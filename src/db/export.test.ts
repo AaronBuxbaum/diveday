@@ -27,6 +27,7 @@ import { getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 const EXPECTED_FILES = [
   "shop.csv",
   "boats.csv",
+  "trip_lenses.csv",
   "contacts.csv",
   "people.csv",
   "certifications.csv",
@@ -99,6 +100,7 @@ const EXPORTED_TABLES = [
   "dive_package_entitlements",
   "shops",
   "boats",
+  "trip_lenses",
   "people",
   "certifications",
   "specialty_certifications",
@@ -299,6 +301,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "contact_email_confirmed_at",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
+  trip_lenses: ["shop_id"],
   dive_packages: ["shop_id"],
   dive_package_entitlements: ["shop_id"],
   staff_shifts: ["shop_id"],

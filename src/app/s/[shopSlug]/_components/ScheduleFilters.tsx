@@ -44,6 +44,7 @@ export type ScheduleFiltersCopy = {
 export function ScheduleFilters({
   embed,
   month,
+  lens,
   tripTypeFilter,
   hasSpaceFilter,
   canDiveFilter,
@@ -53,6 +54,14 @@ export function ScheduleFilters({
 }: {
   embed: boolean;
   month: string | null;
+  /**
+   * The lens the reader is looking through, or null. Carried as a hidden input
+   * below for the same reason `month` is: this is a GET form, so any parameter
+   * it does not carry is **erased** on submit — and one tap of "Has space"
+   * would otherwise hand back the whole board with the rail reset to "Every
+   * departure" and nothing saying why.
+   */
+  lens: string | null;
   tripTypeFilter: string | null;
   hasSpaceFilter: boolean;
   /**
@@ -86,6 +95,7 @@ export function ScheduleFilters({
     <QueryForm ref={formRef} className="mb-6 flex flex-wrap items-end gap-3">
       {embed ? <input type="hidden" name="embed" value="1" /> : null}
       {month ? <input type="hidden" name="month" value={month} /> : null}
+      {lens ? <input type="hidden" name="lens" value={lens} /> : null}
       <FieldGrid columns={1} className="min-w-40">
         <Field label={copy.tripType}>
           <select

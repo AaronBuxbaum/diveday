@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { canPersonManagePaymentSettings, canPersonRefund } from "@/db/authz";
 import { listBoats } from "@/db/boats";
+import { listTripLenses } from "@/db/trip-lenses";
 import { getTripGuests } from "@/db/trips-guests";
 import { getTripOverview } from "@/db/trips-overview";
 import { languageNameIn } from "@/i18n/language-labels";
@@ -149,16 +150,20 @@ export default async function ManageTripPage({
   // Locale and the trip row both depend on `shop` but not on each other.
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const [overview, guests, shopBoats, mayDiscount, mayWriteOffPayment] = await Promise.all([
-    getTripOverview(db, shop, tripId, session.user.personId),
-    getTripGuests(db, shop, tripId, { diverQuery: diverq, confirmName }),
-    // The fleet, for the Details form's hull select. Live hulls only: this is a
-    // picker for what the departure will sail on, not a record of what it did
-    // (`listBoatsForHistory` is the other one).
-    shop.hasBoatDiving ? listBoats(db, shop.id) : [],
-    canPersonManagePaymentSettings(db, shop.id, session.user.personId),
-    canPersonRefund(db, shop.id, session.user.personId),
-  ]);
+  const [overview, guests, shopBoats, shopLenses, mayDiscount, mayWriteOffPayment] =
+    await Promise.all([
+      getTripOverview(db, shop, tripId, session.user.personId),
+      getTripGuests(db, shop, tripId, { diverQuery: diverq, confirmName }),
+      // The fleet, for the Details form's hull select. Live hulls only: this is
+      // a picker for what the departure will sail on, not a record of what it
+      // did (`listBoatsForHistory` is the other one).
+      shop.hasBoatDiving ? listBoats(db, shop.id) : [],
+      // The shop's own words for its kinds of day, for the select beside the
+      // hull (ADR 20260904-reef-all-the-way-down, decision 2).
+      listTripLenses(db, shop.id),
+      canPersonManagePaymentSettings(db, shop.id, session.user.personId),
+      canPersonRefund(db, shop.id, session.user.personId),
+    ]);
   if (!overview || !guests) notFound();
   const {
     trip,
@@ -625,6 +630,7 @@ export default async function ManageTripPage({
               currency={toShopCurrency(shop.currency)}
               warnNoPrice={!cancelled}
               boats={shopBoats.map((boat) => ({ id: boat.id, name: boat.name }))}
+              lenses={shopLenses.map((lens) => ({ id: lens.id, name: lens.name }))}
               hasBoatDiving={shop.hasBoatDiving}
               hasShoreDiving={shop.hasShoreDiving}
               hasPoolDiving={shop.hasPoolDiving}

@@ -37,6 +37,40 @@ describe("the public schedule identity composition", () => {
 });
 
 /**
+ * **The lens rail's place** — ADR 20260904-reef-all-the-way-down, decision 2
+ * (issue #1162).
+ *
+ * `e2e/schedule-filters.spec.ts` and `e2e/trip-admission.spec.ts` address the
+ * departures as the `ul` immediately after the filter form, across seven
+ * assertions. An element sibling slipped between the two breaks every one of
+ * them, and nothing about that failure names the rail. So the order is a
+ * source-level assertion here, where a later edit meets it first.
+ */
+describe("the lens rail's place", () => {
+  it("renders once, after the month nav and above the filter form", () => {
+    const monthNav = positionOf('aria-label={t("schedule.monthNav")}');
+    const rail = positionOf("<FilterChips");
+    const filters = positionOf("<ScheduleFilters");
+    const weekLedger = positionOf("<WeekLedger");
+
+    for (const marker of [monthNav, rail, filters, weekLedger]) {
+      expect(marker).toBeGreaterThan(-1);
+    }
+    expect(countOf("<FilterChips")).toBe(1);
+    expect(monthNav).toBeLessThan(rail);
+    expect(rail).toBeLessThan(filters);
+    expect(filters).toBeLessThan(weekLedger);
+  });
+
+  it("stands down inside the frame, which promises no navigation landmarks", () => {
+    // `FilterChips` renders a `<nav>`, and `e2e/schedule-embed.spec.ts` asserts
+    // the widget has literally zero navigation landmarks.
+    expect(SOURCE).toContain("hasUpcoming && !isEmbed && lenses.length > 0");
+    expect(SOURCE).toContain("isEmbed ? [] : await listTripLenses(");
+  });
+});
+
+/**
  * **The boat that is out** — ADR 20260904-reef-all-the-way-down, Budget rule
  * 4, slice 16c.
  */

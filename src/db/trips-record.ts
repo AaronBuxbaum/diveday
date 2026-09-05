@@ -346,6 +346,13 @@ export type TripPatch = {
    */
   diveMode?: TripDiveMode;
   boatId?: string | null;
+  /**
+   * The shop's own word for this kind of day (ADR
+   * 20260904-reef-all-the-way-down, decision 2). `null` clears it, `undefined`
+   * leaves it alone. Tenancy is checked by the caller against
+   * `getTripLens`, the same way the hull above is checked.
+   */
+  lensId?: string | null;
   isPrivate?: boolean;
   /** The shop's own divemaster target stops applying to this departure (issue #973). */
   selfGuided?: boolean;
@@ -478,6 +485,7 @@ export async function updateTrip(
         // field is not asking for a change.
         ...(patch.diveMode === undefined ? {} : { diveMode: patch.diveMode }),
         ...(patch.boatId === undefined ? {} : { boatId: patch.boatId }),
+        ...(patch.lensId === undefined ? {} : { lensId: patch.lensId }),
         ...(patch.isPrivate === undefined ? {} : { isPrivate: patch.isPrivate }),
         // **A course session is never self-guided** (issue #1342), the same
         // rule `insertTripInstance` applies to every creation door and for the

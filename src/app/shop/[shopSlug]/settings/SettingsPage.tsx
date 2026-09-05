@@ -27,6 +27,7 @@ import {
   getShopStripeAccount,
   stripeCurrencyMismatch,
 } from "@/db/stripe-accounts";
+import { countTripLensDepartures, listTripLenses } from "@/db/trip-lenses";
 import { currencyOptions } from "@/i18n/currency-labels";
 import { catalogItemLabel, rentableItemLabel } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
@@ -82,6 +83,7 @@ import {
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
 import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
+import { LENS_NAME_MAX } from "@/lib/trip-lenses";
 import { BrandColorField } from "./_components/BrandColorField";
 import { BrandPreview } from "./_components/BrandPreview";
 import { SettingsDoorRow, SettingsRow } from "./_components/SettingsRows";
@@ -89,8 +91,10 @@ import { AddressSearch } from "./AddressSearch";
 import {
   createBoatAction,
   createDivePackageAction,
+  createTripLensAction,
   deleteBoatAction,
   deleteDivePackageAction,
+  deleteTripLensAction,
   dischargeProcessorErasureAction,
   disconnectAction,
   refreshAction,
@@ -115,6 +119,7 @@ import {
   saveTimezoneAction,
   saveUnitsAction,
   updateBoatAction,
+  updateTripLensAction,
 } from "./actions";
 import { CounterQrCard } from "./CounterQrCard";
 import { SECTION_IDS, SETTINGS_GROUPS, type SectionId } from "./settings-groups";
@@ -209,6 +214,10 @@ function noticeMessages(
     "boat-updated": { tone: "success", text: t("boats.boatUpdated") },
     "boat-deleted": { tone: "success", text: t("boats.boatDeleted") },
     "boat-invalid": { tone: "danger", text: t("boats.boatInvalid") },
+    "lens-created": { tone: "success", text: t("lenses.created") },
+    "lens-updated": { tone: "success", text: t("lenses.updated") },
+    "lens-deleted": { tone: "success", text: t("lenses.deleted") },
+    "lens-invalid": { tone: "danger", text: t("lenses.invalid") },
   };
 }
 
@@ -485,13 +494,21 @@ export default async function SettingsPage({
   // that visits it, and the preview is drawn from the shop-wide figure alone.
   // Empty for a shop that has overridden nothing, and then the preview says
   // nothing extra.
-  const [pendingMediaDeletions, owedProcessorErasures, siteBottomTimeOverrides, shopBoats] =
-    await Promise.all([
-      listPendingMediaDeletions(db, session.user.shopId),
-      listOwedProcessorErasures(db, session.user.shopId),
-      listSiteBottomTimeOverrides(db, session.user.shopId),
-      listBoats(db, session.user.shopId),
-    ]);
+  const [
+    pendingMediaDeletions,
+    owedProcessorErasures,
+    siteBottomTimeOverrides,
+    shopBoats,
+    shopLenses,
+  ] = await Promise.all([
+    listPendingMediaDeletions(db, session.user.shopId),
+    listOwedProcessorErasures(db, session.user.shopId),
+    listSiteBottomTimeOverrides(db, session.user.shopId),
+    listBoats(db, session.user.shopId),
+    // The shop's own words for its kinds of day (ADR
+    // 20260904-reef-all-the-way-down, decision 2).
+    listTripLenses(db, session.user.shopId),
+  ]);
   // **How much history each hull carries**, so the confirm can say so before a
   // shop taps Delete. Sequential rather than a fan-out: this reads through the
   // same executor and a shop's fleet is a handful of rows
@@ -500,6 +517,12 @@ export default async function SettingsPage({
   const boatDepartures = new Map<string, number>();
   for (const boat of shopBoats) {
     boatDepartures.set(boat.id, await countBoatDepartures(db, session.user.shopId, boat.id));
+  }
+  // The same count for the same reason, one word at a time: a shop's vocabulary
+  // is a handful of rows and there is nothing to win by fanning out.
+  const lensDepartures = new Map<string, number>();
+  for (const lens of shopLenses) {
+    lensDepartures.set(lens.id, await countTripLensDepartures(db, session.user.shopId, lens.id));
   }
   // Owner-only, and tighter than the gate this panel is *read* behind: a retry
   // fires a destructive call at the shop's Stripe account and a discharge signs
@@ -614,6 +637,7 @@ export default async function SettingsPage({
   ].join(" · ");
   const boatsValue =
     shopBoats.length > 0 ? t("boats.value", { count: shopBoats.length }) : t("boats.noBoats");
+  const lensesValue = t("lenses.value", { count: shopLenses.length });
   // A count, not the numbers themselves: this row is read on the hub and the
   // numbers belong on the boat, not on a settings list somebody is scrolling.
   const emergencyValue = hasEmergencyReference(shop.emergencyReference)
@@ -1806,6 +1830,120 @@ export default async function SettingsPage({
                 </div>
               </SettingsRow>
             ) : null}
+            {/* **Kinds of day** — ADR 20260904-reef-all-the-way-down, decision 2
+              (issue #1162). The shop's own words for its departures, which a
+              diver then filters the public schedule by. Unconditional: a
+              shore-diving shop with no hull still names its kinds of day, so
+              this row carries no `hasBoatDiving` gate. */}
+            <SettingsRow
+              heading={t("lenses.heading")}
+              value={lensesValue}
+              sectionId="lenses"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="lenses" active={activeSection} />
+              <div className="space-y-4 mt-4">
+                {shopLenses.length === 0 ? (
+                  <p className="text-sm text-muted italic">{t("lenses.noLenses")}</p>
+                ) : (
+                  <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
+                    {shopLenses.map((lens) => (
+                      <div
+                        key={lens.id}
+                        className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-surface"
+                      >
+                        <form
+                          action={updateTripLensAction}
+                          className="flex flex-1 flex-col sm:flex-row sm:items-center gap-3 w-full"
+                        >
+                          <input type="hidden" name="lensId" value={lens.id} />
+                          <div className="flex-1 w-full">
+                            <input
+                              name="name"
+                              type="text"
+                              required
+                              maxLength={LENS_NAME_MAX}
+                              defaultValue={lens.name}
+                              aria-label={t("lenses.nameLabel")}
+                              placeholder={t("lenses.nameLabel")}
+                              className={controlClass}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                            <SubmitButton
+                              pendingLabel={t("lenses.submitting")}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                            >
+                              {t("lenses.submit")}
+                            </SubmitButton>
+                          </div>
+                        </form>
+                        {/* Its own form beside the rename, never inside it:
+                          `InlineConfirm` submits the form it sits in, and forms
+                          cannot nest. */}
+                        <form action={deleteTripLensAction} className="shrink-0">
+                          <input type="hidden" name="lensId" value={lens.id} />
+                          {/* The confirm says what the delete touches. A word
+                            nothing carries goes quietly, with no message to
+                            read. Nothing is destroyed either way; the word on
+                            screen is still "Delete" (ADR
+                            20260820-every-delete-is-soft). */}
+                          {lensDepartures.get(lens.id) ? (
+                            <InlineConfirm
+                              triggerLabel={t("lenses.delete")}
+                              message={t("lenses.deleteDepartures", {
+                                count: lensDepartures.get(lens.id) ?? 0,
+                              })}
+                              cancelLabel={t("lenses.deleteCancel")}
+                              confirmLabel={t("lenses.deleteConfirm")}
+                              pendingLabel={t("lenses.deletePending")}
+                              triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
+                            />
+                          ) : (
+                            <InlineConfirm
+                              triggerLabel={t("lenses.delete")}
+                              confirmLabel={t("lenses.deleteConfirm")}
+                              pendingLabel={t("lenses.deletePending")}
+                              triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
+                            />
+                          )}
+                        </form>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="border border-dashed border-border rounded-lg p-4 bg-surface-sunken">
+                  <h4 className="text-sm font-medium mb-3">{t("lenses.createTitle")}</h4>
+                  <form
+                    action={createTripLensAction}
+                    className="flex flex-col sm:flex-row sm:items-start gap-3"
+                  >
+                    <div className="flex-1 w-full">
+                      <input
+                        name="name"
+                        type="text"
+                        required
+                        maxLength={LENS_NAME_MAX}
+                        aria-label={t("lenses.nameLabel")}
+                        placeholder={t("lenses.nameLabel")}
+                        className={controlClass}
+                      />
+                      {/* The one line that earns its place here: it names the
+                        consequence a shop cannot see from this form, which is
+                        that the word is public and divers filter by it. */}
+                      <p className="mt-1 text-xs text-muted">{t("lenses.nameHint")}</p>
+                    </div>
+                    <SubmitButton
+                      pendingLabel={t("lenses.adding")}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {t("lenses.add")}
+                    </SubmitButton>
+                  </form>
+                </div>
+              </div>
+            </SettingsRow>
           </InsetGroup>
         </SettingsGroup>
 

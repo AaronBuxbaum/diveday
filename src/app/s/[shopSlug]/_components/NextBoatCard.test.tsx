@@ -78,6 +78,41 @@ describe("what the card says", () => {
   });
 });
 
+/**
+ * **The card says which boat it is** — ADR 20260904-reef-all-the-way-down
+ * (issue #1374). `nextBookableDeparture` has always skipped the full boats;
+ * until now the eyebrow claimed to be the next departure outright.
+ */
+describe("next boat with space", () => {
+  it("names itself as the next boat with space, in the eyebrow and the region", () => {
+    render(card());
+
+    expect(screen.getByRole("region", { name: "Next boat with space" })).toBeInTheDocument();
+    expect(screen.getByText("Next boat with space")).toBeInTheDocument();
+  });
+
+  it("names the one full boat it stepped over, by its time", () => {
+    render(card({ skipped: 1, firstSkippedTime: "7:00 AM" }));
+
+    expect(screen.getByText(/the 7:00 AM boat is full/)).toBeInTheDocument();
+  });
+
+  it("counts them when it stepped over more than one", () => {
+    render(card({ skipped: 3, firstSkippedTime: "7:00 AM" }));
+
+    expect(screen.getByText(/the 3 boats before it are full/)).toBeInTheDocument();
+    // The count is the fact once there is more than one; a single time would
+    // name the earliest and say nothing about the other two.
+    expect(screen.queryByText(/7:00 AM boat is full/)).not.toBeInTheDocument();
+  });
+
+  it("says nothing when this boat is the shop's own next departure", () => {
+    const { container } = render(card());
+
+    expect(container.textContent).not.toContain("full");
+  });
+});
+
 describe("elevation is earned", () => {
   it("sits on the panel's bed at the panel radius — the rounded-3xl tinted hero it replaced is gone", () => {
     const { container } = render(card());

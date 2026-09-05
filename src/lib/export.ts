@@ -32,6 +32,8 @@ export type ExportFile = { name: string; content: string | Uint8Array };
 export const EXPORT_FILE_NOTES = {
   "shop.csv": "The shop profile, packing checklist, rental catalog, and rental prices.",
   "boats.csv": "The shop's boats and their passenger capacities.",
+  "trip_lenses.csv":
+    "The shop's own words for its kinds of day, as they appear on its public schedule. trips.csv points at one by lens_id.",
   "contacts.csv":
     "One flat row per person, shaped for another system's import wizard: names pre-split, the best certification record (current before expired, verified before pending, expiry included so the destination can enforce it), Nitrox status, rental sizes, and the most recent live signed waiver (accepted/date/source, medical_review holds excluded on purpose). The normalized files stay authoritative — this file exists so leaving never means hand-merging CSVs. Certifications imported from it should land unverified in the destination until its staff re-check the record; a waiver_accepted row should land trusted-and-marked-imported the same way this shop's own importer treats one. no_certification_declared_at is the date this diver said on a public form that they hold no certification at all — a Discover Scuba customer, a snorkeller, somebody yet to start a course. It is their own word and never a certification, level, or evidence. Blank means only that nobody has that answer on file, which is not the same as a diver who said no. It is also blank once the shop holds any certification for them, or once staff cleared it as never said; people.csv carries the raw stamp and its clearance separately.",
   "people.csv":
