@@ -2302,6 +2302,33 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The returning diver's thread** — ADR 20260904-reef-all-the-way-down,
+       * D15 with D19 folded in, D14's recall line, and Budget rule 5's chips.
+       *
+       * The only state that photographs all of them at once: the three facts
+       * with their doors, the sentence naming the staffer who kept a fit, the
+       * Crew chip on the change ledger and the Plan chip on the arrival card's
+       * sites row. None of it renders on the calm thread above, because the
+       * step only exists for a diver whose sizes the shop was already holding
+       * before the booking — a state no form can reach, hence the seed.
+       */
+      test(`the returning diver's thread renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await bookAVisualRegressionSeat(page, scheme);
+        const seeded = await request.post("/api/test/seed-returning-diver", {
+          data: { shopSlug: "blue-mantis", email: `visual-regression-${scheme}@example.com` },
+        });
+        expect(seeded.ok()).toBe(true);
+        await page.goto(new URL(page.url()).pathname);
+        await threadStatus(page).waitFor();
+        await openThreadStep(page, "changes");
+        await capture(page, "thread-anything-changed", scheme);
+      });
+
+      /**
        * **The card a diver meets on their worst day**, which nothing had ever
        * photographed — in either language or either scheme (issue #859).
        *

@@ -32,8 +32,22 @@ import { RECAP_AUTOMATIC_DELAY_MS } from "./recap-schedule";
  * `src/i18n/thread-labels.ts`, per the repo's codes-not-sentences rule.
  */
 
-/** The fixed order a diver walks. Never re-ordered per booking. */
-export const THREAD_STEP_ORDER = ["sign", "certification", "pay", "gear", "dayof"] as const;
+/**
+ * The fixed order a diver walks. Never re-ordered per booking.
+ *
+ * `gear` and `changes` are one slot filled two ways — see
+ * {@link buildThreadSteps}. Both are listed because this tuple is a
+ * *vocabulary* as well as a sequence: `THREAD_STEP_TITLE_KEYS` is a `Record`
+ * over it, so a step with no word of its own is a compile error.
+ */
+export const THREAD_STEP_ORDER = [
+  "sign",
+  "certification",
+  "pay",
+  "gear",
+  "changes",
+  "dayof",
+] as const;
 
 export type ThreadStepId = (typeof THREAD_STEP_ORDER)[number];
 
@@ -58,7 +72,7 @@ export type ThreadStep = {
   state: ThreadStepState;
   /**
    * The checklist item this step re-voices, for the three steps the readiness
-   * engine owns. Absent on `gear` and `dayof`, which no blocker produces — the
+   * engine owns. Absent on `gear`, `changes` and `dayof`, which no blocker produces — the
    * caller's own booleans decide those, and it is deliberate that they are
    * booleans: a rental fit reserves nothing and a recency answer gates nobody
    * (docs/product/glossary.md), so neither may ever become a blocker.
@@ -113,6 +127,23 @@ export type ThreadStepsInput = {
    * that could never fill, rebuilt one level down.
    */
   dayOfComplete: boolean;
+  /**
+   * **The shop already held this diver's stated fit before this booking
+   * existed** — `rental_fit_profiles.fit_stated_at` predates
+   * `bookings.created_at`. A returning diver, in the only sense the data can
+   * actually prove.
+   *
+   * The narrow test is deliberate. "Has a fit at all" would turn true the
+   * instant a first-timer saved their sizes, and the step would then appear
+   * mid-thread asking whether the thing they had just typed had changed.
+   */
+  carriedFacts: boolean;
+  /**
+   * They have answered the question for this seat
+   * (`bookings.carried_facts_confirmed_at`) — by saying nothing changed, or by
+   * changing one of the facts it covers.
+   */
+  carriedFactsConfirmed: boolean;
 };
 
 export function buildThreadSteps(input: ThreadStepsInput): ThreadSpine {
@@ -155,7 +186,23 @@ export function buildThreadSteps(input: ThreadStepsInput): ThreadSpine {
     steps.push({ id: "pay", state: "done" });
   }
 
-  steps.push({ id: "gear", state: input.rentalFitComplete ? "done" : "your_turn" });
+  // **One slot, filled two ways** (ADR 20260904-reef-all-the-way-down, D15
+  // with D19 folded in). A diver whose sizes the shop was already holding has
+  // answered the gear question, so a settled "Gear and sizes" row beside a
+  // live "Anything changed?" would be two rows for one fact — the duplication
+  // decision 3 exists to end. A returning diver is asked once; a first-timer's
+  // spine is what it always was; neither ever sees both.
+  //
+  // `changes` is countable and finishable like every other step, which is what
+  // keeps the figure over the spine able to fill. The ThreadPhone artboard
+  // draws "3 of 4 done" over five rows, which would need the fourth `upcoming`
+  // state this module refused above; the ADR is what code obeys ("the thread
+  // gains one step"), so the shipped figure counts five.
+  if (input.carriedFacts) {
+    steps.push({ id: "changes", state: input.carriedFactsConfirmed ? "done" : "your_turn" });
+  } else {
+    steps.push({ id: "gear", state: input.rentalFitComplete ? "done" : "your_turn" });
+  }
   steps.push({ id: "dayof", state: input.dayOfComplete ? "done" : "your_turn" });
 
   return {

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import {
+  confirmCarriedFacts,
   selfCancelBooking,
   setBookingDiveIntent,
   setBookingHotelPickup,
@@ -25,13 +26,14 @@ import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit, saveRentalFitNote } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { saveSupportNeeds } from "@/db/support-needs";
-import { issueWaiverRequest } from "@/db/waivers";
+import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { setWelcomeConsent } from "@/db/welcome-cues";
 import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
+import { emergencyContactSchema } from "@/lib/contact";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -363,8 +365,95 @@ export async function saveFitFromReady(token: string, formData: FormData) {
       wantsNitrox,
     });
   }
+  // Saving sizes is one of the three ways to answer "Anything changed?", so it
+  // settles that step too. A diver who fixes a wetsuit size must not then be
+  // asked to confirm that they fixed it.
+  await confirmCarriedFacts(ctx.db, { shopId: ctx.data.shop.id, bookingId: ctx.bookingId });
   const result = saved ? "saved=fit" : "error=fit";
   revalidateAndRedirect(base(token), `${base(token)}?${result}`);
+}
+
+/**
+ * **"Nothing changed."** — the primary answer to the returning diver's one
+ * question (ADR 20260904-reef-all-the-way-down, D15 with D19 folded in).
+ *
+ * The whole of it is a stamp on this booking. It writes no fact, because the
+ * point of the answer is that none of them moved; the three doors beside it
+ * each write their own single fact and stamp this in the same breath.
+ */
+export async function confirmCarriedFactsFromReady(token: string) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const saved = await confirmCarriedFacts(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+  });
+  revalidateAndRedirect(base(token), `${base(token)}?${saved ? "saved=changes" : "error=changes"}`);
+}
+
+const tanksSchema = z.object({ nitrox: z.string().optional() });
+
+/**
+ * **Air or nitrox**, on its own.
+ *
+ * Its own action and its own scope, which is the whole point of the question
+ * being a door rather than a field of the dense prep form: a partial post to
+ * that form would clear sizes the diver never touched (issue #1175's named
+ * trap). This writes `bookings.wants_nitrox` and nothing else.
+ *
+ * The offer is re-derived here rather than trusted from the post, exactly as
+ * `saveFitFromReady` does it: a hand-crafted `nitrox=on` must not record a
+ * request against a shop that does not fill nitrox, or a course that cannot run
+ * on it. When the shop could not have asked, the field is ignored entirely
+ * rather than read as a `false` — so an unrelated tap never silently clears a
+ * request recorded while the shop still offered it.
+ */
+export async function saveTanksFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = tanksSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=tanks`);
+  if (!nitroxAvailableOn(ctx.data.shop.rentalItems, ctx.data.trip.course)) {
+    redirect(`${base(token)}?error=tanks`);
+  }
+  const saved = await setBookingNitrox(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    wantsNitrox: parsed.data.nitrox === "on",
+  });
+  if (!saved) redirect(`${base(token)}?error=tanks`);
+  await confirmCarriedFacts(ctx.db, { shopId: ctx.data.shop.id, bookingId: ctx.bookingId });
+  revalidateAndRedirect(base(token), `${base(token)}?saved=tanks`);
+}
+
+/**
+ * **Who to call**, on its own.
+ *
+ * New reach for the readiness capability — the emergency contact has been
+ * written from the *waiver* token until now — and bounded the same way that one
+ * is: the shared `emergencyContactSchema` (max 120/40, the bound CR-014 added
+ * precisely because this page's equivalent action once had none), and
+ * `saveBookingEmergencyContact`, which resolves the person from the booking the
+ * verified capability names rather than from anything posted.
+ *
+ * It never blanks a field, which is that writer's own standing rule: a diver
+ * who submits an empty box keeps what is on file. A contact on a manifest is
+ * safety data, and a silent clear is worse than a stale one.
+ */
+export async function saveEmergencyContactFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=contact`);
+  const saved = await saveBookingEmergencyContact(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    name: parsed.data.emergencyContactName,
+    phone: parsed.data.emergencyContactPhone,
+  });
+  if (!saved) redirect(`${base(token)}?error=contact`);
+  await confirmCarriedFacts(ctx.db, { shopId: ctx.data.shop.id, bookingId: ctx.bookingId });
+  revalidateAndRedirect(base(token), `${base(token)}?saved=contact`);
 }
 
 /**

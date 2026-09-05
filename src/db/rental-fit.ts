@@ -3,7 +3,13 @@ import { nowDate } from "@/lib/clock";
 import type { PrepDiver } from "@/lib/dive-prep";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
-import { bookings, diveSupportNeeds, people, rentalFitProfiles } from "./schema";
+import {
+  bookings,
+  diveSupportNeeds,
+  people,
+  type rentalFitItem,
+  rentalFitProfiles,
+} from "./schema";
 import { SUPPORT_NEEDS_COLUMNS } from "./support-needs";
 
 export type RentalFitInput = {
@@ -174,6 +180,78 @@ export async function setNeedsStaffFit(
     )
     .returning();
   return profile ?? null;
+}
+
+/** Which piece of a fit a staffer kept — `rental_fit_item`, mirroring `SIZED_RENTAL_KINDS`. */
+export type RentalFitItem = (typeof rentalFitItem.enumValues)[number];
+
+/**
+ * **A staffer kept this diver's fit** — the write behind D14's recall sentence
+ * (ADR 20260904-reef-all-the-way-down).
+ *
+ * Confirming is *remembering*, not editing: this touches no size column, so
+ * nothing a diver typed can be moved by a staffer tapping "Keep it" at the end
+ * of a day. An UPDATE and never an upsert — a diver with no profile row has no
+ * fit to confirm, which is the same refusal shape {@link setNeedsStaffFit}
+ * makes and for the same reason.
+ */
+export async function confirmRentalFit(
+  db: AppDb,
+  input: {
+    shopId: string;
+    personId: string;
+    item: RentalFitItem;
+    /** The staff member who kept it — attribution, not authorization. */
+    byPersonId?: string;
+  },
+) {
+  const [profile] = await db
+    .update(rentalFitProfiles)
+    .set({
+      fitConfirmedAt: nowDate(),
+      fitConfirmedBy: input.byPersonId ?? null,
+      fitConfirmedItem: input.item,
+      updatedAt: nowDate(),
+    })
+    .where(
+      and(
+        eq(rentalFitProfiles.shopId, input.shopId),
+        eq(rentalFitProfiles.personId, input.personId),
+      ),
+    )
+    .returning();
+  return profile ?? null;
+}
+
+/**
+ * **Who kept this diver's fit, which piece, and when** — or null.
+ *
+ * Null unless all three are on file, which is what makes the sentence it feeds
+ * refuse to half-render. The commonest way to lose one is anonymization: the
+ * erasure path nulls `fit_confirmed_by`, and a line reading "somebody kept your
+ * BCD" would be worse than no line, so the whole thing ages out instead.
+ *
+ * Its own reader rather than a widening of {@link toDiverRentalFit}: that
+ * projection is the browser boundary, and its docblock says the next column
+ * added to this table must not cross it by default.
+ */
+export async function fitConfirmationForDiver(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+): Promise<{ staffFullName: string; item: RentalFitItem; confirmedAt: Date } | null> {
+  const [row] = await db
+    .select({
+      confirmedAt: rentalFitProfiles.fitConfirmedAt,
+      item: rentalFitProfiles.fitConfirmedItem,
+      staffFullName: people.fullName,
+    })
+    .from(rentalFitProfiles)
+    .leftJoin(people, eq(people.id, rentalFitProfiles.fitConfirmedBy))
+    .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)))
+    .limit(1);
+  if (!row?.confirmedAt || !row.item || !row.staffFullName) return null;
+  return { staffFullName: row.staffFullName, item: row.item, confirmedAt: row.confirmedAt };
 }
 
 /**

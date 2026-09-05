@@ -35,6 +35,11 @@ function spine(overrides: Partial<ThreadStepsInput> = {}) {
     hasPayableOrder: false,
     rentalFitComplete: false,
     dayOfComplete: false,
+    // The first-timer's spine is the default here on purpose: every case below
+    // that does not name these two is asserting the thread as it has always
+    // been, so a regression in the ordinary path cannot hide behind the new one.
+    carriedFacts: false,
+    carriedFactsConfirmed: false,
     ...overrides,
   });
 }
@@ -162,6 +167,75 @@ describe("buildThreadSteps", () => {
     // The engine's own sentence, not the generic one: H-22's minimum-age
     // wording says something a diver can act on.
     expect(built.setupItem).toBe(setup);
+  });
+});
+
+/**
+ * **"Anything changed?"** — ADR 20260904-reef-all-the-way-down, D15 with D19
+ * folded in. One slot, filled two ways: a returning diver is asked once, a
+ * first-timer's spine is what it always was, and neither ever sees both rows
+ * for the one fact.
+ */
+describe("the returning diver's step", () => {
+  it("takes the gear step's place, and never stands beside it", () => {
+    const built = spine({ carriedFacts: true });
+    const ids = built.steps.map((step) => step.id);
+    expect(ids).toContain("changes");
+    expect(ids).not.toContain("gear");
+    // Even with a fit already complete, which is the state a returning diver is
+    // always in — the duplication is exactly what this replaces.
+    const settledFit = spine({ carriedFacts: true, rentalFitComplete: true });
+    expect(settledFit.steps.map((step) => step.id)).not.toContain("gear");
+  });
+
+  it("sits where the gear step sat", () => {
+    const built = spine({
+      carriedFacts: true,
+      checklist: [
+        item({ category: "waiver" }),
+        item({ category: "certification", state: "waiting", detailCode: "certification_pending" }),
+        item({ category: "payment", state: "action", detailCode: "payment_due" }),
+      ],
+    });
+    expect(built.steps.map((step) => step.id)).toEqual([
+      "sign",
+      "certification",
+      "pay",
+      "changes",
+      "dayof",
+    ]);
+  });
+
+  it("is the diver's turn until they answer, and settles when they do", () => {
+    const asked = spine({ carriedFacts: true });
+    expect(asked.steps.find((step) => step.id === "changes")?.state).toBe("your_turn");
+    expect(asked.current).toBe("changes");
+
+    const answered = spine({ carriedFacts: true, carriedFactsConfirmed: true });
+    expect(answered.steps.find((step) => step.id === "changes")?.state).toBe("done");
+  });
+
+  it("counts, so the figure can still fill", () => {
+    // The load-bearing invariant, re-pinned across the new branch: every step
+    // this module emits is finishable, so `done` can reach `countable`.
+    const built = spine({
+      checklist: [item({ category: "waiver" })],
+      carriedFacts: true,
+      carriedFactsConfirmed: true,
+      dayOfComplete: true,
+    });
+    expect(built.countable).toBe(3);
+    expect(built.done).toBe(built.countable);
+    expect(built.current).toBeNull();
+  });
+
+  it("never reaches a first-timer, whose spine is unchanged", () => {
+    const built = spine({ carriedFacts: false, carriedFactsConfirmed: true });
+    const ids = built.steps.map((step) => step.id);
+    expect(ids).toContain("gear");
+    expect(ids).not.toContain("changes");
+    // A stray confirmation stamp cannot settle a gear question nobody answered.
+    expect(built.steps.find((step) => step.id === "gear")?.state).toBe("your_turn");
   });
 });
 

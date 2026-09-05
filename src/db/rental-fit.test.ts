@@ -7,6 +7,8 @@ import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import {
+  confirmRentalFit,
+  fitConfirmationForDiver,
   getRentalFit,
   listTripPrepDivers,
   rentalFitByBooking,
@@ -14,7 +16,7 @@ import {
   saveRentalFitNote,
   setNeedsStaffFit,
 } from "./rental-fit";
-import { people } from "./schema";
+import { people, rentalFitProfiles } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function context() {
@@ -277,6 +279,90 @@ describe("setNeedsStaffFit (H-06 fallback)", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "No Fit Yet");
     expect(await setNeedsStaffFit(db, { shopId, personId, needed: true })).toBeNull();
+  });
+});
+
+/**
+ * **Recall, not inference** (ADR 20260904-reef-all-the-way-down, D14).
+ *
+ * A staffer keeping a diver's fit at the end of a day is remembering, not
+ * editing — so the one thing these cases guard hardest is that no size moves.
+ * The reader's refusals matter as much as its answer: a half-present
+ * confirmation renders no sentence, which is what stops "somebody kept your
+ * BCD" reaching a diver after the staffer who did it was anonymized.
+ */
+describe("confirmRentalFit / fitConfirmationForDiver", () => {
+  it("stamps who, what and when, and moves no size at all", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Kept Fit");
+    const { personId: staffId } = await bookVisitor(db, shopId, tripId, "Keiko Tanaka");
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+
+    const confirmed = await confirmRentalFit(db, {
+      shopId,
+      personId,
+      item: "bcd",
+      byPersonId: staffId,
+    });
+    expect(confirmed?.fitConfirmedAt).toBeInstanceOf(Date);
+    expect(confirmed?.fitConfirmedItem).toBe("bcd");
+    expect(confirmed?.fitConfirmedBy).toBe(staffId);
+    // Every size the diver stated is exactly where they left it.
+    expect(confirmed?.bcdSize).toBe("M");
+    expect(confirmed?.wetsuitSize).toBe("3 mm / M");
+    expect(confirmed?.finSize).toBe("M");
+    expect(confirmed?.weightPreference).toBe("12 lbs");
+
+    expect(await fitConfirmationForDiver(db, shopId, personId)).toEqual({
+      staffFullName: "Keiko Tanaka",
+      item: "bcd",
+      confirmedAt: confirmed?.fitConfirmedAt,
+    });
+  });
+
+  it("returns null with no fit on file to confirm", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nothing To Keep");
+    expect(await confirmRentalFit(db, { shopId, personId, item: "wetsuit" })).toBeNull();
+    expect(await fitConfirmationForDiver(db, shopId, personId)).toBeNull();
+  });
+
+  it("never reaches across shops", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Other Tenant");
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+
+    const elsewhere = await confirmRentalFit(db, {
+      shopId: "99999999-8888-4777-8666-555555555555",
+      personId,
+      item: "bcd",
+    });
+    expect(elsewhere).toBeNull();
+    expect(await fitConfirmationForDiver(db, shopId, personId)).toBeNull();
+  });
+
+  it("says nothing at all when the staffer who kept it is gone", async () => {
+    // The erasure path nulls `fit_confirmed_by`. A line reading "somebody kept
+    // your BCD" would be worse than no line, so the whole thing ages out.
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Anonymized Keeper");
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await confirmRentalFit(db, { shopId, personId, item: "bcd" });
+
+    expect(await fitConfirmationForDiver(db, shopId, personId)).toBeNull();
+  });
+
+  it("says nothing when only the clock was stamped", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Half A Record");
+    const { personId: staffId } = await bookVisitor(db, shopId, tripId, "Half Keeper");
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await db
+      .update(rentalFitProfiles)
+      .set({ fitConfirmedAt: new Date("2026-09-01T12:00:00Z"), fitConfirmedBy: staffId })
+      .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
+
+    expect(await fitConfirmationForDiver(db, shopId, personId)).toBeNull();
   });
 });
 

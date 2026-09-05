@@ -339,3 +339,90 @@ test("a link into one step of the thread opens that step", async ({ page }) => {
   // before one.
   await expect(page.locator("[data-thread-step] details[open]")).toHaveCount(1);
 });
+
+/**
+ * **A returning diver is asked once, and a yes goes straight to the fact** —
+ * ADR 20260904-reef-all-the-way-down, D15 with D19 folded in, and D14 for the
+ * recall line.
+ *
+ * The state has no UI that can reach it: `fit_stated_at` must predate the
+ * booking, which no form can produce for a seat booked five seconds ago, and
+ * the fit confirmation is written by the evening leftover row that has not
+ * landed. `/api/test/seed-returning-diver` is the only door to it — the same
+ * argument the changed-dive-site seed makes one table over.
+ */
+test("a returning diver is asked once, and answering one fact leaves the others alone", async ({
+  page,
+  request,
+}) => {
+  // A public booking, a seed, a reload, then three passes over the thread.
+  test.setTimeout(90_000);
+  const email = `returning-${e2eNow().getTime()}@example.com`;
+
+  await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+  await page
+    .getByRole("list", { name: "Upcoming trips" })
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .first()
+    .click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill("Rosa Delgado");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+  const thread = new URL(page.url()).pathname;
+
+  // A first-time booking's thread: the gear row, and no question about change.
+  await page.goto(thread);
+  await expect(page.locator('[data-thread-step="gear"]')).toHaveCount(1);
+  await expect(page.locator('[data-thread-step="changes"]')).toHaveCount(0);
+
+  const seeded = await request.post("/api/test/seed-returning-diver", {
+    data: { shopSlug: "blue-mantis", email },
+  });
+  expect(seeded.ok()).toBe(true);
+
+  await page.goto(thread);
+  // Replaced rather than joined: one slot, one question, never two rows for the
+  // one fact.
+  await expect(page.locator('[data-thread-step="changes"]')).toHaveCount(1);
+  await expect(page.locator('[data-thread-step="gear"]')).toHaveCount(0);
+  await expect(threadStatus(page)).toContainText("Anything changed?");
+
+  const changes = await openThreadStep(page, "changes");
+  await expect(changes.getByText("Sizes")).toBeVisible();
+  await expect(changes.getByText("Tanks")).toBeVisible();
+  await expect(changes.getByText("Emergency contact")).toBeVisible();
+  // The sizes the shop is actually holding, and who kept them (D14).
+  await expect(changes.getByText(/BCD M/)).toBeVisible();
+  await expect(
+    changes.getByText("Keiko Tanaka kept your BCD at M after your last trip."),
+  ).toBeVisible();
+  await expect(changes.getByText(/Rosa Delgado \(sister\)/)).toBeVisible();
+
+  // The figure before the answer, so the move can be read off it rather than
+  // guessed at.
+  const before = await threadStatus(page).innerText();
+
+  await changes.getByRole("button", { name: "Nothing changed" }).click();
+  await expect(page.locator('[data-thread-step="changes"]')).toContainText(
+    "Your sizes are with the crew.",
+  );
+  await expect(threadStatus(page)).not.toContainText("Anything changed?");
+  expect(await threadStatus(page).innerText()).not.toBe(before);
+
+  // Now change one fact through its own door, and nothing else moves. That is
+  // the boundary #1175 and #1179 both state: a post to one fact may never reach
+  // another's columns.
+  const reopened = await openThreadStep(page, "changes");
+  await reopened.getByLabel("Air or nitrox?").selectOption("on");
+  await reopened.getByRole("button", { name: "Save" }).first().click();
+  await expect(page.getByText("Tank choice saved.")).toBeVisible();
+
+  const after = await openThreadStep(page, "changes");
+  await expect(after.getByText("Nitrox").first()).toBeVisible();
+  await expect(after.getByText(/BCD M/)).toBeVisible();
+  await expect(after.getByText(/Rosa Delgado \(sister\)/)).toBeVisible();
+});

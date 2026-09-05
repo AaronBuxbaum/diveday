@@ -1,6 +1,9 @@
 import { SectionCard } from "@/components/ui/card";
+import { FactSource } from "@/components/ui/FactSource";
 import type { TripChangeEvent } from "@/db/trip-change-events";
+import { DIVER_FACT_SOURCE_KEYS } from "@/i18n/fact-source-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { factSourceFromChangeEvent } from "@/lib/fact-source";
 import { formatDateTimeTz } from "@/lib/format";
 
 function valueText(value: unknown): string | null {
@@ -88,10 +91,17 @@ export function TripChangeLedger({
         {events.map((event) => (
           <li key={event.id} className="border-s-2 border-border ps-4">
             <p className="text-sm font-medium">{changeText(event, t, revealArrivalDetails)}</p>
-            <p className="mt-1 text-xs text-muted">
-              {event.source === "crew" ? t("trip.changeSourceCrew") : t("trip.changeSourceShop")} ·{" "}
-              {formatDateTimeTz(event.occurredAt, locale, timeZone)}
-            </p>
+            {/* Where this entry came from, in the app's one provenance grammar
+                (ADR 20260904-reef-all-the-way-down, Budget rule 5). The time is
+                built by `formatDateTimeTz` in the shop's own zone rather than by
+                a bare `toLocaleString`, whose default field set carries seconds
+                (issue #799). */}
+            <FactSource
+              className="mt-1"
+              kind={factSourceFromChangeEvent(event.source)}
+              label={t(DIVER_FACT_SOURCE_KEYS[factSourceFromChangeEvent(event.source)])}
+              at={formatDateTimeTz(event.occurredAt, locale, timeZone)}
+            />
           </li>
         ))}
       </ol>
