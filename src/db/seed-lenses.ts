@@ -1,4 +1,5 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { lensSlugFrom } from "@/lib/trip-lenses";
 import type { DbExecutor } from "./client";
 import { tripLenses, trips } from "./schema";
@@ -68,23 +69,46 @@ const LENS_BY_TRIP_TITLE: Record<string, (typeof DEMO_LENSES)[number]> = {
 /**
  * Writes the demo vocabulary and hangs the seeded departures on it.
  *
- * Runs after `seedMoreTrips` so every title it names exists; a title the seed
- * no longer carries simply matches nothing, which is the right failure for a
- * demo fixture (a throw here would break every seeded shop over a renamed
- * trip).
+ * **Runs on every reset, and writes the words only once.** It sits inside
+ * `seedDemoSchedule`, which `resetDemoShop` calls again for each e2e test — but
+ * a lens is shop *configuration*, like a hull, and the reset deliberately does
+ * not clear it. So the words are inserted only where they are missing (the
+ * per-shop unique slug index would otherwise refuse the second reset and take
+ * the whole seed transaction with it), while the trip assignments are re-applied
+ * every time, because the reset has just rebuilt the departures they hang on.
+ *
+ * The timestamps are spaced a second apart rather than left to `now()`: six rows
+ * in one statement all share the transaction's clock, and `listTripLenses`
+ * orders by `created_at`, so an unspaced insert would render the rail in an
+ * arbitrary order instead of the one the shop wrote.
+ *
+ * Runs after `seedMoreTrips` so every title it names exists; a title the seed no
+ * longer carries simply matches nothing, which is the right failure for a demo
+ * fixture — a throw here would break every seeded shop over a renamed trip.
  */
 export async function seedLenses(db: DbExecutor, shopId: string): Promise<void> {
-  const inserted = await db
-    .insert(tripLenses)
-    .values(
-      DEMO_LENSES.map((name) => ({
-        shopId,
-        name,
-        slug: lensSlugFrom(name),
-      })),
-    )
-    .returning({ id: tripLenses.id, name: tripLenses.name });
-  const idByName = new Map(inserted.map((row) => [row.name, row.id]));
+  const existing = await db
+    .select({ id: tripLenses.id, name: tripLenses.name })
+    .from(tripLenses)
+    .where(and(eq(tripLenses.shopId, shopId), isNull(tripLenses.deletedAt)));
+  const idByName = new Map(existing.map((row) => [row.name, row.id]));
+
+  const missing = DEMO_LENSES.filter((name) => !idByName.has(name));
+  if (missing.length > 0) {
+    const base = nowDate().getTime();
+    const inserted = await db
+      .insert(tripLenses)
+      .values(
+        missing.map((name, index) => ({
+          shopId,
+          name,
+          slug: lensSlugFrom(name),
+          createdAt: new Date(base + index * 1000),
+        })),
+      )
+      .returning({ id: tripLenses.id, name: tripLenses.name });
+    for (const row of inserted) idByName.set(row.name, row.id);
+  }
 
   const titlesByLens = new Map<string, string[]>();
   for (const [title, lensName] of Object.entries(LENS_BY_TRIP_TITLE)) {
