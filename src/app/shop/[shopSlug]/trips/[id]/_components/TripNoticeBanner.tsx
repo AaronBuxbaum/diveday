@@ -123,6 +123,15 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.certifiedAwaitingCard",
   },
   "certify-failed": { form: "roster", tone: "danger", key: "trips.notices.certifyFailed" },
+  "next-step-saved": { form: "roster", tone: "success", key: "trips.notices.nextStepSaved" },
+  "next-step-too-long": { form: "roster", tone: "danger", key: "trips.notices.nextStepTooLong" },
+  // The LMS boundary, said out loud: a next step belongs to a course session
+  // and this departure is not one (issues #1196, #1205).
+  "next-step-not-a-course": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.nextStepNotACourse",
+  },
   "contact-saved": { form: "roster", tone: "success", key: "trips.notices.contactSaved" },
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { form: "add-diver", tone: "danger", key: "trips.notices.diverInvalid" },

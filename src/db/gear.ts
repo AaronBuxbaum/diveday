@@ -768,6 +768,39 @@ export async function returnGearReservation(
 }
 
 /**
+ * **Hand a whole rental set over in one act** (issue #1185, delight report
+ * D25) — the mirror of {@link returnTripGearSet}, and written to look like it.
+ *
+ * A set is one diver's units on one departure, which is what a counter
+ * actually hands across: the diver arrives, takes their armful, and the
+ * hand-over is one deliberate act rather than one tap per piece.
+ *
+ * Conditional on the stamp being empty for the reason
+ * {@link checkOutGearReservation} states: `checked_out_at` is the record of
+ * *when* the unit left, and a second tap must not rewrite it. A unit already
+ * out is therefore left exactly as it was, and a set with nothing left to hand
+ * over is `not_found` rather than a silent success.
+ */
+export async function checkOutTripGearSet(
+  db: AppDb,
+  input: { shopId: string; bookingId: string },
+): Promise<GearReservationActionOutcome> {
+  const handedOver = await db
+    .update(gearReservations)
+    .set({ checkedOutAt: nowDate() })
+    .where(
+      and(
+        eq(gearReservations.shopId, input.shopId),
+        eq(gearReservations.bookingId, input.bookingId),
+        isNull(gearReservations.checkedOutAt),
+        isNull(gearReservations.returnedAt),
+      ),
+    )
+    .returning({ id: gearReservations.id });
+  return handedOver.length > 0 ? { ok: true } : { ok: false, reason: "not_found" };
+}
+
+/**
  * **Bring a whole rental set home in one act** (issue #1186, delight report
  * D26).
  *
@@ -1641,6 +1674,8 @@ export async function listAvailableGearUnits(
 
 export type TripGearAssignment = {
   reservationId: string;
+  /** The unit itself, so a caller can ask its service clocks about it. */
+  gearItemId: string;
   bookingId: string;
   kind: GearItemKind;
   label: string;
@@ -1659,6 +1694,7 @@ export async function listTripGearAssignments(
   const rows = await db
     .select({
       reservationId: gearReservations.id,
+      gearItemId: gearItems.id,
       // This is the departure roster's booking-only view.
       bookingId: bookings.id,
       kind: gearItems.kind,

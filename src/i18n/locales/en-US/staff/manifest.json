@@ -176,7 +176,7 @@
   "supportNeedsLabel": "Dive support",
   "emergency": {
     "heading": "In an emergency",
-    "empty": "No emergency numbers recorded. Add the chamber, the dive-accident hotline and your shore contact in Settings. The crew reads this offline.",
+    "empty": "No emergency numbers recorded for this shop.",
     "vesselLabel": "Vessel:",
     "shoreContactLabel": "Shore contact:",
     "planLabel": "If something goes wrong"

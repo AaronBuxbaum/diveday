@@ -33,6 +33,9 @@
     "cancel": "Cancel this departure"
   },
   "notices": {
+    "nextStepSaved": "Next step saved.",
+    "nextStepTooLong": "Keep the next step under 280 characters.",
+    "nextStepNotACourse": "This departure isn't a course session, so there is no next step to record.",
     "saved": "Changes saved.",
     "cancelled": "Trip cancelled. It's off the public schedule.",
     "reinstated": "Back on! The trip is on the schedule again.",
@@ -380,6 +383,11 @@
     "allClear": "Everyone's cleared to dive",
     "blockersReferenceHeading": "Blockers",
     "bookedOfCapacity": "{booked} of {capacity} booked",
+    "nextStepSummary": "Next step",
+    "nextStepLabel": "What this student does next",
+    "nextStepDescription": "The student reads this on their recap.",
+    "nextStepSave": "Save next step",
+    "nextStepSaving": "Saving\u2026",
     "certifyConfirm": "Confirm certification",
     "certifyDiver": "Certify",
     "certifyLevel": "Level",

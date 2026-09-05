@@ -110,6 +110,26 @@ export function formatShortDate(date: Date, locale = "en-US", timeZone: string):
   }).format(date);
 }
 
+/**
+ * A date a reader may be seeing months after it happened — "Sep 4, 2026".
+ *
+ * The year is the fact that matters and the weekday is not: a consent stamp
+ * beside a crew name answers *when did they agree*, and "Fri, Sep 4" leaves a
+ * reader guessing which September. `formatShortDate` makes the opposite trade
+ * for a departure a few days out, which is why this is a second formatter
+ * rather than an option on that one.
+ *
+ * `timeZone` stays required for the reason stated above `formatShortDate`.
+ */
+export function formatDateWithYear(date: Date, locale = "en-US", timeZone: string): string {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone,
+  }).format(date);
+}
+
 export function formatTime(date: Date, locale = "en-US", timeZone: string): string {
   return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     hour: "numeric",

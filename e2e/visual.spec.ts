@@ -4093,7 +4093,23 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "prep-assignments", scheme);
       });
 
-      // The slip the counter prints and hands over. Reached the way a staffer
+      // **The load-out, after one diver's set has been handed across** (issue
+      // #1185, delight report D25). The calm capture above shows the cart line
+      // and its pickers; this one shows the state a counter reaches by 7am —
+      // one set out, its Hand over gone, the return pane in its place.
+      test(`the prep page's load-out reads as handed over (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
+        const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
+        await assignments.getByRole("heading", { name: "Rental assignments" }).waitFor();
+        await assignments.getByRole("button", { name: "Hand over" }).first().click();
+        // Wait on what the destination renders, never on a timeout: the set
+        // that just went out has a return pane and no hand-over.
+        await assignments.getByRole("button", { name: "All good" }).first().waitFor();
+        await capture(page, "prep-load-out-handed-over", scheme);
+      });
+
+      // The slip the counter prints and hands over. Reached the way a staffer      // The slip the counter prints and hands over. Reached the way a staffer
       // reaches it — through the assignment row's own door, not a typed URL —
       // so the capture also proves the door appears for a diver who has units
       // on them.
@@ -5994,6 +6010,64 @@ for (const scheme of ["light", "dark"] as const) {
       // The row's own words, not a timing guess.
       await page.getByText(/currency and depth unit/).waitFor();
       await capture(page, "today-units-unconfirmed", scheme);
+    });
+
+    /**
+     * **The shop's own three sentences** (issue #1212).
+     *
+     * Filled through the shop's own form, in its own shop, because this writes
+     * shop-wide settings (ADR 20260815-per-test-private-shops) — the same
+     * reason the emergency capture below takes one.
+     */
+    test(`the shop's own words render true to the design (${scheme})`, async ({
+      page,
+      privateShop,
+    }) => {
+      await page.goto(`/shop/${privateShop.slug}/settings`);
+      await openSettingsRow(page, "Your own words");
+      await page
+        .getByLabel("What a first-timer reads before diving with you")
+        .fill("First time with us? Come find whoever is holding the clipboard — that's us.");
+      await page
+        .getByLabel("What to expect at the dock")
+        .fill("Park by the blue gate. We'll wave you down from the second slip.");
+      await page
+        .getByLabel("How you sign off a finished day")
+        .fill("Thanks for diving with us. The kettle's always on.");
+      await page.getByRole("button", { name: "Save your words" }).click();
+      // The row comes back open with its saved notice — the destination's own
+      // render, not a timing guess.
+      await page.getByText("Saved.").first().waitFor();
+      await capture(page, "settings-hospitality", scheme);
+    });
+
+    /**
+     * **A dive site with the shop's own planning note on it** (issue #1204),
+     * in the editor that writes it and on the library row that carries it.
+     *
+     * Its own shop: the note is written onto a dive-site row, and
+     * `/api/test/reset` restores the schedule rather than the library.
+     */
+    test(`a dive site's planning note renders true to the design (${scheme})`, async ({
+      page,
+      privateShop,
+    }) => {
+      await page.goto(`/shop/${privateShop.slug}/dive-sites`);
+      await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
+      await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
+      await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
+      await page
+        .getByLabel("What to remember about running this site")
+        .fill("The entry silted up after the storm. Brief the swim-through before you go in.");
+      await page.getByRole("button", { name: "Save dive site" }).click();
+      // The form settles in place; the frame worth keeping is one navigation
+      // on from it — the note in the list a shop plans against.
+      await expect(page.getByLabel("What to remember about running this site")).toHaveValue(
+        "The entry silted up after the storm. Brief the swim-through before you go in.",
+      );
+      await page.goto(`/shop/${privateShop.slug}/dive-sites`);
+      await page.getByText("The entry silted up after the storm").waitFor();
+      await capture(page, "dive-site-planning-note", scheme);
     });
 
     test(`the manifest prompts for an emergency reference nobody filled in (${scheme})`, async ({

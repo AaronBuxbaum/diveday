@@ -57,14 +57,16 @@ export async function buildAfterStateProps(input: {
       reviewUrl: shop.reviewUrl,
       brandColor: shop.brandColor,
       brandDisplayFont: shop.brandDisplayFont,
+      signOffNote: shop.signOffNote,
     },
     trip,
+    course: data.course,
     // The postcard's drawing: the first site the day dived, read the way the
     // home spine reads a departure's (`siteMarkFor`), or the sea fan for a
     // course session whatever the site.
     siteMark: siteMarkFor({
       siteName: data.sites[0]?.name ?? null,
-      isCourse: trip.courseTitle !== null,
+      isCourse: data.course !== null,
     }),
     when: formatShortDate(trip.startsAt, locale, shop.timezone),
     diverName: data.diverName,

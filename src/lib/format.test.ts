@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatByteSize,
   formatDateTimeTz,
+  formatDateWithYear,
   formatDayParts,
   formatOrdinal,
   formatRelativeDay,
@@ -36,6 +37,18 @@ describe("isValidTimeZone (CR-014)", () => {
 describe("formatShortDate", () => {
   it("renders weekday, month, and day", () => {
     expect(formatShortDate(morning, "en-US", "UTC")).toBe("Fri, Jul 17");
+  });
+});
+
+describe("formatDateWithYear", () => {
+  it("names the year and drops the weekday", () => {
+    expect(formatDateWithYear(morning, "en-US", "UTC")).toBe("Jul 17, 2026");
+  });
+
+  it("resolves the day in the named zone rather than the host's", () => {
+    // Late on the 16th in Honolulu, already the 17th in UTC — the assertion
+    // that fails if the `timeZone` argument is ever dropped on a UTC CI box.
+    expect(formatDateWithYear(morning, "en-US", "Pacific/Honolulu")).toBe("Jul 16, 2026");
   });
 });
 

@@ -10,9 +10,11 @@ import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units"
 import { DIVE_SITE_DIFFICULTIES, type DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
+import { MAX_PLANNING_NOTE_LENGTH, planningNoteIsFresh } from "@/lib/dive-site-memory";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import { MAX_SITE_IMAGES } from "@/lib/dive-sites";
 import { DOCK_DAY_LIMITS } from "@/lib/diver-planning";
+import { formatDateWithYear } from "@/lib/format";
 import type { CertificationLevel } from "@/lib/readiness";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import {
@@ -65,6 +67,10 @@ export type SiteFieldValues = {
   minimumCertificationLevel: CertificationLevel | null;
   requiredSpecialties: DiveSpecialty[];
   requiresNitrox: boolean;
+  /** The shop's own staff-only note about running this site (issue #1204). */
+  planningNote: string | null;
+  /** When it was written, so the editor can say whether it is still on the site list. */
+  planningNoteAt: Date | null;
 };
 
 /**
@@ -143,6 +149,8 @@ export function SiteFields({
   fieldGuideCopy,
   marineLifeCatalog,
   siteId,
+  locale,
+  timezone,
 }: {
   t: StaffTranslator;
   /** How this shop reads depth; the stored figure is always metres. */
@@ -162,6 +170,10 @@ export function SiteFields({
   marineLifeCatalog: FieldGuideCatalogEntry[];
   /** The site being edited, so a species request carries what they were writing. */
   siteId?: string | null;
+  /** The reader's negotiated locale, for the planning note's own date. */
+  locale: string;
+  /** The shop's zone, so that date reads as the day the shop lived. */
+  timezone: string;
 }) {
   // `ImageFileInput` is a Client Component, so its words arrive resolved.
   const imageInputCopy = {
@@ -511,6 +523,45 @@ export function SiteFields({
             </Field>
           </FieldGrid>
         </>
+      ),
+    },
+
+    // **What the shop wants to remember about running this site** (issue
+    // #1204) — the one box on this form no diver ever reads. The line above it
+    // exists only once there is a note: it says when it was written, and
+    // whether it has dropped off the site list, which is the only thing about
+    // the note the editor cannot show on its own.
+    planning: {
+      body: (
+        <FieldGrid columns={1} className="gap-y-5">
+          <Field
+            label={t("diveSites.form.planningNoteLabel")}
+            description={t("diveSites.form.planningNoteDescription")}
+            // The one thing the box cannot say for itself: when the note was
+            // written, and whether it has dropped off the site list. Rendered
+            // as the field's own hint rather than a paragraph wedged above the
+            // control, so it keeps the form's one grammar.
+            hint={
+              values?.planningNote && values.planningNoteAt
+                ? t(
+                    planningNoteIsFresh(values.planningNoteAt)
+                      ? "diveSites.planningNote.noted"
+                      : "diveSites.planningNote.expired",
+                    { date: formatDateWithYear(values.planningNoteAt, locale, timezone) },
+                  )
+                : undefined
+            }
+          >
+            <textarea
+              name="planningNote"
+              rows={3}
+              maxLength={MAX_PLANNING_NOTE_LENGTH}
+              defaultValue={values?.planningNote ?? ""}
+              placeholder={t("diveSites.form.planningNotePlaceholder")}
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
       ),
     },
 

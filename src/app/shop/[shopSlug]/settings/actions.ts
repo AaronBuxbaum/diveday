@@ -28,6 +28,7 @@ import {
   setShopDivingOptions,
   setShopDockDayRhythm,
   setShopEmergencyReference,
+  setShopHospitalityNotes,
   setShopPackingList,
   setShopPassThroughFee,
   setShopProfile,
@@ -820,6 +821,38 @@ export async function saveProfileAction(formData: FormData) {
   revalidatePath(`/s/${session.user.shopSlug}`);
   revalidatePath(settings);
   revalidateAndRedirect(settings, noticeUrl(settings, "profile-saved", { saved: "profile" }));
+}
+
+const hospitalitySchema = z.object({
+  welcomeNote: z.string().trim().max(280),
+  dockCallNote: z.string().trim().max(280),
+  signOffNote: z.string().trim().max(280),
+});
+
+/**
+ * **The shop's own words** (issue #1212), saved as typed.
+ *
+ * Nothing is templated, interpolated or previewed with a diver's name in it:
+ * these are the shop's sentences and they reach a reader verbatim, so the only
+ * thing this refuses is a sentence too long to be one (ADR
+ * 20260814-course-depth-markers — shop prose never routes through ICU).
+ */
+export async function saveHospitalityAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const parsed = hospitalitySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    redirect(noticeUrl(settings, "hospitality-too-long", { saved: "hospitality" }));
+  }
+
+  await setShopHospitalityNotes(await getDb(), session.user.shopId, parsed.data);
+  revalidatePath(`/s/${session.user.shopSlug}`);
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, "hospitality-saved", { saved: "hospitality" }),
+  );
 }
 
 /** Where the post-trip recap's "leave us a review" link sends a diver. */

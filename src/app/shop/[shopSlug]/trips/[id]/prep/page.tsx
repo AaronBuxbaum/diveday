@@ -37,7 +37,12 @@ import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader
 import { TripSurfaceNav } from "../_components/TripSurfaceNav";
 import { GearReturnPane } from "./_components/GearReturnPane";
 import { RentalUnitPicker } from "./_components/RentalUnitPicker";
-import { assignGearUnit, releaseGearUnitAction, returnTripGearSetAction } from "./actions";
+import {
+  assignGearUnit,
+  checkOutTripGearSetAction,
+  releaseGearUnitAction,
+  returnTripGearSetAction,
+} from "./actions";
 
 /** `?notice=` codes the gear-assignment forms redirect back with. Read through
  * `noticeFromParam`, never a bare index — the param is attacker-supplied. */
@@ -53,6 +58,8 @@ const GEAR_NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> =
   "gear-invalid": { tone: "danger", key: "gear.notice.invalid" },
   "gear-already-returned": { tone: "warning", key: "gear.notice.alreadyReturned" },
   "gear-returned-set": { tone: "success", key: "gear.notice.returnedSet" },
+  "gear-handed-over": { tone: "success", key: "gear.prep.notice.handedOver" },
+  "gear-nothing-to-hand-over": { tone: "warning", key: "gear.notice.nothingToHandOver" },
   "gear-concern-needs-words": { tone: "warning", key: "gear.notice.concernNeedsWords" },
   "gear-nothing-out": { tone: "warning", key: "gear.notice.nothingOut" },
 };
@@ -114,7 +121,8 @@ export default async function TripPrepPage({
   const t = staffTranslator(locale);
   const prep = await getTripPrep(db, shop, tripId);
   if (!prep) notFound();
-  const { trip, checklist, hotelPickups, gearFleetTotal, freeByKind, assignmentRows } = prep;
+  const { trip, checklist, hotelPickups, gearFleetTotal, freeByKind, loadOut, assignmentRows } =
+    prep;
 
   /**
    * The size a staffer pulls, or the honest reason there isn't one — null when
@@ -771,7 +779,26 @@ export default async function TripPrepPage({
               <h2 id="assignments-heading" className={SECTION_TITLE_CLASS}>
                 {t("gear.prep.heading")}
               </h2>
-              <p className="mt-1 text-sm text-muted print:hidden">{t("gear.prep.description")}</p>
+              {/* The cart, not a caption. What replaced a sentence restating
+                  the heading is the count a counter is working against — and
+                  its two exceptions, said only when there are any, so a clean
+                  load-out reads as one line rather than three reassurances
+                  (issue #1185). */}
+              {loadOut ? (
+                <p className="mt-1 text-sm text-muted print:hidden">
+                  {[
+                    t("gear.prep.cartLine", { units: loadOut.units, divers: loadOut.divers }),
+                    loadOut.stillToPick > 0
+                      ? t("gear.prep.cartStillToPick", { count: loadOut.stillToPick })
+                      : null,
+                    loadOut.serviceFlagged > 0
+                      ? t("gear.prep.cartServiceFlagged", { count: loadOut.serviceFlagged })
+                      : null,
+                  ]
+                    .filter((line) => line !== null)
+                    .join(" · ")}
+                </p>
+              ) : null}
               {/* **One grammar per diver, not two stacked lists.** A row used
                   to be a list of assigned units in one shape (a mono tag, a
                   kind, a release control) followed by a list of labelled
@@ -786,7 +813,7 @@ export default async function TripPrepPage({
                   className: "mt-3 divide-y divide-border overflow-hidden print:overflow-visible",
                 })}
               >
-                {assignmentRows.map(({ diver, assigned, wanted }) => (
+                {assignmentRows.map(({ diver, assigned, wanted, handedOver }) => (
                   <li
                     key={diver.bookingId}
                     className={`px-4 py-3 sm:px-5${assigned.length > 0 ? "" : " print:hidden"}`}
@@ -847,6 +874,24 @@ export default async function TripPrepPage({
                           </dd>
                         </div>
                       ))}
+                      {/* **The set goes out in one act too** (issue #1185,
+                          D25) — the mirror of the return pane below it. One
+                          deliberate hand-over per diver, offered only while
+                          there is something still on the wall to hand across:
+                          a set already out has nothing to give, and a set with
+                          nothing assigned is not a set. */}
+                      {assigned.length > 0 && !handedOver ? (
+                        <form action={checkOutTripGearSetAction} className="print:hidden">
+                          <input type="hidden" name="tripId" value={tripId} />
+                          <input type="hidden" name="bookingId" value={diver.bookingId} />
+                          <SubmitButton
+                            pendingLabel={t("gear.prep.handingOver")}
+                            className={buttonClass({ variant: "secondary", size: "sm" })}
+                          >
+                            {t("gear.prep.handOver")}
+                          </SubmitButton>
+                        </form>
+                      ) : null}
                       {/* **The set comes home in one act** (issue #1186, D26).
                           Only when something is actually out: a diver whose
                           units are still on the wall has nothing to return, and

@@ -16,6 +16,12 @@ export type ArrivalCardShop = {
   contactPhone: string | null;
   contactEmail: string | null;
   address: ShopAddressParts;
+  /**
+   * The shop's standing sentence about what happens at the dock (issue
+   * #1212), in the shop's own words. Used only where the departure wrote none
+   * of its own: two answers to one question is the defect.
+   */
+  dockCallNote: string | null;
 };
 
 export type ArrivalCardTrip = {
@@ -59,7 +65,7 @@ export function arrivalCardFacts(shop: ArrivalCardShop, trip: ArrivalCardTrip) {
     parkingNote: clean(trip.arrivalParkingNote),
     transitNote: clean(trip.arrivalTransitNote),
     lookFor: clean(trip.arrivalLookFor),
-    firstInteraction: clean(trip.arrivalFirstInteraction),
+    firstInteraction: clean(trip.arrivalFirstInteraction) ?? clean(shop.dockCallNote),
     photoUrl: clean(trip.arrivalPhotoUrl),
   };
 }

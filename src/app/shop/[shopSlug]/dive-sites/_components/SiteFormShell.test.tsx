@@ -14,6 +14,7 @@ const MESSAGES: Record<DiveSiteFormError, string> = {
   depthTooDeep: "That maximum depth is deeper than any dive site.",
   images: "One of those image links couldn't be used.",
   imagesUnconfigured: "Image hosting isn't set up for this shop yet.",
+  planningNoteTooLong: "Keep the planning note under 280 characters.",
   conflict: "Somebody else changed this briefing while you had it open.",
   nameTaken: "Another dive site here already goes by that name.",
 };

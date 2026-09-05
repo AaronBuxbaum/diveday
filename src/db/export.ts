@@ -855,6 +855,12 @@ export async function loadShopExportBundleInput(
             "brand_hero_image_alt",
             "established_year",
             "brand_badges",
+            // The shop's own three sentences (issue #1212). Written by hand,
+            // in one language, and read verbatim by divers — so they are the
+            // shop's to take away rather than something DiveDay regenerates.
+            "welcome_note",
+            "dock_call_note",
+            "sign_off_note",
             "created_at",
           ],
           rows: [
@@ -907,6 +913,9 @@ export async function loadShopExportBundleInput(
               shop.brandHeroImageAlt,
               shop.establishedYear,
               JSON.stringify(shop.brandBadges),
+              shop.welcomeNote,
+              shop.dockCallNote,
+              shop.signOffNote,
               shop.createdAt,
             ],
           ],
@@ -1749,6 +1758,15 @@ export async function loadShopExportBundleInput(
             // as `last_dived_band` above — and a shop that moved its data would
             // otherwise be asking every one of them again.
             "welcome_shared_at",
+            // The diver answered "anything changed?" for this seat. A statement
+            // they made on the day, the same kind of record as the two above.
+            "carried_facts_confirmed_at",
+            // The instructor's own words to this student, and who wrote them
+            // (issues #1196, #1205). The student read it on their recap; a
+            // shop moving its data takes the sentence with it.
+            "course_next_step",
+            "course_next_step_at",
+            "course_next_step_by_person_id",
             "hotel_pickup_location",
             "pickup_time",
             "payment_status",
@@ -1776,6 +1794,10 @@ export async function loadShopExportBundleInput(
               row.claimedAt,
               row.referralSource,
               row.welcomeSharedAt,
+              row.carriedFactsConfirmedAt,
+              row.courseNextStep,
+              row.courseNextStepAt,
+              row.courseNextStepByPersonId,
               row.hotelPickupLocation,
               row.pickupTime,
               payment?.status ?? "unpaid",
@@ -2424,6 +2446,13 @@ export async function loadShopExportBundleInput(
             // attribution is a rumour.
             "needs_staff_fit_by",
             "needs_staff_fit_by_name",
+            // When a staffer last confirmed this fit at the counter, on which
+            // piece, and who did it — the same id + name pair the flag above
+            // uses, for the same reason.
+            "fit_confirmed_at",
+            "fit_confirmed_item",
+            "fit_confirmed_by",
+            "fit_confirmed_by_name",
             "updated_at",
           ],
           rows: rentalFitRows.map((row) => [
@@ -2446,6 +2475,10 @@ export async function loadShopExportBundleInput(
             row.needsStaffFitNote,
             row.needsStaffFitBy,
             row.needsStaffFitBy ? personName.get(row.needsStaffFitBy) : null,
+            row.fitConfirmedAt,
+            row.fitConfirmedItem,
+            row.fitConfirmedBy,
+            row.fitConfirmedBy ? personName.get(row.fitConfirmedBy) : null,
             row.updatedAt,
           ]),
           note: EXPORT_FILE_NOTES["rental_fit.csv"],
@@ -2970,6 +3003,12 @@ export async function loadShopExportBundleInput(
             "route_note",
             "route_zoom",
             "image_urls",
+            // The shop's own staff-only note about running this site, and who
+            // wrote it (issue #1204). It never reached a diver, and it travels
+            // with the site for the same reason the drawn route does.
+            "planning_note",
+            "planning_note_at",
+            "planning_note_by_person_id",
             "deleted_at",
             "created_at",
           ],
@@ -3012,6 +3051,9 @@ export async function loadShopExportBundleInput(
             row.routeNote,
             row.routeZoom,
             JSON.stringify(row.imageUrls),
+            row.planningNote,
+            row.planningNoteAt,
+            row.planningNoteByPersonId,
             row.deletedAt,
             row.createdAt,
           ]),

@@ -44,6 +44,7 @@ import {
   recordTripInvitationAction,
   removeBookingAction,
   restoreInternalNoteAction,
+  saveCourseNextStepAction,
   saveRosterEmergencyContactAction,
   sendLastMinuteDealAction,
   undoRemoveBookingAction,
@@ -166,6 +167,7 @@ async function TripGuestsBody({
     confirmMatches,
     diverCandidates,
     notesByBooking,
+    courseNextStepByBooking,
     paymentsConnected,
     demand,
     lastMinute,
@@ -351,6 +353,10 @@ async function TripGuestsBody({
         certifyDiverAction={
           trip.course ? certifyDiverFromRosterAction.bind(null, shopSlug, tripId) : undefined
         }
+        saveCourseNextStepAction={
+          trip.course ? saveCourseNextStepAction.bind(null, shopSlug, tripId) : undefined
+        }
+        courseNextStepByBooking={courseNextStepByBooking}
         notesByBooking={notesByBooking}
         addNoteAction={addInternalNoteAction.bind(null, shopSlug, tripId)}
         deleteNoteAction={deleteInternalNoteAction.bind(null, shopSlug, tripId)}

@@ -102,6 +102,8 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
     const {
       maxDepth: _maxDepth,
       expectedBottomTime: _expectedBottomTime,
+      // The note and its author are one value on the row (issue #1204).
+      planningNote: planningNoteWords,
       ...siteFields
     } = parsed.fields;
     const site = await createDiveSiteForForm(await getDb(), {
@@ -114,6 +116,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       satelliteImageUrl: photos.photos.satelliteImageUrl,
       routeImageUrl: photos.photos.routeImageUrl,
       imageUrls: photos.photos.imageUrls,
+      planningNote: { words: planningNoteWords, byPersonId: activeSession.user.personId },
       minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
       requiresNitrox: formData.get("requiresNitrox") === "on",
@@ -182,6 +185,8 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
               landmarkCopy={landmarkEditorCopy(t)}
               fieldGuideCopy={fieldGuideEditorCopy(t)}
               marineLifeCatalog={marineLifeCatalogEntries(diverT)}
+              locale={locale}
+              timezone={shop.timezone}
               certificationDescription={t("diveSites.new.certificationDescription")}
             />
           </SiteFormShell>

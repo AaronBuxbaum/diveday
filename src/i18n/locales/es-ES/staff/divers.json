@@ -342,7 +342,7 @@
     "medicalClearanceDocumentFailed": "No se pudo guardar ese archivo de evaluación.",
     "medicalClearanceEvidenceRequired": "Indica el nombre del médico o adjunta su evaluación.",
     "medicalClearanceOutcomeRequired": "Indica qué decidió el médico.",
-    "medicalClearanceAnswerRecorded": "Este registro ya tiene la respuesta de un médico. Una evaluación nueva necesita una exención nueva.",
+    "medicalClearanceAnswerRecorded": "Este registro ya tiene la respuesta de un médico. Resérvale una plaza en una salida y envía desde ahí una exención nueva.",
     "medicalClearanceNoHold": "Este buceador no tiene nada pendiente de revisión médica aquí.",
     "medicalClearanceRecorded": "Autorización médica registrada. Este buceador ya no está retenido por revisión médica.",
     "medicalNotClearedRecorded": "Registrado. El médico no autorizó a esta persona, y la retención médica sigue en pie.",

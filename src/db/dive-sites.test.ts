@@ -26,6 +26,8 @@ import {
   updateDiveSiteForForm,
 } from "./dive-sites";
 import { diveSites, globalDiveSites, globalDiveSiteVersions } from "./schema";
+import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripDiveSitesPeek } from "./trips-record";
 
 describe("dive-site library", () => {
   /**
@@ -594,6 +596,112 @@ describe("published dive-site catalog paging", () => {
  * between them: it reverts every section to whatever the row held when that tab
  * opened. It used to do that silently (issue #820).
  */
+/**
+ * **The shop's own note about running a site** (issue #1204).
+ *
+ * Two rules, and the second is the one a careless save would break: the stamp
+ * moves only when the words do, and the note never reaches a diver.
+ */
+describe("a dive site's planning note", () => {
+  async function noteContext() {
+    const { db, shop } = await seededShopContext();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("the seeded shop has no staff");
+    const site = await createDiveSite(db, { shopId: shop.id, name: "Silted Entry Reef" });
+    return { db, shop, site, personId: staff.person.id };
+  }
+
+  const rowFor = async (db: Awaited<ReturnType<typeof noteContext>>["db"], siteId: string) => {
+    const [row] = await db.select().from(diveSites).where(eq(diveSites.id, siteId));
+    return row;
+  };
+
+  it("stamps who noted it and when, on a save that changes the words", async () => {
+    const { db, shop, site, personId } = await noteContext();
+    await updateDiveSite(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: site.name,
+      planningNote: { words: "  The entry silted up after the storm.  ", byPersonId: personId },
+    });
+    const row = await rowFor(db, site.id);
+    expect(row?.planningNote).toBe("The entry silted up after the storm.");
+    expect(row?.planningNoteAt).toBeInstanceOf(Date);
+    expect(row?.planningNoteByPersonId).toBe(personId);
+  });
+
+  it("leaves the stamp where it was when the note comes back unchanged", async () => {
+    // Re-saving a briefing must not refresh a note nobody re-thought, or the
+    // ninety-day window would measure the last press of Save instead.
+    const { db, shop, site, personId } = await noteContext();
+    const note = { words: "The entry silted up after the storm.", byPersonId: personId };
+    await updateDiveSite(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: site.name,
+      planningNote: note,
+    });
+    const first = await rowFor(db, site.id);
+
+    await updateDiveSite(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: site.name,
+      currentNote: "Ripping on the flood.",
+      planningNote: note,
+    });
+    const second = await rowFor(db, site.id);
+    expect(second?.planningNoteAt).toEqual(first?.planningNoteAt);
+    expect(second?.currentNote).toBe("Ripping on the flood.");
+  });
+
+  it("clears all three columns when the words are taken away", async () => {
+    const { db, shop, site, personId } = await noteContext();
+    await updateDiveSite(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: site.name,
+      planningNote: { words: "Brief the swim-through first.", byPersonId: personId },
+    });
+    await updateDiveSite(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: site.name,
+      planningNote: { words: "   ", byPersonId: personId },
+    });
+    const row = await rowFor(db, site.id);
+    expect(row?.planningNote).toBeNull();
+    expect(row?.planningNoteAt).toBeNull();
+    expect(row?.planningNoteByPersonId).toBeNull();
+  });
+
+  it("leaves the note alone for a caller that does not manage it", async () => {
+    // The CSV import and a template pull write briefings without ever seeing
+    // this box, and neither may wipe what a colleague wrote.
+    const { db, shop, site, personId } = await noteContext();
+    await updateDiveSite(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: site.name,
+      planningNote: { words: "Brief the swim-through first.", byPersonId: personId },
+    });
+    await updateDiveSite(db, shop.id, site.id, { shopId: shop.id, name: site.name });
+    expect((await rowFor(db, site.id))?.planningNote).toBe("Brief the swim-through first.");
+  });
+
+  it("never reaches the projection every diver-facing site reader shares", async () => {
+    // `getTripDiveSitesPeek` feeds the waiver success page and `/ready`. A
+    // column added to its projection would publish a staff note to divers with
+    // nothing failing, so the assertion is on the returned object's own keys.
+    const { db, shop } = await seededShopContext();
+    const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    if (!trip) throw new Error("the seeded shop has no departures");
+    const [peek] = await getTripDiveSitesPeek(db, trip.id);
+    if (!peek) throw new Error("the seeded departure names no site");
+    expect(Object.keys(peek)).toEqual([
+      "name",
+      "description",
+      "difficultyLevel",
+      "depthRange",
+      "imageUrls",
+    ]);
+  });
+});
+
 describe("a dive-site briefing saved from two tabs", () => {
   it("refuses the second save rather than reverting the first", async () => {
     const { db, shop } = await seededShopContext();

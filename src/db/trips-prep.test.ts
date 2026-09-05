@@ -1,9 +1,11 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
 import { seededShopContext } from "@/test/db";
-import { listAvailableGearUnits, reserveGearUnit } from "./gear";
+import { checkOutTripGearSet, listAvailableGearUnits, reserveGearUnit } from "./gear";
+import { gearItems } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { listStaff, setTripCrew } from "./trips-crew";
 import { getTripPrep } from "./trips-prep";
@@ -26,6 +28,36 @@ async function prepFor(ctx: Awaited<ReturnType<typeof context>>) {
   const prep = await getTripPrep(ctx.db, ctx.shop, ctx.tripId);
   if (!prep) throw new Error("prep missing for the seeded trip");
   return prep;
+}
+
+/** Put one tagged unit against the first diver who wants one, and hand the row back. */
+async function reserveOneUnit(ctx: Awaited<ReturnType<typeof context>>) {
+  const before = await prepFor(ctx);
+  const wanting = before.assignmentRows.find((entry) => entry.wanted.length > 0);
+  const need = wanting?.wanted[0];
+  if (!wanting || !need) throw new Error("seeded trip has no diver wanting a unit");
+  const window = tripReservationWindow(before.trip, ctx.shop.timezone);
+  const [unit] = await listAvailableGearUnits(ctx.db, ctx.shop.id, {
+    ...window,
+    todayLocal: calendarDateInTimezone(nowDate(), ctx.shop.timezone),
+    kind: need.kind,
+  });
+  if (!unit) throw new Error(`seeded shop has no available ${need.kind}`);
+  const reserved = await reserveGearUnit(ctx.db, {
+    shopId: ctx.shop.id,
+    gearItemId: unit.id,
+    bookingId: wanting.diver.bookingId,
+    tripId: ctx.tripId,
+    reservedFrom: window.from,
+    reservedUntil: window.until,
+  });
+  if (!reserved.ok) throw new Error(`reservation failed: ${reserved.reason}`);
+  const after = await prepFor(ctx);
+  const row = after.assignmentRows.find(
+    (entry) => entry.diver.bookingId === wanting.diver.bookingId,
+  );
+  if (!row) throw new Error("the reserved diver left the assignment rows");
+  return row;
 }
 
 describe("getTripPrep", () => {
@@ -114,6 +146,68 @@ describe("getTripPrep", () => {
       for (const [kind, units] of prep.freeByKind) {
         expect(units.every((unit) => unit.kind === kind)).toBe(true);
       }
+    });
+
+    /**
+     * **The cart** (issue #1185, delight report D25). The counts the load-out
+     * line states, derived from the rows themselves so the line and the rows
+     * cannot disagree — and absent entirely for a shop that hands nothing over.
+     */
+    describe("the load-out cart", () => {
+      it("is nothing at all for a shop with no gear register", async () => {
+        const ctx = await context();
+        // Opt-in by presence works in both directions (ADR
+        // 20260815-minimal-gear-register): take the register away and the cart
+        // goes with it, rather than rendering "0 units for 0 divers".
+        await ctx.db
+          .update(gearItems)
+          .set({ deletedAt: nowDate() })
+          .where(eq(gearItems.shopId, ctx.shop.id));
+        const prep = await prepFor(ctx);
+        expect(prep.gearFleetTotal).toBe(0);
+        expect(prep.loadOut).toBeNull();
+      });
+
+      it("counts the units and divers its own rows carry", async () => {
+        const prep = await prepFor(await context());
+        if (!prep.loadOut) throw new Error("seeded shop has a register, so it has a cart");
+        expect(prep.loadOut.units).toBe(
+          prep.assignmentRows.reduce((sum, row) => sum + row.assigned.length, 0),
+        );
+        expect(prep.loadOut.divers).toBe(prep.assignmentRows.length);
+        expect(prep.loadOut.stillToPick).toBe(
+          prep.assignmentRows.reduce((sum, row) => sum + row.wanted.length, 0),
+        );
+      });
+
+      it("states a zero rather than dropping the exception counts", async () => {
+        // The page decides what to say about an exception; the reader always
+        // answers with a number, so "nothing flagged" is never a missing field.
+        const prep = await prepFor(await context());
+        if (!prep.loadOut) throw new Error("seeded shop has a register, so it has a cart");
+        expect(typeof prep.loadOut.serviceFlagged).toBe("number");
+        expect(prep.loadOut.serviceFlagged).toBeGreaterThanOrEqual(0);
+        expect(prep.loadOut.stillToPick).toBeGreaterThanOrEqual(0);
+      });
+
+      it("calls a set handed over only once every unit on it has left", async () => {
+        const ctx = await context();
+        const row = await reserveOneUnit(ctx);
+        expect(row.handedOver).toBe(false);
+
+        expect(
+          await checkOutTripGearSet(ctx.db, {
+            shopId: ctx.shop.id,
+            bookingId: row.diver.bookingId,
+          }),
+        ).toEqual({ ok: true });
+
+        const after = await prepFor(ctx);
+        const updated = after.assignmentRows.find(
+          (entry) => entry.diver.bookingId === row.diver.bookingId,
+        );
+        expect(updated?.handedOver).toBe(true);
+      });
     });
 
     it("keeps fins wanted after the mask unit is reserved", async () => {

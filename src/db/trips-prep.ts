@@ -6,9 +6,19 @@ import {
   type HotelPickupRun,
   rentalFitLine,
 } from "@/lib/dive-prep";
-import { type GearAssignmentNeed, gearAssignmentNeeds, tripReservationWindow } from "@/lib/gear";
+import {
+  type GearAssignmentNeed,
+  gearAssignmentNeeds,
+  gearServiceState,
+  tripReservationWindow,
+} from "@/lib/gear";
 import type { AppDb } from "./client";
-import { countGearItemsByKind, listAvailableGearUnits, listTripGearAssignments } from "./gear";
+import {
+  countGearItemsByKind,
+  latestServiceClocks,
+  listAvailableGearUnits,
+  listTripGearAssignments,
+} from "./gear";
 import { listTripPrepDivers } from "./rental-fit";
 import { getTripCrewIds, getTripWithBooked, listStaff } from "./trips";
 
@@ -26,11 +36,29 @@ export type TripPrep = {
   gearFleetTotal: number;
   /** Units free for this departure's whole window, bucketed by kind. */
   freeByKind: Map<string, Awaited<ReturnType<typeof listAvailableGearUnits>>>;
+  /**
+   * The cart this departure is loading: how much is on it, for how many
+   * divers, and the two exceptions worth saying out loud (issue #1185).
+   *
+   * **Null when the shop has no gear register**, so the load-out cannot render
+   * a cart for a shop that hands nothing over — the same opt-in-by-presence
+   * rule `gearFleetTotal` states (ADR 20260815-minimal-gear-register).
+   */
+  loadOut: {
+    units: number;
+    divers: number;
+    /** Sizes a diver asked for that no unit is against yet. */
+    stillToPick: number;
+    /** Assigned units whose own service clock has already lapsed. */
+    serviceFlagged: number;
+  } | null;
   /** One row per diver who either holds a unit or wants one this shop tags. */
   assignmentRows: {
     diver: Awaited<ReturnType<typeof listTripPrepDivers>>[number];
     assigned: NonNullable<ReturnType<Awaited<ReturnType<typeof listTripGearAssignments>>["get"]>>;
     wanted: GearAssignmentNeed[];
+    /** Every unit on this row has left the counter — the whole set is out. */
+    handedOver: boolean;
   }[];
 };
 
@@ -104,9 +132,37 @@ export async function getTripPrep(
                   !assigned.some((assignment) => assignment.kind === item.kind),
               )
           : [];
-      return { diver, assigned, wanted };
+      return {
+        diver,
+        assigned,
+        wanted,
+        handedOver:
+          assigned.length > 0 && assigned.every((assignment) => assignment.checkedOutAt !== null),
+      };
     })
     .filter((row) => row.assigned.length > 0 || row.wanted.length > 0);
 
-  return { trip, checklist, hotelPickups, gearFleetTotal, freeByKind, assignmentRows };
+  // The cart, derived from the rows rather than counted a second time: a
+  // number the page and the rows could disagree about is worse than no number.
+  const assignedUnits = assignmentRows.flatMap((row) => row.assigned);
+  const serviceClocks = await latestServiceClocks(
+    db,
+    shop.id,
+    assignedUnits.map((assignment) => assignment.gearItemId),
+  );
+  const loadOut =
+    gearFleetTotal > 0
+      ? {
+          units: assignedUnits.length,
+          divers: assignmentRows.length,
+          stillToPick: assignmentRows.reduce((sum, row) => sum + row.wanted.length, 0),
+          serviceFlagged: assignedUnits.filter(
+            (assignment) =>
+              gearServiceState(serviceClocks.get(assignment.gearItemId) ?? [], todayLocal).state ===
+              "overdue",
+          ).length,
+        }
+      : null;
+
+  return { trip, checklist, hotelPickups, gearFleetTotal, freeByKind, loadOut, assignmentRows };
 }

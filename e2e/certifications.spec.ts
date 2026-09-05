@@ -179,6 +179,56 @@ test("an instructor certifies a diver from the course roster, and they can book 
   await expect(page.getByRole("heading", { name: /You.re on the boat/ })).toBeVisible();
 });
 
+/**
+ * **What the student does next** (issues #1196 and #1205, delight reports D36
+ * and D45).
+ *
+ * The box sits beside the certify tap and under the same condition, because
+ * both are things only a course session's instructor has to say. A fun dive
+ * offers neither, which is the LMS boundary made visible on the surface — the
+ * writer refuses one there too (`recordCourseNextStep`).
+ *
+ * Read against the seeded course session rather than a session built here:
+ * the fixture already has an instructor and a student on it, and what this
+ * walks is the box, not the scheduling that precedes it.
+ */
+test("an instructor writes a student's next step on the course session's own roster", async ({
+  page,
+}) => {
+  const trip = await findTripOnBoard(page, "blue-mantis", /Advanced Open Water Diver/);
+  await trip.click();
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+
+  // The disclosure is per student; the first one on this session's roster is
+  // the one this walks.
+  const summary = page.getByText("Next step", { exact: true }).first();
+  await summary.waitFor();
+  await summary.click();
+  const note = page.getByLabel("What this student does next").first();
+  await note.fill("Book your deep dive with Marcus before the card arrives.");
+  await page.getByRole("button", { name: "Save next step" }).first().click();
+  await expect(page.getByText("Next step saved.")).toBeVisible();
+
+  // It comes back in the box rather than as a blank field somebody has to
+  // retype — an instructor editing what they said is the ordinary case.
+  await page.getByText("Next step", { exact: true }).first().click();
+  await expect(page.getByLabel("What this student does next").first()).toHaveValue(
+    "Book your deep dive with Marcus before the card arrives.",
+  );
+});
+
+/** The other half of the boundary: an ordinary charter is offered neither act. */
+test("a fun dive's roster offers no certification and no next step", async ({ page }) => {
+  const trip = await findTripOnBoard(page, "blue-mantis", /Two-Tank Reef/);
+  const title = ((await trip.textContent()) ?? "").trim();
+  await trip.click();
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+  // The departure's own masthead is what says the page has rendered.
+  await page.getByRole("heading", { level: 1, name: title }).waitFor();
+  await expect(page.getByText("Next step", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Certify", { exact: true })).toHaveCount(0);
+});
+
 test("a diver record keeps card refusals visible and clears a wrong no-card stamp", async ({
   page,
   request,

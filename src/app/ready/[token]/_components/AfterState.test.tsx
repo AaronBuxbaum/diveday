@@ -47,6 +47,7 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
       depthUnit: "meters",
       temperatureUnit: "celsius",
       reviewUrl: null,
+      signOffNote: null,
       brandColor: null,
       brandDisplayFont: null,
     },
@@ -64,6 +65,7 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
     // A site is its name here and nothing else — see "what the record may
     // claim" below for why, and for the type assertion that now holds it.
     sites: [{ name: "French Reef" }],
+    course: null,
     shoutout: null,
     photos: [],
     maxPhotos: 12,
@@ -383,6 +385,7 @@ describe("one primary at rest", () => {
             reviewUrl: "https://g.page/r/blue-mantis/review",
             brandColor: null,
             brandDisplayFont: null,
+            signOffNote: null,
           },
           ownReview: { rating: 5, comment: "Vis was unreal." },
           params: { review: "published" },
@@ -406,6 +409,7 @@ describe("one primary at rest", () => {
             reviewUrl: "https://g.page/r/blue-mantis/review",
             brandColor: null,
             brandDisplayFont: null,
+            signOffNote: null,
           },
           ownReview: { rating: 5, comment: "Vis was unreal." },
         })}
@@ -481,6 +485,64 @@ describe("the keepsake prints like a logbook page", () => {
         expect(child.className).toContain("print:hidden");
       }
     }
+  });
+});
+
+/**
+ * **The shop's own sign-off, and only where the crew wrote none** (issue
+ * #1212). Two answers to one question is the defect, so the crew's words
+ * always win, and the standing sentence stands in only for the days nobody
+ * wrote anything.
+ */
+describe("the shop's sign-off", () => {
+  const signOff = "Thanks for diving with us. The kettle's always on.";
+  const withSignOff = (overrides: Partial<AfterStateProps> = {}) =>
+    props({
+      ...overrides,
+      shop: { ...props().shop, signOffNote: signOff },
+    });
+
+  it("renders when the crew wrote no shout-out", () => {
+    render(<AfterState {...withSignOff({ shoutout: null })} />);
+    expect(screen.getByText(signOff)).toBeInTheDocument();
+  });
+
+  it("stays silent under a shout-out somebody wrote today", () => {
+    render(<AfterState {...withSignOff({ shoutout: "Come back for the wreck." })} />);
+    expect(screen.queryByText(signOff)).toBeNull();
+  });
+
+  it("leaves the page with exactly one primary", () => {
+    const { container } = render(<AfterState {...withSignOff({ shoutout: null })} />);
+    expect(primaries(container)).toHaveLength(1);
+  });
+});
+
+/**
+ * **The course variant sits before the ask** (issues #1196, #1205). The review
+ * is this page's single primary in every variant, and a course session's own
+ * paragraph must not displace it.
+ */
+describe("a course session's recap", () => {
+  const course = {
+    title: "Advanced Open Water Diver",
+    nextStep: null,
+    certification: null,
+  } as const;
+
+  it("says what the shop recorded, above the one ask", () => {
+    const { container } = render(<AfterState {...props({ course })} />);
+    const said = container.textContent ?? "";
+    expect(said).toContain("recap.course.notYetCertified");
+    expect(said.indexOf("recap.course.notYetCertified")).toBeLessThan(
+      said.indexOf("reviews.askHeading"),
+    );
+    expect(primaries(container)).toHaveLength(1);
+  });
+
+  it("renders nothing at all on an ordinary charter", () => {
+    const { container } = render(<AfterState {...props({ course: null })} />);
+    expect(container.textContent).not.toContain("recap.course.");
   });
 });
 

@@ -204,6 +204,8 @@ export function RosterSection({
   deleteNoteAction,
   saveEmergencyContactAction,
   certifyDiverAction,
+  saveCourseNextStepAction,
+  courseNextStepByBooking,
   updatePickupAction,
   // Accepted for interface parity with callers/DepthUnit plumbing elsewhere
   // on this page, but `depthWarningText` already embeds its own unit
@@ -266,6 +268,15 @@ export function RosterSection({
    * roster — a fun dive has no completion to certify.
    */
   certifyDiverAction?: (formData: FormData) => void;
+  /**
+   * What this student does next, in the instructor's own words (issues #1196,
+   * #1205) — present under exactly the same condition as `certifyDiverAction`,
+   * because both are acts of teaching a course session and a roster that
+   * offered one without the other would be a roster that half-taught.
+   */
+  saveCourseNextStepAction?: (formData: FormData) => void;
+  /** What each student's next step already says, so an instructor edits rather than retypes. */
+  courseNextStepByBooking?: Map<string, string>;
   updatePickupAction?: (bookingId: string, formData: FormData) => void;
   /** How this shop reads depth; the stored figure is always metres. */
   depthUnit: DepthUnit;
@@ -784,6 +795,50 @@ export function RosterSection({
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {t("trips.roster.certifyConfirm")}
+              </SubmitButton>
+            </FieldGrid>
+          </details>
+        ) : null}
+
+        {/* What this student does next, written once and read on their recap
+            (issues #1196, #1205). Beside the card above and under the same
+            condition: both are things only a course session's instructor has
+            to say, and neither is offered on a fun dive. */}
+        {saveCourseNextStepAction ? (
+          <details className="mt-3">
+            <summary
+              className={buttonClass({
+                variant: "secondary",
+                size: "sm",
+                className: "cursor-pointer list-none",
+              })}
+            >
+              {t("trips.roster.nextStepSummary")}
+            </summary>
+            <FieldGrid
+              as="form"
+              action={saveCourseNextStepAction}
+              columns={1}
+              className="mt-2 gap-y-3 sm:w-72"
+            >
+              <input type="hidden" name="bookingId" value={booking.id} />
+              <Field
+                label={t("trips.roster.nextStepLabel")}
+                description={t("trips.roster.nextStepDescription")}
+              >
+                <textarea
+                  name="note"
+                  rows={2}
+                  maxLength={280}
+                  defaultValue={courseNextStepByBooking?.get(booking.id) ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <SubmitButton
+                pendingLabel={t("trips.roster.nextStepSaving")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("trips.roster.nextStepSave")}
               </SubmitButton>
             </FieldGrid>
           </details>

@@ -18,6 +18,7 @@ import {
   setBookingPickupDetails,
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { recordCourseNextStep } from "@/db/course-next-step";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { sendNotification } from "@/db/notifications";
 import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
@@ -1309,6 +1310,47 @@ export async function certifyDiverFromRosterAction(
     noticeUrl(
       back,
       written ? (level ? "certified" : "certified-awaiting-card") : "certify-failed",
+      { bid: bookingId },
+    ),
+  );
+}
+
+/**
+ * **What this student does next, in the instructor's own words** (issues #1196
+ * and #1205).
+ *
+ * Beside the certify tap and under the same condition, because both are acts
+ * of teaching a session. The refusals come from the writer rather than from
+ * here: a departure with no course is `not_a_course_session`, which is the LMS
+ * boundary stated in code (`recordCourseNextStep`).
+ */
+export async function saveCourseNextStepAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const bookingId = String(formData.get("bookingId") ?? "");
+  if (!bookingId) redirect(back);
+
+  const outcome = await recordCourseNextStep(await getDb(), {
+    shopId: s.user.shopId,
+    bookingId,
+    instructorPersonId: s.user.personId,
+    note: String(formData.get("note") ?? ""),
+  });
+  revalidateAndRedirect(
+    back,
+    noticeUrl(
+      back,
+      outcome.ok
+        ? "next-step-saved"
+        : outcome.reason === "too_long"
+          ? "next-step-too-long"
+          : outcome.reason === "not_a_course_session"
+            ? "next-step-not-a-course"
+            : "invalid",
       { bid: bookingId },
     ),
   );

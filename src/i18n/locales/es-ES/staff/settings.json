@@ -151,6 +151,20 @@
       "brandPreview": "Cómo se ve",
       "brandPreviewNight": "De noche"
     },
+    "hospitality": {
+      "heading": "Tus propias palabras",
+      "value": "{count, plural, one {# escrita} other {# escritas}}",
+      "hint": "Los buceadores leen esto en el idioma en que lo escribas.",
+      "welcomeLabel": "Lo que lee quien bucea contigo por primera vez",
+      "dockCallLabel": "Qu\u00e9 esperar en el muelle",
+      "signOffLabel": "C\u00f3mo despides un d\u00eda terminado",
+      "save": "Guardar tus palabras",
+      "saving": "Guardando\u2026",
+      "notice": {
+        "saved": "Guardado.",
+        "tooLong": "Mant\u00e9n cada una por debajo de 280 caracteres."
+      }
+    },
     "address": {
       "heading": "Dirección del centro",
       "detail": "La dirección comercial del centro, no la de alguien del equipo. Se publica para que los buscadores te ubiquen como un lugar real. Busca tu centro por nombre o dirección y elígelo: con eso queda guardado.",
@@ -545,7 +559,7 @@
       "saving": "Guardando…"
     },
     "languagesEmpty": "No indicado",
-    "publicNameSeen": "Los buceadores ven “{name}”"
+    "publicNameSeen": "Los buceadores ven “{name}”, aceptado el {date}"
   },
   "safetyChecklist": {
     "eyebrow": "Ajustes",

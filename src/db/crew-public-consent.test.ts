@@ -386,7 +386,7 @@ describe("setCrewPublicConsent", () => {
  * under their name by opening `/s/<slug>/trips/<id>` departure by departure.
  */
 describe("listShopStaff and the name a diver reads", () => {
-  it("carries the stored name for somebody who consented", async () => {
+  it("carries the stored name and the day it was agreed, for somebody who consented", async () => {
     const { db, shop } = await seededShopContext();
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seeded shop has no staff");
@@ -407,6 +407,10 @@ describe("listShopStaff and the name a diver reads", () => {
     // public page have to be able to disagree with the record, because that is
     // the whole point of the person typing it (issue #1351).
     expect(row?.crewPublicName).toBe("Mar");
+    // And when they agreed, which is the fact an owner asked about on the
+    // Verdicts board: a name on a public page with no date beside it says
+    // nothing about whether anyone ever said yes.
+    expect(row?.crewPublicConsentAt).toBeInstanceOf(Date);
   });
 
   /**
@@ -468,6 +472,10 @@ describe("listShopStaff and the name a diver reads", () => {
     const row = (await listShopStaff(db, shop.id)).find((r) => r.personId === member.personId);
     expect(row?.crewPublicName).toBe("Mar");
     expect(row?.accountStatus).toBe("disabled");
+    // The stamp follows the name rather than leading it: the surface renders
+    // the date only where it renders the name, so a disabled row states
+    // nothing about a consent no page is acting on.
+    expect(row?.crewPublicConsentAt).toBeInstanceOf(Date);
   });
 
   /**
@@ -501,9 +509,16 @@ describe("listShopStaff and the name a diver reads", () => {
     });
 
     const roster = await listShopStaff(db, shop.id);
-    expect(roster.find((member) => member.personId === staff.person.id)?.crewPublicName).toBeNull();
+    const declined = roster.find((member) => member.personId === staff.person.id);
+    expect(declined?.crewPublicName).toBeNull();
+    // Neither half survives a decline. A stamp left behind would be exactly the
+    // list of who said no that this boundary exists to prevent.
+    expect(declined?.crewPublicConsentAt).toBeNull();
     // The seed's own consenting crew member, untouched by this test, is what
     // makes the null above mean something.
     expect(roster.filter((member) => member.crewPublicName !== null).length).toBeGreaterThan(0);
+    expect(roster.filter((member) => member.crewPublicConsentAt !== null).length).toBeGreaterThan(
+      0,
+    );
   });
 });

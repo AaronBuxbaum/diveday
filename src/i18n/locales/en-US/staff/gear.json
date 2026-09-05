@@ -137,7 +137,8 @@
     "imported": "Imported {events} service events across {units} new units, plus {assignments} historical assignments. {skipped} duplicate service events and {assignmentSkipped} unmatched or duplicate assignments were left alone.",
     "returnedSet": "Back on the wall.",
     "concernNeedsWords": "A service concern needs a line saying what happened, so a technician can act on it.",
-    "nothingOut": "Nothing from that set is out."
+    "nothingOut": "Nothing from that set is out.",
+    "nothingToHandOver": "That set is already out."
   },
   "import": {
     "eyebrow": "Settings",
@@ -223,7 +224,11 @@
   },
   "prep": {
     "heading": "Rental assignments",
-    "description": "Which tagged unit each renting diver takes, reserved for the departure's dates.",
+    "cartLine": "{units, plural, one {# unit} other {# units}} for {divers, plural, one {# diver} other {# divers}}",
+    "cartStillToPick": "{count, plural, one {# piece still to pick} other {# pieces still to pick}}",
+    "cartServiceFlagged": "{count, plural, one {# unit with service overdue} other {# units with service overdue}}",
+    "handOver": "Hand over",
+    "handingOver": "Handing over…",
     "outLabel": "out",
     "kindWithSize": "{kindLabel} · {size}",
     "noneFree": "No {kindLabel} free for these dates.",
@@ -231,6 +236,7 @@
     "ticketDoor": "Rental ticket",
     "notice": {
       "assigned": "Assigned.",
+      "handedOver": "Handed over.",
       "released": "Assignment released.",
       "unitUnavailable": "Somebody got that unit first. Pick another.",
       "unitOutOfService": "That unit is off the wall for service.",

@@ -267,7 +267,7 @@
   },
   "/shop/[shopSlug]/dive-sites": {
     "e2e": ["depth-and-age-surfaces.spec.ts", "dive-sites.spec.ts"],
-    "visual": ["dive-sites-library"],
+    "visual": ["dive-site-planning-note", "dive-sites-library"],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/dive-sites/[id]": {
@@ -425,6 +425,7 @@
     "visual": [
       "settings-address",
       "settings-data-unfinished",
+      "settings-hospitality",
       "settings-payments",
       "settings-tax",
       "settings-trial"
@@ -493,6 +494,7 @@
       "add-diver.spec.ts",
       "blowout.spec.ts",
       "boat-loop.spec.ts",
+      "certifications.spec.ts",
       "check-in.spec.ts",
       "courses.spec.ts",
       "depth-and-age-surfaces.spec.ts",
@@ -585,7 +587,13 @@
       "nitrox.spec.ts",
       "support-needs.spec.ts"
     ],
-    "visual": ["prep", "prep-assignments", "prep-by-diver", "prep-no-nitrox"]
+    "visual": [
+      "prep",
+      "prep-assignments",
+      "prep-by-diver",
+      "prep-load-out-handed-over",
+      "prep-no-nitrox"
+    ]
   },
   "/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]": {
     "e2e": ["gear.spec.ts"],

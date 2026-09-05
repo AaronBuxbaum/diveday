@@ -5,7 +5,9 @@ import { nowDate, nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeCourtesy, fakeEmail, fakeSms } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
+import { recordCourseNextStep } from "./course-next-step";
 import { recordDiverOwnLocale } from "./people";
+import { issueShopCertification } from "./readiness";
 import {
   addCrewRecapPhoto,
   addRecapPhoto,
@@ -27,6 +29,7 @@ import {
 } from "./recap";
 import {
   bookings,
+  certifications,
   notificationDeliveries,
   people,
   priorVisits,
@@ -37,7 +40,7 @@ import {
 import { setShopCurrency, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
-import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
+import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 const ORIGIN = "https://diveday.test";
 
@@ -292,6 +295,134 @@ async function pendingTipContext() {
  * no branch up there can widen what a dead recap URL discloses (ADR
  * 20260827-first-light, decision 3; issue #1119).
  */
+/**
+ * **A recap never implies a credential nobody issued** (issues #1196 and
+ * #1205, delight reports D36 and D45).
+ *
+ * The reader may print a certification only for a row this shop issued, from
+ * *this* departure, standing as verified. The four negatives below are the
+ * whole guard: a self-declared card, a pending one, an imported one, and a
+ * verified one issued from a different session each leave the recap saying
+ * plainly that nothing was recorded.
+ */
+describe("the course recap's certification", () => {
+  async function courseSessionContext() {
+    const { db, shop } = await seededShopContext();
+    const all = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const session = all.find((trip) => trip.title.startsWith("Advanced Open Water Diver"));
+    if (!session) throw new Error("the seeded shop is missing its course session");
+    const [student] = await getTripRoster(db, shop.id, session.id);
+    if (!student) throw new Error("the seeded course session has an empty roster");
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("the seeded shop has no staff");
+    return {
+      db,
+      shop,
+      session,
+      bookingId: student.booking.id,
+      personId: student.person.id,
+      instructorId: staff.person.id,
+    };
+  }
+
+  it("names the course and records no certification until one is issued", async () => {
+    const { db, bookingId } = await courseSessionContext();
+    const data = await getRecapPageData(db, bookingId);
+    expect(data?.course?.title).toContain("Advanced Open Water");
+    expect(data?.course?.certification).toBeNull();
+  });
+
+  it("carries no course at all for an ordinary charter", async () => {
+    const { db, bookingId } = await recapContext();
+    expect((await getRecapPageData(db, bookingId))?.course).toBeNull();
+  });
+
+  it("prints the card this shop issued from this session", async () => {
+    const { db, shop, session, bookingId, personId, instructorId } = await courseSessionContext();
+    const issued = await issueShopCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: session.id,
+      issuedByPersonId: instructorId,
+      level: "advanced_open_water",
+    });
+    expect(issued, "the seeded session could not issue its own card").not.toBeNull();
+
+    const data = await getRecapPageData(db, bookingId);
+    expect(data?.course?.certification?.level).toBe("advanced_open_water");
+    expect(data?.course?.certification?.issuedAt).toBeInstanceOf(Date);
+  });
+
+  it("ignores every card that is not this session's own verified issue", async () => {
+    const { db, shop, session, bookingId, personId } = await courseSessionContext();
+    const other = (await upcomingTripsWithCounts(db, shop.id, new Date(0))).find(
+      (trip) => trip.id !== session.id,
+    );
+    if (!other) throw new Error("the seeded shop has one departure");
+
+    // 1. Self-declared: the diver's own word, never the shop's record.
+    // 2. Pending: sighted but not yet confirmed.
+    // 3. Imported: carried in from a spreadsheet, provenance unknown.
+    // 4. Verified, this shop's — but issued from another departure.
+    await db.insert(certifications).values([
+      {
+        shopId: shop.id,
+        personId,
+        agency: "padi",
+        level: "rescue",
+        selfDeclaredAt: nowDate(),
+        status: "pending",
+      },
+      {
+        shopId: shop.id,
+        personId,
+        agency: "padi",
+        level: "rescue",
+        identifier: "PENDING-1",
+        status: "pending",
+        issuedByShopAt: nowDate(),
+        issuedFromTripId: session.id,
+      },
+      {
+        shopId: shop.id,
+        personId,
+        agency: "padi",
+        level: "rescue",
+        identifier: "IMPORTED-1",
+        status: "verified",
+        importedAt: nowDate(),
+      },
+      {
+        shopId: shop.id,
+        personId,
+        agency: "padi",
+        level: "rescue",
+        identifier: "OTHER-TRIP",
+        status: "verified",
+        issuedByShopAt: nowDate(),
+        issuedFromTripId: other.id,
+      },
+    ]);
+
+    expect((await getRecapPageData(db, bookingId))?.course?.certification).toBeNull();
+  });
+
+  it("prints the instructor's next step under their name, and nothing when there is none", async () => {
+    const { db, shop, bookingId, instructorId } = await courseSessionContext();
+    expect((await getRecapPageData(db, bookingId))?.course?.nextStep).toBeNull();
+
+    await recordCourseNextStep(db, {
+      shopId: shop.id,
+      bookingId,
+      instructorPersonId: instructorId,
+      note: "Book your deep dive before the card arrives.",
+    });
+    const data = await getRecapPageData(db, bookingId);
+    expect(data?.course?.nextStep?.words).toBe("Book your deep dive before the card arrives.");
+    expect(data?.course?.nextStep?.byName).toBeTruthy();
+  });
+});
+
 describe("getRecapPageState", () => {
   it("hands back the recap itself while there is one to read", async () => {
     const { db, bookingId } = await recapContext();

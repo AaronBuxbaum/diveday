@@ -19,6 +19,7 @@ import { languageNameIn } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
+import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { requireShopSurface } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
@@ -217,6 +218,7 @@ function StaffRow({
   notice,
   priorRoles,
   locale,
+  timezone,
   t,
 }: {
   member: StaffMember;
@@ -225,6 +227,8 @@ function StaffRow({
   /** The roles this row held before the save it just made — its Undo, or nothing. */
   priorRoles: Role[];
   locale: string;
+  /** The shop's own zone, so a consent stamp reads as the day the shop lived. */
+  timezone: string;
   t: StaffTranslator;
 }) {
   const status = statusBadge(t)[member.accountStatus];
@@ -246,9 +250,15 @@ function StaffRow({
               somebody's consent from the other side. Nothing at all for
               somebody who declined — a row that said so would be a list of who
               declined, which is the boundary the feature rests on. */}
-          {publicName(member) ? (
+          {/* The stamp rides the name and only the name: a row with no name
+              shows nothing at all, so a declined answer and a never-asked one
+              stay indistinguishable (issue #1357). */}
+          {publicName(member) && member.crewPublicConsentAt ? (
             <p className="text-sm text-muted">
-              {t("settings.team.publicNameSeen", { name: publicName(member) })}
+              {t("settings.team.publicNameSeen", {
+                name: publicName(member),
+                date: formatDateWithYear(member.crewPublicConsentAt, locale, timezone),
+              })}
             </p>
           ) : null}
         </div>
@@ -665,6 +675,7 @@ export default async function TeamSettingsPage({
                   notice={pageNotice}
                   priorRoles={rolesFor === member.personId ? undoRolesFor : []}
                   locale={locale}
+                  timezone={shop.timezone}
                   t={t}
                 />
               ))}

@@ -350,6 +350,25 @@ export const shops = pgTable(
      * shape as `conservation_commitments`, and like it these are shop claims.
      */
     brandBadges: jsonb("brand_badges").$type<string[]>().notNull().default([]),
+    /**
+     * The shop's own three sentences (issue #1212): what a first-timer reads
+     * before diving with them, what to expect at the dock, and how a finished
+     * day is signed off.
+     *
+     * **Monolingual by design**, and the same trade ADR
+     * 20260813-dive-site-briefings-are-the-shops-own-words made: these are the
+     * shop's words, rendered verbatim and uncaptioned wherever they appear, so
+     * they arrive in the language they were typed rather than the reader's.
+     * Never through ICU — a swallowed error would take the paragraph with it
+     * (ADR 20260814-course-depth-markers).
+     *
+     * Blank normalises to NULL in the writer, so "unset" has exactly one
+     * shape, and each is bounded at 280 characters by
+     * `shops_hospitality_notes_bounded`.
+     */
+    welcomeNote: text("welcome_note"),
+    dockCallNote: text("dock_call_note"),
+    signOffNote: text("sign_off_note"),
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -375,6 +394,15 @@ export const shops = pgTable(
     check(
       "shops_established_year_plausible",
       sql`${table.establishedYear} IS NULL OR (${table.establishedYear} >= 1900 AND ${table.establishedYear} <= 2100)`,
+    ),
+    // Three sentences, not three paragraphs: each of the shop's own words is
+    // read in passing — on a thread, on an arrival card, at the foot of a
+    // recap — and the bound is what keeps it that.
+    check(
+      "shops_hospitality_notes_bounded",
+      sql`(${table.welcomeNote} is null or length(${table.welcomeNote}) <= 280)
+        and (${table.dockCallNote} is null or length(${table.dockCallNote}) <= 280)
+        and (${table.signOffNote} is null or length(${table.signOffNote}) <= 280)`,
     ),
     // `#rrggbb`, lowercase, or nothing — the one shape `src/lib/brand.ts` parses.
     check(
@@ -1456,10 +1484,41 @@ export const diveSites = pgTable(
      * form.
      */
     rowVersion: integer("row_version").notNull().default(0),
+    /**
+     * **What the shop wants to remember about running this site** (issue
+     * #1204) — the silted-up entry, the mooring ball somebody moved, the
+     * ranger who wants a call first.
+     *
+     * Staff-only, and the one column on this row that is: every other piece of
+     * prose here is written for a diver to read. It is deliberately absent
+     * from `getTripDiveSitesPeek`'s projection and from every reader under
+     * `src/app/s/**`, which `src/db/dive-sites.test.ts` asserts on the
+     * returned keys rather than trusting a reviewer to notice.
+     *
+     * Stamped with who noted it and when. The stamp only moves when the words
+     * change, so re-saving a briefing does not refresh a note nobody
+     * re-thought, and the note leaves the *site list* after
+     * `PLANNING_NOTE_FRESH_DAYS` rather than being erased — an expiry is a
+     * note falling off a planning surface, not a record being destroyed.
+     */
+    planningNote: text("planning_note"),
+    planningNoteAt: timestamp("planning_note_at", { withTimezone: true }),
+    planningNoteByPersonId: uuid("planning_note_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("dive_sites_shop_name_unique").on(table.shopId, table.name),
+    // All three or none: a note nobody is recorded as having written, or a
+    // stamp with no words under it, is a row no surface can render honestly.
+    check(
+      "dive_sites_planning_note_attributed",
+      sql`(${table.planningNote} is null) = (${table.planningNoteAt} is null)
+        and (${table.planningNoteAt} is null) = (${table.planningNoteByPersonId} is null)`,
+    ),
+    check(
+      "dive_sites_planning_note_not_blank",
+      sql`${table.planningNote} is null or length(btrim(${table.planningNote})) > 0`,
+    ),
     index("dive_sites_shop_name_idx").on(table.shopId, table.name),
     // Null (the shop's own number applies) or a real duration — never zero,
     // for the same reason `shops_bottom_time_minutes_positive` exists.
@@ -2516,10 +2575,39 @@ export const bookings = pgTable(
      * every shop surface forever, which is the badge D22 exists to refuse.
      */
     welcomeSharedAt: timestamp("welcome_shared_at", { withTimezone: true }),
+    /**
+     * **What the instructor told this student to do next** (issues #1196 and
+     * #1205), written from the course session's own roster and read back by
+     * the student on their recap.
+     *
+     * The instructor's own words, in the instructor's own language, printed
+     * verbatim under their name — never DiveDay inferring a next step, and
+     * never a credential. A note is refused outright on a departure with no
+     * course (`recordCourseNextStep`), which is where the LMS boundary lives
+     * in code rather than in a comment.
+     *
+     * All three columns move together, and clearing the words clears the
+     * stamp and the author with them.
+     */
+    courseNextStep: text("course_next_step"),
+    courseNextStepAt: timestamp("course_next_step_at", { withTimezone: true }),
+    courseNextStepByPersonId: uuid("course_next_step_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("bookings_trip_person_unique").on(table.tripId, table.personId),
+    // A next step nobody is recorded as having written is not one a student
+    // should read, and a stamp with no words under it renders nothing.
+    check(
+      "bookings_course_next_step_attributed",
+      sql`(${table.courseNextStep} is null) = (${table.courseNextStepAt} is null)
+        and (${table.courseNextStepAt} is null) = (${table.courseNextStepByPersonId} is null)`,
+    ),
+    check(
+      "bookings_course_next_step_bounded",
+      sql`${table.courseNextStep} is null
+        or (length(btrim(${table.courseNextStep})) > 0 and length(${table.courseNextStep}) <= 280)`,
+    ),
     index("bookings_trip_idx").on(table.tripId),
     /** Backs the diver-record lookups (getDiverProfile, payment/booking history joins). */
     index("bookings_shop_person_idx").on(table.shopId, table.personId),

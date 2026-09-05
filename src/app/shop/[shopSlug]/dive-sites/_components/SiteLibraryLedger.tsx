@@ -7,6 +7,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { SiteLibraryGroupLabel } from "@/lib/dive-site-difficulty";
+import { planningNoteIsFresh } from "@/lib/dive-site-memory";
 import { siteFitCutsAgainstGroup, siteLibraryRequirement } from "@/lib/dive-sites";
 import { type SiteFitTone, siteFit } from "@/lib/diver-planning";
 
@@ -201,6 +202,13 @@ function SiteRow({
       <div className="min-w-0 py-2">
         <p className="font-medium break-words">{site.name}</p>
         <p className="mt-0.5 text-sm break-words text-muted">{meta.join(" · ")}</p>
+        {/* What the shop wants to remember about running this site, while it
+            is still recent enough to plan against (issue #1204). A site with
+            no note, or one that has aged past the window, shows nothing —
+            the note is still on the row and still on its own editor. */}
+        {planningNoteIsFresh(site.planningNoteAt) && site.planningNote ? (
+          <p className="mt-0.5 text-sm break-words text-muted">{site.planningNote}</p>
+        ) : null}
       </div>
     </LedgerRow>
   );
