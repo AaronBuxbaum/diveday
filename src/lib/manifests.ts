@@ -543,6 +543,36 @@ export function crewRollCallCounts(
 }
 
 /**
+ * **Is every crew member this trip names accounted for at this checkpoint?**
+ *
+ * The crew half of {@link rollCallCompleteness}, extracted so a second surface
+ * cannot answer it differently. The rule is "at least one rostered body
+ * aboard, and everybody rostered accounted for" — the reasoning is in that
+ * function's docblock, and it is the reasoning that matters here too: a crew
+ * recorded ashore at the dock is *accounted for* and carries forward, so a
+ * trip whose whole roster was marked not-aboard would otherwise close every
+ * checkpoint with nobody aboard.
+ *
+ * **The evening reads this too** (ADR 20260904-reef-all-the-way-down, slice
+ * 16h; issue #1346). `assembleEveningClose` used to reach "all boats are home"
+ * from the absence of a `listRollCallGaps` row, and those rows count only crew
+ * who already have a result — so a shop that has never tapped a crew roll call
+ * could never raise a crew gap, the shop home said every boat was home, and
+ * the same boat's manifest said `crew_awaiting`. Both surfaces call this now,
+ * so the home and the manifest cannot drift again.
+ */
+export function crewIsAccountedFor(
+  checkpoint: RollCallCheckpoint,
+  crew: readonly CrewRollCallSubject[],
+): boolean {
+  const { crewAssigned, crewAwaiting, crewNotBackAboard, crewAshore } = crewRollCallCounts(
+    checkpoint,
+    crew,
+  );
+  return crewAssigned - crewAshore > 0 && crewAwaiting === 0 && crewNotBackAboard === 0;
+}
+
+/**
  * Why a checkpoint is not closed yet. Codes, not sentences — the UI picks the
  * words from each locale's staff bundle.
  *
@@ -677,7 +707,7 @@ export function rollCallCompleteness(input: {
   // 20260804). Under the retired attestation this state still cost a human
   // saying "0 aboard" out loud; dropping the count must not make it free.
   const crewAboard = crewAssigned - crewAshore;
-  const crewAccountedFor = crewAboard > 0 && crewAwaiting === 0 && crewNotBackAboard === 0;
+  const crewAccountedFor = crewIsAccountedFor(input.checkpoint, input.crew);
   const crewReason: CrewIncompleteReason | null =
     crewNotBackAboard > 0
       ? "crew_not_back_aboard"

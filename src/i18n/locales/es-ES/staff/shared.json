@@ -314,7 +314,8 @@
       "staffCredentialDue": "Credencial",
       "unitsUnconfirmed": "Configuración",
       "helpRequest": "Solicitud de ayuda",
-      "sayHello": "Saluda"
+      "sayHello": "Saluda",
+      "rentalFit": "Equipo"
     },
     "blockerAction": {
       "setRequirements": "Configurar requisitos",
@@ -425,7 +426,8 @@
       "openGearRegister": "Abrir registro de equipo",
       "openGearUnit": "Abrir ficha de la unidad",
       "openStaffing": "Abrir personal",
-      "openUnits": "Abrir unidades"
+      "openUnits": "Abrir unidades",
+      "openDiver": "Abrir ficha del buceador"
     },
     "greeting": {
       "morning": "Buenos días, {name}",
@@ -474,7 +476,10 @@
       "dueBackDetail": "{unitLabel} debe devolverse hoy.",
       "serviceDueDetail": "{clockLabel} vence el {dueOn}.",
       "serviceOverdueDetail": "{clockLabel} venció el {dueOn}.",
-      "neverPickedUpDetail": "{unitLabel} estaba reservado hasta el {dueOn} y nunca se recogió. Libéralo."
+      "neverPickedUpDetail": "{unitLabel} estaba reservado hasta el {dueOn} y nunca se recogió. Libéralo.",
+      "fitConfirmDetail": "El {unitLabel} de {name} salió en talla {size}. ¿La guardamos como su talla?",
+      "fitConfirmKeep": "Guardarla",
+      "fitConfirmSaving": "Guardando"
     },
     "staffCredential": {
       "dueDetail": "La renovación de {credential} para esta persona es el {dueOn}.",

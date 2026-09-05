@@ -1,5 +1,9 @@
 import { hasReturned, hasSailed } from "@/lib/trips";
 import { nowDate } from "./clock";
+import { type CrewRollCallSubject, crewIsAccountedFor, crewRollCallCounts } from "./manifests";
+import { type OpenSeatsDebrief, openSeatsDebrief } from "./open-seats";
+import type { PlanChangeReason } from "./plan-change";
+import { rollCallCheckpoints } from "./roll-call";
 import type { RollCallGapReason, TodayAction, TodayActionKind } from "./today";
 import { sortActions } from "./today";
 import { shopDayBounds, toDateInputValue, utcToWallTime } from "./zoned";
@@ -126,6 +130,20 @@ const GAP_REASON_RANK: Record<RollCallGapReason, number> = {
   no_roll_call: 5,
 };
 
+/**
+ * **One dive whose actual site was not the planned one** (issue #1184, D24).
+ *
+ * Read off `executed_dives`, never inferred: the manifest's own dive log is
+ * where a crew records both the site they dived and, optionally, why. A dive
+ * that changed with nothing said about why still carries the true half.
+ */
+export type CloseoutPlanChange = {
+  diveNumber: number;
+  /** The site the boat actually dived, as the shop named it. */
+  siteName: string;
+  reasonCode: PlanChangeReason | null;
+};
+
 /** One of today's departures, as the db layer hands it in. */
 export type CloseoutTripInput = {
   tripId: string;
@@ -134,6 +152,27 @@ export type CloseoutTripInput = {
   endsAt: Date;
   /** Non-cancelled bookings — a fact about the trip, shown beside its state. */
   booked: number;
+  /** Seats the departure had, for the evening's open-seats reading. */
+  capacity: number;
+  /** Decides the closing checkpoint the crew are counted at. */
+  plannedDives: number;
+  /**
+   * The trip's **assigned** crew — `trip_assignments` — each carrying their
+   * result at the closing checkpoint. Not "whoever already has a result": that
+   * distinction is the whole of issue #1346, and `crewIsAccountedFor`'s
+   * docblock has the reasoning. Absence of a result is *awaiting*, never
+   * accounted for, so an empty list withholds the moment rather than granting
+   * it.
+   */
+  crew: readonly CrewRollCallSubject[];
+  /** Newest non-cancelled booking on this departure. Null when nobody booked. */
+  lastBookingAt?: Date | null;
+  /** Whether a last-minute deal ever went out on this departure. */
+  dealSent?: boolean;
+  /** The most recent same-title departure that filled, if there is one. */
+  comparable?: { title: string; startsAt: Date; samePrice: boolean } | null;
+  /** Dives whose actual site was not the planned one. */
+  planChanges?: readonly CloseoutPlanChange[];
   /**
    * The crew's post-trip note, as it stands. Carried here because the close-out
    * is where it gets written: the hourly recap scan mails each diver no earlier
@@ -184,6 +223,17 @@ export type CloseoutDeparture = {
   startsAt: Date;
   endsAt: Date;
   booked: number;
+  capacity: number;
+  plannedDives: number;
+  /** See `CloseoutTripInput.crew` — the assigned crew, at the closing checkpoint. */
+  crew: readonly CrewRollCallSubject[];
+  /**
+   * The open-seats reading, already answered — the ingredients never travel
+   * past this point, so no surface can reach a second answer from them. Null
+   * when the boat filled, when it never sailed, and when nothing is known.
+   */
+  openSeats: OpenSeatsDebrief | null;
+  planChanges: readonly CloseoutPlanChange[];
   status: CloseoutDepartureStatus;
   /** The headline gap when `status` is `unreconciled`/`count_open`. */
   gapReason: RollCallGapReason | null;
@@ -329,6 +379,22 @@ export function assembleDayCloseout(input: {
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       booked: trip.booked,
+      capacity: trip.capacity,
+      plannedDives: trip.plannedDives,
+      crew: trip.crew,
+      openSeats: openSeatsDebrief(
+        {
+          capacity: trip.capacity,
+          booked: trip.booked,
+          startsAt: trip.startsAt,
+          timeZone: input.timeZone,
+          lastBookingAt: trip.lastBookingAt ?? null,
+          dealSent: trip.dealSent ?? false,
+          comparable: trip.comparable ?? null,
+        },
+        now,
+      ),
+      planChanges: trip.planChanges ?? [],
       recapShoutout: trip.recapShoutout,
       recapSentAt: trip.recapSentAt ?? null,
       recapAutoSendPaused: trip.recapAutoSendPaused ?? false,
@@ -603,6 +669,23 @@ export type StationClose = {
    * it leaves this number alone and says so through `status` instead.
    */
   back: number;
+  /** How many crew the trip named. Zero is its own open state (`crewIsAccountedFor`). */
+  crewAssigned: number;
+  /**
+   * Whether every assigned crew member is accounted for at the closing
+   * checkpoint, through the *same* predicate the manifest asks
+   * ({@link crewIsAccountedFor}). False on a trip that named nobody, and false
+   * on a shop that has never tapped a crew roll call — in both cases the
+   * station keeps its diver-only sentence rather than claiming souls it cannot
+   * count.
+   */
+  crewAccountedFor: boolean;
+  /** Assigned crew the closing checkpoint brought back. */
+  crewBack: number;
+  /** See `CloseoutDeparture.openSeats`. Null when the boat filled. */
+  openSeats: OpenSeatsDebrief | null;
+  /** Dives whose actual site was not the planned one. */
+  planChanges: readonly CloseoutPlanChange[];
   recapSentAt: Date | null;
   /** Behind the shop — the same reading `sendDueRecaps` makes about a due recap. */
   ended: boolean;
@@ -626,10 +709,24 @@ export type EveningClose = {
    * day is over.
    */
   closing: boolean;
-  /** Divers the day sent out, across every departure. Tabular figures. */
+  /**
+   * **Souls the day sent out** — divers and crew, across every departure
+   * (issue #1346; ADR 20260904-reef-all-the-way-down, slice 16h). Tabular
+   * figures.
+   *
+   * It counted seats until 2026-09-05: a sum of non-cancelled bookings, which
+   * put the crew in neither number on a sentence whose whole subject is who
+   * came home. The people most reliably still in the water at the end of a day
+   * are the crew, and the homecoming line was the one sentence in the product
+   * that left them out.
+   */
   out: number;
-  /** Divers the head counts brought back. */
+  /** Souls the head counts brought back. */
   back: number;
+  /** The diver half of {@link out}, for a sentence that names both. */
+  divers: number;
+  /** The crew half of {@link out} — every assigned crew member of the day. */
+  crew: number;
   /**
    * The evening's earned moment: the day is closing and every head count
    * closed clean. Condition-derived and self-expiring, like every other row of
@@ -643,6 +740,18 @@ export type EveningClose = {
    * counted is a claim the shop's own records do not support. The moment is
    * rare on purpose; spending it on an unverified day is worse than not
    * spending it.
+   *
+   * **And every station's assigned crew has to be accounted for** (issue
+   * #1346). `status` comes from `listRollCallGaps`, whose crew population is
+   * only crew who *already have a result* — so a shop that has never tapped a
+   * crew roll call could never raise a crew gap, and this line said every boat
+   * was home while the same boat's manifest said `crew_awaiting`. The fix
+   * narrows the moment rather than the gap reader: tightening
+   * `listRollCallGaps` would raise a danger-toned `crew_uncounted` row on every
+   * departure of every shop that has not adopted crew roll call, which is the
+   * saturation failure DOM-H3's split exists to avoid. So the gaps stay as they
+   * are, and the *celebration* asks {@link crewIsAccountedFor} — the manifest's
+   * own predicate — before it spends the accent.
    */
   allHome: boolean;
 };
@@ -668,6 +777,11 @@ export function assembleEveningClose(
         departure.gapReason !== null && AFTER_DIVE_GAP_REASONS.has(departure.gapReason)
           ? departure.uncounted
           : 0;
+      // The last checkpoint of the trip's own plan — never a hand-built
+      // `after_dive_N`, so a four-dive day and a one-dive day are read by the
+      // same rule (`rollCallCheckpoints`, src/lib/roll-call.ts).
+      const closingCheckpoint = rollCallCheckpoints(departure.plannedDives).at(-1) ?? "departure";
+      const crewCounts = crewRollCallCounts(closingCheckpoint, departure.crew);
       return {
         tripId: departure.tripId,
         title: departure.title,
@@ -680,6 +794,11 @@ export function assembleEveningClose(
         uncounted: departure.uncounted,
         booked: departure.booked,
         back: Math.max(0, departure.booked - missing),
+        crewAssigned: crewCounts.crewAssigned,
+        crewAccountedFor: crewIsAccountedFor(closingCheckpoint, departure.crew),
+        crewBack: Math.max(0, crewCounts.crewAssigned - crewCounts.crewNotBackAboard),
+        openSeats: departure.openSeats,
+        planChanges: departure.planChanges,
         recapSentAt: departure.recapSentAt,
         ended: departure.ended,
       };
@@ -690,13 +809,16 @@ export function assembleEveningClose(
         a.endsAt.getTime() - b.endsAt.getTime() ||
         a.tripId.localeCompare(b.tripId),
     );
-  const out = stations.reduce((total, station) => total + station.booked, 0);
-  const back = stations.reduce((total, station) => total + station.back, 0);
+  const divers = stations.reduce((total, station) => total + station.booked, 0);
+  const crew = stations.reduce((total, station) => total + station.crewAssigned, 0);
+  const out = divers + crew;
+  const back = stations.reduce((total, station) => total + station.back + station.crewBack, 0);
   const closing = stations.length > 0 && stations.every((station) => station.settled);
   const allHome =
     closing &&
     out > 0 &&
     out === back &&
-    stations.every((station) => station.status === "all_home");
-  return { stations, closing, out, back, allHome };
+    stations.every((station) => station.status === "all_home") &&
+    stations.every((station) => station.crewAccountedFor);
+  return { stations, closing, out, back, divers, crew, allHome };
 }

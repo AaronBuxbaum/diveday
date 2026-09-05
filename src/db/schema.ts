@@ -6313,6 +6313,28 @@ export const rentalFitProfiles = pgTable(
      */
     fitStatedAt: timestamp("fit_stated_at", { withTimezone: true }),
     /**
+     * **When a human last checked this fit against what actually went out**
+     * (issue #1174, delight report D14).
+     *
+     * Distinct from `fit_stated_at` above, and the distinction is the whole
+     * point: that column means *a fit was stated*, by the diver on their own
+     * form or by staff typing what the diver said. This one means *somebody
+     * watched a unit come back in a different size and said keep it*. D14's
+     * boundary is that the app learns only from a staff-confirmed outcome, so
+     * a fact that ages naturally is the honest shape rather than a confidence
+     * score nobody calibrated.
+     *
+     * Null on every row nobody has confirmed, which is most of them, and it
+     * gates nothing: an unconfirmed fit is still the fit.
+     */
+    fitConfirmedAt: timestamp("fit_confirmed_at", { withTimezone: true }),
+    /**
+     * Whose call it was. The diver-facing thread says "Keiko kept M as your
+     * fit", so the name is part of what makes a size change something a person
+     * did rather than something the system decided.
+     */
+    fitConfirmedByPersonId: uuid("fit_confirmed_by_person_id").references(() => people.id),
+    /**
      * The safe fallback when a requested size isn't available (H-06): staff
      * flag the diver for hands-on fitting at check-in instead of silently
      * packing a different size. Set/cleared only by its own action — a size

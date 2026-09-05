@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
+import { assembleEveningClose } from "@/lib/closeout";
+import { rollCallCheckpoints } from "@/lib/roll-call";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import {
@@ -11,7 +13,14 @@ import {
 } from "./closeout";
 import { addCrewRecapPhoto } from "./recap";
 import { listShopReviewsForStaff, submitTripReview } from "./reviews";
-import { bookings as bookingsTable, people, rollCallEvents, trips as tripsTable } from "./schema";
+import {
+  bookings as bookingsTable,
+  people,
+  rollCallCrewEvents,
+  rollCallEvents,
+  tripAssignments,
+  trips as tripsTable,
+} from "./schema";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
@@ -299,6 +308,108 @@ describe("day close-out (in-memory PGlite)", () => {
         decisions: {},
       }),
     ).rejects.toThrow(/not a person of this shop/);
+  });
+
+  /**
+   * **The evening reads the assigned crew, not whoever has a result** (issue
+   * #1346). `listRollCallGaps` counts only crew who already carry one, which
+   * is why a shop that has never tapped a crew roll call could reach "all
+   * boats are home" over a boat whose manifest said `crew_awaiting`.
+   */
+  describe("the crew the evening counts", () => {
+    const crewOfCompletedTrip = async () => {
+      const { db, shop } = await seededShopContext();
+      const now = new Date(nowMs() + HOUR);
+      const { state } = await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now);
+      const completed = state.departures.find(
+        (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
+      );
+      if (!completed) throw new Error("seeded completed trip missing");
+      return { db, shop, now, completed };
+    };
+
+    it("names every rostered crew member, with no result until somebody records one", async () => {
+      const { db, completed } = await crewOfCompletedTrip();
+      const assigned = await db
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, completed.tripId));
+
+      expect(completed.crew).toHaveLength(assigned.length);
+      expect(assigned.length).toBeGreaterThan(0);
+      // No seed writes a `roll_call_crew_events` row, so absence is what the
+      // evening sees — and absence is awaiting, never accounted for.
+      expect(completed.crew.every((member) => member.rollCall === undefined)).toBe(true);
+      expect(assembleEveningClose([completed]).allHome).toBe(false);
+    });
+
+    it("takes the last write per person, so an undone tap satisfies nothing", async () => {
+      const { db, shop, now, completed } = await crewOfCompletedTrip();
+      const [staff] = await listStaff(db, shop.id);
+      if (!staff) throw new Error("seed staff missing");
+      const assigned = await db
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, completed.tripId));
+      const checkpoints = rollCallCheckpoints(completed.plannedDives);
+
+      const boarded = assigned.flatMap((crew, index) =>
+        checkpoints.map((checkpoint, step) => ({
+          shopId: shop.id,
+          tripId: completed.tripId,
+          personId: crew.personId,
+          recordedByPersonId: staff.person.id,
+          status: "boarded" as const,
+          checkpoint,
+          source: "live" as const,
+          occurredAt: new Date(completed.startsAt.getTime() + (step * 10 + index) * 60_000),
+        })),
+      );
+      await db.insert(rollCallCrewEvents).values(boarded);
+
+      const counted = await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now);
+      const withCrew = counted.state.departures.find(
+        (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
+      );
+      expect(assembleEveningClose([withCrew ?? completed]).stations[0]?.crewAccountedFor).toBe(
+        true,
+      );
+
+      // One person's closing result is then cleared, which every reader of
+      // this trail collapses to "no result".
+      const firstCrew = assigned[0];
+      const closing = checkpoints.at(-1);
+      if (!firstCrew || !closing) throw new Error("no crew or checkpoint");
+      await db.insert(rollCallCrewEvents).values({
+        shopId: shop.id,
+        tripId: completed.tripId,
+        personId: firstCrew.personId,
+        recordedByPersonId: staff.person.id,
+        status: "cleared",
+        checkpoint: closing,
+        source: "live",
+        occurredAt: new Date(completed.endsAt.getTime()),
+      });
+
+      const undone = await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now);
+      const afterUndo = undone.state.departures.find(
+        (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
+      );
+      if (!afterUndo) throw new Error("seeded completed trip missing");
+      expect(assembleEveningClose([afterUndo]).stations[0]?.crewAccountedFor).toBe(false);
+    });
+
+    it("is tenant-safe: another shop's day never reaches this roster", async () => {
+      const { db, shop, now } = await crewOfCompletedTrip();
+      const other = await getDayCloseout(
+        db,
+        "00000000-0000-4000-8000-000000000000",
+        "other-shop",
+        shop.timezone,
+        now,
+      );
+      expect(other.state.departures).toEqual([]);
+    });
   });
 
   it("carries Today's deep-linked reviews row into the leftovers unchanged", async () => {

@@ -8,12 +8,19 @@ import {
   parseCloseoutSnapshot,
   shopDayOf,
 } from "./closeout";
+import { type CrewRollCallSubject, rollCallCompleteness } from "./manifests";
 import type { TodayAction } from "./today";
 
 const TZ = "America/New_York";
 // A fixed evening instant: 17:30 shop-local on 2026-08-04 (EDT, UTC-4).
 const now = new Date("2026-08-04T21:30:00Z");
 const HOUR = 60 * 60 * 1000;
+
+/** Two crew, both counted back — the ordinary shape of a finished departure. */
+const CREW_COUNTED_BACK: CrewRollCallSubject[] = [
+  { rollCall: { state: "boarded" } },
+  { rollCall: { state: "boarded" } },
+];
 
 function trip(overrides: Partial<CloseoutTripInput> & { tripId: string }): CloseoutTripInput {
   return {
@@ -22,6 +29,9 @@ function trip(overrides: Partial<CloseoutTripInput> & { tripId: string }): Close
     startsAt: new Date("2026-08-04T11:30:00Z"),
     endsAt: new Date("2026-08-04T15:30:00Z"),
     booked: 8,
+    capacity: 12,
+    plannedDives: 2,
+    crew: CREW_COUNTED_BACK,
     recapShoutout: null,
     ...overrides,
   };
@@ -397,9 +407,77 @@ describe("assembleEveningClose", () => {
     expect(evening.stations.map((station) => [station.tripId, station.settled])).toEqual([
       ["t1", true],
     ]);
-    expect([evening.out, evening.back]).toEqual([10, 10]);
+    // **Souls, not seats** (issue #1346): ten divers and the two crew who took
+    // them out. The crew were in neither number until 2026-09-05, on the one
+    // sentence in the product about who came home.
+    expect([evening.divers, evening.crew]).toEqual([10, 2]);
+    expect([evening.out, evening.back]).toEqual([12, 12]);
     expect(evening.closing).toBe(true);
     expect(evening.allHome).toBe(true);
+  });
+
+  it("withholds the moment when nobody counted the crew, and says so the way the manifest does", () => {
+    // **The #1346 invariant, asserted on both surfaces at once.** A departure
+    // whose divers are all counted back and whose two assigned crew have no
+    // result at all: the home said "all boats are home" while the same boat's
+    // manifest said `crew_awaiting`, because `listRollCallGaps` counts only
+    // crew who already have a result. One fixture, both readings — asserting
+    // `allHome` alone would let the two drift apart again.
+    const crew: CrewRollCallSubject[] = [{}, {}];
+    const evening = assembleEveningClose(day({ tripId: "t1", booked: 10, crew }), now);
+
+    expect(evening.stations[0]?.status).toBe("all_home");
+    expect(evening.closing).toBe(true);
+    expect(evening.allHome).toBe(false);
+    expect(
+      rollCallCompleteness({
+        checkpoint: "after_dive_2",
+        totalDivers: 10,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew,
+      }).crewReason,
+    ).toBe("crew_awaiting");
+  });
+
+  it("withholds it from a departure that names no crew at all", () => {
+    // `crew_none_assigned` parity with the manifest: an empty roster is a
+    // scheduling gap, never evidence that nobody else was aboard.
+    const evening = assembleEveningClose(day({ tripId: "t1", booked: 10, crew: [] }), now);
+
+    expect(evening.stations[0]?.crewAccountedFor).toBe(false);
+    expect(evening.allHome).toBe(false);
+    // The divers still count, and the crew half is honestly zero.
+    expect([evening.divers, evening.crew, evening.out]).toEqual([10, 0, 10]);
+  });
+
+  it("withholds it from a crew recorded entirely ashore", () => {
+    // `crew_none_aboard`: a complete set of results that together say the boat
+    // sailed with nobody running it.
+    // `implied` is the carried-forward dock result: they never left, so they
+    // are accounted for on land rather than missing from the water. The
+    // arithmetic therefore comes out even — and precisely because it does, the
+    // moment must not.
+    const ashore: CrewRollCallSubject[] = [
+      { rollCall: { state: "not_boarded", implied: true } },
+      { rollCall: { state: "not_boarded", implied: true } },
+    ];
+    const evening = assembleEveningClose(day({ tripId: "t1", booked: 10, crew: ashore }), now);
+
+    expect(evening.stations[0]?.crewAccountedFor).toBe(false);
+    expect([evening.out, evening.back]).toEqual([12, 12]);
+    expect(evening.allHome).toBe(false);
+  });
+
+  it("counts a crew member who did not come back as still out", () => {
+    const crew: CrewRollCallSubject[] = [
+      { rollCall: { state: "boarded" } },
+      { rollCall: { state: "not_boarded" } },
+    ];
+    const evening = assembleEveningClose(day({ tripId: "t1", booked: 10, crew }), now);
+
+    expect([evening.out, evening.back]).toEqual([12, 11]);
+    expect(evening.allHome).toBe(false);
   });
 
   it("holds the closing block back while a boat is still out", () => {
@@ -474,7 +552,7 @@ describe("assembleEveningClose", () => {
     }).departures;
     const evening = assembleEveningClose(departures, now);
 
-    expect([evening.out, evening.back]).toEqual([10, 9]);
+    expect([evening.out, evening.back]).toEqual([12, 11]);
     // The day is over, so the block may render — but a boat that came back one
     // person short is not "all boats are home", and the accent stays unspent.
     expect(evening.closing).toBe(true);
@@ -491,7 +569,7 @@ describe("assembleEveningClose", () => {
     }).departures;
     const evening = assembleEveningClose(departures, now);
 
-    expect([evening.out, evening.back]).toEqual([10, 10]);
+    expect([evening.out, evening.back]).toEqual([12, 12]);
     // …and precisely because the arithmetic comes out even, the moment must
     // not: nobody counted this boat at the dock, so "10 out, 10 back" is a
     // claim the shop's records cannot support.

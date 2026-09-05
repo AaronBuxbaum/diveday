@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, isNull, lt, ne } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDayCloseout } from "@/db/closeout";
+import { listFitAdjustedReturns } from "@/db/gear";
 import { getTripManifest } from "@/db/manifests";
 import { bookings, rollCallCrewEvents, rollCallEvents, type Shop, trips } from "@/db/schema";
 import { listStaff } from "@/db/trips";
@@ -189,6 +190,32 @@ describe("POST /api/test/seed-evening", () => {
     expect(evening.out).toBeGreaterThan(0);
     expect(evening.back).toBe(evening.out);
     expect(evening.stations.every((station) => station.status === "all_home")).toBe(true);
+  });
+
+  it("leaves the evening's two quiet rows on the day, so the captures have them in frame", async () => {
+    // Both are ordinary states of a finished day (issue #1174's rental fit and
+    // #1184's changed plan), so they are seeded here rather than into the demo
+    // shop, whose day would otherwise permanently carry an unanswered question.
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const body = await (await POST(seedRequest("?heads=closed"))).json();
+    expect(body.fitAdjusted).toMatchObject({ reservationId: expect.any(String) });
+    expect(body.planChanged).toMatchObject({ tripId: expect.any(String) });
+
+    const now = nowDate();
+    const returns = await listFitAdjustedReturns(db, shop.id, shopDayBounds(now, shop.timezone));
+    expect(returns).toHaveLength(1);
+
+    const closeout = await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now);
+    const changed = closeout.state.departures.filter(
+      (departure) => departure.planChanges.length > 0,
+    );
+    expect(changed).toHaveLength(1);
+    expect(changed[0]?.planChanges[0]?.siteName).toEqual(expect.any(String));
+    // No reason is invented for it: a crew that moved the boat and said
+    // nothing has a record saying only that the site changed.
+    expect(changed[0]?.planChanges[0]?.reasonCode).toBeNull();
   });
 
   it("takes any other value of the parameter as the plain evening, never as a close", async () => {

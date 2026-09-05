@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RentalFitKeepControl } from "@/app/shop/[shopSlug]/_components/today/RentalFitKeepControl";
 import { closeDayAction, setLeftoverDecisionAction } from "@/app/shop/[shopSlug]/actions";
 import { EARNED_MOMENT_SURFACE } from "@/components/EarnedMoment";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -161,12 +162,27 @@ export function ClosingBlock({
                         the row: a leftover's fix and its dismissal are
                         different answers to the same row, and a stretched
                         overlay would make one of them the accident. */}
-                    <Link
-                      href={action.href}
-                      className={buttonClass({ variant: "link", size: "sm" })}
-                    >
-                      {action.actionLabel}
-                    </Link>
+                    {action.rentalFit ? (
+                      // **The one row whose fix is the tap itself** (issue
+                      // #1174, D14): the size is already known, so pointing at
+                      // the diver's record to retype it would be the surface
+                      // asking a question it can answer. Dismiss stays beside
+                      // it, which is the other honest answer.
+                      <RentalFitKeepControl
+                        personId={action.rentalFit.personId}
+                        kind={action.rentalFit.kind}
+                        size={action.rentalFit.size}
+                        label={t("shared.today.gear.fitConfirmKeep")}
+                        pendingLabel={t("shared.today.gear.fitConfirmSaving")}
+                      />
+                    ) : (
+                      <Link
+                        href={action.href}
+                        className={buttonClass({ variant: "link", size: "sm" })}
+                      >
+                        {action.actionLabel}
+                      </Link>
+                    )}
                     <form action={setLeftoverDecisionAction.bind(null, action.id, "dismiss")}>
                       <SubmitButton
                         pendingLabel={t("closeout.leftovers.saving")}

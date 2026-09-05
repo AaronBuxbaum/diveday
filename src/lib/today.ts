@@ -12,6 +12,7 @@ import { HOUR_MS } from "@/lib/clock";
 import type { Role } from "./authz";
 import type { CrewIncompleteReason } from "./manifests";
 import type { AboardBlockerKind, ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
+import type { SizedRentalKind } from "./rentals";
 import type { SeasonStart } from "./season";
 import type { TripStageReading } from "./trip-stages";
 import { utcToWallTime } from "./zoned";
@@ -90,7 +91,8 @@ export type TodayActionKind =
   | "gear_service_due"
   | "staff_credential_due"
   | "units_unconfirmed"
-  | "say_hello";
+  | "say_hello"
+  | "rental_fit_confirm";
 
 /**
  * Severity breaks ties inside a single departure. It ranks by how long the fix
@@ -210,6 +212,10 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // It is a courtesy the desk can pay if the morning allows, so it never
   // outranks a thing somebody has to do (issue #1182).
   say_hello: 33,
+  // Lower still, because it is a question about *yesterday's* boat rather than
+  // anything today wants: a unit came home in a size the fit does not record,
+  // and the shop may keep it or leave it (issue #1174, D14).
+  rental_fit_confirm: 34,
 };
 
 /**
@@ -262,6 +268,9 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   // Every staff role: the person who says hello is whoever is at the dock when
   // the diver walks up, which is as often the captain as the owner.
   say_hello: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  // The same audience the other gear rows have, and for the same reason: the
+  // person who handed the diver a different BCD is whoever was at the counter.
+  rental_fit_confirm: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
 };
 
 /**
@@ -348,6 +357,9 @@ export const ACTION_KIND_META = {
   // Neutral, and there is no other honest tone: a warning-coloured row about
   // greeting somebody would read as a thing that has gone wrong.
   say_hello: { tone: "neutral" },
+  // Neutral: a question about a size is not a problem, and a warning-toned row
+  // asking whether to keep a wetsuit size would read as gear trouble.
+  rental_fit_confirm: { tone: "neutral" },
 } as const satisfies Record<TodayActionKind, { tone: "danger" | "warning" | "neutral" }>;
 
 /**
@@ -491,6 +503,20 @@ export type TodayAction = {
   payment?: { bookingId: string; orderId?: string; hostedInvoiceUrl?: string | null };
   /** A one-choice day-of request and its visible staff hand-off state. */
   helpRequest?: { requestId: string; status: "requested" | "acknowledged" };
+  /**
+   * Present on the evening's rental-fit question (issue #1174, D14): the tap
+   * writes the size onto the diver's fit in place rather than navigating.
+   * `href` stays the row's real destination — the diver's record — so a
+   * pre-hydration tap, a middle-click and an open-in-new-tab all still land
+   * somewhere the staffer can finish the job by hand.
+   */
+  rentalFit?: {
+    personId: string;
+    kind: SizedRentalKind;
+    size: string;
+    unitLabel: string;
+    personName: string;
+  };
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };

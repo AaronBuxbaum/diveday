@@ -3,6 +3,7 @@ import {
   buddyAlertFor,
   buildTripManifest,
   carryForwardNotBoarded,
+  crewIsAccountedFor,
   crewRollCallCounts,
   isNotBackAboard,
   isRollCallAccountedFor,
@@ -414,6 +415,38 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
     });
   /** Everyone assigned is aboard — the ordinary case the crew rules ride on. */
   const allAboard = (assigned: number) => crewOf({ assigned });
+
+  it("answers the same as `crewIsAccountedFor` on every crew shape", () => {
+    // **The extraction cannot regress** (issue #1346). The evening's homecoming
+    // line calls the extracted predicate and the manifest calls this function;
+    // two answers to "is the crew accounted for" is exactly the drift that let
+    // the shop home say every boat was home over a boat whose manifest said
+    // `crew_awaiting`.
+    const shapes = [
+      { assigned: 0 },
+      { assigned: 2 },
+      { assigned: 2, awaiting: 1 },
+      { assigned: 2, awaiting: 2 },
+      { assigned: 2, notBackAboard: 1 },
+      { assigned: 2, ashore: 2 },
+      { assigned: 3, ashore: 1 },
+      { assigned: 3, awaiting: 1, notBackAboard: 1 },
+    ];
+    for (const checkpoint of ["departure", "after_dive_2"] as const) {
+      for (const shape of shapes) {
+        const crew = crewOf(shape);
+        expect(crewIsAccountedFor(checkpoint, crew)).toBe(
+          rollCallCompleteness({
+            checkpoint,
+            totalDivers: 6,
+            awaiting: 0,
+            notBackAboard: 0,
+            crew,
+          }).crewAccountedFor,
+        );
+      }
+    }
+  });
 
   it("reads complete only once divers and crew are both accounted for", () => {
     expect(

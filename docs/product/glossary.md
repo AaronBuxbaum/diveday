@@ -520,6 +520,12 @@ new domain concept, define it here in the same PR.
   true, and re-opening is just working again and closing again. An open after-dive head count or
   a boat still out makes the close *loud* (a by-name acknowledgement before the button) but never
   impossible: the human is the authority on their own day, and the count stays chased either way.
+  The evening's **"All boats are home"** line is narrower than the close itself, and deliberately:
+  it needs every departure of the shop day settled, every one of them reading `all_home`, **and**
+  every *assigned* crew member accounted for at the closing checkpoint — the manifest's own
+  `crewIsAccountedFor` (issue #1346). Roll-call gaps stay as they were: tightening those would
+  raise a danger-toned row on every departure of every shop that has not adopted crew roll call,
+  so the moment is what narrows, not the chase.
   readiness check has. Every *live* surface that shows one — roster, counter check-in, manifest,
   departure board — uses these words and one tone per state (blocked is always danger), resolved
   through `readinessStatusText`/`readinessStatusTone` in `src/i18n/readiness-labels.ts`. The same
@@ -770,7 +776,11 @@ new domain concept, define it here in the same PR.
   printed at the top of the paper manifest and nowhere on screen, deliberately. On paper it is a
   **static** fact about the departure — how many the trip carries, how many crew it names — never a
   live roll-call count, because a "Boarded 6" printed at 07:12 is wrong by 07:20 and paper cannot
-  correct itself. The screen answers the live question, in the checkpoint panel.
+  correct itself. The screen answers the live question, in the checkpoint panel. **One screen does
+  count this way**: the shop home's evening homecoming line, which since 2026-09-05 reads "8 divers
+  and 2 crew out, 10 back" (issue #1346). It counted bookings before that, which left the crew out
+  of both numbers on the one sentence in the product about who came home — and it says the two
+  halves rather than one total, because a shop reading its own evening wants to know which is which.
 - **Departure log** (was "incident-ready export" until 2026-08-12) — the print-optimized document a
   shop hands to authorities or insurers after a departure, generated from close-out: the manifest roster with each person's per-checkpoint roll-call state, the
   **pre-departure checklist**'s own answer for each shop-defined item (checked, by whom, when, or

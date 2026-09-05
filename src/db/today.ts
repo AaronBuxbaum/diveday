@@ -22,6 +22,7 @@ import {
   missingFitDetailText,
   openCrewActionText,
   openDataSettingsActionText,
+  openDiverActionText,
   openGearRegisterActionText,
   openGearUnitActionText,
   openGuestsActionText,
@@ -36,6 +37,7 @@ import {
   overRatioDetailText,
   overRatioIntroDetailText,
   owedRefundDetailText,
+  rentalFitConfirmDetailText,
   reviewsPendingDetailText,
   reviewsPendingSubjectText,
   rollCallGapDetailText,
@@ -94,10 +96,15 @@ import {
 import { liveStageOf, type TripStageReading } from "@/lib/trip-stages";
 import { hasReturned, hasSailed } from "@/lib/trips";
 import { welcomeCueFor } from "@/lib/welcome-cue";
-import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
-import { listGearDueBack, listGearServiceDue, listOverdueGearReservations } from "./gear";
+import {
+  listFitAdjustedReturns,
+  listGearDueBack,
+  listGearServiceDue,
+  listOverdueGearReservations,
+} from "./gear";
 import { listTodayHelpRequests } from "./help-requests";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
 import { listDepartureCrewRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
@@ -1929,13 +1936,18 @@ export async function getTodayWork(
   // are the owning surface's own, so the queue and the register can never
   // disagree — and self-gating: a shop with no fleet produces no rows.
   const todayLocal = calendarDateInTimezone(now, timeZone);
-  const [overdueGear, dueBackGear, gearServiceDueRows] = await Promise.all([
+  const [overdueGear, dueBackGear, gearServiceDueRows, fitAdjustedReturns] = await Promise.all([
     listOverdueGearReservations(db, shopId, todayLocal),
     listGearDueBack(db, shopId, todayLocal),
     // Six days, not seven: dueAt below is the *shop-local* midnight of the due
     // date, and the queue's one-week-horizon invariant is measured in flat UTC
     // hours — a seventh local day can poke past it by a DST hour.
     listGearServiceDue(db, shopId, todayLocal, 6),
+    // Bounded to the shop's own day on purpose (issue #1174, D14): the
+    // leftovers trail is keyed by `shop_day`, so a dismissal cannot carry, and
+    // a question that came back every evening until somebody answered it would
+    // be a nag. Asked once, tonight, where the day's other leftovers are.
+    listFitAdjustedReturns(db, shopId, shopDayBounds(now, timeZone)),
   ]);
   // A calendar date's instant on the shop's own clock — midnight opening the
   // day (a service deadline), or midnight closing it (a return due by tonight).
@@ -2009,6 +2021,34 @@ export async function getTodayWork(
       actionLabel: openGearUnitActionText(t),
       href: `/shop/${shopSlug}/gear/${row.gearItemId}`,
       dueAt,
+    });
+  }
+  // **What the day taught the shop about a diver's size** (issue #1174, D14).
+  // A question, not a problem: the desk already confirmed the swap at the
+  // counter, and this asks once whether to keep it. `href` is the diver's own
+  // record, where the same edit can be made by hand.
+  for (const row of fitAdjustedReturns) {
+    actions.push({
+      id: `rental-fit:${row.reservationId}`,
+      kind: "rental_fit_confirm",
+      urgency: "later",
+      subject: row.personName,
+      context: row.tripTitle,
+      detail: rentalFitConfirmDetailText(t, {
+        personName: row.personName,
+        unitLabel: row.unitLabel,
+        size: row.size,
+      }),
+      actionLabel: openDiverActionText(t),
+      href: `/shop/${shopSlug}/divers/${row.personId}`,
+      rentalFit: {
+        personId: row.personId,
+        kind: row.kind,
+        size: row.size,
+        unitLabel: row.unitLabel,
+        personName: row.personName,
+      },
+      dueAt: row.tripEndsAt,
     });
   }
 

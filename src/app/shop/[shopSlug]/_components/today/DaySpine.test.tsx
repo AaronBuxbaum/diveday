@@ -22,6 +22,7 @@ vi.mock("@/app/actions/waivers", () => ({ sendWaiversAction: vi.fn() }));
 // better-auth and the database. Same reason as the three above.
 vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   closeDayAction: vi.fn(),
+  keepRentalFitAction: vi.fn(),
   setLeftoverDecisionAction: vi.fn(),
 }));
 
@@ -88,6 +89,13 @@ function closed(overrides: Partial<CloseoutDeparture> & { tripId: string }): Clo
     startsAt: hoursFromNow(-6),
     endsAt: hoursFromNow(-3),
     booked: 10,
+    capacity: 12,
+    plannedDives: 2,
+    // Two crew, both counted back at the closing checkpoint — the shape a
+    // settled departure has once the day's counting is done (issue #1346).
+    crew: [{ rollCall: { state: "boarded" } }, { rollCall: { state: "boarded" } }],
+    openSeats: null,
+    planChanges: [],
     status: "all_home",
     gapReason: null,
     diveNumber: 0,
@@ -1064,6 +1072,100 @@ describe("the evening reading", () => {
     }
   });
 
+  it("keeps a settled station's diver-only sentence when the crew were never counted", () => {
+    // **The other half of #1346.** The moment is withheld, but the station
+    // does not invent a crew count either: it says exactly what the records
+    // support, which is how many divers came back.
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1", booked: 10, crew: [{}, {}] })]),
+    });
+
+    expect(screen.getByText("10 of 10 back")).toBeInTheDocument();
+    expect(screen.queryByText(/All boats are home/)).toBeNull();
+  });
+
+  it("says the plan changed on the station's own meta line, and nothing when it did not", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([
+        closed({
+          tripId: "t1",
+          planChanges: [{ diveNumber: 2, siteName: "Benwood", reasonCode: "current" }],
+        }),
+      ]),
+    });
+    expect(
+      screen.getByText("the plan changed: dive 2 moved to Benwood, current"),
+    ).toBeInTheDocument();
+
+    cleanup();
+    renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
+    expect(screen.queryByText(/the plan changed/)).toBeNull();
+  });
+
+  it("renders the open-seats debrief as one row, and nothing at all when the boat filled", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([
+        closed({
+          tripId: "t1",
+          openSeats: {
+            openSeats: 4,
+            lastBookingDaysOut: 3,
+            dealSent: false,
+            comparable: null,
+          },
+        }),
+      ]),
+    });
+    expect(screen.getByText("Open seats")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "4 seats stayed open: the last booking came in 3 days out and no last-minute deal went out.",
+      ),
+    ).toBeInTheDocument();
+    // No trailing door: the station's own title already opens this departure,
+    // and a second path to it from the same panel is what restraint deletes.
+    expect(screen.getAllByRole("link", { name: "Two-Tank Reef" })).toHaveLength(1);
+
+    cleanup();
+    renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
+    expect(screen.queryByText("Open seats")).toBeNull();
+  });
+
+  it("gives the rental-fit leftover a control that saves, with Dismiss still beside it", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], {
+        leftovers: [
+          action({
+            id: "rental-fit:r1",
+            kind: "rental_fit_confirm",
+            subject: "Hugo Marsh",
+            detail: "Hugo Marsh's BCD went out as L. Keep that as the fit next time?",
+            actionLabel: "Open diver record",
+            href: "/shop/blue-mantis/divers/p1",
+            rentalFit: {
+              personId: "p1",
+              kind: "bcd",
+              size: "L",
+              unitLabel: "BCD",
+              personName: "Hugo Marsh",
+            },
+          }),
+        ],
+      }),
+    });
+
+    // A submitting control, never a link: the size is already known, so
+    // pointing at the diver's record to retype it would be the surface asking
+    // a question it can answer.
+    expect(screen.getByRole("button", { name: "Keep it" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open diver record" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
+  });
+
   it("offers the departure log only to a reader who may generate one", () => {
     renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
     expect(screen.getByRole("link", { name: "Generate log" })).toBeInTheDocument();
@@ -1114,14 +1216,14 @@ describe("the evening reading", () => {
     });
 
     expect(screen.getByText("All home")).toBeInTheDocument();
-    expect(screen.getByText(/10 of 10 back by/)).toBeInTheDocument();
+    expect(screen.getByText(/10 divers and 2 crew out, 12 back by/)).toBeInTheDocument();
     expect(screen.getByText("head count closed by Keiko Tanaka")).toBeInTheDocument();
   });
 
   it("marks the day's homecoming once, and only when every count closed clean", () => {
     renderSpine({ departures: [], evening: evening([closed({ tripId: "t1", booked: 10 })]) });
 
-    const line = screen.getAllByText("All boats are home: 10 out, 10 back.");
+    const line = screen.getAllByText("All boats are home: 10 divers and 2 crew out, 12 back.");
     expect(line).toHaveLength(1);
     expect(line[0]).toHaveAttribute("role", "status");
   });
@@ -1150,7 +1252,9 @@ describe("the evening reading", () => {
       departures: [],
       evening: evening([closed({ tripId: "t1", booked: 3 })], { firstEver: true }),
     });
-    expect(screen.getByText("Your first boat is home: 3 out, 3 back.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Your first boat is home: 3 divers and 2 crew out, 5 back."),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/All boats are home/)).toBeNull();
   });
 

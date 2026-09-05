@@ -29,7 +29,8 @@
     "backupNotAuthorized": "Only an owner or manager can change backup settings.",
     "whatsappNotAuthorized": "Only an owner or manager can change WhatsApp settings.",
     "promosNotAuthorized": "Promo codes are limited to owners and managers.",
-    "integrationsNotAuthorized": "Only an owner or manager can change integrations."
+    "integrationsNotAuthorized": "Only an owner or manager can change integrations.",
+    "rentalFitKept": "Fit saved."
   },
   "orientation": {
     "heading": "New here? A few pointers for your role.",
@@ -134,8 +135,8 @@
     "aboardReasonUnknown": "nothing on file that clears them. An unsigned waiver is no medical declaration.",
     "aboardReasonPayment": "payment still owed. It is in the list below.",
     "crewRollCallOpen": "Every diver is aboard, and the crew roll call is still open.",
-    "allHome": "All boats are home: {out} out, {back} back.",
-    "firstBoatHome": "Your first boat is home: {out} out, {back} back.",
+    "allHome": "All boats are home: {divers, plural, one {# diver} other {# divers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back.",
+    "firstBoatHome": "Your first boat is home: {divers, plural, one {# diver} other {# divers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back.",
     "firstBooking": "Your first booking",
     "stage": {
       "boarding": "Boarding",
@@ -154,7 +155,21 @@
     "close": {
       "back": "{back} of {booked} back",
       "backBy": "{back} of {booked} back by {time}",
-      "closedBy": "head count closed by {name}"
+      "closedBy": "head count closed by {name}",
+      "backSouls": "{divers, plural, one {# diver} other {# divers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back",
+      "backSoulsBy": "{divers, plural, one {# diver} other {# divers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back by {time}",
+      "openSeats": {
+        "label": "Open seats",
+        "sentence": "{seats, plural, one {# seat stayed open} other {# seats stayed open}}: {facts}.",
+        "lastBooking": "{days, plural, =0 {the last booking came in on the day} one {the last booking came in # day out} other {the last booking came in # days out}}",
+        "noDeal": "no last-minute deal went out",
+        "comparableSamePrice": "{title} on {date} filled at the same price",
+        "comparableOtherPrice": "{title} on {date} filled at a different price"
+      },
+      "planChange": {
+        "moved": "the plan changed: dive {dive} moved to {site}",
+        "movedWithReason": "the plan changed: dive {dive} moved to {site}, {reason}"
+      }
     },
     "firstBookingPaid": "paid {amount}",
     "firstBookingPaidNoAmount": "paid",

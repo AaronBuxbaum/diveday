@@ -1,5 +1,7 @@
 import { eq, inArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate, nowMs } from "@/lib/clock";
 import { gearServiceState, tripReservationWindow } from "@/lib/gear";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
@@ -15,6 +17,7 @@ import {
   latestServiceClocks,
   listAvailableGearUnits,
   listDeletedGearItems,
+  listFitAdjustedReturns,
   listGearDueBack,
   listGearItems,
   listGearServiceDue,
@@ -31,7 +34,8 @@ import {
   setGearItemStatus,
   updateGearItem,
 } from "./gear";
-import { gearReservations, shops, trips } from "./schema";
+import { saveRentalFit } from "./rental-fit";
+import { bookings, gearReservations, shops, trips } from "./schema";
 import { moveTrip, setTripStatus } from "./trips";
 import { createTrip } from "./trips-create";
 
@@ -1539,6 +1543,147 @@ describe("returning a whole rental set", () => {
     expect(untouched?.returnedAt).toBeNull();
     expect(untouched?.outcome).toBeNull();
     expect(await outcomesOf(db, reservationIds)).toHaveLength(2);
+  });
+
+  /**
+   * **The evening's rental-fit question** (issue #1174, D14). A `fit_adjusted`
+   * return is the desk saying at the counter that the unit which went out was
+   * not the one the fit named, so nothing new has to be flagged for the
+   * evening to know a swap happened.
+   */
+  describe("listFitAdjustedReturns", () => {
+    // `returnGearReservation` stamps the clock, so the window this reader is
+    // asked about is the one holding *now* — the shop-local day, in the caller.
+    const DAY = 24 * 60 * 60 * 1000;
+    const wholeDay = () => ({
+      from: new Date(nowMs() - DAY),
+      to: new Date(nowMs() + DAY),
+    });
+
+    it("finds only a fit-adjusted return whose size differs from the recorded fit", async () => {
+      const { db, shop } = await gearShopContext();
+      const { bookingId, reservationIds } = await aSetOut(db, shop.id);
+      const [bcdReservation, regReservation] = reservationIds;
+      if (!bcdReservation || !regReservation) throw new Error("expected two reservations");
+      const [booking] = await db
+        .select({ personId: bookings.personId })
+        .from(bookings)
+        .where(eq(bookings.id, bookingId));
+      if (!booking) throw new Error("booking missing");
+      await saveRentalFit(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        rentsBcd: true,
+        rentsRegulator: true,
+        rentsWetsuit: false,
+        rentsMaskFins: false,
+        rentsWeights: false,
+        rentsDiveComputer: false,
+        rentsGopro: false,
+        bcdSize: "S",
+      });
+
+      // The regulator came home fine, and a regulator has no size to learn
+      // from anyway; the BCD came home fit-adjusted, at M against a recorded S.
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId: regReservation,
+        outcome: "all_good",
+      });
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId: bcdReservation,
+        outcome: "fit_adjusted",
+      });
+
+      const rows = await listFitAdjustedReturns(db, shop.id, wholeDay());
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        reservationId: bcdReservation,
+        kind: "bcd",
+        size: "M",
+        recordedSize: "S",
+        personName: "Nadia Osei",
+      });
+    });
+
+    it("says nothing when the fit already records the size that went out", async () => {
+      const { db, shop } = await gearShopContext();
+      const { bookingId, reservationIds } = await aSetOut(db, shop.id);
+      const [bcdReservation] = reservationIds;
+      if (!bcdReservation) throw new Error("expected a reservation");
+      const [booking] = await db
+        .select({ personId: bookings.personId })
+        .from(bookings)
+        .where(eq(bookings.id, bookingId));
+      if (!booking) throw new Error("booking missing");
+      await saveRentalFit(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        rentsBcd: true,
+        rentsRegulator: false,
+        rentsWetsuit: false,
+        rentsMaskFins: false,
+        rentsWeights: false,
+        rentsDiveComputer: false,
+        rentsGopro: false,
+        bcdSize: "M",
+      });
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId: bcdReservation,
+        outcome: "fit_adjusted",
+      });
+
+      expect(await listFitAdjustedReturns(db, shop.id, wholeDay())).toEqual([]);
+    });
+
+    it("stays inside the day it is asked about, and inside its own shop", async () => {
+      const { db, shop } = await gearShopContext();
+      const { reservationIds } = await aSetOut(db, shop.id);
+      const [bcdReservation] = reservationIds;
+      if (!bcdReservation) throw new Error("expected a reservation");
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId: bcdReservation,
+        outcome: "fit_adjusted",
+      });
+
+      // Yesterday's window sees nothing: the question expires with the day,
+      // because the leftovers trail that carries a dismissal is keyed by it.
+      const yesterday = { from: new Date(nowMs() - 2 * DAY), to: new Date(nowMs() - DAY) };
+      expect(await listFitAdjustedReturns(db, shop.id, yesterday)).toEqual([]);
+
+      const rival = await rivalShop(db);
+      expect(await listFitAdjustedReturns(db, rival.id, wholeDay())).toEqual([]);
+    });
+
+    it("goes quiet once the unit is deleted", async () => {
+      // Gear is opt-in by presence (ADR 20260815-minimal-gear-register): a
+      // fleet the shop no longer has asks the shop nothing.
+      const { db, shop } = await gearShopContext();
+      const { reservationIds } = await aSetOut(db, shop.id);
+      const [bcdReservation] = reservationIds;
+      if (!bcdReservation) throw new Error("expected a reservation");
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId: bcdReservation,
+        outcome: "fit_adjusted",
+      });
+      const [reservation] = await db
+        .select({ gearItemId: gearReservations.gearItemId })
+        .from(gearReservations)
+        .where(eq(gearReservations.id, bcdReservation));
+      if (!reservation) throw new Error("reservation missing");
+
+      expect(await listFitAdjustedReturns(db, shop.id, wholeDay())).toHaveLength(1);
+      await deleteGearItem(db, {
+        shopId: shop.id,
+        gearItemId: reservation.gearItemId,
+        todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
+      });
+      expect(await listFitAdjustedReturns(db, shop.id, wholeDay())).toEqual([]);
+    });
   });
 
   it("leaves the outcome null when a reservation is closed without asking", async () => {

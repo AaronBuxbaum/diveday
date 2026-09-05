@@ -47,6 +47,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   staff_credential_due: "shared.today.actionKind.staffCredentialDue",
   units_unconfirmed: "shared.today.actionKind.unitsUnconfirmed",
   say_hello: "shared.today.actionKind.sayHello",
+  rental_fit_confirm: "shared.today.actionKind.rentalFit",
 };
 
 /** A blocked row's one-tap fix, singular ("Send waiver"). */
@@ -638,6 +639,24 @@ export function gearOverdueDetailText(
 export function gearDueBackDetailText(t: StaffTranslator, input: { unitLabel: string }): string {
   return t("shared.today.gear.dueBackDetail", input);
 }
+/**
+ * The evening's rental-fit question (issue #1174, D14).
+ *
+ * It names the **size that went out**, never a direction. `gear_items.size` is
+ * free text a shop writes for itself ("M", "3mm L"), so the app cannot know
+ * that L is a size up from M, and the artboard's "went out a size up" is a
+ * sentence only a human could have written truthfully.
+ */
+export function rentalFitConfirmDetailText(
+  t: StaffTranslator,
+  input: { personName: string; unitLabel: string; size: string },
+): string {
+  return t("shared.today.gear.fitConfirmDetail", {
+    name: input.personName,
+    unitLabel: input.unitLabel,
+    size: input.size,
+  });
+}
 
 export function gearNeverPickedUpDetailText(
   t: StaffTranslator,
@@ -662,6 +681,11 @@ export function openGearRegisterActionText(t: StaffTranslator): string {
 
 export function openGearUnitActionText(t: StaffTranslator): string {
   return t("shared.today.actionLabel.openGearUnit");
+}
+
+/** Where a row about one diver points when its own control is not the answer. */
+export function openDiverActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openDiver");
 }
 
 export function staffCredentialDueDetailText(

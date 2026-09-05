@@ -84,7 +84,7 @@ drift names this ADR in its doc comment, and a test pins the rule.
 | 16e — the booking page bounded: three field-guide tiles and one door, the other departures worth a look (D01), the intent question (D12 with D23's count folded in), the rusty diver's offers (D18); the composition test that holds the length | shipped | `src/app/s/[shopSlug]/trips/[id]/_components/TripPitch.tsx` | `src/app/s/[shopSlug]/trips/[id]/_components/TripPitch.test.tsx`, `src/app/s/[shopSlug]/trips/[id]/page.composition.test.ts`, `src/lib/worth-a-look.test.ts`, `src/lib/dive-intent.test.ts`, `src/lib/re-entry.test.ts` |
 | 16f — the storefront's lenses (D02) and "next with space" | open | — | — |
 | 16g — the thread: "Anything changed?" (D15 with D19 folded in), provenance chips (D51, Budget 5), the rental-fit line (D14) | open | — | — |
-| 16h — the evening: souls not seats (#1346), the open-seats debrief (D47), the rental-fit leftover (D14), the plan-change meta (D24) | open | — | — |
+| 16h — the evening: souls not seats (#1346), the open-seats debrief (D47), the rental-fit leftover (D14), the plan-change meta (D24) | shipped | `src/app/shop/[shopSlug]/_components/today/ClosingStation.tsx` | `src/lib/closeout.test.ts`, `src/lib/open-seats.test.ts`, `src/lib/manifests.test.ts`, `src/db/closeout.test.ts`, `src/app/shop/[shopSlug]/_components/today/DaySpine.test.tsx`, `e2e/day-close.spec.ts` |
 | 16i — the recap: the postcard's number, save-as-image (#1081), the private line (D33), the private pulse (D40), the next dive (D35) | open | — | — |
 | 16j — the ten adopted-unseen issues, built from their own bodies (#1284, D05 on H-67 b, D17, D25, #1363, #1366, D36+D45, D44, D52, #1357) | open | — | — |
 

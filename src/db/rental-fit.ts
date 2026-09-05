@@ -1,6 +1,7 @@
 import { and, asc, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { PrepDiver } from "@/lib/dive-prep";
+import { SIZED_RENTAL_FIT_COLUMN, type SizedRentalKind } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { bookings, diveSupportNeeds, people, rentalFitProfiles } from "./schema";
@@ -136,6 +137,64 @@ export async function saveRentalFitNote(
     })
     .returning();
   return profile ?? null;
+}
+
+/**
+ * **Keep the size that actually went out** (issue #1174, delight report D14).
+ *
+ * The evening's one-tap answer to "Hugo's BCD went out as L — keep that as the
+ * fit?". It writes the one size column for that kind and stamps three clocks:
+ * `fit_stated_at`, because a size a human confirmed *is* a stated fit, and
+ * `fit_confirmed_at`/`fit_confirmed_by_person_id`, because a fit somebody
+ * checked against a real return is a different fact from one somebody typed —
+ * and the diver's own thread names whose call it was.
+ *
+ * **`needs_staff_fit_at` is conspicuously absent and must stay absent.** A size
+ * edit never clears that flag (the column's own comment in schema.ts): a stale
+ * flag costs one extra look at the counter, and a wrongly-cleared one puts a
+ * diver in gear nobody checked.
+ *
+ * Codes, never sentences — the UI picks the words.
+ */
+export async function confirmRentalFitSize(
+  db: AppDb,
+  input: {
+    shopId: string;
+    personId: string;
+    kind: SizedRentalKind;
+    size: string;
+    /** The staff member whose call it was. Attribution, not authorization. */
+    confirmedByPersonId: string;
+    now?: Date;
+  },
+): Promise<"saved" | "unknown_person" | "invalid"> {
+  const size = input.size.trim();
+  if (!size) return "invalid";
+  // The same tenant proof `saveRentalFit` makes: a copied id must not write a
+  // fit into another shop's record.
+  const [person] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+    .limit(1);
+  if (!person) return "unknown_person";
+
+  const at = input.now ?? nowDate();
+  const values = {
+    [SIZED_RENTAL_FIT_COLUMN[input.kind]]: size,
+    fitStatedAt: at,
+    fitConfirmedAt: at,
+    fitConfirmedByPersonId: input.confirmedByPersonId,
+    updatedAt: at,
+  };
+  await db
+    .insert(rentalFitProfiles)
+    .values({ shopId: input.shopId, personId: input.personId, ...values })
+    .onConflictDoUpdate({
+      target: [rentalFitProfiles.shopId, rentalFitProfiles.personId],
+      set: values,
+    });
+  return "saved";
 }
 
 /**

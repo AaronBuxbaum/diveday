@@ -7,6 +7,7 @@ import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import {
+  confirmRentalFitSize,
   getRentalFit,
   listTripPrepDivers,
   rentalFitByBooking,
@@ -397,6 +398,80 @@ describe("rental fit completeness over a stored profile", () => {
     expect(rentalFitCompleteness(await getRentalFit(db, shopId, personId))).toEqual({
       state: "incomplete",
       missing: ["bcd"],
+    });
+  });
+
+  /**
+   * **The evening's "Keep it"** (issue #1174, delight report D14): the size a
+   * unit actually went out in, written down because a human at the counter
+   * already confirmed the swap.
+   */
+  describe("confirmRentalFitSize", () => {
+    it("writes the one size, stamps who confirmed it, and leaves the staff-fit flag alone", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Hugo Marsh");
+      const [staffPerson] = await db
+        .select({ id: people.id })
+        .from(people)
+        .where(eq(people.shopId, shopId))
+        .limit(1);
+      if (!staffPerson) throw new Error("shop has no people");
+
+      await saveRentalFit(db, baseFitInput(shopId, personId));
+      await setNeedsStaffFit(db, { shopId, personId, needed: true, note: "no L in stock" });
+
+      expect(
+        await confirmRentalFitSize(db, {
+          shopId,
+          personId,
+          kind: "bcd",
+          size: "L",
+          confirmedByPersonId: staffPerson.id,
+        }),
+      ).toBe("saved");
+
+      const fit = await getRentalFit(db, shopId, personId);
+      expect(fit?.bcdSize).toBe("L");
+      // The other sizes are untouched: this answers one question about one
+      // piece of gear.
+      expect(fit?.wetsuitSize).toBe("3 mm / M");
+      expect(fit?.fitStatedAt).toBeInstanceOf(Date);
+      expect(fit?.fitConfirmedAt).toBeInstanceOf(Date);
+      expect(fit?.fitConfirmedByPersonId).toBe(staffPerson.id);
+      // **Never cleared here.** A stale flag costs one extra look at the
+      // counter; a wrongly-cleared one puts a diver in gear nobody checked.
+      expect(fit?.needsStaffFitAt).toBeInstanceOf(Date);
+    });
+
+    it("refuses a person from another shop, and an empty size", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Elsewhere Elsa");
+      const [staffPerson] = await db
+        .select({ id: people.id })
+        .from(people)
+        .where(eq(people.shopId, shopId))
+        .limit(1);
+      if (!staffPerson) throw new Error("shop has no people");
+
+      expect(
+        await confirmRentalFitSize(db, {
+          shopId: "00000000-0000-4000-8000-000000000000",
+          personId,
+          kind: "bcd",
+          size: "L",
+          confirmedByPersonId: staffPerson.id,
+        }),
+      ).toBe("unknown_person");
+      expect(
+        await confirmRentalFitSize(db, {
+          shopId,
+          personId,
+          kind: "bcd",
+          size: "  ",
+          confirmedByPersonId: staffPerson.id,
+        }),
+      ).toBe("invalid");
+      expect(await getRentalFit(db, shopId, personId)).toBeNull();
     });
   });
 
