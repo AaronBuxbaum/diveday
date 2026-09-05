@@ -11,6 +11,8 @@ import {
   notificationDeliveries,
   notificationDeliveryAttempts,
   stripeWebhookEvents,
+  tripDeskEvents,
+  tripReadMarks,
   userAccounts,
 } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
@@ -250,6 +252,46 @@ describe("pruneExpiredRecords", () => {
     expect(first.totalDeleted).toBe(1);
     expect(second.totalDeleted).toBe(0);
     expect(second.failedTables).toEqual([]);
+  });
+
+  it("prunes a stale shift handoff and leaves this morning's alone", async () => {
+    // The catch-up strip's own window (issues #1202, #1187). Thirty days is the
+    // difference between a same-day handoff and the replayable surveillance
+    // feed the boundary refuses, so the prune is what enforces the boundary.
+    const { db, shop, reef, entry } = await retentionContext();
+    const window = RETENTION_DAYS.trip_desk_events;
+    await db.insert(tripDeskEvents).values([
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        kind: "arrival",
+        bookingId: entry.booking.id,
+        subjectPersonId: entry.person.id,
+        occurredAt: daysAgo(window + 1),
+      },
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        kind: "gear_changed",
+        bookingId: entry.booking.id,
+        subjectPersonId: entry.person.id,
+        occurredAt: daysAgo(1),
+      },
+    ]);
+    await db.insert(tripReadMarks).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: entry.person.id,
+      lastSeenSeq: 0,
+      lastSeenAt: daysAgo(RETENTION_DAYS.trip_read_marks + 1),
+    });
+
+    const summary = await pruneExpiredRecords(db, { now: NOW });
+    expect(outcomeFor(summary, "trip_desk_events").deleted).toBe(1);
+    expect(outcomeFor(summary, "trip_read_marks").deleted).toBe(1);
+    const left = await db.select({ kind: tripDeskEvents.kind }).from(tripDeskEvents);
+    expect(left).toEqual([{ kind: "gear_changed" }]);
+    expect(await db.select().from(tripReadMarks)).toHaveLength(0);
   });
 
   it("reports a per-table outcome for every retained table, with the window applied", async () => {

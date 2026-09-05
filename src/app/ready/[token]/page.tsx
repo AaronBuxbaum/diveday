@@ -125,6 +125,7 @@ import {
   saveNoteFromReady,
   saveSpecialtyFromReady,
   saveSupportNeedsFromReady,
+  saveWelcomeConsentFromReady,
   signWaiverFromReady,
 } from "./actions";
 
@@ -714,6 +715,11 @@ const READY_NOTICES: Record<
   "saved-help": { tone: "success", key: "ready.helpRequestSent" },
   "error-help": { tone: "danger", key: "ready.helpRequestUnavailable" },
   "error-help-handled": { tone: "neutral", key: "ready.helpRequestHandled" },
+  // The welcome word (issue #1182). A refusal and no success notice: the
+  // block's own line says what the answer now is, so a banner would be the
+  // second confirmation. The refusal never says *which* of the two reasons it
+  // was, for the same reason the cancel one does not.
+  "error-welcome": { tone: "danger", key: "ready.welcomeUnavailable" },
 };
 
 /**
@@ -1176,6 +1182,40 @@ function DayOfDetails({
           </form>
         )}
       </div>
+      {/* **A word to the crew** (issue #1182, delight report D22).
+          Rendered only when there is something to offer — a first trip with
+          this shop, or a return after a long gap — so most divers never see
+          this block at all.
+
+          Budget rule 6's grammar, in order: the question names the fact it
+          would share, the line under it says who sees it and for how long, and
+          the control is the way back as much as the way in. Nothing is shared
+          until the diver taps, and nothing about them is stored beyond the
+          stamp — what the crew reads is derived from their own bookings. */}
+      {data.welcomeOffer ? (
+        <div className="py-5">
+          <h3 className="text-base font-semibold">
+            {data.welcomeOffer.kind === "first_trip"
+              ? t("ready.welcomeFirstTripQuestion")
+              : t("ready.welcomeReturningQuestion", { years: data.welcomeOffer.years })}
+          </h3>
+          <p className="mt-1 text-sm text-muted">{t("ready.welcomeAudience")}</p>
+          <form
+            action={saveWelcomeConsentFromReady.bind(null, token)}
+            className="mt-3 flex flex-wrap items-center gap-3"
+          >
+            <input type="hidden" name="share" value={data.welcomeShared ? "off" : "on"} />
+            <SubmitButton pendingLabel={t("common.saving")} className={saveButton}>
+              {data.welcomeShared ? t("ready.welcomeWithdraw") : t("ready.welcomeShare")}
+            </SubmitButton>
+            {data.welcomeShared ? (
+              <span className="text-sm font-medium text-success-strong">
+                {t("ready.welcomeShared")}
+              </span>
+            ) : null}
+          </form>
+        </div>
+      ) : null}
       {/* **What this dive needs set up for you** — the accessible-dive record
           (ADR 20260827-support-needs-are-a-record-about-the-dive). Asked here
           and nowhere else: `/ready` is after the sale and is the diver's own

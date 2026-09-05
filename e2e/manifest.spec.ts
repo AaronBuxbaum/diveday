@@ -1006,6 +1006,90 @@ test("a checklist tap made offline queues, then syncs once signal returns", asyn
  * likely reading of that is that it saved, and what is written here is what an
  * incident export later seals into a document a physician reads.
  */
+/**
+ * **The shift catch-up strip** (issues #1202 and #1187, delight report D42 with
+ * D27 folded in; ADR 20260904-reef-all-the-way-down slice 16d).
+ *
+ * The seed leaves the owner a read mark on today's reef boat stamped at 06:10
+ * and the desk's own acts after it, so this is the state a staffer walking back
+ * to a departure actually opens. What it proves is the rule's two silences —
+ * nothing on a boat this reader has never opened, nothing once they have said
+ * *Got it* — because a strip that reappears is a strip a crew learns to ignore.
+ *
+ * The third state, "an act that lands *after* Got it comes back", is pinned in
+ * `src/db/desk-events.test.ts`: producing one from the browser needs a second
+ * actor, and this spec signs in as one person.
+ */
+test("the catch-up strip says what the desk did, and stops once the crew has read it", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
+
+  const strip = page.getByRole("region", { name: /Since you looked at/ });
+  await expect(strip).toBeVisible();
+  // Grouped by kind rather than replayed in order: two arrivals are one
+  // sentence, and the meeting point is its own.
+  await expect(strip).toContainText("have checked in.");
+  await expect(strip).toContainText("The meeting point moved.");
+
+  await strip.getByRole("button", { name: "Got it" }).click();
+  await expect(strip).toHaveCount(0);
+
+  // And it stays gone across a fresh render: the mark moved, so there is
+  // nothing left to be "since".
+  await page.reload();
+  await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
+  await expect(page.getByRole("region", { name: /Since you looked at/ })).toHaveCount(0);
+});
+
+test("a departure this staffer has never opened shows no catch-up at all", async ({ page }) => {
+  // A first visit is reading, not catching up. With no read mark there is
+  // nothing for a strip to be "since", and replaying the morning to somebody
+  // seeing the boat for the first time is the surveillance feed #1202 refuses.
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Wreck Trip — Spiegel Grove");
+  await openTripTab(page, "Manifest");
+  await page.getByRole("heading", { level: 1, name: /Wreck Trip/ }).waitFor();
+  await expect(page.getByRole("region", { name: /Since you looked at/ })).toHaveCount(0);
+});
+
+test("the crew records why the plan changed, and the plan itself does not move", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
+
+  // At the dock the plan is read-only, with a quiet door to the log
+  // (issue #1184, D24).
+  const planned = page.getByRole("heading", { name: "The plan" });
+  await expect(planned).toBeVisible();
+  await page.getByRole("link", { name: "Changed the plan?" }).click();
+  await expect(page).toHaveURL(/checkpoint=after_dive_1/);
+
+  const summary = page.locator("summary").filter({ hasText: "Dive 1" });
+  await summary.click();
+  const log = page.locator("form").filter({ hasText: "Dive 1" });
+
+  // A note with no reason above it is refused rather than dropped, and what
+  // the divemaster typed survives the refusal (issue #1018's rule).
+  await log.getByLabel("Note for the shop").fill("The mooring was taken.");
+  await log.getByRole("button", { name: "Save dive record" }).click();
+  await expect(log.getByText(/Choose why the plan changed/).first()).toBeVisible();
+  await expect(log.getByLabel("Note for the shop")).toHaveValue("The mooring was taken.");
+
+  await log.getByLabel("Why the plan changed").selectOption("current");
+  await log.getByRole("button", { name: "Save dive record" }).click();
+  await expect(log.getByText("Dive record saved.")).toBeVisible();
+
+  // The published plan is untouched: what happened lives in a different table.
+  await page.getByRole("link", { name: "Before departure" }).click();
+  await expect(page).toHaveURL(/checkpoint=departure/);
+  await expect(page.getByText("Dive 1 · Molasses Reef")).toBeVisible();
+});
+
 test("a transposed dive log entry is refused out loud and keeps what was typed", async ({
   page,
 }) => {

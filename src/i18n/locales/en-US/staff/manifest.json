@@ -77,7 +77,9 @@
       "unknownRecorder": "Your staff record was not found, so nothing was saved.",
       "invalidTime": "One of the times could not be read. Check both and save again.",
       "invalid": "Nothing was saved. Check the entries and try again.",
-      "wrongDive": "This form is for a different dive. Reload the manifest and try again."
+      "wrongDive": "This form is for a different dive. Reload the manifest and try again.",
+      "planChangeNoteWithoutReason": "Choose why the plan changed, then save the note.",
+      "planChangeNoteTooLong": "That note is too long. Shorten it and save again."
     },
     "observedSpeciesHint": "Divers read this on their recap."
   },
@@ -179,5 +181,33 @@
     "shoreContactLabel": "Shore contact:",
     "planLabel": "If something goes wrong"
   },
-  "onThisPhone": "On this phone"
+  "onThisPhone": "On this phone",
+  "catchUp": {
+    "label": "Since you looked at {time} · from the desk",
+    "dismiss": "Got it",
+    "arrival": "{count, plural, one {{names} has checked in.} other {{names} have checked in.}}",
+    "seatTaken": "{count, plural, one {{names} took a seat.} other {{names} took seats.}}",
+    "seatReleased": "{count, plural, one {{names} gave up a seat.} other {{names} gave up seats.}}",
+    "gearChanged": "{count, plural, one {{names} has different gear now.} other {{names} have different gear now.}}",
+    "pickupSet": "{count, plural, one {{names} has a hotel pickup.} other {{names} have hotel pickups.}}",
+    "helpRequest": "{count, plural, one {{names} wants a hand from the crew.} other {{names} want a hand from the crew.}}",
+    "meetingPoint": "The meeting point moved.",
+    "planChanged": "The dive plan changed."
+  },
+  "planChange": {
+    "heading": "The plan",
+    "diveRow": "Dive {number} · {site}",
+    "diveRowNoSite": "Dive {number} · site to be confirmed",
+    "door": "Changed the plan?",
+    "doorNote": "Say why in the dive log after each dive.",
+    "reasonLabel": "Why the plan changed",
+    "reason": {
+      "current": "Current",
+      "weather": "Weather",
+      "visibility": "Visibility",
+      "crewCall": "The crew's call"
+    },
+    "noteLabel": "Note for the shop",
+    "noteHint": "Divers never see this."
+  }
 }

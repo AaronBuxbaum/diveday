@@ -1,6 +1,7 @@
 import { and, asc, eq, gt, inArray, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
+import { recordDeskEvent } from "./desk-events";
 import { bookings, people, tripHelpRequests, trips } from "./schema";
 
 export type HelpRequestKind = (typeof tripHelpRequests.kind.enumValues)[number];
@@ -113,7 +114,7 @@ export async function saveHelpRequest(
   const now = input.now ?? nowDate();
   return db.transaction(async (tx) => {
     const [booking] = await tx
-      .select({ tripId: bookings.tripId })
+      .select({ tripId: bookings.tripId, personId: bookings.personId })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .where(
@@ -184,6 +185,20 @@ export async function saveHelpRequest(
             updatedAt: now,
           })
           .returning();
+    // "Ben Okafor wants a hand from the crew." — the fourth of the arrival
+    // facts #1187 names, and the one that most often reaches the boat as
+    // nothing at all. **Which of the three kinds it was is deliberately not in
+    // the event**: the strip carries the fact that a diver asked, and the ask
+    // itself is one tap away on Today. No actor either — the diver asked on
+    // their own link, so this is news to every staffer including the desk.
+    await recordDeskEvent(tx, {
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      kind: "help_request",
+      bookingId: input.bookingId,
+      subjectPersonId: booking.personId,
+      occurredAt: now,
+    });
     return { ok: true, request: request ?? null };
   });
 }

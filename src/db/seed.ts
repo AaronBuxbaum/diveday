@@ -109,6 +109,7 @@ import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCourseInquiries } from "./seed-course-inquiries";
 import { seedDateRequests } from "./seed-date-requests";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
+import { seedDeskHandoff } from "./seed-desk-handoff";
 import { seedDeskTrail } from "./seed-desk-trail";
 import { seedDiveRecency } from "./seed-dive-recency";
 import { seedDiveSiteCatalog } from "./seed-dive-site-catalog";
@@ -171,6 +172,7 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
  * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
  * | `./seed-desk-trail.ts` | the notes and activity behind today's reef boat, so its Guests tab has a history |
+ * | `./seed-desk-handoff.ts` | the morning's desk acts on that same boat, the owner's read mark behind them, and the two divers who said the crew may know it is their first trip |
  * | `./seed-diver-trail.ts` | the same table read the other way round — what the desk has done about eight of the cast, so a diver's record opens on a history rather than an empty Activity panel |
  * | `./seed-dive-site-catalog.ts` | DiveDay's published dive-site templates — shared by every shop, never this one's |
  * | `./seed-self-declared.ts` | the two list joiners who said what they can dive, so the marks a staffer reads before a blast are ever rendered |
@@ -870,6 +872,16 @@ export async function seedDemoSchedule(
         trip: reefTrip,
         roster: bookingRows,
         divers: customers,
+        actorPersonId: instructor.id,
+      });
+      // The morning handoff on that same boat: what the desk did after the
+      // owner last looked, plus the two divers who said the crew may know it
+      // is their first trip (src/db/seed-desk-handoff.ts, issues #1202/#1187
+      // and #1182). Written by the instructor so the owner's own login — the
+      // one a demo signs in with — is the reader who is behind on them.
+      await seedDeskHandoff(db, shopId, {
+        trip: reefTrip,
+        roster: bookingRows,
         actorPersonId: instructor.id,
       });
       // One unpaid seat on that same boat, so the Overview's pulse has a money

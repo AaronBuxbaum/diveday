@@ -7,6 +7,7 @@ import {
   listDiverMergeCandidates,
   listDiverMergeDuplicateIds,
   mergeDiverRecords,
+  PERSON_COLUMNS_DELIBERATELY_UNMOVED,
   PERSON_TABLES_DELIBERATELY_UNMOVED,
   STAFF_HISTORY_TABLES,
   STAFF_PERSON_ONLY_TABLES,
@@ -23,6 +24,7 @@ import {
   priorVisits,
   rentalFitProfiles,
   shops,
+  tripDeskEvents,
   trips,
 } from "./schema";
 
@@ -237,8 +239,8 @@ describe("diver record merge", () => {
  * The merge moves history table by table from a hard-coded list, so a table
  * added tomorrow with a `person_id` is silently forgotten: no error, no failing
  * test, just a row left pointing at a diver the shop just removed. That is how
- * `gear_reservations` was missed. This holds the four answers exhaustive
- * against the live schema, which is the only place the truth is.
+ * `gear_reservations` was missed. This holds the answers exhaustive against the
+ * live schema, which is the only place the truth is.
  */
 describe("every person_id column in the schema has a merge answer", () => {
   it("classifies each one as moved, refused, or deliberately left alone", async () => {
@@ -261,6 +263,90 @@ describe("every person_id column in the schema has a merge answer", () => {
     expect(inSchema.filter((table) => !classified.has(table))).toEqual([]);
     // And nothing is classified that the schema no longer has.
     expect([...classified].filter((table) => !inSchema.includes(table)).sort()).toEqual([]);
+  });
+
+  /**
+   * The case above could not see a column called anything else, and most of
+   * them are: `subject_person_id`, `actor_person_id`, `recorded_by_person_id`.
+   * So the guard written to stop a table being forgotten had a blind spot the
+   * exact shape of a naming convention — `activity_events.subject_person_id`
+   * sat in it from the day it was written, and `trip_desk_events` (slice 16d)
+   * landed in it without anything going red.
+   *
+   * `like '%person_id'` is the version that sees them. Every pair is either
+   * moved with the diver or has a written reason for staying, and the reasons
+   * are almost all the same one: attribution belongs to the shop.
+   */
+  it("classifies the prefixed person columns too", async () => {
+    const { db } = await seededShopContext();
+    const result = await db.execute(sql`
+      select table_name, column_name
+      from information_schema.columns
+      where table_schema = 'public'
+        and column_name like '%person_id'
+        and column_name <> 'person_id'
+      order by table_name, column_name
+    `);
+    const inSchema = result.rows.map((row) => {
+      const { table_name, column_name } = row as { table_name: string; column_name: string };
+      return `${table_name}.${column_name}`;
+    });
+    expect(inSchema.length).toBeGreaterThan(20);
+
+    const classified = new Set<string>(Object.keys(PERSON_COLUMNS_DELIBERATELY_UNMOVED));
+    expect(inSchema.filter((pair) => !classified.has(pair))).toEqual([]);
+    expect([...classified].filter((pair) => !inSchema.includes(pair)).sort()).toEqual([]);
+  });
+
+  /**
+   * `activity_events.subject_person_id` has always stayed put, and the case at
+   * the top of this file pins it. `trip_desk_events` takes the same answer, so
+   * this says so out loud rather than leaving the new table's behaviour to be
+   * inferred from a map: a trail records who a thing happened to at the time,
+   * and this one is read by `trip_id`, so nothing is lost from the survivor's
+   * page by leaving it. The actor beside it is attribution and never moves
+   * either.
+   */
+  it("leaves a desk event's subject and actor on the ids that were there", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .orderBy(trips.id)
+      .limit(1);
+    if (!trip) throw new Error("expected a seeded trip");
+    const [event] = await db
+      .insert(tripDeskEvents)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        kind: "seat_taken",
+        actorPersonId: owner.id,
+        subjectPersonId: source.id,
+      })
+      .returning();
+    if (!event) throw new Error("desk event fixture insert failed");
+
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: shop.id,
+        personId: source.id,
+        survivorId: survivor.id,
+        actorPersonId: owner.id,
+      }),
+    ).toEqual({ ok: true, survivorId: survivor.id, mergedPersonId: source.id });
+
+    const [after] = await db
+      .select({
+        subjectPersonId: tripDeskEvents.subjectPersonId,
+        actorPersonId: tripDeskEvents.actorPersonId,
+      })
+      .from(tripDeskEvents)
+      .where(eq(tripDeskEvents.id, event.id));
+    expect(after?.subjectPersonId).toBe(source.id);
+    expect(after?.actorPersonId).toBe(owner.id);
   });
 
   it("moves a bookingless counter rental onto the survivor", async () => {
