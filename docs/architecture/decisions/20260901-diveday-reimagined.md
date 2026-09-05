@@ -144,14 +144,14 @@ overlay with a default, never a requirement.
   looks ship, not three**: inherit the host page, or DiveDay light. The app has no forced-scheme
   mechanism — the night palette is a `prefers-color-scheme` block and `data-theme` appears nowhere
   in `globals.css` — so a "DiveDay dark" widget would mean a second copy of the night tokens for one
-  frame; a widget follows the visitor's scheme like every other page. ~~**"One course" and "a named
-  set" are not built**: the courses widget lists the catalogue, and a curated set is filed as a
-  follow-up rather than half-drawn.~~ *Both shipped since: "one course" in #1348 (`data-show` on the
-  courses widget) and the named set in slice 16j (issue #1284) — an `embed_sets` row a shop names
-  and edits in Settings, framed by the grid and courses widgets through a `data-set` attribute
-  beside the untouched `data-show`. All four of this paragraph's "what it shows" answers now ship.*
-  What the same pass *did* close: the lightbox's payment step
-  really does open the real page and says so (`?pay=due` lands the frame on a "Continue to payment"
+  frame; a widget follows the visitor's scheme like every other page. **"One course" ships; "a named
+  set" is deferred.** #1348 gave the courses widget `data-show=<course-slug>`, so three of this
+  paragraph's four "what it shows" answers are live. The fourth waits on a shop asking for it — the
+  owner's ruling on issue #1284, 2026-09-03, which also closed #1262 into it: a stored set needs a
+  table, and the open question is whether that table should instead be the reusable departure **tag**
+  that [20260904-reef-all-the-way-down](20260904-reef-all-the-way-down.md)'s lens vocabulary has since
+  become. Building it now would answer that by accident. What the same pass *did* close: the
+  lightbox's payment step really does open the real page and says so (`?pay=due` lands the frame on a "Continue to payment"
   door at the top level; Stripe's page refuses framing, and a redirect inside the frame was a blank
   box), the button widget darkens a pale host colour in the loader itself (the one widget not
   framed, so the server's rule never ran for it), the generator refuses a departure card with no

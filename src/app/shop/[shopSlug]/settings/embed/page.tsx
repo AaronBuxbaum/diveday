@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { canPersonManageShopSettings } from "@/db/authz";
+import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
-import { listEmbedSets } from "@/db/embed-sets";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { localeEndonym } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
@@ -10,17 +10,13 @@ import { DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { brandDisplayFontFamily, DIVEDAY_BRAND_COLOR, isBrandDisplayFontCode } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
-import { EMBED_SET_MAX } from "@/lib/embed-sets";
 import { EMBED_KINDS, type EmbedKind, PLATFORMS, type Platform } from "@/lib/embed-snippets";
 import { formatDayParts, formatTime } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
-import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { EmbedGenerator, type EmbedGeneratorCopy } from "./EmbedGenerator";
-import { EmbedSets } from "./EmbedSets";
-import { EMBED_SETS_FORM } from "./forms";
 
 export const instant = true;
 
@@ -35,22 +31,16 @@ export const metadata: Metadata = { title: "Website embed — DiveDay" };
  */
 export default async function EmbedSettingsPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; form?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { notice: noticeCode } = await searchParams;
   const { session, shop, db } = await requireShopSurface(shopSlug, {
     allow: canPersonManageShopSettings,
     refusal: { notice: "settings-not-authorized" },
   });
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const setsNoticeText = (key: "saved" | "deleted" | "invalid" | "missing") =>
-    t(`settings.embed.sets.notice.${key}`);
-  const setsTooManyText = t("settings.embed.sets.notice.tooMany", { max: EMBED_SET_MAX });
   const origin = publicAppUrl();
   const header = (
     <ShopPageHeader
@@ -70,7 +60,8 @@ export default async function EmbedSettingsPage({
       </main>
     );
   }
-  const { trips } = await pagedUpcomingTripsWithCounts(db, shop.id, {
+  void db;
+  const { trips } = await pagedUpcomingTripsWithCounts(await getDb(), shop.id, {
     now: nowDate(),
     limit: 30,
     publicOnly: true,
@@ -86,28 +77,10 @@ export default async function EmbedSettingsPage({
   // the roster's progression order rather than alphabetically — the same order
   // `listActiveCourses` gives every other surface, so a shop picking "Open
   // Water" finds it where it always is.
-  const courseChoices = (await listActiveCourses(db, shop.id)).map((course) => ({
+  const courseChoices = (await listActiveCourses(await getDb(), shop.id)).map((course) => ({
     id: course.slug,
     label: course.title,
   }));
-  // The shop's own named lists — the fourth of the ADR's "what it shows"
-  // answers (issue #1284). Both the generator's select and the editor below it
-  // read the same rows, so a list a shop just named is offered immediately.
-  const sets = await listEmbedSets(db, shop.id);
-  // Every code this page can answer with belongs to one form — the lists
-  // editor — so it is routed there rather than to a banner under the `<h1>`,
-  // which on a page this tall is nowhere near what the reader just submitted.
-  const setsNotice = noticeFromParam(noticeCode, {
-    "embed-set-saved": { form: EMBED_SETS_FORM, tone: "success", text: setsNoticeText("saved") },
-    "embed-set-deleted": {
-      form: EMBED_SETS_FORM,
-      tone: "success",
-      text: setsNoticeText("deleted"),
-    },
-    "embed-set-invalid": { form: EMBED_SETS_FORM, tone: "danger", text: setsNoticeText("invalid") },
-    "embed-set-too-many": { form: EMBED_SETS_FORM, tone: "danger", text: setsTooManyText },
-    "embed-set-missing": { form: EMBED_SETS_FORM, tone: "danger", text: setsNoticeText("missing") },
-  } satisfies Record<string, FormNotice>);
   const kinds = Object.fromEntries(
     EMBED_KINDS.map((kind) => [kind, t(`settings.embed.kinds.${kind}.name`)]),
   ) as Record<EmbedKind, string>;
@@ -129,7 +102,6 @@ export default async function EmbedSettingsPage({
     showEverything: t("settings.embed.showEverything"),
     showDeparture: t("settings.embed.showDeparture"),
     showAllCourses: t("settings.embed.showAllCourses"),
-    setsGroup: t("settings.embed.sets.group"),
     look: t("settings.embed.look"),
     lookSite: t("settings.embed.lookSite"),
     lookLight: t("settings.embed.lookLight"),
@@ -163,7 +135,6 @@ export default async function EmbedSettingsPage({
         shopSlug={shop.slug}
         trips={tripChoices}
         courses={courseChoices}
-        sets={sets.map((set) => ({ id: set.id, label: set.name, kind: set.kind }))}
         locales={DIVER_LOCALES}
         previewHost={{
           brand: shop.brandColor ?? DIVEDAY_BRAND_COLOR,
@@ -173,37 +144,6 @@ export default async function EmbedSettingsPage({
         }}
         copy={copy}
       />
-      {/* Section rhythm belongs to the page: one `space-y-10` above, and no
-          `mt-*` on the card (docs/design/forms-and-controls.md). The generator
-          already renders its own `space-y-10` stack, so this joins it. */}
-      <div className="mt-10">
-        <EmbedSets
-          shopSlug={shop.slug}
-          sets={sets}
-          trips={tripChoices}
-          courses={courseChoices}
-          notice={noticeForForm(setsNotice, EMBED_SETS_FORM)}
-          copy={{
-            title: t("settings.embed.sets.title"),
-            nameLabel: t("settings.embed.sets.nameLabel"),
-            namePlaceholder: {
-              trip: t("settings.embed.sets.namePlaceholder.trip"),
-              course: t("settings.embed.sets.namePlaceholder.course"),
-            },
-            membersLabel: t("settings.embed.sets.membersLabel"),
-            add: t("settings.embed.sets.add"),
-            addNamed: (kind) => t("settings.embed.sets.addNamed", { kind }),
-            save: t("settings.embed.sets.save"),
-            saving: t("settings.embed.sets.saving"),
-            deleteNamed: (name) => t("settings.embed.sets.deleteNamed", { name }),
-            deleteConfirm: (name) => t("settings.embed.sets.deleteConfirm", { name }),
-            kinds: {
-              trip: t("settings.embed.sets.kinds.trip"),
-              course: t("settings.embed.sets.kinds.course"),
-            },
-          }}
-        />
-      </div>
       <p className="mt-6 text-sm text-muted">
         {t.rich("settings.embed.footer", {
           link: (chunks) => (

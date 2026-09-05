@@ -27,7 +27,6 @@ const authModule = (await import("@/lib/auth")) as unknown as {
 const auth = authModule.auth;
 const EmbedSettingsPage = (await import("./page")).default;
 const { EmbedGenerator } = await import("./EmbedGenerator");
-const { EmbedSets } = await import("./EmbedSets");
 
 async function seededContext() {
   const db: AppDb = await seededTestDb();
@@ -82,10 +81,7 @@ describe("EmbedSettingsPage", () => {
     const previousAppHost = process.env.APP_HOST;
     process.env.APP_HOST = "http://localhost:3000";
     try {
-      const element = await EmbedSettingsPage({
-        params: Promise.resolve({ shopSlug: shop.slug }),
-        searchParams: Promise.resolve({}),
-      });
+      const element = await EmbedSettingsPage({ params: Promise.resolve({ shopSlug: shop.slug }) });
       const [generator] = findElements<{
         origin: string;
         shopSlug: string;
@@ -100,58 +96,6 @@ describe("EmbedSettingsPage", () => {
       // Eight kinds, each with a name (ADR 20260901-diveday-reimagined, 13d).
       expect(Object.keys(generator?.props.copy.kinds ?? {})).toHaveLength(8);
       expect(generator?.props.copy.code).toBe("Embed code");
-    } finally {
-      process.env.APP_HOST = previousAppHost;
-    }
-  });
-
-  it("renders the named lists editor beside the generator", async () => {
-    const { db, shop, personId } = await seededContext();
-    vi.mocked(getDb).mockResolvedValue(db);
-    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
-    const previousAppHost = process.env.APP_HOST;
-    process.env.APP_HOST = "http://localhost:3000";
-    try {
-      const element = await EmbedSettingsPage({
-        params: Promise.resolve({ shopSlug: shop.slug }),
-        searchParams: Promise.resolve({}),
-      });
-      const [editor] = findElements<{
-        sets: { name: string }[];
-        trips: { id: string }[];
-        copy: { title: string };
-      }>(element, EmbedSets);
-      expect(editor).toBeDefined();
-      expect(editor?.props.copy.title).toBe("Named lists");
-      // The demo shop seeds one (`src/db/seed-embed-sets.ts`), so the card is a
-      // populated one rather than an empty form.
-      expect(editor?.props.sets.length).toBeGreaterThan(0);
-      expect(editor?.props.trips.length).toBeGreaterThan(0);
-    } finally {
-      process.env.APP_HOST = previousAppHost;
-    }
-  });
-
-  it("routes a list's notice to the lists form rather than to a page banner", async () => {
-    const { db, shop, personId } = await seededContext();
-    vi.mocked(getDb).mockResolvedValue(db);
-    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
-    const previousAppHost = process.env.APP_HOST;
-    process.env.APP_HOST = "http://localhost:3000";
-    try {
-      const element = await EmbedSettingsPage({
-        params: Promise.resolve({ shopSlug: shop.slug }),
-        searchParams: Promise.resolve({ notice: "embed-set-saved", form: "embed-sets" }),
-      });
-      const [editor] = findElements<{ notice?: { tone: string; text: string } }>(
-        element,
-        EmbedSets,
-      );
-      expect(editor?.props.notice).toEqual({
-        form: "embed-sets",
-        tone: "success",
-        text: "List saved.",
-      });
     } finally {
       process.env.APP_HOST = previousAppHost;
     }

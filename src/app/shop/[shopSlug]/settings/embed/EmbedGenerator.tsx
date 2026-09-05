@@ -4,7 +4,6 @@ import { useEffect, useId, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { decodeEmbedChoice, encodeEmbedChoice } from "@/lib/embed-sets";
 import {
   DEFAULT_EMBED_OPTIONS,
   EMBED_KINDS,
@@ -28,8 +27,6 @@ export type EmbedGeneratorCopy = {
   showEverything: string;
   showDeparture: string;
   showAllCourses: string;
-  /** The `<optgroup>` heading over the shop's own named lists (issue #1284). */
-  setsGroup: string;
   look: string;
   lookSite: string;
   lookLight: string;
@@ -57,36 +54,6 @@ export type EmbedGeneratorCopy = {
 
 const FRAMED = new Set<EmbedKind>(["calendar", "grid", "departure", "courses"]);
 
-/** The kinds that frame one departure, and so read a bare trip id. */
-const READS_TRIP_ID = new Set<EmbedKind>(["departure", "lightbox", "button", "qr"]);
-
-/**
- * **Can this kind still honour the choice already made?**
- *
- * The select carries four namespaces — a trip id, a course slug, a departures
- * list and a courses list — and every one of them is an opaque string, so the
- * only thing that can tell them apart is which kind produced them. A choice
- * that survives into a kind that cannot read it is a widget framed with an id
- * from the wrong namespace, which answers 404 with nothing on the page to say
- * why.
- */
-function kindHonours(
-  kind: EmbedKind,
-  choice: string,
-  sets: readonly { id: string; kind: "trip" | "course" }[],
-  courses: readonly { id: string }[],
-): boolean {
-  const { show, set } = decodeEmbedChoice(choice);
-  if (set) {
-    const row = sets.find((candidate) => candidate.id === set);
-    if (!row) return false;
-    return row.kind === "trip" ? kind === "grid" : kind === "courses";
-  }
-  if (!show) return true;
-  const isCourseSlug = courses.some((course) => course.id === show);
-  return isCourseSlug ? kind === "courses" : READS_TRIP_ID.has(kind);
-}
-
 /**
  * **The embed generator** (Harbor — ADR 20260901-diveday-reimagined, decision
  * 2): the one place a shop chooses what goes on its own website. Four choices
@@ -103,7 +70,6 @@ export function EmbedGenerator({
   shopSlug,
   trips,
   courses,
-  sets,
   locales,
   previewHost,
   copy,
@@ -113,8 +79,6 @@ export function EmbedGenerator({
   trips: readonly { id: string; label: string }[];
   /** The shop's active courses, by slug, for the courses widget (issue #1284). */
   courses: readonly { id: string; label: string }[];
-  /** The shop's own named lists, for the grid and courses widgets (issue #1284). */
-  sets: readonly { id: string; label: string; kind: "trip" | "course" }[];
   locales: readonly string[];
   /**
    * What the preview frame is told about "the host page" when the look is the
@@ -126,7 +90,7 @@ export function EmbedGenerator({
   copy: EmbedGeneratorCopy;
 }) {
   const [kind, setKind] = useState<EmbedKind>("calendar");
-  const [choice, setChoice] = useState<string>("");
+  const [show, setShow] = useState<string>("");
   const [look, setLook] = useState<EmbedLook>("site");
   const [lang, setLang] = useState<string>("auto");
   const [platform, setPlatform] = useState<Platform>("html");
@@ -134,23 +98,15 @@ export function EmbedGenerator({
   const [qr, setQr] = useState<string | null>(null);
   const ids = { kind: useId(), look: useId(), platform: useId() };
 
-  // One select, four namespaces: a trip id, a course slug, and either kind of
-  // named list. The `set:` prefix is the only thing that tells a list apart
-  // from the other three, because every value here is an opaque string
-  // (`src/lib/embed-sets.ts`).
-  const { show, set } = decodeEmbedChoice(choice);
-  const options = { look, lang, show, set };
+  const options = { look, lang, show: show || null };
   // The QR code can point at one boat too — the counter's code for tonight's
-  // night dive — so it takes the same choice as a button. `grid` joins them
-  // for the lists alone: it never narrows to one thing, but it does narrow to
-  // one of the shop's own (issue #1284).
+  // night dive — so it takes the same choice as a button.
   const needsShow =
     kind === "departure" ||
     kind === "lightbox" ||
     kind === "button" ||
     kind === "qr" ||
-    kind === "courses" ||
-    kind === "grid";
+    kind === "courses";
   // A departure card with no departure chosen renders a not-found body, so the
   // snippet waits for the choice rather than being pasted broken. **The
   // courses widget is deliberately not in that boat**: "every course" is the
@@ -159,15 +115,8 @@ export function EmbedGenerator({
   const showMissing = kind === "departure" && !show;
   // Departures are chosen by id, courses by slug, and one select does both —
   // so the list has to change with the kind, and a choice made for one kind
-  // must not survive into the other as an id the widget will 404 on. A grid
-  // offers no single thing at all: the whole board, or one named list.
-  const choices = kind === "grid" ? [] : kind === "courses" ? courses : trips;
-  const setChoices = sets.filter((row) =>
-    kind === "grid" ? row.kind === "trip" : kind === "courses" ? row.kind === "course" : false,
-  );
-  // Only the grid's field is new, and only when there is a list to put in it —
-  // so a shop that has named none sees exactly the page it saw before.
-  const showsChoiceField = needsShow && (kind !== "grid" || setChoices.length > 0);
+  // must not survive into the other as an id the widget will 404 on.
+  const choices = kind === "courses" ? courses : trips;
   const target = embedTargetUrl(origin, shopSlug, options);
   const snippet =
     kind === "qr" || kind === "partner" || showMissing
@@ -215,15 +164,13 @@ export function EmbedGenerator({
                       value={k}
                       checked={kind === k}
                       onChange={() => {
-                        // The choice holds a trip id for every kind but one, a
-                        // course slug for `courses`, and either kind of named
-                        // list. Crossing a namespace has to clear it or the
-                        // courses widget is framed with a UUID and answers 404,
-                        // and a grid's list survives into a departure card that
-                        // cannot read one; staying inside one keeps a choice the
-                        // shop already made, so picking "QR code" after "One
-                        // departure" still points at that boat.
-                        if (!kindHonours(k, choice, sets, courses)) setChoice("");
+                        // `show` holds a trip id for every kind but one, and a
+                        // course slug for `courses`. Crossing that line has to
+                        // clear it or the courses widget is framed with a UUID
+                        // and answers 404; staying on the same side keeps a
+                        // choice the shop already made, so picking "QR code"
+                        // after "One departure" still points at that boat.
+                        if ((k === "courses") !== (kind === "courses")) setShow("");
                         setKind(k);
                       }}
                       className="sr-only"
@@ -235,11 +182,11 @@ export function EmbedGenerator({
               </div>
             </fieldset>
 
-            {showsChoiceField ? (
+            {needsShow ? (
               <Field label={copy.shows} error={showMissing ? copy.showRequired : undefined}>
                 <select
-                  value={choice}
-                  onChange={(event) => setChoice(event.target.value)}
+                  value={show}
+                  onChange={(event) => setShow(event.target.value)}
                   className={controlClass}
                   required={kind === "departure"}
                   aria-invalid={showMissing || undefined}
@@ -251,20 +198,11 @@ export function EmbedGenerator({
                         ? copy.showAllCourses
                         : copy.showEverything}
                   </option>
-                  {choices.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
+                  {choices.map((choice) => (
+                    <option key={choice.id} value={choice.id}>
+                      {choice.label}
                     </option>
                   ))}
-                  {setChoices.length > 0 ? (
-                    <optgroup label={copy.setsGroup}>
-                      {setChoices.map((row) => (
-                        <option key={row.id} value={encodeEmbedChoice({ show: null, set: row.id })}>
-                          {row.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ) : null}
                 </select>
               </Field>
             ) : null}
@@ -331,13 +269,13 @@ export function EmbedGenerator({
                 <p className="py-8 text-center text-sm text-muted">{copy.showRequired}</p>
               ) : FRAMED.has(kind) ? (
                 <iframe
-                  key={`${kind}-${choice}-${lang}-${look}`}
+                  key={`${kind}-${show}-${lang}-${look}`}
                   title={copy.preview}
                   src={embedFrameUrl(
                     origin,
                     shopSlug,
                     kind as "calendar" | "grid" | "departure" | "courses",
-                    { ...DEFAULT_EMBED_OPTIONS, lang, show, set, look },
+                    { ...DEFAULT_EMBED_OPTIONS, lang, show: show || null, look },
                     look === "site" ? previewHost : {},
                   )}
                   className="h-[480px] w-full rounded-lg border-0 bg-surface"

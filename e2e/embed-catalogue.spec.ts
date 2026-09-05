@@ -97,18 +97,6 @@ test.describe("the widget views", () => {
     await expect(page.getByRole("listitem")).toHaveCount(0);
   });
 
-  test("an unknown list renders not-found, never the whole board", async ({ page }) => {
-    // The trap this closes: falling through to every departure on a public,
-    // framed, unauthenticated page is the shape of an information leak. Status
-    // 200 for the same partial-prerendering reason the unknown-course case
-    // above spells out — the shell has already gone out.
-    const response = await page.goto(
-      "/s/blue-mantis/embed/grid?set=00000000-0000-4000-8000-0000000000ff",
-    );
-    expect(response?.status()).toBe(200);
-    await expect(page.getByRole("article")).toHaveCount(0);
-  });
-
   test("the storefront itself cannot be recoloured by URL", async ({ page }) => {
     await page.goto("/s/blue-mantis?brand=%23b45309");
     const primary = await page.evaluate(() =>
@@ -192,40 +180,5 @@ test.describe("the generator", () => {
     await expect(page.getByRole("textbox", { name: /^Referral link/ })).toHaveValue(
       /utm_campaign=the-reef-hotel/,
     );
-  });
-
-  /**
-   * **A named list, offered and framed** (issue #1284) — the fourth and last
-   * of the ADR's "what it shows" answers. The demo seeds one over its two
-   * earliest upcoming departures (`src/db/seed-embed-sets.ts`).
-   */
-  test("offers the shop's lists on a grid and composes data-set from the choice", async ({
-    page,
-  }) => {
-    await page.goto("/shop/blue-mantis/settings/embed");
-    await page.locator('[data-hydrated="true"], main').first().waitFor();
-    const tile = (text: RegExp) => page.locator("label").filter({ hasText: text });
-    await tile(/^Grid/).click();
-
-    // The id is not written down here: it is a uuid the seed minted, so the
-    // option the generator offers is where it comes from.
-    const shows = page.getByLabel("What it shows");
-    await expect(shows).toBeVisible();
-    await shows.selectOption({ label: "Beginner boats" });
-    const snippet = page.getByLabel("Embed code");
-    await expect(snippet).toHaveValue(/data-set="/);
-    await expect(snippet).not.toHaveValue(/data-show=/);
-    const setId = ((await snippet.inputValue()).match(/data-set="([^"]+)"/) ?? [])[1];
-    expect(setId).toBeTruthy();
-
-    // The whole board first, so "fewer" is a comparison rather than a guess.
-    await page.goto("/s/blue-mantis/embed/grid");
-    await expect(page.getByRole("article").first()).toBeVisible();
-    const whole = await page.getByRole("article").count();
-
-    await page.goto(`/s/blue-mantis/embed/grid?set=${setId}`);
-    await expect(page.getByRole("article").first()).toBeVisible();
-    await expect(page.getByRole("article")).toHaveCount(2);
-    expect(whole).toBeGreaterThan(2);
   });
 });

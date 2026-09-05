@@ -587,7 +587,7 @@
     "rowCount": "{count, plural, one {# row} other {# rows}}",
     "notIncluded": {
       "label": "Not included, on purpose:",
-      "text": "offline manifest copies, notification retry queues, Stripe account linkage, the close-out and buddy-team trails, weather-cancellation state, DiveDay's own reconciliation ledgers, unstored pasted image URLs, and the lists behind your website embeds. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions and course leads <mono>do</mono> export. Photos and safely stored imported receipts export as real files in <mono>photos/</mono>. Credentials, calendar links, and your WhatsApp account never export. See the README."
+      "text": "offline manifest copies, notification retry queues, Stripe account linkage, the close-out and buddy-team trails, weather-cancellation state, DiveDay's own reconciliation ledgers, and unstored pasted image URLs. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions and course leads <mono>do</mono> export. Photos and safely stored imported receipts export as real files in <mono>photos/</mono>. Credentials, calendar links, and your WhatsApp account never export. See the README."
     }
   },
   "import": {
@@ -924,7 +924,7 @@
       },
       "grid": {
         "name": "Grid",
-        "hint": "Trips and courses as cards, or one of your lists"
+        "hint": "Trips and courses as cards"
       },
       "departure": {
         "name": "One departure",
@@ -973,33 +973,6 @@
     "code": "Embed code",
     "partnerLinkField": "Referral link",
     "showRequired": "Pick the departure this card is for.",
-    "fromFareharbor": "Coming from FareHarbor? <link>Each of its embeds has its match here</link>.",
-    "sets": {
-      "title": "Named lists",
-      "group": "Lists",
-      "nameLabel": "Name",
-      "namePlaceholder": {
-        "trip": "Beginner boats",
-        "course": "Entry-level courses"
-      },
-      "membersLabel": "On this list",
-      "add": "Add list",
-      "addNamed": "Add a list of {kind}",
-      "save": "Save",
-      "saving": "Saving…",
-      "deleteNamed": "Delete {name}",
-      "deleteConfirm": "Delete {name}? Any snippet pointing at it stops showing.",
-      "kinds": {
-        "trip": "Departures",
-        "course": "Courses"
-      },
-      "notice": {
-        "saved": "List saved.",
-        "deleted": "List deleted.",
-        "invalid": "Give the list a name and at least one thing to put on it.",
-        "tooMany": "A list holds up to {max}.",
-        "missing": "That list is no longer here."
-      }
-    }
+    "fromFareharbor": "Coming from FareHarbor? <link>Each of its embeds has its match here</link>."
   }
 }

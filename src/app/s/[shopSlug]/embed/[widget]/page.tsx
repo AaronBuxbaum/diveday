@@ -5,7 +5,6 @@ import { buttonClass } from "@/components/ui/button";
 import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
-import { getEmbedSet, listEmbedSetCourses, listEmbedSetTrips } from "@/db/embed-sets";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -46,11 +45,7 @@ export default async function EmbedWidgetPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; widget: string }>;
-  searchParams: Promise<{
-    show?: string | string[];
-    set?: string | string[];
-    credit?: string | string[];
-  }>;
+  searchParams: Promise<{ show?: string | string[]; credit?: string | string[] }>;
 }) {
   const { shopSlug, widget } = await params;
   if (!isEmbedWidget(widget)) notFound();
@@ -59,14 +54,8 @@ export default async function EmbedWidgetPage({
   if (!shop) notFound();
   const { t, locale } = await requestTranslator(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);
-  const { show, set, credit } = await searchParams;
+  const { show, credit } = await searchParams;
   const showId = typeof show === "string" ? show : null;
-  const setId = typeof set === "string" ? set : null;
-  // **A named list, resolved once and refused loudly.** An unknown, deleted,
-  // wrong-shop or wrong-kind id is a `notFound()` below rather than a silent
-  // fall-through to the whole board — this page is public, framed and
-  // unauthenticated, and a fall-through is the shape of an information leak.
-  const namedSet = setId ? await getEmbedSet(db, shop.id, setId) : null;
   // The loader draws the crawlable credit on the host page and says so; a
   // frame hand-written without it keeps its own. One line per widget.
   const hostCarriesCredit = credit === "host";
@@ -111,22 +100,13 @@ export default async function EmbedWidgetPage({
       />
     );
   } else if (widget === "courses") {
-    // **One course, a named list, or the catalogue** (issue #1284, completing
-    // ADR 20260901-diveday-reimagined decision 2's four "what it shows"
-    // answers). A slug that names no active course is a 404 rather than a
-    // silently empty list, the same call the departure card makes one branch
-    // up: a shop that unpublished the course its blog post frames should see
-    // the frame say so, not show an empty panel that reads as a bug in DiveDay.
-    //
-    // `show` wins over `set` here, because one course is the narrower answer
-    // and a snippet carrying both is a shop that changed its mind — the two are
-    // mutually exclusive in the generator, so this only decides a hand-edited
-    // paste.
-    if (setId && (!namedSet || namedSet.kind !== "course")) notFound();
-    const active =
-      namedSet && !showId
-        ? await listEmbedSetCourses(db, shop.id, namedSet.memberIds)
-        : await listActiveCourses(db, shop.id);
+    const active = await listActiveCourses(db, shop.id);
+    // **One course, or the catalogue** (issue #1284, completing ADR
+    // 20260901-diveday-reimagined decision 2's "what it shows"). A slug that
+    // names no active course is a 404 rather than a silently empty list, the
+    // same call the departure card makes one branch up: a shop that unpublished
+    // the course its blog post frames should see the frame say so, not show an
+    // empty panel that reads as a bug in DiveDay.
     const courses = showId ? active.filter((course) => course.slug === showId) : active;
     if (showId && courses.length === 0) notFound();
     body = (
@@ -164,23 +144,10 @@ export default async function EmbedWidgetPage({
       </ul>
     );
   } else {
-    // **The board, or one of the shop's named lists** (issue #1284). A list of
-    // departures is departures alone: a shop that said "our three beginner
-    // boats" is not asking for three courses to be printed under them.
-    //
-    // A resolved list whose members have all sailed renders the same empty the
-    // whole board renders when nothing is upcoming — no new sentence, and no
-    // second empty state to keep consistent with the first.
-    if (setId && (!namedSet || namedSet.kind !== "trip")) notFound();
-    const [{ trips }, courses] = namedSet
-      ? [
-          { trips: await listEmbedSetTrips(db, shop.id, namedSet.memberIds, now) },
-          [] as Awaited<ReturnType<typeof listActiveCourses>>,
-        ]
-      : await Promise.all([
-          pagedUpcomingTripsWithCounts(db, shop.id, { now, limit: 6, publicOnly: true }),
-          listActiveCourses(db, shop.id),
-        ]);
+    const [{ trips }, courses] = await Promise.all([
+      pagedUpcomingTripsWithCounts(db, shop.id, { now, limit: 6, publicOnly: true }),
+      listActiveCourses(db, shop.id),
+    ]);
     body = (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {trips.map((trip) => (

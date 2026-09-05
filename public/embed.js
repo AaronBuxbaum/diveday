@@ -5,8 +5,7 @@
  *
  *   <div data-diveday="calendar|grid|departure|courses" data-shop="<slug>"
  *        data-look="site|light" data-lang="auto|en-US|es-ES"
- *        [data-show="<trip id> on departure, <course slug> on courses"]
- *        [data-set="<named list id> on grid and courses"]></div>
+ *        [data-show="<trip id> on departure, <course slug> on courses"]></div>
  *   <a href="…" data-diveday="button|lightbox" data-shop="<slug>" data-look="site|light">Book a dive</a>
  *
  * The attribute names are a contract (src/lib/embed-snippets.ts pins them, and
@@ -85,13 +84,6 @@
     // against a host page and pins both.
     const show = el.getAttribute("data-show");
     if (show && (kind === "departure" || kind === "courses")) url.searchParams.set("show", show);
-    // A named list on the two widgets that render many things (issue #1284).
-    // Its own attribute, never a second meaning for `data-show`: both values
-    // are opaque strings, so one name could not be read as either. The mirror
-    // is SHOWS_SET in src/lib/embed-snippets.ts, and embed-loader.test.ts runs
-    // this file against a host page to pin the pair.
-    const set = el.getAttribute("data-set");
-    if (set && (kind === "grid" || kind === "courses")) url.searchParams.set("set", set);
     const lang = el.getAttribute("data-lang");
     if (lang && lang !== "auto") url.searchParams.set("lang", lang);
     if ((el.getAttribute("data-look") || "site") === "site") {

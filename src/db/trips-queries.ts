@@ -181,13 +181,6 @@ function upcomingTripScope(
     tripType?: "fun_dive" | "course";
     publicOnly?: boolean;
     /**
-     * A named embed list's members (issue #1284). A caller passing this has
-     * already bounded the set — `EMBED_SET_MAX` — and wants the same scheduled,
-     * public, live, not-yet-sailed filter every other upcoming read applies,
-     * which is exactly why it goes here rather than into a second query.
-     */
-    ids?: readonly string[];
-    /**
      * One of the shop's own words for a kind of day (ADR
      * 20260904-reef-all-the-way-down, decision 2). Applied **here**, in SQL,
      * rather than over the fetched page: this list is keyset-paged at fourteen
@@ -205,7 +198,6 @@ function upcomingTripScope(
     bounds.monthEnd ? lt(trips.startsAt, bounds.monthEnd) : undefined,
     bounds.tripType === "fun_dive" ? isNull(trips.courseId) : undefined,
     bounds.tripType === "course" ? isNotNull(trips.courseId) : undefined,
-    bounds.ids && bounds.ids.length > 0 ? inArray(trips.id, [...bounds.ids]) : undefined,
     bounds.lensId ? eq(trips.lensId, bounds.lensId) : undefined,
   );
 }
@@ -249,8 +241,6 @@ export async function pagedUpcomingTripsWithCounts(
     tripType?: "fun_dive" | "course";
     /** Hide private charters/sessions (e.g. for public storefront schedule). */
     publicOnly?: boolean;
-    /** Narrow to these departures — a named embed list's members (issue #1284). */
-    ids?: readonly string[];
     /** Only departures wearing this one of the shop's own words for a kind of day. */
     lensId?: string;
   } = {},
@@ -282,7 +272,6 @@ export async function pagedUpcomingTripsWithCounts(
           monthEnd: options.monthEnd,
           tripType: options.tripType,
           publicOnly: options.publicOnly,
-          ids: options.ids,
           lensId: options.lensId,
         }),
         afterDate && after && !Number.isNaN(afterDate.getTime())

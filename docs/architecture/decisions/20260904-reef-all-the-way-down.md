@@ -86,9 +86,11 @@ appears on the home, the board and the storefront; never on the manifest.
 
 Thirty-six issues, one line each on the Verdicts board. **Eighteen drawn** onto the surfaces
 (D01, D02, D12, D14, D15, D18, D20, D22, D24, D33, D35, D40, D42, D47, D49, D51, #1081, #1346).
-**Eleven adopted unseen** — built from their own bodies because the primitives already settle their
-shape (D05 on H-67 b, D17, D25, D36 and D45 as one recap variant, D44, D52, #1284, #1357, #1363,
-#1366). **Three
+**Ten adopted unseen** — built from their own bodies because the primitives already settle their
+shape (D05 on H-67 b, D17, D25, D36 and D45 as one recap variant, D44, D52, #1357, #1363,
+#1366). *#1284 was on this list in error and came off it 2026-09-05: the owner deferred its one
+remaining half — the stored named set of embed departures — on 2026-09-03, and the reusable
+departure tag that deferral wanted weighed first is now this ADR's own lens vocabulary.* **Three
 folded** into the row they duplicate (D19 into D15; D23 into D12's count; D27 into D42). **Three
 held** on the waiting-on lines their issues already carry (D39, D48, D53). **One declined**: D38,
 a message the diver did not ask for, which is the one thing the delight report itself forbids; if it
