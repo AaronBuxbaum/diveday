@@ -85,7 +85,25 @@ drift names this ADR in its doc comment, and a test pins the rule.
 | 16f — the storefront's lenses (D02) and "next with space" | shipped | `src/app/s/[shopSlug]/page.tsx` | `src/app/s/[shopSlug]/page.composition.test.ts`, `src/lib/trip-lenses.test.ts`, `src/db/trip-lenses.test.ts`, `e2e/schedule-lenses.spec.ts` |
 | 16g — the thread: "Anything changed?" (D15 with D19 folded in), provenance chips (D51, Budget 5), the rental-fit line (D14) | shipped | `src/app/ready/[token]/_components/ChangedFacts.tsx` | `src/lib/thread-steps.test.ts`, `src/app/ready/[token]/page.composition.test.ts`, `src/app/ready/[token]/_components/ChangedFacts.test.tsx`, `src/components/ui/FactSource.test.tsx`, `src/components/TripChangeLedger.test.tsx` |
 | 16h — the evening: souls not seats (#1346), the open-seats debrief (D47), the rental-fit leftover (D14), the plan-change meta (D24) | shipped | `src/app/shop/[shopSlug]/_components/today/ClosingStation.tsx` | `src/lib/closeout.test.ts`, `src/lib/open-seats.test.ts`, `src/lib/manifests.test.ts`, `src/db/closeout.test.ts`, `src/app/shop/[shopSlug]/_components/today/DaySpine.test.tsx`, `e2e/day-close.spec.ts` |
-| 16i — the recap: the postcard's number, save-as-image (#1081), the private line (D33), the private pulse (D40), the next dive (D35) | open | — | — |
+| 16i — the recap: the postcard's number, save-as-image (#1081), the private line (D33), the private pulse (D40), the next dive (D35) | shipped | `src/app/ready/[token]/_components/AfterState.tsx` | `src/lib/postcard-image.test.ts`, `src/lib/next-dive.test.ts`, `src/db/next-dive.test.ts`, `src/db/recap-pulses.test.ts`, `src/app/ready/[token]/_components/SavePostcard.test.tsx`, `src/app/ready/[token]/_components/AfterState.test.tsx`, `e2e/recap.spec.ts` |
+
+Two of 16i's drawn claims ship as **stated gaps** rather than as invented facts, and the artboard is
+the thing that is out of date, not the code:
+
+- **D35's reason names a person** — "Keiko said the wreck". `trips.recap_shoutout` is trip-level free
+  text with **no author column**, and the surface that already renders it says only "From your crew".
+  An attribution would have to be guessed, so the shipped reason is `crew_named_site` → "Your crew
+  mentioned {site}." Naming the crew member needs an author on the shoutout first.
+- **D35's "same tags as D02"** — the experience lens exists now (`trips.lens_id`, slice 16f), but the
+  *day just dived* is what a lens reason would compare against and `RecapPageData` does not carry the
+  sailed departure's lens. `src/lib/next-dive.ts` states the gap where the fifth reason code will go,
+  so 16f's follow-on adds a code rather than a second ranker.
+
+One further deviation from the plan: the course reason ships as `course_next_session` ("The next
+session of {course}.") rather than `course_next_step` ("The next step after {course}."). Nothing in
+`courses` records what a course *awards*, so "after" would have to be inferred from a
+`minimum_certification_level` ladder a shop's catalog is not obliged to be; `trips.course_id`
+matching is checkable, and it is the more useful sentence for the student it is for.
 | 16j — the ten adopted-unseen issues, built from their own bodies (D05 on H-67 b, D17, D25, #1363, #1366, D36+D45, D44, D52, #1357) | open | — | — |
 
 16f ships with two deliberate deviations from `Storefront.dc.html`. The board draws a dashed **Has

@@ -11,7 +11,8 @@
     "noteRequired": "Cuenta en pocas palabras qué pasó cuando el motivo es “Otro motivo”.",
     "noteTooLong": "La nota es demasiado larga. Redúcela a 200 caracteres.",
     "standout": "Reseña marcada como destacada.",
-    "standoutRemoved": "Reseña quitada de las destacadas."
+    "standoutRemoved": "Reseña quitada de las destacadas.",
+    "pulseAddressed": "Marcado como atendido."
   },
   "ratingWithheld": "Tu valoración sigue apareciendo en tu propia página de calendario, pero DiveDay ha dejado de publicarla en los buscadores: ahora está oculta más de una de cada cinco reseñas que has revisado. Volver a publicar {count, plural, one {# reseña oculta} other {# reseñas ocultas}} la recupera.",
   "standout": "Destacada",
@@ -52,5 +53,13 @@
     "hidden": "Ocultas — {count}"
   },
   "publishAll": "{count, plural, =2 {Publicar ambas} other {Publicar las #}}",
-  "republish": "Volver a publicar"
+  "republish": "Volver a publicar",
+  "pulseTitle": "Nos pidieron arreglar",
+  "pulseMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
+  "pulseMarkAddressed": "Marcar como atendido",
+  "pulseCategoryGear": "Equipo",
+  "pulseCategoryBriefing": "Briefing",
+  "pulseCategoryBoat": "Barco",
+  "pulseCategoryTiming": "Tiempos",
+  "pulseCategoryOther": "Otra cosa"
 }

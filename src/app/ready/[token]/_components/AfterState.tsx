@@ -15,6 +15,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { SHELL_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import type { RecapPageData, RecapPhotoView, RecapSite } from "@/db/recap";
+import type { RecapPulseCategory } from "@/db/recap-pulses";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
@@ -24,6 +25,8 @@ import type { DiveRecordComparison } from "@/lib/dive-record";
 import { formatOrdinal } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { currencySymbol, minorToMajor, type ShopCurrency } from "@/lib/money";
+import type { NextDivePick } from "@/lib/next-dive";
+import type { PostcardImage } from "@/lib/postcard-image";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
 import type { SiteMarkCode } from "@/lib/site-mark";
@@ -31,7 +34,10 @@ import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { visitMilestone } from "@/lib/visit-milestones";
+import { NextDiveCard } from "./NextDiveCard";
 import { PrintRecordButton } from "./PrintRecordButton";
+import { RecapPulse } from "./RecapPulse";
+import { SavePostcard } from "./SavePostcard";
 import { ShareReviewButton } from "./ShareReviewButton";
 import { TipAmountPicker } from "./TipAmountPicker";
 
@@ -61,14 +67,23 @@ import { TipAmountPicker } from "./TipAmountPicker";
  * 4. **The one ask.** The review is the page's single primary, and the
  *    carry-it-to-Google door is the one thing that may take that weight off
  *    it — after a strong rating has just landed, never beside it.
- * 5. **Quiet doors** — photos and the tip, each a hairline row that opens its
+ * 5. **The other thing worth saying, privately** — the pulse (D40, issue
+ *    #1200). Beside the review and outside its `<form>`, because a private
+ *    field inside a public one is a trap and a diver who has already left a
+ *    review must still be able to reach it. Not a door: the doors are places
+ *    to go, and this is a second thing to say.
+ * 6. **Quiet doors** — photos and the tip, each a hairline row that opens its
  *    existing form in place, in the same grammar the prep state's spine uses
  *    one screen earlier.
- * 6. **One fact and one link** at the foot: the shop's next public departure,
- *    and the way back to its schedule.
+ * 7. **One next dive, and one reason it is that one** (D35, issue #1195) —
+ *    over candidates `decideTripAdmission` has already cleared, so the card
+ *    never points at a boat this diver could not board.
+ * 8. **One link** at the foot, and the shop's next public departure beside it
+ *    *only when the card above did not render*: two "here is what is next"
+ *    claims naming two different departures is the page arguing with itself.
  *
  * Presentational and synchronous, like `ThreadSpine`: the two pages resolve
- * the data and bind the three token-scoped server actions, and hand them over.
+ * the data and bind the four token-scoped server actions, and hand them over.
  * That split is what lets `AfterState.test.tsx` pin the rules — the day's
  * facts once, one primary at rest, the stamp's set — with no database.
  *
@@ -78,7 +93,13 @@ import { TipAmountPicker } from "./TipAmountPicker";
  * (docs/engineering/capability-telemetry-runbook.md). A button that hands that
  * to a group chat cannot exist on one of two URLs rendering one surface. The
  * keepsake's own shareable artifact — an image with no bearer URL in it — is
- * issue #1081.
+ * `SavePostcard`, which draws the record into a canvas in the browser from a
+ * value object that has no URL field at all (issue #1081).
+ *
+ * **Slice 16i of ADR 20260904-reef-all-the-way-down** is what added items 5, 7
+ * and 8 above, replaced the face's sentence with its number (H-67 c), and put
+ * the private line and the export in the record's own footer. This component is
+ * where that decision lives and the one that must not drift from it.
  */
 export type AfterStateProps = {
   t: DiverTranslator;
@@ -156,21 +177,46 @@ export type AfterStateProps = {
   /** The diver's own review, when they have left one. */
   ownReview: { rating: number; comment: string | null } | null;
   /**
-   * `?review=`, `?photo=` and `?tip=`, straight off the URL. All three are
-   * attacker-supplied and every read below goes through `noticeFromParam`,
+   * The diver's own private pulse, when they have left one — never a review and
+   * never public (D40, issue #1200). Its presence is also what puts the way back
+   * on screen.
+   */
+  ownPulse: { categories: RecapPulseCategory[]; note: string | null } | null;
+  /**
+   * `?review=`, `?photo=`, `?tip=` and `?pulse=`, straight off the URL. All four
+   * are attacker-supplied and every read below goes through `noticeFromParam`,
    * never a bare lookup that walks the prototype.
    */
-  params: { review?: string; photo?: string; tip?: string };
+  params: { review?: string; photo?: string; tip?: string; pulse?: string };
   /**
    * The shop's next public departure, already worded ("Two-Tank Reef" ·
    * "tomorrow"). Null when the board is empty, which renders the bare link.
    */
   nextDeparture: { title: string; when: string } | null;
-  /** The three recap actions, already bound to a signed recap token. */
+  /**
+   * **The day's record as a picture** (issue #1081): the same worded facts the
+   * card below renders, assembled in `buildAfterStateProps` so the export and
+   * the screen cannot disagree. It carries **no URL, token or slug** — that
+   * absence is the whole reason this surface exports an image rather than
+   * offering a share link (see this component's own note, and
+   * `src/lib/postcard-image.ts`).
+   */
+  postcard: PostcardImage;
+  /**
+   * The one departure this diver is pointed at, or null when the board has
+   * nothing for them (D35, issue #1195). Every candidate has already been
+   * through `decideTripAdmission`, so the card can never suggest a boat they
+   * could not board.
+   */
+  nextDive: NextDivePick | null;
+  /** That pick's sentences, worded where every other fact on this page is worded. */
+  nextDiveWorded: { when: string; reason: string; levelCovers: string | null } | null;
+  /** The four recap actions, already bound to a signed recap token. */
   actions: {
     submitReview: (formData: FormData) => void | Promise<void>;
     uploadPhoto: (formData: FormData) => void | Promise<void>;
     startTip: (formData: FormData) => void | Promise<void>;
+    submitPulse: (formData: FormData) => void | Promise<void>;
   };
 };
 
@@ -239,8 +285,12 @@ export function AfterState({
   tip,
   tipPresets,
   ownReview,
+  ownPulse,
   params,
   nextDeparture,
+  postcard,
+  nextDive,
+  nextDiveWorded,
   actions,
   siteMark,
 }: AfterStateProps) {
@@ -330,6 +380,7 @@ export function AfterState({
         observedSpecies={observedSpecies}
         visitCount={visitCount}
         siteMark={siteMark}
+        postcard={postcard}
       />
 
       {/* The crew's own words carry themselves — a quote, not a boxed panel.
@@ -396,6 +447,19 @@ export function AfterState({
           </div>
         </form>
       </SectionCard>
+
+      {/* ——— The other thing worth saying, and it is private. Beside the review
+          above and deliberately *outside* its `<form>` — a private field inside
+          a public one is a trap, and a diver who has already left a review must
+          still be able to reach this. Never a quiet door of its own: the doors
+          below are places to go, and this is a second thing to say. */}
+      <RecapPulse
+        t={t}
+        shopName={shop.name}
+        ownPulse={ownPulse}
+        notice={params.pulse}
+        action={actions.submitPulse}
+      />
 
       {/* ——— The quiet doors: hairline rows on the page background, each one a
           tap away from the form it already had. Same grammar as the prep
@@ -559,11 +623,27 @@ export function AfterState({
         ) : null}
       </ul>
 
+      {/* ——— One next dive, and one reason it is that one (D35, issue #1195).
+          Renders nothing when the board has nothing this diver can dive. */}
+      <NextDiveCard
+        t={t}
+        shopSlug={shop.slug}
+        pick={nextDive}
+        when={nextDiveWorded?.when ?? ""}
+        reason={nextDiveWorded?.reason ?? ""}
+        levelCovers={nextDiveWorded?.levelCovers ?? null}
+      />
+
       {/* ——— One fact, one link. The shop's next public departure is the only
           thing worth saying on the way out; when the board is empty the link
-          goes on its own rather than borrowing a sentence. */}
+          goes on its own rather than borrowing a sentence.
+
+          **The fact stands down when the card above rendered.** Two "here is
+          what is next" claims one scroll apart, naming two different
+          departures, is the page arguing with itself — so the card wins and
+          the footer keeps the link it always had. */}
       <footer className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-6 print:hidden">
-        {nextDeparture ? (
+        {nextDeparture && !nextDive ? (
           <p className="min-w-0 flex-1 text-base text-muted">
             {nextDeparture.title} · {nextDeparture.when}
           </p>
@@ -634,6 +714,7 @@ function DiveRecord({
   observedSpecies,
   visitCount,
   siteMark,
+  postcard,
 }: Pick<
   AfterStateProps,
   | "t"
@@ -646,6 +727,7 @@ function DiveRecord({
   | "observedSpecies"
   | "visitCount"
   | "siteMark"
+  | "postcard"
 > & {
   trip: AfterStateProps["trip"];
 }) {
@@ -696,7 +778,12 @@ function DiveRecord({
         className="flex items-center justify-between gap-4 bg-primary-tint px-5 py-4 sm:px-6 print:bg-transparent print:px-0 print:py-0"
       >
         <div className="flex min-w-0 items-center gap-4">
-          <SiteMark mark={siteMark} size="lg" ground="surface" className="print:hidden" />
+          {/* `data-postcard-mark` is `SavePostcard`'s reach into the live DOM:
+              the export borrows this drawing rather than keeping a second copy
+              of the illustration hand (issue #1081). */}
+          <span data-postcard-mark className="contents">
+            <SiteMark mark={siteMark} size="lg" ground="surface" className="print:hidden" />
+          </span>
           <h2
             id="dive-record-heading"
             className={`font-brand-display ${SUB_TITLE_CLASS} text-pretty`}
@@ -707,17 +794,24 @@ function DiveRecord({
         {stampText ? (
           <MilestoneStamp label={stampText} />
         ) : (
+          // **A number, not a sentence** (H-67 c). It said "Your 3rd dive day
+          // with Blue Mantis" — a whole clause naming the shop, on a card whose
+          // eyebrow already says the shop and whose footer already says who
+          // recorded it, three times on one postcard. "Dive day № 3" is the
+          // fact and nothing else.
+          //
+          // The milestone roundel above keeps its own words, deliberately:
+          // "First dive day" is a different sentence from an ordinary count,
+          // and it is the one visit where the count *is* the moment.
+          //
           // Never coral, exactly like the stamp it stands in for: primary tint
           // is the visit's ink either way. A first visit cannot reach this
-          // branch — 1 is a milestone — so the ordinal is always past first.
+          // branch — 1 is a milestone — so the count is always past one.
           <span
             data-testid={AFTER_STATE_TEST_IDS.visitLine}
-            className="rounded-md bg-primary-tint px-2.5 py-1 text-xs font-semibold text-primary"
+            className="rounded-md bg-primary-tint px-2.5 py-1 text-xs font-semibold text-primary tabular-nums"
           >
-            {t("recap.visitMilestone", {
-              ordinal: formatOrdinal(visitCount, locale),
-              shopName: shop.name,
-            })}
+            {t("recap.diveDayNumber", { count: visitCount })}
           </span>
         )}
       </div>
@@ -834,13 +928,30 @@ function DiveRecord({
           <p className="mt-2 text-xs font-medium text-muted">{t("recap.printSignature")}</p>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-          {/* Whose record it is, which is all this card may claim of itself. */}
-          <p className="text-xs text-muted">{t("recap.recordedBy", { shopName: shop.name })}</p>
-          <span className="print:hidden">
-            <PrintRecordButton label={t("recap.printRecord")} />
-          </span>
-        </div>
+        {/* **The line a diver writes for themselves, and the picture it goes
+            on** (D33 issue #1193, issue #1081). One component because they are
+            one piece of state: the line is typed in the browser, drawn into the
+            canvas in the browser, and has no path off the phone at all — and it
+            owns the record's closing block, because the dashed row and the
+            footer carrying Save are two rows of one thing. */}
+        <SavePostcard
+          postcard={postcard}
+          fileName={`${t("recap.postcardFileName")}.png`}
+          copy={{
+            lineLabel: t("recap.privateLineLabel"),
+            lineHint: t("recap.privateLineHint"),
+            linePlaceholder: t("recap.privateLinePlaceholder"),
+            save: t("recap.saveAsImage"),
+            saving: t("recap.savingImage"),
+            failed: t("recap.saveImageFailed"),
+          }}
+          // Whose record it is, which is all this card may claim of itself.
+          recordedBy={
+            <p className="text-xs text-muted">{t("recap.recordedBy", { shopName: shop.name })}</p>
+          }
+        >
+          <PrintRecordButton label={t("recap.printRecord")} />
+        </SavePostcard>
       </div>
     </section>
   );

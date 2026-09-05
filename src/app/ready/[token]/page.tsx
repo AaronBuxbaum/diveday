@@ -12,6 +12,7 @@ import {
 import { buildAfterStateProps } from "@/app/ready/[token]/_lib/after-state-data";
 import {
   startTipAction,
+  submitRecapPulseAction,
   submitReviewAction,
   uploadRecapPhotoAction,
 } from "@/app/recap/[token]/actions";
@@ -1647,6 +1648,7 @@ export default async function DiverReadinessPage({
         submitReview: submitReviewAction.bind(null, recapToken),
         uploadPhoto: uploadRecapPhotoAction.bind(null, recapToken),
         startTip: startTipAction.bind(null, recapToken),
+        submitPulse: submitRecapPulseAction.bind(null, recapToken),
       },
     });
     return (

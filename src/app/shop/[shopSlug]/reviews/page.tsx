@@ -4,8 +4,11 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { GroupLabel } from "@/components/ui/ledger";
+import { listOpenRecapPulses } from "@/db/recap-pulses";
 import {
   countStaffReviewGroups,
   getShopReviewAggregate,
@@ -15,14 +18,16 @@ import {
   type ReviewModerationReason,
   type StaffReview,
 } from "@/db/reviews";
+import { STAFF_PULSE_CATEGORY_KEYS } from "@/i18n/next-dive-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { formatShortDate } from "@/lib/format";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import {
   type BulkPublishCopy,
@@ -37,6 +42,7 @@ import {
   ReviewRowUndoToast,
 } from "./_components/ReviewRowActions";
 import { ReviewsAggregateLine } from "./_components/ReviewsAggregateLine";
+import { markPulseAddressedAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -76,7 +82,17 @@ const REVIEW_REASON_KEYS: Record<ReviewModerationReason, StaffMessageKey> = {
  * the page banner they fed are all gone with the redirects that wrote them.
  * The one banner left is `ratingWithheld`, which is a fact about the page
  * rather than the outcome of a tap.
+ *
+ * **One exception, added with the private pulse** (slice 16i). Marking a pulse
+ * addressed takes its row out of a panel that is itself gone once the last one
+ * goes, so a settle-in-place control would settle into nothing and a staffer
+ * who just acted on somebody's complaint would watch the page go quiet. That
+ * one act redirects with a `?notice=`, read below through `noticeFromParam`.
  */
+const PULSE_NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey }> = {
+  "pulse-addressed": { tone: "success", key: "reviews.notice.pulseAddressed" },
+  error: { tone: "danger", key: "reviews.notice.error" },
+};
 
 /**
  * **Reviews is a worklist first** (ADR 20260827-people-not-lists, decision 3;
@@ -102,10 +118,10 @@ export default async function ReviewsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; notice?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { page } = await searchParams;
+  const { page, notice } = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone ?? "UTC";
@@ -116,32 +132,39 @@ export default async function ReviewsPage({
     { year: nowWall.year, month: nowWall.month, day: 1, hour: 0, minute: 0 },
     timezone,
   );
-  const [waitingPage, moderatedPage, aggregate, monthAggregate, groups] = await Promise.all([
-    // **The worklist is read whole, not paged.** It is the reason to open this
-    // page, and a queue split across pages is a queue you cannot see the end
-    // of. `MAX_BULK_PUBLISH` is the ceiling because it is also the ceiling on
-    // what one pass may release (`src/db/reviews.ts`) — the rows on screen and
-    // the rows the header act touches are the same set by construction.
-    listShopReviewsForStaff(db, session.user.shopId, {
-      scope: "waiting",
-      limit: MAX_BULK_PUBLISH,
-    }),
-    // A non-numeric or missing `?page=` reads as page 1; the query clamps it
-    // into range so a bookmarked page past the end lands on the last real one.
-    listShopReviewsForStaff(db, session.user.shopId, {
-      page: Number.parseInt(page ?? "", 10),
-      scope: "moderated",
-    }),
-    getShopReviewAggregate(db, session.user.shopId),
-    getShopReviewAggregate(db, session.user.shopId, { since: monthStart }),
-    countStaffReviewGroups(db, session.user.shopId),
-  ]);
+  const [waitingPage, moderatedPage, aggregate, monthAggregate, groups, openPulses] =
+    await Promise.all([
+      // **The worklist is read whole, not paged.** It is the reason to open this
+      // page, and a queue split across pages is a queue you cannot see the end
+      // of. `MAX_BULK_PUBLISH` is the ceiling because it is also the ceiling on
+      // what one pass may release (`src/db/reviews.ts`) — the rows on screen and
+      // the rows the header act touches are the same set by construction.
+      listShopReviewsForStaff(db, session.user.shopId, {
+        scope: "waiting",
+        limit: MAX_BULK_PUBLISH,
+      }),
+      // A non-numeric or missing `?page=` reads as page 1; the query clamps it
+      // into range so a bookmarked page past the end lands on the last real one.
+      listShopReviewsForStaff(db, session.user.shopId, {
+        page: Number.parseInt(page ?? "", 10),
+        scope: "moderated",
+      }),
+      getShopReviewAggregate(db, session.user.shopId),
+      getShopReviewAggregate(db, session.user.shopId, { since: monthStart }),
+      countStaffReviewGroups(db, session.user.shopId),
+      // **What divers asked this shop to fix, privately** (D40, issue #1200).
+      // Never a review and never public: nothing here reaches the aggregate,
+      // the public list, or the suppression share (src/db/recap-pulses.ts).
+      listOpenRecapPulses(db, session.user.shopId),
+    ]);
   // Whether DiveDay has stopped publishing this shop's rating as a
   // machine-readable claim. Not the same as "the rating is unrepresentative":
   // a shop with no reviews at all is also not representative and has nothing
   // to be told about (src/lib/reviews.ts).
   const ratingWithheld = ratingIsWithheld(aggregate);
   const t = staffTranslator(locale);
+  // `noticeFromParam`, never a bare lookup: the param is attacker-supplied.
+  const pulseNotice = noticeFromParam(notice, PULSE_NOTICES);
   const base = shopPath(shopSlug, "reviews");
   /**
    * The words every row's action bar reports with, translated once for the
@@ -239,6 +262,79 @@ export default async function ReviewsPage({
         <StaffNoticeBanner tone="warning">
           {t("reviews.ratingWithheld", { count: reviewsToRepublishForRating(aggregate) })}
         </StaffNoticeBanner>
+      ) : null}
+
+      {pulseNotice ? (
+        <StaffNoticeBanner tone={pulseNotice.tone}>{t(pulseNotice.key)}</StaffNoticeBanner>
+      ) : null}
+
+      {/* **Renders nothing when there is nothing to fix** — the pattern this
+          page's own `nothingAtAll` branch already keeps. A heading over an
+          absence would put a permanent "Asked us to fix" on the screen of every
+          shop nobody has ever complained to.
+
+          Above the ledger because it is the thing on this page a person is
+          waiting on, and behind no gate of its own: whoever may read the shop's
+          reviews may read this. */}
+      {openPulses.length > 0 ? (
+        <SectionCard title={t("reviews.pulseTitle")} className="mb-8">
+          <ul className="divide-y divide-border">
+            {openPulses.map((pulse) => (
+              <li
+                key={pulse.id}
+                className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0"
+              >
+                {/* `min-w-56` so the act drops below the words on a phone
+                    rather than squeezing them into a four-line column. */}
+                <div className="min-w-56 flex-1">
+                  <p className="text-base font-semibold">
+                    {pulse.categories
+                      .map((category) => t(STAFF_PULSE_CATEGORY_KEYS[category]))
+                      .join(" · ")}
+                  </p>
+                  {/* The diver's own words, in full — this is the whole reason
+                      the row exists, so it is never clipped. */}
+                  {pulse.note ? (
+                    <p className="mt-1 break-words text-base text-pretty">{pulse.note}</p>
+                  ) : null}
+                  <p className="mt-1 text-xs text-muted">
+                    {t.rich("reviews.pulseMeta", {
+                      diverName: pulse.diverName,
+                      tripTitle: pulse.tripTitle,
+                      date: formatShortDate(pulse.tripStartsAt, locale, timezone),
+                      diver: (chunks) => (
+                        <Link
+                          href={shopPath(shopSlug, "divers", pulse.personId)}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {chunks}
+                        </Link>
+                      ),
+                      trip: (chunks) => (
+                        <Link
+                          href={shopPath(shopSlug, "trips", pulse.tripId)}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {chunks}
+                        </Link>
+                      ),
+                    })}
+                  </p>
+                </div>
+                <form action={markPulseAddressedAction}>
+                  <input type="hidden" name="pulseId" value={pulse.id} />
+                  <SubmitButton
+                    pendingLabel={t("reviews.saving")}
+                    ariaLabel={`${t("reviews.pulseMarkAddressed")} — ${pulse.diverName}`}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
+                    {t("reviews.pulseMarkAddressed")}
+                  </SubmitButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
       ) : null}
 
       {nothingAtAll ? (
