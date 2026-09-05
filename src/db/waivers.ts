@@ -2034,7 +2034,15 @@ export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tri
   return listTripsWaiverStatuses(db, shopId, [tripId]);
 }
 
-/** Staff roster view: only the current record joins each active booking across multiple trips. */
+/**
+ * Staff roster view: only the current record joins each active booking across
+ * multiple trips.
+ *
+ * Ordered by seat time then id, for the reason `getTripRoster` states in full:
+ * `bookings.created_at` ties across a seeding transaction, and since
+ * `createBooking` stamps the application clock it ties across a spec's own
+ * writes too. A list a staffer works down is not left to the heap.
+ */
 export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tripIds: string[]) {
   if (tripIds.length === 0) return [];
   return db
@@ -2052,8 +2060,5 @@ export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tr
         ne(bookings.status, "cancelled"),
       ),
     )
-    // Total order, for the reason `trips-roster.ts` gives at its own call:
-    // `created_at` ties across a seeding transaction and, since createBooking
-    // stamps the frozen clock, across a spec's own writes.
     .orderBy(asc(bookings.createdAt), asc(bookings.id));
 }
