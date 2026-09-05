@@ -16,6 +16,7 @@ import {
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
 import * as readinessModule from "./readiness";
+import { saveRentalFit } from "./rental-fit";
 import {
   bookingCapabilities,
   bookings,
@@ -444,6 +445,83 @@ describe("createBooking (in-memory PGlite)", () => {
       "Nora Quinn",
     );
     expect(await getTripRoster(db, rival.id, trip.id)).toHaveLength(0);
+  });
+});
+
+/**
+ * **Both sides of "is this diver returning?" must come from one clock.**
+ *
+ * The diver's thread decides it by asking whether `rental_fit_profiles.
+ * fit_stated_at` predates `bookings.created_at` (ADR
+ * 20260904-reef-all-the-way-down, D15). The first is written through
+ * `nowDate()`; the second was a `defaultNow()` column, stamped by Postgres,
+ * which `DIVEDAY_CLOCK` cannot reach — the hazard `dbNow`'s docblock in
+ * `src/test/db.ts` describes as comparing "a frozen instant against a live
+ * one".
+ *
+ * Under the harness the frozen instant sits weeks behind the wall clock, so
+ * every fit read as last season's, every diver read as returning, and the gear
+ * step disappeared from the thread fleet-wide. `e2e/nitrox.spec.ts` is what
+ * noticed, by waiting on a disclosure that no longer rendered.
+ *
+ * This asserts the property that stops it rather than the symptom: a booking's
+ * own stamp comes from the same clock every other timestamp in that insert
+ * does. Without the fix `created_at` is the live clock and this fails by the
+ * width of the harness's freeze.
+ */
+describe("createBooking stamps its own clock (D15's comparison)", () => {
+  it("writes created_at from the application clock, not the database's", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await bookVisitor(db, shop.id, open.id);
+    if (!outcome.ok) throw new Error("booking refused");
+
+    const [row] = await db
+      .select({ createdAt: bookings.createdAt })
+      .from(bookings)
+      .where(eq(bookings.id, outcome.bookingId));
+    if (!row) throw new Error("booking row vanished");
+
+    // The unit harness freezes the application clock (src/test/global-setup),
+    // so an app-stamped column lands on that instant and a database-stamped
+    // one lands on wall time. A second of slack covers the round trip without
+    // admitting the weeks-wide gap this exists to catch.
+    expect(Math.abs(row.createdAt.getTime() - nowDate().getTime())).toBeLessThan(1000);
+  });
+
+  /**
+   * The comparison the thread actually makes, end to end: a diver who states
+   * their fit *after* booking is not a returning diver, however the clocks are
+   * set. This is the assertion that fails loudest if either side moves back to
+   * `defaultNow()`.
+   */
+  it("leaves a fit stated after the booking looking newer than it", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await bookVisitor(db, shop.id, open.id);
+    if (!outcome.ok) throw new Error("booking refused");
+
+    const [booking] = await db
+      .select({ createdAt: bookings.createdAt, personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, outcome.bookingId));
+    if (!booking) throw new Error("booking row vanished");
+
+    const saved = await saveRentalFit(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      rentsBcd: true,
+      rentsRegulator: false,
+      rentsWetsuit: false,
+      rentsMaskFins: false,
+      rentsWeights: false,
+      rentsDiveComputer: false,
+      rentsGopro: false,
+      bcdSize: "M",
+    });
+    expect(saved?.fitStatedAt).toBeInstanceOf(Date);
+    // Not "greater than": one frozen clock writes both, so they are equal, and
+    // equal is the right answer — a fit stated in the same session as the
+    // booking is not last season's. The page's test is a strict `<`.
+    expect(saved?.fitStatedAt?.getTime()).toBeGreaterThanOrEqual(booking.createdAt.getTime());
   });
 });
 

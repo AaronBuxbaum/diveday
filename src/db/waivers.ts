@@ -2052,5 +2052,8 @@ export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tr
         ne(bookings.status, "cancelled"),
       ),
     )
-    .orderBy(asc(bookings.createdAt));
+    // Total order, for the reason `trips-roster.ts` gives at its own call:
+    // `created_at` ties across a seeding transaction and, since createBooking
+    // stamps the frozen clock, across a spec's own writes.
+    .orderBy(asc(bookings.createdAt), asc(bookings.id));
 }
