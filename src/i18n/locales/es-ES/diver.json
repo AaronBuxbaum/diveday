@@ -652,7 +652,7 @@
     "pulseSending": "Enviando…",
     "pulseWithdraw": "Quitarlo",
     "pulseSaved": "{shop} ya lo tiene.",
-    "pulseWithdrawn": "Quitado. {shop} ya no puede verlo.",
+    "pulseWithdrawn": "Quitado: ya no está en la lista de {shop}.",
     "pulseEmpty": "Elige primero de qué se trata.",
     "pulseFailed": "No se ha enviado. Inténtalo de nuevo en un momento.",
     "nextDiveHeading": "Tu próxima inmersión",

@@ -652,7 +652,7 @@
     "pulseSending": "Sending…",
     "pulseWithdraw": "Take it back",
     "pulseSaved": "{shop} has it.",
-    "pulseWithdrawn": "Taken back. {shop} can’t see it.",
+    "pulseWithdrawn": "Taken back. It’s off {shop}’s list.",
     "pulseEmpty": "Pick what it was about first.",
     "pulseFailed": "That didn’t send. Try again in a moment.",
     "nextDiveHeading": "Your next dive",

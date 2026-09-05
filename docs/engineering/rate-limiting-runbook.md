@@ -32,6 +32,7 @@ cannot see it.
 | Recap photo upload | `src/app/recap/[token]/actions.ts` | IP **and** booking (post-verification) | `RATE_LIMITS.recapUploadByIp` (30/hour) + `RATE_LIMITS.recapUploadByToken` (10/hour) |
 | Post-trip tip checkout | same file, `startTipAction` | IP **and** booking | `RATE_LIMITS.tipStart` (10/hour), spent on both dimensions |
 | Review submit / revise | same file, `submitReviewAction` | IP **and** booking | `RATE_LIMITS.reviewSubmitByIp` (30/hour) + `RATE_LIMITS.reviewSubmitByToken` (10/hour) |
+| Recap pulse: submit, revise or withdraw | same file, `submitRecapPulseAction` | IP **and** booking (IP before the token is verified) | `RATE_LIMITS.recapPulseByIp` (30/hour) + `RATE_LIMITS.recapPulseByToken` (10/hour) |
 | Wait-list join | `src/app/s/[shopSlug]/trips/[id]/actions.ts` `joinWaitlist` | IP, **and** the address any certification claim is *about* | `RATE_LIMITS.waitlistJoin` (10/hour) + `RATE_LIMITS.declarationByPerson` (5/hour) |
 | Booking | same file, `bookSpot` | IP | `RATE_LIMITS.booking` (10/hour) |
 | Booking-confirmation actions (rental fit, pay, "sign your waiver now") | same file, `confirmContextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |

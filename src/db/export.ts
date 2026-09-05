@@ -264,7 +264,13 @@ export async function loadShopExportBundleInput(
       const recapPulseRows = await tx
         .select({ pulse: recapPulses, diverName: people.fullName })
         .from(recapPulses)
-        .innerJoin(people, eq(people.id, recapPulses.personId))
+        // The tenant is named here rather than inferred. It does hold without
+        // this — `recapPulses.personId` is copied off `bookings.personId`, and
+        // `createBookingRecord` only ever resolves a person inside its own shop
+        // — but that invariant lives three files away, and the sibling
+        // `trip_recap_photos` join states its own. Costs nothing; makes the
+        // condition greppable in the query that depends on it.
+        .innerJoin(people, and(eq(people.id, recapPulses.personId), eq(people.shopId, shopId)))
         .where(eq(recapPulses.shopId, shopId))
         .orderBy(asc(recapPulses.createdAt), asc(recapPulses.id));
 
