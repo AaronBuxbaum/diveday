@@ -545,3 +545,60 @@ describe("a course session is never self-guided", () => {
     expect(row?.selfGuided).toBe(true);
   });
 });
+
+/**
+ * **The calendar revision counter** (issue #1165). `trips.revision` ships as
+ * RFC 5545 `SEQUENCE` from both calendar surfaces, so a move has to bump it —
+ * a client that sees an unchanged sequence may keep the old `DTSTART`, which
+ * puts a diver at a dock at the old time — and a no-op drag must not.
+ */
+describe("moveTrip and the calendar revision", () => {
+  const at = (day: number, hour: number, tz: string) =>
+    wallTimeToUtc({ year: 2026, month: 9, day, hour, minute: 0 }, tz);
+
+  it("bumps by exactly one when the departure really moves, and not at all when it does not", async () => {
+    const { db, shop } = await seededShopContext();
+    const source = await createTrip(db, {
+      shopId: shop.id,
+      title: "Revision — a boat that moves",
+      startsAt: at(5, 8, shop.timezone),
+      endsAt: at(5, 12, shop.timezone),
+      capacity: 6,
+    });
+    if (!source) throw new Error("failed to create the departure");
+    expect(source.revision).toBe(0);
+
+    const moved = await moveTrip(db, shop.id, source.id, at(6, 8, shop.timezone));
+    expect(moved.ok).toBe(true);
+    const [afterMove] = await db.select().from(trips).where(eq(trips.id, source.id));
+    expect(afterMove?.revision).toBe(1);
+
+    // `moveTrip` early-returns on an unchanged instant, so this proves the bump
+    // cannot fire on a drag that puts the boat back where it already was.
+    const again = await moveTrip(db, shop.id, source.id, at(6, 8, shop.timezone));
+    expect(again.ok).toBe(true);
+    const [afterNoop] = await db.select().from(trips).where(eq(trips.id, source.id));
+    expect(afterNoop?.revision).toBe(1);
+  });
+
+  it("gives a copy revision 0 however many times the source has moved", async () => {
+    const { db, shop } = await seededShopContext();
+    const source = await createTrip(db, {
+      shopId: shop.id,
+      title: "Revision — a boat that gets copied",
+      startsAt: at(5, 8, shop.timezone),
+      endsAt: at(5, 12, shop.timezone),
+      capacity: 6,
+    });
+    if (!source) throw new Error("failed to create the departure");
+    await moveTrip(db, shop.id, source.id, at(7, 8, shop.timezone));
+    await moveTrip(db, shop.id, source.id, at(8, 8, shop.timezone));
+
+    // A copy is a new row with a new UID, so no subscriber holds a revision of
+    // it to compare against — starting anywhere but zero would be a lie.
+    const copied = await duplicateTrip(db, shop.id, source.id, at(12, 8, shop.timezone));
+    if (!copied) throw new Error("duplicateTrip returned nothing");
+    const [row] = await db.select().from(trips).where(eq(trips.id, copied.id));
+    expect(row?.revision).toBe(0);
+  });
+});

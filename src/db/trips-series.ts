@@ -16,6 +16,7 @@ import {
   type TripRecurrenceFrequency,
   type WeekdaySet,
 } from "@/lib/recurrence";
+import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type AppDb, type AppTransaction, queryAll } from "./client";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
@@ -978,7 +979,7 @@ export async function applyDetailsToFutureSeries(
     }));
 
     const siblings = await tx
-      .select({ id: trips.id, booked: count(bookings.id) })
+      .select({ id: trips.id, diveSiteId: trips.diveSiteId, booked: count(bookings.id) })
       .from(trips)
       .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
       .where(
@@ -1018,6 +1019,31 @@ export async function applyDetailsToFutureSeries(
       checkpointsByTrip.set(row.tripId, list);
     }
 
+    // What each sibling's dive plan looks like *before* this apply, so the
+    // calendar revision moves only for the ones whose sites actually change
+    // (issue #1165). A sibling that already ran these sites is not a revision
+    // to anybody's calendar, and bumping it would re-alert every diver on it
+    // for an edit they cannot see. One `inArray` read beside the checkpoints,
+    // never a query per sibling.
+    const siblingDives =
+      siblingIds.length > 0
+        ? await tx
+            .select({
+              tripId: tripDives.tripId,
+              diveNumber: tripDives.diveNumber,
+              diveSiteId: tripDives.diveSiteId,
+            })
+            .from(tripDives)
+            .where(inArray(tripDives.tripId, siblingIds))
+        : [];
+    const divesByTrip = new Map<string, Array<{ diveNumber: number; diveSiteId: string | null }>>();
+    for (const row of siblingDives) {
+      const list = divesByTrip.get(row.tripId) ?? [];
+      list.push({ diveNumber: row.diveNumber, diveSiteId: row.diveSiteId });
+      divesByTrip.set(row.tripId, list);
+    }
+    const sourceSites = tripSiteList(drafts);
+
     let updated = 0;
     let skipped = 0;
     for (const sibling of siblings) {
@@ -1030,9 +1056,15 @@ export async function applyDetailsToFutureSeries(
         skipped += 1;
         continue;
       }
+      const siteListMoved =
+        tripSiteListChanged(tripSiteList(divesByTrip.get(sibling.id) ?? []), sourceSites) ||
+        source.diveSiteId !== sibling.diveSiteId;
       await tx
         .update(trips)
         .set({
+          // Only the siblings whose plan actually moved. A bulk apply of a
+          // price or a title is not a calendar revision.
+          ...(siteListMoved ? { revision: sql`${trips.revision} + 1` } : {}),
           title: source.title,
           description: source.description,
           capacity: source.capacity,

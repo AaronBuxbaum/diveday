@@ -31,7 +31,7 @@ beforeEach(() => {
     .mockResolvedValue(FAKE_DB as never);
   vi.mocked(sendDueReminders)
     .mockReset()
-    .mockResolvedValue({ scanned: 5, sent: 2, skipped: 1, held: 2, failed: 0 });
+    .mockResolvedValue({ scanned: 6, sent: 2, skipped: 1, held: 2, settled: 1, failed: 0 });
   vi.mocked(Sentry.captureCheckIn).mockClear().mockReturnValue("check-in-id");
   vi.mocked(Sentry.captureException).mockClear();
 });
@@ -57,10 +57,18 @@ describe("GET /api/cron/trip-reminders", () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
 
     expect(response.status).toBe(200);
-    // `held` rides the response, not just the log: an operator has to be able
-    // to tell "nothing was due" from "plenty was, and it is waiting for
-    // daylight somewhere".
-    expect(await response.json()).toEqual({ scanned: 5, sent: 2, skipped: 1, held: 2, failed: 0 });
+    // `held` and `settled` ride the response, not just the log: an operator has
+    // to be able to tell "nothing was due" from "plenty was, and it is waiting
+    // for daylight somewhere" from "one was due and the diver had nothing left
+    // to do" (issue #1177).
+    expect(await response.json()).toEqual({
+      scanned: 6,
+      sent: 2,
+      skipped: 1,
+      held: 2,
+      settled: 1,
+      failed: 0,
+    });
     expect(sendDueReminders).toHaveBeenCalledWith(FAKE_DB);
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(
       1,

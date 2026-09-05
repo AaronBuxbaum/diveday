@@ -35,6 +35,7 @@ export function DetailsSection({
   warnNoPrice = true,
   embedded = false,
   boats,
+  lenses,
   hasBoatDiving,
   hasShoreDiving,
   hasPoolDiving,
@@ -51,6 +52,8 @@ export function DetailsSection({
   dayCount: number;
   /** The shop's live fleet, for the hull select. Empty means no boat rows yet. */
   boats: { id: string; name: string }[];
+  /** The shop's own words for its kinds of day, in the order it wrote them. */
+  lenses: { id: string; name: string }[];
   hasBoatDiving: boolean;
   hasShoreDiving: boolean;
   hasPoolDiving: boolean;
@@ -429,6 +432,22 @@ export function DetailsSection({
                   {boats.map((boat) => (
                     <option key={boat.id} value={boat.id}>
                       {boat.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
+            {/* The shop's own word for this kind of day (ADR
+                20260904-reef-all-the-way-down, decision 2). Renders nothing
+                when the shop has written no vocabulary, exactly as the boat
+                select renders nothing with no hulls. */}
+            {lenses.length > 0 ? (
+              <Field label={t("lenses.tripFieldLabel")} hint={t("trips.details.optionalHint")}>
+                <select name="lensId" defaultValue={trip.lensId ?? ""} className={controlClass}>
+                  <option value="">{t("lenses.tripFieldNone")}</option>
+                  {lenses.map((lens) => (
+                    <option key={lens.id} value={lens.id}>
+                      {lens.name}
                     </option>
                   ))}
                 </select>

@@ -180,6 +180,14 @@ function upcomingTripScope(
     monthEnd?: Date;
     tripType?: "fun_dive" | "course";
     publicOnly?: boolean;
+    /**
+     * One of the shop's own words for a kind of day (ADR
+     * 20260904-reef-all-the-way-down, decision 2). Applied **here**, in SQL,
+     * rather than over the fetched page: this list is keyset-paged at fourteen
+     * rows, so an in-memory narrowing yields short and empty pages and a
+     * "Show later" that promises rows it cannot deliver.
+     */
+    lensId?: string;
   },
 ) {
   return and(
@@ -190,6 +198,7 @@ function upcomingTripScope(
     bounds.monthEnd ? lt(trips.startsAt, bounds.monthEnd) : undefined,
     bounds.tripType === "fun_dive" ? isNull(trips.courseId) : undefined,
     bounds.tripType === "course" ? isNotNull(trips.courseId) : undefined,
+    bounds.lensId ? eq(trips.lensId, bounds.lensId) : undefined,
   );
 }
 
@@ -232,6 +241,8 @@ export async function pagedUpcomingTripsWithCounts(
     tripType?: "fun_dive" | "course";
     /** Hide private charters/sessions (e.g. for public storefront schedule). */
     publicOnly?: boolean;
+    /** Only departures wearing this one of the shop's own words for a kind of day. */
+    lensId?: string;
   } = {},
 ): Promise<{ trips: TripWithBookedCount[]; nextCursor: string | null }> {
   const now = options.now ?? nowDate();
@@ -261,6 +272,7 @@ export async function pagedUpcomingTripsWithCounts(
           monthEnd: options.monthEnd,
           tripType: options.tripType,
           publicOnly: options.publicOnly,
+          lensId: options.lensId,
         }),
         afterDate && after && !Number.isNaN(afterDate.getTime())
           ? or(

@@ -161,6 +161,49 @@ describe("anonymizeDiver — the roll-call note (ADR 20260828-a-missing-diver-ge
   });
 });
 
+describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
+  /**
+   * `bookings.welcome_shared_at` is the diver saying this departure's crew may
+   * know it is a first trip or a long return. Its two siblings on the same row
+   * — `dive_intent` and `re_entry_ask` — were cleared from the day they
+   * existed; this one shipped with slice 16d and was not, which is the gap.
+   *
+   * It matters more than a stale flag because of how the cue reads: the words
+   * are derived at render from this diver's own booking history, so a stamp
+   * left behind keeps the manifest introducing a person who asked to be
+   * forgotten. Consent is also not a boarding fact — nothing about the day
+   * needs it — so there is no evidence-skeleton argument for keeping it the way
+   * there is for the roll-call row above.
+   */
+  it("takes back the permission a diver gave the crew", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    const [booking] = await db
+      .select({ id: bookings.id, personId: bookings.personId })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), ne(bookings.status, "cancelled")))
+      .orderBy(bookings.id)
+      .limit(1);
+    if (!booking) throw new Error("expected a seeded booking");
+    await db
+      .update(bookings)
+      .set({ welcomeSharedAt: new Date("2026-07-20T12:00:00Z") })
+      .where(eq(bookings.id, booking.id));
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      actorPersonId: owner.id,
+    });
+    expect(erased.ok).toBe(true);
+
+    const [after] = await db
+      .select({ welcomeSharedAt: bookings.welcomeSharedAt })
+      .from(bookings)
+      .where(eq(bookings.id, booking.id));
+    expect(after?.welcomeSharedAt).toBeNull();
+  });
+});
+
 describe("anonymizeDiver — the integration outbox (issue #1016)", () => {
   /**
    * `integration_events.payload` is kept 400 days and carries no `person_id`,

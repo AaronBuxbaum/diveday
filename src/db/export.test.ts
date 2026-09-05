@@ -27,6 +27,7 @@ import { getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 const EXPECTED_FILES = [
   "shop.csv",
   "boats.csv",
+  "trip_lenses.csv",
   "contacts.csv",
   "people.csv",
   "certifications.csv",
@@ -99,6 +100,7 @@ const EXPORTED_TABLES = [
   "dive_package_entitlements",
   "shops",
   "boats",
+  "trip_lenses",
   "people",
   "certifications",
   "specialty_certifications",
@@ -309,6 +311,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "contact_email_confirmed_at",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
+  trip_lenses: ["shop_id"],
   dive_packages: ["shop_id"],
   dive_package_entitlements: ["shop_id"],
   staff_shifts: ["shop_id"],
@@ -334,6 +337,13 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "recap_shoutout", // recap copy travels with recap_photos.csv
     "recap_auto_send_paused", // auto-send countdown / pause is ephemeral operational state
     "recap_auto_send_at",
+    // How many times this installation has re-issued the calendar events whose
+    // UIDs are `trip-<uuid>@diveday` — a counter about *our* published
+    // revisions, not a fact the shop entered. A re-imported bundle mints new
+    // trip ids and therefore new UIDs, so no subscriber anywhere holds a
+    // revision to compare it against and the number would mean nothing on the
+    // far side. Same class as `pending_checkout_intent_id`.
+    "revision",
   ],
   trip_change_events: ["shop_id"],
   trip_stage_events: ["shop_id"],

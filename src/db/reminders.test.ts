@@ -1,14 +1,21 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_DOCK_DAY_RHYTHM } from "@/lib/diver-planning";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { fakeEmail, fakeSms, fakeCourtesy as fakeWhatsApp } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
+import {
+  createCertification,
+  deleteCertification,
+  getBookingReadiness,
+  reviewCertification,
+} from "./readiness";
 import { sendDueReminders } from "./reminders";
 import { notificationDeliveries, people, shops, waiverRecords } from "./schema";
 import { setShopDockDayRhythm } from "./shops";
 import { upcomingTripsWithCounts, updateTripConditions } from "./trips";
-import { issueWaiverRequest } from "./waivers";
+import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 // The seeded shop already has bookings on several future trips, so
 // sendDueReminders (a global cron) touches more than the one under test. Every
@@ -479,5 +486,146 @@ describe("reminders against the shop's civil hours", () => {
     expect(morning.held).toBe(0);
     // One row, not four: the held passes must not have queued anything.
     expect(await rowsFor(db, bookingId)).toHaveLength(1);
+  });
+});
+
+/**
+ * **The state-aware rhythm** (issue #1177, delight report D17).
+ *
+ * This is a suppression, so its regression is silence: a diver who hears
+ * nothing and misses a boat, with no error and no red test. The first case
+ * below is therefore the anti-silence one, and it is the one that matters —
+ * the seeded booking has no signed waiver and no cert card, so the 7-day email
+ * must go out exactly as it always did.
+ */
+describe("sendDueReminders and the reminder rhythm", () => {
+  /** Everything the seeded reef trip gates on, cleared for this one diver. */
+  async function makeReady(ctx: Awaited<ReturnType<typeof reminderContext>>) {
+    const { db, shop, bookingId, personId } = ctx;
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+    if (!issued.ok) throw new Error(`waiver issue failed: ${issued.reason}`);
+    const signed = await completeWaiver(db, issued.token, {
+      signerName: "Pat Party",
+      agreed: true,
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+    });
+    if (!signed.ok) throw new Error(`waiver signing failed: ${signed.reason}`);
+
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId,
+      agency: "padi",
+      level: "open_water",
+      identifier: "PADI-OW-RHYTHM-1",
+    });
+    if (!card) throw new Error("certification not created");
+    await reviewCertification(db, {
+      shopId: shop.id,
+      certificationId: card.id,
+      status: "verified",
+    });
+
+    // Proven ready rather than assumed: if the seed's gates ever grow, this
+    // throws here instead of quietly turning every case below into a tautology.
+    const readiness = await getBookingReadiness(db, shop.id, bookingId);
+    expect(readiness).toEqual({ status: "ready", blockers: [] });
+    return card;
+  }
+
+  const pass = (
+    db: Awaited<ReturnType<typeof reminderContext>>["db"],
+    now: Date,
+    email = fakeEmail(),
+  ) =>
+    sendDueReminders(db, {
+      now,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      whatsAppProviders: new Map(),
+      appOrigin: null,
+    });
+
+  it("still sends the 7-day email when the diver has a waiver and a card outstanding", async () => {
+    const { db, shop, bookingId, inWeekBucket } = await reminderContext();
+    // The state this whole feature must never suppress.
+    expect((await getBookingReadiness(db, shop.id, bookingId))?.status).not.toBe("ready");
+    const email = fakeEmail();
+
+    await pass(db, inWeekBucket, email);
+
+    expect(emailsFor(email, bookingId)).toHaveLength(1);
+    expect(await rowsFor(db, bookingId)).toHaveLength(1);
+  });
+
+  it("holds the 7-day nudge for a diver with nothing left to do, and records nothing", async () => {
+    // The `settled` count is compared against an identical run whose diver was
+    // left un-ready, because the seeded shop has other bookings on the same
+    // board and a bare count would be about all of them.
+    const control = await reminderContext();
+    const controlSummary = await pass(control.db, control.inWeekBucket);
+
+    const ctx = await reminderContext();
+    await makeReady(ctx);
+    const email = fakeEmail();
+    const summary = await pass(ctx.db, ctx.inWeekBucket, email);
+
+    expect(emailsFor(email, ctx.bookingId)).toHaveLength(0);
+    // No delivery row at all: a falsified one would stop the nudge re-arming.
+    expect(await rowsFor(ctx.db, ctx.bookingId)).toHaveLength(0);
+    expect(summary.settled).toBe(controlSummary.settled + 1);
+    expect(summary.sent).toBe(controlSummary.sent - 1);
+    expect(summary.failed).toBe(controlSummary.failed);
+  });
+
+  it("re-arms inside the same week when the diver stops being ready", async () => {
+    const ctx = await reminderContext();
+    const card = await makeReady(ctx);
+    const email = fakeEmail();
+
+    await pass(ctx.db, ctx.inWeekBucket, email);
+    expect(emailsFor(email, ctx.bookingId)).toHaveLength(0);
+
+    // The card comes off the record an hour later, still inside the week-wide
+    // bucket. Nothing was written by the suppressed pass, so the cadence is
+    // still un-sent and the next hourly pass picks it up.
+    await deleteCertification(ctx.db, { shopId: ctx.shop.id, certificationId: card.id });
+    await pass(ctx.db, new Date(ctx.inWeekBucket.getTime() + 60 * 60 * 1000), email);
+
+    expect(emailsFor(email, ctx.bookingId)).toHaveLength(1);
+    expect(await rowsFor(ctx.db, ctx.bookingId)).toHaveLength(1);
+  });
+
+  it("sends the 24-hour reminder to a fully ready diver anyway", async () => {
+    // Its utility is the dock call and the conditions, not the to-do list.
+    const ctx = await reminderContext();
+    await makeReady(ctx);
+    const email = fakeEmail();
+    const dockDay = new Date(ctx.reef.startsAt.getTime() - 6 * 60 * 60 * 1000);
+
+    await pass(ctx.db, dockDay, email);
+
+    expect(emailsFor(email, ctx.bookingId)).toHaveLength(1);
+    expect(emailsFor(email, ctx.bookingId)[0].kind).toBe("trip_reminder_24h");
+  });
+
+  it("counts a settled diver with no reachable channel as settled, never as failed", async () => {
+    // Pins the order of the two checks: the suppression runs before the
+    // no-email-no-phone branch, so a diver who needed no message is not
+    // reported to the shop as an unreachable one.
+    const control = await reminderContext();
+    const controlSummary = await pass(control.db, control.inWeekBucket);
+
+    const ctx = await reminderContext();
+    await makeReady(ctx);
+    await ctx.db
+      .update(people)
+      .set({ email: null, phone: null })
+      .where(eq(people.id, ctx.personId));
+
+    const summary = await pass(ctx.db, ctx.inWeekBucket);
+
+    expect(await rowsFor(ctx.db, ctx.bookingId)).toHaveLength(0);
+    expect(summary.settled).toBe(controlSummary.settled + 1);
+    expect(summary.failed).toBe(controlSummary.failed);
   });
 });

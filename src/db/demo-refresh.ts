@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, gte, isNull, lt } from "drizzle-orm";
+import { and, asc, eq, gt, gte, isNull, lt, sql } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
@@ -223,6 +223,11 @@ export async function ensureDemoSailsToday(
   const endsAt = new Date(
     startsAt.getTime() + (candidate.endsAt.getTime() - candidate.startsAt.getTime()),
   );
-  await db.update(trips).set({ startsAt, endsAt }).where(eq(trips.id, candidate.id));
+  await db
+    .update(trips)
+    // A real departure really moves, so the demo shop's own `.ics` says so
+    // (issue #1165) — the same reason `moveTrip` bumps.
+    .set({ startsAt, endsAt, revision: sql`${trips.revision} + 1` })
+    .where(eq(trips.id, candidate.id));
   return "moved";
 }

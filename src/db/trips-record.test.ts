@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBoat, deleteBoat } from "./boats";
+import { listDiveSites } from "./dive-sites";
 import { people, rollCallEvents, userAccounts } from "./schema";
 import { listTripChangeEvents } from "./trip-change-events";
 import {
@@ -524,5 +525,113 @@ describe("editing a departure's boat, mode and public sale", () => {
     const outcome = await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id });
 
     expect(outcome).toMatchObject({ ok: false, reason: "boat_not_found" });
+  });
+});
+
+/**
+ * **What counts as a calendar revision** (issue #1165).
+ *
+ * `trips.revision` ships as RFC 5545 `SEQUENCE`, and both directions of
+ * getting it wrong are silent. Under-bumping strands a diver at the dock at
+ * the old time, because a client that sees an unchanged sequence may keep the
+ * old `DTSTART`. Over-bumping re-alerts every phone on the boat for an edit
+ * they cannot see. The two negative cases below are as load-bearing as the two
+ * positive ones.
+ */
+describe("updateTrip and the calendar revision", () => {
+  async function departure() {
+    const { db, shop } = await seededShopContext();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Revision — a two-tank morning",
+      startsAt: new Date("2030-09-05T12:00:00.000Z"),
+      endsAt: new Date("2030-09-05T16:00:00.000Z"),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("trip not created");
+    return { db, shop, trip };
+  }
+
+  const basePatch = (trip: { title: string; startsAt: Date; endsAt: Date; capacity: number }) => ({
+    title: trip.title,
+    startsAt: trip.startsAt,
+    endsAt: trip.endsAt,
+    capacity: trip.capacity,
+    plannedDives: 2,
+  });
+
+  const revisionOf = async (
+    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    shopId: string,
+    tripId: string,
+  ) => (await getTripWithBooked(db, shopId, tripId))?.revision;
+
+  it("bumps when the departure time changes", async () => {
+    const { db, shop, trip } = await departure();
+    expect(trip.revision).toBe(0);
+
+    await updateTrip(db, shop.id, trip.id, {
+      ...basePatch(trip),
+      startsAt: new Date("2030-09-05T14:00:00.000Z"),
+      endsAt: new Date("2030-09-05T18:00:00.000Z"),
+    });
+
+    expect(await revisionOf(db, shop.id, trip.id)).toBe(1);
+  });
+
+  it("bumps when a dive's site is swapped", async () => {
+    const { db, shop, trip } = await departure();
+    const sites = await listDiveSites(db, shop.id);
+    const [first, second] = sites;
+    if (!first || !second) throw new Error("seeded shop needs two dive sites");
+
+    await updateTrip(db, shop.id, trip.id, {
+      ...basePatch(trip),
+      dives: [{ diveSiteId: first.id }, { diveSiteId: second.id }],
+    });
+    const afterFirstPlan = await revisionOf(db, shop.id, trip.id);
+    expect(afterFirstPlan).toBe(1);
+
+    // Same two sites, other way round: a different day for the diver reading
+    // the entry, so a different revision.
+    await updateTrip(db, shop.id, trip.id, {
+      ...basePatch(trip),
+      dives: [{ diveSiteId: second.id }, { diveSiteId: first.id }],
+    });
+    expect(await revisionOf(db, shop.id, trip.id)).toBe(2);
+
+    // And re-saving the identical plan is not an edit at all.
+    await updateTrip(db, shop.id, trip.id, {
+      ...basePatch(trip),
+      dives: [{ diveSiteId: second.id }, { diveSiteId: first.id }],
+    });
+    expect(await revisionOf(db, shop.id, trip.id)).toBe(2);
+  });
+
+  it("does not bump for a title, description, price or capacity edit", async () => {
+    const { db, shop, trip } = await departure();
+
+    await updateTrip(db, shop.id, trip.id, {
+      ...basePatch(trip),
+      title: "Revision — renamed on the board",
+      description: "Bring a hood, the springs run cold",
+      priceCents: 21_000,
+      capacity: 10,
+    });
+
+    expect(await revisionOf(db, shop.id, trip.id)).toBe(0);
+  });
+
+  it("never bumps for a conditions note, however many the crew write", async () => {
+    // The failure this exists to prevent: a phone that buzzes every time
+    // somebody types the vis at the rail.
+    const { db, shop, trip } = await departure();
+
+    await updateTripConditions(db, shop.id, trip.id, { conditionsSummary: "Light chop, vis 40ft" });
+    await updateTripConditions(db, shop.id, trip.id, { conditionsSummary: "Flat, vis 60ft" });
+    await updateTripConditions(db, shop.id, trip.id, { conditionsHold: true });
+
+    expect(await revisionOf(db, shop.id, trip.id)).toBe(0);
   });
 });

@@ -47,6 +47,7 @@ import {
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
+import { createTripLens, deleteTripLens, renameTripLens } from "@/db/trip-lenses";
 import { toDiverLocale } from "@/i18n/settings";
 import {
   type AddressLookupResult,
@@ -91,6 +92,7 @@ import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeShopHeroImage, storeShopLogoImage } from "@/lib/storage";
 import { timeZoneAnchor } from "@/lib/timezones";
+import { LENS_NAME_MAX } from "@/lib/trip-lenses";
 import { uuidParam } from "@/lib/uuid";
 
 /* -------------------------------------------------------------------------- *
@@ -1237,4 +1239,69 @@ export async function deleteBoatAction(formData: FormData) {
   await deleteBoat(db, session.user.shopId, boatId);
 
   revalidateAndRedirect(settings, noticeUrl(settings, "boat-deleted", { saved: "boats" }));
+}
+
+/**
+ * **The shop's own words for its kinds of day** — ADR
+ * 20260904-reef-all-the-way-down, decision 2 (issue #1162).
+ *
+ * The same three actions the fleet row above has, for the same reason: this is
+ * a shop-owned vocabulary with a soft delete, and its notice codes ride the
+ * same `?saved=` section so the row that changed comes back open.
+ */
+export async function createTripLensAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const name = String(formData.get("name") ?? "")
+    .trim()
+    .slice(0, LENS_NAME_MAX);
+  if (!name) {
+    redirect(noticeUrl(settings, "lens-invalid", { saved: "lenses" }));
+  }
+
+  const db = await getDb();
+  await createTripLens(db, session.user.shopId, name);
+
+  revalidateAndRedirect(settings, noticeUrl(settings, "lens-created", { saved: "lenses" }));
+}
+
+/** Corrects the word a shop wrote. The slug it was published under does not move. */
+export async function updateTripLensAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const rawLensId = formData.get("lensId");
+  const lensId = typeof rawLensId === "string" ? uuidParam(rawLensId) : null;
+  const name = String(formData.get("name") ?? "")
+    .trim()
+    .slice(0, LENS_NAME_MAX);
+  if (!lensId || !name) {
+    redirect(noticeUrl(settings, "lens-invalid", { saved: "lenses" }));
+  }
+
+  const db = await getDb();
+  await renameTripLens(db, session.user.shopId, lensId, name);
+
+  revalidateAndRedirect(settings, noticeUrl(settings, "lens-updated", { saved: "lenses" }));
+}
+
+/** Stamps the word and leaves every departure that wore it saying so. */
+export async function deleteTripLensAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const rawLensId = formData.get("lensId");
+  const lensId = typeof rawLensId === "string" ? uuidParam(rawLensId) : null;
+  if (!lensId) {
+    redirect(noticeUrl(settings, "lens-invalid", { saved: "lenses" }));
+  }
+
+  const db = await getDb();
+  await deleteTripLens(db, session.user.shopId, lensId);
+
+  revalidateAndRedirect(settings, noticeUrl(settings, "lens-deleted", { saved: "lenses" }));
 }

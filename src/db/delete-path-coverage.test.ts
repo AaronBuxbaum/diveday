@@ -119,6 +119,8 @@ const RESET_KEEPS: Record<string, string> = {
   shop_contact_email_confirmation_tokens:
     "the front-desk address's own proof of ownership (issue #1288) — settings, not schedule",
   boats: "shop settings, outside the resettable schedule",
+  trip_lenses:
+    "the shop's own words for a kind of day — vocabulary is settings, not schedule, and the reset rebuilds the board rather than the words",
   dive_packages: "the shop's own price list of packages — settings, not schedule",
   pre_departure_checklist_items: "the shop's own checklist lines — settings, not schedule",
   shop_backup_destinations: "seeded by the stable half (seedBackup); a reset would not restore it",

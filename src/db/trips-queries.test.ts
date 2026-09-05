@@ -5,6 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createDiveSite } from "./dive-sites";
 import { bookings, shops, trips } from "./schema";
+import { createTripLens } from "./trip-lenses";
 import {
   countShopTrips,
   createTrip,
@@ -158,6 +159,98 @@ describe("paged schedule queries", () => {
     expect(withSpace.trips.length).toBeGreaterThan(0);
     expect(withSpace.trips.length).toBeLessThan(all.length);
     expect(withSpace.trips.every((t) => t.booked < t.capacity)).toBe(true);
+  });
+
+  /**
+   * **The lens narrows in SQL, inside `upcomingTripScope`** — ADR
+   * 20260904-reef-all-the-way-down, decision 2.
+   *
+   * The board is keyset-paged at fourteen rows. A lens applied over the fetched
+   * page would yield short pages, empty pages, and a "Show later" that promises
+   * departures it cannot deliver; applied in the scope, the pages stay honest
+   * and every other filter still composes with it.
+   */
+  it("narrows the board to one of the shop's own words, and still pages it", async () => {
+    const { db, shop } = ctx;
+    const lens = await createTripLens(db, shop.id, "Easygoing reef");
+    if (!lens) throw new Error("lens insert failed");
+    const all = await upcomingTripsWithCounts(db, shop.id);
+    const wearing = all.slice(0, 3).map((trip) => trip.id);
+    for (const id of wearing) {
+      await db.update(trips).set({ lensId: lens.id }).where(eq(trips.id, id));
+    }
+
+    const narrowed = await pagedUpcomingTripsWithCounts(db, shop.id, {
+      lensId: lens.id,
+      limit: 200,
+    });
+    expect(narrowed.trips.map((trip) => trip.id).sort()).toEqual([...wearing].sort());
+
+    // And the cursor walks the narrowed list rather than the whole board.
+    const firstPage = await pagedUpcomingTripsWithCounts(db, shop.id, {
+      lensId: lens.id,
+      limit: 2,
+    });
+    expect(firstPage.trips).toHaveLength(2);
+    expect(firstPage.nextCursor).not.toBeNull();
+    const secondPage = await pagedUpcomingTripsWithCounts(db, shop.id, {
+      lensId: lens.id,
+      limit: 2,
+      cursor: firstPage.nextCursor ?? undefined,
+    });
+    expect(secondPage.trips).toHaveLength(1);
+    expect(secondPage.nextCursor).toBeNull();
+  });
+
+  it("composes with the open-seat filter rather than replacing it", async () => {
+    const { db, shop } = ctx;
+    const lens = await createTripLens(db, shop.id, "Wrecks");
+    if (!lens) throw new Error("lens insert failed");
+    const all = await upcomingTripsWithCounts(db, shop.id);
+    const full = all.find((trip) => trip.booked >= trip.capacity);
+    const roomy = all.find((trip) => trip.booked < trip.capacity);
+    if (!full || !roomy) throw new Error("expected the seed to hold a full and a roomy departure");
+    for (const trip of [full, roomy]) {
+      await db.update(trips).set({ lensId: lens.id }).where(eq(trips.id, trip.id));
+    }
+
+    const both = await pagedUpcomingTripsWithCounts(db, shop.id, { lensId: lens.id, limit: 200 });
+    expect(both.trips.map((trip) => trip.id).sort()).toEqual([full.id, roomy.id].sort());
+
+    const withSpace = await pagedUpcomingTripsWithCounts(db, shop.id, {
+      lensId: lens.id,
+      hasSpace: true,
+      limit: 200,
+    });
+    expect(withSpace.trips.map((trip) => trip.id)).toEqual([roomy.id]);
+  });
+
+  it("keeps the one-hour late-arrival buffer under a lens", async () => {
+    // AGENTS.md's trips buffer: a departure that left half an hour ago has not
+    // "sailed" yet, and a new predicate beside `nowWithBuffer` must not be what
+    // takes it off the board.
+    const { db, shop } = ctx;
+    const lens = await createTripLens(db, shop.id, "After dark");
+    if (!lens) throw new Error("lens insert failed");
+    const now = nowDate();
+    const startsAt = new Date(now.getTime() - 30 * 60 * 1000);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Late-arrival lens departure",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 3 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("trip creation failed");
+    await db.update(trips).set({ lensId: lens.id }).where(eq(trips.id, trip.id));
+
+    const narrowed = await pagedUpcomingTripsWithCounts(db, shop.id, {
+      lensId: lens.id,
+      now,
+      limit: 200,
+    });
+    expect(narrowed.trips.map((row) => row.id)).toContain(trip.id);
   });
 
   /**

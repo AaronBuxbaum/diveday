@@ -305,7 +305,14 @@ test.describe("staff", () => {
 
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
-    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    // Exact, for the reason the sibling assertion below already records: an
+    // unpriced trip's card also carries a "Set a price for {title}, …" link
+    // whose accessible name contains the title as a substring.
+    await page
+      .locator("li")
+      .filter({ hasText: title })
+      .getByRole("link", { name: title, exact: true })
+      .click();
     await page
       .getByRole("navigation", { name: "Trip" })
       .getByRole("link", { name: "Manifest" })
@@ -544,7 +551,7 @@ test.describe("the shopfront on a phone", () => {
       page.getByText("Small-boat reef and wreck diving out of Key Largo."),
     ).toBeVisible();
 
-    const card = page.getByRole("region", { name: "Next boat out" });
+    const card = page.getByRole("region", { name: "Next boat with space" });
     await expect(card).toBeVisible();
     // The page's one primary — every week row below it is a link.
     const primaries = page.getByRole("link", { name: "Book this boat" });

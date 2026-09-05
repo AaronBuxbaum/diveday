@@ -188,4 +188,38 @@ describe("listFeedTrips", () => {
     const entry = feed.find((row) => row.tripId === trip.id);
     expect(entry?.location).not.toContain("North Jetty");
   });
+
+  it("carries the trip's revision on every day of it, and reports the bumped value after a move", async () => {
+    const { db, shop, personId, trip } = await context();
+    await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, trip.id));
+    await db.insert(tripScheduleDays).values([
+      {
+        tripId: trip.id,
+        dayNumber: 1,
+        startsAt: trip.startsAt,
+        endsAt: new Date(trip.startsAt.getTime() + 4 * 60 * 60 * 1000),
+      },
+      {
+        tripId: trip.id,
+        dayNumber: 2,
+        startsAt: new Date(trip.startsAt.getTime() + 24 * 60 * 60 * 1000),
+        endsAt: new Date(trip.startsAt.getTime() + 28 * 60 * 60 * 1000),
+      },
+    ]);
+
+    const before = await listFeedTrips(db, { shopId: shop.id, personId, scope: "shop_trips" });
+    expect(before.filter((row) => row.tripId === trip.id).map((row) => row.revision)).toEqual([
+      0, 0,
+    ]);
+
+    // Written directly rather than through `moveTrip`, which is proven in
+    // `trips-schedule.test.ts`: what this asserts is that the feed reads the
+    // column, and that both days of one departure publish the same number —
+    // a `starts_at` move shifts every one of them.
+    await db.update(trips).set({ revision: 5 }).where(eq(trips.id, trip.id));
+    const after = await listFeedTrips(db, { shopId: shop.id, personId, scope: "shop_trips" });
+    expect(after.filter((row) => row.tripId === trip.id).map((row) => row.revision)).toEqual([
+      5, 5,
+    ]);
+  });
 });

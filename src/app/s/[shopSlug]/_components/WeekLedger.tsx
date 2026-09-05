@@ -46,6 +46,18 @@ export type WeekLedgerRow = {
   linkLabel: string;
   timeRange: string;
   title: string;
+  /**
+   * The shop's own word for this kind of day, leading the meta line (ADR
+   * 20260904-reef-all-the-way-down, decision 2).
+   *
+   * Null is the ordinary case and pushes **nothing** — no fragment, no
+   * separator, and never "Uncategorised". It is deliberately plain ink with no
+   * tint, badge or tone: beside a certification marker on the same line, a
+   * coloured "First time back in a while" reads as an eligibility rule rather
+   * than as the shop's description of its own day (the trap #1162's triage
+   * names).
+   */
+  lens: string | null;
   /** A course session names its course, and links to it — the row's one nested link. */
   course: { label: string; title: string; href: string } | null;
   /** Where it goes, already joined ("Molasses Reef and French Reef · + 1 more dive site"). */
@@ -126,6 +138,10 @@ function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stick
 
 function Row({ row }: { row: WeekLedgerRow }) {
   const meta: ReactNode[] = [];
+  // The shop's own word leads the line, before the course and the site: it is
+  // what the reader is scanning for once they have tapped a lens, and it is the
+  // one fragment on the row written by the shop rather than by DiveDay.
+  if (row.lens) meta.push(<span key="lens">{row.lens}</span>);
   if (row.course) {
     meta.push(
       <span key="course" className="font-medium text-primary">

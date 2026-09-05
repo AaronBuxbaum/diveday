@@ -3,7 +3,16 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
-import { diveSites, people, personRoles, shops, tripDives, trips, userAccounts } from "./schema";
+import {
+  diveSites,
+  people,
+  personRoles,
+  shops,
+  tripDives,
+  tripStageEvents,
+  trips,
+  userAccounts,
+} from "./schema";
 import {
   latestTripStage,
   latestTripStagesByTrip,
@@ -253,6 +262,62 @@ describe("liveShopStage", () => {
       stage: "underway",
       tripId: trip.id,
     });
+  });
+
+  it("hands the storefront no crew member's name", async () => {
+    // The one reader an anonymous visitor's page calls. `LiveShopStage` omits
+    // `recordedByName` on purpose, so printing it is a compile error rather
+    // than something review has to keep catching; this holds the runtime half.
+    const { db, shopId } = await freshShop("live-no-name");
+    const trip = await aDeparture(db, shopId);
+    const staffer = await aStaffer(db, shopId);
+    await recordTripStage(db, {
+      shopId,
+      tripId: trip.id,
+      stage: "underway",
+      recordedByPersonId: staffer,
+      recordedAt: new Date("2026-07-21T12:10:00.000Z"),
+    });
+    const live = await liveShopStage(db, shopId, NOW, windowStart);
+    expect(live).not.toBeNull();
+    expect(Object.keys(live ?? {})).not.toContain("recordedByName");
+  });
+
+  it("resolves the site name only from this shop's own dive sites", async () => {
+    // The join is shop-scoped in its own right rather than trusting the event
+    // row's own scoping, because this name is printed to an anonymous visitor.
+    // A site id that belongs to another shop resolves to no name at all — it
+    // never resolves to that shop's word.
+    const { db, shopId } = await freshShop("live-site-scope");
+    // A second shop in the *same* database — `freshShop` mints its own, and a
+    // cross-tenant test needs both tenants where one query can reach them.
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "live-site-scope-other", timezone: ZONE })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("expected a second shop");
+    const [foreignSite] = await db
+      .insert(diveSites)
+      .values({ shopId: otherShop.id, name: "Another Shop's Secret Ledge" })
+      .returning({ id: diveSites.id });
+    if (!foreignSite) throw new Error("expected a site for the other shop");
+    const trip = await aDeparture(db, shopId);
+    const staffer = await aStaffer(db, shopId);
+    await recordTripStage(db, {
+      shopId,
+      tripId: trip.id,
+      stage: "underway",
+      recordedByPersonId: staffer,
+      recordedAt: new Date("2026-07-21T12:10:00.000Z"),
+    });
+    // Reach past the writer, which snapshots from the departure's own plan, to
+    // the state a future writer or a bad migration could leave behind.
+    await db
+      .update(tripStageEvents)
+      .set({ diveSiteId: foreignSite.id })
+      .where(eq(tripStageEvents.shopId, shopId));
+    const live = await liveShopStage(db, shopId, NOW, windowStart);
+    expect(live?.siteName).toBeNull();
   });
 
   it("never publishes a private charter", async () => {

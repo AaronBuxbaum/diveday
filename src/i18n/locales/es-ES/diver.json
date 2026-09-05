@@ -119,8 +119,13 @@
     "tripListLabel": "Próximas salidas",
     "monthNav": "Explorar por mes",
     "spotsLeftUrgent": "{count, plural, one {Solo queda # plaza} other {Solo quedan # plazas}}",
-    "nextDeparture": {
-      "eyebrow": "Próxima salida"
+    "nextWithSpace": {
+      "eyebrow": "Próxima salida con plazas",
+      "earlierFull": "{count, plural, one {la salida de {time} está llena} other {las # salidas anteriores están llenas}}"
+    },
+    "lenses": {
+      "railLabel": "Tipos de día",
+      "all": "Todas las salidas"
     },
     "shopfront": {
       "bookThisBoat": "Reservar esta salida"

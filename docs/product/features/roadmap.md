@@ -388,8 +388,11 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
   leftover (D14), the plan-change meta (D24).
 - **16i** — the recap: the postcard's number, save-as-image (#1081), the private line (D33), the
   private pulse (D40), the next dive (D35).
-- **16j** — the eleven adopted-unseen issues, each on its own pull request (#1284, D05 on
+- **16j** — the ten adopted-unseen issues, each on its own pull request (D05 on
   `trips.revision`, D17, D25, #1363, #1366, D36 and D45 as one recap variant, D44, D52, #1357).
+  #1284's remaining half — the stored named set of embed departures — was dropped from this slice
+  on 2026-09-05: the owner deferred it on 2026-09-03 pending a shop asking, and slice 16f's lens
+  vocabulary is now a live candidate for the reusable tag that deferral wanted decided first.
 
 ## Concept-model simplification (proposed — each row needs an owner decision)
 

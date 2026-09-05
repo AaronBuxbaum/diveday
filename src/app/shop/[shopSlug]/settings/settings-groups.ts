@@ -50,6 +50,7 @@ export const SECTION_IDS = [
   "divingOptions",
   "emergency",
   "boats",
+  "lenses",
   "rentals",
   "rentalPricing",
   "divePackages",
@@ -263,6 +264,14 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     group: "your-shop",
     target: { kind: "section", id: "boats" },
     gate: "boats",
+  },
+  // No gate: a shore-diving shop with no hull still names its kinds of day
+  // (ADR 20260904-reef-all-the-way-down, decision 2).
+  {
+    id: "lenses",
+    labelKey: "lenses.heading",
+    group: "your-shop",
+    target: { kind: "section", id: "lenses" },
   },
   // Money.
   {

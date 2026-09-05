@@ -85,6 +85,7 @@ import {
   tripInvitations,
   tripLastMinutePromoRecipients,
   tripLastMinutePromos,
+  tripLenses,
   tripRecapPhotos,
   tripRequirements,
   tripReviews,
@@ -268,6 +269,11 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(waiverMaterialityDecisions).where(eq(waiverMaterialityDecisions.shopId, shopId));
   await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
   await db.delete(boats).where(eq(boats.shopId, shopId));
+  // The shop's own words for a kind of day (ADR 20260904-reef-all-the-way-down,
+  // decision 2). Same shape as `boats` above: it references `shops` with no
+  // cascade, so a demo whose owner wrote a vocabulary made the final
+  // `delete(shops)` throw 23503 and stranded the shop past its TTL.
+  await db.delete(tripLenses).where(eq(tripLenses.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
   // References both shops and people (ADR 20260803-processor-erasure-obligations),

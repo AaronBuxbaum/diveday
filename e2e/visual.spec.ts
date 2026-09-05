@@ -1685,6 +1685,31 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-above-level", scheme);
       });
 
+      /**
+       * **The board read through one of the shop's own words** — ADR
+       * 20260904-reef-all-the-way-down, decision 2 (issue #1162).
+       *
+       * Its own baseline because no existing capture can tell a current chip
+       * from a plain one, and the current chip beside a narrowed list is the
+       * whole drawn state. Waits on a real departure card, not the skeleton,
+       * exactly as its two neighbours do.
+       */
+      test(`the public schedule read through a lens renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/s/blue-mantis?lens=after-dark");
+        // The reef charter its two neighbours wait on wears a different word
+        // and is not on this board at all, so this waits on the earliest live
+        // "After dark" departure the seed puts there.
+        await page
+          .locator("li")
+          .filter({ hasText: "Sunset Two-Tank — French Reef" })
+          .getByRole("link")
+          .first()
+          .waitFor();
+        await capture(page, "schedule-lens", scheme);
+      });
+
       // A departure that no longer exists, which is what a link on a flyer or
       // in last season's Instagram post resolves to. It is a *shop* surface
       // now rather than DiveDay's app-wide 404 (issue #765), so the thing to
@@ -2685,7 +2710,7 @@ for (const scheme of ["light", "dark"] as const) {
         // and with no boat to book, the page's one primary becomes the
         // date-request composer's own submit.
         await expect(page.getByRole("heading", { level: 1 })).toHaveText("Fresh Shop E2E");
-        await expect(page.getByRole("region", { name: "Next boat out" })).toHaveCount(0);
+        await expect(page.getByRole("region", { name: "Next boat with space" })).toHaveCount(0);
         await expect(page.getByRole("link", { name: "Book this boat" })).toHaveCount(0);
         await capture(page, "public-schedule-new-shop", scheme);
         // After the shot, so the composer's disclosure is closed in the

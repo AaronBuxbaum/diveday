@@ -26,6 +26,13 @@ import { tripCalendarFile } from "@/lib/trip-calendar";
  * (issue #704) the wrong parking lot. The staff feed fixed exactly this in
  * `feed-trips.ts`; the diver's file was still doing it.
  *
+ * **It says which revision it is.** `SEQUENCE` ships from `trips.revision`,
+ * which moves for a change to the departure time or to the list of dive sites
+ * and for nothing else (`src/lib/trip-revision.ts`). A diver who downloads the
+ * file again after the boat moved gets their existing entry updated rather
+ * than a second one beside it; a conditions note the crew types at the rail
+ * leaves the counter alone, so nobody's phone re-alerts for it.
+ *
  * **What is deliberately not here** is the packing line D05 also asks for.
  * This route is public and holds no booking, so it cannot know what *this*
  * diver rented, is bringing, or is provided (`PackingSection` composes that
@@ -73,6 +80,7 @@ export async function GET(
     // describes, and keeping it on the published time leaves the file
     // byte-identical for a shop that sets no dock call.
     stamp: trip.startsAt,
+    revision: trip.revision,
   });
   return new NextResponse(file, {
     headers: {
