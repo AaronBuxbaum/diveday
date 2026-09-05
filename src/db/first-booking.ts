@@ -92,7 +92,10 @@ export async function shopFirstBooking(
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(eq(bookings.shopId, shopId))
-    .orderBy(asc(bookings.createdAt))
+    // "First" has to mean one row. Two bookings can share an instant — a
+    // seeding transaction stamps them identically — so the id decides, rather
+    // than the heap.
+    .orderBy(asc(bookings.createdAt), asc(bookings.id))
     .limit(2);
 
   const [only] = rows;
