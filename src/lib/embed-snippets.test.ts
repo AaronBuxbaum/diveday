@@ -136,4 +136,73 @@ describe("the embed grammar", () => {
       );
     }
   });
+
+  /**
+   * **A named list, on its own attribute** (issue #1284, the fourth of the
+   * ADR's four "what it shows" answers).
+   *
+   * `data-set` is new; `data-show` is untouched. Both values are opaque
+   * strings, so one attribute could never carry both meanings — which is why
+   * the answer here is a second name rather than a widened one, and why every
+   * snippet a shop already pasted keeps meaning exactly what it meant.
+   */
+  it("narrows the grid and the courses list to one of the shop's own lists", () => {
+    const options = { look: "site" as const, lang: "auto", set: "set-1" };
+    for (const kind of ["grid", "courses"] as const) {
+      expect(embedSnippet(ORIGIN, "blue-mantis", kind, options, { button: "Book" })).toContain(
+        `<div data-diveday="${kind}" data-shop="blue-mantis" data-look="site" data-lang="auto" data-set="set-1"></div>`,
+      );
+      expect(
+        new URL(embedFrameUrl(ORIGIN, "blue-mantis", kind, options)).searchParams.get("set"),
+      ).toBe("set-1");
+    }
+  });
+
+  it("refuses a list on the two kinds that point at one thing", () => {
+    // A departure card frames one departure and a calendar is the whole month;
+    // neither has a list to narrow, and a button cannot link to one at all.
+    const options = { look: "site" as const, lang: "auto", set: "set-1" };
+    for (const kind of ["departure", "calendar"] as const) {
+      expect(
+        new URL(embedFrameUrl(ORIGIN, "blue-mantis", kind, options)).searchParams.has("set"),
+      ).toBe(false);
+      expect(embedSnippet(ORIGIN, "blue-mantis", kind, options, { button: "Book" })).not.toContain(
+        "data-set",
+      );
+    }
+    expect(embedTargetUrl(ORIGIN, "blue-mantis", options)).toBe(
+      "https://diveday.example/s/blue-mantis",
+    );
+  });
+
+  it("writes byte-identical snippets for every kind when no list is chosen", () => {
+    // The contract with every paste a shop has already made: adding an option
+    // may add an attribute, never change the markup of a snippet that does not
+    // use it.
+    for (const kind of [
+      "button",
+      "lightbox",
+      "calendar",
+      "grid",
+      "departure",
+      "courses",
+    ] as const) {
+      const withoutField = embedSnippet(
+        ORIGIN,
+        "blue-mantis",
+        kind,
+        { look: "site", lang: "auto", show: "t1" },
+        { button: "Book" },
+      );
+      const withNullSet = embedSnippet(
+        ORIGIN,
+        "blue-mantis",
+        kind,
+        { look: "site", lang: "auto", show: "t1", set: null },
+        { button: "Book" },
+      );
+      expect(withNullSet).toBe(withoutField);
+      expect(withoutField).not.toContain("data-set");
+    }
+  });
 });

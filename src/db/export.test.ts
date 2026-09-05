@@ -191,6 +191,17 @@ const EXCLUDED_TABLES = [
   // already in the bundle, so the row adds a signature over records the
   // destination has, and nothing the destination lacks.
   "day_closeouts",
+  // The named lists behind a shop's website embeds (issue #1284). A row is a
+  // name plus the ids of *this installation's* own departures or course slugs,
+  // and a re-imported bundle mints new trip ids — so the membership would
+  // arrive pointing at nothing, and a list that resolves to nothing is worse
+  // than no list. The name alone is not a shop record anybody would miss: the
+  // snippet that reads it is pasted on the shop's own site and carries the id
+  // of a list in *this* installation either way. Same class as
+  // `bookings.pending_checkout_intent_id`. Said out loud on the export page's
+  // "not included" line, which ADR 20260806-export-operational-records exists
+  // because it went stale once.
+  "embed_sets",
   // The buddy-team pairing trail (ADR 20260804-buddy-teams). The *standing*
   // teams a shop would carry to another system are already exported as
   // buddy_pairs.csv; this is the history of how they got that way.

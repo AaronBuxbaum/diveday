@@ -7739,6 +7739,62 @@ export const pushSubscriptions = pgTable(
   ],
 );
 
+/** Whether a named embed list holds departures or courses. */
+export const embedSetKind = pgEnum("embed_set_kind", ["trip", "course"]);
+
+/**
+ * **A named list a shop frames on its own website** (issue #1284, the fourth of
+ * ADR 20260901-diveday-reimagined decision 2's "what it shows" answers): "our
+ * three beginner boats", "the wreck week".
+ *
+ * Stored rather than encoded into the snippet, which is the whole point. A
+ * `data-show="t1,t2,t3"` breaks the moment one of those departures is deleted,
+ * and the shop has no way to edit the paste it already made; a `?set=<id>` is a
+ * name whose membership the shop keeps editing in Settings, and every snippet
+ * pointing at it follows.
+ *
+ * Membership is a set, not a sequence. The widget renders its members in the
+ * shop's own natural order — departures by `starts_at`, courses in the roster's
+ * progression order — because a stored order no editor can change is dead
+ * weight, and a drag handle is a whole interaction for a fact a shop has no
+ * opinion about.
+ */
+export const embedSets = pgTable(
+  "embed_sets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** What the shop calls it on its own website ("Beginner boats"). */
+    name: text("name").notNull(),
+    kind: embedSetKind("kind").notNull(),
+    /**
+     * Trip ids when `kind` is `trip`, course slugs when it is `course` — told
+     * apart by the kind, never by the value, the same rule `data-show` follows.
+     * Every member is validated against this shop's own rows on write, so a
+     * devtools edit on the checkbox list cannot store another shop's id.
+     */
+    memberIds: jsonb("member_ids").$type<string[]>().notNull().default([]),
+    /** ADR 20260820-every-delete-is-soft. The word on screen is still "Delete". */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // Partial, over the live rows only: every read means "this shop's lists",
+    // and a deleted one is never in that answer.
+    index("embed_sets_shop_live_idx")
+      .on(table.shopId, table.name)
+      .where(sql`${table.deletedAt} is null`),
+    check("embed_sets_name_present", sql`length(btrim(${table.name})) > 0`),
+    // A list is something a visitor scrolls past on a shop's own page, and a
+    // shop with more than two dozen boats on one is publishing its whole board
+    // rather than a selection. The cap is also what bounds the `in (…)` the
+    // widget's read builds.
+    check("embed_sets_member_count", sql`jsonb_array_length(${table.memberIds}) between 1 and 24`),
+  ],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -7802,3 +7858,6 @@ export type GearServiceEvent = typeof gearServiceEvents.$inferSelect;
 export type GearServiceKindValue = (typeof gearServiceKind.enumValues)[number];
 export type GearReservation = typeof gearReservations.$inferSelect;
 export type PriorGearAssignment = typeof priorGearAssignments.$inferSelect;
+
+export type EmbedSet = typeof embedSets.$inferSelect;
+export type EmbedSetKind = (typeof embedSetKind.enumValues)[number];

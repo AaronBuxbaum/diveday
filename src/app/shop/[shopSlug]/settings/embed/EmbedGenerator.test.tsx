@@ -22,6 +22,7 @@ const copy: EmbedGeneratorCopy = {
   showEverything: "Everything",
   showDeparture: "One departure",
   showAllCourses: "Every course",
+  setsGroup: "Lists",
   look: "Look",
   lookSite: "Your site",
   lookLight: "DiveDay",
@@ -58,6 +59,10 @@ function renderGenerator() {
       shopSlug="blue-mantis"
       trips={[{ id: "t1", label: "Thu 27 Aug · 7:00 AM — Two-Tank Reef" }]}
       courses={[{ id: "open-water", label: "Open Water Diver" }]}
+      sets={[
+        { id: "set-boats", label: "Beginner boats", kind: "trip" },
+        { id: "set-courses", label: "Entry-level courses", kind: "course" },
+      ]}
       locales={["en-US", "es-ES"]}
       previewHost={{ brand: DIVEDAY_BRAND_COLOR, font: null }}
       copy={copy}
@@ -142,6 +147,62 @@ describe("EmbedGenerator", () => {
     await user.click(screen.getByRole("radio", { name: /kind courses/ }));
     expect(screen.getByLabelText("What it shows")).toHaveValue("");
     expect((screen.getByLabelText("Embed code") as HTMLTextAreaElement).value).not.toContain("t1");
+  });
+
+  /**
+   * **The fourth answer** (issue #1284): one of the shop's own named lists.
+   * Its own attribute, and offered only where a list means anything.
+   */
+  it("puts a list on the grid, as data-set and never as data-show", async () => {
+    const user = userEvent.setup();
+    renderGenerator();
+    await user.click(screen.getByRole("radio", { name: /kind grid/ }));
+
+    const select = screen.getByLabelText("What it shows");
+    expect(within(select).getByRole("option", { name: "Beginner boats" })).toBeInTheDocument();
+    // A departures list on a grid; the courses list is a different namespace.
+    expect(within(select).queryByRole("option", { name: "Entry-level courses" })).toBeNull();
+
+    await user.selectOptions(select, "set:set-boats");
+    const snippet = (screen.getByLabelText("Embed code") as HTMLTextAreaElement).value;
+    expect(snippet).toContain('data-diveday="grid"');
+    expect(snippet).toContain('data-set="set-boats"');
+    expect(snippet).not.toContain("data-show");
+  });
+
+  it("offers the courses widget its own lists alongside one course", async () => {
+    const user = userEvent.setup();
+    renderGenerator();
+    await user.click(screen.getByRole("radio", { name: /kind courses/ }));
+
+    const select = screen.getByLabelText("What it shows");
+    expect(within(select).getByRole("option", { name: "Open Water Diver" })).toBeInTheDocument();
+    expect(within(select).getByRole("option", { name: "Entry-level courses" })).toBeInTheDocument();
+    expect(within(select).queryByRole("option", { name: "Beginner boats" })).toBeNull();
+  });
+
+  it("forgets a list when the shop crosses to a kind that cannot read one", async () => {
+    const user = userEvent.setup();
+    renderGenerator();
+    await user.click(screen.getByRole("radio", { name: /kind grid/ }));
+    await user.selectOptions(screen.getByLabelText("What it shows"), "set:set-boats");
+
+    await user.click(screen.getByRole("radio", { name: /kind departure/ }));
+    expect(screen.getByLabelText("What it shows")).toHaveValue("");
+    expect((screen.getByLabelText("Embed code") as HTMLTextAreaElement).value).not.toContain(
+      "set-boats",
+    );
+  });
+
+  it("offers no lists at all for the kinds that point at one object", async () => {
+    const user = userEvent.setup();
+    renderGenerator();
+    for (const kind of ["button", "lightbox", "departure", "qr"]) {
+      await user.click(screen.getByRole("radio", { name: new RegExp(`kind ${kind}`) }));
+      const select = screen.getByLabelText("What it shows");
+      expect(within(select).queryByRole("group", { name: "Lists" })).toBeNull();
+      expect(within(select).queryByRole("option", { name: "Beginner boats" })).toBeNull();
+    }
   });
 
   it("draws the QR code from the target and offers the partner link attributed", async () => {

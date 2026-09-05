@@ -12,6 +12,8 @@ export default function EmbedSettingsLoading() {
         <div className="space-y-10">
           <div className={sectionCardClass({ padding: "none", className: "h-40" })} />
           <div className={sectionCardClass({ padding: "none", className: "h-64" })} />
+          {/* The Named lists card (issue #1284). */}
+          <div className={sectionCardClass({ padding: "none", className: "h-56" })} />
         </div>
       </div>
     </main>

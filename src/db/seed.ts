@@ -35,6 +35,7 @@ import {
   diveSiteMoments,
   diveSites,
   diveSupportNeeds,
+  embedSets,
   executedDives,
   gearItems,
   gearReservations,
@@ -115,6 +116,7 @@ import { seedDiveSiteCatalog } from "./seed-dive-site-catalog";
 import { seedDiveSites } from "./seed-dive-sites";
 import { seedDiverTrail } from "./seed-diver-trail";
 import { seedDivers } from "./seed-divers";
+import { seedEmbedSets } from "./seed-embed-sets";
 import { seedFrontDesk } from "./seed-front-desk";
 import { seedGear } from "./seed-gear";
 import { seedHistory } from "./seed-history";
@@ -945,6 +947,9 @@ export async function seedDemoSchedule(
   // Which partner's link sent a seat — beside the recency answers, and written
   // the same way: a column on bookings that already exist (issue #1285).
   await seedPartnerReferrals(db, shopId);
+  // One named embed list over departures the schedule already holds, so the
+  // embed settings card and its e2e spec have a real row to read (issue #1284).
+  await seedEmbedSets(db, shopId);
 
   // Adds-only and late, like the four above: the desk's trail **per diver**,
   // so the Activity section on a diver's record opens on a real history rather
@@ -1177,6 +1182,15 @@ export async function resetDemoSchedule(
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
   await db.delete(tripChangeEvents).where(eq(tripChangeEvents.shopId, shopId));
+  // **Reset-owned, and not because of a foreign key.** A named embed list holds
+  // trip ids in jsonb, so nothing stops a stale row surviving the departures it
+  // names — it just resolves to an empty widget, silently, for the rest of the
+  // run. `seedEmbedSets` writes a fresh one below against the new schedule, so
+  // this is what keeps "one list, over departures that exist" the fixture's
+  // actual state rather than its state on the first reset only. The silent
+  // leak is the same class this file's `trip_series` comment describes: the
+  // omissions that announce themselves with a 23503 are the easy half.
+  await db.delete(embedSets).where(eq(embedSets.shopId, shopId));
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));

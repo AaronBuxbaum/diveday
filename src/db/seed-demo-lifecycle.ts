@@ -30,6 +30,7 @@ import {
   diveSiteMoments,
   diveSites,
   diveSupportNeeds,
+  embedSets,
   executedDives,
   gearItems,
   gearReservations,
@@ -234,6 +235,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripChangeEvents).where(eq(tripChangeEvents.shopId, shopId));
+  // The shop's named embed lists (issue #1284): a `shop_id` FK with no cascade,
+  // so it goes with everything else the shop owns.
+  await db.delete(embedSets).where(eq(embedSets.shopId, shopId));
   await db.delete(trips).where(eq(trips.shopId, shopId));
   // Before the series it points at, and after the trips: a skip is the
   // memory of a date that is no longer there.

@@ -90,6 +90,28 @@ describe("the loader", () => {
     expect(grid.searchParams.has("show")).toBe(false);
   });
 
+  it("forwards a named list on the grid and the courses widget, and drops it elsewhere", () => {
+    // The half of issue #1284 that would otherwise ship broken: the generator
+    // composes a correct snippet, and every already-pasted loader silently
+    // drops the attribute it has never heard of. `data-set` is new here in the
+    // same change that introduced it, so the two move in lockstep.
+    host(`
+      <div data-diveday="grid" data-shop="blue-mantis" data-look="light" data-lang="auto" data-set="set-1"></div>
+      <div data-diveday="courses" data-shop="blue-mantis" data-look="light" data-lang="auto" data-set="set-2"></div>
+      <div data-diveday="departure" data-shop="blue-mantis" data-look="light" data-lang="auto" data-set="set-1"></div>
+      <div data-diveday="calendar" data-shop="blue-mantis" data-look="light" data-lang="auto" data-set="set-1"></div>
+    `);
+    const framed = (kind: string) =>
+      new URL(
+        document.querySelector<HTMLIFrameElement>(`iframe[data-diveday-frame="${kind}"]`)?.src ??
+          "",
+      );
+    expect(framed("grid").searchParams.get("set")).toBe("set-1");
+    expect(framed("courses").searchParams.get("set")).toBe("set-2");
+    expect(framed("departure").searchParams.has("set")).toBe(false);
+    expect(framed("calendar").searchParams.has("set")).toBe(false);
+  });
+
   it("darkens a pale host colour until white reads on the button", () => {
     // Amber: 1.9:1 on white as it stands. The settings copy promises the
     // button darkens itself, and this is the rule that keeps that promise —

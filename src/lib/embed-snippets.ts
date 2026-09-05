@@ -60,6 +60,17 @@ export function isEmbedKind(value: unknown): value is EmbedKind {
  */
 const SHOWS_ONE: ReadonlySet<EmbedKind> = new Set(["departure", "courses"]);
 
+/**
+ * The list kinds — the ones a shop's own named set can narrow (issue #1284).
+ * `grid` and `courses`: both render many things, and a set is a shorter many.
+ * `departure` and `calendar` take none — a card points at one departure, and a
+ * calendar is the whole month by definition.
+ *
+ * Its own attribute, `data-set`, beside the untouched `data-show`. A snippet a
+ * shop pasted last season carries neither and keeps meaning what it meant.
+ */
+const SHOWS_SET: ReadonlySet<EmbedKind> = new Set(["grid", "courses"]);
+
 export type EmbedLook = "site" | "light";
 export type EmbedOptions = {
   /** `site` reads the host page's colour and face; `light` is DiveDay's own. */
@@ -76,9 +87,25 @@ export type EmbedOptions = {
    * its own namespace.
    */
   show?: string | null;
+  /**
+   * A named list's id, for `grid` and `courses` (issue #1284) — "our three
+   * beginner boats", "the wreck week".
+   *
+   * Told apart from `show` by the **attribute**, never by the value: both are
+   * opaque strings, and a set id and a trip id would be indistinguishable if
+   * they shared one. That is also why this is a new field rather than a
+   * widening of `show` — the loader on a shop's site reads names, and a name
+   * that started meaning two things could not be read at all.
+   */
+  set?: string | null;
 };
 
-export const DEFAULT_EMBED_OPTIONS: EmbedOptions = { look: "site", lang: "auto", show: null };
+export const DEFAULT_EMBED_OPTIONS: EmbedOptions = {
+  look: "site",
+  lang: "auto",
+  show: null,
+  set: null,
+};
 
 /** The URL the loader frames for a framed kind — the same grammar in JS. */
 export function embedFrameUrl(
@@ -98,6 +125,8 @@ export function embedFrameUrl(
   // `departure` and `courses` are the two widgets that can narrow to one
   // thing; `grid` and `calendar` are the whole board by definition.
   if (options.show && SHOWS_ONE.has(kind)) url.searchParams.set("show", options.show);
+  // `grid` and `courses` are the two that can narrow to a named list.
+  if (options.set && SHOWS_SET.has(kind)) url.searchParams.set("set", options.set);
   if (options.lang !== "auto") url.searchParams.set("lang", options.lang);
   if (options.look === "site") {
     if (host.brand) url.searchParams.set("brand", host.brand);
@@ -111,7 +140,12 @@ export function embedFrameUrl(
   return url.toString();
 }
 
-/** Where a button, a lightbox or a QR code sends a diver. */
+/**
+ * Where a button, a lightbox or a QR code sends a diver.
+ *
+ * `set` is deliberately not read: those three point at **one object** — a
+ * departure or the storefront — and a link cannot point at a list.
+ */
 export function embedTargetUrl(
   origin: string,
   shopSlug: string,
@@ -170,5 +204,6 @@ export function embedSnippet(
     return `${loader}\n<a href="${attr(embedTargetUrl(origin, shopSlug, options))}" data-diveday="${kind}" ${common}>${attr(words.button)}</a>`;
   }
   const show = options.show && SHOWS_ONE.has(kind) ? ` data-show="${attr(options.show)}"` : "";
-  return `${loader}\n<div data-diveday="${kind}" ${common}${show}></div>`;
+  const set = options.set && SHOWS_SET.has(kind) ? ` data-set="${attr(options.set)}"` : "";
+  return `${loader}\n<div data-diveday="${kind}" ${common}${show}${set}></div>`;
 }

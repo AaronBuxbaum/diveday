@@ -433,7 +433,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/embed": {
-    "e2e": ["schedule-embed.spec.ts"],
+    "e2e": ["embed-catalogue.spec.ts", "schedule-embed.spec.ts"],
     "visual": ["settings-embed"],
     "a11y": ["a11y.spec.ts"]
   },

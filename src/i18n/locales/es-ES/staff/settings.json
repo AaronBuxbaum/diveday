@@ -587,7 +587,7 @@
     "rowCount": "{count, plural, one {# fila} other {# filas}}",
     "notIncluded": {
       "label": "No incluido, a propósito:",
-      "text": "copias de manifiesto sin conexión, colas de reintento de notificaciones, la vinculación con Stripe, los rastros de cierre del día y de equipos de buceo, el estado de cancelación por clima, los libros de conciliación de DiveDay y las URL de imágenes pegadas sin guardar. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>sí</mono> se exportan. Las fotos y los recibos importados guardados de forma segura se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
+      "text": "copias de manifiesto sin conexión, colas de reintento de notificaciones, la vinculación con Stripe, los rastros de cierre del día y de equipos de buceo, el estado de cancelación por clima, los libros de conciliación de DiveDay las URL de imágenes pegadas sin guardar y las listas que hay detrás de las inserciones de tu web. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>sí</mono> se exportan. Las fotos y los recibos importados guardados de forma segura se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
     }
   },
   "import": {
@@ -924,7 +924,7 @@
       },
       "grid": {
         "name": "Cuadrícula",
-        "hint": "Salidas y cursos como tarjetas"
+        "hint": "Salidas y cursos como tarjetas, o una de tus listas"
       },
       "departure": {
         "name": "Una salida",
@@ -973,6 +973,33 @@
     "code": "Código de inserción",
     "partnerLinkField": "Enlace de referido",
     "showRequired": "Elige la salida de esta tarjeta.",
-    "fromFareharbor": "¿Vienes de FareHarbor? <link>Cada una de sus inserciones tiene aquí su equivalente</link>."
+    "fromFareharbor": "¿Vienes de FareHarbor? <link>Cada una de sus inserciones tiene aquí su equivalente</link>.",
+    "sets": {
+      "title": "Listas con nombre",
+      "group": "Listas",
+      "nameLabel": "Nombre",
+      "namePlaceholder": {
+        "trip": "Salidas para principiantes",
+        "course": "Cursos de iniciación"
+      },
+      "membersLabel": "En esta lista",
+      "add": "Añadir lista",
+      "addNamed": "Añadir una lista de {kind}",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "deleteNamed": "Eliminar {name}",
+      "deleteConfirm": "¿Eliminar {name}? Cualquier código que apunte a ella deja de mostrarla.",
+      "kinds": {
+        "trip": "Salidas",
+        "course": "Cursos"
+      },
+      "notice": {
+        "saved": "Lista guardada.",
+        "deleted": "Lista eliminada.",
+        "invalid": "Ponle un nombre a la lista y elige al menos un elemento.",
+        "tooMany": "Una lista admite hasta {max}.",
+        "missing": "Esa lista ya no está."
+      }
+    }
   }
 }
