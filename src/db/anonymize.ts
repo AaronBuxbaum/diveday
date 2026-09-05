@@ -749,11 +749,20 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
 
   // --- booking-scoped rows -------------------------------------------------
   if (owned) {
+    // `welcomeSharedAt` is a consent stamp, not a fact about the seat: the
+    // diver said this departure's crew may know it is a first trip or a long
+    // return (issue #1182, D22). Two reasons it cannot outlive them. Consent
+    // given by a person who has asked to be forgotten is not consent any more.
+    // And the cue derives its words at read from this diver's *booking
+    // history*, so a stamp left behind keeps the manifest greeting an
+    // anonymized shell by name-shaped implication — "first trip with us" —
+    // about somebody who is no longer there to have a first trip.
     await tx
       .update(bookings)
       .set({
         diveIntent: null,
         reEntryAsk: null,
+        welcomeSharedAt: null,
         hotelPickupLocation: null,
         pickupTime: null,
       })
