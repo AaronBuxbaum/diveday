@@ -1,4 +1,5 @@
-import { HOUR_MS, nowDate } from "./clock";
+import { hasReturned, hasSailed } from "@/lib/trips";
+import { nowDate } from "./clock";
 import type { RollCallGapReason, TodayAction, TodayActionKind } from "./today";
 import { sortActions } from "./today";
 import { shopDayBounds, toDateInputValue, utcToWallTime } from "./zoned";
@@ -124,17 +125,6 @@ const GAP_REASON_RANK: Record<RollCallGapReason, number> = {
   departure_uncounted: 4,
   no_roll_call: 5,
 };
-
-/**
- * **The standing late-arrival buffer**, in one place rather than four literals.
- *
- * Trips run late, so every "has it sailed / is it back / is it in the past"
- * question in this app allows an hour past the scheduled time before it
- * answers yes (AGENTS.md's hard rule). The evening's whole shape hangs off it:
- * a station cannot settle, and the closing block cannot appear, until the last
- * departure is an hour past its scheduled return.
- */
-export const DEPARTURE_BUFFER_MS = HOUR_MS;
 
 /** One of today's departures, as the db layer hands it in. */
 export type CloseoutTripInput = {
@@ -296,10 +286,10 @@ function departureStatus(
     };
   }
   const none = { gapReason: null, diveNumber: 0, uncounted: 0 };
-  if (trip.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime()) {
+  if (!hasSailed(trip.startsAt, now)) {
     return { status: "not_departed", ...none };
   }
-  if (trip.endsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime()) {
+  if (!hasReturned(trip.endsAt, now)) {
     return { status: "still_out", ...none };
   }
   return { status: "all_home", ...none };
@@ -673,9 +663,7 @@ export function assembleEveningClose(
 ): EveningClose {
   const stations: StationClose[] = departures
     .map((departure) => {
-      const settled =
-        departure.status === "all_home" ||
-        departure.endsAt.getTime() + DEPARTURE_BUFFER_MS <= now.getTime();
+      const settled = departure.status === "all_home" || hasReturned(departure.endsAt, now);
       const missing =
         departure.gapReason !== null && AFTER_DIVE_GAP_REASONS.has(departure.gapReason)
           ? departure.uncounted

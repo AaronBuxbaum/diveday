@@ -2,7 +2,7 @@
   "note": "Words of agent context every session loads before reading any code. A ratchet: a count may never rise, and a fall is banked with `node scripts/check-context-budget.mjs --write`. See the module comment in scripts/check-context-budget.mjs.",
   "budgets": {
     "CLAUDE.md": 49,
-    "AGENTS.md": 11524,
+    "AGENTS.md": 11543,
     ".claude/skills/*/SKILL.md (description lines)": 786,
     ".claude/agents/*.md (description lines)": 130
   },
@@ -61,6 +61,12 @@
       "why": "The db:reset row now states the rule is enforced rather than remembered: a second opener of one .pglite is refused naming the process to stop, and a lock left by a killed server is taken over rather than obeyed. Both halves matter at the moment a session hits it — the first so an 'is already open by process N' refusal reads as working-as-intended, the second so nobody deletes the lock file by hand and re-opens the silent fork it exists to stop (ADR 20260903-one-process-per-pglite-directory).",
       "files": {
         "AGENTS.md": "11503 -> 11533"
+      }
+    },
+    {
+      "why": "The late-arrival buffer rule now names hasSailed/hasReturned and its guard; the long half (the fifteen spellings and the citation ring) went to docs/agents/repo-checks.md rather than here.",
+      "files": {
+        "AGENTS.md": "11524 -> 11543"
       }
     }
   ]

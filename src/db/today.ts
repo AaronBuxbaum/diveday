@@ -90,6 +90,7 @@ import {
   urgencyFor,
 } from "@/lib/today";
 import { liveStageOf, type TripStageReading } from "@/lib/trip-stages";
+import { hasReturned, hasSailed } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
@@ -332,13 +333,6 @@ export const RETURNED_ROLL_CALL_LOOKBACK_MS = 48 * HOUR_MS;
  * failure mode this whole change exists to remove.
  */
 export const ROLL_CALL_RESIDUE_MS = 30 * 24 * HOUR_MS;
-
-/**
- * How long after its scheduled departure a boat is still treated as at the
- * dock. Trips run late, so every "has it sailed" question in this app carries
- * the same hour (`src/db/ready.ts`).
- */
-const DEPARTURE_BUFFER_MS = 60 * 60 * 1000;
 
 /**
  * One trip's unclosed head count, as codes and numbers — `src/i18n/today-labels.ts`
@@ -602,7 +596,7 @@ export async function listRollCallGaps(
     // still reaches the crew scan below.
     if (bookingIds.length === 0 && crewIds.length === 0) continue;
     const checkpoints = rollCallCheckpoints(trip.plannedDives);
-    const home = new Date(trip.endsAt.getTime() + 60 * 60 * 1000) <= now;
+    const home = hasReturned(trip.endsAt, now);
     const underway = !home;
     const stale = home && trip.endsAt.getTime() < now.getTime() - RETURNED_ROLL_CALL_LOOKBACK_MS;
 
@@ -2022,7 +2016,7 @@ export async function getTodayWork(
       const result = rollCall.get(row.booking.id);
       if (result === "boarded") return false;
       if (result === undefined) return true;
-      return trip.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime();
+      return !hasSailed(trip.startsAt, now);
     });
     // The crew list this trip names *now*, each carrying their own departure
     // result — the shape `rollCallCompleteness` requires, so that the verdict
