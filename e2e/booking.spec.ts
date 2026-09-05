@@ -305,7 +305,14 @@ test.describe("staff", () => {
 
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
-    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    // Exact, for the reason the sibling assertion below already records: an
+    // unpriced trip's card also carries a "Set a price for {title}, …" link
+    // whose accessible name contains the title as a substring.
+    await page
+      .locator("li")
+      .filter({ hasText: title })
+      .getByRole("link", { name: title, exact: true })
+      .click();
     await page
       .getByRole("navigation", { name: "Trip" })
       .getByRole("link", { name: "Manifest" })
