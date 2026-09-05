@@ -316,6 +316,13 @@ const FONTS_WAIT_MS = 5_000;
 // `/_next/image` generating a width it has never been asked for, on a CI runner
 // already running the other shards — the 5s this replaced was under that.
 const IMAGE_SETTLE_MS = 15_000;
+// The entrance-animation settle (`waitForEntranceAnimations`, at the end of
+// `paintWholeDocument`). Every finite animation this app runs is a Reef
+// entrance: 600ms is the delight budget's ceiling (ADR
+// 20260904-reef-all-the-way-down, Budget rule 2) and the marketing reveal is
+// 220ms, so this is five times the longest of them. It is a bound on a wait
+// that should already be over, not a duration anything is expected to use.
+const ANIMATION_WAIT_MS = 3_000;
 
 /**
  * The bounds above are all *page-side*, and a page-side bound cannot fire in a
@@ -353,6 +360,7 @@ const PAGE_SIDE_BUDGET_MS = SCROLL_BUDGET_MS + IMAGE_SETTLE_MS + 4 * FRAME_WAIT_
 const PROTOCOL_SLACK_MS = 5_000;
 const PAINT_STALL_MS = PAGE_SIDE_BUDGET_MS + PROTOCOL_SLACK_MS;
 const FONTS_STALL_MS = FONTS_WAIT_MS + PROTOCOL_SLACK_MS;
+const ANIMATION_STALL_MS = ANIMATION_WAIT_MS + PROTOCOL_SLACK_MS;
 /** How long the is-the-renderer-alive probe gets to answer after a stall. */
 const RENDERER_PROBE_MS = 5_000;
 /**
@@ -420,12 +428,12 @@ const SCREENSHOT_GIVE_UP_MS = SCREENSHOT_TIMEOUT_MS + PROTOCOL_SLACK_MS;
  * — a browser that is gone, not a surface that is slow. Nothing here is a knob
  * to widen when one test starts timing out.
  */
-const PAINT_BUDGET_MS = PAINT_STALL_MS + FONTS_STALL_MS;
+const PAINT_BUDGET_MS = PAINT_STALL_MS + FONTS_STALL_MS + ANIMATION_STALL_MS;
 /**
  * The bounded waits that each pay one `RENDERER_PROBE_MS` diagnostic on the
  * path that has already given up: `paintWholeDocument`'s scroll-through/image
- * settle and font settle, plus `screenshotOrGiveUp`'s probe on a screenshot
- * that never returned.
+ * settle, font settle and entrance-animation settle, plus
+ * `screenshotOrGiveUp`'s probe on a screenshot that never returned.
  *
  * This is *per viewport*, and that is the correction. The ceiling below is
  * documented as the sum of the work it bounds, but the overhead term used to
@@ -461,7 +469,7 @@ const PAINT_BUDGET_MS = PAINT_STALL_MS + FONTS_STALL_MS;
  * refusing to answer rather than anything a rerun could mask. Any failure
  * *without* that verdict stays red on the first attempt, exactly as before.
  */
-const STALL_PROBES_PER_VIEWPORT = 3;
+const STALL_PROBES_PER_VIEWPORT = 4;
 const STALL_PROBE_BUDGET_MS = RENDERER_PROBE_MS * STALL_PROBES_PER_VIEWPORT * VIEWPORTS.length;
 /** The viewport resizes and the navigation that preceded them. */
 const CAPTURE_OVERHEAD_MS = 10_000;
@@ -769,6 +777,10 @@ async function paintWholeDocument(page: Page) {
     ),
     true,
   );
+  // Last, because the scroll above is what starts the entrance animations and
+  // a font swap can start more: whatever is still running has been started by
+  // this pass. See `waitForEntranceAnimations` for the measured case (#1380).
+  await waitForEntranceAnimations(page);
 }
 
 /**
@@ -830,23 +842,53 @@ async function screenshotOrGiveUp(page: Page, path: string) {
  * Waits out every running (finite) CSS animation — the same
  * `document.getAnimations()` pattern `e2e/a11y.spec.ts` uses to settle a
  * *paint* rather than a *duration*. The command palette gained a real
- * `animate-scale-in`/`animate-fade-in` entrance in this change (issue #832)
- * where it previously had none, and `capture()` shoots the instant its input
- * is focused — mid-transform, not at rest. Exact and not a timing guess:
+ * `animate-scale-in`/`animate-fade-in` entrance in issue #832 where it
+ * previously had none, and `capture()` shoots the instant its input is
+ * focused — mid-transform, not at rest. Exact and not a timing guess:
  * `animate-pulse` skeletons and other infinite animations are excluded so a
  * still-loading surface never hangs this wait.
+ *
+ * **It runs for every capture, at the end of `paintWholeDocument`** (issue
+ * #1380), because the palette was never the only surface that animates on the
+ * way in. `screenshotOrGiveUp` passes Playwright's `animations: "disabled"`,
+ * which fast-forwards what it can see, and the marketing pages proved that is
+ * not the whole answer: on a pull request touching only the shop home,
+ * `product-light-vw-1280` and `product-light-vw-390` came back changed, 5,856
+ * of 5,947 differing pixels by one to three colour units, every one of them on
+ * the antialiased border and bed shadow of one `MarketingSectionMotion` card,
+ * with the text inside identical and the dark capture of the same page
+ * passing. That is a `rise-in` photographed a frame from its end state, and
+ * the shutter lands there deterministically per commit, so a re-run cannot
+ * clear it and the next unrelated branch pays the triage again. The scroll
+ * `paintWholeDocument` runs is what starts those reveals, so the settle
+ * belongs at the end of it: the same pass that triggers them waits them out.
+ *
+ * Bounded like every other wait here. A finite animation that never finishes
+ * (paused, or on an element the renderer has stopped ticking) degrades to a
+ * shot taken anyway with a warning, never a hang that costs the run.
  */
 async function waitForEntranceAnimations(page: Page) {
-  await page.evaluate(() =>
-    Promise.all(
-      document
-        .getAnimations()
-        .filter(
-          (animation) =>
-            animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY,
-        )
-        .map((animation) => animation.finished.catch(() => undefined)),
-    ).then(() => undefined),
+  await withRendererBound(
+    page,
+    "the entrance-animation settle",
+    ANIMATION_STALL_MS,
+    page.evaluate(
+      (ms) =>
+        Promise.race([
+          Promise.all(
+            document
+              .getAnimations()
+              .filter(
+                (animation) =>
+                  animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY,
+              )
+              .map((animation) => animation.finished.catch(() => undefined)),
+          ).then(() => true),
+          new Promise((resolve) => setTimeout(() => resolve(true), ms)),
+        ]),
+      ANIMATION_WAIT_MS,
+    ),
+    true,
   );
 }
 
@@ -5410,7 +5452,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.keyboard.press("ControlOrMeta+k");
         const box = page.getByRole("combobox", { name: /Search divers/ });
         await expect(box).toBeFocused();
-        await waitForEntranceAnimations(page);
         await capture(page, "command-palette", scheme);
         await page.keyboard.press("Escape");
         await expect(box).toBeHidden();
@@ -5431,7 +5472,6 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(box).toBeFocused();
         await box.fill("reef");
         await expect(page.getByRole("option", { name: /Reef/ }).first()).toBeVisible();
-        await waitForEntranceAnimations(page);
         await capture(page, "command-palette-results", scheme);
         await page.keyboard.press("Escape");
         await expect(box).toBeHidden();
