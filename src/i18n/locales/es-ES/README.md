@@ -155,6 +155,20 @@ diver reading "reserva un viaje" is not being told about a database record. Narr
 a decision about diver-facing voice and belongs to whoever is writing the marketing pages; it is
 not a terminology violation and this file does not call it one.
 
+## Crew are counted one by one: **tripulante / tripulantes**
+
+The shop home's evening line names who came home — "salieron 8 buceadores y 2 tripulantes,
+volvieron 10" (issue #1346) — and the count noun there is the same one the manifest and the trip
+bundles already use, singular and plural, one person at a time.
+
+**Not the collective *tripulación*.** English gets away with "4 crew" because *crew* is both; in
+Spanish *tripulación* is the body of people, so "2 tripulación" is ungrammatical and "una
+tripulación de 2" turns a count into a description. The evening line sits beside a diver count
+that inflects, and the two halves of one sentence have to inflect the same way.
+
+Keep the verb-first shape that line uses (*salieron … volvieron …*) rather than translating the
+English "out / back" as adjectives: Spanish states this as something the people did.
+
 ## The supervision ratio is **la ratio**, feminine, and it is *excedida* rather than *fuera*
 
 DiveDay counts two different ratios and both reach a Spanish reader (`docs/product/glossary.md`
