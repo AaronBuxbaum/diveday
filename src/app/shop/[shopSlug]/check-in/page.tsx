@@ -26,6 +26,7 @@ import { formatDayParts, formatTime } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeCodeOf, noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { hasSailed } from "@/lib/trips";
 import { CounterInstrument } from "./_components/CounterInstrument";
 import { CounterQueue } from "./_components/CounterQueue";
 import { DepartureChips } from "./_components/DepartureChips";
@@ -33,7 +34,7 @@ import { DepartureMeta } from "./_components/DepartureMeta";
 import { checkInAction, markWaiverInPersonFromCheckIn, undoCheckInAction } from "./actions";
 import { CheckInQueueRefresh } from "./CheckInQueueRefresh";
 import { CheckInSearch } from "./CheckInSearch";
-import { counterQueuePath, hasDeparted, selectFocusedDeparture } from "./focus";
+import { counterQueuePath, selectFocusedDeparture } from "./focus";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -530,7 +531,7 @@ export default async function CheckInPage({
               waiverAction={recordPaperWaiver}
               // A boat that has sailed is one the counter is reading rather
               // than working: its receipts are the point, so they arrive open.
-              settledOpen={hasDeparted(focus.startsAt, now)}
+              settledOpen={hasSailed(focus.startsAt, now)}
               settledHeadingLevel="h3"
               t={t}
             />
