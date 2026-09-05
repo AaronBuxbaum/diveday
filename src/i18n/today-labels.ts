@@ -46,6 +46,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   gear_service_due: "shared.today.actionKind.gearServiceDue",
   staff_credential_due: "shared.today.actionKind.staffCredentialDue",
   units_unconfirmed: "shared.today.actionKind.unitsUnconfirmed",
+  say_hello: "shared.today.actionKind.sayHello",
 };
 
 /** A blocked row's one-tap fix, singular ("Send waiver"). */
@@ -587,6 +588,11 @@ export function helpRequestActionText(
 
 export function openTripActionText(t: StaffTranslator): string {
   return t("shared.today.actionLabel.openTrip");
+}
+
+/** The Say hello row's door — the departure's Guests tab (issue #1182). */
+export function openGuestsActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openGuests");
 }
 
 /**

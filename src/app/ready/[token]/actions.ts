@@ -21,6 +21,7 @@ import { saveRentalFit, saveRentalFitNote } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { saveSupportNeeds } from "@/db/support-needs";
 import { issueWaiverRequest } from "@/db/waivers";
+import { setWelcomeConsent } from "@/db/welcome-cues";
 import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -263,6 +264,37 @@ export async function saveHelpRequestFromReady(token: string, formData: FormData
     );
   }
   revalidateAndRedirect(base(token), `${base(token)}?saved=help`);
+}
+
+const welcomeConsentSchema = z.object({ share: z.enum(["on", "off"]) });
+
+/**
+ * **Tell the crew, or take it back** (issue #1182, delight report D22).
+ *
+ * The only writer of `bookings.welcome_shared_at` anywhere in the app: staff
+ * have no door to it, because a cue a shop switched on about a diver is the
+ * profile badge D22's boundary refuses. Both directions are one action —
+ * withdrawing has to be exactly as easy as consenting, which is Budget rule 6's
+ * "the way back" made a button rather than a sentence.
+ */
+export async function saveWelcomeConsentFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = welcomeConsentSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=welcome`);
+  const result = await setWelcomeConsent(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    shared: parsed.data.share === "on",
+  });
+  if (!result.ok) {
+    revalidateAndRedirect(base(token), `${base(token)}?error=welcome`);
+  }
+  // No success notice, unlike every other action on this page. The block's own
+  // line says what the answer now is, and it keeps saying it on a reload — a
+  // banner reading "Saved." above a form that already states the standing
+  // answer is the second confirmation, not the first.
+  revalidateAndRedirect(base(token));
 }
 
 const fitSchema = z.object({

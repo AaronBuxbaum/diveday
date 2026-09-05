@@ -371,7 +371,12 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
 - **16c** — the boat says where it is: `trip_stage_events`, the manifest's stage strip, the home's
   chip, the storefront's live panel, the thread's line; the boat drawing (#1372, #1374, D20).
 - **16d** — the manifest's top: the catch-up strip (D42 with D27 folded in), the plan-change door
-  (D24), the welcome word under a name (D22).
+  (D24), the welcome word under a name (D22). **Shipped 2026-09-05.** `trip_desk_events` and
+  `trip_read_marks` are new, kind-coded and prose-free, written from the consequence paths that
+  already exist and pruned at 30 days; the plan change is a four-value reason plus a staff-only
+  note on `executed_dives`, which never touches `trip_dives`; the welcome word is one consent
+  stamp on `bookings` the diver writes on their own `/ready` thread. The strip's second drawn
+  line, D12's intent count, ships with 16e.
 - **16e** — the booking page bounded: three tiles and a door, "Also worth a look" (D01), the
   intent question (D12), the rusty diver's offers (D18); a composition test holds the length.
 - **16f** — the storefront's lenses (D02) and "next with space".

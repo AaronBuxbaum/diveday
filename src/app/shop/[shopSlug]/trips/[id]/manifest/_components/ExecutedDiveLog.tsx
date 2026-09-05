@@ -9,6 +9,11 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ExecutedDive } from "@/db/schema";
 import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
 import type { RollCallCheckpoint } from "@/lib/manifests";
+import {
+  PLAN_CHANGE_NOTE_MAX,
+  PLAN_CHANGE_REASONS,
+  type PlanChangeReason,
+} from "@/lib/plan-change";
 import { utcToWallTime } from "@/lib/zoned";
 import type { ExecutedDiveResult } from "../actions";
 
@@ -43,6 +48,16 @@ export type ExecutedDiveLabels = {
   observedSpeciesHint: string;
   /** The empty option: a dive where nothing stood out is an ordinary dive. */
   observedSpeciesNone: string;
+  /**
+   * **Why the boat did not dive the plan** (issue #1184, delight report D24).
+   * Four coded reasons plus an empty option, because this one reaches a diver's
+   * own record and has to arrive in their language.
+   */
+  planChangeReason: string;
+  planChangeReasonOptions: Record<PlanChangeReason, string>;
+  /** The staff-only note beside it, and the six words that say so. */
+  planChangeNote: string;
+  planChangeNoteHint: string;
   save: string;
   saved: string;
   /** One per refusal `saveExecutedDiveAction` can return. */
@@ -236,6 +251,10 @@ function ExecutedDiveForm({
     row?.executed.notRecorded.includes("depth") ?? false,
   );
   const [species, setSpecies] = useState(row?.executed.observedSpeciesSlug ?? "");
+  const [planChangeReason, setPlanChangeReason] = useState<PlanChangeReason | "">(
+    row?.executed.planChangeReason ?? "",
+  );
+  const [planChangeNote, setPlanChangeNote] = useState(row?.executed.planChangeNote ?? "");
   // **Every species DiveDay carries, this site's own faces first.** The guide
   // is a briefing selection of at most eight reliably-seen animals; the things
   // worth writing down are the ones that are not usually there, so the guide
@@ -252,6 +271,13 @@ function ExecutedDiveForm({
   // `aria-invalid` and `aria-describedby` for a reader who never sees the row.
   const timesError = result?.status === "error" && result.reason === "times_transposed";
   const depthError = result?.status === "error" && result.reason === "depth_out_of_range";
+  // A note with no reason above it names the *reason* field, not the note: the
+  // fix is choosing one, and the box the divemaster already filled in is
+  // correct. A note that is too long names the note.
+  const planChangeReasonError =
+    result?.status === "error" && result.reason === "plan_change_note_without_reason";
+  const planChangeNoteError =
+    result?.status === "error" && result.reason === "plan_change_note_too_long";
 
   return (
     <form action={formAction} className="px-4 pb-4">
@@ -273,6 +299,47 @@ function ExecutedDiveForm({
               </option>
             ))}
           </select>
+        </Field>
+        {/* **Why the plan changed, beside the site that changed** (issue
+            #1184, delight report D24). Both fields are optional and neither
+            gates the save: a crew that moved the boat and said nothing about
+            why still has a record saying the site changed, which is the true
+            thing. The reason is a code because a diver reads it on their own
+            record; the note is free text because nobody but the shop does. */}
+        <Field
+          label={labels.planChangeReason}
+          error={
+            planChangeReasonError ? labels.refusals.plan_change_note_without_reason : undefined
+          }
+        >
+          <select
+            name="planChangeReason"
+            value={planChangeReason}
+            onChange={(event) => setPlanChangeReason(event.target.value as PlanChangeReason | "")}
+            className={controlClass}
+          >
+            <option value="">{labels.unknown}</option>
+            {PLAN_CHANGE_REASONS.map((reason) => (
+              <option key={reason} value={reason}>
+                {labels.planChangeReasonOptions[reason]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field
+          label={labels.planChangeNote}
+          description={labels.planChangeNoteHint}
+          error={planChangeNoteError ? labels.refusals.plan_change_note_too_long : undefined}
+          className="sm:col-span-2"
+        >
+          <textarea
+            name="planChangeNote"
+            rows={2}
+            maxLength={PLAN_CHANGE_NOTE_MAX}
+            value={planChangeNote}
+            onChange={(event) => setPlanChangeNote(event.target.value)}
+            className={controlClass}
+          />
         </Field>
         <Field
           label={labels.maxDepth}

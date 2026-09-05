@@ -12,6 +12,7 @@ import {
 } from "@/lib/trip-change-events";
 import type { TripDiveMode } from "@/lib/trip-details";
 import type { AppDb, DbExecutor } from "./client";
+import { recordDeskEvent } from "./desk-events";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import type { Trip } from "./schema";
 import {
@@ -518,6 +519,18 @@ export async function updateTrip(
         source: "shop",
         beforeValue: beforeArrival,
         afterValue: afterArrival,
+        actorPersonId: patch.changeActorPersonId,
+        occurredAt: changedAt,
+      });
+      // The crew-facing twin of the line above, written in the same
+      // transaction so the diver's ledger and the manifest's catch-up strip
+      // cannot disagree about whether the dock moved (#1202: "the dock point
+      // moved"). The two tables are separate on purpose — one is publicly safe,
+      // one is internal — and this is the only fact written to both.
+      await recordDeskEvent(tx, {
+        shopId,
+        tripId,
+        kind: "meeting_point",
         actorPersonId: patch.changeActorPersonId,
         occurredAt: changedAt,
       });

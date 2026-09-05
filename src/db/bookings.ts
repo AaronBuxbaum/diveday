@@ -17,6 +17,7 @@ import {
 } from "@/lib/trip-admission";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
+import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
@@ -1194,6 +1195,19 @@ async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
     // this transaction for the same reason the revoke above is: a diver whose
     // booking cancelled but whose dive stayed spent has silently lost it.
     await releasePackageCoverageForBooking(tx, shopId, bookingId);
+    // And the crew, who read "Hugo Marsh gave up a seat." on the manifest's
+    // catch-up strip (issue #1202). A seat leaving the roster is the change
+    // most likely to land while a captain is already walking to the boat —
+    // the same reason the push event below exists. No actor: this path is
+    // reached by a staffer, by the diver's own link, and by the wait-list
+    // sweep, and none of them hands one down.
+    await recordDeskEvent(tx, {
+      shopId,
+      tripId: booking.tripId,
+      kind: "seat_released",
+      bookingId: booking.id,
+      subjectPersonId: booking.personId,
+    });
     return booking;
   });
 }
@@ -1239,7 +1253,7 @@ export async function selfCancelBooking(
     // the write, which the unconditional update this replaced could then
     // blindly stomp back to cancelled (security review finding on this ADR).
     const [row] = await tx
-      .select({ status: bookings.status, tripId: bookings.tripId })
+      .select({ status: bookings.status, tripId: bookings.tripId, personId: bookings.personId })
       .from(bookings)
       .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
       .limit(1)
@@ -1281,6 +1295,15 @@ export async function selfCancelBooking(
       bookingId: input.bookingId,
     });
     await releasePackageCoverageForBooking(tx, input.shopId, input.bookingId);
+    // And the same handoff line the staff cancel writes: a seat the diver gave
+    // back from their own link is exactly as much news to the crew (#1202).
+    await recordDeskEvent(tx, {
+      shopId: input.shopId,
+      tripId: row.tripId,
+      kind: "seat_released",
+      bookingId: input.bookingId,
+      subjectPersonId: row.personId,
+    });
     return { ok: true };
   });
 }
@@ -1332,8 +1355,21 @@ export async function setBookingHotelPickup(
         ne(bookings.status, "cancelled"),
       ),
     )
-    .returning({ id: bookings.id });
-  return Boolean(updated);
+    .returning({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId });
+  if (!updated) return false;
+  // "Ada Lindqvist has a hotel pickup." — one of the four arrival facts #1187
+  // names, and the one a crew planning a run to the dock most needs. Only when
+  // there is a pickup: clearing one is the desk tidying a field, not news.
+  if (input.hotelPickupLocation) {
+    await recordDeskEvent(db, {
+      shopId: input.shopId,
+      tripId: updated.tripId,
+      kind: "pickup_set",
+      bookingId: updated.id,
+      subjectPersonId: updated.personId,
+    });
+  }
+  return true;
 }
 
 export async function setBookingPickupDetails(

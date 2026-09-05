@@ -66,7 +66,9 @@
       "unknownRecorder": "No se encontró tu ficha de personal, así que no se guardó nada.",
       "invalidTime": "No se pudo leer una de las horas. Revisa las dos y guarda de nuevo.",
       "invalid": "No se guardó nada. Revisa los datos e inténtalo de nuevo.",
-      "wrongDive": "Este formulario es de otra inmersión. Recarga la lista de embarque e inténtalo de nuevo."
+      "wrongDive": "Este formulario es de otra inmersión. Recarga la lista de embarque e inténtalo de nuevo.",
+      "planChangeNoteWithoutReason": "Elige por qué cambió el plan y guarda la nota.",
+      "planChangeNoteTooLong": "Esa nota es demasiado larga. Acórtala y guarda de nuevo."
     },
     "observedSpeciesHint": "Los buceadores lo leen en su resumen."
   },
@@ -168,5 +170,33 @@
     "shoreContactLabel": "Contacto en tierra:",
     "planLabel": "Si algo sale mal"
   },
-  "onThisPhone": "En este teléfono"
+  "onThisPhone": "En este teléfono",
+  "catchUp": {
+    "label": "Desde que lo viste a las {time} · desde el mostrador",
+    "dismiss": "Entendido",
+    "arrival": "{count, plural, one {{names} se registró.} other {{names} se registraron.}}",
+    "seatTaken": "{count, plural, one {{names} tomó una plaza.} other {{names} tomaron plazas.}}",
+    "seatReleased": "{count, plural, one {{names} dejó su plaza.} other {{names} dejaron sus plazas.}}",
+    "gearChanged": "{count, plural, one {{names} ahora lleva otro equipo.} other {{names} ahora llevan otro equipo.}}",
+    "pickupSet": "{count, plural, one {{names} tiene recogida en el hotel.} other {{names} tienen recogida en el hotel.}}",
+    "helpRequest": "{count, plural, one {{names} pide una mano a la tripulación.} other {{names} piden una mano a la tripulación.}}",
+    "meetingPoint": "El punto de encuentro cambió.",
+    "planChanged": "El plan de inmersión cambió."
+  },
+  "planChange": {
+    "heading": "El plan",
+    "diveRow": "Inmersión {number} · {site}",
+    "diveRowNoSite": "Inmersión {number} · sitio por confirmar",
+    "door": "¿Cambió el plan?",
+    "doorNote": "Di por qué en el registro de inmersión después de cada una.",
+    "reasonLabel": "Por qué cambió el plan",
+    "reason": {
+      "current": "Corriente",
+      "weather": "Clima",
+      "visibility": "Visibilidad",
+      "crewCall": "Decisión de la tripulación"
+    },
+    "noteLabel": "Nota para el centro",
+    "noteHint": "Los buceadores no ven esto."
+  }
 }

@@ -2,6 +2,7 @@ import { trackEvent } from "@/lib/analytics";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { type BookingOutcome, createBooking } from "./bookings";
 import type { AppDb } from "./client";
+import { recordDeskEvent } from "./desk-events";
 import { publishManifestEvent } from "./manifest-events";
 import { recordTripActivity } from "./operations";
 import { type IssueAndDeliverWaiverResult, issueWaiverOnJoin } from "./waiver-issue";
@@ -206,6 +207,20 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     tripId: input.tripId,
     actorPersonId: input.actorPersonId,
     action: activityAction(input.entry, outcome.personName),
+  });
+
+  // "Lina Costa took a seat." on the manifest's catch-up strip (issue #1202).
+  // Written here rather than at any of the four seating surfaces, for the same
+  // reason the waiver and the trail are: this is the one consequence path for
+  // seating, and a call site that forgot it would leave a captain reading a
+  // roster with a name on it nobody told them about.
+  await recordDeskEvent(db, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    kind: "seat_taken",
+    bookingId: outcome.bookingId,
+    subjectPersonId: outcome.personId,
+    actorPersonId: input.actorPersonId,
   });
 
   // A diver just appeared on the roster. This is the archetypal change that

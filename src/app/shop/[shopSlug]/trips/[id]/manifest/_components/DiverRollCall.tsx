@@ -21,6 +21,7 @@ import {
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { supportNeedsLines } from "@/i18n/support-needs-labels";
+import { welcomeCueText } from "@/i18n/welcome-cue-labels";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -604,6 +605,29 @@ export function DiverRollCall({
                             </span>
                             {capsule}
                           </span>
+                          {/* **The welcome word** (issue #1182, delight report
+                            D22; ADR 20260904-reef-all-the-way-down slice 16d):
+                            "first time with us", "back after 3 years".
+
+                            Muted text under the name, never a `Badge` and never
+                            inside the roll-call circle — a badge is the profile
+                            decoration D22's boundary rules out, and it would
+                            also take the row's one capsule away from an
+                            exception the crew has to act on. It does not enter
+                            that priority chain at all, so a diver with a cue
+                            and a birthday shows the birthday capsule *and* this
+                            line.
+
+                            `text-base`, not the 12.5px the canvas drew: this is
+                            a manifest, where AGENTS.md's licence to trade
+                            legibility for restraint stops. It costs a second
+                            line on some rows, which is the price of it being
+                            readable at the rail. */}
+                          {diver.welcomeCue ? (
+                            <span className="mt-0.5 block text-base text-muted">
+                              {welcomeCueText(t, diver.welcomeCue)}
+                            </span>
+                          ) : null}
                         </span>
                       </>
                     }

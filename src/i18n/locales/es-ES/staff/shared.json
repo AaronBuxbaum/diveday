@@ -313,7 +313,8 @@
       "gearServiceDue": "Mantenimiento",
       "staffCredentialDue": "Credencial",
       "unitsUnconfirmed": "Configuración",
-      "helpRequest": "Solicitud de ayuda"
+      "helpRequest": "Solicitud de ayuda",
+      "sayHello": "Saluda"
     },
     "blockerAction": {
       "setRequirements": "Configurar requisitos",
@@ -478,6 +479,10 @@
     "staffCredential": {
       "dueDetail": "La renovación de {credential} para esta persona es el {dueOn}.",
       "overdueDetail": "{credential} para esta persona venció el {dueOn}. Actualiza el registro."
+    },
+    "sayHello": {
+      "firstTrip": "{count, plural, one {{names} bucea contigo por primera vez.} other {{names} bucean contigo por primera vez.}}",
+      "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}."
     }
   },
   "tripDiveFields": {
@@ -703,5 +708,9 @@
     "divesWith": "Bucea con {name}",
     "divesWithOnDeparture": "Bucea con {name}, en esta salida",
     "divesWithNotOnDeparture": "Bucea con {name}, sin reserva en esta salida"
+  },
+  "welcomeCue": {
+    "firstTrip": "primera vez con nosotros",
+    "returning": "de vuelta tras {years, plural, one {# año} other {# años}}"
   }
 }

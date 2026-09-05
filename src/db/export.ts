@@ -1670,6 +1670,12 @@ export async function loadShopExportBundleInput(
             // CSV cell either — `csvCell`'s formula guard covers the one
             // reachable shape, a leading `-`.
             "referral_source",
+            // The diver's own consent to have the crew told this is a first
+            // trip, or a return after a long gap (issue #1182). A statement
+            // they made about themselves on this seat, the same kind of record
+            // as `last_dived_band` above — and a shop that moved its data would
+            // otherwise be asking every one of them again.
+            "welcome_shared_at",
             "hotel_pickup_location",
             "pickup_time",
             "payment_status",
@@ -1695,6 +1701,7 @@ export async function loadShopExportBundleInput(
               row.partyLeadBookingId,
               row.claimedAt,
               row.referralSource,
+              row.welcomeSharedAt,
               row.hotelPickupLocation,
               row.pickupTime,
               payment?.status ?? "unpaid",
@@ -2015,6 +2022,12 @@ export async function loadShopExportBundleInput(
             // DiveDay's copy in the reader's language and a CSV has no reader
             // to resolve them for — the slug is the durable fact.
             "observed_species_slug",
+            // Why the boat did not dive the plan, and the shop's own note about
+            // it (issue #1184). The reason is a code for the same reason the
+            // species slug above is; the note is the shop's own words and
+            // belongs in a bundle the shop is handed back.
+            "plan_change_reason",
+            "plan_change_note",
             "recorded_by_person_id",
             "deleted_at",
             "created_at",
@@ -2033,6 +2046,8 @@ export async function loadShopExportBundleInput(
             JSON.stringify(row.observedConditions),
             JSON.stringify(row.notRecorded),
             row.observedSpeciesSlug,
+            row.planChangeReason,
+            row.planChangeNote,
             row.recordedByPersonId,
             row.deletedAt,
             row.createdAt,

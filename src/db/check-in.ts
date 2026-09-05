@@ -7,6 +7,7 @@ import type { ReadinessResult } from "@/lib/readiness";
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
+import { recordDeskEvent } from "./desk-events";
 import { listDepartureBoardedBookingIds } from "./manifests";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
 import { activityEvents, bookings, people, priorVisits, trips } from "./schema";
@@ -364,6 +365,21 @@ export async function checkInBooking(
       bookingId: booking.id,
       actorPersonId: recordedBy,
       message: `${booking.personName} checked in at the counter`,
+      occurredAt: now,
+    });
+    // The crew walking to the boat read this as "Ada Lindqvist has checked in."
+    // on the manifest's catch-up strip (issues #1202, #1187 — "did anyone tell
+    // them?"). Inside this transaction, beside the activity line it mirrors:
+    // the two say the same fact to two different readers, and a check-in whose
+    // handoff line silently failed to write is the failure D27 exists about.
+    // `undoCheckInBooking` writes nothing — an undo is not news.
+    await recordDeskEvent(tx, {
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      kind: "arrival",
+      bookingId: booking.id,
+      subjectPersonId: booking.personId,
+      actorPersonId: recordedBy,
       occurredAt: now,
     });
     return { ok: true, bookingId: booking.id, personName: booking.personName };

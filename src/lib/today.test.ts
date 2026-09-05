@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ReadinessBlocker } from "./readiness";
 import {
+  ACTION_KIND_META,
   assembleDaySpine,
   collapseDiverActions,
   diverBlockerAction,
@@ -665,6 +666,48 @@ describe("sortStationRows", () => {
     ];
     sortStationRows(input);
     expect(input.map((row) => row.id)).toEqual(["quiet", "danger"]);
+  });
+
+  it("puts saying hello below every piece of work in the station", () => {
+    // The courtesy row (issue #1182, delight report D22). It is a thing the
+    // desk may do if the morning allows, so it never leads a station and never
+    // outranks something somebody has to do.
+    const at = hoursFromNow(2);
+    const sorted = sortStationRows([
+      action({ id: "hello", kind: "say_hello", dueAt: at }),
+      action({ id: "prep", kind: "dive_prep", dueAt: at }),
+      action({ id: "medical", kind: "medical_review", dueAt: at }),
+      action({ id: "waiver", kind: "waiver", dueAt: at }),
+    ]);
+    expect(sorted.map((row) => row.id)).toEqual(["medical", "waiver", "prep", "hello"]);
+  });
+});
+
+/**
+ * The Say hello row's own registry entries (issue #1182). Each is a decision
+ * rather than a default, and each is the kind of thing that quietly drifts:
+ * a warning tone would read as a thing that has gone wrong, a narrower audience
+ * would hide it from the captain who is actually at the dock.
+ */
+describe("the Say hello row", () => {
+  it("is neutral-toned, at the bottom of the severity order, and visible to everyone", () => {
+    expect(ACTION_KIND_META.say_hello.tone).toBe("neutral");
+    const at = hoursFromNow(2);
+    const belowEverything = sortStationRows([
+      action({ id: "hello", kind: "say_hello", dueAt: at }),
+      action({ id: "units", kind: "units_unconfirmed", dueAt: at }),
+    ]);
+    expect(belowEverything.map((row) => row.id)).toEqual(["units", "hello"]);
+    for (const role of [
+      "owner",
+      "manager",
+      "instructor",
+      "divemaster",
+      "captain",
+      "crew",
+    ] as const) {
+      expect(filterActionsForRoles([action({ kind: "say_hello" })], [role]).withheldCount).toBe(0);
+    }
   });
 });
 

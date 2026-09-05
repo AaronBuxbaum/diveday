@@ -21,6 +21,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { medicalWaiverMark } from "@/lib/waivers";
+import { welcomeCueFor } from "@/lib/welcome-cue";
 import { loadActiveStaffRoles } from "./authz";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, DbExecutor } from "./client";
@@ -41,6 +42,7 @@ import { getShopById } from "./shops";
 import { supportNeedsByTripPerson } from "./support-needs";
 import { getTripRoster, getTripWithBooked } from "./trips";
 import { liveTrip } from "./trips-live";
+import { welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**
  * "Is this person on this trip's crew?", as one SQL condition, so the crew
@@ -515,6 +517,7 @@ export async function getTripManifests(
     crewRollCalls,
     buddyTeams,
     supportByPerson,
+    welcomeInputs,
     ...rollCalls
   ] = await Promise.all([
     getShopById(db, shopId),
@@ -526,6 +529,11 @@ export async function getTripManifests(
     listLatestCrewRollCalls(db, shopId, tripId),
     listTripBuddyTeams(db, shopId, tripId),
     supportNeedsByTripPerson(db, shopId, tripId),
+    // The two facts behind the welcome word (issue #1182): who consented, and
+    // when this shop last had them on a boat. Read here rather than in the page
+    // so the offline serializer and every other consumer of a manifest see the
+    // same derived cue.
+    welcomeCueInputsByBooking(db, shopId, tripId),
     ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
   ]);
   if (!shop) return null;
@@ -620,6 +628,13 @@ export async function getTripManifests(
       age: person.dateOfBirth ? ageOnDate(person.dateOfBirth, tripDate) : null,
       minor: person.dateOfBirth ? isMinorOnDate(person.dateOfBirth, tripDate) : false,
       birthday: birthdayCallout(person.dateOfBirth, tripDate),
+      // Null unless the diver said so, and null again an hour after this boat
+      // is home — the whole expiry lives in `welcomeCueFor`, so nothing here
+      // has to remember to stop rendering it.
+      welcomeCue: welcomeCueFor({
+        ...(welcomeInputs.get(booking.id) ?? { sharedAt: null, lastDivedAt: null }),
+        tripEndsAt: trip.endsAt,
+      }),
       depthAdvisory: depthByBooking.get(booking.id),
       supportNeeds: supportByPerson.get(person.id) ?? null,
       hotelPickupLocation: booking.hotelPickupLocation,

@@ -271,6 +271,16 @@ const EXCLUDED_TABLES = [
   "integration_events",
   "integration_deliveries",
   "integration_sync_records",
+  // The manifest's shift catch-up (issues #1202, #1187). A same-day handoff
+  // between two people standing in one shop on one morning, kept for thirty
+  // days and read by nobody after the boat is home — operational plumbing, not
+  // a shop record, and the same reasoning as `notification_deliveries`.
+  // Exporting it would also be the one thing #1202's boundary rules out: a
+  // durable, downloadable, per-person account of who did what and when.
+  "trip_desk_events",
+  // Where each staffer had read up to in that trail. Meaningless without the
+  // events above, and meaningless in another system — same reasoning again.
+  "trip_read_marks",
 ];
 
 /**

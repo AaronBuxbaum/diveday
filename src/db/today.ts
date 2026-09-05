@@ -24,6 +24,7 @@ import {
   openDataSettingsActionText,
   openGearRegisterActionText,
   openGearUnitActionText,
+  openGuestsActionText,
   openLastMinuteDealActionText,
   openOrdersActionText,
   openPrepListActionText,
@@ -48,6 +49,7 @@ import {
   unitsUnconfirmedSubjectText,
   waitlistSeatDetailText,
 } from "@/i18n/today-labels";
+import { sayHelloSentences } from "@/i18n/welcome-cue-labels";
 import type { Role } from "@/lib/authz";
 import {
   calendarDateInTimezone,
@@ -89,6 +91,7 @@ import {
   type TodayAction,
   urgencyFor,
 } from "@/lib/today";
+import { welcomeCueFor } from "@/lib/welcome-cue";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
@@ -122,6 +125,7 @@ import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { countShopTrips, listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
+import { sharedWelcomeSeatsByTrip } from "./welcome-cues";
 
 /**
  * Today's boat: the trip id staff would check in for right now, or null on a
@@ -1164,6 +1168,17 @@ export async function getTodayWork(
     listRollCallGaps(db, shopId, now),
   ]);
 
+  // Who on today's boats said the crew may know it is their first trip, or
+  // that they are back after a long gap (issue #1182, delight report D22).
+  // Today's departures only: a cue is permission for one day, and a row about
+  // Thursday's boat on Tuesday morning would be a badge with a date on it.
+  const sharedWelcomeSeats = await sharedWelcomeSeatsByTrip(
+    db,
+    shopId,
+    todayTrips.map((trip) => trip.id),
+    now,
+  );
+
   const helpRequests = await listTodayHelpRequests(
     db,
     shopId,
@@ -1338,6 +1353,37 @@ export async function getTodayWork(
         blockers: row.readiness.blockers,
       }));
     actions.push(...collapseDiverActions(blockedDivers, shopSlug, now, t));
+
+    // **Say hello** (issue #1182, delight report D22). One row per departure,
+    // never one per diver: the row is about the boat's roster, and five rows
+    // saying "greet this person" would be a queue of pleasantries above the
+    // work. It disappears on its own an hour after the boat is home, because
+    // `welcomeCueFor` stops returning a cue there — nothing here has to
+    // remember to stop.
+    const welcomeCues = (sharedWelcomeSeats.get(trip.id) ?? []).flatMap((seat) => {
+      const cue = welcomeCueFor({
+        sharedAt: seat.sharedAt,
+        lastDivedAt: seat.lastDivedAt,
+        tripEndsAt: trip.endsAt,
+        now,
+      });
+      return cue ? [{ name: seat.personName, cue }] : [];
+    });
+    if (welcomeCues.length > 0) {
+      actions.push({
+        id: `say-hello:${trip.id}`,
+        kind: "say_hello",
+        urgency: urgencyFor(trip.startsAt, now),
+        subject: trip.title,
+        context: when,
+        departure,
+        aboutDeparture: true,
+        detail: sayHelloSentences(t, locale, welcomeCues).join(" "),
+        actionLabel: openGuestsActionText(t),
+        href: tripHref,
+        dueAt: trip.startsAt,
+      });
+    }
 
     const withoutFit = missingFit.get(trip.id) ?? 0;
     if (withoutFit > 0) {

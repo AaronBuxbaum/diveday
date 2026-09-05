@@ -764,7 +764,14 @@
     "carriedHeading": "Sigue archivado a tu nombre",
     "carriedWaiver": "Tu exención firmada",
     "carriedCertification": "Tu certificación",
-    "carriedFit": "Tus tallas"
+    "carriedFit": "Tus tallas",
+    "welcomeFirstTripQuestion": "¿Le decimos a la tripulación que es tu primera vez con nosotros?",
+    "welcomeReturningQuestion": "¿Le decimos a la tripulación que vuelves tras {years, plural, one {# año} other {# años}}?",
+    "welcomeAudience": "Solo la tripulación de este barco, solo hoy, y puedes quitarlo cuando quieras.",
+    "welcomeShare": "Díselo",
+    "welcomeWithdraw": "Quitarlo",
+    "welcomeShared": "Tu tripulación lo sabrá.",
+    "welcomeUnavailable": "No se pudo guardar. Inténtalo otra vez."
   },
   "thread": {
     "stepsDoneSuffix": "de {total, plural, one {# paso completado} other {# pasos completados}}",

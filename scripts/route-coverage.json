@@ -565,7 +565,8 @@
       "manifest-buddy-teams-panel",
       "manifest-dive-support",
       "manifest-not-back-aboard",
-      "manifest-person-panel"
+      "manifest-person-panel",
+      "manifest-plan-change"
     ],
     "a11y": ["a11y.spec.ts"]
   },

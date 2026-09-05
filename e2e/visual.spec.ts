@@ -30,8 +30,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and sixty key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 640 screenshots per run (see
+ * Visual regression coverage. A hundred and eighty-nine key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 756 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -4922,6 +4922,40 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-not-back-aboard", scheme);
+      });
+
+      /**
+       * **The plan-change door, open** (issue #1184, delight report D24; ADR
+       * 20260904-reef-all-the-way-down slice 16d). The two fields it adds — a
+       * coded reason a diver will read on their own record, and a note only the
+       * shop sees — live inside the dive log's collapsed disclosure, so no
+       * existing capture can reach them: `manifest-not-back-aboard` stands at
+       * this same checkpoint with the log shut.
+       *
+       * The catch-up strip deliberately has no capture of its own. The seeded
+       * demo leaves the owner a read mark and the desk's morning acts after it,
+       * so the plain `manifest` shot above already carries the strip at the top
+       * of the page — a second full-page shot of the same screen would cost two
+       * baselines to photograph one block twice.
+       */
+      test(`the manifest's plan-change fields render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // Board → trip → Manifest, then a checkpoint switch and a disclosure.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await offlineCopySaved(page);
+        await page
+          .getByRole("link", { name: "After dive 1" })
+          .evaluate((link: HTMLElement) => link.click());
+        await page.waitForURL(/checkpoint=after_dive_1/);
+        // The log's own summary line, which only this checkpoint renders.
+        await page.getByText("Dive 1 — not recorded yet").click();
+        // Waits on a control the open form renders and the closed one does not.
+        await page.getByLabel("Why the plan changed").waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-plan-change", scheme);
       });
 
       /**
