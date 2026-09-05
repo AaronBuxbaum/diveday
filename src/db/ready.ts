@@ -3,6 +3,7 @@ import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-prepa
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { withinCancellationWindow } from "@/lib/deposits";
+import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { publicAppUrl } from "@/lib/notifications";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
@@ -10,6 +11,7 @@ import type { RentalPricing } from "@/lib/rentals";
 import type { SupportNeeds } from "@/lib/support-needs";
 import { hasSailed } from "@/lib/trips";
 import { shopWaiverStatus } from "@/lib/waivers";
+import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
 import type { AppDb } from "./client";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
@@ -21,6 +23,7 @@ import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getSupportNeeds } from "./support-needs";
 import { getTripWithBooked } from "./trips";
 import { getCurrentWaiverTemplate, listSignedWaiversByPerson } from "./waivers";
+import { welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**
  * Everything the transactional `/ready` page needs, gathered from the same
@@ -84,6 +87,14 @@ export type ReadyPageData = {
    * answer, and the staff surfaces render it as their word.
    */
   lastDivedBand: DiveRecencyBand | null;
+  /**
+   * What the diver said this dive is for, or null when they were not asked or
+   * did not say (ADR 20260904-reef-all-the-way-down, D12). Gates nothing; the
+   * booking form asks it and `/ready` is where it can be changed, which is what
+   * makes the form's "change it any time" true — and what reaches the party
+   * member and the walk-in who never saw a booking form at all.
+   */
+  diveIntent: DiveIntent | null;
   nitroxCardVerified: boolean;
   /**
    * A live nitrox card exists for this diver, sighted or not. Only decides
@@ -142,6 +153,15 @@ export type ReadyPageData = {
    * cancellation stranded, and a page reading only that told them to pack.
    */
   departureCancelled: boolean;
+  /**
+   * **What there would be to tell the crew about this diver** (issue #1182,
+   * delight report D22) — a first trip with this shop, or a return after a long
+   * gap — regardless of whether they have said yes. Null means there is nothing
+   * to offer and the question is not asked at all.
+   */
+  welcomeOffer: WelcomeCue | null;
+  /** Whether they have said yes. Their own answer, on their own link. */
+  welcomeShared: boolean;
 };
 
 export async function getReadyPageData(
@@ -159,6 +179,8 @@ export async function getReadyPageData(
       personId: bookings.personId,
       wantsNitrox: bookings.wantsNitrox,
       lastDivedBand: bookings.lastDivedBand,
+      welcomeSharedAt: bookings.welcomeSharedAt,
+      diveIntent: bookings.diveIntent,
       hotelPickupLocation: bookings.hotelPickupLocation,
       pickupTime: bookings.pickupTime,
       status: bookings.status,
@@ -196,6 +218,7 @@ export async function getReadyPageData(
     stripeAccount,
     nitroxVerified,
     nitroxOnFile,
+    welcomeInputs,
   ] = await Promise.all([
     getRentalFit(db, row.shopId, row.personId),
     getSupportNeeds(db, row.shopId, row.personId),
@@ -204,6 +227,10 @@ export async function getReadyPageData(
     getShopStripeAccount(db, row.shopId),
     verifiedNitroxPersonIds(db, row.shopId),
     nitroxCardOnFilePersonIds(db, row.shopId),
+    // The same reader the manifest uses, so "first time with us" means the
+    // same thing on the diver's own page as it does under their name at the
+    // rail (issue #1182).
+    welcomeCueInputsByBooking(db, row.shopId, row.tripId, now),
   ]);
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -263,6 +290,7 @@ export async function getReadyPageData(
     },
     wantsNitrox: row.wantsNitrox,
     lastDivedBand: row.lastDivedBand,
+    diveIntent: row.diveIntent,
     nitroxCardVerified: nitroxVerified.has(row.personId),
     nitroxCardOnFile: nitroxOnFile.has(row.personId),
     rentalFit: toDiverRentalFit(rentalFit),
@@ -274,6 +302,15 @@ export async function getReadyPageData(
     cancelPreview,
     canCancelBooking,
     departureCancelled: trip.status !== "scheduled",
+    // `offerableWelcomeCue`, not `welcomeCueFor`: this is the diver's own page,
+    // and the whole point of the question is that it can be asked before they
+    // have consented. The staff surfaces read the consented one.
+    welcomeOffer: offerableWelcomeCue({
+      lastDivedAt: welcomeInputs.get(bookingId)?.lastDivedAt ?? null,
+      tripEndsAt: trip.endsAt,
+      now,
+    }),
+    welcomeShared: row.welcomeSharedAt !== null,
   };
 }
 

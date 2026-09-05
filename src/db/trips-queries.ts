@@ -187,6 +187,14 @@ function upcomingTripScope(
      * which is exactly why it goes here rather than into a second query.
      */
     ids?: readonly string[];
+    /**
+     * One of the shop's own words for a kind of day (ADR
+     * 20260904-reef-all-the-way-down, decision 2). Applied **here**, in SQL,
+     * rather than over the fetched page: this list is keyset-paged at fourteen
+     * rows, so an in-memory narrowing yields short and empty pages and a
+     * "Show later" that promises rows it cannot deliver.
+     */
+    lensId?: string;
   },
 ) {
   return and(
@@ -198,6 +206,7 @@ function upcomingTripScope(
     bounds.tripType === "fun_dive" ? isNull(trips.courseId) : undefined,
     bounds.tripType === "course" ? isNotNull(trips.courseId) : undefined,
     bounds.ids && bounds.ids.length > 0 ? inArray(trips.id, [...bounds.ids]) : undefined,
+    bounds.lensId ? eq(trips.lensId, bounds.lensId) : undefined,
   );
 }
 
@@ -242,6 +251,8 @@ export async function pagedUpcomingTripsWithCounts(
     publicOnly?: boolean;
     /** Narrow to these departures — a named embed list's members (issue #1284). */
     ids?: readonly string[];
+    /** Only departures wearing this one of the shop's own words for a kind of day. */
+    lensId?: string;
   } = {},
 ): Promise<{ trips: TripWithBookedCount[]; nextCursor: string | null }> {
   const now = options.now ?? nowDate();
@@ -272,6 +283,7 @@ export async function pagedUpcomingTripsWithCounts(
           tripType: options.tripType,
           publicOnly: options.publicOnly,
           ids: options.ids,
+          lensId: options.lensId,
         }),
         afterDate && after && !Number.isNaN(afterDate.getTime())
           ? or(

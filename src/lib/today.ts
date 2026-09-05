@@ -89,7 +89,8 @@ export type TodayActionKind =
   | "gear_due_back"
   | "gear_service_due"
   | "staff_credential_due"
-  | "units_unconfirmed";
+  | "units_unconfirmed"
+  | "say_hello";
 
 /**
  * Severity breaks ties inside a single departure. It ranks by how long the fix
@@ -205,6 +206,10 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // trip before opening the Units row would never be asked again, and currency
   // decides what a diver's card is charged in (issue #835).
   units_unconfirmed: 32,
+  // Below even that, and rightly: nothing has gone wrong and nothing is owed.
+  // It is a courtesy the desk can pay if the morning allows, so it never
+  // outranks a thing somebody has to do (issue #1182).
+  say_hello: 33,
 };
 
 /**
@@ -254,6 +259,9 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   gear_service_due: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   staff_credential_due: ["owner", "manager"],
   units_unconfirmed: ["owner", "manager"],
+  // Every staff role: the person who says hello is whoever is at the dock when
+  // the diver walks up, which is as often the captain as the owner.
+  say_hello: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
 };
 
 /**
@@ -337,6 +345,9 @@ export const ACTION_KIND_META = {
   // Neutral, not warning: the shop is trading on a derived default that is
   // probably right. It wants confirming, not alarming about.
   units_unconfirmed: { tone: "neutral" },
+  // Neutral, and there is no other honest tone: a warning-coloured row about
+  // greeting somebody would read as a thing that has gone wrong.
+  say_hello: { tone: "neutral" },
 } as const satisfies Record<TodayActionKind, { tone: "danger" | "warning" | "neutral" }>;
 
 /**

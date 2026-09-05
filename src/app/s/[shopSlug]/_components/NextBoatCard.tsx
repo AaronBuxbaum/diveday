@@ -6,10 +6,23 @@ import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
 
 /**
- * **The next boat, as a bookable object** — ADR
- * 20260827-clearwater-surface-language, decision 8. The storefront's one card
- * and its one primary action; everything else on the page is type, hairlines
- * and space.
+ * **The next boat with space, as a bookable object** — ADR
+ * 20260827-clearwater-surface-language, decision 8, renamed to what it has
+ * always shown by ADR 20260904-reef-all-the-way-down (issue #1374). The
+ * storefront's one card and its one primary action; everything else on the page
+ * is type, hairlines and space.
+ *
+ * `nextBookableDeparture` has always skipped the full boats — the eyebrow said
+ * "Next boat out", which is a different and sometimes false claim. So the card
+ * now says which it is, and **names the boats it stepped over**, once, as a
+ * trailing fragment on the facts line. That fragment is the whole of the
+ * change: a diver who can see a 7:00 AM departure on the week below and a 7:30
+ * PM one on the card should not have to work out why.
+ *
+ * It still renders nothing when every departure is full. There is no fallback
+ * to "the next departure, full or not" — that would contradict the eyebrow and
+ * put a second primary on a page whose one primary is then the date-request
+ * composer's own submit.
  *
  * Two things it must not drift from:
  *
@@ -36,6 +49,8 @@ export function NextBoatCard({
   description,
   spots,
   price,
+  skipped = 0,
+  firstSkippedTime,
   t,
 }: {
   /** The trip page's booking anchor. */
@@ -50,16 +65,24 @@ export function NextBoatCard({
   spots: string;
   /** Already-formatted money, or null for a departure with no price set. */
   price: string | null;
+  /**
+   * How many earlier departures this card stepped over because they are full.
+   * Zero — the ordinary case, where this boat *is* the shop's next one — says
+   * nothing at all.
+   */
+  skipped?: number;
+  /** The first skipped boat's departure time, in the shop's own zone. */
+  firstSkippedTime?: string;
   t: DiverTranslator;
 }) {
   return (
     <SectionCard
       as="section"
-      ariaLabel={t("schedule.nextDeparture.eyebrow")}
+      ariaLabel={t("schedule.nextWithSpace.eyebrow")}
       className="flex flex-col gap-4"
     >
       <div className="min-w-0">
-        <p className={EYEBROW_CLASS}>{t("schedule.nextDeparture.eyebrow")}</p>
+        <p className={EYEBROW_CLASS}>{t("schedule.nextWithSpace.eyebrow")}</p>
         {/* The departure time is the figure a returning diver came to check,
             with the day reading as its caption (decision 3: numbers that lead
             render as figures). */}
@@ -74,6 +97,18 @@ export function NextBoatCard({
           {price ? (
             <span className="text-muted">
               · {price} {t("common.perDiver")}
+            </span>
+          ) : null}
+          {/* Why this is not the 7:00 AM boat on the week below. Quiet ink, one
+              fragment on the line the card already has, and absent entirely
+              when there is nothing to explain. */}
+          {skipped > 0 ? (
+            <span className="text-muted">
+              ·{" "}
+              {t("schedule.nextWithSpace.earlierFull", {
+                count: skipped,
+                time: firstSkippedTime ?? "",
+              })}
             </span>
           ) : null}
         </p>

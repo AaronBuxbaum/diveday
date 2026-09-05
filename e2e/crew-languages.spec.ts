@@ -79,6 +79,10 @@ test("the public trip page names the crew who agreed, by first name only", async
   await page.goto("/s/blue-mantis");
   await page.getByRole("link", { name: "Two-Tank Reef — Molasses & French" }).first().click();
 
+  // The crew line moved behind the pitch's one door with the rest of the
+  // "about the places" beats (ADR 20260904-reef-all-the-way-down, decision 1).
+  // Nothing about the rule changed; where a diver taps to read it did.
+  await page.getByRole("heading", { name: "The rest of the briefing" }).click();
   const crew = page.getByRole("heading", { name: "Who you're diving with" });
   await expect(crew).toBeVisible();
   const list = crew.locator("xpath=..").getByRole("list");
@@ -115,5 +119,11 @@ test("a shop with no recorded languages shows no line at all", async ({ page, pr
   await expect(page.getByText(/aboard$/)).toHaveCount(0);
   // A minted shop configures nothing, so nobody has agreed to be named either
   // — the seed deliberately leaves both blank on this path (issue #1181).
-  await expect(page.getByRole("heading", { name: "Who you're diving with" })).toHaveCount(0);
+  //
+  // A raw `page.locator` rather than `getByRole`: the fixture filters roles to
+  // what is *visible*, and since the crew line moved behind the pitch's door
+  // (ADR 20260904-reef-all-the-way-down) a closed door would satisfy that
+  // whether or not the heading exists. This counts the element itself, open or
+  // shut, so the absence is the consent filter and not the fold.
+  await expect(page.locator('h2:text-is("Who you\'re diving with")')).toHaveCount(0);
 });

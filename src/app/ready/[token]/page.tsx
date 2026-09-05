@@ -63,6 +63,7 @@ import { latestTripStage } from "@/db/trip-stages";
 import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
 import { diverContrastCopy } from "@/i18n/contrast-copy";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { DIVER_DIVE_INTENT_KEYS } from "@/i18n/dive-intent-labels";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
@@ -77,6 +78,7 @@ import { claimLinkPath } from "@/lib/booking-capabilities";
 import type { CarriedPreparation as CarriedPreparationItem } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
+import { DIVE_INTENTS } from "@/lib/dive-intent";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import {
   formatMoneyCents,
@@ -114,6 +116,7 @@ import {
   emailFreshReadinessLinkAction,
   payFromReady,
   saveCertificationFromReady,
+  saveDiveIntentFromReady,
   saveDiveRecencyFromReady,
   saveFitFromReady,
   saveHelpRequestFromReady,
@@ -122,6 +125,7 @@ import {
   saveNoteFromReady,
   saveSpecialtyFromReady,
   saveSupportNeedsFromReady,
+  saveWelcomeConsentFromReady,
   signWaiverFromReady,
 } from "./actions";
 
@@ -711,6 +715,11 @@ const READY_NOTICES: Record<
   "saved-help": { tone: "success", key: "ready.helpRequestSent" },
   "error-help": { tone: "danger", key: "ready.helpRequestUnavailable" },
   "error-help-handled": { tone: "neutral", key: "ready.helpRequestHandled" },
+  // The welcome word (issue #1182). A refusal and no success notice: the
+  // block's own line says what the answer now is, so a banner would be the
+  // second confirmation. The refusal never says *which* of the two reasons it
+  // was, for the same reason the cancel one does not.
+  "error-welcome": { tone: "danger", key: "ready.welcomeUnavailable" },
 };
 
 /**
@@ -1044,6 +1053,36 @@ function DayOfDetails({
           {t("ready.saveLastDived")}
         </SubmitButton>
       </form>
+      {/* **The way back.** The booking form asks this and says "change it any
+          time from the link we send you" — this is that link, and it is also
+          where the divers who never saw a booking form get asked at all: a
+          party member, a walk-in a staffer seated. Its own save, like every
+          other question on this page, so answering it cannot blank a size set
+          last week (ADR 20260904-reef-all-the-way-down, D12). */}
+      <form
+        action={saveDiveIntentFromReady.bind(null, token)}
+        className="flex flex-col gap-3 py-5 sm:flex-row sm:items-end"
+      >
+        <Field label={t("ready.intentHeading")} htmlFor="dive-intent" className="flex-1">
+          <select
+            id="dive-intent"
+            name="diveIntent"
+            required
+            defaultValue={data.diveIntent ?? ""}
+            className={controlClass}
+          >
+            <option value="">{t("ready.intentChoose")}</option>
+            {DIVE_INTENTS.map((intent) => (
+              <option key={intent} value={intent}>
+                {t(DIVER_DIVE_INTENT_KEYS[intent])}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <SubmitButton pendingLabel={t("ready.savingIntent")} className={saveButton}>
+          {t("ready.saveIntent")}
+        </SubmitButton>
+      </form>
       {/* **The diver's own words.** Its own save (`saveNoteFromReady` writes
           the note column and nothing else), so answering it cannot blank sizes
           set last week, and saving sizes cannot blank it (issue 627). */}
@@ -1143,6 +1182,40 @@ function DayOfDetails({
           </form>
         )}
       </div>
+      {/* **A word to the crew** (issue #1182, delight report D22).
+          Rendered only when there is something to offer — a first trip with
+          this shop, or a return after a long gap — so most divers never see
+          this block at all.
+
+          Budget rule 6's grammar, in order: the question names the fact it
+          would share, the line under it says who sees it and for how long, and
+          the control is the way back as much as the way in. Nothing is shared
+          until the diver taps, and nothing about them is stored beyond the
+          stamp — what the crew reads is derived from their own bookings. */}
+      {data.welcomeOffer ? (
+        <div className="py-5">
+          <h3 className="text-base font-semibold">
+            {data.welcomeOffer.kind === "first_trip"
+              ? t("ready.welcomeFirstTripQuestion")
+              : t("ready.welcomeReturningQuestion", { years: data.welcomeOffer.years })}
+          </h3>
+          <p className="mt-1 text-sm text-muted">{t("ready.welcomeAudience")}</p>
+          <form
+            action={saveWelcomeConsentFromReady.bind(null, token)}
+            className="mt-3 flex flex-wrap items-center gap-3"
+          >
+            <input type="hidden" name="share" value={data.welcomeShared ? "off" : "on"} />
+            <SubmitButton pendingLabel={t("common.saving")} className={saveButton}>
+              {data.welcomeShared ? t("ready.welcomeWithdraw") : t("ready.welcomeShare")}
+            </SubmitButton>
+            {data.welcomeShared ? (
+              <span className="text-sm font-medium text-success-strong">
+                {t("ready.welcomeShared")}
+              </span>
+            ) : null}
+          </form>
+        </div>
+      ) : null}
       {/* **What this dive needs set up for you** — the accessible-dive record
           (ADR 20260827-support-needs-are-a-record-about-the-dive). Asked here
           and nowhere else: `/ready` is after the sale and is the diver's own

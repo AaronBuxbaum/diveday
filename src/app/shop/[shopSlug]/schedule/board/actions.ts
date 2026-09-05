@@ -11,6 +11,7 @@ import { getMovePreflight } from "@/db/move-preflight";
 import { canPersonViewShopReports } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { createTripRequestInvitations } from "@/db/trip-invitations";
+import { getTripLens, listTripLenses } from "@/db/trip-lenses";
 import {
   countShopTrips,
   createTrip,
@@ -97,12 +98,13 @@ export async function loadBuilderOptionsAction() {
       courses: [],
       diveSites: [],
       boats: [],
+      lenses: [],
       hasBoatDiving: true,
       hasShoreDiving: false,
       hasPoolDiving: false,
     };
   }
-  const [courses, diveSites, boats, shop] = await Promise.all([
+  const [courses, diveSites, boats, lenses, shop] = await Promise.all([
     listActiveCourses(db, shopId).then((rows) =>
       rows.map((row) => ({ id: row.id, title: row.title, agency: row.agency })),
     ),
@@ -110,6 +112,9 @@ export async function loadBuilderOptionsAction() {
     listBoats(db, shopId).then((rows) =>
       rows.map((row) => ({ id: row.id, name: row.name, capacity: row.capacity })),
     ),
+    // The shop's own words for its kinds of day (ADR
+    // 20260904-reef-all-the-way-down, decision 2).
+    listTripLenses(db, shopId).then((rows) => rows.map((row) => ({ id: row.id, title: row.name }))),
     getShopById(db, shopId),
   ]);
   return {
@@ -120,6 +125,7 @@ export async function loadBuilderOptionsAction() {
     // not offer them, or a departure lands on a boat the shop has said it does
     // not run.
     boats: shop?.hasBoatDiving === false ? [] : boats,
+    lenses,
     hasBoatDiving: shop?.hasBoatDiving ?? true,
     hasShoreDiving: shop?.hasShoreDiving ?? false,
     hasPoolDiving: shop?.hasPoolDiving ?? false,
@@ -151,6 +157,8 @@ const addSchema = z.object({
     z.enum(["boat", "shore", "pool"]).default("boat"),
   ),
   boatId: z.preprocess((value) => value || undefined, z.uuid().optional()),
+  // The shop's own word for this kind of day (ADR 20260904-reef-all-the-way-down).
+  lensId: z.preprocess((value) => value || undefined, z.uuid().optional()),
   date: z.string(),
   startTime: z.string(),
   endTime: z.string(),
@@ -258,7 +266,12 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     selfGuided,
     diveMode,
     boatId,
+    lensId,
   } = parsed.data;
+
+  // The same tenant rule the hull obeys: a lens id arriving on this form has to
+  // be one of *this* shop's live words.
+  if (lensId && !(await getTripLens(db, shop.id, lensId))) return await invalid();
 
   const details = tripDetailsPatch(
     {
@@ -331,6 +344,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     selfGuided,
     diveMode: details.patch.diveMode,
     boatId: details.patch.boatId,
+    lensId: lensId ?? null,
   };
 
   if (repeatIntervalWeeks > 0) {

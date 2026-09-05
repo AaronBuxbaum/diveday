@@ -19,6 +19,8 @@ import {
   pushSubscriptions,
   shopContactEmailConfirmationTokens,
   stripeWebhookEvents,
+  tripDeskEvents,
+  tripReadMarks,
 } from "./schema";
 
 /**
@@ -279,6 +281,39 @@ export async function pruneExpiredRecords(
           .where(lt(pushSubscriptions.createdAt, cutoff("push_subscriptions")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, ids)),
+    ),
+  );
+
+  // The manifest's shift catch-up (issues #1202, #1187). Pruned on the event's
+  // own `occurred_at`: a desk act is a same-day handoff, so its age is the only
+  // thing that decides, and a departure that was moved or never sailed is
+  // bounded the same way as one that did.
+  outcomes.push(
+    await pruneBatch(
+      "trip_desk_events",
+      () =>
+        db
+          .select({ id: tripDeskEvents.id })
+          .from(tripDeskEvents)
+          .where(lt(tripDeskEvents.occurredAt, cutoff("trip_desk_events")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(tripDeskEvents).where(inArray(tripDeskEvents.id, ids)),
+    ),
+  );
+
+  // The marks that point into those events, on `last_seen_at` rather than a
+  // creation time: a mark a staffer keeps moving forward is live state, and
+  // only one nobody has touched in a month has nothing left to point at.
+  outcomes.push(
+    await pruneBatch(
+      "trip_read_marks",
+      () =>
+        db
+          .select({ id: tripReadMarks.id })
+          .from(tripReadMarks)
+          .where(lt(tripReadMarks.lastSeenAt, cutoff("trip_read_marks")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(tripReadMarks).where(inArray(tripReadMarks.id, ids)),
     ),
   );
 

@@ -823,7 +823,7 @@ describe("diver erasure", () => {
     const bookingId = booked.bookingId;
     await db
       .update(bookings)
-      .set({ groupPreference: "likes to buddy with Marta" })
+      .set({ diveIntent: "easing_back", reEntryAsk: "deck_word" })
       .where(eq(bookings.id, bookingId));
 
     const issued = await issueWaiverRequest(db, {
@@ -1251,7 +1251,8 @@ describe("diver erasure", () => {
     ).toHaveLength(0);
 
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
-    expect(booking?.groupPreference).toBeNull();
+    expect(booking?.diveIntent).toBeNull();
+    expect(booking?.reEntryAsk).toBeNull();
 
     // Both the booking-scoped event and the diver-scoped one with a null
     // booking_id — the latter is only reachable by matching the stored name.

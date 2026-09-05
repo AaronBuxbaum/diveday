@@ -1,0 +1,23 @@
+{
+  "heading": "Tipos de día",
+  "value": "{count, plural, =0 {Sin tipos de día} =1 {1 tipo de día} other {# tipos de día}}",
+  "nameLabel": "Nombre",
+  "nameHint": "Los buceadores ven esta palabra en tu calendario y pueden filtrar por ella.",
+  "createTitle": "Añadir un tipo de día",
+  "submit": "Guardar",
+  "submitting": "Guardando...",
+  "add": "Añadir",
+  "adding": "Añadiendo...",
+  "delete": "Eliminar",
+  "deleteConfirm": "Eliminar",
+  "deleteCancel": "Mejor no",
+  "deletePending": "Eliminando…",
+  "deleteDepartures": "{count, plural, one {# salida lleva esta palabra y la pierde.} other {# salidas llevan esta palabra y la pierden.}}",
+  "noLenses": "Todavía no hay tipos de día.",
+  "created": "Tipo de día añadido.",
+  "updated": "Tipo de día guardado.",
+  "deleted": "Tipo de día eliminado.",
+  "invalid": "Ponle un nombre al tipo de día.",
+  "tripFieldLabel": "Tipo de día",
+  "tripFieldNone": "Ninguno"
+}

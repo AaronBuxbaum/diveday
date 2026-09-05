@@ -1,6 +1,8 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { PLAN_CHANGE_NOTE_MAX, type PlanChangeReason } from "@/lib/plan-change";
 import type { AppDb, DbExecutor } from "./client";
+import { recordDeskEvent } from "./desk-events";
 import { isMarineLifeSlug } from "./marine-life-catalog";
 import { diveSites, executedDives, people, tripDives, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -25,6 +27,17 @@ export type ExecutedDiveInput = {
    * the check for why an ornament may not cost the dive record.
    */
   observedSpeciesSlug?: string | null;
+  /**
+   * Why the actual site is not the planned one (issue #1184). Absent or null
+   * clears it, like every other field on this replacing upsert.
+   */
+  planChangeReason?: PlanChangeReason | null;
+  /**
+   * A short staff-only note beside that reason. Blank trims to null; a note
+   * with no reason is refused rather than stored, which is what keeps this
+   * from becoming the second staff chat D27's boundary rules out.
+   */
+  planChangeNote?: string | null;
   recordedByPersonId: string;
 };
 
@@ -68,7 +81,9 @@ export type ExecutedDiveRefusal =
   | "unknown_recorder"
   | "unknown_site"
   | "times_transposed"
-  | "depth_out_of_range";
+  | "depth_out_of_range"
+  | "plan_change_note_without_reason"
+  | "plan_change_note_too_long";
 
 export type UpsertExecutedDiveResult =
   | { ok: true; dive: typeof executedDives.$inferSelect }
@@ -132,6 +147,21 @@ export async function upsertExecutedDive(
     ) {
       return { ok: false, reason: "depth_out_of_range" };
     }
+    // **The note is refused, not dropped** — unlike the species slug below,
+    // which degrades to null rather than costing the dive record. The reason is
+    // the difference between a decoration and a claim: a note explaining why
+    // the boat moved, saved with no reason above it, is exactly the free-text
+    // staff chat #1187's boundary rules out, and silently discarding what a
+    // divemaster typed is the failure issue #1018 was about. The database check
+    // says the same thing; this says it in words the crew can act on.
+    const planChangeNote = input.planChangeNote?.trim() || null;
+    const planChangeReasonCode = input.planChangeReason ?? null;
+    if (planChangeNote && !planChangeReasonCode) {
+      return { ok: false, reason: "plan_change_note_without_reason" };
+    }
+    if (planChangeNote && planChangeNote.length > PLAN_CHANGE_NOTE_MAX) {
+      return { ok: false, reason: "plan_change_note_too_long" };
+    }
     // **The catalog, not the site's field guide** — a correction to the first
     // version of this, which had it backwards (dive-domain review, 2026-09-04).
     //
@@ -188,6 +218,10 @@ export async function upsertExecutedDive(
         : null,
       notRecorded: [...new Set(input.notRecorded ?? [])].filter((value) => value === "depth"),
       observedSpeciesSlug: observedSpeciesSlug ?? null,
+      planChangeReason: planChangeReasonCode,
+      // A note cannot outlive the reason it explains: clearing the reason
+      // clears it, which is the same rule the table's own check states.
+      planChangeNote: planChangeReasonCode ? planChangeNote : null,
       recordedByPersonId: recorder.id,
       updatedAt: nowDate(),
     };
@@ -210,7 +244,22 @@ export async function upsertExecutedDive(
     // The upsert targets a partial unique index and always writes a row; a
     // missing one is not a refusal anyone can act on, so it stays the
     // unknown-trip answer rather than inventing a sixth reason.
-    return row ? { ok: true, dive: row } : { ok: false, reason: "unknown_trip" };
+    if (!row) return { ok: false, reason: "unknown_trip" };
+    // The crew who were not on this dive read "The dive plan changed." on the
+    // manifest's catch-up strip (issue #1202). Written inside this transaction
+    // so a handoff line can never go missing from a save that succeeded, and
+    // written on any save carrying a reason: a second save of the same dive
+    // groups into the same one sentence, and the person who saved it never sees
+    // their own act.
+    if (planChangeReasonCode) {
+      await recordDeskEvent(tx, {
+        shopId: input.shopId,
+        tripId: input.tripId,
+        kind: "plan_changed",
+        actorPersonId: recorder.id,
+      });
+    }
+    return { ok: true, dive: row };
   });
 }
 

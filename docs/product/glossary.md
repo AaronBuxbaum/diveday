@@ -1589,6 +1589,22 @@ new domain concept, define it here in the same PR.
 - **Conservation note** — a shop's own prose about its conservation practice at one dive site.
   The shop's words, in the shop's language, alongside the rest of the briefing — not a code and
   not a claim DiveDay renders on the shop's behalf.
+- **Lens** — the shop's own word for a kind of day ("Easygoing reef", "After dark", "First time
+  back in a while"), written once in `trip_lenses` and hung on a departure by `trips.lens_id`. It
+  is **shop prose**, like a site briefing and unlike the conservation codes or the marine-life
+  catalog: DiveDay never translates it, and the whole value is that the schedule sounds like the
+  shop rather than like every other shop. A diver filters the public schedule by one
+  (`?lens=<slug>`, whose slug is derived on create and never rewritten, so a shared link survives
+  a rename).
+  **It is never a safety label and never an eligibility signal.** Nothing in
+  `src/lib/trip-admission.ts` or `src/lib/readiness.ts` reads it, and it is deliberately kept
+  structurally separate from the requirement markers it sits beside on a schedule row: "First time
+  back in a while" next to a certification marker, in the same tint or weight, would read as a rule
+  about who may board rather than as the shop describing its own morning (the trap issue #1162's
+  triage names). One lens per departure; none is the ordinary case and renders nothing at all
+  (ADR
+  [20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md),
+  decision 2).
 - **Crew public name** — the string a consenting staff member shows divers on the departures they
   crew (`people.crew_public_name`). Theirs to type, not derived: `full_name` is one free-text box
   a shop fills in, so taking its first whitespace token assumes the given name was typed first and

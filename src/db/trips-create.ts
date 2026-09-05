@@ -45,6 +45,8 @@ export type NewTrip = {
   selfGuided?: boolean;
   diveMode?: "boat" | "shore" | "pool";
   boatId?: string | null;
+  /** The shop's own word for this kind of day (ADR 20260904-reef-all-the-way-down). */
+  lensId?: string | null;
 };
 
 export type TripScheduleDayInput = {
@@ -223,6 +225,7 @@ export async function insertTripInstance(
     selfGuided?: boolean;
     diveMode?: "boat" | "shore" | "pool";
     boatId?: string | null;
+    lensId?: string | null;
   },
 ) {
   const [trip] = await tx
@@ -282,6 +285,7 @@ export async function insertTripInstance(
       selfGuided: params.courseId ? false : (params.selfGuided ?? false),
       diveMode: params.diveMode ?? "boat",
       boatId: params.boatId ?? null,
+      lensId: params.lensId ?? null,
     })
     .returning();
   if (!trip) throw new Error("insertTripInstance: insert returned no row");
@@ -346,6 +350,7 @@ export async function createTrip(db: AppDb, input: NewTrip) {
       selfGuided: input.selfGuided,
       diveMode: input.diveMode,
       boatId: input.boatId,
+      lensId: input.lensId,
     });
   });
 }

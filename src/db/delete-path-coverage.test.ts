@@ -136,6 +136,8 @@ const RESET_KEEPS: Record<string, string> = {
   // in the ordering would be dead code that reads like a safety measure.
   booking_payment_events: "ON DELETE CASCADE from bookings clears it",
   push_subscriptions: "ON DELETE CASCADE from trips clears it",
+  trip_desk_events: "ON DELETE CASCADE from trips clears it",
+  trip_read_marks: "ON DELETE CASCADE from trips clears it",
 };
 
 /**
@@ -167,6 +169,8 @@ const CASCADE_KEEPS: Record<string, string> = {
   booking_payment_events: "ON DELETE CASCADE from bookings clears it",
   push_subscriptions: "ON DELETE CASCADE from trips clears it",
   integration_sync_records: "ON DELETE CASCADE from shops clears it",
+  trip_desk_events: "ON DELETE CASCADE from trips clears it",
+  trip_read_marks: "ON DELETE CASCADE from trips clears it",
 };
 
 describe("shop-scoped delete-path coverage", () => {

@@ -21,6 +21,7 @@ function row(overrides: Partial<WeekLedgerRow> = {}): WeekLedgerRow {
     linkLabel: "Aug 27 · 7:00 AM – 10:30 AM · Two-Tank Reef · 3 spots left",
     timeRange: "7:00 AM – 10:30 AM",
     title: "Two-Tank Reef — Molasses & French",
+    lens: null,
     course: null,
     site: "Molasses Reef and French Reef",
     requirements: ["Open Water or higher"],
@@ -124,6 +125,63 @@ describe("one meta line, and nothing stacked under it", () => {
 
     const item = screen.getByRole("listitem");
     expect(item.textContent).not.toContain("·");
+  });
+
+  /**
+   * **The lens leads the line, and its absence is silent** — ADR
+   * 20260904-reef-all-the-way-down, decision 2 (issue #1162).
+   */
+  it("puts the shop's own word first, before the course and the site", () => {
+    render(
+      <WeekLedger
+        rows={[
+          row({
+            lens: "Easygoing reef",
+            course: null,
+            site: "Molasses Reef and French Reef",
+            requirements: ["Open Water or higher"],
+          }),
+        ]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const item = screen.getByRole("listitem");
+    expect(metaLine(item)).toBe(
+      "Easygoing reef · Molasses Reef and French Reef · Open Water or higher",
+    );
+    expect(bodyLines(item)).toHaveLength(1);
+  });
+
+  it("renders the same line with no leading separator when the departure wears no word", () => {
+    // Never "Uncategorised", and never a dangling "·" where a word would be.
+    render(
+      <WeekLedger
+        rows={[row({ lens: null, course: null, site: "Molasses Reef" })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const item = screen.getByRole("listitem");
+    expect(metaLine(item)).toBe("Molasses Reef · Open Water or higher");
+  });
+
+  it("still renders exactly one paragraph when the lens is the row's only meta", () => {
+    render(
+      <WeekLedger
+        rows={[
+          row({ lens: "After dark", course: null, site: null, requirements: [], aboveLevel: null }),
+        ]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+      />,
+    );
+
+    const item = screen.getByRole("listitem");
+    expect(metaLine(item)).toBe("After dark");
+    expect(bodyLines(item)).toHaveLength(1);
   });
 });
 

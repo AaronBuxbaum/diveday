@@ -313,7 +313,8 @@
       "gearServiceDue": "Gear service",
       "staffCredentialDue": "Credential",
       "unitsUnconfirmed": "Setup",
-      "helpRequest": "Help request"
+      "helpRequest": "Help request",
+      "sayHello": "Say hello"
     },
     "blockerAction": {
       "setRequirements": "Set requirements",
@@ -478,6 +479,10 @@
     "staffCredential": {
       "dueDetail": "{credential} for this staff member renews {dueOn}.",
       "overdueDetail": "{credential} for this staff member expired {dueOn}. Update the record."
+    },
+    "sayHello": {
+      "firstTrip": "{count, plural, one {{names} is diving with you for the first time.} other {{names} are diving with you for the first time.}}",
+      "returning": "{name} is back after {years, plural, one {# year} other {# years}}."
     }
   },
   "tripDiveFields": {
@@ -703,5 +708,22 @@
     "divesWith": "Dives with {name}",
     "divesWithOnDeparture": "Dives with {name}, on this departure",
     "divesWithNotOnDeparture": "Dives with {name}, not booked on this departure"
+  },
+  "welcomeCue": {
+    "firstTrip": "first time with us",
+    "returning": "back after {years, plural, one {# year} other {# years}}"
+  },
+  "diveIntent": {
+    "aboardToday": "Aboard today: {list}",
+    "easingBack": "{count} getting comfortable again",
+    "smallLife": "{count} looking for small life",
+    "aWreck": "{count} hoping for a wreck",
+    "skills": "{count} practising skills",
+    "goodDay": "{count} out for a good day"
+  },
+  "reEntry": {
+    "deckWord": "Asked for a word with the divemaster.",
+    "easyFirstDive": "Asked for an easy first dive.",
+    "refresherCourse": "Asked about the refresher course."
   }
 }

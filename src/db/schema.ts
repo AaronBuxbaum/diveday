@@ -25,6 +25,7 @@ import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/cou
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import type { DiveSiteTemplateUndo } from "@/lib/dive-site-template-sync";
 import type { EmergencyReference } from "@/lib/emergency-reference";
+import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
 
@@ -1693,6 +1694,52 @@ export const diveSiteMoments = pgTable(
   ],
 );
 
+/**
+ * **A lens is the shop's own word for a kind of day** — ADR
+ * 20260904-reef-all-the-way-down, D02 (issue #1162).
+ *
+ * "Easygoing reef", "Getting comfortable again", "Photography" — a vocabulary
+ * the shop writes once and then hangs a departure on, so a diver reading the
+ * public schedule can pick the day they want rather than the next open seat.
+ * Deliberately the shop's prose rather than a DiveDay taxonomy: the whole
+ * value is that it sounds like the shop, and a fixed enum would make every
+ * shop's schedule read the same. The cost, stated plainly, is that a lens word
+ * is not translated — it is the shop's own sentence, like a boat's line or a
+ * site's fit tone.
+ *
+ * The slug is derived from the name once, on create, and never rewritten: a
+ * shop that renames "Easygoing reef" to "Easy reef" must not break the link a
+ * diver shared yesterday.
+ */
+export const tripLenses = pgTable(
+  "trip_lenses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    /** Also the rail's order: the order the shop wrote its own vocabulary in. */
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Deleting a lens stamps this and leaves the row (ADR
+     * 20260820-every-delete-is-soft), because `trips.lens_id` points at it and
+     * a real delete would erase which kind of day a past departure was. The
+     * word on screen is still "Delete".
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("trip_lenses_shop_live_idx")
+      .on(table.shopId, table.createdAt)
+      .where(sql`${table.deletedAt} is null`),
+    uniqueIndex("trip_lenses_shop_slug_key")
+      .on(table.shopId, table.slug)
+      .where(sql`${table.deletedAt} is null`),
+  ],
+);
+
 export const trips = pgTable(
   "trips",
   {
@@ -1715,6 +1762,12 @@ export const trips = pgTable(
      * moved-from slot as empty and re-create the departure staff just moved.
      */
     seriesOccurrenceDate: text("series_occurrence_date"),
+    /**
+     * The shop's own word for this kind of day (ADR
+     * 20260904-reef-all-the-way-down, D02). Null is the ordinary case and
+     * renders nothing — never "Uncategorised".
+     */
+    lensId: uuid("lens_id").references(() => tripLenses.id, { onDelete: "set null" }),
     /** Compatibility pointer to the first dive's site for readiness and forecast consumers. */
     diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
     /** Present only for a scheduled course session; ordinary charters leave this empty. */
@@ -2039,6 +2092,22 @@ export const tripDives = pgTable(
 );
 
 /** Recorded facts from a completed dive; planned trip details remain immutable evidence. */
+/**
+ * **Why the boat did not dive the plan** (issue #1184, delight report D24).
+ *
+ * Four codes, not a sentence: this reaches a diver's own record, so it is
+ * worded per reader (`planChangeReasonText`) rather than typed once in
+ * English. The values are the four the canvas drew — current, weather, vis, or
+ * the crew's own call — and the fourth is deliberately the honest one: a
+ * skipper who moved the boat because they judged it better is the commonest
+ * real reason and the one a coded list usually launders into "conditions".
+ *
+ * It never touches `trip_dives`. The plan a shop published stays exactly where
+ * it was written; this says what happened instead, which is D24's whole
+ * boundary — record the change, never overwrite the plan.
+ */
+export const planChangeReason = pgEnum("plan_change_reason", PLAN_CHANGE_REASONS);
+
 export const executedDives = pgTable(
   "executed_dives",
   {
@@ -2081,6 +2150,22 @@ export const executedDives = pgTable(
      * surface it reaches is a logbook card, not a species checklist.
      */
     observedSpeciesSlug: text("observed_species_slug"),
+    /**
+     * **Why the actual site is not the planned one** (issue #1184, D24). A code
+     * so it can be worded in the diver's own language; null is the ordinary
+     * state, including for a dive that went exactly to plan.
+     *
+     * Never inferred. A crew that changed site and said nothing about why has a
+     * record that says the site changed, which is the true thing.
+     */
+    planChangeReason: planChangeReason("plan_change_reason"),
+    /**
+     * A short note **for the shop**, never printed to a diver. The one place
+     * this record carries free text, bounded at 280 characters and refused
+     * without a reason beside it — D27's boundary is "do not create a second
+     * staff chat", and a note box with no code above it is exactly that.
+     */
+    planChangeNote: text("plan_change_note"),
     recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
@@ -2100,6 +2185,14 @@ export const executedDives = pgTable(
     check(
       "executed_dives_exit_after_entry",
       sql`${table.enteredAt} is null or ${table.exitedAt} is null or ${table.exitedAt} > ${table.enteredAt}`,
+    ),
+    check(
+      "executed_dives_plan_change_note_length",
+      sql`${table.planChangeNote} is null or (length(trim(${table.planChangeNote})) between 1 and 280)`,
+    ),
+    check(
+      "executed_dives_plan_change_note_needs_reason",
+      sql`${table.planChangeNote} is null or ${table.planChangeReason} is not null`,
     ),
   ],
 );
@@ -2214,6 +2307,41 @@ export const diveRecencyBand = pgEnum("dive_recency_band", [
   "never",
 ]);
 
+/**
+ * **What this dive is for, in the diver's own words** — one optional choice on
+ * the booking form (ADR 20260904-reef-all-the-way-down, D12/#1172).
+ *
+ * Five plain answers rather than a free-text box, because the crew reads a
+ * *count*: "4 came for an easygoing reef, 2 are getting comfortable again" is a
+ * sentence a divemaster can act on, and a paragraph per seat is not.
+ *
+ * **A soft cue, never a promise or a pairing rule.** Nothing here gates a
+ * booking, ranks a diver, or builds a buddy team; a shop that reads it and does
+ * nothing has lost nothing.
+ */
+export const diveIntent = pgEnum("dive_intent", [
+  "easing_back",
+  "small_life",
+  "a_wreck",
+  "skills",
+  "good_day",
+]);
+
+/**
+ * **The one support a diver easing back asked for** (ADR
+ * 20260904-reef-all-the-way-down, D18/#1178). Offered only to a diver who has
+ * just said they are getting comfortable again, and only when the departure is
+ * far enough out that the shop can still act on it.
+ *
+ * **None of these gates a booking**, and none of them is a warning: D18's
+ * boundary is support without shame and without a silent gate.
+ */
+export const reEntryAsk = pgEnum("re_entry_ask", [
+  "deck_word",
+  "easy_first_dive",
+  "refresher_course",
+]);
+
 export const bookings = pgTable(
   "bookings",
   {
@@ -2252,8 +2380,30 @@ export const bookings = pgTable(
      * not a refusal the software makes.
      */
     lastDivedBand: diveRecencyBand("last_dived_band"),
-    /** Optional, non-sensitive pace/interest note the diver shares for buddy grouping. */
-    groupPreference: text("group_preference"),
+    /**
+     * The diver's own answer to "what's this dive for?", asked on the booking
+     * form and changeable on `/ready` (ADR 20260904-reef-all-the-way-down,
+     * D12). Null is "not said" — a real state, never a default that reads as a
+     * claim.
+     *
+     * **On the booking rather than the person**, for the same reason
+     * `last_dived_band` above is: it is a fact with a date on it. What a diver
+     * came for in March says nothing about the trip they book in November, and
+     * a person-level column would quietly become that claim.
+     *
+     * **Gates nothing and names nobody.** The crew reads the departure's tally,
+     * not a row per seat.
+     */
+    diveIntent: diveIntent("dive_intent"),
+    /**
+     * The one support this diver asked for when they said they were easing back
+     * (ADR 20260904-reef-all-the-way-down, D18). Null is "asked for nothing",
+     * which is every booking that never saw the question.
+     *
+     * On the booking for the reason above, and **gates nothing**: it is a line
+     * the crew answers, never a blocker on a seat.
+     */
+    reEntryAsk: reEntryAsk("re_entry_ask"),
     /** Optional lodging / hotel pickup address or landmark provided by the diver on /ready. */
     hotelPickupLocation: text("hotel_pickup_location"),
     /** Optional staff-set pickup time for this booking (e.g., "07:15"). */
@@ -2336,6 +2486,24 @@ export const bookings = pgTable(
      * a person who came back on their own the second time (issue #1285).
      */
     referralSource: text("referral_source"),
+    /**
+     * **The diver said the crew may know this is a first trip, or a long
+     * return** (issue #1182, delight report D22). The consent stamp, and the
+     * whole of it: what the cue then *says* is derived at read from this
+     * diver's own booking history, so nothing about them is copied onto a row
+     * and nothing goes stale.
+     *
+     * Null is the ordinary state and renders nothing — a cue nobody consented
+     * to does not exist, which is what makes this a welcome rather than a
+     * profile badge. Written and cleared by the diver on their own `/ready`
+     * thread and nowhere else; staff cannot set it.
+     *
+     * On the booking rather than the person, for the reason `lastDivedBand`
+     * above is: it is permission for **one departure's** crew, given on the
+     * day. A person-level flag would quietly become standing permission for
+     * every shop surface forever, which is the badge D22 exists to refuse.
+     */
+    welcomeSharedAt: timestamp("welcome_shared_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -2575,6 +2743,118 @@ export const tripStageEvents = pgTable(
       table.recordedAt,
       table.seq,
     ),
+  ],
+);
+
+/**
+ * **A desk act a crew member coming back to this departure needs to know
+ * about** (issues #1202 and #1187, delight report D42 with D27 folded in).
+ *
+ * Deliberately **not** `trip_change_events`, which is the publicly safe plan
+ * ledger a diver's own link reads. That table's docblock states what may live
+ * in it — meeting point and conditions, no contact data, no readiness state —
+ * and the whole value of this one is the internal half: who arrived, whose
+ * seat moved, who asked the crew for a hand. Two tables so that one query can
+ * never accidentally serve a diver a staff fact (#1202's triage names exactly
+ * that disclosure risk and recommends the split).
+ *
+ * **Codes only. This table holds no prose**, and it holds no name: the diver a
+ * line is about is `subject_person_id`, joined live at read, so an erasure
+ * through `anonymizeDiver` redacts the strip without a second sweep.
+ *
+ * Append-only and **not soft-deletable** — nobody points at a desk event and
+ * asks for it gone, so it is the soft-delete rule's "machinery nobody pointed
+ * at" rather than an omission. It is bounded instead by a 30-day retention
+ * window: a same-day handoff nobody can replay a season later is the
+ * difference between a catch-up and the surveillance feed #1202's boundary
+ * refuses.
+ */
+export const tripDeskEventKind = pgEnum("trip_desk_event_kind", [
+  "arrival",
+  "seat_taken",
+  "seat_released",
+  "gear_changed",
+  "pickup_set",
+  "help_request",
+  "meeting_point",
+  "plan_changed",
+]);
+
+export const tripDeskEvents = pgTable(
+  "trip_desk_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    kind: tripDeskEventKind("kind").notNull(),
+    /** Null for the trip-wide kinds (`meeting_point`, `plan_changed`). */
+    bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "cascade" }),
+    /**
+     * The diver the line is about. **Never a stored name** — see the table's
+     * note: the name is joined at read so erasure needs no second sweep here.
+     */
+    subjectPersonId: uuid("subject_person_id").references(() => people.id, {
+      onDelete: "cascade",
+    }),
+    /**
+     * Who did it, when a person did. Null for an act a diver performed on their
+     * own link (a help request), and for a scheduled or system-driven write.
+     * The reader never sees their own acts, so this is also what advances the
+     * actor's own read mark.
+     */
+    actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * The tiebreak, for the same reason `activity_events.seq` carries one:
+     * `occurred_at` alone cannot order this table. Two desk acts in one request
+     * share an instant, and the e2e clock is frozen outright so *every* row in
+     * a test carries the identical timestamp. The read mark stores this
+     * sequence rather than a timestamp for exactly that reason — "since I last
+     * looked" has to be a position, not a moment two rows can share.
+     */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    index("trip_desk_events_shop_trip_idx").on(table.shopId, table.tripId, table.seq),
+    index("trip_desk_events_occurred_idx").on(table.occurredAt),
+  ],
+);
+
+/**
+ * **Where one person had read up to on one departure.** The other half of the
+ * catch-up strip: the strip is the events after this mark, and nothing else.
+ *
+ * A person with no row here is not behind — they are new to this boat, and a
+ * first visit is reading rather than catching up. That is why the strip renders
+ * nothing at all to them instead of replaying the morning.
+ *
+ * Mutable latest state, not a trail, so it has no `seq` and no history. It is
+ * pruned on `last_seen_at` for the same 30 days its events are: a mark that
+ * outlives every event it points past says nothing.
+ */
+export const tripReadMarks = pgTable(
+  "trip_read_marks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    lastSeenSeq: bigint("last_seen_seq", { mode: "number" }).notNull().default(0),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("trip_read_marks_trip_person_unique").on(table.tripId, table.personId),
+    index("trip_read_marks_shop_seen_idx").on(table.shopId, table.lastSeenAt),
   ],
 );
 

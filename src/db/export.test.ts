@@ -27,6 +27,7 @@ import { getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 const EXPECTED_FILES = [
   "shop.csv",
   "boats.csv",
+  "trip_lenses.csv",
   "contacts.csv",
   "people.csv",
   "certifications.csv",
@@ -99,6 +100,7 @@ const EXPORTED_TABLES = [
   "dive_package_entitlements",
   "shops",
   "boats",
+  "trip_lenses",
   "people",
   "certifications",
   "specialty_certifications",
@@ -284,6 +286,16 @@ const EXCLUDED_TABLES = [
   "integration_events",
   "integration_deliveries",
   "integration_sync_records",
+  // The manifest's shift catch-up (issues #1202, #1187). A same-day handoff
+  // between two people standing in one shop on one morning, kept for thirty
+  // days and read by nobody after the boat is home — operational plumbing, not
+  // a shop record, and the same reasoning as `notification_deliveries`.
+  // Exporting it would also be the one thing #1202's boundary rules out: a
+  // durable, downloadable, per-person account of who did what and when.
+  "trip_desk_events",
+  // Where each staffer had read up to in that trail. Meaningless without the
+  // events above, and meaningless in another system — same reasoning again.
+  "trip_read_marks",
 ];
 
 /**
@@ -310,6 +322,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "contact_email_confirmed_at",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
+  trip_lenses: ["shop_id"],
   dive_packages: ["shop_id"],
   dive_package_entitlements: ["shop_id"],
   staff_shifts: ["shop_id"],

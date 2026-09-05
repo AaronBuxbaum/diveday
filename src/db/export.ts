@@ -83,6 +83,7 @@ import {
   tripInvitations,
   tripLastMinutePromoRecipients,
   tripLastMinutePromos,
+  tripLenses,
   tripRecapPhotos,
   tripRequirements,
   tripReviews,
@@ -690,6 +691,17 @@ export async function loadShopExportBundleInput(
 
       const boatName = new Map(boatRows.map((row) => [row.id, row.name]));
 
+      // The shop's own words for its kinds of day. Plainly a shop record — the
+      // shop wrote them and its public schedule shows them — so they leave with
+      // the shop (ADR 20260904-reef-all-the-way-down, decision 2). Deleted
+      // words ride along with their stamp, the same as every other soft-deleted
+      // table in this bundle: trips.csv still points at one by lens_id.
+      const tripLensRows = await tx
+        .select()
+        .from(tripLenses)
+        .where(eq(tripLenses.shopId, shopId))
+        .orderBy(asc(tripLenses.createdAt), asc(tripLenses.id));
+
       // Per-person rollups for contacts.csv. Archived cards never represent a
       // diver in a migration file; archived people still export, marked.
       const cardsByPerson = new Map<string, typeof certificationRows>();
@@ -911,6 +923,18 @@ export async function loadShopExportBundleInput(
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["boats.csv"],
+        },
+        {
+          file: "trip_lenses.csv",
+          header: ["id", "name", "slug", "created_at", "deleted_at"],
+          rows: tripLensRows.map((row) => [
+            row.id,
+            row.name,
+            row.slug,
+            row.createdAt,
+            row.deletedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_lenses.csv"],
         },
         {
           file: "contacts.csv",
@@ -1273,6 +1297,9 @@ export async function loadShopExportBundleInput(
             "dive_mode",
             "boat_id",
             "boat_name",
+            // The shop's own word for this kind of day, as an id into
+            // trip_lenses.csv.
+            "lens_id",
             "conditions_hold",
             "conditions_summary",
             "water_temperature_c",
@@ -1323,6 +1350,7 @@ export async function loadShopExportBundleInput(
             row.diveMode,
             row.boatId,
             row.boatId ? boatName.get(row.boatId) : null,
+            row.lensId,
             row.conditionsHold,
             row.conditionsSummary,
             row.waterTemperatureC,
@@ -1681,11 +1709,17 @@ export async function loadShopExportBundleInput(
             "status",
             "wants_nitrox",
             "conditions_briefed_at",
-            "group_preference",
+            // What the diver said this dive was for, and the one support they
+            // asked for when they said they were easing back (ADR
+            // 20260904-reef-all-the-way-down). Codes rather than words: an
+            // export is the shop's own database handed back, and the sentence a
+            // diver read was in whichever language they read it in.
+            "dive_intent",
+            "re_entry_ask",
             // The diver's own answer to "when did you last dive?" (ADR
             // 20260821-currency-is-what-catches-people). A statement they made
             // about themselves, on the seat they made it for — the same kind of
-            // record as `group_preference` beside it, and a shop moving its data
+            // record as `dive_intent` beside it, and a shop moving its data
             // elsewhere should not have to ask every returning diver again.
             "last_dived_band",
             // The party structure a shop booked (ADR 20260804-seat-claim-links).
@@ -1709,6 +1743,12 @@ export async function loadShopExportBundleInput(
             // CSV cell either — `csvCell`'s formula guard covers the one
             // reachable shape, a leading `-`.
             "referral_source",
+            // The diver's own consent to have the crew told this is a first
+            // trip, or a return after a long gap (issue #1182). A statement
+            // they made about themselves on this seat, the same kind of record
+            // as `last_dived_band` above — and a shop that moved its data would
+            // otherwise be asking every one of them again.
+            "welcome_shared_at",
             "hotel_pickup_location",
             "pickup_time",
             "payment_status",
@@ -1729,11 +1769,13 @@ export async function loadShopExportBundleInput(
               row.status,
               row.wantsNitrox,
               row.conditionsBriefedAt,
-              row.groupPreference,
+              row.diveIntent,
+              row.reEntryAsk,
               row.lastDivedBand,
               row.partyLeadBookingId,
               row.claimedAt,
               row.referralSource,
+              row.welcomeSharedAt,
               row.hotelPickupLocation,
               row.pickupTime,
               payment?.status ?? "unpaid",
@@ -2054,6 +2096,12 @@ export async function loadShopExportBundleInput(
             // DiveDay's copy in the reader's language and a CSV has no reader
             // to resolve them for — the slug is the durable fact.
             "observed_species_slug",
+            // Why the boat did not dive the plan, and the shop's own note about
+            // it (issue #1184). The reason is a code for the same reason the
+            // species slug above is; the note is the shop's own words and
+            // belongs in a bundle the shop is handed back.
+            "plan_change_reason",
+            "plan_change_note",
             "recorded_by_person_id",
             "deleted_at",
             "created_at",
@@ -2072,6 +2120,8 @@ export async function loadShopExportBundleInput(
             JSON.stringify(row.observedConditions),
             JSON.stringify(row.notRecorded),
             row.observedSpeciesSlug,
+            row.planChangeReason,
+            row.planChangeNote,
             row.recordedByPersonId,
             row.deletedAt,
             row.createdAt,
@@ -3927,7 +3977,8 @@ export async function loadDiverExportBundleInput(
             "status",
             "wants_nitrox",
             "conditions_briefed_at",
-            "group_preference",
+            "dive_intent",
+            "re_entry_ask",
             "last_dived_band",
             "claimed_at",
             "payment_status",
@@ -3945,7 +3996,8 @@ export async function loadDiverExportBundleInput(
               row.status,
               row.wantsNitrox,
               row.conditionsBriefedAt,
-              row.groupPreference,
+              row.diveIntent,
+              row.reEntryAsk,
               row.lastDivedBand,
               row.claimedAt,
               payment?.status ?? "unpaid",
@@ -4531,6 +4583,9 @@ export async function loadShopExportCounts(
     "shop.csv": 1,
     "boats.csv": await countOf(
       db.select({ n: count() }).from(boats).where(eq(boats.shopId, shopId)),
+    ),
+    "trip_lenses.csv": await countOf(
+      db.select({ n: count() }).from(tripLenses).where(eq(tripLenses.shopId, shopId)),
     ),
     // One flat import-ready row per person, so the count mirrors people.csv.
     "contacts.csv": peopleCount,

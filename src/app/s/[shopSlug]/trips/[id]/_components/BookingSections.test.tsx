@@ -41,6 +41,8 @@ describe("BookSpotSection price currency (task 35)", () => {
   it("quotes the per-diver price in the shop's currency, not dollars", () => {
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -62,6 +64,8 @@ describe("BookSpotSection price currency (task 35)", () => {
     // would offer the seat at ¥130.
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -81,6 +85,8 @@ describe("BookSpotSection price currency (task 35)", () => {
   it("still reads as dollars for a usd shop", () => {
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -108,6 +114,8 @@ describe("BookSpotSection — the money says itself once", () => {
   it("renders exactly one figure at total scale when the diver pays now", () => {
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -128,6 +136,8 @@ describe("BookSpotSection — the money says itself once", () => {
   it("renders exactly one figure at total scale when the shop is paid at the counter", () => {
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -148,6 +158,8 @@ describe("BookSpotSection — the money says itself once", () => {
   it("says no money at all on an unpriced departure", () => {
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -171,6 +183,8 @@ describe("BookSpotSection — the money says itself once", () => {
     // never a design preference, only a consequence.
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -193,6 +207,8 @@ describe("BookSpotSection — the money says itself once", () => {
     // repeating it was the second of five places this form said the money.
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -219,6 +235,8 @@ describe("BookSpotSection — under the button", () => {
   function renderWithTerms(payAtBooking: boolean) {
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -265,6 +283,8 @@ describe("BookSpotSection — no box inside the box", () => {
   it("renders no requirement panel of its own", () => {
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -285,6 +305,8 @@ describe("BookSpotSection — no box inside the box", () => {
   it("wraps no party or gear step in a bordered fieldset", () => {
     const { container } = renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={4}
@@ -315,6 +337,8 @@ describe("BookSpotSection rental gear at checkout", () => {
   it("shows a gear step per diver when the shop prices rental gear and checkout is on", () => {
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -345,6 +369,8 @@ describe("BookSpotSection rental gear at checkout", () => {
   it("shows no gear step when the shop hasn't priced any rental gear online", () => {
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -364,6 +390,8 @@ describe("BookSpotSection rental gear at checkout", () => {
   it("shows no gear step when checkout itself is off, even with rental pricing configured", () => {
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -392,6 +420,8 @@ describe("BookSpotSection tax disclosure", () => {
   it("says tax is added at checkout when the shop has Stripe Tax on", () => {
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
@@ -414,6 +444,8 @@ describe("BookSpotSection tax disclosure", () => {
   it("says nothing about tax when the shop handles it outside DiveDay", () => {
     renderDiver(
       <BookSpotSection
+        reEntryOpen={false}
+        hasRefresherCourse={false}
         trip={trip()}
         tripRef={tripRef}
         remaining={6}

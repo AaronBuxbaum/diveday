@@ -13,10 +13,21 @@ test("the shopfront leads with the next boat, and the week still lists it", {
   // had room; the storefront makes the next boat the page's subject instead, so
   // the card renders and the week below stays a complete, honest sequence.
   // Both branches of the reader are unit-tested in src/lib/trips.test.ts.
-  const card = page.getByRole("region", { name: "Next boat out" });
+  const card = page.getByRole("region", { name: "Next boat with space" });
   await expect(card).toBeVisible();
   const title = await card.getByRole("heading", { level: 2 }).textContent();
   expect(title).toBeTruthy();
+
+  // **And it says why it is not the earlier boat** (issue #1374). The reader
+  // has always skipped the full ones; the card now names them, and says
+  // nothing when there was nothing to skip.
+  const rows = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem");
+  const firstRowTitle = await rows.first().getByRole("heading", { level: 3 }).textContent();
+  if (firstRowTitle?.trim() !== title?.trim()) {
+    await expect(card.getByText(/boats? (before it are|is) full/)).toBeVisible();
+  } else {
+    await expect(card.getByText(/full/)).toHaveCount(0);
+  }
 
   const list = page.getByRole("list", { name: "Upcoming trips" });
   await expect(list.getByRole("listitem").filter({ hasText: title ?? "" })).not.toHaveCount(0);
