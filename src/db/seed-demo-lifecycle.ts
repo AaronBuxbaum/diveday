@@ -59,6 +59,7 @@ import {
   priorVisits,
   processorErasureObligations,
   recapPhotos,
+  recapPulses,
   rentalFitProfiles,
   reviewModerationEvents,
   rollCallCrewEvents,
@@ -185,6 +186,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // ON DELETE CASCADE (ADR 20260813-review-moderation-has-a-floor).
   await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
+  // The review's private sibling, on the same parents (D40).
+  await db.delete(recapPulses).where(eq(recapPulses.shopId, shopId));
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
