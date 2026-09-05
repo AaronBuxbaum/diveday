@@ -1,3 +1,4 @@
+import { hasReturned } from "@/lib/trips";
 import type { CalendarDate } from "./calendar-date";
 import { calendarDateInTimezone } from "./calendar-date";
 
@@ -143,12 +144,9 @@ export function crewRequestRefusal(input: {
     (latest, meeting) => Math.max(latest, meeting.endsAt.getTime()),
     Number.NEGATIVE_INFINITY,
   );
-  if (Number.isFinite(last) && last + DEPARTURE_BUFFER_MS <= input.now.getTime()) return "past";
+  if (Number.isFinite(last) && hasReturned(new Date(last), input.now)) return "past";
   if (overlappingBlocks(input.blocks, input.personId, input.meetings, input.timeZone).length > 0) {
     return "unavailable";
   }
   return null;
 }
-
-/** The shop-wide late-arrival buffer, in milliseconds (AGENTS.md's trips rule). */
-const DEPARTURE_BUFFER_MS = 60 * 60 * 1000;

@@ -1,5 +1,5 @@
-import { HOUR_MS } from "@/lib/clock";
 import { shopPath } from "@/lib/staff-notices";
+import { hasSailed } from "@/lib/trips";
 
 /**
  * **Which boat the counter is looking at, and how a refusal finds its way
@@ -18,13 +18,6 @@ import { shopPath } from "@/lib/staff-notices";
  */
 
 /**
- * The standing late-arrival buffer (AGENTS.md): a departure is not treated as
- * sailed until an hour past its scheduled time, because trips run late and a
- * diver still walks up to the desk for one.
- */
-export const COUNTER_DEPARTED_BUFFER_MS = HOUR_MS;
-
-/**
  * The least a departure has to be for the counter to focus it.
  *
  * `today` is the caller's answer, not this module's: "the same calendar day"
@@ -36,11 +29,6 @@ export const COUNTER_DEPARTED_BUFFER_MS = HOUR_MS;
  * already on the board".
  */
 export type FocusableDeparture = { tripId: string; startsAt: Date; today: boolean };
-
-/** Whether a departure counts as sailed, with the standing one-hour buffer. */
-export function hasDeparted(startsAt: Date, now: Date): boolean {
-  return startsAt.getTime() + COUNTER_DEPARTED_BUFFER_MS <= now.getTime();
-}
 
 /**
  * The queue's own URL, carrying the focused departure.
@@ -91,12 +79,12 @@ export function selectFocusedDeparture<Departure extends FocusableDeparture>(
   if (requested) return requested;
 
   const todays = departures.filter((departure) => departure.today);
-  const stillToSail = todays.find((departure) => !hasDeparted(departure.startsAt, now));
+  const stillToSail = todays.find((departure) => !hasSailed(departure.startsAt, now));
   if (stillToSail) return stillToSail;
   const lastToday = todays[todays.length - 1];
   if (lastToday) return lastToday;
   return (
-    departures.find((departure) => !hasDeparted(departure.startsAt, now)) ??
+    departures.find((departure) => !hasSailed(departure.startsAt, now)) ??
     departures[departures.length - 1] ??
     null
   );

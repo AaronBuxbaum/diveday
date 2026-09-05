@@ -1,4 +1,4 @@
-import { HOUR_MS, nowDate } from "@/lib/clock";
+import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { crewLanguageGap } from "@/lib/crew-languages";
 import { countInWaterCrew } from "@/lib/crew-roles";
@@ -6,6 +6,7 @@ import { divemasterRatioGap, inWaterDivemasterCount } from "@/lib/divemaster-rat
 import { rentalFitCompleteness } from "@/lib/rentals";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { summarizeTripDiveSites } from "@/lib/trip-dives";
+import { hasReturned } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 import { canPersonConfigureTrips } from "./authz";
 import { hasTripBlowout } from "./blowouts";
@@ -71,7 +72,7 @@ export async function getTripOverview(
   // boats run late, and the pulse dying at the scheduled minute told a staffer
   // watching a boat still out that there was nothing left to watch. A cancelled
   // departure never sailed at all.
-  const departed = !cancelled && trip.endsAt.getTime() + HOUR_MS <= now.getTime();
+  const departed = !cancelled && hasReturned(trip.endsAt, now);
   // The pulse — the state-of-the-boat strip that opens the page — only beats for
   // a departure that is still ahead: a cancelled or departed trip has no seats to
   // fill or blockers to clear.

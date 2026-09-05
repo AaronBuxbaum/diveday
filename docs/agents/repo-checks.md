@@ -1,12 +1,12 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 43 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 45 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
 shape being refused.
 
-Only the 22 guards whose reasoning is not obvious from their own failure message are
+Only the 24 guards whose reasoning is not obvious from their own failure message are
 written up here. The rest say everything they need to say when they go red.
 
 This is the long-form half of one row in [AGENTS.md](../../AGENTS.md)'s command table, and it lives
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, voice, logical-property, clock, transaction-concurrency, timezone, Intl-cache, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII, stack-CI-skip, CI-change-detection and Node-version safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, voice, logical-property, clock, transaction-concurrency, timezone, Intl-cache, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, departure-buffer, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII, stack-CI-skip, CI-change-detection and Node-version safeguards.
 
 ## The guards worth reading about
 
@@ -160,6 +160,16 @@ Writing it found two live defects, which is the argument for it: a single publis
 ### live-trip-read
 
 The live-trip-read one (`scripts/check-live-trips.mjs`) fails any read of `trips` — a `.from(trips)`, or a join from one of the child tables that now survives a delete — that neither carries `liveTrip()` (`src/db/trips-live.ts`) nor says `diveday:allow-deleted-trips: <why>`. Deleting a departure stamps `trips.deleted_at` and leaves the row and its five children in place, and the table is read from 91 places; a reader that forgets the filter does not throw and does not fail a test written before the column existed, it shows an anonymous visitor a departure the shop took off the board. Joins from `bookings`, `tripWaitlistEntries` and the roll-call tables are outside the gate on purpose — `deleteTrip` refuses a departure carrying any of those, so no such row exists to arrive through.
+
+### departure-buffer
+
+The departure-buffer one (`scripts/check-departure-buffer.mjs`) refuses three shapes outside `src/lib/trips.ts`: an offset added to a `startsAt`/`endsAt` on a line that also *compares*; the same offset bound to a name and compared against *now* a few lines later; and any `*_BUFFER_MS` declaration. All three mean the same thing — somebody asked "has this sailed?" without going through `hasSailed()` / `hasReturned()`. The split-across-lines rule arrived in review: the first version matched only within one line, so `const cutoff = new Date(trip.startsAt.getTime() + HOUR_MS)` followed by `if (cutoff <= now)` was a prohibited check the guard called clean. Comparing a derived date against anything other than the clock is left alone, which is what keeps the seeds — full of exactly that arithmetic — out of it.
+
+It exists because AGENTS.md's late-arrival rule was enforced by a sentence for as long as the rule existed, and a sentence does not scale. When the guard was written the hour was spelled **fifteen** times: nine separate `const … = 60 * 60 * 1000` declarations (`closeout`, `ready`, `today`, `roster-facts`, `find-my-booking`, `crew-requests`, `thread-steps`, the diver record's status split, and `COUNTER_DEPARTED_BUFFER_MS` at the walk-in counter) plus six bare literals compared inline in `bookings`, `blowouts`, `today`, `trips-overview` and the diver-facing departure page — behind three different predicate names.
+
+The interesting part is that every one of the nine was *correct*, and every one carried a docstring citing the rule. What they did not have was a centre: `today` cited `ready`, `ready` cited `selfCancelBooking`, `roster-facts` cited the diver record, the diver record and `crew-requests` cited AGENTS.md, and `find-my-booking` said "same 1-hour buffer every other check uses". A ring of citations with no source is what a rule looks like shortly before one of its copies is edited alone. Two had already drifted: most sites treated the departure as gone at `startsAt + 1h` exactly, while the roster's "ahead" flag and the diver record's held it upcoming a millisecond longer — a difference nothing depended on, which is why it survived. `hasSailed` settles it on the majority reading (the boundary instant counts as past), and `src/lib/trips.test.ts` pins that instant.
+
+The failure it catches is quiet and customer-facing: a site that forgets the hour does not throw and does not look wrong in review, it tells a diver standing on the dock at 07:05 that the 07:00 boat they are waiting to board is in their history, or turns away a walk-in the desk would have taken. The comparison operator is the anchor rather than the arithmetic because the seeds construct dates from a departure constantly and ask nothing about the clock. An offset that genuinely asks a different question says `diveday:allow-departure-offset: <why>` on the line or anywhere in the comment block above it; there is one, the recap's own delay in `src/lib/thread-steps.ts`, which waits its scheduled hours after a boat this rule has already counted as home.
 
 ### loading-skeleton
 

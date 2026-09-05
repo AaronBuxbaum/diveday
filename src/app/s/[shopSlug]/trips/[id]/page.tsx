@@ -57,7 +57,7 @@ import { isLiveShopStaff } from "@/lib/session";
 import { similarDepartures } from "@/lib/similar-departures";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { tripPageJsonLd } from "@/lib/structured-data";
-import { isFull, spotsRemaining } from "@/lib/trips";
+import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import {
   BookSpotSection,
@@ -377,7 +377,7 @@ export default async function TripDetailPage({
   const readinessLink = `${publicTripPath(shopSlug, tripId)}/ready?booking=${encodeURIComponent(bookingToken ?? "")}`;
 
   const now = nowDate();
-  const inPast = new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= now;
+  const inPast = hasSailed(trip.startsAt, now);
   // Where this departure stands against the head count it needs, if it named
   // one. A departure that already sailed has nothing conditional left to
   // promise; a cancelled one returned far above this line, at the `status`

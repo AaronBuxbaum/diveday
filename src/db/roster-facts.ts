@@ -1,6 +1,7 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type AboardBlockerKind, aboardBlockerKind } from "@/lib/readiness";
+import { hasSailed } from "@/lib/trips";
 import { inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
 import { bookings, orders, people, priorVisits, trips } from "./schema";
@@ -54,14 +55,6 @@ const EMPTY: RosterFacts = {
   openBalance: false,
   blocker: null,
 };
-
-/**
- * The standing late-arrival buffer (AGENTS.md): a boat that left at 7:00 is
- * not "in the past" at 7:05. The same hour the diver record's own story split
- * uses (`[personId]/_lib/status.ts`), so a departure cannot read as ahead on
- * one surface and behind on the other.
- */
-const DEPARTURE_BUFFER_MS = 60 * 60 * 1000;
 
 /**
  * Every roster fact for one page of divers, in four batched reads plus the
@@ -156,7 +149,7 @@ export async function rosterFacts(
   for (const seat of seats) {
     const entry = facts.get(seat.personId);
     if (!entry) continue;
-    const ahead = seat.startsAt.getTime() + DEPARTURE_BUFFER_MS >= now.getTime();
+    const ahead = !hasSailed(seat.startsAt, now);
     if (ahead) {
       if (!entry.nextBookingAt || seat.startsAt < entry.nextBookingAt) {
         entry.nextBookingAt = seat.startsAt;
