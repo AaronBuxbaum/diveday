@@ -1749,6 +1749,13 @@ export async function loadShopExportBundleInput(
             // as `last_dived_band` above — and a shop that moved its data would
             // otherwise be asking every one of them again.
             "welcome_shared_at",
+            // The diver answering "nothing has changed" about the sizes, gas
+            // and emergency contact the shop already holds (ADR
+            // 20260904-reef-all-the-way-down, D15). Same class as the two
+            // columns above: a statement they made about themselves on this
+            // seat, and a shop that moved its data would otherwise ask the
+            // whole board the question over again.
+            "carried_facts_confirmed_at",
             "hotel_pickup_location",
             "pickup_time",
             "payment_status",
@@ -1776,6 +1783,7 @@ export async function loadShopExportBundleInput(
               row.claimedAt,
               row.referralSource,
               row.welcomeSharedAt,
+              row.carriedFactsConfirmedAt,
               row.hotelPickupLocation,
               row.pickupTime,
               payment?.status ?? "unpaid",
@@ -2424,6 +2432,17 @@ export async function loadShopExportBundleInput(
             // attribution is a rumour.
             "needs_staff_fit_by",
             "needs_staff_fit_by_name",
+            // A staffer keeping the size a unit actually came back in (issue
+            // #1174). Carried for the same reason the flag above it is, and
+            // with the same id + name pair: the diver's own thread reads this
+            // back as "Keiko kept your BCD at M", so a bundle without the
+            // attribution would restore a sentence with nobody in it. The
+            // item says which piece, which is what stops the sentence naming
+            // the wrong one.
+            "fit_confirmed_at",
+            "fit_confirmed_by",
+            "fit_confirmed_by_name",
+            "fit_confirmed_item",
             "updated_at",
           ],
           rows: rentalFitRows.map((row) => [
@@ -2446,6 +2465,10 @@ export async function loadShopExportBundleInput(
             row.needsStaffFitNote,
             row.needsStaffFitBy,
             row.needsStaffFitBy ? personName.get(row.needsStaffFitBy) : null,
+            row.fitConfirmedAt,
+            row.fitConfirmedBy,
+            row.fitConfirmedBy ? personName.get(row.fitConfirmedBy) : null,
+            row.fitConfirmedItem,
             row.updatedAt,
           ]),
           note: EXPORT_FILE_NOTES["rental_fit.csv"],
