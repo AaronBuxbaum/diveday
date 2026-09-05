@@ -18,6 +18,10 @@ export const THREAD_STEP_TITLE_KEYS: Record<ThreadStepId, DiverMessageKey> = {
   certification: "thread.stepCertification",
   pay: "thread.stepPay",
   gear: "thread.stepGear",
+  // The gear step's other spelling, for the diver whose sizes the shop was
+  // already holding (ADR 20260904-reef-all-the-way-down, D15). One slot, and a
+  // question rather than a noun, because that is what is genuinely being asked.
+  changes: "thread.stepChanges",
   dayof: "thread.stepDayOf",
 };
 

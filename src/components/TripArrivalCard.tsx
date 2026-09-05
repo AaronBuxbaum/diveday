@@ -1,8 +1,11 @@
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SectionCard } from "@/components/ui/card";
+import { FactSource } from "@/components/ui/FactSource";
+import { DIVER_FACT_SOURCE_KEYS } from "@/i18n/fact-source-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { googleMapsUrl } from "@/lib/maps";
 import { type ShopAddressParts, shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 
@@ -75,12 +78,23 @@ export function TripArrivalCard({
   shop,
   trip,
   locale,
+  sites,
   downloadHref,
   className = "",
 }: {
   shop: ArrivalCardShop;
   trip: ArrivalCardTrip;
   locale: string;
+  /**
+   * Where this departure is planned to go, in the order the day runs them (ADR
+   * 20260904-reef-all-the-way-down, Budget rule 5). The row carries the Plan
+   * chip and renders nothing when the caller passes none — so the public trip
+   * page and the downloadable card are untouched by its arrival.
+   *
+   * A shop-typed title need not name a site, and this is the only place the
+   * order and the provenance appear together.
+   */
+  sites?: readonly string[];
   /** A post-booking download URL carrying the Ready capability. */
   downloadHref?: string | null;
   className?: string;
@@ -134,6 +148,20 @@ export function TripArrivalCard({
           {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
         </p>
         <dl className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
+          {sites && sites.length > 0 ? (
+            <div>
+              <dt className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm font-semibold">
+                {t("trip.arrivalSites")}
+                {/* No `at`: the plan's own timestamp is what the change ledger
+                    below already carries, and a second one here would be the
+                    same fact twice. */}
+                <FactSource kind="plan" label={t(DIVER_FACT_SOURCE_KEYS.plan)} />
+              </dt>
+              <dd className="mt-1 text-sm text-muted">
+                {cachedListFormat(locale, { style: "long", type: "unit" }).format(sites)}
+              </dd>
+            </div>
+          ) : null}
           {facts.landmark ? (
             <ArrivalFact label={t("trip.arrivalLandmark")} value={facts.landmark} />
           ) : null}

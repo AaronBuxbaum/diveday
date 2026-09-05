@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
+import { ChangedFacts, type FitRecall } from "@/app/ready/[token]/_components/ChangedFacts";
 import {
   ThreadSpine,
   type ThreadSpineStep,
@@ -99,7 +100,7 @@ import {
 import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
 import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
 import { signRecapToken } from "@/lib/recap-links";
-import { nitroxCardWanted } from "@/lib/rentals";
+import { nitroxAvailableOn, nitroxCardWanted, sizeForRentalItem } from "@/lib/rentals";
 import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
@@ -113,11 +114,13 @@ import {
 import { liveStageOf, STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
 import {
   cancelMyBookingAction,
+  confirmCarriedFactsFromReady,
   emailFreshReadinessLinkAction,
   payFromReady,
   saveCertificationFromReady,
   saveDiveIntentFromReady,
   saveDiveRecencyFromReady,
+  saveEmergencyContactFromReady,
   saveFitFromReady,
   saveHelpRequestFromReady,
   saveHotelPickupLocationFromReady,
@@ -125,6 +128,7 @@ import {
   saveNoteFromReady,
   saveSpecialtyFromReady,
   saveSupportNeedsFromReady,
+  saveTanksFromReady,
   saveWelcomeConsentFromReady,
   signWaiverFromReady,
 } from "./actions";
@@ -705,6 +709,17 @@ const READY_NOTICES: Record<
   // are deliberately never distinguished to a diver (a booking-state oracle is
   // still a leak); the shop's number is on the card below.
   "error-cancel": { tone: "danger", key: "ready.cancelUnavailable" },
+  // "Anything changed?" answered — the returning diver's one question (ADR
+  // 20260904-reef-all-the-way-down, D15). Its own notice because the answer
+  // leaves nothing on screen that says it landed: the step simply settles, and
+  // the redirect carries no hash, so the confirmation would otherwise be shut
+  // inside a closed disclosure — the same gap `saved-fit` exists to close.
+  "saved-changes": { tone: "success", key: "ready.savedChanges" },
+  "error-changes": { tone: "danger", key: "ready.errorChanges" },
+  "saved-tanks": { tone: "success", key: "ready.savedTanks" },
+  "error-tanks": { tone: "danger", key: "ready.errorTanks" },
+  "saved-contact": { tone: "success", key: "ready.savedContact" },
+  "error-contact": { tone: "danger", key: "ready.errorContact" },
   "saved-last-dived": { tone: "success", key: "ready.lastDivedSaved" },
   "error-last-dived": { tone: "danger", key: "ready.lastDivedUnavailable" },
   "saved-support": { tone: "success", key: "ready.supportSaved" },
@@ -1831,6 +1846,31 @@ export default async function DiverReadinessPage({
    * needs) live *inside* Day-of details rather than beside it as rows of their
    * own that moved no number when answered.
    */
+  /**
+   * **The shop was already holding this diver's sizes before they booked this
+   * seat** — which is what makes "Anything changed?" a question about last
+   * time (ADR 20260904-reef-all-the-way-down, D15).
+   *
+   * The comparison is against `bookings.created_at` rather than against "does a
+   * fit exist": a wider test would turn true the instant a first-timer saved
+   * their sizes, and the step would appear mid-thread asking whether the thing
+   * they had just typed had changed. A staff edit made after the booking leaves
+   * the ordinary gear row instead — rarer than the naive test, and never wrong.
+   *
+   * **Both sides must come from the same clock, and that is not free.**
+   * `fit_stated_at` is written through `nowDate()`; `bookings.created_at` was
+   * a `defaultNow()` column, which Postgres stamps and `DIVEDAY_CLOCK` cannot
+   * reach. Straddling the two made this "compare a frozen instant against a
+   * live one" (`dbNow`'s docblock in `src/test/db.ts`), and since the frozen
+   * instant sits weeks behind the wall clock under the e2e harness, every fit
+   * read as last season's and every diver as a returning one — the gear step
+   * vanished fleet-wide. `createBooking` now stamps `created_at` from the
+   * application clock for that reason; do not put a `defaultNow()` column on
+   * either side of this again.
+   */
+  const carriedFacts =
+    data.rentalFit?.fitStatedAt != null && data.rentalFit.fitStatedAt < data.bookingCreatedAt;
+
   const spine = buildThreadSteps({
     checklist: items,
     // Money is owed, or money has settled. The receipt matters on its own:
@@ -1839,6 +1879,8 @@ export default async function DiverReadinessPage({
     hasPayableOrder: items.some((item) => item.category === "payment") || paymentReceipt !== null,
     rentalFitComplete: hasRentalFit,
     dayOfComplete: hasLastDived,
+    carriedFacts,
+    carriedFactsConfirmed: data.carriedFactsConfirmedAt != null,
   });
 
   const notice = noticeFromParam(
@@ -1887,6 +1929,12 @@ export default async function DiverReadinessPage({
   /** One step's fact, and one step's form. The two things the spine cannot derive. */
   const stepLine = (step: ThreadStep): string | null => {
     if (step.id === "gear") return hasRentalFit ? t("ready.gearOnFile") : null;
+    // A settled "Anything changed?" states the same fact the gear step would
+    // have: the crew has their sizes. No second sentence for one fact, and
+    // nothing that says "you confirmed" — the diver knows what they tapped.
+    if (step.id === "changes") {
+      return step.state === "done" ? t("ready.gearOnFile") : null;
+    }
     if (step.id === "dayof") {
       return hasLastDived && data.lastDivedBand
         ? t(DIVER_DIVE_RECENCY_KEYS[data.lastDivedBand])
@@ -1917,6 +1965,44 @@ export default async function DiverReadinessPage({
    * openable, and "collapses to a check line" is what their closed summary
    * already is.
    */
+  /**
+   * The sizes form, composed once and opened from either spelling of its step:
+   * as the whole of `gear`, or behind the Sizes door of `changes`. One node so
+   * the two can never drift into asking for sizes differently — and so the
+   * "Change" door opens the form that already owns every size column and posts
+   * all of them, rather than a partial that would blank what it did not carry.
+   */
+  const fitForm = (
+    <RentalFitForm
+      action={saveFitFromReady.bind(null, token)}
+      rentalFit={data.rentalFit}
+      rentalItems={data.shop.rentalItems}
+      course={data.trip.course}
+      pricing={data.shop.rentalPricing}
+      currency={toShopCurrency(data.shop.currency)}
+      wantsNitrox={data.wantsNitrox}
+      nitroxCardVerified={data.nitroxCardVerified}
+      nitroxCardOnFile={data.nitroxCardOnFile}
+      nitroxCardEntryOffered={nitroxCardEntryOffered}
+      plannedDives={data.trip.plannedDives}
+      saved={saved === "fit"}
+    />
+  );
+
+  /**
+   * **D14's recall line**, or nothing. Never an inference: the staffer's name,
+   * the piece they kept and the size the shop is holding must all be on file,
+   * and the size is read off the fit's own column rather than composed here. It
+   * claims nothing about the gear that actually went out.
+   */
+  const fitRecall: FitRecall | null = (() => {
+    const confirmation = data.fitConfirmation;
+    if (!confirmation) return null;
+    const size = sizeForRentalItem(data.rentalFit, confirmation.item);
+    if (!size) return null;
+    return { staffFullName: confirmation.staffFullName, item: confirmation.item, size };
+  })();
+
   const stepBody = (step: ThreadStep): React.ReactNode => {
     const primary = step.id === spine.current;
     const actionButton = buttonClass(
@@ -1980,20 +2066,25 @@ export default async function DiverReadinessPage({
         );
       }
       case "gear":
+        return fitForm;
+      case "changes":
         return (
-          <RentalFitForm
-            action={saveFitFromReady.bind(null, token)}
-            rentalFit={data.rentalFit}
-            rentalItems={data.shop.rentalItems}
-            course={data.trip.course}
-            pricing={data.shop.rentalPricing}
-            currency={toShopCurrency(data.shop.currency)}
+          <ChangedFacts
+            t={t}
+            locale={locale}
+            fit={data.rentalFit}
             wantsNitrox={data.wantsNitrox}
-            nitroxCardVerified={data.nitroxCardVerified}
-            nitroxCardOnFile={data.nitroxCardOnFile}
-            nitroxCardEntryOffered={nitroxCardEntryOffered}
-            plannedDives={data.trip.plannedDives}
-            saved={saved === "fit"}
+            // Re-derived here, not read off the fit form: the tanks row may only
+            // ask what the shop can actually answer.
+            offerNitrox={nitroxAvailableOn(data.shop.rentalItems, data.trip.course)}
+            emergencyContact={data.emergencyContact}
+            fitRecall={fitRecall}
+            fitForm={fitForm}
+            actions={{
+              confirm: confirmCarriedFactsFromReady.bind(null, token),
+              saveTanks: saveTanksFromReady.bind(null, token),
+              saveContact: saveEmergencyContactFromReady.bind(null, token),
+            }}
           />
         );
       case "dayof":
@@ -2156,6 +2247,12 @@ export default async function DiverReadinessPage({
             }}
             trip={fullTrip}
             locale={locale}
+            // Where the day is planned to go, in the order it runs them. It
+            // wears the Plan chip (Budget rule 5) — the shop wrote it down, and
+            // the ledger below is where a change to it would appear.
+            sites={tripDives
+              .map(({ diveSite }) => diveSite?.name)
+              .filter((name): name is string => Boolean(name))}
             downloadHref={`${publicTripArrivalCardPath(fullShop.slug, fullTrip.id)}?booking=${encodeURIComponent(
               token,
             )}`}

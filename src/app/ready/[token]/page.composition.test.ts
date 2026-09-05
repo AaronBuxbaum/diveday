@@ -98,6 +98,57 @@ describe("the coral budget", () => {
   });
 });
 
+/**
+ * **"Anything changed?"** — ADR 20260904-reef-all-the-way-down, D15 with D19
+ * folded in, and Budget rule 5 for the provenance chip.
+ *
+ * The panel's own behaviour is pinned in `_components/ChangedFacts.test.tsx`
+ * and the step's switch in `src/lib/thread-steps.test.ts`. What only the route
+ * can say is *where it sits*, *which actions its doors are bound to*, and what
+ * it deliberately did not bring with it.
+ */
+describe("anything changed", () => {
+  it("composes one panel, inside the spine's step bodies", () => {
+    expect(countOf("<ChangedFacts")).toBe(1);
+    // Inside `stepBody`, so it is one step of the thread rather than a second
+    // panel beside it — and after the one status statement, which is still the
+    // only thing on the page that says how far along the diver is.
+    expect(positionOf("<ThreadStatus")).toBeGreaterThan(-1);
+    expect(positionOf("const stepBody")).toBeLessThan(positionOf("<ChangedFacts"));
+    expect(positionOf("<ChangedFacts")).toBeLessThan(positionOf("<ThreadStatus"));
+    expect(countOf("<ThreadStatus")).toBe(1);
+  });
+
+  it("binds each door to its own token-scoped action", () => {
+    for (const action of [
+      "confirmCarriedFactsFromReady.bind(null, token)",
+      "saveTanksFromReady.bind(null, token)",
+      "saveEmergencyContactFromReady.bind(null, token)",
+    ]) {
+      expect(SOURCE).toContain(action);
+    }
+  });
+
+  it("keeps the sensitive record out of the confirm-at-a-glance panel", () => {
+    // Support needs are a record about a person's dive and the crew note is
+    // their own words — both stay inside Day-of details (#1179's privacy call).
+    // A door here bound to either would be restating one in a panel built for
+    // skimming.
+    const panel = SOURCE.slice(positionOf("<ChangedFacts"), positionOf('case "dayof"'));
+    expect(panel).not.toContain("saveSupportNeedsFromReady");
+    expect(panel).not.toContain("saveDiveRecencyFromReady");
+    expect(panel).not.toContain("saveNoteFromReady");
+  });
+
+  it("spends no coral and prints no observed fact", () => {
+    // The thread's three moments are booked, paperwork done and welcome home;
+    // "you confirmed your sizes" is none of them.
+    expect(countOf("<EarnedMoment")).toBe(1);
+    // Only a recap may print Observed as what happened (Budget rule 5).
+    expect(SOURCE).not.toContain('kind="observed"');
+  });
+});
+
 describe("what the thread no longer carries", () => {
   it("renders no dive-briefing deck", () => {
     // "What you'll see" is the trip page's pitch (`TripDayPlan`/`TripLookFor`)

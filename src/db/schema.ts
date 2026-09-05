@@ -2364,6 +2364,18 @@ export const bookings = pgTable(
     wantsNitrox: boolean("wants_nitrox").notNull().default(false),
     conditionsBriefedAt: timestamp("conditions_briefed_at", { withTimezone: true }),
     /**
+     * **The diver answered "Anything changed?" for this seat** (ADR
+     * 20260904-reef-all-the-way-down, D15 with D19 folded in) — by saying
+     * nothing changed, or by changing one of the three facts the question
+     * covers. Acting on a fact *is* answering it.
+     *
+     * Per booking rather than per person, because the question is "since last
+     * time" and it is asked once per departure: a diver who confirmed their
+     * sizes in March is not thereby answering for a November boat. Null is the
+     * ordinary absent state and nothing backfills it.
+     */
+    carriedFactsConfirmedAt: timestamp("carried_facts_confirmed_at", { withTimezone: true }),
+    /**
      * The diver's own answer to "when did you last dive?", asked on `/ready`
      * (ADR 20260821-currency-is-what-catches-people). Null is "not said" — a
      * real state, never a default that reads as a claim.
@@ -6337,6 +6349,25 @@ export const tripRequirements = pgTable(
 );
 
 /**
+ * The pieces of a **fit** that have a size to remember — the values of
+ * `SIZED_RENTAL_KINDS` (`src/lib/rentals.ts`), mirrored so a stored
+ * confirmation can only ever name one of them.
+ *
+ * Deliberately not `gear_item_kind` below: that one is the *register's*
+ * alphabet and carries `regulator`, `tank`, `drysuit`, `hood` and a split
+ * `mask`/`fins`, none of which has a size column on `rental_fit_profiles`. A
+ * confirmation naming one of those could not be printed back to a diver
+ * against any size the shop actually holds.
+ */
+export const rentalFitItem = pgEnum("rental_fit_item", [
+  "bcd",
+  "wetsuit",
+  "boots",
+  "mask_fins",
+  "weights",
+]);
+
+/**
  * A diver's reusable rental fit at one shop: which pieces of kit they take
  * from the shop and what size each is. Deliberately a storage concept — this
  * is what a diver needs prepared, never a reservation of a particular item or
@@ -6404,6 +6435,26 @@ export const rentalFitProfiles = pgTable(
      * only: authorization is checked in the action, not read from this column.
      */
     needsStaffFitBy: uuid("needs_staff_fit_by").references(() => people.id),
+    /**
+     * **A staffer kept this fit after a trip** — recall, never inference (ADR
+     * 20260904-reef-all-the-way-down, D14).
+     *
+     * Written only by `confirmRentalFit` (src/db/rental-fit.ts), which a staff
+     * act calls at the end of a day; a diver's own save never touches any of
+     * the three, and confirming edits no size. Their absence is the ordinary
+     * state, and the diver-facing sentence renders nothing without all three —
+     * so this can never become "somebody kept your fit".
+     *
+     * Modelled on the `needs_staff_fit_*` trio above and, like it, carries no
+     * check constraint tying the three together: `fit_confirmed_by` is nulled
+     * when a staffer is anonymized, and that must age the sentence out rather
+     * than break the row.
+     */
+    fitConfirmedAt: timestamp("fit_confirmed_at", { withTimezone: true }),
+    /** Who kept it. Attribution, never authorization — the same call `needs_staff_fit_by` makes. */
+    fitConfirmedBy: uuid("fit_confirmed_by").references(() => people.id),
+    /** Which piece they kept, so the sentence can name it beside the size on file. */
+    fitConfirmedItem: rentalFitItem("fit_confirmed_item"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

@@ -865,6 +865,26 @@ async function createBookingRecord(
       reEntryAsk: req.reEntryAsk ?? null,
       identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
       referralSource: partnerReferralSlug(req.referralSource),
+      // **Stamped by the application clock, not the column's `defaultNow()`.**
+      //
+      // `defaultNow()` is Postgres' clock, which `DIVEDAY_CLOCK` does not
+      // reach — `src/test/db.ts`'s `dbNow` docblock is the long version. That
+      // was harmless while nothing compared this column against an
+      // app-stamped one; the diver's thread now does, asking whether
+      // `rental_fit_profiles.fit_stated_at` predates this booking to decide
+      // whether a diver is returning.
+      //
+      // A comparison that straddles the two clocks "compares a frozen instant
+      // against a live one, and the row is selected only while the two happen
+      // to fall in the right order" — and under the e2e harness the frozen
+      // instant sits weeks behind the wall clock, so *every* fit looked like
+      // last season's and every diver looked like a returning one. Both sides
+      // of that comparison now come from the same clock.
+      //
+      // Production is unchanged: with no override the app clock is the live
+      // one, so this is the same instant `defaultNow()` would have written,
+      // give or take the round trip.
+      createdAt: nowDate(),
     })
     .returning();
   if (!created) throw new Error("createBooking: booking insert returned no row");
@@ -1348,6 +1368,40 @@ export async function setBookingDiveIntent(
   const [updated] = await db
     .update(bookings)
     .set({ diveIntent: input.intent })
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .returning({ id: bookings.id });
+  return Boolean(updated);
+}
+
+/**
+ * **The diver answered "Anything changed?" for this seat** (ADR
+ * 20260904-reef-all-the-way-down, D15 with D19 folded in).
+ *
+ * Written from the diver's own `/ready` thread, by the primary "Nothing
+ * changed" and by every one of the three change doors alike — acting on a fact
+ * is answering the question, so a diver who corrects a wetsuit size never has
+ * to then confirm that they corrected it.
+ *
+ * Idempotent by design and deliberately not guarded against re-answering: a
+ * second tap is a diver tapping twice, not an error, and the stamp moving to
+ * the later of the two is the honest record of when they last looked.
+ *
+ * Returns false when no live booking matched, so the caller can say so rather
+ * than reporting a save that never happened.
+ */
+export async function confirmCarriedFacts(
+  db: AppDb,
+  input: { shopId: string; bookingId: string },
+): Promise<boolean> {
+  const [updated] = await db
+    .update(bookings)
+    .set({ carriedFactsConfirmedAt: nowDate() })
     .where(
       and(
         eq(bookings.id, input.bookingId),
