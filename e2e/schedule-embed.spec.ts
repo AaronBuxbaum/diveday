@@ -21,7 +21,7 @@ test("the schedule embed renders without page chrome and allows framing", async 
   // and neither shelf — every one of which would spend a third of a 900px
   // frame on something the shop's own page around it already says.
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Next boat out" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Next boat with space" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Courses" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "What divers say" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "All reviews" })).toHaveCount(0);

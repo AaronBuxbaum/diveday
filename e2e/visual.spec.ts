@@ -2683,7 +2683,7 @@ for (const scheme of ["light", "dark"] as const) {
         // and with no boat to book, the page's one primary becomes the
         // date-request composer's own submit.
         await expect(page.getByRole("heading", { level: 1 })).toHaveText("Fresh Shop E2E");
-        await expect(page.getByRole("region", { name: "Next boat out" })).toHaveCount(0);
+        await expect(page.getByRole("region", { name: "Next boat with space" })).toHaveCount(0);
         await expect(page.getByRole("link", { name: "Book this boat" })).toHaveCount(0);
         await capture(page, "public-schedule-new-shop", scheme);
         // After the shot, so the composer's disclosure is closed in the
