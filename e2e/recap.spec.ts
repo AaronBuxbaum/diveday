@@ -368,7 +368,15 @@ test("a private pulse reaches the shop, appears nowhere public, and can be taken
     // The diver's way back, and the panel goes with it.
     await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
     await page.getByRole("button", { name: "Take it back" }).click();
-    await expect(page.getByText(/can.t see it/)).toBeVisible();
+    await expect(page.getByText(/Taken back/)).toBeVisible();
+    // And the confirmation says only what is true. It used to read "{shop}
+    // can't see it", which a security pass over this slice caught as an
+    // over-promise: a withdrawn row is deliberately kept in the shop's export
+    // bundle, because the shop may already have read and acted on it
+    // (src/lib/export.ts says so at the file note). What the withdrawal
+    // actually does is take it off the panel below, which is what the next two
+    // lines prove.
+    await expect(page.getByText(/can.t see it/)).toHaveCount(0);
 
     await staff.goto("/shop/blue-mantis/reviews");
     await expect(staff.getByRole("heading", { name: "Asked us to fix" })).toHaveCount(0);
