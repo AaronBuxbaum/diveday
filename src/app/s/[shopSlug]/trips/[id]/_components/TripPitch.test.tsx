@@ -101,12 +101,27 @@ describe("TripPitch", () => {
       "Green turtle",
       "Elkhorn coral",
     ]);
-    // Every other species is still on the page — nothing is deleted, it is one
-    // tap away — and none of them is a tile.
+    // Every species is still on the page — nothing is deleted, it is one tap
+    // away — and only three of them are tiles.
     const door = container.querySelector("[data-pitch-door-body]");
     if (!door) throw new Error("expected the pitch to render a door");
     for (const name of CREATURES.slice(3)) {
       expect(within(door as HTMLElement).getByText(name)).toBeInTheDocument();
+    }
+  });
+
+  it("keeps the three promoted faces inside the door as well, with their prose", () => {
+    // A tile is a photo and a name. The card behind the door is the photo, the
+    // name, the shop's note and how to spot it — so promoting a species to the
+    // grid must not cost it the only place its prose is printed. Pinned
+    // because the obvious "show the tiles, then the remainder" reading drops
+    // three field notes off the page, which the door's own count used to imply
+    // it had done.
+    const { container } = fullDay();
+    const door = container.querySelector("[data-pitch-door-body]") as HTMLElement | null;
+    if (!door) throw new Error("expected the pitch to render a door");
+    for (const name of CREATURES.slice(0, 3)) {
+      expect(within(door).getByText(name)).toBeInTheDocument();
     }
   });
 
@@ -142,7 +157,10 @@ describe("TripPitch", () => {
 
   it("counts the species the door is holding, and says nothing when it holds none", () => {
     const { container } = fullDay();
-    expect(container.textContent).toContain("7 more species");
+    // Ten, not "7 more": the number names what the door holds, and it holds
+    // the whole field guide.
+    expect(container.textContent).toContain(`${CREATURES.length} species`);
+    expect(container.textContent).not.toContain("more species");
     cleanup();
     const short = render(
       <TripPitch

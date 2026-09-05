@@ -295,7 +295,7 @@
       "crew": "Tripulación"
     },
     "pitchDoor": "El resto del briefing",
-    "pitchDoorSpecies": "{count, plural, one {# especie más} other {# especies más}}"
+    "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}"
   },
   "booking": {
     "heading": "Reserva tu plaza",

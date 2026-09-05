@@ -63,7 +63,6 @@ export function TripPitch({
   const t = diverTranslator(locale);
   const cards = fieldGuideCardsFor(briefings);
   const tiles = cards.slice(0, PITCH_TILES);
-  const hidden = cards.length - tiles.length;
   // The one fact this block promotes out from behind the door: how demanding
   // the day reads. Everything else on the chip line the artboard drew is
   // already printed above it — the depth range rides on each `TripDayPlan`
@@ -122,7 +121,14 @@ export function TripPitch({
           folded
           summaryVariant="row"
           label={t("trip.pitchDoor")}
-          meta={hidden > 0 ? t("trip.pitchDoorSpecies", { count: hidden }) : undefined}
+          // What the door *holds*, not what the grid skipped. The artboard's
+          // "+ 7 more" was a fourth cell in the tile row, counting faces it had
+          // no room for; moving it onto the door turned it into a claim about
+          // what is behind the door, and the door carries the whole field guide.
+          // Each card there is the photo plus the shop's own note and how to
+          // spot it, which is exactly what a tile cannot show, so the three
+          // promoted faces belong inside it too rather than losing their prose.
+          meta={cards.length > 0 ? t("trip.pitchDoorSpecies", { count: cards.length }) : undefined}
         >
           <div data-pitch-door-body>
             <TripLookFor briefings={briefings} locale={locale} />

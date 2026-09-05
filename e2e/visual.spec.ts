@@ -494,6 +494,17 @@ const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 /** The seeded reef charter, the departure most of the staff tour hangs off. */
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
+/**
+ * A departure far enough out that D18's re-entry offers are still worth making.
+ *
+ * `reEntryWindowOpen` closes inside 24 hours, because nobody can act on an ask
+ * that late, and `REEF_TRIP` is the demo's *today* boat — about five hours out
+ * on the frozen clock, so the offers are correctly suppressed on it and the
+ * capture would photograph a block that is not there. This one sails two days
+ * out (`seed-more-trips`, `at(2, 11, 0)`).
+ */
+const EASING_BACK_TRIP = "Two-Tank Reef — French Reef";
+
 /** The seeded long-range run that only sails with six (src/db/seed-minimum-seats.ts). */
 const MINIMUM_SEATS_TRIP = "Tortugas Run — 3 days out, 6 divers to sail";
 
@@ -1831,7 +1842,11 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the booking form answers a diver easing back (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis");
-        await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+        await page
+          .locator("li")
+          .filter({ hasText: EASING_BACK_TRIP })
+          .getByRole("link", { name: EASING_BACK_TRIP })
+          .click();
         await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
         // The label, never the input: the pill's radio is `sr-only` and lies
         // under the very label that wraps it, so `check()` on it never
