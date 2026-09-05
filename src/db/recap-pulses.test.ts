@@ -208,6 +208,27 @@ describe("taking it back", () => {
       }),
     ).rejects.toThrow();
   });
+
+  /**
+   * The writers all parse, so nothing off-enum can reach the column through the
+   * app. `categories` is jsonb and drizzle's `$type<>` is a compile-time
+   * assertion; the check constraint guards the array's *length*, never its
+   * membership — so the narrowing has to happen again on the way out, or a row
+   * written by anything but a writer hands a surface a key its bundle does not
+   * have and `t(undefined)` reaches a reader. Raised by a `security-reviewer`
+   * pass over slice 16i as a by-convention property worth making structural.
+   */
+  it("re-narrows the codes on the way out, so a row written past the writers cannot reach a surface", async () => {
+    const { db, shop, bookingIds } = await pulseContext();
+    await submitRecapPulse(db, { bookingId: bookingIds[0], categories: ["gear"] });
+    await db
+      .update(recapPulses)
+      .set({ categories: ["gear", "sabotage"] as never })
+      .where(eq(recapPulses.bookingId, bookingIds[0]));
+
+    expect((await getRecapPulseForBooking(db, bookingIds[0]))?.categories).toEqual(["gear"]);
+    expect((await listOpenRecapPulses(db, shop.id))[0]?.categories).toEqual(["gear"]);
+  });
 });
 
 describe("the shop's panel", () => {
