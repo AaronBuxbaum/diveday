@@ -17,6 +17,7 @@ const trip: FeedTrip = {
   endsAt: new Date("2026-08-03T17:30:00.000Z"),
   location: "Molasses Reef, Key Largo",
   crew: ["Nora Quinn"],
+  revision: 0,
 };
 
 function document(trips: FeedTrip[]) {
@@ -88,8 +89,20 @@ describe("feedDocument", () => {
     expect(document([{ ...trip, crew: [] }])).not.toContain("Crew:");
   });
 
-  it("carries no SEQUENCE, which would need a revision counter trips do not have", () => {
-    expect(document([trip])).not.toContain("SEQUENCE:");
+  // Until issue #1165 this file asserted the feed "carries no SEQUENCE, which
+  // would need a revision counter trips do not have". `trips.revision` is that
+  // counter, so the assertion moves here rather than being deleted quietly.
+  // The two halves of the reversal: the field ships, and it moves only for a
+  // material change, which is what keeps a phone from re-alerting for a
+  // conditions note.
+  it("writes the trip's revision as SEQUENCE, so a client treats a re-fetch as an update", () => {
+    expect(document([trip])).toContain("SEQUENCE:0");
+    expect(document([{ ...trip, revision: 4 }])).toContain("SEQUENCE:4");
+  });
+
+  it("leaves SEQUENCE where it was when only the title changed", () => {
+    expect(document([trip])).toContain("SEQUENCE:0");
+    expect(document([{ ...trip, title: "Renamed" }])).toContain("SEQUENCE:0");
   });
 
   it("produces a valid empty calendar when nothing is scheduled", () => {

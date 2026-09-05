@@ -18,6 +18,12 @@ export type FeedTrip = {
   endsAt: Date;
   location: string | null;
   crew: readonly string[];
+  /**
+   * The trip's own `trips.revision`, published as RFC 5545 `SEQUENCE` (issue
+   * #1165). Every day of a multi-day trip carries the same number, which is
+   * right: moving `starts_at` shifts every one of them.
+   */
+  revision: number;
 };
 
 /**
@@ -59,6 +65,7 @@ function feedEvent(trip: FeedTrip, origin: string, shopSlug: string, labels: Fee
     endsAt: trip.endsAt,
     location: trip.location,
     url: `${origin}/shop/${shopSlug}/trips/${trip.tripId}`,
+    sequence: trip.revision,
   } satisfies CalendarEvent;
 }
 

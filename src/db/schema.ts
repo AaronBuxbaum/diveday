@@ -1924,6 +1924,29 @@ export const trips = pgTable(
      */
     recapAutoSendAt: timestamp("recap_auto_send_at", { withTimezone: true }),
     /**
+     * **How many times this departure has materially changed**, published as
+     * RFC 5545 `SEQUENCE` by both calendar surfaces — the diver's one-off
+     * `.ics` (`src/app/s/[shopSlug]/trips/[id]/calendar/route.ts`) and the
+     * staff subscription feed (`src/features/calendar-sync`), through
+     * `src/lib/trip-calendar.ts` (issue #1165, delight report D05).
+     *
+     * **Exactly two edits bump it**: a change to `starts_at`, and a change to
+     * the list of dive sites the day visits (`src/lib/trip-revision.ts` holds
+     * that rule, with no database in it). `moveTrip`, `updateTrip`,
+     * `applyDetailsToFutureSeries` and the demo refresh are the writers.
+     *
+     * **Nothing else does**, and the omissions are the point. A conditions
+     * note, a status flip, a title, a price and a capacity all leave it where
+     * it is: a calendar client re-alerts a diver's phone on a `SEQUENCE` it
+     * has not seen, and a crew member typing "vis is 40ft today" at the rail
+     * must not buzz the whole boat. A counter that moved for a note and stayed
+     * flat for a two-hour time change would be worse than no counter at all.
+     *
+     * A duplicated departure is a new row and starts at 0; so does every
+     * instance a series roll materializes.
+     */
+    revision: integer("revision").notNull().default(0),
+    /**
      * Set when staff delete an empty departure (ADR 20260820-every-delete-is-soft).
      *
      * `deleteTrip` still refuses a departure with any roster, wait-list entry or

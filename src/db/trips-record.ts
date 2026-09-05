@@ -11,6 +11,7 @@ import {
   tripConditionsSnapshot,
 } from "@/lib/trip-change-events";
 import type { TripDiveMode } from "@/lib/trip-details";
+import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
@@ -392,6 +393,11 @@ export async function updateTrip(
         // is fixed at creation and `UpdateTripPatch` carries no `courseId`, so
         // the row's own value is the only place to learn it.
         courseId: trips.courseId,
+        // Both read for the revision rule below (issue #1165): the two facts a
+        // calendar client re-alerts on are when the boat leaves and where it
+        // goes, so both have to be compared against what the patch asks for.
+        startsAt: trips.startsAt,
+        diveSiteId: trips.diveSiteId,
         meetingPointLabel: trips.meetingPointLabel,
         meetingPointAddress: trips.meetingPointAddress,
         arrivalLandmark: trips.arrivalLandmark,
@@ -454,9 +460,39 @@ export async function updateTrip(
     }
     const changedAt = nowDate();
     const beforeArrival = tripArrivalSnapshot(existing);
+
+    // **Does this edit move the calendar?** (issue #1165.) `trips.revision` is
+    // published as RFC 5545 `SEQUENCE`, so it has to rise for the two facts a
+    // subscribed client must re-alert on — the departure instant and the list
+    // of sites the day visits — and for nothing else. A title, a price, a
+    // capacity and a meeting-point note all leave it alone; the rule itself is
+    // `src/lib/trip-revision.ts`, with no database in it.
+    //
+    // Read sequentially rather than fanned out: this is inside a transaction,
+    // which is one checked-out client (`scripts/check-db-concurrency.mjs`).
+    const existingDives = await tx
+      .select({ diveNumber: tripDives.diveNumber, diveSiteId: tripDives.diveSiteId })
+      .from(tripDives)
+      .where(eq(tripDives.tripId, tripId));
+    const beforeSites = tripSiteList(existingDives);
+    // A patch with no `dives` leaves the plan exactly as it was, so its "after"
+    // is its "before" — the dive rows are only replaced when `drafts` exists.
+    const afterSites = drafts ? tripSiteList(drafts) : beforeSites;
+    const nextDiveSiteId =
+      patch.diveSiteId === undefined
+        ? existing.diveSiteId
+        : (patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null));
+    const revisionMoved =
+      patch.startsAt.getTime() !== existing.startsAt.getTime() ||
+      tripSiteListChanged(beforeSites, afterSites) ||
+      // The denormalized pointer counts on its own: it is what the feed reads
+      // for `LOCATION` when the trip has no meeting point of its own.
+      nextDiveSiteId !== existing.diveSiteId;
+
     const [trip] = await tx
       .update(trips)
       .set({
+        ...(revisionMoved ? { revision: sql`${trips.revision} + 1` } : {}),
         title: patch.title,
         description: patch.description ?? null,
         meetingPointLabel: patch.meetingPointLabel ?? null,
@@ -568,7 +604,16 @@ export type TripConditionsPatch = {
   changeActorPersonId?: string | null;
 };
 
-/** Forecasts belong to the dated charter and are explicitly timestamped. */
+/**
+ * Forecasts belong to the dated charter and are explicitly timestamped.
+ *
+ * **Deliberately never touches `trips.revision`** (issue #1165). A conditions
+ * note is published as `SEQUENCE` by nothing: bumping the counter here would
+ * re-alert every diver's calendar every time the crew typed "vis is 40ft
+ * today", which is the exact notification noise the calendar boundary rules
+ * out. `setTripStatus` is the same — a cancelled departure leaves the feed by
+ * losing its UID, not by being re-issued at a higher revision.
+ */
 export async function updateTripConditions(
   db: AppDb,
   shopId: string,

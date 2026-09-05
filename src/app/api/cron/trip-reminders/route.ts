@@ -36,6 +36,11 @@ const CRON_MONITOR_CONFIG = {
  * five scans are durable-retry drains whose backoff bounds derive from
  * `DAILY_TICK_CRONTAB` (OPS-6), and moving that cadence would move a retry
  * window this has no business touching.
+ *
+ * A pass can now report a cadence that came due and was not sent: the rhythm
+ * rule table (`TRIP_REMINDER_RHYTHM`, issue #1177) holds the 7-day nudge back
+ * from a diver with nothing left undone, and the summary counts those as
+ * `settled` rather than as sent, skipped or failed.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
