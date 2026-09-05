@@ -106,11 +106,98 @@ export const STAFF_HISTORY_TABLES = [
 export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as const;
 
 /**
- * The rest of the `person_id` columns in the schema, each left where it is on
- * purpose. Stated rather than merely absent so `diver-merge.test.ts` can hold
- * the three lists above exhaustive against the live database: a table added
- * tomorrow with a `person_id` fails that test until somebody decides which of
- * these four answers it deserves.
+ * Every `%person_id` column that is not a bare `person_id`, keyed
+ * `table.column`. **None of them move**, and stating that is the point: the
+ * exhaustiveness test below asked `column_name = 'person_id'`, so a column
+ * carrying a prefix — which is most of them — was invisible to the guard
+ * written to stop a table being forgotten. `trip_desk_events` (slice 16d)
+ * landed in that blind spot with nothing going red. The test now asks
+ * `like '%person_id'`, and this map is what makes it pass on purpose rather
+ * than by accident.
+ *
+ * Two reasons cover the whole list.
+ *
+ * **Attribution** — `recorded_by`, `actor`, `created_by`, `deleted_by`,
+ * `issued_by`, `reviewed_by`, `called_by`, `resolved_by`, `uploaded_by`,
+ * `decided_by`, `discharged_by`, `merged_by`, `anonymized_by`. Who did a thing
+ * is operational evidence about the *shop*, on the same ground `anonymizeDiver`
+ * refuses to erase a staff member at all. A merge involving somebody who has
+ * any of it is refused by the `STAFF_*` lists long before this matters.
+ *
+ * **Subject on an event trail** — `activity_events.subject_person_id` and
+ * `trip_desk_events.subject_person_id`. A trail records what happened, not what
+ * is true now: repointing the subject would make the shop's own history claim
+ * the survivor was the subject of an act performed against a record that had a
+ * different name at the time. This is the pre-existing, tested answer for
+ * `activity_events` ("leaves activity subjects on the original id"), and
+ * `trip_desk_events` takes it for the same reason plus one of its own — it is
+ * read by `trip_id`, never by person, so nothing is lost from the survivor's
+ * page by leaving it.
+ */
+export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string>> = {
+  "activity_events.actor_person_id": "who did it — attribution, not diver history",
+  "activity_events.subject_person_id": "an event trail records who it happened to at the time",
+  "buddy_pair_members.crew_person_id": "a crew member on a team, refused as a staff record",
+  "buddy_pair_members.paired_by_person_id": "who built the team",
+  "buddy_team_events.recorded_by_person_id": "who recorded the team change",
+  "certifications.deleted_by_person_id": "who removed the card",
+  "certifications.issued_by_person_id": "who entered the card",
+  "certifications.reviewed_by_person_id": "who confirmed the card",
+  "closeout_leftover_decisions.actor_person_id": "who decided what happened to the leftover",
+  "crew_assignment_requests.decided_by_person_id": "who answered the ask",
+  "crew_availability_blocks.created_by_person_id": "who blocked the days",
+  "day_closeouts.actor_person_id": "who closed the day",
+  "dive_packages.created_by_person_id": "who wrote the package",
+  "executed_dives.deleted_by_person_id": "who deleted the logged dive",
+  "executed_dives.recorded_by_person_id": "who logged the dive",
+  "gear_items.deleted_by_person_id": "who retired the unit",
+  "gear_service_events.recorded_by_person_id": "who serviced the unit",
+  "internal_notes.created_by_person_id": "who wrote the note",
+  "marine_life_requests.requested_by_person_id": "which staffer asked for the species",
+  "nitrox_certifications.deleted_by_person_id": "who removed the card",
+  "nitrox_certifications.issued_by_person_id": "who entered the card",
+  "nitrox_certifications.reviewed_by_person_id": "who confirmed the card",
+  "orders.created_by_person_id": "who took the order",
+  "people.anonymized_by_person_id": "provenance for an erasure, and anonymized rows never merge",
+  "people.merged_by_person_id": "who ran a merge",
+  "people.merged_into_person_id":
+    "the merge pointer itself — structural, and what makes the shell resolve",
+  "people.no_certification_cleared_by_person_id": "who cleared the no-card stamp",
+  "pre_departure_check_events.recorded_by_person_id": "who ticked the check",
+  "pre_departure_checklist_items.deleted_by_person_id": "who removed the check",
+  "processor_erasure_obligations.discharged_by_person_id": "who discharged the obligation",
+  "review_moderation_events.recorded_by_person_id": "who published or withheld the review",
+  "roll_call_crew_events.recorded_by_person_id": "who called the crew roll",
+  "roll_call_events.recorded_by_person_id": "who called the roll",
+  "shop_promo_codes.created_by_person_id": "who wrote the code",
+  "specialty_certifications.deleted_by_person_id": "who removed the card",
+  "specialty_certifications.issued_by_person_id": "who entered the card",
+  "specialty_certifications.reviewed_by_person_id": "who confirmed the card",
+  "staff_credentials.deleted_by_person_id": "who removed the credential",
+  "staff_credentials.reviewed_by_person_id": "who confirmed the credential",
+  "staff_shifts.created_by_person_id": "who wrote the shift",
+  "trip_blowouts.called_by_person_id": "who called the blow-out",
+  "trip_change_events.actor_person_id": "who changed the departure",
+  "trip_desk_events.actor_person_id": "who did it at the desk",
+  "trip_desk_events.subject_person_id": "an event trail records who it happened to at the time",
+  "trip_help_requests.resolved_by_person_id": "who answered the ask",
+  "trip_invitations.created_by_person_id": "who sent the invitation",
+  "trip_last_minute_promos.created_by_person_id": "who wrote the deal",
+  "trip_recap_photos.uploaded_by_person_id": "who uploaded the photo",
+  "trip_stage_events.recorded_by_person_id": "who said where the boat was",
+  "waiver_materiality_decisions.actor_person_id": "who judged the answer material",
+  "waiver_records.anonymized_by_person_id": "provenance for an erasure on a signed release",
+  "waiver_records.medical_clearance_declined_by_person_id": "who declined the clearance",
+  "waiver_records.medical_cleared_by_person_id": "who cleared the medical answer",
+  "waiver_records.recorded_by_person_id": "who witnessed the signature",
+};
+
+/**
+ * The rest of the bare `person_id` columns in the schema, each left where it is
+ * on purpose. Stated rather than merely absent so `diver-merge.test.ts` can hold
+ * the lists above exhaustive against the live database: a table added tomorrow
+ * with a `person_id` fails that test until somebody decides which of these
+ * answers it deserves.
  */
 export const PERSON_TABLES_DELIBERATELY_UNMOVED: Readonly<Record<string, string>> = {
   // Each identity keeps its own roles. The source row survives soft-deleted
