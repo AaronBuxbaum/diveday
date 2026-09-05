@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { liveStageOf, type TripStage, type TripStageReading } from "@/lib/trip-stages";
@@ -176,7 +176,10 @@ export async function liveShopStage(
         eq(trips.status, "scheduled"),
         eq(trips.isPrivate, false),
         gte(tripStageEvents.recordedAt, windowStart),
-        lt(tripStageEvents.recordedAt, now),
+        // Inclusive: a tap recorded in the same instant as this read is not in
+        // the future, and on a frozen clock (the e2e fleet, the seeded demo)
+        // every tap shares that instant exactly.
+        lte(tripStageEvents.recordedAt, now),
       ),
     )
     .orderBy(desc(tripStageEvents.recordedAt), desc(tripStageEvents.seq));

@@ -1,5 +1,5 @@
-import { and, asc, eq } from "drizzle-orm";
-import { MINUTE_MS } from "@/lib/clock";
+import { and, asc, eq, gt, lte } from "drizzle-orm";
+import { MINUTE_MS, nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import { tripDives, tripStageEvents, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -23,12 +23,42 @@ export async function seedTripStage(
   shopId: string,
   recordedByPersonId: string,
 ): Promise<void> {
-  const [today] = await db
+  // The departure that is out *right now*, or the next one boarding. Anything
+  // else and the demo seeds a word that has already gone stale — a stage stops
+  // speaking once a boat's own day is over, which is the rule, and a seed that
+  // ignored it would leave the whole slice invisible on the one shop every
+  // capture is of.
+  const now = nowDate();
+  const [running] = await db
     .select({ id: trips.id, startsAt: trips.startsAt })
     .from(trips)
-    .where(and(eq(trips.shopId, shopId), liveTrip(), eq(trips.status, "scheduled")))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        liveTrip(),
+        eq(trips.status, "scheduled"),
+        lte(trips.startsAt, now),
+        gt(trips.endsAt, now),
+      ),
+    )
     .orderBy(asc(trips.startsAt))
     .limit(1);
+  const [upcoming] = running
+    ? []
+    : await db
+        .select({ id: trips.id, startsAt: trips.startsAt })
+        .from(trips)
+        .where(
+          and(
+            eq(trips.shopId, shopId),
+            liveTrip(),
+            eq(trips.status, "scheduled"),
+            gt(trips.startsAt, now),
+          ),
+        )
+        .orderBy(asc(trips.startsAt))
+        .limit(1);
+  const today = running ?? upcoming;
   if (!today) return;
 
   const [firstDive] = await db
@@ -41,9 +71,11 @@ export async function seedTripStage(
   await db.insert(tripStageEvents).values({
     shopId,
     tripId: today.id,
-    stage: "underway",
+    // A boat that has left is out on its site; one still at the dock is
+    // boarding, which is the word its crew would have tapped.
+    stage: running ? "underway" : "boarding",
     diveSiteId: firstDive?.diveSiteId ?? null,
     recordedByPersonId,
-    recordedAt: new Date(today.startsAt.getTime() + 20 * MINUTE_MS),
+    recordedAt: running ? new Date(today.startsAt.getTime() + 20 * MINUTE_MS) : now,
   });
 }

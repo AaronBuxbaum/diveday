@@ -59,6 +59,12 @@ export function liveStageOf(
 ): TripStageReading | null {
   if (!reading) return null;
   if (!endsAt) return reading;
+  // diveday:allow-departure-offset: this is a word's shelf life, not a
+  // departure check. `hasReturned` answers "is the boat back?", which a stage
+  // must not depend on — the whole point of the line is a boat that is late.
+  // What expires here is DiveDay's licence to keep repeating a sentence the
+  // crew has stopped maintaining, and two late-arrival buffers is the window
+  // the ADR's own risk note argues for.
   if (now.getTime() > endsAt.getTime() + STAGE_STALE_AFTER_MS) return null;
   return reading;
 }
