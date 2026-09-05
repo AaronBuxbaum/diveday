@@ -182,7 +182,14 @@ export async function getRecapPulseForBooking(
     .from(recapPulses)
     .where(and(eq(recapPulses.bookingId, bookingId), isNull(recapPulses.deletedAt)))
     .limit(1);
-  return row ? { categories: row.categories, note: row.note } : null;
+  // Re-narrowed on the way out, not trusted on the way in. `categories` is
+  // jsonb and drizzle's `$type<>` is a compile-time assertion only — the check
+  // constraint guards the array's *length*, never its membership. Every writer
+  // parses today, so nothing off-enum can be in there; parsing here is what
+  // makes that structural rather than a property of the current writers, and
+  // it is the difference between a surface rendering one fewer chip and
+  // `t(undefined)` reaching a reader.
+  return row ? { categories: parseRecapPulseCategories(row.categories), note: row.note } : null;
 }
 
 /**
@@ -211,7 +218,11 @@ export async function listOpenRecapPulses(
       tripStartsAt: trips.startsAt,
     })
     .from(recapPulses)
-    .innerJoin(people, eq(people.id, recapPulses.personId))
+    // The tenant condition stated in the query rather than three files away:
+    // `recapPulses.personId` is copied off an already-shop-scoped booking, so
+    // this is unreachable today, but the invariant lives in `bookings.ts` and
+    // the join is what a reader looks at.
+    .innerJoin(people, and(eq(people.id, recapPulses.personId), eq(people.shopId, shopId)))
     // diveday:allow-deleted-trips: a pulse about a departure the shop later took
     // off the board is still a thing the shop was asked to fix, and dropping it
     // here would silently empty the panel rather than answer it.
@@ -225,7 +236,9 @@ export async function listOpenRecapPulses(
     )
     .orderBy(desc(recapPulses.createdAt))
     .limit(options.limit ?? 20);
-  return rows;
+  // Same re-narrowing as the reader above, for the same reason: this list is
+  // what the staff panel keys its category words off.
+  return rows.map((row) => ({ ...row, categories: parseRecapPulseCategories(row.categories) }));
 }
 
 /**
