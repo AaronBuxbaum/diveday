@@ -285,6 +285,20 @@ export const shops = pgTable(
     sendWindowStartHour: integer("send_window_start_hour").notNull().default(8),
     sendWindowEndHour: integer("send_window_end_hour").notNull().default(20),
     /**
+     * Where the shop's season starts — the denominator behind the home's one
+     * fact of scale (ADR 20260904-reef-all-the-way-down, decision 2, Budget
+     * rule 3). "Your 400th diver of the season" is a claim about a count from
+     * a date, and a dive shop's year rarely starts in January, so the shop
+     * chooses. Two integers rather than a date because the year is whichever
+     * one the anniversary last fell in, which `seasonStartInstant` resolves in
+     * the shop's own zone.
+     *
+     * February is capped at 28 by the constraint below, not 29: a season
+     * beginning on a leap day would need a clamp in every reader of it.
+     */
+    seasonStartMonth: integer("season_start_month").notNull().default(1),
+    seasonStartDay: integer("season_start_day").notNull().default(1),
+    /**
      * When the shop last saved its units — the signal behind the setup
      * checklist's "check your currency and depth unit" step. Onboarding now
      * *derives* both from the timezone (`src/lib/curated-defaults.ts`), and a
@@ -341,6 +355,19 @@ export const shops = pgTable(
   },
   (table) => [
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
+    // The same days `parseSeasonStart` accepts (`src/lib/season.ts`). A
+    // constraint looser than the action it backs lets any other caller
+    // persist a date the counting would have to guess about.
+    check(
+      "shops_season_start_month_in_range",
+      sql`${table.seasonStartMonth} >= 1 and ${table.seasonStartMonth} <= 12`,
+    ),
+    check(
+      "shops_season_start_day_in_month",
+      sql`${table.seasonStartDay} >= 1 and ${table.seasonStartDay} <= 31
+        and not (${table.seasonStartMonth} = 2 and ${table.seasonStartDay} > 28)
+        and not (${table.seasonStartMonth} in (4, 6, 9, 11) and ${table.seasonStartDay} > 30)`,
+    ),
     // A year a shop could plausibly have opened in. Bounded at both ends like
     // every other numeric setting, so no caller can persist a figure the
     // storefront would print as nonsense.

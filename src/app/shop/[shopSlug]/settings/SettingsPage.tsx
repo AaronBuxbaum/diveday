@@ -60,7 +60,13 @@ import {
   dockDayOffsets,
 } from "@/lib/diver-planning";
 import { EMERGENCY_LINE_SLOTS, hasEmergencyReference } from "@/lib/emergency-reference";
-import { formatHourOfDay, formatMoneyScanned, formatShortDate } from "@/lib/format";
+import {
+  formatHourOfDay,
+  formatMoneyScanned,
+  formatMonthDay,
+  formatShortDate,
+  monthNames,
+} from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
@@ -103,6 +109,7 @@ import {
   saveRentalPricingAction,
   saveReviewUrlAction,
   saveSearchListingAction,
+  saveSeasonStartAction,
   saveSendWindowAction,
   saveTaxAction,
   saveTimezoneAction,
@@ -126,6 +133,8 @@ function noticeMessages(
     "packing-saved": { tone: "success", text: t("settings.main.notice.packingSaved") },
     "packing-invalid": { tone: "danger", text: t("settings.main.notice.packingInvalid") },
     "timezone-saved": { tone: "success", text: t("settings.main.notice.timezoneSaved") },
+    "season-saved": { tone: "success", text: t("settings.main.notice.seasonSaved") },
+    "season-invalid": { tone: "danger", text: t("settings.main.notice.seasonInvalid") },
     "timezone-invalid": { tone: "danger", text: t("settings.main.notice.timezoneInvalid") },
     "dock-saved": { tone: "success", text: t("settings.main.notice.dockSaved") },
     "emergency-saved": { tone: "success", text: t("settings.main.notice.emergencySaved") },
@@ -730,6 +739,63 @@ export default async function SettingsPage({
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("settings.main.timezone.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            {/* Beside the timezone, because the two are one reading: the zone
+              says when a day starts and this says when the counting does. The
+              denominator behind the home's one fact of scale (ADR
+              20260904-reef-all-the-way-down, Budget rule 3) — a dive shop's
+              year rarely starts in January, and "your 400th diver of the
+              season" is only true against a date the shop chose. */}
+            <SettingsRow
+              heading={t("settings.main.season.heading")}
+              value={formatMonthDay(shop.seasonStartMonth, shop.seasonStartDay, locale)}
+              detail={t("settings.main.season.detail")}
+              sectionId="season"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="season" active={activeSection} />
+              <FieldGrid as="form" action={saveSeasonStartAction} columns={2} className="mt-4">
+                <Field label={t("settings.main.season.monthLabel")}>
+                  <select
+                    name="seasonStartMonth"
+                    required
+                    defaultValue={shop.seasonStartMonth}
+                    className={controlClass}
+                  >
+                    {monthNames(locale).map((name, index) => (
+                      <option key={name} value={index + 1}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label={t("settings.main.season.dayLabel")}>
+                  {/* A number rather than a second select: the days a month
+                    has depend on the month, and the action and the table both
+                    refuse a date the calendar does not have (`parseSeasonStart`
+                    and the `shops_season_start_day_in_month` constraint), so a
+                    31 chosen in April comes back as a refusal on the field
+                    rather than as a silently clamped 30. */}
+                  <input
+                    type="number"
+                    name="seasonStartDay"
+                    required
+                    min={1}
+                    max={31}
+                    defaultValue={shop.seasonStartDay}
+                    className={controlClass}
+                  />
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.season.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.season.submit")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>

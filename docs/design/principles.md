@@ -91,6 +91,27 @@ sold-out charter, sitting under a diver who cannot board, is the software please
 good morning the two moments above already say so. If a shop ever asks for its own scoreboard, that
 is a surface of its own and not a consolation attached to the work queue.
 
+**The budget widened along one axis — time — on 2026-09-04, and every ban above stands** (H-67 a,
+ADR [20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md),
+decision 2). Between Reef's three moments no surface said what time it was, and that silence cost
+delight without buying trust. Two of its eight rules are what a reader of this section meets first,
+and both render nothing when they are not true:
+
+- **The water band takes one of four washes by the shop's clock** — dawn 5–8, day, dusk 17–20,
+  night. Lagoon-family and sand only, never coral, and never a status: the band carries no fact,
+  which is why it may sit behind a manifest where the swell may not. An hour outside the three named
+  windows gets the day wash, which is the one that has always shipped.
+- **One fact of scale, on the day it is true** — every hundredth diver of the season, the season's
+  first boat, and the two once-a-shop moments that already ship. A count of divers or boats, never
+  money, a comparison, a streak or a rank. It *is* that day's earned moment rather than a fourth
+  coral element, so it outranks the daily all-clear line above and stands down for the two that
+  happen once ever.
+
+That is not the standing line coming back through a side door. A standing line is present whether or
+not the day earned one; a fact of scale is true once a season and silent for the rest of it, and it
+is a count rather than a compliment — which is why it may sit above a diver who cannot board, where
+"yesterday's charter sold out" may not.
+
 ## 4. Words sound like a good dive briefing
 
 Microcopy is warm, plain, and brief — a competent divemaster, not a lawyer or a mascot. Empty

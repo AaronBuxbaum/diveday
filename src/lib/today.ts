@@ -12,6 +12,7 @@ import { HOUR_MS } from "@/lib/clock";
 import type { Role } from "./authz";
 import type { CrewIncompleteReason } from "./manifests";
 import type { AboardBlockerKind, ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
+import type { SeasonStart } from "./season";
 import { utcToWallTime } from "./zoned";
 
 /**
@@ -1075,3 +1076,55 @@ export function todaysBoatsAreClear(spine: DaySpine): boolean {
   if (spine.desk.some(pressing)) return false;
   return !spine.stations.some((station) => station.rows.some(pressing));
 }
+
+/**
+ * **One fact of scale, on the day it is true** — ADR
+ * 20260904-reef-all-the-way-down, decision 2, Budget rule 3.
+ *
+ * The narrower thing the standing good-news line was declined for being
+ * (issue #808, still declined): not a line that is present always, but a fact
+ * that is true once and then never again this season. Rule 3 bounds it to a
+ * count of divers or boats — never money, a comparison, a streak or a rank —
+ * and it renders **nothing** on every other day, which is most of them.
+ *
+ * The season's first boat outranks its hundredth diver when a day is both:
+ * one of them happens once a season and the other happens five times.
+ *
+ * The hundredth diver is the seat that *crosses* the hundred, in boarding
+ * order, so a day that crosses two hundreds says the first of them and never
+ * the second. That is the same restraint the coral budget puts on every other
+ * moment: one, or none.
+ */
+export type FactOfScale =
+  | { kind: "first_boat"; seasonStart: SeasonStart }
+  | {
+      kind: "divers";
+      count: number;
+      diverName: string;
+      departureAt: Date;
+      seasonStart: SeasonStart;
+    };
+
+export function factOfScaleFor(input: {
+  seasonStart: SeasonStart;
+  seatsBefore: number;
+  todaySeats: readonly { diverName: string; departureAt: Date }[];
+  firstBoatOfSeason: boolean;
+}): FactOfScale | null {
+  if (input.firstBoatOfSeason) return { kind: "first_boat", seasonStart: input.seasonStart };
+  for (const [index, seat] of input.todaySeats.entries()) {
+    const running = input.seatsBefore + index + 1;
+    if (running % FACT_OF_SCALE_EVERY !== 0) continue;
+    return {
+      kind: "divers",
+      count: running,
+      diverName: seat.diverName,
+      departureAt: seat.departureAt,
+      seasonStart: input.seasonStart,
+    };
+  }
+  return null;
+}
+
+/** Every hundredth diver, which is the ADR's own number. */
+const FACT_OF_SCALE_EVERY = 100;

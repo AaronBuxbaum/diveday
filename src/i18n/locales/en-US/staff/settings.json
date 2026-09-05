@@ -37,6 +37,8 @@
       "refreshed": "Payment status refreshed from Stripe.",
       "notAuthorized": "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers.",
       "timezoneSaved": "Timezone saved.",
+      "seasonSaved": "Season start saved.",
+      "seasonInvalid": "Pick a day that month has.",
       "timezoneInvalid": "That isn’t a timezone we recognize. Pick one from the list.",
       "emergencySaved": "Emergency reference saved.",
       "sendWindowSaved": "Message hours saved.",
@@ -84,6 +86,14 @@
         "palau": "Palau",
         "fiji": "Fiji"
       }
+    },
+    "season": {
+      "heading": "Season start",
+      "detail": "Your diver and boat counts run from this date each year.",
+      "monthLabel": "Month",
+      "dayLabel": "Day",
+      "submitting": "Saving…",
+      "submit": "Save season start"
     },
     "contact": {
       "heading": "Public contact details",

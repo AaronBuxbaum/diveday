@@ -137,6 +137,11 @@
     "allHome": "Todos los barcos están en puerto: {out} salieron, {back} volvieron.",
     "firstBoatHome": "Tu primer barco está en puerto: {out} salieron, {back} volvieron.",
     "firstBooking": "Tu primera reserva",
+    "factOfScale": {
+      "divers": "{name} embarca en la salida de las {time} como tu buceador número {count} de la temporada.",
+      "firstBoat": "Primera salida de la temporada.",
+      "since": "Desde el {date}"
+    },
     "close": {
       "back": "{back} de {booked} de vuelta",
       "backBy": "{back} de {booked} de vuelta a las {time}",

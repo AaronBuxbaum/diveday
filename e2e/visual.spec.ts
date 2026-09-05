@@ -5732,6 +5732,83 @@ test.describe("print", () => {
  * blue-mantis would hand a blank emergency card to whichever spec ran next in
  * this worker (ADR 20260815-per-test-private-shops).
  */
+/**
+ * **The water band's four washes** — ADR 20260904-reef-all-the-way-down,
+ * decision 2, Budget rule 1.
+ *
+ * The band follows the *shop's* clock, and the fleet's clock cannot move:
+ * `DIVEDAY_CLOCK` is one process-wide value shared by the server, the seed and
+ * the browser (`e2e/servers.ts`), which is why `seed-evening` moves departures
+ * rather than time. So the shop moves. At the frozen instant these three zones
+ * read 06:30, 18:30 and 03:30, and the day wash is already photographed by
+ * every other capture of this page — `today` and its siblings are a New York
+ * shop at 09:30.
+ *
+ * A private shop per capture, with a pinned identity for the reason the
+ * emergency-reference block below states: a minted shop's name is drawn at
+ * random and renders in the header. The seeded departures keep their instants,
+ * so these boards read at odd local hours; the frame is the band, not the
+ * board.
+ *
+ * Twelve screenshots (three washes, two schemes, two viewports) for a rule
+ * whose whole surface is a background gradient. That is the price of
+ * photographing it rather than asserting a class name, and this file's own
+ * docblock asks that it be stated rather than absorbed.
+ */
+for (const scheme of ["light", "dark"] as const) {
+  // Three describes rather than a loop over a table, because the capture name
+  // has to be a literal: `scripts/check-route-coverage.mjs` reads the
+  // `capture(page, "…")` calls out of this file to know what each route is
+  // covered by, and a template literal is invisible to it.
+  test.describe(`${scheme} mode — the water band at dawn`, () => {
+    test.use({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+      privateShopSlug: "coral-ledge-divers",
+      privateShopTimezone: "America/Los_Angeles",
+    });
+
+    test(`the shop home wears the dawn wash (${scheme})`, async ({ page, privateShop }) => {
+      await page.goto(`/shop/${privateShop.slug}`);
+      // The attribute the wash is chosen by, not a timing guess: it is
+      // server-rendered, so its presence is the page having rendered as this
+      // shop rather than as the shell.
+      await page.locator('#shop-main-content[data-water-band="dawn"]').waitFor();
+      await capture(page, "today-band-dawn", scheme);
+    });
+  });
+
+  test.describe(`${scheme} mode — the water band at dusk`, () => {
+    test.use({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+      privateShopSlug: "windward-bell-divers",
+      privateShopTimezone: "Indian/Maldives",
+    });
+
+    test(`the shop home wears the dusk wash (${scheme})`, async ({ page, privateShop }) => {
+      await page.goto(`/shop/${privateShop.slug}`);
+      await page.locator('#shop-main-content[data-water-band="dusk"]').waitFor();
+      await capture(page, "today-band-dusk", scheme);
+    });
+  });
+
+  test.describe(`${scheme} mode — the water band at night`, () => {
+    test.use({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+      privateShopSlug: "lantern-bay-divers",
+      privateShopTimezone: "Pacific/Honolulu",
+    });
+
+    test(`the shop home wears the night wash (${scheme})`, async ({ page, privateShop }) => {
+      await page.goto(`/shop/${privateShop.slug}`);
+      await page.locator('#shop-main-content[data-water-band="night"]').waitFor();
+      await capture(page, "today-band-night", scheme);
+    });
+  });
+}
+
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode — the unanswered emergency reference`, () => {
     // **A pinned identity, or this capture is noise.** The minted shop's name

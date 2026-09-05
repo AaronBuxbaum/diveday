@@ -36,6 +36,7 @@ export type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
  */
 export const SECTION_IDS = [
   "timezone",
+  "season",
   "contact",
   "profile",
   "address",
@@ -177,6 +178,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.timezone.heading",
     group: "your-shop",
     target: { kind: "section", id: "timezone" },
+  },
+  {
+    id: "season",
+    labelKey: "settings.main.season.heading",
+    group: "your-shop",
+    target: { kind: "section", id: "season" },
   },
   {
     id: "contact",

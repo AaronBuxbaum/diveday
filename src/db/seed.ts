@@ -522,7 +522,7 @@ const DEMO_IDENTITY_ATTEMPTS = 5;
  * identity on a name collision — never patching the slug alone, since every
  * staff email is derived from it and would otherwise disagree with the shop.
  */
-async function insertDemoShop(db: DbExecutor, pinnedSlug?: string) {
+async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, timezone?: string) {
   let lastError: unknown;
   for (let attempt = 0; attempt < DEMO_IDENTITY_ATTEMPTS; attempt += 1) {
     // A pinned identity has nothing to retry *to* — it is the caller's own
@@ -535,7 +535,7 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string) {
         .values({
           name: identity.name,
           slug: identity.slug,
-          timezone: DEMO_SHOP_TIMEZONE,
+          timezone: timezone ?? DEMO_SHOP_TIMEZONE,
           // **Deliberately left unconfirmed**, unlike the canonical demo above.
           // A minted shop genuinely has not answered the units question, and
           // pre-answering it on the shop's behalf would make the one fixture
@@ -619,7 +619,15 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string) {
 
 export async function createDemoShop(
   db: DbExecutor,
-  opts: { history?: boolean; slug?: string } = {},
+  /**
+   * `timezone` moves the shop, not the board: `seed-clock.ts` anchors every
+   * seeded departure to `DEMO_SHOP_TIMEZONE`, so a shop minted in another zone
+   * reads those same instants at its own local hours. It exists so a visual
+   * capture can photograph a water band other than the fleet clock's (ADR
+   * 20260904-reef-all-the-way-down, Budget rule 1), which no test can do by
+   * moving `DIVEDAY_CLOCK` — that is one process-wide value.
+   */
+  opts: { history?: boolean; slug?: string; timezone?: string } = {},
 ): Promise<{ slug: string; ownerEmail: string }> {
   // Aggregate storage cap (security review, finding 1): the per-IP rate limit
   // bounds one visitor's burst but not the fleet-wide total, so an IP-rotating
@@ -628,7 +636,7 @@ export async function createDemoShop(
   // ceiling — the canonical demo and real shops are never eligible (see below).
   await enforceMintedDemoCap(db);
 
-  const { shop, identity } = await insertDemoShop(db, opts.slug);
+  const { shop, identity } = await insertDemoShop(db, opts.slug, opts.timezone);
 
   await db.insert(boats).values([
     {

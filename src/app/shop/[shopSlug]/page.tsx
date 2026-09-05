@@ -25,6 +25,7 @@ import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/c
 import { listDiveSites } from "@/db/dive-sites";
 import { shopFirstBooking } from "@/db/first-booking";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
+import { seasonScale } from "@/db/season-scale";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTodayWork } from "@/db/today";
@@ -48,6 +49,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { recapAutoSendAt } from "@/lib/recap-schedule";
+import { seasonStartInstant } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -55,6 +57,7 @@ import {
   ACTION_KIND_META,
   assembleDaySpine,
   type DayStation,
+  factOfScaleFor,
   getTimeOfDayGreeting,
   roleLensFor,
   spineIsQuiet,
@@ -438,6 +441,26 @@ async function TodayBody({
   // the same reasoning `firstBookableMoment` below makes about departures.
   const firstBooking =
     shop.isDemo || showFirstRunChecklist ? null : await shopFirstBooking(db, shop.id, now);
+  // **One fact of scale, on the day it is true** (ADR
+  // 20260904-reef-all-the-way-down, decision 2, Budget rule 3). A read, never
+  // a cache: nothing is stored and nothing is acknowledged, so the sentence
+  // ends when the day does. Skipped on a shop still in first run for the same
+  // reason as the line above — it has no departures to count. The demo shop
+  // keeps it: its board is seeded but its divers are real rows, and a count is
+  // not a claim about a first.
+  const season = { month: shop.seasonStartMonth, day: shop.seasonStartDay };
+  const factOfScale = showFirstRunChecklist
+    ? null
+    : factOfScaleFor({
+        seasonStart: season,
+        ...(await seasonScale(
+          db,
+          shop.id,
+          shop.timezone,
+          seasonStartInstant(now, shop.timezone, season),
+          now,
+        )),
+      });
   const showOrientation =
     orientationRole !== null &&
     !showFirstRunChecklist &&
@@ -851,6 +874,7 @@ async function TodayBody({
           helpRequestAction={updateHelpRequestAction}
           showPaymentsRow={showPaymentsRow}
           firstBooking={firstBooking}
+          factOfScale={factOfScale}
           evening={evening}
           now={now}
           sessions={

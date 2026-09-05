@@ -809,6 +809,14 @@ export async function loadShopExportBundleInput(
             // texting at hours it had deliberately ruled out.
             "send_window_start_hour",
             "send_window_end_hour",
+            // Where the shop's season starts (ADR
+            // 20260904-reef-all-the-way-down, Budget rule 3). Exported for the
+            // same reason as the window above: it is a date the shop chose,
+            // and a restore that silently put it back on 1 January would make
+            // the home's one fact of scale count from a year the shop never
+            // named.
+            "season_start_month",
+            "season_start_day",
             // Whether the shop asked to stay out of search engines
             // (ADR 20260813-search-listing-is-a-choice). Exported because the
             // bundle is also the *backup*: a shop that opted out and later
@@ -863,6 +871,8 @@ export async function loadShopExportBundleInput(
               JSON.stringify(shop.emergencyReference),
               shop.sendWindowStartHour,
               shop.sendWindowEndHour,
+              shop.seasonStartMonth,
+              shop.seasonStartDay,
               shop.searchListingOptOutAt,
               JSON.stringify(shop.conservationCommitments),
               shop.tagline,

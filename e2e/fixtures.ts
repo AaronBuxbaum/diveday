@@ -118,6 +118,7 @@ export const test = base.extend<
     browserActivity: undefined;
     privateShop: PrivateShop;
     privateShopSlug: string | null;
+    privateShopTimezone: string | null;
   },
   { workerBaseURL: string; staffStorageState: (role: StaffRole) => Promise<string> }
 >({
@@ -290,14 +291,30 @@ export const test = base.extend<
    */
   privateShopSlug: [null, { option: true }],
 
-  privateShop: async ({ demoReset, request, page, privateShopSlug }, use) => {
+  /**
+   * Pin the minted shop's **zone**, for a visual capture and nothing else.
+   *
+   * The water band takes one of four washes by the shop's clock (ADR
+   * 20260904-reef-all-the-way-down, Budget rule 1), and the fleet's clock is
+   * one process-wide `DIVEDAY_CLOCK` no test can move — `seed-evening`'s own
+   * docblock says why. So the shop moves instead: at the frozen instant, four
+   * zones read as four different hours, which is also the more faithful test
+   * of a band that is supposed to follow the *shop's* clock rather than the
+   * server's. It moves the band, not the board — the seeded departures keep
+   * their instants and simply read at that zone's local hours.
+   */
+  privateShopTimezone: [null, { option: true }],
+
+  privateShop: async ({ demoReset, request, page, privateShopSlug, privateShopTimezone }, use) => {
     // Named only for ordering: the reset purges the *previous* test's minted
     // shop, and it has to have run before this one mints its replacement.
     void demoReset;
+    const mint = new URLSearchParams();
+    if (privateShopSlug) mint.set("slug", privateShopSlug);
+    if (privateShopTimezone) mint.set("timezone", privateShopTimezone);
+    const query = mint.toString();
     const response = await request.post(
-      privateShopSlug
-        ? `/api/test/seed-private-shop?slug=${encodeURIComponent(privateShopSlug)}`
-        : "/api/test/seed-private-shop",
+      query ? `/api/test/seed-private-shop?${query}` : "/api/test/seed-private-shop",
     );
     if (!response.ok()) {
       throw new Error(

@@ -15,6 +15,10 @@
     "visual": ["seat-claim"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/confirm-contact/[token]": {
+    "e2e": ["contact-email-confirmation.spec.ts"],
+    "visual": ["confirm-contact-invalid"]
+  },
   "/demo/[story]": {
     "e2e": ["demo-stories.spec.ts"],
     "visual": ["demo-story-door"]
@@ -150,13 +154,17 @@
     "visual": ["course-page"],
     "a11y": ["a11y.spec.ts"]
   },
-  "/s/[shopSlug]/reviews": {
-    "e2e": ["reviews.spec.ts"],
-    "visual": ["public-reviews"]
+  "/s/[shopSlug]/embed/[widget]": {
+    "e2e": ["embed-catalogue.spec.ts"],
+    "visual": ["embed-courses", "embed-departure", "embed-grid"]
   },
   "/s/[shopSlug]/register": {
     "e2e": ["self-registration.spec.ts"],
     "visual": ["shopfront-register"]
+  },
+  "/s/[shopSlug]/reviews": {
+    "e2e": ["reviews.spec.ts"],
+    "visual": ["public-reviews"]
   },
   "/s/[shopSlug]/trips/[id]": {
     "e2e": [
@@ -207,8 +215,11 @@
       "nav-more-menu",
       "nav-more-sheet",
       "today",
-      "today-empty",
       "today-all-home",
+      "today-band-dawn",
+      "today-band-dusk",
+      "today-band-night",
+      "today-empty",
       "today-evening",
       "today-evening-closed",
       "today-first-bookable",
@@ -290,13 +301,13 @@
       "waivers.spec.ts"
     ],
     "visual": [
+      "diver-medical-clearance-form",
+      "diver-medical-not-cleared",
       "diver-profile",
       "diver-profile-deleted",
       "diver-profile-imported",
       "diver-profile-not-certified",
       "diver-profile-paper-waiver",
-      "diver-medical-clearance-form",
-      "diver-medical-not-cleared",
       "diver-profile-payments",
       "diver-record-clear"
     ]
@@ -551,8 +562,8 @@
     "visual": [
       "manifest",
       "manifest-buddy-divergence",
-      "manifest-dive-support",
       "manifest-buddy-teams-panel",
+      "manifest-dive-support",
       "manifest-not-back-aboard",
       "manifest-person-panel"
     ],
@@ -606,10 +617,6 @@
     "visual": ["terms"],
     "a11y": ["a11y.spec.ts"]
   },
-  "/confirm-contact/[token]": {
-    "e2e": ["contact-email-confirmation.spec.ts"],
-    "visual": ["confirm-contact-invalid"]
-  },
   "/unsubscribe/[token]": {
     "e2e": ["courtesy-email-unsubscribe.spec.ts", "last-minute-fill.spec.ts"],
     "visual": ["unsubscribe-invalid"]
@@ -622,10 +629,5 @@
     "e2e": ["a11y.spec.ts", "waivers.spec.ts"],
     "visual": ["expired-link-unknown", "waiver-active"],
     "a11y": ["a11y.spec.ts"]
-  },
-  "/s/[shopSlug]/embed/[widget]": {
-    "e2e": ["embed-catalogue.spec.ts"],
-    "visual": ["embed-grid", "embed-departure", "embed-courses"],
-    "a11y": []
   }
 }
