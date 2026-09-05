@@ -137,6 +137,15 @@
     "allHome": "Todos los barcos están en puerto: {out} salieron, {back} volvieron.",
     "firstBoatHome": "Tu primer barco está en puerto: {out} salieron, {back} volvieron.",
     "firstBooking": "Tu primera reserva",
+    "stage": {
+      "boarding": "Embarcando",
+      "underway": "En {site}",
+      "underwayNoSite": "En el agua",
+      "surface": "En superficie",
+      "headingIn": "De regreso",
+      "home": "En puerto",
+      "chip": "{stage} · {time}"
+    },
     "factOfScale": {
       "divers": "{name} embarca en la salida de las {time} como tu buceador número {count} de la temporada.",
       "firstBoat": "Primera salida de la temporada.",

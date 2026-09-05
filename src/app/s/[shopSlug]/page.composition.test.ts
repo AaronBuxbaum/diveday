@@ -35,3 +35,25 @@ describe("the public schedule identity composition", () => {
     expect(SOURCE).not.toContain("lg:grid-cols-[minmax(0,1fr)_20rem]");
   });
 });
+
+/**
+ * **The boat that is out** — ADR 20260904-reef-all-the-way-down, Budget rule
+ * 4, slice 16c.
+ */
+describe("the live boat panel's place", () => {
+  it("sits in the identity band, above the next departure", () => {
+    const live = positionOf("<LiveBoatPanel");
+    const hero = positionOf("<ShopfrontHero");
+    const nextBoat = positionOf("<NextBoatCard");
+    expect(live).toBeGreaterThan(hero);
+    expect(live).toBeLessThan(nextBoat);
+    expect(countOf("<LiveBoatPanel")).toBe(1);
+  });
+
+  it("is never rendered inside the frame", () => {
+    // `?embed=1` is a window onto the schedule (issue #805); a live panel
+    // would spend a third of a widget on a fact the host page did not ask for.
+    expect(positionOf("<LiveBoatPanel")).toBeGreaterThan(positionOf("{isEmbed ? null : ("));
+    expect(SOURCE).toContain("isEmbed ? null : liveShopStage(");
+  });
+});

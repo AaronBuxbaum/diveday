@@ -370,6 +370,7 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
   on the day it is true, with a season-start setting (#1371, #1373). **Shipped 2026-09-05.**
 - **16c** — the boat says where it is: `trip_stage_events`, the manifest's stage strip, the home's
   chip, the storefront's live panel, the thread's line; the boat drawing (#1372, #1374, D20).
+  **Shipped 2026-09-05** — `#1374`'s "next with space" half stays open for 16f.
 - **16d** — the manifest's top: the catch-up strip (D42 with D27 folded in), the plan-change door
   (D24), the welcome word under a name (D22).
 - **16e** — the booking page bounded: three tiles and a door, "Also worth a look" (D01), the

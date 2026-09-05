@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
+import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
 import {
   ThreadSpine,
   type ThreadSpineStep,
@@ -58,6 +59,7 @@ import {
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
+import { latestTripStage } from "@/db/trip-stages";
 import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
 import { diverContrastCopy } from "@/i18n/contrast-copy";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
@@ -106,6 +108,7 @@ import {
   type ThreadStep,
   theBoatIsHome,
 } from "@/lib/thread-steps";
+import { liveStageOf, STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
 import {
   cancelMyBookingAction,
   emailFreshReadinessLinkAction,
@@ -1608,7 +1611,7 @@ export default async function DiverReadinessPage({
   // One round trip, not two: the trip reads are scoped by `shop.id`, which the
   // verified capability already resolved, so none of them has to wait on the
   // shop row `PackingSection` needs for its units and rental catalogue.
-  const [fullShop, fullTrip, tripDives, changeEvents, publicCrew] = await Promise.all([
+  const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = await Promise.all([
     getShopBySlug(db, shop.slug),
     getTripWithBooked(db, shop.id, data.trip.id),
     listTripDives(db, shop.id, data.trip.id),
@@ -1618,7 +1621,31 @@ export default async function DiverReadinessPage({
     // person's answer about divers, not about search engines — so it is the
     // same filter and the same words as the public page.
     tripPublicCrew(db, shop.id, data.trip.id),
+    // Where the crew last said this boat was (ADR
+    // 20260904-reef-all-the-way-down, Budget rule 4). Read whatever its age;
+    // `liveStageOf` below decides whether it still speaks, so a stage nobody
+    // cleared cannot follow a diver into next week.
+    latestTripStage(db, shop.id, data.trip.id),
   ]);
+  // The boat's own line, composed here: word order and where the site sits in
+  // the sentence are the locale's choice, and `liveStageOf` is what stops a
+  // stage nobody cleared speaking for a departure that ended yesterday.
+  const liveStage = liveStageOf(boatStage, detail.trip.endsAt ?? null, nowDate());
+  const stageLine = liveStage
+    ? {
+        sentence:
+          liveStage.stage === "underway" && !liveStage.siteName
+            ? t("tripStage.underwayNoSite", { boat: detail.trip.title })
+            : t(STAGE_SENTENCE_KEYS[liveStage.stage], {
+                boat: detail.trip.title,
+                site: liveStage.siteName ?? "",
+              }),
+        said: t("tripStage.said", {
+          time: formatTime(liveStage.recordedAt, locale, detail.shop.timezone),
+        }),
+      }
+    : null;
+
   // What one seat on this departure costs. Null on an unpriced trip, which
   // then quotes nothing rather than guessing — see `resolvePaymentReceipt`,
   // which takes the same figure to work out a balance after a deposit.
@@ -2018,6 +2045,9 @@ export default async function DiverReadinessPage({
           <p className="mt-8 text-base text-muted">{checklistDetailText(t, spine.setupItem)}</p>
         ) : (
           <>
+            {stageLine ? (
+              <BoatStageLine sentence={stageLine.sentence} said={stageLine.said} />
+            ) : null}
             <ThreadStatus
               done={spine.done}
               doneSuffix={t("thread.stepsDoneSuffix", { total: spine.countable })}

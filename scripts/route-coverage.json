@@ -117,6 +117,7 @@
   "/s/[shopSlug]": {
     "e2e": [
       "a11y.spec.ts",
+      "boat-stage.spec.ts",
       "booking.spec.ts",
       "courses.spec.ts",
       "courtesy-email-unsubscribe.spec.ts",
@@ -198,6 +199,7 @@
   "/shop/[shopSlug]": {
     "e2e": [
       "boat-loop.spec.ts",
+      "boat-stage.spec.ts",
       "day-close.spec.ts",
       "day-spine.spec.ts",
       "departure-log.spec.ts",
@@ -553,6 +555,7 @@
     "e2e": [
       "a11y.spec.ts",
       "boat-loop.spec.ts",
+      "boat-stage.spec.ts",
       "buddy-pairs.spec.ts",
       "depth-and-age-surfaces.spec.ts",
       "divers.spec.ts",
