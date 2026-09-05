@@ -3,7 +3,12 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
-import { selfCancelBooking, setBookingHotelPickup, setBookingLastDived } from "@/db/bookings";
+import {
+  selfCancelBooking,
+  setBookingDiveIntent,
+  setBookingHotelPickup,
+  setBookingLastDived,
+} from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { saveHelpRequest } from "@/db/help-requests";
@@ -21,11 +26,13 @@ import { saveRentalFit, saveRentalFitNote } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { saveSupportNeeds } from "@/db/support-needs";
 import { issueWaiverRequest } from "@/db/waivers";
+import { setWelcomeConsent } from "@/db/welcome-cues";
 import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
+import { DIVE_INTENTS } from "@/lib/dive-intent";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
@@ -265,6 +272,37 @@ export async function saveHelpRequestFromReady(token: string, formData: FormData
   revalidateAndRedirect(base(token), `${base(token)}?saved=help`);
 }
 
+const welcomeConsentSchema = z.object({ share: z.enum(["on", "off"]) });
+
+/**
+ * **Tell the crew, or take it back** (issue #1182, delight report D22).
+ *
+ * The only writer of `bookings.welcome_shared_at` anywhere in the app: staff
+ * have no door to it, because a cue a shop switched on about a diver is the
+ * profile badge D22's boundary refuses. Both directions are one action —
+ * withdrawing has to be exactly as easy as consenting, which is Budget rule 6's
+ * "the way back" made a button rather than a sentence.
+ */
+export async function saveWelcomeConsentFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = welcomeConsentSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=welcome`);
+  const result = await setWelcomeConsent(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    shared: parsed.data.share === "on",
+  });
+  if (!result.ok) {
+    revalidateAndRedirect(base(token), `${base(token)}?error=welcome`);
+  }
+  // No success notice, unlike every other action on this page. The block's own
+  // line says what the answer now is, and it keeps saying it on a reload — a
+  // banner reading "Saved." above a form that already states the standing
+  // answer is the second confirmation, not the first.
+  revalidateAndRedirect(base(token));
+}
+
 const fitSchema = z.object({
   bcd: z.string().optional(),
   regulator: z.string().optional(),
@@ -436,6 +474,41 @@ export async function cancelMyBookingAction(token: string) {
 const diveRecencySchema = z.object({
   lastDivedBand: z.enum(DIVE_RECENCY_BANDS),
 });
+
+/**
+ * **What this dive is for, changed after the booking** (ADR
+ * 20260904-reef-all-the-way-down, D12).
+ *
+ * The booking form promises "change it any time from the link we send you";
+ * this is that link. It also reaches the divers who never saw the booking form
+ * at all — a party member, a walk-in a staffer seated — which is the argument
+ * ADR 20260821-currency-is-what-catches-people already made for putting the
+ * recency question here.
+ *
+ * Validated against the pgEnum's own tuple, like the band below it, and there
+ * is no "prefer not to say" value to post: that answer is not submitting the
+ * form, which is the state every booking is in already.
+ */
+const diveIntentSchema = z.object({
+  diveIntent: z.enum(DIVE_INTENTS),
+});
+
+export async function saveDiveIntentFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = diveIntentSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=dive-intent`);
+
+  // The booking comes from the verified capability, never from the form: a
+  // bearer of this token can only ever answer for its own seat.
+  const saved = await setBookingDiveIntent(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    intent: parsed.data.diveIntent,
+  });
+  if (!saved) redirect(`${base(token)}?error=dive-intent`);
+  revalidateAndRedirect(base(token), `${base(token)}?saved=dive-intent`);
+}
 
 export async function saveDiveRecencyFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);

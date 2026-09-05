@@ -39,6 +39,15 @@ const labels: ExecutedDiveLabels = {
   observedSpecies: "Seen on this dive",
   observedSpeciesHint: "Divers read this on their recap.",
   observedSpeciesNone: "Nothing to note",
+  planChangeReason: "Why the plan changed",
+  planChangeReasonOptions: {
+    current: "Current",
+    weather: "Weather",
+    visibility: "Visibility",
+    crew_call: "The crew's call",
+  },
+  planChangeNote: "Note for the shop",
+  planChangeNoteHint: "Divers never see this.",
   save: "Save dive record",
   saved: "Dive record saved.",
   refusals: {
@@ -51,6 +60,8 @@ const labels: ExecutedDiveLabels = {
     invalid_time: "One of the times could not be read.",
     invalid: "Nothing was saved.",
     wrong_dive: "This form is for a different dive.",
+    plan_change_note_without_reason: "Choose why the plan changed, then save the note.",
+    plan_change_note_too_long: "That note is too long.",
   },
 };
 

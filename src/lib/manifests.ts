@@ -6,6 +6,7 @@ import type { RollCallCheckpoint, RollCallRecord } from "./roll-call";
 import { isNotBackAboard } from "./roll-call";
 import type { SupportNeeds } from "./support-needs";
 import type { MedicalWaiverMark } from "./waivers";
+import type { WelcomeCue } from "./welcome-cue";
 
 /**
  * The roll-call vocabulary lives in `./roll-call`, and is re-exported here so
@@ -137,6 +138,17 @@ export type ManifestDiverInput = {
   minor?: boolean;
   /** The diver has a birthday today or within the callout window (H-21). */
   birthday?: BirthdayCallout | null;
+  /**
+   * The word under this diver's name: first time with us, or back after a long
+   * gap (issue #1182, delight report D22). Null unless the diver themselves
+   * said the crew may know, and null again an hour after the boat is home.
+   *
+   * Not a badge and not part of the one-capsule chain — it renders as muted
+   * text under the name, so a diver with a birthday shows the birthday capsule
+   * *and* this. Deliberately absent from the offline snapshot: a saved copy
+   * cannot re-derive an expiry, and a stale welcome cue is worse than none.
+   */
+  welcomeCue?: WelcomeCue | null;
   /**
    * Whether the trip's deepest site goes past this diver's ceiling (H-08).
    * Carried here and not only on the roster because the plan for dive two is

@@ -30,8 +30,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and sixty key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 640 screenshots per run (see
+ * Visual regression coverage. A hundred and ninety-one key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 764 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -53,7 +53,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
  * and `TABLET_SURFACES` adds 10: five staff surfaces get a third, portrait
  * tablet width, at one screenshot per scheme rather than the usual two. That
- * brings the run to 658 screenshots — the tablet width is a 1.6% addition, not
+ * brings the run to 782 screenshots — the tablet width is a 1.3% addition, not
  * the 50% a third viewport applied to every surface would have cost.
  *
  * ## One surface, one `test()`
@@ -493,6 +493,17 @@ const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 
 /** The seeded reef charter, the departure most of the staff tour hangs off. */
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
+
+/**
+ * A departure far enough out that D18's re-entry offers are still worth making.
+ *
+ * `reEntryWindowOpen` closes inside 24 hours, because nobody can act on an ask
+ * that late, and `REEF_TRIP` is the demo's *today* boat — about five hours out
+ * on the frozen clock, so the offers are correctly suppressed on it and the
+ * capture would photograph a block that is not there. This one sails two days
+ * out (`seed-more-trips`, `at(2, 11, 0)`).
+ */
+const EASING_BACK_TRIP = "Two-Tank Reef — French Reef";
 
 /** The seeded long-range run that only sails with six (src/db/seed-minimum-seats.ts). */
 const MINIMUM_SEATS_TRIP = "Tortugas Run — 3 days out, 6 divers to sail";
@@ -1804,13 +1815,14 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "booking-confirmed-embed", scheme);
       });
 
-      // The seeded reef trip's public page: hero, "The day", the route, "Look
-      // for", the site's own words, the conditions line, the one-line
-      // requirement, and the form last (ADR 20260827-the-divers-thread,
-      // decision 2). The swipeable field-guide deck it used to photograph is
-      // gone as of slice 7c; the shop's authored prose came back beneath the
-      // pitch as `TripSiteNotes`, because deleting the deck had left eight
-      // columns the staff form writes reaching no diver at all.
+      // The seeded reef trip's public page: hero, "The day", the pitch — a fact
+      // chip, three field-guide tiles and one closed door — the conditions
+      // line, two alternates, the one-line requirement, and the form last (ADR
+      // 20260827-the-divers-thread decision 2, bounded by ADR
+      // 20260904-reef-all-the-way-down decision 1). This is the *closed* state,
+      // which is what a diver meets; `booking-pitch-open` below photographs
+      // what the door holds. The page measured 5,782px at 390 before the form
+      // when nothing bounded it.
       //
       // Reached from the *standalone* schedule, never the embed: a schedule
       // loaded with `embed=1` carries the flag forward on its trip links, and
@@ -1825,6 +1837,49 @@ for (const scheme of ["light", "dark"] as const) {
         // the form mounting.
         await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "site-briefing", scheme);
+      });
+
+      /**
+       * **The same departure with the pitch's door open** (ADR
+       * 20260904-reef-all-the-way-down, decision 1).
+       *
+       * Five beats moved behind one `<details>` — the route, the rest of the
+       * field guide, the moments strip, the shop's own site prose and the crew
+       * — and a capture of the closed page alone would leave all five as pixels
+       * nothing ever looks at again. Nothing is deleted by that slice; this is
+       * the baseline that proves it.
+       */
+      test(`the pitch's door opens onto the whole briefing (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+        await page.getByRole("heading", { name: "The rest of the briefing" }).click();
+        // Wait on something only the opened door renders, never a timing guess.
+        await expect(page.getByRole("heading", { name: "Look for" })).toBeVisible();
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await capture(page, "booking-pitch-open", scheme);
+      });
+
+      /**
+       * **The booking form with "Getting comfortable again" chosen** (D12 and
+       * D18). It is the only state in which D18's three offers are ever on
+       * screen, so without this capture the block a rusty diver actually reads
+       * has no baseline at all.
+       */
+      test(`the booking form answers a diver easing back (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        await page
+          .locator("li")
+          .filter({ hasText: EASING_BACK_TRIP })
+          .getByRole("link", { name: EASING_BACK_TRIP })
+          .click();
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        // The label, never the input: the pill's radio is `sr-only` and lies
+        // under the very label that wraps it, so `check()` on it never
+        // resolves (see `chooseDiveIntent` in e2e/helpers.ts).
+        await page.getByText("Getting comfortable again", { exact: true }).click();
+        // The offers mount on that choice; wait for their own legend.
+        await expect(page.getByText("Anything that would help?")).toBeVisible();
+        await capture(page, "booking-intent", scheme);
       });
 
       /**
@@ -4947,6 +5002,40 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-not-back-aboard", scheme);
+      });
+
+      /**
+       * **The plan-change door, open** (issue #1184, delight report D24; ADR
+       * 20260904-reef-all-the-way-down slice 16d). The two fields it adds — a
+       * coded reason a diver will read on their own record, and a note only the
+       * shop sees — live inside the dive log's collapsed disclosure, so no
+       * existing capture can reach them: `manifest-not-back-aboard` stands at
+       * this same checkpoint with the log shut.
+       *
+       * The catch-up strip deliberately has no capture of its own. The seeded
+       * demo leaves the owner a read mark and the desk's morning acts after it,
+       * so the plain `manifest` shot above already carries the strip at the top
+       * of the page — a second full-page shot of the same screen would cost two
+       * baselines to photograph one block twice.
+       */
+      test(`the manifest's plan-change fields render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // Board → trip → Manifest, then a checkpoint switch and a disclosure.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await offlineCopySaved(page);
+        await page
+          .getByRole("link", { name: "After dive 1" })
+          .evaluate((link: HTMLElement) => link.click());
+        await page.waitForURL(/checkpoint=after_dive_1/);
+        // The log's own summary line, which only this checkpoint renders.
+        await page.getByText("Dive 1 — not recorded yet").click();
+        // Waits on a control the open form renders and the closed one does not.
+        await page.getByLabel("Why the plan changed").waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-plan-change", scheme);
       });
 
       /**

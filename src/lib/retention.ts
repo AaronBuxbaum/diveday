@@ -68,7 +68,9 @@ export type RetainedTable =
   | "account_tokens"
   | "shop_contact_email_confirmation_tokens"
   | "booking_payment_events"
-  | "push_subscriptions";
+  | "push_subscriptions"
+  | "trip_desk_events"
+  | "trip_read_marks";
 
 /**
  * The one place a human changes how long each trail is kept, in days.
@@ -166,6 +168,23 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * device that simply stopped being used.
    */
   push_subscriptions: 30,
+  /**
+   * 30 days, and the shortness *is* the feature (issues #1202, #1187). A desk
+   * event is a same-day handoff: who arrived, whose seat moved, who asked the
+   * crew for a hand. Nothing reads one after the boat is home, and a per-person
+   * catch-up that could still be replayed a season later is precisely the
+   * surveillance feed #1202's boundary refuses. The row carries no prose and no
+   * name — only a code and a `people` reference resolved live — so what a month
+   * of these can tell anyone is already bounded; this bounds how long.
+   */
+  trip_desk_events: 30,
+  /**
+   * The same 30 days, measured on `last_seen_at`, for the marks that point into
+   * those events. A mark that outlives every event it points past says nothing,
+   * and there is nothing else to keep it alive: the trip cascade never fires
+   * because `deleteTrip` is soft.
+   */
+  trip_read_marks: 30,
 };
 
 /**

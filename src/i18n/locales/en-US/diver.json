@@ -298,7 +298,9 @@
       "divemaster": "Divemaster",
       "captain": "Captain",
       "crew": "Crew"
-    }
+    },
+    "pitchDoor": "The rest of the briefing",
+    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}"
   },
   "booking": {
     "heading": "Grab a spot",
@@ -313,9 +315,6 @@
       "dueAtShop": "Due at the shop",
       "balanceAtDock": "{balance} at the dock on {when}"
     },
-    "preferenceLabel": "What kind of dive would make your day?",
-    "preferenceHint": "(optional — shared with the crew, never a promise)",
-    "preferencePlaceholder": "Macro photos, a relaxed pace, or staying with friends",
     "promoLabel": "Promo code",
     "promoHint": "(if you have one)",
     "passThroughFee": "{name}: {price} per diver (third-party charge)",
@@ -375,12 +374,39 @@
       "nameTooLong": "That name is too long.",
       "emailInvalid": "Enter a valid email address.",
       "phoneTooLong": "That phone number is too long.",
-      "noteTooLong": "Keep this note under 300 characters.",
       "promoInvalid": "That code isn't active."
     },
     "emailsOnTheWay": "Two emails are on their way: your booking confirmation, and the link to sign your waiver.",
     "embedPayNext": "Your seat’s held. Paying opens on DiveDay’s secure page, outside this window.",
-    "continueToPayment": "Continue to payment"
+    "continueToPayment": "Continue to payment",
+    "alsoOnTheSchedule": "Also on the schedule",
+    "worthALook": {
+      "sameCourse": "The same course, another day.",
+      "sameSite": "The same site, another day.",
+      "gentler": "The shop rates this site for beginners.",
+      "alsoMorning": "Also a morning boat.",
+      "alsoAfternoon": "Also an afternoon boat.",
+      "alsoEvening": "Also an evening boat.",
+      "moreRoom": "More room on this one."
+    },
+    "intent": {
+      "question": "What's this dive for?",
+      "optional": "optional",
+      "easingBack": "Getting comfortable again",
+      "smallLife": "Small life and photos",
+      "aWreck": "A wreck, someday",
+      "skills": "Practising skills",
+      "goodDay": "Just a good day out",
+      "audience": "Your crew sees how many picked each, not who.",
+      "changeIt": "Change it any time from the link we send you."
+    },
+    "reEntry": {
+      "legend": "Anything that would help?",
+      "deckWord": "A word with the divemaster before we get in.",
+      "easyFirstDive": "An easy first dive to start with.",
+      "refresherCourse": "Tell me about the refresher course.",
+      "noGate": "None of these changes whether you can book."
+    }
   },
   "bookingGear": {
     "heading": "Rental gear",
@@ -780,7 +806,18 @@
     "carriedHeading": "Still on file for you",
     "carriedWaiver": "Your signed waiver",
     "carriedCertification": "Your certification",
-    "carriedFit": "Your sizes"
+    "carriedFit": "Your sizes",
+    "welcomeFirstTripQuestion": "Tell the crew this is your first time with us?",
+    "welcomeReturningQuestion": "Tell the crew you are back after {years, plural, one {# year} other {# years}}?",
+    "welcomeAudience": "Only the crew on this boat, only today, and you can take it back.",
+    "welcomeShare": "Tell them",
+    "welcomeWithdraw": "Take it back",
+    "welcomeShared": "Your crew will know.",
+    "welcomeUnavailable": "That could not be saved. Try again.",
+    "intentHeading": "What's this dive for?",
+    "intentChoose": "Rather not say",
+    "saveIntent": "Save",
+    "savingIntent": "Saving…"
   },
   "thread": {
     "stepsDoneSuffix": "of {total} done",

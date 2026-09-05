@@ -23,6 +23,7 @@ export type BuddyMemberOption = { token: string; label: string };
  */
 export function BuddyTeamsPanel({
   defaultOpen,
+  intentLine,
   buddyTeamsList,
   diverOptions,
   crewOptions,
@@ -42,6 +43,17 @@ export function BuddyTeamsPanel({
    * one team-building session.
    */
   defaultOpen: boolean;
+  /**
+   * **What the divers aboard came for, as one sentence of counts** (delight
+   * report D23/#1183, folded into D12's count by ADR
+   * 20260904-reef-all-the-way-down).
+   *
+   * The team builder is the surface D23 names, and this is the whole of what it
+   * gets: an aggregate, no names, no suggested pairing. `null` whenever nobody
+   * on this departure answered, which is most of them — the caller renders
+   * nothing rather than a line saying nothing.
+   */
+  intentLine: string | null;
   buddyTeamsList: TripBuddyTeam[];
   diverOptions: BuddyMemberOption[];
   crewOptions: BuddyMemberOption[];
@@ -116,6 +128,10 @@ export function BuddyTeamsPanel({
             needs to know to build one — that crew count and that a divemaster
             can lead several — is on the builder's own hint below, where the
             tick boxes are. */}
+        {/* A sentence on a safety surface: no drawing, no coral, no tone (the
+            budget's rule 8). It informs a conversation and decides nothing —
+            a team that ignores it still forms. */}
+        {intentLine ? <p className="mt-2 text-sm text-muted">{intentLine}</p> : null}
         <FormStatus className="mt-2">{panelError}</FormStatus>
         {/* No empty state when there are no teams. The one this used to render
             — a 200px dashed card reading "No buddy teams yet. Tick two or more

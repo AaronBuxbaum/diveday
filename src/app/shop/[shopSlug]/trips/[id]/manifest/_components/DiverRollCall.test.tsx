@@ -472,3 +472,61 @@ describe("asserting aboard over a missing mark is never the cheap direction", ()
     expect(screen.queryByRole("button", { name: "Mark boarded" })).not.toBeInTheDocument();
   });
 });
+
+/**
+ * The welcome word (issue #1182, delight report D22; ADR
+ * 20260904-reef-all-the-way-down slice 16d). D22's boundary is that a cue
+ * invites a human welcome and is never a profile badge, so what these assert is
+ * the difference: muted text under the name, at manifest size, outside the
+ * row's one-capsule chain.
+ */
+describe("the welcome word", () => {
+  /** The element carrying the cue's words, wherever it sits in the row. */
+  function welcomeLine(container: HTMLElement, text: string) {
+    return [...container.querySelectorAll<HTMLElement>("span")].find(
+      (element) => element.textContent === text,
+    );
+  }
+
+  it("says nothing about a diver who consented to nothing", () => {
+    const { container } = renderList({ divers: [diver()] });
+    expect(container.textContent).not.toContain("first time with us");
+  });
+
+  it("renders as muted text under the name, at 16px", () => {
+    const { container } = renderList({
+      divers: [diver({ welcomeCue: { kind: "first_trip" } })],
+    });
+    const line = welcomeLine(container, "first time with us");
+    expect(line).toBeDefined();
+    // `text-base`, not the 12.5px the canvas drew: this is a safety surface,
+    // where the licence to trade legibility for restraint stops.
+    expect(line?.className).toContain("text-base");
+    expect(line?.className).toContain("text-muted");
+  });
+
+  it("is never a badge", () => {
+    const { container } = renderList({
+      divers: [diver({ welcomeCue: { kind: "returning", years: 3 } })],
+    });
+    const line = welcomeLine(container, "back after 3 years");
+    expect(line).toBeDefined();
+    // A `Badge` is a pill: rounded-full, a tint fill, a border. None of those.
+    expect(line?.className).not.toMatch(/rounded-full|bg-\w+-tint|border/);
+  });
+
+  it("leaves the row's one capsule to the exception that earned it", () => {
+    // A diver with both a cue and a birthday shows the birthday capsule *and*
+    // the cue as text — the cue does not enter the priority chain at all.
+    const { container } = renderList({
+      divers: [
+        diver({
+          welcomeCue: { kind: "first_trip" },
+          birthday: { status: "today" },
+        }),
+      ],
+    });
+    expect(welcomeLine(container, "first time with us")).toBeDefined();
+    expect(container.textContent).toContain("Birthday today");
+  });
+});

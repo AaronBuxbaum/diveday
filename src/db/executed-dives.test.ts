@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { deleteExecutedDive, listExecutedDives, upsertExecutedDive } from "./executed-dives";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
-import { diveSiteCreatures, diveSites, people, personRoles, trips } from "./schema";
+import {
+  diveSiteCreatures,
+  diveSites,
+  people,
+  personRoles,
+  tripDeskEvents,
+  tripDives,
+  trips,
+} from "./schema";
 
 async function logFixture() {
   const { db, shop } = await seededShopContext();
@@ -318,5 +326,154 @@ describe("upsertExecutedDive — the observed species", () => {
       recordedByPersonId: owner.id,
     });
     expect(cleared).toMatchObject({ ok: true, dive: { observedSpeciesSlug: null } });
+  });
+});
+
+/**
+ * The plan-change door (issue #1184, delight report D24). Its boundary is that
+ * the record says what *happened* and never rewrites what was *planned*, so one
+ * case here asserts `trip_dives` outright rather than trusting that two tables
+ * cannot touch.
+ */
+describe("upsertExecutedDive — the plan change", () => {
+  it("records why the plan changed and reads it back", async () => {
+    const { db, shop, owner, trip } = await logFixture();
+    const saved = await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveNumber: 1,
+      planChangeReason: "current",
+      planChangeNote: "Ran the drift the other way.",
+      recordedByPersonId: owner.id,
+    });
+    expect(saved).toMatchObject({
+      ok: true,
+      dive: { planChangeReason: "current", planChangeNote: "Ran the drift the other way." },
+    });
+
+    const listed = await listExecutedDives(db, shop.id, trip.id);
+    expect(listed[0]?.executed.planChangeReason).toBe("current");
+  });
+
+  it("takes a reason with no note — a crew that said nothing more still said why", async () => {
+    const { db, shop, owner, trip } = await logFixture();
+    expect(
+      await upsertExecutedDive(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        diveNumber: 1,
+        planChangeReason: "weather",
+        recordedByPersonId: owner.id,
+      }),
+    ).toMatchObject({ ok: true, dive: { planChangeReason: "weather", planChangeNote: null } });
+  });
+
+  it("refuses a note with no reason above it", async () => {
+    // The boundary #1187 draws: a free-text box with no code above it is the
+    // second staff chat, not a record. Refused rather than dropped, because
+    // silently discarding what a divemaster typed is issue #1018's own defect.
+    const { db, shop, owner, trip } = await logFixture();
+    expect(
+      await upsertExecutedDive(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        diveNumber: 1,
+        planChangeNote: "The mooring was taken.",
+        recordedByPersonId: owner.id,
+      }),
+    ).toEqual({ ok: false, reason: "plan_change_note_without_reason" });
+  });
+
+  it("refuses a note past the bound rather than truncating it", async () => {
+    const { db, shop, owner, trip } = await logFixture();
+    expect(
+      await upsertExecutedDive(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        diveNumber: 1,
+        planChangeReason: "visibility",
+        planChangeNote: "x".repeat(281),
+        recordedByPersonId: owner.id,
+      }),
+    ).toEqual({ ok: false, reason: "plan_change_note_too_long" });
+  });
+
+  it("lets the note go when the reason does", async () => {
+    const { db, shop, owner, trip } = await logFixture();
+    await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveNumber: 1,
+      planChangeReason: "crew_call",
+      planChangeNote: "The skipper called it for the light on the shallow side.",
+      recordedByPersonId: owner.id,
+    });
+    const cleared = await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveNumber: 1,
+      planChangeReason: null,
+      recordedByPersonId: owner.id,
+    });
+    expect(cleared).toMatchObject({
+      ok: true,
+      dive: { planChangeReason: null, planChangeNote: null },
+    });
+  });
+
+  it("leaves the published plan byte-identical", async () => {
+    const { db, shop, owner, trip } = await logFixture();
+    const before = await db
+      .select()
+      .from(tripDives)
+      .where(eq(tripDives.tripId, trip.id))
+      .orderBy(tripDives.diveNumber);
+    await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveNumber: 1,
+      actualSiteId: null,
+      planChangeReason: "current",
+      planChangeNote: "Went to the lee side instead.",
+      recordedByPersonId: owner.id,
+    });
+    const after = await db
+      .select()
+      .from(tripDives)
+      .where(eq(tripDives.tripId, trip.id))
+      .orderBy(tripDives.diveNumber);
+    expect(after).toEqual(before);
+  });
+
+  it("writes one desk event for the crew who were not on the dive", async () => {
+    const { db, shop, owner, trip } = await logFixture();
+    await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveNumber: 1,
+      planChangeReason: "weather",
+      recordedByPersonId: owner.id,
+    });
+    const events = await db
+      .select({ kind: tripDeskEvents.kind })
+      .from(tripDeskEvents)
+      .where(and(eq(tripDeskEvents.shopId, shop.id), eq(tripDeskEvents.tripId, trip.id)));
+    expect(events).toEqual([{ kind: "plan_changed" }]);
+  });
+
+  it("writes no desk event for a dive that went to plan", async () => {
+    const { db, shop, owner, trip } = await logFixture();
+    await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveNumber: 1,
+      maxDepthMeters: 18,
+      recordedByPersonId: owner.id,
+    });
+    const events = await db
+      .select({ kind: tripDeskEvents.kind })
+      .from(tripDeskEvents)
+      .where(and(eq(tripDeskEvents.shopId, shop.id), eq(tripDeskEvents.tripId, trip.id)));
+    expect(events).toEqual([]);
   });
 });

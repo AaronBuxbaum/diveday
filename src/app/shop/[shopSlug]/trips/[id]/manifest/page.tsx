@@ -15,6 +15,8 @@ import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
+import { listDeskEventsSince } from "@/db/desk-events";
+import { diveIntentTallyForTrip } from "@/db/dive-intent";
 import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
 import { getTripManifests } from "@/db/manifests";
@@ -23,6 +25,8 @@ import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-de
 import type { ExecutedDive } from "@/db/schema";
 import { latestTripStage } from "@/db/trip-stages";
 import { listTripDives } from "@/db/trips";
+import { catchUpSentences } from "@/i18n/desk-event-labels";
+import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { fieldGuideCards, marineLifeCatalogCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
@@ -30,6 +34,7 @@ import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
+import { groupCatchUp } from "@/lib/desk-events";
 import { formatDateTimeTz, formatTime, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -52,6 +57,7 @@ import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { TripSurfaceNav } from "../_components/TripSurfaceNav";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
+import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
 import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/ExecutedDiveLog";
@@ -60,6 +66,7 @@ import type { PersonTrailEntry } from "./_components/PersonSheet";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
+import { TripPlanSection } from "./_components/TripPlanSection";
 import {
   addBuddyTeamMemberAction,
   addManifestPrivateNoteAction,
@@ -69,6 +76,7 @@ import {
   isPushSubscribedAction,
   isPushSubscribedAnywhereAction,
   type ManifestActionContext,
+  markTripCaughtUpAction,
   preDepartureCheckAction,
   removeBuddyTeamMemberAction,
   rollCallAction,
@@ -161,6 +169,15 @@ function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): ExecutedD
     observedSpecies: t("manifest.executedDive.observedSpecies"),
     observedSpeciesHint: t("manifest.executedDive.observedSpeciesHint"),
     observedSpeciesNone: t("manifest.executedDive.observedSpeciesNone"),
+    planChangeReason: t("manifest.planChange.reasonLabel"),
+    planChangeReasonOptions: {
+      current: t("manifest.planChange.reason.current"),
+      weather: t("manifest.planChange.reason.weather"),
+      visibility: t("manifest.planChange.reason.visibility"),
+      crew_call: t("manifest.planChange.reason.crewCall"),
+    },
+    planChangeNote: t("manifest.planChange.noteLabel"),
+    planChangeNoteHint: t("manifest.planChange.noteHint"),
     save: t("manifest.executedDive.save"),
     saved: t("manifest.executedDive.saved"),
     refusals: {
@@ -173,6 +190,10 @@ function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): ExecutedD
       invalid_time: t("manifest.executedDive.refusal.invalidTime"),
       invalid: t("manifest.executedDive.refusal.invalid"),
       wrong_dive: t("manifest.executedDive.refusal.wrongDive"),
+      plan_change_note_without_reason: t(
+        "manifest.executedDive.refusal.planChangeNoteWithoutReason",
+      ),
+      plan_change_note_too_long: t("manifest.executedDive.refusal.planChangeNoteTooLong"),
     },
   };
 }
@@ -251,7 +272,7 @@ export default async function TripManifestPage({
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
   const { checkpoint: requestedCheckpoint, buddyError, buddies } = await searchParams;
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
@@ -268,6 +289,8 @@ export default async function TripManifestPage({
     plannedDives,
     executedDives,
     liveDiveSites,
+    catchUp,
+    diveIntents,
     stage,
   ] = await Promise.all([
     getTripManifests(db, shop.id, tripId),
@@ -287,6 +310,13 @@ export default async function TripManifestPage({
     listTripDives(db, shop.id, tripId),
     listExecutedDives(db, shop.id, tripId),
     listDiveSites(db, shop.id),
+    // What the desk did since *this* staffer last looked (issues #1202,
+    // #1187). Empty for somebody who has never worked this departure — there is
+    // nothing for a catch-up to be "since", and replaying the morning to a
+    // first-time reader is the surveillance feed the boundary refuses.
+    listDeskEventsSince(db, shop.id, tripId, session.user.personId),
+    // Codes and counts, never a row per seat (#1183's boundary).
+    diveIntentTallyForTrip(db, shop.id, tripId),
     // The newest word the crew tapped, whatever its age: the strip shows the
     // crew their own last answer even on a boat that is hours overdue. The
     // staleness rule belongs to what a *diver* reads, not to the control.
@@ -358,6 +388,13 @@ export default async function TripManifestPage({
   // one takes the narrower context that has none.
   const boundAddPrivateNoteAction = addManifestPrivateNoteAction.bind(null, { shopSlug, tripId });
   const boundSaveExecutedDiveAction = saveExecutedDiveAction.bind(null, actionContext);
+  // *Got it* is checkpoint-independent — the strip is about the departure, not
+  // about which list is open — so it takes the narrower context.
+  const boundMarkTripCaughtUpAction = markTripCaughtUpAction.bind(null, { shopSlug, tripId });
+  // One sentence per kind of desk act, in `DESK_EVENT_KINDS` order rather than
+  // the order the desk happened to work. Composed here because the names are
+  // joined by `Intl.ListFormat` in the reader's own locale.
+  const catchUpSentenceList = catchUpSentences(t, locale, groupCatchUp(catchUp.events));
   // Same narrower context as the note above: the checklist is checkpoint-
   // independent, so its action re-proves nothing about which one was open.
   const boundPreDepartureCheckAction = preDepartureCheckAction.bind(null, { shopSlug, tripId });
@@ -596,6 +633,21 @@ export default async function TripManifestPage({
           souls: manifest.summary.totalDivers + manifest.crew.length,
         })}
       </p>
+      {/* **The catch-up strip**, under the sub-nav and above the instrument,
+          exactly where the canvas draws it (ADR 20260904-reef-all-the-way-down
+          slice 16d). It renders nothing when there is nothing new, and nothing
+          at all to somebody who has never worked this departure — so on most
+          openings of most manifests this line costs the page no pixels. */}
+      {catchUp.mark ? (
+        <CatchUpStrip
+          label={t("manifest.catchUp.label", {
+            time: formatTime(catchUp.mark.at, locale, shop.timezone),
+          })}
+          sentences={catchUpSentenceList}
+          dismissLabel={t("manifest.catchUp.dismiss")}
+          dismissAction={boundMarkTripCaughtUpAction}
+        />
+      ) : null}
       {/* **The count leads** (ADR 20260827-the-departure-is-two-working-surfaces,
           decision 2: the count is "always on screen"). This is the page's only
           count surface — the checkpoint's progress, the numbers behind it, who
@@ -742,6 +794,28 @@ export default async function TripManifestPage({
         t={t}
       />
 
+      {/* **The plan, and the door to saying it changed** (issue #1184, D24).
+          At the dock only: after a dive the log below owns this ground, and a
+          read-only copy of the plan beside it would be a second answer to the
+          same question. */}
+      {isDeparture ? (
+        <TripPlanSection
+          heading={t("manifest.planChange.heading")}
+          dives={plannedDives.map(({ dive, diveSite }) => ({
+            diveNumber: dive.diveNumber,
+            line: diveSite
+              ? t("manifest.planChange.diveRow", {
+                  number: dive.diveNumber,
+                  site: diveSite.name,
+                })
+              : t("manifest.planChange.diveRowNoSite", { number: dive.diveNumber }),
+          }))}
+          doorLabel={t("manifest.planChange.door")}
+          doorNote={t("manifest.planChange.doorNote")}
+          doorHref={`/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=after_dive_1`}
+        />
+      ) : null}
+
       {!isDeparture ? (
         <ExecutedDiveLog
           planned={plannedDives.map(({ dive, diveSite }) => ({
@@ -791,6 +865,7 @@ export default async function TripManifestPage({
           themselves ride on each member's row where roll call can see them. */}
       <BuddyTeamsPanel
         defaultOpen={buddies === "open"}
+        intentLine={staffDiveIntentLine(t, diveIntents, locale)}
         buddyTeamsList={buddyTeamsList}
         diverOptions={diverOptions}
         crewOptions={crewOptions}

@@ -33,26 +33,71 @@ function positionOf(marker: string): number {
   return SOURCE.indexOf(marker);
 }
 
+/**
+ * **Every block this page may render between the hero and the form.**
+ *
+ * The list is the rule (ADR 20260904-reef-all-the-way-down, decision 1): the
+ * page is bounded to three field-guide tiles and a door, so a feature that
+ * wants to sell harder opens the door rather than adding a section. It measured
+ * 5,782px at 390 before the form when nothing bounded it.
+ */
+const ABOVE_THE_FORM = [
+  "<TripHeader",
+  "<TripActions",
+  "<TripDayPlan",
+  "<TripPitch",
+  "<ConditionsLine",
+  "<TripChangeLedger",
+  "<TripAlternatives",
+] as const;
+
 describe("the trip page's order", () => {
+  it("bounds what runs above the form, and bounds its own list", () => {
+    // The count is the bound. Adding a section means editing this literal and
+    // this number, which is the deliberate act the ADR asks for.
+    expect(ABOVE_THE_FORM).toHaveLength(7);
+    const positions = ABOVE_THE_FORM.map(positionOf);
+    for (const at of positions) expect(at).toBeGreaterThan(-1);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    // Everything the page actually renders in that range, read off the source
+    // rather than listed by hand: any capitalised JSX name between the hero and
+    // the form's slot that is not on the list above fails here.
+    const region = SOURCE.slice(positionOf("<TripHeader"), positionOf("{confirmed ? ("));
+    const rendered = new Set([...region.matchAll(/<([A-Z][A-Za-z]*)/g)].map((m) => `<${m[1]}`));
+    expect([...rendered].sort()).toEqual([...ABOVE_THE_FORM].sort());
+  });
+
+  it("keeps the five moved beats inside the pitch's door", () => {
+    // They are `TripPitch`'s children now. One promoted back onto the page is
+    // the regression this slice exists to stop — and the way it would arrive is
+    // somebody re-adding the element here rather than opening the door.
+    for (const beat of [
+      "TripRoutes",
+      "TripLookFor",
+      "TripMoments",
+      "TripSiteNotes",
+      "TripCrewLine",
+    ]) {
+      expect(SOURCE).not.toContain(`<${beat}`);
+    }
+  });
+
   it("runs pitch, then requirement, then the form, then the contact line", () => {
     const pitch = positionOf("<TripDayPlan");
-    const lookFor = positionOf("<TripLookFor");
-    const siteNotes = positionOf("<TripSiteNotes");
     const conditions = positionOf("<ConditionsLine");
     const requirement = positionOf("{requirementNote ? (");
     const form = positionOf("<BookSpotSection");
     const contact = positionOf("<ShopContactLinks");
 
-    for (const marker of [pitch, lookFor, siteNotes, conditions, requirement, form, contact]) {
+    for (const marker of [pitch, conditions, requirement, form, contact]) {
       expect(marker).toBeGreaterThan(-1);
     }
-    expect(pitch).toBeLessThan(lookFor);
     // The shop's own words about each site sit with the pitch, above the form —
     // they are what a diver reads to decide, and the whole reason
     // ADR 20260813-dive-site-briefings-are-the-shops-own-words asks a shop to
-    // write them. They reached no diver at all between slices 7c and this.
-    expect(lookFor).toBeLessThan(siteNotes);
-    expect(siteNotes).toBeLessThan(conditions);
+    // write them. They reached no diver at all between slices 7c and 2026-08-28,
+    // and from 16e they are behind `TripPitch`'s door rather than gone.
+    expect(pitch).toBeLessThan(conditions);
     expect(conditions).toBeLessThan(requirement);
     expect(requirement).toBeLessThan(form);
     expect(form).toBeLessThan(contact);

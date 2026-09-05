@@ -13,6 +13,7 @@ import {
   removeBuddyTeamMember,
 } from "@/db/buddy-pairs";
 import { getDb } from "@/db/client";
+import { markTripCaughtUp } from "@/db/desk-events";
 import { type ExecutedDiveRefusal, upsertExecutedDive } from "@/db/executed-dives";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { addInternalNote } from "@/db/operations";
@@ -26,10 +27,12 @@ import {
 import { getShopById } from "@/db/shops";
 import { recordTripStage } from "@/db/trip-stages";
 import { trackEvent } from "@/lib/analytics";
+import { nowDate } from "@/lib/clock";
 import { depthToMeters, MAX_ENTERED_DEPTH_METERS } from "@/lib/depth-units";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
+import { PLAN_CHANGE_NOTE_MAX, PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { TRIP_STAGES } from "@/lib/trip-stages";
@@ -128,6 +131,11 @@ const executedDiveSchema = z.object({
   // catalog *and* against the site's own field guide, since a constraint that
   // lives in a `<select>` is a suggestion (issue #1190).
   observedSpeciesSlug: z.union([z.literal(""), z.string().trim().max(80)]).optional(),
+  // Bounded here and refused again in the write: a note with no reason above it
+  // is `upsertExecutedDive`'s own refusal, because the pairing is a domain rule
+  // and a `<select>` beside a `<textarea>` is a suggestion (issue #1184).
+  planChangeReason: z.union([z.literal(""), z.enum(PLAN_CHANGE_REASONS)]).optional(),
+  planChangeNote: z.string().trim().max(PLAN_CHANGE_NOTE_MAX).optional(),
 });
 
 /**
@@ -143,6 +151,30 @@ const executedDiveSchema = z.object({
 export type ExecutedDiveResult =
   | { status: "ok" }
   | { status: "error"; reason: ExecutedDiveRefusal | "invalid" | "invalid_time" | "wrong_dive" };
+
+/**
+ * *Got it* — this staffer has read the catch-up strip (issues #1202, #1187).
+ *
+ * The whole act, and deliberately nothing more: it takes no form data, returns
+ * nothing, and redirects nowhere. The strip is above the instrument on a
+ * safety surface, so the outcome of dismissing it is that it stops being there;
+ * a toast confirming that would be a second thing to read on the busiest screen
+ * in the app.
+ *
+ * `markTripCaughtUp` re-proves the departure against the signed-in shop before
+ * it writes, and the mark is keyed to `staff.user.personId` rather than
+ * anything the client sent — a tap can only ever move the tapper's own mark.
+ */
+export async function markTripCaughtUpAction(ctx: ManifestTripContext): Promise<void> {
+  const staff = await requireStaffSession();
+  await markTripCaughtUp(await getDb(), {
+    shopId: staff.user.shopId,
+    tripId: ctx.tripId,
+    personId: staff.user.personId,
+    now: nowDate(),
+  });
+  revalidatePath(manifestPath(ctx));
+}
 
 /** Record what actually happened after a dive, including an honest unknown. */
 export async function saveExecutedDiveAction(
@@ -192,6 +224,8 @@ export async function saveExecutedDiveAction(
     },
     notRecorded,
     observedSpeciesSlug: parsed.data.observedSpeciesSlug || null,
+    planChangeReason: parsed.data.planChangeReason || null,
+    planChangeNote: parsed.data.planChangeNote || null,
     recordedByPersonId: staff.user.personId,
   });
   if (!saved.ok) return { status: "error", reason: saved.reason };

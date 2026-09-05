@@ -39,6 +39,7 @@ import {
   violatesExclusionConstraint,
   violatesUniqueIndex,
 } from "./client";
+import { recordDeskEvent } from "./desk-events";
 import { type OffsetPage, offsetPage } from "./paging";
 import {
   bookings,
@@ -634,7 +635,7 @@ export async function reserveGearUnit(
         return { ok: false, reason: "unit_out_of_service" } as const;
 
       const [booking] = await tx
-        .select({ id: bookings.id })
+        .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
         .from(bookings)
         .where(
           and(
@@ -657,6 +658,18 @@ export async function reserveGearUnit(
         })
         .returning();
       if (!reservation) return { ok: false, reason: "unit_unavailable" } as const;
+      // "Ben Okafor has different gear now." on the manifest's catch-up strip
+      // — one of the four arrival facts #1187 names. **Which unit is
+      // deliberately not in the event**: the strip says the fact, the prep page
+      // says the detail, and a size on a boarding list is a detail nobody at
+      // the rail is acting on.
+      await recordDeskEvent(tx, {
+        shopId: input.shopId,
+        tripId: booking.tripId,
+        kind: "gear_changed",
+        bookingId: booking.id,
+        subjectPersonId: booking.personId,
+      });
       return { ok: true, reservation } as const;
     });
   } catch (error) {
@@ -813,8 +826,32 @@ export async function releaseGearReservation(
         isNull(gearReservations.returnedAt),
       ),
     )
-    .returning({ id: gearReservations.id });
-  if (deleted) return { ok: true };
+    .returning({ id: gearReservations.id, bookingId: gearReservations.bookingId });
+  if (deleted) {
+    // The same handoff line the reservation wrote: a unit taken back off a
+    // diver is as much a change to what they are carrying as one assigned
+    // (#1187). Read after the delete because the row is gone by then and the
+    // booking is the only thing left to resolve the departure from — and only
+    // when there is one: a bookingless counter rental belongs to no departure
+    // and so is nobody's handoff.
+    const [booking] = deleted.bookingId
+      ? await db
+          .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
+          .from(bookings)
+          .where(and(eq(bookings.id, deleted.bookingId), eq(bookings.shopId, input.shopId)))
+          .limit(1)
+      : [];
+    if (booking) {
+      await recordDeskEvent(db, {
+        shopId: input.shopId,
+        tripId: booking.tripId,
+        kind: "gear_changed",
+        bookingId: booking.id,
+        subjectPersonId: booking.personId,
+      });
+    }
+    return { ok: true };
+  }
   const stamps = await reservationStamps(db, input);
   if (!stamps) return { ok: false, reason: "not_found" };
   // A returned row can carry no check-out stamp (marking a unit returned never
