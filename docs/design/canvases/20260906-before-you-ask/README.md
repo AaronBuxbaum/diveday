@@ -46,7 +46,7 @@ the desk. The week of **Thursday, August 27, 2026**, read at four moments:
 - **Thursday, 6:02 and 6:31 AM**: Dana starts adding Emmet O'Brien and one more to Friday
   September 4's 7:00 (9 of 12 booked; 11 after this) at the desk, is interrupted, and picks it up on
   her phone (`Resume`).
-- **Thursday evening**: Dana adds Saturday September 5 to the board. The last six Saturdays ran the
+- **Thursday evening**: Dana adds Saturday September 5 to the board. The six Saturdays before it (July 18 to August 22) ran the
   7:00 Two-Tank Reef — Molasses & French on Mantis II with Keiko and Sal, 12 seats at $95; four of
   them also ran the 1:00 Wreck Trip (`AddDeparture`). Saturday August 29 holds the one departure the
   diver's-thread canvas filled, the 11:00 Two-Tank — French Reef, sold out with two waiting
@@ -64,8 +64,10 @@ Nothing here is real customer data.
 
 Reef's tokens, radii, type ladder and bed; the three moments and the four washes; Geist as the
 only face on a staff surface and the shop's own on the diver's; the safety floor (44px targets,
-16px critical text, AA, never colour alone); the coral count of three, spent nowhere on these
-boards; and every ban. No board is a manifest, a roll call, a cert check, a waiver or a payment,
+16px critical text, AA, never colour alone); the coral count of three, spent on no drawn surface
+(the cover's mark and its three owner-call badges are the canvas's own chrome, as on every cover since
+Reef); and every ban. The stroke icons on the boards (the `.hand` class) are the app's icon style, not
+the illustration set: no creature, water motif or boat appears on any board here. No board is a manifest, a roll call, a cert check, a waiver or a payment,
 and no move reaches one: a card is never verified by DiveDay, a head count is never inferred, a
 medical answer is never carried forward.
 
