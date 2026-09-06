@@ -85,6 +85,7 @@ const EXPECTED_FILES = [
   "recap_photos.csv",
   "trip_recap_photos.csv",
   "trip_reviews.csv",
+  "recap_pulses.csv",
   "review_moderation_events.csv",
   "dive_packages.csv",
   "dive_package_entitlements.csv",
@@ -159,6 +160,7 @@ const EXPORTED_TABLES = [
   "recap_photos",
   "trip_recap_photos",
   "trip_reviews",
+  "recap_pulses",
   "review_moderation_events",
   "shop_promo_codes",
   "courses",
@@ -501,6 +503,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   recap_photos: ["shop_id"],
   trip_recap_photos: ["shop_id"],
   trip_reviews: ["shop_id"],
+  recap_pulses: ["shop_id"],
   shop_promo_codes: [
     "shop_id",
     "stripe_coupon_id", // provider linkage, useless outside this Stripe account

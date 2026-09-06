@@ -7679,6 +7679,106 @@ export const reviewModerationEvents = pgTable(
 );
 
 /**
+ * **What a diver's private pulse was about** — a code, never a sentence, so the
+ * shop reads it in its own language and the diver picked it in theirs (ADR
+ * 20260731-domain-layer-copy-leaks).
+ *
+ * Five, and deliberately short. The list *is* the design: an open box asking
+ * "how was it?" the evening after a dive gets either nothing or an essay, and a
+ * shop reading essays fixes nothing. Four name the things a dive day goes wrong
+ * at and a shop can change by Tuesday; `other` exists so a diver with a fifth
+ * thing is never stuck, and `note` is where they say it.
+ */
+export const recapPulseCategory = pgEnum("recap_pulse_category", [
+  /** Rental kit: fit, condition, what was missing. */
+  "gear",
+  /** The dive brief and what it did or did not cover. */
+  "briefing",
+  /** The vessel itself: space, shade, the head, the ladder. */
+  "boat",
+  /** When things happened against when they were said to. */
+  "timing",
+  /** Anything these four do not describe; `note` carries it. */
+  "other",
+]);
+
+/**
+ * **The private twin of a review** (delight report D40, issue #1200) — which is
+ * why it sits directly under `trip_reviews` and its moderation trail rather
+ * than off in a concern of its own.
+ *
+ * A diver who had a thin day has exactly one door on the recap today, and it is
+ * the public one. So the shop either learns nothing or learns it in front of
+ * everybody. This is the other door: **just for the shop, never on the review,
+ * never public.** Nothing here may reach `listPublishedShopReviews`, the JSON-LD
+ * aggregate, or the suppression share `countSuppressedReviews` computes — a
+ * pulse is not a review and counts as one in neither direction.
+ *
+ * `shop_id`, `trip_id` and `person_id` are derived from the booking by
+ * `submitRecapPulse` and never accepted from the form: the recap token resolves
+ * to a booking, and the booking is the only thing that says whose pulse this is
+ * (the rule `submitTripReview` already keeps).
+ */
+export const recapPulses = pgTable(
+  "recap_pulses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    /** One or more category codes — the jsonb-array shape `trip_requirements.required_specialties` uses. */
+    categories: jsonb("categories")
+      .$type<(typeof recapPulseCategory.enumValues)[number][]>()
+      .notNull()
+      .default([]),
+    /** The diver's own words, optional, bounded at `MAX_RECAP_PULSE_NOTE_LENGTH` server-side. */
+    note: text("note"),
+    /** Stamped when a staffer marks it dealt with. Null is the open state. */
+    addressedAt: timestamp("addressed_at", { withTimezone: true }),
+    addressedByPersonId: uuid("addressed_by_person_id").references(() => people.id),
+    /**
+     * **The diver's way back.** Clearing every category takes the pulse back,
+     * and that delete is soft like every other (ADR
+     * 20260820-every-delete-is-soft): the row stays, the shop stops seeing it.
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // One live pulse per booking. Partial, over the live rows only, so a
+    // withdrawn pulse does not block the diver writing a new one.
+    uniqueIndex("recap_pulses_booking_live_unique")
+      .on(table.bookingId)
+      .where(sql`${table.deletedAt} is null`),
+    // The staff panel's query verbatim: this shop's open items, newest first.
+    index("recap_pulses_shop_open_idx")
+      .on(table.shopId, table.createdAt)
+      .where(sql`${table.addressedAt} is null and ${table.deletedAt} is null`),
+    // A live pulse is about something. An empty one is a withdrawal, and a
+    // withdrawal is a deleted row, so this cannot be satisfied by an empty array.
+    check(
+      "recap_pulses_live_has_category",
+      sql`${table.deletedAt} is not null or jsonb_array_length(${table.categories}) > 0`,
+    ),
+    // Who marked it addressed is recorded with the fact, or neither is.
+    check(
+      "recap_pulses_addressed_has_actor",
+      sql`(${table.addressedAt} is null) = (${table.addressedByPersonId} is null)`,
+    ),
+  ],
+);
+
+/**
  * `waiver_document` (a scanned paper release or medical form brought in by the
  * importer) is the blob kind diver erasure owes a delete for
  * (ADR 20260802-diver-data-erasure) — the row's URL column is nulled locally

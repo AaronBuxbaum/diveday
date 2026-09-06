@@ -65,6 +65,7 @@ import {
   preDepartureChecklistItems,
   priorVisits,
   recapPhotos,
+  recapPulses,
   rentalFitProfiles,
   reviewModerationEvents,
   rollCallCrewEvents,
@@ -254,6 +255,24 @@ export async function loadShopExportBundleInput(
         .innerJoin(people, eq(people.id, tripReviews.personId))
         .where(eq(tripReviews.shopId, shopId))
         .orderBy(asc(tripReviews.createdAt), asc(tripReviews.id));
+
+      // The diver's private word to this shop about the day (ADR
+      // 20260904-reef-all-the-way-down, D40). Not a review — it is never
+      // published — but the same class of record: the diver's own account,
+      // tied to their seat, which the shop already reads on its Reviews page.
+      // A shop handed its data back gets the feedback it acted on.
+      const recapPulseRows = await tx
+        .select({ pulse: recapPulses, diverName: people.fullName })
+        .from(recapPulses)
+        // The tenant is named here rather than inferred. It does hold without
+        // this — `recapPulses.personId` is copied off `bookings.personId`, and
+        // `createBookingRecord` only ever resolves a person inside its own shop
+        // — but that invariant lives three files away, and the sibling
+        // `trip_recap_photos` join states its own. Costs nothing; makes the
+        // condition greppable in the query that depends on it.
+        .innerJoin(people, and(eq(people.id, recapPulses.personId), eq(people.shopId, shopId)))
+        .where(eq(recapPulses.shopId, shopId))
+        .orderBy(asc(recapPulses.createdAt), asc(recapPulses.id));
 
       const promoCodeRows = await tx
         .select()
@@ -3175,6 +3194,42 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["trip_reviews.csv"],
         },
         {
+          file: "recap_pulses.csv",
+          header: [
+            "id",
+            "booking_id",
+            "trip_id",
+            "person_id",
+            "diver_name",
+            // Codes, not sentences — `recap_pulse_category`. The words are
+            // DiveDay's copy in the reader's language, and a CSV has no reader
+            // to resolve them for, so the slug is the durable fact. Same call
+            // `observed_species_slug` makes.
+            "categories",
+            "note",
+            "addressed_at",
+            "addressed_by_person_id",
+            "deleted_at",
+            "created_at",
+            "updated_at",
+          ],
+          rows: recapPulseRows.map(({ pulse, diverName }) => [
+            pulse.id,
+            pulse.bookingId,
+            pulse.tripId,
+            pulse.personId,
+            diverName,
+            JSON.stringify(pulse.categories),
+            pulse.note,
+            pulse.addressedAt,
+            pulse.addressedByPersonId,
+            pulse.deletedAt,
+            pulse.createdAt,
+            pulse.updatedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["recap_pulses.csv"],
+        },
+        {
           file: "review_moderation_events.csv",
           header: [
             "id",
@@ -4854,6 +4909,9 @@ export async function loadShopExportCounts(
     ),
     "trip_reviews.csv": await countOf(
       db.select({ n: count() }).from(tripReviews).where(eq(tripReviews.shopId, shopId)),
+    ),
+    "recap_pulses.csv": await countOf(
+      db.select({ n: count() }).from(recapPulses).where(eq(recapPulses.shopId, shopId)),
     ),
     "review_moderation_events.csv": await countOf(
       db

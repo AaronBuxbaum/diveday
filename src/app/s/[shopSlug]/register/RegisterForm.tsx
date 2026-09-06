@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
 import {
   SELF_DECLARED_LEVELS,
   SELF_REGISTRATION_DONE,
@@ -31,20 +32,6 @@ const AGENCIES = [
 
 /** The enum value each of those keys stands for, in the column's own spelling. */
 const AGENCY_VALUES = ["padi", "ssi", "naui", "sdi", "raid", "bsac", "cmas", "other"] as const;
-
-/**
- * The level codes as the column spells them, against the copy's own camelCase.
- * Written as whole keys rather than a template so the message id is a literal
- * the translator's type can check — a `${string}` interpolation is a key nobody
- * proves exists.
- */
-const LEVEL_KEYS = {
-  open_water: "course.certificationLevels.openWater",
-  advanced_open_water: "course.certificationLevels.advancedOpenWater",
-  rescue: "course.certificationLevels.rescue",
-  divemaster: "course.certificationLevels.divemaster",
-  instructor: "course.certificationLevels.instructor",
-} as const;
 
 /**
  * **The counter's QR, as a form** (issue #1236).
@@ -150,7 +137,7 @@ export function RegisterForm({
               <option value="">—</option>
               {SELF_DECLARED_LEVELS.map((level) => (
                 <option key={level} value={level}>
-                  {t(LEVEL_KEYS[level])}
+                  {t(DIVER_CERT_LEVEL_KEYS[level])}
                 </option>
               ))}
             </select>

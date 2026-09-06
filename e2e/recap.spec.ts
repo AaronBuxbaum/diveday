@@ -270,3 +270,117 @@ test("the day's facts render once, inside the one record a diver keeps", async (
   await expect(record.getByTestId("dive-record-conditions")).toHaveCount(1);
   await expect(record.getByTestId("dive-record-sites")).toHaveCount(1);
 });
+
+/**
+ * **D33's promise, swept end to end** (issue #1193).
+ *
+ * The row above the private line says it "stays on your phone".
+ * `SavePostcard` makes that structurally true — no `name`, no enclosing form —
+ * and `SavePostcard.test.tsx` asserts the shape. This asserts the
+ * *consequence*, which is the only thing a diver actually cares about: with a
+ * sentinel typed into that box, nothing the page sends anywhere contains it.
+ *
+ * Every request is collected through `page.on("request")` and the download
+ * event is what says the work finished, so there is no timing guess here —
+ * `pnpm check:e2e-hygiene` refuses one and would be right to.
+ */
+test("the line a diver writes for themselves never reaches the network (D33)", async ({ page }) => {
+  const SENTINEL = "PrivateLineSentinel7742";
+  const seen: string[] = [];
+  page.on("request", (request) => {
+    seen.push(request.url());
+    seen.push(JSON.stringify(request.headers()));
+    const body = request.postData();
+    if (body) seen.push(body);
+  });
+
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
+  await page.getByLabel("A line for yourself").fill(SENTINEL);
+
+  // The download event is the deterministic signal that the whole save path
+  // ran — canvas drawn, PNG encoded, anchor clicked.
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Save as image" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/\.png$/);
+
+  // Nothing the page sent — url, header or body — carries what was typed.
+  expect(seen.filter((entry) => entry.includes(SENTINEL))).toEqual([]);
+
+  // And a reload proves it is stored nowhere either: the box is empty again,
+  // because the only place that sentence ever lived was this tab.
+  await page.reload();
+  await expect(page.getByLabel("A line for yourself")).toHaveValue("");
+});
+
+/**
+ * **The second door, and the shop is the only one who ever sees it** (D40,
+ * issue #1200).
+ *
+ * Three things in one pass: a diver's pulse reaches the staff panel; it appears
+ * on neither public reviews surface, which is the whole distinction between
+ * this and a review; and taking it back takes it off the panel rather than
+ * leaving a shop answering a complaint that has been withdrawn.
+ *
+ * `page` stays the anonymous diver throughout and the shop is read on a
+ * disposable staff context — the CR-019 pattern — so the surface under test is
+ * never rendered to a session that could not have reached it.
+ */
+test("a private pulse reaches the shop, appears nowhere public, and can be taken back (D40)", async ({
+  page,
+  browser,
+  workerBaseURL,
+  staffStorageState,
+}) => {
+  // Two contexts and five navigations; the default 15s is not enough.
+  test.setTimeout(45_000);
+  const NOTE = "PulseNoteSentinel8815";
+  const staffContext = await browser.newContext({
+    baseURL: workerBaseURL,
+    storageState: await staffStorageState("owner"),
+  });
+  const staff = makeActivitySafe(await staffContext.newPage());
+
+  try {
+    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+    await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
+    // The chips wrap a visually-hidden checkbox, so the label is what a person
+    // taps and what this taps (`e2e/fixtures.ts` filters to visible nodes).
+    await page.getByText("The gear", { exact: true }).click();
+    await page.getByLabel("What happened? (optional)").fill(NOTE);
+    await page.getByRole("button", { name: "Send it to the shop" }).click();
+    await expect(page.getByText("Blue Mantis Divers has it.")).toBeVisible();
+
+    // Nowhere an anonymous visitor can reach: not the schedule's review strip,
+    // not the public archive. A pulse is not a review in either direction.
+    await page.goto("/s/blue-mantis");
+    await expect(page.getByText(NOTE)).toHaveCount(0);
+    await page.goto("/s/blue-mantis/reviews");
+    await expect(page.getByText(NOTE)).toHaveCount(0);
+
+    // On the shop's own panel, above the ledger.
+    await staff.goto("/shop/blue-mantis/reviews");
+    await expect(staff.getByRole("heading", { name: "Asked us to fix" })).toBeVisible();
+    await expect(staff.getByText(NOTE)).toBeVisible();
+
+    // The diver's way back, and the panel goes with it.
+    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+    await page.getByRole("button", { name: "Take it back" }).click();
+    await expect(page.getByText(/Taken back/)).toBeVisible();
+    // And the confirmation says only what is true. It used to read "{shop}
+    // can't see it", which a security pass over this slice caught as an
+    // over-promise: a withdrawn row is deliberately kept in the shop's export
+    // bundle, because the shop may already have read and acted on it
+    // (src/lib/export.ts says so at the file note). What the withdrawal
+    // actually does is take it off the panel below, which is what the next two
+    // lines prove.
+    await expect(page.getByText(/can.t see it/)).toHaveCount(0);
+
+    await staff.goto("/shop/blue-mantis/reviews");
+    await expect(staff.getByRole("heading", { name: "Asked us to fix" })).toHaveCount(0);
+  } finally {
+    await staffContext.close();
+  }
+});

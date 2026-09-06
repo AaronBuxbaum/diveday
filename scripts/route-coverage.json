@@ -362,8 +362,8 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/reviews": {
-    "e2e": ["reviews.spec.ts", "tenant-isolation.spec.ts"],
-    "visual": ["staff-reviews", "staff-reviews-rating-withheld"],
+    "e2e": ["recap.spec.ts", "reviews.spec.ts", "tenant-isolation.spec.ts"],
+    "visual": ["staff-reviews", "staff-reviews-pulse", "staff-reviews-rating-withheld"],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/schedule/blowout/[tripId]": {

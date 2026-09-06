@@ -13,6 +13,7 @@ import {
   orders,
   people,
   personRoles,
+  recapPulses,
   rollCallEvents,
   trips,
 } from "./schema";
@@ -158,6 +159,75 @@ describe("anonymizeDiver — the roll-call note (ADR 20260828-a-missing-diver-ge
     expect(notes.length).toBeGreaterThan(0);
     // The boarding fact stays — that is the safety record. The sentence goes.
     expect(notes.every((row) => row.note === null)).toBe(true);
+  });
+});
+
+describe("anonymizeDiver — the private word (ADR 20260904-reef-all-the-way-down, D40)", () => {
+  /**
+   * A recap pulse is free text a diver typed on their phone about their day.
+   * Nothing bounds it to "the gear was bad" — it is whatever they wanted this
+   * shop to know, under their name, and it renders on the Reviews page and
+   * ships in every export bundle including the weekly one to shop-owned S3.
+   *
+   * It shipped with slice 16i and reached no clause in `anonymizeDiver`, which
+   * a `security-reviewer` pass found. Nothing mechanical would have: the file
+   * scrubs forty-odd person-scoped statements and nothing enumerates the list,
+   * so the next table can be forgotten exactly the same way.
+   *
+   * Both halves are asserted, because the withdrawn case is the one a reader
+   * would assume is already handled: `deleted_at` is the diver taking a pulse
+   * back, not an erasure, and the words were still on file.
+   */
+  it("takes the words and leaves the shop's record that it heard something", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    const seats = await db
+      .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), ne(bookings.status, "cancelled")))
+      .orderBy(bookings.id)
+      .limit(2);
+    const [live, withdrawn] = seats;
+    if (!live || !withdrawn) throw new Error("expected two seeded bookings");
+
+    await db.insert(recapPulses).values([
+      {
+        shopId: shop.id,
+        bookingId: live.id,
+        tripId: live.tripId,
+        personId: live.personId,
+        categories: ["gear"],
+        note: "The regulator I was handed free-flowed on the second dive.",
+      },
+      {
+        shopId: shop.id,
+        bookingId: withdrawn.id,
+        tripId: withdrawn.tripId,
+        personId: withdrawn.personId,
+        categories: ["boat"],
+        note: "Taken back, but the words were on file until now.",
+        deletedAt: new Date("2026-08-25T00:00:00.000Z"),
+      },
+    ]);
+
+    for (const seat of [live, withdrawn]) {
+      const erased = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: seat.personId,
+        actorPersonId: owner.id,
+      });
+      expect(erased.ok).toBe(true);
+    }
+
+    const rows = await db
+      .select({ id: recapPulses.id, note: recapPulses.note, categories: recapPulses.categories })
+      .from(recapPulses)
+      .where(eq(recapPulses.shopId, shop.id));
+    expect(rows.length).toBe(2);
+    // The words are the diver's and go.
+    expect(rows.every((row) => row.note === null)).toBe(true);
+    // The row stays: that a shop received and settled a piece of feedback is
+    // its own operational record, the same call the review scrub above makes.
+    expect(rows.every((row) => row.categories.length > 0)).toBe(true);
   });
 });
 

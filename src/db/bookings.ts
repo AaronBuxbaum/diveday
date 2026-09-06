@@ -19,6 +19,7 @@ import {
 } from "@/lib/trip-admission";
 import { hasSailed } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
+import { readCertificationEvidence } from "./certification-evidence";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
@@ -32,11 +33,9 @@ import {
   bookings,
   certifications,
   courses,
-  nitroxCertifications,
   people,
   personRoles,
   shops,
-  specialtyCertifications,
   tripAssignments,
   trips,
 } from "./schema";
@@ -446,50 +445,6 @@ const NO_EVIDENCE: TripAdmissionEvidence = {
   specialtyCertifications: [],
   nitroxCertifications: [],
 };
-
-/** One diver's live cert evidence at this shop — the same rows readiness reads. */
-async function readCertificationEvidence(tx: DbExecutor, shopId: string, personId: string) {
-  const [certificationRows, specialtyRows, nitroxRows] = await queryAll(tx, [
-    () =>
-      tx
-        .select()
-        .from(certifications)
-        .where(
-          and(
-            eq(certifications.shopId, shopId),
-            eq(certifications.personId, personId),
-            isNull(certifications.deletedAt),
-          ),
-        ),
-    () =>
-      tx
-        .select()
-        .from(specialtyCertifications)
-        .where(
-          and(
-            eq(specialtyCertifications.shopId, shopId),
-            eq(specialtyCertifications.personId, personId),
-            isNull(specialtyCertifications.deletedAt),
-          ),
-        ),
-    () =>
-      tx
-        .select()
-        .from(nitroxCertifications)
-        .where(
-          and(
-            eq(nitroxCertifications.shopId, shopId),
-            eq(nitroxCertifications.personId, personId),
-            isNull(nitroxCertifications.deletedAt),
-          ),
-        ),
-  ]);
-  return {
-    certifications: certificationRows,
-    specialtyCertifications: specialtyRows,
-    nitroxCertifications: nitroxRows,
-  };
-}
 
 async function settlePackageCoverage(
   tx: DbExecutor,

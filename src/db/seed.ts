@@ -63,6 +63,7 @@ import {
   priorVisits,
   processorErasureObligations,
   recapPhotos,
+  recapPulses,
   rentalFitProfiles,
   reviewModerationEvents,
   rollCallCrewEvents,
@@ -1112,6 +1113,11 @@ export async function resetDemoSchedule(
   await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
   // Reviews reference bookings, trips, and people — all three parents below.
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
+  // The pulse is the review's private sibling and hangs off the same three
+  // parents, plus the staffer who addressed it (ADR
+  // 20260904-reef-all-the-way-down, D40) — so it clears here for the same
+  // reason and at the same point.
+  await db.delete(recapPulses).where(eq(recapPulses.shopId, shopId));
   // Stripe checkout/refund state references bookings, trips, and orders, so it
   // must be cleared before those parents or the deletes below FK-violate and
   // abort the whole reset mid-run — leaving a prior payment test's trips and

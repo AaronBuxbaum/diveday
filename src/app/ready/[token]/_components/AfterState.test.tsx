@@ -73,8 +73,19 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
     tip: null,
     tipPresets: [10, 20, 40],
     ownReview: null,
+    ownPulse: null,
     params: {},
     nextDeparture: null,
+    postcard: {
+      shopName: "Blue Mantis Divers",
+      heading: "recap.logbookHeading",
+      diveDayLine: "recap.diveDayNumber(3)",
+      facts: [{ label: "recap.diverLabel", value: "Yara Halabi" }],
+      privateLine: null,
+      recordedBy: "recap.recordedBy(Blue Mantis Divers)",
+    },
+    nextDive: null,
+    nextDiveWorded: null,
     // Both of these are required, and both were silently absent until the
     // cast below came off: spreading a `Partial` past `as AfterStateProps`
     // let a missing prop compile, so the component was under test with
@@ -82,7 +93,7 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
     diveRecord: null,
     fieldGuide: [],
     observedSpecies: [],
-    actions: { submitReview: noop, uploadPhoto: noop, startTip: noop },
+    actions: { submitReview: noop, uploadPhoto: noop, startTip: noop, submitPulse: noop },
     ...overrides,
   };
 }
@@ -437,7 +448,7 @@ describe("the coral budget", () => {
 });
 
 describe("the milestone stamp", () => {
-  it("stamps a milestone visit instead of the plain ordinal line", () => {
+  it("stamps a milestone visit instead of the plain count", () => {
     render(<AfterState {...props({ visitCount: 10 })} />);
     expect(screen.getByTestId(AFTER_STATE_TEST_IDS.stamp)).toBeInTheDocument();
     expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.visitLine)).toBeNull();
@@ -538,5 +549,148 @@ describe("the postcard (ADR 20260901-diveday-reimagined, slice 13i)", () => {
     // second one, and the day's facts below it still render once.
     expect(screen.getByRole("heading", { level: 2, name: "recap.logbookHeading" })).toBeTruthy();
     expect(screen.getAllByTestId(AFTER_STATE_TEST_IDS.sites)).toHaveLength(1);
+  });
+});
+
+/**
+ * **The postcard's face says a number** (H-67 c, slice 16i).
+ *
+ * It said "Your 3rd dive day with Blue Mantis Divers" — a clause naming the
+ * shop on a card whose eyebrow and whose footer both already name it, three
+ * times on one postcard. The milestone roundel is the deliberate exception: on
+ * the visits `visit-milestones.ts` names, the count *is* the moment and gets a
+ * sentence of its own.
+ */
+describe("the dive-day number", () => {
+  it("says the number and stops, without naming the shop again", () => {
+    render(<AfterState {...props({ visitCount: 3 })} />);
+    const chip = screen.getByTestId(AFTER_STATE_TEST_IDS.visitLine);
+    expect(chip).toHaveTextContent("recap.diveDayNumber(3)");
+    expect(chip.textContent).not.toContain("Blue Mantis");
+  });
+
+  it("leaves the milestone roundel its own sentence", () => {
+    render(<AfterState {...props({ visitCount: 10 })} />);
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.stamp)).toBeInTheDocument();
+    expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.visitLine)).toBeNull();
+  });
+});
+
+/**
+ * **The private pulse sits beside the review, never inside it** (D40, issue
+ * #1200). A private field inside a public form is a trap: the diver has no way
+ * to tell which half of what they typed the shop will publish. The nesting
+ * assertion below is the whole of that rule.
+ */
+describe("the private pulse", () => {
+  const pulseForm = (container: HTMLElement) =>
+    [...container.querySelectorAll("form")].find((form) =>
+      form.querySelector('input[name="category"]'),
+    );
+
+  it("puts its inputs outside the review's own form", () => {
+    const { container } = render(<AfterState {...props()} />);
+    const reviewForm = [...container.querySelectorAll("form")].find((form) =>
+      form.querySelector('textarea[name="comment"]'),
+    );
+    expect(reviewForm).toBeTruthy();
+    expect(within(reviewForm as HTMLElement).queryByText("recap.pulseGear")).toBeNull();
+    expect(reviewForm?.querySelector('input[name="category"]')).toBeNull();
+    // And it is really on the page, one form of its own.
+    expect(pulseForm(container)).toBeTruthy();
+  });
+
+  it("offers all five categories and a note, and no way back until there is one", () => {
+    const { container } = render(<AfterState {...props()} />);
+    expect(container.querySelectorAll('input[name="category"]')).toHaveLength(5);
+    expect(container.querySelector('textarea[name="note"]')).toBeTruthy();
+    expect(screen.queryByText("recap.pulseWithdraw")).toBeNull();
+  });
+
+  it("opens on what the diver already said, and shows the way back", () => {
+    const { container } = render(
+      <AfterState {...props({ ownPulse: { categories: ["boat"], note: "No shade." } })} />,
+    );
+    const boat = container.querySelector<HTMLInputElement>('input[value="boat"]');
+    expect(boat?.defaultChecked).toBe(true);
+    expect(container.querySelector<HTMLTextAreaElement>('textarea[name="note"]')?.value).toBe(
+      "No shade.",
+    );
+    expect(screen.getByText("recap.pulseWithdraw")).toBeInTheDocument();
+  });
+
+  /**
+   * `?pulse=` is attacker-supplied like the other three, so an unrecognised
+   * value renders nothing rather than walking the prototype.
+   */
+  it("says nothing for a notice code it does not recognise", () => {
+    render(<AfterState {...props({ params: { pulse: "constructor" } })} />);
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("reports the outcome beside the form", () => {
+    render(<AfterState {...props({ params: { pulse: "saved" } })} />);
+    expect(screen.getByRole("status")).toHaveTextContent("recap.pulseSaved(Blue Mantis Divers)");
+  });
+});
+
+/**
+ * **One next dive, one reason, and nothing when there is no pick** (D35, issue
+ * #1195).
+ */
+describe("the next dive", () => {
+  const pick = {
+    tripId: "trip-9",
+    title: "Two-Tank — Spiegel Grove",
+    startsAt: new Date("2026-09-12T12:00:00Z"),
+    reason: "crew_named_site" as const,
+    reasonSite: "Spiegel Grove",
+    levelCovered: null,
+    seatsLeft: 4,
+  };
+  const worded = {
+    when: "in 3 days",
+    reason: "recap.nextDiveCrewNamedSite(Spiegel Grove)",
+    levelCovers: null,
+  };
+
+  it("renders one card carrying one reason", () => {
+    render(<AfterState {...props({ nextDive: pick, nextDiveWorded: worded })} />);
+    expect(screen.getByRole("heading", { name: "recap.nextDiveHeading" })).toBeInTheDocument();
+    expect(screen.getByText(worded.reason)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: pick.title })).toHaveAttribute(
+      "href",
+      "/s/blue-mantis/trips/trip-9",
+    );
+  });
+
+  it("renders nothing at all when the board has nothing for this diver", () => {
+    render(<AfterState {...props({ nextDive: null, nextDiveWorded: null })} />);
+    expect(screen.queryByText("recap.nextDiveHeading")).toBeNull();
+  });
+
+  /**
+   * Two "here is what is next" claims one scroll apart, naming two different
+   * departures, is the page arguing with itself — so the footer's bare fact
+   * stands down whenever the card rendered.
+   */
+  it("takes the footer's next-departure line off when the card is present", () => {
+    const nextDeparture = { title: "Night Reef", when: "tomorrow" };
+    const withCard = render(
+      <AfterState {...props({ nextDeparture, nextDive: pick, nextDiveWorded: worded })} />,
+    );
+    expect(withCard.queryByText(/Night Reef/)).toBeNull();
+    withCard.unmount();
+
+    render(<AfterState {...props({ nextDeparture })} />);
+    expect(screen.getByText(/Night Reef/)).toBeInTheDocument();
+  });
+
+  it("carries no score anywhere in what it renders", () => {
+    const { container } = render(
+      <AfterState {...props({ nextDive: pick, nextDiveWorded: worded })} />,
+    );
+    expect(container.innerHTML).not.toMatch(/score|confidence|match strength/i);
   });
 });

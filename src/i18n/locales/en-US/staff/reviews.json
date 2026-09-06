@@ -11,7 +11,8 @@
     "noteRequired": "Say what happened, in a few words, when the reason is “Something else”.",
     "noteTooLong": "That note is too long. Keep it to 200 characters.",
     "standout": "Review marked as standout.",
-    "standoutRemoved": "Review removed from standouts."
+    "standoutRemoved": "Review removed from standouts.",
+    "pulseAddressed": "Marked addressed."
   },
   "ratingWithheld": "Your rating still shows on your own schedule page, but DiveDay has stopped publishing it to search engines: more than one in five of the reviews you have ruled on are now hidden. Republishing {count, plural, one {# hidden review} other {# hidden reviews}} brings it back.",
   "standout": "Standout",
@@ -52,5 +53,13 @@
     "hidden": "Hidden — {count}"
   },
   "publishAll": "{count, plural, =2 {Publish both} other {Publish all #}}",
-  "republish": "Republish"
+  "republish": "Republish",
+  "pulseTitle": "Asked us to fix",
+  "pulseMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
+  "pulseMarkAddressed": "Mark addressed",
+  "pulseCategoryGear": "Gear",
+  "pulseCategoryBriefing": "Briefing",
+  "pulseCategoryBoat": "Boat",
+  "pulseCategoryTiming": "Timing",
+  "pulseCategoryOther": "Something else"
 }
