@@ -23,6 +23,7 @@ type ImageConfig = {
     domains?: string[];
   };
   assetPrefix?: string;
+  outputFileTracingExcludes?: Record<string, string[]>;
 };
 
 async function loadConfig(env: Record<string, string>): Promise<ImageConfig> {
@@ -129,5 +130,48 @@ describe("next.config.ts isVercelPreviewBuild", () => {
   it("is false off Vercel, so a local build and CI keep the behaviour they had", async () => {
     expect(await loadPreviewFlag({ VERCEL: "", VERCEL_ENV: "" })).toBe(false);
     expect(await loadPreviewFlag({ VERCEL: "", VERCEL_ENV: "preview" })).toBe(false);
+  });
+});
+
+/**
+ * **The globs that currently match nothing, and must survive somebody noticing
+ * that** (issue #1370).
+ *
+ * `sharp` ships one libvips build per platform, and until 52e62f1 this repo's
+ * `pnpm-workspace.yaml` forced all four onto every install — which is what the
+ * "37.2 MB off every traced function" in `next.config.ts` was measured against.
+ * Without that key an install matches its machine, so on the Linux x64 boxes CI
+ * and Vercel build on, `@img/*-darwin-*` is never installed and never traced.
+ * Re-measured 2026-09-06: zero darwin paths in any of 147 closures.
+ *
+ * That makes the four darwin globs look like dead configuration, and deleting
+ * dead configuration is the correct instinct almost everywhere. Here it is the
+ * one wrong turn: they are insurance for a build on a Mac, the machine where
+ * those packages *do* install, and their cost is nothing. A number in a comment
+ * cannot stop that edit; this can.
+ */
+describe("next.config.ts outputFileTracingExcludes", () => {
+  it("keeps the darwin sharp globs, which are insurance rather than a saving", async () => {
+    const config = await loadConfig(CONFIGURED);
+    const globs = config.outputFileTracingExcludes?.["**"] ?? [];
+    for (const glob of [
+      "node_modules/.pnpm/@img+sharp-darwin-*/**",
+      "node_modules/.pnpm/@img+sharp-libvips-darwin-*/**",
+      "node_modules/@img/sharp-darwin-*/**",
+      "node_modules/@img/sharp-libvips-darwin-*/**",
+    ]) {
+      expect(
+        globs,
+        `${glob} matches nothing on a Linux install by design — it is what keeps a Mac build from shipping an unreachable native. See the comment above outputFileTracingExcludes.`,
+      ).toContain(glob);
+    }
+  });
+
+  it("keeps the linux native traced, since it is the one that actually runs", async () => {
+    const config = await loadConfig(CONFIGURED);
+    const globs = config.outputFileTracingExcludes?.["**"] ?? [];
+    // Excluding this is the failure the darwin exclusion is carefully not:
+    // a function that cannot decode a JPEG.
+    expect(globs.some((glob) => glob.includes("linux"))).toBe(false);
   });
 });
