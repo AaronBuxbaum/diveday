@@ -8,6 +8,7 @@ import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { SubmitButton } from "@/components/SubmitButton";
+import { sendHoldCopy } from "@/components/send-hold-copy";
 import { buttonClass } from "@/components/ui/button";
 import { GroupLabel, LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -90,8 +91,6 @@ import { WaiverSendControl } from "./WaiverSendControl";
  * quietly.
  */
 
-/** Binds shopSlug + tripId server-side; the client control supplies the entry. */
-export type SpineInviteAction = (tripId: string, entryId: string) => Promise<"sent" | "fallback">;
 export type SpineHelpRequestAction = (
   requestId: string,
   status: "acknowledged" | "handled",
@@ -100,7 +99,6 @@ export type SpineHelpRequestAction = (
 type RowControls = {
   shopSlug: string;
   shopName: string;
-  inviteAction: SpineInviteAction;
   waiverCopy: WaiverSendCopy;
   resendCopy: ResendConfirmationCopy;
   inviteCopy: WaitlistInviteCopy;
@@ -215,7 +213,7 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
       shopName={controls.shopName}
       tripTitle={action.invite.tripTitle}
       tripWhen={action.invite.tripWhen}
-      invite={controls.inviteAction.bind(null, action.invite.tripId)}
+      tripId={action.invite.tripId}
       copy={controls.inviteCopy}
     />
   ) : action.payment?.orderId ? (
@@ -383,7 +381,6 @@ export function DaySpine({
   currency,
   crewedTripIds,
   withheldCount = 0,
-  inviteAction,
   helpRequestAction,
   showPaymentsRow = false,
   firstRun,
@@ -403,7 +400,6 @@ export function DaySpine({
   crewedTripIds?: readonly string[];
   /** How many rows the reader's role lens withheld (issue #715). */
   withheldCount?: number;
-  inviteAction: SpineInviteAction;
   helpRequestAction?: SpineHelpRequestAction;
   /**
    * The desk group's one presence-derived row: the shop has departures, cannot
@@ -440,7 +436,6 @@ export function DaySpine({
   const controls: RowControls = {
     shopSlug,
     shopName,
-    inviteAction,
     helpRequestAction,
     t,
     waiverCopy: waiverSendCopy(t),
@@ -458,6 +453,7 @@ export function DaySpine({
     // Component, so the full copy object is composed here rather than passing
     // a translator across the boundary.
     inviteCopy: {
+      hold: sendHoldCopy(t),
       invitedRelative: t.raw("trips.waitlist.invitedRelative"),
       inviteEmailed: t("trips.waitlist.inviteEmailed"),
       reSendInvite: t("trips.waitlist.reSendInvite"),

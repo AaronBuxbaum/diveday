@@ -474,5 +474,10 @@
   },
   "forgiving": {
     "typedAs": "typed as “{raw}”"
+  },
+  "sendHold": {
+    "sendingIn": "Sending in {seconds} s.",
+    "sendingNow": "Sending…",
+    "undo": "Undo"
   }
 }

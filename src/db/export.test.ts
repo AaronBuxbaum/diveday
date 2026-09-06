@@ -287,6 +287,10 @@ const EXCLUDED_TABLES = [
   // Where each staffer had read up to in that trail. Meaningless without the
   // events above, and meaningless in another system — same reasoning again.
   "trip_read_marks",
+  // A send tapped and not yet left (ADR 20260906-before-you-ask, decision 2).
+  // A row lives eight seconds and is deleted on either exit; a bundle that
+  // caught one would export a tap, not a record.
+  "held_sends",
 ];
 
 /**

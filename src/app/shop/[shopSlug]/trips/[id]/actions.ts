@@ -4,11 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import {
-  canPersonConfigureTrips,
-  canPersonManagePaymentSettings,
-  canPersonRefund,
-} from "@/db/authz";
+import { canPersonConfigureTrips, canPersonRefund } from "@/db/authz";
 import { getBoatById } from "@/db/boats";
 import {
   bookingDiverName,
@@ -43,7 +39,6 @@ import {
   recordTripInvitation,
 } from "@/db/trip-invitations";
 import { getTripLens } from "@/db/trip-lenses";
-import { type SendLastMinuteDealOutcome, sendLastMinuteDealBlast } from "@/db/trip-promos";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
@@ -60,7 +55,7 @@ import {
   updateTrip,
   updateTripConditions,
 } from "@/db/trips";
-import { inviteWaitlistDiver, joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
+import { joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
 import {
   type InPersonWaiverOutcome,
   recordInPersonWaiver,
@@ -73,7 +68,6 @@ import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
-import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
@@ -334,17 +328,6 @@ const UPDATE_TRIP_NOTICE: Record<Extract<UpdateTripOutcome, { ok: false }>["reas
  * would have redirected to a code with no banner behind it: indistinguishable
  * from a dead link, and green in every test.
  */
-const LAST_MINUTE_NOTICE: Record<
-  Extract<SendLastMinuteDealOutcome, { ok: false }>["reason"],
-  string
-> = {
-  invalid_discount: "last-minute-invalid-discount",
-  trip_unavailable: "last-minute-trip-unavailable",
-  trip_full: "last-minute-trip-full",
-  not_connected: "last-minute-not-connected",
-  no_recipients: "last-minute-no-recipients",
-  stripe_failed: "last-minute-stripe-failed",
-};
 
 /**
  * A wait-list refusal's `?notice=` code. `already_waitlisted` never reaches this
@@ -919,40 +902,6 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
 }
 
 /**
- * What a one-tap wait-list invite reports back to the control: `sent` when the
- * freed-seat email actually went out through the notification seam, `fallback`
- * when it didn't (no provider configured, or the diver has no address on file)
- * so the UI opens the prewritten mailto/copy composer instead of pretending
- * mail is on its way. Either way the invite is stamped so nobody double-invites.
- */
-export type WaitlistInviteResult = "sent" | "fallback";
-
-/**
- * Invite a wait-list diver to grab a freed seat: stamps `invitedAt` (so the
- * entry reads "Invited just now" and two staff don't both reach out) and emails
- * them the trip's booking link through the shared notification seam. When email
- * isn't wired up, the control falls back to the composer — the send is the
- * default now, the composer is the safety net.
- */
-export async function inviteWaitlistAction(
-  shopSlug: string,
-  tripId: string,
-  entryId: string,
-): Promise<WaitlistInviteResult> {
-  const s = (await requireShopSurface(shopSlug)).session;
-  const result = await inviteWaitlistDiver(await getDb(), {
-    shopId: s.user.shopId,
-    shopSlug,
-    entryId,
-  });
-  revalidatePath(tripPath(shopSlug, tripId));
-  // The freed-seat row also lives on Today, so refresh the queue after an invite
-  // whether it was sent from the roster or straight from Today (WP-9 → §7).
-  revalidatePath(shopPath(shopSlug));
-  return result.ok && result.delivery === "sent" ? "sent" : "fallback";
-}
-
-/**
  * Records a staff outreach attempt for a request-origin invitation. The
  * browser then opens the same safe composer fallback used by the wait-list
  * invite; this deliberately does not turn a lead into a booking or consume a
@@ -1045,62 +994,6 @@ async function sendTripInvitation(
     invitedAt,
   });
   return delivery.status === "sent" ? "sent" : "fallback";
-}
-
-/**
- * Sends a staff-picked discount blast to every last-minute-list diver whose
- * date range covers this trip (docs ADR 20260727-last-minute-fill-promos).
- * A plain form action, not a one-tap control like the wait-list invite — the
- * discount percent is a real commercial choice, not a re-runnable nudge.
- */
-export async function sendLastMinuteDealAction(
-  shopSlug: string,
-  tripId: string,
-  formData: FormData,
-) {
-  const back = tripPath(shopSlug, tripId);
-  const anchor = "#last-minute-deal";
-  // **Discounting is money work, wherever the button sits.** This mints a real
-  // percentage coupon on the shop's connected Stripe account and mails it to a
-  // list of divers — the same act as a shop-wide promo code, which
-  // `/shop/[shopSlug]/promos` gates on this very predicate on both its page and
-  // its actions. Ungated, a captain who may not change a departure's price
-  // (`canConfigureTrips` says so explicitly) could discount that same departure
-  // by the allowed maximum and send it out (issue #714). `canManagePaymentSettings`
-  // names discount codes in its own docstring; two spellings of one concept had
-  // opposite answers.
-  const s = (
-    await requireShopSurface(shopSlug, {
-      allow: canPersonManagePaymentSettings,
-      refusal: { notice: "not-authorized", landing: ["trips", tripId] },
-    })
-  ).session;
-  const discountPercent = Number(formData.get("discountPercent"));
-  if (!isValidLastMinuteDiscountPercent(discountPercent)) {
-    redirect(noticeUrl(`${back}${anchor}`, "last-minute-invalid-discount"));
-  }
-  const recipientPersonIds = formData.getAll("recipientPersonIds").map(String).filter(Boolean);
-  if (recipientPersonIds.length === 0) {
-    redirect(noticeUrl(`${back}${anchor}`, "last-minute-no-recipients"));
-  }
-  const outcome = await sendLastMinuteDealBlast(await getDb(), {
-    shopId: s.user.shopId,
-    shopSlug,
-    tripId,
-    discountPercent,
-    createdByPersonId: s.user.personId,
-    recipientPersonIds,
-  });
-  if (outcome.ok) {
-    // Today's nudge disappears once any blast has been sent, so refresh it
-    // alongside the trip page it was sent from.
-    revalidatePath(back);
-    revalidatePath(shopPath(shopSlug));
-    redirect(noticeUrl(`${back}${anchor}`, "last-minute-sent", { count: outcome.recipientCount }));
-  }
-  // The anchor goes into the path `noticeUrl` is handed, which puts the query
-  // ahead of the `#last-minute-deal` fragment where it belongs.
-  redirect(noticeUrl(`${back}${anchor}`, LAST_MINUTE_NOTICE[outcome.reason]));
 }
 
 /**

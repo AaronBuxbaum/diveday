@@ -403,14 +403,13 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
 
 16h, 16i and 16j landed as a stack, each cut from the layer below and merged bottom-up.
 
-### 17. Before you ask (design complete; H-68 Ready)
+### 17. Before you ask (design complete; H-68 Chosen 2026-09-06)
 
 The 2026-09-06 loop, argued on [the canvas](../../design/canvases/20260906-before-you-ask/README.md)
 and proposed in ADR [20260906-before-you-ask](../../architecture/decisions/20260906-before-you-ask.md):
 the product keeps its knowledge to itself, which is what "too minimalistic" feels like from a desk.
 One rule, DiveDay fills in what it already knows, shows where it got it, and leaves the last tap to
-a person, drawn six times. Three of the six carry an owner's call (H-68); the other three move on
-the ADR alone. Each slice runs the `design-implementation` skill: the component names the ADR, a
+a person, drawn six times. The owner chose every recommended option on 2026-09-06 (H-68), so all six move. Each slice runs the `design-implementation` skill: the component names the ADR, a
 test pins the rule, the canvas README's slice table moves, and the visual diffs are explained.
 
 - **17a** — a send you can take back: the eight-second server-side hold with Undo on the four

@@ -1,6 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState } from "react";
+import {
+  holdSendAction,
+  releaseHeldSendAction,
+  undoHeldSendAction,
+} from "@/app/actions/held-sends";
 import {
   IDLE_WAIVER_SEND_STATE,
   type WaiverFallbackLink,
@@ -8,12 +13,11 @@ import {
   type WaiverSendCopy,
   type WaiverSendState,
   type WaiverSendSurface,
+  waiverSendStateFromOutcome,
 } from "@/app/actions/waiver-send-types";
-import { sendWaiversAction } from "@/app/actions/waivers";
 import { Copyable } from "@/components/Copyable";
-import { SubmitButton } from "@/components/SubmitButton";
+import { SendHold } from "@/components/SendHold";
 import { buttonClass } from "@/components/ui/button";
-import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { fill, pluralForm } from "@/i18n/fill";
 
@@ -232,7 +236,6 @@ export function WaiverSendControl({
   personId,
   label,
   hint,
-  pendingLabel,
   confirmMessage,
   className,
   wrapperClassName,
@@ -257,10 +260,11 @@ export function WaiverSendControl({
   wrapperClassName?: string;
   copy: WaiverSendCopy;
 }) {
-  const [state, formAction] = useActionState(
-    sendWaiversAction.bind(null, shopSlug, surface, tripId),
-    IDLE_WAIVER_SEND_STATE,
-  );
+  // The tap holds the send for eight seconds and this control's row counts it
+  // down with Undo where the button was (ADR 20260906-before-you-ask, decision
+  // 2); the outcome lands here once the hold drains, in the same shape the
+  // notice below has always rendered.
+  const [state, setState] = useState<WaiverSendState>(IDLE_WAIVER_SEND_STATE);
   // **The tap answered "there is nothing to send", so the button goes.**
   //
   // A row saying a diver's waiver link could not be delivered after five
@@ -299,29 +303,28 @@ export function WaiverSendControl({
   return (
     <div className={wrapperClassName ?? "sm:text-right"}>
       {nothingLeftToSend ? null : (
-        <form action={formAction} className="flex sm:inline-flex">
+        <SendHold
+          className="flex sm:inline-flex"
+          hold={holdSendAction}
+          undo={undoHeldSendAction}
+          release={releaseHeldSendAction}
+          onOutcome={(outcome) => setState(waiverSendStateFromOutcome(outcome))}
+          copy={copy.hold}
+          // The one clause a reissue keeps: the old link stops working, which
+          // the row cannot show on its own.
+          note={confirmMessage}
+        >
+          <input type="hidden" name="holdKind" value="waiver_send" />
+          <input type="hidden" name="surface" value={surface} />
+          {tripId ? <input type="hidden" name="tripId" value={tripId} /> : null}
           {bookingIds.map((id) => (
             <input key={id} type="hidden" name="bookingId" value={id} />
           ))}
           {personId ? <input type="hidden" name="personId" value={personId} /> : null}
-          {/* Resending is a send, not a reversible edit (principle 7,
-              docs/design/principles.md) — a resend to someone who already got
-              one guards with a real confirm, not an undo. */}
-          {confirmMessage ? (
-            <InlineConfirm
-              triggerLabel={labelContent}
-              triggerClassName={buttonClassName}
-              message={confirmMessage}
-              confirmLabel={copy.confirmResend}
-              cancelLabel={copy.neverMind}
-              pendingLabel={pendingLabel ?? copy.sending}
-            />
-          ) : (
-            <SubmitButton pendingLabel={pendingLabel ?? copy.sending} className={buttonClassName}>
-              {labelContent}
-            </SubmitButton>
-          )}
-        </form>
+          <button type="submit" className={buttonClassName}>
+            {labelContent}
+          </button>
+        </SendHold>
       )}
       <ResultNotice state={state} copy={copy} />
     </div>

@@ -1,9 +1,19 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CertificationSummary } from "@/db/self-declared-cards";
 import type { CertRequirementSource } from "@/lib/readiness";
 import { type LastMinuteDealRecipient, LastMinuteDealSection } from "./LastMinuteDealSection";
+
+// The send is a held send (ADR 20260906-before-you-ask, decision 2), whose
+// control reaches the router and the `"use server"` action module; neither is
+// what this suite is about.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/app/actions/held-sends", () => ({
+  holdSendAction: vi.fn(),
+  undoHeldSendAction: vi.fn(),
+  releaseHeldSendAction: vi.fn(),
+}));
 
 afterEach(cleanup);
 
@@ -58,7 +68,7 @@ function renderSection(
       promos={[]}
       timezone="America/New_York"
       locale="en-US"
-      sendAction={() => {}}
+      tripId="trip-1"
     />,
   );
 }

@@ -39,6 +39,7 @@ import {
   gearItems,
   gearReservations,
   gearServiceEvents,
+  heldSends,
   importedPaymentHistory,
   integrationDeliveries,
   integrationEvents,
@@ -1052,6 +1053,7 @@ export async function resetDemoSchedule(
   // against them are schedule-scoped operational history.
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
+  await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
   // Neither of these is seeded — both are written only by what a visitor does
   // (a staff note on a diver, the activity trail `seat-diver.ts` appends), and
   // both reference `people` without cascade. So a demo where anyone used the

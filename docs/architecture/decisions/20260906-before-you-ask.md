@@ -1,7 +1,8 @@
 # 20260906-before-you-ask — DiveDay fills in what it already knows, shows where it got it, and leaves the last tap to a person
 
-- **Status:** Proposed — three of its six moves carry an owner's call (H-68); the rest is the
-  canvas's recommendation and moves nothing until that row is Chosen
+- **Status:** Accepted — decided 2026-09-06 (Aaron Buxbaum, in session; H-68: every recommended
+  option, so the send hold, the cold-email link and the crew fill all ship). Slices 17a–17f in the
+  roadmap
 - **Date:** 2026-09-06
 - **Design:** [the canvas](../../design/canvases/20260906-before-you-ask/README.md) — seven
   artboards on two pages: the cover and two specimen boards; then the known diver's booking page,

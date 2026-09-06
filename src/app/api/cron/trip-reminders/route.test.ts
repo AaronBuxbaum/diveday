@@ -5,6 +5,9 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/db/reminders", () => ({ sendDueReminders: vi.fn() }));
+vi.mock("@/db/held-sends", () => ({
+  drainHeldSends: vi.fn(async () => ({ sent: 0, failed: 0 })),
+}));
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
   captureException: vi.fn(),

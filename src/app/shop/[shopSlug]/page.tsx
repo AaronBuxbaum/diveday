@@ -76,7 +76,6 @@ import {
   updateHelpRequestAction,
   uploadCrewRecapPhotoAction,
 } from "./actions";
-import { inviteWaitlistAction } from "./trips/[id]/actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -875,7 +874,6 @@ async function TodayBody({
           currency={shop.currency}
           crewedTripIds={lens === "boat" ? crewedTripIds : undefined}
           withheldCount={withheldCount}
-          inviteAction={inviteWaitlistAction.bind(null, shopSlug)}
           helpRequestAction={updateHelpRequestAction}
           showPaymentsRow={showPaymentsRow}
           firstBooking={firstBooking}

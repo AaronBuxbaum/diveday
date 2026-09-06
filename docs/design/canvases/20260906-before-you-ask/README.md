@@ -1,6 +1,6 @@
 # Before you ask — six moves where DiveDay fills in what it already knows
 
-- **Status:** Live (its ADR is Proposed; three decisions wait on H-68)
+- **Status:** Live (its ADR was Accepted on 2026-09-06 with H-68 Chosen; slices land below)
 - **Date:** 2026-09-06
 - **ADR:** [20260906-before-you-ask](../../../architecture/decisions/20260906-before-you-ask.md)
 - **Published:** https://claude.ai/code/artifact/b74389e3-06d8-42f4-aed8-2cf90b9be3c7
@@ -85,7 +85,7 @@ medical answer is never carried forward.
 **A canvas has authority over a surface only while that surface's slice is `open`**
 ([design-artifacts.md](../../design-artifacts.md)). Slice bodies, dependencies and the review
 each one takes are in the ADR and in
-[roadmap.md](../../../product/features/roadmap.md#17-before-you-ask-design-complete-h-68-ready).
+[roadmap.md](../../../product/features/roadmap.md#17-before-you-ask-design-complete-h-68-chosen-2026-09-06).
 Each row ends with the standing obligation: the component that must not drift names this ADR in
 its doc comment, and a test pins the rule.
 

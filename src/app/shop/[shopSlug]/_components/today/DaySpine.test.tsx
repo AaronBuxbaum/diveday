@@ -16,7 +16,11 @@ import {
 // spine renderable in this environment at all.
 vi.mock("@/app/actions/invoices", () => ({ resendInvoiceAction: vi.fn() }));
 vi.mock("@/app/actions/notifications", () => ({ resendConfirmationAction: vi.fn() }));
-vi.mock("@/app/actions/waivers", () => ({ sendWaiversAction: vi.fn() }));
+vi.mock("@/app/actions/held-sends", () => ({
+  holdSendAction: vi.fn(),
+  undoHeldSendAction: vi.fn(),
+  releaseHeldSendAction: vi.fn(),
+}));
 // The closing block binds the evening's own acts, which live in the home's
 // sibling `actions.ts` — a `"use server"` module whose imports reach
 // better-auth and the database. Same reason as the three above.
@@ -28,7 +32,7 @@ vi.mock("@/app/shop/[shopSlug]/actions", () => ({
 
 import type { FirstBooking } from "@/db/first-booking";
 import { assembleEveningClose, type CloseoutDeparture } from "@/lib/closeout";
-import { DaySpine, type EveningReading, type SpineInviteAction } from "./DaySpine";
+import { DaySpine, type EveningReading } from "./DaySpine";
 
 afterEach(() => {
   cleanup();
@@ -36,7 +40,6 @@ afterEach(() => {
 
 const NOW = new Date("2026-08-27T11:00:00Z");
 const hoursFromNow = (hours: number) => new Date(NOW.getTime() + hours * 60 * 60 * 1000);
-const inviteAction: SpineInviteAction = vi.fn().mockResolvedValue("sent");
 
 function action(overrides: Partial<TodayAction> = {}): TodayAction {
   return {
@@ -155,7 +158,6 @@ function renderSpine({
       locale="en-US"
       timeZone="America/New_York"
       currency="usd"
-      inviteAction={inviteAction}
       now={NOW}
       {...props}
     />,
@@ -958,7 +960,6 @@ describe("a row that performs keeps its place", () => {
         locale="en-US"
         timeZone="America/New_York"
         currency="usd"
-        inviteAction={inviteAction}
         now={NOW}
       />,
     );

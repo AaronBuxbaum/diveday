@@ -37,9 +37,7 @@ export type TripRosterActions = {
   deleteInternalNoteAction: FormAction;
   saveRosterEmergencyContactAction: FormAction;
   updateBookingPickupAction: (bookingId: string, formData: FormData) => void | Promise<void>;
-  inviteWaitlistAction: (entryId: string) => Promise<"sent" | "fallback">;
   recordTripInvitationAction: (invitationId: string) => Promise<"sent" | "fallback">;
-  sendLastMinuteDealAction: FormAction;
   undoRemoveBookingAction: FormAction;
   restoreInternalNoteAction: FormAction;
 };
@@ -198,7 +196,6 @@ export function TripRosterContent({
               shopName={shopName}
               tripTitle={trip.title}
               tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
-              inviteAction={actions.inviteWaitlistAction}
               certificationSummaries={certificationSummaries}
               departureRequirement={dealRequirement}
               locale={locale}
@@ -281,7 +278,7 @@ export function TripRosterContent({
                 promoRecipients={lastMinute.promoRecipients}
                 timezone={timezone}
                 status={noticeForForm(tripNotice, "last-minute-deal")}
-                sendAction={actions.sendLastMinuteDealAction}
+                tripId={trip.id}
               />
             </div>
           </AutoOpenDetails>

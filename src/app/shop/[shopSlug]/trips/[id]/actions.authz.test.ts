@@ -50,13 +50,8 @@ vi.mock("@/db/refunds", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
-const {
-  markPaymentAction,
-  removeBookingAction,
-  reinstateTripAction,
-  saveRequirementsAction,
-  sendLastMinuteDealAction,
-} = await import("./actions");
+const { markPaymentAction, removeBookingAction, reinstateTripAction, saveRequirementsAction } =
+  await import("./actions");
 
 /**
  * A seeded ordinary charter — not a course session, whose rules are frozen —
@@ -480,7 +475,7 @@ describe("who may run each action on the trip page", () => {
   ];
 
   /** Money: what a dive costs, and writing off what it earned. */
-  const MONEY = ["sendLastMinuteDealAction", "markPaymentAction"];
+  const MONEY = ["markPaymentAction"];
 
   /**
    * The day's work, and deliberately open. Running the boat, the roster, the
@@ -506,7 +501,6 @@ describe("who may run each action on the trip page", () => {
     "deleteInternalNoteAction",
     "restoreInternalNoteAction",
     "addToWaitlistAction",
-    "inviteWaitlistAction",
     "recordTripInvitationAction",
     "createDirectTripInvitationAction",
     "removeBookingAction",
@@ -565,9 +559,9 @@ describe("who may run each action on the trip page", () => {
    *
    * - **`TRIP_CONFIG`** — the preamble is `requireTripConfig`, which re-reads
    *   live roles and bounces anyone `canPersonConfigureTrips` refuses.
-   * - **`MONEY`** — somebody is refused on a money predicate. Sometimes in the
-   *   preamble (`sendLastMinuteDealAction` passes `canPersonManagePaymentSettings`
-   *   as `allow`), and sometimes further down: `markPaymentAction` takes the
+   * - **`MONEY`** — somebody is refused on a money predicate. The last-minute
+   *   deal's gate now lives on its held send (`holdSendAction`, tested beside
+   *   it); here it is `markPaymentAction`, whose gate is further down: it takes the
    *   ordinary preamble and then refuses on `canPersonRefund`, because its gate
    *   is on the *transition* — recording cash at the dock is crew work, marking
    *   a booking written off is not. A check that only read preambles would call
@@ -621,37 +615,13 @@ describe("who may run each action on the trip page", () => {
 });
 
 /**
- * The two money actions themselves, which had no gate at all: a captain could
+ * The money actions themselves, which had no gate at all: a captain could
  * mint a percentage coupon on the shop's connected Stripe account and mail it
  * to a list of divers, on a departure whose price they are explicitly not
- * allowed to change (issue #714).
+ * allowed to change (issue #714). The deal blast is a held send now, and its
+ * gate is tested beside it (`src/app/actions/held-sends.test.ts`).
  */
 describe("money on the trip page", () => {
-  it("refuses a captain the last-minute deal blast", async () => {
-    const { shop, tripId, captain } = await context();
-    signIn(shop, captain);
-
-    const form = new FormData();
-    form.set("discountPercent", "25");
-
-    const to = await redirectedTo(() => sendLastMinuteDealAction(shop.slug, tripId, form));
-
-    expect(to).toContain("notice=not-authorized");
-  });
-
-  it("lets an owner send it", async () => {
-    const { shop, tripId, owner } = await context();
-    signIn(shop, owner);
-
-    const form = new FormData();
-    form.set("discountPercent", "25");
-
-    // Not asserting a send here — the fleet configures no provider — only that
-    // it is not the authorization refusal.
-    const to = await redirectedTo(() => sendLastMinuteDealAction(shop.slug, tripId, form));
-    expect(to).not.toContain("notice=not-authorized");
-  });
-
   /**
    * **The way *out* of a write-off is a write-off too.**
    *

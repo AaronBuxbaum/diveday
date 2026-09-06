@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
+import { sendHoldCopy } from "@/components/send-hold-copy";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import {
 import type { CertRequirementSource } from "@/lib/readiness";
 import type { FormNotice } from "@/lib/staff-notices";
 import { LastMinuteSendButton } from "./LastMinuteSendButton";
+import { LastMinuteSendHold } from "./LastMinuteSendHold";
 
 const STATUS_TONE: Record<TripLastMinutePromo["status"], BadgeTone> = {
   sent: "success",
@@ -56,6 +58,7 @@ export type LastMinuteDealRecipient = {
 
 export function LastMinuteDealSection({
   shopSlug,
+  tripId,
   recipients,
   requirement,
   course = null,
@@ -66,7 +69,6 @@ export function LastMinuteDealSection({
   timezone,
   locale,
   status,
-  sendAction,
 }: {
   /**
    * What the last blast did. This section is the reason `FormStatus` exists:
@@ -77,6 +79,8 @@ export function LastMinuteDealSection({
   status?: FormNotice;
   /** Only used by the cancelled empty state's way out, back to the board. */
   shopSlug: string;
+  /** The departure the deal is for: the held send is keyed to it. */
+  tripId: string;
   recipients: readonly LastMinuteDealRecipient[];
   requirement: CertRequirementSource | null;
   course?: CourseTargetInfo | null;
@@ -86,7 +90,6 @@ export function LastMinuteDealSection({
   promoRecipients?: TripLastMinutePromoRecipientItem[];
   timezone: string;
   locale: string;
-  sendAction: (formData: FormData) => void;
 }) {
   const t = staffTranslator(locale);
   // The list is the audience, not a review queue. Keep people who do not meet
@@ -112,8 +115,9 @@ export function LastMinuteDealSection({
       <p className="mt-1 text-sm text-muted">{t("trips.lastMinute.description")}</p>
 
       {canSend ? (
-        <form
-          action={sendAction}
+        <LastMinuteSendHold
+          tripId={tripId}
+          copy={sendHoldCopy(t)}
           className={sectionCardClass({
             className: "mt-4 flex flex-wrap items-end gap-3",
           })}
@@ -205,7 +209,7 @@ export function LastMinuteDealSection({
           <FormStatus tone={status?.tone} className="basis-full">
             {status?.text}
           </FormStatus>
-        </form>
+        </LastMinuteSendHold>
       ) : (
         // Three different reasons there is no send button, each with the one
         // door that helps from here: a cancelled boat sends you back to the
