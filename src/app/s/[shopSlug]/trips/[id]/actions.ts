@@ -32,7 +32,6 @@ import {
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
-import { parseDiveIntent } from "@/lib/dive-intent";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
@@ -45,7 +44,6 @@ import {
 } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { parseReEntryAsk, reEntryWindowOpen } from "@/lib/re-entry";
 import { type CertRequirementSource, combineCertRequirements } from "@/lib/readiness";
 import { partnerFromReferralCookie, REFERRAL_COOKIE } from "@/lib/referrals";
 import {
@@ -166,12 +164,6 @@ export async function bookSpot(
     validParty.push({ fullName, email });
   }
   const phone = String(formData.get("phone") ?? "").trim();
-  // **Narrowed to the enum or dropped, never refused.** Both are optional
-  // questions on an anonymous form, so a hand-crafted post carrying junk in
-  // either field reads as "not said" — a fabricated value must never be able to
-  // cost somebody a seat (ADR 20260904-reef-all-the-way-down, D12/D18).
-  const diveIntent = parseDiveIntent(formData.get("diveIntent"));
-  const postedReEntryAsk = parseReEntryAsk(formData.get("reEntryAsk"));
   if (phone.length > DIVER_PHONE_MAX) fieldErrors.phone = t("booking.fieldErrors.phoneTooLong");
   if (Object.keys(fieldErrors).length > 0) {
     return { error: t("booking.errors.checkFields"), fieldErrors };
@@ -238,15 +230,6 @@ export async function bookSpot(
   const payAtBookingForGear = Boolean(
     payablePerDiverCentsForGear && canAcceptPayments(stripeAccountForGear) && publicAppUrl(),
   );
-  // **The offer window is re-derived from the departure, never trusted from the
-  // post** — the same rule the nitrox checkbox above follows. A hand-crafted
-  // field must not record a request the form would not have offered, and inside
-  // 24 hours of a departure D18 offers nothing at all because nobody can act on
-  // it (ADR 20260904-reef-all-the-way-down, D18).
-  const reEntryAsk =
-    postedReEntryAsk && tripForGear && reEntryWindowOpen(tripForGear.startsAt)
-      ? postedReEntryAsk
-      : null;
   const offersGearAtCheckout = payAtBookingForGear && hasAnyRentalPricing(shopNow.rentalPricing);
   const offeredGearItems = offeredRentableItems(shopNow.rentalItems);
   // Both gates, re-derived server-side: the shop fills nitrox, and this
@@ -325,11 +308,11 @@ export async function bookSpot(
       email: entry.email || undefined,
       // Only the lead booker's phone is collected, so the crew can reach the party.
       phone: index === 0 && phone ? phone : undefined,
-      // **The lead's row only.** The answer is the person who filled the form
-      // in; writing their intent onto all five seats of a party would inflate
-      // the count the crew reads into a claim nobody made.
-      diveIntent: index === 0 ? (diveIntent ?? undefined) : undefined,
-      reEntryAsk: index === 0 ? (reEntryAsk ?? undefined) : undefined,
+      // **Nothing about the dive itself.** "What's this dive for?" and D18's
+      // three offers were posted from this form until 2026-09-06 and written
+      // onto the lead's row; `/ready/<token>` asks both after the sale, of the
+      // diver whose seat it is, so this transaction records only the party and
+      // how to reach it.
       referralSource,
     })),
   );
@@ -504,6 +487,10 @@ export async function bookSpot(
             rentsWeights: rentedSet.has("weights"),
             rentsDiveComputer: rentedSet.has("dive_computer"),
             rentsGopro: rentedSet.has("gopro"),
+            rentsDrysuit: rentedSet.has("drysuit"),
+            rentsHoodGloves: rentedSet.has("hood_gloves"),
+            rentsTorch: rentedSet.has("torch"),
+            rentsSmb: rentedSet.has("smb"),
           });
           if (nitroxOfferedAtCheckout) {
             await setBookingNitrox(dbi, {

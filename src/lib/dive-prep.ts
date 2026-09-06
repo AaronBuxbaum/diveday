@@ -33,7 +33,11 @@ export type RentalItemKind =
   | "mask_fins"
   | "weights"
   | "dive_computer"
-  | "gopro";
+  | "gopro"
+  | "drysuit"
+  | "hood_gloves"
+  | "torch"
+  | "smb";
 
 export type RentalFit = {
   rentsBcd: boolean;
@@ -43,6 +47,10 @@ export type RentalFit = {
   rentsWeights: boolean;
   rentsDiveComputer: boolean;
   rentsGopro: boolean;
+  rentsDrysuit: boolean;
+  rentsHoodGloves: boolean;
+  rentsTorch: boolean;
+  rentsSmb: boolean;
   bcdSize: string | null;
   wetsuitSize: string | null;
   bootSize: string | null;
@@ -389,6 +397,14 @@ function rentedItems(fit: RentalFit): PrepPiece[] {
   if (fit.rentsWeights) items.push(stated("weights", fit.weightPreference));
   if (fit.rentsDiveComputer) items.push(unsized("dive_computer"));
   if (fit.rentsGopro) items.push(unsized("gopro"));
+  // The four add-ons that carry no size (see `RENTABLE_ITEMS`). A drysuit is
+  // the one that visibly wants one; until it has a size column it reaches the
+  // packing list as a piece, which is still what the crew has to pull off the
+  // wall.
+  if (fit.rentsDrysuit) items.push(unsized("drysuit"));
+  if (fit.rentsHoodGloves) items.push(unsized("hood_gloves"));
+  if (fit.rentsTorch) items.push(unsized("torch"));
+  if (fit.rentsSmb) items.push(unsized("smb"));
   return items;
 }
 

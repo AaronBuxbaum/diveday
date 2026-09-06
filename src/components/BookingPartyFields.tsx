@@ -147,17 +147,29 @@ export function BookingPartyFields({
               refused server parse with everything the diver typed still on
               screen. Radios named `partySize` do that; a navigation control
               cannot. The track's geometry is copied from it so the two read as
-              one grammar. */}
+              one grammar — `rounded-inset` over `rounded-lg` segments, which
+              is the pair that nests. It carried `rounded-panel` (28px) around
+              8px segments until 2026-09-06, so the selected pill's corners
+              stood outside the track's own curve at both ends. */}
+          {/* **The segment reads as a number, not a sentence.** Six segments
+              spelling "1 diver … 6 divers" are wider than any phone, so the
+              track wrapped — and because each segment also grew to fill its
+              row, the leftovers landed as one stretched pill centred under
+              four siblings, which is what a shop reported as looking broken.
+              The group is captioned "Number of divers" directly above, so the
+              numeral is the whole answer; the plural sentence stays as each
+              radio's accessible name, which is both what a screen reader
+              announces and what the specs match on. */}
           <div
             role="radiogroup"
             aria-labelledby="party-size-label"
             data-hydrated={hydrated ? "true" : "false"}
-            className="mt-2 flex w-fit max-w-full flex-wrap gap-1 rounded-panel border border-border bg-surface-sunken p-1"
+            className="mt-2 flex w-fit max-w-full gap-1 rounded-inset border border-border bg-surface-sunken p-1"
           >
             {counts.map((count) => (
               <label
                 key={count}
-                className={`inline-flex min-h-11 grow cursor-pointer items-center justify-center rounded-lg px-2.5 text-sm font-semibold whitespace-nowrap transition-colors ${
+                className={`inline-flex min-h-11 min-w-11 flex-1 cursor-pointer items-center justify-center rounded-lg px-2.5 text-sm font-semibold tabular-nums transition-colors ${
                   size === count
                     ? "bg-surface text-primary shadow-sm"
                     : "text-muted hover:bg-surface hover:text-foreground"
@@ -169,9 +181,10 @@ export function BookingPartyFields({
                   value={count}
                   checked={size === count}
                   onChange={() => setSize(count)}
+                  aria-label={t("party.diverCountOption", { count })}
                   className="sr-only"
                 />
-                {t("party.diverCountOption", { count })}
+                {t("party.diverCountShort", { count })}
               </label>
             ))}
           </div>

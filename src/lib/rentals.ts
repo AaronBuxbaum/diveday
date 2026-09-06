@@ -20,7 +20,11 @@ export type RentableItemKind =
   | "mask_fins"
   | "weights"
   | "dive_computer"
-  | "gopro";
+  | "gopro"
+  | "drysuit"
+  | "hood_gloves"
+  | "torch"
+  | "smb";
 
 /** Everything a shop's catalog can hold: the rental-fit gear plus nitrox fills. */
 export type ShopCatalogKind = RentableItemKind | "nitrox";
@@ -32,7 +36,11 @@ export type RentalFitField =
   | "rentsMaskFins"
   | "rentsWeights"
   | "rentsDiveComputer"
-  | "rentsGopro";
+  | "rentsGopro"
+  | "rentsDrysuit"
+  | "rentsHoodGloves"
+  | "rentsTorch"
+  | "rentsSmb";
 
 export type RentableItem = {
   kind: RentableItemKind;
@@ -98,6 +106,20 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
     defaultRented: true,
   },
   { kind: "gopro", field: "rentsGopro", name: "gopro", defaultRented: false },
+  // **The kit a particular dive calls for**, rather than the kit everybody
+  // takes (reported 2026-09-06: a shop's "What we rent" list could not say it
+  // rents drysuits). Every one defaults off, so a shop that leaves them alone
+  // is where it was and no diver is ever packed one they did not ask for.
+  //
+  // None carries a size yet. A drysuit is the one that plainly wants one, and
+  // giving it a `rental_fit_profiles` size column is its own decision — whose
+  // scale, and whether the boot size beneath a wetsuit answers for it too — so
+  // it is filed rather than guessed at, and until then a drysuit reaches the
+  // packing list as a piece the counter fits by hand.
+  { kind: "drysuit", field: "rentsDrysuit", name: "drysuit", defaultRented: false },
+  { kind: "hood_gloves", field: "rentsHoodGloves", name: "hoodGloves", defaultRented: false },
+  { kind: "torch", field: "rentsTorch", name: "torch", defaultRented: false },
+  { kind: "smb", field: "rentsSmb", name: "smb", defaultRented: false },
 ] as const;
 
 /**
@@ -210,9 +232,9 @@ export function nitroxCardWanted(
 /**
  * The pieces of a fit that have a **size to record**, in canonical order.
  *
- * `regulator`, `dive_computer` and `gopro` are deliberately absent: they are
- * one-size gear with no `rental_fit_profiles` size column, so renting one can
- * never leave a fit half-filled. `boots` has no checkbox of its own — it rides
+ * `regulator`, `dive_computer`, `gopro`, `drysuit`, `hood_gloves`, `torch` and
+ * `smb` are deliberately absent: none has a `rental_fit_profiles` size column,
+ * so renting one can never leave a fit half-filled. `boots` has no checkbox of its own — it rides
  * along with the wetsuit (`src/lib/dive-prep.ts`), so a suit with no shoe size
  * is as much of a loose end as a suit with no suit size.
  *

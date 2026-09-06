@@ -23,6 +23,10 @@ export type RentalFitInput = {
   rentsWeights: boolean;
   rentsDiveComputer: boolean;
   rentsGopro: boolean;
+  rentsDrysuit: boolean;
+  rentsHoodGloves: boolean;
+  rentsTorch: boolean;
+  rentsSmb: boolean;
   bcdSize?: string;
   wetsuitSize?: string;
   bootSize?: string;
@@ -72,6 +76,10 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
     rentsWeights: input.rentsWeights,
     rentsDiveComputer: input.rentsDiveComputer,
     rentsGopro: input.rentsGopro,
+    rentsDrysuit: input.rentsDrysuit,
+    rentsHoodGloves: input.rentsHoodGloves,
+    rentsTorch: input.rentsTorch,
+    rentsSmb: input.rentsSmb,
     // Each size is written only when the caller actually carried it -- the
     // same rule as `note` below, and for the same reason. The diver record's
     // form renders a size box only for an item the shop's catalog currently
@@ -311,6 +319,10 @@ export type DiverRentalFit = {
   rentsWeights: boolean;
   rentsDiveComputer: boolean;
   rentsGopro: boolean;
+  rentsDrysuit: boolean;
+  rentsHoodGloves: boolean;
+  rentsTorch: boolean;
+  rentsSmb: boolean;
   bcdSize: string | null;
   wetsuitSize: string | null;
   bootSize: string | null;
@@ -338,6 +350,10 @@ export function toDiverRentalFit(
     rentsWeights: profile.rentsWeights,
     rentsDiveComputer: profile.rentsDiveComputer,
     rentsGopro: profile.rentsGopro,
+    rentsDrysuit: profile.rentsDrysuit,
+    rentsHoodGloves: profile.rentsHoodGloves,
+    rentsTorch: profile.rentsTorch,
+    rentsSmb: profile.rentsSmb,
     bcdSize: profile.bcdSize,
     wetsuitSize: profile.wetsuitSize,
     bootSize: profile.bootSize,

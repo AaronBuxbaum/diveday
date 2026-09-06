@@ -523,6 +523,10 @@ describe("today's work queue (in-memory PGlite)", () => {
       rentsWeights: true,
       rentsDiveComputer: false,
       rentsGopro: false,
+      rentsDrysuit: false,
+      rentsHoodGloves: false,
+      rentsTorch: false,
+      rentsSmb: false,
     };
 
     // A BCD size and nothing else: this is what the old rule called a fit, and

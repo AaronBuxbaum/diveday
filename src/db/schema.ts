@@ -6490,9 +6490,19 @@ export const rentalFitProfiles = pgTable(
     rentsWetsuit: boolean("rents_wetsuit").notNull().default(true),
     rentsMaskFins: boolean("rents_mask_fins").notNull().default(true),
     rentsWeights: boolean("rents_weights").notNull().default(true),
-    /** Optional add-ons — a diver usually owns a computer and may not want a GoPro. */
+    /**
+     * Optional add-ons — a diver usually owns a computer, and the rest are kit
+     * a particular dive calls for rather than kit everybody takes. All default
+     * **false**, so a shop that never ticks one in its catalog is exactly where
+     * it was before these columns existed and no diver is ever packed
+     * something they did not ask for.
+     */
     rentsDiveComputer: boolean("rents_dive_computer").notNull().default(false),
     rentsGopro: boolean("rents_gopro").notNull().default(false),
+    rentsDrysuit: boolean("rents_drysuit").notNull().default(false),
+    rentsHoodGloves: boolean("rents_hood_gloves").notNull().default(false),
+    rentsTorch: boolean("rents_torch").notNull().default(false),
+    rentsSmb: boolean("rents_smb").notNull().default(false),
     bcdSize: text("bcd_size"),
     wetsuitSize: text("wetsuit_size"),
     bootSize: text("boot_size"),

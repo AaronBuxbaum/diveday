@@ -227,6 +227,19 @@ const CONTROL_TAGS = new Set(["input", "select", "textarea"]);
  * A `children` that isn't a single element (rare — the documented contract is
  * "pass the control itself") falls back to the original wrap-everything
  * shape, so nothing breaks; it just doesn't get the two behaviors above.
+ *
+ * **`min-w-0`, on both branches.** A grid item's `min-width` is `auto`, which
+ * is the item's own *content* minimum — so a control whose intrinsic minimum
+ * is wider than its track pushes the field past it rather than shrinking, and
+ * `w-full` on the control then measures the widened field. `input[type=date]`
+ * is exactly that control on iOS Safari, where the rendered date is drawn by
+ * the platform at a width nothing in this stylesheet sets: on the date-request
+ * form it made the two date boxes visibly wider than the name, email, phone
+ * and party boxes stacked directly above them (reported 2026-09-06), because
+ * the dates sit in their own nested `FieldGrid` and so had a track of their own
+ * to stretch. Tailwind's `grid-cols-*` tracks are already `minmax(0, 1fr)`;
+ * this is the other half of that, and it belongs here rather than at a call
+ * site because every grid of fields in the app wants it.
  */
 export function Field({
   label,
@@ -347,7 +360,7 @@ export function Field({
     // `ImageFileInput`, whose button *is* a label wrapping the file input.
     // Nesting one label inside another is invalid HTML, and a click in the
     // overlap has two controls to forward to.
-    const rows = `row-span-2 grid grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`;
+    const rows = `row-span-2 grid min-w-0 grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`;
     const body = (
       <span className="grid content-start gap-1">
         {children}
@@ -387,7 +400,9 @@ export function Field({
   });
 
   return (
-    <div className={`row-span-2 grid grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`}>
+    <div
+      className={`row-span-2 grid min-w-0 grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`}
+    >
       <span className="self-end">
         <label htmlFor={controlId}>{captionContent}</label>
         {requiredMarker}

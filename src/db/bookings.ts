@@ -1335,6 +1335,42 @@ export async function setBookingDiveIntent(
 }
 
 /**
+ * **What would help a diver easing back into it** (ADR
+ * 20260904-reef-all-the-way-down, D18).
+ *
+ * The twin of {@link setBookingDiveIntent} and asked on the same page, one
+ * question later: a diver who has said this dive is about getting comfortable
+ * again is offered a word with the divemaster, an easy first dive, or the
+ * shop's refresher course. It informs the crew and gates nothing — every one of
+ * the three is something the shop chooses to do, not a condition on boarding.
+ *
+ * The offers were posted from the public booking form until 2026-09-06, from a
+ * chip a stranger tapped before paying. They arrive from the diver's own
+ * `/ready` link now, which is also the only door a party member or a walk-in
+ * the counter seated ever had.
+ *
+ * Returns false when no live booking matched, so the caller can say so rather
+ * than reporting a save that never happened.
+ */
+export async function setBookingReEntryAsk(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; ask: ReEntryAsk },
+): Promise<boolean> {
+  const [updated] = await db
+    .update(bookings)
+    .set({ reEntryAsk: input.ask })
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .returning({ id: bookings.id });
+  return Boolean(updated);
+}
+
+/**
  * **The diver answered "Anything changed?" for this seat** (ADR
  * 20260904-reef-all-the-way-down, D15 with D19 folded in).
  *

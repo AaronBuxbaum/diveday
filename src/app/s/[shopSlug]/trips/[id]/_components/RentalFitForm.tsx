@@ -37,6 +37,10 @@ export const RENTABLE_ITEM_LABEL_KEYS: Record<RentableItemKind, DiverMessageKey>
   weights: "rental.itemLabels.weights",
   dive_computer: "rental.itemLabels.diveComputer",
   gopro: "rental.itemLabels.gopro",
+  drysuit: "rental.itemLabels.drysuit",
+  hood_gloves: "rental.itemLabels.hoodGloves",
+  torch: "rental.itemLabels.torch",
+  smb: "rental.itemLabels.smb",
 };
 
 /**

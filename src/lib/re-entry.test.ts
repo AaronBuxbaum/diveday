@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isRefresherCourse, parseReEntryAsk, RE_ENTRY_ASKS, reEntryWindowOpen } from "./re-entry";
+import {
+  isRefresherCourse,
+  parseReEntryAsk,
+  RE_ENTRY_ASKS,
+  reEntryOffersFor,
+  reEntryWindowOpen,
+} from "./re-entry";
 
 const NOW = new Date("2026-09-05T12:00:00.000Z");
 const hoursOut = (hours: number) => new Date(NOW.getTime() + hours * 60 * 60 * 1000);
@@ -62,5 +68,26 @@ describe("parseReEntryAsk", () => {
     for (const junk of ["", "primer", 1, null, undefined]) {
       expect(parseReEntryAsk(junk)).toBeNull();
     }
+  });
+});
+
+/**
+ * **The rendered offers and the accepted ones are one list.** Both the
+ * readiness page and `saveReEntryAskFromReady` read this, which is the point:
+ * the action re-derived only the saved intent and the 24-hour window and took
+ * `refresher_course` from anyone who posted it, so a shop with no refresher
+ * course could have one asked of it (caught in review of PR #1416).
+ */
+describe("reEntryOffersFor", () => {
+  it("makes all three where the shop publishes a refresher course", () => {
+    expect(reEntryOffersFor(true)).toEqual([...RE_ENTRY_ASKS]);
+  });
+
+  it("drops the refresher ask where the shop runs no refresher", () => {
+    const offers = reEntryOffersFor(false);
+    expect(offers).not.toContain("refresher_course");
+    // The other two are unconditional: a word on deck and an easy first dive
+    // are things any crew can do, and neither names a course.
+    expect(offers).toEqual(["deck_word", "easy_first_dive"]);
   });
 });

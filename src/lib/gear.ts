@@ -176,7 +176,18 @@ export function gearAssignmentNeeds(
       { kind: "fins", size: piece.size },
     ];
   }
-  return [{ kind: piece.kind as Exclude<RentalItemKind, "mask_fins">, size: piece.size }];
+  // The same split, one item over: a diver ticks "hood & gloves" once and the
+  // register holds a hood and a pair of gloves as separate tagged units.
+  // Neither carries a size in the fit.
+  if (piece.kind === "hood_gloves") {
+    return [
+      { kind: "hood", size: null },
+      { kind: "gloves", size: null },
+    ];
+  }
+  return [
+    { kind: piece.kind as Exclude<RentalItemKind, "mask_fins" | "hood_gloves">, size: piece.size },
+  ];
 }
 
 /** The service-form suggestion: the conventional next deadline for this clock. */

@@ -380,7 +380,11 @@
       "maskFins": "Máscara y aletas",
       "weights": "Lastre",
       "diveComputer": "Ordenador de buceo",
-      "gopro": "GoPro"
+      "gopro": "GoPro",
+      "drysuit": "Traje seco",
+      "hoodGloves": "Capucha y guantes",
+      "torch": "Linterna",
+      "smb": "Boya de superficie"
     },
     "nitroxFillsLabel": "Llenados de nitrox",
     "itemWithSize": "{item} {size}",

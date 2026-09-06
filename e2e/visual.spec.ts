@@ -23,6 +23,7 @@ import {
   openTripAbout,
   openTripFromBoard,
   openTripTab,
+  saveDiveIntent,
   seededTripId,
   threadStatus,
   waiverLinkFromResult,
@@ -499,9 +500,9 @@ const REEF_TRIP = "Two-Tank Reef — Molasses & French";
  *
  * `reEntryWindowOpen` closes inside 24 hours, because nobody can act on an ask
  * that late, and `REEF_TRIP` is the demo's *today* boat — about five hours out
- * on the frozen clock, so the offers are correctly suppressed on it and the
- * capture would photograph a block that is not there. This one sails two days
- * out (`seed-more-trips`, `at(2, 11, 0)`).
+ * on the frozen clock, so the offers are correctly suppressed on it and a
+ * capture there would photograph a block that is not present. This one sails
+ * two days out (`seed-more-trips`, `at(2, 11, 0)`).
  */
 const EASING_BACK_TRIP = "Two-Tank Reef — French Reef";
 
@@ -1860,29 +1861,6 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **The booking form with "Getting comfortable again" chosen** (D12 and
-       * D18). It is the only state in which D18's three offers are ever on
-       * screen, so without this capture the block a rusty diver actually reads
-       * has no baseline at all.
-       */
-      test(`the booking form answers a diver easing back (${scheme})`, async ({ page }) => {
-        await page.goto("/s/blue-mantis");
-        await page
-          .locator("li")
-          .filter({ hasText: EASING_BACK_TRIP })
-          .getByRole("link", { name: EASING_BACK_TRIP })
-          .click();
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
-        // The label, never the input: the pill's radio is `sr-only` and lies
-        // under the very label that wraps it, so `check()` on it never
-        // resolves (see `chooseDiveIntent` in e2e/helpers.ts).
-        await page.getByText("Getting comfortable again", { exact: true }).click();
-        // The offers mount on that choice; wait for their own legend.
-        await expect(page.getByText("Anything that would help?")).toBeVisible();
-        await capture(page, "booking-intent", scheme);
-      });
-
-      /**
        * The same page on a charter that actually gates, so the "Who this trip
        * is for" note names a level *above* the shop's default (ADR
        * 20260803-trip-admission-at-booking). `site-briefing` above already
@@ -2273,6 +2251,40 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(new URL(page.url()).pathname);
         await threadStatus(page).waitFor();
         await capture(page, "readiness", scheme);
+      });
+
+      /**
+       * **The thread's Day-of step, answered "Getting comfortable again"** (D12
+       * and D18).
+       *
+       * Both questions were asked on the public booking form until 2026-09-06
+       * and the `booking-intent` capture stood there; they are asked here now,
+       * of the diver whose seat it is. This is still the only state in which
+       * D18's three offers are ever on screen, so without a baseline the block
+       * a rusty diver actually reads has none at all — and it has to be a
+       * departure more than a day out, or the offers are correctly absent.
+       */
+      test(`the thread answers a diver easing back (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await page.goto("/s/blue-mantis");
+        await page
+          .locator("li")
+          .filter({ hasText: EASING_BACK_TRIP })
+          .getByRole("link", { name: EASING_BACK_TRIP })
+          .click();
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
+        await page
+          .getByLabel("Email", { exact: true })
+          .fill(`visual-regression-easing-${scheme}@example.com`);
+        await page.getByRole("button", { name: /^Book/ }).click();
+        await expect(page).toHaveURL(/\/ready\//);
+        await saveDiveIntent(page, "Getting comfortable again");
+        // The save redirects, which shuts the accordion; the offers are the
+        // point of the capture, so the step is opened again for it.
+        const dayOf = await openThreadStep(page, "dayof");
+        await expect(dayOf.getByText("Anything that would help?")).toBeVisible();
+        await capture(page, "readiness-easing-back", scheme);
       });
 
       /**

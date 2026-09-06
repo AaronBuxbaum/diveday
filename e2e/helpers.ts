@@ -84,23 +84,34 @@ export async function choosePartySize(page: Page, count: number) {
   // pointer events" — until the whole test times out. Three specs and both
   // party-organizer captures died that way on 2026-08-28, each one a
   // three-minute hang rather than an assertion.
-  await control.getByText(label, { exact: true }).click();
+  //
+  // The label is found by the **value of the radio it wraps**, never by its own
+  // text: the segment showed "2 divers" until 2026-09-06 and shows "2" now, and
+  // a helper keyed on that spelling took the same 30-second hang the moment it
+  // changed (`courses.spec.ts`, CI on PR #1416). The accessible name is still
+  // the plural sentence, which is what the assertion below reads.
+  await control.locator(`label:has(input[value="${count}"])`).click();
   await expect(page.getByRole("radio", { name: label, exact: true })).toBeChecked();
 }
 
 /**
- * Pick one of the booking form's five "what's this dive for?" pills.
+ * Answer "What's this dive for?" on the diver's own thread and save it.
  *
- * Clicks the **label**, which is what a diver's thumb lands on, then asserts
- * the input took it — the same rule `choosePartySize` above states and for the
- * same reason: the radio is `sr-only`, a 1px box lying under the very `<label>`
- * that wraps it, so `check()` on it never resolves. Playwright's hit-target
- * check finds the label in front of its click point and retries "intercepts
- * pointer events" until the whole test times out.
+ * The question was five pills on the public booking form until 2026-09-06; it
+ * is one `<select>` in the Day-of step of `/ready/<token>` now, asked after the
+ * sale of the diver whose seat it is. Scoped to its own `<form>` because the
+ * recency question sits in the same step behind a Save spelled the same word,
+ * and waits on the page's own notice rather than a timeout — the redirect
+ * carries no hash, so the confirmation is the only thing that says it landed.
  */
-export async function chooseDiveIntent(page: Page, label: string) {
-  await page.getByText(label, { exact: true }).click();
-  await expect(page.getByRole("radio", { name: label, exact: true })).toBeChecked();
+export async function saveDiveIntent(page: Page, label: string) {
+  const step = await openThreadStep(page, "dayof");
+  const form = step.locator("form").filter({ hasText: "What's this dive for?" });
+  await form.getByLabel("What's this dive for?").selectOption({ label });
+  await form.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "The crew will know what you came for" }),
+  ).toBeVisible();
 }
 
 /**

@@ -1690,6 +1690,10 @@ describe("returning a whole rental set", () => {
         rentsWeights: false,
         rentsDiveComputer: false,
         rentsGopro: false,
+        rentsDrysuit: false,
+        rentsHoodGloves: false,
+        rentsTorch: false,
+        rentsSmb: false,
         bcdSize: "S",
       });
 
@@ -1737,6 +1741,10 @@ describe("returning a whole rental set", () => {
         rentsWeights: false,
         rentsDiveComputer: false,
         rentsGopro: false,
+        rentsDrysuit: false,
+        rentsHoodGloves: false,
+        rentsTorch: false,
+        rentsSmb: false,
         bcdSize: "M",
       });
       await returnGearReservation(db, {

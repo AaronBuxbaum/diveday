@@ -198,7 +198,11 @@
       "maskFins": "Mask and fins",
       "weights": "Weights",
       "diveComputer": "Dive computer",
-      "gopro": "GoPro"
+      "gopro": "GoPro",
+      "drysuit": "Drysuit",
+      "hoodGloves": "Hood and gloves",
+      "torch": "Dive light",
+      "smb": "Surface marker buoy"
     },
     "providedItems": {
       "tanksAndWeights": "Tanks and weights",
@@ -395,15 +399,12 @@
       "moreRoom": "More room on this one."
     },
     "intent": {
-      "question": "What's this dive for?",
-      "optional": "optional",
       "easingBack": "Getting comfortable again",
       "smallLife": "Small life and photos",
       "aWreck": "A wreck, someday",
       "skills": "Practising skills",
       "goodDay": "Just a good day out",
-      "audience": "Your crew sees how many picked each, not who.",
-      "changeIt": "Change it any time from the link we send you."
+      "audience": "Your crew sees how many picked each, not who."
     },
     "reEntry": {
       "legend": "Anything that would help?",
@@ -875,6 +876,11 @@
     "intentHeading": "What's this dive for?",
     "intentChoose": "Rather not say",
     "saveIntent": "Save",
+    "saveReEntry": "Save",
+    "intentSaved": "Thanks. The crew will know what you came for.",
+    "intentUnavailable": "That did not save. Try again, or tell the crew on the day.",
+    "reEntrySaved": "Thanks. The crew will look out for you.",
+    "reEntryUnavailable": "That did not save. Try again, or tell the crew on the day.",
     "savingIntent": "Saving…"
   },
   "thread": {
@@ -1042,7 +1048,11 @@
       "maskFins": "Mask & fins",
       "weights": "Weights",
       "diveComputer": "Dive computer",
-      "gopro": "GoPro"
+      "gopro": "GoPro",
+      "drysuit": "Drysuit",
+      "hoodGloves": "Hood & gloves",
+      "torch": "Dive light",
+      "smb": "Surface marker buoy"
     },
     "jargonHintLabel": "What is {item}?",
     "jargonHints": {
@@ -1056,6 +1066,7 @@
     "yourDetails": "Your details",
     "diverN": "Diver {number}",
     "diverCountOption": "{count, plural, one {# diver} other {# divers}}",
+    "diverCountShort": "{count, number}",
     "nameLabel": "Name",
     "diverNameLabel": "Diver {number} name",
     "emailLabel": "Email",

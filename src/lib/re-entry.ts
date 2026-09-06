@@ -40,6 +40,26 @@ export const RE_ENTRY_ASKS = [
 ] as const satisfies readonly ReEntryAsk[];
 
 /**
+ * **The offers actually worth making**, which is all three only where the shop
+ * publishes a refresher course: an ask about a course nobody runs is a question
+ * with no answer.
+ *
+ * One list, read by the surface that renders the offers *and* by the action
+ * that accepts one (`saveReEntryAskFromReady`). Two copies drifted the moment
+ * they existed: the readiness page filtered `refresher_course` out for a shop
+ * with no refresher, while the action re-derived only the saved intent and the
+ * 24-hour window and took the third ask from anyone who posted it — a crafted
+ * submission, or an ordinary one from a page rendered before the shop
+ * deactivated its refresher course, recording an offer the shop cannot make
+ * (caught in review of PR #1416).
+ */
+export function reEntryOffersFor(hasRefresherCourse: boolean): readonly ReEntryAsk[] {
+  return hasRefresherCourse
+    ? RE_ENTRY_ASKS
+    : RE_ENTRY_ASKS.filter((ask) => ask !== "refresher_course");
+}
+
+/**
  * The DiveDay-published course templates that *are* a refresher, by slug
  * (`src/db/course-templates.ts`). A shop's own course copied from one of these
  * keeps the slug, so this recognises the shop's course without reading its

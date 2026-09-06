@@ -515,6 +515,10 @@ describe("createBooking stamps its own clock (D15's comparison)", () => {
       rentsWeights: false,
       rentsDiveComputer: false,
       rentsGopro: false,
+      rentsDrysuit: false,
+      rentsHoodGloves: false,
+      rentsTorch: false,
+      rentsSmb: false,
       bcdSize: "M",
     });
     expect(saved?.fitStatedAt).toBeInstanceOf(Date);

@@ -155,6 +155,10 @@ const profileSchema = z.object({
   weights: z.string().optional(),
   diveComputer: z.string().optional(),
   gopro: z.string().optional(),
+  drysuit: z.string().optional(),
+  hoodGloves: z.string().optional(),
+  torch: z.string().optional(),
+  smb: z.string().optional(),
   // Optional, not required, and deliberately not `.default("")`. The form
   // renders a size box only for an item `offeredRentableItems(shop.rentalItems)`
   // says the shop offers, so a shop that has dropped weights from its catalog
@@ -955,6 +959,10 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     rentsWeights: parsed.data.weights === "on",
     rentsDiveComputer: parsed.data.diveComputer === "on",
     rentsGopro: parsed.data.gopro === "on",
+    rentsDrysuit: parsed.data.drysuit === "on",
+    rentsHoodGloves: parsed.data.hoodGloves === "on",
+    rentsTorch: parsed.data.torch === "on",
+    rentsSmb: parsed.data.smb === "on",
     bcdSize: parsed.data.bcdSize,
     wetsuitSize: parsed.data.wetsuitSize,
     // One shoe-size answer, written to both columns — see RentalFit.tsx.
