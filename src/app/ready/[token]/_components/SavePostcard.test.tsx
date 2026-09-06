@@ -50,6 +50,19 @@ beforeEach(() => {
     scale: () => {},
   } as unknown as CanvasRenderingContext2D);
   vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockReturnValue("data:image/png;base64,QUJD");
+  // jsdom implements neither, so both are installed explicitly. The default is
+  // a browser with no share API at all, which is the anchor path every case
+  // below the share block asserts — including Chromium, which is what the e2e
+  // download spec exercises.
+  Object.defineProperty(HTMLCanvasElement.prototype, "toBlob", {
+    configurable: true,
+    writable: true,
+    value(this: HTMLCanvasElement, done: (blob: Blob | null) => void) {
+      done(new Blob(["png"], { type: "image/png" }));
+    },
+  });
+  delete (navigator as Partial<Navigator>).share;
+  delete (navigator as Partial<Navigator>).canShare;
   vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
     this: HTMLAnchorElement,
   ) {
@@ -175,6 +188,104 @@ describe("saving the picture", () => {
       </SavePostcard>,
     );
     fireEvent.click(screen.getByRole("button", { name: COPY.save }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(COPY.failed);
+    expect(clicked).toHaveLength(0);
+  });
+});
+
+describe("the share sheet on a phone (#1407)", () => {
+  /**
+   * The phone is the device this feature is for, and `<a download>` has
+   * historically been ignored on iOS Safari. These cases pin the three ways the
+   * save can end, because two of them must NOT look like the third.
+   */
+  function withShare(options: {
+    canShare: (data: ShareData) => boolean;
+    share: (data: ShareData) => Promise<void>;
+  }) {
+    Object.defineProperty(navigator, "canShare", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(options.canShare),
+    });
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(options.share),
+    });
+  }
+
+  function renderCard() {
+    render(
+      <SavePostcard
+        postcard={POSTCARD}
+        fileName="blue-mantis-dive-day.png"
+        copy={COPY}
+        recordedBy={<p>Recorded by Blue Mantis Divers</p>}
+      >
+        <button type="button">Print log entry</button>
+      </SavePostcard>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: COPY.save }));
+  }
+
+  it("hands the card to the share sheet and clicks no anchor", async () => {
+    const shared: ShareData[] = [];
+    withShare({
+      canShare: () => true,
+      share: async (data) => {
+        shared.push(data);
+      },
+    });
+    renderCard();
+
+    await waitFor(() => expect(shared).toHaveLength(1));
+    const files = shared[0].files;
+    expect(files).toHaveLength(1);
+    expect(files?.[0]).toBeInstanceOf(File);
+    expect(files?.[0].name).toBe("blue-mantis-dive-day.png");
+    expect(files?.[0].type).toBe("image/png");
+    // The download is the *other* path, not a belt-and-braces second delivery.
+    expect(clicked).toHaveLength(0);
+    // D33 holds here too: what leaves the page is an image, and the share
+    // payload names no URL for the page it came from.
+    expect(shared[0].url).toBeUndefined();
+    expect(shared[0].text).toBeUndefined();
+  });
+
+  it("falls back to the download when the browser will not take a file", async () => {
+    const share = vi.fn();
+    withShare({ canShare: () => false, share: async () => share() });
+    renderCard();
+
+    await waitFor(() => expect(clicked).toHaveLength(1));
+    expect(share).not.toHaveBeenCalled();
+    expect(clicked[0].getAttribute("download")).toBe("blue-mantis-dive-day.png");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("treats a dismissed sheet as a change of mind, not a failure", async () => {
+    withShare({
+      canShare: () => true,
+      // What every browser throws when the diver closes the sheet.
+      share: () =>
+        Promise.reject(Object.assign(new Error("share canceled"), { name: "AbortError" })),
+    });
+    renderCard();
+
+    await waitFor(() => expect(screen.getByRole("button", { name: COPY.save })).not.toBeDisabled());
+    // Neither an alert nor a download behind their back.
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(clicked).toHaveLength(0);
+  });
+
+  it("still says so when the share itself fails", async () => {
+    withShare({
+      canShare: () => true,
+      share: () => Promise.reject(new Error("share target exploded")),
+    });
+    renderCard();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(COPY.failed);
     expect(clicked).toHaveLength(0);
