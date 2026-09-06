@@ -235,7 +235,7 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
       className="flex sm:inline-flex"
     >
       <SubmitButton
-        pendingLabel={t("shared.today.helpRequest.saving")}
+        pendingLabel={t("today.helpRequest.saving")}
         className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
       >
         {action.actionLabel}
@@ -445,13 +445,13 @@ export function DaySpine({
     t,
     waiverCopy: waiverSendCopy(t),
     resendCopy: {
-      resending: t("shared.today.resendConfirmation.resending"),
-      confirmationResent: t("shared.today.resendConfirmation.confirmationResent"),
+      resending: t("today.resendConfirmation.resending"),
+      confirmationResent: t("today.resendConfirmation.confirmationResent"),
       errors: {
-        invalid: t("shared.today.resendConfirmation.errors.invalid"),
-        noEmail: t("shared.today.resendConfirmation.errors.noEmail"),
-        notConfigured: t("shared.today.resendConfirmation.errors.notConfigured"),
-        failed: t("shared.today.resendConfirmation.errors.failed"),
+        invalid: t("today.resendConfirmation.errors.invalid"),
+        noEmail: t("today.resendConfirmation.errors.noEmail"),
+        notConfigured: t("today.resendConfirmation.errors.notConfigured"),
+        failed: t("today.resendConfirmation.errors.failed"),
       },
     },
     // Same keys `WaitlistSection.tsx` uses — `WaitlistInvite` is a Client
@@ -473,17 +473,17 @@ export function DaySpine({
       emailBody: t.raw("trips.waitlist.emailBody"),
     },
     paymentCopy: {
-      copyLink: t("shared.today.paymentAction.copyLink"),
-      linkCopied: t("shared.today.paymentAction.linkCopied"),
-      copyFailed: t("shared.today.paymentAction.copyFailed"),
-      resendInvoice: t("shared.today.paymentAction.resendInvoice"),
-      resending: t("shared.today.paymentAction.resending"),
-      invoiceResent: t("shared.today.paymentAction.invoiceResent"),
+      copyLink: t("today.paymentAction.copyLink"),
+      linkCopied: t("today.paymentAction.linkCopied"),
+      copyFailed: t("today.paymentAction.copyFailed"),
+      resendInvoice: t("today.paymentAction.resendInvoice"),
+      resending: t("today.paymentAction.resending"),
+      invoiceResent: t("today.paymentAction.invoiceResent"),
       errors: {
-        notFound: t("shared.today.paymentAction.errors.notFound"),
-        notOpen: t("shared.today.paymentAction.errors.notOpen"),
-        notConfigured: t("shared.today.paymentAction.errors.notConfigured"),
-        failed: t("shared.today.paymentAction.errors.failed"),
+        notFound: t("today.paymentAction.errors.notFound"),
+        notOpen: t("today.paymentAction.errors.notOpen"),
+        notConfigured: t("today.paymentAction.errors.notConfigured"),
+        failed: t("today.paymentAction.errors.failed"),
       },
     },
   };
@@ -558,7 +558,7 @@ export function DaySpine({
     <div className="flex flex-col gap-10">
       {withheldCount > 0 ? (
         <p className="-mt-4 text-xs text-muted">
-          {t("shared.today.todayQueue.withheldDeskWork", { count: withheldCount })}
+          {t("today.todayQueue.withheldDeskWork", { count: withheldCount })}
         </p>
       ) : null}
 
@@ -592,7 +592,7 @@ export function DaySpine({
         // detail: the panel it sits in is the surface's coral.
         <EarnedMomentLine className="-mt-4 flex items-center gap-3">
           <SiteMark mark="turtle" size="sm" ground="surface" coral={false} />
-          <span>{t("shared.today.todayQueue.boatsClear")}</span>
+          <span>{t("today.todayQueue.boatsClear")}</span>
         </EarnedMomentLine>
       ) : null}
 
@@ -775,10 +775,10 @@ export function DaySpine({
       {jobs === 0 && !closing && !firstRun ? (
         <EmptyState
           titleId="queue-heading"
-          title={t("shared.today.todayQueue.emptyHeading")}
+          title={t("today.todayQueue.emptyHeading")}
           body={
             <>
-              {t("shared.today.todayQueue.emptyBody")}{" "}
+              {t("today.todayQueue.emptyBody")}{" "}
               {seasonalBriefingText(t, getSeasonalBriefing(now, timeZone), shopName)}
             </>
           }
@@ -787,7 +787,7 @@ export function DaySpine({
               href={`/shop/${shopSlug}/schedule/board`}
               className={buttonClass({ variant: "secondary", size: "sm" })}
             >
-              {t("shared.today.todayQueue.emptyAction")}
+              {t("today.todayQueue.emptyAction")}
             </Link>
           }
         />

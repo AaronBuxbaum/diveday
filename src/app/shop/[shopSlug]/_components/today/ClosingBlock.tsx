@@ -172,8 +172,8 @@ export function ClosingBlock({
                         personId={action.rentalFit.personId}
                         kind={action.rentalFit.kind}
                         size={action.rentalFit.size}
-                        label={t("shared.today.gear.fitConfirmKeep")}
-                        pendingLabel={t("shared.today.gear.fitConfirmSaving")}
+                        label={t("today.gear.fitConfirmKeep")}
+                        pendingLabel={t("today.gear.fitConfirmSaving")}
                       />
                     ) : (
                       <Link

@@ -273,9 +273,9 @@ export default async function StaffingPage({
   const gapWords: GapWords = {
     no_instructor: t("trips.pulse.needsInstructor"),
     over_ratio: t("trips.pulse.overRatio"),
-    uncrewed_course: t("shared.today.actionKind.uncrewedCourse"),
-    uncrewed_departure: t("shared.today.actionKind.uncrewedDeparture"),
-    crew_below_target: t("shared.today.actionKind.crewBelowTarget"),
+    uncrewed_course: t("today.actionKind.uncrewedCourse"),
+    uncrewed_departure: t("today.actionKind.uncrewedDeparture"),
+    crew_below_target: t("today.actionKind.crewBelowTarget"),
   };
 
   const myBlocks = blocks.filter((block) => block.personId === session.user.personId);

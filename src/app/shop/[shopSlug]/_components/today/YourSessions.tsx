@@ -27,13 +27,13 @@ export function YourSessions({
   if (sessions.length === 0) return null;
   const t = staffTranslator(locale);
   return (
-    <LedgerGroup as="h2" id="your-sessions-heading" label={t("shared.today.yourSessions.heading")}>
+    <LedgerGroup as="h2" id="your-sessions-heading" label={t("today.yourSessions.heading")}>
       <ul className="mt-3">
         {sessions.map((session) => (
           <LedgerRow
             key={session.tripId}
             href={`/shop/${shopSlug}/trips/${session.tripId}`}
-            linkLabel={t("shared.today.yourSessions.openRoster")}
+            linkLabel={t("today.yourSessions.openRoster")}
           >
             <div className="min-w-0 py-2">
               <p className="font-medium">{session.title}</p>
@@ -43,16 +43,16 @@ export function YourSessions({
                 {session.courseTitle ? ` · ${session.courseTitle}` : ""}
               </p>
               <p className="mt-1 text-sm tabular-nums">
-                {t("shared.today.yourSessions.studentsCount", { count: session.booked })}
+                {t("today.yourSessions.studentsCount", { count: session.booked })}
                 {session.booked > 0 ? (
                   <>
                     {" · "}
                     <span className={session.ready > 0 ? "font-medium text-success" : ""}>
-                      {t("shared.today.yourSessions.readyCount", { count: session.ready })}
+                      {t("today.yourSessions.readyCount", { count: session.ready })}
                     </span>
                     {" · "}
                     <span className={session.blocked > 0 ? "font-semibold text-danger" : ""}>
-                      {t("shared.today.yourSessions.blockedCount", { count: session.blocked })}
+                      {t("today.yourSessions.blockedCount", { count: session.blocked })}
                     </span>
                   </>
                 ) : null}

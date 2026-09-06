@@ -11,98 +11,98 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /** Every `TodayActionKind` chip, to its label key. Tone stays in `src/lib/today.ts` (not copy). */
 export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
-  roll_call_missing_diver: "shared.today.actionKind.rollCallMissingDiver",
-  roll_call_missing_crew: "shared.today.actionKind.rollCallMissingCrew",
-  roll_call_unfinished: "shared.today.actionKind.rollCallUnfinished",
-  roll_call_crew_unfinished: "shared.today.actionKind.rollCallCrewUnfinished",
-  roll_call_departure_open: "shared.today.actionKind.rollCallDepartureOpen",
-  roll_call_not_started: "shared.today.actionKind.rollCallNotStarted",
-  medical_review: "shared.today.actionKind.medicalReview",
-  medical_not_cleared: "shared.today.actionKind.medicalNotCleared",
-  readiness_unavailable: "shared.today.actionKind.readinessUnavailable",
-  identity: "shared.today.actionKind.identity",
-  certification: "shared.today.actionKind.certification",
-  requirements: "shared.today.actionKind.requirements",
-  waiver: "shared.today.actionKind.waiver",
-  instructor_missing: "shared.today.actionKind.instructorMissing",
-  uncrewed_course: "shared.today.actionKind.uncrewedCourse",
-  uncrewed_departure: "shared.today.actionKind.uncrewedDeparture",
-  nitrox_gate: "shared.today.actionKind.nitroxGate",
-  high_wind_alert: "shared.today.actionKind.highWindAlert",
-  dive_prep: "shared.today.actionKind.divePrep",
-  help_request: "shared.today.actionKind.helpRequest",
-  payment: "shared.today.actionKind.payment",
-  email_delivery: "shared.today.actionKind.emailDelivery",
-  waitlist_seat: "shared.today.actionKind.waitlistSeat",
-  last_minute_fill: "shared.today.actionKind.lastMinuteFill",
-  emergency_contact: "shared.today.actionKind.emergencyContact",
-  crew_below_target: "shared.today.actionKind.crewBelowTarget",
-  stuck_payment_operation: "shared.today.actionKind.stuckPaymentOperation",
-  failed_photo_deletion: "shared.today.actionKind.failedPhotoDeletion",
-  owed_refund: "shared.today.actionKind.owedRefund",
-  reviews_pending: "shared.today.actionKind.reviewsPending",
-  gear_overdue: "shared.today.actionKind.gearOverdue",
-  gear_due_back: "shared.today.actionKind.gearDueBack",
-  gear_service_due: "shared.today.actionKind.gearServiceDue",
-  staff_credential_due: "shared.today.actionKind.staffCredentialDue",
-  units_unconfirmed: "shared.today.actionKind.unitsUnconfirmed",
-  say_hello: "shared.today.actionKind.sayHello",
-  rental_fit_confirm: "shared.today.actionKind.rentalFit",
+  roll_call_missing_diver: "today.actionKind.rollCallMissingDiver",
+  roll_call_missing_crew: "today.actionKind.rollCallMissingCrew",
+  roll_call_unfinished: "today.actionKind.rollCallUnfinished",
+  roll_call_crew_unfinished: "today.actionKind.rollCallCrewUnfinished",
+  roll_call_departure_open: "today.actionKind.rollCallDepartureOpen",
+  roll_call_not_started: "today.actionKind.rollCallNotStarted",
+  medical_review: "today.actionKind.medicalReview",
+  medical_not_cleared: "today.actionKind.medicalNotCleared",
+  readiness_unavailable: "today.actionKind.readinessUnavailable",
+  identity: "today.actionKind.identity",
+  certification: "today.actionKind.certification",
+  requirements: "today.actionKind.requirements",
+  waiver: "today.actionKind.waiver",
+  instructor_missing: "today.actionKind.instructorMissing",
+  uncrewed_course: "today.actionKind.uncrewedCourse",
+  uncrewed_departure: "today.actionKind.uncrewedDeparture",
+  nitrox_gate: "today.actionKind.nitroxGate",
+  high_wind_alert: "today.actionKind.highWindAlert",
+  dive_prep: "today.actionKind.divePrep",
+  help_request: "today.actionKind.helpRequest",
+  payment: "today.actionKind.payment",
+  email_delivery: "today.actionKind.emailDelivery",
+  waitlist_seat: "today.actionKind.waitlistSeat",
+  last_minute_fill: "today.actionKind.lastMinuteFill",
+  emergency_contact: "today.actionKind.emergencyContact",
+  crew_below_target: "today.actionKind.crewBelowTarget",
+  stuck_payment_operation: "today.actionKind.stuckPaymentOperation",
+  failed_photo_deletion: "today.actionKind.failedPhotoDeletion",
+  owed_refund: "today.actionKind.owedRefund",
+  reviews_pending: "today.actionKind.reviewsPending",
+  gear_overdue: "today.actionKind.gearOverdue",
+  gear_due_back: "today.actionKind.gearDueBack",
+  gear_service_due: "today.actionKind.gearServiceDue",
+  staff_credential_due: "today.actionKind.staffCredentialDue",
+  units_unconfirmed: "today.actionKind.unitsUnconfirmed",
+  say_hello: "today.actionKind.sayHello",
+  rental_fit_confirm: "today.actionKind.rentalFit",
 };
 
 /** A blocked row's one-tap fix, singular ("Send waiver"). */
 const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
-  requirements_not_configured: "shared.today.blockerAction.setRequirements",
-  identity_unconfirmed: "shared.today.blockerAction.confirmIdentity",
-  under_minimum_age: "shared.today.blockerAction.checkDateOfBirth",
-  waiver_not_sent: "shared.today.blockerAction.sendWaiver",
-  waiver_pending: "shared.today.blockerAction.nudgeWaiver",
-  waiver_expired: "shared.today.blockerAction.reissueWaiver",
-  medical_review: "shared.today.blockerAction.reviewMedical",
+  requirements_not_configured: "today.blockerAction.setRequirements",
+  identity_unconfirmed: "today.blockerAction.confirmIdentity",
+  under_minimum_age: "today.blockerAction.checkDateOfBirth",
+  waiver_not_sent: "today.blockerAction.sendWaiver",
+  waiver_pending: "today.blockerAction.nudgeWaiver",
+  waiver_expired: "today.blockerAction.reissueWaiver",
+  medical_review: "today.blockerAction.reviewMedical",
   // Not "review": there is nothing left to review. What the refusal creates
   // is a conversation about a seat this diver can no longer take, and the
   // label stops there rather than choosing refund or rebook for the shop.
-  medical_not_cleared: "shared.today.blockerAction.contactDiver",
-  certification_missing: "shared.today.blockerAction.addCard",
-  certification_pending: "shared.today.blockerAction.verifyCard",
+  medical_not_cleared: "today.blockerAction.contactDiver",
+  certification_missing: "today.blockerAction.addCard",
+  certification_pending: "today.blockerAction.verifyCard",
   // Never "Verify card": there is no number to look up with an agency, only a
   // level the diver typed. The work is getting the card in front of somebody.
-  certification_self_declared: "shared.today.blockerAction.askForCard",
-  certification_insufficient: "shared.today.blockerAction.reviewCard",
-  specialty_missing: "shared.today.blockerAction.addSpecialty",
-  specialty_pending: "shared.today.blockerAction.verifySpecialty",
-  specialty_import_unconfirmed: "shared.today.blockerAction.confirmSpecialty",
-  nitrox_missing: "shared.today.blockerAction.addNitroxCard",
-  nitrox_pending: "shared.today.blockerAction.verifyNitroxCard",
-  nitrox_self_declared: "shared.today.blockerAction.askForNitroxCard",
-  payment_due: "shared.today.blockerAction.takePayment",
-  payment_refunded: "shared.today.blockerAction.takePayment",
-  readiness_unavailable: "shared.today.blockerAction.checkReadiness",
+  certification_self_declared: "today.blockerAction.askForCard",
+  certification_insufficient: "today.blockerAction.reviewCard",
+  specialty_missing: "today.blockerAction.addSpecialty",
+  specialty_pending: "today.blockerAction.verifySpecialty",
+  specialty_import_unconfirmed: "today.blockerAction.confirmSpecialty",
+  nitrox_missing: "today.blockerAction.addNitroxCard",
+  nitrox_pending: "today.blockerAction.verifyNitroxCard",
+  nitrox_self_declared: "today.blockerAction.askForNitroxCard",
+  payment_due: "today.blockerAction.takePayment",
+  payment_refunded: "today.blockerAction.takePayment",
+  readiness_unavailable: "today.blockerAction.checkReadiness",
 };
 
 /** The same fix, worded for a row that stands for several divers ("Send waivers"). */
 const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
-  requirements_not_configured: "shared.today.blockerGroup.setRequirements",
-  identity_unconfirmed: "shared.today.blockerGroup.confirmIdentities",
-  under_minimum_age: "shared.today.blockerGroup.checkDatesOfBirth",
-  waiver_not_sent: "shared.today.blockerGroup.sendWaivers",
-  waiver_pending: "shared.today.blockerGroup.nudgeWaivers",
-  waiver_expired: "shared.today.blockerGroup.reissueWaivers",
-  medical_review: "shared.today.blockerGroup.reviewMedicals",
-  medical_not_cleared: "shared.today.blockerGroup.contactDivers",
-  certification_missing: "shared.today.blockerGroup.reviewCards",
-  certification_pending: "shared.today.blockerGroup.verifyCards",
-  certification_self_declared: "shared.today.blockerGroup.askForCards",
-  certification_insufficient: "shared.today.blockerGroup.reviewCards",
-  specialty_missing: "shared.today.blockerGroup.reviewSpecialties",
-  specialty_pending: "shared.today.blockerGroup.verifySpecialties",
-  specialty_import_unconfirmed: "shared.today.blockerGroup.confirmImportedSpecialties",
-  nitrox_missing: "shared.today.blockerGroup.reviewNitroxCards",
-  nitrox_pending: "shared.today.blockerGroup.verifyNitroxCards",
-  nitrox_self_declared: "shared.today.blockerGroup.askForNitroxCards",
-  payment_due: "shared.today.blockerGroup.takePayments",
-  payment_refunded: "shared.today.blockerGroup.takePayments",
-  readiness_unavailable: "shared.today.blockerGroup.checkReadiness",
+  requirements_not_configured: "today.blockerGroup.setRequirements",
+  identity_unconfirmed: "today.blockerGroup.confirmIdentities",
+  under_minimum_age: "today.blockerGroup.checkDatesOfBirth",
+  waiver_not_sent: "today.blockerGroup.sendWaivers",
+  waiver_pending: "today.blockerGroup.nudgeWaivers",
+  waiver_expired: "today.blockerGroup.reissueWaivers",
+  medical_review: "today.blockerGroup.reviewMedicals",
+  medical_not_cleared: "today.blockerGroup.contactDivers",
+  certification_missing: "today.blockerGroup.reviewCards",
+  certification_pending: "today.blockerGroup.verifyCards",
+  certification_self_declared: "today.blockerGroup.askForCards",
+  certification_insufficient: "today.blockerGroup.reviewCards",
+  specialty_missing: "today.blockerGroup.reviewSpecialties",
+  specialty_pending: "today.blockerGroup.verifySpecialties",
+  specialty_import_unconfirmed: "today.blockerGroup.confirmImportedSpecialties",
+  nitrox_missing: "today.blockerGroup.reviewNitroxCards",
+  nitrox_pending: "today.blockerGroup.verifyNitroxCards",
+  nitrox_self_declared: "today.blockerGroup.askForNitroxCards",
+  payment_due: "today.blockerGroup.takePayments",
+  payment_refunded: "today.blockerGroup.takePayments",
+  readiness_unavailable: "today.blockerGroup.checkReadiness",
 };
 
 /**
@@ -134,8 +134,8 @@ export function pointingLabelText(
     ? // Falls back to the whole name rather than a word: this is a pointing
       // label ("Open Priya's record"), so an unsplittable name is still the
       // best thing to point at.
-      t("shared.today.pointingLabel.diver", { name: firstNameOf(fullName, fullName) })
-    : t("shared.today.pointingLabel.trip");
+      t("today.pointingLabel.diver", { name: firstNameOf(fullName, fullName) })
+    : t("today.pointingLabel.trip");
 }
 
 /**
@@ -148,12 +148,12 @@ export function blockerDetailWithRemainingText(
   detail: string,
   remaining: number,
 ): string {
-  return t("shared.today.blockerDetail.withRemaining", { detail, remaining });
+  return t("today.blockerDetail.withRemaining", { detail, remaining });
 }
 
 /** A collapsed row's headline blocker plus the names it stands for. */
 export function blockerDetailGroupText(t: StaffTranslator, detail: string, names: string): string {
-  return t("shared.today.blockerDetail.group", { detail, names });
+  return t("today.blockerDetail.group", { detail, names });
 }
 
 /**
@@ -171,12 +171,12 @@ export function nameListText(t: StaffTranslator, names: readonly string[], shown
   if (names.length === 0) return "";
   if (names.length === 1) return names[0] ?? "";
   if (names.length <= shown + 1) {
-    return t("shared.today.nameList.all", {
+    return t("today.nameList.all", {
       leading: names.slice(0, -1).join(", "),
       last: names.at(-1) ?? "",
     });
   }
-  return t("shared.today.nameList.overflow", {
+  return t("today.nameList.overflow", {
     leading: names.slice(0, shown).join(", "),
     rest: names.length - shown,
   });
@@ -184,17 +184,17 @@ export function nameListText(t: StaffTranslator, names: readonly string[], shown
 
 /** A collapsed multi-diver row's subject — "6 divers", pluralised by the bundle. */
 export function diverGroupSubjectText(t: StaffTranslator, count: number): string {
-  return t("shared.today.subject.diverGroup", { count });
+  return t("today.subject.diverGroup", { count });
 }
 
 /** The remaining `src/db/today.ts` action rows, resolved through the same bundle-only rule. */
 
 export function missingFitDetailText(t: StaffTranslator, count: number): string {
-  return t("shared.today.detail.missingFit", { count });
+  return t("today.detail.missingFit", { count });
 }
 
 export function ungatedNitroxDetailText(t: StaffTranslator, count: number): string {
-  return t("shared.today.detail.ungatedNitrox", { count });
+  return t("today.detail.ungatedNitrox", { count });
 }
 
 export function highWindAlertDetailText(
@@ -203,7 +203,7 @@ export function highWindAlertDetailText(
   gusts: number | null,
   direction: string | null,
 ): string {
-  return t("shared.today.detail.highWindAlert", {
+  return t("today.detail.highWindAlert", {
     speed,
     gusts: gusts ?? 0,
     hasGusts: gusts !== null && gusts > speed ? "yes" : "no",
@@ -213,7 +213,7 @@ export function highWindAlertDetailText(
 }
 
 export function instructorMissingDetailText(t: StaffTranslator): string {
-  return t("shared.today.detail.instructorMissing");
+  return t("today.detail.instructorMissing");
 }
 
 /**
@@ -227,7 +227,7 @@ export function instructorMissingDetailText(t: StaffTranslator): string {
  * at the crew editor, this queue row is the fact that gets them there.
  */
 export function uncrewedDepartureDetailText(t: StaffTranslator, divers: number): string {
-  return t("shared.today.detail.uncrewedDeparture", { divers });
+  return t("today.detail.uncrewedDeparture", { divers });
 }
 
 /**
@@ -244,7 +244,7 @@ export function uncrewedDepartureDetailText(t: StaffTranslator, divers: number):
  * column.
  */
 export function uncrewedCourseDetailText(t: StaffTranslator, divers: number): string {
-  return t("shared.today.detail.uncrewedCourse", { divers });
+  return t("today.detail.uncrewedCourse", { divers });
 }
 
 /**
@@ -260,7 +260,7 @@ export function crewBelowTargetDetailText(
   divemasterCount: number,
   ratio: number,
 ): string {
-  return t("shared.today.detail.crewBelowTarget", { divers, divemasterCount, ratio });
+  return t("today.detail.crewBelowTarget", { divers, divemasterCount, ratio });
 }
 
 /**
@@ -277,7 +277,7 @@ export function crewBelowTargetDetailText(
  * cap at all.
  */
 export function overRatioDetailText(t: StaffTranslator, booked: number, capacity: number): string {
-  return t("shared.today.detail.overRatio", { booked, capacity });
+  return t("today.detail.overRatio", { booked, capacity });
 }
 
 /**
@@ -294,7 +294,7 @@ export function overRatioIntroDetailText(
   booked: number,
   capacity: number,
 ): string {
-  return t("shared.today.detail.overRatioIntro", {
+  return t("today.detail.overRatioIntro", {
     booked,
     capacity,
     perInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
@@ -331,60 +331,62 @@ export function rollCallGapDetailText(
   };
   switch (gap.reason) {
     case "missing_diver":
-      return t(
-        gap.stale ? "shared.today.detail.missingDiverStale" : "shared.today.detail.missingDiver",
-        { dive, uncounted, total },
-      );
+      return t(gap.stale ? "today.detail.missingDiverStale" : "today.detail.missingDiver", {
+        dive,
+        uncounted,
+        total,
+      });
     case "missing_crew":
-      return t(
-        gap.stale ? "shared.today.detail.missingCrewStale" : "shared.today.detail.missingCrew",
-        { dive, uncounted, total },
-      );
+      return t(gap.stale ? "today.detail.missingCrewStale" : "today.detail.missingCrew", {
+        dive,
+        uncounted,
+        total,
+      });
     case "after_dive_uncounted":
       return t(
         gap.stale
-          ? "shared.today.detail.openRollCallStale"
+          ? "today.detail.openRollCallStale"
           : gap.underway
-            ? "shared.today.detail.openRollCallUnderway"
-            : "shared.today.detail.openRollCall",
+            ? "today.detail.openRollCallUnderway"
+            : "today.detail.openRollCall",
         { dive, uncounted, total },
       );
     case "crew_uncounted":
       return t(
         gap.stale
-          ? "shared.today.detail.openCrewRollCallStale"
+          ? "today.detail.openCrewRollCallStale"
           : gap.underway
-            ? "shared.today.detail.openCrewRollCallUnderway"
-            : "shared.today.detail.openCrewRollCall",
+            ? "today.detail.openCrewRollCallUnderway"
+            : "today.detail.openCrewRollCall",
         { dive, uncounted, total },
       );
     case "departure_uncounted":
-      return t("shared.today.detail.departureCountOpen", { uncounted, total });
+      return t("today.detail.departureCountOpen", { uncounted, total });
     case "no_roll_call":
-      return t("shared.today.detail.noRollCall", { total });
+      return t("today.detail.noRollCall", { total });
   }
 }
 
 /** The unclosed-roll-call row's action label — it opens the checkpoint that is open. */
 export function openRollCallActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openRollCall");
+  return t("today.actionLabel.openRollCall");
 }
 
 export function missingContactDetailText(t: StaffTranslator, count: number): string {
-  return t("shared.today.detail.missingContact", { count });
+  return t("today.detail.missingContact", { count });
 }
 
 /** The single-diver contact row leads with the diver's name; the detail then carries only the gap. */
 export function missingContactNamedDetailText(t: StaffTranslator): string {
-  return t("shared.today.detail.missingContactNamed");
+  return t("today.detail.missingContactNamed");
 }
 
 export function lastMinuteFillDetailText(t: StaffTranslator, seats: number): string {
-  return t("shared.today.detail.lastMinuteFill", { seats });
+  return t("today.detail.lastMinuteFill", { seats });
 }
 
 export function waitlistSeatDetailText(t: StaffTranslator, seats: number, waiting: number): string {
-  return t("shared.today.detail.waitlistSeat", { seats, waiting });
+  return t("today.detail.waitlistSeat", { seats, waiting });
 }
 
 /**
@@ -404,35 +406,32 @@ export function emailDeliveryDetailText(
   if (status === "not_configured") {
     return t(
       isWaiver
-        ? "shared.today.detail.emailNotConfigured.waiver"
-        : "shared.today.detail.emailNotConfigured.confirmation",
+        ? "today.detail.emailNotConfigured.waiver"
+        : "today.detail.emailNotConfigured.confirmation",
     );
   }
-  return t(
-    isWaiver
-      ? "shared.today.detail.emailFailed.waiver"
-      : "shared.today.detail.emailFailed.confirmation",
-    { attempts },
-  );
+  return t(isWaiver ? "today.detail.emailFailed.waiver" : "today.detail.emailFailed.confirmation", {
+    attempts,
+  });
 }
 
 /** A stuck operation's kind word ("Invoice", "Refund", "Checkout"), matching Reports' own wording. */
 const STUCK_OPERATION_KIND_KEYS: Record<string, StaffMessageKey> = {
-  checkout_session: "shared.today.opsAlert.operationKind.checkoutSession",
-  invoice: "shared.today.opsAlert.operationKind.invoice",
-  refund: "shared.today.opsAlert.operationKind.refund",
+  checkout_session: "today.opsAlert.operationKind.checkoutSession",
+  invoice: "today.opsAlert.operationKind.invoice",
+  refund: "today.opsAlert.operationKind.refund",
 };
 
 /** A stuck photo-deletion's media kind, matching Reports' own wording. */
 const MEDIA_DELETION_KIND_KEYS: Record<string, StaffMessageKey> = {
-  course_photo: "shared.today.opsAlert.mediaKind.coursePhoto",
-  recap_photo: "shared.today.opsAlert.mediaKind.recapPhoto",
-  arrival_photo: "shared.today.opsAlert.mediaKind.arrivalPhoto",
+  course_photo: "today.opsAlert.mediaKind.coursePhoto",
+  recap_photo: "today.opsAlert.mediaKind.recapPhoto",
+  arrival_photo: "today.opsAlert.mediaKind.arrivalPhoto",
   // Queued by diver erasure (ADR 20260802-diver-data-erasure) — see the same
   // note on Reports' `MEDIA_KIND_KEYS`: a missing entry renders the raw enum.
-  certification_card: "shared.today.opsAlert.mediaKind.certificationCard",
-  waiver_document: "shared.today.opsAlert.mediaKind.waiverDocument",
-  dive_site_photo: "shared.today.opsAlert.mediaKind.diveSitePhoto",
+  certification_card: "today.opsAlert.mediaKind.certificationCard",
+  waiver_document: "today.opsAlert.mediaKind.waiverDocument",
+  dive_site_photo: "today.opsAlert.mediaKind.diveSitePhoto",
 };
 
 /** A stuck operation's kind word, standalone — `src/db/today.ts` uses this for the row's `subject`. */
@@ -462,8 +461,8 @@ export function stuckPaymentOperationDetailText(
 ): string {
   const kind = stuckOperationKindText(t, operationKind);
   return stripeObjectId
-    ? t("shared.today.opsAlert.stuckDetail.withId", { kind, when, id: stripeObjectId })
-    : t("shared.today.opsAlert.stuckDetail.withoutId", { kind, when });
+    ? t("today.opsAlert.stuckDetail.withId", { kind, when, id: stripeObjectId })
+    : t("today.opsAlert.stuckDetail.withoutId", { kind, when });
 }
 
 /** A failed/stuck photo-deletion's detail line (task 157), mirroring Reports' media-deletions panel. */
@@ -472,7 +471,7 @@ export function failedPhotoDeletionDetailText(
   mediaKind: string,
   when: string,
 ): string {
-  return t("shared.today.opsAlert.mediaDeletionDetail", {
+  return t("today.opsAlert.mediaDeletionDetail", {
     kind: mediaDeletionKindText(t, mediaKind),
     when,
   });
@@ -487,11 +486,11 @@ export function owedRefundDetailText(
   input: { amount: string | null; tripTitle: string; when: string },
 ): string {
   return input.amount === null
-    ? t("shared.today.opsAlert.owedRefundDetailNoAmount", {
+    ? t("today.opsAlert.owedRefundDetailNoAmount", {
         tripTitle: input.tripTitle,
         when: input.when,
       })
-    : t("shared.today.opsAlert.owedRefundDetail", {
+    : t("today.opsAlert.owedRefundDetail", {
         amount: input.amount,
         tripTitle: input.tripTitle,
         when: input.when,
@@ -506,15 +505,15 @@ export function owedRefundDetailText(
  */
 /** The pending-reviews queue row: how many divers are waiting to be heard. */
 export function reviewsPendingSubjectText(t: StaffTranslator, count: number): string {
-  return t("shared.today.reviewsPending.subject", { count });
+  return t("today.reviewsPending.subject", { count });
 }
 
 export function reviewsPendingDetailText(t: StaffTranslator): string {
-  return t("shared.today.reviewsPending.detail");
+  return t("today.reviewsPending.detail");
 }
 
 export function openReviewsActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openReviews");
+  return t("today.actionLabel.openReviews");
 }
 
 /**
@@ -525,19 +524,19 @@ export function openReviewsActionText(t: StaffTranslator): string {
  * card is charged in is the fact that makes this worth a row at all (#835).
  */
 export function unitsUnconfirmedSubjectText(t: StaffTranslator): string {
-  return t("shared.today.unitsUnconfirmed.subject");
+  return t("today.unitsUnconfirmed.subject");
 }
 
 export function unitsUnconfirmedDetailText(t: StaffTranslator, currency: string): string {
-  return t("shared.today.unitsUnconfirmed.detail", { currency });
+  return t("today.unitsUnconfirmed.detail", { currency });
 }
 
 export function openUnitsActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openUnits");
+  return t("today.actionLabel.openUnits");
 }
 
 export function openOrdersActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openOrders");
+  return t("today.actionLabel.openOrders");
 }
 
 /**
@@ -545,11 +544,11 @@ export function openOrdersActionText(t: StaffTranslator): string {
  * group, where the retry button for it now lives.
  */
 export function openDataSettingsActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openDataSettings");
+  return t("today.actionLabel.openDataSettings");
 }
 
 export function openPrepListActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openPrepList");
+  return t("today.actionLabel.openPrepList");
 }
 
 /** The small day-of hand-off row, kept as codes here so staff copy stays localized. */
@@ -563,15 +562,15 @@ export function helpRequestDetailText(
 ): string {
   const help = t(
     input.kind === "carry_gear"
-      ? "shared.today.helpRequest.kind.carryGear"
+      ? "today.helpRequest.kind.carryGear"
       : input.kind === "first_timer"
-        ? "shared.today.helpRequest.kind.firstTimer"
-        : "shared.today.helpRequest.kind.findGroup",
+        ? "today.helpRequest.kind.firstTimer"
+        : "today.helpRequest.kind.findGroup",
   );
   return t(
     input.status === "acknowledged"
-      ? "shared.today.helpRequest.detailAcknowledged"
-      : "shared.today.helpRequest.detailRequested",
+      ? "today.helpRequest.detailAcknowledged"
+      : "today.helpRequest.detailRequested",
     { name: input.personName, help },
   );
 }
@@ -581,19 +580,17 @@ export function helpRequestActionText(
   status: "requested" | "acknowledged",
 ): string {
   return t(
-    status === "acknowledged"
-      ? "shared.today.helpRequest.markHandled"
-      : "shared.today.helpRequest.acknowledge",
+    status === "acknowledged" ? "today.helpRequest.markHandled" : "today.helpRequest.acknowledge",
   );
 }
 
 export function openTripActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openTrip");
+  return t("today.actionLabel.openTrip");
 }
 
 /** The Say hello row's door — the departure's Guests tab (issue #1182). */
 export function openGuestsActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openGuests");
+  return t("today.actionLabel.openGuests");
 }
 
 /**
@@ -604,23 +601,21 @@ export function openGuestsActionText(t: StaffTranslator): string {
  * crew *and* short of divers. Each row's door names where it goes instead.
  */
 export function openCrewActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openCrew");
+  return t("today.actionLabel.openCrew");
 }
 
 /** See {@link openCrewActionText}. */
 export function openLastMinuteDealActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openLastMinuteDeal");
+  return t("today.actionLabel.openLastMinuteDeal");
 }
 
 export function inviteFromWaitlistActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.inviteFromWaitlist");
+  return t("today.actionLabel.inviteFromWaitlist");
 }
 
 export function emailResendActionText(t: StaffTranslator, isWaiver: boolean): string {
   return t(
-    isWaiver
-      ? "shared.today.actionLabel.resendWaiverLink"
-      : "shared.today.actionLabel.resendConfirmation",
+    isWaiver ? "today.actionLabel.resendWaiverLink" : "today.actionLabel.resendConfirmation",
   );
 }
 
@@ -633,11 +628,11 @@ export function gearOverdueDetailText(
   t: StaffTranslator,
   input: { unitLabel: string; dueOn: string },
 ): string {
-  return t("shared.today.gear.overdueDetail", input);
+  return t("today.gear.overdueDetail", input);
 }
 
 export function gearDueBackDetailText(t: StaffTranslator, input: { unitLabel: string }): string {
-  return t("shared.today.gear.dueBackDetail", input);
+  return t("today.gear.dueBackDetail", input);
 }
 /**
  * The evening's rental-fit question (issue #1174, D14).
@@ -651,7 +646,7 @@ export function rentalFitConfirmDetailText(
   t: StaffTranslator,
   input: { personName: string; unitLabel: string; size: string },
 ): string {
-  return t("shared.today.gear.fitConfirmDetail", {
+  return t("today.gear.fitConfirmDetail", {
     name: input.personName,
     unitLabel: input.unitLabel,
     size: input.size,
@@ -662,30 +657,30 @@ export function gearNeverPickedUpDetailText(
   t: StaffTranslator,
   input: { unitLabel: string; dueOn: string },
 ): string {
-  return t("shared.today.gear.neverPickedUpDetail", input);
+  return t("today.gear.neverPickedUpDetail", input);
 }
 
 export function gearServiceDueDetailText(
   t: StaffTranslator,
   input: { clockLabel: string; overdue: boolean; dueOn: string },
 ): string {
-  return t(
-    input.overdue ? "shared.today.gear.serviceOverdueDetail" : "shared.today.gear.serviceDueDetail",
-    { clockLabel: input.clockLabel, dueOn: input.dueOn },
-  );
+  return t(input.overdue ? "today.gear.serviceOverdueDetail" : "today.gear.serviceDueDetail", {
+    clockLabel: input.clockLabel,
+    dueOn: input.dueOn,
+  });
 }
 
 export function openGearRegisterActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openGearRegister");
+  return t("today.actionLabel.openGearRegister");
 }
 
 export function openGearUnitActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openGearUnit");
+  return t("today.actionLabel.openGearUnit");
 }
 
 /** Where a row about one diver points when its own control is not the answer. */
 export function openDiverActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openDiver");
+  return t("today.actionLabel.openDiver");
 }
 
 export function staffCredentialDueDetailText(
@@ -693,15 +688,13 @@ export function staffCredentialDueDetailText(
   input: { credential: string; dueOn: string; overdue: boolean },
 ): string {
   return t(
-    input.overdue
-      ? "shared.today.staffCredential.overdueDetail"
-      : "shared.today.staffCredential.dueDetail",
+    input.overdue ? "today.staffCredential.overdueDetail" : "today.staffCredential.dueDetail",
     { credential: input.credential, dueOn: input.dueOn },
   );
 }
 
 export function openStaffingActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openStaffing");
+  return t("today.actionLabel.openStaffing");
 }
 
 /** The one-line "how's my day?" headline, resolved from `summarizeDay`'s code. */
@@ -739,17 +732,17 @@ export function daySpineSummaryText(
 
 /** Every `TodayGreetingBand`, to its greeting key (`{name}` is the only placeholder). */
 export const GREETING_KEYS: Record<TodayGreetingBand, StaffMessageKey> = {
-  morning: "shared.today.greeting.morning",
-  afternoon: "shared.today.greeting.afternoon",
-  evening: "shared.today.greeting.evening",
-  night: "shared.today.greeting.night",
+  morning: "today.greeting.morning",
+  afternoon: "today.greeting.afternoon",
+  evening: "today.greeting.evening",
+  night: "today.greeting.night",
 };
 
 const SEASONAL_BRIEFING_KEYS: Record<TodaySeason, StaffMessageKey> = {
-  summer: "shared.today.seasonalBriefing.summer",
-  autumn: "shared.today.seasonalBriefing.autumn",
-  winter: "shared.today.seasonalBriefing.winter",
-  spring: "shared.today.seasonalBriefing.spring",
+  summer: "today.seasonalBriefing.summer",
+  autumn: "today.seasonalBriefing.autumn",
+  winter: "today.seasonalBriefing.winter",
+  spring: "today.seasonalBriefing.spring",
 };
 
 /**
