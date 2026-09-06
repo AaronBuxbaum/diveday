@@ -194,7 +194,7 @@ describe("saving the picture", () => {
   });
 });
 
-describe("the share sheet on a phone (#1407)", () => {
+describe("the share sheet on a phone (issue #1407)", () => {
   /**
    * The phone is the device this feature is for, and `<a download>` has
    * historically been ignored on iOS Safari. These cases pin the three ways the

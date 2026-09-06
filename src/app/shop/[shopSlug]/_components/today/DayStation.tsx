@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FIGURE_CLASS, FIGURE_DIAL_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime } from "@/lib/format";
 import type { AboardBlockerKind } from "@/lib/readiness";
@@ -119,6 +120,17 @@ export function DayStation({
     station.crewNames.length > 0 ? station.crewNames.join(", ") : null,
     station.priceCents === null ? null : formatMoneyCents(station.priceCents, currency, locale),
   ].filter((fact): fact is string => Boolean(fact));
+  // What the divers aboard came for, as one quiet counted line (D12/#1172 with
+  // D23/#1183, issue #1386). Null on a departure nobody answered on — which is
+  // most of them, and renders nothing rather than an empty heading.
+  //
+  // Deliberately no heading, no icon, no tone and no badge: it is an aggregate
+  // that names nobody, it suggests a conversation and never a pairing, and it
+  // is the crew's own reading of the morning rather than a job anybody taps.
+  // Until now it rendered only inside the manifest's collapsed buddy panel, so
+  // a shop could collect answers for weeks and meet them only by opening a fold
+  // on a safety surface.
+  const intentLine = staffDiveIntentLine(t, station.intents ?? [], locale);
   // The whole readiness fact, not the split counts: when every blocked diver on
   // a boat is marked `not_boarded` both split counts are zero, and a station
   // that went quiet there would be affirming the opposite of its own numbers.
@@ -194,6 +206,7 @@ export function DayStation({
             {crewed ? <Badge tone="primary">{t("shopHome.spine.crewing")}</Badge> : null}
           </h3>
           {meta.length > 0 ? <p className="mt-1 text-sm text-muted">{meta.join(" · ")}</p> : null}
+          {intentLine ? <p className="mt-1 text-sm text-muted">{intentLine}</p> : null}
         </div>
         {/* The head count leads as a figure (decision 3), drawn as the board
             draws it: a dial whose water stands at booked-of-capacity in

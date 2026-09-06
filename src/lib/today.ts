@@ -10,6 +10,7 @@ import {
 } from "@/i18n/today-labels";
 import { HOUR_MS } from "@/lib/clock";
 import type { Role } from "./authz";
+import type { DiveIntentCount } from "./dive-intent";
 import type { CrewIncompleteReason } from "./manifests";
 import type { AboardBlockerKind, ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import type { SizedRentalKind } from "./rentals";
@@ -911,6 +912,16 @@ export type SpineDeparture = {
    * crew has tapped nothing, which renders nothing — never "Unknown".
    */
   stage?: TripStageReading | null;
+  /**
+   * **What the divers aboard came for, as counts** (D12/#1172 with D23/#1183,
+   * issue #1386). Empty on a departure nobody answered on, which is the
+   * ordinary state and renders nothing at all.
+   *
+   * A fact the station carries, not a queue row: it names nobody, there is
+   * nothing to tap, and D23's boundary is that it suggests a conversation and
+   * never a pairing. Nothing about ranking or `assembleDaySpine` reads it.
+   */
+  intents?: readonly DiveIntentCount[];
 };
 
 /**
