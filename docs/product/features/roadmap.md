@@ -403,6 +403,31 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
 
 16h, 16i and 16j landed as a stack, each cut from the layer below and merged bottom-up.
 
+### 17. Before you ask (design complete; H-68 Ready)
+
+The 2026-09-06 loop, argued on [the canvas](../../design/canvases/20260906-before-you-ask/README.md)
+and proposed in ADR [20260906-before-you-ask](../../architecture/decisions/20260906-before-you-ask.md):
+the product keeps its knowledge to itself, which is what "too minimalistic" feels like from a desk.
+One rule, DiveDay fills in what it already knows, shows where it got it, and leaves the last tap to
+a person, drawn six times. Three of the six carry an owner's call (H-68); the other three move on
+the ADR alone. Each slice runs the `design-implementation` skill: the component names the ADR, a
+test pins the rule, the canvas README's slice table moves, and the visual diffs are explained.
+
+- **17a** — a send you can take back: the eight-second server-side hold with Undo on the four
+  sends that ask a confirming question today; the dialogs go. Waits on H-68 a. `security-reviewer`
+  on the undo path.
+- **17b** — nothing you typed is lost: per-person form drafts kept a day, the "picked up from"
+  line, the home's one row while a draft exists; drafts never hold a payment or medical answer.
+- **17c** — type it any way: pure parsers for time, date, phone, name, money and the picker match,
+  the typed text shown beneath the result, the never-list held by test.
+- **17d** — the add panel already knows the weekday: the pattern read over the shop's own
+  departures, the one sentence, the second boat as a row. The crew field waits on H-68 c.
+- **17e** — the door remembers who opened it: a booking reached from a diver's own link arrives
+  with the standing facts folded, each naming its date, and one button. The cold-email link waits
+  on H-68 b. `security-reviewer` on the handoff.
+- **17f** — ask it, and it answers: the palette's answer card for a diver, a day or a departure,
+  its primary act read from the same fix table as the home's rows.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)

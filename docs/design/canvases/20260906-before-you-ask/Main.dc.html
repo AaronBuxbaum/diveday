@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); }
+    .body { font-size: 14px; line-height: 1.55; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .n { width: 28px; height: 28px; border-radius: 999px; background: var(--lagoon-wash); color: var(--lagoon); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .r { display: flex; gap: 16px; align-items: flex-start; padding: 16px 0; border-top: 1px solid var(--rope); }
+    .card { background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 18px 20px; }
+    .h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+    .rule { display: grid; grid-template-columns: 30px minmax(0, 1fr) 200px; gap: 16px; align-items: flex-start; padding: 14px 0; border-top: 1px solid var(--rope); }
+    .k { font-size: 12.5px; font-weight: 650; color: var(--muted); }
+  </style>
+</helmet>
+<div style="width: 1180px; min-height: 2440px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 56px 60px;">
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 40px;">
+    <div style="max-width: 800px; display: flex; flex-direction: column; gap: 14px;">
+      <p class="eyebrow">The tenth canvas &middot; six moves &middot; 2026-09-06</p>
+      <h1 style="font-size: 44px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.04;">Before you ask.</h1>
+      <p class="lede">Reef made DiveDay warm, and the last loop taught it what time it is. It is still polite to a fault: it holds a diver&#8217;s card, sizes and waiver and makes her type her name again; it has run the same Saturday boat for two years and opens a blank form; it asks &#8220;are you sure?&#8221; where it could let you take the thing back. This canvas spends the next budget on one idea. <strong style="color: var(--ink);">DiveDay fills in what it already knows, shows where it got it, and leaves the last tap to a person.</strong> Six moves, each on the surface it lands on. Nothing here is normative; the ADR carries the decisions, three of them are the owner&#8217;s.</p>
+    </div>
+    <svg aria-hidden="true" viewBox="0 0 64 64" width="64" height="64" fill="none" style="flex-shrink: 0; margin-top: 8px;"><circle cx="22" cy="44" r="12" stroke="#0c2a35" stroke-width="2.5"></circle><circle cx="40" cy="26" r="8" stroke="#0c2a35" stroke-width="2.5"></circle><circle cx="52" cy="12" r="4.5" fill="#ff6f61"></circle></svg>
+  </div>
+
+  <div style="margin-top: 40px; display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 48px;">
+    <div>
+      <p class="tag">Three findings, from the running app</p>
+      <div class="r" style="margin-top: 10px;"><span class="n">1</span><p class="body"><strong>It waits to be told what it knows.</strong> A diver who has sailed twice this month types her name, email, phone, card and sizes a third time. The add panel opens with 8:30 in the time field for a shop whose Saturday boat has left at 7:00 every week since 2024. Every fact is on file; every form starts empty.</p></div>
+      <div class="r"><span class="n">2</span><p class="body"><strong>It forgets the moment you look away.</strong> The phone rings mid-booking, the tab is closed, and the half-filled form is gone. A desk is interruptions; the software behaves as if it were a quiet office.</p></div>
+      <div class="r" style="border-bottom: 1px solid var(--rope);"><span class="n">3</span><p class="body"><strong>It answers &#8220;where&#8221; and never &#8220;what&#8221;.</strong> &#8984;K finds Grace and opens her record. The desk&#8217;s question was whether Grace can board the 7:00, and that answer is one line the palette already has.</p></div>
+
+      <p class="tag" style="margin-top: 36px;">The owner&#8217;s three (H-68)</p>
+      <div class="r" style="margin-top: 10px;"><span class="n" style="background: var(--coral-wash); color: var(--coral-deep);">a</span><p class="body">Whether a send takes an eight-second hold with Undo in place of the confirm dialog, on the four sends that ask one today.</p></div>
+      <div class="r"><span class="n" style="background: var(--coral-wash); color: var(--coral-deep);">b</span><p class="body">Whether an email typed into a booking form that matches a diver on file may receive one link to bring their details across. Nothing shows on the page either way.</p></div>
+      <div class="r" style="border-bottom: 1px solid var(--rope);"><span class="n" style="background: var(--coral-wash); color: var(--coral-deep);">c</span><p class="body">Whether a learned default may name crew. The pattern knows Keiko and Sal run Saturdays; filling their names schedules people, which a blank form never did.</p></div>
+    </div>
+
+    <div>
+      <p class="tag">Six moves, each on its surface</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 12px;">
+        <div class="card"><p class="h2" style="font-size: 18px;">1 &middot; The door remembers who opened it</p><p class="note" style="margin-top: 6px;">KnownDiver. A booking reached from a diver&#8217;s own link (the recap&#8217;s next dive, the thread) arrives already knowing her: the card, the waiver that still stands, her own gear, her emergency contact, each with the day it was kept. The page is the seat and one button. A cold visitor gets the form that ships.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">2 &middot; The add panel already knows Saturday</p><p class="note" style="margin-top: 6px;">AddDeparture. Pick a day and the panel is filled from what the shop ran on that weekday: time, title, site, hull, crew, seats, price, each field saying so in one line. Every value is a field, editable in place. A shop with no history sees the blank panel.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">3 &middot; A send you can take back</p><p class="note" style="margin-top: 6px;">SendHold. Tap Send and the row says it is sending in eight seconds, with Undo where the button was. The mail leaves when the ring drains. The confirm dialog goes, and the send stays as safe as it was, because the question moved to after the tap where it costs nothing.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">4 &middot; Nothing you typed is lost</p><p class="note" style="margin-top: 6px;">Resume. Every staff form keeps what was typed, per person, for a day. Reopen it anywhere and it offers the draft in one line with Resume and Start over. The home carries one row while a draft exists. Neither renders otherwise.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">5 &middot; Type it any way</p><p class="note" style="margin-top: 6px;">Fields. &#8220;7&#8221; is 7:00 AM, &#8220;sat&#8221; is this Saturday, ten digits is a phone number, &#8220;SHARMA, PRIYA&#8221; is Priya Sharma. The field shows what it made and keeps what you typed one tap away. Never on a card number, a head count or a dose.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">6 &middot; Ask it, and it answers</p><p class="note" style="margin-top: 6px;">Palette. &#8984;K answers with the fact and the act: Grace, on the 7:00 today, card waiting, Verify. &#8220;sat&#8221; is Saturday&#8217;s board with its count. The doors are still there beneath.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 44px; padding: 24px 28px; border-radius: 28px; background: var(--shell); border: 1px solid var(--rope); box-shadow: var(--bed);">
+    <p class="tag">The rule every move passes, and what renders when it fails</p>
+    <div style="margin-top: 8px;">
+      <div class="rule"><span class="n">1</span><p class="body"><strong>It shows its source.</strong> A filled value says where it came from, in a sentence beside it: kept on Aug 27, from your last six Saturdays, typed as &#8220;7&#8221;. A value with no source is a guess, and DiveDay does not guess.</p><p class="k">Otherwise: the field is empty</p></div>
+      <div class="rule"><span class="n">2</span><p class="body"><strong>It is one tap from undone.</strong> Everything DiveDay filled is a field a person can change, a draft they can discard, a send they can stop. The last tap is always a person&#8217;s (principle 7).</p><p class="k">Otherwise: it is not filled</p></div>
+      <div class="rule"><span class="n">3</span><p class="body"><strong>It renders nothing when it is not true.</strong> No draft, no resume line. No history, no pattern. Cold visitor, cold form. No move adds a standing control (principle 8).</p><p class="k">Otherwise: nothing</p></div>
+      <div class="rule" style="border-bottom: 1px solid var(--rope);"><span class="n">4</span><p class="body"><strong>It never reaches a safety fact.</strong> A card is never verified by DiveDay, a head count is never inferred, a stage is never guessed, a medical answer is never carried forward. Every ban stands: no drawing, coral or motion on a manifest, roll call, cert check, waiver or payment.</p><p class="k">Otherwise: a person does it</p></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+    <div>
+      <p class="tag">What already works this way</p>
+      <p class="body" style="margin-top: 10px;">The crew&#8217;s phone holds today&#8217;s boats before it leaves the wifi. A re-tap undoes a check-in. The thread asks &#8220;anything changed?&#8221; over the facts the shop kept. The reminder stops when the step is done. The counter says who is new. The boat says where it is because the crew said so.</p>
+      <p class="body" style="margin-top: 8px;">Each of those is the rule above applied once. This canvas applies it six more times, on the surfaces where a shop still types what DiveDay knows.</p>
+    </div>
+    <div>
+      <p class="tag">What this canvas leaves alone</p>
+      <p class="body" style="margin-top: 10px;">The manifest, in full: no move touches it, the roll call stays a tap and nothing on it is inferred. The tokens, radii, type ladder and bed; the three moments and the four washes; Harbor on the diver&#8217;s pages. The coral count. Tracking of any kind (ADR 20260904, alternatives). Reading a certification card from a photo, declined in the ADR as a new dependency for a fact only a person may set.</p>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+    <div>
+      <p class="tag">How to read the canvas</p>
+      <p class="body" style="margin-top: 10px;"><strong>This page</strong> argues: this cover and the specimen boards, Fields and SendHold, which show a rule in frames. <strong>Page 2</strong> shows the surfaces: the known diver&#8217;s booking at 390, the add panel at 1180, the resume line at 390, the palette over the home at 1180.</p>
+      <p class="body" style="margin-top: 8px;">Every board is Blue Mantis Divers in the week of Thursday, August 27, 2026, the fiction every canvas since Clearwater holds to. Reef in Geist on the staff boards; the demo shop&#8217;s green and Bricolage Grotesque on the diver&#8217;s. Every name is invented.</p>
+    </div>
+    <div>
+      <p class="tag">Why this and not more decoration</p>
+      <p class="body" style="margin-top: 10px;">The owner&#8217;s brief said &#8220;too minimalistic&#8221; and named the feeling of things working on their own. Minimal was never the fault of the pictures; it is that the product keeps its knowledge to itself and asks the person to supply it. A shop feels a product is clever the moment it stops having to tell it things. That costs no coral, no motion and no new grammar, and every bit of it renders nothing on the day it is not true.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

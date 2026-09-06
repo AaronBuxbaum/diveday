@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-g { color: var(--muted); }
+    .tab { font-size: 15px; font-weight: 500; color: var(--muted); padding: 9px 14px; border-radius: 10px; white-space: nowrap; }
+    .lbl { font-size: 13.5px; font-weight: 600; margin-bottom: 6px; display: block; }
+    .field { border: 1px solid var(--rope-strong); border-radius: 10px; background: var(--shell); min-height: 44px; display: flex; align-items: center; padding: 0 12px; font-size: 15px; box-sizing: border-box; gap: 8px; }
+    .field.empty { color: var(--muted); }
+    .col { display: flex; flex-direction: column; }
+    .day { height: 92px; border-radius: 18px; border: 1px solid var(--rope); background: var(--shell); padding: 10px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; }
+    .dl { font-size: 12px; font-weight: 650; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+    .dt { font-size: 12.5px; color: var(--muted); }
+  </style>
+</helmet>
+<div style="width: 1180px; min-height: 980px; background: var(--sand); box-sizing: border-box; overflow: hidden;">
+
+  <div style="height: 56px; display: flex; align-items: center; gap: 18px; padding: 0 40px; background: rgba(251,247,239,.92); border-bottom: 1px solid var(--rope); box-sizing: border-box;">
+    <div style="display: flex; align-items: center; gap: 11px;">
+      <div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div>
+      <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px; margin-left: 14px;">
+      <span class="tab">Today</span><span class="tab">Check-in</span><span class="tab">Divers</span>
+      <span class="tab" style="background: var(--lagoon-wash); color: var(--lagoon-deep); font-weight: 600;">Board</span>
+      <span class="tab">More</span>
+    </div>
+  </div>
+
+  <div style="padding: 28px 40px 40px; display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 40px;">
+
+    <!-- The week behind the panel: Saturday is the empty column Dana tapped -->
+    <div class="col" style="gap: 14px;">
+      <p class="eyebrow">Board &middot; week of Aug 31</p>
+      <h1 style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;">Next week</h1>
+      <div class="col" style="gap: 8px; margin-top: 6px;">
+        <div class="day"><span class="dl">Mon, Aug 31</span><span class="dt num">7:00 Two-Tank Reef &middot; 6 of 12</span></div>
+        <div class="day"><span class="dl">Tue, Sep 1</span><span class="dt num">7:00 Two-Tank Reef &middot; 9 of 12</span><span class="dt num">1:00 Wreck Trip &middot; 3 of 10</span></div>
+        <div class="day"><span class="dl">Wed, Sep 2</span><span class="dt num">7:00 Two-Tank Reef &middot; 4 of 12</span></div>
+        <div class="day"><span class="dl">Thu, Sep 3</span><span class="dt num">7:00 Two-Tank Reef &middot; 8 of 12</span><span class="dt num">7:30 PM Night Dive &middot; 2 of 8</span></div>
+        <div class="day"><span class="dl">Fri, Sep 4</span><span class="dt num">7:00 Two-Tank Reef &middot; 9 of 12</span></div>
+        <div class="day" style="border-color: var(--lagoon); background: var(--lagoon-wash);"><span class="dl" style="color: var(--lagoon-deep);">Sat, Sep 5</span><span class="dt" style="color: var(--lagoon-deep);">Adding a departure&hellip;</span></div>
+        <div class="day"><span class="dl">Sun, Sep 6</span><span class="dt">Nothing on the board</span></div>
+      </div>
+    </div>
+
+    <!-- The add panel, already filled from what the shop runs on a Saturday. Every value is a field; one sentence says where they came from. -->
+    <div class="panel" style="padding: 26px 28px 28px; display: flex; flex-direction: column; gap: 20px; align-self: flex-start;">
+      <div class="col" style="gap: 4px;">
+        <p class="eyebrow">Add a departure</p>
+        <h2 style="font-size: 24px; font-weight: 600; letter-spacing: -0.015em;">Saturday, September 5</h2>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 18px; background: var(--tideline);">
+        <svg width="20" height="20" viewBox="0 0 18 18" class="hand" style="color: var(--lagoon-deep); stroke-width: 1.8; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M9 5.2V9l2.6 1.8"></path></svg>
+        <p style="font-size: 14.5px;">Filled from your last six Saturdays. Change anything, or <a href="#" style="font-weight: 500;">start blank</a>.</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+        <div><span class="lbl">Date</span><div class="field num">Sat, Sep 5</div></div>
+        <div><span class="lbl">Leaves</span><div class="field num">7:00 AM</div></div>
+        <div><span class="lbl">Back</span><div class="field num">10:30 AM</div></div>
+      </div>
+      <div><span class="lbl">Title</span><div class="field">Two-Tank Reef &mdash; Molasses &amp; French</div></div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+        <div><span class="lbl">Site</span><div class="field">Molasses Reef<svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="margin-left: auto; color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg></div></div>
+        <div><span class="lbl">Boat</span><div class="field">Mantis II<svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="margin-left: auto; color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg></div></div>
+      </div>
+      <div>
+        <span class="lbl">Crew</span>
+        <div class="field" style="gap: 8px;">
+          <span style="display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 999px; background: var(--lagoon-wash); color: var(--lagoon-deep); font-size: 13.5px; font-weight: 600;">Keiko Tanaka</span>
+          <span style="display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 999px; background: var(--lagoon-wash); color: var(--lagoon-deep); font-size: 13.5px; font-weight: 600;">Sal Moretti</span>
+          <span style="font-size: 14px; color: var(--muted);">Add&hellip;</span>
+        </div>
+        <p style="font-size: 12.5px; color: var(--muted); margin-top: 6px;">Both ran the last six. Neither is booked elsewhere that morning.</p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+        <div><span class="lbl">Seats</span><div class="field num">12</div></div>
+        <div><span class="lbl">Price</span><div class="field num">$95</div></div>
+        <div><span class="lbl">Kind of day</span><div class="field">Easygoing reef<svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="margin-left: auto; color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg></div></div>
+      </div>
+
+      <!-- The pattern's second boat, offered as one row, never added on its own -->
+      <div style="display: flex; align-items: center; gap: 14px; padding: 14px 0 0; border-top: 1px solid var(--rope);">
+        <span class="num" style="font-size: 15px; font-weight: 600;">1:00 PM</span>
+        <span style="flex: 1; font-size: 15px; color: var(--muted);">Wreck Trip &mdash; Spiegel Grove ran on four of those Saturdays too.</span>
+        <span style="font-size: 15px; font-weight: 600; color: var(--lagoon); white-space: nowrap;">Add it as well</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px; padding-top: 4px;">
+        <span class="btn btn-p" style="padding: 0 24px;">Add Saturday&#8217;s boat</span>
+        <span class="btn btn-g">More options</span>
+        <span style="margin-left: auto; font-size: 13.5px; color: var(--muted);">Repeats: no</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

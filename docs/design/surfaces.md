@@ -33,6 +33,9 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ### The shop home — `/shop/[shopSlug]`
 
+**Proposed 2026-09-06** ([ADR 20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md), [canvas](canvases/20260906-before-you-ask/README.md)):
+the desk group carries one "Unfinished" row while a staff form draft exists, and none otherwise; the palette opened from here answers a diver, a day or a departure with the fact and its fix before the doors.
+
 **Proposed 2026-09-04** ([ADR 20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md), [canvas](canvases/20260904-reef-all-the-way-down/README.md)):
 the station becomes a panel with the tile leading and one sentence per row; the band follows the shop's clock; one fact of scale on the day it is true; a stage chip when the crew set one; the evening counts divers and crew. The clock, the fact of scale and the stage chip wait on H-67; the station as a panel waits only on the ADR.
 
@@ -127,6 +130,9 @@ either.
 
 ### The schedule board — `/shop/[shopSlug]/schedule/board`
 
+**Proposed 2026-09-06** ([ADR 20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md), [canvas](canvases/20260906-before-you-ask/README.md)):
+the add panel opens filled from what the shop ran on that weekday over the last six weeks, under one sentence saying so, every value an ordinary field; the pattern's second boat is offered as a row and never added on its own; a shop with no history sees the blank panel. Whether the crew field is filled waits on H-68 c.
+
 **Reef, 2026-09-02:** every departure's site mark, drawn in the line alone — the board has no one
 boat to give the coral detail to, so none carries it.
 
@@ -214,6 +220,9 @@ routes took the display-scale h1 only.
   because a diver is choosing a shop before they are choosing a time slot.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
+
+**Proposed 2026-09-06** ([ADR 20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md), [canvas](canvases/20260906-before-you-ask/README.md)):
+reached from a diver's own link, the page arrives knowing her: the verified card, the waiver that still covers this trip, her gear and her emergency contact folded into one panel, each naming the day it was kept and each a door to change it; what remains is seats and one button. A cold visitor gets the form that ships, and the page reveals nothing to anyone who did not arrive through the capability. Whether a matching cold email may receive one link waits on H-68 b.
 
 **Proposed 2026-09-04** (same ADR and canvas): bounded to three field-guide tiles and a door above the form (the shipped page is 5,782px at 390 before it), two alternates with reasons, one optional intent question, a kind offer to a diver who has been away.
 
