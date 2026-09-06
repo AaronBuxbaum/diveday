@@ -2449,6 +2449,15 @@ export const bookings = pgTable(
      * **Gates nothing.** No readiness blocker, no admission decision, no filter.
      * "Last dived 5+ years ago" is a refresher conversation a divemaster has,
      * not a refusal the software makes.
+     *
+     * **Erasure takes it** (issue #1404). It is coarse and it names nobody, so
+     * a case could be made that it describes the departure rather than the
+     * diver — but it is an answer a person gave about themselves, and after an
+     * erasure there is nobody it is about. `dive_intent` and `re_entry_ask`
+     * below are the same kind of value, both cite this column by name for why
+     * they sit on the booking, and both have always been cleared; the
+     * consistency is the point, and no reader's numbers change, because an
+     * aggregate over erased seats would have to exclude them anyway.
      */
     lastDivedBand: diveRecencyBand("last_dived_band"),
     /**
