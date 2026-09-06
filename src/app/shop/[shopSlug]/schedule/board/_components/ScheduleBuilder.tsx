@@ -10,6 +10,7 @@ import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFi
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { ForgivingInput } from "@/components/ui/ForgivingInput";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
@@ -156,6 +157,8 @@ type BuilderActions = {
  * a prefix/suffix pair assembled from parts.
  */
 export type BuilderCopy = {
+  /** "typed as “{raw}”" — the forgiving time fields' reading line. */
+  typedAs: string;
   ariaLabel: string;
   addDepartureOnDay: string;
   add: string;
@@ -381,6 +384,7 @@ function focusOnMount(el: HTMLElement | null) {
  * silently discarding whatever a staff member had typed.
  */
 function AddPanel({
+  locale,
   dateIso,
   options,
   price,
@@ -393,6 +397,8 @@ function AddPanel({
   onAdd,
   onCancel,
 }: {
+  /** The reader's language, for the time fields' readings. */
+  locale: string;
   dateIso: string;
   /** `null` until the panel's own fetch lands; the selects say so meanwhile. */
   options: BuilderOptions | null;
@@ -640,22 +646,27 @@ function AddPanel({
             className={controlClass}
           />
         </Field>
+        {/* "7" is 7:00 AM and "1p" is 1:00 PM (ADR 20260906-before-you-ask,
+            decision 3): the box takes what the desk says and submits the HH:MM
+            a native time control would have. */}
         <Field label={copy.departs}>
-          <input
+          <ForgivingInput
+            kind="time"
             name="startTime"
-            type="time"
             required
             defaultValue="08:30"
-            className={controlClass}
+            locale={locale}
+            copy={{ typedAs: copy.typedAs }}
           />
         </Field>
         <Field label={copy.returns}>
-          <input
+          <ForgivingInput
+            kind="time"
             name="endTime"
-            type="time"
             required
             defaultValue="12:30"
-            className={controlClass}
+            locale={locale}
+            copy={{ typedAs: copy.typedAs }}
           />
         </Field>
       </FieldGrid>
@@ -1311,12 +1322,15 @@ function impactLines(section: MovePreflightSection, copy: BuilderCopy): string[]
 
 /** Slide a departure to another day or time; a multi-day course moves as a block. */
 function MovePanel({
+  locale,
   trip,
   copy,
   action,
   loadPreflight,
   onCancel,
 }: {
+  /** The reader's language, for the time fields' readings. */
+  locale: string;
   trip: PanelTrip;
   copy: BuilderCopy;
   // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
@@ -1381,13 +1395,14 @@ function MovePanel({
         />
       </Field>
       <Field label={copy.newDepartureTime}>
-        <input
+        <ForgivingInput
+          kind="time"
           name="startTime"
-          type="time"
           required
-          value={startTime}
-          onChange={(event) => setStartTime(event.target.value)}
-          className={controlClass}
+          defaultValue={trip.startTime}
+          locale={locale}
+          copy={{ typedAs: copy.typedAs }}
+          onCanonicalChange={setStartTime}
         />
       </Field>
       <div className="flex items-center gap-3 sm:col-span-2">
@@ -1404,11 +1419,14 @@ function MovePanel({
 
 /** Mint the same departure on another day — same seats, same price, no roster. */
 function CopyPanel({
+  locale,
   trip,
   copy,
   action,
   onCancel,
 }: {
+  /** The reader's language, for the time fields' readings. */
+  locale: string;
   trip: PanelTrip;
   copy: BuilderCopy;
   // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
@@ -1441,12 +1459,13 @@ function CopyPanel({
         />
       </Field>
       <Field label={copy.departureTime}>
-        <input
+        <ForgivingInput
+          kind="time"
           name="startTime"
-          type="time"
           required
           defaultValue={trip.startTime}
-          className={controlClass}
+          locale={locale}
+          copy={{ typedAs: copy.typedAs }}
         />
       </Field>
       <div className="flex items-center gap-3 sm:col-span-2">
@@ -1523,6 +1542,7 @@ function isUsualCrew(crew: readonly string[], usual: readonly string[] | null): 
 
 export function ScheduleBuilder({
   shopSlug,
+  locale,
   days,
   loadMovePreflight,
   loadOptions,
@@ -1539,6 +1559,8 @@ export function ScheduleBuilder({
   week,
 }: {
   shopSlug: string;
+  /** The reader's language, for the forgiving time fields' readings. */
+  locale: string;
   days: BuilderDay[];
   /** Fetches the add panel's course and dive-site options, first time it opens. */
   loadOptions: () => Promise<BuilderOptions>;
@@ -1848,6 +1870,7 @@ export function ScheduleBuilder({
           two identical forms at once. */}
       {canConfigure && open === "add:top" ? (
         <AddPanel
+          locale={locale}
           dateIso={defaultDateIso}
           options={options}
           price={price}
@@ -1904,6 +1927,7 @@ export function ScheduleBuilder({
           <div className="hidden xl:block">
             {canConfigure && weekAdd ? (
               <AddPanel
+                locale={locale}
                 dateIso={weekAdd}
                 options={options}
                 price={price}
@@ -1969,6 +1993,7 @@ export function ScheduleBuilder({
         <div className="mt-4">
           {sharedPanel.kind === "move" ? (
             <MovePanel
+              locale={locale}
               trip={sharedPanel.trip}
               copy={copy}
               action={actions.move}
@@ -1978,6 +2003,7 @@ export function ScheduleBuilder({
           ) : null}
           {sharedPanel.kind === "copy" ? (
             <CopyPanel
+              locale={locale}
               trip={sharedPanel.trip}
               copy={copy}
               action={actions.duplicate}
@@ -2069,6 +2095,7 @@ export function ScheduleBuilder({
             ) : null}
             {canConfigure && open === `add:${day.dateIso}` ? (
               <AddPanel
+                locale={locale}
                 dateIso={day.dateIso}
                 options={options}
                 price={price}

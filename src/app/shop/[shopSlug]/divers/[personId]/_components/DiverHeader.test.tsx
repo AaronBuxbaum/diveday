@@ -42,6 +42,8 @@ function renderHeader({
       shopSlug="blue-mantis"
       personId="person-1"
       t={t}
+      locale="en-US"
+      country="US"
       visits={0}
       book={<span>Book a departure</span>}
       editOpen={editOpen}

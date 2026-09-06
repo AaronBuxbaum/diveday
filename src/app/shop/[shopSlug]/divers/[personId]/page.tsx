@@ -242,6 +242,8 @@ export default async function DiverDetailPage({
         shopSlug={shopSlug}
         personId={personId}
         t={t}
+        locale={locale}
+        country={shop.addressCountry}
         visits={visits}
         status={cleared ? undefined : detailsStatus}
         moment={

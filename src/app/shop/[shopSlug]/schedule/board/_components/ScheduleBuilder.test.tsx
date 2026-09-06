@@ -39,6 +39,7 @@ const { usePathname, setMockPathname, useRouter, useSearchParams, routerReplace 
 vi.mock("next/navigation", () => ({ usePathname, useRouter, useSearchParams }));
 
 const COPY: BuilderCopy = {
+  typedAs: "typed as “{raw}”",
   ariaLabel: "Schedule builder",
   addDepartureOnDay: "Add a departure on {day}",
   add: "Add",
@@ -267,6 +268,7 @@ describe("ScheduleBuilder crew line", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -355,6 +357,7 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -386,6 +389,7 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -424,6 +428,7 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -459,6 +464,7 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -491,6 +497,7 @@ describe("ScheduleBuilder wind line (issue #722)", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -533,6 +540,7 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -672,6 +680,7 @@ describe("ScheduleBuilder row status slot — one grammar (issue 758)", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -716,6 +725,7 @@ describe("ScheduleBuilder row status slot — one grammar (issue 758)", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -758,6 +768,7 @@ describe("ScheduleBuilder row status slot — one grammar (issue 758)", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -792,6 +803,7 @@ describe("ScheduleBuilder row status slot — one grammar (issue 758)", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -827,6 +839,7 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -853,6 +866,7 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -885,6 +899,7 @@ describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
     more: MORE,
     initialCourse: null,
     loadMovePreflight,
+    locale: "en-US",
   } as const;
 
   it("opens when the openAdd prop changes after mount, so the header link works twice", async () => {
@@ -951,6 +966,7 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -986,6 +1002,7 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -1027,6 +1044,7 @@ describe("ScheduleBuilder row actions disclosure (design principles #8)", () => 
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -1123,6 +1141,7 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
         actions={{ ...actions, ...actionOverrides }}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -1226,6 +1245,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -1478,6 +1498,7 @@ describe("ScheduleBuilder request plan: copy composed on the client", () => {
     return render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
+        locale={locale}
         days={days}
         loadOptions={loadOptions}
         loadMovePreflight={loadMovePreflight}
@@ -1657,6 +1678,7 @@ describe("ScheduleBuilder week board", () => {
         actions={actions}
         defaultDateIso="2026-08-27"
         canConfigure={canConfigure}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -1826,7 +1848,10 @@ describe("ScheduleBuilder week board", () => {
     // A move form is two date/time fields; it opens full width beneath the
     // grid rather than inside a 160px column.
     expect(screen.getByLabelText("New date")).toHaveValue("2026-08-27");
-    expect(screen.getByLabelText("New departure time")).toHaveValue("07:00");
+    // The time box settles to what it reads and a hidden control submits the
+    // HH:MM the server expects (ADR 20260906-before-you-ask, decision 3).
+    expect(screen.getByLabelText("New departure time")).toHaveValue("7:00 AM");
+    expect(document.querySelector('input[type="hidden"][name="startTime"]')).toHaveValue("07:00");
   });
 
   /**
@@ -1922,7 +1947,8 @@ describe("ScheduleBuilder week board", () => {
     );
     await user.click(screen.getByRole("button", { name: /^Move Open Water Diver/ }));
     expect(screen.getByLabelText("New date")).toHaveValue("2026-08-28");
-    expect(screen.getByLabelText("New departure time")).toHaveValue("08:00");
+    expect(screen.getByLabelText("New departure time")).toHaveValue("8:00 AM");
+    expect(document.querySelector('input[type="hidden"][name="startTime"]')).toHaveValue("08:00");
     // Three days move together, and the form says so — the same note the
     // stream's own move panel carries for a course.
     expect(screen.getByText("All 3 days move together, keeping their gaps.")).toBeTruthy();
@@ -2164,6 +2190,7 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}
@@ -2304,6 +2331,7 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
+        locale="en-US"
         copy={COPY}
         more={MORE}
         initialCourse={null}

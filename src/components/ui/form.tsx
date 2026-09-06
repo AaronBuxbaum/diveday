@@ -8,8 +8,9 @@ import {
   type ReactNode,
   useId,
 } from "react";
-import { currencyFractionDigits, currencySymbol, maxPriceMajor, minorToMajor } from "@/lib/money";
+import { currencySymbol, minorToMajor } from "@/lib/money";
 import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
+import { type ForgivingCopy, ForgivingInput } from "./ForgivingInput";
 import { StatusMark } from "./StatusMark";
 import { toneMark } from "./tone";
 
@@ -578,6 +579,7 @@ export function PriceField({
   cents,
   currency,
   locale,
+  copy,
 }: {
   id?: string;
   name: string;
@@ -586,23 +588,26 @@ export function PriceField({
   cents: number | null;
   currency: string;
   locale: string;
+  /** Words for the reading line under the box (`forgivingCopy`). */
+  copy: ForgivingCopy;
 }) {
-  const digits = currencyFractionDigits(currency);
+  // "95", "$95" and "95.00" are one figure (ADR 20260906-before-you-ask,
+  // decision 3): the box takes what a person types and settles to the scanned
+  // form, and the hidden control submits the major-unit figure the old number
+  // input sent, so the server sees no difference.
   return (
-    <Field label={label} hint={hint}>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted">{currencySymbol(currency, locale)}</span>
-        <input
+    <Field label={label} htmlFor={id} hint={hint}>
+      <div className="flex items-start gap-2">
+        <span className="pt-3 text-sm text-muted">{currencySymbol(currency, locale)}</span>
+        <ForgivingInput
+          kind="money"
           id={id}
           name={name}
-          type="number"
-          inputMode="decimal"
-          min={0}
-          max={maxPriceMajor(currency)}
-          step={digits === 0 ? "1" : `0.${"0".repeat(digits - 1)}1`}
+          locale={locale}
+          currency={currency}
+          copy={copy}
           defaultValue={cents === null ? "" : String(minorToMajor(cents, currency))}
           placeholder="—"
-          className={controlClass}
         />
       </div>
     </Field>

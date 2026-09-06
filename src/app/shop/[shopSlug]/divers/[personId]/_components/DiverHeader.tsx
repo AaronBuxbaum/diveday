@@ -5,6 +5,8 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
+import { ForgivingInput } from "@/components/ui/ForgivingInput";
+import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { maxPlausibleBirthDate } from "@/lib/age";
@@ -35,6 +37,8 @@ export function DiverHeader({
   shopSlug,
   personId,
   t,
+  locale,
+  country,
   status,
   editOpen = false,
   book,
@@ -45,6 +49,10 @@ export function DiverHeader({
   shopSlug: string;
   personId: string;
   t: StaffTranslator;
+  /** The reader's language, for the forgiving fields' readings. */
+  locale: string;
+  /** The shop's ISO 3166-1 alpha-2 country, so a national phone number lands. */
+  country: string | null;
   /** This form's own outcome, rendered in its action row rather than page-top. */
   status?: DiverNotice;
   /**
@@ -152,12 +160,18 @@ export function DiverHeader({
             columns={2}
             className={sectionCardClass({ className: "mt-3 w-full gap-y-3" })}
           >
+            {/* "SHARMA, PRIYA" turns around into "Priya Sharma"; ten digits in a
+                Florida shop is a US number (ADR 20260906-before-you-ask,
+                decision 3). Both boxes settle to what they read and submit
+                exactly that. */}
             <Field label={t("divers.header.fullNameLabel")}>
-              <input
+              <ForgivingInput
+                kind="name"
                 name="fullName"
                 required
                 defaultValue={diver.person.fullName}
-                className={controlClass}
+                locale={locale}
+                copy={forgivingCopy(t)}
               />
             </Field>
             {/* The one refusal on this form the server can point at exactly: an
@@ -180,11 +194,14 @@ export function DiverHeader({
               />
             </Field>
             <Field label={t("divers.header.phoneLabel")} hint={t("divers.header.optionalHint")}>
-              <input
+              <ForgivingInput
+                kind="phone"
                 name="phone"
-                type="tel"
+                autoComplete="tel"
                 defaultValue={diver.person.phone ?? ""}
-                className={controlClass}
+                locale={locale}
+                country={country}
+                copy={forgivingCopy(t)}
               />
             </Field>
             <Field

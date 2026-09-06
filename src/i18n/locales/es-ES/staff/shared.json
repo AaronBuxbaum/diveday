@@ -471,5 +471,8 @@
     "deckWord": "Pidió hablar con el divemaster.",
     "easyFirstDive": "Pidió una primera inmersión tranquila.",
     "refresherCourse": "Preguntó por el curso de repaso."
+  },
+  "forgiving": {
+    "typedAs": "escrito como «{raw}»"
   }
 }

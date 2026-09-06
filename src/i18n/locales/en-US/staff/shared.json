@@ -471,5 +471,8 @@
     "deckWord": "Asked for a word with the divemaster.",
     "easyFirstDive": "Asked for an easy first dive.",
     "refresherCourse": "Asked about the refresher course."
+  },
+  "forgiving": {
+    "typedAs": "typed as “{raw}”"
   }
 }

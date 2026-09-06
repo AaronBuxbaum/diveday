@@ -334,6 +334,7 @@ export default async function ScheduleBoardPage({
       }
     : undefined;
   const builderCopy: BuilderCopy = {
+    typedAs: st.raw("shared.forgiving.typedAs"),
     ariaLabel: st("schedule.builder.ariaLabel"),
     addDepartureOnDay: st.raw("schedule.builder.addDepartureOnDay"),
     add: st("schedule.builder.add"),
@@ -1033,6 +1034,7 @@ export default async function ScheduleBoardPage({
 
       <ScheduleBuilder
         shopSlug={shopSlug}
+        locale={locale}
         days={builderDays}
         loadOptions={loadBuilderOptionsAction}
         loadMovePreflight={loadMovePreflightAction}
