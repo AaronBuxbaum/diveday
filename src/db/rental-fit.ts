@@ -1,6 +1,7 @@
 import { and, asc, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { PrepDiver } from "@/lib/dive-prep";
+import { SIZED_RENTAL_FIT_COLUMN, type SizedRentalKind } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import {
@@ -145,6 +146,75 @@ export async function saveRentalFitNote(
 }
 
 /**
+ * **Keep the size that actually went out** (issue #1174, delight report D14).
+ *
+ * The evening's one-tap answer to "Hugo's BCD went out as L — keep that as the
+ * fit?", and the only writer of the `fit_confirmed_*` trio. It writes the one
+ * size column for that kind and stamps `fit_stated_at` — a size a human
+ * confirmed *is* a stated fit — plus the trio, because a fit somebody checked
+ * against a real return is a different fact from one somebody typed.
+ *
+ * **The item is stamped, not just the clock**, because the diver's own thread
+ * has to name the piece: "Keiko Tanaka kept your BCD at M after your last
+ * trip". `fitConfirmationForDiver` below refuses to render without all three,
+ * so a stamp with no item would silently cost that sentence.
+ *
+ * Slices 16g and 16h each invented this write independently — 16g as a
+ * stamp-only `confirmRentalFit` with no caller, 16h as this one — and the
+ * stamp-only shape is the wrong one for the button that uses it: "keep that as
+ * the fit" that edits no size does nothing at all. One function, and the columns
+ * are 16g's three rather than 16h's two.
+ *
+ * **`needs_staff_fit_at` is conspicuously absent and must stay absent.** A size
+ * edit never clears that flag (the column's own comment in schema.ts): a stale
+ * flag costs one extra look at the counter, and a wrongly-cleared one puts a
+ * diver in gear nobody checked.
+ *
+ * Codes, never sentences — the UI picks the words.
+ */
+export async function confirmRentalFitSize(
+  db: AppDb,
+  input: {
+    shopId: string;
+    personId: string;
+    kind: SizedRentalKind;
+    size: string;
+    /** The staff member whose call it was. Attribution, not authorization. */
+    confirmedByPersonId: string;
+    now?: Date;
+  },
+): Promise<"saved" | "unknown_person" | "invalid"> {
+  const size = input.size.trim();
+  if (!size) return "invalid";
+  // The same tenant proof `saveRentalFit` makes: a copied id must not write a
+  // fit into another shop's record.
+  const [person] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+    .limit(1);
+  if (!person) return "unknown_person";
+
+  const at = input.now ?? nowDate();
+  const values = {
+    [SIZED_RENTAL_FIT_COLUMN[input.kind]]: size,
+    fitStatedAt: at,
+    fitConfirmedAt: at,
+    fitConfirmedBy: input.confirmedByPersonId,
+    fitConfirmedItem: input.kind,
+    updatedAt: at,
+  };
+  await db
+    .insert(rentalFitProfiles)
+    .values({ shopId: input.shopId, personId: input.personId, ...values })
+    .onConflictDoUpdate({
+      target: [rentalFitProfiles.shopId, rentalFitProfiles.personId],
+      set: values,
+    });
+  return "saved";
+}
+
+/**
  * The safe fallback when a requested size isn't in stock (H-06): flag the diver
  * for hands-on fitting at check-in rather than packing a size nobody chose.
  * Open to any staff member — it escalates to a person, it never overwrites what
@@ -182,46 +252,13 @@ export async function setNeedsStaffFit(
   return profile ?? null;
 }
 
-/** Which piece of a fit a staffer kept — `rental_fit_item`, mirroring `SIZED_RENTAL_KINDS`. */
-export type RentalFitItem = (typeof rentalFitItem.enumValues)[number];
-
 /**
- * **A staffer kept this diver's fit** — the write behind D14's recall sentence
- * (ADR 20260904-reef-all-the-way-down).
- *
- * Confirming is *remembering*, not editing: this touches no size column, so
- * nothing a diver typed can be moved by a staffer tapping "Keep it" at the end
- * of a day. An UPDATE and never an upsert — a diver with no profile row has no
- * fit to confirm, which is the same refusal shape {@link setNeedsStaffFit}
- * makes and for the same reason.
+ * Which piece of a fit a staffer kept — the `rental_fit_item` enum, whose values
+ * are `SIZED_RENTAL_KINDS` exactly. Two names for one set, because the enum is a
+ * stored column and the const is what the fit editor and the evening both read;
+ * `confirmRentalFitSize` passes a `SizedRentalKind` straight into it.
  */
-export async function confirmRentalFit(
-  db: AppDb,
-  input: {
-    shopId: string;
-    personId: string;
-    item: RentalFitItem;
-    /** The staff member who kept it — attribution, not authorization. */
-    byPersonId?: string;
-  },
-) {
-  const [profile] = await db
-    .update(rentalFitProfiles)
-    .set({
-      fitConfirmedAt: nowDate(),
-      fitConfirmedBy: input.byPersonId ?? null,
-      fitConfirmedItem: input.item,
-      updatedAt: nowDate(),
-    })
-    .where(
-      and(
-        eq(rentalFitProfiles.shopId, input.shopId),
-        eq(rentalFitProfiles.personId, input.personId),
-      ),
-    )
-    .returning();
-  return profile ?? null;
-}
+export type RentalFitItem = (typeof rentalFitItem.enumValues)[number];
 
 /**
  * **Who kept this diver's fit, which piece, and when** — or null.

@@ -224,6 +224,54 @@ export const SIZED_RENTAL_KINDS = ["bcd", "wetsuit", "boots", "mask_fins", "weig
 export type SizedRentalKind = (typeof SIZED_RENTAL_KINDS)[number];
 
 /**
+ * Which `rental_fit_profiles` column records each sized kind's size.
+ *
+ * Written down once because two writers now need it: the fit editor, which
+ * knows the column from the field a staffer typed into, and the evening's
+ * "keep it" (issue #1174, D14), which knows only that a **BCD** came back a
+ * size up. A second map would be one rename away from a save that silently
+ * wrote a wetsuit size into the boot column.
+ */
+export const SIZED_RENTAL_FIT_COLUMN = {
+  bcd: "bcdSize",
+  wetsuit: "wetsuitSize",
+  boots: "bootSize",
+  mask_fins: "finSize",
+  weights: "weightPreference",
+} as const satisfies Record<SizedRentalKind, string>;
+
+/**
+ * The sized fit kind one tracked gear unit answers for, or null when the unit
+ * has no size to learn from.
+ *
+ * Most of the register is the second case and stays that way: a torch, a tank
+ * and a reel have no fit, and a **mask** has no size column of its own — the
+ * one shoe size answers for boots and fins, which is the rule
+ * {@link rentalFitCompleteness} already keeps. A unit whose kind is not here
+ * simply never produces an evening question.
+ *
+ * Takes a plain string rather than importing `GearItemKind`, which keeps this
+ * module free of the register (the gear half of the app is opt-in by presence,
+ * ADR 20260815-minimal-gear-register, and nothing here should make it load).
+ */
+export function sizedRentalKindOfGearKind(gearKind: string): SizedRentalKind | null {
+  switch (gearKind) {
+    case "bcd":
+      return "bcd";
+    case "wetsuit":
+      return "wetsuit";
+    case "boots":
+      return "boots";
+    case "fins":
+      return "mask_fins";
+    case "weights":
+      return "weights";
+    default:
+      return null;
+  }
+}
+
+/**
  * The half of a stored fit this file reasons about: what the diver rents, and
  * the sizes recorded against it. Declared structurally rather than imported
  * from `src/db`, which `src/lib` may not reach — a `rental_fit_profiles` row

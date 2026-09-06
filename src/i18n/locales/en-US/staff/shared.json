@@ -314,7 +314,8 @@
       "staffCredentialDue": "Credential",
       "unitsUnconfirmed": "Setup",
       "helpRequest": "Help request",
-      "sayHello": "Say hello"
+      "sayHello": "Say hello",
+      "rentalFit": "Gear"
     },
     "blockerAction": {
       "setRequirements": "Set requirements",
@@ -425,7 +426,8 @@
       "openGearRegister": "Open gear register",
       "openGearUnit": "Open unit record",
       "openStaffing": "Open staffing",
-      "openUnits": "Open units"
+      "openUnits": "Open units",
+      "openDiver": "Open diver record"
     },
     "greeting": {
       "morning": "Good morning, {name}",
@@ -474,7 +476,10 @@
       "dueBackDetail": "{unitLabel} is due back today.",
       "serviceDueDetail": "{clockLabel} is due {dueOn}.",
       "serviceOverdueDetail": "{clockLabel} was due {dueOn}.",
-      "neverPickedUpDetail": "{unitLabel} was reserved until {dueOn} and never picked up. Release it."
+      "neverPickedUpDetail": "{unitLabel} was reserved until {dueOn} and never picked up. Release it.",
+      "fitConfirmDetail": "{name}'s {unitLabel} went out as {size}. Keep that as the fit next time?",
+      "fitConfirmKeep": "Keep it",
+      "fitConfirmSaving": "Keeping"
     },
     "staffCredential": {
       "dueDetail": "{credential} for this staff member renews {dueOn}.",

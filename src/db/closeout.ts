@@ -1,6 +1,21 @@
-import { and, count, desc, eq, gte, inArray, lt, ne } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  max,
+  ne,
+  notInArray,
+  sql,
+} from "drizzle-orm";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { nowDate } from "@/lib/clock";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import {
   assembleDayCloseout,
   buildCloseoutSnapshot,
@@ -12,6 +27,8 @@ import {
   parseCloseoutSnapshot,
   shopDayOf,
 } from "@/lib/closeout";
+import type { CrewRollCallSubject } from "@/lib/manifests";
+import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
 import type { TodayAction } from "@/lib/today";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
@@ -19,14 +36,20 @@ import {
   bookings,
   closeoutLeftoverDecisions,
   dayCloseouts,
+  diveSites,
+  executedDives,
   notificationDeliveries,
   people,
   recapPhotos,
+  rollCallCrewEvents,
   rollCallEvents,
+  tripAssignments,
+  tripDives,
   tripRecapPhotos,
   trips,
 } from "./schema";
 import { getTodayWork, listRollCallGaps } from "./today";
+import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -129,6 +152,124 @@ export async function recordLeftoverDecision(
 }
 
 /**
+ * One trip's assigned crew as the closing checkpoint sees them.
+ *
+ * Carry-forward is the reason this is a function rather than a lookup: a crew
+ * member marked ashore at the dock with nothing after it is *accounted for* at
+ * every later checkpoint (`carryForwardNotBoarded`, src/lib/roll-call.ts), and
+ * reading only the last checkpoint's own row would call them awaiting and hold
+ * the evening open over somebody who never left the dock. The same walk the
+ * manifest makes, on the same function.
+ */
+function crewSubjectsAtClose(
+  plannedDives: number,
+  personIds: readonly string[],
+  standing: (personId: string, checkpoint: string) => "boarded" | "not_boarded" | undefined,
+): CrewRollCallSubject[] {
+  const checkpoints = rollCallCheckpoints(plannedDives);
+  return personIds.map((personId) => {
+    const perCheckpoint = checkpoints.map((checkpoint) => {
+      const state = standing(personId, checkpoint);
+      return state ? { state } : undefined;
+    });
+    return { rollCall: carryForwardNotBoarded(perCheckpoint).at(-1) };
+  });
+}
+
+/**
+ * How far back the evening looks for a departure to compare a short boat with
+ * (issue #1207, D47). A season, roughly — far enough that a weekly charter has
+ * run a dozen times, near enough that the comparison is about this year's
+ * market rather than last year's. One constant, deliberately: it is the
+ * implementing session's call rather than the issue's, and it is meant to be
+ * easy to move.
+ */
+const COMPARABLE_HORIZON_MS = 90 * 24 * HOUR_MS;
+
+/**
+ * **The comparable departure** — the most recent same-title trip that filled,
+ * per departure of today.
+ *
+ * One query, one `where`, one `having`: the capacity comparison rides inside
+ * the same grouped read that produces the row, so the count and the row can
+ * never disagree about which departures qualify. Splitting them is the classic
+ * bug on exactly this kind of view, and #1207's triage names it.
+ *
+ * **It carries no crew, no rank and no rate**, and it must not grow any. D47's
+ * boundary is that the evening states facts about seats, never a scoreboard
+ * about people, and the surest way to keep it one is to have nothing here that
+ * could become one.
+ */
+async function comparableDepartures(
+  db: AppDb,
+  shopId: string,
+  today: readonly { id: string; title: string; startsAt: Date; priceCents: number | null }[],
+): Promise<Map<string, { title: string; startsAt: Date; samePrice: boolean } | null>> {
+  const answer = new Map<string, { title: string; startsAt: Date; samePrice: boolean } | null>(
+    today.map((trip) => [trip.id, null]),
+  );
+  if (today.length === 0) return answer;
+  const startTimes = today.map((trip) => trip.startsAt.getTime());
+  const horizon = new Date(Math.min(...startTimes) - COMPARABLE_HORIZON_MS);
+  const latest = new Date(Math.max(...startTimes));
+
+  const candidates = await db
+    .select({
+      title: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      priceCents: trips.priceCents,
+    })
+    .from(trips)
+    .leftJoin(
+      bookings,
+      and(
+        eq(bookings.tripId, trips.id),
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        inArray(trips.title, [...new Set(today.map((trip) => trip.title))]),
+        lt(trips.endsAt, latest),
+        gte(trips.endsAt, horizon),
+        notInArray(
+          trips.id,
+          today.map((trip) => trip.id),
+        ),
+      ),
+    )
+    .groupBy(trips.id)
+    .having(sql`count(${bookings.id}) >= ${trips.capacity}`)
+    .orderBy(desc(trips.endsAt));
+
+  for (const trip of today) {
+    const match = candidates.find(
+      (candidate) =>
+        candidate.title === trip.title && candidate.endsAt.getTime() < trip.startsAt.getTime(),
+    );
+    answer.set(
+      trip.id,
+      match
+        ? {
+            title: match.title,
+            startsAt: match.startsAt,
+            // Both null reads as the same price, which is honest: two
+            // departures that both say "ask the shop" are priced alike as far
+            // as anything on the board is concerned.
+            samePrice: match.priceCents === trip.priceCents,
+          }
+        : null,
+    );
+  }
+  return answer;
+}
+
+/**
  * Today's departures in the shop's own calendar day — backwards-looking on
  * purpose, like `listRollCallGaps`: the boats this surface reconciles have
  * mostly already fallen out of every forward-looking reader.
@@ -141,6 +282,9 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
       title: trips.title,
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
+      capacity: trips.capacity,
+      plannedDives: trips.plannedDives,
+      priceCents: trips.priceCents,
       recapShoutout: trips.recapShoutout,
       recapAutoSendPaused: trips.recapAutoSendPaused,
       recapAutoSendAt: trips.recapAutoSendAt,
@@ -157,7 +301,19 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
       ),
     );
   if (rows.length === 0) return [];
-  const [counts, photos, crewPhotos, recapDeliveries] = await Promise.all([
+  const tripIds = rows.map((row) => row.id);
+  const [
+    counts,
+    photos,
+    crewPhotos,
+    recapDeliveries,
+    crewRoster,
+    crewResults,
+    lastBookings,
+    neverSentDeal,
+    comparables,
+    planChangeRows,
+  ] = await Promise.all([
     db
       .select({ tripId: bookings.tripId, booked: count() })
       .from(bookings)
@@ -236,6 +392,89 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
           ),
         ),
       ),
+    // **The assigned crew** (issue #1346). Tenancy through `trips`:
+    // `trip_assignments` carries no `shop_id` of its own (CR-007), so a trip id
+    // alone must never reach a roster.
+    db
+      .select({ tripId: tripAssignments.tripId, personId: tripAssignments.personId })
+      .from(tripAssignments)
+      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+      .where(and(liveTrip(), eq(trips.shopId, shopId), inArray(tripAssignments.tripId, tripIds))),
+    // Their results, joined back to the roster with the same guard
+    // `listRollCallGaps` uses, so a person taken off the trip cannot answer
+    // for it. Oldest first: the last row read per (trip, person, checkpoint)
+    // is the one that stands, which is the order every reader of this trail
+    // walks it in.
+    db
+      .select({
+        tripId: rollCallCrewEvents.tripId,
+        personId: rollCallCrewEvents.personId,
+        checkpoint: rollCallCrewEvents.checkpoint,
+        status: rollCallCrewEvents.status,
+      })
+      .from(rollCallCrewEvents)
+      .innerJoin(
+        tripAssignments,
+        and(
+          eq(tripAssignments.tripId, rollCallCrewEvents.tripId),
+          eq(tripAssignments.personId, rollCallCrewEvents.personId),
+        ),
+      )
+      .where(
+        and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
+      )
+      .orderBy(
+        asc(rollCallCrewEvents.occurredAt),
+        asc(rollCallCrewEvents.createdAt),
+        asc(rollCallCrewEvents.seq),
+      ),
+    // **D47's first clause** — when the last seat sold.
+    db
+      .select({ tripId: bookings.tripId, lastBookingAt: max(bookings.createdAt) })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          inArray(bookings.tripId, tripIds),
+          ne(bookings.status, "cancelled"),
+        ),
+      )
+      .groupBy(bookings.tripId),
+    // **D47's second** — the deal that never went out, answered by the module
+    // that owns last-minute deals rather than by a second query here.
+    tripIdsNeverSentLastMinuteDeal(db, shopId, tripIds),
+    comparableDepartures(db, shopId, rows),
+    // **D24** — dives whose actual site was not the planned one. A dive with no
+    // planned site is deliberately not a change: there was no plan to depart
+    // from, and "the plan changed" would be the surface inventing one.
+    db
+      .select({
+        tripId: executedDives.tripId,
+        diveNumber: executedDives.diveNumber,
+        siteName: diveSites.name,
+        reasonCode: executedDives.planChangeReason,
+      })
+      .from(executedDives)
+      .innerJoin(trips, eq(trips.id, executedDives.tripId))
+      .innerJoin(diveSites, eq(diveSites.id, executedDives.actualSiteId))
+      .innerJoin(
+        tripDives,
+        and(
+          eq(tripDives.tripId, executedDives.tripId),
+          eq(tripDives.diveNumber, executedDives.diveNumber),
+        ),
+      )
+      .where(
+        and(
+          liveTrip(),
+          eq(executedDives.shopId, shopId),
+          inArray(executedDives.tripId, tripIds),
+          isNull(executedDives.deletedAt),
+          isNotNull(tripDives.diveSiteId),
+          ne(tripDives.diveSiteId, executedDives.actualSiteId),
+        ),
+      )
+      .orderBy(asc(executedDives.diveNumber)),
   ]);
   const bookedByTrip = new Map(counts.map((row) => [row.tripId, Number(row.booked)]));
   const photosByTrip = new Map<string, typeof photos>();
@@ -273,12 +512,57 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     }
     recapStateByTrip.set(delivery.tripId, state);
   }
+  // **The assigned crew, each with the result that stands at each checkpoint.**
+  // Absence is *awaiting*, never accounted for (`crewIsAccountedFor`), so a
+  // crew member with no result at all reaches the evening as an empty record
+  // rather than being left out of the list.
+  const crewByTrip = new Map<string, string[]>();
+  for (const row of crewRoster) {
+    const list = crewByTrip.get(row.tripId) ?? [];
+    list.push(row.personId);
+    crewByTrip.set(row.tripId, list);
+  }
+  const standingCrewResult = new Map<string, "boarded" | "not_boarded">();
+  for (const event of crewResults) {
+    const key = `${event.tripId}\0${event.personId}\0${event.checkpoint}`;
+    // A `cleared` undo collapses to "no result", the same reading every other
+    // reader of this trail makes, so an undone tap can never satisfy a count.
+    if (event.status === "cleared") standingCrewResult.delete(key);
+    else standingCrewResult.set(key, event.status);
+  }
+  const lastBookingByTrip = new Map(
+    lastBookings.map((row) => [row.tripId, row.lastBookingAt ?? null]),
+  );
+  const planChangesByTrip = new Map<string, typeof planChangeRows>();
+  for (const change of planChangeRows) {
+    const list = planChangesByTrip.get(change.tripId) ?? [];
+    list.push(change);
+    planChangesByTrip.set(change.tripId, list);
+  }
+
   return rows.map((row) => ({
     tripId: row.id,
     title: row.title,
     startsAt: row.startsAt,
     endsAt: row.endsAt,
     booked: bookedByTrip.get(row.id) ?? 0,
+    capacity: row.capacity,
+    plannedDives: row.plannedDives,
+    crew: crewSubjectsAtClose(
+      row.plannedDives,
+      crewByTrip.get(row.id) ?? [],
+      (personId, checkpoint) => standingCrewResult.get(`${row.id}\0${personId}\0${checkpoint}`),
+    ),
+    lastBookingAt: lastBookingByTrip.get(row.id) ?? null,
+    // The reader answers "never sent", so a trip *absent* from that set is one
+    // whose deal went out.
+    dealSent: !neverSentDeal.has(row.id),
+    comparable: comparables.get(row.id) ?? null,
+    planChanges: (planChangesByTrip.get(row.id) ?? []).map((change) => ({
+      diveNumber: change.diveNumber,
+      siteName: change.siteName,
+      reasonCode: change.reasonCode,
+    })),
     recapShoutout: row.recapShoutout,
     recapAutoSendPaused: row.recapAutoSendPaused,
     recapAutoSendAt: row.recapAutoSendAt,

@@ -134,6 +134,10 @@ const EVENING_NOTICES: Record<string, { key: StaffMessageKey; tone: NoticeTone }
   // Where the owner-only departure log lands everyone else. The door is absent
   // from their stations, so this is for a bookmark or a role that changed.
   "log-not-authorized": { key: "incidentExport.ownerOnlyNotice", tone: "neutral" },
+  // The evening's "Keep it" (issue #1174, D14). The row leaving the leftovers
+  // group is most of the answer; this says the size went somewhere, because
+  // where it went is a diver record two taps away.
+  "rental-fit-kept": { key: "shopHome.notice.rentalFitKept", tone: "success" },
 };
 
 export const metadata: Metadata = {

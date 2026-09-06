@@ -29,7 +29,8 @@
     "backupNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo.",
     "whatsappNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
     "promosNotAuthorized": "Los códigos promocionales están limitados a propietarios y gerentes.",
-    "integrationsNotAuthorized": "Solo un propietario o gerente puede cambiar las integraciones."
+    "integrationsNotAuthorized": "Solo un propietario o gerente puede cambiar las integraciones.",
+    "rentalFitKept": "Talla guardada."
   },
   "orientation": {
     "heading": "¿Recién llegado? Algunas pistas para tu puesto.",
@@ -134,8 +135,8 @@
     "aboardReasonUnknown": "no hay nada en la ficha que lo autorice. Sin exención firmada no hay declaración médica.",
     "aboardReasonPayment": "queda un pago pendiente. Está en la lista de abajo.",
     "crewRollCallOpen": "Todos los buceadores están a bordo y falta pasar lista a la tripulación.",
-    "allHome": "Todos los barcos están en puerto: {out} salieron, {back} volvieron.",
-    "firstBoatHome": "Tu primer barco está en puerto: {out} salieron, {back} volvieron.",
+    "allHome": "Todos los barcos están en puerto: salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
+    "firstBoatHome": "Tu primer barco está en puerto: salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
     "firstBooking": "Tu primera reserva",
     "stage": {
       "boarding": "Embarcando",
@@ -154,7 +155,21 @@
     "close": {
       "back": "{back} de {booked} de vuelta",
       "backBy": "{back} de {booked} de vuelta a las {time}",
-      "closedBy": "lista cerrada por {name}"
+      "closedBy": "lista cerrada por {name}",
+      "backSouls": "salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}",
+      "backSoulsBy": "salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back} a las {time}",
+      "openSeats": {
+        "label": "Plazas libres",
+        "sentence": "{seats, plural, one {Quedó # plaza libre} other {Quedaron # plazas libres}}: {facts}.",
+        "lastBooking": "{days, plural, =0 {la última reserva entró el mismo día} one {la última reserva entró # día antes} other {la última reserva entró # días antes}}",
+        "noDeal": "no salió ninguna oferta de última hora",
+        "comparableSamePrice": "{title} del {date} se llenó al mismo precio",
+        "comparableOtherPrice": "{title} del {date} se llenó a otro precio"
+      },
+      "planChange": {
+        "moved": "el plan cambió: la inmersión {dive} se trasladó a {site}",
+        "movedWithReason": "el plan cambió: la inmersión {dive} se trasladó a {site}, {reason}"
+      }
     },
     "firstBookingPaid": "pagado {amount}",
     "firstBookingPaidNoAmount": "pagado",

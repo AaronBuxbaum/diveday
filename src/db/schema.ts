@@ -6436,14 +6436,23 @@ export const rentalFitProfiles = pgTable(
      */
     needsStaffFitBy: uuid("needs_staff_fit_by").references(() => people.id),
     /**
-     * **A staffer kept this fit after a trip** — recall, never inference (ADR
-     * 20260904-reef-all-the-way-down, D14).
+     * **A staffer kept this fit after a trip** — recall, never inference (issue
+     * #1174, ADR 20260904-reef-all-the-way-down, D14).
      *
-     * Written only by `confirmRentalFit` (src/db/rental-fit.ts), which a staff
-     * act calls at the end of a day; a diver's own save never touches any of
-     * the three, and confirming edits no size. Their absence is the ordinary
-     * state, and the diver-facing sentence renders nothing without all three —
-     * so this can never become "somebody kept your fit".
+     * Distinct from `fit_stated_at` above, and the distinction is the whole
+     * point: that column means *a fit was stated*, by the diver on their own
+     * form or by staff typing what the diver said. These three mean *somebody
+     * watched a unit come back in a different size and said keep it*. D14's
+     * boundary is that the app learns only from a staff-confirmed outcome, so a
+     * fact that ages naturally is the honest shape rather than a confidence
+     * score nobody calibrated.
+     *
+     * Written only by `confirmRentalFitSize` (src/db/rental-fit.ts), which the
+     * evening's one-tap "Keep it" calls; a diver's own save never touches any
+     * of the three. Their absence is the ordinary state — most rows — and it
+     * gates nothing: an unconfirmed fit is still the fit. The diver-facing
+     * sentence renders nothing without all three, so this can never become
+     * "somebody kept your fit".
      *
      * Modelled on the `needs_staff_fit_*` trio above and, like it, carries no
      * check constraint tying the three together: `fit_confirmed_by` is nulled

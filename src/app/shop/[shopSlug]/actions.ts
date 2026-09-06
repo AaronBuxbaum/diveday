@@ -16,6 +16,7 @@ import {
   setTripRecapShoutout,
   unpauseTripRecapAutoSend,
 } from "@/db/recap";
+import { confirmRentalFitSize } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -23,6 +24,7 @@ import { canViewShopReports } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { type LeftoverDecision, shopDayOf } from "@/lib/closeout";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { SIZED_RENTAL_KINDS, type SizedRentalKind } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
@@ -243,6 +245,29 @@ export async function sendRecapAction(tripId: string) {
     home,
     noticeUrl(home, result.summary.failed > 0 ? "recap-send-attention" : "recap-sent"),
   );
+}
+
+/**
+ * **Keep the size a unit actually went out in** (issue #1174, delight report
+ * D14) — the evening's one-tap answer, from the leftovers group.
+ *
+ * Every staff role may answer it, the same rule as closing the day: whoever
+ * was at the counter when the swap happened is who knows. The row it lands on
+ * exists only because the desk already recorded a `fit_adjusted` return, so
+ * this writes down what a human already decided rather than making a new call.
+ */
+export async function keepRentalFitAction(personId: string, kind: SizedRentalKind, size: string) {
+  const { staff, home } = await shopHome();
+  if (!uuidParam(personId) || !SIZED_RENTAL_KINDS.includes(kind)) redirect(home);
+  const result = await confirmRentalFitSize(await getDb(), {
+    shopId: staff.user.shopId,
+    personId,
+    kind,
+    size,
+    confirmedByPersonId: staff.user.personId,
+  });
+  if (result !== "saved") revalidateAndRedirect(home, noticeUrl(home, result));
+  revalidateAndRedirect(home, noticeUrl(home, "rental-fit-kept"));
 }
 
 export async function toggleRecapAutoSendPauseAction(formData: FormData) {

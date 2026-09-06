@@ -1,13 +1,19 @@
 import Link from "next/link";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { LedgerRow } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { FIGURE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { CLOSEOUT_STATUS_KEYS, closeoutDepartureDetailText } from "@/i18n/closeout-labels";
+import {
+  CLOSEOUT_STATUS_KEYS,
+  closeoutDepartureDetailText,
+  openSeatsDebriefText,
+  planChangeText,
+} from "@/i18n/closeout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { openRollCallActionText } from "@/i18n/today-labels";
 import { CLOSEOUT_STATUS_TONES, type StationClose } from "@/lib/closeout";
-import { formatTime } from "@/lib/format";
+import { formatShortDate, formatTime } from "@/lib/format";
 
 /**
  * **A station that has settled** — the evening reading of the shop home's day
@@ -67,16 +73,43 @@ export function ClosingStation({
   // rather than counting what is not (DOM-H3 — one sentence per reason, never
   // a shared vague one).
   const counted = close.status === "all_home" && close.booked > 0;
+  // **Souls, but only where the records support the claim** (issue #1346). A
+  // shop whose crew were counted gets the sentence that names both; a shop
+  // that has never tapped a crew roll call keeps the diver-only wording it has
+  // always had, rather than a line asserting a crew count nobody made.
+  const souls = counted && close.crewAccountedFor;
+  const soulCounts = {
+    divers: close.booked,
+    crew: close.crewAssigned,
+    back: close.back + close.crewBack,
+  };
   const detail = counted
     ? headCountClose
-      ? t("shopHome.spine.close.backBy", {
-          back: close.back,
-          booked: close.booked,
-          time: formatTime(headCountClose.closedAt, locale, timeZone),
-        })
-      : t("shopHome.spine.close.back", { back: close.back, booked: close.booked })
+      ? souls
+        ? t("shopHome.spine.close.backSoulsBy", {
+            ...soulCounts,
+            time: formatTime(headCountClose.closedAt, locale, timeZone),
+          })
+        : t("shopHome.spine.close.backBy", {
+            back: close.back,
+            booked: close.booked,
+            time: formatTime(headCountClose.closedAt, locale, timeZone),
+          })
+      : souls
+        ? t("shopHome.spine.close.backSouls", soulCounts)
+        : t("shopHome.spine.close.back", { back: close.back, booked: close.booked })
     : closeoutDepartureDetailText(t, close, detailTime);
   const checkpoint = close.diveNumber >= 1 ? `after_dive_${close.diveNumber}` : "departure";
+  // Two quiet readings the day already contains, each rendering nothing when
+  // there is no factual answer (ADR 20260904-reef-all-the-way-down, slice 16h).
+  const planChanged = planChangeText(t, locale, close.planChanges);
+  const openSeats = close.openSeats
+    ? openSeatsDebriefText(t, locale, close.openSeats, {
+        comparableDate: close.openSeats.comparable
+          ? formatShortDate(close.openSeats.comparable.startsAt, locale, timeZone)
+          : "",
+      })
+    : null;
 
   return (
     // The same panel the live station is (ADR 20260904-reef-all-the-way-down,
@@ -121,6 +154,12 @@ export function ClosingStation({
             {t("shopHome.spine.close.closedBy", { name: headCountClose.closedBy })}
           </span>
         ) : null}
+        {/* **What the boat actually dived** (issue #1184, D24). One more span
+            in the row that already carries who closed the count, because a
+            changed site is a fact about the same finished departure rather
+            than a second subject. Absent on a day that went to plan, which is
+            most days. */}
+        {planChanged ? <span className="text-muted">{planChanged}</span> : null}
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         {/* A boat still out is exactly the row you would chase, so it gets
@@ -149,6 +188,21 @@ export function ClosingStation({
           </Link>
         ) : null}
       </div>
+      {/* **The open-seats debrief** (issue #1207, D47). Facts the shop already
+          owns, said once, on the one evening they are still worth acting on.
+          No trailing door: the station's own title is a link to this
+          departure, and a second path to the same page from the same panel is
+          what copy-restraint deletes. */}
+      {openSeats ? (
+        <ul className="mt-3">
+          <LedgerRow
+            stacked
+            kind={{ word: t("shopHome.spine.close.openSeats.label"), tone: "neutral" }}
+          >
+            <p className="py-2 text-sm text-muted">{openSeats}</p>
+          </LedgerRow>
+        </ul>
+      ) : null}
       {children}
     </SectionCard>
   );

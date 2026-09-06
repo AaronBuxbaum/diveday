@@ -72,6 +72,48 @@ test.describe("the day closes on the home", () => {
     await expect(page.getByText(/Closed \d+ times today/)).toBeVisible();
   });
 
+  test("names divers and crew in the homecoming line once every count has closed", async ({
+    page,
+    request,
+  }) => {
+    // **Souls, not seats** (issue #1346). The line counted bookings until
+    // 2026-09-05, which left the crew — the people most reliably still in the
+    // water at the end of a day — out of both numbers on the one sentence
+    // about who came home. The `?heads=closed` fixture is the only way to
+    // reach the moment, because `assembleEveningClose` refuses to claim it
+    // over a boat nobody counted.
+    test.setTimeout(45_000);
+    await signInAsOwner(page);
+    expect((await request.post("/api/test/seed-evening?heads=closed")).ok()).toBe(true);
+    await page.goto("/shop/blue-mantis");
+
+    await expect(
+      page.getByText(/^All boats are home: \d+ divers and \d+ crew out, \d+ back\.$/),
+    ).toBeVisible();
+  });
+
+  test("keeps the size a unit came home in, and takes the question off the page", async ({
+    page,
+    request,
+  }) => {
+    // The evening's rental-fit leftover (issue #1174, D14). The desk already
+    // confirmed the swap at the counter, so the row asks one question and its
+    // answer is the tap itself.
+    test.setTimeout(45_000);
+    await signInAsOwner(page);
+    expect((await request.post("/api/test/seed-evening")).ok()).toBe(true);
+    await page.goto("/shop/blue-mantis");
+
+    const keep = page.getByRole("button", { name: "Keep it" });
+    await expect(keep).toBeVisible();
+    await keep.click();
+
+    // The notice is what says the size went somewhere — the diver's record is
+    // two taps away — and the row leaving the group is the rest of the answer.
+    await expect(page.getByText("Fit saved.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Keep it" })).toHaveCount(0);
+  });
+
   test("308s the old close-out URL home, carrying its notice with it", async ({ page }) => {
     // The route folded (H-62). Every link already out in the world — a
     // bookmark, an old chat message, the departure log's own owner-only

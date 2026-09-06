@@ -1,8 +1,12 @@
 import type {
   CloseoutAdminTaskStatus,
   CloseoutDepartureStatus,
+  CloseoutPlanChange,
   LeftoverDecision,
 } from "@/lib/closeout";
+import { cachedListFormat } from "@/lib/intl-cache";
+import type { OpenSeatsDebrief } from "@/lib/open-seats";
+import type { PlanChangeReason } from "@/lib/plan-change";
 import type { RollCallGapReason } from "@/lib/today";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -75,6 +79,96 @@ export function closeoutDepartureDetailText(
     default:
       return t("closeout.departures.detail.allHome", { booked: departure.booked });
   }
+}
+
+/**
+ * **The open-seats debrief, as one sentence** (issue #1207, D47).
+ *
+ * One to three clauses joined by the locale's own conjunction, wrapped in the
+ * sentence that leads with the count. `cachedListFormat` rather than a bare
+ * `new Intl.ListFormat`: a formatter costs about twelve times what reusing one
+ * does, and this file formats on essentially every evening render
+ * (`pnpm check:intl-cache`).
+ *
+ * Null when there is no clause to make, which is the ADR's standing rule that
+ * a widening renders nothing when it is not true. `openSeatsDebrief` has
+ * already refused a departure that filled and one that never sailed, so
+ * anything arriving here has seats to explain.
+ */
+export function openSeatsDebriefText(
+  t: StaffTranslator,
+  locale: string,
+  debrief: OpenSeatsDebrief,
+  input: { comparableDate: string },
+): string | null {
+  const clauses: string[] = [];
+  if (debrief.lastBookingDaysOut !== null) {
+    clauses.push(
+      t("shopHome.spine.close.openSeats.lastBooking", { days: debrief.lastBookingDaysOut }),
+    );
+  }
+  // Only the *absent* deal is a clause. A deal that went out is the shop having
+  // already done the thing, which needs no sentence about it.
+  if (!debrief.dealSent) clauses.push(t("shopHome.spine.close.openSeats.noDeal"));
+  if (debrief.comparable) {
+    clauses.push(
+      t(
+        debrief.comparable.samePrice
+          ? "shopHome.spine.close.openSeats.comparableSamePrice"
+          : "shopHome.spine.close.openSeats.comparableOtherPrice",
+        { title: debrief.comparable.title, date: input.comparableDate },
+      ),
+    );
+  }
+  if (clauses.length === 0) return null;
+  return t("shopHome.spine.close.openSeats.sentence", {
+    seats: debrief.openSeats,
+    facts: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(clauses),
+  });
+}
+
+/**
+ * The word for why the boat did not dive the plan.
+ *
+ * Deliberately 16d's own keys rather than a second set: the reason a diver's
+ * dive log gives and the reason the evening gives are the same fact, and two
+ * spellings of it would drift the first time somebody softened one.
+ */
+const PLAN_CHANGE_REASON_KEYS: Record<PlanChangeReason, StaffMessageKey> = {
+  current: "manifest.planChange.reason.current",
+  weather: "manifest.planChange.reason.weather",
+  visibility: "manifest.planChange.reason.visibility",
+  crew_call: "manifest.planChange.reason.crewCall",
+};
+
+/**
+ * **The plan-change clause** (issue #1184, D24) — one per dive that moved,
+ * joined the same way the open-seats clauses are.
+ *
+ * A dive that changed with no reason recorded still gets its clause, without
+ * one. The reason is never inferred: a crew that moved the boat and said
+ * nothing about why has a record saying the site changed, which is the true
+ * half of it.
+ */
+export function planChangeText(
+  t: StaffTranslator,
+  locale: string,
+  changes: readonly CloseoutPlanChange[],
+): string | null {
+  if (changes.length === 0) return null;
+  const clauses = changes.map((change) =>
+    change.reasonCode
+      ? t("shopHome.spine.close.planChange.movedWithReason", {
+          dive: change.diveNumber,
+          site: change.siteName,
+          reason: t(PLAN_CHANGE_REASON_KEYS[change.reasonCode]).toLocaleLowerCase(locale),
+        })
+      : t("shopHome.spine.close.planChange.moved", {
+          dive: change.diveNumber,
+          site: change.siteName,
+        }),
+  );
+  return cachedListFormat(locale, { style: "long", type: "conjunction" }).format(clauses);
 }
 
 /** The recorded decision's word on a snapshot leftover. */

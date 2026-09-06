@@ -7,7 +7,7 @@ import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import {
-  confirmRentalFit,
+  confirmRentalFitSize,
   fitConfirmationForDiver,
   getRentalFit,
   listTripPrepDivers,
@@ -285,59 +285,47 @@ describe("setNeedsStaffFit (H-06 fallback)", () => {
 /**
  * **Recall, not inference** (ADR 20260904-reef-all-the-way-down, D14).
  *
- * A staffer keeping a diver's fit at the end of a day is remembering, not
- * editing — so the one thing these cases guard hardest is that no size moves.
- * The reader's refusals matter as much as its answer: a half-present
- * confirmation renders no sentence, which is what stops "somebody kept your
- * BCD" reaching a diver after the staffer who did it was anonymized.
+ * The diver-facing half of the evening's "Keep it": one sentence naming the
+ * staffer, the piece and roughly when. The reader's refusals matter as much as
+ * its answer — a half-present confirmation renders no sentence, which is what
+ * stops "somebody kept your BCD" reaching a diver after the staffer who did it
+ * was anonymized. What the writer may move is guarded beside `confirmRentalFitSize`
+ * below; here the rule is that only the kept piece changed.
  */
-describe("confirmRentalFit / fitConfirmationForDiver", () => {
-  it("stamps who, what and when, and moves no size at all", async () => {
+describe("fitConfirmationForDiver", () => {
+  it("reads back who kept which piece, and when", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Kept Fit");
     const { personId: staffId } = await bookVisitor(db, shopId, tripId, "Keiko Tanaka");
     await saveRentalFit(db, baseFitInput(shopId, personId));
 
-    const confirmed = await confirmRentalFit(db, {
-      shopId,
-      personId,
-      item: "bcd",
-      byPersonId: staffId,
-    });
-    expect(confirmed?.fitConfirmedAt).toBeInstanceOf(Date);
-    expect(confirmed?.fitConfirmedItem).toBe("bcd");
-    expect(confirmed?.fitConfirmedBy).toBe(staffId);
-    // Every size the diver stated is exactly where they left it.
-    expect(confirmed?.bcdSize).toBe("M");
-    expect(confirmed?.wetsuitSize).toBe("3 mm / M");
-    expect(confirmed?.finSize).toBe("M");
-    expect(confirmed?.weightPreference).toBe("12 lbs");
+    expect(
+      await confirmRentalFitSize(db, {
+        shopId,
+        personId,
+        kind: "bcd",
+        size: "L",
+        confirmedByPersonId: staffId,
+      }),
+    ).toBe("saved");
 
+    const fit = await getRentalFit(db, shopId, personId);
     expect(await fitConfirmationForDiver(db, shopId, personId)).toEqual({
       staffFullName: "Keiko Tanaka",
       item: "bcd",
-      confirmedAt: confirmed?.fitConfirmedAt,
+      confirmedAt: fit?.fitConfirmedAt,
     });
+    // Only the piece that was kept moved. The rest of the fit is where the
+    // diver left it, which is what stops one evening tap rewriting a record.
+    expect(fit?.wetsuitSize).toBe("3 mm / M");
+    expect(fit?.finSize).toBe("M");
+    expect(fit?.weightPreference).toBe("12 lbs");
   });
 
-  it("returns null with no fit on file to confirm", async () => {
+  it("says nothing at all with no confirmation on file", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nothing To Keep");
-    expect(await confirmRentalFit(db, { shopId, personId, item: "wetsuit" })).toBeNull();
-    expect(await fitConfirmationForDiver(db, shopId, personId)).toBeNull();
-  });
-
-  it("never reaches across shops", async () => {
-    const { db, shopId, tripId } = await context();
-    const { personId } = await bookVisitor(db, shopId, tripId, "Other Tenant");
     await saveRentalFit(db, baseFitInput(shopId, personId));
-
-    const elsewhere = await confirmRentalFit(db, {
-      shopId: "99999999-8888-4777-8666-555555555555",
-      personId,
-      item: "bcd",
-    });
-    expect(elsewhere).toBeNull();
     expect(await fitConfirmationForDiver(db, shopId, personId)).toBeNull();
   });
 
@@ -346,8 +334,19 @@ describe("confirmRentalFit / fitConfirmationForDiver", () => {
     // your BCD" would be worse than no line, so the whole thing ages out.
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Anonymized Keeper");
+    const { personId: staffId } = await bookVisitor(db, shopId, tripId, "Gone Keeper");
     await saveRentalFit(db, baseFitInput(shopId, personId));
-    await confirmRentalFit(db, { shopId, personId, item: "bcd" });
+    await confirmRentalFitSize(db, {
+      shopId,
+      personId,
+      kind: "bcd",
+      size: "L",
+      confirmedByPersonId: staffId,
+    });
+    await db
+      .update(rentalFitProfiles)
+      .set({ fitConfirmedBy: null })
+      .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
 
     expect(await fitConfirmationForDiver(db, shopId, personId)).toBeNull();
   });
@@ -483,6 +482,82 @@ describe("rental fit completeness over a stored profile", () => {
     expect(rentalFitCompleteness(await getRentalFit(db, shopId, personId))).toEqual({
       state: "incomplete",
       missing: ["bcd"],
+    });
+  });
+
+  /**
+   * **The evening's "Keep it"** (issue #1174, delight report D14): the size a
+   * unit actually went out in, written down because a human at the counter
+   * already confirmed the swap.
+   */
+  describe("confirmRentalFitSize", () => {
+    it("writes the one size, stamps who confirmed it, and leaves the staff-fit flag alone", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Hugo Marsh");
+      const [staffPerson] = await db
+        .select({ id: people.id })
+        .from(people)
+        .where(eq(people.shopId, shopId))
+        .limit(1);
+      if (!staffPerson) throw new Error("shop has no people");
+
+      await saveRentalFit(db, baseFitInput(shopId, personId));
+      await setNeedsStaffFit(db, { shopId, personId, needed: true, note: "no L in stock" });
+
+      expect(
+        await confirmRentalFitSize(db, {
+          shopId,
+          personId,
+          kind: "bcd",
+          size: "L",
+          confirmedByPersonId: staffPerson.id,
+        }),
+      ).toBe("saved");
+
+      const fit = await getRentalFit(db, shopId, personId);
+      expect(fit?.bcdSize).toBe("L");
+      // The other sizes are untouched: this answers one question about one
+      // piece of gear.
+      expect(fit?.wetsuitSize).toBe("3 mm / M");
+      expect(fit?.fitStatedAt).toBeInstanceOf(Date);
+      expect(fit?.fitConfirmedAt).toBeInstanceOf(Date);
+      expect(fit?.fitConfirmedBy).toBe(staffPerson.id);
+      // The piece, not just the clock — the diver's thread names it.
+      expect(fit?.fitConfirmedItem).toBe("bcd");
+      // **Never cleared here.** A stale flag costs one extra look at the
+      // counter; a wrongly-cleared one puts a diver in gear nobody checked.
+      expect(fit?.needsStaffFitAt).toBeInstanceOf(Date);
+    });
+
+    it("refuses a person from another shop, and an empty size", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Elsewhere Elsa");
+      const [staffPerson] = await db
+        .select({ id: people.id })
+        .from(people)
+        .where(eq(people.shopId, shopId))
+        .limit(1);
+      if (!staffPerson) throw new Error("shop has no people");
+
+      expect(
+        await confirmRentalFitSize(db, {
+          shopId: "00000000-0000-4000-8000-000000000000",
+          personId,
+          kind: "bcd",
+          size: "L",
+          confirmedByPersonId: staffPerson.id,
+        }),
+      ).toBe("unknown_person");
+      expect(
+        await confirmRentalFitSize(db, {
+          shopId,
+          personId,
+          kind: "bcd",
+          size: "  ",
+          confirmedByPersonId: staffPerson.id,
+        }),
+      ).toBe("invalid");
+      expect(await getRentalFit(db, shopId, personId)).toBeNull();
     });
   });
 

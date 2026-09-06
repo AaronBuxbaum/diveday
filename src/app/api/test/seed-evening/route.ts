@@ -1,13 +1,27 @@
-import { and, asc, eq, gte, inArray, lt, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
-import { bookings, rollCallCrewEvents, rollCallEvents, tripAssignments, trips } from "@/db/schema";
+import {
+  bookings,
+  diveSites,
+  executedDives,
+  gearItems,
+  gearReservations,
+  rentalFitProfiles,
+  rollCallCrewEvents,
+  rollCallEvents,
+  tripAssignments,
+  tripDives,
+  trips,
+} from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listStaff } from "@/db/trips";
 import { liveTrip } from "@/db/trips-live";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { tripReservationWindow } from "@/lib/gear";
+import { SIZED_RENTAL_FIT_COLUMN, sizedRentalKindOfGearKind } from "@/lib/rentals";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { shopDayBounds } from "@/lib/zoned";
 
@@ -129,6 +143,15 @@ export async function POST(request: Request) {
   }
   moved.reverse();
 
+  // Two evening facts the closing surfaces can only draw if the day contains
+  // them (ADR 20260904-reef-all-the-way-down, slice 16h). Both are ordinary
+  // states of a finished day rather than failures, so they belong here and not
+  // on `/api/test/seed-trouble-states`; both no-op when the demo day has no
+  // room for them, because a fixture that throws is worse than a capture that
+  // is short one row.
+  const fitAdjusted = await returnOneUnitFitAdjusted(db, shop.id, shop.timezone, moved);
+  const planChanged = await moveOneDiveOffPlan(db, shop.id, moved);
+
   const close =
     new URL(request.url).searchParams.get("heads") === "closed"
       ? await closeHeadCounts(db, shop.id, moved)
@@ -144,6 +167,8 @@ export async function POST(request: Request) {
     // Events written, not counts closed — `null` when nobody asked for any,
     // which is a different fact from having tried and written none.
     eventsWritten: close ? close.eventsWritten : null,
+    fitAdjusted,
+    planChanged,
     departures: moved.map((trip) => ({
       id: trip.id,
       startsAt: trip.startsAt.toISOString(),
@@ -385,6 +410,147 @@ async function closeHeadCounts(
   if (diverRows.length > 0) await db.insert(rollCallEvents).values(diverRows);
   if (crewRows.length > 0) await db.insert(rollCallCrewEvents).values(crewRows);
   return { ok: true, eventsWritten: diverRows.length + crewRows.length };
+}
+
+/**
+ * **One unit that came home in a size the diver's fit does not record** (issue
+ * #1174, delight report D14) — the evening's rental-fit leftover, made
+ * photographable.
+ *
+ * It writes the reservation as well as the return, because the demo's own
+ * reservations sit on an upcoming wreck trip: a unit coming back today from a
+ * boat that has not sailed would be a fixture telling a lie in order to draw a
+ * picture. This one goes out with a diver on a departure that *did* sail today
+ * and comes back at the counter, which is the day the row is about.
+ *
+ * **Never seeded into the demo shop itself.** A demo permanently asking about
+ * a size somebody swapped is a worse demo, the same reasoning
+ * `src/db/seed-front-desk.ts` writes at the row it deliberately seeds
+ * `succeeded`.
+ */
+async function returnOneUnitFitAdjusted(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  timeZone: string,
+  departures: readonly MovedDeparture[],
+): Promise<{ reservationId: string; size: string } | null> {
+  const trip = departures.at(-1);
+  if (!trip) return null;
+  const [seat] = await db
+    .select({ bookingId: bookings.id, personId: bookings.personId })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, trip.id),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1);
+  if (!seat) return null;
+
+  // Gear is opt-in by presence (ADR 20260815-minimal-gear-register): a shop
+  // with no fleet produces nothing here and no surface changes.
+  const units = await db
+    .select({ id: gearItems.id, kind: gearItems.kind, size: gearItems.size })
+    .from(gearItems)
+    .where(
+      and(eq(gearItems.shopId, shopId), isNull(gearItems.deletedAt), isNotNull(gearItems.size)),
+    )
+    .orderBy(asc(gearItems.label));
+  const [fit] = await db
+    .select()
+    .from(rentalFitProfiles)
+    .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, seat.personId)))
+    .limit(1);
+  const swapped = units.find((unit) => {
+    const kind = sizedRentalKindOfGearKind(unit.kind);
+    if (!kind || !unit.size) return false;
+    return (fit?.[SIZED_RENTAL_FIT_COLUMN[kind]]?.trim() || null) !== unit.size.trim();
+  });
+  if (!swapped?.size) return null;
+
+  const window = tripReservationWindow(trip, timeZone);
+  const now = nowDate();
+  const [reservation] = await db
+    .insert(gearReservations)
+    .values({
+      shopId,
+      gearItemId: swapped.id,
+      bookingId: seat.bookingId,
+      reservedFrom: window.from,
+      reservedUntil: window.until,
+      checkedOutAt: trip.startsAt,
+      returnedAt: now,
+      // The desk's own answer at the counter, which is what makes this a
+      // staff-confirmed outcome rather than a guess (D14's boundary).
+      returnOutcome: "fit_adjusted",
+    })
+    .returning({ id: gearReservations.id });
+  return reservation ? { reservationId: reservation.id, size: swapped.size } : null;
+}
+
+/**
+ * **One dive that did not go to the plan** (issue #1184, delight report D24) —
+ * the settled station's plan-change clause, made photographable.
+ *
+ * No reason code is written, deliberately: a crew that moved the boat and said
+ * nothing about why has a record saying the site changed, and the clause has
+ * to read correctly in that ordinary case too.
+ */
+async function moveOneDiveOffPlan(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  departures: readonly MovedDeparture[],
+): Promise<{ tripId: string; diveNumber: number } | null> {
+  const trip = departures.at(-1);
+  if (!trip) return null;
+  const [planned] = await db
+    .select({ diveNumber: tripDives.diveNumber, diveSiteId: tripDives.diveSiteId })
+    .from(tripDives)
+    .where(and(eq(tripDives.tripId, trip.id), isNotNull(tripDives.diveSiteId)))
+    .orderBy(asc(tripDives.diveNumber))
+    .limit(1);
+  if (!planned?.diveSiteId) return null;
+  const [elsewhere] = await db
+    .select({ id: diveSites.id })
+    .from(diveSites)
+    .where(
+      and(
+        eq(diveSites.shopId, shopId),
+        isNull(diveSites.deletedAt),
+        ne(diveSites.id, planned.diveSiteId),
+      ),
+    )
+    .orderBy(asc(diveSites.name))
+    .limit(1);
+  if (!elsewhere) return null;
+
+  const existing = await db
+    .select({ id: executedDives.id })
+    .from(executedDives)
+    .where(
+      and(
+        eq(executedDives.shopId, shopId),
+        eq(executedDives.tripId, trip.id),
+        eq(executedDives.diveNumber, planned.diveNumber),
+      ),
+    )
+    .limit(1);
+  if (existing.length > 0) {
+    await db
+      .update(executedDives)
+      .set({ actualSiteId: elsewhere.id, deletedAt: null })
+      .where(eq(executedDives.id, existing[0].id));
+  } else {
+    await db.insert(executedDives).values({
+      shopId,
+      tripId: trip.id,
+      diveNumber: planned.diveNumber,
+      actualSiteId: elsewhere.id,
+    });
+  }
+  return { tripId: trip.id, diveNumber: planned.diveNumber };
 }
 
 /** The later of a computed instant and the one it has to supersede. */

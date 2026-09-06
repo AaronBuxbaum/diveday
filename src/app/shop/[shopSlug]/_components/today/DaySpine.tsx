@@ -574,8 +574,13 @@ export function DaySpine({
           the day has moved past. */}
       {allHomeLine && evening ? (
         <EarnedMomentLine className="-mt-4 tabular-nums">
+          {/* **Souls, not seats** (issue #1346). The one sentence in the
+              product about who came home used to leave the crew out of both
+              numbers — and they are the people most reliably still in the
+              water at the end of a day. */}
           {t(evening.firstEver ? "shopHome.spine.firstBoatHome" : "shopHome.spine.allHome", {
-            out: evening.close.out,
+            divers: evening.close.divers,
+            crew: evening.close.crew,
             back: evening.close.back,
           })}
         </EarnedMomentLine>

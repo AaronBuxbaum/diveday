@@ -34,6 +34,11 @@ import {
   type ReservationWindow,
 } from "@/lib/gear";
 import {
+  SIZED_RENTAL_FIT_COLUMN,
+  type SizedRentalKind,
+  sizedRentalKindOfGearKind,
+} from "@/lib/rentals";
+import {
   type AppDb,
   type DbExecutor,
   violatesExclusionConstraint,
@@ -51,6 +56,7 @@ import {
   gearServiceEvents,
   people,
   priorGearAssignments,
+  rentalFitProfiles,
   shops,
   trips,
 } from "./schema";
@@ -1708,6 +1714,107 @@ export async function listGearDueBack(
   dueBackOn: CalendarDate,
 ): Promise<GearReturnRow[]> {
   return listReturnRows(db, shopId, eq(gearReservations.reservedUntil, dueBackOn));
+}
+
+/** One unit that came home today in a size the diver's fit does not record. */
+export type FitAdjustedReturn = {
+  reservationId: string;
+  personId: string;
+  personName: string;
+  /** Which fit column the size would be kept in. */
+  kind: SizedRentalKind;
+  unitLabel: string;
+  /** The size that actually went out. Free text, as the shop wrote it. */
+  size: string;
+  tripTitle: string | null;
+  tripEndsAt: Date | null;
+  /** What the fit records for this kind today. Null when nothing does. */
+  recordedSize: string | null;
+};
+
+/**
+ * **What the day already taught the shop about a diver's size** (issue #1174,
+ * delight report D14).
+ *
+ * A `fit_adjusted` return is the desk saying, at the counter, that the unit
+ * that went out was not the one the fit named — which is exactly D14's
+ * "staff-confirmed outcome" and needs no new flag to be readable. This finds
+ * the ones where the size genuinely differs from what is on file, so the
+ * evening can ask once whether to keep it.
+ *
+ * **Bounded to the shop's own day**, because the question expires with it: the
+ * leftovers trail is keyed by `shop_day`, so a dismissal recorded tonight
+ * cannot carry to tomorrow, and a row that reappeared every evening until
+ * somebody answered would be the nag this whole surface is against. The
+ * `fit_adjusted` outcome stays on the reservation for anyone who wants it
+ * later.
+ *
+ * **Gear stays opt-in by presence** (ADR 20260815-minimal-gear-register): the
+ * read starts at `gear_reservations`, so a shop with no fleet produces no rows
+ * and no surface anywhere changes. A post-trip prompt appearing for a shop
+ * that does not rent gear is the exact trap #1174's triage names.
+ */
+export async function listFitAdjustedReturns(
+  db: AppDb,
+  shopId: string,
+  returnedWithin: { from: Date; to: Date },
+): Promise<FitAdjustedReturn[]> {
+  const rows = await db
+    .select({
+      reservationId: gearReservations.id,
+      personId: bookings.personId,
+      personName: people.fullName,
+      gearKind: gearItems.kind,
+      unitLabel: gearItems.label,
+      size: gearItems.size,
+      tripTitle: trips.title,
+      tripEndsAt: trips.endsAt,
+      fit: rentalFitProfiles,
+    })
+    .from(gearReservations)
+    .innerJoin(gearItems, eq(gearItems.id, gearReservations.gearItemId))
+    .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+    .leftJoin(trips, eq(trips.id, bookings.tripId))
+    .leftJoin(
+      rentalFitProfiles,
+      and(eq(rentalFitProfiles.personId, bookings.personId), eq(rentalFitProfiles.shopId, shopId)),
+    )
+    .where(
+      and(
+        eq(gearReservations.shopId, shopId),
+        eq(gearReservations.returnOutcome, "fit_adjusted"),
+        isNotNull(gearReservations.returnedAt),
+        gte(gearReservations.returnedAt, returnedWithin.from),
+        lt(gearReservations.returnedAt, returnedWithin.to),
+        isNotNull(gearItems.size),
+        liveGearItem(),
+      ),
+    )
+    .orderBy(asc(people.fullName), asc(gearItems.label));
+
+  return rows.flatMap((row): FitAdjustedReturn[] => {
+    const kind = sizedRentalKindOfGearKind(row.gearKind);
+    const size = row.size?.trim();
+    if (!kind || !size) return [];
+    const recordedSize = row.fit?.[SIZED_RENTAL_FIT_COLUMN[kind]]?.trim() || null;
+    // Nothing to ask about when the fit already says what went out. The
+    // question is only worth a staffer's evening when the two disagree.
+    if (recordedSize === size) return [];
+    return [
+      {
+        reservationId: row.reservationId,
+        personId: row.personId,
+        personName: row.personName,
+        kind,
+        unitLabel: row.unitLabel,
+        size,
+        tripTitle: row.tripTitle,
+        tripEndsAt: row.tripEndsAt,
+        recordedSize,
+      },
+    ];
+  });
 }
 
 export async function listOverdueGearReservations(
