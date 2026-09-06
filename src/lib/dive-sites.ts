@@ -9,6 +9,7 @@ import {
 } from "./dive-site-difficulty";
 import { parseFieldGuideSelection } from "./dive-site-field-guide";
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
+import { MAX_PLANNING_NOTE_LENGTH } from "./dive-site-memory";
 import { hasRoute, parseRoutePoints, parseRouteZoom, type RoutePoint } from "./dive-site-route";
 import { DOCK_DAY_LIMITS, type SiteFitTone } from "./diver-planning";
 import {
@@ -50,6 +51,7 @@ export type DiveSiteFormError =
   | "images"
   | "imagesUnconfigured"
   | "nameTaken"
+  | "planningNoteTooLong"
   | "conflict";
 
 /**
@@ -152,6 +154,13 @@ export const diveSiteFormSchema = z.object({
   routeZoom: z.string().max(4).optional(),
   routeLabel: z.string().trim().max(80).optional(),
   routeNote: z.string().trim().max(240).optional(),
+  /**
+   * The shop's own note about running this site (issue #1204) — staff-only,
+   * and the one string on this form no diver ever reads. Bounded loosely here
+   * so the refusal can name its own rule (`planningNoteTooLong`) rather than
+   * arriving as the form-wide "invalid".
+   */
+  planningNote: z.string().trim().max(4_000).optional().default(""),
 });
 
 export type DiveSiteFormFields = z.output<typeof diveSiteFormSchema>;
@@ -204,6 +213,12 @@ export function parseDiveSiteForm(
   const maxDepthMeters = maxDepth === "" ? null : depthToMeters(maxDepth, depthUnit);
   if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) {
     return { ok: false, error: "depthTooDeep" };
+  }
+  // Its own code rather than the form-wide "invalid": the note is one box on a
+  // ~4,000px form, and a banner that only said "check the form" would send a
+  // staffer hunting through ten sections for it (issue #1204).
+  if ((parsed.data.planningNote ?? "").length > MAX_PLANNING_NOTE_LENGTH) {
+    return { ok: false, error: "planningNoteTooLong" };
   }
   // A route drawn against coordinates the site no longer has is a line over
   // nothing — the briefing needs the frame to place it in. Dropping the points

@@ -2478,6 +2478,87 @@ describe("physician medical clearance", () => {
     expect(await hasUnansweredMedicalHold(db, shop.id, booking.personId)).toBe(false);
   });
 
+  it("walks a refused diver back to boardable through a new seat, and only through one", async () => {
+    // The sentence the desk reads after a refusal now names this walk, so the
+    // walk is a test rather than a claim. The person-level release is the
+    // locked door it must never point at: a refusal is an unresolved hold, and
+    // `issueWaiverRequest` answers `already_completed` to a record-level ask
+    // forever after.
+    const { db, shop, booking, person, staff } = await heldContext();
+    const refusedAt = new Date(now.getTime() + 60_000);
+    await recordMedicalEvaluation(db, {
+      outcome: "not_cleared",
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
+      now: refusedAt,
+    });
+
+    const [refused] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      );
+    expect(isUnresolvedMedicalHold(refused)).toBe(true);
+    expect((await getBookingReadiness(db, shop.id, booking.id))?.blockers).toContainEqual(
+      expect.objectContaining({ code: "medical_not_cleared" }),
+    );
+
+    // The locked door the sentence must not point at: nothing can be sent
+    // against the seat that was refused. The record page offers no send at all
+    // for a held release (`divers/[personId]/_lib/status.ts`), and the writer
+    // agrees — this booking already carries a record that is not pending.
+    const later = new Date(now.getTime() + 120_000);
+    expect(
+      await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now: later }),
+    ).toEqual({ ok: false, reason: "already_completed" });
+
+    const startsAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const nextTrip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Re-evaluated reef",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!nextTrip) throw new Error("trip insert failed");
+    const [nextBooking] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: nextTrip.id, personId: person.id, status: "booked" })
+      .returning();
+    if (!nextBooking) throw new Error("booking insert failed");
+    expect((await getBookingReadiness(db, shop.id, nextBooking.id))?.status).toBe("blocked");
+
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: nextBooking.id,
+      now: later,
+    });
+    if (!issued.ok) throw new Error(`the new seat's release was refused: ${issued.reason}`);
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      now: later,
+    });
+    const boarded = await getBookingReadiness(db, shop.id, nextBooking.id);
+    expect(boarded?.status).toBe("ready");
+    expect(boarded?.blockers).toEqual([]);
+
+    // The refusal is history, not something the new release erased or amended.
+    const [stillRefused] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, refused.id));
+    expect(stillRefused.medicalClearedAt).toBeNull();
+    expect(stillRefused.medicalClearanceDeclinedAt).toEqual(refusedAt);
+    expect((await getBookingReadiness(db, shop.id, booking.id))?.status).toBe("blocked");
+  });
+
   it("destroys the physician's evaluation when the diver is erased, and keeps the fact", async () => {
     const { db, shop, booking, staff } = await heldContext();
     await recordMedicalEvaluation(db, {

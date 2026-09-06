@@ -21,6 +21,7 @@ export function siteFormErrorMessages(
     images: t("diveSites.form.errorImages"),
     imagesUnconfigured: t("diveSites.form.errorImagesUnconfigured"),
     nameTaken: t("diveSites.form.errorNameTaken"),
+    planningNoteTooLong: t("diveSites.form.errorPlanningNote"),
     conflict: t("diveSites.form.errorConflict"),
   };
 }

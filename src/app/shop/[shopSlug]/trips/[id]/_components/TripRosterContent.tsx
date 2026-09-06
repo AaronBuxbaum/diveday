@@ -32,6 +32,7 @@ export type TripRosterActions = {
   removeBookingAction: FormAction;
   confirmDiverIdentityAction: FormAction;
   certifyDiverAction?: FormAction;
+  saveCourseNextStepAction?: FormAction;
   addInternalNoteAction: FormAction;
   deleteInternalNoteAction: FormAction;
   saveRosterEmergencyContactAction: FormAction;
@@ -100,6 +101,7 @@ export function TripRosterContent({
     confirmMatches,
     diverCandidates,
     notesByBooking,
+    courseNextStepByBooking,
     paymentsConnected,
     demand,
     lastMinute,
@@ -177,6 +179,8 @@ export function TripRosterContent({
         removeBookingAction={actions.removeBookingAction}
         confirmIdentityAction={actions.confirmDiverIdentityAction}
         certifyDiverAction={actions.certifyDiverAction}
+        saveCourseNextStepAction={actions.saveCourseNextStepAction}
+        courseNextStepByBooking={courseNextStepByBooking}
         notesByBooking={notesByBooking}
         addNoteAction={actions.addInternalNoteAction}
         deleteNoteAction={actions.deleteInternalNoteAction}

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import {
+  checkOutTripGearSet,
   type GearReservationActionOutcome,
   type ReserveGearUnitOutcome,
   releaseGearReservation,
@@ -185,9 +186,48 @@ export async function releaseGearUnitAction(formData: FormData) {
   );
 }
 
-const returnSetSchema = z.object({
-  tripId: z.uuid(),
-  bookingId: z.uuid(),
+const gearSetSchema = z.object({ tripId: z.uuid(), bookingId: z.uuid() });
+
+/**
+ * **Hand one diver's whole rental set across in one act** (issue #1185,
+ * delight report D25).
+ *
+ * The mirror of `returnTripGearSetAction` below, and deliberately the plainer
+ * of the two: a hand-over asks nothing, because the moment a diver walks off
+ * with their armful there is nothing yet to say about how it went.
+ *
+ * A set with nothing left on the wall answers `not_found`, worded here as the
+ * set already being out rather than as a missing record — the same trade the
+ * return path makes, and for the same reason: on this page the reservations
+ * are visibly there.
+ */
+export async function checkOutTripGearSetAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const parsed = gearSetSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const gear = shopPath(session.user.shopSlug, "gear");
+    revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
+  }
+  const prep = shopPath(session.user.shopSlug, "trips", parsed.data.tripId, "prep");
+
+  const outcome = await checkOutTripGearSet(await getDb(), {
+    shopId: session.user.shopId,
+    bookingId: parsed.data.bookingId,
+  });
+  revalidateAndRedirect(
+    prep,
+    noticeUrl(
+      prep,
+      outcome.ok
+        ? "gear-handed-over"
+        : outcome.reason === "not_found"
+          ? "gear-nothing-to-hand-over"
+          : RESERVATION_ACTION_NOTICE[outcome.reason],
+    ),
+  );
+}
+
+const returnSetSchema = gearSetSchema.extend({
   outcome: z.enum(GEAR_RETURN_OUTCOMES),
   note: z.string().trim().max(400).optional(),
 });

@@ -151,6 +151,20 @@
       "brandPreview": "How it reads",
       "brandPreviewNight": "At night"
     },
+    "hospitality": {
+      "heading": "Your own words",
+      "value": "{count, plural, one {# written} other {# written}}",
+      "hint": "Divers read these in the language you type them.",
+      "welcomeLabel": "What a first-timer reads before diving with you",
+      "dockCallLabel": "What to expect at the dock",
+      "signOffLabel": "How you sign off a finished day",
+      "save": "Save your words",
+      "saving": "Saving\u2026",
+      "notice": {
+        "saved": "Saved.",
+        "tooLong": "Keep each one under 280 characters."
+      }
+    },
     "address": {
       "heading": "Shop address",
       "detail": "Your shop's business address, not a staff member's. Published so search engines can place you as a real venue. Search for your shop by name or address, then pick it. That saves it.",
@@ -545,7 +559,7 @@
       "saving": "Saving…"
     },
     "languagesEmpty": "Not set",
-    "publicNameSeen": "Divers see “{name}”"
+    "publicNameSeen": "Divers see “{name}”, agreed on {date}"
   },
   "safetyChecklist": {
     "eyebrow": "Settings",

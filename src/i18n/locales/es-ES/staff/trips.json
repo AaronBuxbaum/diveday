@@ -33,6 +33,9 @@
     "cancel": "Cancelar esta salida"
   },
   "notices": {
+    "nextStepSaved": "Siguiente paso guardado.",
+    "nextStepTooLong": "Mant\u00e9n el siguiente paso por debajo de 280 caracteres.",
+    "nextStepNotACourse": "Esta salida no es una sesi\u00f3n de curso, as\u00ed que no hay un siguiente paso que registrar.",
     "saved": "Cambios guardados.",
     "cancelled": "Salida cancelada. Ya no aparece en el calendario público.",
     "reinstated": "¡De vuelta! La salida vuelve a estar en el calendario.",
@@ -380,6 +383,11 @@
     "allClear": "Todos listos para bucear",
     "blockersReferenceHeading": "Bloqueos",
     "bookedOfCapacity": "{booked} de {capacity, plural, one {# reservado} other {# reservados}}",
+    "nextStepSummary": "Siguiente paso",
+    "nextStepLabel": "Qu\u00e9 hace a continuaci\u00f3n este alumno",
+    "nextStepDescription": "El alumno lo lee en su resumen.",
+    "nextStepSave": "Guardar siguiente paso",
+    "nextStepSaving": "Guardando\u2026",
     "certifyConfirm": "Confirmar certificación",
     "certifyDiver": "Certificar",
     "certifyLevel": "Nivel",

@@ -574,6 +574,51 @@ test.describe("staff", () => {
    * when that tab opened. It did that silently until issue #820, and the first
    * writer's afternoon was gone with no record it had existed.
    */
+  test("a shop writes what it wants to remember about running a site, and takes it back", async ({
+    page,
+  }) => {
+    // Issue #1204. The note is staff-only, it rides the site list while it is
+    // recent, and it never reaches a diver — the last of which is the one the
+    // whole feature turns on.
+    await page.goto("/shop/blue-mantis/dive-sites");
+    await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
+    await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
+
+    const note = page.getByLabel("What to remember about running this site");
+    await expect(note).toHaveValue("");
+    await note.fill("The mooring ball moved south. Brief the swim-through first.");
+    await page.getByRole("button", { name: "Save dive site" }).click();
+    // The form settles in place — the note it was given is what it reads back.
+    await expect(note).toHaveValue("The mooring ball moved south. Brief the swim-through first.");
+
+    // And the library row now carries it.
+    await page.goto("/shop/blue-mantis/dive-sites");
+    await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
+    await expect(
+      page.getByText("The mooring ball moved south. Brief the swim-through first."),
+    ).toBeVisible();
+
+    // And nowhere a diver looks. The public briefing reads the same row.
+    await page.goto("/s/blue-mantis");
+    await expect(
+      page.getByText("The mooring ball moved south. Brief the swim-through first."),
+    ).toHaveCount(0);
+
+    // Taking it back takes it off the row.
+    await page.goto("/shop/blue-mantis/dive-sites");
+    await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
+    await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
+    const cleared = page.getByLabel("What to remember about running this site");
+    await cleared.fill("");
+    await page.getByRole("button", { name: "Save dive site" }).click();
+    await expect(cleared).toHaveValue("");
+    await page.goto("/shop/blue-mantis/dive-sites");
+    await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
+    await expect(
+      page.getByText("The mooring ball moved south. Brief the swim-through first."),
+    ).toHaveCount(0);
+  });
+
   test("a second tab's save is refused rather than reverting the first", async ({
     page,
     context,

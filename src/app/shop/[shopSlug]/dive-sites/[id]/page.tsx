@@ -202,6 +202,9 @@ export default async function EditDiveSitePage({
     const {
       maxDepth: _maxDepth,
       expectedBottomTime: _expectedBottomTime,
+      // The note and its author are one value on the row, so the form's plain
+      // string is rebuilt into it below rather than carried by the spread.
+      planningNote: planningNoteWords,
       ...siteFields
     } = parsed.fields;
     const updated = await updateDiveSiteForForm(
@@ -218,6 +221,10 @@ export default async function EditDiveSitePage({
         satelliteImageUrl: photos.photos.satelliteImageUrl,
         routeImageUrl: photos.photos.routeImageUrl,
         imageUrls: photos.photos.imageUrls,
+        planningNote: {
+          words: planningNoteWords,
+          byPersonId: activeSession.user.personId,
+        },
         minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
         requiredSpecialties: specialties.data,
         requiresNitrox: formData.get("requiresNitrox") === "on",
@@ -481,6 +488,8 @@ export default async function EditDiveSitePage({
               landmarkCopy={landmarkEditorCopy(t)}
               fieldGuideCopy={fieldGuideEditorCopy(t)}
               marineLifeCatalog={marineLifeCatalogEntries(diverT)}
+              locale={locale}
+              timezone={shop.timezone}
               siteId={site.id}
               certificationDescription={t("diveSites.edit.certificationDescription")}
               requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}

@@ -774,17 +774,25 @@ function ShopCard({
   contactPhone,
   contactEmail,
   address,
+  welcome,
   t,
 }: {
   name: string;
   contactPhone: string | null;
   contactEmail: string | null;
   address: ReadyPageData["shop"]["address"];
+  /**
+   * The shop's own welcome to somebody diving with them for the first time
+   * (issue #1212), or nothing. Rendered exactly as typed and uncaptioned, the
+   * way a dive-site briefing renders — never through ICU, never with a label
+   * over it explaining that the shop wrote it.
+   */
+  welcome: string | null;
   t: DiverTranslator;
 }) {
   const lines = shopAddressLines(address);
   const mapQuery = shopMapQuery(name, address);
-  if (lines.length === 0 && !contactPhone && !contactEmail) return null;
+  if (lines.length === 0 && !contactPhone && !contactEmail && !welcome) return null;
   return (
     // A shell: the map bleeds to the card's edge and the block under it pads
     // itself, so the card contributes only its chrome.
@@ -801,6 +809,7 @@ function ShopCard({
       <div className="p-5 sm:p-6">
         <h2 className={SECTION_TITLE_CLASS}>{t("ready.shopHeading")}</h2>
         <p className="mt-2 text-base font-medium">{name}</p>
+        {welcome ? <p className="mt-2 text-base">{welcome}</p> : null}
         {lines.length > 0 ? (
           <address className="mt-1 text-base text-muted not-italic">
             {lines.map((line) => (
@@ -2239,6 +2248,7 @@ export default async function DiverReadinessPage({
               timezone: fullShop.timezone,
               contactPhone: fullShop.contactPhone,
               contactEmail: fullShop.contactEmail,
+              dockCallNote: fullShop.dockCallNote,
               address: {
                 street: fullShop.addressStreet,
                 locality: fullShop.addressLocality,
@@ -2335,6 +2345,9 @@ export default async function DiverReadinessPage({
           contactPhone={shop.contactPhone}
           contactEmail={shop.contactEmail}
           address={shop.address}
+          // Only to somebody who has not dived with this shop before: a
+          // welcome read on every thread stops being a welcome.
+          welcome={data.firstVisit ? shop.welcomeNote?.trim() || null : null}
           t={t}
         />
       </ThreadShell>

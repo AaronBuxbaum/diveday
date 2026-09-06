@@ -8,6 +8,7 @@ import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import {
   checkOutGearReservation,
+  checkOutTripGearSet,
   countGearItems,
   countGearItemsByKind,
   createGearItem,
@@ -1410,6 +1411,115 @@ describe("a departure that moves takes its gear with it", () => {
     // schedule edit the crew has already agreed with a customer.
     const [trip] = await db.select().from(trips).where(eq(trips.id, maya.trip.id));
     expect(trip?.startsAt.toISOString()).toBe("2026-09-08T12:00:00.000Z");
+  });
+});
+
+/**
+ * **A rental set goes out in one act** (issue #1185, delight report D25) — the
+ * load-out half of the loop whose return half is the describe below.
+ */
+describe("handing a whole rental set over", () => {
+  async function aSetReserved(db: AppDb, shopId: string, name = "Nadia Osei") {
+    const bcd = mustCreate(
+      await createGearItem(db, { shopId, kind: "bcd", label: `BCD for ${name}`, size: "M" }),
+    );
+    const reg = mustCreate(
+      await createGearItem(db, { shopId, kind: "regulator", label: `Reg for ${name}` }),
+    );
+    const diver = await shopBooking(db, shopId, name);
+    const reservationIds: string[] = [];
+    for (const unit of [bcd, reg]) {
+      const reserved = await reserveGearUnit(db, {
+        shopId,
+        gearItemId: unit.id,
+        bookingId: diver.bookingId,
+        reservedFrom: "2026-09-10",
+        reservedUntil: "2026-09-11",
+      });
+      if (!reserved.ok) throw new Error("reserve failed");
+      reservationIds.push(reserved.reservation.id);
+    }
+    return { bookingId: diver.bookingId, reservationIds };
+  }
+
+  async function stampsOf(db: AppDb, ids: string[]) {
+    return db
+      .select({
+        id: gearReservations.id,
+        checkedOutAt: gearReservations.checkedOutAt,
+        returnedAt: gearReservations.returnedAt,
+      })
+      .from(gearReservations)
+      .where(inArray(gearReservations.id, ids));
+  }
+
+  it("stamps every unit still on the wall in one act", async () => {
+    const { db, shop } = await gearShopContext();
+    const { bookingId, reservationIds } = await aSetReserved(db, shop.id);
+
+    expect(await checkOutTripGearSet(db, { shopId: shop.id, bookingId })).toEqual({ ok: true });
+
+    const rows = await stampsOf(db, reservationIds);
+    expect(rows).toHaveLength(2);
+    for (const row of rows) expect(row.checkedOutAt).toBeInstanceOf(Date);
+  });
+
+  it("leaves an already-out unit's stamp exactly where it was", async () => {
+    // The double-tap rule `checkOutGearReservation` states: `checked_out_at` is
+    // the record of *when* the unit left, and nothing may quietly rewrite it.
+    const { db, shop } = await gearShopContext();
+    const { bookingId, reservationIds } = await aSetReserved(db, shop.id);
+    const [first] = reservationIds;
+    if (!first) throw new Error("expected a reservation");
+    await checkOutGearReservation(db, { shopId: shop.id, reservationId: first });
+    const [before] = await stampsOf(db, [first]);
+
+    expect(await checkOutTripGearSet(db, { shopId: shop.id, bookingId })).toEqual({ ok: true });
+
+    const [after] = await stampsOf(db, [first]);
+    expect(after?.checkedOutAt).toEqual(before?.checkedOutAt);
+  });
+
+  it("leaves a returned unit alone and says the set is already out", async () => {
+    const { db, shop } = await gearShopContext();
+    const { bookingId, reservationIds } = await aSetReserved(db, shop.id);
+    await checkOutTripGearSet(db, { shopId: shop.id, bookingId });
+    expect(
+      await returnTripGearSet(db, { shopId: shop.id, bookingId, outcome: "all_good" }),
+    ).toEqual({ ok: true });
+
+    // A closed reservation is not something to hand over again.
+    expect(await checkOutTripGearSet(db, { shopId: shop.id, bookingId })).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+    for (const row of await stampsOf(db, reservationIds)) {
+      expect(row.returnedAt).toBeInstanceOf(Date);
+    }
+  });
+
+  it("says nothing rather than reporting a success on a second tap", async () => {
+    const { db, shop } = await gearShopContext();
+    const { bookingId } = await aSetReserved(db, shop.id);
+    expect(await checkOutTripGearSet(db, { shopId: shop.id, bookingId })).toEqual({ ok: true });
+    expect(await checkOutTripGearSet(db, { shopId: shop.id, bookingId })).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+  });
+
+  it("never touches another booking's units", async () => {
+    const { db, shop } = await gearShopContext();
+    const mine = await aSetReserved(db, shop.id, "Nadia Osei");
+    const theirs = await aSetReserved(db, shop.id, "Tomas Rivera");
+
+    expect(await checkOutTripGearSet(db, { shopId: shop.id, bookingId: mine.bookingId })).toEqual({
+      ok: true,
+    });
+
+    for (const row of await stampsOf(db, theirs.reservationIds)) {
+      expect(row.checkedOutAt).toBeNull();
+    }
   });
 });
 

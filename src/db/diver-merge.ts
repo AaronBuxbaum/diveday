@@ -143,6 +143,7 @@ export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as
 export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string>> = {
   "activity_events.actor_person_id": "who did it — attribution, not diver history",
   "activity_events.subject_person_id": "an event trail records who it happened to at the time",
+  "bookings.course_next_step_by_person_id": "which instructor wrote the student their next step",
   "buddy_pair_members.crew_person_id": "a crew member on a team, refused as a staff record",
   "buddy_pair_members.paired_by_person_id": "who built the team",
   "buddy_team_events.recorded_by_person_id": "who recorded the team change",
@@ -154,6 +155,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "crew_availability_blocks.created_by_person_id": "who blocked the days",
   "day_closeouts.actor_person_id": "who closed the day",
   "dive_packages.created_by_person_id": "who wrote the package",
+  "dive_sites.planning_note_by_person_id": "who wrote down what the site was like",
   "executed_dives.deleted_by_person_id": "who deleted the logged dive",
   "executed_dives.recorded_by_person_id": "who logged the dive",
   "gear_items.deleted_by_person_id": "who retired the unit",

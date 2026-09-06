@@ -3,6 +3,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { isStaff } from "@/lib/authz";
 import type { BrandDisplayFontCode } from "@/lib/brand";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import type { CertificationLevel } from "@/lib/certification-levels";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { compareDiveRecord, type DiveRecordComparison } from "@/lib/dive-record";
@@ -38,6 +39,7 @@ import {
 } from "./notifications";
 import {
   bookings,
+  certifications,
   notificationDeliveries,
   people,
   priorVisits,
@@ -122,7 +124,29 @@ export type RecapPageData = {
      */
     brandColor: string | null;
     brandDisplayFont: BrandDisplayFontCode | null;
+    /**
+     * How this shop signs off a finished day, in its own words (issue #1212).
+     * Read only where the crew wrote nothing of their own for this diver — a
+     * standing sentence must never talk over one somebody wrote today.
+     */
+    signOffNote: string | null;
   };
+  /**
+   * **The course this departure taught, and what the shop recorded for it**
+   * (issues #1196 and #1205). Null on an ordinary charter, which is most of
+   * them, and then nothing about courses renders at all.
+   *
+   * `certification` is populated from exactly one shape of row — issued by
+   * this shop, from *this* departure, and verified — and from nothing else.
+   * A self-declared card, a pending one, an imported one, and a verified one
+   * issued from another trip all leave it null, and the recap then says
+   * plainly that no certification was recorded rather than implying one.
+   */
+  course: {
+    title: string;
+    nextStep: { words: string; byName: string } | null;
+    certification: { level: CertificationLevel; issuedAt: Date } | null;
+  } | null;
   trip: {
     /**
      * **Server-side only, and it must stay that way.** The next-dive card's
@@ -135,9 +159,11 @@ export type RecapPageData = {
      */
     id: string;
     title: string;
-    /** The course this departure taught, when it was a session of one. */
-    courseTitle: string | null;
-    /** The course row's own id, for the next dive's `course_next_session` rule. Server-side only. */
+    /**
+     * The course row's own id, for the next dive's `course_next_session` rule.
+     * Server-side only. The course's *title* is not here: it belongs to the
+     * `course` block above, which the recap's own course beat reads.
+     */
     courseId: string | null;
     startsAt: Date;
     endsAt: Date;
@@ -363,6 +389,9 @@ export async function getRecapPageData(
       temperatureUnit: shops.temperatureUnit,
       brandColor: shops.brandColor,
       brandDisplayFont: shops.brandDisplayFont,
+      signOffNote: shops.signOffNote,
+      courseNextStep: bookings.courseNextStep,
+      courseNextStepByPersonId: bookings.courseNextStepByPersonId,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -394,6 +423,8 @@ export async function getRecapPageData(
     photos,
     stripeAccount,
     latestTip,
+    sessionCertifications,
+    nextStepAuthors,
   ] = await Promise.all([
     listTripDives(db, row.shopId, row.tripId),
     // The only read of `executed_dives` on this page. `listExecutedDives`
@@ -441,6 +472,39 @@ export async function getRecapPageData(
     listRecapPhotosForBooking(db, bookingId, row.tripId),
     getShopStripeAccount(db, row.shopId),
     getLatestTipForBooking(db, row.shopId, bookingId),
+    // **The overclaim guard, as a query** (issues #1196, #1205). Three
+    // conditions, and a card missing any one of them is not this session's
+    // credential: the shop issued it (`issuedByShopAt`), it issued it *from
+    // this departure* (`issuedFromTripId`), and it stands as verified. A
+    // self-declaration, a pending review, an imported card and a card from
+    // another session all read as "nothing was recorded", which is what the
+    // recap then says out loud.
+    trip.course
+      ? db
+          .select({ level: certifications.level, issuedAt: certifications.issuedByShopAt })
+          .from(certifications)
+          .where(
+            and(
+              eq(certifications.shopId, row.shopId),
+              eq(certifications.personId, row.personId),
+              eq(certifications.issuedFromTripId, row.tripId),
+              isNotNull(certifications.issuedByShopAt),
+              eq(certifications.status, "verified"),
+              isNull(certifications.deletedAt),
+            ),
+          )
+          .orderBy(desc(certifications.issuedByShopAt))
+          .limit(1)
+      : Promise.resolve([]),
+    // Who wrote the next step, for the name under the words. Read only when
+    // there are words: an author with nothing under it renders nothing.
+    row.courseNextStep && row.courseNextStepByPersonId
+      ? db
+          .select({ fullName: people.fullName })
+          .from(people)
+          .where(eq(people.id, row.courseNextStepByPersonId))
+          .limit(1)
+      : Promise.resolve([]),
   ]);
 
   const sites: RecapSite[] = [];
@@ -519,6 +583,10 @@ export async function getRecapPageData(
       ? await refreshTipFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
       : latestTip;
 
+  const sessionCertification = sessionCertifications[0] ?? null;
+  const nextStepWords = row.courseNextStep?.trim() || null;
+  const nextStepAuthor = nextStepAuthors[0]?.fullName?.trim() || null;
+
   return {
     shop: {
       id: row.shopId,
@@ -534,11 +602,24 @@ export async function getRecapPageData(
       temperatureUnit: row.temperatureUnit,
       brandColor: row.brandColor,
       brandDisplayFont: row.brandDisplayFont,
+      signOffNote: row.signOffNote,
     },
+    course: trip.course
+      ? {
+          title: trip.course.title,
+          nextStep:
+            nextStepWords && nextStepAuthor
+              ? { words: nextStepWords, byName: nextStepAuthor }
+              : null,
+          certification:
+            sessionCertification?.issuedAt && sessionCertification.level
+              ? { level: sessionCertification.level, issuedAt: sessionCertification.issuedAt }
+              : null,
+        }
+      : null,
     trip: {
       id: row.tripId,
       title: trip.title,
-      courseTitle: trip.course?.title ?? null,
       courseId: trip.courseId,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,

@@ -545,3 +545,29 @@ export async function setShopProfile(
     .returning();
   return shop ?? null;
 }
+
+/**
+ * **The shop's own three sentences** (issue #1212) — the welcome a first-timer
+ * reads, what to expect at the dock, and how a finished day is signed off.
+ *
+ * All three are written together because they are one act at one form, and a
+ * blank one is stored as NULL so "unset" has exactly one shape: every reader
+ * asks `note ? …` and nothing has to decide whether a run of spaces counts.
+ */
+export async function setShopHospitalityNotes(
+  db: AppDb,
+  shopId: string,
+  notes: { welcomeNote: string; dockCallNote: string; signOffNote: string },
+) {
+  const clean = (value: string) => value.trim() || null;
+  const [shop] = await db
+    .update(shops)
+    .set({
+      welcomeNote: clean(notes.welcomeNote),
+      dockCallNote: clean(notes.dockCallNote),
+      signOffNote: clean(notes.signOffNote),
+    })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}

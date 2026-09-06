@@ -9,6 +9,7 @@ import { combineCertRequirements } from "@/lib/readiness";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
+import { courseNextStepsByBooking } from "./course-next-step";
 import { findSimilarDivers, listBookableDivers } from "./divers";
 import { listLastMinuteList } from "./last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
@@ -83,6 +84,7 @@ export async function getTripGuests(
     diverNotes,
     activity,
     stripeAccount,
+    courseNextStepByBooking,
   ] = await Promise.all([
     getTripRoster(db, shop.id, tripId),
     getTripRequirements(db, shop.id, tripId),
@@ -98,6 +100,9 @@ export async function getTripGuests(
     listDiverNotesForTrip(db, shop.id, tripId),
     listTripActivity(db, shop.id, tripId),
     getShopStripeAccount(db, shop.id),
+    // What each student on a course session has already been told to do next
+    // (issues #1196, #1205), so the roster's box opens holding it.
+    courseNextStepsByBooking(db, shop.id, tripId),
   ]);
 
   // Keep the three staff-note entry points one system: a diver-record note is
@@ -200,6 +205,7 @@ export async function getTripGuests(
     confirmMatches,
     diverCandidates,
     notesByBooking,
+    courseNextStepByBooking,
     // `orders/new` refuses without a payable account, so each seat's "Create
     // order" link points at connecting one instead of at a door that bounces.
     paymentsConnected: canAcceptPayments(stripeAccount),

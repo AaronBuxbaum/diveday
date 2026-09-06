@@ -67,6 +67,7 @@ import {
   removeBookingAction,
   restoreInternalNoteAction,
   saveConditionsAction,
+  saveCourseNextStepAction,
   saveDetails,
   saveRequirementsAction,
   saveRosterEmergencyContactAction,
@@ -419,6 +420,11 @@ export default async function ManageTripPage({
     confirmDiverIdentityAction: confirmDiverIdentityAction.bind(null, shopSlug, tripId),
     certifyDiverAction: trip.course
       ? certifyDiverFromRosterAction.bind(null, shopSlug, tripId)
+      : undefined,
+    // The two course acts travel together: a roster that could certify a
+    // student but not tell them what comes next is half a session's record.
+    saveCourseNextStepAction: trip.course
+      ? saveCourseNextStepAction.bind(null, shopSlug, tripId)
       : undefined,
     addInternalNoteAction: addInternalNoteAction.bind(null, shopSlug, tripId),
     deleteInternalNoteAction: deleteInternalNoteAction.bind(null, shopSlug, tripId),

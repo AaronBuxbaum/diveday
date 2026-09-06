@@ -137,7 +137,8 @@
     "imported": "Se importaron {events} eventos de mantenimiento en {units} unidades nuevas y {assignments} asignaciones históricas. Se dejaron {skipped} eventos duplicados y {assignmentSkipped} asignaciones sin cambios.",
     "returnedSet": "De vuelta en la estantería.",
     "concernNeedsWords": "Para revisar un equipo hace falta una línea que diga qué pasó, para que el técnico pueda actuar.",
-    "nothingOut": "De ese conjunto no hay nada fuera."
+    "nothingOut": "De ese conjunto no hay nada fuera.",
+    "nothingToHandOver": "Ese conjunto ya está fuera."
   },
   "import": {
     "eyebrow": "Ajustes",
@@ -223,7 +224,11 @@
   },
   "prep": {
     "heading": "Asignaciones de alquiler",
-    "description": "Qué unidad etiquetada se lleva cada buceador que alquila, reservada para las fechas de la salida.",
+    "cartLine": "{units, plural, one {# unidad} other {# unidades}} para {divers, plural, one {# buceador} other {# buceadores}}",
+    "cartStillToPick": "{count, plural, one {# pieza por elegir} other {# piezas por elegir}}",
+    "cartServiceFlagged": "{count, plural, one {# unidad con mantenimiento vencido} other {# unidades con mantenimiento vencido}}",
+    "handOver": "Entregar",
+    "handingOver": "Entregando…",
     "outLabel": "fuera",
     "kindWithSize": "{kindLabel} · {size}",
     "noneFree": "No hay {kindLabel} libre para estas fechas.",
@@ -231,6 +236,7 @@
     "ticketDoor": "Boleta de alquiler",
     "notice": {
       "assigned": "Asignado.",
+      "handedOver": "Entregado.",
       "released": "Asignación liberada.",
       "unitUnavailable": "Alguien tomó esa unidad primero. Elige otra.",
       "unitOutOfService": "Esa unidad está fuera de la pared por mantenimiento.",

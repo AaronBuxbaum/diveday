@@ -526,6 +526,11 @@ describe("who may run each action on the trip page", () => {
     // role: the tap only ever lands beside a name on that session's own
     // roster (issue #717).
     "certifyDiverFromRosterAction",
+    // The other half of teaching a session (issues #1196, #1205), and open on
+    // exactly the same terms as the tap above it: the box only ever appears
+    // beside a name on that session's own roster, and what it records is a
+    // sentence rather than a credential.
+    "saveCourseNextStepAction",
     "updateBookingPickupAction",
   ];
 

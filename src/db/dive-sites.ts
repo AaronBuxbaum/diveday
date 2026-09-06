@@ -91,6 +91,17 @@ export type DiveSiteInput = {
   routeNote?: string;
   /** The zoom those waypoints were drawn at, and must be rendered at. */
   routeZoom?: number;
+  /**
+   * **The shop's own note about running this site** (issue #1204), with the
+   * staffer writing it. Undefined leaves whatever is on the row alone, which is
+   * what a caller that does not manage the note means (the CSV import, a
+   * template pull, a copy).
+   *
+   * The stamp moves only when the words change — re-saving a briefing must not
+   * refresh a note nobody re-thought, or the ninety-day window would reset
+   * every time somebody corrected a depth.
+   */
+  planningNote?: { words: string; byPersonId: string };
 };
 
 export async function listDiveSites(db: AppDb, shopId: string) {
@@ -385,12 +396,51 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
       routeLabel: input.routeLabel || null,
       routeNote: input.routeNote || null,
       routeZoom: input.routeZoom ?? DEFAULT_ROUTE_ZOOM,
+      // Spelled out rather than carried by the spread above: the input holds
+      // the note and its author as one object, and the row holds three columns
+      // that have to move together (issue #1204).
+      planningNote: input.planningNote?.words.trim() || null,
+      planningNoteAt: input.planningNote?.words.trim() ? nowDate() : null,
+      planningNoteByPersonId: input.planningNote?.words.trim()
+        ? input.planningNote.byPersonId
+        : null,
       templateUpdateUndo: null,
     })
     .returning();
   if (!site) throw new Error("createDiveSite: insert returned no row");
   if (input.creatures) await replaceDiveSiteCreatures(db, input.shopId, site.id, input.creatures);
   return site;
+}
+
+/**
+ * The three planning-note columns a save should write, or nothing at all.
+ *
+ * Three answers: the caller does not manage the note (undefined — leave the
+ * row alone), the note is cleared (all three null), or the words changed (all
+ * three written, stamped now and attributed to whoever typed them). A note
+ * that came back exactly as stored is the fourth case and it deliberately
+ * writes nothing, which is what keeps the ninety-day window measuring the note
+ * rather than the last time anybody pressed Save.
+ */
+async function planningNoteWrite(
+  db: AppDb,
+  shopId: string,
+  siteId: string,
+  note: DiveSiteInput["planningNote"],
+  now: Date = nowDate(),
+) {
+  if (!note) return {};
+  const words = note.words.trim();
+  if (!words) {
+    return { planningNote: null, planningNoteAt: null, planningNoteByPersonId: null };
+  }
+  const [current] = await db
+    .select({ planningNote: diveSites.planningNote })
+    .from(diveSites)
+    .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId)))
+    .limit(1);
+  if (current?.planningNote === words) return {};
+  return { planningNote: words, planningNoteAt: now, planningNoteByPersonId: note.byPersonId };
 }
 
 export async function updateDiveSite(
@@ -401,9 +451,15 @@ export async function updateDiveSite(
   options: { expectedVersion?: number | null } = {},
 ) {
   const expected = options.expectedVersion;
+  // **The stamp moves only when the words do** (issue #1204). Read first,
+  // compare, and leave all three columns untouched when the note came back
+  // byte-identical — otherwise every correction to a depth would reset the
+  // ninety days a planning note is shown for.
+  const planningNote = await planningNoteWrite(db, shopId, siteId, input.planningNote);
   const [site] = await db
     .update(diveSites)
     .set({
+      ...planningNote,
       // Every writer that rewrites this row's prose bumps it, not only this
       // one — a template pull that leaves the number alone hands the editor's
       // next save the same silent revert this exists to refuse.

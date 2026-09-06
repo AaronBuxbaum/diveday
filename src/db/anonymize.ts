@@ -764,6 +764,13 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         diveIntent: null,
         reEntryAsk: null,
         welcomeSharedAt: null,
+        // The instructor's next step is prose about this named student — "book
+        // your deep dive with Marcus before the card arrives" — so it goes
+        // with them (issues #1196, #1205). All three columns together, or the
+        // attribution check refuses the update.
+        courseNextStep: null,
+        courseNextStepAt: null,
+        courseNextStepByPersonId: null,
         hotelPickupLocation: null,
         pickupTime: null,
       })

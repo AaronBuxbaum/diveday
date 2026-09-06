@@ -63,6 +63,12 @@ export type StaffMember = {
    * that added the column to this projection.
    */
   crewPublicName: string | null;
+  /**
+   * When that person agreed to be named, shown beside the name and only there.
+   * A declined row and a never-asked row both carry a null name and a null
+   * stamp, so neither the name nor its date can tell them apart.
+   */
+  crewPublicConsentAt: Date | null;
 };
 
 /**
@@ -100,6 +106,7 @@ export async function listShopStaff(db: DbExecutor, shopId: string): Promise<Sta
       emergencyContactPhone: people.emergencyContactPhone,
       spokenLanguages: people.spokenLanguages,
       crewPublicName: people.crewPublicName,
+      crewPublicConsentAt: people.crewPublicConsentAt,
       role: personRoles.role,
       userAccountId: userAccounts.id,
       accountStatus: userAccounts.status,
@@ -134,6 +141,7 @@ export async function listShopStaff(db: DbExecutor, shopId: string): Promise<Sta
       emergencyContactPhone: row.emergencyContactPhone,
       spokenLanguages: row.spokenLanguages,
       crewPublicName: row.crewPublicName,
+      crewPublicConsentAt: row.crewPublicConsentAt,
     });
   }
   return [...byPerson.values()].sort((a, b) => a.fullName.localeCompare(b.fullName));

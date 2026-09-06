@@ -381,18 +381,27 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
 - **16e** — the booking page bounded: three tiles and a door, the other departures worth a look
   (D01), the intent question (D12 with D23 folded into its count), the rusty diver's offers (D18);
   a composition test holds the length. **Shipped 2026-09-05.**
-- **16f** — the storefront's lenses (D02) and "next with space".
+- **16f** — the storefront's lenses (D02) and "next with space". **Shipped 2026-09-05.** A lens is
+  the shop's own word for a kind of day, single-select, and the drawn checkbox folds into a dashed
+  **Has space** pill at the end of the rail.
 - **16g** — the thread: "Anything changed?" (D15 with D19 folded in), provenance chips (D51), the
-  rental-fit line (D14).
+  rental-fit line (D14). **Shipped 2026-09-05.** It also carried the clock bug D15's own comparison
+  exposed: `bookings.created_at` was Postgres' `now()` while every fact beside it read the app
+  clock, so under a frozen harness every fit read as last season's.
 - **16h** — the evening: souls not seats (#1346), the open-seats debrief (D47), the rental-fit
-  leftover (D14), the plan-change meta (D24).
+  leftover (D14), the plan-change meta (D24). **Shipped 2026-09-05.**
 - **16i** — the recap: the postcard's number, save-as-image (#1081), the private line (D33), the
-  private pulse (D40), the next dive (D35).
-- **16j** — the ten adopted-unseen issues, each on its own pull request (D05 on
-  `trips.revision`, D17, D25, #1363, #1366, D36 and D45 as one recap variant, D44, D52, #1357).
-  #1284's remaining half — the stored named set of embed departures — was dropped from this slice
-  on 2026-09-05: the owner deferred it on 2026-09-03 pending a shop asking, and slice 16f's lens
-  vocabulary is now a live candidate for the reusable tag that deferral wanted decided first.
+  private pulse (D40), the next dive (D35). **Shipped 2026-09-05.**
+- **16j** — the ten adopted-unseen issues (D05 on `trips.revision`, D17, D25, #1363, #1366, D36 and
+  D45 as one recap variant, D44, D52, #1357). **Shipped 2026-09-05 in two batches** rather than the
+  planned pull request per issue: batch A the `.ics` SEQUENCE and the reminder rhythm, batch B the
+  six the shop's own words run through. #1284's remaining half — the stored named set of embed
+  departures — was dropped from this slice on 2026-09-05: the owner deferred it on 2026-09-03
+  pending a shop asking, and slice 16f's lens vocabulary is now a live candidate for the reusable
+  tag that deferral wanted decided first. #1357 keeps its take-down question open, which is
+  `ready-for-human`; its consent stamp shipped.
+
+16h, 16i and 16j landed as a stack, each cut from the layer below and merged bottom-up.
 
 ## Concept-model simplification (proposed — each row needs an owner decision)
 

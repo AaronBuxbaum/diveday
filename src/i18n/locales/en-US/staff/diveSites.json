@@ -48,11 +48,16 @@
       "total": "{count, plural, one {# site} other {# sites}}"
     }
   },
+  "planningNote": {
+    "noted": "Noted {date}",
+    "expired": "Noted {date}. It stopped showing on the site list."
+  },
   "form": {
     "sections": {
       "about": "The site",
       "underwater": "What's down there",
-      "dive": "The dive"
+      "dive": "The dive",
+      "planning": "Planning notes"
     },
     "sectionsLabel": "On this page",
     "unsavedInSection": "Unsaved changes in {section}",
@@ -183,6 +188,10 @@
     "errorImages": "One of those photos couldn't be stored. A site holds up to six, and each has to be a JPG, PNG, WebP, or HEIC under 5 MB. Everything else you typed is still here.",
     "errorImagesUnconfigured": "Photo storage isn't set up for this shop yet. Save the briefing without photos for now, or ask your shop's owner or manager to configure it.",
     "errorConflict": "Somebody else changed this briefing while you had it open, so nothing was saved. What you typed is still here. Copy anything you need, then reload the page.",
+    "planningNoteLabel": "What to remember about running this site",
+    "planningNoteDescription": "Staff only. It never reaches a diver.",
+    "planningNotePlaceholder": "The entry silted up after the storm. Brief the swim-through before you go in.",
+    "errorPlanningNote": "Keep the planning note under 280 characters.",
     "errorNameTaken": "Another dive site here already goes by that name, and a deleted one still holds its name too. Give this briefing a name of its own and save again. Everything else you typed is still here."
   },
   "edit": {

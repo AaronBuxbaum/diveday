@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, lte, ne } from "drizzle-orm";
 import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
@@ -24,10 +24,11 @@ import {
   type RentalFitItem,
   toDiverRentalFit,
 } from "./rental-fit";
-import { bookings, certifications, people, shops } from "./schema";
+import { bookings, certifications, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getSupportNeeds } from "./support-needs";
 import { getTripWithBooked } from "./trips";
+import { liveTrip } from "./trips-live";
 import { getCurrentWaiverTemplate, listSignedWaiversByPerson } from "./waivers";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
 
@@ -66,7 +67,21 @@ export type ReadyPageData = {
     rentalPricing: RentalPricing;
     /** Minutes before departure the shop wants divers at the dock — the same figure the night-before email's arrival line uses. */
     dockCallMinutes: number;
+    /**
+     * The shop's own welcome, in the shop's own words (issue #1212). Rendered
+     * verbatim and uncaptioned, and only to a first-timer — see `firstVisit`.
+     */
+    welcomeNote: string | null;
+    /** The shop's standing sentence about the dock, for a departure that wrote none of its own. */
+    dockCallNote: string | null;
   };
+  /**
+   * **Is this the diver's first day with this shop?** The same predicate the
+   * recap's visit count uses (`src/db/recap.ts`) — non-cancelled,
+   * non-no-show seats on live scheduled departures at or before this one —
+   * so the thread and the keepsake cannot disagree about who is new.
+   */
+  firstVisit: boolean;
   trip: {
     id: string;
     plannedDives: number;
@@ -234,6 +249,8 @@ export async function getReadyPageData(
       rentalItems: shops.rentalItems,
       rentalPricing: shops.rentalPricing,
       dockCallMinutes: shops.dockCallMinutes,
+      welcomeNote: shops.welcomeNote,
+      dockCallNote: shops.dockCallNote,
       personEmail: people.email,
       personLocale: people.locale,
       emergencyContactName: people.emergencyContactName,
@@ -259,6 +276,7 @@ export async function getReadyPageData(
     nitroxOnFile,
     welcomeInputs,
     fitConfirmation,
+    visitRows,
   ] = await Promise.all([
     getRentalFit(db, row.shopId, row.personId),
     getSupportNeeds(db, row.shopId, row.personId),
@@ -275,6 +293,25 @@ export async function getReadyPageData(
     // Read here rather than folded into `getRentalFit`'s row, because the
     // staffer's name comes from a join this page is the only caller of.
     fitConfirmationForDiver(db, row.shopId, row.personId),
+    // **The recap's own predicate, not a second one** (issue #1212): a
+    // cancelled or blown-out day is not a day this diver dived, and the two
+    // surfaces have to agree about who is new. This seat is in the count, so
+    // one row is a first visit.
+    db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          eq(bookings.shopId, row.shopId),
+          eq(bookings.personId, row.personId),
+          ne(bookings.status, "cancelled"),
+          ne(bookings.status, "no_show"),
+          eq(trips.status, "scheduled"),
+          liveTrip(),
+          lte(trips.startsAt, trip.startsAt),
+        ),
+      ),
   ]);
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -321,7 +358,10 @@ export async function getReadyPageData(
       rentalItems: row.rentalItems,
       rentalPricing: row.rentalPricing,
       dockCallMinutes: row.dockCallMinutes,
+      welcomeNote: row.welcomeNote,
+      dockCallNote: row.dockCallNote,
     },
+    firstVisit: visitRows.length <= 1,
     trip: {
       id: row.tripId,
       plannedDives: trip.plannedDives,

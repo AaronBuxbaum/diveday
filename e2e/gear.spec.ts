@@ -190,6 +190,50 @@ test.describe("staff", () => {
   });
 
   /**
+   * **The load-out half of the same loop** (issue #1185, delight report D25).
+   *
+   * The return pane shipped without the hand-over that has to precede it, so
+   * the only way a unit read as out was a seeded fixture. This walks the act a
+   * counter actually performs: assign, hand the set across, and see the
+   * register agree the unit has left the wall.
+   */
+  test("hands a diver's whole set over from the prep page, and the register agrees", async ({
+    page,
+  }) => {
+    const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
+    await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
+    const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
+    await expect(assignments.getByRole("heading", { name: "Rental assignments" })).toBeVisible();
+
+    // The cart line states what is on it, which is the fact the description
+    // sentence it replaced never carried.
+    await expect(assignments.getByText(/\d+ units? for \d+ divers?/)).toBeVisible();
+
+    // Assign one unit so there is a set to hand across, and remember its tag.
+    const picker = page.locator("select[id^='assign-']").first();
+    await picker.waitFor();
+    const option = picker.locator("option:not([disabled])").first();
+    const label = (await option.textContent()) ?? "";
+    const tag = label.split(" · ")[0]?.trim() ?? "";
+    expect(tag.length).toBeGreaterThan(0);
+    await picker.selectOption({ label });
+    await expect(assignments.getByText(tag, { exact: true })).toBeVisible();
+
+    // One deliberate act per diver. The row it belongs to is the one holding
+    // the tag just assigned.
+    const row = assignments.locator("li").filter({ hasText: tag }).last();
+    await row.getByRole("button", { name: "Hand over" }).first().click();
+    await expect(page.getByRole("status").filter({ hasText: "Handed over." })).toBeVisible();
+
+    // The register is the other reader of the same stamp, and it has to agree
+    // that the unit is off the wall.
+    await page.goto("/shop/blue-mantis/gear");
+    await page.getByRole("link", { name: tag, exact: true }).first().click();
+    await expect(page.getByRole("heading", { level: 1, name: tag })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Check out" })).toHaveCount(0);
+  });
+
+  /**
    * **The gear comes home in one act** (issue #1186, delight report D26).
    *
    * The demo shop never has a unit out — it reserves against a departure five

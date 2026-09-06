@@ -247,6 +247,77 @@ describe("getReadyPageData", () => {
  * is to read a diver the shop has actually prepared for, rather than a
  * fabricated row that agrees with the query by construction.
  */
+/**
+ * **Who is new** (issue #1212). The shop's own welcome is read once, by
+ * somebody diving with them for the first time, so the thread and the recap
+ * have to agree about who that is — which is why this asks the recap's own
+ * predicate rather than a second one of its own.
+ */
+describe("the diver's first day with this shop", () => {
+  /** When the departure a booking sits on leaves — the axis the count is read along. */
+  const unpaidTripStartsAt = async (
+    db: Awaited<ReturnType<typeof unpaidBooking>>["db"],
+    bookingId: string,
+  ) => {
+    const data = await getReadyPageData(db, bookingId);
+    if (!data) throw new Error("booking vanished");
+    return data.detail.trip.startsAt.getTime();
+  };
+
+  it("is a first visit on their first seat, and not on the second", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    expect((await getReadyPageData(db, bookingId))?.firstVisit).toBe(true);
+
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const later = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!later) throw new Error("the seeded shop has one reef departure");
+    const [{ personId }] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    const second = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: later.id,
+      personId,
+    });
+    if (!second.ok) throw new Error(`second booking failed: ${second.reason}`);
+
+    // The count is "days with this shop *by this date*", which is the recap's
+    // own reading: the earlier seat is still a first day, and the later one is
+    // not, whichever order they were booked in.
+    const [earlier, later_] =
+      (await unpaidTripStartsAt(db, bookingId)) <= (await unpaidTripStartsAt(db, second.bookingId))
+        ? [bookingId, second.bookingId]
+        : [second.bookingId, bookingId];
+    expect((await getReadyPageData(db, earlier))?.firstVisit).toBe(true);
+    expect((await getReadyPageData(db, later_))?.firstVisit).toBe(false);
+  });
+
+  it("does not count a seat the diver gave up", async () => {
+    // The same non-cancelled predicate the recap's visit count uses: a
+    // cancelled seat is not a day they dived.
+    const { db, shop, bookingId } = await unpaidBooking();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const later = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!later) throw new Error("the seeded shop has one reef departure");
+    const [{ personId }] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    const second = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: later.id,
+      personId,
+    });
+    if (!second.ok) throw new Error(`second booking failed: ${second.reason}`);
+    await cancelBooking(db, shop.id, bookingId);
+
+    expect((await getReadyPageData(db, second.bookingId))?.firstVisit).toBe(true);
+  });
+});
+
 describe("carriedPreparationForDiver", () => {
   it("finds what the shop holds for a diver who prepared", async () => {
     const { db, shop } = await seededShopContext();

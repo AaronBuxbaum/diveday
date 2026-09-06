@@ -106,6 +106,7 @@ import {
   saveDivingOptionsAction,
   saveDockDayRhythmAction,
   saveEmergencyReferenceAction,
+  saveHospitalityAction,
   savePackingAction,
   savePassThroughFeeAction,
   saveProfileAction,
@@ -169,6 +170,11 @@ function noticeMessages(
     "contact-invalid": { tone: "danger", text: t("settings.main.notice.contactInvalid") },
     "profile-saved": { tone: "success", text: t("settings.main.notice.profileSaved") },
     "profile-invalid": { tone: "danger", text: t("settings.main.notice.profileInvalid") },
+    "hospitality-saved": { tone: "success", text: t("settings.main.hospitality.notice.saved") },
+    "hospitality-too-long": {
+      tone: "danger",
+      text: t("settings.main.hospitality.notice.tooLong"),
+    },
     "address-saved": { tone: "success", text: t("settings.main.notice.addressSaved") },
     "address-removed": { tone: "success", text: t("settings.main.notice.addressRemoved") },
     "address-invalid": { tone: "danger", text: t("settings.main.notice.addressInvalid") },
@@ -564,6 +570,12 @@ export default async function SettingsPage({
   // interface). "Not set" is a value here, not a status: on a settings row the
   // absence of an answer is exactly the fact the reader came to check.
   const notSet = t("settings.main.summary.notSet");
+  // How many of the three the shop has written. The words themselves are too
+  // long to sit on a closed row, and which one is missing is a question the
+  // open row answers better than a summary line could.
+  const hospitalityWritten = [shop.welcomeNote, shop.dockCallNote, shop.signOffNote].filter(
+    (note) => (note ?? "").trim().length > 0,
+  ).length;
   const zoneId = shop.timezone || DEFAULT_TIMEZONE;
   const timezoneValue =
     zoneId in CURATED_TIMEZONE_KEYS ? t(CURATED_TIMEZONE_KEYS[zoneId as CuratedTimeZone]) : zoneId;
@@ -1055,6 +1067,63 @@ export default async function SettingsPage({
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("settings.main.profile.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            {/* **The shop's own three sentences** (issue #1212). Free text,
+              rendered verbatim on the thread, the arrival card and the recap —
+              which is why the one line here names the consequence a shop
+              cannot see from this page: what they type is what a diver reads,
+              in the language they typed it (ADR
+              20260813-dive-site-briefings-are-the-shops-own-words). */}
+            <SettingsRow
+              heading={t("settings.main.hospitality.heading")}
+              value={
+                hospitalityWritten > 0
+                  ? t("settings.main.hospitality.value", { count: hospitalityWritten })
+                  : notSet
+              }
+              description={t("settings.main.hospitality.hint")}
+              sectionId="hospitality"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="hospitality" active={activeSection} />
+              <FieldGrid as="form" action={saveHospitalityAction} columns={1} className="mt-4">
+                <Field label={t("settings.main.hospitality.welcomeLabel")}>
+                  <textarea
+                    name="welcomeNote"
+                    rows={2}
+                    maxLength={280}
+                    defaultValue={shop.welcomeNote ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label={t("settings.main.hospitality.dockCallLabel")}>
+                  <textarea
+                    name="dockCallNote"
+                    rows={2}
+                    maxLength={280}
+                    defaultValue={shop.dockCallNote ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label={t("settings.main.hospitality.signOffLabel")}>
+                  <textarea
+                    name="signOffNote"
+                    rows={2}
+                    maxLength={280}
+                    defaultValue={shop.signOffNote ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.hospitality.saving")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.hospitality.save")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>

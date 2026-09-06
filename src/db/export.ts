@@ -874,6 +874,12 @@ export async function loadShopExportBundleInput(
             "brand_hero_image_alt",
             "established_year",
             "brand_badges",
+            // The shop's own three sentences (issue #1212). Written by hand,
+            // in one language, and read verbatim by divers — so they are the
+            // shop's to take away rather than something DiveDay regenerates.
+            "welcome_note",
+            "dock_call_note",
+            "sign_off_note",
             "created_at",
           ],
           rows: [
@@ -926,6 +932,9 @@ export async function loadShopExportBundleInput(
               shop.brandHeroImageAlt,
               shop.establishedYear,
               JSON.stringify(shop.brandBadges),
+              shop.welcomeNote,
+              shop.dockCallNote,
+              shop.signOffNote,
               shop.createdAt,
             ],
           ],
@@ -1775,6 +1784,12 @@ export async function loadShopExportBundleInput(
             // seat, and a shop that moved its data would otherwise ask the
             // whole board the question over again.
             "carried_facts_confirmed_at",
+            // The instructor's own words to this student, and who wrote them
+            // (issues #1196, #1205). The student read it on their recap; a
+            // shop moving its data takes the sentence with it.
+            "course_next_step",
+            "course_next_step_at",
+            "course_next_step_by_person_id",
             "hotel_pickup_location",
             "pickup_time",
             "payment_status",
@@ -1803,6 +1818,9 @@ export async function loadShopExportBundleInput(
               row.referralSource,
               row.welcomeSharedAt,
               row.carriedFactsConfirmedAt,
+              row.courseNextStep,
+              row.courseNextStepAt,
+              row.courseNextStepByPersonId,
               row.hotelPickupLocation,
               row.pickupTime,
               payment?.status ?? "unpaid",
@@ -3012,6 +3030,12 @@ export async function loadShopExportBundleInput(
             "route_note",
             "route_zoom",
             "image_urls",
+            // The shop's own staff-only note about running this site, and who
+            // wrote it (issue #1204). It never reached a diver, and it travels
+            // with the site for the same reason the drawn route does.
+            "planning_note",
+            "planning_note_at",
+            "planning_note_by_person_id",
             "deleted_at",
             "created_at",
           ],
@@ -3054,6 +3078,9 @@ export async function loadShopExportBundleInput(
             row.routeNote,
             row.routeZoom,
             JSON.stringify(row.imageUrls),
+            row.planningNote,
+            row.planningNoteAt,
+            row.planningNoteByPersonId,
             row.deletedAt,
             row.createdAt,
           ]),

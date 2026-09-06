@@ -51,6 +51,18 @@ describe("the thread page's order", () => {
     expect(packing).toBeLessThan(cancel);
     expect(cancel).toBeLessThan(shop);
   });
+
+  /**
+   * **The shop's welcome is said once, at the foot** (issue #1212).
+   *
+   * It rides the shop card the page already ends with rather than opening a
+   * block of its own, and it is passed exactly once — a second `welcome=`
+   * would be the same sentence twice on one thread.
+   */
+  it("hands the shop's welcome to the one card that says it", () => {
+    expect(countOf("welcome={")).toBe(1);
+    expect(positionOf("welcome={")).toBeGreaterThan(positionOf("<ShopCard"));
+  });
 });
 
 describe("status is said once", () => {

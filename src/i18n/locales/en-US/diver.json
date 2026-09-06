@@ -617,6 +617,12 @@
     "tipAmountLegend": "Tip amount",
     "otherTipPlaceholder": "Other",
     "otherTipAriaLabel": "Other tip amount",
+    "course": {
+      "certified": "{shopName} recorded your {level} from this session.",
+      "notYetCertified": "Your {course} session is on file. {shopName} has not recorded a certification for it.",
+      "nextStepBy": "Next step from {name}",
+      "nextStepQuote": "\u201c{words}\u201d"
+    },
     "crewQuote": "“{words}”",
     "logbookHeading": "Dive log entry",
     "printRecord": "Print log entry",

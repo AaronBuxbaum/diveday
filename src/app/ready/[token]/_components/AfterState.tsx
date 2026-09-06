@@ -34,6 +34,7 @@ import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { visitMilestone } from "@/lib/visit-milestones";
+import { CourseAfterState } from "./CourseAfterState";
 import { NextDiveCard } from "./NextDiveCard";
 import { PrintRecordButton } from "./PrintRecordButton";
 import { RecapPulse } from "./RecapPulse";
@@ -118,6 +119,12 @@ export type AfterStateProps = {
      */
     brandColor: string | null;
     brandDisplayFont: BrandDisplayFontCode | null;
+    /**
+     * How this shop signs off a finished day (issue #1212). Read only where
+     * the crew wrote nothing of their own: a standing sentence never talks
+     * over one somebody wrote today.
+     */
+    signOffNote: string | null;
   };
   /** The day's site, drawn in the illustration hand on the record's face. */
   siteMark: SiteMarkCode;
@@ -162,6 +169,12 @@ export type AfterStateProps = {
    * the diver's own language whatever the crew was reading when they picked it.
    */
   observedSpecies: string[];
+  /**
+   * The course this departure taught, with what the shop recorded for it
+   * (issues #1196, #1205). Null on an ordinary charter and then nothing about
+   * courses renders — see `CourseAfterState` for the overclaim rule.
+   */
+  course: RecapPageData["course"];
   shoutout: string | null;
   photos: RecapPhotoView[];
   /** How many photos one booking may hold — `MAX_RECAP_PHOTOS_PER_BOOKING`. */
@@ -276,6 +289,7 @@ export function AfterState({
   diveRecord,
   fieldGuide,
   observedSpecies,
+  course,
   shoutout,
   photos,
   maxPhotos,
@@ -393,6 +407,23 @@ export function AfterState({
           </blockquote>
           <figcaption className="mt-2 text-sm text-muted">{t("recap.fromYourCrew")}</figcaption>
         </figure>
+      ) : shop.signOffNote?.trim() ? (
+        // The shop's standing sign-off, in the shop's own words and only where
+        // the crew wrote none for this diver (issue #1212). Uncaptioned: it is
+        // a sentence, not a quotation the reader has to attribute.
+        <p className="mt-10 text-base print:hidden">{shop.signOffNote.trim()}</p>
+      ) : null}
+
+      {/* What a course day left the student holding — before the review ask,
+          which stays the page's one primary (issues #1196, #1205). */}
+      {course ? (
+        <CourseAfterState
+          t={t}
+          courseTitle={course.title}
+          shopName={shop.name}
+          certification={course.certification}
+          nextStep={course.nextStep}
+        />
       ) : null}
 
       {/* ——— The one ask. It is the page's single primary in every variant: a

@@ -617,6 +617,12 @@
     "tipAmountLegend": "Cantidad de propina",
     "otherTipPlaceholder": "Otra",
     "otherTipAriaLabel": "Otra cantidad de propina",
+    "course": {
+      "certified": "{shopName} registr\u00f3 tu {level} de esta sesi\u00f3n.",
+      "notYetCertified": "Tu sesi\u00f3n de {course} est\u00e1 registrada. {shopName} todav\u00eda no ha registrado una certificaci\u00f3n por ella.",
+      "nextStepBy": "Siguiente paso de {name}",
+      "nextStepQuote": "\u201c{words}\u201d"
+    },
     "crewQuote": "“{words}”",
     "logbookHeading": "Registro del diario de inmersión",
     "printRecord": "Imprimir registro",
