@@ -229,7 +229,6 @@ export function ResultNotice({ state, copy }: { state: WaiverSendState; copy: Wa
  * post (the send still happens) before hydration.
  */
 export function WaiverSendControl({
-  shopSlug,
   surface,
   tripId,
   bookingIds,
@@ -241,7 +240,6 @@ export function WaiverSendControl({
   wrapperClassName,
   copy,
 }: {
-  shopSlug: string;
   surface: WaiverSendSurface;
   /** Required when surface is "roster" — which trip's guests page to revalidate. */
   tripId?: string;

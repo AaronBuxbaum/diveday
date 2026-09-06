@@ -38,7 +38,6 @@ const copy = waiverSendCopy(staffTranslator("en-US"));
 function renderControl() {
   return render(
     <WaiverSendControl
-      shopSlug="blue-mantis"
       surface="today"
       bookingIds={["booking-1"]}
       label="Resend waiver link"

@@ -146,7 +146,13 @@
     "requestPlanDiversOne": "{divers} buceador",
     "requestPlanDiversOther": "{divers} buceadores",
     "requestPlanPersonOne": "{name} ({divers} buceador)",
-    "requestPlanPersonOther": "{name} ({divers} buceadores)"
+    "requestPlanPersonOther": "{name} ({divers} buceadores)",
+    "patternFilled": "Rellenado con tus últimas {count} salidas de {weekday}. Cambia lo que quieras, o",
+    "patternStartBlank": "empieza en blanco",
+    "patternCrew": "{names} fueron la tripulación.",
+    "patternAlsoUsual": "{time} · {title} también salió {count} de esos días.",
+    "patternAlsoUsualUntitled": "{time} · otra salida también se hizo {count} de esos días.",
+    "patternAddAlso": "Añádela también"
   },
   "week": {
     "ariaLabel": "La semana",

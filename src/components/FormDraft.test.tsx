@@ -3,15 +3,11 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { FormDraft } from "./FormDraft";
+
 const saveFormDraftAction = vi.fn(async (_form: string, _fields: Array<[string, string]>) => {});
 const discardFormDraftAction = vi.fn(async (_form: string) => {});
-vi.mock("@/app/actions/form-drafts", () => ({
-  saveFormDraftAction: (form: string, fields: Array<[string, string]>) =>
-    saveFormDraftAction(form, fields),
-  discardFormDraftAction: (form: string) => discardFormDraftAction(form),
-}));
-
-const { FormDraft } = await import("./FormDraft");
+const actions = { save: saveFormDraftAction, discard: discardFormDraftAction };
 
 const copy = { pickedUp: "Picked up from the desk, {time}.", startOver: "Start over" };
 
@@ -33,7 +29,7 @@ function renderForm(draft: { fields: Record<string, string>; savedAtLabel: strin
           <option value="2">2</option>
         </select>
       </label>
-      <FormDraft form="new_diver" draft={draft} copy={copy} />
+      <FormDraft form="new_diver" draft={draft} actions={actions} copy={copy} />
       <button type="submit">Add</button>
     </form>,
   );

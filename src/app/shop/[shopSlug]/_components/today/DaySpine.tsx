@@ -194,7 +194,6 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
   );
   const control = action.waiver ? (
     <WaiverSendControl
-      shopSlug={controls.shopSlug}
       surface="today"
       bookingIds={action.waiver.bookingIds}
       label={action.actionLabel}

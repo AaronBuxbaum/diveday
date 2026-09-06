@@ -850,7 +850,6 @@ export function RosterSection({
         {waiverControl.action ? (
           <div className="mt-3">
             <WaiverSendControl
-              shopSlug={shopSlug}
               surface="roster"
               tripId={tripId}
               bookingIds={[booking.id]}

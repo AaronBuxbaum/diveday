@@ -41,7 +41,7 @@ const waiverSendPayload = z
   // A send with nobody to send to is not a send; refused here so no row is
   // ever held for it.
   .refine((payload) => payload.bookingIds.length > 0 || payload.personId !== undefined, {
-    message: "nobody to send to",
+    message: "empty_batch",
   });
 
 const lastMinuteDealPayload = z.object({

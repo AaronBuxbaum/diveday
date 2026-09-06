@@ -42,6 +42,12 @@ const COPY: BuilderCopy = {
   typedAs: "typed as “{raw}”",
   draftPickedUp: "Picked up from the desk, {time}.",
   draftStartOver: "Start over",
+  patternFilled: "Filled from your last {count} {weekday} departures. Change anything, or",
+  patternStartBlank: "start blank",
+  patternCrew: "{names} crewed them.",
+  patternAlsoUsual: "{time} · {title} ran on {count} of those days too.",
+  patternAlsoUsualUntitled: "{time} · another departure ran on {count} of those days too.",
+  patternAddAlso: "Add it as well",
   ariaLabel: "Schedule builder",
   addDepartureOnDay: "Add a departure on {day}",
   add: "Add",
@@ -206,7 +212,13 @@ function baseTrip(overrides: Partial<BuilderDay["trips"][number]> = {}) {
 }
 
 const noop = vi.fn();
-const actions = { add: noop, move: noop, duplicate: noop, remove: noop };
+const actions = {
+  add: noop,
+  move: noop,
+  duplicate: noop,
+  remove: noop,
+  draft: { save: async () => {}, discard: async () => {} },
+};
 
 /** Already resolved server-side from the shop's currency and the reader's locale. */
 const PRICE: BuilderPriceInput = { step: "0.01", max: 100_000, placeholder: "$0.00" };
@@ -659,6 +671,138 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
     await userEvent.selectOptions(courseSelect, "");
     expect(selfGuided()?.closest(".hidden")).toBeNull();
     expect((selfGuided() as HTMLInputElement).disabled).toBe(false);
+  });
+});
+
+/**
+ * **The add panel already knows the weekday** (ADR 20260906-before-you-ask,
+ * decision 3). The rule pinned: a panel opened plainly fills its own fields
+ * from the weekday's pattern once the option lists are on screen and says so
+ * in one line; the crew come as chips the desk can take off; "start blank"
+ * empties what the pattern wrote; and a panel that arrived with a draft, a
+ * course, or a site asks for no pattern at all.
+ */
+describe("ScheduleBuilder add panel: the weekday pattern", () => {
+  const days: BuilderDay[] = [
+    {
+      dateIso: "2026-08-01",
+      label: "Sat, Aug 1",
+      parts: { weekday: "Sat", day: "1", month: "Aug" },
+      trips: [],
+    },
+  ];
+  const pattern = {
+    weekday: 6,
+    sampledDays: 6,
+    fields: {
+      startTime: "07:00",
+      endTime: "10:30",
+      title: "Two-Tank Reef",
+      diveSiteId: "site-1",
+      capacity: "10",
+      priceDollars: "95",
+    },
+    crew: [
+      { id: "keiko", name: "Keiko Tanaka" },
+      { id: "sal", name: "Sal Moreno" },
+    ],
+    alsoUsual: { startTime: "13:00", timeLabel: "1:00 PM", title: "Wreck Trip", days: 4 },
+  };
+  const loadPattern = vi.fn(async (_dateIso: string) => pattern);
+
+  function renderBuilder(extra: Partial<ComponentProps<typeof ScheduleBuilder>> = {}) {
+    return render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
+        loadPattern={loadPattern}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        locale="en-US"
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+        {...extra}
+      />,
+    );
+  }
+
+  afterEach(() => {
+    loadPattern.mockClear();
+  });
+
+  it("fills the panel from the weekday, names the crew as chips, and offers the second boat", async () => {
+    const { container } = renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    expect(loadPattern).toHaveBeenCalledWith("2026-08-01");
+
+    expect(
+      await screen.findByText("Filled from your last 6 Sat departures. Change anything, or"),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("What is it")).toHaveValue("Two-Tank Reef");
+    expect(screen.getByLabelText("Departs")).toHaveValue("7:00 AM");
+    expect(container.querySelector('input[name="startTime"]')).toHaveValue("07:00");
+    expect(container.querySelector('select[name="diveSiteId"]')).toHaveValue("site-1");
+    expect(screen.getByLabelText("Seats")).toHaveValue(10);
+    expect(screen.getByLabelText(/Price per diver/)).toHaveValue(95);
+
+    // The crew ride along as hidden fields, one per chip, and one line names them.
+    expect(
+      [...container.querySelectorAll('input[name="crewPersonIds"]')].map((el) =>
+        el.getAttribute("value"),
+      ),
+    ).toEqual(["keiko", "sal"]);
+    expect(screen.getByText("Keiko Tanaka and Sal Moreno crewed them.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Remove: Sal Moreno" }));
+    expect(
+      [...container.querySelectorAll('input[name="crewPersonIds"]')].map((el) =>
+        el.getAttribute("value"),
+      ),
+    ).toEqual(["keiko"]);
+
+    // The second departure is one row, off until ticked, carrying its start time.
+    const also = screen.getByRole("checkbox", {
+      name: /1:00 PM · Wreck Trip ran on 4 of those days too/,
+    });
+    expect(also).not.toBeChecked();
+    expect(also).toHaveAttribute("name", "alsoUsualStart");
+    expect(also).toHaveAttribute("value", "13:00");
+  });
+
+  it("starts blank on request: the fields empty, the crew gone, the line gone", async () => {
+    const { container } = renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    await screen.findByText(/Filled from your last 6 Sat departures/);
+    await userEvent.click(screen.getByRole("button", { name: "start blank" }));
+
+    expect(screen.getByLabelText("What is it")).toHaveValue("");
+    expect(container.querySelector('input[name="startTime"]')).toHaveValue("08:30");
+    expect(container.querySelector('select[name="diveSiteId"]')).toHaveValue("");
+    expect(container.querySelectorAll('input[name="crewPersonIds"]')).toHaveLength(0);
+    expect(screen.queryByText(/Filled from your last/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /Wreck Trip/ })).not.toBeInTheDocument();
+  });
+
+  it("asks for no pattern when the panel arrived with something to say already", async () => {
+    renderBuilder({
+      addDraft: { fields: { title: "Night dive" }, savedAtLabel: "4:12 PM" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    expect(await screen.findByLabelText("What is it")).toHaveValue("Night dive");
+    expect(loadPattern).not.toHaveBeenCalled();
+
+    cleanup();
+    renderBuilder({
+      openAdd: "quick",
+      initialCourse: { id: "course-1", title: "Open Water Diver", requirement: "" },
+    });
+    expect(await screen.findByLabelText("What is it")).toBeInTheDocument();
+    expect(loadPattern).not.toHaveBeenCalled();
   });
 });
 

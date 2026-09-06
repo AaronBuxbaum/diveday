@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FormDraft, type FormDraftProps } from "@/components/FormDraft";
+import { applyFormFields } from "@/components/apply-form-fields";
+import { FormDraft, type FormDraftActions, type FormDraftProps } from "@/components/FormDraft";
 import { RepeatFields } from "@/components/RepeatFields";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -17,6 +18,7 @@ import { StatusMark } from "@/components/ui/StatusMark";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
+import { cachedListFormat } from "@/lib/intl-cache";
 import {
   MAX_DECISION_HOURS,
   MAX_MINIMUM_BOOKINGS,
@@ -147,6 +149,8 @@ type BuilderActions = {
   duplicate: (formData: FormData) => void | Promise<void>;
   // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
   remove: (formData: FormData) => void | Promise<void>;
+  /** The add panel's draft, kept and discarded (ADR 20260906-before-you-ask, decision 3). */
+  draft: FormDraftActions;
 };
 
 /**
@@ -163,6 +167,13 @@ export type BuilderCopy = {
   /** The add panel's draft line (ADR 20260906-before-you-ask, decision 3). */
   draftPickedUp: string;
   draftStartOver: string;
+  /** The add panel's weekday-pattern lines (same decision). */
+  patternFilled: string;
+  patternStartBlank: string;
+  patternCrew: string;
+  patternAlsoUsual: string;
+  patternAlsoUsualUntitled: string;
+  patternAddAlso: string;
   ariaLabel: string;
   addDepartureOnDay: string;
   add: string;
@@ -348,6 +359,23 @@ export type BuilderRequestPlan = {
   }>;
 };
 
+/**
+ * What the shop ran on this weekday over the last six weeks, shaped for the
+ * add panel's own controls (ADR 20260906-before-you-ask, decision 3). Read by
+ * `loadWeekdayPatternAction` when a panel opens on a day with no draft.
+ */
+export type BuilderPattern = {
+  /** 0 = Sunday, as `BuilderMoreOptions.weekdayNames` is indexed. */
+  weekday: number;
+  sampledDays: number;
+  /** Field name → the string its control would hold; a field the days disagreed on is absent. */
+  fields: Record<string, string>;
+  /** The people aboard on most of those days, most frequent first. */
+  crew: Array<{ id: string; name: string }>;
+  /** A second departure most of those days also carried, offered as one row. */
+  alsoUsual: { startTime: string; timeLabel: string; title: string | null; days: number } | null;
+};
+
 /** Everything the panel needs that only matters once "More options" is open. */
 export type BuilderMoreOptions = {
   /**
@@ -390,6 +418,8 @@ function focusOnMount(el: HTMLElement | null) {
 function AddPanel({
   locale,
   addDraft,
+  draftActions,
+  loadPattern,
   dateIso,
   options,
   price,
@@ -406,6 +436,9 @@ function AddPanel({
   locale: string;
   /** What this person had typed into the add panel when they last left it, if fresh. */
   addDraft: FormDraftProps["draft"];
+  draftActions: FormDraftActions;
+  /** The weekday's pattern, fetched when the panel opens with nothing else to say. */
+  loadPattern?: (dateIso: string) => Promise<BuilderPattern | null>;
   dateIso: string;
   /** `null` until the panel's own fetch lands; the selects say so meanwhile. */
   options: BuilderOptions | null;
@@ -485,6 +518,61 @@ function AddPanel({
   /** The departure's date, mirrored so the repeat fieldset can seed its weekday. */
   const [startDate, setStartDate] = useState(dateIso);
 
+  /**
+   * **The add panel already knows the weekday** (ADR 20260906-before-you-ask,
+   * decision 3). A panel opened plainly — no draft to pick up, no course, site
+   * or request that brought it here — asks what this weekday usually is and
+   * fills its own fields from the answer once the option lists it needs are
+   * on screen, the way a keystroke would. One line says so, with "start blank"
+   * as the one act; the crew come as chips that can be taken off; a second
+   * departure most of those days carried is one row, ticked on to add.
+   *
+   * Read once, for the day the panel opened on: a date changed afterwards is
+   * the desk's own edit, and the pattern never writes over an edit.
+   */
+  // The form is `FieldGrid as="form"`, which takes no ref; the anchor below is
+  // its first child, and `closest("form")` is the form.
+  const patternAnchor = useRef<HTMLSpanElement>(null);
+  const ownForm = () => patternAnchor.current?.closest("form") ?? null;
+  const plain = addDraft === null && !initialCourse && !initialSite && !requestPlan;
+  const [pattern, setPattern] = useState<BuilderPattern | null>(null);
+  const [patternApplied, setPatternApplied] = useState(false);
+  const [crew, setCrew] = useState<BuilderPattern["crew"]>([]);
+  useEffect(() => {
+    if (!plain || !loadPattern) return;
+    let live = true;
+    void loadPattern(dateIso).then((found) => {
+      if (live && found) setPattern(found);
+    });
+    return () => {
+      live = false;
+    };
+  }, [plain, loadPattern, dateIso]);
+  useEffect(() => {
+    const element = patternAnchor.current?.closest("form");
+    if (!pattern || patternApplied || !options || !element) return;
+    applyFormFields(element, pattern.fields);
+    setCrew(pattern.crew);
+    setPatternApplied(true);
+  }, [pattern, patternApplied, options]);
+  const startBlank = () => {
+    const element = ownForm();
+    if (element) {
+      applyFormFields(element, {
+        ...Object.fromEntries(Object.keys(pattern?.fields ?? {}).map((name) => [name, ""])),
+        startTime: "08:30",
+        endTime: "12:30",
+        capacity: "12",
+        diveMode: offeredModes[0] ?? "boat",
+      });
+    }
+    setCrew([]);
+    setPattern(null);
+  };
+  const crewNames = cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
+    crew.map((member) => member.name),
+  );
+
   return (
     <FieldGrid
       as="form"
@@ -492,11 +580,33 @@ function AddPanel({
       columns={1}
       className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
+      <span ref={patternAnchor} className="contents" />
+      {pattern && patternApplied ? (
+        <p
+          role="status"
+          className="flex flex-wrap items-center gap-x-1 gap-y-1 rounded-inset bg-surface-sunken px-3 py-2 text-sm"
+        >
+          <span>
+            {fill(copy.patternFilled, {
+              count: pattern.sampledDays,
+              weekday: more.weekdayNames[pattern.weekday] ?? "",
+            })}
+          </span>
+          <button
+            type="button"
+            onClick={startBlank}
+            className={buttonClass({ variant: "link", size: "sm", className: "px-0" })}
+          >
+            {copy.patternStartBlank}
+          </button>
+        </p>
+      ) : null}
       {/* Nothing you typed is lost (ADR 20260906-before-you-ask, decision 3):
           the desk's half-filled panel picks up here, and the line says so. */}
       <FormDraft
         form="add_departure"
         draft={addDraft}
+        actions={draftActions}
         copy={{ pickedUp: copy.draftPickedUp, startOver: copy.draftStartOver }}
       />
       {requestPlan ? (
@@ -1085,6 +1195,57 @@ function AddPanel({
           }}
         />
       </fieldset>
+      {crew.length > 0 ? (
+        <Field label={copy.crewLabel}>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <ul className="contents">
+              {crew.map((member) => (
+                <li
+                  key={member.id}
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1 font-medium"
+                >
+                  <input type="hidden" name="crewPersonIds" value={member.id} />
+                  {member.name}
+                  <button
+                    type="button"
+                    aria-label={`${copy.remove}: ${member.name}`}
+                    onClick={() => setCrew((current) => current.filter((c) => c.id !== member.id))}
+                    className="ms-1 rounded-full px-1 text-muted hover:text-foreground"
+                  >
+                    <span aria-hidden="true">×</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <span className="text-muted">{fill(copy.patternCrew, { names: crewNames })}</span>
+          </div>
+        </Field>
+      ) : null}
+      {pattern?.alsoUsual && patternApplied ? (
+        <Field label={null}>
+          <label className="flex items-start gap-3 rounded-inset bg-surface-sunken px-3 py-2 text-sm">
+            <input
+              type="checkbox"
+              name="alsoUsualStart"
+              value={pattern.alsoUsual.startTime}
+              className="mt-0.5 size-4 accent-primary"
+            />
+            <span className="flex flex-col">
+              <span>
+                {fill(
+                  pattern.alsoUsual.title ? copy.patternAlsoUsual : copy.patternAlsoUsualUntitled,
+                  {
+                    time: pattern.alsoUsual.timeLabel,
+                    title: pattern.alsoUsual.title ?? "",
+                    count: pattern.alsoUsual.days,
+                  },
+                )}
+              </span>
+              <span className="font-medium">{copy.patternAddAlso}</span>
+            </span>
+          </label>
+        </Field>
+      ) : null}
       {/* The rare half, collapsed by default (design principles #8). The hint
           names what is behind it — a bare "More options" would hide the
           multi-day and repeat mechanisms behind a shrug. */}
@@ -1558,6 +1719,7 @@ export function ScheduleBuilder({
   shopSlug,
   locale,
   addDraft = null,
+  loadPattern,
   days,
   loadMovePreflight,
   loadOptions,
@@ -1578,6 +1740,8 @@ export function ScheduleBuilder({
   locale: string;
   /** The reader's fresh add-panel draft, applied when a panel opens. */
   addDraft?: FormDraftProps["draft"];
+  /** The weekday's usual departure, fetched when a panel opens with no draft. */
+  loadPattern?: (dateIso: string) => Promise<BuilderPattern | null>;
   days: BuilderDay[];
   /** Fetches the add panel's course and dive-site options, first time it opens. */
   loadOptions: () => Promise<BuilderOptions>;
@@ -1889,6 +2053,8 @@ export function ScheduleBuilder({
         <AddPanel
           locale={locale}
           addDraft={addDraft}
+          draftActions={actions.draft}
+          loadPattern={loadPattern}
           dateIso={defaultDateIso}
           options={options}
           price={price}
@@ -1947,6 +2113,8 @@ export function ScheduleBuilder({
               <AddPanel
                 locale={locale}
                 addDraft={addDraft}
+                draftActions={actions.draft}
+                loadPattern={loadPattern}
                 dateIso={weekAdd}
                 options={options}
                 price={price}
@@ -2116,6 +2284,8 @@ export function ScheduleBuilder({
               <AddPanel
                 locale={locale}
                 addDraft={addDraft}
+                draftActions={actions.draft}
+                loadPattern={loadPattern}
                 dateIso={day.dateIso}
                 options={options}
                 price={price}

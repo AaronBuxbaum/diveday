@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { discardFormDraftAction, saveFormDraftAction } from "@/app/actions/form-drafts";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/actions";
@@ -337,7 +338,12 @@ export default async function NewDiverPage({
           emailMaxLength={320}
           phoneMaxLength={40}
         >
-          <FormDraft form="new_diver" draft={newDiverDraft} copy={formDraftCopy(t)} />
+          <FormDraft
+            form="new_diver"
+            draft={newDiverDraft}
+            actions={{ save: saveFormDraftAction, discard: discardFormDraftAction }}
+            copy={formDraftCopy(t)}
+          />
           <input type="hidden" name="surface" value={surfaceParam ?? ""} />
           <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
           <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />

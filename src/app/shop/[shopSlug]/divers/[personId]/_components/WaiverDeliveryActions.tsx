@@ -175,7 +175,6 @@ function ChannelButton({
  * can always hand it over themselves.
  */
 export function WaiverDeliveryActions({
-  shopSlug,
   personId,
   hasEmail,
   hasPhone,
@@ -184,7 +183,6 @@ export function WaiverDeliveryActions({
   sendCopy,
   children,
 }: {
-  shopSlug: string;
   personId: string;
   hasEmail: boolean;
   hasPhone: boolean;

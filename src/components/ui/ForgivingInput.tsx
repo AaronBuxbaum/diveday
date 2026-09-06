@@ -116,7 +116,11 @@ export function ForgivingInput({
         aria-describedby={showReading ? readingId : input["aria-describedby"]}
         onChange={(event) => {
           const next = event.currentTarget.value;
-          setText(next);
+          // A value that arrives while nobody is in the box — a draft picked
+          // up, the weekday's pattern — was not typed, so it settles at once
+          // rather than sitting as "07:00" until a blur that never comes.
+          const arrived = !focused ? read(next) : null;
+          setText(arrived ? arrived.label : next);
           setRaw(next);
           onCanonicalChange?.(read(next)?.canonical ?? next);
         }}

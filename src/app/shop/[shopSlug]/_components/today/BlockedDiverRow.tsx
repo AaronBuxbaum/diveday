@@ -54,7 +54,6 @@ type BlockedDiverRowProps = {
   blockers: readonly ReadinessBlocker[];
   /** `null` when nothing maps to an action; the reasons still show. */
   fix: BlockerFix | null;
-  shopSlug: string;
   /** Which surface the waiver send is attributed to (analytics + revalidation). */
   surface: SendProps["surface"];
   /** The send control's words, composed by the host (`waiverSendCopy(t)`). */
@@ -101,7 +100,6 @@ export function BlockedDiverRow({
   identity,
   blockers,
   fix,
-  shopSlug,
   surface,
   waiverCopy,
   meta,
@@ -143,7 +141,6 @@ export function BlockedDiverRow({
   const action = fix ? (
     fix.sendsWaiver ? (
       <WaiverSendControl
-        shopSlug={shopSlug}
         surface={surface}
         bookingIds={[fix.bookingId]}
         label={fix.label}

@@ -473,7 +473,7 @@
     "refresherCourse": "Preguntó por el curso de repaso."
   },
   "forgiving": {
-    "typedAs": "escrito como «{raw}»"
+    "typedAs": "escrito como “{raw}”"
   },
   "sendHold": {
     "sendingIn": "Se envía en {seconds} s.",

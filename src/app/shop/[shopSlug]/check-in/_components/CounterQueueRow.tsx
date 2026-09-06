@@ -266,7 +266,6 @@ export function CounterQueueRow({
           and the rest name their first one in the summary (#759, #890). */}
       <BlockedDiverRow
         layout="below"
-        shopSlug={shopSlug}
         surface="check_in"
         waiverCopy={waiverSendCopy(t)}
         blockers={row.readiness.blockers}
