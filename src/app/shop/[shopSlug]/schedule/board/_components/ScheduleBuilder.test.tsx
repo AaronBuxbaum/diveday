@@ -40,6 +40,8 @@ vi.mock("next/navigation", () => ({ usePathname, useRouter, useSearchParams }));
 
 const COPY: BuilderCopy = {
   typedAs: "typed as “{raw}”",
+  draftPickedUp: "Picked up from the desk, {time}.",
+  draftStartOver: "Start over",
   ariaLabel: "Schedule builder",
   addDepartureOnDay: "Add a departure on {day}",
   add: "Add",

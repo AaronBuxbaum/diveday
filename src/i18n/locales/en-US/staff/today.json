@@ -259,5 +259,11 @@
   "sayHello": {
     "firstTrip": "{count, plural, one {{names} is diving with you for the first time.} other {{names} are diving with you for the first time.}}",
     "returning": "{name} is back after {years, plural, one {# year} other {# years}}."
+  },
+  "unfinished": {
+    "label": "Unfinished",
+    "addDeparture": "A departure you started adding.",
+    "newDiver": "A diver you started adding.",
+    "resume": "Resume"
   }
 }

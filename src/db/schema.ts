@@ -25,6 +25,7 @@ import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/cou
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import type { DiveSiteTemplateUndo } from "@/lib/dive-site-template-sync";
 import type { EmergencyReference } from "@/lib/emergency-reference";
+import type { DraftFields } from "@/lib/form-drafts";
 import type { HeldSendPayload } from "@/lib/held-sends";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
@@ -2853,6 +2854,33 @@ export const tripStageEvents = pgTable(
       table.recordedAt,
       table.seq,
     ),
+  ],
+);
+
+/**
+ * A staff form's draft (ADR 20260906-before-you-ask, decision 3): what one
+ * person typed into one form, kept a day and applied when they next open it,
+ * on any device. One row per person and form; `saved_at` is bumped on every
+ * write and read by the retention prune. `fields` holds the draftable subset
+ * only (`src/lib/form-drafts.ts`): never a payment detail or a medical answer.
+ */
+export const formDrafts = pgTable(
+  "form_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    form: text("form").notNull(),
+    fields: jsonb("fields").$type<DraftFields>().notNull(),
+    savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("form_drafts_person_form_unique").on(table.shopId, table.personId, table.form),
+    index("form_drafts_saved_at_idx").on(table.savedAt),
   ],
 );
 

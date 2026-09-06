@@ -479,5 +479,9 @@
     "sendingIn": "Sending in {seconds} s.",
     "sendingNow": "Sending…",
     "undo": "Undo"
+  },
+  "formDraft": {
+    "pickedUp": "Picked up from the desk, {time}.",
+    "startOver": "Start over"
   }
 }

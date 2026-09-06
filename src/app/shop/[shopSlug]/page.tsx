@@ -3,7 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { Suspense } from "react";
-import { DaySpine, type EveningReading } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
+import {
+  DaySpine,
+  type EveningReading,
+  type SpineDraft,
+} from "@/app/shop/[shopSlug]/_components/today/DaySpine";
 import { FirstBookableCard } from "@/app/shop/[shopSlug]/_components/today/FirstBookableCard";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
 import { RecapNoteEditor } from "@/app/shop/[shopSlug]/_components/today/RecapNoteEditor";
@@ -24,6 +28,7 @@ import { getDb } from "@/db/client";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
 import { listDiveSites } from "@/db/dive-sites";
 import { shopFirstBooking } from "@/db/first-booking";
+import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
 import { seasonScale } from "@/db/season-scale";
 import { getShopById } from "@/db/shops";
@@ -297,6 +302,16 @@ async function TodayBody({
   const authNoticeKey = noticeFromParam(notice, AUTH_NOTICES);
 
   const now = nowDate();
+  // The reader's own unfinished forms (ADR 20260906-before-you-ask, decision 3).
+  const spineDrafts: SpineDraft[] = (
+    await listFreshFormDrafts(db, shop.id, session.user.personId, now)
+  ).map((draft) => ({
+    form: draft.form,
+    href:
+      draft.form === "add_departure"
+        ? `/shop/${shopSlug}/schedule/board?add=1`
+        : `/shop/${shopSlug}/divers/new`,
+  }));
   // The lens (20260721-role-aware-landing): a captain or divemaster's Today
   // filters to boat work and badges the boat they crew; an instructor's leads
   // with their sessions. It never re-orders the spine — clock order wins.
@@ -874,6 +889,7 @@ async function TodayBody({
           currency={shop.currency}
           crewedTripIds={lens === "boat" ? crewedTripIds : undefined}
           withheldCount={withheldCount}
+          drafts={spineDrafts}
           helpRequestAction={updateHelpRequestAction}
           showPaymentsRow={showPaymentsRow}
           firstBooking={firstBooking}

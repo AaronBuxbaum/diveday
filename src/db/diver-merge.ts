@@ -219,6 +219,10 @@ export const PERSON_TABLES_DELIBERATELY_UNMOVED: Readonly<Record<string, string>
   // still owed. `mergeDiverRecords` refuses an anonymized person outright, so
   // no row here can ever belong to either side of a merge.
   processor_erasure_obligations: "provenance for an erasure, and anonymized rows never merge",
+  // A staffer's own half-typed form (ADR 20260906-before-you-ask, decision
+  // 3), gone within a day. Written by someone at the desk, never about a
+  // diver, so it belongs to whoever typed it and moves with nobody.
+  form_drafts: "a staffer's own half-typed form, gone in a day",
 };
 
 function quotedTable(tableName: string) {

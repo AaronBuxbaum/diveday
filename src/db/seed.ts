@@ -36,6 +36,7 @@ import {
   diveSites,
   diveSupportNeeds,
   executedDives,
+  formDrafts,
   gearItems,
   gearReservations,
   gearServiceEvents,
@@ -1054,6 +1055,7 @@ export async function resetDemoSchedule(
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
   await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
+  await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
   // Neither of these is seeded — both are written only by what a visitor does
   // (a staff note on a diver, the activity trail `seat-diver.ts` appends), and
   // both reference `people` without cascade. So a demo where anyone used the

@@ -479,5 +479,9 @@
     "sendingIn": "Se envía en {seconds} s.",
     "sendingNow": "Enviando…",
     "undo": "Deshacer"
+  },
+  "formDraft": {
+    "pickedUp": "Retomado del mostrador, {time}.",
+    "startOver": "Empezar de nuevo"
   }
 }

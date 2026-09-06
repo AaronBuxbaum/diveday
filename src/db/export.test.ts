@@ -291,6 +291,9 @@ const EXCLUDED_TABLES = [
   // A row lives eight seconds and is deleted on either exit; a bundle that
   // caught one would export a tap, not a record.
   "held_sends",
+  // What one staffer had typed into a form when the phone rang (same ADR,
+  // decision 3): a day-old draft of their own, never a shop record.
+  "form_drafts",
 ];
 
 /**

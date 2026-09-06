@@ -7,6 +7,7 @@ import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
+import { discardFormDraft } from "@/db/form-drafts";
 import { getMovePreflight } from "@/db/move-preflight";
 import { canPersonViewShopReports } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
@@ -378,6 +379,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       createdByPersonId: session.user.personId,
     });
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
+    await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
     return await landAfterAdd(db, shop, shopSlug, title, series.trips.length);
   }
 
@@ -396,6 +398,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     createdByPersonId: session.user.personId,
   });
   await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
+  await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
   return await landAfterAdd(db, shop, shopSlug, title, 1);
 }
 

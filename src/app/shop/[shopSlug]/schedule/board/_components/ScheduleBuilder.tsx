@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormDraft, type FormDraftProps } from "@/components/FormDraft";
 import { RepeatFields } from "@/components/RepeatFields";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -159,6 +160,9 @@ type BuilderActions = {
 export type BuilderCopy = {
   /** "typed as “{raw}”" — the forgiving time fields' reading line. */
   typedAs: string;
+  /** The add panel's draft line (ADR 20260906-before-you-ask, decision 3). */
+  draftPickedUp: string;
+  draftStartOver: string;
   ariaLabel: string;
   addDepartureOnDay: string;
   add: string;
@@ -385,6 +389,7 @@ function focusOnMount(el: HTMLElement | null) {
  */
 function AddPanel({
   locale,
+  addDraft,
   dateIso,
   options,
   price,
@@ -399,6 +404,8 @@ function AddPanel({
 }: {
   /** The reader's language, for the time fields' readings. */
   locale: string;
+  /** What this person had typed into the add panel when they last left it, if fresh. */
+  addDraft: FormDraftProps["draft"];
   dateIso: string;
   /** `null` until the panel's own fetch lands; the selects say so meanwhile. */
   options: BuilderOptions | null;
@@ -485,6 +492,13 @@ function AddPanel({
       columns={1}
       className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
+      {/* Nothing you typed is lost (ADR 20260906-before-you-ask, decision 3):
+          the desk's half-filled panel picks up here, and the line says so. */}
+      <FormDraft
+        form="add_departure"
+        draft={addDraft}
+        copy={{ pickedUp: copy.draftPickedUp, startOver: copy.draftStartOver }}
+      />
       {requestPlan ? (
         /* Pinned under the chrome bar, not at a hand-picked 16px: `top-4` put
            this brief *behind* the bar the moment the page scrolled, which is
@@ -1543,6 +1557,7 @@ function isUsualCrew(crew: readonly string[], usual: readonly string[] | null): 
 export function ScheduleBuilder({
   shopSlug,
   locale,
+  addDraft = null,
   days,
   loadMovePreflight,
   loadOptions,
@@ -1561,6 +1576,8 @@ export function ScheduleBuilder({
   shopSlug: string;
   /** The reader's language, for the forgiving time fields' readings. */
   locale: string;
+  /** The reader's fresh add-panel draft, applied when a panel opens. */
+  addDraft?: FormDraftProps["draft"];
   days: BuilderDay[];
   /** Fetches the add panel's course and dive-site options, first time it opens. */
   loadOptions: () => Promise<BuilderOptions>;
@@ -1871,6 +1888,7 @@ export function ScheduleBuilder({
       {canConfigure && open === "add:top" ? (
         <AddPanel
           locale={locale}
+          addDraft={addDraft}
           dateIso={defaultDateIso}
           options={options}
           price={price}
@@ -1928,6 +1946,7 @@ export function ScheduleBuilder({
             {canConfigure && weekAdd ? (
               <AddPanel
                 locale={locale}
+                addDraft={addDraft}
                 dateIso={weekAdd}
                 options={options}
                 price={price}
@@ -2096,6 +2115,7 @@ export function ScheduleBuilder({
             {canConfigure && open === `add:${day.dateIso}` ? (
               <AddPanel
                 locale={locale}
+                addDraft={addDraft}
                 dateIso={day.dateIso}
                 options={options}
                 price={price}

@@ -109,6 +109,8 @@ export function ForgivingInput({
         {...input}
         id={id}
         type="text"
+        // A form draft (`FormDraft`) applies to this box by the hidden control's name.
+        data-draft-for={name}
         inputMode={kind === "phone" ? "tel" : kind === "money" ? "decimal" : "text"}
         value={text}
         aria-describedby={showReading ? readingId : input["aria-describedby"]}

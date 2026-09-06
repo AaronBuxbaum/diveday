@@ -18,6 +18,7 @@ import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
 import type { EveningClose } from "@/lib/closeout";
+import type { FormDraftKind } from "@/lib/form-drafts";
 import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import {
@@ -90,6 +91,9 @@ import { WaiverSendControl } from "./WaiverSendControl";
  * loses renders nothing at all: a suppressed moment is not a moment drawn
  * quietly.
  */
+
+/** One of the reader's fresh form drafts, with the door back to it. */
+export type SpineDraft = { form: FormDraftKind; href: string };
 
 export type SpineHelpRequestAction = (
   requestId: string,
@@ -382,6 +386,7 @@ export function DaySpine({
   crewedTripIds,
   withheldCount = 0,
   helpRequestAction,
+  drafts = [],
   showPaymentsRow = false,
   firstRun,
   firstBooking,
@@ -401,6 +406,11 @@ export function DaySpine({
   /** How many rows the reader's role lens withheld (issue #715). */
   withheldCount?: number;
   helpRequestAction?: SpineHelpRequestAction;
+  /**
+   * The reader's own unfinished forms (ADR 20260906-before-you-ask, decision
+   * 3): one row per fresh draft under the desk group, and none otherwise.
+   */
+  drafts?: readonly SpineDraft[];
   /**
    * The desk group's one presence-derived row: the shop has departures, cannot
    * accept payments, and has never taken an order
@@ -789,13 +799,40 @@ export function DaySpine({
         />
       ) : null}
 
-      {deskActions.length > 0 || showPaymentsRow ? (
+      {deskActions.length > 0 || showPaymentsRow || drafts.length > 0 ? (
         <LedgerGroup as="h2" label={t("shopHome.spine.deskLabel")}>
           <ul className="mt-1.5">
             {/* A closing leftover owns the row once the day settles. Keep
                 standing desk work here, but never paint one action twice. */}
             {deskActions.map((action) => (
               <StationRow key={rowKey(action)} action={action} controls={controls} />
+            ))}
+            {/* What the reader started and did not finish — a draft is theirs
+                alone, so the row is too. Renders nothing when there is none. */}
+            {drafts.map((draft) => (
+              <LedgerRow
+                key={`draft:${draft.form}`}
+                className="-mx-2 px-2"
+                kind={{ word: t("today.unfinished.label"), tone: "neutral" }}
+                href={draft.href}
+                linkLabel={t("today.unfinished.resume")}
+                trailing={
+                  <span
+                    aria-hidden="true"
+                    className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary"
+                  >
+                    {t("today.unfinished.resume")}
+                  </span>
+                }
+              >
+                <p className="py-2 text-sm text-muted">
+                  {t(
+                    draft.form === "add_departure"
+                      ? "today.unfinished.addDeparture"
+                      : "today.unfinished.newDiver",
+                  )}
+                </p>
+              </LedgerRow>
             ))}
             {showPaymentsRow ? (
               <LedgerRow

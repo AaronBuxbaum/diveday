@@ -10,6 +10,7 @@ import { listBoats, listBoatsForHistory } from "@/db/boats";
 import { listDateRequestsByIds } from "@/db/course-inquiries";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
+import { readFormDraft } from "@/db/form-drafts";
 import { canPersonViewShopReports } from "@/db/reporting";
 import { openAfterDiveRollCalls } from "@/db/today";
 import {
@@ -189,6 +190,12 @@ export default async function ScheduleBoardPage({
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   const st = staffTranslator(locale);
   const now = nowDate();
+  // The reader's own half-typed add panel, if they left one in the last day
+  // (ADR 20260906-before-you-ask, decision 3).
+  const draft = await readFormDraft(db, shop.id, session.user.personId, "add_departure", now);
+  const addDraft = draft
+    ? { fields: draft.fields, savedAtLabel: formatTime(draft.savedAt, locale, shop.timezone) }
+    : null;
   const todayIso = toDateInputValue(utcToWallTime(now, tz));
   // Which week the desktop grid draws. Total by construction: a malformed or
   // missing `?week=` lands on the one the shop is in rather than refusing the
@@ -335,6 +342,8 @@ export default async function ScheduleBoardPage({
     : undefined;
   const builderCopy: BuilderCopy = {
     typedAs: st.raw("shared.forgiving.typedAs"),
+    draftPickedUp: st.raw("shared.formDraft.pickedUp"),
+    draftStartOver: st("shared.formDraft.startOver"),
     ariaLabel: st("schedule.builder.ariaLabel"),
     addDepartureOnDay: st.raw("schedule.builder.addDepartureOnDay"),
     add: st("schedule.builder.add"),
@@ -1035,6 +1044,7 @@ export default async function ScheduleBoardPage({
       <ScheduleBuilder
         shopSlug={shopSlug}
         locale={locale}
+        addDraft={addDraft}
         days={builderDays}
         loadOptions={loadBuilderOptionsAction}
         loadMovePreflight={loadMovePreflightAction}

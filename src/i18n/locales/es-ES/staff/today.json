@@ -259,5 +259,11 @@
   "sayHello": {
     "firstTrip": "{count, plural, one {{names} bucea contigo por primera vez.} other {{names} bucean contigo por primera vez.}}",
     "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}."
+  },
+  "unfinished": {
+    "label": "Sin terminar",
+    "addDeparture": "Una salida que empezaste a añadir.",
+    "newDiver": "Un buceador que empezaste a añadir.",
+    "resume": "Retomar"
   }
 }

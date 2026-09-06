@@ -5,6 +5,8 @@ import { z } from "zod";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/actions";
+import { FormDraft } from "@/components/FormDraft";
+import { formDraftCopy } from "@/components/form-draft-copy";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
@@ -13,8 +15,10 @@ import { SectionCard } from "@/components/ui/card";
 import { FieldActions } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { createDiver, findSimilarDivers } from "@/db/divers";
+import { discardFormDraft, readFormDraft } from "@/db/form-drafts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   blankableDiverEmailSchema,
@@ -89,9 +93,15 @@ export default async function NewDiverPage({
     confirmPhone,
   } = await searchParams;
 
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
 
   const locale = await requestLocale(shop.defaultLocale);
+  // What this person had typed here when they were last interrupted (ADR
+  // 20260906-before-you-ask, decision 3), applied by `FormDraft` below.
+  const draft = await readFormDraft(db, shop.id, session.user.personId, "new_diver");
+  const newDiverDraft = draft
+    ? { fields: draft.fields, savedAtLabel: formatTime(draft.savedAt, locale, shop.timezone) }
+    : null;
   const t = staffTranslator(locale);
 
   const potentialMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
@@ -183,6 +193,8 @@ export default async function NewDiverPage({
         redirect(buildNewDiverUrl(search));
       }
     }
+    // The form was accepted: whatever draft of it was kept is finished with.
+    await discardFormDraft(activeDb, staff.user.shopId, staff.user.personId, "new_diver");
 
     if (activeSurface === "trip-guests" && activeWaitlist && activeTripId) {
       await addToWaitlistAction(staff.user.shopSlug, activeTripId, formData);
@@ -325,6 +337,7 @@ export default async function NewDiverPage({
           emailMaxLength={320}
           phoneMaxLength={40}
         >
+          <FormDraft form="new_diver" draft={newDiverDraft} copy={formDraftCopy(t)} />
           <input type="hidden" name="surface" value={surfaceParam ?? ""} />
           <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
           <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
