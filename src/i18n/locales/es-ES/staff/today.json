@@ -1,0 +1,263 @@
+{
+  "todayQueue": {
+    "emptyHeading": "No hay nada pendiente para ti",
+    "emptyBody": "Todos los buceadores reservados en la próxima semana tienen en orden su exención, sus certificaciones y su pago.",
+    "emptyAction": "Ver el calendario",
+    "boatsClear": "Las salidas de hoy están todas despejadas 🤙",
+    "withheldDeskWork": "{count, plural, one {# tarea para recepción} other {# tareas para recepción}}"
+  },
+  "resendConfirmation": {
+    "resending": "Reenviando…",
+    "confirmationResent": "Confirmación reenviada.",
+    "errors": {
+      "invalid": "No se encontró esa reserva. Abre la salida para revisarla.",
+      "noEmail": "No hay correo registrado. Añade uno desde el listado y vuelve a intentarlo.",
+      "notConfigured": "El correo todavía no está configurado para este centro.",
+      "failed": "Sigue sin poder entregarse. Abre la salida para revisar la reserva."
+    }
+  },
+  "paymentAction": {
+    "copyLink": "Copiar enlace de pago",
+    "linkCopied": "Enlace copiado.",
+    "copyFailed": "No se pudo copiar. Cópialo desde la factura.",
+    "resendInvoice": "Reenviar factura",
+    "resending": "Reenviando…",
+    "invoiceResent": "Factura reenviada.",
+    "errors": {
+      "notFound": "No se encontró ese pedido. Abre la salida para revisarlo.",
+      "notOpen": "Este pedido ya no está abierto. Abre la salida para verificar su estado.",
+      "notConfigured": "Los pagos todavía no están conectados para este centro.",
+      "failed": "Sigue sin poder reenviarse. Abre la salida para revisar el pedido."
+    }
+  },
+  "helpRequest": {
+    "kind": {
+      "carryGear": "Ayuda con el equipo",
+      "firstTimer": "Orientación para principiantes",
+      "findGroup": "Encontrar su grupo"
+    },
+    "detailRequested": "{name} ha pedido ayuda: {help}.",
+    "detailAcknowledged": "{name} espera ayuda: {help}.",
+    "acknowledge": "Confirmar recibida",
+    "markHandled": "Marcar como atendida",
+    "saving": "Guardando…"
+  },
+  "yourSessions": {
+    "heading": "Tus sesiones",
+    "studentsCount": "{count, plural, one {# estudiante} other {# estudiantes}}",
+    "readyCount": "{count, plural, one {# listo} other {# listos}}",
+    "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
+    "openRoster": "Ver lista"
+  },
+  "actionKind": {
+    "rollCallMissingDiver": "Buceador sin localizar",
+    "rollCallUnfinished": "Recuento",
+    "rollCallMissingCrew": "Tripulación sin localizar",
+    "rollCallCrewUnfinished": "Recuento de tripulación",
+    "rollCallDepartureOpen": "Recuento en muelle",
+    "rollCallNotStarted": "Sin recuento",
+    "medicalReview": "Médico",
+    "medicalNotCleared": "No autorizado",
+    "readinessUnavailable": "Disponibilidad",
+    "identity": "Identidad",
+    "certification": "Certificaciones",
+    "requirements": "Configuración",
+    "waiver": "Exención",
+    "instructorMissing": "El curso necesita instructor",
+    "uncrewedCourse": "Sin instructor ni supervisión",
+    "uncrewedDeparture": "Nadie en el agua",
+    "nitroxGate": "Nitrox",
+    "highWindAlert": "Viento fuerte",
+    "divePrep": "Preparación",
+    "payment": "Pago",
+    "emailDelivery": "Correo",
+    "waitlistSeat": "Lista de espera",
+    "lastMinuteFill": "Llenar plazas",
+    "emergencyContact": "Contacto",
+    "crewBelowTarget": "Bajo el objetivo",
+    "stuckPaymentOperation": "Stripe",
+    "failedPhotoDeletion": "Limpieza",
+    "owedRefund": "Reembolso pendiente",
+    "reviewsPending": "Reseñas",
+    "gearOverdue": "Equipo atrasado",
+    "gearDueBack": "Devolución hoy",
+    "gearServiceDue": "Mantenimiento",
+    "staffCredentialDue": "Credencial",
+    "unitsUnconfirmed": "Configuración",
+    "helpRequest": "Solicitud de ayuda",
+    "sayHello": "Saluda",
+    "rentalFit": "Equipo"
+  },
+  "blockerAction": {
+    "setRequirements": "Configurar requisitos",
+    "confirmIdentity": "Confirmar identidad",
+    "checkDateOfBirth": "Verificar fecha de nacimiento",
+    "sendWaiver": "Enviar exención",
+    "nudgeWaiver": "Recordar exención",
+    "reissueWaiver": "Reemitir exención",
+    "reviewMedical": "Revisar informe médico",
+    "contactDiver": "Avisar a la persona",
+    "addCard": "Añadir certificación",
+    "askForCard": "Pedir datos de certificación",
+    "verifyCard": "Verificar certificación",
+    "reviewCard": "Revisar certificación",
+    "addSpecialty": "Añadir especialidad",
+    "verifySpecialty": "Verificar especialidad",
+    "confirmSpecialty": "Confirmar especialidad",
+    "addNitroxCard": "Añadir certificación de nitrox",
+    "askForNitroxCard": "Pedir certificación de nitrox",
+    "verifyNitroxCard": "Verificar certificación de nitrox",
+    "takePayment": "Cobrar pago",
+    "checkReadiness": "Verificar disponibilidad"
+  },
+  "blockerGroup": {
+    "setRequirements": "Configurar requisitos",
+    "confirmIdentities": "Confirmar identidades",
+    "checkDatesOfBirth": "Verificar fechas de nacimiento",
+    "sendWaivers": "Enviar exenciones",
+    "nudgeWaivers": "Recordar exenciones",
+    "reissueWaivers": "Reemitir exenciones",
+    "reviewMedicals": "Revisar informes médicos",
+    "contactDivers": "Avisar a las personas",
+    "reviewCards": "Revisar certificaciones",
+    "askForCards": "Pedir certificaciones",
+    "verifyCards": "Verificar certificaciones",
+    "reviewSpecialties": "Revisar especialidades",
+    "verifySpecialties": "Verificar especialidades",
+    "confirmImportedSpecialties": "Confirmar especialidades importadas",
+    "reviewNitroxCards": "Revisar certificaciones de nitrox",
+    "askForNitroxCards": "Pedir certificaciones de nitrox",
+    "verifyNitroxCards": "Verificar certificaciones de nitrox",
+    "takePayments": "Cobrar pagos",
+    "checkReadiness": "Verificar disponibilidad"
+  },
+  "pointingLabel": {
+    "trip": "Ver lista",
+    "diver": "Abrir la ficha de {name}"
+  },
+  "nameList": {
+    "all": "{leading} y {last}",
+    "overflow": "{leading} y {rest, plural, one {# más} other {# más}}"
+  },
+  "subject": {
+    "diverGroup": "{count, plural, one {# buceador} other {# buceadores}}"
+  },
+  "blockerDetail": {
+    "withRemaining": "{detail} {remaining, plural, one {Queda # bloqueo más por resolver.} other {Quedan # bloqueos más por resolver.}}",
+    "group": "{detail} {names}."
+  },
+  "detail": {
+    "missingDiver": "{uncounted, plural, one {# de {total} buceadores no ha vuelto} other {# de {total} buceadores no han vuelto}} a bordo tras la inmersión {dive}. Encuéntralos y cierra el recuento.",
+    "missingDiverStale": "{uncounted, plural, one {# de {total} buceadores nunca se contabilizó} other {# de {total} buceadores nunca se contabilizaron}} tras la inmersión {dive}. Demasiado antiguo para resolverlo en el muelle: reconstrúyelo desde el manifiesto y anota qué pasó.",
+    "openRollCall": "El barco ha vuelto y el recuento de la inmersión {dive} está sin terminar: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado. Contabiliza a todos antes de dejar el muelle.",
+    "openRollCallUnderway": "El barco sigue fuera y la inmersión {dive} está a medio contar: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado. Contacta con la tripulación ahora, mientras está en el sitio.",
+    "openRollCallStale": "El recuento de la inmersión {dive} nunca se cerró: {uncounted, plural, one {# de {total} buceadores sigue sin} other {# de {total} buceadores siguen sin}} resultado. Demasiado antiguo para resolverlo en el muelle: reconstrúyelo desde el manifiesto.",
+    "missingCrew": "{uncounted, plural, one {# de {total} tripulantes no ha vuelto} other {# de {total} tripulantes no han vuelto}} a bordo tras la inmersión {dive}. Encuéntralos y cierra el recuento.",
+    "missingCrewStale": "{uncounted, plural, one {# de {total} tripulantes nunca se contabilizó} other {# de {total} tripulantes nunca se contabilizaron}} tras la inmersión {dive}. Demasiado antiguo para resolverlo en el muelle: reconstrúyelo desde el manifiesto y anota qué pasó.",
+    "openCrewRollCall": "El barco ha vuelto y el recuento de tripulación de la inmersión {dive} está sin terminar: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Contabiliza a todos antes de dejar el muelle.",
+    "openCrewRollCallUnderway": "El barco sigue fuera y el recuento de tripulación de la inmersión {dive} está a medias: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Contacta con el barco ahora, mientras está en el sitio.",
+    "openCrewRollCallStale": "El recuento de tripulación de la inmersión {dive} nunca se cerró: {uncounted, plural, one {# de {total} tripulantes sigue sin} other {# de {total} tripulantes siguen sin}} resultado. Demasiado antiguo para resolverlo en el muelle: reconstrúyelo desde el manifiesto.",
+    "departureCountOpen": "El recuento en el muelle nunca se completó. {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado en la salida. Es papeleo, no un buceador en el agua. Resuélvelo para que el próximo recuento parta de una lista real.",
+    "noRollCall": "No se hizo ningún recuento: {total, plural, one {# buceador zarpó} other {# buceadores zarparon}} sin nada registrado. Nadie fue dado por desaparecido; no hay registro.",
+    "missingFit": "{count, plural, one {A # buceador le faltan} other {A # buceadores les faltan}} tallas de alquiler, así que la lista de preparación está incompleta.",
+    "ungatedNitrox": "{count, plural, one {# buceador pidió} other {# buceadores pidieron}} nitrox sin certificación verificada, así que esos tanques están planeados con aire.",
+    "highWindAlert": "Previsión de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes { (rachas de {gusts} nudos)} other {}}. Revisa las condiciones antes de salir.",
+    "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
+    "uncrewedCourse": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}} y nadie en el agua. Esta sesión no puede aceptar inscripciones hasta que se asigne un instructor.",
+    "overRatio": "{booked, plural, one {# reservado} other {# reservados}}, pero la tripulación asignada solo cubre {capacity} según la ratio de nivel inicial publicada por PADI.",
+    "overRatioIntro": "{booked, plural, one {# reservado} other {# reservados}} en esta sesión de iniciación, y la tripulación cubre {capacity} a {perInstructor} por instructor para la inmersión en aguas abiertas. Un asistente certificado no lo aumenta; solo otro instructor añade plazas.",
+    "uncrewedDeparture": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}} y no hay divemaster ni instructor asignado para supervisar esta salida.",
+    "crewBelowTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasterCount, plural, one {# supervisor} other {# supervisores}}, bajo tu objetivo de {ratio}:1.",
+    "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado. Pregunta en el mostrador; se imprime en el manifiesto.",
+    "missingContactNamed": "No tiene contacto de emergencia registrado. Pregunta en el mostrador; se imprime en el manifiesto.",
+    "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}} sin oferta de última hora enviada todavía.",
+    "waitlistSeat": "{seats, plural, one {se liberó # plaza} other {se liberaron # plazas}} y {waiting, plural, one {# persona está} other {# personas están}} en la lista de espera.",
+    "emailNotConfigured": {
+      "waiver": "Su enlace de exención nunca se envió porque el correo no está configurado.",
+      "confirmation": "Su confirmación de reserva nunca se envió porque el correo no está configurado."
+    },
+    "emailFailed": {
+      "waiver": "No se pudo entregar su enlace de exención{attempts, plural, =0 {} =1 {} other { tras # intentos}}.",
+      "confirmation": "No se pudo entregar su confirmación de reserva{attempts, plural, =0 {} =1 {} other { tras # intentos}}."
+    }
+  },
+  "actionLabel": {
+    "openRollCall": "Abrir recuento",
+    "openPrepList": "Abrir lista de preparación",
+    "openTrip": "Abrir salida",
+    "openCrew": "Abrir tripulación",
+    "openLastMinuteDeal": "Abrir oferta de última hora",
+    "openGuests": "Abrir invitados",
+    "inviteFromWaitlist": "Invitar de la lista de espera",
+    "resendWaiverLink": "Reenviar enlace de exención",
+    "resendConfirmation": "Reenviar confirmación",
+    "openOrders": "Revisar en Pedidos",
+    "openDataSettings": "Revisar en Ajustes",
+    "openReviews": "Ver reseñas",
+    "openGearRegister": "Abrir registro de equipo",
+    "openGearUnit": "Abrir ficha de la unidad",
+    "openStaffing": "Abrir personal",
+    "openUnits": "Abrir unidades",
+    "openDiver": "Abrir ficha del buceador"
+  },
+  "greeting": {
+    "morning": "Buenos días, {name}",
+    "afternoon": "Buenas tardes, {name}",
+    "evening": "Buenas noches, {name}",
+    "night": "Trabajando hasta tarde, {name}"
+  },
+  "seasonalBriefing": {
+    "summer": "Aprovecha el intervalo de superficie. Busca sombra{hasShop, select, true { en {shopName}} other {}}, bebe agua y nos vemos en el próximo barco.",
+    "autumn": "Aprovecha el intervalo de superficie. Toma una toalla calentita{hasShop, select, true { en {shopName}} other {}}, revisa la brisa y nos vemos en el próximo barco.",
+    "winter": "Aprovecha el intervalo de superficie. Abrígate con un chubasquero seco{hasShop, select, true { en {shopName}} other {}} y nos vemos en el próximo barco.",
+    "spring": "Aprovecha el intervalo de superficie. Disfruta del sol{hasShop, select, true { en {shopName}} other {}}, revisa tu equipo y nos vemos en el próximo barco."
+  },
+  "opsAlert": {
+    "operationKind": {
+      "checkoutSession": "Pago",
+      "invoice": "Factura",
+      "refund": "Reembolso"
+    },
+    "mediaKind": {
+      "coursePhoto": "Foto del curso",
+      "recapPhoto": "Foto del resumen",
+      "arrivalPhoto": "Foto de llegada",
+      "certificationCard": "Evidencia de certificación",
+      "waiverDocument": "Documento de exención",
+      "diveSitePhoto": "Foto del sitio de buceo"
+    },
+    "stuckDetail": {
+      "withId": "{kind} atascado desde {when} (Stripe: {id}). Revísalo en el panel de Stripe.",
+      "withoutId": "{kind} atascado desde {when}. Revísalo en el panel de Stripe."
+    },
+    "mediaDeletionDetail": "{kind} eliminada de la aplicación pero todavía no borrada del almacenamiento, en cola desde {when}.",
+    "owedRefundDetail": "{amount} de {tripTitle} del {when}. Cancelaste la salida y el dinero no pudo volver por tarjeta. Devuélvelo y luego marca la plaza como reembolsada.",
+    "owedRefundDetailNoAmount": "Pendiente de {tripTitle} del {when}. Cancelaste la salida y no se registró ningún importe en el pago. Devuelve lo que pagó y luego marca la plaza como reembolsada."
+  },
+  "reviewsPending": {
+    "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión",
+    "detail": "Los buceadores escribieron sobre sus salidas. Publica las buenas palabras u oculta el resto."
+  },
+  "unitsUnconfirmed": {
+    "subject": "¿En qué moneda y unidad de profundidad trabaja este centro?",
+    "detail": "Supusimos {currency} por tu zona horaria al crear la cuenta y nadie lo ha confirmado. Es lo que se le cobra a la tarjeta de un buceador."
+  },
+  "gear": {
+    "overdueDetail": "{unitLabel} debía devolverse el {dueOn} y sigue fuera.",
+    "dueBackDetail": "{unitLabel} debe devolverse hoy.",
+    "serviceDueDetail": "{clockLabel} vence el {dueOn}.",
+    "serviceOverdueDetail": "{clockLabel} venció el {dueOn}.",
+    "neverPickedUpDetail": "{unitLabel} estaba reservado hasta el {dueOn} y nunca se recogió. Libéralo.",
+    "fitConfirmDetail": "El {unitLabel} de {name} salió en talla {size}. ¿La guardamos como su talla?",
+    "fitConfirmKeep": "Guardarla",
+    "fitConfirmSaving": "Guardando"
+  },
+  "staffCredential": {
+    "dueDetail": "La renovación de {credential} para esta persona es el {dueOn}.",
+    "overdueDetail": "{credential} para esta persona venció el {dueOn}. Actualiza el registro."
+  },
+  "sayHello": {
+    "firstTrip": "{count, plural, one {{names} bucea contigo por primera vez.} other {{names} bucean contigo por primera vez.}}",
+    "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}."
+  }
+}

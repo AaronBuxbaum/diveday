@@ -762,6 +762,13 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       .update(bookings)
       .set({
         diveIntent: null,
+        // The diver's own answer to "when did you last dive?" (issue #1404).
+        // It is a statement a person made about themselves, and after an
+        // erasure there is no person it belongs to. Its two nearest neighbours
+        // on this row both cite it by name in their own docblocks as the same
+        // kind of value, and both have always been cleared — leaving this one
+        // behind was the asymmetry, not a decision.
+        lastDivedBand: null,
         reEntryAsk: null,
         welcomeSharedAt: null,
         // The instructor's next step is prose about this named student — "book

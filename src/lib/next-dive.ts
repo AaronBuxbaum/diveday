@@ -11,7 +11,7 @@ import type { CertificationLevel } from "./certification-levels";
  * is a recommendation the reader has to take on trust from software that just
  * watched them dive.
  *
- * **Four rules, in one fixed order, and every one is a check rather than an
+ * **Five rules, in one fixed order, and every one is a check rather than an
  * inference.** A reason fires because a literal fact is true, so nothing here
  * can invent an affinity out of a name:
  *
@@ -27,8 +27,17 @@ import type { CertificationLevel } from "./certification-levels";
  *    `trips.course_id` matching — and it is also the more useful sentence for
  *    the reader it is for, a student mid-course whose next dive is the next day
  *    of the course they are already doing.
- * 3. `same_site` — the candidate goes back to somewhere the day went.
- * 4. `soonest_with_room` — none of the above, so the honest reason is the only
+ * 3. `same_lens` — the candidate wears the same one of the shop's own words for
+ *    a kind of day as the day just dived (`trips.lens_id`, ADR 20260904's
+ *    decision 2, slice 16f). A **literal id match** and nothing else: two
+ *    lenses whose names read alike are two words the shop chose to keep apart,
+ *    and a similarity judgement here is exactly the invented affinity the rest
+ *    of this list is built to refuse. Above `same_site` because "another day
+ *    like that one" is a better reason than "the same reef again", and below
+ *    `course_next_session` because a course session is a commitment the diver
+ *    has already made.
+ * 4. `same_site` — the candidate goes back to somewhere the day went.
+ * 5. `soonest_with_room` — none of the above, so the honest reason is the only
  *    one left: it is next and it has a seat. Dull is fine; invented is not.
  *
  * **No score is exported or returned**, deliberately. A number on the card is
@@ -39,15 +48,6 @@ import type { CertificationLevel } from "./certification-levels";
  * its alternates from `rankNextDives` here** rather than writing a second one.
  * `pickNextDive` is the head of that list and nothing more, so the two can
  * never disagree about which departure leads.
- *
- * **The lens reason is a documented gap.** ADR 20260904's decision 2 gave a
- * departure one of the shop's own words for a kind of day (`trips.lens_id`,
- * slice 16f), and "another day like that one" is plainly a fifth rule. It is
- * not here because the *day just dived* is what a lens reason has to compare
- * against, and the recap reader hands over a trip that has already sailed — so
- * the rule needs its lens carried through `RecapPageData`, which is a separate
- * change to a separate reader. When it lands it is one more code in the list
- * above and one more branch in `reasonFor`, never a second ranker.
  *
  * Framework-free, deterministic, and wordless: `src/i18n/next-dive-labels.ts`
  * turns each code into a sentence (ADR 20260731-domain-layer-copy-leaks).
@@ -60,6 +60,7 @@ import type { CertificationLevel } from "./certification-levels";
 export type NextDiveReason =
   | "crew_named_site"
   | "course_next_session"
+  | "same_lens"
   | "same_site"
   | "soonest_with_room";
 
@@ -67,6 +68,7 @@ export type NextDiveReason =
 export const NEXT_DIVE_REASONS = [
   "crew_named_site",
   "course_next_session",
+  "same_lens",
   "same_site",
   "soonest_with_room",
 ] as const satisfies readonly NextDiveReason[];
@@ -87,6 +89,13 @@ export type NextDiveCandidate = {
   /** The departure's named dive site, or null when it has none on the row. */
   siteName: string | null;
   /**
+   * The shop's own word for what kind of day this is (`trips.lens_id`), or null
+   * when it wears none. An **id**, never the word: the rule is an equality and
+   * the sentence takes its noun from the day's lens, which by definition is the
+   * same row whenever the rule fires.
+   */
+  lensId: string | null;
+  /**
    * The level the trip and its sites demand between them, or null when the
    * departure asks nothing of anybody. Only ever *stated* on the card — this is
    * a fact about the trip, and admission has already proven the diver clears it.
@@ -106,6 +115,14 @@ export type NextDiveDay = {
   shoutout: string | null;
   /** Every site the day actually went to. */
   siteNames: readonly string[];
+  /** The lens the day wore, or null. Compared to a candidate's by id alone. */
+  lensId: string | null;
+  /**
+   * That lens in the shop's own words, for the sentence. Read from the day
+   * rather than the candidate because `same_lens` fires only on an id match, so
+   * the two are the same row — and one read answers for every candidate.
+   */
+  lensName: string | null;
 };
 
 export type NextDivePick = {
@@ -117,6 +134,8 @@ export type NextDivePick = {
   reasonSite?: string;
   /** The course the reason names, on `course_next_session`. */
   reasonCourse?: string;
+  /** The shop's word for the kind of day, on `same_lens`. */
+  reasonLens?: string;
   /**
    * The level this departure demands, when it demands one — worded as "your
    * {level} card covers it", because admission has already cleared the diver.
@@ -155,10 +174,14 @@ export function mentionsSite(shoutout: string | null, siteName: string | null): 
   return new RegExp(`${lead}${escaped}${tail}`, "iu").test(shoutout);
 }
 
-/** Why this candidate would be picked. Every candidate has one — the fourth is the floor. */
+/** Why this candidate would be picked. Every candidate has one — the fifth is the floor. */
 function reasonFor(candidate: NextDiveCandidate, day: NextDiveDay): NextDiveReason {
   if (mentionsSite(day.shoutout, candidate.siteName)) return "crew_named_site";
   if (day.courseId !== null && candidate.courseId === day.courseId) return "course_next_session";
+  // Literal id equality, deliberately. Two lenses a shop worded similarly are
+  // still two words it chose to keep apart, and anything looser here would be
+  // the invented affinity every other rule in this module refuses.
+  if (day.lensId !== null && candidate.lensId === day.lensId) return "same_lens";
   if (
     candidate.siteName !== null &&
     day.siteNames.some(
@@ -205,6 +228,7 @@ export function rankNextDives(input: NextDiveInput): NextDivePick[] {
       ...(reason === "course_next_session"
         ? { reasonCourse: candidate.courseTitle ?? undefined }
         : {}),
+      ...(reason === "same_lens" ? { reasonLens: input.day.lensName ?? undefined } : {}),
       levelCovered: candidate.requiredLevel,
       seatsLeft: candidate.seatsLeft,
     }));

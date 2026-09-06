@@ -193,6 +193,40 @@ describe("a station owns its departure's facts", () => {
     expect(screen.getByText("3 divers still need rental sizes.")).toBeInTheDocument();
   });
 
+  /**
+   * What the divers aboard came for, as one counted line (D12/#1172 with
+   * D23/#1183, issue #1386). It rendered only inside the manifest's collapsed
+   * buddy panel until now, so a shop could collect answers for weeks and meet
+   * them only by opening a fold on a safety surface.
+   *
+   * The two cases that matter are the two ends: a station nobody answered on
+   * must render *nothing* — not a heading over an empty list — and a station
+   * with answers must name the counts and no diver.
+   */
+  it("renders no extra line on a station whose bookings carry no intent", () => {
+    renderSpine({ departures: [departure({ intents: [] })] });
+    expect(screen.queryByText(/Aboard today/)).toBeNull();
+  });
+
+  it("counts what the divers came for, naming numbers and nobody", () => {
+    renderSpine({
+      departures: [
+        departure({
+          intents: [
+            { intent: "good_day", count: 4 },
+            { intent: "easing_back", count: 2 },
+          ],
+        }),
+      ],
+    });
+    const line = screen.getByText(/Aboard today/);
+    expect(line).toHaveTextContent("4 out for a good day");
+    expect(line).toHaveTextContent("2 getting comfortable again");
+    // An aggregate, never a pairing: no diver is named by it.
+    expect(line).not.toHaveTextContent("Keiko Tanaka");
+    expect(line.textContent).not.toMatch(/Priya|Grace|Yara/);
+  });
+
   it("says the site, hull, crew and price on the station's own line", () => {
     renderSpine();
     expect(

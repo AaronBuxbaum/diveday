@@ -41,7 +41,7 @@ export function sayHelloSentences(
   const sentences =
     firstTimers.length > 0
       ? [
-          t("shared.today.sayHello.firstTrip", {
+          t("today.sayHello.firstTrip", {
             count: firstTimers.length,
             names: list.format(firstTimers.map((entry) => entry.name)),
           }),
@@ -49,9 +49,7 @@ export function sayHelloSentences(
       : [];
   for (const entry of cues) {
     if (entry.cue.kind !== "returning") continue;
-    sentences.push(
-      t("shared.today.sayHello.returning", { name: entry.name, years: entry.cue.years }),
-    );
+    sentences.push(t("today.sayHello.returning", { name: entry.name, years: entry.cue.years }));
   }
   return sentences;
 }

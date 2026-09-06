@@ -49,11 +49,31 @@ import {
  * owner; changing it is one line here and no change at all in
  * `src/lib/postcard-image.ts`, which decides no colours.
  *
- * The download mechanism is the one already shipping under this app's CSP:
- * `toDataURL` onto an `<a download>` (`settings/embed/EmbedGenerator.tsx`). No
- * html-to-image, no dom-to-image, no new dependency. On iOS Safari the
- * `download` attribute has historically been ignored and the data URL opens in
- * a new tab for a long-press save — a degradation rather than a failure.
+ * **Two ways off the page, and the phone gets the better one** (issue #1407).
+ * Where the browser will take a file — `navigator.canShare({ files })`, the
+ * feature test, never a user-agent sniff — the card goes straight into the
+ * share sheet, which is where a diver sharing their day was heading anyway.
+ * Everywhere else it falls back to the mechanism already shipping under this
+ * app's CSP: `toDataURL` onto an `<a download>`
+ * (`settings/embed/EmbedGenerator.tsx`). No html-to-image, no dom-to-image, no
+ * new dependency, and the fallback is byte-for-byte what it always was — which
+ * is what keeps the Chromium e2e download spec meaningful, since Chromium does
+ * not take the share path.
+ *
+ * That fallback existed because iOS Safari has historically ignored the
+ * `download` attribute: the data URL opens in a new tab and the diver long-presses
+ * to save. A degradation rather than a failure, but the phone is the device
+ * this feature is *for*, which is what the share path is about.
+ *
+ * Two things the share path has to get right, and both are load-bearing:
+ *
+ * - **The blob is built before `share` is called.** Some platforms require the
+ *   share call to be reachable from the click gesture, and awaiting the canvas
+ *   first is what breaks that. So the file is finished, *then* offered.
+ * - **A dismissed sheet is not an error.** Cancelling rejects the promise with
+ *   an `AbortError`, and treating that as a failure would show the "didn't
+ *   save" alert to somebody who simply changed their mind. It is caught by
+ *   name and returns the button to rest.
  *
  * Holds no copy: every string is a `copy` prop, like `PrintRecordButton`.
  */
@@ -122,6 +142,10 @@ export function SavePostcard({
         readPalette(),
         await borrowSiteMark(),
       );
+      if (await shareCard(canvas, fileName)) {
+        setState("idle");
+        return;
+      }
       const href = canvas.toDataURL("image/png");
       const anchor = document.createElement("a");
       anchor.href = href;
@@ -185,6 +209,46 @@ export function SavePostcard({
       </div>
     </>
   );
+}
+
+/**
+ * Hand the finished card to the platform's share sheet, or say the sheet is not
+ * an option — `true` means the diver has been dealt with and the caller must
+ * not also click an anchor at them.
+ *
+ * A **dismissal returns `true`**: the diver saw the sheet and closed it, which
+ * is a completed interaction, and following it with a download would be the
+ * page overriding the choice they just made. Only a browser that cannot take
+ * the file at all returns `false`, and only a genuine share failure throws —
+ * which the caller reports, because at that point nothing reached the diver.
+ */
+async function shareCard(canvas: HTMLCanvasElement, fileName: string): Promise<boolean> {
+  // Cheap first: no share API at all means no blob worth encoding.
+  if (typeof navigator.share !== "function" || typeof navigator.canShare !== "function") {
+    return false;
+  }
+  const blob = await canvasBlob(canvas);
+  if (!blob) return false;
+  const file = new File([blob], fileName, { type: "image/png" });
+  // The files test specifically. A browser can have `share` for links and still
+  // refuse a file, and `canShare()` with no argument would answer for the wrong
+  // question.
+  if (!navigator.canShare({ files: [file] })) return false;
+  try {
+    await navigator.share({ files: [file] });
+  } catch (error) {
+    // `AbortError` is the cancel button. Anything else genuinely failed.
+    if ((error as DOMException | null)?.name !== "AbortError") throw error;
+  }
+  return true;
+}
+
+/** `canvas.toBlob` as a promise, resolving to null on a canvas that cannot encode. */
+function canvasBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  if (typeof canvas.toBlob !== "function") return Promise.resolve(null);
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), "image/png");
+  });
 }
 
 /**

@@ -272,6 +272,47 @@ describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
       .where(eq(bookings.id, booking.id));
     expect(after?.welcomeSharedAt).toBeNull();
   });
+
+  /**
+   * `bookings.last_dived_band` is the diver's own answer to "when did you last
+   * dive?", and it predates all of the above — it has sat beside two columns
+   * that *were* cleared since #1222 without being one of them (issue #1404).
+   *
+   * The argument for keeping it is that a band is coarse, names nobody, and
+   * describes a boat rather than a person. The argument that wins is that a
+   * person said it about themselves, and `dive_intent` — which is cleared, and
+   * whose docblock cites this column by name as the reason it lives on the
+   * booking — is exactly the same kind of value. An asymmetry between the two
+   * with no written reason reads to the next person as an oversight, and gets
+   * "fixed" in whichever direction they guess.
+   */
+  it("takes the diver's recency answer with them", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    const [booking] = await db
+      .select({ id: bookings.id, personId: bookings.personId })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), ne(bookings.status, "cancelled")))
+      .orderBy(bookings.id)
+      .limit(1);
+    if (!booking) throw new Error("expected a seeded booking");
+    await db
+      .update(bookings)
+      .set({ lastDivedBand: "over_five_years" })
+      .where(eq(bookings.id, booking.id));
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      actorPersonId: owner.id,
+    });
+    expect(erased.ok).toBe(true);
+
+    const [after] = await db
+      .select({ lastDivedBand: bookings.lastDivedBand })
+      .from(bookings)
+      .where(eq(bookings.id, booking.id));
+    expect(after?.lastDivedBand).toBeNull();
+  });
 });
 
 describe("anonymizeDiver — the integration outbox (issue #1016)", () => {

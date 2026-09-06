@@ -19,6 +19,19 @@ first. So read the whole tail before fixing anything — the list at the bottom 
 fixing all of it in one pass is the point. A phase that passed prints one line; the failures
 print in full, last.
 
+Then, **before you push**, run what your diff *reaches* rather than only what you edited:
+
+```bash
+pnpm test:changed
+```
+
+It selects by import graph, so it picks up the coverage guards — the ones that assert over
+`src/db/schema.ts` from files your change never touches, and therefore the ones a focused
+`pnpm test <file>` can never select. When you touched `schema.ts`, `test:changed` widens to the
+whole suite and belongs to CI; name the three guards by path instead
+(`src/db/export.test.ts`, `src/db/diver-merge.test.ts`, `src/db/delete-path-coverage.test.ts` —
+40 tests, about a minute). See [docs/agents/verifying.md](../../../docs/agents/verifying.md).
+
 ## 2. Flows changed: e2e
 
 ```bash

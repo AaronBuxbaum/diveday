@@ -5,6 +5,7 @@ import { readCertificationEvidence } from "./certification-evidence";
 import { nextDiveForBooking } from "./next-dive";
 import { createCertification, upsertTripRequirements } from "./readiness";
 import { people, trips } from "./schema";
+import { createTripLens } from "./trip-lenses";
 import { createTrip } from "./trips";
 
 // Spied rather than replaced: every case below still needs the real reads, and
@@ -46,11 +47,20 @@ async function boardContext() {
 async function departure(
   db: Awaited<ReturnType<typeof boardContext>>["db"],
   shopId: string,
-  input: { title: string; startsAt: Date; capacity?: number; isPrivate?: boolean },
+  input: {
+    title: string;
+    startsAt: Date;
+    capacity?: number;
+    isPrivate?: boolean;
+    lensId?: string | null;
+    diveSiteId?: string;
+  },
 ) {
   const trip = await createTrip(db, {
     shopId,
     title: input.title,
+    ...(input.lensId === undefined ? {} : { lensId: input.lensId }),
+    ...(input.diveSiteId === undefined ? {} : { diveSiteId: input.diveSiteId }),
     startsAt: input.startsAt,
     endsAt: new Date(input.startsAt.getTime() + 4 * 60 * 60 * 1000),
     capacity: input.capacity ?? 6,
@@ -66,6 +76,7 @@ const day = (justDivedTripId: string) => ({
   dayCourseId: null,
   dayShoutout: null,
   daySiteNames: [] as string[],
+  dayLensId: null as string | null,
   now: NOW,
 });
 
@@ -208,5 +219,62 @@ describe("nextDiveForBooking", () => {
       ...day("00000000-0000-0000-0000-0000000000ff"),
     });
     expect(readCertificationEvidence).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("nextDiveForBooking — the shop's own word for a kind of day (#1408)", () => {
+  /**
+   * `same_lens` is the one reason whose fact lives on a *second* table, so it
+   * is the one the database half can get wrong on its own: the rules in
+   * `src/lib/next-dive.ts` are proven against plain values, and what is only
+   * checkable here is that the sailed day's `lens_id` and each candidate's
+   * both actually arrive, and that the word the sentence needs is read.
+   */
+  it("prefers a departure wearing the day's lens over a bare site match", async () => {
+    const { db, shop, diverId } = await boardContext();
+    const lens = await createTripLens(db, shop.id, "easygoing reef");
+    if (!lens) throw new Error("lens not created");
+
+    // The site match is sooner, so only precedence can put the lens first.
+    const sited = await departure(db, shop.id, { title: "French Reef again", startsAt: AT(24) });
+    await db.update(trips).set({ diveSiteId: null }).where(eq(trips.id, sited.id));
+    const lensed = await departure(db, shop.id, {
+      title: "Another easy day",
+      startsAt: AT(48),
+      lensId: lens.id,
+    });
+
+    const pick = await nextDiveForBooking(db, {
+      shopId: shop.id,
+      personId: diverId,
+      ...day("00000000-0000-0000-0000-0000000000ff"),
+      daySiteNames: ["French Reef"],
+      dayLensId: lens.id,
+    });
+    expect(pick).toMatchObject({
+      tripId: lensed.id,
+      reason: "same_lens",
+      reasonLens: "easygoing reef",
+    });
+  });
+
+  it("gives no lens reason when the day wore none", async () => {
+    const { db, shop, diverId } = await boardContext();
+    const lens = await createTripLens(db, shop.id, "easygoing reef");
+    if (!lens) throw new Error("lens not created");
+    const lensed = await departure(db, shop.id, {
+      title: "Another easy day",
+      startsAt: AT(24),
+      lensId: lens.id,
+    });
+
+    const pick = await nextDiveForBooking(db, {
+      shopId: shop.id,
+      personId: diverId,
+      ...day("00000000-0000-0000-0000-0000000000ff"),
+      dayLensId: null,
+    });
+    expect(pick).toMatchObject({ tripId: lensed.id, reason: "soonest_with_room" });
+    expect(pick?.reasonLens).toBeUndefined();
   });
 });

@@ -22,6 +22,7 @@ import type { StaffMessageKey } from "./staff-messages";
 export const NEXT_DIVE_REASON_KEYS: Record<NextDiveReason, DiverMessageKey> = {
   crew_named_site: "recap.nextDiveCrewNamedSite",
   course_next_session: "recap.nextDiveCourseSession",
+  same_lens: "recap.nextDiveSameLens",
   same_site: "recap.nextDiveSameSite",
   soonest_with_room: "recap.nextDiveSoonest",
 };

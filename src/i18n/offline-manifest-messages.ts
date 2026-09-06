@@ -7,7 +7,8 @@ import { translatorOnError } from "./on-error";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./settings";
 
 /**
- * **The two staff namespaces the offline boat manifest reads** (issues #1353, #1359).
+ * **The two staff namespaces the offline boat manifest reads** (issues #1353, #1359,
+ * and #1368 which shrank one of them from underneath).
  *
  * `OfflineManifestView` is a Client Component -- it has to be, because the
  * whole point is a manifest that opens from cache on a phone with no signal at
@@ -32,6 +33,16 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  * own, as above. Teaching the scan to skip comments would mean teaching it
  * where the strings are, and a stripper that guesses wrong deletes a real
  * `t()` call from the scan silently, on a safety surface.
+ *
+ * **Then the same problem one layer in, fixed at the cause** (issue #1368). Two
+ * rounds of narrowing had made `shared` the answer, and `shared` had itself
+ * become too wide: the manifest reached 15 of its 41 subtrees and shipped the
+ * other 26, the largest being the shop home's own `today` copy at ~27.5 KB
+ * minified across the two locales — on a route that renders no shop home. The
+ * fix was not a third narrowing here but giving `today` its own area bundle, as
+ * ADR 20260807-per-area-staff-bundles says an area gets. Nothing in this file
+ * changed; `shared.json` got smaller beneath it, and so did every other staff
+ * bundle that imports it.
  *
  * **Its own module, not a second export beside `staffTranslator`.** Putting the
  * narrow composer in `staff-messages.ts` would leave the saving resting on

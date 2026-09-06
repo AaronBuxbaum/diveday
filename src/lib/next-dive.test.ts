@@ -23,6 +23,8 @@ const DAY: NextDiveDay = {
   courseId: null,
   shoutout: null,
   siteNames: ["French Reef"],
+  lensId: null,
+  lensName: null,
 };
 
 function candidate(overrides: Partial<NextDiveCandidate> = {}): NextDiveCandidate {
@@ -33,6 +35,7 @@ function candidate(overrides: Partial<NextDiveCandidate> = {}): NextDiveCandidat
     courseId: null,
     courseTitle: null,
     siteName: null,
+    lensId: null,
     requiredLevel: null,
     seatsLeft: 4,
     ...overrides,
@@ -143,17 +146,29 @@ describe("the reasons", () => {
     expect(NEXT_DIVE_REASONS).toEqual([
       "crew_named_site",
       "course_next_session",
+      "same_lens",
       "same_site",
       "soonest_with_room",
     ]);
     const ranked = rankNextDives({
-      day: { ...DAY, courseId: "course-ow", shoutout: "The Spiegel Grove, next time." },
+      day: {
+        ...DAY,
+        courseId: "course-ow",
+        shoutout: "The Spiegel Grove, next time.",
+        lensId: "lens-easy",
+        lensName: "easygoing reef",
+      },
       candidates: [
         candidate({ tripId: "plain", startsAt: new Date("2026-09-07T12:00:00Z") }),
         candidate({
           tripId: "site",
           siteName: "French Reef",
           startsAt: new Date("2026-09-07T13:00:00Z"),
+        }),
+        candidate({
+          tripId: "lens",
+          lensId: "lens-easy",
+          startsAt: new Date("2026-09-07T13:30:00Z"),
         }),
         candidate({
           tripId: "course",
@@ -169,6 +184,80 @@ describe("the reasons", () => {
     });
     // Every one of them is sooner than the one above it, and every one loses.
     expect(ranked.map((row) => row.reason)).toEqual(NEXT_DIVE_REASONS);
+  });
+});
+
+describe("same_lens", () => {
+  /**
+   * The shop's own word for a kind of day (`trips.lens_id`, ADR 20260904
+   * decision 2). The rule is a literal id equality and these cases are here to
+   * keep it one: a lens reason that could fire on anything but the same row
+   * would be the module inventing an affinity, which is the one thing every
+   * other rule is written to refuse.
+   */
+  it("fires when the candidate wears the same lens as the day just dived", () => {
+    const pick = pickNextDive({
+      day: { ...DAY, lensId: "lens-easy", lensName: "easygoing reef" },
+      candidates: [candidate({ tripId: "same-lens", lensId: "lens-easy" })],
+    });
+    expect(pick).toMatchObject({ reason: "same_lens", reasonLens: "easygoing reef" });
+  });
+
+  it("never fires on a different lens, however alike the words", () => {
+    const pick = pickNextDive({
+      // Two words a shop deliberately kept apart. Nothing here may read them.
+      day: { ...DAY, lensId: "lens-easy", lensName: "easygoing reef" },
+      candidates: [candidate({ tripId: "other", lensId: "lens-easygoing-reef" })],
+    });
+    expect(pick?.reason).toBe("soonest_with_room");
+    expect(pick?.reasonLens).toBeUndefined();
+  });
+
+  it("never fires when the day wore no lens, whatever the candidates wear", () => {
+    const pick = pickNextDive({
+      day: { ...DAY, lensId: null, lensName: null },
+      candidates: [candidate({ tripId: "lensed", lensId: "lens-easy" })],
+    });
+    expect(pick?.reason).toBe("soonest_with_room");
+  });
+
+  it("loses to the course session and beats the site", () => {
+    const ranked = rankNextDives({
+      day: {
+        ...DAY,
+        courseId: "course-ow",
+        lensId: "lens-easy",
+        lensName: "easygoing reef",
+      },
+      candidates: [
+        // Both sooner than the course session, and both still lose to it.
+        candidate({
+          tripId: "site",
+          siteName: "French Reef",
+          startsAt: new Date("2026-09-07T12:00:00Z"),
+        }),
+        candidate({
+          tripId: "lens",
+          lensId: "lens-easy",
+          startsAt: new Date("2026-09-07T13:00:00Z"),
+        }),
+        candidate({
+          tripId: "course",
+          courseId: "course-ow",
+          startsAt: new Date("2026-09-07T14:00:00Z"),
+        }),
+      ],
+    });
+    expect(ranked.map((row) => row.tripId)).toEqual(["course", "lens", "site"]);
+  });
+
+  it("carries no lens word onto a pick made for another reason", () => {
+    const pick = pickNextDive({
+      day: { ...DAY, lensId: "lens-easy", lensName: "easygoing reef" },
+      candidates: [candidate({ tripId: "site", siteName: "French Reef" })],
+    });
+    expect(pick?.reason).toBe("same_site");
+    expect(pick?.reasonLens).toBeUndefined();
   });
 });
 

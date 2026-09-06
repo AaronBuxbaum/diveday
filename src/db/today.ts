@@ -63,6 +63,7 @@ import {
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { countInWaterCrew, effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
+import type { DiveIntentCount } from "@/lib/dive-intent";
 import {
   DEFAULT_DIVERS_PER_DIVEMASTER,
   divemasterRatioGap,
@@ -99,6 +100,7 @@ import { welcomeCueFor } from "@/lib/welcome-cue";
 import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
+import { diveIntentTallyForTrips } from "./dive-intent";
 import {
   listFitAdjustedReturns,
   listGearDueBack,
@@ -273,6 +275,14 @@ export type DepartureSummary = {
    * anything, which is most departures and renders nothing.
    */
   stage: TripStageReading | null;
+  /**
+   * **What the divers aboard came for, as counts** (D12/#1172 with D23/#1183,
+   * issue #1386). Empty on a departure nobody answered on — which renders
+   * nothing, so a shop that never asks never sees a row about it.
+   *
+   * Read for the whole day in one query below, never one per station.
+   */
+  intents: DiveIntentCount[];
 };
 
 export type CrewedSessionSummary = {
@@ -1218,6 +1228,12 @@ export async function getTodayWork(
   const credentialRows = await listStaffCredentials(db, shopId);
 
   const tripIds = todayTrips.map((t) => t.id);
+  // What the divers on today's boats came for, as counts (issue #1386).
+  // **One query for the whole day**, keyed on the trip ids already in hand —
+  // one call per station is the shape this is written to avoid, and the reader
+  // leaves departures nobody answered on out of its map entirely, so an
+  // absent entry is the ordinary "nobody said" rather than a case to test for.
+  const diveIntents = await diveIntentTallyForTrips(db, shopId, tripIds);
   // The hull each of today's departures sails on, for the station's meta line.
   // A bounded lookup keyed on the trips already in hand rather than a join
   // widened into `pagedUpcomingTripsWithCounts`: that reader also feeds the
@@ -2154,6 +2170,9 @@ export async function getTodayWork(
       // manifest is the exception and reads the raw ledger — that strip is the
       // crew's own control, and it shows them their last answer.
       stage: liveStageOf(stagesByTrip.get(trip.id) ?? null, trip.endsAt, now),
+      // Absent from the map means nobody aboard answered, and an empty tally is
+      // what makes the station render no line at all.
+      intents: diveIntents.get(trip.id) ?? [],
     };
   });
 

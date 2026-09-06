@@ -664,6 +664,7 @@
     "nextDiveHeading": "Your next dive",
     "nextDiveCrewNamedSite": "Your crew mentioned {site}.",
     "nextDiveCourseSession": "The next session of {course}.",
+    "nextDiveSameLens": "Another {lens} day.",
     "nextDiveSameSite": "Back to {site}.",
     "nextDiveSoonest": "The next one with room.",
     "nextDiveLevelCovers": "Your {level} card covers it.",

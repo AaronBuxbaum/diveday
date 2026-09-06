@@ -59,25 +59,42 @@ const nextConfig: NextConfig = {
   ],
   // Vercel runs Linux. It has never run macOS, and it never will.
   //
-  // `sharp` ships its libvips binary as one optional package per platform, and
-  // pnpm installs all of them so the lockfile resolves on a developer's Mac as
-  // well as on a runner. Every one then lands in the *traced* closure, which is
-  // the set of files Vercel actually deploys and the set its 250 MB
-  // per-function limit measures. Counted off `.next/**/*.nft.json` with every
-  // path resolved and stat'd, the worst function — `/s/[shopSlug]/trips/[id]`,
-  // 1,020 files — was **110.5 MB**, and four platform builds of one image
-  // library were 71.9 MB of it:
+  // `sharp` ships its libvips binary as one optional package per platform. The
+  // traced closure — the set of files Vercel actually deploys, and the set its
+  // 250 MB per-function limit measures — is counted off `.next/**/*.nft.json`
+  // with every path resolved and stat'd.
   //
-  //     19.4 MB  @img/sharp-libvips-darwin-x64     <- excluded below
-  //     17.8 MB  @img/sharp-libvips-linux-x64         the one that runs
-  //     17.4 MB  @img/sharp-libvips-linux-arm64       kept, see 2026-09-04
-  //     17.3 MB  @img/sharp-libvips-darwin-arm64   <- excluded below
+  // **Re-measured 2026-09-06 on Linux x64** (the platform CI and Vercel both
+  // build on; a measurement taken on a Mac answers this question wrong):
   //
-  // Dropping the two darwin pairs takes 37.2 MB off *every* traced function.
-  // Nothing resolves them at runtime: `sharp` selects its native by
-  // `process.platform` at require time, so on a Linux function the darwin
-  // packages are never opened — which is exactly why they are safe to exclude
-  // and were never noticed.
+  //     147 traced closures
+  //     worst function  /s/[shopSlug]/trips/[id]  —  821 files, 35.7 MB
+  //     17.8 MB  @img/sharp-libvips-linux-x64   traced; the one that runs
+  //      0.0 MB  @img/*-darwin-*                absent — see below
+  //
+  // **The four darwin globs below save nothing here, and that is fine.** This
+  // comment used to credit them with "37.2 MB off every traced function",
+  // measured while `pnpm-workspace.yaml` carried a `supportedArchitectures` key
+  // forcing darwin+linux x arm64+x64 optional packages onto *every* install.
+  // That key is gone (52e62f1, which took a cold install from 2.7 GB to
+  // 1.4 GB), so pnpm now installs only what matches the machine: on this box
+  // `node_modules/@img/` holds exactly `colour`, `sharp-libvips-linux-x64` and
+  // `sharp-linux-x64`, the `.pnpm` store holds no others, and **zero
+  // `@img/*darwin*` paths appear in any trace**. A glob cannot exclude a file
+  // that was never installed.
+  //
+  // So they are **insurance, not a saving**: they are what stops a build on a
+  // Mac — the one machine where those packages *do* install — from shipping an
+  // unreachable native into a Linux function. Nothing resolves them at runtime
+  // either way, since `sharp` selects its native by `process.platform` at
+  // require time. They cost nothing and they are deliberately kept; do not
+  // delete them because they currently match nothing, which is the one wrong
+  // turn this paragraph exists to prevent.
+  //
+  // **`pnpm-lock.yaml` is not evidence.** It still lists every platform's
+  // package — darwin, linuxmusl, win32, wasm32 — because that is *resolution*,
+  // and 52e62f1 left the lockfile byte-identical. Read an installed
+  // `node_modules/@img/` and `node_modules/.pnpm/`, never the lockfile.
   //
   // `linux-arm64` is deliberately **not** excluded, and the two halves of that
   // are worth keeping straight, because this file has now been wrong about it
@@ -115,8 +132,9 @@ const nextConfig: NextConfig = {
   // node-postgres `Pool`, and the embedded-database branch is never taken. The
   // *module* still loads, because the import at the top of that file is static —
   // but `new PGlite()` never runs, so the 17.40 MiB of `.wasm`, `.data` and
-  // extension tarballs beside it are never opened. Measured off the traces:
-  // present, byte-identical, in **126 of the 142** closures.
+  // extension tarballs beside it are never opened. Re-confirmed 2026-09-06:
+  // 40 such files totalling **17.40 MiB** sit in the store, and the exclusion
+  // below keeps every one of them out of **all 147** traced closures.
   //
   //     9.62 MiB  pglite.wasm
   //     6.00 MiB  pglite.data
