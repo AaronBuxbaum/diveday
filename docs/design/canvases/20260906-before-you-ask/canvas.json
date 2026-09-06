@@ -1,0 +1,23 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "The argument" },
+    { "id": "page-2", "name": "The surfaces" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Before you ask — read me first", "x": 0, "y": 0, "w": 1180, "h": 2440, "page": "page-1" },
+    { "file": "SendHold.dc.html", "title": "A send you can take back — three frames", "x": 1300, "y": 0, "w": 1180, "h": 1200, "page": "page-1" },
+    { "file": "Fields.dc.html", "title": "Type it any way — the specimen", "x": 1300, "y": 1340, "w": 1180, "h": 1320, "page": "page-1" },
+    { "file": "KnownDiver.dc.html", "title": "The booking page, from her own link", "x": 0, "y": 0, "w": 390, "h": 1240, "page": "page-2" },
+    { "file": "AddDeparture.dc.html", "title": "The add panel already knows Saturday", "x": 520, "y": 0, "w": 1180, "h": 980, "page": "page-2" },
+    { "file": "Resume.dc.html", "title": "Nothing you typed is lost — phone", "x": 1820, "y": 0, "w": 390, "h": 1040, "page": "page-2" },
+    { "file": "Palette.dc.html", "title": "Ask it, and it answers", "x": 2340, "y": 0, "w": 1180, "h": 1080, "page": "page-2" }
+  ],
+  "annotations": [
+    { "id": "read-order", "x": 0, "y": -170, "w": 560, "text": "Read the cover first: the three findings, the six moves, the four-part rule. The two specimen boards beside it show a rule in frames. Page 2 holds the surfaces.", "page": "page-1" },
+    { "id": "fiction", "x": 0, "y": -170, "w": 560, "text": "Blue Mantis Divers, the week of Thursday August 27, 2026. Every name is invented. Reef in Geist on the staff boards; the demo shop's green and Bricolage Grotesque on the diver's.", "page": "page-2" },
+    { "id": "known-diver-door", "x": 0, "y": 1300, "w": 390, "text": "This page opens only from Yara's own link. A cold visitor gets the form that ships. Whether an email typed cold that matches a diver may receive one link is the owner's call (H-68 b); nothing shows on the page either way.", "page": "page-2" },
+    { "id": "crew-call", "x": 520, "y": 1040, "w": 520, "text": "The crew field is the one value on this panel that schedules people. Whether the pattern may fill it, or leaves it empty with the sentence, is H-68 c.", "page": "page-2" },
+    { "id": "palette-note", "x": 2340, "y": 1140, "w": 520, "text": "The palette answers; it never mutates. Each act lands on the page whose form does the work, with that form ready.", "page": "page-2" }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}
