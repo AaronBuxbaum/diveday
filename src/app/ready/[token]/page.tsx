@@ -98,7 +98,7 @@ import {
   publicTripCalendarPath,
   publicTripPath,
 } from "@/lib/public-routes";
-import { RE_ENTRY_ASKS, type ReEntryAsk } from "@/lib/re-entry";
+import { reEntryOffersFor } from "@/lib/re-entry";
 import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
 import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
 import { signRecapToken } from "@/lib/recap-links";
@@ -1043,17 +1043,6 @@ function ExpiredLink({
  * own actions exactly as before, and gate nothing: answering none of them
  * still finishes the step, and answering one cannot blank another.
  */
-/**
- * The offers worth making, which is all three only where the shop publishes a
- * refresher course: an ask about a course nobody runs is a question with no
- * answer.
- */
-function reEntryOffers(hasRefresherCourse: boolean): readonly ReEntryAsk[] {
-  return hasRefresherCourse
-    ? RE_ENTRY_ASKS
-    : RE_ENTRY_ASKS.filter((ask) => ask !== "refresher_course");
-}
-
 function DayOfDetails({
   token,
   data,
@@ -1152,7 +1141,7 @@ function DayOfDetails({
           <fieldset>
             <legend className="text-sm font-medium">{t("booking.reEntry.legend")}</legend>
             <div className="mt-2 flex flex-col gap-1">
-              {reEntryOffers(data.refresherCourseOffered).map((ask) => (
+              {reEntryOffersFor(data.refresherCourseOffered).map((ask) => (
                 <label
                   key={ask}
                   className="flex min-h-11 cursor-pointer items-center gap-2 text-sm"

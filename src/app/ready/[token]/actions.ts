@@ -40,7 +40,7 @@ import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { RE_ENTRY_ASKS, reEntryWindowOpen } from "@/lib/re-entry";
+import { RE_ENTRY_ASKS, reEntryOffersFor } from "@/lib/re-entry";
 import { nitroxAvailableOn } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 
@@ -613,12 +613,20 @@ export async function saveDiveIntentFromReady(token: string, formData: FormData)
  * **What would help, from a diver easing back in** (ADR
  * 20260904-reef-all-the-way-down, D18).
  *
- * Offered only under an intent already saved as `easing_back`, so this refuses
- * anything posted without one — and re-derives the offer window from the
- * departure rather than trusting the post, exactly as the booking form's
- * version of this did. Inside 24 hours nobody at the shop can act on an ask,
- * and a request recorded then would read to the crew as one somebody could
- * have.
+ * **Every gate is re-derived here, never trusted from the post** — the same
+ * rule the nitrox request follows. All three are `getReadyPageData`'s own, so
+ * what this accepts is exactly what the page offered:
+ *
+ * - the saved intent is `easing_back`, so an ask cannot arrive without the
+ *   answer that opens it;
+ * - the departure is more than a day out, because inside 24 hours nobody at
+ *   the shop can act on an ask and a request recorded then would read to the
+ *   crew as one somebody could have;
+ * - and the ask is one of `reEntryOffersFor`, which drops `refresher_course`
+ *   for a shop that publishes no refresher. That third gate was missing until
+ *   review of PR #1416: the page filtered the option out, so a crafted post —
+ *   or an ordinary one from a page rendered before the shop deactivated its
+ *   refresher course — recorded an offer the shop could not make.
  */
 const reEntryAskSchema = z.object({
   reEntryAsk: z.enum(RE_ENTRY_ASKS),
@@ -629,7 +637,14 @@ export async function saveReEntryAskFromReady(token: string, formData: FormData)
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   const parsed = reEntryAskSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=re-entry-ask`);
-  if (ctx.data.diveIntent !== "easing_back" || !reEntryWindowOpen(ctx.data.detail.trip.startsAt)) {
+  // `reEntryOffersOpen` is the saved intent and the window together, resolved
+  // by the same read the page rendered from; `refresherCourseOffered` is the
+  // third. Both are read fresh on this request, so a shop that switched its
+  // refresher off a minute ago is answered as it is now.
+  if (
+    !ctx.data.reEntryOffersOpen ||
+    !reEntryOffersFor(ctx.data.refresherCourseOffered).includes(parsed.data.reEntryAsk)
+  ) {
     redirect(`${base(token)}?error=re-entry-ask`);
   }
 
