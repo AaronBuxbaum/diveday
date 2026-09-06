@@ -5,6 +5,7 @@ import { decideTripAdmission } from "@/lib/trip-admission";
 import { readCertificationEvidence } from "./certification-evidence";
 import type { AppDb } from "./client";
 import { tripRequirementSummaries } from "./readiness";
+import { getTripLens } from "./trip-lenses";
 import { pagedUpcomingTripsWithCounts } from "./trips";
 
 /**
@@ -56,6 +57,13 @@ export async function nextDiveForBooking(
     dayShoutout: string | null;
     /** Every site the day actually went to. */
     daySiteNames: readonly string[];
+    /**
+     * The shop's own word for the kind of day this was (`trips.lens_id`), or
+     * null. Only the id travels: the word is read once below, and only when a
+     * day wears one, because `same_lens` fires on an id match and so the
+     * matching candidate is wearing that very row.
+     */
+    dayLensId: string | null;
     now?: Date;
   },
 ): Promise<NextDivePick | null> {
@@ -69,13 +77,19 @@ export async function nextDiveForBooking(
   const upcoming = trips.filter((trip) => trip.id !== input.justDivedTripId);
   if (upcoming.length === 0) return null;
 
-  const [requirements, evidence] = await Promise.all([
+  const [requirements, evidence, dayLens] = await Promise.all([
     tripRequirementSummaries(
       db,
       input.shopId,
       upcoming.map((trip) => trip.id),
     ),
     readCertificationEvidence(db, input.shopId, input.personId),
+    // One read, and only for a day that wears a lens at all: every candidate
+    // the rule can fire on shares this exact row, so there is no per-candidate
+    // name to fetch. A lens the shop has since deleted resolves to null and the
+    // rule simply does not fire, which is the right answer — a reason has to be
+    // sayable to be given.
+    input.dayLensId === null ? null : getTripLens(db, input.shopId, input.dayLensId),
   ]);
 
   const candidates: NextDiveCandidate[] = [];
@@ -103,6 +117,7 @@ export async function nextDiveForBooking(
       courseId: trip.courseId,
       courseTitle: trip.course?.title ?? null,
       siteName: trip.diveSite?.name ?? null,
+      lensId: trip.lensId,
       requiredLevel: siteRequirement?.minimumCertificationLevel ?? null,
       seatsLeft: Math.max(0, trip.capacity - trip.booked),
     });
@@ -114,6 +129,8 @@ export async function nextDiveForBooking(
       courseId: input.dayCourseId,
       shoutout: input.dayShoutout,
       siteNames: input.daySiteNames,
+      lensId: dayLens?.id ?? null,
+      lensName: dayLens?.name ?? null,
     },
     candidates,
   });

@@ -50,8 +50,9 @@ export async function buildAfterStateProps(input: {
     getReviewForBooking(db, bookingId),
     nextPublicDeparture(db, shop.id, locale, shop.timezone),
     getRecapPulseForBooking(db, bookingId),
-    // **The three server-side-only fields on `RecapPageData` are read here and
-    // nowhere else** (`trip.id`, `trip.courseId`, `personId` — see their own
+    // **The four server-side-only fields on `RecapPageData` are read here and
+    // nowhere else** (`trip.id`, `trip.courseId`, `trip.lensId`, `personId` —
+    // see their own
     // note in src/db/recap.ts). They never reach `AfterStateProps`: this props
     // object names every field explicitly rather than spreading `data`, which
     // is what keeps a person uuid off a client-visible bearer-token page.
@@ -62,6 +63,7 @@ export async function buildAfterStateProps(input: {
       dayCourseId: trip.courseId,
       dayShoutout: data.shoutout,
       daySiteNames: data.sites.map((site) => site.name),
+      dayLensId: trip.lensId,
     }),
   ]);
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
@@ -205,6 +207,7 @@ function wordNextDive(
     reason: t(NEXT_DIVE_REASON_KEYS[pick.reason], {
       site: pick.reasonSite ?? "",
       course: pick.reasonCourse ?? "",
+      lens: pick.reasonLens ?? "",
     }),
     levelCovers: pick.levelCovered
       ? t("recap.nextDiveLevelCovers", { level: t(DIVER_CERT_LEVEL_KEYS[pick.levelCovered]) })

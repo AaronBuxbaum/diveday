@@ -664,6 +664,7 @@
     "nextDiveHeading": "Tu próxima inmersión",
     "nextDiveCrewNamedSite": "Tu tripulación mencionó {site}.",
     "nextDiveCourseSession": "La próxima sesión de {course}.",
+    "nextDiveSameLens": "Otro día de {lens}.",
     "nextDiveSameSite": "De vuelta a {site}.",
     "nextDiveSoonest": "La próxima con plazas.",
     "nextDiveLevelCovers": "Tu certificación {level} lo cubre.",

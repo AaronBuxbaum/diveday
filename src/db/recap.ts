@@ -152,7 +152,7 @@ export type RecapPageData = {
      * **Server-side only, and it must stay that way.** The next-dive card's
      * candidate filter needs the departure that just sailed so it never offers
      * it back (`nextDiveForBooking`), and the pulse's booking scope needs
-     * nothing else. Neither this nor `courseId` nor `personId` below may reach
+     * nothing else. Neither this nor `courseId`, `lensId` nor `personId` below may reach
      * `AfterStateProps`: this page is reached by a bearer URL, and the props are
      * client-visible — so `buildAfterStateProps` names every prop it passes
      * explicitly rather than spreading `data` into the object.
@@ -165,6 +165,12 @@ export type RecapPageData = {
      * `course` block above, which the recap's own course beat reads.
      */
     courseId: string | null;
+    /**
+     * The shop's own word for this kind of day (`trips.lens_id`), for the next
+     * dive's `same_lens` rule. Server-side only, like `courseId` above — an id
+     * the ranker compares, never a word anything renders from here.
+     */
+    lensId: string | null;
     startsAt: Date;
     endsAt: Date;
     plannedDives: number;
@@ -621,6 +627,7 @@ export async function getRecapPageData(
       id: row.tripId,
       title: trip.title,
       courseId: trip.courseId,
+      lensId: trip.lensId,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       plannedDives: trip.plannedDives,
