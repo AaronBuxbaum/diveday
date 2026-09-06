@@ -125,10 +125,6 @@ test.describe("staff", () => {
     // The roster lives on the Guests tab now.
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
     await expect(page.getByText("Sam Quinn").first()).toBeVisible();
-    // The ask reaches the crew as a fact beside the name, on the seat that made
-    // it — never as a warning, and never on the party member who said nothing.
-    await expect(page.getByText("Asked for a word with the divemaster.")).toHaveCount(1);
-
     // Removing a booking confirms first — it can fire an automatic refund that
     // undo can't claw back, so a misclick shouldn't be one tap from done.
     // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
@@ -326,8 +322,9 @@ test.describe("staff", () => {
   });
 
   test("a diver easing back is offered help while the shop can still act", async ({ page }) => {
-    // A trip, a booking, an answer and the offer it opens.
-    test.setTimeout(30_000);
+    // A trip, a booking, an answer, the offer it opens, and the crew reading it
+    // back — two sign-ins with a whole booking flow between them.
+    test.setTimeout(45_000);
     const title = `Easy Does It ${e2eNow().getTime()}`;
     await createTrip(page, {
       title,
@@ -360,6 +357,23 @@ test.describe("staff", () => {
     await expect(
       page.getByRole("status").filter({ hasText: "The crew will look out for you" }),
     ).toBeVisible();
+
+    // **The ask reaches the crew as a fact beside the name.** This assertion
+    // lived in the full-loop test above while the booking form recorded the
+    // ask; it belongs here now, with the page that records it. Never a warning,
+    // and only on the seat that made it.
+    await signInAsOwner(page);
+    await page.goto("/shop/blue-mantis/schedule/board");
+    // Named and exact: an unpriced departure's row also carries a "Set a price
+    // for …" link whose accessible name contains the title.
+    await page
+      .locator("li")
+      .filter({ hasText: title })
+      .getByRole("link", { name: title, exact: true })
+      .click();
+    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+    await expect(page.getByText("Ruth Okafor").first()).toBeVisible();
+    await expect(page.getByText("Asked for a word with the divemaster.")).toHaveCount(1);
   });
 
   test("a departure inside the day asks the question and offers nothing", async ({ page }) => {
