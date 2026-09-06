@@ -65,7 +65,7 @@ import { latestTripStage } from "@/db/trip-stages";
 import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
 import { diverContrastCopy } from "@/i18n/contrast-copy";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { DIVER_DIVE_INTENT_KEYS } from "@/i18n/dive-intent-labels";
+import { DIVER_DIVE_INTENT_KEYS, DIVER_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
@@ -98,6 +98,7 @@ import {
   publicTripCalendarPath,
   publicTripPath,
 } from "@/lib/public-routes";
+import { RE_ENTRY_ASKS, type ReEntryAsk } from "@/lib/re-entry";
 import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
 import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
 import { signRecapToken } from "@/lib/recap-links";
@@ -127,6 +128,7 @@ import {
   saveHotelPickupLocationFromReady,
   saveNitroxCertificationFromReady,
   saveNoteFromReady,
+  saveReEntryAskFromReady,
   saveSpecialtyFromReady,
   saveSupportNeedsFromReady,
   saveTanksFromReady,
@@ -723,6 +725,14 @@ const READY_NOTICES: Record<
   "error-contact": { tone: "danger", key: "ready.errorContact" },
   "saved-last-dived": { tone: "success", key: "ready.lastDivedSaved" },
   "error-last-dived": { tone: "danger", key: "ready.lastDivedUnavailable" },
+  // "What's this dive for?" and D18's offers below it. Both redirected with
+  // `?saved=`/`?error=` codes that had no row here from the day the question
+  // landed, so a diver who tapped Save was told nothing either way — the same
+  // silent-failure gap `saved-fit` and `saved-changes` exist to close.
+  "saved-dive-intent": { tone: "success", key: "ready.intentSaved" },
+  "error-dive-intent": { tone: "danger", key: "ready.intentUnavailable" },
+  "saved-re-entry-ask": { tone: "success", key: "ready.reEntrySaved" },
+  "error-re-entry-ask": { tone: "danger", key: "ready.reEntryUnavailable" },
   "saved-support": { tone: "success", key: "ready.supportSaved" },
   "error-support": { tone: "danger", key: "ready.supportUnavailable" },
   // The count is refused on its own field (see `saveSupportNeedsFromReady`);
@@ -1033,6 +1043,17 @@ function ExpiredLink({
  * own actions exactly as before, and gate nothing: answering none of them
  * still finishes the step, and answering one cannot blank another.
  */
+/**
+ * The offers worth making, which is all three only where the shop publishes a
+ * refresher course: an ask about a course nobody runs is a question with no
+ * answer.
+ */
+function reEntryOffers(hasRefresherCourse: boolean): readonly ReEntryAsk[] {
+  return hasRefresherCourse
+    ? RE_ENTRY_ASKS
+    : RE_ENTRY_ASKS.filter((ask) => ask !== "refresher_course");
+}
+
 function DayOfDetails({
   token,
   data,
@@ -1108,6 +1129,57 @@ function DayOfDetails({
           {t("ready.saveIntent")}
         </SubmitButton>
       </form>
+      {/* Who reads the answer above, in the consent grammar ADR
+          20260904-reef-all-the-way-down's budget rule 6 asks of anything a
+          diver shares. It stood under the same question on the public booking
+          form until 2026-09-06; the second half of that line — "change it any
+          time from the link we send you" — is gone, because this is that
+          link. */}
+      <p className="pb-5 text-sm text-muted">{t("booking.intent.audience")}</p>
+      {/* **D18's three offers, where the answer that opens them lives** (ADR
+          20260904-reef-all-the-way-down, D18). They hung off the intent chips
+          on the public booking form and came here with them: a diver who has
+          said this dive is about getting comfortable again is asked what would
+          help, while there is still a day for the shop to do it. Both gates —
+          the saved intent and the offer window — are `getReadyPageData`'s, so
+          this renders exactly what `saveReEntryAskFromReady` will accept.
+          Its own save, like every other question on this page. */}
+      {data.reEntryOffersOpen ? (
+        <form
+          action={saveReEntryAskFromReady.bind(null, token)}
+          className="flex flex-col gap-3 py-5"
+        >
+          <fieldset>
+            <legend className="text-sm font-medium">{t("booking.reEntry.legend")}</legend>
+            <div className="mt-2 flex flex-col gap-1">
+              {reEntryOffers(data.refresherCourseOffered).map((ask) => (
+                <label
+                  key={ask}
+                  className="flex min-h-11 cursor-pointer items-center gap-2 text-sm"
+                >
+                  <input
+                    type="radio"
+                    name="reEntryAsk"
+                    value={ask}
+                    defaultChecked={data.reEntryAsk === ask}
+                    className="size-4"
+                  />
+                  {t(DIVER_RE_ENTRY_KEYS[ask])}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          {/* The one sentence here that has to exist: an offer of help on a
+              readiness checklist reads as a condition unless it says it is
+              not one. */}
+          <p className="text-sm text-muted">{t("booking.reEntry.noGate")}</p>
+          <div>
+            <SubmitButton pendingLabel={t("common.saving")} className={saveButton}>
+              {t("ready.saveReEntry")}
+            </SubmitButton>
+          </div>
+        </form>
+      ) : null}
       {/* **The diver's own words.** Its own save (`saveNoteFromReady` writes
           the note column and nothing else), so answering it cannot blank sizes
           set last week, and saving sizes cannot blank it (issue 627). */}

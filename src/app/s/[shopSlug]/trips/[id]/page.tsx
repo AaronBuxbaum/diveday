@@ -12,7 +12,6 @@ import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { getDb } from "@/db/client";
-import { hasActiveRefresherCourse } from "@/db/courses";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
@@ -53,7 +52,6 @@ import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
-import { reEntryWindowOpen } from "@/lib/re-entry";
 import { combineCertRequirements } from "@/lib/readiness";
 import { isLiveShopStaff } from "@/lib/session";
 import { similarDepartures } from "@/lib/similar-departures";
@@ -469,16 +467,6 @@ export default async function TripDetailPage({
           when: `${formatDayParts(row.startsAt, locale, shop.timezone).weekday} ${formatTime(row.startsAt, locale, shop.timezone)}`,
           href: `${publicTripPath(shopSlug, row.tripId)}${isEmbed ? "?embed=1" : ""}`,
         }));
-  /**
-   * **D18's window and its third offer** (issue #1178). Both are facts about
-   * the *shop*, resolved here so `BookSpotSection` can ask nothing of the
-   * database: whether there is still a day for the shop to act on an ask, and
-   * whether it publishes a refresher course to point a diver at. Neither is
-   * read on a departure that has sailed or is on hold, where the form itself
-   * does not render.
-   */
-  const reEntryOpen = !inPast && !trip.conditionsHold && reEntryWindowOpen(trip.startsAt, now);
-  const hasRefresherCourse = reEntryOpen ? await hasActiveRefresherCourse(db, shop.id) : false;
   const remaining = spotsRemaining(trip);
   const errorMessage = error && isErrorCode(error) ? t(ERROR_MESSAGE_KEYS[error]) : undefined;
   const tripRef = { shopSlug, tripId, embed: isEmbed };
@@ -730,8 +718,6 @@ export default async function TripDetailPage({
             eLearningFeeCents={eLearningFeeCents}
             depositCents={depositCents}
             balanceDueAt={trip.startsAt}
-            reEntryOpen={reEntryOpen}
-            hasRefresherCourse={hasRefresherCourse}
             terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
           />
         )}

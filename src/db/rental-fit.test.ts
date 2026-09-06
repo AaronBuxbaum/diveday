@@ -51,6 +51,10 @@ function baseFitInput(shopId: string, personId: string) {
     rentsWeights: true,
     rentsDiveComputer: false,
     rentsGopro: false,
+    rentsDrysuit: false,
+    rentsHoodGloves: false,
+    rentsTorch: false,
+    rentsSmb: false,
     bcdSize: "M",
     wetsuitSize: "3 mm / M",
     bootSize: "9",
@@ -460,6 +464,10 @@ describe("rental fit completeness over a stored profile", () => {
       rentsWeights: false,
       rentsDiveComputer: false,
       rentsGopro: false,
+      rentsDrysuit: false,
+      rentsHoodGloves: false,
+      rentsTorch: false,
+      rentsSmb: false,
       finSize: "M",
     });
 

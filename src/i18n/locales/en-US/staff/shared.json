@@ -380,7 +380,11 @@
       "maskFins": "Mask & fins",
       "weights": "Weights",
       "diveComputer": "Dive computer",
-      "gopro": "GoPro"
+      "gopro": "GoPro",
+      "drysuit": "Drysuit",
+      "hoodGloves": "Hood & gloves",
+      "torch": "Dive light",
+      "smb": "Surface marker buoy"
     },
     "nitroxFillsLabel": "Nitrox fills",
     "itemWithSize": "{item} {size}",

@@ -307,7 +307,7 @@
     },
     "rentals": {
       "heading": "Qué alquilamos",
-      "detail": "Desmarca lo que no ofrezcas: desaparece del formulario de equipo y de la lista de preparación.",
+      "detail": "Marca lo que alquilas. Lo que no marques desaparece del formulario de equipo y de la lista de preparación.",
       "legend": "Equipo y servicios de alquiler",
       "submit": "Guardar catálogo de alquiler",
       "submitting": "Guardando…",
@@ -355,7 +355,8 @@
     },
     "counterQr": {
       "heading": "La tarjeta del mostrador",
-      "description": "Imprímela y ponla en el mostrador. Quien llegue sin reserva la escanea, indica su nombre, certificación y tallas, y se le envía la exención, todo antes de llegar al frente de la cola."
+      "description": "Imprímela y ponla en el mostrador. Quien llegue sin reserva la escanea, indica su nombre, certificación y tallas, y se le envía la exención, todo antes de llegar al frente de la cola.",
+      "show": "Mostrar el código"
     },
     "integrations": {
       "heading": "Shopify, QuickBooks y Zapier"

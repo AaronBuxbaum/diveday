@@ -1,13 +1,14 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
-  chooseDiveIntent,
   choosePartySize,
   createTrip,
   daysFromNow,
   e2eNow,
   openRosterDetails,
+  openThreadStep,
   openTripAbout,
   openTripActivity,
+  saveDiveIntent,
   signInAsOwner,
   signOut,
   threadStatus,
@@ -73,13 +74,6 @@ test.describe("staff", () => {
     await page.getByLabel("Email", { exact: true }).fill(`nora-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Sam Quinn");
     await page.getByLabel("Diver 2 email").fill(`sam-${e2eNow().getTime()}@example.com`);
-    // **What this dive is for** (ADR 20260904-reef-all-the-way-down, D12): five
-    // plain choices in place of the free-text box this replaced, and the first
-    // of them is what opens D18's three offers underneath.
-    await chooseDiveIntent(page, "Getting comfortable again");
-    await expect(page.getByText("None of these changes whether you can book.")).toBeVisible();
-    // The three offers are ordinary 16px radios, not the sr-only pills above.
-    await page.getByRole("radio", { name: "A word with the divemaster before we get in." }).check();
     await page.getByRole("button", { name: "Book these spots" }).click();
     // Booking lands on the diver's own readiness page, not a branch of the
     // trip page — one page after booking, and the one the confirmation email
@@ -271,16 +265,19 @@ test.describe("staff", () => {
  * 20260904-reef-all-the-way-down; issues #1172/D12, #1183/D23, #1178/D18).
  *
  * Two halves that cannot be proved from either side alone: a diver answers an
- * optional question on a public form, and a divemaster reads a *count* on the
- * team builder that names nobody. Plus D18's window — the three offers go once
- * the shop can no longer act on one, and the question underneath them stays,
+ * optional question on their own thread, and a divemaster reads a *count* on
+ * the team builder that names nobody. Plus D18's window — the three offers go
+ * once the shop can no longer act on one, and the question above them stays,
  * because a crew can read a count at any notice.
+ *
+ * Both questions were asked on the public booking form until 2026-09-06 and are
+ * asked on `/ready/<token>` now, so every one of these books a seat first.
  */
 test.describe("staff", () => {
   signedInAsOwner();
 
   test("a diver's intent reaches the crew as a count, and names nobody", async ({ page }) => {
-    // Two sign-ins and a booking between them.
+    // Two sign-ins, a booking and an answer between them.
     test.setTimeout(30_000);
     const title = `Macro Morning ${e2eNow().getTime()}`;
     await createTrip(page, {
@@ -296,12 +293,14 @@ test.describe("staff", () => {
     await page.locator("li").filter({ hasText: title }).getByRole("link", { name: title }).click();
     await page.getByLabel("Name", { exact: true }).fill("Ines Marchetti");
     await page.getByLabel("Email", { exact: true }).fill(`ines-${e2eNow().getTime()}@example.com`);
-    await chooseDiveIntent(page, "Small life and photos");
-    // The consent grammar the ADR's budget rule 6 asks for: who sees it, and
-    // the way back.
-    await expect(page.getByText("Your crew sees how many picked each, not who.")).toBeVisible();
     await page.getByRole("button", { name: /^Book (this spot|these spots)$/ }).click();
     await expect(page).toHaveURL(/\/ready\//);
+    // The consent grammar the ADR's budget rule 6 asks for: who sees it. The
+    // second half of that line — how to change it — is gone, because this page
+    // is where it is changed.
+    const dayOf = await openThreadStep(page, "dayof");
+    await expect(dayOf.getByText("Your crew sees how many picked each, not who.")).toBeVisible();
+    await saveDiveIntent(page, "Small life and photos");
 
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
@@ -326,6 +325,43 @@ test.describe("staff", () => {
     await expect(aboard).not.toContainText("Ines");
   });
 
+  test("a diver easing back is offered help while the shop can still act", async ({ page }) => {
+    // A trip, a booking, an answer and the offer it opens.
+    test.setTimeout(30_000);
+    const title = `Easy Does It ${e2eNow().getTime()}`;
+    await createTrip(page, {
+      title,
+      date: daysFromNow(4),
+      departsAt: "09:00",
+      returnsAt: "12:30",
+      capacity: 6,
+    });
+    await signOut(page);
+
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+    await page.locator("li").filter({ hasText: title }).getByRole("link", { name: title }).click();
+    await page.getByLabel("Name", { exact: true }).fill("Ruth Okafor");
+    await page.getByLabel("Email", { exact: true }).fill(`ruth-${e2eNow().getTime()}@example.com`);
+    await page.getByRole("button", { name: /^Book (this spot|these spots)$/ }).click();
+    await expect(page).toHaveURL(/\/ready\//);
+
+    // The offers mount on the *saved* answer, so they cannot be on screen
+    // before it and cannot be posted without it — the action refuses an ask
+    // with no `easing_back` intent behind it.
+    await expect(page.getByText("Anything that would help?")).toHaveCount(0);
+    await saveDiveIntent(page, "Getting comfortable again");
+    const dayOf = await openThreadStep(page, "dayof");
+    await expect(dayOf.getByText("Anything that would help?")).toBeVisible();
+    await expect(dayOf.getByText("None of these changes whether you can book.")).toBeVisible();
+    await dayOf
+      .getByRole("radio", { name: "A word with the divemaster before we get in." })
+      .check();
+    await dayOf.getByRole("button", { name: "Save", exact: true }).last().click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "The crew will look out for you" }),
+    ).toBeVisible();
+  });
+
   test("a departure inside the day asks the question and offers nothing", async ({ page }) => {
     test.setTimeout(30_000);
     // Ninety minutes out on the frozen clock (09:30 in the shop's zone), so
@@ -344,9 +380,14 @@ test.describe("staff", () => {
 
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await page.locator("li").filter({ hasText: title }).getByRole("link", { name: title }).click();
-    await chooseDiveIntent(page, "Getting comfortable again");
+    await page.getByLabel("Name", { exact: true }).fill("Tom Reyes");
+    await page.getByLabel("Email", { exact: true }).fill(`tom-${e2eNow().getTime()}@example.com`);
+    await page.getByRole("button", { name: /^Book (this spot|these spots)$/ }).click();
+    await expect(page).toHaveURL(/\/ready\//);
+    await saveDiveIntent(page, "Getting comfortable again");
     // The question stands; the offers do not.
-    await expect(page.getByText("Your crew sees how many picked each, not who.")).toBeVisible();
+    const dayOf = await openThreadStep(page, "dayof");
+    await expect(dayOf.getByText("Your crew sees how many picked each, not who.")).toBeVisible();
     await expect(page.getByText("Anything that would help?")).toHaveCount(0);
   });
 });

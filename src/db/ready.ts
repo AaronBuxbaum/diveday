@@ -7,12 +7,14 @@ import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { publicAppUrl } from "@/lib/notifications";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
+import { type ReEntryAsk, reEntryWindowOpen } from "@/lib/re-entry";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SupportNeeds } from "@/lib/support-needs";
 import { hasSailed } from "@/lib/trips";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
 import type { AppDb } from "./client";
+import { hasActiveRefresherCourse } from "./courses";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
@@ -145,6 +147,21 @@ export type ReadyPageData = {
    * member and the walk-in who never saw a booking form at all.
    */
   diveIntent: DiveIntent | null;
+  /**
+   * Which of D18's three offers this diver took, or null when they were never
+   * offered or took none. Only ever asked of a diver whose {@link diveIntent}
+   * is `easing_back`; it informs the crew and gates nothing.
+   */
+  reEntryAsk: ReEntryAsk | null;
+  /**
+   * Whether the three offers are worth making at all: the diver said they are
+   * easing back, the departure is far enough out that the shop can still act
+   * (`reEntryWindowOpen`), and — for the third offer — the shop publishes a
+   * refresher course to point them at. False the rest of the time, which is
+   * almost always, and the query behind it only runs then.
+   */
+  refresherCourseOffered: boolean;
+  reEntryOffersOpen: boolean;
   nitroxCardVerified: boolean;
   /**
    * A live nitrox card exists for this diver, sighted or not. Only decides
@@ -231,6 +248,7 @@ export async function getReadyPageData(
       lastDivedBand: bookings.lastDivedBand,
       welcomeSharedAt: bookings.welcomeSharedAt,
       diveIntent: bookings.diveIntent,
+      reEntryAsk: bookings.reEntryAsk,
       hotelPickupLocation: bookings.hotelPickupLocation,
       pickupTime: bookings.pickupTime,
       status: bookings.status,
@@ -265,6 +283,17 @@ export async function getReadyPageData(
 
   const trip = await getTripWithBooked(db, row.shopId, row.tripId);
   if (!trip) return null;
+
+  // **D18's offers, and the one query they are worth.** Inside 24 hours of a
+  // departure nobody at the shop can act on an ask, and a diver who has not
+  // said they are easing back was never offered one — so both gates are
+  // answered from rows already in hand, and the refresher-course lookup only
+  // runs for the small set of divers who reach the third offer.
+  const reEntryOffersOpen =
+    row.diveIntent === "easing_back" && reEntryWindowOpen(trip.startsAt, now);
+  const refresherCourseOffered = reEntryOffersOpen
+    ? await hasActiveRefresherCourse(db, row.shopId)
+    : false;
 
   const [
     rentalFit,
@@ -379,6 +408,9 @@ export async function getReadyPageData(
     wantsNitrox: row.wantsNitrox,
     lastDivedBand: row.lastDivedBand,
     diveIntent: row.diveIntent,
+    reEntryAsk: row.reEntryAsk,
+    reEntryOffersOpen,
+    refresherCourseOffered,
     nitroxCardVerified: nitroxVerified.has(row.personId),
     nitroxCardOnFile: nitroxOnFile.has(row.personId),
     rentalFit: toDiverRentalFit(rentalFit),

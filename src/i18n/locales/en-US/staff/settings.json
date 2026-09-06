@@ -307,7 +307,7 @@
     },
     "rentals": {
       "heading": "What we rent",
-      "detail": "Untick anything you don't offer and it drops off the kit form and the prep list.",
+      "detail": "Tick what you rent. Anything unticked drops off the kit form and the prep list.",
       "legend": "Rentable gear and services",
       "submit": "Save rental catalog",
       "submitting": "Saving…",
@@ -355,7 +355,8 @@
     },
     "counterQr": {
       "heading": "The counter card",
-      "description": "Print this and put it on the desk. A walk-in scans it, fills in their name, certification and sizes, and their release goes out, all before they reach the front of the queue."
+      "description": "Print this and put it on the desk. A walk-in scans it, fills in their name, certification and sizes, and their release goes out, all before they reach the front of the queue.",
+      "show": "Show the code"
     },
     "integrations": {
       "heading": "Shopify, QuickBooks & Zapier"

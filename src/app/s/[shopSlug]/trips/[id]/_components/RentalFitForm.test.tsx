@@ -20,6 +20,10 @@ const emptyFit: DiverRentalFit = {
   weightPreference: null,
   rentsDiveComputer: false,
   rentsGopro: false,
+  rentsDrysuit: false,
+  rentsHoodGloves: false,
+  rentsTorch: false,
+  rentsSmb: false,
   note: null,
   fitStatedAt: new Date("2026-07-21T13:30:00.000Z"),
 };

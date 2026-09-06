@@ -198,7 +198,11 @@
       "maskFins": "Máscara y aletas",
       "weights": "Plomos",
       "diveComputer": "Ordenador de buceo",
-      "gopro": "GoPro"
+      "gopro": "GoPro",
+      "drysuit": "Traje seco",
+      "hoodGloves": "Capucha y guantes",
+      "torch": "Linterna",
+      "smb": "Boya de superficie"
     },
     "providedItems": {
       "tanksAndWeights": "Botellas y plomos",
@@ -395,15 +399,12 @@
       "moreRoom": "Hay más espacio en esta."
     },
     "intent": {
-      "question": "¿Para qué es esta inmersión?",
-      "optional": "opcional",
       "easingBack": "Volver a tomar confianza",
       "smallLife": "Vida pequeña y fotos",
       "aWreck": "Un naufragio, algún día",
       "skills": "Practicar destrezas",
       "goodDay": "Solo un buen día",
-      "audience": "Tu tripulación ve cuántos eligieron cada opción, no quién.",
-      "changeIt": "Puedes cambiarlo cuando quieras desde el enlace que te enviamos."
+      "audience": "Tu tripulación ve cuántos eligieron cada opción, no quién."
     },
     "reEntry": {
       "legend": "¿Algo que te ayude?",
@@ -875,6 +876,11 @@
     "intentHeading": "¿Para qué es esta inmersión?",
     "intentChoose": "Prefiero no decirlo",
     "saveIntent": "Guardar",
+    "saveReEntry": "Guardar",
+    "intentSaved": "Gracias. La tripulación sabrá a qué vienes.",
+    "intentUnavailable": "No se pudo guardar. Inténtalo de nuevo o díselo a la tripulación el mismo día.",
+    "reEntrySaved": "Gracias. La tripulación estará pendiente de ti.",
+    "reEntryUnavailable": "No se pudo guardar. Inténtalo de nuevo o díselo a la tripulación el mismo día.",
     "savingIntent": "Guardando…"
   },
   "thread": {
@@ -1042,7 +1048,11 @@
       "maskFins": "Máscara y aletas",
       "weights": "Lastre",
       "diveComputer": "Ordenador de buceo",
-      "gopro": "GoPro"
+      "gopro": "GoPro",
+      "drysuit": "Traje seco",
+      "hoodGloves": "Capucha y guantes",
+      "torch": "Linterna",
+      "smb": "Boya de superficie"
     },
     "jargonHintLabel": "¿Qué es {item}?",
     "jargonHints": {
@@ -1056,6 +1066,7 @@
     "yourDetails": "Tus datos",
     "diverN": "Buceador {number}",
     "diverCountOption": "{count, plural, one {# buceador} other {# buceadores}}",
+    "diverCountShort": "{count, number}",
     "nameLabel": "Nombre",
     "diverNameLabel": "Nombre del buceador {number}",
     "emailLabel": "Correo electrónico",

@@ -275,7 +275,10 @@ export function DateRequestForm({
               className={controlClass}
             />
           </Field>
-          <Field label={copy.howManyDivers} hint={copy.optional}>
+          {/* No `(optional)` on this one: the box opens holding **1** and that
+              value is submitted whatever the diver does, so a qualifier saying
+              it may be left blank describes a state the form cannot be in. */}
+          <Field label={copy.howManyDivers}>
             <input
               name="divers"
               type="number"

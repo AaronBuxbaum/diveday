@@ -11,10 +11,10 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  * caller of `src/lib/rentals.ts`'s catalog) keeps its own map against
  * diver.json instead of importing this one, so the two bundles never tangle.
  *
- * Keyed by `RentalItemKind` (dive-prep.ts's 8-item packing-list alphabet,
- * which includes `boots`) since that's a superset of `RentableItemKind`
- * (rentals.ts's 7-item shop catalog) — every staff surface can index either
- * kind space against the same words.
+ * Keyed by `RentalItemKind` (dive-prep.ts's packing-list alphabet, which
+ * includes `boots`) since that's a superset of `RentableItemKind` (rentals.ts's
+ * shop catalog) — every staff surface can index either kind space against the
+ * same words.
  */
 const RENTAL_ITEM_LABEL_KEYS: Record<RentalItemKind, StaffMessageKey> = {
   bcd: "shared.rentalFit.itemLabels.bcd",
@@ -25,6 +25,10 @@ const RENTAL_ITEM_LABEL_KEYS: Record<RentalItemKind, StaffMessageKey> = {
   weights: "shared.rentalFit.itemLabels.weights",
   dive_computer: "shared.rentalFit.itemLabels.diveComputer",
   gopro: "shared.rentalFit.itemLabels.gopro",
+  drysuit: "shared.rentalFit.itemLabels.drysuit",
+  hood_gloves: "shared.rentalFit.itemLabels.hoodGloves",
+  torch: "shared.rentalFit.itemLabels.torch",
+  smb: "shared.rentalFit.itemLabels.smb",
 };
 
 /** A dive-prep packing-list item's word, e.g. for `PrepLine.kind` or a `RentalFitLine`'s items. */

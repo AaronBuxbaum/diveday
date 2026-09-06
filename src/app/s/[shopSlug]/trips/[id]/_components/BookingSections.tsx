@@ -11,13 +11,10 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { DIVER_DIVE_INTENT_KEYS, DIVER_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
-import { DIVE_INTENTS, type DiveIntent } from "@/lib/dive-intent";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import type { PassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { RE_ENTRY_ASKS, type ReEntryAsk } from "@/lib/re-entry";
 import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
 import { capacityLabel } from "@/lib/trips";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
@@ -335,111 +332,6 @@ const GEAR_SLOTS = ["gear-one", "gear-two", "gear-three", "gear-four", "gear-fiv
  *   used to sit *inside* this card in a sunken box is the page's now, above the
  *   form, where a diver reads it before starting to type.
  */
-/**
- * **What this dive is for, and what would help** (ADR
- * 20260904-reef-all-the-way-down; issues #1172/D12 and #1178/D18).
- *
- * Five plain choices in place of the 300-character "what kind of dive would
- * make your day?" box this replaced. The same question, asked so the crew can
- * *count* it: a divemaster reads "4 came for an easygoing reef, 2 are getting
- * comfortable again" before a boat leaves, which is a thing to act on, where
- * six paragraphs are a thing to read.
- *
- * **Optional, and it says who sees it and how to change it** — the consent
- * grammar the ADR's budget rule 6 asks of anything a diver shares. Answering
- * nothing is a first-class state: there is no "prefer not to say" radio,
- * because not choosing one is already that answer.
- *
- * Deliberately **not** `SegmentedControl`: that is a row of `<Link>`s for
- * moving between views and cannot reach `FormData`. Radios named `diveIntent`
- * can, which is why `BookingPartyFields` hand-rolls its party count the same
- * way.
- *
- * **D18 hangs off the first choice**, and only off that. The public departure
- * page is anonymous — nothing here knows when this diver last dived, and
- * looking it up from a typed email would be an enumeration oracle — so the
- * trigger is the diver's own tap, given in this session and costing no extra
- * field. None of the three offers gates anything, and all three go inside 24
- * hours of the departure, when the shop can no longer act on one.
- */
-function DiveIntentFields({
-  intent,
-  onIntentChange,
-  reEntryOpen,
-  hasRefresherCourse,
-}: {
-  intent: DiveIntent | null;
-  onIntentChange: (intent: DiveIntent) => void;
-  reEntryOpen: boolean;
-  hasRefresherCourse: boolean;
-}) {
-  // The root translator, because the two key maps in `dive-intent-labels.ts`
-  // spell their keys out in full — which is what keeps the message-key type
-  // checking static.
-  const t = useTranslations();
-  const asks: readonly ReEntryAsk[] = hasRefresherCourse
-    ? RE_ENTRY_ASKS
-    : RE_ENTRY_ASKS.filter((ask) => ask !== "refresher_course");
-  return (
-    <div>
-      <p id="dive-intent-label" className="text-sm font-semibold">
-        {t("booking.intent.question")}{" "}
-        <span className="font-normal text-muted">{t("booking.intent.optional")}</span>
-      </p>
-      <div
-        role="radiogroup"
-        aria-labelledby="dive-intent-label"
-        className="mt-2 flex flex-wrap gap-2"
-      >
-        {DIVE_INTENTS.map((option) => (
-          <label
-            key={option}
-            className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border px-3.5 text-sm font-medium transition-colors ${
-              intent === option
-                ? "border-primary bg-primary-tint text-primary"
-                : "border-border text-muted hover:bg-surface-sunken hover:text-foreground"
-            }`}
-          >
-            <input
-              type="radio"
-              name="diveIntent"
-              value={option}
-              checked={intent === option}
-              onChange={() => onIntentChange(option)}
-              className="sr-only"
-            />
-            {t(DIVER_DIVE_INTENT_KEYS[option])}
-          </label>
-        ))}
-      </div>
-      {/* Who sees it, and the way back — budget rule 6's grammar for anything a
-          diver shares. */}
-      <p className="mt-2 text-sm text-muted">
-        {t("booking.intent.audience")} {t("booking.intent.changeIt")}
-      </p>
-      {/* A native `<fieldset>`/`<legend>` rather than a second `radiogroup`
-          role: radios inside a fieldset are already a named group, and the
-          legend is the name. */}
-      {intent === "easing_back" && reEntryOpen ? (
-        <fieldset className="mt-4 rounded-inset bg-surface-sunken p-4">
-          <legend className="text-sm font-semibold">{t("booking.reEntry.legend")}</legend>
-          <div className="mt-2 flex flex-col gap-1">
-            {asks.map((ask) => (
-              <label key={ask} className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
-                <input type="radio" name="reEntryAsk" value={ask} className="size-4" />
-                {t(DIVER_RE_ENTRY_KEYS[ask])}
-              </label>
-            ))}
-          </div>
-          {/* The one sentence here that has to exist: an offer of help beside a
-              Book button reads as a condition unless it says it is not one. */}
-          <p className="mt-2 text-sm text-muted">{t("booking.reEntry.noGate")}</p>
-        </fieldset>
-      ) : null}
-    </div>
-  );
-}
-
 export function BookSpotSection({
   trip,
   tripRef,
@@ -460,8 +352,6 @@ export function BookSpotSection({
   depositCents,
   balanceDueAt,
   timeZone,
-  reEntryOpen,
-  hasRefresherCourse,
   terms,
 }: {
   trip: Trip;
@@ -507,19 +397,6 @@ export function BookSpotSection({
   /** The shop's zone. A date rendered without one reads in the host's (UTC). */
   timeZone: string;
   /**
-   * Whether there is still a day for the shop to act on a re-entry ask
-   * (`reEntryWindowOpen`). False inside 24 hours of the departure, which is
-   * D18's own "suppress it when there is too little time to act" — the intent
-   * question stays, only its three offers go.
-   */
-  reEntryOpen: boolean;
-  /**
-   * Whether this shop publishes a refresher course. The third offer renders
-   * only when it does: an ask about a course the shop does not run is a
-   * question with no answer.
-   */
-  hasRefresherCourse: boolean;
-  /**
    * The one sentence of fine print under the button (`TripTerms`) — the free
    * cancellation window, server-rendered by the page. Null when the shop
    * states none. Every *figure* moved into `MoneyBlock`.
@@ -534,12 +411,6 @@ export function BookSpotSection({
   // back up rather than this section duplicating that state — `MoneyBlock`
   // multiplies the fare by it.
   const [partySize, setPartySize] = useState(1);
-  // The intent lives in React state as well as in `FormData`, for the same
-  // reason the party count does: a refused server parse re-renders this form,
-  // and an uncontrolled radio would leave the diver's answer on screen or not
-  // depending on how the browser felt about it. It is also what decides
-  // whether D18's offers are on screen at all.
-  const [diveIntent, setDiveIntent] = useState<DiveIntent | null>(null);
   // Per-diver gear subtotal, reported up by each `BookingGearFields` slot
   // (docs ADR 20260801-checkout-upsells-rental-gear) — summed into the running
   // total below so "3 divers × $120" becomes accurate once gear is added.
@@ -635,38 +506,39 @@ export function BookSpotSection({
             {t("ageAttestation", { age: trip.course.minimumAge })}
           </label>
         ) : null}
-        <div className="flex flex-col gap-4 border-t border-border pt-4">
-          <DiveIntentFields
-            intent={diveIntent}
-            onIntentChange={setDiveIntent}
-            reEntryOpen={reEntryOpen}
-            hasRefresherCourse={hasRefresherCourse}
-          />
-          {payAtBooking ? (
-            <FieldGrid columns={1} className="max-w-64">
-              {/* A shop-wide code and a trip-scoped last-minute deal are typed
+        {/* **Nothing about the dive itself is asked here.** "What's this dive
+            for?" and D18's three offers stood in this slot until 2026-09-06:
+            five chips and two sentences of consent grammar between a party of
+            divers' names and the price they were about to commit to, asked of
+            a stranger who has not bought anything yet. `/ready/<token>` asks
+            it after the sale, of the diver whose booking it is — which is also
+            where a party member and a walk-in the counter seated can answer it
+            at all. Same argument as the certification question, which left
+            this form for the same page on 2026-08-27. */}
+        {payAtBooking ? (
+          <FieldGrid columns={1} className="max-w-64 border-t border-border pt-4">
+            {/* A shop-wide code and a trip-scoped last-minute deal are typed
                   into the same box — the diver has no idea which kind they were
                   handed, and the server resolves both (docs ADR
                   20260729-shop-promo-codes). */}
-              <Field
-                label={t("promoLabel")}
-                hint={t("promoHint")}
-                description={
-                  <FieldError id="promoCode-error" message={state.fieldErrors?.promoCode} />
-                }
-              >
-                <input
-                  name="promoCode"
-                  autoComplete="off"
-                  maxLength={40}
-                  aria-invalid={state.fieldErrors?.promoCode ? "true" : undefined}
-                  aria-describedby={state.fieldErrors?.promoCode ? "promoCode-error" : undefined}
-                  className={`${controlClass} uppercase`}
-                />
-              </Field>
-            </FieldGrid>
-          ) : null}
-        </div>
+            <Field
+              label={t("promoLabel")}
+              hint={t("promoHint")}
+              description={
+                <FieldError id="promoCode-error" message={state.fieldErrors?.promoCode} />
+              }
+            >
+              <input
+                name="promoCode"
+                autoComplete="off"
+                maxLength={40}
+                aria-invalid={state.fieldErrors?.promoCode ? "true" : undefined}
+                aria-describedby={state.fieldErrors?.promoCode ? "promoCode-error" : undefined}
+                className={`${controlClass} uppercase`}
+              />
+            </Field>
+          </FieldGrid>
+        ) : null}
         {/* The money, said once, immediately above the button that commits to
             it. Five `text-sm` siblings scattered through this form did this job
             before — see `MoneyBlock`. */}

@@ -94,6 +94,7 @@ export function CompactDisclosureRow({
   label,
   value,
   open,
+  onToggle,
   className = "",
   bodyClassName = "mt-3",
   children,
@@ -102,12 +103,24 @@ export function CompactDisclosureRow({
   label: ReactNode;
   value?: ReactNode;
   open?: boolean;
+  /**
+   * Told whether the row is now open, for the rare body that should not do its
+   * work until somebody asks for it — `CounterQrCard`'s QR encoder is the one
+   * caller, and ~50 KB of it. A row whose body is ordinary markup passes
+   * nothing and stays a plain native disclosure.
+   */
+  onToggle?: (open: boolean) => void;
   className?: string;
   bodyClassName?: string;
   children: ReactNode;
 }) {
   return (
-    <details id={id} open={open} className={`group/compact-row ${className}`.trim()}>
+    <details
+      id={id}
+      open={open}
+      onToggle={onToggle ? (event) => onToggle(event.currentTarget.open) : undefined}
+      className={`group/compact-row ${className}`.trim()}
+    >
       <summary className="-mx-2 flex min-h-11 cursor-pointer list-none flex-col items-start justify-center gap-1 rounded-lg px-2 py-2 text-sm select-none transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-primary sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <span className="flex min-w-0 items-center gap-2">
           <DisclosureCaret className="shrink-0 text-muted group-open/compact-row:rotate-90" />

@@ -99,6 +99,7 @@
       "expired-link-readiness",
       "party-organizer-confirmation",
       "readiness",
+      "readiness-easing-back",
       "stranded-diver-card",
       "thread-anything-changed",
       "thread-high-contrast",
@@ -192,7 +193,6 @@
     ],
     "visual": [
       "booking-confirmed-embed",
-      "booking-intent",
       "booking-pitch-open",
       "shop-not-found",
       "site-briefing",

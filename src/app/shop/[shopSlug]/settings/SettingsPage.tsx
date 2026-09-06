@@ -2593,6 +2593,7 @@ export default async function SettingsPage({
             url={`${publicAppUrl() ?? ""}${publicShopRegisterPath(shopSlug)}`}
             title={t("settings.main.counterQr.heading")}
             description={t("settings.main.counterQr.description")}
+            showLabel={t("settings.main.counterQr.show")}
           />
 
           <InsetGroup>

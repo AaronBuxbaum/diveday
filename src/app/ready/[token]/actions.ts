@@ -9,6 +9,7 @@ import {
   setBookingDiveIntent,
   setBookingHotelPickup,
   setBookingLastDived,
+  setBookingReEntryAsk,
 } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
@@ -39,6 +40,7 @@ import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { RE_ENTRY_ASKS, reEntryWindowOpen } from "@/lib/re-entry";
 import { nitroxAvailableOn } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 
@@ -313,6 +315,10 @@ const fitSchema = z.object({
   weights: z.string().optional(),
   diveComputer: z.string().optional(),
   gopro: z.string().optional(),
+  drysuit: z.string().optional(),
+  hoodGloves: z.string().optional(),
+  torch: z.string().optional(),
+  smb: z.string().optional(),
   nitrox: z.string().optional(),
   bcdSize: z.string().trim().max(20),
   wetsuitSize: z.string().trim().max(20),
@@ -335,6 +341,10 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     rentsWeights: parsed.data.weights === "on",
     rentsDiveComputer: parsed.data.diveComputer === "on",
     rentsGopro: parsed.data.gopro === "on",
+    rentsDrysuit: parsed.data.drysuit === "on",
+    rentsHoodGloves: parsed.data.hoodGloves === "on",
+    rentsTorch: parsed.data.torch === "on",
+    rentsSmb: parsed.data.smb === "on",
     bcdSize: parsed.data.bcdSize,
     wetsuitSize: parsed.data.wetsuitSize,
     // Fins and boots are one shoe-size answer on the diver's form now, written
@@ -597,6 +607,39 @@ export async function saveDiveIntentFromReady(token: string, formData: FormData)
   });
   if (!saved) redirect(`${base(token)}?error=dive-intent`);
   revalidateAndRedirect(base(token), `${base(token)}?saved=dive-intent`);
+}
+
+/**
+ * **What would help, from a diver easing back in** (ADR
+ * 20260904-reef-all-the-way-down, D18).
+ *
+ * Offered only under an intent already saved as `easing_back`, so this refuses
+ * anything posted without one — and re-derives the offer window from the
+ * departure rather than trusting the post, exactly as the booking form's
+ * version of this did. Inside 24 hours nobody at the shop can act on an ask,
+ * and a request recorded then would read to the crew as one somebody could
+ * have.
+ */
+const reEntryAskSchema = z.object({
+  reEntryAsk: z.enum(RE_ENTRY_ASKS),
+});
+
+export async function saveReEntryAskFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = reEntryAskSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=re-entry-ask`);
+  if (ctx.data.diveIntent !== "easing_back" || !reEntryWindowOpen(ctx.data.detail.trip.startsAt)) {
+    redirect(`${base(token)}?error=re-entry-ask`);
+  }
+
+  const saved = await setBookingReEntryAsk(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    ask: parsed.data.reEntryAsk,
+  });
+  if (!saved) redirect(`${base(token)}?error=re-entry-ask`);
+  revalidateAndRedirect(base(token), `${base(token)}?saved=re-entry-ask`);
 }
 
 export async function saveDiveRecencyFromReady(token: string, formData: FormData) {
