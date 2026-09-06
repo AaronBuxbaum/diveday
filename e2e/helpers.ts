@@ -84,7 +84,13 @@ export async function choosePartySize(page: Page, count: number) {
   // pointer events" — until the whole test times out. Three specs and both
   // party-organizer captures died that way on 2026-08-28, each one a
   // three-minute hang rather than an assertion.
-  await control.getByText(label, { exact: true }).click();
+  //
+  // The label is found by the **value of the radio it wraps**, never by its own
+  // text: the segment showed "2 divers" until 2026-09-06 and shows "2" now, and
+  // a helper keyed on that spelling took the same 30-second hang the moment it
+  // changed (`courses.spec.ts`, CI on PR #1416). The accessible name is still
+  // the plural sentence, which is what the assertion below reads.
+  await control.locator(`label:has(input[value="${count}"])`).click();
   await expect(page.getByRole("radio", { name: label, exact: true })).toBeChecked();
 }
 
