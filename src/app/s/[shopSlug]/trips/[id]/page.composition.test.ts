@@ -162,3 +162,39 @@ describe("the trip page's order", () => {
     expect(SOURCE).toContain("const reviewAggregate = isEmbed ? null :");
   });
 });
+
+/**
+ * **The door remembers who opened it, and nobody else** (ADR
+ * 20260906-before-you-ask, decision 3). A cold request renders the form that
+ * ships: the known-diver facts are read only through a verified handoff, the
+ * panel renders only off that read, and an email typed into the form never
+ * reaches the page's own render. Pinned at the source, like the order above,
+ * because what is being pinned is which *inputs* a server page consults.
+ */
+describe("the known diver's facts", () => {
+  const SECTIONS = readFileSync(join(__dirname, "_components", "BookingSections.tsx"), "utf8");
+
+  it("are read only through the handoff, and never on an embed", () => {
+    const read = SOURCE.indexOf("readKnownDiver(db, {");
+    expect(read).toBeGreaterThan(-1);
+    const guard = SOURCE.lastIndexOf("handoffToken && !isEmbed", read);
+    expect(guard).toBeGreaterThan(-1);
+    // One read, and one guard directly above it.
+    expect(SOURCE.split("readKnownDiver(").length - 1).toBe(1);
+    expect(read - guard).toBeLessThan(120);
+  });
+
+  it("render as a panel only when the read answered", () => {
+    expect(SOURCE).toContain("const knownDiverPanel = knownDiver\n    ? {");
+    expect(SECTIONS).toContain("{knownDiver ? (\n          <KnownDiverPanel");
+  });
+
+  it("never come from an email typed into the form", () => {
+    // The cold-email path is an action that returns nothing and a form that
+    // hears nothing back — the page consults no search param but the handoff.
+    expect(SOURCE).not.toMatch(/readKnownDiver\([^)]*email/);
+    expect(SECTIONS).toContain(
+      "onLeadEmailSettled={knownDiver || tripRef.embed ? undefined : offerHandoff}",
+    );
+  });
+});

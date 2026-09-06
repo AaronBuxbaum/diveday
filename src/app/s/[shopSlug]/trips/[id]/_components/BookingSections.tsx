@@ -19,6 +19,7 @@ import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
 import { capacityLabel } from "@/lib/trips";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
 import { BookingGearFields } from "./BookingGearFields";
+import { KnownDiverPanel, type KnownDiverPanelProps } from "./KnownDiverPanel";
 import { MoneyBlock } from "./MoneyBlock";
 import type { Trip } from "./types";
 
@@ -353,6 +354,8 @@ export function BookSpotSection({
   balanceDueAt,
   timeZone,
   terms,
+  knownDiver,
+  offerHandoff,
 }: {
   trip: Trip;
   tripRef: TripRef;
@@ -402,6 +405,21 @@ export function BookSpotSection({
    * states none. Every *figure* moved into `MoneyBlock`.
    */
   terms?: React.ReactNode;
+  /**
+   * The diver this page was opened by, through their own handoff (ADR
+   * 20260906-before-you-ask, decision 3): the panel's worded facts plus the
+   * lead fields' prefill. Null on every cold visit, where nothing renders.
+   */
+  knownDiver?:
+    | (KnownDiverPanelProps & {
+        lead: { fullName: string; email: string | null; phone: string | null };
+      })
+    | null;
+  /**
+   * H-68 b: offer one link to a cold-typed lead email that matches a diver on
+   * file. Fire-and-forget — the form never hears back.
+   */
+  offerHandoff?: (email: string) => void;
 }) {
   const t = useTranslations("booking");
   const tRoot = useTranslations();
@@ -463,6 +481,14 @@ export function BookSpotSection({
           heading — the second of the five places this card said the money, on a
           page whose hero had already said it at figure scale. */}
       <form action={formAction} className="flex flex-col gap-4">
+        {knownDiver ? (
+          <KnownDiverPanel
+            name={knownDiver.name}
+            lines={knownDiver.lines}
+            blankHref={knownDiver.blankHref}
+            handoff={knownDiver.handoff}
+          />
+        ) : null}
         <BookingPartyFields
           maxPartySize={remaining}
           leadPhone
@@ -471,6 +497,8 @@ export function BookSpotSection({
           onSizeChange={setPartySize}
           contactEmail={contactEmail}
           contactPhone={contactPhone}
+          lead={knownDiver?.lead ?? null}
+          onLeadEmailSettled={knownDiver || tripRef.embed ? undefined : offerHandoff}
         />
         {showGearFields
           ? Array.from({ length: partySize }, (_, index) => (

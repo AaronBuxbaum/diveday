@@ -313,6 +313,15 @@
   },
   "booking": {
     "heading": "Grab a spot",
+    "knownDiver": {
+      "heading": "Booking as {name}",
+      "card": "{level} card, verified {date}",
+      "waiver": "Waiver signed {date}, still covers this trip",
+      "ownGear": "Own gear, as of {date}",
+      "sizes": "Sizes kept {date}",
+      "contact": "Emergency contact on file: {name}",
+      "notYou": "Not {name}? <a>Start with a blank form</a>"
+    },
     "money": {
       "fare": "{price} × {count, plural, one {# diver} other {# divers}}",
       "courseFee": "Course fee",
@@ -622,7 +631,7 @@
       "certified": "{shopName} recorded your {level} from this session.",
       "notYetCertified": "Your {course} session is on file. {shopName} has not recorded a certification for it.",
       "nextStepBy": "Next step from {name}",
-      "nextStepQuote": "\u201c{words}\u201d"
+      "nextStepQuote": "“{words}”"
     },
     "crewQuote": "“{words}”",
     "logbookHeading": "Dive log entry",
@@ -3552,6 +3561,12 @@
       "subject": "Your trip-prep link for {tripTitle}",
       "body": "Here is a fresh link to what's left before you sail with {shopName} on {tripTitle}. The one you had has expired.",
       "openLink": "Open your trip prep",
+      "expiry": "This private link expires {expiresAt}."
+    },
+    "bookingHandoff": {
+      "subject": "Book {tripTitle} with your details already in",
+      "body": "You started booking {tripTitle} with {shopName}. Open the page from this link and what {shopName} already has on file for you comes with you: your card, your waiver, your sizes.",
+      "openLink": "Book with your details",
       "expiry": "This private link expires {expiresAt}."
     },
     "sms": {

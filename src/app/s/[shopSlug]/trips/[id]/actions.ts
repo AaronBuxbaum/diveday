@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { issueBookingCapability } from "@/db/booking-capabilities";
+import { consumeBookingHandoff, offerBookingHandoffByEmail } from "@/db/booking-handoff";
 import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
@@ -403,6 +404,13 @@ export async function bookSpot(
     bookingId: primaryBookingId,
     purpose: "readiness",
   });
+  // The door remembers who opened it (ADR 20260906-before-you-ask, decision
+  // 3): the handoff this page was opened through is single-use, and the
+  // booking is its one use. A stale or forged value is a no-op.
+  const handoff = formData.get("handoff");
+  if (typeof handoff === "string" && handoff) {
+    await consumeBookingHandoff(dbi, { shopId: shopNow.id, token: handoff });
+  }
   // This form is the diver's own — the public schedule page, submitted from
   // their device — so its `Accept-Language` is first-hand evidence of the
   // language the lead booker reads (docs ADR
@@ -725,4 +733,31 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
         ? "already"
         : "unavailable";
   redirect(`${publicTripPath(shopSlug, tripId)}?error=${code}${embedParam(embed, "&")}`);
+}
+
+/**
+ * **One link to an address typed cold** (ADR 20260906-before-you-ask, decision
+ * 3; H-68 b). Called from the booking form's own lead-email blur, never a page
+ * load. Returns nothing whatever happened: the page must not learn whether
+ * the address is on file, and the delivery row keeps it to one an hour.
+ */
+export async function offerHandoff({ shopSlug, tripId }: TripRef, email: string): Promise<void> {
+  const parsed = z
+    .object({ email: diverEmailSchema, tripId: z.uuid() })
+    .safeParse({ email, tripId });
+  if (!parsed.success) return;
+  const db = await getDb();
+  const shop = await getShopBySlug(db, shopSlug);
+  if (!shop) return;
+  try {
+    await offerBookingHandoffByEmail(db, {
+      shopId: shop.id,
+      tripId: parsed.data.tripId,
+      email: parsed.data.email,
+      origin: publicAppUrl(),
+      requestLocale: await requestLocale(shop.defaultLocale),
+    });
+  } catch {
+    // A link that fails to send is the cold form the diver already has.
+  }
 }

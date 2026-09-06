@@ -9,6 +9,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { buttonClass } from "@/components/ui/button";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
+import { readKnownDiver } from "@/db/booking-handoff";
 import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { getDb } from "@/db/client";
@@ -32,6 +33,7 @@ import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { languageEndonymList } from "@/i18n/language-labels";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
+import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -78,6 +80,7 @@ import { TripHeader } from "./_components/TripHeader";
 import { TripPitch } from "./_components/TripPitch";
 import { TripTerms } from "./_components/TripTerms";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
+import { offerHandoff } from "./actions";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -142,6 +145,8 @@ export default async function TripDetailPage({
     /** Stripe's cancel return, embed only — see `EmbedBookedNotice`. */
     pay?: string;
     embed?: string;
+    /** A diver's own handoff (ADR 20260906-before-you-ask, decision 3). */
+    from?: string;
   }>;
 }) {
   await connection();
@@ -150,7 +155,14 @@ export default async function TripDetailPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { booking: bookingToken, waitlist: waitlistId, error, pay, embed } = await searchParams;
+  const {
+    booking: bookingToken,
+    waitlist: waitlistId,
+    error,
+    pay,
+    embed,
+    from: handoffToken,
+  } = await searchParams;
   // Embed mode is the compact surface a shop frames on its own website
   // (docs ADR 20260726-schedule-embed) — no "All trips" chrome pointing back
   // to a schedule the embedding page may never have shown at all.
@@ -266,6 +278,43 @@ export default async function TripDetailPage({
     isEmbed && bookingToken
       ? await verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" })
       : null;
+  // **The door remembers who opened it** (ADR 20260906-before-you-ask,
+  // decision 3). Facts reach this page through a handoff and nothing else: a
+  // cold request, an embed, and an unverifiable token all read as null, and
+  // null renders the form that ships. The facts are worded here, where the
+  // locale and the shop's zone are, and reach the client as sentences.
+  const knownDiver =
+    handoffToken && !isEmbed
+      ? await readKnownDiver(db, { shopId: shop.id, token: handoffToken })
+      : null;
+  const knownDiverPanel = knownDiver
+    ? {
+        name: knownDiver.fullName,
+        handoff: handoffToken ?? "",
+        blankHref: `${publicTripPath(shopSlug, tripId)}#book`,
+        lead: { fullName: knownDiver.fullName, email: knownDiver.email, phone: knownDiver.phone },
+        lines: knownDiver.facts.map((fact) => {
+          const on = (at: Date) => formatShortDate(at, locale, shop.timezone);
+          switch (fact.kind) {
+            case "card":
+              return t("booking.knownDiver.card", {
+                level: t(DIVER_CERT_LEVEL_KEYS[fact.level]),
+                date: on(fact.keptAt),
+              });
+            case "waiver":
+              return t("booking.knownDiver.waiver", { date: on(fact.keptAt) });
+            case "own_gear":
+              return t("booking.knownDiver.ownGear", { date: on(fact.keptAt) });
+            case "sizes":
+              return t("booking.knownDiver.sizes", { date: on(fact.keptAt) });
+            case "contact":
+              return t("booking.knownDiver.contact", { name: fact.name });
+            default:
+              return "";
+          }
+        }),
+      }
+    : null;
   const [confirmed, waitlistConfirmation] = await Promise.all([
     confirmCapability ? getBookingForTrip(db, tripId, confirmCapability.bookingId) : null,
     waitlistId ? getWaitlistEntryForTrip(db, shop.id, tripId, waitlistId) : null,
@@ -719,6 +768,8 @@ export default async function TripDetailPage({
             depositCents={depositCents}
             balanceDueAt={trip.startsAt}
             terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
+            knownDiver={knownDiverPanel}
+            offerHandoff={offerHandoff.bind(null, tripRef)}
           />
         )}
         {/* The last line on the page: how to reach a human. Renders nothing at

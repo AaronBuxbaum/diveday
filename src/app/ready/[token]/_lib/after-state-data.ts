@@ -1,4 +1,5 @@
 import type { AfterStateProps } from "@/app/ready/[token]/_components/AfterState";
+import { issueBookingHandoff } from "@/db/booking-handoff";
 import type { AppDb } from "@/db/client";
 import { nextDiveForBooking } from "@/db/next-dive";
 import { MAX_RECAP_PHOTOS_PER_BOOKING, type RecapPageData } from "@/db/recap";
@@ -9,10 +10,12 @@ import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERT_LEVEL_KEYS, NEXT_DIVE_REASON_KEYS } from "@/i18n/next-dive-labels";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
+import { handoffHref } from "@/lib/booking-handoff";
 import { nowDate } from "@/lib/clock";
 import { formatOrdinal, formatRelativeDay, formatShortDate } from "@/lib/format";
 import type { NextDivePick } from "@/lib/next-dive";
 import type { PostcardImage } from "@/lib/postcard-image";
+import { publicTripPath } from "@/lib/public-routes";
 import { siteMarkFor } from "@/lib/site-mark";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { visitMilestone } from "@/lib/visit-milestones";
@@ -33,6 +36,16 @@ import { visitMilestone } from "@/lib/visit-milestones";
  * that happened, and a second query shape for it is a second answer to "what
  * did I dive" waiting to disagree with the first.
  */
+async function nextDiveHandoffHref(
+  db: AppDb,
+  shop: { id: string; slug: string },
+  bookingId: string,
+  tripId: string,
+): Promise<string | null> {
+  const issued = await issueBookingHandoff(db, { shopId: shop.id, bookingId });
+  return issued ? handoffHref(publicTripPath(shop.slug, tripId), issued.token) : null;
+}
+
 export async function buildAfterStateProps(input: {
   db: AppDb;
   data: RecapPageData;
@@ -122,6 +135,10 @@ export async function buildAfterStateProps(input: {
     postcard: postcardFor({ data, t, locale, when }),
     nextDive,
     nextDiveWorded: nextDive ? wordNextDive(nextDive, t, locale, shop.timezone) : null,
+    // The door remembers who opened it (ADR 20260906-before-you-ask, decision
+    // 3): the next dive's link carries a ten-minute handoff minted from this
+    // booking, so the page it opens arrives with this diver's facts folded.
+    nextDiveHref: nextDive ? await nextDiveHandoffHref(db, shop, bookingId, nextDive.tripId) : null,
     actions,
   };
 }

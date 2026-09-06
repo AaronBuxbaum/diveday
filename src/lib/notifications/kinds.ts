@@ -119,6 +119,27 @@ const waiverRequestSchema = z.object({
  * See `notificationIdempotencyKey` below for how a rescue is keyed in the send
  * queue, and why per-booking is the right granularity (issue #850).
  */
+/**
+ * The door remembers who opened it (ADR 20260906-before-you-ask, decision 3;
+ * H-68 b): one link to a booking page that arrives with the diver's standing
+ * facts folded, sent to an address typed cold into that form when it matches
+ * a diver on file. Per booking like the readiness link, so the delivery row
+ * is what keeps it to one an hour, and nothing on the page says it went.
+ */
+const bookingHandoffSchema = z.object({
+  kind: z.literal("booking_handoff"),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  bookingUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
 const readinessLinkSchema = z.object({
   kind: z.literal("readiness_link"),
   bookingId: z.uuid(),
@@ -595,6 +616,7 @@ export const notificationSchema = z
     bookingConfirmationSchema,
     waiverRequestSchema,
     readinessLinkSchema,
+    bookingHandoffSchema,
     waitlistInviteSchema,
     tripInvitationSchema,
     tripReminder7dSchema,
@@ -711,6 +733,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // the correct number for one diver waiting on one link.
     case "readiness_link":
       return `readiness-link/${notification.bookingId}/${notification.expiresAt.toISOString()}`;
+    case "booking_handoff":
+      return `booking-handoff/${notification.bookingId}/${notification.expiresAt.toISOString()}`;
     // Keyed by invite timestamp so a genuine re-invite (a seat opens twice) is a
     // fresh send, while a double-submit of the same tap still dedups at the
     // notification_send_queue level.

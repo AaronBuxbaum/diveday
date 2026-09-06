@@ -3748,6 +3748,10 @@ export const bookingPaymentEvents = pgTable(
 export const notificationKind = pgEnum("notification_kind", [
   "booking_confirmation",
   "waiver_request",
+  // One link, to an address typed cold into a booking form that matches a
+  // diver on file, bringing their details across (H-68 b). Nothing on the
+  // page says whether it went; the delivery row is what keeps it to one.
+  "booking_handoff",
   // The diver's own rescue for a trip-prep link that aged out: they ask from
   // the dead page, and a replacement goes to the address already on the
   // booking (issue #850). Tracked like every other per-booking message so a
@@ -5771,6 +5775,10 @@ export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
   "readiness",
   "confirm",
   "claim",
+  // The door remembers who opened it (ADR 20260906-before-you-ask, decision
+  // 3): ten minutes, minted by the diver's own thread and consumed by the
+  // booking it leads to. The one purpose whose expiry is not the trip's.
+  "handoff",
 ]);
 
 /**

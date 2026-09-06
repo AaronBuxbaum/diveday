@@ -1,6 +1,7 @@
 import { escapeHtml } from "@/lib/html";
 import {
   bookingConfirmationEmail,
+  bookingHandoffEmail,
   checkoutRecoveryEmail,
   contactEmailConfirmationEmail,
   courseInquiryEmail,
@@ -91,6 +92,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "trip_minimum_not_met") return tripMinimumNotMetEmail(notification);
   if (notification.kind === "waiver_request") return waiverRequestEmail(notification);
   if (notification.kind === "readiness_link") return readinessLinkEmail(notification);
+  if (notification.kind === "booking_handoff") return bookingHandoffEmail(notification);
   if (notification.kind === "welcome") return welcomeEmail(notification);
   if (notification.kind === "email_verification") return verifyAccountEmail(notification);
   if (notification.kind === "contact_email_confirmation") {
