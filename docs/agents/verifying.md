@@ -6,7 +6,8 @@ line between the two.
 ## Run locally: anything you can scope to the change
 
 - the one guard you touched — `node scripts/check-<name>.mjs`
-- `pnpm test <file> --reporter=dot`, and `pnpm test:changed` mid-iteration
+- `pnpm test <file> --reporter=dot`, and — **before you push** — `pnpm test:changed`, which selects
+  by import graph and so reaches the coverage guards a focused run structurally cannot (see below)
 - `pnpm typecheck` and `pnpm lint`, both of which are seconds
 - `node scripts/check-repo.mjs` when you touched something a static guard reads — it is
   concurrent and finishes in under a minute
@@ -14,6 +15,30 @@ line between the two.
   `pnpm e2e:build`
 - `node scripts/screenshot.mjs <path…>` against a running `pnpm dev` — looking at UI you changed
   is not optional and has no CI substitute
+
+## The guards that live in files you will never edit
+
+A focused `pnpm test <file>` runs the tests you can name. The **coverage guards** are the ones you
+cannot: `src/db/export.test.ts`, `src/db/diver-merge.test.ts` and `src/db/delete-path-coverage.test.ts`
+assert over `src/db/schema.ts` from files whose whole job is to notice something you added
+*elsewhere*. Nothing you touch selects them, so they go red on CI instead — four times in one
+afternoon on 2026-09-05: slice 16g's four columns, 16i's `recap_pulses` table and its
+`addressed_by_person_id`, and 16j-B's two `person_id` columns. Every one of those agents had run
+the documented local gate correctly.
+
+`pnpm test:changed` selects by import graph and catches all four, which is why it is a pre-push
+step rather than a mid-iteration convenience. Know its cost before you start it: `schema.ts` sits
+in nearly every import chain, so a diff touching it selects the **whole** suite — 9,391 of 9,391
+entries, measured 2026-09-06 — and on a stack the diff against `origin/main` is every layer
+beneath you, so that is a floor rather than a ceiling. That run belongs to CI. When you touched
+`schema.ts`, name the three by path instead:
+
+```bash
+pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts --reporter=dot
+```
+
+40 tests, about a minute, and it catches every failure listed above. The trigger is touching
+`schema.ts` at all — 16j-B added only columns and tripped two guards.
 
 ## Push and read CI: anything whole
 

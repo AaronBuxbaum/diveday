@@ -24,9 +24,23 @@ questions — read `schema.ts`.
    migration chain via `createTestDb()` — the column exists as soon as the migration does.
    Write failure-path tests for new constraints (unique violations, FK violations), not just
    happy paths.
-5. **Local sanity**: `pnpm db:reset && pnpm e2e` exercises the auto-migrate + auto-seed boot
+5. **Run the coverage guards before you push.** Touching `src/db/schema.ts` at all — a whole table
+   or a single column — is the trigger, not the shape of the change:
+
+   ```bash
+   pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts --reporter=dot
+   ```
+
+   Three files, 40 tests, about a minute. They assert over `schema.ts` from files your change will
+   not touch, so a focused `pnpm test <file>` never selects them and you learn about them from CI
+   instead — which is how 16g's four columns, 16i's `recap_pulses` table *and* its
+   `addressed_by_person_id`, and 16j-B's two `person_id` columns all went red after a push. An
+   unclassified `person_id` is the expensive one: a merge silently leaves rows pointing at a
+   removed diver. `pnpm test:changed` selects these too, but after a `schema.ts` edit it selects
+   the *whole* suite (9,391 of 9,391 entries, measured 2026-09-06) — that run belongs to CI.
+6. **Local sanity**: `pnpm db:reset && pnpm e2e` exercises the auto-migrate + auto-seed boot
    from zero.
-6. **Commit together**: `schema.ts`, `drizzle/**`, seed, tests, docs. One schema change per PR
+7. **Commit together**: `schema.ts`, `drizzle/**`, seed, tests, docs. One schema change per PR
    where possible.
 
 ## Removing something

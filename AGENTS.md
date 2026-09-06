@@ -54,7 +54,7 @@ adapters and must not introduce unique requirements.
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
 | `pnpm test <file> --reporter=dot` | focused Vitest run with low-noise success output |
-| `pnpm test:changed` | run only the tests affected by your diff against `origin/main` — a mid-iteration check across a handful of touched files; still run full `pnpm check` before commit. Selection follows the import graph, and migrations are read off disk rather than imported, so a change under `drizzle/` deliberately reruns the whole suite (`forceRerunTriggers` in `vitest.config.ts`) |
+| `pnpm test:changed` | the tests your diff reaches through the import graph — the pre-push net that catches a coverage guard living in a file you never touched, which a focused `pnpm test <file>` cannot. A `src/db/schema.ts` edit widens it to the whole suite; name the three guards by path instead ([docs/agents/verifying.md](docs/agents/verifying.md)). Migrations are read off disk rather than imported, so a change under `drizzle/` reruns everything too (`forceRerunTriggers` in `vitest.config.ts`) |
 | `pnpm e2e <spec> --reporter=line` | use local Chromium, build, then run a focused Playwright suite — focused because the **whole** suite belongs to CI. Every worker owns a server and a database, and `/api/test/reset` restores the shared `blue-mantis` fixture's **schedule** before each test — but not the shop's **configuration**, so **a test that writes shop-wide settings takes a shop of its own** (the lazy `privateShop` fixture in `e2e/fixtures.ts`; ADR 20260815-per-test-private-shops). Never a `finally` that puts the setting back: nothing enforces it and it does not survive the failure it is there for. The `RESET_KEEPS` list, the port derivation and the run this rule was written after: [docs/agents/verifying.md](docs/agents/verifying.md) |
 | `pnpm e2e:run <spec> --reporter=line` | fast-iteration path: build once with `pnpm e2e:build`, then `pnpm e2e:run <spec> --reporter=line` reuses that build and skips the rebuild |
 | `pnpm build` | production build |
@@ -225,8 +225,10 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   thing it watches dies; and **when you kill a producer, stop its watcher in the same breath**, since
   a `pkill` that frees you is the same `pkill` that strands whatever was waiting on its output.
 - **Verify before commit, and let CI run anything whole.** Targeted checks are yours — the one
-  guard you touched, `pnpm test <file>`, `pnpm test:changed`, `pnpm typecheck`, `pnpm lint`, one
-  focused `pnpm e2e <spec>`. The **whole** unit suite, `next build`, the whole e2e suite and the
+  guard you touched, `pnpm test <file>`, `pnpm typecheck`, `pnpm lint`, one focused
+  `pnpm e2e <spec>`, and **before you push** `pnpm test:changed` — the only one of those that
+  reaches a coverage guard living in a file you did not edit, which is by construction where every
+  coverage guard lives. The **whole** unit suite, `next build`, the whole e2e suite and the
   visual run go to CI, which shards them across dedicated runners: push and read the result. Open
   the PR before it is green when that is the fastest way to learn what is broken, say in the body
   what you ran and what you did not, and work what comes back — a red PR you are driving is fine,
