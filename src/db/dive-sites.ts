@@ -57,7 +57,12 @@ export type DiveSiteInput = {
   forecastLongitude?: number | null;
   /** The NOAA station this site's tide is read against; null/undefined says nothing about the tide. */
   tideStationId?: string | null;
-  /** When the site dives best; undefined leaves the row's own answer standing. */
+  /**
+   * When the site dives best. Omitting it writes `"any"` rather than leaving
+   * the stored value standing -- this module overwrites every field it is
+   * given, the way `locationName` does, and the comment used to promise a
+   * partial update the two writers never performed.
+   */
   tidePreference?: TidePreference;
   satelliteImageUrl?: string;
   routeImageUrl?: string;
@@ -618,6 +623,11 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     locationName: source.locationName ?? undefined,
     forecastLatitude: source.forecastLatitude,
     forecastLongitude: source.forecastLongitude,
+    // Carried for the same reason the forecast point above it is: a copy that
+    // silently drops them leaves the new row with no station and `"any"`, and
+    // the shop has no way to see that the tide line stopped rendering.
+    tideStationId: source.tideStationId,
+    tidePreference: source.tidePreference,
     satelliteImageUrl: source.satelliteImageUrl ?? undefined,
     routeImageUrl: source.routeImageUrl ?? undefined,
     imageUrls: source.imageUrls,

@@ -63,7 +63,7 @@ export function ConditionsLine({
    * the shop switched `tide_window_public` on (ADR
    * 20260907-noaa-tide-predictions). One line per site on a two-station day.
    */
-  tideLines?: string[];
+  tideLines?: { site: string; text: string }[];
   locale: string;
 }) {
   const t = diverTranslator(locale);
@@ -134,8 +134,8 @@ export function ConditionsLine({
           direction the shop chose to publish, never inside the forecast's
           credit, since NOAA's table is not Open-Meteo's model. */}
       {tide.map((line) => (
-        <p key={line} className="mt-2 text-sm text-muted">
-          {line}
+        <p key={line.site} className="mt-2 text-sm text-muted">
+          {line.text}
         </p>
       ))}
       {crewPrediction && trip.conditionsSummary ? (

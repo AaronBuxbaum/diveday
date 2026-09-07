@@ -1,7 +1,9 @@
 import { calendarDateInTimezone } from "./calendar-date";
+import { nowDate } from "./clock";
 import type { DiveMode, DockDayRhythm } from "./diver-planning";
 import { fetchTidePredictions } from "./tide-predictions";
 import { diveArrivalAt, type TidePreference, type TideWindow, tideWindowAt } from "./tides";
+import { hasSailed } from "./trips";
 
 /**
  * **The tide at every site a departure visits** — ADR 20260907-noaa-tide-predictions.
@@ -41,8 +43,27 @@ export async function tideWindowsForDeparture(input: {
   dives: readonly DepartureTideDive[];
   rhythm: DockDayRhythm;
   timeZone: string;
+  /**
+   * How many days the departure runs over. **More than one and this answers
+   * nothing**: the rhythm is laid over `startsAt`, and `plannedDives` on a
+   * multi-day trip is the total across every day, so a day-two dive would be
+   * given a day-one arrival instant and therefore the wrong water. Each day
+   * has its own `trip_schedule_days.startsAt` and splitting the dives across
+   * them is the real fix; until that exists, saying nothing is the only honest
+   * answer a sentence beside a Book button can give.
+   */
+  scheduleDayCount?: number;
+  now?: Date;
   fetcher?: typeof fetch;
 }): Promise<DepartureTideWindow[]> {
+  if ((input.scheduleDayCount ?? 1) > 1) return [];
+  // A departure that has sailed gets no tide line. Every one of these is
+  // present tense -- "this departure reaches the site on the flood" -- so on a
+  // past trip it is a live claim about where a boat is. The marine outlook
+  // beside it has been gated to future departures all along
+  // (`shouldShowAutomatedForecast`); this is the same rule through the app's
+  // one buffered question.
+  if (hasSailed(input.startsAt, input.now ?? nowDate())) return [];
   const withStations = input.dives.filter(
     (dive): dive is DepartureTideDive & { site: NonNullable<DepartureTideDive["site"]> } =>
       Boolean(dive.site?.tideStationId),

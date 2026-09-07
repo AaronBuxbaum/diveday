@@ -138,7 +138,17 @@ export async function fetchTidePredictions(
   fetcher: Fetcher = fetch,
 ): Promise<TidePrediction[] | null> {
   const beginDate = beginDateFor(day);
-  if (process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && fetcher === fetch) {
+  // **Never in production, whatever the environment says.** Every other
+  // consumer of this flag degrades to *off*; this one degrades to synthetic
+  // turns that render byte-identically to real ones, against an ADR whose rule
+  // for this feature is that the sentence must either be right or absent. The
+  // flag is set only by `scripts/dev-server.mjs` and `playwright.config.ts`,
+  // and that was the whole guarantee until this line: a fact, not a check.
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" &&
+    fetcher === fetch
+  ) {
     return fixtureTidePredictions(beginDate);
   }
   const cache = cacheFor(fetcher);

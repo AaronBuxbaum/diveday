@@ -18,6 +18,9 @@ const site = (name: string, tideStationId: string | null, preference: "any" | "s
   expectedBottomTimeMinutes: null,
 });
 
+/** An hour before the seeded departure, so the sailed guard does not fire. */
+const BEFORE_DEPARTURE = new Date("2026-07-21T11:00:00Z");
+
 describe("tideWindowsForDeparture", () => {
   it("reads each stationed dive at its own arrival and skips the rest", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(NOAA_PAYLOAD)));
@@ -25,6 +28,7 @@ describe("tideWindowsForDeparture", () => {
     // the 13:19 low), dive two at 14:05Z (flood, inside no slack window).
     const windows = await tideWindowsForDeparture({
       startsAt: new Date("2026-07-21T12:00:00Z"),
+      now: BEFORE_DEPARTURE,
       plannedDives: 3,
       diveMode: "boat",
       dives: [
@@ -54,6 +58,7 @@ describe("tideWindowsForDeparture", () => {
     await expect(
       tideWindowsForDeparture({
         startsAt: new Date("2026-07-21T12:00:00Z"),
+        now: BEFORE_DEPARTURE,
         plannedDives: 2,
         diveMode: "boat",
         dives: [{ diveNumber: 1, travelMinutes: null, site: site("Molasses Reef", null) }],
@@ -70,6 +75,7 @@ describe("tideWindowsForDeparture", () => {
     await expect(
       tideWindowsForDeparture({
         startsAt: new Date("2026-07-21T12:00:00Z"),
+        now: BEFORE_DEPARTURE,
         plannedDives: 1,
         diveMode: "boat",
         dives: [{ diveNumber: 1, travelMinutes: null, site: site("Molasses Reef", "8723583") }],
@@ -78,5 +84,51 @@ describe("tideWindowsForDeparture", () => {
         fetcher,
       }),
     ).resolves.toEqual([]);
+  });
+
+  /**
+   * Every one of these sentences is present tense -- "this departure reaches
+   * the site on the flood" -- so on a boat that has already gone it is a live
+   * claim about where that boat is. The marine outlook beside it has been
+   * gated to future departures all along.
+   */
+  it("says nothing about a departure that has already sailed", async () => {
+    const fetcher = vi.fn();
+    const windows = await tideWindowsForDeparture({
+      startsAt: new Date("2026-07-21T12:00:00Z"),
+      now: new Date("2026-07-21T18:00:00Z"),
+      plannedDives: 2,
+      diveMode: "boat",
+      dives: [{ diveNumber: 1, travelMinutes: null, site: site("Molasses Reef", "8723583") }],
+      rhythm: DEFAULT_DOCK_DAY_RHYTHM,
+      timeZone: "America/New_York",
+      fetcher,
+    });
+    expect(windows).toEqual([]);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The rhythm is laid over `startsAt` and `plannedDives` is the total across
+   * every day, so a day-two dive would be handed a day-one arrival instant and
+   * the wrong water. Each day owns its own `trip_schedule_days.startsAt`;
+   * until the dives are split across them, saying nothing is the only honest
+   * answer beside a Book button.
+   */
+  it("refuses a multi-day departure rather than placing its dives on day one", async () => {
+    const fetcher = vi.fn();
+    const windows = await tideWindowsForDeparture({
+      startsAt: new Date("2026-07-21T12:00:00Z"),
+      now: BEFORE_DEPARTURE,
+      plannedDives: 4,
+      diveMode: "boat",
+      scheduleDayCount: 2,
+      dives: [{ diveNumber: 1, travelMinutes: null, site: site("Molasses Reef", "8723583") }],
+      rhythm: DEFAULT_DOCK_DAY_RHYTHM,
+      timeZone: "America/New_York",
+      fetcher,
+    });
+    expect(windows).toEqual([]);
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });
