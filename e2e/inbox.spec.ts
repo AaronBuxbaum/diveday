@@ -23,6 +23,13 @@ signedInAsOwner();
  * `src/db/staff-reply.test.ts`.
  */
 test("a staffer reads the inbox, opens the record, and answers the diver", async ({ page }) => {
+  // Three surfaces and a send in one flow — the worklist, the record behind a
+  // row, and a server action that composes a message and asks a provider about
+  // it. The suite's default timeout is sized for a single page's flow, and
+  // this one measured past it on a loaded machine (`date-requests.spec.ts`
+  // widens its own for the same reason).
+  test.setTimeout(45_000);
+
   await page.goto("/shop/blue-mantis/inbox");
   await expect(page.getByRole("heading", { level: 1, name: "What divers wrote" })).toBeVisible();
 
