@@ -46,8 +46,9 @@ and *Skiff*, default crew Keiko Tanaka and Sal Moretti; Dana Reyes owns the desk
   signs at 6:44; the line reads 3 to come, 1 can't board yet (`Counter`).
 - **6:46 AM on Grace's record**, her self-declared Advanced card, number 2203 8871 04, photographed
   and read (`Card`). The card drawn in the viewfinder is invented and belongs to no agency.
-- **Keiko's first sign-in on her phone**, for the home-screen line, and her phone's text setting for
-  the manifest rows (`Device`).
+- **6:58 AM at the rail**, the manifest row drawn at three text sizes: Hugo Marsh aboard, Priya Sharma
+  and Grace Mensah still ashore; and **Keiko's first sign-in on her phone**, for the home-screen line
+  (`Device`).
 
 Every name, number and time is demo-seed fiction. Nothing here is real customer data.
 
@@ -56,9 +57,10 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 Reef's tokens, radii, type ladder and bed; Geist as the only face on a staff surface; the waiver
 page in DiveDay's own tokens, because the shop's brand may never reach it; the door's anatomy and its
 one primary (ADR 20260827-first-light); the safety floor (44px targets, 16px critical text, AA, never
-colour alone); the coral count of three, spent on no drawn surface (the cover's mark and the three
-owner-call badges are the canvas's own chrome, as on every cover since Reef); and every ban. No board
-is a manifest, a roll call, a cert *check* or a payment: the Card board is the certification form
+colour alone); the coral count of three, which on the boards is spent only as the mark's smallest bubble in the DiveDay
+wordmark, one of the three sanctioned appearances (the cover's mark and the three owner-call badges are the
+canvas's own chrome, as on every cover since Reef); and every ban. No board is a manifest, a cert *check*
+or a payment, and the one roll-call row the Device board draws is there for its size alone: the Card board is the certification form
 whose primary is the shipped human tap, and the Counter board's waiver page is the diver's own as it
 ships. The platform's passkey sheet and camera sheet are drawn only to show where the glance happens;
 DiveDay draws nothing of them. The motion any move takes (the settled row's wash, the door's arrival)
@@ -91,7 +93,7 @@ comment, and a test pins the rule.
 | 19b — hand it over: *Sign here* on the counter's and the roster's blocked row, the session lock read by `requireShopSurface`, the hand-over and who-sees-what lines on the waiver page, the counter provenance on the signature row (H-70 b) | open | — | — |
 | 19c — point the camera at the card: the capture at the top of the form, the reader behind the upload, the four fields with *Read* marks and the date field, the Textract opt-out step in the manual-actions registry, the `/privacy` sentence (H-70 c) | open | — | — |
 | 19d — the type follows the phone: the `-apple-system-body` probe in the pre-hydration script, upward only, the manifest captured at the largest root | open | — | — |
-| 19e — on the home screen: the one line under the day's spine with the platform's install prompt or its two words, the device-kept dismissal, nothing when installed or on a desktop | open | — | — |
+| 19e — on the home screen: the one line under the day's spine with the platform's install prompt or its own menu item, the device-kept dismissal, nothing when installed or on a desktop | open | — | — |
 
 ## Implementing a slice
 

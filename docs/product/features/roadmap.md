@@ -473,7 +473,7 @@ diffs are explained. 19d and 19e do not depend on H-70 and may start on the ADR 
   that sets `lang` and `dir`, upward only from the app's 16px root, one visual capture of the
   manifest at the largest root.
 - **19e** — on the home screen: one row under `DaySpine` on a phone or tablet in a browser tab for a
-  staffer whose role reaches the manifest, the platform's install prompt or its two words with the
+  staffer whose role reaches the manifest, the platform's install prompt or its own menu item with the
   share glyph, a device-kept dismissal, a test that it renders nothing when installed or on a desktop.
 
 ## Concept-model simplification (proposed — each row needs an owner decision)

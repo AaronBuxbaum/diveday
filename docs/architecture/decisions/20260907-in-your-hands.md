@@ -150,8 +150,8 @@ from the rail.
 A staffer whose role reaches the manifest, on a phone or tablet, in a browser tab, on an account
 that has never dismissed it on this device, sees one line under the day's spine: the roll call can
 open from the home screen, without a browser bar and without signal, with the one act that does it —
-a button that calls the platform's install prompt where one exists, the two words of the platform's
-own menu (with the share glyph drawn inline) where none does. Dismissed once, it is gone (a device
+a button that calls the platform's install prompt where one exists, the platform's own menu item
+(with the share glyph drawn inline) where none does. Dismissed once, it is gone (a device
 fact, kept where boat mode keeps its own); installed (`display-mode: standalone`), on a desktop, in
 an embed, or above the first-thing panel, it never renders. No coral, no drawing, no motion: a fact
 about the device at the ledger row's own weight, so the home's budget is untouched.

@@ -34,7 +34,7 @@ So an entry here is the index; the constraint lives beside the code it constrain
 ### The shop home — `/shop/[shopSlug]`
 
 **Proposed 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
-on a phone or tablet in a browser tab, a staffer whose role reaches the manifest sees one line under the day's spine, once per device, saying the roll call can open from the home screen without a browser bar or signal, with the platform's install prompt or its two words; installed, on a desktop, or dismissed, it renders nothing.
+on a phone or tablet in a browser tab, a staffer whose role reaches the manifest sees one line under the day's spine, once per device, saying the roll call can open from the home screen without a browser bar or signal, with the platform's install prompt or its own menu item; installed, on a desktop, or dismissed, it renders nothing.
 
 **Proposed 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), [canvas](canvases/20260907-nothing-from-nowhere/README.md)):
 on a phone the greeting folds into the header bar as the page scrolls, driven by the scroll position; a cleared row's neighbours slide into its gap; the station chip's count rolls; every row and chip answers a press in the frame the finger lands. Each renders the cut, the swap or the tap of today when it is not true.
