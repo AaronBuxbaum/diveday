@@ -1,0 +1,1 @@
+ALTER TABLE "inbound_messages" ADD COLUMN "email_message_id" text;

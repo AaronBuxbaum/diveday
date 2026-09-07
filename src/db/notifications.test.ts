@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import { seededShopContext } from "@/test/db";
@@ -41,7 +41,14 @@ async function seededBooking() {
 
 // ADR 20260902-sender-standards-for-ses: the shop's Reply-To and postal line
 // ride every shop-scoped send, resolved here rather than by each composer.
+// Amended by ADR 20260907-two-way-inbox: the Reply-To is now the shop's own
+// inbound address, so a diver who hits reply lands in the shop's inbox rather
+// than in a front-desk mailbox the app cannot see.
 describe("the shop's sender profile", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   function capturingProvider(seen: Notification[]): NotificationProvider {
     return {
       async send(notification) {
@@ -51,7 +58,7 @@ describe("the shop's sender profile", () => {
     };
   }
 
-  it("attaches the shop's front-desk address and street to a send", async () => {
+  it("attaches the shop's inbound reply address and street to a send", async () => {
     const { db, shop, trip, booking } = await seededBooking();
     await db
       .update(shops)
@@ -86,12 +93,43 @@ describe("the shop's sender profile", () => {
     );
 
     expect(seen[0]?.sender).toEqual({
+      replyTo: `reply+${shop.inboundEmailToken}@inbound.ses.dive.day`,
+      postalAddress: "1 Harbor Rd, Key Largo, FL 33037, US",
+    });
+
+    // Inbound switched off: the confirmed front desk, resolved from the same
+    // row by the same reader, so this layer proves the fallback too.
+    vi.stubEnv("EMAIL_INBOUND_DOMAIN", "");
+    seen.length = 0;
+    await sendNotification(
+      db,
+      {
+        kind: "booking_confirmation",
+        bookingId: booking.bookingId,
+        shopId: shop.id,
+        to: "nora@dive.day",
+        locale: "en-US",
+        diverName: "Nora Quinn",
+        shopName: shop.name,
+        tripTitle: trip.title,
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        timezone: shop.timezone,
+      },
+      capturingProvider(seen),
+    );
+    expect(seen[0]?.sender).toEqual({
       replyTo: "desk@bluemantis.dive",
       postalAddress: "1 Harbor Rd, Key Largo, FL 33037, US",
     });
   });
 
   it("sends exactly as before for a shop with neither on file, and on a drained retry", async () => {
+    // Inbound off, so the front desk is what the sender resolves to and the
+    // mid-flight change to it is observable — which is what this test is
+    // about: a queued payload carries no sender, and the drain resolves one
+    // fresh rather than reusing what was queued.
+    vi.stubEnv("EMAIL_INBOUND_DOMAIN", "");
     const { db, shop, trip, booking } = await seededBooking();
     await db
       .update(shops)

@@ -22,6 +22,7 @@ import { depthText, temperatureText } from "@/i18n/unit-labels";
 import type { BrandDisplayFontCode } from "@/lib/brand";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DiveRecordComparison } from "@/lib/dive-record";
+import type { FlySafeAnchor } from "@/lib/fly-safe";
 import { formatOrdinal } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { currencySymbol, minorToMajor, type ShopCurrency } from "@/lib/money";
@@ -148,6 +149,13 @@ export type AfterStateProps = {
    * (issue #1191).
    */
   diveRecord: DiveRecordComparison | null;
+  /**
+   * When this diver may fly, already worded in the shop's zone
+   * (`src/lib/fly-safe.ts`, issue #1425), or null when the record could not
+   * say. `anchor` picks the sentence: the clock started at the last recorded
+   * exit, or at the day's scheduled end. Informs, gates nothing.
+   */
+  flySafe: { when: string; hours: number; anchor: FlySafeAnchor } | null;
   /**
    * Per site the day dived, the species that site's field guide names.
    *
@@ -278,6 +286,7 @@ export const AFTER_STATE_TEST_IDS = {
   printSignature: "dive-record-print-signature",
   face: "dive-record-face",
   seen: "dive-record-seen",
+  flySafe: "fly-safe-line",
 } as const;
 
 export function AfterState({
@@ -289,6 +298,7 @@ export function AfterState({
   diverName,
   sites,
   diveRecord,
+  flySafe,
   fieldGuide,
   observedSpecies,
   course,
@@ -399,6 +409,20 @@ export function AfterState({
         siteMark={siteMark}
         postcard={postcard}
       />
+
+      {/* The one line the diver's body still needs after the record is closed
+          (issue #1425): when they may fly, in the shop's zone, with the hours
+          and who set them in the same sentence. A sentence and no panel — it
+          informs, and a boxed warning would read as a gate. Off the print, which
+          is the keepsake alone. */}
+      {flySafe ? (
+        <p data-testid={AFTER_STATE_TEST_IDS.flySafe} className="mt-6 text-base print:hidden">
+          {t(
+            flySafe.anchor === "last_dive" ? "recap.flySafeAfterDive" : "recap.flySafeAfterReturn",
+            { when: flySafe.when, count: flySafe.hours, shopName: shop.name },
+          )}
+        </p>
+      ) : null}
 
       {/* The crew's own words carry themselves — a quote, not a boxed panel.
           The quote glyphs come from the bundle, since each locale sets its own

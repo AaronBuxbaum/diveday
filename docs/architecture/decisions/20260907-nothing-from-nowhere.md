@@ -1,7 +1,9 @@
 # 20260907-nothing-from-nowhere — Every change on screen comes from somewhere, anything a finger is on obeys it, and one physics governs all of it
 
-- **Status:** Proposed — pending H-69 (the spring's ration, the Wallet pass, and whether structural
-  motion reaches the roll call). Slices 18a–18f in the roadmap; **18a–18d shipped 2026-09-07**,
+- **Status:** Proposed — pending H-69 a and c (the spring's ration, and whether structural motion
+  reaches the roll call). **H-69 b decided 2026-09-07 (Aaron Buxbaum, in session): yes, the Wallet
+  pass** — built now and shipped dark until the credentials are held; the implementation spec is
+  [SPEC.md](../../design/canvases/20260907-nothing-from-nowhere/SPEC.md). Slices 18a–18f in the roadmap; **18a–18d shipped 2026-09-07**,
   taking H-69 a's recommended answer, holding H-69 b and c
 - **Date:** 2026-09-07
 - **Design:** [the canvas](../../design/canvases/20260907-nothing-from-nowhere/README.md) — seven
@@ -158,6 +160,16 @@ a human can hold. **Recommended:** yes, with the slice filed `waiting-on-externa
 certificate exists, and nothing built ahead of it. Declined, the thread stays as it ships and the
 Pass board renders nothing.
 
+**Decided 2026-09-07: yes** ("we definitely want the wallet pass"), and one step further than the
+recommendation: the slice is **built now and ships dark**. With no credential configured the thread
+renders as it does today and every pass route answers 404, which is the same escape hatch every
+move on this canvas has; the credentials are manual steps in §17's registry and the feature lights
+up the day they are pasted in. The signing library is named: `passkit-generator` 3.5.8 (MIT).
+Apple's push for passes uses the Pass Type ID certificate itself over HTTP/2, so no separate push
+credential is needed; the Google half is signed with `node:crypto`. The full contract — journeys,
+the content table, interfaces, routes, configuration, acceptance tests and must-nots — is
+[SPEC.md](../../design/canvases/20260907-nothing-from-nowhere/SPEC.md), section 18f.
+
 ## What building it settled (2026-09-07)
 
 Slices 18a–18d shipped the same day the canvas was drawn. Three things the boards did not
@@ -178,12 +190,34 @@ anticipate, recorded here because the ADR is what code obeys:
    last move divides by nothing and reads as a flick, so the sheet leaves from under a hand that
    was putting it back. Below `MIN_VELOCITY_MS` a release is read as a distance.
 
-**18e is open on a finding rather than on effort.** The title fold needs the page's title inside
-the shell's bar, and this app renders the bar (`ShopNav`, in the shop layout) and the title
-(`ShopPageHeader`, in the page) in two different trees. A CSS-only fold would have to cover the
-shop-identity menu with an opaque label that stays clickable underneath, or shrink the heading —
-which decision 5 rules out. It needs a data-flow decision (a title slot on the layout, or a
-portal), which is a change to the shell rather than to motion, and it is filed as issue #1422.
+**18e took the portal, and building it settled four things the drawing left open** (issue #1422).
+The title fold needs the page's title inside the shell's bar, and this app renders the bar
+(`ShopNav`, in the shop layout) and the title (`ShopPageHeader`, in the page) in two different
+trees. The page now delivers it into an `aria-hidden` slot through `createPortal`
+(`FoldedPageTitle`), which leaves the layout's shape alone; a title slot on the layout would have
+needed a mechanism plus a decision about what a page with no title renders, for a motion slice.
+
+4. **The heading has to get out of the way, and the boards were right to draw it.** The bar is 85%
+   of the page behind a blur, so a 34px heading passing under it stays legible *through* it — the
+   first build without the fade put the word "Divers" on screen twice, once ghosting through the
+   chrome at full size and once as the folded label on top of it. It fades from 40px on, opacity
+   only: the page is already carrying it upward, and translating it too would move it at two speeds.
+5. **The gate is a slot with something in it, not a slot.** Every staff page renders the bar, but
+   the four departure surfaces carry their own `TripPageHeader` and fill nothing. Gating on the
+   slot's existence alone would have faded the shop's name away on those and left a bar holding a
+   mark and a blank. `:has([data-chrome-title-slot]:not(:empty))` also means there is no flash
+   before hydration, when no page has filled it yet.
+6. **A bare `scroll()` is not the page.** It binds to the *nearest scrollable ancestor*, which is
+   not the same scroller for a label in a sticky header and a heading in the page. Measured on a
+   freshly onboarded shop, the unqualified form had the label already 47px wide on arrival — a
+   fifth of the way through a fold nobody had scrolled. `scroll(root block)` names the one scroller
+   the reader is actually moving.
+7. **The reduced-motion kill-switch does not reach a scroll-driven animation.** `globals.css`'s
+   universal block overrides `animation-duration`, `-delay` and `-iteration-count`, every one of
+   them a statement about *time*, and an animation on a scroll progress timeline takes no progress
+   from time. Stilling this one needs a rule that names `animation-timeline`; without it a
+   reduced-motion reader keeps the fold, and at a 0.01ms duration it snaps in within the first
+   fraction of a pixel of scroll — louder than the motion the setting asked to remove.
 
 ## Alternatives considered
 
@@ -221,11 +255,14 @@ portal), which is a change to the shell rather than to motion, and it is filed a
   that a drag never begins while the sheet's list is scrolled.
 - **The title fold** is two keyframes in `globals.css` under `@supports`, a `data-page-title` on
   `ShopPageHeader`, and nothing in JS; the visual spec captures the folded state at 390.
-- **The pass** is a new runtime dependency (a PassKit signing library, named when the slice starts)
-  plus two public routes for pass registration and update, which answer only to a pass's own
-  authentication token and carry no shop data beyond the pass; the certificate and the push
-  credential enter `config/env-registry.mjs` as `manual` values. The security reviewer reads the
-  slice. Nothing ships until H-69 b is Chosen and the certificate is held.
+- **The pass** is a new runtime dependency, `passkit-generator` 3.5.8 (with `node-forge`, `joi`,
+  `do-not-zip` and `tslib` beneath it), plus the PassKit web service under `/api/wallet/v1/**`, whose
+  routes answer only to a pass's own authentication token and carry no shop data beyond the pass;
+  the Apple certificate and key and the Google issuer credentials enter `config/env-registry.mjs`
+  as `manual` values, and the two accounts enter §17's manual-actions registry. The security
+  reviewer reads the slice. *Amended 2026-09-07 on H-69 b:* the slice ships dark rather than
+  waiting — a DiveDay with no credentials configured renders the thread as today and 404s every
+  pass route — so it lands ahead of the certificate and needs nothing from a human to merge.
 - Each slice ends in the standing obligation from
   [design-artifacts.md](../../design/design-artifacts.md): the component names this ADR and a test
   pins the rule. The escape hatch is the same as the last three ADRs': every move renders the cut,

@@ -31,8 +31,10 @@ const seedPrivateShop = await import("./seed-private-shop/route");
 const seedEvening = await import("./seed-evening/route");
 const seedChangedDiveSite = await import("./seed-changed-dive-site/route");
 const seedObservedSpecies = await import("./seed-observed-species/route");
+const seedDiveTimes = await import("./seed-dive-times/route");
 const seedReturningDiver = await import("./seed-returning-diver/route");
 const seedBookingHandoff = await import("./seed-booking-handoff/route");
+const seedDisplayToken = await import("./seed-display-token/route");
 
 const secret = "e2e-test-secret";
 
@@ -124,6 +126,18 @@ const routes: SeedRoute[] = [
     },
   },
   {
+    slug: "seed-dive-times",
+    POST: seedDiveTimes.POST,
+    // The same `executed_dives` write as the two above, carrying times in and
+    // out — the instants the fly-safe line counts from. A route answering on a
+    // misconfigured deployment would be telling a real diver when they may
+    // board a plane off a dive nobody made. Reaching the database is what
+    // proves the guard let it through.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
     slug: "seed-booking-handoff",
     POST: seedBookingHandoff.POST,
     // A shop slug and an email, refused first — and it must be, because past
@@ -140,6 +154,18 @@ const routes: SeedRoute[] = [
     // emergency contact. A route answering on a misconfigured deployment would
     // be rewriting the number a coastguard calls.
     expectPastTheGuard: expectInvalidBody,
+  },
+  {
+    slug: "seed-display-token",
+    POST: seedDisplayToken.POST,
+    // No body is a valid ask (the defaults are the fixture), so reaching the
+    // database is what proves the guard let it through. Past that it mints a
+    // working, non-expiring link over a shop's whole day for a lobby screen —
+    // a route answering on a misconfigured deployment would be handing out a
+    // real shop's board to anyone.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
   },
   {
     slug: "seed-private-shop",

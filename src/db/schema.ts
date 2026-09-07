@@ -180,6 +180,17 @@ export const shops = pgTable(
      * a diver's reply there (issue #1288).
      */
     contactEmailConfirmedAt: timestamp("contact_email_confirmed_at", { withTimezone: true }),
+    /**
+     * The token in this shop's inbound reply address —
+     * `reply+<token>@<inbound domain>` is the `Reply-To` on every email the
+     * shop sends through DiveDay, so a diver who hits reply lands in the
+     * shop's own inbox rather than a dead letter box (ADR
+     * 20260907-two-way-inbox). Unguessable and unique, minted by the database
+     * on insert; never shown to a person and never typed. Attribution is by
+     * the token alone: the receiving route resolves it to the shop and only
+     * then matches the sender's address to a diver inside that shop.
+     */
+    inboundEmailToken: uuid("inbound_email_token").notNull().defaultRandom(),
     contactPhone: text("contact_phone"),
     /**
      * Where a post-trip review request sends a diver — a Google Business,
@@ -288,6 +299,17 @@ export const shops = pgTable(
     sendWindowStartHour: integer("send_window_start_hour").notNull().default(8),
     sendWindowEndHour: integer("send_window_end_hour").notNull().default(20),
     /**
+     * How long after the day's last dive a diver reads they may fly, in whole
+     * hours — one figure for a single dive, one for a day of two or more
+     * (`src/lib/fly-safe.ts`, issue #1425). The sentence on the recap credits
+     * the figure to the shop and the practice to DAN, so the CHECK below
+     * floors each at DAN's published minimum (12 and 18): a shop may ask for
+     * more, never less, or even that weaker claim is false. Informs, never
+     * gates.
+     */
+    flySafeHoursSingle: integer("fly_safe_hours_single").notNull().default(18),
+    flySafeHoursRepetitive: integer("fly_safe_hours_repetitive").notNull().default(24),
+    /**
      * Where the shop's season starts — the denominator behind the home's one
      * fact of scale (ADR 20260904-reef-all-the-way-down, decision 2, Budget
      * rule 3). "Your 400th diver of the season" is a claim about a count from
@@ -326,6 +348,24 @@ export const shops = pgTable(
      * it and they come back.
      */
     searchListingOptOutAt: timestamp("search_listing_opt_out_at", { withTimezone: true }),
+    /**
+     * Whether the tide window a site carries reaches the diver's public
+     * departure page. Off by default: the sentence names a clock time beside
+     * a Book button, and whether that is a promise the shop wants to publish
+     * is the shop's call. Staff surfaces read it regardless (ADR
+     * 20260907-noaa-tide-predictions).
+     */
+    tideWindowPublic: boolean("tide_window_public").notNull().default(false),
+    /**
+     * The shop's locality as a path segment — `key-largo` for a shop whose
+     * `address_locality` says "Key Largo" — written by `setShopAddress` from
+     * `regionSlugFromLocality` (src/lib/region.ts) every time the address
+     * saves, and never typed by anyone. `/dive/<region>` lists every listed
+     * shop that shares one (issue #1436). Null when the shop has no locality
+     * on file, which keeps it off every regional page rather than on a page
+     * called "null".
+     */
+    regionSlug: text("region_slug"),
     tagline: text("tagline"),
     description: text("description"),
     logoUrl: text("logo_url"),
@@ -376,6 +416,7 @@ export const shops = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
     // The same days `parseSeasonStart` accepts (`src/lib/season.ts`). A
     // constraint looser than the action it backs lets any other caller
@@ -390,9 +431,20 @@ export const shops = pgTable(
         and not (${table.seasonStartMonth} = 2 and ${table.seasonStartDay} > 28)
         and not (${table.seasonStartMonth} in (4, 6, 9, 11) and ${table.seasonStartDay} > 30)`,
     ),
+    // The same bounds `parseFlySafeHours` accepts (`src/lib/fly-safe.ts`):
+    // DAN's floors, a three-day ceiling, and a repetitive wait no shorter than
+    // the single one.
+    check(
+      "shops_fly_safe_hours_in_range",
+      sql`${table.flySafeHoursSingle} >= 12 and ${table.flySafeHoursSingle} <= 72
+        and ${table.flySafeHoursRepetitive} >= 18 and ${table.flySafeHoursRepetitive} <= 72
+        and ${table.flySafeHoursRepetitive} >= ${table.flySafeHoursSingle}`,
+    ),
     // A year a shop could plausibly have opened in. Bounded at both ends like
     // every other numeric setting, so no caller can persist a figure the
     // storefront would print as nonsense.
+    // `/dive/<region>` reads listed shops by this one column (issue #1436).
+    index("shops_region_slug_idx").on(table.regionSlug),
     check(
       "shops_established_year_plausible",
       sql`${table.establishedYear} IS NULL OR (${table.establishedYear} >= 1900 AND ${table.establishedYear} <= 2100)`,
@@ -1289,6 +1341,20 @@ export const courseInquiries = pgTable(
 export const diveSiteFitTone = pgEnum("dive_site_fit_tone", ["welcoming", "demanding", "unknown"]);
 
 /**
+ * When a site dives best, in the shop's own reading of its water: at the
+ * turn, on the rising tide, on the falling one, or `any` — the default, and
+ * the honest answer for a sheltered reef. Mirrors `TIDE_PREFERENCES` in
+ * `src/lib/tides.ts`; the tide window informs and gates nothing (ADR
+ * 20260907-noaa-tide-predictions).
+ */
+export const diveSiteTidePreference = pgEnum("dive_site_tide_preference", [
+  "any",
+  "slack",
+  "flood",
+  "ebb",
+]);
+
+/**
  * How demanding a site is, as a code rather than the shop's own adjective.
  *
  * `dive_sites.difficulty` was free text, and it read as the one untranslated
@@ -1327,6 +1393,14 @@ export const diveSites = pgTable(
     /** Offshore coordinate selected by staff for the automated marine forecast. */
     forecastLatitude: doublePrecision("forecast_latitude"),
     forecastLongitude: doublePrecision("forecast_longitude"),
+    /**
+     * The NOAA CO-OPS station whose high/low table this site is read against —
+     * seven digits, the nearest ocean-side station rather than the site itself,
+     * which is rarely a station. Null means the briefing says nothing about the
+     * tide, which is most sites (ADR 20260907-noaa-tide-predictions).
+     */
+    tideStationId: text("tide_station_id"),
+    tidePreference: diveSiteTidePreference("tide_preference").notNull().default("any"),
     satelliteImageUrl: text("satellite_image_url"),
     routeImageUrl: text("route_image_url"),
     imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
@@ -4006,6 +4080,149 @@ export const notificationRateLimitState = pgTable("notification_rate_limit_state
 });
 
 /**
+ * The channel a diver wrote back on. Channel-agnostic on purpose (ADR
+ * 20260907-two-way-inbox): `sms` is here from the start although nothing
+ * writes it yet — SNS cannot receive a text, and two-way SMS needs a dedicated
+ * number through End User Messaging — so the day that lands it is a webhook
+ * and not a migration.
+ */
+export const inboundChannel = pgEnum("inbound_channel", ["email", "sms", "whatsapp"]);
+
+/**
+ * A message a diver sent *to* the shop — a reply to a booking confirmation, a
+ * WhatsApp "running late", a question from an address nobody has on file (ADR
+ * 20260907-two-way-inbox). Every DiveDay message used to be one-way; divers
+ * replied anyway and the reply landed in a mailbox nobody read at the counter.
+ *
+ * Attribution is by address: the receiving route resolves the shop first (the
+ * reply-to token for email, the WhatsApp Business Account for WhatsApp) and
+ * only then matches `from_address` to a person **inside that shop** — email
+ * against `people.email`, a phone against the digits of `people.phone`. No
+ * match leaves `person_id` null and the row reads as an unknown sender; it
+ * is never guessed across shops.
+ *
+ * `provider_message_id` is unique per channel, which is what makes a redelivered
+ * webhook a no-op rather than a duplicate row. `in_reply_to_delivery_id` is set
+ * when a header names the outbound message (email `In-Reply-To`) and that
+ * message was one of the tracked kinds; it goes null, not missing, when the
+ * delivery trail is pruned.
+ *
+ * Soft-deleted like everything else (ADR 20260820-every-delete-is-soft): the
+ * word on screen is Delete, the row stays. `answered_at` is the inbox's one
+ * state — a reply from the record sets it, so does a staffer saying it was
+ * handled by phone.
+ */
+export const inboundMessages = pgTable(
+  "inbound_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** The diver the address matched, or null for an unknown sender. */
+    personId: uuid("person_id").references(() => people.id),
+    channel: inboundChannel("channel").notNull(),
+    /** The bare address as the provider gave it: a lowercased email, or WhatsApp's digits-only number. */
+    fromAddress: text("from_address").notNull(),
+    subject: text("subject"),
+    body: text("body").notNull(),
+    /**
+     * How many attachments arrived with it. Recorded, never fetched: the
+     * bytes stay with the provider, and the row only says they exist so a
+     * staffer knows to look there.
+     */
+    mediaCount: integer("media_count").notNull().default(0),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    answeredAt: timestamp("answered_at", { withTimezone: true }),
+    providerMessageId: text("provider_message_id").notNull(),
+    /**
+     * The `Message-ID` header of an inbound email, kept apart from
+     * `provider_message_id` (SES's own id, which is what makes a redelivery a
+     * no-op). A reply sets `In-Reply-To` and `References` to *this*, which is
+     * what makes it land in the diver's thread rather than beside it. Null on
+     * every other channel and on a mail that carried none.
+     */
+    emailMessageId: text("email_message_id"),
+    inReplyToDeliveryId: uuid("in_reply_to_delivery_id").references(
+      () => notificationDeliveries.id,
+      { onDelete: "set null" },
+    ),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("inbound_messages_channel_provider_message_unique").on(
+      table.channel,
+      table.providerMessageId,
+    ),
+    // The shop inbox: live rows, newest first, unanswered ones leading.
+    index("inbound_messages_shop_received_idx")
+      .on(table.shopId, table.receivedAt)
+      .where(sql`${table.deletedAt} is null`),
+    index("inbound_messages_shop_unanswered_idx")
+      .on(table.shopId)
+      .where(sql`${table.deletedAt} is null and ${table.answeredAt} is null`),
+    // The record's thread.
+    index("inbound_messages_shop_person_received_idx").on(
+      table.shopId,
+      table.personId,
+      table.receivedAt,
+    ),
+  ],
+);
+
+/**
+ * What a staffer wrote back, on the channel the diver wrote in (ADR
+ * 20260907-two-way-inbox). Its own table rather than a `notification_deliveries`
+ * row because that table is keyed by booking and purpose — one row per
+ * booking per kind, the latest state of "did the confirmation land" — and a
+ * reply is keyed by a person and a message, of which there may be any number.
+ * What it shares with the delivery trail is the outcome vocabulary: the same
+ * `notification_delivery_status`, the provider's message id, and the send
+ * error, so a failed reply reads exactly like a failed confirmation.
+ *
+ * `locale` is the language it went out in — the diver's own, falling back to
+ * the shop's (ADR 20260731-per-person-notification-locale) — kept so the record
+ * can say which. `sent_by_person_id` names the staffer; it stays put on a merge
+ * for the reason every staff reference does.
+ */
+export const staffReplies = pgTable(
+  "staff_replies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    /** The message this answers; null once that message is gone, or for a reply started cold. */
+    inboundMessageId: uuid("inbound_message_id").references(() => inboundMessages.id, {
+      onDelete: "set null",
+    }),
+    channel: inboundChannel("channel").notNull(),
+    toAddress: text("to_address").notNull(),
+    body: text("body").notNull(),
+    locale: text("locale").notNull(),
+    sentByPersonId: uuid("sent_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    status: notificationDeliveryStatus("status").notNull(),
+    providerMessageId: text("provider_message_id"),
+    sendErrorCode: text("send_error_code"),
+    sendError: text("send_error"),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("staff_replies_shop_person_sent_idx").on(table.shopId, table.personId, table.sentAt),
+    index("staff_replies_inbound_message_idx").on(table.inboundMessageId),
+  ],
+);
+
+/**
  * One connected Stripe account per shop (Connect, Standard — the shop's own
  * account, not a platform-controlled sub-account). Presence plus
  * `charges_enabled` is the sole readiness gate for creating an order; absence
@@ -5412,6 +5629,19 @@ export type MedicalAnswers = {
 };
 
 /**
+ * The guardian section of a minor's release as last saved for later — the
+ * sibling of `draft_signer_name`. Strings as typed, unvalidated: what a parent
+ * finds when they come back to the link, never what the record attests to.
+ */
+export type DraftGuardian = {
+  name: string | null;
+  relationship: string | null;
+  email: string | null;
+  /** The guardian's own consent tick, kept across a refusal exactly as `draft_acknowledged` is. */
+  acknowledged: boolean;
+};
+
+/**
  * One issued link gets one row. Pending rows may be superseded; completed rows
  * are immutable evidence and never updated or re-used for a new template.
  */
@@ -5619,6 +5849,48 @@ export const waiverRecords = pgTable(
     medicalClearanceDeclinedByPersonId: uuid("medical_clearance_declined_by_person_id").references(
       () => people.id,
     ),
+    /**
+     * **The guardian's half of a minor's release** (ADR
+     * 20260907-guardian-co-signature). A diver under the age of majority on
+     * the day they sign (`src/lib/guardian.ts`, over `people.date_of_birth`)
+     * has a parent or legal guardian sign the same release, on the same page,
+     * with the same typed-consent evidence the diver's own signature takes —
+     * so these five columns are the diver's `signed_name` /
+     * `signature_method` / `consented_at` / `signed_at` block a second time,
+     * plus who the co-signer is to the diver (a code, `GuardianRelationship`)
+     * and how to reach them.
+     *
+     * All null on every record a guardian never touched: an adult's, a
+     * diver's with no date of birth on file (the rule fails open, as H-08's
+     * does), and every record signed before this shipped. **Null on a minor's
+     * record is the block**: `guardianSignatureMissing` raises
+     * `guardian_signature_missing` in readiness, and the issue path refuses to
+     * treat that record as standing so a fresh link can collect both
+     * signatures. The guardian is *not* a `people` row — they are a party to
+     * one document, not a customer, and giving them a record would invent a
+     * diver the shop never met.
+     *
+     * Inside the integrity seal (`src/lib/waiver-integrity.ts`, v1), because a
+     * guardian's signature removed after the fact is the tampering the seal
+     * exists to catch. `guardian_name` and `guardian_email` are personal data
+     * of a third party and go with the diver's own under erasure
+     * (`src/db/anonymize.ts`); the fact and date of the co-signature survive,
+     * exactly as the diver's `signed_at` does.
+     */
+    guardianName: text("guardian_name"),
+    guardianRelationship: text("guardian_relationship"),
+    guardianEmail: text("guardian_email"),
+    guardianSignatureMethod: text("guardian_signature_method"),
+    guardianConsentedAt: timestamp("guardian_consented_at", { withTimezone: true }),
+    guardianSignedAt: timestamp("guardian_signed_at", { withTimezone: true }),
+    /**
+     * The guardian section as last saved with "Save and finish later" — the
+     * sibling of `draft_signer_name`, so a parent who comes back to the link
+     * finds their own fields as they left them. Unsubmitted state, never
+     * evidence: excluded from the export bundle with the other drafts, and
+     * stripped by erasure.
+     */
+    draftGuardian: jsonb("draft_guardian").$type<DraftGuardian>(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     /** HMAC over the immutable signed metadata; null means legacy/unverified. */
     integrityHash: text("integrity_hash"),
@@ -5697,6 +5969,18 @@ export const waiverRecords = pgTable(
         ${table.medicalClearanceEvaluatedOn} is not null
         and (${table.medicalClearanceDocumentUrl} is not null
           or ${table.medicalClearancePhysicianName} is not null))`,
+    ),
+    // A guardian's signature is one act with four facts: when they signed,
+    // when they consented, by which provider, and who they are to the diver.
+    // Either all four are there or none is — a `guardian_signed_at` with no
+    // relationship would render as a co-signature by nobody in particular.
+    // The name and email are deliberately outside this rule: erasure strips
+    // them and the signature's fact survives (ADR 20260907-guardian-co-signature).
+    check(
+      "waiver_records_guardian_signature_whole",
+      sql`(${table.guardianSignedAt} is null) = (${table.guardianConsentedAt} is null)
+        and (${table.guardianSignedAt} is null) = (${table.guardianSignatureMethod} is null)
+        and (${table.guardianSignedAt} is null) = (${table.guardianRelationship} is null)`,
     ),
   ],
 );
@@ -5884,6 +6168,53 @@ export const calendarFeeds = pgTable(
     uniqueIndex("calendar_feeds_live_person_scope_idx")
       .on(table.personId, table.scope)
       .where(sql`${table.revokedAt} IS NULL`),
+  ],
+);
+
+/**
+ * A long-lived, revocable bearer credential over the shop's **departures board**
+ * — the lobby TV / dock tablet at `/board/[token]` (issue #1426, N-23). Same
+ * discipline as `calendar_feeds`: only the hash is stored, the raw token exists
+ * solely in the response that minted it, and there is no expiry, because a
+ * screen on a wall that went dark after 60 days would be noticed by nobody
+ * until a diver asked why the board is blank. Revocation is the mitigation.
+ *
+ * What the board shows is decided at the reader (`src/db/departures-board.ts`),
+ * never by a column here: a boat's title, time, site, stage word, meeting point
+ * and an "n of capacity" count. `show_names` is the one knob — off, nobody is
+ * named at all; on, the **crew** line appears. Diver names never reach a
+ * lobby screen at any setting.
+ *
+ * Revoking *is* the delete: a revoked link has nothing left a shop could ask
+ * to remove, so `revoked_at` is the row's soft-delete stamp and the settings
+ * page lists only rows where it is null. Nothing hard-deletes a row except the
+ * demo cascade.
+ */
+export const displayTokens = pgTable(
+  "display_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tokenHash: text("token_hash").notNull().unique(),
+    /** "Lobby TV", "Dock B tablet" — the shop's own word for which screen this is. */
+    label: text("label").notNull(),
+    showNames: boolean("show_names").notNull().default(false),
+    createdByPersonId: uuid("created_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Stamped when the board renders, coarsely, so the settings page can tell
+     * a screen that is actually showing from a link nobody ever opened.
+     */
+    lastShownAt: timestamp("last_shown_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("display_tokens_token_hash_idx").on(table.tokenHash),
+    index("display_tokens_shop_live_idx").on(table.shopId, table.revokedAt),
   ],
 );
 

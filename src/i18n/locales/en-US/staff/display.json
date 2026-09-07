@@ -1,0 +1,41 @@
+{
+  "eyebrow": "Settings",
+  "title": "Lobby display",
+  "description": "A link for a TV in the lobby or a tablet on the dock: today's boats, who is aboard as a count, and where to meet. No sign-in on that screen.",
+  "create": {
+    "heading": "New screen",
+    "labelField": "Which screen",
+    "labelPlaceholder": "Lobby TV",
+    "showNames": "Show the crew's names",
+    "showNamesDescription": "Anyone in the room reads them. Only the crew who agreed to be named appear, and divers never do.",
+    "submit": "Create link",
+    "submitting": "Creating…"
+  },
+  "newLink": {
+    "heading": "Open this on the screen",
+    "shownOnce": "Copy it now, because it is shown once. If you lose it, revoke this screen and create another.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Couldn't copy, select it manually",
+    "shared": "Anyone with this link sees today's departures without signing in. Treat it like a key to the shop."
+  },
+  "list": {
+    "heading": "Screens",
+    "empty": "No screens yet.",
+    "created": "Created {when}",
+    "lastShown": "Last shown {when}",
+    "neverShown": "Not opened yet",
+    "namesOn": "Crew named",
+    "namesOff": "Nobody named",
+    "revoke": "Revoke",
+    "revoking": "Revoking…",
+    "confirmRevoke": "Revoke this link? The screen goes dark on its next refresh.",
+    "confirmRevokeButton": "Yes, revoke it",
+    "cancel": "Never mind"
+  },
+  "notice": {
+    "denied": "Only an owner or manager can change lobby screens.",
+    "invalidLabel": "Give the screen a name of up to {max, plural, one {# character} other {# characters}}.",
+    "revoked": "Link revoked."
+  }
+}

@@ -29,6 +29,8 @@
       "reviewUrlInvalid": "Introduce un enlace https:// completo, o vacía el campo para dejar de pedir reseñas.",
       "searchListingOn": "Tus páginas públicas aparecen en los buscadores.",
       "searchListingOff": "Tus páginas públicas están ocultas para los buscadores. Lo que ya esté indexado puede tardar unas semanas en desaparecer.",
+      "tideWindowOn": "Los buceadores ya ven la ventana de marea en las páginas de salida.",
+      "tideWindowOff": "La ventana de marea ya no aparece en las páginas de salida de los buceadores.",
       "conservationInvalid": "Revisa la selección de compromisos de conservación.",
       "connected": "Cuenta de Stripe conectada.",
       "connectFailed": "La conexión con Stripe no se completó. Inténtalo de nuevo.",
@@ -43,6 +45,8 @@
       "emergencySaved": "Referencia de emergencia guardada.",
       "sendWindowSaved": "Horario de mensajes guardado.",
       "sendWindowInvalid": "Eso no se guardó. La primera hora tiene que ir antes que la última, en formato de 24 horas.",
+      "flySafeSaved": "Horas para volar guardadas.",
+      "flySafeInvalid": "Eso no se guardó. Horas enteras, como mínimo las 12 y 18 de DAN, como máximo 72, y la espera tras dos inmersiones no puede ser menor que la de una.",
       "packageSaved": "Paquete añadido.",
       "packageDeleted": "Paquete eliminado.",
       "packageInvalid": "Eso no se guardó. Revisa el número de inmersiones, el precio y cuánto tiempo se puede usar."
@@ -200,6 +204,15 @@
       "submit": "Guardar",
       "submitting": "Guardando…"
     },
+    "tideWindow": {
+      "heading": "Ventana de marea",
+      "valueOn": "Visible para buceadores",
+      "valueOff": "Solo personal",
+      "detail": "Los sitios con estación de mareas NOAA llevan una línea en las páginas del personal: la estoa más cercana y hacia dónde se mueve el agua cuando llega el barco. Marca esto y los buceadores leen la misma línea en la página de la salida.",
+      "label": "Mostrar la ventana de marea en las páginas públicas de salida",
+      "submit": "Guardar",
+      "submitting": "Guardando…"
+    },
     "conservation": {
       "heading": "Compromisos de conservación",
       "detail": "Selecciona los compromisos que practica tu operación. Se publican como una declaración de tu centro, nunca como una verificación de DiveDay.",
@@ -264,6 +277,15 @@
       "startLabel": "No antes de (0–23)",
       "endLabel": "No después de (1–24)",
       "submit": "Guardar horario",
+      "submitting": "Guardando…"
+    },
+    "flySafe": {
+      "heading": "Horas para volar",
+      "value": "{single} h · {repetitive} h",
+      "description": "Horas después de la última inmersión antes de que un buceador lea que puede volar. Su resumen dice la hora y que la espera la fijas tú, siguiendo la guía de DAN.",
+      "singleLabel": "Tras una inmersión",
+      "repetitiveLabel": "Tras dos o más inmersiones",
+      "submit": "Guardar horas para volar",
       "submitting": "Guardando…"
     },
     "units": {
@@ -352,6 +374,9 @@
     },
     "calendar": {
       "heading": "Suscripciones al calendario"
+    },
+    "display": {
+      "heading": "Pantalla del lobby"
     },
     "counterQr": {
       "heading": "La tarjeta del mostrador",

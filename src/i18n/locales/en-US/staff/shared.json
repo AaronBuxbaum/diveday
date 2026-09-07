@@ -5,6 +5,9 @@
     "youWorkHere": "You work here. This is the page divers see.",
     "openTheBoard": "Open the board"
   },
+  "tide": {
+    "window": "{turn, select, next {Next} other {Last}} {kind, select, high {high} other {low}} water at {time}; this departure reaches the site {phase, select, slack {at the turn of the tide} flood {on the flood} other {on the ebb}}{fit, select, met {, when it dives best} missed {. It dives best {preference, select, slack {at slack water} flood {on the flood} other {on the ebb}}} other {}}."
+  },
   "imageInput": {
     "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
     "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
@@ -16,7 +19,21 @@
     "markSignedOnPaper": "Mark signed on paper",
     "medicalAttestationLabel": "I have this diver's signed release on file, I have reviewed their medical questionnaire, and no answer needs physician sign-off.",
     "recording": "Recording…",
-    "recordPaperSignature": "Record paper signature"
+    "recordPaperSignature": "Record paper signature",
+    "guardianNameLabel": "Parent or guardian who signed",
+    "guardianRelationshipLabel": "Relationship",
+    "guardianRelationshipChoose": "Choose one"
+  },
+  "guardian": {
+    "relationship": {
+      "parent": "parent",
+      "legalGuardian": "legal guardian"
+    },
+    "relationshipOption": {
+      "parent": "Parent",
+      "legalGuardian": "Legal guardian"
+    },
+    "coSignedBy": "Co-signed by {name} ({relationship})"
   },
   "medicalClearance": {
     "recordClearance": "Record the physician's answer",
@@ -173,6 +190,7 @@
       "waiverExpired": "Waiver link expired; issue a fresh link.",
       "medicalReview": "A medical answer needs staff follow-up.",
       "medicalNotCleared": "A physician did not clear this diver to dive.",
+      "guardianSignatureMissing": "Signed by a minor alone. A parent or guardian has to sign too; send a fresh waiver link.",
       "certificationMissing": "No certification is on file for this trip.",
       "certificationPending": "Certification is waiting for staff verification.",
       "certificationSelfDeclared": "The diver said their level themselves. No certification record has been verified. Ask for the details and verify them.",
@@ -434,6 +452,7 @@
     "none": "Not signed",
     "current": "Signed",
     "expired": "Needs signing again",
+    "guardianMissing": "Guardian signature missing",
     "medicalReview": "Medical review",
     "medicalNotCleared": "Not cleared"
   },

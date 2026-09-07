@@ -69,6 +69,7 @@ describe("capability routes refuse in place", () => {
 
   it("finds the capability routes on disk", () => {
     expect(routes.sort()).toEqual([
+      "board/[token]",
       "claim/[token]",
       "confirm-contact/[token]",
       "invite/[token]",

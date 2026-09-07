@@ -127,12 +127,18 @@ test.describe("settings that change the shop", () => {
     const listed = page.getByLabel("List my public pages in search engines");
     await expect(listed).toBeChecked();
 
+    // Listed: the agent-facing availability document answers (issue #1427).
+    expect((await page.request.get(`/s/${privateShop.slug}/availability.json`)).status()).toBe(200);
+
     await listed.uncheck();
     await page.getByRole("button", { name: "Save" }).first().click();
     await expect(
       page.getByRole("status").filter({ hasText: "hidden from search engines" }),
     ).toBeVisible();
     await expect(page.getByLabel("List my public pages in search engines")).not.toBeChecked();
+    // Hidden from search is hidden from an agent too: the document is a 404,
+    // not an empty list (ADR 20260813-search-listing-is-a-choice).
+    expect((await page.request.get(`/s/${privateShop.slug}/availability.json`)).status()).toBe(404);
 
     // And back on again — the round trip is the claim, not the one-way switch.
     await page.getByLabel("List my public pages in search engines").check();
@@ -140,6 +146,7 @@ test.describe("settings that change the shop", () => {
     await expect(
       page.getByRole("status").filter({ hasText: "listed in search engines" }),
     ).toBeVisible();
+    expect((await page.request.get(`/s/${privateShop.slug}/availability.json`)).status()).toBe(200);
   });
 
   test("the rail opens a setting and the row edits in place", async ({ page, privateShop }) => {

@@ -62,6 +62,7 @@ import {
   dockDayOffsets,
 } from "@/lib/diver-planning";
 import { EMERGENCY_LINE_SLOTS, hasEmergencyReference } from "@/lib/emergency-reference";
+import { FLY_SAFE_FIELDS, FLY_SAFE_LIMITS } from "@/lib/fly-safe";
 import {
   formatHourOfDay,
   formatMoneyScanned,
@@ -107,6 +108,7 @@ import {
   saveDivingOptionsAction,
   saveDockDayRhythmAction,
   saveEmergencyReferenceAction,
+  saveFlySafeHoursAction,
   saveHospitalityAction,
   savePackingAction,
   savePassThroughFeeAction,
@@ -118,6 +120,7 @@ import {
   saveSeasonStartAction,
   saveSendWindowAction,
   saveTaxAction,
+  saveTideWindowAction,
   saveTimezoneAction,
   saveUnitsAction,
   updateBoatAction,
@@ -148,6 +151,8 @@ function noticeMessages(
     "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
     "send-window-saved": { tone: "success", text: t("settings.main.notice.sendWindowSaved") },
     "send-window-invalid": { tone: "danger", text: t("settings.main.notice.sendWindowInvalid") },
+    "fly-safe-saved": { tone: "success", text: t("settings.main.notice.flySafeSaved") },
+    "fly-safe-invalid": { tone: "danger", text: t("settings.main.notice.flySafeInvalid") },
     "package-saved": { tone: "success", text: t("settings.main.notice.packageSaved") },
     "package-deleted": { tone: "success", text: t("settings.main.notice.packageDeleted") },
     "package-invalid": { tone: "danger", text: t("settings.main.notice.packageInvalid") },
@@ -183,6 +188,8 @@ function noticeMessages(
     "review-url-invalid": { tone: "danger", text: t("settings.main.notice.reviewUrlInvalid") },
     "search-listing-on": { tone: "success", text: t("settings.main.notice.searchListingOn") },
     "search-listing-off": { tone: "success", text: t("settings.main.notice.searchListingOff") },
+    "tide-window-on": { tone: "success", text: t("settings.main.notice.tideWindowOn") },
+    "tide-window-off": { tone: "success", text: t("settings.main.notice.tideWindowOff") },
     "conservation-saved": { tone: "success", text: t("settings.main.notice.conservationSaved") },
     "conservation-invalid": { tone: "danger", text: t("settings.main.notice.conservationInvalid") },
     connected: { tone: "success", text: t("settings.main.notice.connected") },
@@ -629,6 +636,10 @@ export default async function SettingsPage({
   const sendWindowValue = t("settings.main.sendWindow.value", {
     start: formatHourOfDay(shop.sendWindowStartHour, locale),
     end: formatHourOfDay(shop.sendWindowEndHour, locale),
+  });
+  const flySafeValue = t("settings.main.flySafe.value", {
+    single: shop.flySafeHoursSingle,
+    repetitive: shop.flySafeHoursRepetitive,
   });
   const unitsValue = [
     t(shop.depthUnit === "feet" ? "settings.main.units.feet" : "settings.main.units.meters"),
@@ -1248,6 +1259,42 @@ export default async function SettingsPage({
               </FieldGrid>
             </SettingsRow>
 
+            {/* The third row about the shop's public face: whether the tide
+                window a stationed site carries reaches divers. Off by default
+                (ADR 20260907-noaa-tide-predictions). */}
+            <SettingsRow
+              heading={t("settings.main.tideWindow.heading")}
+              value={
+                shop.tideWindowPublic
+                  ? t("settings.main.tideWindow.valueOn")
+                  : t("settings.main.tideWindow.valueOff")
+              }
+              detail={t("settings.main.tideWindow.detail")}
+              sectionId="tideWindow"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="tideWindow" active={activeSection} />
+              <FieldGrid as="form" action={saveTideWindowAction} columns={1} className="mt-4">
+                <label className="flex min-h-11 items-center gap-3 text-sm">
+                  <input
+                    name="tideWindowPublic"
+                    type="checkbox"
+                    defaultChecked={shop.tideWindowPublic}
+                    className="size-4 accent-primary"
+                  />
+                  {t("settings.main.tideWindow.label")}
+                </label>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.tideWindow.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.tideWindow.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
             <SettingsRow
               heading={t("settings.main.conservation.heading")}
               value={conservationValue}
@@ -1484,6 +1531,59 @@ export default async function SettingsPage({
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("settings.main.sendWindow.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            {/* Two whole numbers of hours, one save (issue #1425). The floors
+              are DAN's published minimums, read from the same table the
+              action and the column's CHECK read, so the form can never offer
+              a wait the recap's own sentence would then misattribute. */}
+            <SettingsRow
+              heading={t("settings.main.flySafe.heading")}
+              value={flySafeValue}
+              description={t("settings.main.flySafe.description")}
+              sectionId="flySafe"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="flySafe" active={activeSection} />
+              <FieldGrid
+                as="form"
+                action={saveFlySafeHoursAction}
+                columns={2}
+                className="mt-4 gap-x-5 gap-y-5"
+              >
+                {FLY_SAFE_FIELDS.map((field) => (
+                  <Field
+                    key={field}
+                    label={t(
+                      field === "single"
+                        ? "settings.main.flySafe.singleLabel"
+                        : "settings.main.flySafe.repetitiveLabel",
+                    )}
+                  >
+                    <input
+                      name={field}
+                      type="number"
+                      inputMode="numeric"
+                      required
+                      min={FLY_SAFE_LIMITS[field].min}
+                      max={FLY_SAFE_LIMITS[field].max}
+                      step={1}
+                      defaultValue={
+                        field === "single" ? shop.flySafeHoursSingle : shop.flySafeHoursRepetitive
+                      }
+                      className={`${controlClass} tabular-nums`}
+                    />
+                  </Field>
+                ))}
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.flySafe.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.flySafe.submit")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>
@@ -2609,6 +2709,10 @@ export default async function SettingsPage({
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/calendar`}
               heading={t("settings.main.calendar.heading")}
+            />
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/display`}
+              heading={t("settings.main.display.heading")}
             />
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/integrations`}

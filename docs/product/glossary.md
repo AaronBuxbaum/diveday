@@ -405,9 +405,27 @@ new domain concept, define it here in the same PR.
   majority in the shop's jurisdiction (Florida at launch, H-01). The diving restrictions on
   under-15s are a separate rule and travel through the junior depth bands above, so the two never
   have to agree. Shown on the roster and manifest so a captain reading the boarding list can see it
-  without opening a profile (H-21). **A minor can still sign their own waiver solo** — accepted
-  as-is for now and explicitly flagged for the H-01–H-03 waiver legal review, not silently left
-  open.
+  without opening a profile (H-21). **A minor does not sign their own waiver alone** as of
+  2026-09-07 — see **Guardian co-signature** below. Note the two dates the word is measured on and
+  never confuse them: the roster's badge asks whether the diver is under 18 on the **trip** date,
+  because that is who is on the boat; the co-signature asks whether they were under 18 on the day
+  they **signed**, because a release a seventeen-year-old executed alone does not become valid on
+  their eighteenth birthday.
+- **Guardian co-signature** — the second signature a **minor's** liability release takes: a parent
+  or legal guardian signing the same release, on the same page, under the same signature provider
+  as the diver's own (ADR
+  [20260907-guardian-co-signature](../architecture/decisions/20260907-guardian-co-signature.md);
+  owner decision 2026-09-07, which closed H-21's open half). It is six columns on the release
+  record — who, what they are to the diver (**parent** or **legal guardian**, a code, never free
+  text), how to reach them, and the provider, consent and signature timestamps — never a `people`
+  row, because a guardian is a party to one document rather than a customer of the shop. Until both
+  signatures are on it, readiness raises **guardian signature missing** and the diver does not
+  board; the shop's fix is the same as an expired release's, a fresh link that asks for both. The
+  rule **fails open on an unknown date of birth**, exactly as the minimum-age gate does, so a diver
+  the shop never asked is treated as an adult — and the day a date of birth lands on their record,
+  the release they already signed becomes a blocker rather than a silent pass. It does not answer
+  H-01 or H-03: the release wording is unchanged, still English, and whether typed consent is a
+  sufficient assurance level is as open for the guardian as it is for the diver.
 - **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
   OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
   `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence
@@ -715,6 +733,16 @@ new domain concept, define it here in the same PR.
   which is what every marine forecast means by "seas" — individual sets run roughly 1.5–2× it, so
   the product says *seas*, never *waves*), and the direction is where the waves are **coming from**,
   not where they are going. The going-toward convention exists, but it belongs to current.
+- **Tide window** — where the tide is when the boat reaches a site: **slack** (the half hour either
+  side of a predicted high or low), the **flood** (rising, low to high) or the **ebb** (falling), read
+  off NOAA CO-OPS's high/low predictions for the site's own `tide_station_id` at the dock-day
+  rhythm's arrival instant for that dive, never at the departure time (ADR
+  [20260907-noaa-tide-predictions](../architecture/decisions/20260907-noaa-tide-predictions.md)). A
+  site may say when it **dives best** (`any` / `slack` / `flood` / `ebb`) and the sentence says
+  whether this departure meets it. The time named is the tide table's turn, not a current
+  measurement — real slack on a reef lags it by a site-specific amount, which is the crew's to know.
+  Staff read it wherever a site has a station; divers read it only once the shop switches
+  `tide_window_public` on. Informs; never a gate.
 - **Course session** — a scheduled class (pool or open water) tied to a course, an instructor,
   and enrolled students. Instructor-to-student **ratios** are agency-mandated and vary by
   course and environment.
@@ -1545,6 +1573,19 @@ new domain concept, define it here in the same PR.
   diver climbs the ladder talking about. Informs and gates nothing, and it is an ornament rather than
   evidence — an unusable slug is dropped so the dive record still saves. Null means nobody said,
   never "all good".
+- **Fly-safe from** — the instant a diver reads they may board a plane after the day's diving
+  (`src/lib/fly-safe.ts`, issue #1425). The shop's own hours (`shops.fly_safe_hours_single` and
+  `_repetitive`, defaults 18 and 24, floored at DAN's published minimums of 12 and 18) counted from
+  the **last recorded exit**, or from the scheduled return once the boat is home by the one-hour
+  buffer. *Repetitive* whenever the day held more than one dive by either the record or the plan —
+  the longer wait is the one that costs nothing if wrong — and a record missing its last exit
+  anchors on the return, never on an earlier dive. Rendered on the thread's after-state and in the
+  recap email, in the shop's zone. The sentence names the **shop** as the author of the figure and
+  DAN as the practice behind it, because DAN publishes 12 and 18 and a shop may sit above them.
+  Two things it deliberately cannot know: whether a dive took decompression stops, which DAN says
+  needs substantially longer than 18 hours; and whether the diver dived on an earlier day, so a
+  single dive after a week of diving still reads *single*. Informs and gates nothing; never
+  computed from a depth profile, which is a dive computer's job.
 - **Surface interval** — the time between one dive's exit and the next dive's entry. Only ever
   stated between **consecutively numbered** executed dives that were both recorded and do not
   overlap; anything else is "not recorded". An interval measured across a dive nobody logged
@@ -1571,6 +1612,11 @@ new domain concept, define it here in the same PR.
   since revoked, never satisfies it. Being signed in is not being stepped up; **and step-up is
   only demanded of an account that has enabled two-factor**, so it is a control a staff member
   opts into rather than a floor under every account.
+- **Display link** — a revocable bearer URL (`/board/[token]`, `display_tokens`) a shop puts on a
+  lobby TV or a dock tablet to show the **departures board**: today's boats, the crew's stage word,
+  an "n of capacity" count, the meeting point and the outlook, with no sign-in on that screen. Hashed
+  at rest, non-expiring like a calendar feed, revoked from Settings → Lobby display. It never names
+  a diver; its one switch, *show names*, adds the crew line (issue #1426).
 - **Recovery code** — one of ten single-use strings issued at two-factor enrolment, shown once and
   stored only as a salted HMAC under the deployment's own sealing key. It is a second factor, not
   a password reset: presenting one satisfies the same check a TOTP code does.

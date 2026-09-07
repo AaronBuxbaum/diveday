@@ -17,6 +17,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as scheduler from "aws-cdk-lib/aws-scheduler";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as ses from "aws-cdk-lib/aws-ses";
+import * as sesActions from "aws-cdk-lib/aws-ses-actions";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 import * as cr from "aws-cdk-lib/custom-resources";
@@ -81,6 +82,12 @@ const GITHUB_DEPLOY_ENVIRONMENT = "infra-deploy";
 // credentials document. `iam.User.userName` is a token there, not a string, so
 // interpolating it would print `${Token[...]}` where a name belongs.
 const SES_SENDER_USER_NAME = "diveday-ses-sender";
+/**
+ * How long SES's copy of a received message stays in the inbound bucket. The
+ * app copies what it keeps into `inbound_messages` on receipt; this is the
+ * window in which a failed webhook delivery can still be replayed by hand.
+ */
+const INBOUND_MAIL_RETENTION_DAYS = 30;
 const BACKUP_UPLOADER_USER_NAME = "diveday-backup-uploader";
 const MEDIA_UPLOADER_USER_NAME = "diveday-media-uploader";
 
@@ -732,6 +739,94 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, "SesEventNotificationsTopicArn", {
       value: sesEventNotifications.topicArn,
       description: `SNS topic for SES bounce/complaint/delivery events. ${webhookHost}/api/webhooks/ses is subscribed by this stack; set this ARN as SES_SNS_TOPIC_ARN in the app.`,
+    });
+
+    // 8b. Mail divers send back (ADR 20260907-two-way-inbox). Every email the
+    // app sends carries `Reply-To: reply+<shop token>@<inbound domain>`; SES
+    // receives for that domain, stores each message in the bucket below, and
+    // publishes a `Received` notification to the topic, which delivers it to
+    // /api/webhooks/email-inbound inside the same signed SNS envelope the
+    // delivery webhook already verifies.
+    //
+    // The receiving domain is a *child of the verified sending identity*, on
+    // purpose: SES receives for a verified domain and every subdomain of it,
+    // so this needs no second identity and no second DKIM set -- one MX record
+    // (S17) and an active rule set, both of which are account state a stack
+    // cannot flip.
+    //
+    // The rule set is created here and **not activated**: SES allows one
+    // active rule set per region, activation is a region-wide switch with no
+    // CloudFormation resource behind it, and a stack that flipped it on every
+    // deploy would silently deactivate whatever else the account was
+    // receiving with. It is a manual action, and the runbook says so.
+    const sesInboundDomain =
+      this.node.tryGetContext("sesInboundDomain") || `inbound.${sesEmailDomain}`;
+    const inboundMailBucketName =
+      this.node.tryGetContext("inboundMailBucketName") || "diveday-inbound-mail";
+    const inboundMailBucket = new s3.Bucket(this, "SesInboundMailBucket", {
+      bucketName: inboundMailBucketName,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      // Unversioned for the reason the dump bucket is: a lifecycle expiry on
+      // a versioned bucket writes a marker and keeps the bytes. Every object
+      // is a diver's own words plus their address; the app copies what it
+      // keeps into `inbound_messages` within seconds of the object landing,
+      // and the retention window there is the one that matters.
+      versioned: false,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      lifecycleRules: [
+        {
+          id: "expire-inbound-mail",
+          enabled: true,
+          expiration: cdk.Duration.days(INBOUND_MAIL_RETENTION_DAYS),
+        },
+      ],
+    });
+
+    const sesInboundNotifications = new sns.Topic(this, "SesInboundMailNotifications", {
+      topicName: "diveday-ses-inbound-mail",
+    });
+    sesInboundNotifications.addSubscription(webhookSubscription("/api/webhooks/email-inbound"));
+
+    new ses.ReceiptRuleSet(this, "SesInboundRuleSet", {
+      receiptRuleSetName: "diveday-inbound",
+      rules: [
+        {
+          receiptRuleName: "diveday-inbound-to-s3",
+          recipients: [sesInboundDomain],
+          // SES's own spam and virus scan, whose verdicts ride in the
+          // notification; the webhook refuses a virus and keeps a spam verdict.
+          scanEnabled: true,
+          tlsPolicy: ses.TlsPolicy.OPTIONAL,
+          actions: [
+            new sesActions.S3({
+              bucket: inboundMailBucket,
+              objectKeyPrefix: "mail/",
+              topic: sesInboundNotifications,
+            }),
+          ],
+        },
+      ],
+    });
+
+    // The SES sender reads what SES received: one user, one more grant, no
+    // fourth credential to rotate. Read only, this bucket only.
+    inboundMailBucket.grantRead(sesSenderUser);
+    envValues.EMAIL_INBOUND_SNS_TOPIC_ARN = sesInboundNotifications.topicArn;
+    envValues.EMAIL_INBOUND_S3_BUCKET = inboundMailBucket.bucketName;
+
+    new cdk.CfnOutput(this, "SesInboundMailTopicArn", {
+      value: sesInboundNotifications.topicArn,
+      description: `SNS topic for mail received at ${sesInboundDomain}. ${webhookHost}/api/webhooks/email-inbound is subscribed by this stack; set this ARN as EMAIL_INBOUND_SNS_TOPIC_ARN in the app.`,
+    });
+    new cdk.CfnOutput(this, "SesInboundMailBucketName", {
+      value: inboundMailBucket.bucketName,
+      description: `Where SES stores received mail (objects expire after ${INBOUND_MAIL_RETENTION_DAYS} days). Set as EMAIL_INBOUND_S3_BUCKET in the app.`,
+    });
+    new cdk.CfnOutput(this, "SesInboundMxRecord", {
+      value: `MX ${sesInboundDomain} -> 10 inbound-smtp.${this.region}.amazonaws.com`,
+      description: `DNS record to add for the inbound domain ${sesInboundDomain}, in Vercel DNS, and then activate the diveday-inbound receipt rule set (S17).`,
     });
 
     // 9. SNS direct-to-phone SMS sending - see ADR 20260802-sns-sms-adapter.
@@ -2318,6 +2413,36 @@ exports.handler = async (event) => {
         verify: [
           "aws sesv2 get-email-identity --email-identity <sesEmailDomain> --query MailFromAttributes.MailFromDomainStatus  # SUCCESS",
         ],
+      },
+      {
+        id: "ses-inbound-mx-dns",
+        title: "Add the inbound mail MX record",
+        category: "DNS",
+        when: "once per sending domain, after the first deploy that created the diveday-inbound rule set",
+        why: "Same reason as the DKIM records: the zone is at Vercel. Without the MX record a diver's reply to reply+<token>@inbound.ses.dive.day bounces at their own mail server before SES ever sees it.",
+        run: [
+          "pnpm exec vercel dns add dive.day inbound.ses MX inbound-smtp.<region>.amazonses.com 10",
+        ],
+        store:
+          "Vercel -> dive.day -> DNS, on the inbound subdomain (the SesInboundMxRecord output spells it out for the deployed region).",
+        verify: ["dig +short MX inbound.ses.dive.day  # 10 inbound-smtp.<region>.amazonses.com."],
+      },
+      {
+        id: "ses-inbound-rule-set-active",
+        title: "Activate the inbound receipt rule set",
+        category: "AWS account",
+        when: "once per region, after the first deploy that created it",
+        why: "SES allows one active receipt rule set per region and activation is a region-wide switch with no CloudFormation resource behind it. A stack that flipped it on every deploy would silently deactivate whatever else the account receives mail with, so the stack creates the diveday-inbound set and leaves the switch to a person.",
+        run: ["aws ses set-active-receipt-rule-set --rule-set-name diveday-inbound"],
+        produces:
+          "Mail to reply+<token>@inbound.ses.dive.day stored in the inbound bucket and announced on the SesInboundMailTopicArn topic, which is subscribed to /api/webhooks/email-inbound.",
+        verify: [
+          "aws ses describe-active-receipt-rule-set --query Metadata.Name  # diveday-inbound",
+          "Reply to any DiveDay email from a diver's address and open that diver's record: the reply is on it within a minute.",
+        ],
+        onFailure:
+          "aws sns list-subscriptions-by-topic --topic-arn <SesInboundMailTopicArn>: PendingConfirmation means the webhook answered non-2xx (EMAIL_INBOUND_SNS_TOPIC_ARN or EMAIL_INBOUND_S3_BUCKET unset in the deployment); see docs/engineering/ses-email-runbook.md, 'Mail divers send back'.",
+        note: "Receiving is region-scoped like the sandbox: the rule set, the identity and the bucket must all be in the region the MX record points at.",
       },
       {
         id: "ses-production-access",

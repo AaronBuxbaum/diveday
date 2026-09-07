@@ -26,6 +26,10 @@ export const CHECKLIST_DETAIL_KEYS: Record<ChecklistDetailCode, DiverMessageKey>
   // true either way is the half that matters to them: the shop will be in
   // touch.
   medical_not_cleared: "ready.checklistDetail.medicalReview",
+  // Names the reason to the holder of the link — the same accepted narrowing
+  // as `under_minimum_age` (H-22): whoever holds a minor's readiness page is
+  // the family, and a sentence that hid why would leave them unable to fix it.
+  guardian_signature_missing: "ready.checklistDetail.guardianSignatureMissing",
   certification_missing: "ready.checklistDetail.certificationMissing",
   certification_pending: "ready.checklistDetail.certificationPending",
   certification_self_declared: "ready.checklistDetail.certificationSelfDeclared",

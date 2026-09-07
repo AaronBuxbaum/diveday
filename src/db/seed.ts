@@ -30,6 +30,7 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   dayCloseouts,
+  displayTokens,
   divePackageEntitlements,
   diveSiteCreatures,
   diveSiteMoments,
@@ -42,6 +43,7 @@ import {
   gearServiceEvents,
   heldSends,
   importedPaymentHistory,
+  inboundMessages,
   integrationDeliveries,
   integrationEvents,
   integrationOauthStates,
@@ -76,6 +78,7 @@ import {
   shops,
   specialtyCertifications,
   staffCredentials,
+  staffReplies,
   staffShifts,
   tips,
   tripAssignments,
@@ -122,6 +125,7 @@ import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
 import { seedGear } from "./seed-gear";
 import { seedHistory } from "./seed-history";
+import { seedInbox } from "./seed-inbox";
 import { seedLenses } from "./seed-lenses";
 import { seedMedicalReview } from "./seed-medical-review";
 import { seedMinimumSeats } from "./seed-minimum-seats";
@@ -133,9 +137,11 @@ import { seedPartnerReferrals } from "./seed-partner-referrals";
 import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { seedPromos } from "./seed-promos";
 import { seedRecentRecaps } from "./seed-recent-recaps";
+import { seedRegionNeighbours } from "./seed-region-neighbours";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSupportNeeds } from "./seed-support-needs";
+import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
 import { seedTripStage } from "./seed-trip-stage";
 import { seedTrips } from "./seed-trips";
@@ -353,6 +359,9 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       addressRegion: "FL",
       addressPostalCode: "33037",
       addressCountry: "US",
+      // What `setShopAddress` would derive from the locality above; seeded
+      // inserts bypass that writer, so they say it themselves (issue #1436).
+      regionSlug: "key-largo",
       latitude: 25.0865,
       longitude: -80.4473,
       // Rents the core kit plus both add-ons and fills nitrox, and prices them:
@@ -481,6 +490,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // (ADR 20260824-pre-departure-safety-check) — seeded once here, never
   // re-seeded by a reset, which is why it is not inside seedDemoSchedule.
   await seedPreDepartureChecklist(db, shop.id);
+  // Two listed neighbours in the same town, so `/dive/key-largo` has shops
+  // to show beside a demo it cannot list (issue #1436). Stable half: real
+  // rows a reset never touches.
+  await seedRegionNeighbours(db);
 }
 
 /**
@@ -582,6 +595,7 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, timezone?: st
           addressRegion: "FL",
           addressPostalCode: "33037",
           addressCountry: "US",
+          regionSlug: "key-largo",
           latitude: 25.0865,
           longitude: -80.4473,
           rentalItems: [
@@ -797,6 +811,9 @@ export async function seedDemoSchedule(
   // newer one.
   await seedDiveSiteCatalog(db);
   const { siteByName, benwood, french } = await seedDiveSites(db, shopId);
+  // Which NOAA station the two Key Largo sites read their tide from; the
+  // public toggle rides the history flag (ADR 20260907-noaa-tide-predictions).
+  await seedTides(db, shopId, opts.history !== false);
   const { tripRows, captainId, divemasterId } = await seedTrips(db, shopId, {
     instructor,
     reliefInstructor,
@@ -854,6 +871,10 @@ export async function seedDemoSchedule(
   // board has nothing on — the rows the requests list groups by day
   // (src/lib/date-requests.ts).
   await seedDateRequests(db, shopId);
+  // What divers wrote back — the inbox and the record thread (ADR
+  // 20260907-two-way-inbox). After the divers, since every row but the
+  // stranger's names one.
+  await seedInbox(db, shopId, customers, instructor.id);
   await seedFrontDesk(db, shopId, customers, tripRows, bookingRows, opts.history !== false);
   // The trailing quarter of already-sailed trips that gives owner reporting
   // something to report. Off for the lean unit-test template and for trial
@@ -1054,6 +1075,10 @@ export async function resetDemoSchedule(
   // against them are schedule-scoped operational history.
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
+  // Lobby-display links (issue #1426): nothing seeds one, so a reset clears
+  // them outright and every spec starts with no screens — which is also what
+  // lets the visual captures mint exactly one and photograph exactly one.
+  await db.delete(displayTokens).where(eq(displayTokens.shopId, shopId));
   await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
   // Neither of these is seeded — both are written only by what a visitor does
@@ -1122,6 +1147,12 @@ export async function resetDemoSchedule(
   // 20260904-reef-all-the-way-down, D40) — so it clears here for the same
   // reason and at the same point.
   await db.delete(recapPulses).where(eq(recapPulses.shopId, shopId));
+  // The inbox (ADR 20260907-two-way-inbox): a reply names the message it
+  // answers and the staffer who wrote it, a message names a diver and, when a
+  // header said so, a notification delivery — so replies go first, messages
+  // second, and both before the people and delivery rows they point at.
+  await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
+  await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
   // Stripe checkout/refund state references bookings, trips, and orders, so it
   // must be cleared before those parents or the deletes below FK-violate and
   // abort the whole reset mid-run — leaving a prior payment test's trips and

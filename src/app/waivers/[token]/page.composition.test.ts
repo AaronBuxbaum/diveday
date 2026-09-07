@@ -104,8 +104,21 @@ describe("the waiver's pacing", () => {
     // silently disagreed about was the emergency contact: a name *and* a
     // reachable number the crew calls in an incident, which this page is the
     // main place anyone captures.
+    //
+    // **A heading is not a step, which is the whole point of the rule.** There
+    // are four `<SectionHeading>`s and three steps: the release, the medical
+    // form, the diver's signature, and — only for a minor — the parent or legal
+    // guardian's (ADR 20260907-guardian-co-signature). The co-signature is part
+    // of signing rather than a fourth thing to finish, so the rail is untouched
+    // by it; what must never come back is a heading that *numbers itself*.
     expect(SOURCE).not.toMatch(/StepHeading/);
-    expect(countOf("<SectionHeading>")).toBe(3);
+    expect(countOf("<SectionHeading>")).toBe(4);
+    // The rail's own membership, stated where a future heading cannot drift it:
+    // three labels, and the guardian is not one of them.
+    for (const step of ["waiver.railRelease", "waiver.railMedical", "waiver.railSign"]) {
+      expect(countOf(step)).toBe(1);
+    }
+    expect(SOURCE).not.toMatch(/railGuardian/);
   });
 });
 

@@ -5,7 +5,13 @@ import type { DiverLocale } from "@/i18n/settings";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
 import type { DemoRoleId } from "@/lib/demo-roles";
-import { formatDateTimeTz, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
+import {
+  formatDateTimeTz,
+  formatShortDate,
+  formatTime,
+  formatTimeRangeTz,
+  formatWeekdayTime,
+} from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReminderActionCode } from "@/lib/readiness-summary";
@@ -747,6 +753,12 @@ type TripRecapEmailInput = {
   timezone: string;
   /** The names of the sites dived, in order, for the recap's opening line. */
   sites?: string[];
+  /**
+   * When the diver may fly (`src/lib/fly-safe.ts`), worded here in the
+   * shop's zone. Absent means the record could not say, and the email keeps
+   * quiet rather than guess.
+   */
+  flySafe?: { from: Date; hours: number; anchor: "last_dive" | "scheduled_return" };
   /** The diver's shareable recap page. */
   recapUrl: string;
   /** Self-serve opt-out of `waitlist_invite`/`trip_recap` courtesy email. */
@@ -784,14 +796,30 @@ export function tripRecapEmail(input: TripRecapEmailInput): NotificationEmail {
   const footer = t("notifications.tripRecap.footer");
   const unsubscribe = t("notifications.common.courtesyUnsubscribe", { shopName: input.shopName });
   const unsubscribeUrl = escapeHtml(input.unsubscribeUrl);
+  // The same sentence the after-state carries, in the same words: one fact,
+  // read the same way on the page and in the inbox.
+  const flySafe = input.flySafe
+    ? t(
+        input.flySafe.anchor === "last_dive"
+          ? "notifications.tripRecap.flySafeAfterDive"
+          : "notifications.tripRecap.flySafeAfterReturn",
+        {
+          when: formatWeekdayTime(input.flySafe.from, input.locale, input.timezone),
+          count: input.flySafe.hours,
+          shopName: input.shopName,
+        },
+      )
+    : null;
+  const flySafeText = flySafe ? `\n\n${flySafe}` : "";
+  const flySafeHtml = flySafe ? `<p>${escapeHtml(flySafe)}</p>` : "";
 
   return {
     subject: t("notifications.tripRecap.subject", {
       shopName: input.shopName,
       tripTitle: input.tripTitle,
     }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${thanks}${where}\n\n${seeRecap}:\n${input.recapUrl}\n\n${footer}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${thanksHtml}${whereHtml}</p>${emailButton(input.recapUrl, seeRecap)}<p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${thanks}${where}${flySafeText}\n\n${seeRecap}:\n${input.recapUrl}\n\n${footer}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${thanksHtml}${whereHtml}</p>${flySafeHtml}${emailButton(input.recapUrl, seeRecap)}<p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };
 }
 
@@ -1093,6 +1121,32 @@ export function passwordChangedEmail(input: PasswordChangedEmailInput): Notifica
     subject: t("notifications.passwordChanged.subject"),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${t("notifications.passwordChanged.body")}\n\n${recoveryText}`,
     html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${t("notifications.passwordChanged.body")}</p>${recoveryHtml}`,
+  };
+}
+
+export type StaffReplyEmailInput = {
+  subject: string;
+  body: string;
+};
+
+/**
+ * A staffer's reply (ADR 20260907-two-way-inbox): their words, as typed, under
+ * the thread's subject. No greeting, no sign-off and no copy — the shop's name
+ * is the chrome's, and a sentence DiveDay added to a person's own message
+ * would be the one thing in it they did not say.
+ */
+export function staffReplyEmail(input: StaffReplyEmailInput): NotificationEmail {
+  const paragraphs = input.body
+    .replace(/\r\n/g, "\n")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0);
+  return {
+    subject: input.subject,
+    text: `${paragraphs.join("\n\n")}\n`,
+    html: paragraphs
+      .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`)
+      .join(""),
   };
 }
 

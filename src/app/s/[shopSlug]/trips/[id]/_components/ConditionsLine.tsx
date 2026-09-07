@@ -34,6 +34,7 @@ export function ConditionsLine({
   crewPrediction,
   automatedForecast,
   crewLanguages,
+  tideLines,
   locale,
 }: {
   shop: Shop;
@@ -57,6 +58,12 @@ export function ConditionsLine({
    * what languages are aboard.
    */
   crewLanguages: string | null;
+  /**
+   * The tide at each stationed site, worded by the page — present only when
+   * the shop switched `tide_window_public` on (ADR
+   * 20260907-noaa-tide-predictions). One line per site on a two-station day.
+   */
+  tideLines?: { site: string; text: string }[];
   locale: string;
 }) {
   const t = diverTranslator(locale);
@@ -105,21 +112,32 @@ export function ConditionsLine({
     wind?.label ?? null,
     crewLanguages ? t("trip.conditionsLanguages", { languages: crewLanguages }) : null,
   ].filter((part): part is string => Boolean(part));
-  if (parts.length === 0) return null;
+  const tide = tideLines ?? [];
+  if (parts.length === 0 && tide.length === 0) return null;
 
   return (
     <section className="mt-6 border-t border-border pt-4">
-      <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
-        {parts.map((part, index) => (
-          // The separator is a sibling of the part, never a child of it: a
-          // reading nested beside a dot is one string to anything reading the
-          // DOM, which is how "Light chop" becomes "·Light chop".
-          <Fragment key={part}>
-            {index > 0 ? <span aria-hidden="true">·</span> : null}
-            <span>{part}</span>
-          </Fragment>
-        ))}
-      </p>
+      {parts.length > 0 ? (
+        <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
+          {parts.map((part, index) => (
+            // The separator is a sibling of the part, never a child of it: a
+            // reading nested beside a dot is one string to anything reading the
+            // DOM, which is how "Light chop" becomes "·Light chop".
+            <Fragment key={part}>
+              {index > 0 ? <span aria-hidden="true">·</span> : null}
+              <span>{part}</span>
+            </Fragment>
+          ))}
+        </p>
+      ) : null}
+      {/* The tide's own line, under the readings: a clock time and a
+          direction the shop chose to publish, never inside the forecast's
+          credit, since NOAA's table is not Open-Meteo's model. */}
+      {tide.map((line) => (
+        <p key={line.site} className="mt-2 text-sm text-muted">
+          {line.text}
+        </p>
+      ))}
       {crewPrediction && trip.conditionsSummary ? (
         <p className="mt-2 text-sm text-muted">{trip.conditionsSummary}</p>
       ) : null}

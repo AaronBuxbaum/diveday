@@ -241,8 +241,15 @@ describe("the chrome bar", () => {
 
   it("leaves the page's own title, and the day headers' offset, to the page", async () => {
     const bar = withoutComments(await read("src/components/chrome/ChromeBar.tsx"));
-    // No collapsing large title: the ADR deferred that deliberately, because
-    // it needs a scroll listener under every page.
+    // **Still never the page's `<h1>`** — but the reason has changed, and the
+    // assertion had to change with it or it would have gone on passing while
+    // what it stands for became false. ADR 20260827-clearwater-surface-language
+    // deferred the collapsing large title because it needed a scroll listener
+    // under every page; 20260907-nothing-from-nowhere ships the fold because
+    // `animation-timeline: scroll()` removed that cost. What the bar carries
+    // now is a *folded label* the page fills through a portal — a second,
+    // `aria-hidden` copy of the words. The heading itself stays exactly one
+    // element, in the page.
     expect(bar).not.toContain("<h1");
     // And no connectivity indicator: `ConnectivityStatus` stays a page-level
     // `onlyWhenOffline` mount, so the chrome says nothing on an ordinary day.
@@ -255,6 +262,72 @@ describe("the chrome bar", () => {
     expect(board).toContain("sticky top-(--chrome-h)");
     const publicSchedule = await read("src/app/s/[shopSlug]/page.tsx");
     expect(publicSchedule).toContain('"top-(--chrome-h)"');
+  });
+});
+
+/**
+ * **The fold** — ADR 20260907-nothing-from-nowhere, decision 5 (slice 18e).
+ *
+ * Three facts hold it together, and each was a way to get it wrong: the label
+ * belongs to the staff shell only, its motion is driven by the scroll rather
+ * than by a clock, and the global reduced-motion kill-switch cannot stop it.
+ */
+describe("the title folds into the bar", () => {
+  it("puts the slot in the staff shell and nowhere else", async () => {
+    const staff = await read("src/components/ShopNav.tsx");
+    const shopfront = await read("src/components/PublicShopChrome.tsx");
+    expect(staff, "the staff bar has nowhere to fold a title into").toContain(
+      "data-chrome-title-slot",
+    );
+    // The storefront's gate is this absence: `ShopPageHeader` serves ten-plus
+    // surfaces under `src/app/s/`, and `FoldedPageTitle`'s portal no-ops with
+    // no target. Deliberate, not incidental.
+    expect(shopfront, "the storefront grew a fold the ADR says it does not take").not.toContain(
+      "data-chrome-title-slot",
+    );
+  });
+
+  it("hides the label from assistive technology, so the words are not announced twice", async () => {
+    const staff = withoutComments(await read("src/components/ShopNav.tsx"));
+    const slot = staff.slice(staff.indexOf("data-chrome-title-slot"));
+    expect(slot.slice(0, slot.indexOf("/>")), "the folded label is exposed twice").toContain(
+      "aria-hidden",
+    );
+  });
+
+  it("drives the fold from the scroll, not from a timer", async () => {
+    const css = await read("src/app/globals.css");
+    expect(css).toContain("@supports (animation-timeline: scroll())");
+    expect(css).toContain("animation-range: 0 120px");
+    // No duration on the motion ladder, because there is no duration: the
+    // scroll is the clock. A `--motion-*` rung here would mean somebody had
+    // reached for a timer.
+    const fold = css.slice(
+      css.indexOf("@supports (animation-timeline: scroll())"),
+      css.indexOf("@keyframes chrome-shop-name-folds"),
+    );
+    expect(fold).not.toContain("--motion-");
+  });
+
+  /**
+   * **The global kill-switch does not reach this one.** It overrides
+   * `animation-duration`, `-delay` and `-iteration-count` — every one a
+   * statement about time, and a scroll progress timeline takes no progress from
+   * time. Without a rule naming the timeline, a reduced-motion reader would
+   * still get the fold, and at a 0.01ms duration it would snap in within the
+   * first fraction of a pixel of scroll: louder than the motion it removed.
+   */
+  it("stops the fold for a reduced-motion reader by naming the timeline", async () => {
+    const css = await read("src/app/globals.css");
+    const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+    const rule = reduced.slice(0, reduced.indexOf("}", reduced.indexOf("animation-timeline")));
+    expect(rule, "no reduced-motion rule names the fold's selectors").toContain(
+      "[data-chrome-title-slot]",
+    );
+    expect(rule).toContain("[data-chrome-shop-name]");
+    expect(rule, "a duration override cannot still a scroll-driven animation").toContain(
+      "animation-timeline: none",
+    );
   });
 });
 

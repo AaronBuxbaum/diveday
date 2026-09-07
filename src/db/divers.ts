@@ -32,6 +32,7 @@ import {
   personRoles,
   priorVisits,
   rentalFitProfiles,
+  shops,
   specialtyCertifications,
   trips,
 } from "./schema";
@@ -661,6 +662,7 @@ export async function getDiverProfile(
     waiverTemplate,
     waiverRequest,
     waiverChannels,
+    shopRows,
   ] = await Promise.all([
     db
       .select({ card: certifications, reviewedByName: levelReviewer.fullName })
@@ -731,7 +733,11 @@ export async function getDiverProfile(
     getCurrentWaiverTemplate(db, shopId),
     getDiverWaiverRequestStatus(db, shopId, personId),
     getDiverWaiverChannelStates(db, shopId, personId),
+    // The shop's zone, for the guardian rule: a minor's solo signature reads as
+    // its own standing here rather than as "Signed" (src/lib/guardian.ts).
+    db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
   ]);
+  const shopTimezone = shopRows[0]?.timezone ?? "UTC";
 
   return {
     person: personRow.person,
@@ -758,6 +764,7 @@ export async function getDiverProfile(
     waiver: shopWaiverStatus({
       personSignedWaivers: signedWaivers.get(personId) ?? [],
       currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
+      signer: { dateOfBirth: personRow.person.dateOfBirth, timezone: shopTimezone },
     }),
     waiverRequest,
     /**

@@ -52,7 +52,7 @@ export async function getTripRequirements(db: DbExecutor, shopId: string, tripId
 type CertLevel = "open_water" | "advanced_open_water" | "rescue" | "divemaster" | "instructor";
 
 export async function upsertTripRequirements(
-  db: AppDb,
+  db: DbExecutor,
   input: {
     shopId: string;
     tripId: string;
@@ -1611,6 +1611,9 @@ export async function listTripsReadiness(
         courseMinimumAge,
         courseDate,
         dateOfBirth: row.person.dateOfBirth,
+        // The guardian rule measures the diver's age on the shop-local day
+        // they signed (src/lib/guardian.ts), so the engine needs the zone.
+        timezone,
         now,
       }),
     };
