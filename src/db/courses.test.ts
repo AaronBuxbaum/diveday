@@ -1491,7 +1491,9 @@ describe("sitemap queries (in-memory PGlite)", () => {
     });
 
     const shopRows = await listShopsForSitemap(db);
-    expect(shopRows).toContainEqual({ slug: "live-shop-sitemap" });
+    // `name` as well as `slug` since #1427: `llms.txt` lists each shop by the
+    // name a reader would recognise, and the sitemap reads the same rows.
+    expect(shopRows).toContainEqual({ slug: "live-shop-sitemap", name: "Live Shop" });
     expect(shopRows.map((row) => row.slug)).not.toContain("demo-shop-sitemap");
 
     const courseRows = await listActiveCoursesForSitemap(db);
