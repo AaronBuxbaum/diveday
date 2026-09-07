@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { type InboundChannel, REPLY_BODY_MAX_LENGTH, whatsAppReplyWindowOpen } from "@/lib/inbox";
 import { log } from "@/lib/log";
 import type { NotificationProvider } from "@/lib/notifications";
-import { recipientLocale } from "@/lib/notifications/kinds";
+import { recipientLocale, threadableMessageId } from "@/lib/notifications/kinds";
 import type { AppDb } from "./client";
 import { getInboundMessage, lastInboundAt, recordStaffReply } from "./inbound-messages";
 import { sendNotification } from "./notifications";
@@ -197,6 +197,7 @@ export async function sendStaffReply(
   if (!message.fromAddress.includes("@")) {
     return { status: "refused", reason: "no_reply_address" };
   }
+  const inReplyTo = threadableMessageId(message.emailMessageId);
   const delivery = await sendNotification(
     db,
     {
@@ -209,8 +210,13 @@ export async function sendStaffReply(
       subject: replySubject(locale, shop.name, message.subject),
       body,
       // What files the answer into the diver's own thread rather than beside
-      // it. Absent on a mail that carried no `Message-ID`.
-      ...(message.emailMessageId ? { inReplyTo: message.emailMessageId } : {}),
+      // it. Absent on a mail that carried no `Message-ID`, and on one whose
+      // `Message-ID` the schema will not take: `threadableMessageId` **is** that
+      // rule rather than a restatement of it, so a header this send would be
+      // refused for is dropped here and the answer still goes. An
+      // unauthenticated sender chose that string; it may not cost a shop its
+      // reply (security review of #1509).
+      ...(inReplyTo ? { inReplyTo } : {}),
     },
     input.provider,
   );
