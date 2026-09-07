@@ -50,6 +50,23 @@ export function Pager({
 }) {
   if (pageCount <= 1) return null;
   const position = t("shared.pager.position", { page, pageCount });
+  // **Neither arrow is prefetched.** A page turn differs from the URL you are
+  // already on only in its search params, and the App Shell a `<Link>` pulls
+  // "does not include URL data that varies by destination, such as
+  // `searchParams`" — so the router can never commit off it, and every one of
+  // these lists is an authenticated staff page whose prefetch is therefore a
+  // whole extra server render of a page nobody asked for. Measured on the
+  // diver roster: click-to-URL is the same with it (199-264ms) and without
+  // (207-264ms), because the navigation blocks on the server either way.
+  //
+  // It is not free, though. With the prefetch in flight, the click attaches to
+  // *that* request rather than issuing its own — Chromium reports it
+  // `net::ERR_ABORTED` on every run — so a page turn that loses the race
+  // against the prefetch scheduler has nothing left to wait on and the URL
+  // never moves at all. That is the shape `divers.spec.ts`'s pager test failed
+  // in on CI (the URL still read `/shop/blue-mantis/divers` when the assertion
+  // gave up), and the shape it was reproduced in locally, where it sat for a
+  // full 60 seconds rather than merely being slow.
   return (
     <nav
       aria-label={t("shared.pager.label")}
@@ -59,6 +76,7 @@ export function Pager({
         <Link
           href={href(page - 1)}
           scroll={false}
+          prefetch={false}
           className={buttonClass({ variant: "secondary", size: "sm" })}
         >
           {t("shared.pager.previous")}
@@ -71,6 +89,7 @@ export function Pager({
         <Link
           href={href(page + 1)}
           scroll={false}
+          prefetch={false}
           className={buttonClass({ variant: "secondary", size: "sm" })}
         >
           {t("shared.pager.next")}
