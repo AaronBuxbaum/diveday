@@ -209,7 +209,10 @@ describe("parseWhatsAppDeliveryEvents", () => {
 });
 
 describe("parseWhatsAppInboundMessages (ADR 20260907-two-way-inbox)", () => {
-  function messagesPayload(messages: unknown[], wabaId: string | undefined = "waba-1") {
+  // `null` rather than `undefined` for "no WABA": an explicit `undefined`
+  // argument still takes a default parameter's value, so the omitted-id case
+  // would quietly test the ordinary one.
+  function messagesPayload(messages: unknown[], wabaId: string | null = "waba-1") {
     return JSON.stringify({
       object: "whatsapp_business_account",
       entry: [
@@ -276,7 +279,7 @@ describe("parseWhatsAppInboundMessages (ADR 20260907-two-way-inbox)", () => {
     );
     const payload = messagesPayload(
       [{ from: "1", id: "wamid.n", type: "text", text: { body: "hi" } }],
-      undefined,
+      null,
     );
     expect(parseWhatsAppInboundMessages(payload, NOW)[0].wabaId).toBeNull();
   });

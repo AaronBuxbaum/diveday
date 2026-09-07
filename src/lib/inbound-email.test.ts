@@ -183,4 +183,20 @@ describe("decodeEncodedWords and htmlToText", () => {
   it("keeps block breaks and drops scripts", () => {
     expect(htmlToText("<p>a</p><script>x()</script><ul><li>b</li><li>c</li></ul>")).toBe("a\nb\nc");
   });
+
+  /**
+   * **An unclosed `<script>` is dropped, not scanned for.**
+   *
+   * The obvious pattern for this — a lazy `[\s\S]*?` between the opening and
+   * closing tags — is quadratic on exactly this input: every unmatched
+   * `<script` re-scans to the end. Measured at 24.5 seconds for 1 MB, on a
+   * path any diver holding the shop's reply address can post to, whose bytes
+   * are capped at 2 MB rather than at anything small. This asserts the
+   * behaviour; the size is what makes a regression time the test out rather
+   * than pass slowly.
+   */
+  it("drops an unterminated raw-text element instead of scanning for its close", () => {
+    expect(htmlToText("<p>hello</p><script>x()")).toBe("hello");
+    expect(htmlToText(`<p>hi</p>${"<script>".repeat(120_000)}`)).toBe("hi");
+  });
 });

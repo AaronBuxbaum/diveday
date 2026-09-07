@@ -86,9 +86,18 @@ function parseContentType(value: string | null): {
   return { type: (type ?? "").trim().toLowerCase(), params };
 }
 
-/** RFC 2047 encoded words in a header: `=?UTF-8?B?...?=` and `=?UTF-8?Q?...?=`. */
+/**
+ * RFC 2047 encoded words in a header: `=?UTF-8?B?...?=` and `=?UTF-8?Q?...?=`.
+ *
+ * Whitespace *between* two adjacent encoded words is not part of either — RFC
+ * 2047 §6.2 says it is ignored, and clients rely on that to split a long
+ * subject at a word boundary. So it is collapsed first, before anything is
+ * decoded; doing it afterwards leaves the two decoded halves with a space
+ * between them that the sender never wrote.
+ */
 export function decodeEncodedWords(value: string): string {
   return value
+    .replace(/\?=\s+=\?/g, "?==?")
     .replace(
       /=\?([^?]+)\?([bBqQ])\?([^?]*)\?=/g,
       (_match, charset: string, kind: string, text: string) => {
@@ -98,8 +107,7 @@ export function decodeEncodedWords(value: string): string {
             : Buffer.from(decodeQuotedPrintable(text.replace(/_/g, " ")), "latin1");
         return decodeBytes(bytes, charset);
       },
-    )
-    .replace(/\?=\s+=\?/g, "?==?");
+    );
 }
 
 function decodeQuotedPrintable(text: string): string {
@@ -180,10 +188,42 @@ function collect(part: Part, found: Found, depth = 0): void {
   if (!type.startsWith("text/")) found.attachments += 1;
 }
 
+/**
+ * Drop `<script>`/`<style>` **content**, which the tag strip below would
+ * otherwise leave behind as text.
+ *
+ * A scan rather than the obvious `/<(script|style)[\s\S]*?<\/\1>/gi`,
+ * because that pattern is quadratic on input that opens the tag and never
+ * closes it: every unmatched `<script` re-scans to the end of the string.
+ * Measured at 24.5 seconds for 1 MB of `<script>` — and this runs on a
+ * message any diver holding the shop's reply address can send, whose bytes
+ * are capped at MAX_INBOUND_MESSAGE_BYTES rather than at anything small. One
+ * pass, no backtracking: find an opening tag, jump to its closing tag, keep
+ * what is outside. An unterminated one takes the rest of the document with
+ * it, which is what a browser does too.
+ */
+function stripRawTextElements(html: string): string {
+  const lowered = html.toLowerCase();
+  const opening = /<(script|style)\b/gi;
+  let kept = "";
+  let cursor = 0;
+  for (let match = opening.exec(html); match !== null; match = opening.exec(html)) {
+    const tag = match[1]?.toLowerCase();
+    if (!tag) continue;
+    kept += html.slice(cursor, match.index);
+    const closing = lowered.indexOf(`</${tag}`, opening.lastIndex);
+    // Unterminated: everything after the opening tag is that element's raw
+    // text, so none of it is prose. Stop here rather than reading it as words.
+    if (closing === -1) return kept;
+    cursor = closing;
+    opening.lastIndex = closing;
+  }
+  return kept + html.slice(cursor);
+}
+
 /** HTML to readable text: block breaks kept, tags dropped, entities the common five. */
 export function htmlToText(html: string): string {
-  return html
-    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
+  return stripRawTextElements(html)
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|li|h[1-6]|tr|blockquote)>/gi, "\n")
     .replace(/<[^>]+>/g, "")

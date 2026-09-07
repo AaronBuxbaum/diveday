@@ -20,6 +20,9 @@ import { inboundMessages, notificationDeliveries, people, shops, staffReplies } 
  *   receiving route already resolved (a reply-to token, a WhatsApp Business
  *   Account), and the sender is matched to a person **inside that shop** only.
  *   Nothing here takes an address and finds a shop from it.
+ * - **Attribution needs a vouched address.** A message whose sender the
+ *   channel did not authenticate (`senderAuthenticated: false`) is filed as a
+ *   stranger, never matched onto a diver's record.
  * - **A redelivery is a no-op.** `provider_message_id` is unique per channel,
  *   and `recordInboundMessage` says `duplicate` rather than inserting twice —
  *   Meta and SNS both retry on any non-2xx, and both occasionally deliver
@@ -42,6 +45,16 @@ export type RecordInboundMessageInput = {
   emailMessageId?: string | null;
   /** The provider's id of the outbound message this answers, when a header names one. */
   inReplyToProviderMessageId?: string | null;
+  /**
+   * Whether the channel vouches for the address this arrived from. WhatsApp
+   * always does — Meta reports the number the message was sent from, and only
+   * that number's owner can send from it. Email only when SES authenticated
+   * it: a `From:` header is written by whoever sent the mail, so an
+   * unauthenticated one is filed as a stranger rather than put on the record
+   * of the diver it names. Defaults to true; the email route passes the
+   * answer it got from SES.
+   */
+  senderAuthenticated?: boolean;
 };
 
 export type RecordInboundMessageResult =
@@ -108,7 +121,10 @@ export async function recordInboundMessage(
   const fromAddress = normalizeAddress(input.channel, input.fromAddress);
   if (!fromAddress) return { status: "invalid_address" };
 
-  const personId = await matchPersonByAddress(db, input.shopId, input.channel, fromAddress);
+  const personId =
+    input.senderAuthenticated === false
+      ? null
+      : await matchPersonByAddress(db, input.shopId, input.channel, fromAddress);
   let inReplyToDeliveryId: string | null = null;
   if (input.inReplyToProviderMessageId) {
     const [delivery] = await db

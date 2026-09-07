@@ -2,7 +2,7 @@ import { getDb } from "@/db/client";
 import { recordInboundMessage, shopIdForInboundEmailToken } from "@/db/inbound-messages";
 import { nowDate } from "@/lib/clock";
 import { parseInboundEmail } from "@/lib/inbound-email";
-import { parseInboundReplyToken, sesMessageIdFromHeader } from "@/lib/inbox";
+import { normalizeEmailAddress, parseInboundReplyToken, sesMessageIdFromHeader } from "@/lib/inbox";
 import { log } from "@/lib/log";
 import { inboundEmailDomain } from "@/lib/notifications/inbound-address";
 import { inboundMailStoreFromEnvironment } from "@/lib/notifications/inbound-mail-store";
@@ -106,7 +106,19 @@ export async function POST(request: Request) {
   }
 
   const parsed = parseInboundEmail(raw.message);
-  const from = parsed.from ?? notification.envelopeFrom;
+  // **Whose message this is, and whether anyone vouched for that.** A `From:`
+  // header is written by whoever sent the mail, and the reply-to address is on
+  // every email the shop has ever sent — so anyone who has had one can address
+  // this endpoint. SES authenticates the header only through DMARC; SPF
+  // authenticates the envelope. A message with neither is filed from the
+  // address it actually arrived from and matched to nobody, because a sentence
+  // on a named diver's record is a sentence a staffer will act on.
+  const headerFrom = normalizeEmailAddress(parsed.from);
+  const envelopeFrom = normalizeEmailAddress(notification.envelopeFrom);
+  const senderAuthenticated =
+    notification.fromAuthenticated ||
+    (notification.envelopeAuthenticated && headerFrom !== null && headerFrom === envelopeFrom);
+  const from = senderAuthenticated ? (headerFrom ?? envelopeFrom) : (envelopeFrom ?? headerFrom);
   if (!from) {
     log("email_inbound.ignored", "info", { reason: "no_sender", shopId });
     return new Response(null, { status: 200 });
@@ -127,6 +139,7 @@ export async function POST(request: Request) {
     providerMessageId: notification.providerMessageId,
     emailMessageId: parsed.messageId,
     inReplyToProviderMessageId: sesMessageIdFromHeader(parsed.inReplyTo),
+    senderAuthenticated,
   });
   // Ids and outcomes only — never the sender, the subject or the words.
   log("email_inbound.recorded", "info", {
@@ -134,6 +147,7 @@ export async function POST(request: Request) {
     providerMessageId: notification.providerMessageId,
     status: result.status,
     matched: result.status === "recorded" ? result.personId !== null : undefined,
+    senderAuthenticated,
     attachments: parsed.attachmentCount,
   });
   return new Response(null, { status: 200 });

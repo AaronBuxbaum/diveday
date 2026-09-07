@@ -53,6 +53,9 @@ function receivedMessage(overrides: Record<string, unknown> = {}) {
     receipt: {
       recipients: [`reply+${TOKEN}@inbound.ses.dive.day`],
       virusVerdict: { status: "PASS" },
+      spfVerdict: { status: "PASS" },
+      dkimVerdict: { status: "PASS" },
+      dmarcVerdict: { status: "PASS" },
       action: { type: "S3", bucketName: BUCKET, objectKey: "mail/ses-id-1" },
       ...((overrides.receipt as object) ?? {}),
     },
@@ -164,7 +167,7 @@ describe("email-inbound webhook — filing a reply", () => {
     expect(recordInboundMessage).toHaveBeenCalledWith(FAKE_DB, {
       shopId: SHOP_ID,
       channel: "email",
-      fromAddress: "Priya Sharma <priya@example.com>",
+      fromAddress: "priya@example.com",
       subject: "Re: Your Saturday departure",
       body: "Can I switch to the afternoon boat?",
       mediaCount: 0,
@@ -172,7 +175,71 @@ describe("email-inbound webhook — filing a reply", () => {
       providerMessageId: "ses-id-1",
       emailMessageId: "<abc@mail.example.com>",
       inReplyToProviderMessageId: "0100019abc-1234",
+      senderAuthenticated: true,
     });
+  });
+
+  /**
+   * **A `From:` header nobody authenticated never lands on a diver's record.**
+   *
+   * The reply-to address rides on every email a shop sends, so everyone who
+   * has ever had one can post to this endpoint. Writing `From: priya@…` on
+   * that message costs nothing — and a message filed on Priya's record asking
+   * the desk to move her booking is a sentence a staffer acts on. SES
+   * authenticates the header only through DMARC; SPF covers the envelope. With
+   * neither, the row keeps the address the mail actually arrived from and is
+   * matched to nobody.
+   */
+  it("files an unauthenticated sender as a stranger, under the envelope's own address", async () => {
+    vi.mocked(verifySnsMessage).mockResolvedValue(
+      verifiedNotification(
+        receivedMessage({
+          receipt: {
+            recipients: [`reply+${TOKEN}@inbound.ses.dive.day`],
+            virusVerdict: { status: "PASS" },
+            spfVerdict: { status: "PASS" },
+            dmarcVerdict: { status: "FAIL" },
+            action: { type: "S3", bucketName: BUCKET, objectKey: "mail/ses-id-1" },
+          },
+          mail: { messageId: "ses-id-1", source: "mallory@spoofer.example" },
+        }),
+      ),
+    );
+    expect((await POST(webhookRequest("{}"))).status).toBe(200);
+    expect(recordInboundMessage).toHaveBeenCalledWith(
+      FAKE_DB,
+      expect.objectContaining({
+        fromAddress: "mallory@spoofer.example",
+        senderAuthenticated: false,
+      }),
+    );
+  });
+
+  /**
+   * SPF alone is enough when the envelope and the header agree — the ordinary
+   * reply from a domain that publishes no DMARC record, which is a great many
+   * of them, and which must not stop reaching the diver it came from.
+   */
+  it("attributes an SPF-authenticated sender whose envelope matches its header", async () => {
+    vi.mocked(verifySnsMessage).mockResolvedValue(
+      verifiedNotification(
+        receivedMessage({
+          receipt: {
+            recipients: [`reply+${TOKEN}@inbound.ses.dive.day`],
+            virusVerdict: { status: "PASS" },
+            spfVerdict: { status: "PASS" },
+            dmarcVerdict: { status: "GRAY" },
+            action: { type: "S3", bucketName: BUCKET, objectKey: "mail/ses-id-1" },
+          },
+          mail: { messageId: "ses-id-1", source: "priya@example.com" },
+        }),
+      ),
+    );
+    expect((await POST(webhookRequest("{}"))).status).toBe(200);
+    expect(recordInboundMessage).toHaveBeenCalledWith(
+      FAKE_DB,
+      expect.objectContaining({ fromAddress: "priya@example.com", senderAuthenticated: true }),
+    );
   });
 
   it("never reads from a bucket the stack did not provision", async () => {

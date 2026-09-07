@@ -11,6 +11,9 @@ function received(overrides: Record<string, unknown> = {}) {
       recipients: ["reply+3f2504e0-4f89-41d3-9a0c-0305e82c3301@inbound.ses.dive.day"],
       spamVerdict: { status: "PASS" },
       virusVerdict: { status: "PASS" },
+      spfVerdict: { status: "PASS" },
+      dkimVerdict: { status: "PASS" },
+      dmarcVerdict: { status: "PASS" },
       action: { type: "S3", bucketName: "diveday-inbound-mail", objectKey: "mail/abc123" },
     },
     mail: {
@@ -32,8 +35,41 @@ describe("parseSesInboundNotification", () => {
       objectKey: "mail/abc123",
       recipients: ["reply+3f2504e0-4f89-41d3-9a0c-0305e82c3301@inbound.ses.dive.day"],
       envelopeFrom: "priya@example.com",
+      fromAuthenticated: true,
+      envelopeAuthenticated: true,
       receivedAt: new Date("2026-07-21T12:59:58.000Z"),
     });
+  });
+
+  /**
+   * The two verdicts that say whose message this is. DMARC is the only one
+   * that authenticates the `From:` header — SPF authenticates the envelope,
+   * and DKIM's signing domain need not align with either — so they are
+   * reported separately and the route decides what each one buys.
+   */
+  it("reports SES's SPF and DMARC verdicts separately, and absent as unauthenticated", () => {
+    expect(
+      parseSesInboundNotification(
+        received({
+          receipt: {
+            spfVerdict: { status: "PASS" },
+            dmarcVerdict: { status: "FAIL" },
+            action: { type: "S3", bucketName: "b", objectKey: "k" },
+          },
+          mail: { messageId: "m" },
+        }),
+        NOW,
+      ),
+    ).toMatchObject({ fromAuthenticated: false, envelopeAuthenticated: true });
+    expect(
+      parseSesInboundNotification(
+        received({
+          receipt: { action: { type: "S3", bucketName: "b", objectKey: "k" } },
+          mail: { messageId: "m" },
+        }),
+        NOW,
+      ),
+    ).toMatchObject({ fromAuthenticated: false, envelopeAuthenticated: false });
   });
 
   it("refuses a message the virus scan failed, and keeps one the spam scan failed", () => {

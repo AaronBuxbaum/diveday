@@ -22,6 +22,11 @@ const receivedSchema = z.object({
     recipients: z.array(z.string()).optional(),
     spamVerdict: verdictSchema,
     virusVerdict: verdictSchema,
+    /** SPF authenticates the *envelope* sender (`mail.source`). */
+    spfVerdict: verdictSchema,
+    dkimVerdict: verdictSchema,
+    /** DMARC is the only verdict that authenticates the `From:` header itself. */
+    dmarcVerdict: verdictSchema,
     action: z.object({
       type: z.string(),
       bucketName: z.string().optional(),
@@ -46,9 +51,21 @@ export type SesInboundNotification =
       objectKey: string;
       recipients: string[];
       envelopeFrom: string | null;
+      /**
+       * SES's DMARC verdict passed: the `From:` header names a domain that
+       * authorised this message. Nothing else authenticates that header — SPF
+       * covers the envelope, and DKIM's signing domain need not align with it.
+       */
+      fromAuthenticated: boolean;
+      /** SES's SPF verdict passed: `envelopeFrom` is the domain it claims. */
+      envelopeAuthenticated: boolean;
       receivedAt: Date;
     }
   | { kind: "ignored"; reason: "malformed" | "not_received" | "not_s3" | "virus" };
+
+function passed(verdict: z.infer<typeof verdictSchema>): boolean {
+  return verdict?.status?.toUpperCase() === "PASS";
+}
 
 export function parseSesInboundNotification(message: string, now: Date): SesInboundNotification {
   let parsedJson: unknown;
@@ -81,6 +98,8 @@ export function parseSesInboundNotification(message: string, now: Date): SesInbo
     objectKey: receipt.action.objectKey,
     recipients: receipt.recipients ?? mail.destination ?? [],
     envelopeFrom: mail.source ?? null,
+    fromAuthenticated: passed(receipt.dmarcVerdict),
+    envelopeAuthenticated: passed(receipt.spfVerdict),
     receivedAt,
   };
 }
