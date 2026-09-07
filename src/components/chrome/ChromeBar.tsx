@@ -32,12 +32,27 @@ import type { ReactNode } from "react";
  * rather than 85% of it, because a translucent bar with nothing blurring
  * behind it is just content showing through the navigation.
  *
- * **The page's `<h1>` stays in the page.** This bar renders no title and no
- * collapsing large-title behavior — that alternative was considered and
- * deferred in the ADR, because it needs a scroll listener under every page and
- * this app's best property is instant, skeleton-first navigation. It also
- * carries no connectivity indicator: `ConnectivityStatus` stays a page-level
- * `onlyWhenOffline` mount, so the chrome says nothing on the ordinary day.
+ * **The page's `<h1>` stays in the page** — but below `lg` the bar now carries
+ * a *folded label*, which is not the same thing. ADR
+ * 20260827-clearwater-surface-language deferred the collapsing large title and
+ * named the condition for revisiting it: "a new fact (a CSS-only mechanism),
+ * not a fresh opinion". `animation-timeline: scroll()` is that fact, and ADR
+ * 20260907-nothing-from-nowhere decision 5 spends it — over the first 120px of
+ * scroll the shop's name gives way and the page's own title takes its place at
+ * 17/600, with the mark staying and still opening the shop menu. No scroll
+ * listener, so the instant, skeleton-first navigation this bar was protecting
+ * costs nothing.
+ *
+ * The bar itself still renders neither: `ShopNav` puts an empty, `aria-hidden`
+ * `[data-chrome-title-slot]` in the leading slot and the page's own
+ * `ShopPageHeader` fills it through a portal (`FoldedPageTitle`). The heading
+ * stays one element in the page; the label is a decorative copy. And the
+ * storefront does not fold — `PublicShopChrome` composes this same bar and
+ * renders no slot, so the portal has no target there.
+ *
+ * It also carries no connectivity indicator: `ConnectivityStatus` stays a
+ * page-level `onlyWhenOffline` mount, so the chrome says nothing on the
+ * ordinary day.
  */
 
 /**

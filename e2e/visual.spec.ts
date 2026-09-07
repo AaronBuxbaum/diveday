@@ -162,6 +162,9 @@ const VIEWPORTS = [
  * a real posture too; it is not photographed here, and should not be until
  * something other than a hunch says it needs to be.
  */
+/** The phone of `VIEWPORTS`, named — the fold is a phone behaviour and shoots there alone. */
+const PHONE_VIEWPORT = VIEWPORTS[0];
+
 const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
 
 /**
@@ -1160,6 +1163,42 @@ async function captureStickyFoot(page: Page, name: string, scheme: "light" | "da
         animations: "disabled",
       });
     }
+    if (baseViewport) await page.setViewportSize(baseViewport);
+  });
+}
+
+/**
+ * **The bar, folded** — ADR 20260907-nothing-from-nowhere, decision 5.
+ *
+ * A phone-width viewport shot at a scroll position, because both halves of the
+ * subject need it: the fold only runs below `lg`, and it only *has* a state
+ * worth photographing once the page has scrolled past 120px. `capture()` cannot
+ * take this — it shoots the whole document at scroll 0, which is the one
+ * position where the fold has deliberately done nothing.
+ *
+ * No `animations: "disabled"`: this animation's progress comes from the scroll
+ * offset, not from a clock, so at a fixed scroll it is already stationary and
+ * there is nothing to freeze. Disabling it would jump the label to its end
+ * state at *any* scroll, which would photograph the same picture whether the
+ * mechanism worked or not.
+ *
+ * The wait is on the label's own computed opacity reaching 1 — the state the
+ * shot is of, not a guess at how long it takes to get there.
+ */
+async function captureFolded(page: Page, name: string, scheme: "light" | "dark") {
+  const baseViewport = page.viewportSize();
+  await withTransitionsOff(page, async () => {
+    await page.setViewportSize(PHONE_VIEWPORT);
+    await paintWholeDocument(page);
+    // Past the 120px range, so the fold is complete rather than mid-cross.
+    await page.evaluate(() => window.scrollTo(0, 240));
+    await page.waitForFunction(() => {
+      const slot = document.querySelector("[data-chrome-title-slot]");
+      const name = document.querySelector("[data-chrome-shop-name]");
+      if (!slot || !name) return false;
+      return getComputedStyle(slot).opacity === "1" && Number(getComputedStyle(name).opacity) === 0;
+    });
+    await page.screenshot({ path: `e2e/screenshots/${name}-${scheme}-vw-390.png` });
     if (baseViewport) await page.setViewportSize(baseViewport);
   });
 }
@@ -3565,6 +3604,23 @@ for (const scheme of ["light", "dark"] as const) {
         // capture off the loading state.
         await page.locator("main ul li").first().waitFor();
         await capture(page, "divers", scheme);
+      });
+
+      /**
+       * **The same roster, scrolled — the bar wearing the page's name.**
+       *
+       * This is the surface the fold was written for: a staffer halfway down
+       * Divers used to see "Blue Mantis Divers" and 26 names, with nothing on
+       * screen saying which page they were on (ADR
+       * 20260907-nothing-from-nowhere, decision 5; issue #1422). The capture is
+       * the only thing that can catch the label arriving at the wrong size, in
+       * the wrong place, or on top of the shop's mark rather than beside it.
+       */
+      test(`the bar folds the page's title in on a phone (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/divers");
+        await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+        await page.locator("main ul li").first().waitFor();
+        await captureFolded(page, "chrome-folded-title", scheme);
       });
 
       /**
