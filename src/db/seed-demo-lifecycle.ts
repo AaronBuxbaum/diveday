@@ -24,6 +24,7 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   dayCloseouts,
+  displayTokens,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -37,6 +38,7 @@ import {
   gearServiceEvents,
   heldSends,
   importedPaymentHistory,
+  inboundMessages,
   integrationDeliveries,
   integrationEvents,
   integrationOauthStates,
@@ -77,6 +79,7 @@ import {
   shopWhatsappAccounts,
   specialtyCertifications,
   staffCredentials,
+  staffReplies,
   staffShifts,
   tips,
   tripAssignments,
@@ -192,6 +195,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
   // The review's private sibling, on the same parents (D40).
   await db.delete(recapPulses).where(eq(recapPulses.shopId, shopId));
+  // The inbox: replies before the messages and people they name.
+  await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
+  await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
@@ -321,6 +327,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(crewAssignmentRequests).where(eq(crewAssignmentRequests.shopId, shopId));
   await db.delete(crewAvailabilityBlocks).where(eq(crewAvailabilityBlocks.shopId, shopId));
   await db.delete(calendarFeeds).where(eq(calendarFeeds.shopId, shopId));
+  // The lobby-display links (issue #1426): they reference `people` through
+  // `created_by_person_id` with no cascade, the same 23503 shape as the rows
+  // above.
+  await db.delete(displayTokens).where(eq(displayTokens.shopId, shopId));
   // Deliveries reference the destination they were sent to, so they go first.
   await db.delete(shopBackupDeliveries).where(eq(shopBackupDeliveries.shopId, shopId));
   await db.delete(shopBackupDestinations).where(eq(shopBackupDestinations.shopId, shopId));

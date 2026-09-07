@@ -279,7 +279,13 @@ test("the roster pages both ways, and back one page is the page you came from", 
   const firstName = await page.locator("main ul li a").first().getAttribute("aria-label");
 
   await pager.getByRole("link", { name: "Next" }).click();
-  await expect(page).toHaveURL(/page=2/);
+  // A page turn is a blocking client navigation: `?page=` is search-param
+  // data, which no App Shell carries, so nothing paints and the URL does not
+  // move until the server's response for page 2 lands. Wait for the navigation
+  // with the navigation API — the shape `orders-demo.spec.ts` already uses on
+  // this identical interaction — rather than polling the URL as a value on the
+  // assertion budget, which is the first thing to run out on a loaded shard.
+  await page.waitForURL(/[?&]page=2/);
   await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
   const secondName = await page.locator("main ul li a").first().getAttribute("aria-label");
   expect(secondName).not.toBe(firstName);

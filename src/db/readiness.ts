@@ -1611,6 +1611,9 @@ export async function listTripsReadiness(
         courseMinimumAge,
         courseDate,
         dateOfBirth: row.person.dateOfBirth,
+        // The guardian rule measures the diver's age on the shop-local day
+        // they signed (src/lib/guardian.ts), so the engine needs the zone.
+        timezone,
         now,
       }),
     };

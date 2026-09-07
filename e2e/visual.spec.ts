@@ -27,12 +27,13 @@ import {
   seededTripId,
   threadStatus,
   waiverLinkFromResult,
+  waiverLinkFromToast,
 } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and ninety-one key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 764 screenshots per run (see
+ * Visual regression coverage. A hundred and ninety-nine key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 796 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -162,6 +163,9 @@ const VIEWPORTS = [
  * a real posture too; it is not photographed here, and should not be until
  * something other than a hunch says it needs to be.
  */
+/** The phone of `VIEWPORTS`, named — the fold is a phone behaviour and shoots there alone. */
+const PHONE_VIEWPORT = VIEWPORTS[0];
+
 const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
 
 /**
@@ -197,7 +201,20 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
   "prep",
   "departure-log",
   "departure-log-every-checkpoint",
+  // The dock tablet is one of the two devices the departures board is for
+  // (issue #1426); the other is the TV below.
+  "departures-board",
 ]);
+
+/**
+ * **A TV on the lobby wall** — the other device the departures board is built
+ * for (issue #1426, N-23), and the one width nothing else in this file has any
+ * reason to photograph. 1920×1080 is what a lobby screen actually is; the
+ * 1280 "desktop" is a laptop. Same shape as `TABLET_SURFACES`: a bounded set
+ * checked against the captures that exist, never a global width.
+ */
+const TV_VIEWPORT = { width: 1920, height: 1080 } as const;
+const TV_SURFACES: ReadonlySet<string> = new Set(["departures-board"]);
 
 /**
  * A name in `TABLET_SURFACES` that no `capture()` call uses photographs
@@ -206,10 +223,10 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
  * this file back is the cheapest thing that can tell a typo from a decision.
  * Once per worker process, against a file already on the page cache.
  */
-for (const name of TABLET_SURFACES) {
+for (const name of [...TABLET_SURFACES, ...TV_SURFACES]) {
   if (!readFileSync("e2e/visual.spec.ts", "utf8").includes(`capture(page, "${name}"`)) {
     throw new Error(
-      `TABLET_SURFACES names "${name}", which no capture() call uses — it would ` +
+      `TABLET_SURFACES/TV_SURFACES names "${name}", which no capture() call uses — it would ` +
         "silently photograph nothing. Fix the name or drop it from the set.",
     );
   }
@@ -1059,8 +1076,20 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
   // `scripts/screenshot.mjs` fell into wholesale (#643). Waiting for the last
   // `animate-pulse` to leave `<main>` is one rule that covers every capture,
   // including whichever is added next, without a per-capture selector.
+  //
+  // `[data-suspense-placeholder]` covers the same trap *outside* `<main>`: the
+  // public shop layout streams its whole chrome — header and the staffer's
+  // "you work here" bar — behind a boundary whose fallback is a bare band
+  // holding the height. That band is not a pulse and not in `<main>`, so
+  // neither half of the rule above could see it, and a capture fired while it
+  // stood photographed a header with no shop name. It is not hypothetical:
+  // `public-schedule-new-shop-dark` came back with the placeholder at vw-390
+  // and the real chrome at vw-1280 — the same page, one second apart.
   await page.waitForFunction(
-    () => !document.querySelector("main .animate-pulse:not([data-live-pulse])"),
+    () =>
+      !document.querySelector(
+        "main .animate-pulse:not([data-live-pulse]), [data-suspense-placeholder]",
+      ),
     undefined,
     {
       timeout: 15_000,
@@ -1070,7 +1099,11 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
   // shop runs on one. Widest last is deliberate: the base viewport is restored
   // below either way, but a capture that fails mid-loop leaves the page at a
   // width a trace viewer can make sense of.
-  const viewports = TABLET_SURFACES.has(name) ? [...VIEWPORTS, TABLET_VIEWPORT] : VIEWPORTS;
+  const viewports = [
+    ...VIEWPORTS,
+    ...(TABLET_SURFACES.has(name) ? [TABLET_VIEWPORT] : []),
+    ...(TV_SURFACES.has(name) ? [TV_VIEWPORT] : []),
+  ];
   await withTransitionsOff(page, async () => {
     for (const viewport of viewports) {
       await page.setViewportSize(viewport);
@@ -1148,6 +1181,42 @@ async function captureStickyFoot(page: Page, name: string, scheme: "light" | "da
         animations: "disabled",
       });
     }
+    if (baseViewport) await page.setViewportSize(baseViewport);
+  });
+}
+
+/**
+ * **The bar, folded** — ADR 20260907-nothing-from-nowhere, decision 5.
+ *
+ * A phone-width viewport shot at a scroll position, because both halves of the
+ * subject need it: the fold only runs below `lg`, and it only *has* a state
+ * worth photographing once the page has scrolled past 120px. `capture()` cannot
+ * take this — it shoots the whole document at scroll 0, which is the one
+ * position where the fold has deliberately done nothing.
+ *
+ * No `animations: "disabled"`: this animation's progress comes from the scroll
+ * offset, not from a clock, so at a fixed scroll it is already stationary and
+ * there is nothing to freeze. Disabling it would jump the label to its end
+ * state at *any* scroll, which would photograph the same picture whether the
+ * mechanism worked or not.
+ *
+ * The wait is on the label's own computed opacity reaching 1 — the state the
+ * shot is of, not a guess at how long it takes to get there.
+ */
+async function captureFolded(page: Page, name: string, scheme: "light" | "dark") {
+  const baseViewport = page.viewportSize();
+  await withTransitionsOff(page, async () => {
+    await page.setViewportSize(PHONE_VIEWPORT);
+    await paintWholeDocument(page);
+    // Past the 120px range, so the fold is complete rather than mid-cross.
+    await page.evaluate(() => window.scrollTo(0, 240));
+    await page.waitForFunction(() => {
+      const slot = document.querySelector("[data-chrome-title-slot]");
+      const name = document.querySelector("[data-chrome-shop-name]");
+      if (!slot || !name) return false;
+      return getComputedStyle(slot).opacity === "1" && Number(getComputedStyle(name).opacity) === 0;
+    });
+    await page.screenshot({ path: `e2e/screenshots/${name}-${scheme}-vw-390.png` });
     if (baseViewport) await page.setViewportSize(baseViewport);
   });
 }
@@ -1542,6 +1611,29 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Send it to the shop" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "shopfront-register", scheme);
+      });
+
+      /**
+       * **The departures board** (issue #1426, N-23): a lobby TV's read of the
+       * day behind a display link and no session. Minted through the test
+       * seed route because the token is hashed at rest and shown once; with
+       * names on, so the crew line — the one thing the switch adds — is in the
+       * picture. Phone, laptop, the dock tablet and the TV wall
+       * (`TV_SURFACES`).
+       */
+      test(`the departures board renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-display-token", {
+          data: { label: "Lobby TV", showNames: true },
+        });
+        expect(seeded.ok()).toBe(true);
+        const { path } = (await seeded.json()) as { path: string };
+        await page.goto(path);
+        await page.getByRole("heading", { level: 1, name: "Blue Mantis Divers" }).waitFor();
+        await page.getByText("Two-Tank Reef — Molasses & French").waitFor();
+        await capture(page, "departures-board", scheme);
       });
 
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
@@ -2104,6 +2196,33 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The day the crew logged, with its times** (issue #1425, N-04).
+       *
+       * The `recap` capture above is the day with no `executed_dives` row,
+       * which is what most recaps look like at the moment they are opened, and
+       * it carries no fly-safe line: nothing on that record can say. This is
+       * the other branch — both tanks logged with a time out — and the one
+       * sentence it adds under the record: when this diver may fly, in the
+       * shop's zone, with the hours and who set them. A separate capture from
+       * the two beside it for the same reason they are separate from each
+       * other: a logged day, a changed site and a sighting are three states
+       * that do not travel together.
+       */
+      test(`a recap that says when the diver may fly renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const seeded = await request.post("/api/test/seed-dive-times");
+        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
+        // Waiting on the line itself, not on the page — see the capture above.
+        await page.getByTestId(AFTER_STATE_TEST_IDS.flySafe).filter({ visible: true }).waitFor();
+        await capture(page, "recap-fly-safe", scheme);
+      });
+
+      /**
        * **The field guide, open** (issue #1192, D32).
        *
        * The drawer is shut on arrival, so the `recap` capture above already
@@ -2211,6 +2330,58 @@ for (const scheme of ["light", "dark"] as const) {
           .check();
         await page.getByTestId("waiver-step-rail").getByText("1 of 3 done").waitFor();
         await capture(page, "waiver-rail-follow-ups", scheme);
+      });
+
+      /**
+       * **The guardian's card** (ADR 20260907-guardian-co-signature): the
+       * second signature a minor's release takes, and the one composition on
+       * this page no other capture can reach — it renders from the diver's own
+       * date of birth, so an adult's link never draws it.
+       *
+       * Its own diver rather than the seeded thirteen-year-old, for the reason
+       * `e2e/guardian-co-signature.spec.ts` gives: hers is already co-signed so
+       * the demo boat is not permanently blocked, and a signed release issues
+       * no second link.
+       */
+      test(`the guardian's half of a minor's release renders true to the design (${scheme})`, async ({
+        page,
+        browser,
+        workerBaseURL,
+        staffStorageState,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const staffContext = await browser.newContext({
+          baseURL: workerBaseURL,
+          storageState: await staffStorageState("owner"),
+        });
+        const staffPage = makeActivitySafe(await staffContext.newPage());
+        // A minted diver keeps the capture's own name out of the frame: the
+        // page prints the diver's name in the guardian card's opening line, so
+        // a per-run stamp would change the picture on every run. Pinned words.
+        await staffPage.goto("/shop/blue-mantis/divers/new");
+        await staffPage.getByLabel("Full name").fill("Robin Delgado");
+        await staffPage.getByLabel("Email").fill("robin.delgado@example.com");
+        await staffPage.getByRole("button", { name: "Add diver" }).click();
+        await staffPage.waitForURL(/\/shop\/blue-mantis\/divers\/[0-9a-f-]{36}/);
+        // Thirteen against the frozen e2e clock, so the rendered page is the
+        // same picture on every run. `?edit=1` names the disclosure the date of
+        // birth lives behind rather than relying on where a fresh record lands.
+        await staffPage.goto(`${new URL(staffPage.url()).pathname}?edit=1`);
+        await staffPage.getByLabel("Date of birth").fill(daysFromNow(-365 * 13));
+        await staffPage.getByRole("button", { name: "Save details" }).click();
+        await staffPage.getByRole("status").getByText("Diver details updated").waitFor();
+        // Back to the record's own URL first: the save lands on a `?notice=`,
+        // whose banner is a second `role="status"` beside the copy toast
+        // `waiverLinkFromToast` reads.
+        await staffPage.goto(new URL(staffPage.url()).pathname);
+        await staffPage.getByText("Send options", { exact: true }).click();
+        await staffPage.getByRole("button", { name: "Copy link" }).click();
+        const waiverHref = await waiverLinkFromToast(staffPage);
+        await staffContext.close();
+
+        await page.goto(waiverHref);
+        await page.getByRole("heading", { name: "Parent or guardian" }).waitFor();
+        await capture(page, "waiver-guardian", scheme);
       });
 
       /**
@@ -3436,6 +3607,30 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder-add", scheme);
       });
 
+      // The same quick panel once a stationed site is chosen: the one line the
+      // panel adds when it knows where the boat is going (ADR
+      // 20260907-noaa-tide-predictions), read off the fixture table the fleet
+      // serves in place of NOAA. Its own capture rather than a change to the
+      // one above, which is the baseline for the panel with nothing chosen.
+      test(`the add-a-departure panel with a tide window renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await page.getByRole("link", { name: "Add a departure", exact: true }).click();
+        await addPanelSettled(page);
+        // By control name, not by label: the quick row and dive one both carry
+        // a "Dive site" select, and the expanded one stays mounted-but-hidden
+        // so nothing typed is lost on a collapse (e2e/dive-sites.spec.ts says
+        // the same thing at its own two call sites).
+        await page.locator('select[name="diveSiteId"]').selectOption({ label: "Molasses Reef" });
+        await page
+          .getByText(/(Next|Last) (high|low) water at .*; this departure reaches the site/)
+          .waitFor();
+        await boardListSettled(page);
+        await capture(page, "schedule-builder-add-tide", scheme);
+      });
+
       // The same panel at full depth — everything `/trips/new` used to be, now
       // disclosed inline (ADR 20260806-one-trip-create-form). This is the tall
       // one, and the only baseline that can catch the expanded form's own
@@ -3529,6 +3724,23 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The same roster, scrolled — the bar wearing the page's name.**
+       *
+       * This is the surface the fold was written for: a staffer halfway down
+       * Divers used to see "Blue Mantis Divers" and 26 names, with nothing on
+       * screen saying which page they were on (ADR
+       * 20260907-nothing-from-nowhere, decision 5; issue #1422). The capture is
+       * the only thing that can catch the label arriving at the wrong size, in
+       * the wrong place, or on top of the shop's mark rather than beside it.
+       */
+      test(`the bar folds the page's title in on a phone (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/divers");
+        await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+        await page.locator("main ul li").first().waitFor();
+        await captureFolded(page, "chrome-folded-title", scheme);
+      });
+
+      /**
        * The form the front desk fills in most often, and the one the command
        * palette's create flow lands on. Four specs reach it and none of them
        * had ever looked at it: `check:route-coverage` counted an e2e spec as
@@ -3599,6 +3811,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Emergency contact name").fill("Kojo Mensah");
         await page.getByLabel("Emergency contact phone").fill("+13055550177");
         await page.getByRole("button", { name: "Save details" }).click();
+        // **Wait for the save's own redirect before reloading over it.** The
+        // reload was already here to settle the page; on its own it *raced*
+        // the action instead, aborting the request mid-write. When the reload
+        // won, the contact was never saved, the record kept its one open item,
+        // and the earned moment 40 lines below correctly never rendered — the
+        // test then spent its whole 210s budget waiting for a banner that was
+        // right not to appear (CI run 34082101061).
+        await page.waitForURL(/notice=person-saved/);
         // Land the save before touching the Waiver group. The save redirects and
         // the record re-renders around the notice it carries, which is what left
         // the paper-waiver button "not stable" and then "detached from the DOM"
@@ -4432,6 +4652,20 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * The fly-safe hours, open (issue #1425) — two whole-hour boxes whose
+       * floors are DAN's minimums. Its own capture for the reason the row
+       * above has one: closed everywhere else, and the form is the only place
+       * a shop sets the number the recap then credits to it.
+       */
+      test(`the fly-safe hours card renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await page.getByRole("heading", { name: "Fly-safe hours" }).waitFor();
+        await openSettingsRow(page, "Fly-safe hours");
+        await page.getByLabel("After two or more dives").waitFor();
+        await capture(page, "settings-fly-safe", scheme);
+      });
+
+      /**
        * The emergency reference, open — the five number slots, the vessel and
        * shore-contact boxes, and the free-text plan (issue #688). Its own
        * capture for the same reason as the two rows above: it is closed in
@@ -4789,6 +5023,23 @@ for (const scheme of ["light", "dark"] as const) {
         // heading resolves before the interesting part has mounted.
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         await capture(page, "settings-calendar", scheme);
+      });
+
+      // Lobby display (issue #1426) with one screen listed — minted through
+      // the seed route rather than the form, so the shown-once link block is
+      // *not* in the picture: it carries a token that differs on every run.
+      test(`the lobby display settings render true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-display-token", {
+          data: { label: "Lobby TV" },
+        });
+        expect(seeded.ok()).toBe(true);
+        await page.goto("/shop/blue-mantis/settings/display");
+        await page.getByRole("button", { name: "Create link" }).waitFor();
+        await page.getByText("Lobby TV").waitFor();
+        await capture(page, "settings-display", scheme);
       });
 
       // The courses catalog as one ledger (slice 9g of ADR

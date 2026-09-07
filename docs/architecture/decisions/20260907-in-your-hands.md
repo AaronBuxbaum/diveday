@@ -1,7 +1,9 @@
 # 20260907-in-your-hands — Where the device already knows a thing, DiveDay uses it, says where it came from, and leaves the last tap to a person
 
-- **Status:** Proposed — pending H-70 (passkeys and the step-up, the release signed on the shop's
-  device, the card photo sent to a text reader). Slices 19a–19e in the roadmap
+- **Status:** Accepted — decided 2026-09-07 (Aaron Buxbaum, in session; H-70: passkeys and the
+  step-up yes, the release signed on the shop's device yes, the card reader declined — "we should
+  have no photo upload", which also corrected this record's third finding, below). Slices 19a, 19b,
+  19d and 19e in the roadmap; 19c dropped
 - **Date:** 2026-09-07
 - **Design:** [the canvas](../../design/canvases/20260907-in-your-hands/README.md) — five artboards
   on two pages: the cover; then the door, the counter, the card, and the two device moves on one
@@ -31,7 +33,11 @@ of one shape:
    The device the staffer is looking at could be turned around.
 3. **The card is photographed and then typed.** *Capture for review* already lands a photo of the
    certification card on the record; the agency, level, number and date are then typed off the same
-   card into the fields under it.
+   card into the fields under it. **Corrected on acceptance: this finding was wrong.** *Capture for
+   review* is the typed add-certification form's own submit, and a card has carried no image since
+   [20260811-retire-the-digital-card](20260811-retire-the-digital-card.md) dropped `card_image_url`
+   — a photograph of the plastic never established anything. The canvas read the label as a camera
+   and drew a move on it; decision 4 records the outcome.
 4. **The type ignores the phone.** The ladder is rem, so a desktop browser's text setting reaches
    it; iOS's own text setting, the one that reaches every other app, reaches nothing here.
 5. **The app can be installed and never says so.** `manifest.ts` declares `standalone` and the
@@ -83,7 +89,7 @@ device's own check stands as the fresh factor the step-up asks for before money,
 backup-destination changes ([20260826-account-security-step-up](20260826-account-security-step-up.md)),
 bound to the session and purpose for fifteen minutes as the authenticator code is today.
 **Recommended:** yes to both. Declined on the second, the code is asked as today; declined on the
-first, nothing on the door or in Settings changes.
+first, nothing on the door or in Settings changes. **Decided 2026-09-07: yes to both.**
 
 ### 3. Hand it over (H-70 b)
 
@@ -110,9 +116,17 @@ holds an unsaved form.
 on the signature. The words are H-01's and whether a typed name suffices is H-03's; this asks a
 narrower thing, the device. **Recommended:** yes, provenance recorded — it is the paper flow with the
 signature kept, and the paper flow already ships. Declined, *Sign here* renders nothing, the row keeps
-its two doors, and the session lock is not built.
+its two doors, and the session lock is not built. **Decided 2026-09-07: yes, provenance recorded.**
 
-### 4. Point the camera at the card (H-70 c)
+### 4. Point the camera at the card (H-70 c) — declined, and dropped in full
+
+**Decided 2026-09-07: declined** — "we should have no photo upload." The move as proposed below is
+not built, and neither is its fallback: no photo capture is added to the certification form, which
+ships as it is. The proposal rested on the wrong premise named in the Context (no photo of a card
+exists or is stored, and [20260811-retire-the-digital-card](20260811-retire-the-digital-card.md)
+already decided that none should), so the owner's answer restates a standing decision rather than
+reversing this record's fallback. Slice 19c is dropped; the canvas's Card board stands as the dated
+argument. The text as proposed follows, unedited, as the record of what was weighed.
 
 The certification form's photo capture moves to the top of the form and takes the camera's name,
 *Photograph the card*, since on a phone or a tablet that input opens the camera. The photo lands on
@@ -190,10 +204,9 @@ about the device at the ledger row's own weight, so the home's budget is untouch
 - **The signature row** gains its counter provenance (where, on whose device, handed over by whom,
   when), never edited; the `dive-domain-expert` and the security reviewer read slice 19b; the two
   sentences drafted ahead of counsel are reworded, not redrawn, when H-01–H-03 answer.
-- **The reader** is a server action behind the existing upload; Textract enters the infra stack with
-  its opt-out policy as a manual step in §17's registry, its cost in the observability runbook, and a
-  disclosure sentence on `/privacy`. `CardSightingForm` names this ADR; a test pins that the reading
-  writes fields and never `status`.
+- **The reader** is not built (decision 4, declined). No Textract, no manual step, no `/privacy`
+  sentence, no change to `CardSightingForm`; the certification form keeps carrying no photograph,
+  which `anonymize.ts` already states beside its erasure of the card rows.
 - **The root probe** is one line in the existing pre-hydration script and one visual capture;
   `check:tokens` and the loading-skeleton guard are unchanged, and any px measure that stops scaling
   is a visual diff to fix.

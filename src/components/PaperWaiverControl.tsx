@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { PaperWaiverCopy } from "@/components/paper-waiver-copy";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { WaiverActionIcon } from "@/components/WaiverActionIcon";
 
 /**
@@ -34,6 +35,7 @@ export function PaperWaiverControl({
   action,
   bookingId,
   copy,
+  requiresGuardian = false,
   className = "mt-2",
   variant = "link",
   defaultOpen = false,
@@ -47,6 +49,14 @@ export function PaperWaiverControl({
    */
   bookingId?: string;
   copy: PaperWaiverCopy;
+  /**
+   * The diver is a minor today, so the paper release names its co-signer too
+   * (ADR 20260907-guardian-co-signature). `recordInPersonWaiver` applies the
+   * same rule from the date of birth on file and refuses without one, so this
+   * only decides whether the two controls are drawn — a staffer never meets
+   * the refusal, and a hand-built request never gets past it.
+   */
+  requiresGuardian?: boolean;
   className?: string;
   /**
    * Genuinely different jobs, not skins. Under a primary "send the link"
@@ -102,6 +112,36 @@ export function PaperWaiverControl({
         <input type="checkbox" name="medicalAttested" required className="mt-0.5 size-4 shrink-0" />
         <span>{copy.medicalAttestationLabel}</span>
       </label>
+      {/* A minor's paper release was signed twice, so the record names both
+          (ADR 20260907-guardian-co-signature). The staffer attests to the
+          guardian's signature the way they attest to the diver's — same
+          `in_person_attested` evidence, same act. */}
+      {requiresGuardian ? (
+        <FieldGrid columns={2} className="mt-4">
+          <Field label={copy.guardian.nameLabel}>
+            <input
+              name="guardianName"
+              autoComplete="off"
+              required
+              minLength={2}
+              maxLength={120}
+              className={controlClass}
+            />
+          </Field>
+          <Field label={copy.guardian.relationshipLabel}>
+            <select name="guardianRelationship" required defaultValue="" className={controlClass}>
+              <option value="" disabled>
+                {copy.guardian.relationshipChoose}
+              </option>
+              {copy.guardian.relationshipOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </FieldGrid>
+      ) : null}
       <div className="mt-4 flex flex-wrap gap-2">
         <SubmitButton
           pendingLabel={copy.recording}

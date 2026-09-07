@@ -5,6 +5,9 @@
     "youWorkHere": "Trabajas aquí: esta es la página que ven los buceadores.",
     "openTheBoard": "Abrir el panel"
   },
+  "tide": {
+    "window": "{turn, select, next {Próxima} other {Última}} {kind, select, high {pleamar} other {bajamar}} a las {time}; esta salida llega al sitio {phase, select, slack {en el cambio de marea} flood {con marea entrante} other {con marea saliente}}{fit, select, met {, cuando mejor se bucea} missed {. Se bucea mejor {preference, select, slack {en la estoa} flood {con marea entrante} other {con marea saliente}}} other {}}."
+  },
   "imageInput": {
     "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
     "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
@@ -16,7 +19,21 @@
     "markSignedOnPaper": "Marcar como firmado en papel",
     "medicalAttestationLabel": "Tengo la exención firmada de este buceador archivada, he revisado su cuestionario médico y ninguna respuesta necesita el visto bueno de un médico.",
     "recording": "Registrando…",
-    "recordPaperSignature": "Registrar firma en papel"
+    "recordPaperSignature": "Registrar firma en papel",
+    "guardianNameLabel": "Madre, padre o tutor que firmó",
+    "guardianRelationshipLabel": "Relación",
+    "guardianRelationshipChoose": "Elige una opción"
+  },
+  "guardian": {
+    "relationship": {
+      "parent": "madre o padre",
+      "legalGuardian": "tutor legal"
+    },
+    "relationshipOption": {
+      "parent": "Madre o padre",
+      "legalGuardian": "Tutor legal"
+    },
+    "coSignedBy": "Firmada también por {name} ({relationship})"
   },
   "medicalClearance": {
     "recordClearance": "Registrar la respuesta del médico",
@@ -173,6 +190,7 @@
       "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",
       "medicalReview": "Una respuesta médica necesita seguimiento del personal.",
       "medicalNotCleared": "Un médico no autorizó a esta persona a bucear.",
+      "guardianSignatureMissing": "Firmada por un menor sin acompañante. Falta la firma de su madre, padre o tutor legal; envía un enlace nuevo de la exención.",
       "certificationMissing": "No hay ninguna certificación registrada para esta salida.",
       "certificationPending": "La certificación espera verificación del personal.",
       "certificationSelfDeclared": "El buceador indicó su nivel por su cuenta. No se ha verificado ningún registro de certificación: pide los datos y verifícalos.",
@@ -434,6 +452,7 @@
     "none": "Sin firmar",
     "current": "Firmado",
     "expired": "Hay que firmarlo de nuevo",
+    "guardianMissing": "Falta la firma del tutor",
     "medicalReview": "Revisión médica",
     "medicalNotCleared": "No autorizado"
   },

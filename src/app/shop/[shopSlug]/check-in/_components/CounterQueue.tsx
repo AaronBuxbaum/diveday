@@ -3,6 +3,7 @@ import { LedgerGroup } from "@/components/ui/ledger";
 import { RollingFigure } from "@/components/ui/RollingFigure";
 import type { CheckInQueueRow as QueueRow } from "@/db/check-in";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { isSettledAtCounter } from "@/lib/check-in";
 import { CounterQueueRow } from "./CounterQueueRow";
 
@@ -33,6 +34,7 @@ import { CounterQueueRow } from "./CounterQueueRow";
 export function CounterQueue({
   rows,
   shopSlug,
+  today,
   isAmbiguousName,
   showFirstVisit,
   checkInAction,
@@ -45,6 +47,12 @@ export function CounterQueue({
   /** One departure's rows, in the reader's order. */
   rows: readonly QueueRow[];
   shopSlug: string;
+  /**
+   * The shop's own calendar day, which is the day a paper release recorded
+   * here is signed on — and so the day the guardian rule measures a diver's
+   * age against (ADR 20260907-guardian-co-signature).
+   */
+  today: CalendarDate;
   /** Whether two visible divers share this name — the email is a disambiguator. */
   isAmbiguousName: (personName: string) => boolean;
   /**
@@ -88,6 +96,7 @@ export function CounterQueue({
               key={row.bookingId}
               row={row}
               shopSlug={shopSlug}
+              today={today}
               showEmail={isAmbiguousName(row.personName)}
               showFirstVisit={showFirstVisit}
               checkInAction={checkInAction}
@@ -122,6 +131,7 @@ export function CounterQueue({
                 key={row.bookingId}
                 row={row}
                 shopSlug={shopSlug}
+                today={today}
                 showEmail={isAmbiguousName(row.personName)}
                 showFirstVisit={showFirstVisit}
                 checkInAction={checkInAction}

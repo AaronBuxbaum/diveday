@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
 import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { recordInPersonWaiver } from "@/db/waivers";
@@ -125,6 +126,11 @@ export async function markWaiverInPersonFromCheckIn(
     subject: { bookingId },
     recordedByPersonId: session.user.personId,
     medicalAttested: formData.get("medicalAttested") === "on",
+    // A minor's paper release names its co-signer (ADR
+    // 20260907-guardian-co-signature). Passed as typed; `recordInPersonWaiver`
+    // decides from the date of birth on file whether it is needed at all, and
+    // refuses a section that is not a signature.
+    guardian: paperGuardianFrom(formData),
   });
   // Landing it in place, like the two above: the diver is standing at the
   // counter, and the answer they are waiting for is their own row losing its

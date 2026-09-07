@@ -6,6 +6,7 @@ import { seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeCourtesy, fakeEmail, fakeSms } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { recordCourseNextStep } from "./course-next-step";
+import { upsertExecutedDive } from "./executed-dives";
 import { recordDiverOwnLocale } from "./people";
 import { issueShopCertification } from "./readiness";
 import {
@@ -37,7 +38,7 @@ import {
   shops,
   trips,
 } from "./schema";
-import { setShopCurrency, setShopReviewUrl } from "./shops";
+import { setShopCurrency, setShopFlySafeHours, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -815,6 +816,54 @@ describe("sendDueRecaps", () => {
     const mine = own.sent.filter((n) => n.kind === "trip_recap" && n.bookingId === bookingId);
     expect(mine).toHaveLength(1);
     expect(mine[0]).toMatchObject({ locale: "es-ES" });
+  });
+
+  /**
+   * The email carries the same fly-safe instant the after-state renders
+   * (issue #1425): counted from the last exit the crew recorded, by the
+   * shop's own hours — and nothing at all when nothing was recorded and the
+   * scheduled return is what the clock would have to guess from.
+   */
+  it("carries when the diver may fly, counted from the last recorded exit by the shop's hours", async () => {
+    const { db, shop, reef, bookingId, afterTrip } = await recapContext();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("no staff");
+    const lastExit = new Date(reef.endsAt.getTime() - 30 * 60 * 1000);
+    for (const [diveNumber, exitedAt] of [
+      [1, new Date(lastExit.getTime() - 2 * 60 * 60 * 1000)],
+      [2, lastExit],
+    ] as const) {
+      const recorded = await upsertExecutedDive(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        diveNumber,
+        enteredAt: new Date(exitedAt.getTime() - 45 * 60 * 1000),
+        exitedAt,
+        recordedByPersonId: staff.person.id,
+      });
+      expect(recorded.ok).toBe(true);
+    }
+    await setShopFlySafeHours(db, shop.id, { single: 18, repetitive: 30 });
+
+    const email = fakeEmail();
+    await sendDueRecaps(db, {
+      now: afterTrip,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    });
+    const mine = email.sent.find((n) => n.kind === "trip_recap" && n.bookingId === bookingId);
+    if (mine?.kind !== "trip_recap") throw new Error("recap notification missing");
+    expect(mine.flySafe).toEqual({
+      from: new Date(lastExit.getTime() + 30 * 60 * 60 * 1000),
+      hours: 30,
+      basis: "repetitive",
+      anchor: "last_dive",
+    });
+
+    // The page reads the same answer off the same rows.
+    const data = await getRecapPageData(db, bookingId);
+    expect(data?.flySafe).toEqual(mine.flySafe);
   });
 
   it("sends the recap after the minimum delay, records it, and is a no-op on a second run", async () => {

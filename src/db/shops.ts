@@ -5,6 +5,7 @@ import type { ConservationCommitmentCode } from "@/lib/conservation-commitments"
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
+import type { FlySafeHours } from "@/lib/fly-safe";
 import type { ShopCurrency } from "@/lib/money";
 import { regionSlugFromLocality } from "@/lib/region";
 import type { RentalPricing } from "@/lib/rentals";
@@ -304,6 +305,21 @@ export async function setShopSendWindow(db: AppDb, shopId: string, window: SendW
 }
 
 /**
+ * How long after the last dive this shop tells a diver they may fly
+ * (`src/lib/fly-safe.ts`, issue #1425). The pair is validated by
+ * `parseFlySafeHours` before it reaches here and by the table's own CHECK
+ * after, so a caller that skips the parser is refused rather than stored.
+ */
+export async function setShopFlySafeHours(db: AppDb, shopId: string, hours: FlySafeHours) {
+  const [shop] = await db
+    .update(shops)
+    .set({ flySafeHoursSingle: hours.single, flySafeHoursRepetitive: hours.repetitive })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
  * Sets the currency the shop displays and charges in. Unlike the depth unit
  * below, this is **not** lossless: every stored `*_cents` amount is an integer
  * count of the old currency's minor unit and no conversion happens here, so a
@@ -577,6 +593,20 @@ export async function setShopHospitalityNotes(
       dockCallNote: clean(notes.dockCallNote),
       signOffNote: clean(notes.signOffNote),
     })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * Whether a site's tide window reaches the diver's public departure page
+ * (ADR 20260907-noaa-tide-predictions). Off by default; staff surfaces read
+ * the window regardless of this.
+ */
+export async function setShopTideWindowPublic(db: AppDb, shopId: string, on: boolean) {
+  const [shop] = await db
+    .update(shops)
+    .set({ tideWindowPublic: on })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

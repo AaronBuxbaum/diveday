@@ -1,0 +1,170 @@
+import { describe, expect, it } from "vitest";
+import { HOUR_MS } from "./clock";
+import {
+  DEFAULT_FLY_SAFE_HOURS,
+  FLY_SAFE_LIMITS,
+  flySafeFrom,
+  parseFlySafeHours,
+} from "./fly-safe";
+import { formatWeekdayTime } from "./format";
+
+const endsAt = new Date("2026-07-25T22:00:00.000Z");
+const home = new Date(endsAt.getTime() + 2 * HOUR_MS);
+const hours = DEFAULT_FLY_SAFE_HOURS;
+
+describe("flySafeFrom", () => {
+  it("anchors on the last recorded exit and takes the single-dive hours for a one-tank day", () => {
+    const exit = new Date("2026-07-25T20:10:00.000Z");
+    const result = flySafeFrom({
+      executedDives: [{ diveNumber: 1, exitedAt: exit }],
+      plannedDives: 1,
+      endsAt,
+      now: home,
+      hours,
+    });
+    expect(result).toEqual({
+      from: new Date(exit.getTime() + 18 * HOUR_MS),
+      basis: "single",
+      anchor: "last_dive",
+      hours: 18,
+    });
+  });
+
+  it("takes the repetitive hours once the day held more than one dive, from the later exit", () => {
+    const first = new Date("2026-07-25T19:00:00.000Z");
+    const second = new Date("2026-07-25T21:15:00.000Z");
+    const result = flySafeFrom({
+      executedDives: [
+        { diveNumber: 2, exitedAt: second },
+        { diveNumber: 1, exitedAt: first },
+      ],
+      plannedDives: 2,
+      endsAt,
+      now: home,
+      hours,
+    });
+    expect(result).toMatchObject({ basis: "repetitive", anchor: "last_dive", hours: 24 });
+    expect(result?.from).toEqual(new Date(second.getTime() + 24 * HOUR_MS));
+  });
+
+  it("reads a two-dive plan as repetitive even when the crew logged only one tank", () => {
+    const exit = new Date("2026-07-25T20:10:00.000Z");
+    const result = flySafeFrom({
+      executedDives: [{ diveNumber: 1, exitedAt: exit }],
+      plannedDives: 2,
+      endsAt,
+      now: home,
+      hours,
+    });
+    expect(result).toMatchObject({ basis: "repetitive", hours: 24 });
+  });
+
+  it("falls back to the scheduled return once the boat is home, when nothing was recorded", () => {
+    const result = flySafeFrom({
+      executedDives: [],
+      plannedDives: 2,
+      endsAt,
+      now: home,
+      hours,
+    });
+    expect(result).toEqual({
+      from: new Date(endsAt.getTime() + 24 * HOUR_MS),
+      basis: "repetitive",
+      anchor: "scheduled_return",
+      hours: 24,
+    });
+  });
+
+  it("says nothing while the boat is still out by the one-hour buffer", () => {
+    const justPastReturn = new Date(endsAt.getTime() + 30 * 60 * 1000);
+    expect(
+      flySafeFrom({ executedDives: [], plannedDives: 2, endsAt, now: justPastReturn, hours }),
+    ).toBeNull();
+    expect(
+      flySafeFrom({ executedDives: [], plannedDives: 2, endsAt: null, now: home, hours }),
+    ).toBeNull();
+  });
+
+  it("never anchors on an earlier dive when a later one was recorded without its exit", () => {
+    const firstExit = new Date("2026-07-25T19:00:00.000Z");
+    const dives = [
+      { diveNumber: 1, exitedAt: firstExit },
+      { diveNumber: 2, exitedAt: null },
+    ];
+    // Boat home: the return is the later of the two instants, so it anchors.
+    expect(
+      flySafeFrom({ executedDives: dives, plannedDives: 2, endsAt, now: home, hours }),
+    ).toEqual({
+      from: new Date(endsAt.getTime() + 24 * HOUR_MS),
+      basis: "repetitive",
+      anchor: "scheduled_return",
+      hours: 24,
+    });
+    // Boat not yet home: no honest answer at all, rather than dive one's.
+    expect(
+      flySafeFrom({ executedDives: dives, plannedDives: 2, endsAt, now: endsAt, hours }),
+    ).toBeNull();
+  });
+
+  it("keeps a recorded exit that runs past the scheduled return when the record is incomplete", () => {
+    const lateExit = new Date(endsAt.getTime() + HOUR_MS);
+    const result = flySafeFrom({
+      executedDives: [
+        { diveNumber: 1, exitedAt: lateExit },
+        { diveNumber: 2, exitedAt: null },
+      ],
+      plannedDives: 2,
+      endsAt,
+      now: new Date(lateExit.getTime() + 3 * HOUR_MS),
+      hours,
+    });
+    expect(result?.from).toEqual(new Date(lateExit.getTime() + 24 * HOUR_MS));
+  });
+
+  it("renders in the shop's zone through the shared formatter", () => {
+    const exit = new Date("2026-07-25T20:10:00.000Z");
+    const result = flySafeFrom({
+      executedDives: [{ diveNumber: 1, exitedAt: exit }],
+      plannedDives: 1,
+      endsAt,
+      now: home,
+      hours,
+    });
+    if (!result) throw new Error("expected a result");
+    // 20:10Z + 18h = 14:10Z on the 26th, a Sunday, which is 10:10 AM in Key Largo.
+    expect(formatWeekdayTime(result.from, "en-US", "America/New_York")).toBe("Sunday 10:10 AM");
+    expect(formatWeekdayTime(result.from, "es-ES", "America/New_York")).toBe("domingo, 10:10");
+    expect(formatWeekdayTime(result.from, "en-US", "UTC")).toBe("Sunday 2:10 PM");
+  });
+});
+
+describe("parseFlySafeHours", () => {
+  it("accepts whole hours inside DAN's floors and the three-day ceiling", () => {
+    expect(parseFlySafeHours({ single: "18", repetitive: "24" })).toEqual({
+      single: 18,
+      repetitive: 24,
+    });
+    expect(parseFlySafeHours({ single: 12, repetitive: 18 })).toEqual({
+      single: 12,
+      repetitive: 18,
+    });
+  });
+
+  it("refuses a value under DAN's minimum, over the ceiling, fractional, or missing", () => {
+    expect(parseFlySafeHours({ single: "11", repetitive: "24" })).toBeNull();
+    expect(parseFlySafeHours({ single: "18", repetitive: "17" })).toBeNull();
+    expect(parseFlySafeHours({ single: "18", repetitive: "73" })).toBeNull();
+    expect(parseFlySafeHours({ single: "18.5", repetitive: "24" })).toBeNull();
+    expect(parseFlySafeHours({ single: "18" })).toBeNull();
+    expect(parseFlySafeHours({ single: "abc", repetitive: "24" })).toBeNull();
+  });
+
+  it("refuses a repetitive wait shorter than the single one", () => {
+    expect(parseFlySafeHours({ single: "30", repetitive: "24" })).toBeNull();
+  });
+
+  it("floors at DAN's published minimums so the attribution stays true", () => {
+    expect(FLY_SAFE_LIMITS.single.min).toBe(12);
+    expect(FLY_SAFE_LIMITS.repetitive.min).toBe(18);
+  });
+});

@@ -23,6 +23,7 @@ function row(overrides: Partial<CheckInQueueRow> = {}): CheckInQueueRow {
     personId: "person-1",
     personName: "Nadia Petrov",
     email: "nadia@example.com",
+    dateOfBirth: null,
     tripId: "trip-1",
     tripTitle: "Two-Tank Reef — Molasses & French",
     startsAt: new Date("2026-08-27T11:00:00.000Z"),
@@ -45,6 +46,7 @@ function renderRow(
     <CounterQueueRow
       row={row(overrides)}
       shopSlug="blue-mantis"
+      today="2026-08-27"
       showEmail={showEmail}
       showFirstVisit={showFirstVisit}
       checkInAction={vi.fn().mockResolvedValue({ ok: true })}

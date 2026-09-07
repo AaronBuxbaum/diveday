@@ -28,6 +28,7 @@ import {
   setShopDivingOptions,
   setShopDockDayRhythm,
   setShopEmergencyReference,
+  setShopFlySafeHours,
   setShopHospitalityNotes,
   setShopPackingList,
   setShopPassThroughFee,
@@ -40,6 +41,7 @@ import {
   setShopSendWindow,
   setShopTaxEnabled,
   setShopTemperatureUnit,
+  setShopTideWindowPublic,
   setShopTimezone,
 } from "@/db/shops";
 import {
@@ -67,6 +69,7 @@ import {
 } from "@/lib/divemaster-ratio";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
 import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
+import { FLY_SAFE_FIELDS, parseFlySafeHours } from "@/lib/fly-safe";
 import { isValidTimeZone } from "@/lib/format";
 import {
   isShopCurrency,
@@ -421,6 +424,27 @@ export async function saveSendWindowAction(formData: FormData) {
     settings,
     noticeUrl(settings, "send-window-saved", { saved: "sendWindow" }),
   );
+}
+
+/**
+ * How long after the last dive this shop tells a diver they may fly
+ * (`src/lib/fly-safe.ts`, issue #1425). Refused whole, with a notice, on any
+ * value outside DAN's floors and the three-day ceiling — never clamped, so a
+ * forged form cannot quietly write a wait shorter than the guidance the
+ * recap's own sentence then names.
+ */
+export async function saveFlySafeHoursAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const hours = parseFlySafeHours(
+    Object.fromEntries(FLY_SAFE_FIELDS.map((field) => [field, formData.get(field)])),
+  );
+  if (!hours) {
+    redirect(noticeUrl(settings, "fly-safe-invalid", { saved: "flySafe" }));
+  }
+  await setShopFlySafeHours(await getDb(), session.user.shopId, hours);
+  revalidateAndRedirect(settings, noticeUrl(settings, "fly-safe-saved", { saved: "flySafe" }));
 }
 
 /**
@@ -1337,4 +1361,19 @@ export async function deleteTripLensAction(formData: FormData) {
   await deleteTripLens(db, session.user.shopId, lensId);
 
   revalidateAndRedirect(settings, noticeUrl(settings, "lens-deleted", { saved: "lenses" }));
+}
+
+/**
+ * Whether divers read a site's tide window on the public departure page (ADR
+ * 20260907-noaa-tide-predictions). One checkbox, off by default: the sentence
+ * names a clock time beside a Book button, and publishing it is the shop's call.
+ */
+export async function saveTideWindowAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const on = formData.get("tideWindowPublic") === "on";
+  await setShopTideWindowPublic(await getDb(), session.user.shopId, on);
+  const notice = on ? "tide-window-on" : "tide-window-off";
+  revalidateAndRedirect(settings, noticeUrl(settings, notice, { saved: "tideWindow" }));
 }

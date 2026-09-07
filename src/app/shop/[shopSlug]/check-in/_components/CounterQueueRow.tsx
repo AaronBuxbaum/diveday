@@ -12,6 +12,8 @@ import type { CheckInQueueRow as QueueRow } from "@/db/check-in";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { blockerFixFor } from "@/lib/blockers";
+import type { CalendarDate } from "@/lib/calendar-date";
+import { guardianSignatureRequired } from "@/lib/guardian";
 import { counterBlockerDisclosure } from "../blocker-disclosure";
 import { CheckInActionForm } from "../CheckInActionForm";
 
@@ -94,6 +96,7 @@ function DiverIdentity({
 export function CounterQueueRow({
   row,
   shopSlug,
+  today,
   showEmail,
   showFirstVisit,
   checkInAction,
@@ -103,6 +106,8 @@ export function CounterQueueRow({
 }: {
   row: QueueRow;
   shopSlug: string;
+  /** The shop's own calendar day — see `CounterQueue`. */
+  today: CalendarDate;
   /** Only where two visible divers share a name — see the page's own note. */
   showEmail: boolean;
   /**
@@ -280,6 +285,9 @@ export function CounterQueueRow({
               action={waiverAction}
               bookingId={row.bookingId}
               copy={paperWaiverCopy(t)}
+              // A minor's paper release names its co-signer too (ADR
+              // 20260907-guardian-co-signature).
+              requiresGuardian={guardianSignatureRequired(row.dateOfBirth, today)}
               className="mt-2"
             />
           ) : null
