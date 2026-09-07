@@ -4500,6 +4500,38 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "offline-manifest-roll-call", scheme);
       });
 
+      /**
+       * **The counter's own half of that copy, with a tap made** (ADR
+       * 20260907-the-counter-survives-offline).
+       *
+       * The frame above photographs the section untouched, alongside every
+       * other control on the shell. This one is the state a desk actually
+       * works in: one seat settled — the primary fill and the drawn check the
+       * live counter's own settled row wears — beside a diver readiness
+       * refuses, who gets no control at all and shows what is in the way. Two
+       * rows that must not look alike, and nothing else on this surface can
+       * show that pair.
+       */
+      test(`the offline counter renders a settled arrival true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // Board → trip → Manifest, then the saved copy, then one tap.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await settleOfflineShellWorker(page);
+        await openOnThisPhone(page);
+        await page.getByRole("link", { name: "Open offline roll call" }).click();
+        await page.waitForURL(/offline-manifest/);
+        const counter = page.getByRole("region", { name: "At the counter" });
+        const diego = counter.getByRole("button", { name: /Diego Alvarez/ });
+        await diego.click();
+        // Wait on what the tap itself renders, never on a timeout: the row
+        // reports its own settled state through `aria-pressed`.
+        await expect(diego).toHaveAttribute("aria-pressed", "true");
+        await capture(page, "offline-counter-settled", scheme);
+      });
+
       // The offline fallback a captain lands on after a failed reload with
       // no snapshot saved — the entire safety surface in that moment, so it
       // gets its own baseline rather than relying on the roll-call text
@@ -5330,6 +5362,46 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Requested dates" }).waitFor();
         await page.getByRole("link", { name: "Add a departure" }).first().waitFor();
         await capture(page, "staff-date-requests", scheme);
+      });
+
+      // **The shop inbox** (ADR 20260907-two-way-inbox): everything divers
+      // wrote back, unanswered first, as two groups under one seam. The seed
+      // puts one of each state on it — an email from a diver on file, a
+      // WhatsApp inside Meta's window, a message from an address nobody holds,
+      // and an already-answered thread — so the capture is the whole grammar of
+      // the surface rather than a list of one shape. Waiting on the Answered
+      // group, which renders below the waiting one: a capture taken before it
+      // lands photographs half a page.
+      test(`the shop inbox renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/inbox");
+        await page.getByRole("heading", { level: 1, name: "What divers wrote back" }).waitFor();
+        await page.getByRole("heading", { name: "Answered" }).waitFor();
+        await capture(page, "staff-inbox", scheme);
+      });
+
+      // **The conversation on the diver's record**, which is where the shop
+      // answers. Both voices in one ledger — the diver's words on the card, the
+      // shop's on the sunken fill — with the composer under them wearing the
+      // channel in its own label. Lena's is the seeded thread that already has
+      // both directions in it; her record is reached from the inbox row so the
+      // capture proves the door as well as the destination.
+      test(`the record's message thread renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/inbox");
+        await page
+          .getByRole("main")
+          .getByRole("listitem")
+          .filter({ hasText: "Lena Fischer" })
+          .getByRole("link", { name: "Open record" })
+          .click();
+        await page.getByRole("heading", { level: 1, name: "Lena Fischer" }).waitFor();
+        // The group is folded at rest for an answered thread — open it, so the
+        // picture is of the conversation rather than of a closed summary line.
+        await page.getByText("Messages", { exact: true }).first().click();
+        await page.getByLabel("Write back by Email").waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "staff-diver-message-thread", scheme);
       });
 
       // Shop-wide discount codes: the create form, then the codes as one

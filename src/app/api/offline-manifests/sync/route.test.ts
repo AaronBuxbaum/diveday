@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { getTripManifest } from "@/db/manifests";
 import {
+  bookingArrivalEvents,
+  bookings,
   people,
   personRoles,
   rollCallCrewEvents,
@@ -11,9 +13,11 @@ import {
   userAccounts,
 } from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
+import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
@@ -737,5 +741,207 @@ describe("POST /api/offline-manifests/sync", () => {
       const malformed = await POST(postRequest({ events: [{ status: "boarded" }] }));
       expect(malformed.status).toBe(401);
     });
+  });
+});
+
+/**
+ * **The counter's own queue** (ADR 20260907-the-counter-survives-offline).
+ *
+ * It rides this route because the reconciliation rules are the ones roll call
+ * already has, and it stays a separate array on the body because arrival and
+ * boarding are different claims. The last test here is the one that matters
+ * most: no arrival batch, well-formed or otherwise, puts anybody on a boat.
+ */
+describe("POST /api/offline-manifests/sync — queued arrivals", () => {
+  async function readyContext() {
+    const ctx = await seededContext();
+    const roster = await getTripRoster(ctx.db, ctx.shop.id, ctx.trip.id);
+    const [row] = roster;
+    if (!row) throw new Error("expected seeded booking missing");
+    const issued = await issueWaiverRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: row.booking.id,
+    });
+    if (!issued.ok) throw new Error("waiver request refused");
+    await completeWaiver(ctx.db, issued.token, {
+      signerName: row.person.fullName,
+      agreed: true,
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+    });
+    return ctx;
+  }
+
+  function arrivalEvent(input: { bookingId: string; tripId: string; status?: string }) {
+    const now = nowDate().toISOString();
+    return {
+      clientEventId: crypto.randomUUID(),
+      snapshotId: crypto.randomUUID(),
+      snapshotSavedAt: now,
+      bookingId: input.bookingId,
+      tripId: input.tripId,
+      status: input.status ?? "arrived",
+      occurredAt: now,
+    };
+  }
+
+  it("applies a queued arrival and reports it back by client event id", async () => {
+    const { db, shop, trip, booking, staffPersonId } = await readyContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+
+    const event = arrivalEvent({ bookingId: booking.id, tripId: trip.id });
+    const response = await POST(postRequest({ events: [], arrivalEvents: [event] }));
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      results: Array<{ clientEventId: string; status: string }>;
+    };
+    expect(body.results).toEqual([{ clientEventId: event.clientEventId, status: "applied" }]);
+
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("checked_in");
+  });
+
+  /**
+   * The rule the item states in one line, asserted where a device's own bytes
+   * reach the database: *an arrival is never promoted to aboard by the queue.*
+   * The arrival applies, and the roll-call tables are untouched.
+   */
+  it("never boards anybody: an applied arrival writes no roll-call row", async () => {
+    const { db, shop, trip, booking, staffPersonId } = await readyContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+
+    const before = await rollCallEventIds(db, shop.id);
+    const response = await POST(
+      postRequest({
+        events: [],
+        arrivalEvents: [arrivalEvent({ bookingId: booking.id, tripId: trip.id })],
+      }),
+    );
+    expect(response.status).toBe(200);
+
+    expect(await rollCallEventIds(db, shop.id)).toEqual(before);
+    const manifest = await getTripManifest(db, shop.id, trip.id, "departure");
+    expect(manifest?.divers.find((d) => d.bookingId === booking.id)?.rollCall).toBeUndefined();
+  });
+
+  it("refuses an arrival for a diver readiness no longer clears, and writes nothing", async () => {
+    const { db, shop, trip, booking, staffPersonId } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+
+    const event = arrivalEvent({ bookingId: booking.id, tripId: trip.id });
+    const response = await POST(postRequest({ events: [], arrivalEvents: [event] }));
+    const body = (await response.json()) as {
+      results: Array<{ clientEventId: string; status: string; reason?: string }>;
+    };
+    expect(body.results).toEqual([
+      { clientEventId: event.clientEventId, status: "rejected", reason: "not_ready" },
+    ]);
+    const trail = await db
+      .select()
+      .from(bookingArrivalEvents)
+      .where(eq(bookingArrivalEvents.bookingId, booking.id));
+    expect(trail).toHaveLength(0);
+  });
+
+  it("applies an arrival and its undo in one batch, in queue order, under one frozen clock", async () => {
+    const { db, shop, trip, booking, staffPersonId } = await readyContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+
+    const arrived = arrivalEvent({ bookingId: booking.id, tripId: trip.id });
+    const undo = {
+      ...arrivalEvent({ bookingId: booking.id, tripId: trip.id, status: "cleared" }),
+      retractsClientEventId: arrived.clientEventId,
+    };
+    const response = await POST(postRequest({ events: [], arrivalEvents: [arrived, undo] }));
+    const body = (await response.json()) as {
+      results: Array<{ clientEventId: string; status: string; reason?: string }>;
+    };
+    expect(body.results.map((r) => r.status)).toEqual(["applied", "applied"]);
+
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("booked");
+  });
+
+  it("refuses an unauthenticated caller's arrival batch without touching the database", async () => {
+    vi.mocked(auth).mockResolvedValue(null);
+    const response = await POST(
+      postRequest({
+        events: [],
+        arrivalEvents: [
+          arrivalEvent({
+            bookingId: "00000000-0000-4000-8000-000000000000",
+            tripId: "00000000-0000-4000-8000-000000000001",
+          }),
+        ],
+      }),
+    );
+    expect(response.status).toBe(401);
+    expect(vi.mocked(getDb)).not.toHaveBeenCalled();
+  });
+
+  it("still refuses a batch that names nothing at all", async () => {
+    const { db, shop, staffPersonId } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+    const response = await POST(postRequest({ events: [], arrivalEvents: [] }));
+    expect(response.status).toBe(400);
+  });
+
+  /**
+   * **Belt and braces on the never-boards invariant, at the byte level.**
+   *
+   * The invariant is structural — nothing on the arrival path can reach
+   * `roll_call_events`, whatever the body says — so this is not the thing
+   * holding it up. It is here because a body is the one part of this feature an
+   * attacker writes, and a schema that quietly *ignored* an unknown field would
+   * leave "the queue cannot board anybody" resting on a single import graph
+   * that a later refactor could reroute. `boarded` is refused as a status, and
+   * a stray `checkpoint` is refused as a field, so the refusal is visible at
+   * the boundary as well as absent from the writers.
+   */
+  it("refuses an arrival event that borrows roll call's vocabulary", async () => {
+    const { db, shop, trip, booking, staffPersonId } = await readyContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+    const before = await rollCallEventIds(db, shop.id);
+
+    const boarding = await POST(
+      postRequest({
+        events: [],
+        arrivalEvents: [
+          arrivalEvent({ bookingId: booking.id, tripId: trip.id, status: "boarded" }),
+        ],
+      }),
+    );
+    expect(boarding.status).toBe(400);
+
+    // The status is where a boarding would have to be smuggled, and the enum
+    // refuses it before anything is read. The seat is untouched.
+    const [afterBoarding] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(afterBoarding?.status).toBe("booked");
+
+    // A stray `checkpoint` is **stripped**, not refused, and that is the right
+    // behaviour rather than a gap: zod drops a key the schema does not name, so
+    // the field cannot reach a writer, and refusing the whole batch instead
+    // would let one unknown key from a newer device throw away every roll call
+    // queued beside it. What matters is the outcome, so that is what is
+    // asserted — the tap applies as the ordinary arrival it is, and roll call
+    // is still empty.
+    const smuggled = await POST(
+      postRequest({
+        events: [],
+        arrivalEvents: [
+          { ...arrivalEvent({ bookingId: booking.id, tripId: trip.id }), checkpoint: "departure" },
+        ],
+      }),
+    );
+    expect(smuggled.status).toBe(200);
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("checked_in");
+    expect(await rollCallEventIds(db, shop.id)).toEqual(before);
   });
 });

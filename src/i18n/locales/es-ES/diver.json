@@ -3583,6 +3583,9 @@
       "divers": "Cuántos buceadores: {divers}",
       "experience": "Experiencia hasta ahora: {experience}"
     },
+    "staffReply": {
+      "subject": "Un mensaje de {shopName}"
+    },
     "passwordReset": {
       "subject": "Restablece tu contraseña de DiveDay",
       "body": "Alguien pidió restablecer la contraseña de esta cuenta de DiveDay.",

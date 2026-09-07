@@ -8,6 +8,7 @@ import { nowMs } from "@/lib/clock";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 import {
   acknowledgeDiscardedOfflineRecords,
+  appendOfflineArrival,
   appendOfflineRollCall,
   listOfflineManifests,
   loadOfflineManifest,
@@ -887,5 +888,129 @@ describe("syncOfflineManifest", () => {
 
     const reloaded = await loadOfflineManifest(payload.manifests[0].trip.id);
     expect(reloaded?.events[0].syncStatus).toBe("pending");
+  });
+});
+
+/**
+ * The counter's queue on the device (ADR 20260907-the-counter-survives-offline)
+ * — the same lock, the same encrypted record and the same round trip roll call
+ * uses, in a third array beside it.
+ */
+describe("appendOfflineArrival", () => {
+  const tripId = payload.manifests[0].trip.id;
+  const bookingId = payload.manifests[0].divers[0].bookingId;
+
+  it("queues an arrival against a seat this copy knows about", async () => {
+    await saveOfflineManifest(payload);
+    const envelope = await appendOfflineArrival(tripId, { bookingId, status: "arrived" });
+    expect(envelope.arrivalEvents).toHaveLength(1);
+    expect(envelope.arrivalEvents?.[0]).toMatchObject({
+      bookingId,
+      status: "arrived",
+      syncStatus: "pending",
+      snapshotId: envelope.snapshot.snapshotId,
+    });
+    // Nothing landed in roll call's queue: the two never share an array.
+    expect(envelope.events).toHaveLength(0);
+
+    const reloaded = await loadOfflineManifest(tripId);
+    expect(reloaded?.arrivalEvents).toHaveLength(1);
+  });
+
+  it("refuses a seat this copy has never heard of", async () => {
+    await saveOfflineManifest(payload);
+    await expect(
+      appendOfflineArrival(tripId, {
+        bookingId: "99999999-9999-9999-9999-999999999999",
+        status: "arrived",
+      }),
+    ).rejects.toMatchObject({ code: "not_allowed" });
+  });
+
+  /**
+   * The H-05 stop rule: a copy kept alive past its own window only because it
+   * still holds unsynced evidence is readable so that evidence can reconcile,
+   * and records nothing new — the counter takes the same rule the two
+   * recorders beside it take.
+   */
+  it("refuses to record against a copy kept alive past its own expiry", async () => {
+    // The *embedded* expiry, not the stored plaintext one: `appendOfflineArrival`
+    // reads `snapshot.expiresAt` from inside the encrypted envelope, so this
+    // re-saves against a trip that ended eight days ago — one day past the
+    // 7-day post-trip window — exactly as the roll-call sibling above does.
+    await saveOfflineManifest(payload);
+    await appendOfflineArrival(tripId, { bookingId, status: "arrived" });
+    await saveOfflineManifest({
+      ...payload,
+      manifests: [
+        {
+          ...payload.manifests[0],
+          trip: {
+            ...payload.manifests[0].trip,
+            endsAt: new Date(FROZEN_MS - 8 * DAY_MS).toISOString(),
+          },
+        },
+      ],
+    });
+    await expect(
+      appendOfflineArrival(tripId, { bookingId, status: "cleared" }),
+    ).rejects.toMatchObject({ code: "expired" });
+    // And the arrival already queued survives the refusal.
+    const reloaded = await loadOfflineManifest(tripId);
+    expect(reloaded?.arrivalEvents).toHaveLength(1);
+  });
+
+  it("syncs alongside roll call in one round trip, and marks each queue's own results", async () => {
+    await saveOfflineManifest(payload);
+    const withRollCall = await appendOfflineRollCall(tripId, {
+      bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+    });
+    const withArrival = await appendOfflineArrival(tripId, { bookingId, status: "arrived" });
+    const rollCallId = withRollCall.events[0].clientEventId;
+    const arrivalId = withArrival.arrivalEvents?.[0]?.clientEventId;
+
+    server.use(
+      http.post("/api/offline-manifests/sync", async ({ request }) => {
+        const body = (await request.json()) as {
+          events: Array<{ clientEventId: string }>;
+          arrivalEvents: Array<{ clientEventId: string; status: string }>;
+        };
+        // One POST, three arrays, and the counter's tap is in its own.
+        expect(body.events).toHaveLength(1);
+        expect(body.arrivalEvents).toHaveLength(1);
+        expect(body.arrivalEvents[0].status).toBe("arrived");
+        return HttpResponse.json({
+          results: [
+            { clientEventId: rollCallId, status: "applied" },
+            { clientEventId: arrivalId, status: "rejected", reason: "not_ready" },
+          ],
+        });
+      }),
+    );
+
+    const synced = await syncOfflineManifest(tripId);
+    expect(synced?.events[0].syncStatus).toBe("applied");
+    expect(synced?.arrivalEvents?.[0]).toMatchObject({
+      syncStatus: "rejected",
+      rejectionReason: "not_ready",
+    });
+  });
+
+  /**
+   * A record still holding a queued arrival is evidence this device has not
+   * delivered, so the cross-shop purge must leave it alone — the same reprieve
+   * an unsynced roll call gets, for the same reason.
+   */
+  it("holds a foreign shop's record against the purge while its arrival is unsent", async () => {
+    await saveOfflineManifest(otherShopPayload);
+    const otherTripId = otherShopPayload.manifests[0].trip.id;
+    await appendOfflineArrival(otherTripId, {
+      bookingId: otherShopPayload.manifests[0].divers[0].bookingId,
+      status: "arrived",
+    });
+    await purgeOfflineManifestsExceptShop("blue-mantis");
+    expect(await loadOfflineManifest(otherTripId)).not.toBeNull();
   });
 });

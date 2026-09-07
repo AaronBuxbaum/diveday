@@ -9,6 +9,7 @@ import {
   accountTokens,
   activityEvents,
   boats,
+  bookingArrivalEvents,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -177,6 +178,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
+  await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   // Events before the shop's own item list they reference.

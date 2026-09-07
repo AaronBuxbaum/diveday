@@ -566,8 +566,19 @@ new domain concept, define it here in the same PR.
   horizon, so a departure can never reach **check-in** without also appearing in both of Today's
   views.
 - **Check-in** — a staff-recorded arrival state for a booked diver. It confirms the live readiness
-  result at the counter and changes the booking to `checked_in`; it is not boarding, which remains
-  a separate departure-time manifest decision.
+  result and changes the booking to `checked_in`; it is not boarding, which remains a separate
+  departure-time manifest decision. Readiness is confirmed **wherever the tap is applied**, which
+  since the counter went offline-capable is at the desk for a live tap and at reconciliation —
+  minutes or hours later, against readiness as it stands *then* — for a queued one.
+- **Arrival event** — one append-only row in `booking_arrival_events` recording a single tap at the
+  counter: `arrived`, or the `cleared` that takes it back. `bookings.status` stays the projection
+  every reader looks at; this is the history beneath it, and it is what lets a check-in be recorded
+  with no signal and reconciled later on the rules roll call already uses — deduplicated on the
+  device's own event id, refused when a newer statement stands, and, for an undo, applied only
+  while the arrival it names is still the one standing. Its vocabulary has no `boarded` and no
+  checkpoint, and its writers cannot reach `roll_call_events`: an arrival is never promoted to
+  aboard by the queue
+  ([ADR 20260907-the-counter-survives-offline](../architecture/decisions/20260907-the-counter-survives-offline.md)).
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.

@@ -2,18 +2,22 @@
 import { nowDate } from "./clock";
 
 import {
+  canRecordOfflineArrival,
   canRecordOfflineChecklistCheck,
   canRecordOfflineCrewStatus,
   canRecordOfflineStatus,
   isOfflineManifestExpired,
   OFFLINE_MANIFEST_MAX_RETENTION_MS,
   OFFLINE_MANIFEST_RECORD_VERSION,
+  type OfflineArrivalEvent,
   type OfflineChecklistEvent,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
+  offlineArrivalEvents,
   offlineManifestExpiresAt,
   offlineRollCallSubject,
+  pendingOfflineEventCount,
 } from "./offline-manifests";
 
 const DB_NAME = "diveday-offline-manifests";
@@ -396,6 +400,15 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
         throw new Error("Stored offline-manifest envelope has an unrecognized shape");
       }
       envelope = parsed as OfflineManifestEnvelope;
+      // A record written before a queue existed has no array for it, and the
+      // pending counts below (and every reader downstream) would throw reading
+      // `.filter` off `undefined` — on the one surface a crew has with no
+      // signal, about the copy that holds their unsynced roll call. There is
+      // no deploy that reaches a phone in a dry bag on a boat, so the shape a
+      // device already wrote is the shape this has to accept.
+      envelope.events ??= [];
+      envelope.checklistEvents ??= [];
+      envelope.arrivalEvents ??= [];
     } catch (error) {
       // Nothing recoverable from ciphertext this key can't open — if it's
       // also past its retention window, clean it up now rather than leaving
@@ -426,9 +439,7 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
       // follows. It is enforced lazily, on read: IndexedDB has no background
       // expiry, so the guarantee is "no read after the ceiling ever returns
       // it", exactly as the ordinary retention window has always worked.
-      const pendingEvents =
-        envelope.events.filter((event) => event.syncStatus === "pending").length +
-        envelope.checklistEvents.filter((event) => event.syncStatus === "pending").length;
+      const pendingEvents = pendingOfflineEventCount(envelope);
       if (pendingEvents === 0 || isPastPendingGrace(record)) {
         if (pendingEvents > 0) await noteDiscardedRecord(db, envelope, pendingEvents);
         await deleteOfflineManifest(tripId, db);
@@ -568,11 +579,7 @@ export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): 
       return withManifestLock(tripId, async () => {
         const current = await loadOfflineManifest(tripId);
         if (!current) return;
-        if (
-          current.events.some((event) => event.syncStatus === "pending") ||
-          current.checklistEvents.some((event) => event.syncStatus === "pending")
-        )
-          return;
+        if (pendingOfflineEventCount(current) > 0) return;
         await deleteOfflineManifest(tripId);
       });
     }),
@@ -601,6 +608,7 @@ export async function saveOfflineManifest(
       },
       events: existing?.events ?? [],
       checklistEvents: existing?.checklistEvents ?? [],
+      arrivalEvents: existing?.arrivalEvents ?? [],
     };
     const db = await openDatabase();
     try {
@@ -740,6 +748,53 @@ export async function appendOfflineChecklistCheck(
   });
 }
 
+/**
+ * Queue one tap at the counter on this device — `appendOfflineChecklistCheck`'s
+ * sibling, narrowed to a seat (ADR 20260907-the-counter-survives-offline).
+ *
+ * The same expiry rule the two recorders beside it apply: a copy kept alive
+ * past its retention window only because it still holds unsynced evidence is
+ * readable so that evidence can reconcile, and records nothing new.
+ *
+ * `retractsClientEventId` rides along on a `cleared` and names the arrival it
+ * takes back. Nothing is validated about it here, for the same reason roll
+ * call validates nothing about its own: the only honest check is against the
+ * newest statement the *server* holds, and this function runs where there is
+ * no server.
+ */
+export async function appendOfflineArrival(
+  tripId: string,
+  input: Pick<OfflineArrivalEvent, "bookingId" | "status" | "retractsClientEventId">,
+): Promise<OfflineManifestEnvelope> {
+  return withManifestLock(tripId, async () => {
+    const envelope = await loadOfflineManifest(tripId);
+    if (!envelope) throw new OfflineManifestError("unavailable");
+    if (isOfflineManifestExpired(envelope.snapshot)) {
+      throw new OfflineManifestError("expired");
+    }
+    if (!canRecordOfflineArrival(envelope.snapshot, input.bookingId)) {
+      throw new OfflineManifestError("not_allowed");
+    }
+    envelope.arrivalEvents = offlineArrivalEvents(envelope);
+    envelope.arrivalEvents.push({
+      ...input,
+      clientEventId: crypto.randomUUID(),
+      snapshotId: envelope.snapshot.snapshotId,
+      snapshotSavedAt: envelope.snapshot.savedAt,
+      tripId,
+      occurredAt: nowDate().toISOString(),
+      syncStatus: "pending",
+    });
+    const db = await openDatabase();
+    try {
+      await persistEnvelope(db, envelope);
+    } finally {
+      db.close();
+    }
+    return envelope;
+  });
+}
+
 export async function syncOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
   const envelope = await loadOfflineManifest(tripId);
   if (!envelope) return null;
@@ -747,11 +802,18 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
   const pendingChecklist = envelope.checklistEvents.filter(
     (event) => event.syncStatus === "pending",
   );
-  if ((pending.length === 0 && pendingChecklist.length === 0) || !navigator.onLine) return envelope;
+  const pendingArrivals = offlineArrivalEvents(envelope).filter(
+    (event) => event.syncStatus === "pending",
+  );
+  if (pendingOfflineEventCount(envelope) === 0 || !navigator.onLine) return envelope;
   const response = await fetch("/api/offline-manifests/sync", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ events: pending, checklistEvents: pendingChecklist }),
+    body: JSON.stringify({
+      events: pending,
+      checklistEvents: pendingChecklist,
+      arrivalEvents: pendingArrivals,
+    }),
   });
   if (!response.ok) throw new OfflineManifestError("sync_unreachable");
   const body = (await response.json()) as { results: OfflineSyncResult[] };
@@ -777,6 +839,7 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
     };
     current.events = current.events.map(applyResult);
     current.checklistEvents = current.checklistEvents.map(applyResult);
+    current.arrivalEvents = offlineArrivalEvents(current).map(applyResult);
     const db = await openDatabase();
     try {
       await persistEnvelope(db, current);

@@ -20,6 +20,7 @@ import {
   rollCallNoteAllowed,
   type TripManifest,
 } from "@/lib/manifests";
+import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { loadActiveStaffRoles } from "./authz";
@@ -339,7 +340,12 @@ export async function listDepartureBoardedByTrip(
  * checkpoint means the opposite and must never be read through this function.
  */
 export async function listDepartureRollCallByTrip(
-  db: AppDb,
+  // `DbExecutor`, not `AppDb`: `undoCheckInBooking` asks this question from
+  // *inside* its own transaction, where "is this diver already aboard" has to
+  // be read on the same connection that holds the booking's `FOR UPDATE` row
+  // (ADR 20260907-the-counter-survives-offline). A pure widening — the union
+  // already contains `AppDb`, so every existing caller is unaffected.
+  db: DbExecutor,
   shopId: string,
   tripIds: string[],
 ): Promise<Map<string, Map<string, "boarded" | "not_boarded">>> {
@@ -400,7 +406,7 @@ export async function listDepartureRollCallByTrip(
  * `cleared`-drops-out rule and its cancelled-booking guard.
  */
 export async function departureRollCallForBooking(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   tripId: string,
   bookingId: string,
@@ -693,45 +699,6 @@ export async function getTripManifest(
     return null;
   }
   return manifests.find((manifest) => manifest.checkpoint === checkpoint) ?? null;
-}
-
-/**
- * How far an offline event's own timestamps may sit outside the order they
- * logically have to fall in — snapshot saved, then result recorded, then
- * synced — before the server refuses it. A boat tablet's clock is not the
- * server's, so a few minutes either way is ordinary; a snapshot that claims to
- * postdate the result recorded from it, or a result recorded in the future, is
- * not skew but a broken or forged event.
- */
-const OFFLINE_EVENT_SKEW_MS = 5 * 60 * 1000;
-
-/**
- * The `snapshot_invalid` staleness bound, shared by **both** offline recorders
- * (`recordRollCall` for a diver, `recordCrewRollCall` for a crew member).
- *
- * One function rather than the same four clauses written twice, because the
- * two halves of a head count disagreeing about what makes an offline event
- * stale is exactly the class of bug that outlives the week somebody re-reads
- * only one of them (the follow-up's invariant I4). Mirroring makes them
- * diffable; sharing makes them unable to differ.
- *
- * A missing `clientEventId` is out of bounds on purpose: without it the write
- * is not idempotent, so a retried sync would double-record who came back from
- * a dive.
- */
-function offlineEventOutOfBounds(input: {
-  clientEventId: string | undefined;
-  offlineSnapshotSavedAt: Date | undefined;
-  occurredAt: Date;
-  now: Date;
-}): boolean {
-  const savedAt = input.offlineSnapshotSavedAt;
-  return (
-    !input.clientEventId ||
-    !savedAt ||
-    savedAt.getTime() > input.occurredAt.getTime() + OFFLINE_EVENT_SKEW_MS ||
-    input.occurredAt.getTime() > input.now.getTime() + OFFLINE_EVENT_SKEW_MS
-  );
 }
 
 /**

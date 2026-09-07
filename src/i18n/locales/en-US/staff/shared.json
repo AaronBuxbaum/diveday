@@ -231,6 +231,7 @@
     "courses": "Courses",
     "reviews": "Reviews",
     "requests": "Requests",
+    "inbox": "Messages",
     "orders": "Orders",
     "waivers": "Waivers",
     "reports": "Reports",
@@ -378,6 +379,16 @@
         "heading": "Before you leave the dock",
         "checkedLabel": "Checked — press to clear",
         "uncheckedLabel": "Not checked — press to mark checked"
+      },
+      "counter": {
+        "heading": "At the counter",
+        "checkedInLabel": "Checked in",
+        "notCheckedInLabel": "Check in",
+        "checkedInWhenSavedLabel": "Checked in when saved",
+        "refusedNotReady": "Not checked in: readiness stopped clearing them after you tapped. Open the live counter before they board.",
+        "refusedNotBookable": "Not checked in: this booking was cancelled.",
+        "refusedBoarded": "Still checked in: the crew recorded them aboard.",
+        "refusedGeneric": "DiveDay did not apply this tap. Open the live counter."
       }
     },
     "shellVersion": {

@@ -1,6 +1,8 @@
-import { and, asc, count, eq, gt, gte, ilike, inArray, lte, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, ilike, inArray, lte, ne, or } from "drizzle-orm";
+import { ARRIVAL_RETRACTION_SUPERSEDED } from "@/lib/arrival";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import { arrivalsWindow } from "@/lib/operational-window";
 import { priorVisitStanding } from "@/lib/prior-visits";
 import type { ReadinessResult } from "@/lib/readiness";
@@ -8,9 +10,16 @@ import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
-import { listDepartureBoardedBookingIds } from "./manifests";
+import { departureRollCallForBooking, listDepartureBoardedBookingIds } from "./manifests";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
-import { activityEvents, bookings, people, priorVisits, trips } from "./schema";
+import {
+  activityEvents,
+  bookingArrivalEvents,
+  bookings,
+  people,
+  priorVisits,
+  trips,
+} from "./schema";
 import { liveTrip } from "./trips-live";
 
 export type CheckInQueueRow = {
@@ -269,11 +278,61 @@ export async function listWalkInTrips(
     .orderBy(asc(trips.startsAt));
 }
 
+/**
+ * What a device queued at the counter with no signal, carried alongside the
+ * ordinary inputs rather than as a second function (ADR
+ * 20260907-the-counter-survives-offline).
+ *
+ * One writer for both doors is the whole point: an offline arrival takes the
+ * *same* staff gate, the same trip and booking checks and the same live
+ * readiness re-read a staffer standing at the desk takes, and reaches them by
+ * the same path rather than by a parallel one somebody has to remember to keep
+ * in step. What the offline branch adds is only what a queue needs and a
+ * present human does not — idempotency, a staleness bound, and the two
+ * orderings below.
+ */
+export type ArrivalOfflineInput = {
+  source?: "live" | "offline";
+  /** Device-generated idempotency key. Required for an offline tap. */
+  clientEventId?: string;
+  /** The tap's own instant on the device, which is not the instant it arrives here. */
+  occurredAt?: Date;
+  /** When the copy the device was reading was saved — the staleness bound's other half. */
+  offlineSnapshotSavedAt?: Date;
+};
+
+/**
+ * The refusals **only a queue can earn**, and the reason they are named as a
+ * set: they answer a device reconciling minutes or hours after the tap, never
+ * a staffer standing at the desk, so the counter's `?notice=` map deliberately
+ * excludes them rather than carrying words nobody can reach. Naming them here
+ * rather than spelling the exclusion at that call site is what keeps the
+ * exhaustiveness the map does enforce — a *live* refusal added to either union
+ * later is still a compile error there.
+ *
+ * `boarded` is the newest member and the one worth reading twice: it exists
+ * because a queued retraction may arrive after the rail has put the diver on
+ * the boat, and the live counter has no way to produce it — a staffer undoing
+ * a check-in is looking at the person.
+ */
+export type ArrivalOfflineRefusal =
+  | "newer_event_exists"
+  | typeof ARRIVAL_RETRACTION_SUPERSEDED
+  | "snapshot_invalid"
+  | "boarded";
+
 export type CheckInOutcome =
   | { ok: true; bookingId: string; personName: string; duplicate?: boolean }
   | {
       ok: false;
-      reason: "not_found" | "already_checked_in" | "not_bookable" | "not_ready" | "staff_not_found";
+      reason:
+        | "not_found"
+        | "already_checked_in"
+        | "not_bookable"
+        | "not_ready"
+        | "staff_not_found"
+        | "newer_event_exists"
+        | "snapshot_invalid";
       blockers?: ReadinessResult["blockers"];
       // Only set on `not_ready` — the caller needs it to link straight back to
       // the diver's Trip row (`trips/[id]#booking-<id>`), the same
@@ -314,15 +373,124 @@ async function activeStaffRecorderId(
 }
 
 /**
+ * The newest arrival statement standing for one seat, or nothing.
+ *
+ * `desc(occurredAt), desc(createdAt), desc(seq)` — the same three keys
+ * `recordRollCall` and `recordPreDepartureCheck` read their own trails back
+ * by, and for the same reason: `occurred_at` ties constantly under a frozen
+ * clock or a batched offline sync, so the last-appended row has to be the one
+ * that wins or the device and the server order two taps differently.
+ */
+async function newestArrivalEvent(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+  bookingId: string,
+): Promise<{ occurredAt: Date; clientEventId: string | null } | undefined> {
+  const [newest] = await tx
+    .select({
+      occurredAt: bookingArrivalEvents.occurredAt,
+      clientEventId: bookingArrivalEvents.clientEventId,
+    })
+    .from(bookingArrivalEvents)
+    .where(
+      and(
+        eq(bookingArrivalEvents.shopId, shopId),
+        eq(bookingArrivalEvents.tripId, tripId),
+        eq(bookingArrivalEvents.bookingId, bookingId),
+      ),
+    )
+    .orderBy(
+      desc(bookingArrivalEvents.occurredAt),
+      desc(bookingArrivalEvents.createdAt),
+      desc(bookingArrivalEvents.seq),
+    )
+    .limit(1);
+  return newest;
+}
+
+/**
+ * Has this exact queued tap already been applied? A sync that succeeded and
+ * whose response never reached the boat is retried, and without this the diver
+ * would be checked in twice and the trail would say two people arrived.
+ *
+ * Shop-scoped, matching the unique index the device's `crypto.randomUUID()`
+ * keys are stored under.
+ */
+async function appliedArrivalEventId(
+  tx: DbExecutor,
+  shopId: string,
+  clientEventId: string,
+): Promise<string | undefined> {
+  const [existing] = await tx
+    .select({ id: bookingArrivalEvents.id })
+    .from(bookingArrivalEvents)
+    .where(
+      and(
+        eq(bookingArrivalEvents.shopId, shopId),
+        eq(bookingArrivalEvents.clientEventId, clientEventId),
+      ),
+    )
+    .limit(1);
+  return existing?.id;
+}
+
+/**
+ * The two orderings an offline arrival is subject to, shared by both writers
+ * so the check-in half and the undo half cannot answer them differently.
+ *
+ * - **Newest wins.** A tap recorded before the statement already standing is
+ *   refused. It is a plain timestamp comparison and it is deliberately strict
+ *   (`>`, not `>=`), so a device's own batch of taps sharing one millisecond
+ *   still applies in queue order.
+ * - **A retraction is a compare-and-set.** An undo names the arrival it takes
+ *   back, and applies only while that arrival is still the newest statement
+ *   here (ADR 20260815-an-offline-retraction-names-its-target, reproduced at
+ *   the counter). The timestamp comparison alone cannot do this job: a
+ *   retraction is stamped at tap time, so one tapped now beats everything
+ *   recorded before now — including a desk that checked the diver back in five
+ *   minutes ago because they were standing there. Refusing is the safe
+ *   direction: the diver stays checked in, which is a statement a human made
+ *   about somebody they could see.
+ *
+ * An undo that names nothing keeps the old newest-wins-only behaviour, exactly
+ * as roll call's does: an event with no `retractsClientEventId` was queued by a
+ * build that predates the field, on a phone in a dry bag, and refusing it would
+ * discard a correction a staffer really made.
+ */
+function offlineArrivalRefusal(input: {
+  newest: { occurredAt: Date; clientEventId: string | null } | undefined;
+  occurredAt: Date;
+  retractsClientEventId?: string;
+}): "newer_event_exists" | typeof ARRIVAL_RETRACTION_SUPERSEDED | null {
+  const { newest } = input;
+  if (newest && newest.occurredAt > input.occurredAt) return "newer_event_exists";
+  if (
+    input.retractsClientEventId &&
+    newest?.clientEventId?.toLowerCase() !== input.retractsClientEventId.toLowerCase()
+  ) {
+    return ARRIVAL_RETRACTION_SUPERSEDED;
+  }
+  return null;
+}
+
+/**
  * Record a counter check-in atomically. A successful check-in is not boarding:
  * the manifest still performs its own departure-time readiness gate. This
  * mutation only closes the arrival queue and leaves an activity trail.
  */
 export async function checkInBooking(
   db: AppDb,
-  input: { shopId: string; bookingId: string; recordedByPersonId: string; now?: Date },
+  input: {
+    shopId: string;
+    bookingId: string;
+    recordedByPersonId: string;
+    now?: Date;
+  } & ArrivalOfflineInput,
 ): Promise<CheckInOutcome> {
   const now = input.now ?? nowDate();
+  const source = input.source ?? "live";
+  const occurredAt = input.occurredAt ?? now;
   return db.transaction(async (tx) => {
     const recordedBy = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!recordedBy) return { ok: false, reason: "staff_not_found" };
@@ -343,13 +511,46 @@ export async function checkInBooking(
       .limit(1)
       .for("update");
     if (!booking) return { ok: false, reason: "not_found" };
+    // Asked before anything else this transaction could repeat: a retried sync
+    // must not re-run readiness, re-stamp the trail, or tell the crew a second
+    // person arrived.
+    if (source === "offline" && input.clientEventId) {
+      const applied = await appliedArrivalEventId(tx, input.shopId, input.clientEventId);
+      if (applied) {
+        return { ok: true, bookingId: booking.id, personName: booking.personName, duplicate: true };
+      }
+    }
     if (booking.status === "checked_in") {
       return { ok: true, bookingId: booking.id, personName: booking.personName, duplicate: true };
     }
     if (booking.status !== "booked" || booking.tripStatus !== "scheduled") {
       return { ok: false, reason: "not_bookable" };
     }
+    if (source === "offline") {
+      if (
+        offlineEventOutOfBounds({
+          clientEventId: input.clientEventId,
+          offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
+          occurredAt,
+          now: nowDate(),
+        })
+      ) {
+        return { ok: false, reason: "snapshot_invalid" };
+      }
+      const refusal = offlineArrivalRefusal({
+        newest: await newestArrivalEvent(tx, input.shopId, booking.tripId, booking.id),
+        occurredAt,
+      });
+      // An arrival states something rather than taking something back, so the
+      // only ordering it can fail is newest-wins; the compare-and-set belongs
+      // to the undo.
+      if (refusal) return { ok: false, reason: "newer_event_exists" };
+    }
 
+    // **Live readiness, re-read now, on both doors.** This is what an offline
+    // queue buys nobody a way around: a diver whose card expired or whose
+    // refund landed while the tablet was out of signal is refused here, hours
+    // after the tap, exactly as they would have been at the desk.
     const readiness = await getBookingReadiness(tx as DbExecutor, input.shopId, booking.id);
     if (readiness?.status !== "ready") {
       return {
@@ -367,13 +568,28 @@ export async function checkInBooking(
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "not_bookable" };
 
+    // The trail underneath the `bookings.status` projection just written, and
+    // the thing that makes an offline queue possible at all: the two orderings
+    // above have nothing to compare against unless every tap — live ones
+    // included — leaves a row here.
+    await tx.insert(bookingArrivalEvents).values({
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: recordedBy,
+      status: "arrived",
+      source,
+      clientEventId: source === "offline" ? (input.clientEventId ?? null) : null,
+      offlineSnapshotSavedAt: source === "offline" ? (input.offlineSnapshotSavedAt ?? null) : null,
+      occurredAt,
+    });
     await tx.insert(activityEvents).values({
       shopId: input.shopId,
       tripId: booking.tripId,
       bookingId: booking.id,
       actorPersonId: recordedBy,
       message: `${booking.personName} checked in at the counter`,
-      occurredAt: now,
+      occurredAt,
     });
     // The crew walking to the boat read this as "Ada Lindqvist has checked in."
     // on the manifest's catch-up strip (issues #1202, #1187 — "did anyone tell
@@ -388,7 +604,7 @@ export async function checkInBooking(
       bookingId: booking.id,
       subjectPersonId: booking.personId,
       actorPersonId: recordedBy,
-      occurredAt: now,
+      occurredAt,
     });
     return { ok: true, bookingId: booking.id, personName: booking.personName };
   });
@@ -396,7 +612,18 @@ export async function checkInBooking(
 
 export type UndoCheckInOutcome =
   | { ok: true; bookingId: string; personName: string; duplicate?: boolean }
-  | { ok: false; reason: "not_found" | "not_checked_in" | "staff_not_found" };
+  | {
+      ok: false;
+      reason:
+        | "not_found"
+        | "not_checked_in"
+        | "staff_not_found"
+        | "newer_event_exists"
+        | typeof ARRIVAL_RETRACTION_SUPERSEDED
+        | "snapshot_invalid"
+        /** Offline only: the rail has since recorded this diver aboard. */
+        | "boarded";
+    };
 
 /**
  * Clear a counter check-in — the re-tap half of the queue's one-tap row
@@ -410,9 +637,23 @@ export type UndoCheckInOutcome =
  */
 export async function undoCheckInBooking(
   db: AppDb,
-  input: { shopId: string; bookingId: string; recordedByPersonId: string; now?: Date },
+  input: {
+    shopId: string;
+    bookingId: string;
+    recordedByPersonId: string;
+    now?: Date;
+    /**
+     * The arrival this undo takes back, by the `clientEventId` the device
+     * minted for it — what makes an offline retraction a compare-and-set
+     * rather than a blind newest-wins write. Absent on a live tap, where the
+     * staffer is looking at the row.
+     */
+    retractsClientEventId?: string;
+  } & ArrivalOfflineInput,
 ): Promise<UndoCheckInOutcome> {
   const now = input.now ?? nowDate();
+  const source = input.source ?? "live";
+  const occurredAt = input.occurredAt ?? now;
   return db.transaction(async (tx) => {
     const recordedBy = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!recordedBy) return { ok: false, reason: "staff_not_found" };
@@ -431,12 +672,62 @@ export async function undoCheckInBooking(
       .limit(1)
       .for("update");
     if (!booking) return { ok: false, reason: "not_found" };
+    if (source === "offline" && input.clientEventId) {
+      const applied = await appliedArrivalEventId(tx, input.shopId, input.clientEventId);
+      if (applied) {
+        return { ok: true, bookingId: booking.id, personName: booking.personName, duplicate: true };
+      }
+    }
     // A double-tap of the undo (two devices, a stale tab) finds the work
-    // already done — same idempotence contract as checkInBooking.
+    // already done — same idempotence contract as checkInBooking. It sits
+    // ahead of the compare-and-set deliberately: the device asked for this
+    // seat to be off the arrival queue and it already is, so there is nothing
+    // for a refusal to protect. The case the compare-and-set exists for lands
+    // below it, on a seat that is checked in again.
     if (booking.status === "booked") {
       return { ok: true, bookingId: booking.id, personName: booking.personName, duplicate: true };
     }
     if (booking.status !== "checked_in") return { ok: false, reason: "not_checked_in" };
+    if (source === "offline") {
+      if (
+        offlineEventOutOfBounds({
+          clientEventId: input.clientEventId,
+          offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
+          occurredAt,
+          now: nowDate(),
+        })
+      ) {
+        return { ok: false, reason: "snapshot_invalid" };
+      }
+      const refusal = offlineArrivalRefusal({
+        newest: await newestArrivalEvent(tx, input.shopId, booking.tripId, booking.id),
+        occurredAt,
+        retractsClientEventId: input.retractsClientEventId,
+      });
+      if (refusal) return { ok: false, reason: refusal };
+      // **Aboard outranks the desk.** A tablet that lost signal at 07:40 can
+      // queue "this diver never turned up" and sync it at 11:00, by which time
+      // the rail has recorded them onto the boat. Applied blindly that puts a
+      // diver who is on a reef back on the counter's "still to come" list, and
+      // somebody rings a phone in a dry bag.
+      //
+      // Same shape as the compare-and-set above it, and the same justification:
+      // a statement a device made hours ago in ignorance may not overturn a
+      // stronger, later one. Deliberately **offline only** — a staffer undoing
+      // a live check-in is looking at the person, and the live counter keeps
+      // that power exactly as it has it today.
+      //
+      // A read, never a write: this asks roll call a question and cannot record
+      // anything there, so the invariant that no arrival path reaches
+      // `roll_call_events` is untouched (ADR
+      // 20260907-the-counter-survives-offline).
+      if (
+        (await departureRollCallForBooking(tx, input.shopId, booking.tripId, booking.id)) ===
+        "boarded"
+      ) {
+        return { ok: false, reason: "boarded" };
+      }
+    }
 
     const [updated] = await tx
       .update(bookings)
@@ -445,13 +736,24 @@ export async function undoCheckInBooking(
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "not_checked_in" };
 
+    await tx.insert(bookingArrivalEvents).values({
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: recordedBy,
+      status: "cleared",
+      source,
+      clientEventId: source === "offline" ? (input.clientEventId ?? null) : null,
+      offlineSnapshotSavedAt: source === "offline" ? (input.offlineSnapshotSavedAt ?? null) : null,
+      occurredAt,
+    });
     await tx.insert(activityEvents).values({
       shopId: input.shopId,
       tripId: booking.tripId,
       bookingId: booking.id,
       actorPersonId: recordedBy,
       message: `${booking.personName}'s counter check-in was undone`,
-      occurredAt: now,
+      occurredAt,
     });
     return { ok: true, bookingId: booking.id, personName: booking.personName };
   });

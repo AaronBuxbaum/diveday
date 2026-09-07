@@ -1,0 +1,45 @@
+{
+  "title": "Lo que respondieron los buceadores",
+  "emptyHeading": "Nadie espera tu respuesta",
+  "emptyDetail": "Cuando un buceador responde a uno de tus correos, SMS o WhatsApps, aparece aquí y en su ficha.",
+  "group": {
+    "waiting": "Esperan tu respuesta",
+    "answered": "Respondidos"
+  },
+  "channel": {
+    "email": "Correo",
+    "sms": "SMS",
+    "whatsapp": "WhatsApp"
+  },
+  "unknownSender": "Remitente desconocido",
+  "attachments": "{count, plural, one {# archivo adjunto} other {# archivos adjuntos}}, quedaron en {channel}",
+  "openRecord": "Ver ficha",
+  "markAnswered": "Marcar como respondido",
+  "markingAnswered": "Marcando…",
+  "delete": "Eliminar",
+  "deleting": "Eliminando…",
+  "notFound": "Ese mensaje ya no está aquí.",
+  "pagination": {
+    "total": "{count, plural, one {# mensaje} other {# mensajes}}"
+  },
+  "thread": {
+    "heading": "Mensajes",
+    "summary": "{count, plural, one {# mensaje} other {# mensajes}}",
+    "summaryWaiting": "{count, plural, one {# mensaje} other {# mensajes}}, {waiting} esperan tu respuesta",
+    "none": "Ninguno todavía",
+    "repliedBy": "{name} · {date}",
+    "sendFailed": "No se envió",
+    "replyLabel": "Responde por {channel}",
+    "send": "Enviar",
+    "sending": "Enviando…",
+    "windowClosed": "WhatsApp lleva una respuesta escrita hasta un día después del último mensaje de {name}, y ese día ya pasó."
+  },
+  "notices": {
+    "replyEmpty": "Escribe algo para enviar.",
+    "replyTooLong": "Demasiado largo para enviarlo. Acórtalo e inténtalo de nuevo.",
+    "replyWindowClosed": "WhatsApp ya no llevará una respuesta escrita a esta conversación.",
+    "replyNotConfigured": "Este centro no tiene ningún remitente conectado para ese canal.",
+    "replyFailed": "No se envió. Inténtalo de nuevo.",
+    "replyUnavailable": "Ese mensaje ya no está aquí."
+  }
+}

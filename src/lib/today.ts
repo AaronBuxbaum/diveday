@@ -87,6 +87,7 @@ export type TodayActionKind =
   | "failed_photo_deletion"
   | "owed_refund"
   | "reviews_pending"
+  | "inbox_unanswered"
   | "gear_overdue"
   | "gear_due_back"
   | "gear_service_due"
@@ -192,31 +193,36 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // Ranked above the other two platform-health rows: a diver is waiting on
   // this one, and has already been told the shop would be in touch.
   owed_refund: 26,
+  // A diver wrote and nobody has written back. Above the reviews queue below
+  // it because somebody is waiting on an answer they asked for, and below the
+  // owed refund above it because that diver is waiting on money. Answering is
+  // desk work either way, so both sit under every per-diver departure row.
+  inbox_unanswered: 27,
   // Divers said something worth publishing; nothing sails or refunds on it.
-  reviews_pending: 27,
+  reviews_pending: 28,
   // The gear register's rows (ADR 20260815-minimal-gear-register). All
   // counter work, never a boarding blocker — a unit that never came home
   // outranks one due back tonight, and both outrank a bench clock, because
   // that is the order the desk actually chases them in.
-  gear_overdue: 28,
-  gear_due_back: 29,
-  gear_service_due: 30,
-  staff_credential_due: 31,
+  gear_overdue: 29,
+  gear_due_back: 30,
+  gear_service_due: 31,
+  staff_credential_due: 32,
   // Bottom of the queue, and rightly: this is a question nobody has answered
   // rather than anything that has gone wrong. It is here at all because the
   // first-run checklist that asked it stops rendering at the shop's first
   // departure — step 4 of that same checklist — so a shop that scheduled a
   // trip before opening the Units row would never be asked again, and currency
   // decides what a diver's card is charged in (issue #835).
-  units_unconfirmed: 32,
+  units_unconfirmed: 33,
   // Below even that, and rightly: nothing has gone wrong and nothing is owed.
   // It is a courtesy the desk can pay if the morning allows, so it never
   // outranks a thing somebody has to do (issue #1182).
-  say_hello: 33,
+  say_hello: 34,
   // Lower still, because it is a question about *yesterday's* boat rather than
   // anything today wants: a unit came home in a size the fit does not record,
   // and the shop may keep it or leave it (issue #1174, D14).
-  rental_fit_confirm: 34,
+  rental_fit_confirm: 35,
 };
 
 /**
@@ -261,6 +267,9 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   failed_photo_deletion: ["owner", "manager"],
   owed_refund: ["owner", "manager"],
   reviews_pending: ["owner", "manager"],
+  // Front-desk work, like every other row that answers a person: the shop
+  // writing back is the desk's job even when the message is about a boat.
+  inbox_unanswered: ["owner", "manager"],
   gear_overdue: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_due_back: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_service_due: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
@@ -346,6 +355,9 @@ export const ACTION_KIND_META = {
   failed_photo_deletion: { tone: "warning" },
   owed_refund: { tone: "warning" },
   reviews_pending: { tone: "neutral" },
+  // Neutral: somebody is waiting, and nothing has gone wrong. A warning tone
+  // on "a diver said hello" is how a queue teaches its reader to stop looking.
+  inbox_unanswered: { tone: "neutral" },
   // Warning, not danger: a unit that is late is a phone call, not a diver in
   // the water. Due-back-today and a bench clock are ordinary counter work.
   gear_overdue: { tone: "warning" },
