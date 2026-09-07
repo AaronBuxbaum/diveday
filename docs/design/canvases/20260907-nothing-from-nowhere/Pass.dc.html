@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Bricolage+Grotesque:wght@500;600;700;800&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+      --brand: #158462; --brand-deep: #127354; --brand-wash: #eaf5f0;
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); }
+    .body { font-size: 14px; line-height: 1.55; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .face { font-family: 'Bricolage Grotesque', 'Geist', system-ui, sans-serif; }
+    .phone { width: 390px; height: 700px; background: var(--sand); border-radius: 28px; border: 1px solid var(--rope); box-shadow: var(--bed); overflow: hidden; position: relative; box-sizing: border-box; flex-shrink: 0; }
+    .bar { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: rgba(251,247,239,.92); border-bottom: 1px solid var(--rope); box-sizing: border-box; }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .flabel { font-size: 11.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .link { display: flex; align-items: center; gap: 10px; min-height: 52px; font-size: 16px; font-weight: 600; color: var(--brand); border-top: 1px solid var(--rope); }
+    .pass { width: 340px; background: var(--brand); color: #ffffff; border-radius: 18px; padding: 18px 20px 20px; box-sizing: border-box; box-shadow: 0 12px 32px rgba(12, 42, 53, .22); display: flex; flex-direction: column; gap: 18px; }
+    .pl { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .78; }
+    .pv { font-size: 17px; font-weight: 600; line-height: 1.25; }
+    .caption { width: 390px; display: flex; flex-direction: column; gap: 6px; }
+  </style>
+</helmet>
+<div style="width: 1280px; min-height: 1600px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 48px 52px;">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 900px;">
+    <p class="eyebrow">Move 6 &middot; the departure on the lock screen &middot; the thread and the Wallet &middot; page 2 &middot; H-69 b</p>
+    <h1 style="font-size: 36px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.06;">The one move that is a feature: Yara&#8217;s Thursday, in her Wallet, in the shop&#8217;s colours.</h1>
+    <p class="lede" style="font-size: 16px;">The thread already offers a calendar event that updates itself when the plan moves. A Wallet pass is the same fact on the surface a phone shows without being asked: the lock screen, the morning of. It wears the shop&#8217;s brand (Harbor), carries what the thread&#8217;s top card says, and updates from the same revision the calendar reads. It carries no barcode and no link, because the thread&#8217;s URL is the diver&#8217;s own capability and a pass is a thing that gets shown to people.</p>
+  </div>
+
+  <div style="margin-top: 32px; display: flex; gap: 48px; align-items: flex-start;">
+
+    <!-- The thread -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="bar">
+          <div style="width: 32px; height: 32px; border-radius: 10px; background: var(--brand); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div>
+          <span class="face" style="font-size: 18px; font-weight: 700; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+        </div>
+        <div style="padding: 22px 16px 0; display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <p class="eyebrow" style="color: var(--brand);">Your next dive &middot; in 4 days</p>
+            <h1 class="face" style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.08; margin-top: 6px;">Two-Tank Reef &mdash; Molasses &amp; French</h1>
+            <p class="num" style="font-size: 16px; color: var(--muted); margin-top: 6px;">Thursday, Sep 3 &middot; 7:00 AM &middot; Mantis II</p>
+          </div>
+          <div class="panel" style="padding: 16px 18px 4px;">
+            <p style="font-size: 16px; line-height: 1.45;">Dock call <span class="num" style="font-weight: 650;">6:30 AM</span>. We leave at <span class="num" style="font-weight: 650;">7:00 AM</span>.</p>
+            <p style="font-size: 16px; line-height: 1.45; margin-top: 4px;">Meet at the shop dock. Keiko and Sal are your crew.</p>
+            <div class="link" style="margin-top: 12px;"><svg width="18" height="18" viewBox="0 0 20 20" class="hand"><rect x="3.5" y="4.5" width="13" height="12" rx="2.5"></rect><path d="M7 3v3M13 3v3M3.5 9h13"></path></svg>Add to calendar</div>
+            <div class="link"><svg width="18" height="18" viewBox="0 0 20 20" class="hand"><rect x="3" y="5" width="14" height="11" rx="2.5"></rect><path d="M3 9h14M13 12.5h1.5"></path></svg>Add to Wallet</div>
+          </div>
+          <div class="panel" style="padding: 16px 18px;">
+            <p class="flabel">Anything changed?</p>
+            <p style="font-size: 15px; line-height: 1.45; margin-top: 8px;">Your Advanced card, checked Aug 25. Your waiver, signed Aug 27. Your own gear. Samir Halabi, in case.</p>
+            <div class="link" style="margin-top: 10px; min-height: 44px;">Something&#8217;s different</div>
+          </div>
+          <div class="panel" style="padding: 16px 18px;">
+            <p class="flabel">The day</p>
+            <p style="font-size: 15px; line-height: 1.45; margin-top: 8px; color: var(--muted);">Two reef dives to 60 feet, an hour apart. Easygoing, with current on the second site some days.</p>
+          </div>
+        </div>
+        <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 16px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); background: var(--sand);"><svg aria-hidden="true" viewBox="0 0 64 64" width="16" height="16" fill="none"><circle cx="22" cy="44" r="12" stroke="#54676d" stroke-width="3"></circle><circle cx="40" cy="26" r="8" stroke="#54676d" stroke-width="3"></circle><circle cx="52" cy="12" r="4.5" fill="#54676d"></circle></svg>Bookings by DiveDay</div>
+      </div>
+      <div class="caption"><span class="flabel">/ready &middot; the thread, Sunday Aug 30</span><p class="note">One line joins Add to calendar. The Harbor rule holds: the shop&#8217;s green and its face on the headings, every fact in Geist and ink. Nothing else on the thread changes.</p></div>
+    </div>
+
+    <!-- The pass -->
+    <div style="display: flex; flex-direction: column; gap: 22px;">
+      <div style="display: flex; gap: 28px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="pass">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 30px; height: 30px; border-radius: 9px; background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">BM</div>
+              <span class="face" style="font-size: 16px; font-weight: 700; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+              <span style="margin-left: auto;" class="pl">Dive</span>
+            </div>
+            <div>
+              <p class="pl">Departure</p>
+              <p class="face" style="font-size: 24px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.1; margin-top: 3px;">Two-Tank Reef &mdash; Molasses &amp; French</p>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+              <div><p class="pl">Date</p><p class="pv num">Thu, Sep 3</p></div>
+              <div><p class="pl">Dock call</p><p class="pv num">6:30 AM</p></div>
+              <div><p class="pl">Departs</p><p class="pv num">7:00 AM</p></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div><p class="pl">Boat</p><p class="pv">Mantis II</p></div>
+              <div><p class="pl">Diver</p><p class="pv">Yara Halabi</p></div>
+            </div>
+            <div style="border-top: 1px solid rgba(255,255,255,.22); padding-top: 12px; display: flex; align-items: center; justify-content: space-between;">
+              <p style="font-size: 12.5px; opacity: .85;">Meet at the shop dock, Key Largo</p>
+              <svg aria-hidden="true" viewBox="0 0 64 64" width="18" height="18" fill="none"><circle cx="22" cy="44" r="12" stroke="#ffffff" stroke-width="3"></circle><circle cx="40" cy="26" r="8" stroke="#ffffff" stroke-width="3"></circle><circle cx="52" cy="12" r="4.5" fill="#ffffff"></circle></svg>
+            </div>
+          </div>
+          <p class="note" style="max-width: 340px;"><span class="flabel">The pass, as issued</span><br>Relevant from 5:30 AM on the day, so the phone surfaces it on the lock screen unasked. Back of the pass: the crew, the sites, the shop&#8217;s phone, and the one sentence that says the plan can move and the pass will follow.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="pass" style="background: var(--brand-deep);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 30px; height: 30px; border-radius: 9px; background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">BM</div>
+              <span class="face" style="font-size: 16px; font-weight: 700; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+              <span style="margin-left: auto; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: rgba(255,255,255,.2); padding: 4px 9px; border-radius: 999px;">Boarding</span>
+            </div>
+            <div>
+              <p class="pl">Departure</p>
+              <p class="face" style="font-size: 24px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.1; margin-top: 3px;">Two-Tank Reef &mdash; Molasses &amp; French</p>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+              <div><p class="pl">Date</p><p class="pv num">Thu, Sep 3</p></div>
+              <div><p class="pl">Dock call</p><p class="pv num">7:30 AM</p></div>
+              <div><p class="pl">Departs</p><p class="pv num">8:00 AM</p></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div><p class="pl">Boat</p><p class="pv">Mantis II</p></div>
+              <div><p class="pl">Diver</p><p class="pv">Yara Halabi</p></div>
+            </div>
+            <div style="border-top: 1px solid rgba(255,255,255,.22); padding-top: 12px; display: flex; align-items: center; justify-content: space-between;">
+              <p style="font-size: 12.5px; opacity: .85;">Moved to 8:00 on Tuesday. Same dock.</p>
+              <svg aria-hidden="true" viewBox="0 0 64 64" width="18" height="18" fill="none"><circle cx="22" cy="44" r="12" stroke="#ffffff" stroke-width="3"></circle><circle cx="40" cy="26" r="8" stroke="#ffffff" stroke-width="3"></circle><circle cx="52" cy="12" r="4.5" fill="#ffffff"></circle></svg>
+            </div>
+          </div>
+          <p class="note" style="max-width: 340px;"><span class="flabel">The same pass, Thursday 7:40 AM</span><br>The shop moved the boat to 8:00 on Tuesday: <span style="font-family: ui-monospace, monospace; font-size: 12px;">trips.revision</span> bumped, the calendar&#8217;s SEQUENCE and the pass&#8217;s update went out together, and the phone showed the change on the lock screen. At 7:40 the crew tapped Boarding on the manifest, and the pass says so, the way the thread and the storefront already do (budget rule 4).</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 708px;">
+        <div style="background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 16px 18px;">
+          <p class="tag">What it carries, and never carries</p>
+          <p class="body" style="margin-top: 8px;">The departure&#8217;s facts the thread&#8217;s top card shows: title, date, dock call, departure, boat, meeting place, the diver&#8217;s name, the crew-set stage. Never the thread&#8217;s URL, a booking id, a barcode, a price, a waiver or medical state, or an emergency contact. The counter checks people in by name today and keeps doing so; a pass is not a ticket.</p>
+        </div>
+        <div style="background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 16px 18px;">
+          <p class="tag">What it needs, and why it is the owner&#8217;s (H-69 b)</p>
+          <p class="body" style="margin-top: 8px;">An Apple Developer Program membership and a Pass Type ID certificate to sign passes; an Apple push credential so a pass can be told it changed; a Google Wallet issuer account for the Android half. Each is an account, a yearly fee and a signing secret only a human can hold, so the slice is filed waiting on that and ships nothing until it exists. The signing library is a new runtime dependency and the ADR names it.</p>
+        </div>
+        <div style="background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 16px 18px;">
+          <p class="tag">Where it lands</p>
+          <p class="body" style="margin-top: 8px;">One line on the thread, beside Add to calendar, on every state after booking. One pass per booking, in the shop&#8217;s brand, or DiveDay&#8217;s own tokens for a shop that set none. The pass&#8217;s update web service is two new public routes (register, fetch) that answer only to a pass&#8217;s own authentication token, which is why the security reviewer reads the slice.</p>
+        </div>
+        <div style="background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 16px 18px;">
+          <p class="tag">What renders otherwise</p>
+          <p class="body" style="margin-top: 8px;">The thread as it ships: Add to calendar and nothing beside it. A phone with no Wallet, a shop whose diver declined, a pass whose certificate is not yet held: the line is absent, never a broken button. Declined, this board is the one on the canvas that renders nothing at all.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

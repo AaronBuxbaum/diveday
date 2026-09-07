@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); }
+    .body { font-size: 14px; line-height: 1.55; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .n { width: 28px; height: 28px; border-radius: 999px; background: var(--lagoon-wash); color: var(--lagoon); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .r { display: flex; gap: 16px; align-items: flex-start; padding: 16px 0; border-top: 1px solid var(--rope); }
+    .card { background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 18px 20px; }
+    .h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+    .rule { display: grid; grid-template-columns: 30px minmax(0, 1fr) 200px; gap: 16px; align-items: flex-start; padding: 14px 0; border-top: 1px solid var(--rope); }
+    .k { font-size: 12.5px; font-weight: 650; color: var(--muted); }
+    .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+  </style>
+</helmet>
+<div style="width: 1180px; min-height: 3000px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 56px 60px;">
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 40px;">
+    <div style="max-width: 800px; display: flex; flex-direction: column; gap: 14px;">
+      <p class="eyebrow">The eleventh canvas &middot; six moves &middot; 2026-09-07</p>
+      <h1 style="font-size: 44px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.04;">Nothing from nowhere.</h1>
+      <p class="lede">Reef made DiveDay warm, the next loop taught it what time it is, and the last one taught it to fill in what it knows. It still moves like a web page: a figure changes in one frame, the rows beneath a cleared row jump into the gap, the sheet a thumb opened from the bottom of the screen closes with a tap at the top, and a pressed row does nothing under the finger that pressed it. This canvas spends the next budget on how the interface behaves as a thing. <strong style="color: var(--ink);">Every change on screen comes from somewhere, anything a finger is on obeys it within a frame, and one physics governs all of it.</strong> Six moves, each on the surface it lands on. Nothing here is normative; the ADR carries the decisions, three of them are the owner&#8217;s.</p>
+    </div>
+    <svg aria-hidden="true" viewBox="0 0 64 64" width="64" height="64" fill="none" style="flex-shrink: 0; margin-top: 8px;"><circle cx="22" cy="44" r="12" stroke="#0c2a35" stroke-width="2.5"></circle><circle cx="40" cy="26" r="8" stroke="#0c2a35" stroke-width="2.5"></circle><circle cx="52" cy="12" r="4.5" fill="#ff6f61"></circle></svg>
+  </div>
+
+  <div style="margin-top: 40px; display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 48px;">
+    <div>
+      <p class="tag">Four findings, from the running app</p>
+      <div class="r" style="margin-top: 10px;"><span class="n">1</span><p class="body"><strong>A fact that changes in place swaps.</strong> &#8220;6 of 10 here&#8221; becomes &#8220;7 of 10 here&#8221; in one frame. The dial&#8217;s water takes 300ms to rise and the figure beside it jumps, so one change gets two answers, one of which moves. There is no count that rolls anywhere in the tree.</p></div>
+      <div class="r"><span class="n">2</span><p class="body"><strong>A row that leaves takes 200ms and the gap closes in none.</strong> The counter row sinks and the roster row departs on the exit curve, which principle 5 already asks for. The rows beneath them jump up a row height in a single frame, so the eye watches the wrong thing move.</p></div>
+      <div class="r"><span class="n">3</span><p class="body"><strong>The sheet arrives on a timer and leaves on a tap.</strong> The More sheet rises over 200ms and cannot be dragged; it dismisses by a tap on the scrim, at the top of the screen, with the thumb that opened it from the dock. The pull-to-refresh and the buddy drag prove the app already has gesture physics, with a written contract. The sheet is the third gesture and does not have it.</p></div>
+      <div class="r" style="border-bottom: 1px solid var(--rope);"><span class="n">4</span><p class="body"><strong>Timing is ten numbers in two languages.</strong> Durations in the tree run 150, 180, 200, 220, 260, 280, 300, 320, 360 and 520ms with one token among them, and every JS timer (<span class="mono">MENU_CLOSE_MS = 390</span>, <span class="mono">useExitAnimation(open, 180)</span>) is a CSS number copied by hand. What reads as one material on a phone is one ladder read by both.</p></div>
+
+      <p class="tag" style="margin-top: 36px;">The owner&#8217;s three (H-69)</p>
+      <div class="r" style="margin-top: 10px;"><span class="n" style="background: var(--coral-wash); color: var(--coral-deep);">a</span><p class="body">Whether the spring may be spent on the two places a finger has given a thing weight: the sheet snapping back from a short drag, and a pressed control letting go. Today it is rationed to the one menu that unfolds.</p></div>
+      <div class="r"><span class="n" style="background: var(--coral-wash); color: var(--coral-deep);">b</span><p class="body">Whether DiveDay signs Wallet passes. A departure on the diver&#8217;s lock screen the morning of needs an Apple Developer account and a Google Wallet issuer, which only a human can hold and pay for.</p></div>
+      <div class="r" style="border-bottom: 1px solid var(--rope);"><span class="n" style="background: var(--coral-wash); color: var(--coral-deep);">c</span><p class="body">Whether the roll and the slide reach the roll call, where the drawn motion is banned. The row leaving the roster already moves there. Recommended: the slide yes, after the commit; the head count never rolls.</p></div>
+    </div>
+
+    <div>
+      <p class="tag">Six moves, each on its surface</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 12px;">
+        <div class="card"><p class="h2" style="font-size: 18px;">1 &middot; A figure rolls</p><p class="note" style="margin-top: 6px;">Roll. When a count changes in place, only the digits that changed move: the old one leaves upward, the new one arrives from below, 200ms on the arrival curve. &#8220;6 of 10 here&#8221; becomes 7 the way an odometer does. A figure&#8217;s first paint, a refusal and a reduced-motion reader get the swap.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">2 &middot; A row closes its own gap</p><p class="note" style="margin-top: 6px;">Counter. When a row leaves or changes place, the rows around it slide to where they now belong, on the same 200ms the row took to go. Undo brings it back along the same path. Nothing the browser lays out is animated; every row moves by transform from where it was to where it is.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">3 &middot; The sheet follows the thumb</p><p class="note" style="margin-top: 6px;">Sheet. The More sheet and the embed lightbox take a drag: the sheet tracks the finger downward one for one, resists upward, and the scrim lightens with it. Let go past the line or with speed and it leaves from where it is; let go short and it settles back. The scrim tap and Escape stay.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">4 &middot; The title folds into the bar</p><p class="note" style="margin-top: 6px;">Title. On a phone the page title folds into the 56px header as the page scrolls, driven by the scroll position itself and no script. At the top the bar holds the shop&#8217;s name; by 120px of scroll it reads the page. A browser without scroll-driven animation gets the bar it has today.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">5 &middot; The press answers within a frame</p><p class="note" style="margin-top: 6px;">Physics. Everything tappable sinks the instant it is pressed, with no easing on the way down, and lets go on the spring. A button today shrinks two percent over the same 200ms as everything else; a row, a chip, a tab and a ledger line do nothing under a finger at all. On a wet dock the press is how a person knows one tap was enough.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">6 &middot; The departure on the lock screen</p><p class="note" style="margin-top: 6px;">Pass. The thread gains one line beside Add to calendar: Add to Wallet. The pass wears the shop&#8217;s brand, carries the boat, the time, the dock call and the site, surfaces on the lock screen the morning of, and updates when the plan moves, from the same revision the calendar reads. No barcode and no link: the thread&#8217;s URL is the diver&#8217;s own capability and does not belong on a card that gets shown around.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 44px; padding: 24px 28px; border-radius: 28px; background: var(--shell); border: 1px solid var(--rope); box-shadow: var(--bed);">
+    <p class="tag">The rule every move passes, and what renders when it fails</p>
+    <div style="margin-top: 8px;">
+      <div class="rule"><span class="n">1</span><p class="body"><strong>It comes from somewhere.</strong> Every motion answers where a thing came from or what changed: a digit from below, a row from the place it held, a sheet from the dock, a title from the top of the page. Motion that answers neither has no job (principle 5) and is not drawn.</p><p class="k">Otherwise: the cut, as today</p></div>
+      <div class="rule"><span class="n">2</span><p class="body"><strong>The finger is obeyed within a frame.</strong> Anything a finger is on goes down with no easing, follows the finger one for one while it holds, and takes the finger&#8217;s speed when it lets go. A timer never runs while a finger is on the thing.</p><p class="k">Otherwise: the tap, as today</p></div>
+      <div class="rule"><span class="n">3</span><p class="body"><strong>At rest, nothing moves.</strong> No move adds an idle animation, a loop or a standing effect. A reduced-motion reader gets the swap and the cut everywhere, through the kill-switch that already exists; the sheet still follows the finger, because a thing under a finger moving is not animation.</p><p class="k">Otherwise: nothing</p></div>
+      <div class="rule" style="border-bottom: 1px solid var(--rope);"><span class="n">4</span><p class="body"><strong>Motion follows the commit, never leads it.</strong> On the roll call and the manifest a state changes on screen when the server has it, and the motion is what that change looks like. A head count never rolls: a digit mid-roll is neither number for 200ms, on the one figure a crew reads in glare to decide. Every ban stands: no drawing, coral or drawn motion on a manifest, roll call, cert check, waiver or payment.</p><p class="k">Otherwise: the swap</p></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+    <div>
+      <p class="tag">What already works this way</p>
+      <p class="body" style="margin-top: 10px;">A disclosure&#8217;s body arrives rather than appearing, all seventy of them. A bar that fills scales. An exit says so in its name and takes the exit curve. The board&#8217;s row menu unfolds on the spring. The pull-to-refresh resists, cancels short of its line and never fights the scroll. The buddy drag waits a quarter second under the finger before it begins. The undo toast rises and dismisses.</p>
+      <p class="body" style="margin-top: 8px;">Each of those is a rule written the day one thing was fixed. This canvas writes the physics they share once, and applies it in the six places the app still moves like a page.</p>
+    </div>
+    <div>
+      <p class="tag">What this canvas leaves alone</p>
+      <p class="body" style="margin-top: 10px;">Between pages there is still no motion (issue #795, decided 2026-08-27, both reasons standing: the skeleton is the answer to &#8220;where did it go&#8221;, and React 19.2.8 stable still has no ViewTransition). There is no cross-fade and no sound. The coral count, the four washes, the three drawn moments and the boat as the only drawing that moves. The manifest&#8217;s bans in full: the drawn motion never reaches it, and the structural motion waits on H-69 c. Haptics, which are Android&#8217;s and already say so.</p>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+    <div>
+      <p class="tag">How to read the canvas</p>
+      <p class="body" style="margin-top: 10px;"><strong>This page</strong> argues: this cover and the Physics sheet, which is the ladder, the three curves, the press and the table of what moves when. <strong>Page 2</strong> shows the surfaces: the roll at large scale and on the counter&#8217;s instrument line, the counter closing a gap in three frames, the sheet under a thumb in three frames, the home&#8217;s title folding at two scroll positions, and the pass on the thread and in the Wallet.</p>
+      <p class="body" style="margin-top: 8px;">Every board is Blue Mantis Divers in the week of Thursday, August 27, 2026, the fiction every canvas since Clearwater holds to. Reef in Geist on the staff boards; the demo shop&#8217;s green and Bricolage Grotesque on the diver&#8217;s. Every name is invented.</p>
+    </div>
+    <div>
+      <p class="tag">Why this and not more motion</p>
+      <p class="body" style="margin-top: 10px;">The owner&#8217;s brief said Apple. An Apple interface moves little, and this app declined page transitions for two reasons that still hold. What it does is behave as a physical thing: it acknowledges the finger at once, it stays under the finger for as long as the finger stays, and a change on screen always comes from somewhere. Every move here is transform and opacity inside principle 5&#8217;s 250ms, spends the spring only where a finger gave something weight, and renders the cut the app has today when it is not true.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

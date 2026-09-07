@@ -403,6 +403,40 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
 
 16h, 16i and 16j landed as a stack, each cut from the layer below and merged bottom-up.
 
+### 18. Nothing from nowhere (design complete; H-69 open)
+
+The 2026-09-07 loop over how the interface moves, argued on
+[the canvas](../../design/canvases/20260907-nothing-from-nowhere/README.md) and proposed in ADR
+[20260907-nothing-from-nowhere](../../architecture/decisions/20260907-nothing-from-nowhere.md): a
+figure that changes in place swaps, a row that leaves takes 200ms and the gap beneath it closes in
+none, the More sheet cannot be dragged, timing is ten copied numbers in two languages, and a
+pressed row does nothing under the finger. The ADR states one physics (a three-rung ladder as
+tokens, the three curves, the press on every tappable thing, an event table) and applies it in six
+moves, every one rendering the cut, the swap or the tap the app has today when it is not true.
+Three calls are the owner's (H-69): the spring's ration, the Wallet pass, and whether the roll and
+the slide reach the roll call. Each slice runs the `design-implementation` skill: the component
+names the ADR, a test pins the rule, the canvas README's slice table moves, and the visual diffs
+are explained. 18b, 18c, 18d and 18e do not depend on H-69 and may start on the ADR alone; 18a's
+spring half, 18c's roster half and 18f wait on it.
+
+- **18a** — the physics: `--motion-quick` / `--motion-base` / `--motion-unfold` as theme tokens,
+  `motionMs()` for the three copied timers, the press on every tappable primitive, principle 5's
+  ladder and event table. The spring on the press release waits on H-69 a.
+- **18b** — a figure rolls: `RollingFigure` on the counter's instrument line and settled count,
+  the station chip, the palette's answer count, the held send's seconds, the booking form's gear
+  price; the never-list held by a test over the roll call's and the manifest's trees.
+- **18c** — a row closes its own gap: `useSettledRows` on the counter queue, the home's station,
+  the wait list and the board's day, with Undo running the same path reversed. The manifest
+  roster waits on H-69 c.
+- **18d** — the sheet follows the thumb: `useDragSheet` generalised from `PullToRefresh`, on the
+  More sheet and the embed lightbox, with the grab handle; the settle-back on the spring waits on
+  H-69 a.
+- **18e** — the title folds into the bar on a phone: two scroll-driven keyframes under
+  `@supports`, a `data-page-title` on `ShopPageHeader`, a folded capture in the visual spec.
+- **18f** — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's
+  brand, updates from `trips.revision`, the two pass-service routes. `waiting-on-external` on the
+  Apple Developer and Google Wallet accounts H-69 b decides; nothing built ahead of them.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)

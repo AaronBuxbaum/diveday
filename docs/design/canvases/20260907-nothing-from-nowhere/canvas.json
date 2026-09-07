@@ -1,0 +1,123 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The physics"
+    },
+    {
+      "id": "page-2",
+      "name": "The surfaces"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Nothing from nowhere — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 3000,
+      "page": "page-1"
+    },
+    {
+      "file": "Physics.dc.html",
+      "title": "The physics — one ladder, three curves, one press",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 3050,
+      "page": "page-1"
+    },
+    {
+      "file": "Roll.dc.html",
+      "title": "Move 1 — a figure rolls",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 2000,
+      "page": "page-2"
+    },
+    {
+      "file": "Counter.dc.html",
+      "title": "Move 2 — the counter, a row closes its own gap",
+      "x": 1300,
+      "y": 0,
+      "w": 1360,
+      "h": 1560,
+      "page": "page-2"
+    },
+    {
+      "file": "Pass.dc.html",
+      "title": "Move 6 — the departure on the lock screen",
+      "x": 2780,
+      "y": 0,
+      "w": 1280,
+      "h": 1600,
+      "page": "page-2"
+    },
+    {
+      "file": "Sheet.dc.html",
+      "title": "Move 3 — the sheet follows the thumb",
+      "x": 0,
+      "y": 2160,
+      "w": 1360,
+      "h": 1650,
+      "page": "page-2"
+    },
+    {
+      "file": "Title.dc.html",
+      "title": "Move 4 — the title folds into the bar",
+      "x": 1480,
+      "y": 2160,
+      "w": 1180,
+      "h": 1800,
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "read-order",
+      "x": 0,
+      "y": -170,
+      "w": 560,
+      "text": "Read the cover first, then the Physics sheet: the ladder, the three curves, the press, and the table of what moves when. Page 2 holds the surfaces, one move each. Move 5, the press, has no surface of its own; it is on the Physics sheet.",
+      "page": "page-1"
+    },
+    {
+      "id": "fiction",
+      "x": 0,
+      "y": -170,
+      "w": 560,
+      "text": "Blue Mantis Divers, Thursday August 27, 2026, 6:41 AM at the counter and 6:40 on the home; Yara Halabi's Thursday September 3 on the thread. Every name is invented. Reef in Geist on the staff boards; the demo shop's green and Bricolage Grotesque on the diver's.",
+      "page": "page-2"
+    },
+    {
+      "id": "marks",
+      "x": 1300,
+      "y": -110,
+      "w": 480,
+      "text": "The dashed line and the finger ring on the sheet's second frame are the canvas's own marks. Nothing like them ships.",
+      "page": "page-2"
+    },
+    {
+      "id": "owner-calls",
+      "x": 2780,
+      "y": -110,
+      "w": 420,
+      "text": "H-69 b is this board's whole existence: declined, the thread stays as it ships and this board renders nothing.",
+      "page": "page-2"
+    },
+    {
+      "id": "roll-call",
+      "x": 1480,
+      "y": 2040,
+      "w": 520,
+      "text": "No board on this canvas is a manifest, a roll call, a cert check, a waiver or a payment. Whether the roll and the slide reach the roll call at all is H-69 c; the head count never rolls under any answer.",
+      "page": "page-2"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}
