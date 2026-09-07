@@ -1503,7 +1503,11 @@ export function OfflineManifestView() {
                           here is board somebody by reaching for the wrong
                           list. So the control says which question it answers,
                           in the live counter's own two words. */}
-                      <span className="shrink-0 text-sm font-semibold whitespace-nowrap">
+                      {/* `text-base`, matching the live counter's own trailing
+                          word rather than shrinking it: this is a wet-thumb
+                          surface in sun, and 14px on it is the size the
+                          critical-text rule exists about. */}
+                      <span className="shrink-0 text-base font-semibold whitespace-nowrap">
                         {arrived
                           ? t("shared.offlineManifest.single.counter.checkedInLabel")
                           : t("shared.offlineManifest.single.counter.notCheckedInLabel")}
