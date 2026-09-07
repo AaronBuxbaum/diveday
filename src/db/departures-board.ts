@@ -1,4 +1,5 @@
 import { and, asc, count, eq, gte, inArray, isNotNull, isNull, lt } from "drizzle-orm";
+import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { groupCrewAssignments } from "@/lib/crew-roles";
 import {
@@ -14,7 +15,16 @@ import { liveStageOf, type TripStage } from "@/lib/trip-stages";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { listDepartureRollCallByTrip } from "./manifests";
-import { boats, bookings, diveSites, people, personRoles, tripAssignments, trips } from "./schema";
+import {
+  boats,
+  bookings,
+  diveSites,
+  people,
+  personRoles,
+  tripAssignments,
+  trips,
+  userAccounts,
+} from "./schema";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { liveTrip } from "./trips-live";
 import { liveBookingJoin } from "./trips-queries";
@@ -47,6 +57,13 @@ export type BoardDeparture = {
   title: string;
   /** A private charter is never named on the board — see `boardTitleFor`. */
   isPrivate: boolean;
+  /**
+   * The crew's reversible "we are watching the weather" call. The one question
+   * this screen exists to answer is whether a boat is still going, so a hold
+   * that reaches the trip page and the storefront has to reach here too.
+   * Informs and gates nothing, the same posture those two take.
+   */
+  conditionsHold: boolean;
   startsAt: Date;
   endsAt: Date;
   siteName: string | null;
@@ -77,6 +94,7 @@ export const BOARD_DEPARTURE_KEYS = [
   "tripId",
   "title",
   "isPrivate",
+  "conditionsHold",
   "startsAt",
   "endsAt",
   "siteName",
@@ -168,7 +186,14 @@ export async function getDeparturesBoard(
             people,
             and(eq(people.id, tripAssignments.personId), eq(people.shopId, input.shopId)),
           )
-          .leftJoin(personRoles, eq(personRoles.personId, people.id))
+          // Inner rather than left, and joined to the account, for the same
+          // reason `tripPublicCrew` does both: the `people` row of somebody
+          // removed from the team deliberately survives with its assignments
+          // attached, so a reader that asks only "is there an assignment" keeps
+          // naming them. `removeStaffMember` also clears the consent stamp, so
+          // this is the second lock rather than the only one.
+          .innerJoin(personRoles, eq(personRoles.personId, people.id))
+          .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
           .where(
             and(
               inArray(tripAssignments.tripId, tripIds),
@@ -184,6 +209,8 @@ export async function getDeparturesBoard(
               // says why: somebody who declined has to read as somebody who was
               // never rostered.
               isNotNull(people.crewPublicConsentAt),
+              eq(userAccounts.status, "active"),
+              inArray(personRoles.role, [...STAFF_ROLES]),
             ),
           )
           // By name, for the reason the day spine gives: without it the same
@@ -246,6 +273,7 @@ export async function getDeparturesBoard(
       tripId: trip.id,
       title: trip.title,
       isPrivate: trip.isPrivate,
+      conditionsHold: trip.conditionsHold,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       siteName: row.siteName ?? null,

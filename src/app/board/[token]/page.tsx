@@ -15,6 +15,7 @@ import { boardTitleFor } from "@/lib/display-tokens";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { stageTone } from "@/lib/trip-stages";
+import { hasReturned } from "@/lib/trips";
 import { BoardRefresh } from "./_components/BoardRefresh";
 
 // `instant = true`: the segment's `loading.tsx` is the boundary, and the
@@ -117,7 +118,7 @@ export default async function DeparturesBoardPage({
       ) : (
         <ol className="mt-8 grid gap-4 lg:mt-10 lg:gap-5">
           {departures.map((row) => (
-            <BoardRow key={row.tripId} row={row} shop={shop} locale={locale} t={t} />
+            <BoardRow key={row.tripId} row={row} shop={shop} locale={locale} now={now} t={t} />
           ))}
         </ol>
       )}
@@ -153,8 +154,17 @@ function stageText(row: BoardDeparture, t: DiverTranslator): string | null {
     case "boarding":
       return t("board.stage.boarding");
     case "underway": {
-      const site = stage.siteName ?? row.siteName;
-      return site ? t("board.stage.underway", { site }) : t("board.stage.underwayNoSite");
+      // **The crew's own word, or nothing.** Falling back to the trip's planned
+      // site would have this screen assert where the boat *is* on their behalf,
+      // which `src/lib/trip-stages.ts` refuses outright: "a stage is a thing a
+      // person said, not a thing a clock implied", and "never a position". A
+      // siteless tap is a real answer -- a two-tank day whose first dive is
+      // chosen on the water has no site to name, and `trips.dive_site_id` would
+      // hand back the *second* dive's. Both other stage renderers refuse the
+      // same fallback, and the planned site already has its own line above.
+      return stage.siteName
+        ? t("board.stage.underway", { site: stage.siteName })
+        : t("board.stage.underwayNoSite");
     }
     case "surface":
       return t("board.stage.surface");
@@ -193,11 +203,13 @@ function BoardRow({
   row,
   shop,
   locale,
+  now,
   t,
 }: {
   row: BoardDeparture;
   shop: Shop;
   locale: string;
+  now: Date;
   t: DiverTranslator;
 }) {
   const title = boardTitleFor(row);
@@ -208,8 +220,34 @@ function BoardRow({
   const stageClass =
     row.stage && stageTone(row.stage.stage) === "success" ? "text-success" : "text-primary";
 
+  /**
+   * **Three different questions, and the row asks whichever one is live.**
+   *
+   * Before anybody boards, the lobby's question is "is there room", so the
+   * count is seats: booked over capacity, which is the fill rate the glossary
+   * and the day spine's dial already use. Once a departure roll call has begun
+   * it becomes "who is on", so the count is divers boarded over divers booked
+   * -- the manifest's own pairing. It used to read `boarded` over `capacity`,
+   * which is a roll-call numerator over a commercial denominator: a sold-out
+   * four-diver boat with everyone aboard read "4 of 12 aboard", which a crew
+   * glancing at the dock tablet reads as eight people still to come.
+   *
+   * And a boat that is home is spoken about in the past. Rows stay up for the
+   * whole shop day, `boarded` never decays, and `liveStageOf` drops the stage
+   * word two hours after the return -- so an afternoon row was shaped exactly
+   * like a full boat about to sail.
+   */
+  const returned = hasReturned(row.endsAt, now);
+  const count = returned
+    ? t("board.returned", { boarded: row.boarded })
+    : row.boarded > 0
+      ? t("board.aboard", { boarded: row.boarded, booked: row.booked })
+      : t("board.seats", { booked: row.booked, capacity: row.capacity });
+
   return (
-    <li className="grid gap-x-8 gap-y-3 rounded-panel border border-border bg-surface px-6 py-5 lg:grid-cols-[auto_1fr_auto] lg:items-center lg:px-8 lg:py-6">
+    <li
+      className={`grid gap-x-8 gap-y-3 rounded-panel border border-border bg-surface px-6 py-5 lg:grid-cols-[auto_1fr_auto] lg:items-center lg:px-8 lg:py-6 ${returned ? "text-muted" : ""}`}
+    >
       <p className="text-[2.25rem] leading-none font-bold tabular-nums lg:text-[2.75rem]">
         {formatTime(row.startsAt, locale, shop.timezone)}
       </p>
@@ -217,6 +255,11 @@ function BoardRow({
         <p className="text-[1.75rem] leading-tight font-bold text-balance lg:text-[2.25rem]">
           {title.kind === "private" ? t("board.privateCharter") : title.title}
         </p>
+        {row.conditionsHold && !returned ? (
+          <p className="mt-1 text-[1.5rem] leading-tight font-bold text-warning">
+            {t("board.hold")}
+          </p>
+        ) : null}
         {meta.length > 0 ? (
           <p className="mt-1 flex flex-wrap items-baseline gap-x-3 text-[1.5rem] leading-tight text-muted">
             {meta.map((part, index) => (
@@ -256,9 +299,7 @@ function BoardRow({
             {stage}
           </p>
         ) : null}
-        <p className="text-[1.5rem] leading-tight tabular-nums lg:text-[1.75rem]">
-          {t("board.aboard", { boarded: row.boarded, capacity: row.capacity })}
-        </p>
+        <p className="text-[1.5rem] leading-tight tabular-nums lg:text-[1.75rem]">{count}</p>
       </div>
     </li>
   );

@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { and, eq, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { bookings, people, trips } from "@/db/schema";
+import { bookings, people, trips, userAccounts } from "@/db/schema";
+import { removeStaffMember } from "@/db/staff-accounts";
 import { listStaff, setTripCrew } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
@@ -177,6 +178,72 @@ describe("getDeparturesBoard", () => {
     });
     expect(after.find((row) => row.tripId === reef.tripId)?.isPrivate).toBe(true);
     if (other) expect(after.some((row) => row.tripId === other.tripId)).toBe(false);
+  });
+
+  /**
+   * `removeStaffMember` deliberately leaves the `people` row and its
+   * `trip_assignments` standing — a departed divemaster still appears on the
+   * manifests they crewed. It also clears the consent stamp, which is the
+   * repo's stated mitigation for "a removed person has no login, so there is
+   * no path left by which they can withdraw it". A reader that asks only "is
+   * there an assignment" keeps naming them on Saturday's lobby TV regardless,
+   * so the board carries the same live-staff predicates `tripPublicCrew` does.
+   */
+  it("stops naming somebody who has left the team", async () => {
+    const { db, shop, reef } = await todayBoard();
+    const [agreed] = await db
+      .select({ id: people.id, publicName: people.crewPublicName })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), isNotNull(people.crewPublicConsentAt)))
+      .limit(1);
+    if (!agreed?.publicName) throw new Error("the seeded cast names nobody to divers");
+    await setTripCrew(db, shop.id, reef.tripId, [agreed.id]);
+
+    const before = await getDeparturesBoard(db, {
+      shopId: shop.id,
+      timeZone: shop.timezone,
+      showNames: true,
+    });
+    expect(before.find((row) => row.tripId === reef.tripId)?.crewNames).toEqual([
+      agreed.publicName,
+    ]);
+
+    const [account] = await db
+      .select({ id: userAccounts.id })
+      .from(userAccounts)
+      .where(eq(userAccounts.personId, agreed.id))
+      .limit(1);
+    if (!account) throw new Error("the consenting crew member has no account to disable");
+    const removed = await removeStaffMember(db, {
+      shopId: shop.id,
+      personId: agreed.id,
+      userAccountId: account.id,
+    });
+    expect(removed.ok).toBe(true);
+
+    const after = await getDeparturesBoard(db, {
+      shopId: shop.id,
+      timeZone: shop.timezone,
+      showNames: true,
+    });
+    expect(after.find((row) => row.tripId === reef.tripId)?.crewNames).toEqual([]);
+  });
+
+  /**
+   * The one question this screen exists to answer is whether a boat is still
+   * going, and a conditions hold is the crew saying it might not be. It reaches
+   * the trip page and the storefront; it has to reach here.
+   */
+  it("carries a conditions hold", async () => {
+    const { db, shop, reef } = await todayBoard();
+    expect(reef.conditionsHold).toBe(false);
+    await db.update(trips).set({ conditionsHold: true }).where(eq(trips.id, reef.tripId));
+    const after = await getDeparturesBoard(db, {
+      shopId: shop.id,
+      timeZone: shop.timezone,
+      showNames: false,
+    });
+    expect(after.find((row) => row.tripId === reef.tripId)?.conditionsHold).toBe(true);
   });
 
   it("answers another shop's id with nothing", async () => {
