@@ -72,7 +72,8 @@ export type DisplayTokenContext = { id: string; shopId: string; showNames: boole
 
 /**
  * `null` for an unknown token and for a revoked one alike; the board answers
- * both with the same 404, and a screen shows the status code to nobody.
+ * both with one refusal card, so a holder cannot tell "never ours" from
+ * "revoked this morning".
  */
 export async function verifyDisplayToken(
   db: DbExecutor,
@@ -145,7 +146,7 @@ export async function listDisplayTokens(
  * 2026-09-07). Shop-scoped in the predicate, so an id from another shop
  * revokes nothing, and idempotent: revoking a revoked link is `false`, not
  * an error. Revoking is the row's soft delete — `revoked_at` stays, the row
- * stays, and the board stops answering on the next refresh.
+ * stays, and the board stops showing the day on the next refresh.
  */
 export async function revokeDisplayToken(
   db: AppDb,

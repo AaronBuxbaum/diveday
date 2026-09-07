@@ -24,7 +24,9 @@
       "headingIn": "De regreso",
       "home": "De vuelta en el muelle"
     },
-    "updated": "Actualizado a las {time}"
+    "updated": "Actualizado a las {time}",
+    "unavailableHeading": "Este enlace de pantalla no está disponible",
+    "unavailableBody": "Crea uno nuevo en Configuración, en Pantalla del lobby."
   },
   "conservation": {
     "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",

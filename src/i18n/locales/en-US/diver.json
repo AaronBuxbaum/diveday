@@ -24,7 +24,9 @@
       "headingIn": "Heading in",
       "home": "Back at the dock"
     },
-    "updated": "Updated {time}"
+    "updated": "Updated {time}",
+    "unavailableHeading": "This screen link isn’t available",
+    "unavailableBody": "Make a new one in Settings, under Lobby display."
   },
   "conservation": {
     "shopClaimsDisclaimer": "Stated by the shop, not verified by DiveDay.",

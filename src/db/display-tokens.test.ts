@@ -108,7 +108,9 @@ describe("revokeDisplayToken", () => {
     });
     if (!outcome.ok) throw new Error(outcome.reason);
 
-    expect(await revokeDisplayToken(db, { shopId: shop.id, id: outcome.issued.id })).toBe(true);
+    expect(await revokeDisplayToken(db, { shopId: shop.id, personId, id: outcome.issued.id })).toBe(
+      true,
+    );
     expect(await verifyDisplayToken(db, { token: outcome.issued.token })).toBeNull();
     expect(await listDisplayTokens(db, { shopId: shop.id })).toEqual([]);
     // Soft: the row is still there, stamped.
@@ -117,7 +119,9 @@ describe("revokeDisplayToken", () => {
       .from(displayTokens)
       .where(eq(displayTokens.id, outcome.issued.id));
     expect(row?.revokedAt).toBeInstanceOf(Date);
-    expect(await revokeDisplayToken(db, { shopId: shop.id, id: outcome.issued.id })).toBe(false);
+    expect(await revokeDisplayToken(db, { shopId: shop.id, personId, id: outcome.issued.id })).toBe(
+      false,
+    );
   });
 
   it("revokes nothing for an id that belongs to another shop", async () => {
@@ -133,6 +137,33 @@ describe("revokeDisplayToken", () => {
     expect(
       await revokeDisplayToken(db, {
         shopId: "00000000-0000-0000-0000-000000000000",
+        personId,
+        id: outcome.issued.id,
+      }),
+    ).toBe(false);
+    expect(await verifyDisplayToken(db, { token: outcome.issued.token })).not.toBeNull();
+  });
+
+  it("refuses a crew member, who could otherwise darken the lobby screen", async () => {
+    const { db, shop, personId, staff } = await staffWithRole("owner");
+    const crew = staff.find(
+      (entry) => !entry.roles.includes("owner") && !entry.roles.includes("manager"),
+    );
+    if (!crew) throw new Error("seeded shop is missing a crew member");
+    const outcome = await issueDisplayToken(db, {
+      shopId: shop.id,
+      personId,
+      label: "Lobby TV",
+      showNames: false,
+    });
+    if (!outcome.ok) throw new Error(outcome.reason);
+
+    // A server action is a POST endpoint whether or not the settings page ever
+    // rendered the button, so the gate is re-derived at the writer.
+    expect(
+      await revokeDisplayToken(db, {
+        shopId: shop.id,
+        personId: crew.person.id,
         id: outcome.issued.id,
       }),
     ).toBe(false);

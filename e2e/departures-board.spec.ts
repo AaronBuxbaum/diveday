@@ -53,18 +53,37 @@ test.describe("the departures board", () => {
       await page.getByRole("button", { name: "Yes, revoke it" }).click();
       await expect(page.getByText("Link revoked.")).toBeVisible();
 
-      const dark = await board.goto(url);
-      expect(dark?.status()).toBe(404);
+      // The screen goes dark in place: a capability route refuses in its own
+      // words rather than through DiveDay's 404, whose one button goes to a
+      // software sales page (`src/app/capability-refusals.test.ts`). What
+      // matters on a wall is that the day is gone from it.
+      await board.goto(url);
+      await expect(
+        board.getByRole("heading", { name: "This screen link isn’t available" }),
+      ).toBeVisible();
+      await expect(board.getByText(REEF_TRIP)).toHaveCount(0);
+      await expect(board.getByText("Blue Mantis Divers")).toHaveCount(0);
     } finally {
       await visitor.close();
     }
   });
 
-  test("the link only exists for an owner or manager, and a made-up token is nothing", async ({
+  test("a made-up token names nobody, and the hub carries the door to the screens", async ({
     page,
   }) => {
-    const response = await page.request.get("/board/not-a-real-token");
-    expect(response.status()).toBe(404);
+    // A token that was never ours resolves to no shop, so it names none.
+    const visitor = await page.context().browser()?.newContext();
+    if (!visitor) throw new Error("no browser to open a signed-out context with");
+    try {
+      const forged = makeActivitySafe(await visitor.newPage());
+      await forged.goto("/board/not-a-real-token");
+      await expect(
+        forged.getByRole("heading", { name: "This screen link isn’t available" }),
+      ).toBeVisible();
+      await expect(forged.getByText("Blue Mantis")).toHaveCount(0);
+    } finally {
+      await visitor.close();
+    }
 
     // The hub's row is a door, and the rail knows it.
     await page.goto("/shop/blue-mantis/settings");

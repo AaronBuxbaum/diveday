@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { after, connection } from "next/server";
 import { Fragment } from "react";
+import { EntryDone } from "@/components/account/EntryShell";
 import { getDb } from "@/db/client";
 import { type BoardDeparture, getDeparturesBoard } from "@/db/departures-board";
 import { touchDisplayToken, verifyDisplayToken } from "@/db/display-tokens";
@@ -61,12 +61,26 @@ export default async function DeparturesBoardPage({
   await connection();
   const { token } = await params;
   const db = await getDb();
-  // One answer for every failure — unknown, revoked — exactly as the calendar
-  // feed answers. A screen shows the status code to nobody.
+  // One answer for every failure — a token that was never ours, and one the
+  // shop revoked this morning — because a holder must not be able to tell
+  // those apart. A capability route refuses **in place**, in its own words,
+  // rather than by throwing: DiveDay's app-wide 404 ends in a button to a
+  // software sales page, which is the wrong answer for whoever is standing in
+  // front of this screen (`src/app/capability-refusals.test.ts`, issue #914).
   const display = await verifyDisplayToken(db, { token });
-  if (!display) notFound();
-  const shop = await getShopById(db, display.shopId);
-  if (!shop) notFound();
+  const shop = display ? await getShopById(db, display.shopId) : null;
+  if (!display || !shop) {
+    // No shop resolved, so no shop locale to prefer — the reader's own header
+    // is all there is, and naming nobody is the point.
+    const anonT = diverTranslator(await requestLocale());
+    return (
+      <EntryDone
+        glyph="expired"
+        title={anonT("board.unavailableHeading")}
+        text={anonT("board.unavailableBody")}
+      />
+    );
+  }
 
   const now = nowDate();
   const [locale, departures] = await Promise.all([
@@ -167,8 +181,13 @@ function outlookParts(row: BoardDeparture, shop: Shop, t: DiverTranslator): stri
 
 /**
  * One boat. Three columns at a TV or a landscape tablet — the time, the boat,
- * the count — and one column on a phone, in the same order a person reads
- * them across a room: when, which, how full.
+ * the count — and one stacked card below that, in the same order a person
+ * reads them across a room: when, which, how full.
+ *
+ * The split is at `lg`, not `sm`: a dock tablet held **portrait** is 820px,
+ * and three columns there squeeze the middle one until the departure's own
+ * title breaks mid-phrase and the crew line wraps under it. Stacked, that
+ * width reads as one card per boat with nothing hyphenated.
  */
 function BoardRow({
   row,
@@ -190,7 +209,7 @@ function BoardRow({
     row.stage && stageTone(row.stage.stage) === "success" ? "text-success" : "text-primary";
 
   return (
-    <li className="grid gap-x-8 gap-y-3 rounded-panel border border-border bg-surface px-6 py-5 sm:grid-cols-[auto_1fr_auto] sm:items-center lg:px-8 lg:py-6">
+    <li className="grid gap-x-8 gap-y-3 rounded-panel border border-border bg-surface px-6 py-5 lg:grid-cols-[auto_1fr_auto] lg:items-center lg:px-8 lg:py-6">
       <p className="text-[2.25rem] leading-none font-bold tabular-nums lg:text-[2.75rem]">
         {formatTime(row.startsAt, locale, shop.timezone)}
       </p>
@@ -229,7 +248,7 @@ function BoardRow({
           </p>
         ) : null}
       </div>
-      <div className="sm:text-end">
+      <div className="lg:text-end">
         {stage ? (
           <p
             className={`text-[1.75rem] leading-tight font-bold text-balance lg:text-[2.25rem] ${stageClass}`}
