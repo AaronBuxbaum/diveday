@@ -55,7 +55,11 @@ export function regionSlugFromLocality(locality: string | null | undefined): str
  * shape hygiene rather than a security boundary.
  */
 export function isRegionSlug(candidate: string | null | undefined): candidate is string {
-  return typeof candidate === "string" && candidate.length <= MAX_REGION_SLUG_LENGTH && REGION_SLUG.test(candidate);
+  return (
+    typeof candidate === "string" &&
+    candidate.length <= MAX_REGION_SLUG_LENGTH &&
+    REGION_SLUG.test(candidate)
+  );
 }
 
 /** The regional index and one region's page. */

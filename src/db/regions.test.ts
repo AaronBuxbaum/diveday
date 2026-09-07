@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { listRegions, listRegionShops } from "./regions";
+import { listRegionShops, listRegions } from "./regions";
 import { shops } from "./schema";
 import { REGION_NEIGHBOUR_SLUGS } from "./seed-region-neighbours";
 import { setShopAddress, setShopSearchListing } from "./shops";

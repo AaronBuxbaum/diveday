@@ -52,7 +52,7 @@ export async function getTripRequirements(db: DbExecutor, shopId: string, tripId
 type CertLevel = "open_water" | "advanced_open_water" | "rescue" | "divemaster" | "instructor";
 
 export async function upsertTripRequirements(
-  db: AppDb,
+  db: DbExecutor,
   input: {
     shopId: string;
     tripId: string;

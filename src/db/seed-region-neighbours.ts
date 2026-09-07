@@ -93,15 +93,71 @@ export async function seedRegionNeighbours(db: DbExecutor): Promise<void> {
   const hours = (n: number) => n * 60 * 60 * 1000;
   const departures = [
     // Reef Line: a morning two-tank most days, one afternoon.
-    { shopId: reefLine.id, diveSiteId: frenchReef.id, title: "Morning Two-Tank Reef", startsAt: at(1, 8), capacity: 12, priceCents: 11_000 },
-    { shopId: reefLine.id, diveSiteId: frenchReef.id, title: "Afternoon Reef", startsAt: at(2, 13), capacity: 12, priceCents: 9_500 },
-    { shopId: reefLine.id, diveSiteId: frenchReef.id, title: "Morning Two-Tank Reef", startsAt: at(5, 8, 30), capacity: 12, priceCents: 11_000 },
-    { shopId: reefLine.id, diveSiteId: frenchReef.id, title: "Morning Two-Tank Reef", startsAt: at(10, 8), capacity: 12, priceCents: 11_000 },
+    {
+      shopId: reefLine.id,
+      diveSiteId: frenchReef.id,
+      title: "Morning Two-Tank Reef",
+      startsAt: at(1, 8),
+      capacity: 12,
+      priceCents: 11_000,
+    },
+    {
+      shopId: reefLine.id,
+      diveSiteId: frenchReef.id,
+      title: "Afternoon Reef",
+      startsAt: at(2, 13),
+      capacity: 12,
+      priceCents: 9_500,
+    },
+    {
+      shopId: reefLine.id,
+      diveSiteId: frenchReef.id,
+      title: "Morning Two-Tank Reef",
+      startsAt: at(5, 8, 30),
+      capacity: 12,
+      priceCents: 11_000,
+    },
+    {
+      shopId: reefLine.id,
+      diveSiteId: frenchReef.id,
+      title: "Morning Two-Tank Reef",
+      startsAt: at(10, 8),
+      capacity: 12,
+      priceCents: 11_000,
+    },
     // Keys Current: wrecks, which ask for an Advanced card.
-    { shopId: keysCurrent.id, diveSiteId: spiegelGrove.id, title: "Spiegel Grove Wreck", startsAt: at(1, 9), capacity: 8, priceCents: 14_500 },
-    { shopId: keysCurrent.id, diveSiteId: spiegelGrove.id, title: "Spiegel Grove Wreck", startsAt: at(3, 8), capacity: 8, priceCents: 14_500 },
-    { shopId: keysCurrent.id, diveSiteId: spiegelGrove.id, title: "Wreck and Drift", startsAt: at(6, 13, 30), capacity: 8, priceCents: 15_500 },
-    { shopId: keysCurrent.id, diveSiteId: spiegelGrove.id, title: "Spiegel Grove Wreck", startsAt: at(12, 8), capacity: 8, priceCents: 14_500 },
+    {
+      shopId: keysCurrent.id,
+      diveSiteId: spiegelGrove.id,
+      title: "Spiegel Grove Wreck",
+      startsAt: at(1, 9),
+      capacity: 8,
+      priceCents: 14_500,
+    },
+    {
+      shopId: keysCurrent.id,
+      diveSiteId: spiegelGrove.id,
+      title: "Spiegel Grove Wreck",
+      startsAt: at(3, 8),
+      capacity: 8,
+      priceCents: 14_500,
+    },
+    {
+      shopId: keysCurrent.id,
+      diveSiteId: spiegelGrove.id,
+      title: "Wreck and Drift",
+      startsAt: at(6, 13, 30),
+      capacity: 8,
+      priceCents: 15_500,
+    },
+    {
+      shopId: keysCurrent.id,
+      diveSiteId: spiegelGrove.id,
+      title: "Spiegel Grove Wreck",
+      startsAt: at(12, 8),
+      capacity: 8,
+      priceCents: 14_500,
+    },
   ];
   for (const departure of departures) {
     const trip = await createTrip(db, {
