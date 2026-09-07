@@ -143,7 +143,13 @@ describe("renderTranscript", () => {
     const md = renderTranscript({
       ...base,
       results: [
-        { id: "shop-open", label: "The shop opens", status: "reached", simulatedAt: dayStart, realMs: 1 },
+        {
+          id: "shop-open",
+          label: "The shop opens",
+          status: "reached",
+          simulatedAt: dayStart,
+          realMs: 1,
+        },
         { id: "seat-booked", label: "A diver books a seat", status: "not-attempted" },
       ],
     });
