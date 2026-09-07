@@ -1491,7 +1491,10 @@ describe("sitemap queries (in-memory PGlite)", () => {
     });
 
     const shopRows = await listShopsForSitemap(db);
-    expect(shopRows).toContainEqual({ slug: "live-shop-sitemap" });
+    // The name rides along for `/llms.txt`, which lists the shops an agent may
+    // read and needs something to call them (issue #1427). The sitemap itself
+    // still reads only the slug.
+    expect(shopRows).toContainEqual({ slug: "live-shop-sitemap", name: "Live Shop" });
     expect(shopRows.map((row) => row.slug)).not.toContain("demo-shop-sitemap");
 
     const courseRows = await listActiveCoursesForSitemap(db);

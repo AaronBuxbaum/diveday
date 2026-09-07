@@ -23,6 +23,7 @@ function row(name: string, overrides: Partial<CheckInQueueRow> = {}): CheckInQue
     personId: `person-${name}`,
     personName: name,
     email: null,
+    dateOfBirth: null,
     tripId: "trip-1",
     tripTitle: "Two-Tank Reef — Molasses & French",
     startsAt: new Date("2026-08-27T11:00:00.000Z"),
@@ -43,6 +44,7 @@ function renderQueue(rows: CheckInQueueRow[], settledOpen = false, showFirstVisi
     <CounterQueue
       rows={rows}
       shopSlug="blue-mantis"
+      today="2026-08-27"
       isAmbiguousName={() => false}
       showFirstVisit={showFirstVisit}
       checkInAction={vi.fn().mockResolvedValue({ ok: true })}

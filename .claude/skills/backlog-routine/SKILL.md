@@ -110,20 +110,20 @@ git checkout -b claude/<slug-1> origin/main
 git checkout -b claude/<slug-2> claude/<slug-1>
 
 # at the layer's FIRST commit, not when the ticket is finished:
-# pushes, opens the missing pull request as a draft, chains the base, registers the stack
-gh stack link claude/<slug-1> claude/<slug-2>
-gh stack link <stack-number> claude/<slug-3>          # every layer after that
-
-# no extension (a cloud session): the same two steps by hand — note -F, never -f
-gh pr create --base claude/<slug-1> --draft --title … --body …
-gh api --method POST repos/{owner}/{repo}/stacks \
-  -F 'pull_requests[]=<bottom>' -F 'pull_requests[]=<next>'
-gh api --method POST repos/{owner}/{repo}/stacks/{n}/add -F 'pull_requests[]=<new>'
+git push -u origin claude/<slug-2>
+# then open its pull request as a draft, with `base` set to claude/<slug-1>
 ```
 
 **Open the pull request when you cut the branch.** A draft with one commit and a placeholder body is
 the point; the body catches up at step 7. Every failure this routine has hit with stacks lived in the
 gap between cutting a branch and opening its pull request.
+
+**There is no registration step and nothing to wait for.** `.github/workflows/stack.yml` sees the
+pull request event and registers the chain as a stack on a runner — a session cannot reach that
+endpoint at all, which is what quietly stopped this working for nine days (ADR
+[20260907-a-runner-registers-the-stack](../../../docs/architecture/decisions/20260907-a-runner-registers-the-stack.md)).
+Anything telling you to run `gh stack link` or `gh api --method POST .../stacks` yourself is written
+for a workstation.
 
 **Why, concretely.** Thirteen branches cut from one `main` in a single session all edited
 `AGENTS.md`'s `check:repo` row, a `docs/design/*.md` section, and a `scripts/*-baseline.json`. Every
@@ -173,9 +173,9 @@ because twice in one session a base branch merged and was deleted while its next
 still being written, and `gh pr create --base` then failed with "No commits between … Base ref must
 be a branch". Measured on 2026-08-23 (ADR
 [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md)):
-that is an artifact of opening the pull request at the *end* of a layer's work. A layer registered at
-its first commit is retargeted by GitHub the moment its base merges, and even a branch orphaned that
-way attaches with one `gh stack link`. Register early and fast merges cost nothing.
+that is an artifact of opening the pull request at the *end* of a layer's work. A layer whose pull
+request exists at its first commit is retargeted by GitHub the moment its base merges. Open early
+and fast merges cost nothing.
 
 **The fetch decides the shape.** After `git fetch origin main`, look at where the previous ticket's
 branch is: merged, and the next ticket cuts from the refreshed `origin/main` with no stack at all —
@@ -214,7 +214,8 @@ Three questions, in this order, and only the third is ever "write a fix":
 2. **Which layer introduced it?** `git log -S'<the failing thing>' --oneline origin/main..HEAD`, or
    read the failing assertion and ask which layer's change it describes. Check that layer's own pull
    request too: if it is red for the same reason, you have your answer.
-3. **Then fix it there**, on that branch, and cascade — `gh stack sync --prune`, or by hand:
+3. **Then fix it there**, on that branch, and cascade — GitHub does it server-side for a
+   registered stack; by hand it is:
 
 ```sh
 git checkout claude/<slug-1> && git rebase origin/main && git push --force-with-lease

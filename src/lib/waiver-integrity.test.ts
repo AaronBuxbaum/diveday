@@ -45,6 +45,13 @@ const record = {
   medicalClearanceDocumentUrl: null,
   medicalClearanceEvaluatedOn: null,
   medicalClearancePhysicianName: null,
+  guardianName: null,
+  guardianRelationship: null,
+  guardianEmail: null,
+  guardianSignatureMethod: null,
+  guardianConsentedAt: null,
+  guardianSignedAt: null,
+  draftGuardian: null,
   completedAt: new Date("2026-07-29T01:00:00.000Z"),
   integrityHash: null,
   integrityVersion: null,
@@ -63,6 +70,9 @@ const erased = {
   medicalAnswers: null,
   draftSignerName: null,
   draftMedicalAnswers: null,
+  draftGuardian: null,
+  guardianName: null,
+  guardianEmail: null,
   importedFromLabel: null,
   importSourceDocumentUrl: null,
   importSourceMedicalDocumentUrl: null,
@@ -166,6 +176,63 @@ describe("waiver integrity across erasure (ADR 20260802-diver-data-erasure)", ()
         integrityVersion: 3,
       }),
     ).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+});
+
+describe("waiver integrity over a guardian's co-signature (ADR 20260907-guardian-co-signature)", () => {
+  /** The same release, given by a minor with a parent signing beside them. */
+  const coSigned = {
+    ...record,
+    guardianName: "Jonas Fischer",
+    guardianRelationship: "parent",
+    guardianEmail: "jonas@example.com",
+    guardianSignatureMethod: "typed_consent",
+    guardianConsentedAt: new Date("2026-07-29T01:00:00.000Z"),
+    guardianSignedAt: new Date("2026-07-29T01:00:00.000Z"),
+  };
+
+  it("detects a co-signature lifted off a signed release", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const sealed = {
+      ...coSigned,
+      integrityHash: computeWaiverIntegrityHash(coSigned),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+    };
+    expect(verifyWaiverIntegrity(sealed)).toBe("valid");
+    // The tampering the seal exists to catch: a minor's release with the
+    // parent quietly removed still reads as a signed release everywhere else.
+    for (const tampered of [
+      { ...sealed, guardianSignedAt: null },
+      { ...sealed, guardianName: "Someone Else" },
+      { ...sealed, guardianRelationship: "legal_guardian" },
+      { ...sealed, guardianEmail: "elsewhere@example.com" },
+      { ...sealed, guardianSignatureMethod: "in_person_attested" },
+      { ...sealed, guardianConsentedAt: new Date("2020-01-01T00:00:00.000Z") },
+    ]) {
+      expect(verifyWaiverIntegrity(tampered)).toBe("invalid");
+    }
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps the surviving co-signature facts inside the erased seal", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    // What `anonymizeDiver` leaves: the name and the address are gone, the
+    // fact of the co-signature is not.
+    const erasedCoSigned = { ...erased, ...coSigned, guardianName: null, guardianEmail: null };
+    const resealed = {
+      ...erasedCoSigned,
+      integrityHash: computeWaiverIntegrityHash(erasedCoSigned, WAIVER_INTEGRITY_VERSION_ERASED),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_ERASED,
+    };
+    expect(verifyWaiverIntegrity(resealed)).toBe("valid");
+    for (const tampered of [
+      { ...resealed, guardianSignedAt: null },
+      { ...resealed, guardianRelationship: null },
+      { ...resealed, guardianSignatureMethod: null },
+    ]) {
+      expect(verifyWaiverIntegrity(tampered)).toBe("invalid");
+    }
     vi.unstubAllEnvs();
   });
 });

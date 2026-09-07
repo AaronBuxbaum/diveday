@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import type { DbExecutor } from "./client";
 import {
   bookingPayments,
@@ -8,9 +9,29 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
-import { at, nextCreatedAt } from "./seed-clock";
+import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt } from "./seed-clock";
 import { commonsImage } from "./seed-images";
 import { getCurrentWaiverTemplate } from "./waivers";
+
+/**
+ * **Who co-signs a minor's release in the demo** (ADR
+ * 20260907-guardian-co-signature), keyed by the diver's own name.
+ *
+ * The seeded thirteen-year-old is on today's reef boat, and a release she gave
+ * alone is a readiness blocker — correctly, and permanently. A demo whose one
+ * minor can never board teaches the wrong lesson: what a shop actually sees is
+ * a parent's signature beside hers, which is also the only way the co-signature
+ * itself appears anywhere a screenshot can find it. Her father is already on
+ * her record as her emergency contact, so the demo says the same thing twice
+ * rather than inventing a second family.
+ *
+ * A minor added to the cast without an entry here fails the seed loudly below,
+ * rather than quietly joining the boat as a blocked diver nobody meant to seed.
+ */
+const DEMO_GUARDIANS: Record<string, { name: string; relationship: "parent" | "legal_guardian" }> =
+  {
+    "Lena Fischer": { name: "Jonas Fischer", relationship: "parent" },
+  };
 
 /**
  * A fixed booking id on the seeded reef trip, so a signed recap link can be
@@ -270,6 +291,35 @@ export async function seedBookings(
       bookingByTripTitle("Nitrox Diver — classroom & two dives", 16)?.id,
     ].filter((id): id is string => id !== undefined),
   );
+  /**
+   * The guardian half of a seeded release, for the divers the rule asks it of
+   * (`src/lib/guardian.ts`) — and nothing at all for everybody else.
+   */
+  const guardianColumns = (personId: string, signedAt: Date) => {
+    const person = customers.find((customer) => customer.id === personId);
+    // The zone is the canonical demo's; a minted shop may sit elsewhere, and a
+    // day either way cannot turn a thirteen-year-old into an adult.
+    if (
+      !guardianSignatureRequired(person?.dateOfBirth, signingDate(signedAt, DEMO_SHOP_TIMEZONE))
+    ) {
+      return {};
+    }
+    const guardian = person && DEMO_GUARDIANS[person.fullName];
+    if (!guardian) {
+      throw new Error(
+        `seed: ${person?.fullName ?? personId} is a minor with a signed release and no guardian in DEMO_GUARDIANS`,
+      );
+    }
+    return {
+      guardianName: guardian.name,
+      guardianRelationship: guardian.relationship,
+      guardianEmail: `${guardian.name.toLowerCase().replace(/[^a-z]+/g, ".")}@example.com`,
+      guardianSignatureMethod: "in_person" as const,
+      guardianConsentedAt: signedAt,
+      guardianSignedAt: signedAt,
+    };
+  };
+
   let upcomingWaiverToken = 0;
   const upcomingWaiverRows = bookingRows_
     .filter((booking) => booking.id !== recapBookingId)
@@ -302,6 +352,7 @@ export async function seedBookings(
               consentedAt: createdAt,
               signedAt: createdAt,
               completedAt: createdAt,
+              ...guardianColumns(booking.personId, createdAt),
             }
           : {}),
       };

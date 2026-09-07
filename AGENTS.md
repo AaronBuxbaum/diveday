@@ -192,19 +192,19 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   costs a re-read, not a missed regression, and the pipeline now names each layer's baseline and
   waits for the layer below to publish it. Cut each branch from the one below and open each PR with
   its `base` set to that branch, bottom one first, every body naming its position and the branch
-  beneath it. **Open each PR as a draft at that layer's first commit and register the chain in the
-  same breath** — `gh stack link <bottom> <next>`, or `gh api --method POST
-  repos/{owner}/{repo}/stacks` with the numbers bottom to top and `-F` (never `-f`, which sends
-  strings and 422s). Registering is what buys the cascading rebase and the bottom-up atomic merge,
-  and registering *early* is what makes GitHub retarget a layer when its base merges instead of
-  leaving you to open a PR against a branch that no longer exists. Four things still go on their own
+  beneath it. **Open each PR as a draft at that layer's first commit.** Registering the chain as a
+  GitHub stack, which buys the cascading rebase and the bottom-up atomic merge, is
+  `.github/workflows/stack.yml`'s job off the pull request event; a session neither runs nor waits
+  for it, and cannot reach that endpoint at all. Opening *early* is what makes GitHub retarget a
+  layer when its base merges instead of leaving you to open a PR against a branch that no longer
+  exists. Four things still go on their own
   branch off `main`: nothing of yours is open (`git fetch origin main` first, every time — it decides
   the shape), a fix that must merge now (a red `main`, a hotfix, a spec race you did not cause), a
   stack already about six layers deep (only the bottom and top layers run the expensive gate — the
   middles skip it, so read a middle layer's green as "nothing ran": ADR
   20260827-stack-ci-skips-the-middle-layers), and a branch that belongs to another
-  session. See the **stacked-prs** skill and ADR
-  20260821-stacked-pull-requests.
+  session. See the **stacked-prs** skill and ADRs 20260821-stacked-pull-requests and
+  20260907-a-runner-registers-the-stack.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same
   spec or test name. Two sessions independently patching the same broken test race each other and
   produce conflicting fixes. If one is already in flight, coordinate in that PR's thread instead

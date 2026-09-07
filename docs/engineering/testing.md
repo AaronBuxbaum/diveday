@@ -25,7 +25,40 @@ pnpm test:watch    # during development
 pnpm e2e           # Playwright (auto-detects sandbox Chromium; CI installs its own)
 pnpm visual        # capture screenshots and run reg-suit comparison and publish to S3
 pnpm check         # repo safeguards + lint + typecheck + unit — the pre-commit bar
+pnpm simulate:day  # one whole dive day against the built server, clock advancing (nightly)
 ```
+
+### The one-day simulation
+
+`pnpm simulate:day` is V-04's rehearsal run by a machine: a fresh shop is minted, its clock set to
+six in the morning, and the day is driven as its people would drive it — a diver books a seat on
+the public page, signs the waiver from their link and files their certification card from it, the
+counter sights the card, verifies it and checks them in, the crew say
+*Boarding*, run roll call before departure, tap *Underway*, count heads after every dive, say
+*Heading in* and *Home*, the shop closes the day, the recap pass runs after its four-hour floor,
+and the diver reads the recap. Between states the frozen clock is moved forward through
+`POST /api/test/clock`, so every stamp lands at the hour it would on a real day.
+
+It is the e2e fleet's own machinery under a config of its own, not a second harness:
+`scripts/simulate-day/playwright.config.ts` starts one of the fleet's worker servers with the
+fleet's environment (`e2eServerEnv`, exported from `playwright.config.ts`) at the top of this
+checkout's port block, and `scripts/simulate-day/day.spec.ts` drives it with `e2e/helpers.ts` and
+`e2e/fixtures.ts`'s `makeActivitySafe`. The states are `DAY_STATES` in
+`scripts/simulate-day/lib.mjs` (their timing and the transcript are the pure, unit-tested half),
+one serial `test` each, so the first state the day cannot reach fails by name and stops the run.
+
+The spec lives under `scripts/simulate-day/` rather than `e2e/` because the fleet discovers every
+spec in that tree and CI deals them into shards, and this one takes minutes, owns its clock and
+belongs to a nightly job. The clock route is likewise for this runner alone: a fleet worker's clock
+is shared by every spec it runs (`seed-evening`'s docblock says why the departures move there
+instead), so no `e2e/` spec may call it.
+
+What it leaves behind (`simulation/`, gitignored): a full-page screenshot per state, and `day.md`
+listing each state with the shop-clock time it was reached, how long it really took, and its
+screenshot — with a failed state named and everything after it marked *not attempted*.
+`.github/workflows/simulate-day.yml` runs it every night (and on `workflow_dispatch`), builds
+once, and uploads `simulation/` whether or not the day completed. Options: `--no-build` (reuse
+the build on disk, as the workflow does), `--keep`, `--out <dir>`, `--start <iso>`.
 
 ### Why `playwright-core` is pinned in devDependencies
 

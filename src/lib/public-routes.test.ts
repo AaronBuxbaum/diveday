@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { publicSchedulePath, shopSlugFromPublicPath, shopSlugFromStaffUrl } from "./public-routes";
+import {
+  LLMS_TXT_PATH,
+  publicAvailabilityPath,
+  publicSchedulePath,
+  shopSlugFromPublicPath,
+  shopSlugFromStaffUrl,
+} from "./public-routes";
+
+describe("agent-facing paths", () => {
+  it("puts the availability document beside the schedule it summarises", () => {
+    expect(publicAvailabilityPath("blue-mantis")).toBe("/s/blue-mantis/availability.json");
+  });
+
+  it("keeps llms.txt at the conventional site-root path", () => {
+    expect(LLMS_TXT_PATH).toBe("/llms.txt");
+  });
+});
 
 describe("shopSlugFromStaffUrl", () => {
   it("recovers the shop from the callbackUrl Auth.js carries", () => {

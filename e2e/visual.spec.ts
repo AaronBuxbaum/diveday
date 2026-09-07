@@ -27,12 +27,13 @@ import {
   seededTripId,
   threadStatus,
   waiverLinkFromResult,
+  waiverLinkFromToast,
 } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and ninety-one key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 764 screenshots per run (see
+ * Visual regression coverage. A hundred and ninety-nine key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 796 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -200,7 +201,20 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
   "prep",
   "departure-log",
   "departure-log-every-checkpoint",
+  // The dock tablet is one of the two devices the departures board is for
+  // (issue #1426); the other is the TV below.
+  "departures-board",
 ]);
+
+/**
+ * **A TV on the lobby wall** — the other device the departures board is built
+ * for (issue #1426, N-23), and the one width nothing else in this file has any
+ * reason to photograph. 1920×1080 is what a lobby screen actually is; the
+ * 1280 "desktop" is a laptop. Same shape as `TABLET_SURFACES`: a bounded set
+ * checked against the captures that exist, never a global width.
+ */
+const TV_VIEWPORT = { width: 1920, height: 1080 } as const;
+const TV_SURFACES: ReadonlySet<string> = new Set(["departures-board"]);
 
 /**
  * A name in `TABLET_SURFACES` that no `capture()` call uses photographs
@@ -209,10 +223,10 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
  * this file back is the cheapest thing that can tell a typo from a decision.
  * Once per worker process, against a file already on the page cache.
  */
-for (const name of TABLET_SURFACES) {
+for (const name of [...TABLET_SURFACES, ...TV_SURFACES]) {
   if (!readFileSync("e2e/visual.spec.ts", "utf8").includes(`capture(page, "${name}"`)) {
     throw new Error(
-      `TABLET_SURFACES names "${name}", which no capture() call uses — it would ` +
+      `TABLET_SURFACES/TV_SURFACES names "${name}", which no capture() call uses — it would ` +
         "silently photograph nothing. Fix the name or drop it from the set.",
     );
   }
@@ -1085,7 +1099,11 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
   // shop runs on one. Widest last is deliberate: the base viewport is restored
   // below either way, but a capture that fails mid-loop leaves the page at a
   // width a trace viewer can make sense of.
-  const viewports = TABLET_SURFACES.has(name) ? [...VIEWPORTS, TABLET_VIEWPORT] : VIEWPORTS;
+  const viewports = [
+    ...VIEWPORTS,
+    ...(TABLET_SURFACES.has(name) ? [TABLET_VIEWPORT] : []),
+    ...(TV_SURFACES.has(name) ? [TV_VIEWPORT] : []),
+  ];
   await withTransitionsOff(page, async () => {
     for (const viewport of viewports) {
       await page.setViewportSize(viewport);
@@ -1593,6 +1611,29 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Send it to the shop" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "shopfront-register", scheme);
+      });
+
+      /**
+       * **The departures board** (issue #1426, N-23): a lobby TV's read of the
+       * day behind a display link and no session. Minted through the test
+       * seed route because the token is hashed at rest and shown once; with
+       * names on, so the crew line — the one thing the switch adds — is in the
+       * picture. Phone, laptop, the dock tablet and the TV wall
+       * (`TV_SURFACES`).
+       */
+      test(`the departures board renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-display-token", {
+          data: { label: "Lobby TV", showNames: true },
+        });
+        expect(seeded.ok()).toBe(true);
+        const { path } = (await seeded.json()) as { path: string };
+        await page.goto(path);
+        await page.getByRole("heading", { level: 1, name: "Blue Mantis Divers" }).waitFor();
+        await page.getByText("Two-Tank Reef — Molasses & French").waitFor();
+        await capture(page, "departures-board", scheme);
       });
 
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
@@ -2289,6 +2330,58 @@ for (const scheme of ["light", "dark"] as const) {
           .check();
         await page.getByTestId("waiver-step-rail").getByText("1 of 3 done").waitFor();
         await capture(page, "waiver-rail-follow-ups", scheme);
+      });
+
+      /**
+       * **The guardian's card** (ADR 20260907-guardian-co-signature): the
+       * second signature a minor's release takes, and the one composition on
+       * this page no other capture can reach — it renders from the diver's own
+       * date of birth, so an adult's link never draws it.
+       *
+       * Its own diver rather than the seeded thirteen-year-old, for the reason
+       * `e2e/guardian-co-signature.spec.ts` gives: hers is already co-signed so
+       * the demo boat is not permanently blocked, and a signed release issues
+       * no second link.
+       */
+      test(`the guardian's half of a minor's release renders true to the design (${scheme})`, async ({
+        page,
+        browser,
+        workerBaseURL,
+        staffStorageState,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const staffContext = await browser.newContext({
+          baseURL: workerBaseURL,
+          storageState: await staffStorageState("owner"),
+        });
+        const staffPage = makeActivitySafe(await staffContext.newPage());
+        // A minted diver keeps the capture's own name out of the frame: the
+        // page prints the diver's name in the guardian card's opening line, so
+        // a per-run stamp would change the picture on every run. Pinned words.
+        await staffPage.goto("/shop/blue-mantis/divers/new");
+        await staffPage.getByLabel("Full name").fill("Robin Delgado");
+        await staffPage.getByLabel("Email").fill("robin.delgado@example.com");
+        await staffPage.getByRole("button", { name: "Add diver" }).click();
+        await staffPage.waitForURL(/\/shop\/blue-mantis\/divers\/[0-9a-f-]{36}/);
+        // Thirteen against the frozen e2e clock, so the rendered page is the
+        // same picture on every run. `?edit=1` names the disclosure the date of
+        // birth lives behind rather than relying on where a fresh record lands.
+        await staffPage.goto(`${new URL(staffPage.url()).pathname}?edit=1`);
+        await staffPage.getByLabel("Date of birth").fill(daysFromNow(-365 * 13));
+        await staffPage.getByRole("button", { name: "Save details" }).click();
+        await staffPage.getByRole("status").getByText("Diver details updated").waitFor();
+        // Back to the record's own URL first: the save lands on a `?notice=`,
+        // whose banner is a second `role="status"` beside the copy toast
+        // `waiverLinkFromToast` reads.
+        await staffPage.goto(new URL(staffPage.url()).pathname);
+        await staffPage.getByText("Send options", { exact: true }).click();
+        await staffPage.getByRole("button", { name: "Copy link" }).click();
+        const waiverHref = await waiverLinkFromToast(staffPage);
+        await staffContext.close();
+
+        await page.goto(waiverHref);
+        await page.getByRole("heading", { name: "Parent or guardian" }).waitFor();
+        await capture(page, "waiver-guardian", scheme);
       });
 
       /**
@@ -3523,6 +3616,30 @@ for (const scheme of ["light", "dark"] as const) {
         await addPanelSettled(page);
         await boardListSettled(page);
         await capture(page, "schedule-builder-add", scheme);
+      });
+
+      // The same quick panel once a stationed site is chosen: the one line the
+      // panel adds when it knows where the boat is going (ADR
+      // 20260907-noaa-tide-predictions), read off the fixture table the fleet
+      // serves in place of NOAA. Its own capture rather than a change to the
+      // one above, which is the baseline for the panel with nothing chosen.
+      test(`the add-a-departure panel with a tide window renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await page.getByRole("link", { name: "Add a departure", exact: true }).click();
+        await addPanelSettled(page);
+        // By control name, not by label: the quick row and dive one both carry
+        // a "Dive site" select, and the expanded one stays mounted-but-hidden
+        // so nothing typed is lost on a collapse (e2e/dive-sites.spec.ts says
+        // the same thing at its own two call sites).
+        await page.locator('select[name="diveSiteId"]').selectOption({ label: "Molasses Reef" });
+        await page
+          .getByText(/(Next|Last) (high|low) water at .*; this departure reaches the site/)
+          .waitFor();
+        await boardListSettled(page);
+        await capture(page, "schedule-builder-add-tide", scheme);
       });
 
       // The same panel at full depth — everything `/trips/new` used to be, now
@@ -4917,6 +5034,23 @@ for (const scheme of ["light", "dark"] as const) {
         // heading resolves before the interesting part has mounted.
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         await capture(page, "settings-calendar", scheme);
+      });
+
+      // Lobby display (issue #1426) with one screen listed — minted through
+      // the seed route rather than the form, so the shown-once link block is
+      // *not* in the picture: it carries a token that differs on every run.
+      test(`the lobby display settings render true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-display-token", {
+          data: { label: "Lobby TV" },
+        });
+        expect(seeded.ok()).toBe(true);
+        await page.goto("/shop/blue-mantis/settings/display");
+        await page.getByRole("button", { name: "Create link" }).waitFor();
+        await page.getByText("Lobby TV").waitFor();
+        await capture(page, "settings-display", scheme);
       });
 
       // The courses catalog as one ledger (slice 9g of ADR

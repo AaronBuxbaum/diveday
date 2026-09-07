@@ -22,6 +22,7 @@ function entry(overrides: Partial<SignedWaiverEntry> & { id: string }): SignedWa
     status: "completed",
     signedAt: new Date("2026-08-28T02:41:00Z"),
     templateVersion: 4,
+    guardian: null,
     integrity: "valid",
     flaggedPrompts: [],
   };

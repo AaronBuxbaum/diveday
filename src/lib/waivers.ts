@@ -1,5 +1,11 @@
 import type { MedicalAnswers, WaiverRecord } from "@/db/schema";
 import { nowDate } from "./clock";
+import {
+  type GuardianSignature,
+  type GuardianSigner,
+  guardianSignatureMissing,
+  guardianSignatureOf,
+} from "./guardian";
 import { needsPhysicianReview } from "./medical";
 
 export const WAIVER_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -222,6 +228,13 @@ export type ShopWaiverStatus =
    * diver signs again, and `signedAt` says how long ago they last did.
    */
   | { state: "expired"; signedAt: Date }
+  /**
+   * Signed, current — and given by a minor alone (ADR
+   * 20260907-guardian-co-signature). Not "Signed": readiness blocks on it, and
+   * the way out is the same as `expired`'s, a fresh link that asks for both
+   * signatures. `signedAt` says when the solo signature was given.
+   */
+  | { state: "guardian_missing"; signedAt: Date }
   /** A health disclosure is waiting on a person, and fails closed until it is resolved. */
   | { state: "medical_review"; at: Date }
   /**
@@ -260,6 +273,13 @@ export type ShopWaiverStatus =
 export function shopWaiverStatus(input: {
   personSignedWaivers: readonly WaiverRecord[];
   currentTemplateVersion: number | null;
+  /**
+   * Who the diver is, for the guardian rule (`src/lib/guardian.ts`). A caller
+   * that omits it gets the answer every adult gets; the diver record and the
+   * readiness thread both pass it, so a minor's solo signature reads as its
+   * own state there rather than as "Signed".
+   */
+  signer?: GuardianSigner;
   now?: Date;
 }): ShopWaiverStatus {
   const now = input.now ?? nowDate();
@@ -285,6 +305,13 @@ export function shopWaiverStatus(input: {
           },
         }
       : { state: "medical_review", at };
+  }
+
+  // The same precedence the readiness engine applies: a hold outranks it, and
+  // it outranks "Signed". The record still *is* the diver's current signature
+  // for every other purpose; it is only the standing that changes word.
+  if (clean && input.signer && guardianSignatureMissing(clean, input.signer)) {
+    return { state: "guardian_missing", signedAt: new Date(signatureTime(clean)) };
   }
 
   if (clean) {
@@ -384,6 +411,16 @@ export type MedicalWaiverMark = {
    * (`/api/medical-clearances/[recordId]`).
    */
   clearance: { recordId: string; documentOnFile: boolean } | null;
+  /**
+   * **Who co-signed a minor's release**, or null (ADR
+   * 20260907-guardian-co-signature). Rides on the mark because the mark is
+   * already the one derivation of "this is the release standing today" that
+   * the manifest, the roster and the diver record all read — so "signed by
+   * guardian" is said the same way on every surface that shows a signature.
+   * Null after erasure took the name; the fact of the co-signature is on the
+   * record and inside its seal either way.
+   */
+  guardian: GuardianSignature | null;
 };
 
 /**
@@ -434,6 +471,7 @@ export function medicalWaiverMark(
   const at = record.signedAt ?? record.completedAt;
   if (!at) return null;
   const overridden = overriddenReferralAt(record, personSignedWaivers);
+  const guardian = guardianSignatureOf(record);
   // A referral a physician cleared is the strongest medical evidence a shop
   // ever holds, and staff reading the record need to see that it is not an
   // ordinary self-declaration — so it is its own source rather than "digital".
@@ -452,11 +490,12 @@ export function medicalWaiverMark(
         recordId: record.id,
         documentOnFile: Boolean(record.medicalClearanceDocumentUrl),
       },
+      guardian,
     };
   }
   // Every other source has no clearance behind it by construction — the branch
   // above is the only one a `medical_cleared_at` can reach.
-  const uncleared = { overriddenReferralAt: overridden, clearance: null } as const;
+  const uncleared = { overriddenReferralAt: overridden, clearance: null, guardian } as const;
   if (record.signatureMethod === "imported") return { at, source: "imported", ...uncleared };
   if (record.medicalAnswers) return { at, source: "digital", ...uncleared };
   if (record.signatureMethod === "in_person_attested") {

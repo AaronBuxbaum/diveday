@@ -402,6 +402,7 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   waiver_expired: "shared.readiness.blockers.waiverExpired",
   medical_review: "shared.readiness.blockers.medicalReview",
   medical_not_cleared: "shared.readiness.blockers.medicalNotCleared",
+  guardian_signature_missing: "shared.readiness.blockers.guardianSignatureMissing",
   certification_missing: "shared.readiness.blockers.certificationMissing",
   certification_pending: "shared.readiness.blockers.certificationPending",
   certification_self_declared: "shared.readiness.blockers.certificationSelfDeclared",

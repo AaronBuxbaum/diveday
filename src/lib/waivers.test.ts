@@ -136,6 +136,7 @@ describe("medical waiver mark", () => {
       source: "digital",
       overriddenReferralAt: null,
       clearance: null,
+      guardian: null,
     });
   });
 
@@ -149,7 +150,13 @@ describe("medical waiver mark", () => {
           signedAt,
         }),
       ),
-    ).toEqual({ at: signedAt, source: "paper", overriddenReferralAt: null, clearance: null });
+    ).toEqual({
+      at: signedAt,
+      source: "paper",
+      overriddenReferralAt: null,
+      clearance: null,
+      guardian: null,
+    });
   });
 
   it("marks an imported acceptance distinctly, even though it carries no questionnaire", () => {
@@ -158,7 +165,13 @@ describe("medical waiver mark", () => {
       medicalWaiverMark(
         completedWaiver({ medicalAnswers: null, signatureMethod: "imported", signedAt }),
       ),
-    ).toEqual({ at: signedAt, source: "imported", overriddenReferralAt: null, clearance: null });
+    ).toEqual({
+      at: signedAt,
+      source: "imported",
+      overriddenReferralAt: null,
+      clearance: null,
+      guardian: null,
+    });
   });
 
   it("surfaces nothing for an in-review, unrecognised, or absent record", () => {
@@ -178,7 +191,13 @@ describe("medical waiver mark", () => {
     const completedAt = new Date(SIGN_NOW.getTime() - 5_000);
     expect(
       medicalWaiverMark(completedWaiver({ medicalAnswers: answers, signedAt: null, completedAt })),
-    ).toEqual({ at: completedAt, source: "digital", overriddenReferralAt: null, clearance: null });
+    ).toEqual({
+      at: completedAt,
+      source: "digital",
+      overriddenReferralAt: null,
+      clearance: null,
+      guardian: null,
+    });
   });
 });
 
@@ -434,6 +453,66 @@ describe("shop-level waiver standing", () => {
 });
 
 /**
+ * **A minor's release is signed twice** (ADR 20260907-guardian-co-signature) —
+ * the standing half of it. `shopWaiverStatus` is what the diver's own record
+ * and the carried-preparation reader both call, so a solo minor signature has
+ * to read as its own state there rather than as "Signed"; and the mark that
+ * travels to the manifest has to carry who co-signed.
+ */
+describe("a minor's co-signature", () => {
+  const guardianSignedAt = new Date(SIGN_NOW.getTime() - 60_000);
+  /** Twelve on the day the release was signed, in the shop's own zone. */
+  const minor = { dateOfBirth: "2014-01-01", timezone: "America/New_York" };
+  const soloRecord = () => completedWaiver({ guardianSignedAt: null });
+  const coSignedRecord = () =>
+    completedWaiver({
+      guardianSignedAt,
+      guardianName: "Jonas Fischer",
+      guardianRelationship: "parent",
+      medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
+    });
+  const standing = (records: WaiverRecord[], signer?: { dateOfBirth: string; timezone: string }) =>
+    shopWaiverStatus({
+      personSignedWaivers: records,
+      currentTemplateVersion: 1,
+      signer,
+      now: SIGN_NOW,
+    });
+
+  it("does not read a minor's solo signature as Signed", () => {
+    const record = soloRecord();
+    expect(standing([record], minor)).toEqual({
+      state: "guardian_missing",
+      signedAt: record.signedAt,
+    });
+  });
+
+  it("reads it as Signed once the guardian has co-signed", () => {
+    expect(standing([coSignedRecord()], minor).state).toBe("current");
+  });
+
+  it("answers as before for an adult and for a caller that names no signer", () => {
+    expect(standing([soloRecord()], { ...minor, dateOfBirth: "1990-01-01" }).state).toBe("current");
+    expect(standing([soloRecord()]).state).toBe("current");
+  });
+
+  it("puts the co-signer on the mark the manifest reads, and nothing when nobody co-signed", () => {
+    expect(medicalWaiverMark(coSignedRecord())?.guardian).toEqual({
+      name: "Jonas Fischer",
+      relationship: "parent",
+    });
+    expect(
+      medicalWaiverMark(
+        completedWaiver({
+          medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
+          guardianSignedAt: null,
+        }),
+      )?.guardian,
+    ).toBeNull();
+  });
+});
+
+/**
  * **A physician clearance ends a medical hold** (issue #1252).
  *
  * The questionnaire refers a diver, the release parks in `medical_review`, and
@@ -527,6 +606,7 @@ describe("physician clearance", () => {
       // deliberately absent: this mark travels to the boat manifest, and
       // opening the file is a permission-gated route.
       clearance: { recordId: cleared().id, documentOnFile: false },
+      guardian: null,
     });
     // The date is the clearance, not the signature: that is the day the
     // fitness question was actually answered.
