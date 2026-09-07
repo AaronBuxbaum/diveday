@@ -10,7 +10,7 @@ import {
 } from "@/db/integrations";
 import { people, shopIntegrations } from "@/db/schema";
 import { seededShopContext } from "@/test/db";
-import { deliverXeroEvent } from "./xero";
+import { deliverXeroEvent, XERO_TOKEN_URL } from "./xero";
 
 const CONFIG = { clientId: "client", clientSecret: "secret" };
 
@@ -218,8 +218,7 @@ describe("deliverXeroEvent", () => {
     const seen: string[] = [];
     const fetchImpl = (async (url: string) => {
       seen.push(url);
-      if (url.includes("identity.xero.com"))
-        return { ok: false, status: 400, json: async () => ({}) };
+      if (url === XERO_TOKEN_URL) return { ok: false, status: 400, json: async () => ({}) };
       return { ok: false, status: 401, json: async () => ({}) };
     }) as unknown as typeof fetch;
 
@@ -228,7 +227,7 @@ describe("deliverXeroEvent", () => {
       code: "xero_refresh_failed",
       retryable: false,
     });
-    expect(seen.filter((url) => url.includes("identity.xero.com"))).toHaveLength(1);
+    expect(seen.filter((url) => url === XERO_TOKEN_URL)).toHaveLength(1);
   });
 
   /** Xero rotates the refresh token, so the rotated one has to reach the row. */
@@ -256,7 +255,7 @@ describe("deliverXeroEvent", () => {
     });
 
     const fetchImpl = (async (url: string) => {
-      if (url.includes("identity.xero.com")) {
+      if (url === XERO_TOKEN_URL) {
         return okResponse({
           access_token: "fresh",
           refresh_token: "refresh-2",
