@@ -7,6 +7,21 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The reef's calendar (delivered 2026-09-07)
+
+N-02 of the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1485). A shop writes
+the weeks it plans its year around in its own words — lobster mini-season, a grouper aggregation,
+turtle nesting, a lionfish derby — at Settings → Seasons and events: a name, its own sentence, an
+inclusive date range, and optionally one of the shop's kinds of day. While a window is live the
+storefront carries a band above the schedule with those words and a link to the narrowed board; a
+month before it opens, the shop's own queue carries one `later` row about it and then goes quiet
+once the week arrives. The dates are calendar dates with no instant in them and "live" is asked
+against today in the shop's timezone (`src/lib/season-events.ts`); `season_events` carries
+`deleted_at` and a partial index like every other table a user can delete from. DiveDay supplies the
+frame and nothing inside it — there is no seeded catalog of seasons, on the same argument as a dive
+site's briefing (ADR
+[20260813-dive-site-briefings-are-the-shops-own-words](../architecture/decisions/20260813-dive-site-briefings-are-the-shops-own-words.md)).
+
 ## The departures board (delivered 2026-09-07)
 
 N-23 from the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1426). A shop mints

@@ -22,6 +22,7 @@ import { listDivePackages } from "@/db/dive-packages";
 import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listOwedProcessorErasures } from "@/db/processor-erasure";
+import { listSeasonEvents } from "@/db/season-events";
 import { shopHasPricedRecords } from "@/db/shops";
 import {
   canAcceptPayments,
@@ -50,6 +51,7 @@ import {
   deriveBrandTheme,
   deriveDarkBrandTheme,
 } from "@/lib/brand";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { configuredValue } from "@/lib/configured";
 import { CONSERVATION_COMMITMENT_CODES } from "@/lib/conservation-commitments";
@@ -77,6 +79,11 @@ import { CONNECT_CLIENT_ID } from "@/lib/payments/connect";
 import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
 import { publicShopRegisterPath } from "@/lib/public-routes";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
+import {
+  isSeasonEventLive,
+  SEASON_EVENT_NAME_MAX,
+  SEASON_EVENT_NOTE_MAX,
+} from "@/lib/season-events";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
@@ -93,9 +100,11 @@ import { AddressSearch } from "./AddressSearch";
 import {
   createBoatAction,
   createDivePackageAction,
+  createSeasonEventAction,
   createTripLensAction,
   deleteBoatAction,
   deleteDivePackageAction,
+  deleteSeasonEventAction,
   deleteTripLensAction,
   dischargeProcessorErasureAction,
   disconnectAction,
@@ -124,6 +133,7 @@ import {
   saveTimezoneAction,
   saveUnitsAction,
   updateBoatAction,
+  updateSeasonEventAction,
   updateTripLensAction,
 } from "./actions";
 import { CounterQrCard } from "./CounterQrCard";
@@ -232,6 +242,10 @@ function noticeMessages(
     "lens-updated": { tone: "success", text: t("lenses.updated") },
     "lens-deleted": { tone: "success", text: t("lenses.deleted") },
     "lens-invalid": { tone: "danger", text: t("lenses.invalid") },
+    "season-event-created": { tone: "success", text: t("seasonEvents.created") },
+    "season-event-updated": { tone: "success", text: t("seasonEvents.updated") },
+    "season-event-deleted": { tone: "success", text: t("seasonEvents.deleted") },
+    "season-event-invalid": { tone: "danger", text: t("seasonEvents.invalid") },
   };
 }
 
@@ -514,6 +528,7 @@ export default async function SettingsPage({
     siteBottomTimeOverrides,
     shopBoats,
     shopLenses,
+    shopSeasons,
   ] = await Promise.all([
     listPendingMediaDeletions(db, session.user.shopId),
     listOwedProcessorErasures(db, session.user.shopId),
@@ -522,6 +537,8 @@ export default async function SettingsPage({
     // The shop's own words for its kinds of day (ADR
     // 20260904-reef-all-the-way-down, decision 2).
     listTripLenses(db, session.user.shopId),
+    // The shop's own year, read beside the words a season may name (issue #1485).
+    listSeasonEvents(db, session.user.shopId),
   ]);
   // **How much history each hull carries**, so the confirm can say so before a
   // shop taps Delete. Sequential rather than a fan-out: this reads through the
@@ -662,6 +679,13 @@ export default async function SettingsPage({
   const boatsValue =
     shopBoats.length > 0 ? t("boats.value", { count: shopBoats.length }) : t("boats.noBoats");
   const lensesValue = t("lenses.value", { count: shopLenses.length });
+  const seasonsValue = t("seasonEvents.value", { count: shopSeasons.length });
+  /**
+   * Today at the shop, for the one badge in this inset: which season is running
+   * right now. The shop's own calendar day, never the server's — a Key Largo
+   * mini-season closes at midnight in Key Largo (`src/lib/season-events.ts`).
+   */
+  const shopCalendarToday = calendarDateInTimezone(nowDate(), shop.timezone);
   // A count, not the numbers themselves: this row is read on the hub and the
   // numbers belong on the boat, not on a settings list somebody is scrolling.
   const emergencyValue = hasEmergencyReference(shop.emergencyReference)
@@ -2111,6 +2135,169 @@ export default async function SettingsPage({
                       {t("lenses.add")}
                     </SubmitButton>
                   </form>
+                </div>
+              </div>
+            </SettingsRow>
+            {/* **The reef's calendar** (issue #1485). Beside the words above it,
+              because a season is written the same way and often names one: the
+              shop types mini-season, its two days and what it wants divers to
+              know, and the storefront shows exactly that while the week is on.
+              Ungated like the row above — a shore-diving shop still has a
+              mini-season. */}
+            <SettingsRow
+              heading={t("seasonEvents.heading")}
+              value={seasonsValue}
+              sectionId="seasonEvents"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="seasonEvents" active={activeSection} />
+              <div className="space-y-4 mt-4">
+                {shopSeasons.length === 0 ? (
+                  <p className="text-sm text-muted italic">{t("seasonEvents.none")}</p>
+                ) : (
+                  <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
+                    {shopSeasons.map((season) => (
+                      <div key={season.id} className="space-y-3 p-3 bg-surface">
+                        {/* The one badge in this inset, and it marks the
+                          exceptional state (principle 9): most of a shop's
+                          calendar is months away, and the one week that is
+                          actually on the storefront right now is the one worth
+                          finding at a glance. */}
+                        {isSeasonEventLive(season, shopCalendarToday) ? (
+                          <Badge tone="success">{t("seasonEvents.live")}</Badge>
+                        ) : null}
+                        <FieldGrid as="form" columns={2} action={updateSeasonEventAction}>
+                          <input type="hidden" name="eventId" value={season.id} />
+                          <Field label={t("seasonEvents.nameLabel")}>
+                            <input
+                              name="name"
+                              type="text"
+                              required
+                              maxLength={SEASON_EVENT_NAME_MAX}
+                              defaultValue={season.name}
+                              className={controlClass}
+                            />
+                          </Field>
+                          <Field label={t("seasonEvents.lensLabel")}>
+                            <select
+                              name="lensId"
+                              defaultValue={season.lensId ?? ""}
+                              className={controlClass}
+                            >
+                              <option value="">{t("seasonEvents.lensNone")}</option>
+                              {shopLenses.map((lens) => (
+                                <option key={lens.id} value={lens.id}>
+                                  {lens.name}
+                                </option>
+                              ))}
+                            </select>
+                          </Field>
+                          <Field label={t("seasonEvents.startLabel")}>
+                            <input
+                              name="startsOn"
+                              type="date"
+                              required
+                              defaultValue={season.startsOn}
+                              className={controlClass}
+                            />
+                          </Field>
+                          <Field label={t("seasonEvents.endLabel")}>
+                            <input
+                              name="endsOn"
+                              type="date"
+                              required
+                              defaultValue={season.endsOn}
+                              className={controlClass}
+                            />
+                          </Field>
+                          <Field label={t("seasonEvents.noteLabel")} className="sm:col-span-2">
+                            <textarea
+                              name="note"
+                              rows={2}
+                              maxLength={SEASON_EVENT_NOTE_MAX}
+                              defaultValue={season.note ?? ""}
+                              className={controlClass}
+                            />
+                          </Field>
+                          <FieldActions>
+                            <SubmitButton
+                              pendingLabel={t("seasonEvents.submitting")}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                            >
+                              {t("seasonEvents.submit")}
+                            </SubmitButton>
+                          </FieldActions>
+                        </FieldGrid>
+                        {/* Its own form beside the edit, never inside it:
+                          `InlineConfirm` submits the form it sits in, and forms
+                          cannot nest. */}
+                        <form action={deleteSeasonEventAction}>
+                          <input type="hidden" name="eventId" value={season.id} />
+                          <InlineConfirm
+                            triggerLabel={t("seasonEvents.delete")}
+                            confirmLabel={t("seasonEvents.deleteConfirm")}
+                            pendingLabel={t("seasonEvents.deletePending")}
+                            triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
+                          />
+                        </form>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="border border-dashed border-border rounded-lg p-4 bg-surface-sunken">
+                  <h4 className="text-sm font-medium mb-3">{t("seasonEvents.createTitle")}</h4>
+                  <FieldGrid as="form" columns={2} action={createSeasonEventAction}>
+                    <Field label={t("seasonEvents.nameLabel")}>
+                      <input
+                        name="name"
+                        type="text"
+                        required
+                        maxLength={SEASON_EVENT_NAME_MAX}
+                        className={controlClass}
+                      />
+                    </Field>
+                    <Field label={t("seasonEvents.lensLabel")}>
+                      <select name="lensId" defaultValue="" className={controlClass}>
+                        <option value="">{t("seasonEvents.lensNone")}</option>
+                        {shopLenses.map((lens) => (
+                          <option key={lens.id} value={lens.id}>
+                            {lens.name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label={t("seasonEvents.startLabel")}>
+                      <input name="startsOn" type="date" required className={controlClass} />
+                    </Field>
+                    <Field label={t("seasonEvents.endLabel")}>
+                      <input name="endsOn" type="date" required className={controlClass} />
+                    </Field>
+                    {/* The one line that earns its place here, for the same
+                      reason the vocabulary's hint does: it names the consequence
+                      a shop cannot see from this form, which is that these words
+                      go out to divers. */}
+                    <Field
+                      label={t("seasonEvents.noteLabel")}
+                      description={t("seasonEvents.hint")}
+                      className="sm:col-span-2"
+                    >
+                      <textarea
+                        name="note"
+                        rows={2}
+                        maxLength={SEASON_EVENT_NOTE_MAX}
+                        className={controlClass}
+                      />
+                    </Field>
+                    <FieldActions>
+                      <SubmitButton
+                        pendingLabel={t("seasonEvents.adding")}
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                      >
+                        {t("seasonEvents.add")}
+                      </SubmitButton>
+                    </FieldActions>
+                  </FieldGrid>
                 </div>
               </div>
             </SettingsRow>

@@ -86,7 +86,8 @@
     "unitsUnconfirmed": "Configuración",
     "helpRequest": "Solicitud de ayuda",
     "sayHello": "Saluda",
-    "rentalFit": "Equipo"
+    "rentalFit": "Equipo",
+    "seasonEvent": "Temporada"
   },
   "blockerAction": {
     "setRequirements": "Configurar requisitos",
@@ -198,7 +199,8 @@
     "openGearUnit": "Abrir ficha de la unidad",
     "openStaffing": "Abrir personal",
     "openUnits": "Abrir unidades",
-    "openDiver": "Abrir ficha del buceador"
+    "openDiver": "Abrir ficha del buceador",
+    "openSchedule": "Abrir el calendario"
   },
   "greeting": {
     "morning": "Buenos días, {name}",
@@ -237,6 +239,9 @@
   "reviewsPending": {
     "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión",
     "detail": "Los buceadores escribieron sobre sus salidas. Publica las buenas palabras u oculta el resto."
+  },
+  "seasonEvent": {
+    "detail": "Empieza el {date}."
   },
   "unitsUnconfirmed": {
     "subject": "¿En qué moneda y unidad de profundidad trabaja este centro?",

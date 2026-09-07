@@ -4634,6 +4634,26 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * The shop's own year, open (issue #1485) — the reef's calendar, where a
+       * shop writes mini-season and the sentence a diver reads on the
+       * storefront while it is running.
+       *
+       * Its own capture for the reason the two rows above have one: it is
+       * closed in `settings-payments`, and this is the only place the form is
+       * looked at. The seeded calendar carries a window that is live, so the
+       * "Running now" badge — the one badge in the inset, and the whole reason
+       * a shop can find the week that is on its storefront at a glance — is in
+       * frame rather than theoretical.
+       */
+      test(`the seasons card renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await page.getByRole("heading", { name: "Seasons and events" }).waitFor();
+        await openSettingsRow(page, "Seasons and events");
+        await page.getByRole("button", { name: "Add" }).last().waitFor();
+        await capture(page, "settings-seasons", scheme);
+      });
+
+      /**
        * The dock-day rhythm, open — six minute boxes and the live strip of
        * beats they produce (ADR 20260812-configurable-dock-day-rhythm). Its own
        * capture for the same reason the address card has one: the row is closed

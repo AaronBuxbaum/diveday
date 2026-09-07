@@ -156,6 +156,11 @@
     "boatsHeading": "Las embarcaciones",
     "boatSeats": "{count, plural, one {# buceador} other {# buceadores}}"
   },
+  "season": {
+    "eyebrow": "En temporada",
+    "through": "Hasta el {date}",
+    "lensLink": "Ver salidas de {lens}"
+  },
   "trip": {
     "courseSession": "Sesión de curso",
     "privateCharter": "Chárter privado",

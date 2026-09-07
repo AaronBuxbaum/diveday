@@ -156,6 +156,11 @@
     "boatsHeading": "The boats",
     "boatSeats": "{count, plural, one {# diver} other {# divers}}"
   },
+  "season": {
+    "eyebrow": "In season",
+    "through": "Through {date}",
+    "lensLink": "See {lens} departures"
+  },
   "trip": {
     "courseSession": "Course session",
     "privateCharter": "Private charter",
