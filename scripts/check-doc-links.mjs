@@ -67,7 +67,6 @@ const files = [
   "AGENTS.md",
   ...(await walk("docs")),
   ...(await walk(".claude/skills")),
-  ...(await walk(".claude/rules")),
 ];
 
 const contentsByFile = new Map();

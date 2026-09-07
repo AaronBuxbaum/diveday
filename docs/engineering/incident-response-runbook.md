@@ -24,13 +24,12 @@ Gmail. The stack default only takes effect on the next `pnpm infra:deploy`; a st
 2026-08-06 still carries the old subscription until then, and the SNS email subscription it creates
 needs a human to click Confirm in the mailbox either way.
 
-**The external monitor exists as of 2026-09-07** (ADR
-[20260907-external-uptime-monitor](../architecture/decisions/20260907-external-uptime-monitor.md)).
-Everything above is a path *out of* DiveDay's own infrastructure into a mailbox, and all of it goes
-quiet in a total outage — the Vercel project down, DNS wrong, the region gone. A Route 53 health
-check does not: it polls `/api/health` from AWS's own checker regions, outside this account, and
-alarms into the same topic. See [Uptime monitoring](#uptime-monitoring) below for what it checks and
-what is still uncovered.
+> `TODO(owner)` — **Stand up the external uptime monitor and the public status page.** Everything
+> above is a path *out of* DiveDay's own infrastructure into a mailbox. Nothing yet watches from
+> outside: a total outage — the Vercel project down, DNS wrong, the region gone — takes the alerting
+> with it, so the first person to notice is a shop with a boat leaving. The target and the cadence
+> are specified in [monitoring-runbook.md](monitoring-runbook.md); this is the half of OPS-4 that is
+> still zero.
 
 ## Severity ladder
 
@@ -123,24 +122,6 @@ Sentry reports errors the app *notices*. It cannot report the app being unreacha
 never booting, or DNS failing — the app is not running to report anything. That gap is what an
 external uptime monitor covers, and it is the one monitoring layer that watches from outside.
 
-**What is wired, and where.** The liveness probe below is a Route 53 health check declared in §22 of
-`infra/lib/infra-stack.ts` off the `UPTIME_TARGETS` row in `infra/lib/observability.ts` — `pnpm
-infra:deploy` creates it, and there is nothing to set up in a third-party console. It polls every 30
-seconds from several AWS regions, matches `"status":"ok"` in the body as well as the 200, and its
-CloudWatch alarm reaches `alerts@dive.day` about four minutes after the site goes away. Its alarm is
-the one alarm in the stack that treats **missing data as breaching**: a monitor that has gone quiet
-is indistinguishable from the outage it watches for.
-
-**What a shop sees.** `https://dive.day/status` runs the same checks in the request that renders it
-and says what it found and when. Point a shop at it rather than answering "is it just me" by hand,
-and read it yourself before diagnosing: it separates "the app is gone" from "the app is up and the
-database is not" in one line.
-
-**Still uncovered:** the second target below. A health check cannot render a page, so nothing yet
-catches a 200 that draws an empty shell. That needs a browser canary against a real shop's public
-schedule, which needs a pilot shop's slug — see AWS-1 in
-[aws-migration-dossier.md](../architecture/aws-migration-dossier.md).
-
 Two targets, deliberately different in kind:
 
 | Target | URL | Checks | Alert on |
@@ -153,17 +134,18 @@ rendering bug 500s every real page. The schedule alone is not enough either: it 
 "the app is down" from "this shop's page is broken". Together they separate those cases in the alert
 itself.
 
-The liveness probe needs no setup beyond a deploy. One thing is still worth doing by hand, once:
+Setup (any of UptimeRobot, Better Stack, or Vercel's own monitoring works; the free tiers are
+sufficient at this scale):
 
-**Test the alert path deliberately.** In the Route 53 console, open the health check and turn
-*Invert health check status* on for a few minutes. The alarm should fire and the mail should land in
-`alerts@dive.day`; turn it back off afterwards. An untested alert path is indistinguishable from no
-alert path, and this is the only alert in the product whose whole value is that it works on the
-worst day.
-
-When the schedule check is built (a browser canary, against a real shop), assert on text the page
-itself renders. **Do not** assert on a date or price — those move with the clock and the negotiated
-locale, and the check will flap.
+1. Create both checks above at a **5-minute** interval, HTTP GET, 10-second timeout.
+2. Require **two consecutive failures** before alerting. A single failed poll is noise; the second
+   is signal.
+3. Send alerts to `alerts@dive.day` — the mailbox exists, so this needs no interim address.
+4. On the schedule check, add a keyword assertion on text you expect the page to contain, so a
+   `200` that renders an empty shell still fails. **Do not** assert on a date or price — those move
+   with the clock and the negotiated locale, and the check will flap.
+5. **Test the alert path once, deliberately**, by pausing the check or pointing it at a URL you know
+   404s. An untested alert path is indistinguishable from no alert path.
 
 The third external signal is already wired: the Sentry Cron Monitor check-in in
 `src/app/api/cron/reminders/route.ts` (`diveday-daily-tick`, overridable via

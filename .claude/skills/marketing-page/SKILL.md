@@ -78,8 +78,7 @@ written down.
 
 ## Verify (the definition of done)
 
-1. The local gate green — `pnpm check:repo`, `pnpm lint`, `pnpm typecheck`, `pnpm test:changed`
-   (`pnpm check:voice` is the fast first pass for a copy change); the whole `pnpm check` runs on CI.
+1. `pnpm check` green (`pnpm check:voice` is the fast local half for a copy change).
 2. `pnpm e2e marketing.spec.ts --reporter=line` — update its pinned headline/price assertions
    deliberately when copy changes; a red marketing spec on a copy change is the test working.
 3. Screenshot every touched route and **look at the PNGs**, light + dark, desktop + phone. The

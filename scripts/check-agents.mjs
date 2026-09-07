@@ -113,83 +113,17 @@ for (const [areaName, area] of Object.entries(areas)) {
 // .claude/) and assert it exists on disk. Skip glob-ish or placeholder tokens (`**`, `<feature>`)
 // — those are prose, not a literal path — but treat bracketed dynamic segments like `[shopSlug]`
 // literally, since Next.js directories are named exactly that.
-const routePathPattern = /`((?:src|scripts|docs|e2e|config|infra|\.claude)\/[^`]*)`/g;
-const repoPathTokens = (markdown) =>
-  new Set(
-    [...markdown.matchAll(routePathPattern)]
-      .map((m) => m[1])
-      .filter((token) => !token.includes("*") && !token.includes("<")),
-  );
-const routePathTokens = repoPathTokens(agentsMd);
+const routePathPattern = /`((?:src|scripts|docs|e2e|\.claude)\/[^`]*)`/g;
+const routePathTokens = new Set(
+  [...agentsMd.matchAll(routePathPattern)]
+    .map((m) => m[1])
+    .filter((token) => !token.includes("*") && !token.includes("<")),
+);
 for (const token of routePathTokens) {
   try {
     await access(path.join(ROOT, token));
   } catch {
     problems.push(`AGENTS.md: route-map path "${token}" does not exist`);
-  }
-}
-
-// 5b. The path-scoped rules carry the other half of the route map — the rows that only matter
-// under one directory moved there so a session that never touches it never pays for them — and
-// misroute exactly as badly when a path they name is renamed away. Every rules file needs
-// frontmatter with a `paths:` list (a rule without one is loaded at launch, which the context
-// budget counts, but is almost always a rule that meant to be scoped and forgot), and every
-// backticked repo path in it must exist.
-async function rulesFiles(relative = "") {
-  const dir = path.join(ROOT, ".claude/rules", relative);
-  let entries;
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-  const found = [];
-  for (const entry of entries) {
-    const next = relative ? `${relative}/${entry.name}` : entry.name;
-    if (entry.isDirectory()) found.push(...(await rulesFiles(next)));
-    else if (entry.name.endsWith(".md")) found.push(next);
-  }
-  return found.sort();
-}
-const ruleFiles = await rulesFiles();
-let rulePathCount = 0;
-for (const file of ruleFiles) {
-  const relative = `.claude/rules/${file}`;
-  const contents = await readFile(path.join(ROOT, relative), "utf8");
-  const block = contents.match(/^---\n([\s\S]*?)\n---/);
-  if (!block) {
-    problems.push(
-      `${relative}: no frontmatter — a rule needs \`paths:\` so it loads only beside the files it governs; without one it is loaded by every session`,
-    );
-  } else if (!/^paths:/m.test(block[1])) {
-    problems.push(
-      `${relative}: frontmatter has no \`paths:\` list, so every session loads it in full — scope it, or move it into AGENTS.md where the budget can see it`,
-    );
-  } else {
-    const globs = [...block[1].matchAll(/^\s*-\s*"?([^"\n]+?)"?\s*$/gm)].map((m) => m[1]);
-    if (globs.length === 0) problems.push(`${relative}: \`paths:\` names no patterns`);
-    for (const glob of globs) {
-      // The literal directory prefix of each glob must exist: `src/db/**` needs `src/db`,
-      // `scripts/aws-*.mjs` needs `scripts`.
-      const beforeGlob = glob.split(/[*{[]/)[0];
-      const literal = beforeGlob.includes("/")
-        ? beforeGlob.slice(0, beforeGlob.lastIndexOf("/"))
-        : beforeGlob;
-      if (!literal) continue;
-      try {
-        await access(path.join(ROOT, literal));
-      } catch {
-        problems.push(`${relative}: \`paths:\` pattern "${glob}" — ${literal} does not exist`);
-      }
-    }
-  }
-  for (const token of repoPathTokens(contents)) {
-    rulePathCount += 1;
-    try {
-      await access(path.join(ROOT, token));
-    } catch {
-      problems.push(`${relative}: path "${token}" does not exist`);
-    }
   }
 }
 
@@ -217,46 +151,6 @@ for (const entry of settings.permissions?.allow ?? []) {
   if (pnpmTarget && !pnpmBuiltins.has(pnpmTarget) && !packageScripts.has(pnpmTarget)) {
     problems.push(
       `.claude/settings.json: allow entry "${entry}" — package.json has no "${pnpmTarget}" script`,
-    );
-  }
-}
-
-// 6b. Every hook command names a script that exists. A hook whose script is gone does not
-// fail loudly: Claude Code reports a non-blocking "hook error" once and carries on, and the
-// rule the hook enforced is silently back to being remembered. The same goes for a script
-// that exists but is never wired — it looks like enforcement in the tree and enforces nothing.
-const hookCommands = Object.entries(settings.hooks ?? {}).flatMap(([event, entries]) =>
-  entries.flatMap((entry) =>
-    (entry.hooks ?? []).map((hook) => ({ event, command: hook.command ?? "" })),
-  ),
-);
-const wiredScripts = new Set();
-for (const { event, command } of hookCommands) {
-  const script = command.match(/scripts\/([\w.-]+\.mjs)/)?.[1];
-  if (!script) {
-    problems.push(`.claude/settings.json: ${event} hook "${command}" does not run a scripts/ file`);
-    continue;
-  }
-  wiredScripts.add(script);
-  if (!existsSync(path.join(ROOT, "scripts", script))) {
-    problems.push(
-      `.claude/settings.json: ${event} hook runs scripts/${script}, which does not exist`,
-    );
-  }
-}
-for (const script of [
-  "guard-bash.mjs",
-  "guard-read.mjs",
-  "format-touched.mjs",
-  "session-context.mjs",
-  "explain-failure.mjs",
-  "stray-processes.mjs",
-  "unfinished-promises.mjs",
-  "unpushed-work.mjs",
-]) {
-  if (!wiredScripts.has(script)) {
-    problems.push(
-      `scripts/${script} is a session hook but .claude/settings.json does not wire it — it enforces nothing until it runs`,
     );
   }
 }
@@ -335,5 +229,5 @@ if (problems.length > 0) {
 }
 
 console.log(
-  `agents: ${skillDirs.length} skills, ${agentFiles.length} reviewer agents, ${ruleFiles.length} path-scoped rules, ${hookCommands.length} hooks, ${Object.keys(areas).length} task-context areas, ${routePathTokens.size} AGENTS.md and ${rulePathCount} rules paths in sync`,
+  `agents: ${skillDirs.length} skills, ${agentFiles.length} reviewer agents, ${Object.keys(areas).length} task-context areas, ${routePathTokens.size} AGENTS.md route-map paths in sync`,
 );

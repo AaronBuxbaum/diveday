@@ -94,8 +94,7 @@ export type TodayActionKind =
   | "staff_credential_due"
   | "units_unconfirmed"
   | "say_hello"
-  | "rental_fit_confirm"
-  | "season_event_upcoming";
+  | "rental_fit_confirm";
 
 /**
  * Severity breaks ties inside a single departure. It ranks by how long the fix
@@ -224,11 +223,6 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // anything today wants: a unit came home in a size the fit does not record,
   // and the shop may keep it or leave it (issue #1174, D14).
   rental_fit_confirm: 35,
-  // The bottom, and it belongs there: a season a month out is the only row in
-  // this queue about a week nobody is working yet. It is here so a shop finds
-  // out while it can still put boats on the water (issue #1485), and it must
-  // never outrank a diver standing at the counter today.
-  season_event_upcoming: 36,
 };
 
 /**
@@ -287,10 +281,6 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   // The same audience the other gear rows have, and for the same reason: the
   // person who handed the diver a different BCD is whoever was at the counter.
   rental_fit_confirm: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
-  // Whoever puts departures on the board. A captain reading the queue at the
-  // rail cannot schedule three boats for mini-season, and a row they can do
-  // nothing about is a row that teaches them to skim the queue.
-  season_event_upcoming: ["owner", "manager"],
 };
 
 /**
@@ -383,9 +373,6 @@ export const ACTION_KIND_META = {
   // Neutral: a question about a size is not a problem, and a warning-toned row
   // asking whether to keep a wetsuit size would read as gear trouble.
   rental_fit_confirm: { tone: "neutral" },
-  // Neutral: a season the shop wrote down itself, arriving on schedule. A
-  // warning-toned row about mini-season would read as bad news about it.
-  season_event_upcoming: { tone: "neutral" },
 } as const satisfies Record<TodayActionKind, { tone: "danger" | "warning" | "neutral" }>;
 
 /**

@@ -46,7 +46,6 @@ import reports from "./reports.json";
 import requests from "./requests.json";
 import reviews from "./reviews.json";
 import schedule from "./schedule.json";
-import seasonEvents from "./seasonEvents.json";
 import seatDiver from "./seatDiver.json";
 import settings from "./settings.json";
 import shared from "./shared.json";
@@ -94,7 +93,6 @@ const staff = {
   integrations,
   boats,
   lenses,
-  seasonEvents,
 };
 
 export default staff;

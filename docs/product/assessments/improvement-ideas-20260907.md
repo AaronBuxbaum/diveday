@@ -53,6 +53,10 @@ head or a NOAA tab.
   *Build:* schema + `src/lib/season-events.ts`, a Settings inset, one storefront band, a lens
   join in `trip-lenses.ts`. *Effort:* M. *Needs:* i18n for the band's frame only; the words are
   the shop's.
+- **N-03 Moon and light on night departures.** Sunset, civil twilight and moon phase computed
+  locally (a small pure solar/lunar module, no dependency) for any departure that starts after the
+  shop's dusk. Renders on the briefing, the thread's prep step and the night-before brief.
+  *Build:* `src/lib/sky.ts` + a line in `TripDayPlan` and `night-before-brief.ts`. *Effort:* S.
 
 ## 2. The diver's body
 
@@ -429,6 +433,7 @@ Each *Build now* is a `ready-for-agent` issue with a prompt and a stacked pull r
 | --- | --- | --- | --- | --- | --- |
 | N-01 | Tide and current window | M | ADR | Now | **Build now** (2026-09-07) |
 | N-02 | The reef's calendar | M | | After pilot | **Build now** (2026-09-07) |
+| N-03 | Moon and light on night departures | S | | Now | **Build now** (2026-09-07) |
 | N-04 | Fly-safe and surface-interval line | S | domain | Now | **Build now** (2026-09-07) |
 | N-05 | After-dive check-in inside the recap | S | domain, security | After pilot | **No** (2026-09-07) |
 | N-06 | The day's profile before booking | S | domain | Now | **Build now** (2026-09-07) |
@@ -497,7 +502,7 @@ the stacked-prs skill. Batches are independent of each other.
 1. **The boat's minutes** (manifest, staffing, gear): N-08, N-09, N-12, N-13, N-41. Owns
    `src/lib/pre-departure-check.ts`, `staffing-week.ts`, `src/db/gear.ts`, the stage-event
    listener, `staff/staffing.json` and `staff/gear.json`.
-2. **The water and the diver's day** (sites, trip page, thread): N-01, N-04, N-06, N-39.
+2. **The water and the diver's day** (sites, trip page, thread): N-01, N-03, N-04, N-06, N-39.
    Owns `src/lib/dive-sites.ts`, `TripDayPlan.tsx`, `AfterState.tsx`, `night-before-brief.ts`,
    `diver.json`.
 3. **The room** (display, sound, paper, off-season): N-23, N-26, N-27, N-45, N-54. Owns a new

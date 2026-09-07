@@ -714,9 +714,6 @@ export default async function TripDetailPage({
             stays time-neutral, since durations promise no clock. */}
         <TripDayPlan
           briefings={diveBriefings}
-          shop={shop}
-          startsAt={trip.startsAt}
-          endsAt={trip.endsAt}
           locale={locale}
           profile={{
             rhythm: shop,

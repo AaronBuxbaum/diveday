@@ -7,7 +7,6 @@ import {
   type JsonLdObject,
   pruneJsonLd,
   type ReviewForStructuredData,
-  regionJsonLd,
   reviewsJsonLd,
   type ShopForStructuredData,
   scheduleJsonLd,
@@ -513,52 +512,5 @@ describe("aggregateRating and a curated record", () => {
       suppressedCount: 6,
     });
     expect(graph.aggregateRating).toBeUndefined();
-  });
-});
-
-describe("regionJsonLd", () => {
-  const shop = {
-    name: "Reef Line Divers",
-    slug: "reef-line-divers",
-    tagline: "Two tanks on the outer reef, every morning.",
-    contactEmail: "desk@reefline.invalid",
-    contactPhone: null,
-    currency: "usd",
-    addressStreet: "88 Marina Way",
-    addressLocality: "Key Largo",
-    addressRegion: "FL",
-    addressPostalCode: "33037",
-    addressCountry: "US",
-  };
-
-  it("lists the town's shops in the order the page renders them", () => {
-    const graph = regionJsonLd(
-      "Dive shops in Key Largo",
-      [shop, { ...shop, name: "Keys Current Charters", slug: "keys-current" }],
-      "https://dive.day",
-    );
-    expect(graph).toMatchObject({
-      "@type": "ItemList",
-      name: "Dive shops in Key Largo",
-      numberOfItems: 2,
-    });
-    const items = graph?.itemListElement as {
-      position: number;
-      item: { name: string; url: string };
-    }[];
-    expect(items.map((entry) => [entry.position, entry.item.name])).toEqual([
-      [1, "Reef Line Divers"],
-      [2, "Keys Current Charters"],
-    ]);
-    expect(items[0]?.item.url).toBe("https://dive.day/s/reef-line-divers");
-    // Each shop is the same operator node its own storefront publishes, address included.
-    expect(items[0]?.item).toMatchObject({
-      "@type": "SportsActivityLocation",
-      address: { "@type": "PostalAddress", addressLocality: "Key Largo" },
-    });
-  });
-
-  it("emits nothing for a region with no shops, which the route 404s anyway", () => {
-    expect(regionJsonLd("Dive shops in Atlantis", [], "https://dive.day")).toBeNull();
   });
 });

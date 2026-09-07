@@ -26,7 +26,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
-import { measure, rules } from "./check-context-budget.mjs";
+import { measure } from "./check-context-budget.mjs";
 
 const ROOT = process.cwd();
 const TOKENS_PER_WORD = 1.35;
@@ -58,18 +58,6 @@ for (const [file, count] of Object.entries(measured).sort((a, b) => b[1] - a[1])
 console.log(
   `  ${String(total).padStart(6)} words  TOTAL — roughly ${Math.round((total * TOKENS_PER_WORD) / 100) * 100} tokens before a session reads a line of code\n`,
 );
-
-// ------------------------------------------------------- path-scoped rules
-// Paid for only by the session that reads a matching file — the half of the old AGENTS.md
-// that moved out of every session's prompt and into the one that needs it.
-const scoped = (await rules(ROOT)).filter((rule) => rule.scoped);
-console.log("Path-scoped rules (loaded only beside a matching file)");
-for (const rule of scoped.sort((a, b) => b.words - a.words)) {
-  console.log(
-    `  ${String(rule.words).padStart(6)} words  ${rule.file}  (~${Math.round((rule.words * TOKENS_PER_WORD) / 100) * 100} tokens when it loads)`,
-  );
-}
-console.log();
 
 // ------------------------------------------------------- front-end coverage
 const coverage = await readJson("scripts/route-coverage.json");
@@ -128,15 +116,12 @@ console.log("Session wiring");
 console.log(`  ${skills.length} skills, ${agents.length} reviewer agents`);
 for (const [event, entries] of Object.entries(settings.hooks ?? {})) {
   const commands = entries.flatMap((entry) =>
-    (entry.hooks ?? []).map((hook) => {
-      const command = (hook.command ?? "").replace(/.*?scripts\//, "scripts/").replace(/"/g, "");
-      return entry.matcher ? `${command} [${entry.matcher}]` : command;
-    }),
+    (entry.hooks ?? []).map((hook) =>
+      (hook.command ?? "").replace(/.*?scripts\//, "scripts/").replace(/"/g, ""),
+    ),
   );
-  console.log(`  ${event.padEnd(19)} ${commands.join(", ")}`);
+  console.log(`  ${event.padEnd(14)} ${commands.join(", ")}`);
 }
-const denied = settings.permissions?.deny ?? [];
-console.log(`  ${denied.length} deny rules keep secrets and generated data out of the file tools`);
 console.log(
   "\nNothing here is a gate. `pnpm check:context-budget` is the only one of these numbers that can fail a build.",
 );

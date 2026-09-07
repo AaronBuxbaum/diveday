@@ -59,50 +59,12 @@ function frontmatterDescription(contents) {
   return line ? line[1] : "";
 }
 
-/** Whether a `.claude/rules/*.md` file carries `paths:` frontmatter, and so loads on demand. */
-export function isPathScoped(contents) {
-  const block = contents.match(/^---\n([\s\S]*?)\n---/);
-  return Boolean(block && /^paths:/m.test(block[1]));
-}
-
 async function listDirs(root, relative) {
   const entries = await readdir(path.join(root, relative), { withFileTypes: true });
   return entries
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
-}
-
-/**
- * Every `.claude/rules/*.md`, recursively, with its word count and whether it is path-scoped.
- * A scoped rule is paid for only by the session that reads a matching file; an unscoped one is
- * loaded at launch beside AGENTS.md, so it belongs in the budget.
- */
-export async function rules(root = ROOT) {
-  const dir = path.join(root, ".claude/rules");
-  const found = [];
-  async function walk(relative) {
-    let entries;
-    try {
-      entries = await readdir(path.join(dir, relative), { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-      const next = relative ? `${relative}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) await walk(next);
-      else if (entry.name.endsWith(".md")) {
-        const contents = await readFile(path.join(dir, next), "utf8");
-        found.push({
-          file: `.claude/rules/${next}`,
-          words: words(contents),
-          scoped: isPathScoped(contents),
-        });
-      }
-    }
-  }
-  await walk("");
-  return found;
 }
 
 /** Every file whose full text or description reaches a session unconditionally. */
@@ -112,13 +74,6 @@ export async function measure(root = ROOT) {
   for (const file of ["CLAUDE.md", "AGENTS.md"]) {
     measured[file] = words(await readFile(path.join(root, file), "utf8"));
   }
-
-  // A rule without `paths:` is AGENTS.md by another name — loaded at launch, in full.
-  let unscopedRules = 0;
-  for (const rule of await rules(root)) {
-    if (!rule.scoped) unscopedRules += rule.words;
-  }
-  measured[".claude/rules/*.md (without paths: frontmatter)"] = unscopedRules;
 
   let skillDescriptions = 0;
   for (const dir of await listDirs(root, ".claude/skills")) {

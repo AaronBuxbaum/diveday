@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
-import {
-  type BriefUnits,
-  firstTimerReassuranceText,
-  forecastText,
-  nightSkyText,
-} from "./night-before-brief";
-import { nightSkyFor } from "./sky";
+import { type BriefUnits, firstTimerReassuranceText, forecastText } from "./night-before-brief";
 
 const t = diverTranslator("en-US");
 
@@ -111,46 +105,5 @@ describe("firstTimerReassuranceText", () => {
 
   it("offers a what-happens-on-the-boat line to a first-timer", () => {
     expect(firstTimerReassuranceText(t, true)).toContain("The crew walks everyone through");
-  });
-});
-
-/**
- * The sky half of the brief. A night departure is the one kind where the
- * evening before is exactly when a diver still has time to find their spare
- * torch, so the answer rides on the email rather than waiting for the dock.
- */
-describe("nightSkyText", () => {
-  const KEY_LARGO = { timeZone: "America/New_York", latitude: 25.0865, longitude: -80.4473 };
-
-  function skyFor(startsAt: string) {
-    return nightSkyFor({ startsAt: new Date(startsAt), ...KEY_LARGO });
-  }
-
-  it("names the light and the moon in the reader's own clock", () => {
-    // 7:30 PM Eastern on 2026-01-02, the demo shop's night charter hour.
-    expect(nightSkyText(t, "en-US", skyFor("2026-01-03T00:30:00Z"), KEY_LARGO.timeZone)).toBe(
-      "Sunset 5:44 PM, dark by 6:09 PM. Full moon, 100% lit.",
-    );
-  });
-
-  it("is null for a departure that leaves in daylight", () => {
-    // 9:00 AM Eastern, and nothing to say: the brief reads as it always did.
-    expect(nightSkyText(t, "en-US", skyFor("2026-01-02T14:00:00Z"), KEY_LARGO.timeZone)).toBeNull();
-  });
-
-  it("is null for a shop that has never set its address", () => {
-    expect(
-      nightSkyText(
-        t,
-        "en-US",
-        nightSkyFor({
-          startsAt: new Date("2026-01-03T00:30:00Z"),
-          timeZone: KEY_LARGO.timeZone,
-          latitude: null,
-          longitude: null,
-        }),
-        KEY_LARGO.timeZone,
-      ),
-    ).toBeNull();
   });
 });

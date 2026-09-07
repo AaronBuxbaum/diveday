@@ -140,7 +140,6 @@ import { seedPromos } from "./seed-promos";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRegionNeighbours } from "./seed-region-neighbours";
 import { seedRentalFit } from "./seed-rental-fit";
-import { seedSeasonEvents } from "./seed-season-events";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSupportNeeds } from "./seed-support-needs";
 import { seedTides } from "./seed-tides";
@@ -851,10 +850,6 @@ export async function seedDemoSchedule(
   // (ADR 20260904-reef-all-the-way-down, decision 2). After `seedMoreTrips`,
   // because it hangs the words on those departures by title.
   await seedLenses(db, shopId);
-
-  // The shop's own year (issue #1485). After the words above, because a season
-  // may name one — a mini-season fills the board with easygoing reef days.
-  await seedSeasonEvents(db, shopId);
 
   await seedPromos(db, shopId, promoRedemptionBooking);
 

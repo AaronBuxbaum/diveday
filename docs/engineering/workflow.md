@@ -18,10 +18,8 @@ How to build anything here. Written for AI agents; humans may follow along.
    (`pnpm test:watch`).
 3. **UI second** — token-styled (ADR-0004), copy per the voice rules
    ([design/principles.md](../design/principles.md)).
-4. **Verify** — the `verify` skill: the local gate (`pnpm check:repo`, `pnpm lint`,
-   `pnpm typecheck`, `pnpm test:changed`), one focused `pnpm e2e <spec>` when flows changed, and
-   for UI work look at the running app (screenshot light + dark) — never ship UI you haven't seen.
-   The whole `pnpm check` runs on CI ([agents/verifying.md](../agents/verifying.md)).
+4. **Verify** — the `verify` skill: `pnpm check`, `pnpm e2e` when flows changed, and for UI
+   work look at the running app (screenshot light + dark) — never ship UI you haven't seen.
 5. **Document** — update any doc your change invalidates; new hard-to-reverse choice → ADR
    (`adr` skill); new domain term → glossary.
 6. **File what you didn't do** — every idea, question, risk, or cleanup you are leaving behind
@@ -42,7 +40,7 @@ How to build anything here. Written for AI agents; humans may follow along.
 
 ## Definition of done
 
-- [ ] the local gate green and CI's `pnpm check` green; the touched `pnpm e2e <spec>` green when flows changed
+- [ ] `pnpm check` green; `pnpm e2e` green when flows changed
 - [ ] New logic has tests that fail without it
 - [ ] UI seen in browser, light + dark; design checklist passes for user-facing changes
 - [ ] Docs/ADR/glossary updated in the same PR
@@ -57,7 +55,7 @@ How to build anything here. Written for AI agents; humans may follow along.
 
 ## Rules
 
-- **Never skip verify.** A green `pnpm check` on CI is the floor, not the ceiling.
+- **Never skip verify.** A green `pnpm check` is the floor, not the ceiling.
 - **New runtime dependency = ADR** (or an entry in an existing one). Dev-tool bumps exempt.
 - **Don't expand scope silently.** Adjacent problems get a follow-up issue (see
   [../agents/issue-tracker.md](../agents/issue-tracker.md)) and a line in the PR, not a drive-by

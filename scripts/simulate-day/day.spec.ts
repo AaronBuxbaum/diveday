@@ -599,21 +599,6 @@ async function newActorContext(): Promise<BrowserContext> {
 async function snap(page: Page, index: number, id: string, suffix = ""): Promise<string> {
   const name = screenshotName(index, id, suffix);
   await page.mouse.move(0, 0);
-  // Put the window back at the top first. A state that clicked its way down the
-  // page leaves it scrolled — a roll-call row scrolled into centre, the "Close
-  // the day" button at the foot — and a `fullPage` shot of a scrolled page
-  // renders every `position: sticky` element at the offset it is stuck at
-  // rather than at rest. The staff header then lands in the middle of the
-  // transcript's screenshot, lying across the content it was taken to show
-  // (`13-day-closed.png` had it over the 11:00 station). `e2e/visual.spec.ts`
-  // scrolls to the top for exactly this reason, and warns when a page scrolls
-  // itself away again.
-  await page.evaluate(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-  });
-  // One painted frame, not a sleep: the shot must not race the scroll it just
-  // asked for, and a frame is the bound that says the scroll has been rendered.
-  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
   await page.screenshot({
     path: path.join(SIMULATION_OUT_DIR, name),
     fullPage: true,

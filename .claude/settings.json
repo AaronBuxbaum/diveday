@@ -21,7 +21,6 @@
       "Bash(node scripts/stray-processes.mjs:*)",
       "Bash(npx playwright test:*)",
       "Bash(git status)",
-      "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git show:*)",
@@ -29,16 +28,6 @@
       "Bash(git fetch:*)",
       "Bash(git pull:*)",
       "Bash(git rebase:*)",
-      "Bash(git rev-parse:*)",
-      "Bash(git rev-list:*)",
-      "Bash(git remote -v)",
-      "Bash(git stash list:*)",
-      "Bash(git worktree list)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git push -u origin:*)",
-      "Bash(ls:*)",
-      "Bash(wc:*)",
       "Bash(pnpm task:context:*)",
       "Bash(pnpm check:*)",
       "Bash(pnpm test *)",
@@ -52,57 +41,16 @@
       "Bash(find:*)",
       "mcp__github",
       "Bash(node scripts/unfinished-promises.mjs:*)",
-      "Bash(node scripts/unpushed-work.mjs:*)",
-      "Bash(node scripts/session-context.mjs:*)",
       "Bash(node scripts/check-context-budget.mjs:*)",
-      "Bash(node scripts/check-repo.mjs:*)",
       "Bash(node scripts/agent-health.mjs:*)",
       "Bash(node scripts/check-all.mjs:*)",
       "Bash(pnpm agent:health)",
       "Bash(pnpm exec vitest run *)",
       "Bash(pnpm exec biome check *)",
       "Bash(pnpm exec tsc *)"
-    ],
-    "deny": [
-      "Read(.env.local)",
-      "Read(.env.manual)",
-      "Read(.env.vercel)",
-      "Read(.env.github)",
-      "Read(.env.production)",
-      "Read(.env.development.local)",
-      "Read(.pglite/**)",
-      "Read(**/*.pem)",
-      "Read(~/.aws/**)",
-      "Read(~/.ssh/**)"
     ]
   },
-  "env": {
-    "NO_COLOR": "1"
-  },
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/session-context.mjs\"",
-            "timeout": 300,
-            "statusMessage": "Reading the checkout"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/session-context.mjs\" --prompt",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [
@@ -113,10 +61,6 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/scripts/unfinished-promises.mjs\""
-          },
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/unpushed-work.mjs\""
           }
         ]
       }
@@ -151,16 +95,6 @@
             "timeout": 10
           }
         ]
-      },
-      {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/guard-read.mjs\"",
-            "timeout": 10
-          }
-        ]
       }
     ],
     "PostToolUse": [
@@ -171,18 +105,6 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/scripts/format-touched.mjs\"",
             "timeout": 45
-          }
-        ]
-      }
-    ],
-    "PostToolUseFailure": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/explain-failure.mjs\"",
-            "timeout": 10
           }
         ]
       }

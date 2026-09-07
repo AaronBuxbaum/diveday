@@ -5,7 +5,7 @@ import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
-import { firstTimerReassuranceText, forecastText, nightSkyText } from "@/lib/night-before-brief";
+import { firstTimerReassuranceText, forecastText } from "@/lib/night-before-brief";
 import {
   type Notification,
   type NotificationProvider,
@@ -31,7 +31,6 @@ import {
   TRIP_REMINDER_CADENCES,
 } from "@/lib/reminders";
 import { maySendNow } from "@/lib/send-window";
-import { nightSkyFor } from "@/lib/sky";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
@@ -410,29 +409,9 @@ export async function sendDueReminders(
         )
       : null;
     const whoToText = isDay ? shop.contactPhone?.trim() || null : null;
-    // What the sky is doing, for a departure still out at sunset — the one
-    // thing about a night dive a shop cannot tell a diver from its own records
-    // (`src/lib/sky.ts`). The evening before is when a diver still has time to
-    // find their spare torch. Null for every daylight departure and every shop
-    // that has never set its address, which leaves the brief unchanged.
-    const night = isDay
-      ? nightSkyText(
-          t,
-          locale,
-          nightSkyFor({
-            startsAt: trip.startsAt,
-            endsAt: trip.endsAt,
-            timeZone: shop.timezone,
-            latitude: shop.latitude,
-            longitude: shop.longitude,
-          }),
-          shop.timezone,
-        )
-      : null;
     const brief = isDay
       ? {
           forecast,
-          night,
           bring: shop.packingList,
           whoToText,
           firstTimerNote: firstTimerReassuranceText(t, !returning.has(person.id)),

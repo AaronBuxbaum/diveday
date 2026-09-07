@@ -15,8 +15,6 @@ import {
   SAVED_LOG_QUERIES,
   SES_REPUTATION_SIGNALS,
   sesReputationAlarmNameFor,
-  UPTIME_TARGETS,
-  uptimeAlarmNameFor,
   WEB_VITAL_SIGNALS,
   webVitalAlarmNameFor,
   webVitalFilterPatternFor,
@@ -225,11 +223,7 @@ describe("the synthesized observability stack", () => {
     expect(alarms).toHaveLength(
       LOG_SIGNALS.filter((signal) => signal.alarm !== false).length +
         WEB_VITAL_SIGNALS.filter((signal) => signal.alarm).length +
-        SES_REPUTATION_SIGNALS.length +
-        // The external uptime alarms (S22). No metric filter behind them --
-        // Route 53 publishes the metric -- so they add to the alarm count and
-        // not to the filter count above.
-        UPTIME_TARGETS.length,
+        SES_REPUTATION_SIGNALS.length,
     );
 
     for (const signal of LOG_SIGNALS) {
@@ -322,101 +316,6 @@ describe("the synthesized observability stack", () => {
       expect(alarm?.Properties?.TreatMissingData).toBe("notBreaching");
       expect(alarm?.Properties?.AlarmActions).toHaveLength(1);
       expect(alarm?.Properties?.AlarmDescription).toContain(signal.response);
-    }
-  });
-
-  it("watches the app from outside the account, and matches the body as well as the code", async () => {
-    const template = synthesize();
-    const checks = Object.values(
-      template.findResources("AWS::Route53::HealthCheck") as Record<
-        string,
-        {
-          Properties?: {
-            HealthCheckConfig?: {
-              Type?: string;
-              FullyQualifiedDomainName?: string;
-              ResourcePath?: string;
-              SearchString?: string;
-              RequestInterval?: number;
-              FailureThreshold?: number;
-              EnableSNI?: boolean;
-              Port?: number;
-            };
-          };
-        }
-      >,
-    );
-    expect(checks).toHaveLength(UPTIME_TARGETS.length);
-
-    const routeSource = await readFile(
-      path.join(process.cwd(), "src/app/api/health/route.ts"),
-      "utf8",
-    );
-
-    for (const target of UPTIME_TARGETS) {
-      const config = checks.find(
-        (candidate) =>
-          candidate.Properties?.HealthCheckConfig?.ResourcePath === target.resourcePath,
-      )?.Properties?.HealthCheckConfig;
-
-      // A plain `HTTPS` check passes on any 200, including a parked domain's
-      // and a CDN error shell's. The string is what makes green mean DiveDay.
-      expect(config?.Type).toBe("HTTPS_STR_MATCH");
-      expect(config?.SearchString).toBe(target.searchString);
-      expect(config?.Port).toBe(443);
-      expect(config?.EnableSNI).toBe(true);
-      expect(config?.RequestInterval).toBe(target.requestIntervalSeconds);
-      expect(config?.FailureThreshold).toBe(target.failureThreshold);
-      // The public host, not an internal name: an external check that resolves
-      // through the account's own DNS is not an external check.
-      expect(config?.FullyQualifiedDomainName).toBe("www.dive.day");
-
-      // The same silence this whole file exists to prevent, one layer out: a
-      // search string the route no longer writes does not error, it just never
-      // matches, and the check goes red forever against a perfectly healthy
-      // app. `"status":"ok"` on the wire is `status: "ok"` in the source.
-      const [field, value] = target.searchString.split(":").map((part) => part.replaceAll('"', ""));
-      expect(routeSource).toMatch(new RegExp(`${field}:\\s*"${value}"`));
-    }
-  });
-
-  it("pages when the external monitor itself goes quiet, unlike every other alarm", () => {
-    const template = synthesize();
-    const alarms = Object.values(
-      template.findResources("AWS::CloudWatch::Alarm") as Record<
-        string,
-        {
-          Properties?: {
-            AlarmName?: string;
-            Namespace?: string;
-            MetricName?: string;
-            Statistic?: string;
-            Threshold?: number;
-            ComparisonOperator?: string;
-            TreatMissingData?: string;
-            AlarmActions?: unknown[];
-            AlarmDescription?: string;
-          };
-        }
-      >,
-    );
-
-    for (const target of UPTIME_TARGETS) {
-      const alarm = alarms.find(
-        (candidate) => candidate.Properties?.AlarmName === uptimeAlarmNameFor(target),
-      );
-      expect(alarm?.Properties?.Namespace).toBe("AWS/Route53");
-      expect(alarm?.Properties?.MetricName).toBe("HealthCheckStatus");
-      expect(alarm?.Properties?.Statistic).toBe("Minimum");
-      expect(alarm?.Properties?.Threshold).toBe(1);
-      expect(alarm?.Properties?.ComparisonOperator).toBe("LessThanThreshold");
-      // **The assertion, not a detail.** Missing data here means the monitor
-      // stopped reporting, which is indistinguishable from the outage it exists
-      // to catch. Every other alarm in this stack says `notBreaching`; flipping
-      // this one to match them would restore the gap it was built to close.
-      expect(alarm?.Properties?.TreatMissingData).toBe("breaching");
-      expect(alarm?.Properties?.AlarmActions).toHaveLength(1);
-      expect(alarm?.Properties?.AlarmDescription).toContain(target.response);
     }
   });
 

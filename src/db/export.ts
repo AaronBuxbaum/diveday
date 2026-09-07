@@ -71,7 +71,6 @@ import {
   reviewModerationEvents,
   rollCallCrewEvents,
   rollCallEvents,
-  seasonEvents,
   shopPromoCodes,
   shopPromoRedemptions,
   shops,
@@ -732,15 +731,6 @@ export async function loadShopExportBundleInput(
         .where(eq(tripLenses.shopId, shopId))
         .orderBy(asc(tripLenses.createdAt), asc(tripLenses.id));
 
-      // The shop's own year — mini-season, the derby, the weeks it plans around
-      // (issue #1485). A shop record on exactly the same argument as the words
-      // above it: the shop wrote them and its own storefront shows them.
-      const seasonEventRows = await tx
-        .select()
-        .from(seasonEvents)
-        .where(eq(seasonEvents.shopId, shopId))
-        .orderBy(asc(seasonEvents.startsOn), asc(seasonEvents.id));
-
       // Per-person rollups for contacts.csv. Archived cards never represent a
       // diver in a migration file; archived people still export, marked.
       const cardsByPerson = new Map<string, typeof certificationRows>();
@@ -992,20 +982,6 @@ export async function loadShopExportBundleInput(
             row.deletedAt,
           ]),
           note: EXPORT_FILE_NOTES["trip_lenses.csv"],
-        },
-        {
-          file: "season_events.csv",
-          header: ["id", "name", "note", "starts_on", "ends_on", "lens_id", "deleted_at"],
-          rows: seasonEventRows.map((row) => [
-            row.id,
-            row.name,
-            row.note,
-            row.startsOn,
-            row.endsOn,
-            row.lensId,
-            row.deletedAt,
-          ]),
-          note: EXPORT_FILE_NOTES["season_events.csv"],
         },
         {
           file: "contacts.csv",
@@ -4864,9 +4840,6 @@ export async function loadShopExportCounts(
     ),
     "trip_lenses.csv": await countOf(
       db.select({ n: count() }).from(tripLenses).where(eq(tripLenses.shopId, shopId)),
-    ),
-    "season_events.csv": await countOf(
-      db.select({ n: count() }).from(seasonEvents).where(eq(seasonEvents.shopId, shopId)),
     ),
     // One flat import-ready row per person, so the count mirrors people.csv.
     "contacts.csv": peopleCount,

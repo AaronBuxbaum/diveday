@@ -17,13 +17,10 @@
  *
  * This registry currently declares 17 metrics (11 log signals + 5 web vitals
  * + the mutation-duration metric, which is one metric *permanently* because its
- * filter carries no dimension -- see `MUTATION_DURATION_SIGNAL`) and 14 alarms (8 + the 3 alarmed vitals + the
- * 2 SES reputation rates, which alarm on metrics AWS publishes for free, + the
- * external uptime alarm in `UPTIME_TARGETS`, which alarms on a Route 53 metric
- * AWS publishes for the price of the health check itself), so it
- * sits 7 metrics and 4 alarms over the free allowance at about $2.50/month once
- * every metric receives data (7 x $0.30 + 4 x $0.10), plus $2.75/month for the
- * health check the last of those watches. A counted signal without an
+ * filter carries no dimension -- see `MUTATION_DURATION_SIGNAL`) and 13 alarms (8 + the 3 alarmed vitals + the
+ * 2 SES reputation rates, which alarm on metrics AWS publishes for free), so it
+ * sits 7 metrics and 3 alarms over the free allowance at about $2.40/month once
+ * every metric receives data (7 x $0.30 + 3 x $0.10). A counted signal without an
  * alarm costs $0.30/month; an alarmed one costs $0.40/month. Those are the real
  * numbers to weigh, not zero and not the free-tier cliff it looks like from the
  * alarm count alone.
@@ -458,86 +455,6 @@ export const SES_REPUTATION_SIGNALS: readonly SesReputationSignal[] = [
 /** The alarm's console name: `DiveDay / SES bounce rate at AWS's review line`. */
 export function sesReputationAlarmNameFor(signal: SesReputationSignal): string {
   return `DiveDay / ${signal.title}`;
-}
-
-/**
- * The one check that runs **outside** the thing it is checking.
- *
- * Every other row in this file reads a line the app wrote, which means every
- * other row goes quiet in exactly the failure it would most want to report: the
- * deployment never booted, DNS is wrong, the region is gone. Nothing then
- * writes a log line, no filter matches, no alarm fires, and the first person to
- * notice is a shop with a boat leaving. This row is a Route 53 health check --
- * AWS's own global checker fleet polling the public URL from outside the
- * account -- and a CloudWatch alarm on the status it publishes (ADR
- * 20260907-external-uptime-monitor, closing AWS-1's heartbeat and the
- * `TODO(owner)` at the top of the incident runbook).
- *
- * It is here, in the registry, rather than as a lone alarm at a call site, for
- * the same reason as everything else: a signal that is not written down is a
- * signal nobody knows the cost or the meaning of.
- *
- * **What it costs**, honestly, since this file states the rest: a health check
- * against a non-AWS endpoint is $0.75/month, and each optional feature on such
- * an endpoint is $1.00/month. This target uses two -- HTTPS and string matching
- * -- so it is $2.75/month, plus $0.10 for the alarm past the free ten. Roughly
- * $34/year for the one signal that survives a total outage. The 30-second
- * interval is the standard one; "fast" (10s) is a third optional feature and
- * buys nothing at this scale.
- *
- * **Why string matching is worth a third of the bill.** The status code alone
- * cannot tell the app from whatever answered on its behalf: a parked domain, a
- * CDN error shell and a misrouted deployment all answer 200 with a page. The
- * check matches the literal `searchString` in the first 5,120 bytes of the
- * body, so green means DiveDay's own route answered with its own verdict.
- */
-export interface UptimeTarget {
-  /** CDK construct id fragment. PascalCase, stable. */
-  readonly constructId: string;
-  readonly title: string;
-  /** Why this URL is the one worth polling from outside. */
-  readonly why: string;
-  /** Path on the app's public host. */
-  readonly resourcePath: string;
-  /**
-   * The literal that must appear in the body. Route 53 treats its absence as a
-   * failed check even on a 200, so this string is a contract with the route --
-   * `observability.test.ts` reads the route's source and fails when it is gone.
-   */
-  readonly searchString: string;
-  /** Seconds between polls from each checker region. 30 is the standard rate. */
-  readonly requestIntervalSeconds: number;
-  /** Consecutive failed polls before Route 53 itself calls the target unhealthy. */
-  readonly failureThreshold: number;
-  /** The first thing to do when it fires. Rendered into the alarm description. */
-  readonly response: string;
-}
-
-export const UPTIME_TARGETS: readonly UptimeTarget[] = [
-  {
-    constructId: "HealthProbe",
-    title: "DiveDay is unreachable from outside",
-    why:
-      "The liveness probe answers 200 only when the process is serving *and* `select 1` round-trips " +
-      "through the same pool every request path uses, so one check separates 'the app is gone' from " +
-      "'the app is up and the database is not' without a second target.",
-    resourcePath: "/api/health",
-    searchString: '"status":"ok"',
-    requestIntervalSeconds: 30,
-    // Three, so a single checker region's blip is not an incident. Route 53
-    // polls from several regions at once and takes the majority, then needs
-    // this many consecutive unhealthy rounds -- about 90 seconds -- before it
-    // flips the status the alarm below watches.
-    failureThreshold: 3,
-    response:
-      "Open https://dive.day/status and https://dive.day/api/health by hand. A 503 there is the database (Neon status, then docs/engineering/incident-response-runbook.md's restore section); no answer at all is the deployment or DNS, and the first move is a rollback rather than a diagnosis.",
-  },
-];
-
-/** `HealthProbe` -> `diveday-uptime-health-probe`, same reasoning as `alarmNameFor`. */
-export function uptimeAlarmNameFor(target: UptimeTarget): string {
-  const kebab = target.constructId.replace(/(?<!^)([A-Z])/g, "-$1").toLowerCase();
-  return `diveday-uptime-${kebab}`;
 }
 
 /**

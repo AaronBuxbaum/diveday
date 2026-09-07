@@ -18,7 +18,6 @@ import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { tripRequirementSummaries } from "@/db/readiness";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
-import { listSeasonEvents } from "@/db/season-events";
 import { getShopBySlug } from "@/db/shops";
 import { listTripLenses } from "@/db/trip-lenses";
 import { liveShopStage } from "@/db/trip-stages";
@@ -38,7 +37,6 @@ import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { parseBrandBadges } from "@/lib/brand";
 import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
-import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { parseConservationCommitments } from "@/lib/conservation-commitments";
 import { courseTotalCents, resolveCourseContentDepths, resolveImageAlt } from "@/lib/courses";
@@ -69,7 +67,6 @@ import {
   popCursor,
   pushCursor,
 } from "@/lib/schedule-pagination";
-import { liveSeasonEvents } from "@/lib/season-events";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
 import { resolveLens } from "@/lib/trip-lenses";
@@ -82,7 +79,6 @@ import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 import { LiveBoatPanel } from "./_components/LiveBoatPanel";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
-import { SeasonBand } from "./_components/SeasonBand";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
 import { WeekLedger, type WeekLedgerRow } from "./_components/WeekLedger";
 
@@ -252,22 +248,6 @@ export default async function SchedulePage({
   const lenses = isEmbed ? [] : await listTripLenses(db, shop.id);
   const activeLens = resolveLens(lens, lenses);
 
-  /**
-   * **The reef's calendar** (issue #1485) — the weeks the shop plans its year
-   * around, in the shop's own words, while one of them is live.
-   *
-   * Read beside the vocabulary above and for the same reason: both are the
-   * shop's own writing about its schedule, and both stand down inside the
-   * frame, where a band would spend a third of a 900px widget on something the
-   * host page did not ask for.
-   *
-   * "Live" is asked on the shop's own calendar day, never the server's: a Key
-   * Largo mini-season closes at midnight in Key Largo (`src/lib/season-events.ts`).
-   */
-  const liveSeasons = isEmbed
-    ? []
-    : liveSeasonEvents(await listSeasonEvents(db, shop.id), calendarDateInTimezone(now, tz));
-
   // The view a diver has built — month, embed mode, the lens, and every list
   // filter — must survive every link that re-renders this page. A pager or
   // month arrow that drops `hasSpace` quietly hands back the full unfiltered
@@ -304,32 +284,6 @@ export default async function SchedulePage({
     const query = params.toString();
     return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
   };
-
-  /**
-   * The live seasons as words. The name, the sentence and the days are the
-   * shop's; "Through …" and the link's label are DiveDay's frame.
-   *
-   * The end date is a `CalendarDate` with no instant in it, so
-   * `formatCalendarDate` reads it through UTC rather than converting a moment —
-   * "Oct 31" is October 31st wherever it is read.
-   *
-   * The link is offered only when the season names a word the rail still
-   * carries: `listSeasonEvents` narrows its join to live lenses, so a season
-   * pointing at a deleted word renders its own sentence and no link, rather
-   * than a chip that lands on the unfiltered board.
-   */
-  const seasonEntries = liveSeasons.map((event) => ({
-    id: event.id,
-    name: event.name,
-    note: event.note,
-    through: t("season.through", { date: formatCalendarDate(event.endsOn, locale) }),
-    lens: event.lens
-      ? {
-          href: lensHref(event.lens.slug),
-          label: t("season.lensLink", { lens: event.lens.name }),
-        }
-      : null,
-  }));
 
   // The published-review *list* still streams in separately (below, via
   // <ScheduleReviewsSection>) — it is the slower, independent read the shell
@@ -747,11 +701,6 @@ export default async function SchedulePage({
                 />
               </div>
             ) : null}
-            {/* **The reef's calendar** (issue #1485). Below the next boat,
-                because the page's one primary is still the bookable object —
-                but above the schedule, because a week that changes what the
-                diving is like changes which day somebody picks out of it. */}
-            <SeasonBand eyebrow={t("season.eyebrow")} entries={seasonEntries} />
           </div>
         </div>
       )}

@@ -12,7 +12,6 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as destinations from "aws-cdk-lib/aws-logs-destinations";
-import * as route53 from "aws-cdk-lib/aws-route53";
 import * as rum from "aws-cdk-lib/aws-rum";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as scheduler from "aws-cdk-lib/aws-scheduler";
@@ -42,8 +41,6 @@ import {
   SAVED_LOG_QUERIES,
   SES_REPUTATION_SIGNALS,
   sesReputationAlarmNameFor,
-  UPTIME_TARGETS,
-  uptimeAlarmNameFor,
   WEB_VITAL_SIGNALS,
   webVitalAlarmNameFor,
   webVitalFilterPatternFor,
@@ -3590,83 +3587,6 @@ exports.handler = async () => {
       description:
         "Daily cleaner for stale visual regression snapshots. Preserves the active main baseline. Invoke by hand to test: aws lambda invoke --function-name diveday-visual-bucket-pruner /dev/stdout",
     });
-
-    // 22. The external uptime monitor -- the one check that runs outside the
-    // thing it checks. See ADR 20260907-external-uptime-monitor and the
-    // `UPTIME_TARGETS` header in infra/lib/observability.ts for what it costs
-    // and why the body is matched as well as the status code.
-    //
-    // Everything in S13 reads a line the app wrote, so all of it goes quiet in
-    // the one failure it would most want to report. Route 53's checker fleet
-    // polls the public URL from several AWS regions that are not this account,
-    // and publishes `HealthCheckStatus` to CloudWatch whether the app is
-    // running or not.
-    //
-    // **The alarm has to live in us-east-1**, and does: Route 53 is a global
-    // service and publishes its health-check metrics only there. This stack is
-    // deployed to us-east-1 (docs/engineering/infrastructure-runbook.md S1), so
-    // the alarm below is an ordinary same-region alarm. A future move of this
-    // stack to another region takes this section with it -- the alarm would
-    // find no metric and would sit in INSUFFICIENT_DATA, which
-    // `treatMissingData` below deliberately renders as breaching rather than as
-    // silence.
-    const uptimeHost = new URL(webhookHost).hostname;
-    for (const target of UPTIME_TARGETS) {
-      const healthCheck = new route53.CfnHealthCheck(this, `${target.constructId}HealthCheck`, {
-        healthCheckConfig: {
-          // `HTTPS_STR_MATCH`, not `HTTPS`: a 200 proves something answered,
-          // not that DiveDay did. The literal is the route's own verdict.
-          type: "HTTPS_STR_MATCH",
-          fullyQualifiedDomainName: uptimeHost,
-          port: 443,
-          resourcePath: target.resourcePath,
-          searchString: target.searchString,
-          requestInterval: target.requestIntervalSeconds,
-          failureThreshold: target.failureThreshold,
-          // The app is served from a shared host behind SNI; without this the
-          // checker's TLS handshake reaches the wrong certificate.
-          enableSni: true,
-          // A second optional feature would be a third dollar a month, and
-          // latency from AWS's checker regions is not how this app learns it is
-          // slow -- CloudWatch RUM and the web-vital signals are.
-          measureLatency: false,
-        },
-        healthCheckTags: [{ key: "Name", value: uptimeAlarmNameFor(target) }],
-      });
-
-      new cloudwatch.Alarm(this, `${target.constructId}UptimeAlarm`, {
-        alarmName: uptimeAlarmNameFor(target),
-        alarmDescription: `${target.title}. ${target.response}`,
-        metric: new cloudwatch.Metric({
-          namespace: "AWS/Route53",
-          metricName: "HealthCheckStatus",
-          dimensionsMap: { HealthCheckId: healthCheck.attrHealthCheckId },
-          // `Minimum`, not `Average`: the metric is 1 or 0 per minute, and an
-          // average would let a recovering minute paper over a dead one.
-          statistic: "Minimum",
-          period: cdk.Duration.minutes(1),
-        }),
-        threshold: 1,
-        comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
-        // Two minutes on top of Route 53's own three consecutive failed rounds:
-        // about four minutes from "the site went away" to an email, which is
-        // faster than a shop noticing and slow enough that a deploy's own
-        // rollover does not page anyone.
-        evaluationPeriods: 2,
-        // **Breaching, and this is the one alarm in the stack where it is.**
-        // Every other alarm treats missing data as healthy because a quiet app
-        // is a healthy app. Here missing data means the *monitor* stopped
-        // reporting, and an external monitor that has gone quiet is
-        // indistinguishable from the outage it exists to catch. A false page
-        // when Route 53 has an off day is the cheaper mistake.
-        treatMissingData: cloudwatch.TreatMissingData.BREACHING,
-      }).addAlarmAction(alarmAction);
-
-      new cdk.CfnOutput(this, `${target.constructId}HealthCheckId`, {
-        value: healthCheck.attrHealthCheckId,
-        description: `Route 53 health check polling https://${uptimeHost}${target.resourcePath} every ${target.requestIntervalSeconds}s from outside this account. Console: Route 53 -> Health checks. Test the alert path once by inverting it (see docs/engineering/incident-response-runbook.md).`,
-      });
-    }
   }
 
   /**

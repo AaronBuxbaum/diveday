@@ -69,7 +69,6 @@ import {
   reviewModerationEvents,
   rollCallCrewEvents,
   rollCallEvents,
-  seasonEvents,
   shopBackupDeliveries,
   shopBackupDestinations,
   shopContactEmailConfirmationTokens,
@@ -289,11 +288,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // decision 2). Same shape as `boats` above: it references `shops` with no
   // cascade, so a demo whose owner wrote a vocabulary made the final
   // `delete(shops)` throw 23503 and stranded the shop past its TTL.
-  // The shop's own year, before the words it points at: `season_events.lens_id`
-  // is `ON DELETE SET NULL`, so a surviving season would not FK-violate the
-  // vocabulary delete — but it does reference `shops`, so it has to be gone
-  // before the final `delete(shops)` for the same reason the words do.
-  await db.delete(seasonEvents).where(eq(seasonEvents.shopId, shopId));
   await db.delete(tripLenses).where(eq(tripLenses.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));

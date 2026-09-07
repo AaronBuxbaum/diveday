@@ -77,17 +77,7 @@ export function promisesUnfinishedWork(text, dirty) {
   // recounted from earlier in the turn, is not this turn ending on one.
   const closing = text.slice(-700);
   if (!PROMISES.some((pattern) => pattern.test(closing))) return false;
-  return !isHandoff(closing);
-}
-
-/**
- * Whether a closing message deliberately hands the next move to the user. Shared
- * with `unpushed-work.mjs`, which has the same reason to stay quiet: a turn that
- * ends on a question is a fine ending whatever the tree or the branch looks like.
- */
-export function isHandoff(text) {
-  const closing = (text ?? "").slice(-700);
-  return HANDOFFS.some((pattern) => pattern.test(closing));
+  return !HANDOFFS.some((pattern) => pattern.test(closing));
 }
 
 export function lastAssistantText(transcriptPath) {

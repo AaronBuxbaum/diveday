@@ -512,9 +512,6 @@ const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 /** The seeded reef charter, the departure most of the staff tour hangs off. */
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
-/** The demo's night charter: 7:30 PM to 11:00 PM, in the water after dark. */
-const NIGHT_TRIP = "Night Dive — City of Washington";
-
 /**
  * A departure far enough out that D18's re-entry offers are still worth making.
  *
@@ -1252,11 +1249,6 @@ function publicReefCard(page: Page) {
   return page.locator("li").filter({ hasText: REEF_TRIP });
 }
 
-/** The same card, for the night charter. */
-function publicNightCard(page: Page) {
-  return page.locator("li").filter({ hasText: NIGHT_TRIP });
-}
-
 /** Open the seeded reef charter's staff record, the way staff reach it. */
 async function openReefTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -1644,27 +1636,6 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "departures-board", scheme);
       });
 
-      /**
-       * **The regional pages** (issue #1436, N-49), the two anonymous surfaces
-       * a diver meets before a shop's own storefront. The demo shop is a demo
-       * and is excluded from both, so what is in the picture is the pair of
-       * real Key Largo neighbours `seedRegionNeighbours` seeds — a populated
-       * state on purpose, since an empty ledger would photograph the empty
-       * state rather than the page.
-       */
-      test(`the regional index renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/dive");
-        await page.getByRole("heading", { level: 1, name: "Dive shops by town" }).waitFor();
-        await capture(page, "regions-index", scheme);
-      });
-
-      test(`one town's dive shops render true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/dive/key-largo");
-        // The town's own <h1>, which the index never renders.
-        await page.getByRole("heading", { level: 1, name: "Dive shops in Key Largo" }).waitFor();
-        await capture(page, "region-shops", scheme);
-      });
-
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/");
         await capture(page, "landing", scheme);
@@ -1959,32 +1930,6 @@ for (const scheme of ["light", "dark"] as const) {
         // the form mounting.
         await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "site-briefing", scheme);
-      });
-
-      /**
-       * **The one departure whose sky is an operational fact** (issue #1467).
-       *
-       * `site-briefing` above photographs the reef morning, where there is
-       * nothing to say about the light and the line is correctly absent. The
-       * night charter casts off at 7:30 PM, half an hour before a July sunset,
-       * and dives both tanks in the dark — so it is the only departure on the
-       * demo board that renders sunset, civil dusk and the moon, and without
-       * this capture that line has no baseline anywhere.
-       *
-       * The clock is frozen (`E2E_FROZEN_CLOCK`) and the shop's coordinates are
-       * seeded, so both times and the phase are fixed: a diff here is a change
-       * in the arithmetic or the copy, never the calendar moving.
-       */
-      test(`the night charter names the light and the moon (${scheme})`, async ({ page }) => {
-        await page.goto("/s/blue-mantis");
-        await publicNightCard(page).getByRole("link", { name: NIGHT_TRIP }).click();
-        await page.getByRole("heading", { name: "The day" }).waitFor();
-        // The line this capture exists for. Waiting on it means the shot can
-        // never be of a page that quietly decided the departure sails in
-        // daylight.
-        await page.getByText(/^Sunset /).waitFor();
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
-        await capture(page, "site-briefing-night-sky", scheme);
       });
 
       /**
@@ -2866,17 +2811,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/terms");
         await page.getByRole("heading", { level: 1 }).waitFor();
         await capture(page, "terms", scheme);
-      });
-
-      // The page a shop owner opens on their worst morning, so the one whose
-      // dark mode and phone width are worth a baseline: a status mark, a
-      // headline, two ruled rows and a timestamp. The clock is frozen by the
-      // harness, so "Last checked …" is stable pixels rather than a mask
-      // (ADR 20260907-external-uptime-monitor).
-      test(`the status page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/status");
-        await page.getByRole("heading", { level: 1 }).waitFor();
-        await capture(page, "status", scheme);
       });
 
       test(`the about page renders true to the design (${scheme})`, async ({ page }) => {
@@ -4769,26 +4703,6 @@ for (const scheme of ["light", "dark"] as const) {
         await openSettingsRow(page, "Shop address");
         await page.getByRole("button", { name: "Remove address" }).waitFor();
         await capture(page, "settings-address", scheme);
-      });
-
-      /**
-       * The shop's own year, open (issue #1485) — the reef's calendar, where a
-       * shop writes mini-season and the sentence a diver reads on the
-       * storefront while it is running.
-       *
-       * Its own capture for the reason the two rows above have one: it is
-       * closed in `settings-payments`, and this is the only place the form is
-       * looked at. The seeded calendar carries a window that is live, so the
-       * "Running now" badge — the one badge in the inset, and the whole reason
-       * a shop can find the week that is on its storefront at a glance — is in
-       * frame rather than theoretical.
-       */
-      test(`the seasons card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Seasons and events" }).waitFor();
-        await openSettingsRow(page, "Seasons and events");
-        await page.getByRole("button", { name: "Add" }).last().waitFor();
-        await capture(page, "settings-seasons", scheme);
       });
 
       /**

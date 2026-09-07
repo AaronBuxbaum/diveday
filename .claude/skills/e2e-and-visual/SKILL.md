@@ -186,5 +186,4 @@ content:
 - New/changed important surfaces have screenshot captures in `e2e/visual.spec.ts` and both schemes where applicable.
 - Each capture lands on a state that actually exercises the change (see above), not merely on the right route.
 - `pnpm visual` runs successfully, and any visual differences are expected and reviewed via `pnpm visual:report` (or the reg-suit HTML report, for a human).
-- The local gate passes (`pnpm check:repo`, `pnpm lint`, `pnpm typecheck`, `pnpm test:changed`);
-  run the touched `pnpm e2e <spec>` when functional flows changed. The whole suite runs on CI.
+- `pnpm check` passes; run `pnpm e2e` when functional flows changed.

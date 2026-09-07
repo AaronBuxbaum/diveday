@@ -8,13 +8,6 @@ Skills complement, never override, `AGENTS.md` and `docs/`. If a skill contradic
 code, the ADR/code wins — fix the skill in the same commit; skills are documentation and fall
 under the same sync duties (docs/README.md).
 
-Three mechanisms, three costs. `AGENTS.md` is loaded by every session in full. A **rule** in
-`.claude/rules/<area>.md` carries `paths:` frontmatter and loads only when a session reads a
-matching file — the rules and the route-map detail for one area live there, not in `AGENTS.md`.
-A **skill** loads only when invoked, but its `description:` line is in every session's listing.
-The **hooks** in `.claude/settings.json` are the mechanical half of the rules and are described in
-[docs/agents/session-hooks.md](../../docs/agents/session-hooks.md).
-
 ## Index
 
 | Skill | Use when |
@@ -60,6 +53,5 @@ collateral — recommended after drafting or editing a marketing page, switching
   belongs, because the body is loaded on purpose.
 - `pnpm check:agents` (part of `check:repo`/`check`) fails on drift: a skill missing from this
   index, an index entry with no skill, frontmatter whose name doesn't match its directory or with
-  no description, an unmentioned reviewer agent, a `task:context` area pointing at a doc that
-  doesn't exist, a rules file without `paths:` or naming a path that doesn't exist, or a hook
-  script that is missing or not wired. A red check means fix the stale reference in the same change.
+  no description, an unmentioned reviewer agent, or a `task:context` area pointing at a doc that
+  doesn't exist. A red check means fix the stale reference in the same change.

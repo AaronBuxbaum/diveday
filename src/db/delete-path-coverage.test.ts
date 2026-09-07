@@ -121,8 +121,6 @@ const RESET_KEEPS: Record<string, string> = {
   boats: "shop settings, outside the resettable schedule",
   trip_lenses:
     "the shop's own words for a kind of day — vocabulary is settings, not schedule, and the reset rebuilds the board rather than the words",
-  season_events:
-    "the shop's own year (mini-season, a derby, a nesting window) — settings beside the words above it, and a reset rebuilds the board rather than the calendar it hangs on",
   dive_packages: "the shop's own price list of packages — settings, not schedule",
   pre_departure_checklist_items: "the shop's own checklist lines — settings, not schedule",
   shop_backup_destinations: "seeded by the stable half (seedBackup); a reset would not restore it",

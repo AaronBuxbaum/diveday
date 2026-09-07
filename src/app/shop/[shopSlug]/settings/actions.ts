@@ -16,7 +16,6 @@ import { queueAndAttemptMediaDeletion, retryMediaDeletion } from "@/db/media-del
 import { sendNotification } from "@/db/notifications";
 import { maxLineItemUnitAmountCents } from "@/db/orders";
 import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
-import { createSeasonEvent, deleteSeasonEvent, updateSeasonEvent } from "@/db/season-events";
 import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import {
   getShopById,
@@ -51,7 +50,7 @@ import {
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
-import { createTripLens, deleteTripLens, getTripLens, renameTripLens } from "@/db/trip-lenses";
+import { createTripLens, deleteTripLens, renameTripLens } from "@/db/trip-lenses";
 import { toDiverLocale } from "@/i18n/settings";
 import {
   type AddressLookupResult,
@@ -92,11 +91,6 @@ import {
   toRentableKinds,
 } from "@/lib/rentals";
 import { parseSeasonStart } from "@/lib/season";
-import {
-  SEASON_EVENT_NAME_MAX,
-  SEASON_EVENT_NOTE_MAX,
-  seasonEventIssues,
-} from "@/lib/season-events";
 import { parseSendWindow } from "@/lib/send-window";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -1367,104 +1361,6 @@ export async function deleteTripLensAction(formData: FormData) {
   await deleteTripLens(db, session.user.shopId, lensId);
 
   revalidateAndRedirect(settings, noticeUrl(settings, "lens-deleted", { saved: "lenses" }));
-}
-
-/**
- * **The reef's calendar** — the shop's own year (issue #1485).
- *
- * The same three actions the vocabulary above has, and for the same reasons:
- * shop-owned words, a soft delete, and notice codes riding the `?saved=`
- * section so the row that changed comes back open.
- *
- * Every refusal is one code. `seasonEventIssues` distinguishes six of them and
- * a form that reported each separately would be six sentences a shop reads once
- * — the one message names the two facts a season needs, which is what the
- * reader has to act on either way.
- */
-function seasonEventFields(formData: FormData) {
-  const name = String(formData.get("name") ?? "")
-    .trim()
-    .slice(0, SEASON_EVENT_NAME_MAX);
-  const rawNote = String(formData.get("note") ?? "")
-    .trim()
-    .slice(0, SEASON_EVENT_NOTE_MAX);
-  const rawLensId = formData.get("lensId");
-  return {
-    name,
-    note: rawNote || null,
-    startsOn: String(formData.get("startsOn") ?? "").trim(),
-    endsOn: String(formData.get("endsOn") ?? "").trim(),
-    lensId: typeof rawLensId === "string" && rawLensId ? uuidParam(rawLensId) : null,
-  };
-}
-
-export async function createSeasonEventAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-
-  const fields = seasonEventFields(formData);
-  if (seasonEventIssues(fields).length > 0) {
-    redirect(noticeUrl(settings, "season-event-invalid", { saved: "seasonEvents" }));
-  }
-
-  const db = await getDb();
-  // The word has to be this shop's own before its id is stored, the same check
-  // every write on a departure runs before it takes a `lensId` off a form.
-  const lensId = fields.lensId
-    ? ((await getTripLens(db, session.user.shopId, fields.lensId))?.id ?? null)
-    : null;
-  await createSeasonEvent(db, session.user.shopId, { ...fields, lensId });
-
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "season-event-created", { saved: "seasonEvents" }),
-  );
-}
-
-export async function updateSeasonEventAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-
-  const rawEventId = formData.get("eventId");
-  const eventId = typeof rawEventId === "string" ? uuidParam(rawEventId) : null;
-  const fields = seasonEventFields(formData);
-  if (!eventId || seasonEventIssues(fields).length > 0) {
-    redirect(noticeUrl(settings, "season-event-invalid", { saved: "seasonEvents" }));
-  }
-
-  const db = await getDb();
-  const lensId = fields.lensId
-    ? ((await getTripLens(db, session.user.shopId, fields.lensId))?.id ?? null)
-    : null;
-  await updateSeasonEvent(db, session.user.shopId, eventId, { ...fields, lensId });
-
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "season-event-updated", { saved: "seasonEvents" }),
-  );
-}
-
-/** Stamps the season and leaves the row (ADR 20260820-every-delete-is-soft). */
-export async function deleteSeasonEventAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-
-  const rawEventId = formData.get("eventId");
-  const eventId = typeof rawEventId === "string" ? uuidParam(rawEventId) : null;
-  if (!eventId) {
-    redirect(noticeUrl(settings, "season-event-invalid", { saved: "seasonEvents" }));
-  }
-
-  const db = await getDb();
-  await deleteSeasonEvent(db, session.user.shopId, eventId);
-
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "season-event-deleted", { saved: "seasonEvents" }),
-  );
 }
 
 /**
