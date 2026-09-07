@@ -250,6 +250,7 @@ const EXCLUDED_TABLES = [
   "auth_provider_accounts",
   "auth_verifications",
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
+  "display_tokens", // bearer credentials for a lobby screen's departures board, never exported
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities

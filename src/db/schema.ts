@@ -5887,6 +5887,53 @@ export const calendarFeeds = pgTable(
   ],
 );
 
+/**
+ * A long-lived, revocable bearer credential over the shop's **departures board**
+ * — the lobby TV / dock tablet at `/board/[token]` (issue #1426, N-23). Same
+ * discipline as `calendar_feeds`: only the hash is stored, the raw token exists
+ * solely in the response that minted it, and there is no expiry, because a
+ * screen on a wall that went dark after 60 days would be noticed by nobody
+ * until a diver asked why the board is blank. Revocation is the mitigation.
+ *
+ * What the board shows is decided at the reader (`src/db/departures-board.ts`),
+ * never by a column here: a boat's title, time, site, stage word, meeting point
+ * and an "n of capacity" count. `show_names` is the one knob — off, nobody is
+ * named at all; on, the **crew** line appears. Diver names never reach a
+ * lobby screen at any setting.
+ *
+ * Revoking *is* the delete: a revoked link has nothing left a shop could ask
+ * to remove, so `revoked_at` is the row's soft-delete stamp and the settings
+ * page lists only rows where it is null. Nothing hard-deletes a row except the
+ * demo cascade.
+ */
+export const displayTokens = pgTable(
+  "display_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tokenHash: text("token_hash").notNull().unique(),
+    /** "Lobby TV", "Dock B tablet" — the shop's own word for which screen this is. */
+    label: text("label").notNull(),
+    showNames: boolean("show_names").notNull().default(false),
+    createdByPersonId: uuid("created_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Stamped when the board renders, coarsely, so the settings page can tell
+     * a screen that is actually showing from a link nobody ever opened.
+     */
+    lastShownAt: timestamp("last_shown_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("display_tokens_token_hash_idx").on(table.tokenHash),
+    index("display_tokens_shop_live_idx").on(table.shopId, table.revokedAt),
+  ],
+);
+
 /** Evidence belongs to a person; requirements decide whether it is sufficient for a trip. */
 export const certifications = pgTable(
   "certifications",

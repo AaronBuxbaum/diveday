@@ -33,6 +33,7 @@ const seedChangedDiveSite = await import("./seed-changed-dive-site/route");
 const seedObservedSpecies = await import("./seed-observed-species/route");
 const seedReturningDiver = await import("./seed-returning-diver/route");
 const seedBookingHandoff = await import("./seed-booking-handoff/route");
+const seedDisplayToken = await import("./seed-display-token/route");
 
 const secret = "e2e-test-secret";
 
@@ -140,6 +141,18 @@ const routes: SeedRoute[] = [
     // emergency contact. A route answering on a misconfigured deployment would
     // be rewriting the number a coastguard calls.
     expectPastTheGuard: expectInvalidBody,
+  },
+  {
+    slug: "seed-display-token",
+    POST: seedDisplayToken.POST,
+    // No body is a valid ask (the defaults are the fixture), so reaching the
+    // database is what proves the guard let it through. Past that it mints a
+    // working, non-expiring link over a shop's whole day for a lobby screen —
+    // a route answering on a misconfigured deployment would be handing out a
+    // real shop's board to anyone.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
   },
   {
     slug: "seed-private-shop",

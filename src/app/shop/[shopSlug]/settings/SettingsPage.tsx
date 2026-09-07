@@ -2611,6 +2611,10 @@ export default async function SettingsPage({
               heading={t("settings.main.calendar.heading")}
             />
             <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/display`}
+              heading={t("settings.main.display.heading")}
+            />
+            <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/integrations`}
               heading={t("settings.main.integrations.heading")}
             />

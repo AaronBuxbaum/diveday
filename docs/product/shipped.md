@@ -7,6 +7,20 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The departures board (delivered 2026-09-07)
+
+N-23 from the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1426). A shop mints
+a **display link** at Settings → Lobby display and opens it on a TV in the lobby or a tablet on the
+dock: `/board/[token]` shows today's boats in clock order — time, title, site and boat, the crew's
+stage word, "n of capacity aboard", the meeting point and the automated outlook — in display type,
+following the device's light or dark scheme at the manifest's `boat-mode` contrast, and re-reads the
+day every minute with no session. The reader (`src/db/departures-board.ts`) is the day spine's own
+readers in a lobby's shape and its row type is closed by test: no diver is ever named, no readiness,
+no phone, no money; the one switch on a link (`show_names`) adds the crew line. The token is hashed
+at rest (`src/lib/bearer-tokens.ts`), non-expiring like the calendar feed, revoked from the same
+settings page, redacted from telemetry (`CAPABILITY_ROUTE_PREFIXES`) and disallowed to crawlers. A
+private charter keeps its row under "Private charter", never its name.
+
 ## Before you ask: DiveDay fills in what it already knows (delivered 2026-09-06)
 
 The 2026-09-06 loop, argued on [its canvas](../design/canvases/20260906-before-you-ask/README.md)

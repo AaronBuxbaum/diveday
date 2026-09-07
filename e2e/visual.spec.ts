@@ -197,7 +197,20 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
   "prep",
   "departure-log",
   "departure-log-every-checkpoint",
+  // The dock tablet is one of the two devices the departures board is for
+  // (issue #1426); the other is the TV below.
+  "departures-board",
 ]);
+
+/**
+ * **A TV on the lobby wall** — the other device the departures board is built
+ * for (issue #1426, N-23), and the one width nothing else in this file has any
+ * reason to photograph. 1920×1080 is what a lobby screen actually is; the
+ * 1280 "desktop" is a laptop. Same shape as `TABLET_SURFACES`: a bounded set
+ * checked against the captures that exist, never a global width.
+ */
+const TV_VIEWPORT = { width: 1920, height: 1080 } as const;
+const TV_SURFACES: ReadonlySet<string> = new Set(["departures-board"]);
 
 /**
  * A name in `TABLET_SURFACES` that no `capture()` call uses photographs
@@ -206,10 +219,10 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
  * this file back is the cheapest thing that can tell a typo from a decision.
  * Once per worker process, against a file already on the page cache.
  */
-for (const name of TABLET_SURFACES) {
+for (const name of [...TABLET_SURFACES, ...TV_SURFACES]) {
   if (!readFileSync("e2e/visual.spec.ts", "utf8").includes(`capture(page, "${name}"`)) {
     throw new Error(
-      `TABLET_SURFACES names "${name}", which no capture() call uses — it would ` +
+      `TABLET_SURFACES/TV_SURFACES names "${name}", which no capture() call uses — it would ` +
         "silently photograph nothing. Fix the name or drop it from the set.",
     );
   }
@@ -1070,7 +1083,11 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
   // shop runs on one. Widest last is deliberate: the base viewport is restored
   // below either way, but a capture that fails mid-loop leaves the page at a
   // width a trace viewer can make sense of.
-  const viewports = TABLET_SURFACES.has(name) ? [...VIEWPORTS, TABLET_VIEWPORT] : VIEWPORTS;
+  const viewports = [
+    ...VIEWPORTS,
+    ...(TABLET_SURFACES.has(name) ? [TABLET_VIEWPORT] : []),
+    ...(TV_SURFACES.has(name) ? [TV_VIEWPORT] : []),
+  ];
   await withTransitionsOff(page, async () => {
     for (const viewport of viewports) {
       await page.setViewportSize(viewport);
@@ -1542,6 +1559,29 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Send it to the shop" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "shopfront-register", scheme);
+      });
+
+      /**
+       * **The departures board** (issue #1426, N-23): a lobby TV's read of the
+       * day behind a display link and no session. Minted through the test
+       * seed route because the token is hashed at rest and shown once; with
+       * names on, so the crew line — the one thing the switch adds — is in the
+       * picture. Phone, laptop, the dock tablet and the TV wall
+       * (`TV_SURFACES`).
+       */
+      test(`the departures board renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-display-token", {
+          data: { label: "Lobby TV", showNames: true },
+        });
+        expect(seeded.ok()).toBe(true);
+        const { path } = (await seeded.json()) as { path: string };
+        await page.goto(path);
+        await page.getByRole("heading", { level: 1, name: "Blue Mantis Divers" }).waitFor();
+        await page.getByText("Two-Tank Reef — Molasses & French").waitFor();
+        await capture(page, "departures-board", scheme);
       });
 
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
@@ -4789,6 +4829,23 @@ for (const scheme of ["light", "dark"] as const) {
         // heading resolves before the interesting part has mounted.
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         await capture(page, "settings-calendar", scheme);
+      });
+
+      // Lobby display (issue #1426) with one screen listed — minted through
+      // the seed route rather than the form, so the shown-once link block is
+      // *not* in the picture: it carries a token that differs on every run.
+      test(`the lobby display settings render true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-display-token", {
+          data: { label: "Lobby TV" },
+        });
+        expect(seeded.ok()).toBe(true);
+        await page.goto("/shop/blue-mantis/settings/display");
+        await page.getByRole("button", { name: "Create link" }).waitFor();
+        await page.getByText("Lobby TV").waitFor();
+        await capture(page, "settings-display", scheme);
       });
 
       // The courses catalog as one ledger (slice 9g of ADR

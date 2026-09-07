@@ -30,6 +30,7 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   dayCloseouts,
+  displayTokens,
   divePackageEntitlements,
   diveSiteCreatures,
   diveSiteMoments,
@@ -1054,6 +1055,10 @@ export async function resetDemoSchedule(
   // against them are schedule-scoped operational history.
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
+  // Lobby-display links (issue #1426): nothing seeds one, so a reset clears
+  // them outright and every spec starts with no screens — which is also what
+  // lets the visual captures mint exactly one and photograph exactly one.
+  await db.delete(displayTokens).where(eq(displayTokens.shopId, shopId));
   await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
   // Neither of these is seeded — both are written only by what a visitor does

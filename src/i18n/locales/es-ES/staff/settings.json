@@ -353,6 +353,9 @@
     "calendar": {
       "heading": "Suscripciones al calendario"
     },
+    "display": {
+      "heading": "Pantalla del lobby"
+    },
     "counterQr": {
       "heading": "La tarjeta del mostrador",
       "description": "Imprímela y ponla en el mostrador. Quien llegue sin reserva la escanea, indica su nombre, certificación y tallas, y se le envía la exención, todo antes de llegar al frente de la cola.",

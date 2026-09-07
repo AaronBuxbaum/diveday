@@ -1,0 +1,41 @@
+{
+  "eyebrow": "Configuración",
+  "title": "Pantalla del lobby",
+  "description": "Un enlace para una TV en el lobby o una tableta en el muelle: las salidas de hoy, cuántos van a bordo y dónde reunirse. Esa pantalla no inicia sesión.",
+  "create": {
+    "heading": "Nueva pantalla",
+    "labelField": "Qué pantalla",
+    "labelPlaceholder": "TV del lobby",
+    "showNames": "Mostrar los nombres de la tripulación",
+    "showNamesDescription": "Cualquiera en la sala los lee. Los buceadores nunca aparecen con nombre.",
+    "submit": "Crear enlace",
+    "submitting": "Creando…"
+  },
+  "newLink": {
+    "heading": "Abre esto en la pantalla",
+    "shownOnce": "Cópialo ahora, porque se muestra una sola vez. Si lo pierdes, revoca esta pantalla y crea otra.",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "copyFailed": "No se pudo copiar, selecciónalo a mano",
+    "shared": "Cualquiera con este enlace ve las salidas de hoy sin iniciar sesión. Trátalo como una llave del centro."
+  },
+  "list": {
+    "heading": "Pantallas",
+    "empty": "Todavía no hay pantallas.",
+    "created": "Creado {when}",
+    "lastShown": "Mostrado por última vez {when}",
+    "neverShown": "Todavía no se ha abierto",
+    "namesOn": "Tripulación con nombre",
+    "namesOff": "Nadie con nombre",
+    "revoke": "Revocar",
+    "revoking": "Revocando…",
+    "confirmRevoke": "¿Revocar este enlace? La pantalla se apaga en su próxima actualización.",
+    "confirmRevokeButton": "Sí, revocarlo",
+    "cancel": "Déjalo"
+  },
+  "notice": {
+    "denied": "Solo un propietario o gerente puede cambiar las pantallas del lobby.",
+    "invalidLabel": "Ponle a la pantalla un nombre de hasta {max, plural, one {# carácter} other {# caracteres}}.",
+    "revoked": "Enlace revocado."
+  }
+}

@@ -32,6 +32,7 @@ export default function robots(): MetadataRoute.Robots {
         "/invite/",
         "/calendar/",
         "/unsubscribe/",
+        "/board/",
       ],
     },
     sitemap: `${origin}/sitemap.xml`,

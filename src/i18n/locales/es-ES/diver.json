@@ -10,6 +10,22 @@
     "liveEyebrow": "Ahora mismo",
     "liveBack": "De vuelta hacia las {back}."
   },
+  "board": {
+    "empty": "Hoy no hay salidas.",
+    "aboard": "{boarded} de {capacity} a bordo",
+    "meetAt": "Punto de encuentro: {place}",
+    "privateCharter": "Salida privada",
+    "crew": "Con {names}",
+    "stage": {
+      "boarding": "Embarcando",
+      "underway": "En {site}",
+      "underwayNoSite": "En el agua",
+      "surface": "En superficie",
+      "headingIn": "De regreso",
+      "home": "De vuelta en el muelle"
+    },
+    "updated": "Actualizado a las {time}"
+  },
   "conservation": {
     "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",
     "commitments": {
