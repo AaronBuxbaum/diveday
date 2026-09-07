@@ -3599,6 +3599,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Emergency contact name").fill("Kojo Mensah");
         await page.getByLabel("Emergency contact phone").fill("+13055550177");
         await page.getByRole("button", { name: "Save details" }).click();
+        // **Wait for the save's own redirect before reloading over it.** The
+        // reload was already here to settle the page; on its own it *raced*
+        // the action instead, aborting the request mid-write. When the reload
+        // won, the contact was never saved, the record kept its one open item,
+        // and the earned moment 40 lines below correctly never rendered — the
+        // test then spent its whole 210s budget waiting for a banner that was
+        // right not to appear (CI run 34082101061).
+        await page.waitForURL(/notice=person-saved/);
         // Land the save before touching the Waiver group. The save redirects and
         // the record re-renders around the notice it carries, which is what left
         // the paper-waiver button "not stable" and then "detached from the DOM"
