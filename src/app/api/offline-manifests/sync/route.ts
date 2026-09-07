@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { loadActiveStaffRoles } from "@/db/authz";
+import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { recordPreDepartureCheck } from "@/db/pre-departure-check";
@@ -117,16 +118,44 @@ const checklistEventSchema = z.object({
   occurredAt: z.iso.datetime(),
 });
 
+/**
+ * One tap at the counter (ADR 20260907-the-counter-survives-offline).
+ *
+ * **There is no `checkpoint` and no `boarded` here, and that is the whole
+ * point.** An arrival says a diver reached the desk; only a person at the rail
+ * says one is on the boat. The two vocabularies never meet: this array is
+ * dispatched below to `checkInBooking`/`undoCheckInBooking`, which write
+ * `bookings.status` and `booking_arrival_events` and cannot reach
+ * `roll_call_events` — so there is no value a device can put in this body,
+ * well-formed or not, that promotes an arrival into a boarding.
+ */
+const arrivalEventSchema = z.object({
+  clientEventId: z.string().uuid(),
+  snapshotId: z.string().uuid(),
+  snapshotSavedAt: z.iso.datetime(),
+  tripId: z.string().uuid(),
+  bookingId: z.string().uuid(),
+  status: z.enum(["arrived", "cleared"]),
+  /** Which arrival a `cleared` takes back — see `retractsClientEventId` above. */
+  retractsClientEventId: z.string().uuid().optional(),
+  occurredAt: z.iso.datetime(),
+});
+
 const bodySchema = z
   .object({
     events: z.array(eventSchema).max(200),
     checklistEvents: z.array(checklistEventSchema).max(200).optional(),
+    arrivalEvents: z.array(arrivalEventSchema).max(200).optional(),
   })
   // A batch naming neither is refused rather than accepted as a no-op — the
   // caller always has at least one pending event when it POSTs at all
   // (`syncOfflineManifest`'s own guard), so an empty pair means a malformed
   // request, not a legitimately quiet device.
-  .refine((body) => body.events.length + (body.checklistEvents?.length ?? 0) > 0);
+  .refine(
+    (body) =>
+      body.events.length + (body.checklistEvents?.length ?? 0) + (body.arrivalEvents?.length ?? 0) >
+      0,
+  );
 
 /**
  * Apply roll-call events a boat tablet recorded while it was offline.
@@ -263,5 +292,43 @@ export async function POST(request: Request) {
       ...(!outcome.ok ? { reason: outcome.reason } : {}),
     });
   }
+  // The counter's own array, applied last and by the same ordering discipline:
+  // oldest first, stable sort, so two taps on one seat sharing a timestamp
+  // still apply in the order the device queued them.
+  //
+  // **The dispatch is on status and nothing else, and both branches are the
+  // functions the live counter itself calls.** An offline arrival takes the
+  // identical staff gate, trip and booking checks and — the one that matters —
+  // the same *live* readiness re-read a staffer at the desk takes, hours after
+  // the tap. Neither branch can write a roll-call row, which is what makes
+  // "the queue never promotes an arrival to aboard" a property of the code
+  // rather than a rule somebody has to keep.
+  const sortedArrivals = [...(parsed.data.arrivalEvents ?? [])].sort((a, b) =>
+    a.occurredAt.localeCompare(b.occurredAt),
+  );
+  for (const event of sortedArrivals) {
+    const common = {
+      shopId: session.user.shopId,
+      bookingId: event.bookingId,
+      recordedByPersonId: session.user.personId,
+      source: "offline" as const,
+      clientEventId: event.clientEventId,
+      offlineSnapshotSavedAt: new Date(event.snapshotSavedAt),
+      occurredAt: new Date(event.occurredAt),
+    };
+    const outcome =
+      event.status === "arrived"
+        ? await checkInBooking(db, common)
+        : await undoCheckInBooking(db, {
+            ...common,
+            retractsClientEventId: event.retractsClientEventId,
+          });
+    results.push({
+      clientEventId: event.clientEventId,
+      status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",
+      ...(!outcome.ok ? { reason: outcome.reason } : {}),
+    });
+  }
+
   return Response.json({ results });
 }

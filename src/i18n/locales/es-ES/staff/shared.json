@@ -378,6 +378,11 @@
         "heading": "Comprobación previa a la salida",
         "checkedLabel": "Comprobado — pulsa para quitar la marca",
         "uncheckedLabel": "No comprobado — pulsa para marcarlo"
+      },
+      "counter": {
+        "heading": "En el mostrador",
+        "checkedInLabel": "Registrado",
+        "notCheckedInLabel": "Registrar"
       }
     },
     "shellVersion": {

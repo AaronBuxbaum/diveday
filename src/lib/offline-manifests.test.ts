@@ -2,17 +2,23 @@ import { describe, expect, it } from "vitest";
 import { EMPTY_EMERGENCY_REFERENCE } from "./emergency-reference";
 import type { TripManifest } from "./manifests";
 import {
+  canRecordOfflineArrival,
   canRecordOfflineCrewStatus,
   canRecordOfflineStatus,
   isOfflineManifestExpired,
+  latestOfflineArrival,
   latestOfflineCrewRollCall,
   latestOfflineRollCall,
   OFFLINE_MANIFEST_RECORD_VERSION,
+  type OfflineArrivalEvent,
   type OfflineManifestSnapshot,
+  offlineArrivalEvents,
   offlineManifestAge,
   offlineManifestExpiresAt,
   offlineManifestFreshness,
   offlineRollCallSubject,
+  pendingOfflineEventCount,
+  rejectedOfflineEventCount,
   serializeManifests,
 } from "./offline-manifests";
 
@@ -1761,5 +1767,160 @@ describe("offline crew roll call", () => {
     // An empty string is not a subject either — that is what a widened type
     // plus a hand-built object can produce.
     expect(offlineRollCallSubject({ bookingId: "" })).toBeNull();
+  });
+});
+
+/**
+ * The counter's own reader (ADR 20260907-the-counter-survives-offline). It is
+ * deliberately the simplest of the three on this surface: no checkpoint, no
+ * carry-forward, no rejection rescue — nothing recorded here is the record of
+ * a diver who did not come back.
+ */
+describe("the counter, offline", () => {
+  function arrival(overrides: Partial<OfflineArrivalEvent> = {}): OfflineArrivalEvent {
+    return {
+      clientEventId: "arrival-1",
+      snapshotId: "snapshot-1",
+      snapshotSavedAt: "2026-07-20T11:00:00.000Z",
+      tripId: "trip-1",
+      bookingId: "ready",
+      status: "arrived",
+      occurredAt: "2026-07-20T11:30:00.000Z",
+      syncStatus: "pending",
+      ...overrides,
+    };
+  }
+
+  it("records against a seat this copy knows, and refuses one it has never heard of", () => {
+    const saved = snapshot();
+    expect(canRecordOfflineArrival(saved, "ready")).toBe(true);
+    expect(canRecordOfflineArrival(saved, "blocked")).toBe(true);
+    expect(canRecordOfflineArrival(saved, "not-on-this-boat")).toBe(false);
+  });
+
+  it("reads a queued tap ahead of the saved copy, and marks it as this device's own", () => {
+    const saved = snapshot();
+    expect(latestOfflineArrival(saved, "ready", [])).toBeUndefined();
+    expect(latestOfflineArrival(saved, "ready", [arrival()])).toEqual({
+      state: "arrived",
+      pending: true,
+      local: true,
+      clientEventId: "arrival-1",
+    });
+  });
+
+  it("reads the saved copy when nothing was tapped here", () => {
+    const saved = snapshot();
+    for (const manifest of saved.manifests) {
+      const diver = manifest.divers.find((entry) => entry.bookingId === "ready");
+      if (diver) diver.checkedIn = true;
+    }
+    expect(latestOfflineArrival(saved, "ready", [])).toEqual({
+      state: "arrived",
+      pending: false,
+      local: false,
+    });
+  });
+
+  /**
+   * The collapse: an undo must not fall through to the saved copy's own stale
+   * "checked in", which would hand the mark straight back to whoever just
+   * tapped it off. The same rule the checklist and roll call both follow.
+   */
+  it("does not fall back to the saved copy behind a queued undo", () => {
+    const saved = snapshot();
+    for (const manifest of saved.manifests) {
+      const diver = manifest.divers.find((entry) => entry.bookingId === "ready");
+      if (diver) diver.checkedIn = true;
+    }
+    const events = [
+      arrival({ clientEventId: "a", occurredAt: "2026-07-20T11:30:00.000Z" }),
+      arrival({
+        clientEventId: "b",
+        status: "cleared",
+        retractsClientEventId: "a",
+        occurredAt: "2026-07-20T11:31:00.000Z",
+      }),
+    ];
+    expect(latestOfflineArrival(saved, "ready", events)).toBeUndefined();
+  });
+
+  /**
+   * The e2e fleet freezes the clock, so two taps on one seat share a
+   * timestamp and the tie is the normal case rather than the exotic one. The
+   * later-queued tap wins, which is the direction the server applies a batch
+   * in — the two must not break the tie in opposite directions.
+   */
+  it("breaks a shared timestamp on queue order, the way the server does", () => {
+    const saved = snapshot();
+    const at = "2026-07-20T11:30:00.000Z";
+    expect(
+      latestOfflineArrival(saved, "ready", [
+        arrival({ clientEventId: "a", status: "cleared", occurredAt: at }),
+        arrival({ clientEventId: "b", occurredAt: at }),
+      ]),
+    ).toMatchObject({ state: "arrived", clientEventId: "b" });
+    expect(
+      latestOfflineArrival(saved, "ready", [
+        arrival({ clientEventId: "a", occurredAt: at }),
+        arrival({ clientEventId: "b", status: "cleared", occurredAt: at }),
+      ]),
+    ).toBeUndefined();
+  });
+
+  /**
+   * A refused tap must not keep standing on screen. The one reason the server
+   * refuses an arrival is that readiness stopped clearing the diver between
+   * the tap and the sync — and a row still reading "Checked in" then tells a
+   * staffer somebody is through a counter that refused them.
+   */
+  it("stops showing an arrival the server refused, in both directions", () => {
+    const saved = snapshot();
+    expect(
+      latestOfflineArrival(saved, "ready", [
+        arrival({ syncStatus: "rejected", rejectionReason: "not_ready" }),
+      ]),
+    ).toBeUndefined();
+
+    // A refused undo leaves the arrival it failed to take back standing, which
+    // is what DiveDay holds.
+    expect(
+      latestOfflineArrival(saved, "ready", [
+        arrival({ clientEventId: "a", occurredAt: "2026-07-20T11:30:00.000Z" }),
+        arrival({
+          clientEventId: "b",
+          status: "cleared",
+          retractsClientEventId: "a",
+          occurredAt: "2026-07-20T11:31:00.000Z",
+          syncStatus: "rejected",
+          rejectionReason: "retraction_superseded",
+        }),
+      ]),
+    ).toMatchObject({ state: "arrived", clientEventId: "a" });
+  });
+
+  it("never lets one seat's queue answer for another", () => {
+    const saved = snapshot();
+    expect(latestOfflineArrival(saved, "blocked", [arrival()])).toBeUndefined();
+  });
+
+  /**
+   * The count that decides whether an expired copy is kept, whether the
+   * cross-shop purge may delete it, and whether the worker's background flush
+   * has anything to do. A queue it cannot see is evidence the other two throw
+   * away, so it counts all three.
+   */
+  it("counts every queue's unsent work, not roll call's alone", () => {
+    const envelope = {
+      events: [] as never[],
+      checklistEvents: [] as never[],
+      arrivalEvents: [arrival(), arrival({ clientEventId: "c", syncStatus: "rejected" as const })],
+    };
+    expect(pendingOfflineEventCount(envelope)).toBe(1);
+    expect(rejectedOfflineEventCount(envelope)).toBe(1);
+    // A record written before the counter could work offline has no array at
+    // all, and must not throw on the one surface a crew has with no signal.
+    expect(pendingOfflineEventCount({ events: [], checklistEvents: [] })).toBe(0);
+    expect(offlineArrivalEvents({})).toEqual([]);
   });
 });

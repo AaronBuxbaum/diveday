@@ -378,6 +378,11 @@
         "heading": "Before you leave the dock",
         "checkedLabel": "Checked — press to clear",
         "uncheckedLabel": "Not checked — press to mark checked"
+      },
+      "counter": {
+        "heading": "At the counter",
+        "checkedInLabel": "Checked in",
+        "notCheckedInLabel": "Check in"
       }
     },
     "shellVersion": {

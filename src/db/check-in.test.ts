@@ -5,13 +5,23 @@ import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { checkInBooking, listCheckInQueue, listWalkInTrips, undoCheckInBooking } from "./check-in";
-import { recordRollCall } from "./manifests";
+import { listDepartureBoardedBookingIds, recordRollCall } from "./manifests";
 import { listTripsReadiness } from "./readiness";
-import { activityEvents, bookings, people, personRoles, priorVisits, userAccounts } from "./schema";
+import {
+  activityEvents,
+  bookingArrivalEvents,
+  bookings,
+  people,
+  personRoles,
+  priorVisits,
+  rollCallEvents,
+  userAccounts,
+} from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+const HOUR = 60 * 60 * 1000;
 
 async function context() {
   const { db, shop } = await seededShopContext();
@@ -542,5 +552,350 @@ describe("the counter check-in recorder must be live staff (defence in depth)", 
     ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
     // Still just the one entry the live staff member wrote.
     expect(await trailFor(db, booking.id, before)).toHaveLength(1);
+  });
+});
+
+/**
+ * **The counter with no signal** (ADR 20260907-the-counter-survives-offline).
+ *
+ * Every test here drives the *same* two functions the live counter drives,
+ * with `source: "offline"` and the three fields a queue carries. That is the
+ * point of the design, so it is the shape of the coverage: what the offline
+ * branch adds is idempotency, a staleness bound and two orderings, and each of
+ * them is a way a queued tap can be wrong hours after somebody made it.
+ */
+describe("a counter arrival queued with no signal", () => {
+  const MINUTE = 60 * 1000;
+
+  /** A seat whose waiver is signed, so readiness clears it. */
+  async function readySeat() {
+    const ctx = await context();
+    const issued = await issueWaiverRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.booking.id,
+    });
+    if (!issued.ok) throw new Error("waiver request refused");
+    await completeWaiver(ctx.db, issued.token, {
+      signerName: ctx.personName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    return ctx;
+  }
+
+  /**
+   * One queued tap's three offline fields, plausible by construction: the
+   * copy was saved ten minutes before the tap, which is the order
+   * `offlineEventOutOfBounds` requires. Overriding `occurredAt` moves the
+   * saved time with it, so a test that means to move the *tap* does not
+   * accidentally test the staleness bound instead.
+   */
+  function queued(overrides: { occurredAt?: Date; clientEventId?: string } = {}) {
+    const occurredAt = overrides.occurredAt ?? new Date(nowDate().getTime() - 30 * MINUTE);
+    return {
+      source: "offline" as const,
+      clientEventId: "clientEventId" in overrides ? overrides.clientEventId : crypto.randomUUID(),
+      occurredAt,
+      offlineSnapshotSavedAt: new Date(occurredAt.getTime() - 10 * MINUTE),
+    };
+  }
+
+  it("applies a queued arrival, and applies it exactly once however often it is retried", async () => {
+    const { db, shop, staff, booking } = await readySeat();
+    const event = queued();
+
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...event,
+      }),
+    ).resolves.toMatchObject({ ok: true, bookingId: booking.id });
+
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("checked_in");
+
+    // The sync response never reached the boat and the batch was sent again.
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...event,
+      }),
+    ).resolves.toMatchObject({ ok: true, duplicate: true });
+
+    const trail = await db
+      .select()
+      .from(bookingArrivalEvents)
+      .where(eq(bookingArrivalEvents.bookingId, booking.id));
+    expect(trail).toHaveLength(1);
+    expect(trail[0]).toMatchObject({ status: "arrived", source: "offline" });
+    expect(trail[0]?.clientEventId).toBe(event.clientEventId);
+  });
+
+  /**
+   * The one rule this whole feature is built around: *an arrival is never
+   * promoted to aboard by the queue.* Asserted against the tables rather than
+   * against a code path, because a code path can be rewritten and this is the
+   * property that must survive the rewrite.
+   */
+  it("puts nobody on a boat — a queued arrival writes no roll-call row at all", async () => {
+    const { db, shop, reef, staff, booking } = await readySeat();
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued(),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const boarded = await listDepartureBoardedBookingIds(db, shop.id, [reef.id]);
+    expect(boarded.has(booking.id)).toBe(false);
+    const rollCall = await db
+      .select()
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.bookingId, booking.id));
+    expect(rollCall).toHaveLength(0);
+    const [queue] = await listCheckInQueue(db, shop.id, { query: booking.id });
+    expect(queue).toMatchObject({ bookingStatus: "checked_in", boarded: false });
+  });
+
+  /**
+   * **Readiness is re-read when the batch lands, not when the tap happened.**
+   * A device holding a copy up to a fortnight old cannot know that a refund
+   * landed or a card expired since; the server can, and refuses.
+   */
+  it("refuses a queued arrival for a diver readiness no longer clears", async () => {
+    const { db, shop, staff, booking } = await context();
+    const outcome = await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+      ...queued(),
+    });
+    expect(outcome).toMatchObject({ ok: false, reason: "not_ready" });
+    const trail = await db
+      .select()
+      .from(bookingArrivalEvents)
+      .where(eq(bookingArrivalEvents.bookingId, booking.id));
+    expect(trail).toHaveLength(0);
+  });
+
+  it("refuses a tap whose own clocks put it outside the plausible window", async () => {
+    const { db, shop, staff, booking } = await readySeat();
+    const occurredAt = new Date(nowDate().getTime() - 30 * MINUTE);
+    // A copy that claims to have been saved *after* the tap taken from it.
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued({ occurredAt }),
+        offlineSnapshotSavedAt: new Date(occurredAt.getTime() + HOUR),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
+
+    // A tap stamped in the future.
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued({ occurredAt: new Date(nowDate().getTime() + HOUR) }),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
+
+    // And one with no idempotency key at all, which cannot be applied safely.
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued({ clientEventId: undefined }),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
+  });
+
+  /**
+   * Two devices, one seat. The desk's own undo is recorded live at 09:00; a
+   * tablet that has been out of signal since 08:00 syncs an arrival stamped
+   * 08:30. The older statement loses.
+   */
+  it("refuses a queued arrival older than the statement already standing", async () => {
+    const { db, shop, staff, booking } = await readySeat();
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    await expect(
+      undoCheckInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued({ occurredAt: new Date(nowDate().getTime() - 2 * HOUR) }),
+      }),
+    ).resolves.toMatchObject({ ok: false, reason: "newer_event_exists" });
+
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("booked");
+  });
+
+  /**
+   * The compare-and-set, reproduced at the counter (ADR
+   * 20260815-an-offline-retraction-names-its-target).
+   *
+   * The tablet's own arrival is synced. The desk then undoes it and checks the
+   * diver back in, because they were standing there. The tablet, still holding
+   * the copy it had, queues an undo of *its own* arrival. Its timestamp beats
+   * the desk's — a retraction is stamped at tap time — so the plain
+   * newest-wins comparison lets it through. The compare-and-set does not: the
+   * arrival it names is no longer the statement standing.
+   */
+  it("refuses an undo whose arrival is no longer the statement standing", async () => {
+    const { db, shop, staff, booking } = await readySeat();
+    const arrival = queued({ occurredAt: new Date(nowDate().getTime() - 3 * HOUR) });
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...arrival,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    // The desk, live, with the diver in front of them.
+    await expect(
+      undoCheckInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        now: new Date(nowDate().getTime() - 2 * HOUR),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        now: new Date(nowDate().getTime() - 2 * HOUR),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const outcome = await undoCheckInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+      ...queued({ occurredAt: new Date(nowDate().getTime() - MINUTE) }),
+      retractsClientEventId: arrival.clientEventId,
+    });
+    expect(outcome).toEqual({ ok: false, reason: "retraction_superseded" });
+
+    // The desk's sighting stands. The diver is still checked in.
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("checked_in");
+  });
+
+  it("applies an undo that still names the statement standing", async () => {
+    const { db, shop, staff, booking } = await readySeat();
+    const arrival = queued({ occurredAt: new Date(nowDate().getTime() - 3 * HOUR) });
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...arrival,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    await expect(
+      undoCheckInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued({ occurredAt: new Date(nowDate().getTime() - MINUTE) }),
+        retractsClientEventId: arrival.clientEventId,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("booked");
+  });
+
+  /**
+   * An undo that names nothing keeps the pre-change path, exactly as roll
+   * call's does: it was queued by a build that predates the field, on a phone
+   * in a dry bag, and refusing it would discard a correction a staffer really
+   * made.
+   */
+  it("still applies an undo that names no arrival", async () => {
+    const { db, shop, staff, booking } = await readySeat();
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued({ occurredAt: new Date(nowDate().getTime() - 3 * HOUR) }),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    await expect(
+      undoCheckInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued({ occurredAt: new Date(nowDate().getTime() - MINUTE) }),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+  });
+
+  /** A queued tap from a device signed into another shop reaches nothing here. */
+  it("refuses a queued arrival scoped to another tenant", async () => {
+    const { db, booking } = await readySeat();
+    await expect(
+      checkInBooking(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        bookingId: booking.id,
+        recordedByPersonId: "00000000-0000-4000-8000-000000000000",
+        ...queued(),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+  });
+
+  /**
+   * Every tap leaves a row, live ones included — the fact the two orderings
+   * above have nothing to compare against without.
+   */
+  it("records a live check-in in the same trail, marked live", async () => {
+    const { db, shop, staff, booking } = await readySeat();
+    await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+    });
+    await undoCheckInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+    });
+    const trail = await db
+      .select()
+      .from(bookingArrivalEvents)
+      .where(eq(bookingArrivalEvents.bookingId, booking.id))
+      .orderBy(bookingArrivalEvents.seq);
+    expect(trail.map((row) => row.status)).toEqual(["arrived", "cleared"]);
+    expect(trail.every((row) => row.source === "live" && row.clientEventId === null)).toBe(true);
   });
 });
