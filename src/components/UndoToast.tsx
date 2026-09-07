@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
+import { motionMs } from "@/lib/motion";
 
 // Matches the `.toast-dismiss` keyframe duration in globals.css. Kept as a
 // timer (not `onAnimationEnd`) because the reduced-motion kill-switch there
 // only shortens the animation to ~0ms — it doesn't skip it — and we want one
 // unmount path that works identically either way.
-const EXIT_DURATION_MS = 200;
+const EXIT_DURATION_MS = motionMs("base");
 
 /**
  * A land-then-undo toast: the action already happened, and this offers a few

@@ -403,7 +403,7 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
 
 16h, 16i and 16j landed as a stack, each cut from the layer below and merged bottom-up.
 
-### 18. Nothing from nowhere (design complete; H-69 open)
+### 18. Nothing from nowhere (18a–18d shipped 2026-09-07; 18e open, 18f waiting on H-69 b)
 
 The 2026-09-07 loop over how the interface moves, argued on
 [the canvas](../../design/canvases/20260907-nothing-from-nowhere/README.md) and proposed in ADR
@@ -420,19 +420,35 @@ are explained. 18b, 18c, 18d and 18e do not depend on H-69 and may start on the 
 spring half, 18c's roster half and 18f wait on it.
 
 - **18a** — the physics: `--motion-quick` / `--motion-base` / `--motion-unfold` as theme tokens,
-  `motionMs()` for the three copied timers, the press on every tappable primitive, principle 5's
-  ladder and event table. The spring on the press release waits on H-69 a.
-- **18b** — a figure rolls: `RollingFigure` on the counter's instrument line and settled count,
-  the station chip, the palette's answer count, the held send's seconds, the booking form's gear
-  price; the never-list held by a test over the roll call's and the manifest's trees.
-- **18c** — a row closes its own gap: `useSettledRows` on the counter queue, the home's station,
-  the wait list and the board's day, with Undo running the same path reversed. The manifest
-  roster waits on H-69 c.
-- **18d** — the sheet follows the thumb: `useDragSheet` generalised from `PullToRefresh`, on the
-  More sheet and the embed lightbox, with the grab handle; the settle-back on the spring waits on
-  H-69 a.
-- **18e** — the title folds into the bar on a phone: two scroll-driven keyframes under
-  `@supports`, a `data-page-title` on `ShopPageHeader`, a folded capture in the visual spec.
+  `motionMs()` for the copied timers, the press on every tappable primitive, principle 5's ladder
+  and event table. **Shipped 2026-09-07.** Ten hand-copied timers now name a rung, every animation
+  utility runs off one, and `motion-tokens.test.ts` reads the stylesheet to prove CSS and JS state
+  the same three numbers. The press has two spellings rather than one: a discrete control scales
+  (`.pressable`), a full-bleed row tints (`.pressable-row`), because three percent of a phone's
+  width is six pixels of travel on each edge and a row that scales reads as the page flinching.
+  The spring on the release ships as H-69 a recommends, and is one token in two rules if declined.
+- **18b** — a figure rolls: `RollingFigure` on the counter's instrument line and settled count and
+  on the held send's seconds; the never-list held by a test over the roll call's and the manifest's
+  trees. **Shipped 2026-09-07.** A figure whose *sentence* changed swaps rather than rolls, which
+  the boards did not draw: rolling digits inside a line that rewrote itself claims a continuity
+  that is not there. The station chip, the palette count and the gear price are the same one-line
+  wiring and go with the surfaces that own them.
+- **18c** — a row closes its own gap: `SettledRows` on the counter's working queue and its settled
+  group, with Undo running the same path reversed. **Shipped 2026-09-07.** Rows are tracked by DOM
+  identity rather than by a key attribute, so a list opts in by wrapping and nothing labels its
+  children. The home's station, the wait list and the board's day are the same wrapper and follow;
+  the manifest roster waits on H-69 c.
+- **18d** — the sheet follows the thumb: `useDragSheet`, on the dock's More sheet, with the grab
+  handle. **Shipped 2026-09-07.** The release decision is a pure function (`dismissOnRelease`)
+  because a hand's *speed* is the one input a DOM test cannot express, and a velocity guard stops a
+  release that lands in the same millisecond as the last move from reading as a flick. The embed
+  lightbox is the same hook and follows.
+- **18e** — the title folds into the bar on a phone. **Open, on a finding.** The fold needs the
+  page's title inside the shell's bar, and this app renders the bar (`ShopNav`, in the shop layout)
+  and the title (`ShopPageHeader`, in the page) in two different trees. Every CSS-only shape either
+  covers the shop-identity menu with a label that stays clickable underneath, or shrinks the
+  heading, which the ADR rules out. It needs a data-flow decision — a title slot on the layout, or
+  a portal — which is a change to the shell rather than to motion.
 - **18f** — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's
   brand, updates from `trips.revision`, the two pass-service routes. `waiting-on-external` on the
   Apple Developer and Google Wallet accounts H-69 b decides; nothing built ahead of them.

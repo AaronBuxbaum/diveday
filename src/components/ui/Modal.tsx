@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
+import { motionMs } from "@/lib/motion";
 
 /**
  * A small centered dialog for collecting input — distinct from `InlineConfirm`,
@@ -32,7 +33,7 @@ export function Modal({
   children: React.ReactNode;
   className?: string;
 }) {
-  const { mounted, closing } = useExitAnimation(open, 180);
+  const { mounted, closing } = useExitAnimation(open, motionMs("base"));
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useFocusTrap(open, dialogRef);

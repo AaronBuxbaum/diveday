@@ -1,6 +1,6 @@
 # Nothing from nowhere — six moves that make the interface behave as a thing
 
-- **Status:** Live (its ADR is Proposed, pending H-69)
+- **Status:** Live (its ADR is Proposed, pending H-69; slices 18a–18d shipped 2026-09-07)
 - **Date:** 2026-09-07
 - **ADR:** [20260907-nothing-from-nowhere](../../../architecture/decisions/20260907-nothing-from-nowhere.md)
 - **Published:** https://claude.ai/code/artifact/6015f01a-ae08-4975-a122-bd270198a86b
@@ -90,12 +90,35 @@ comment, and a test pins the rule.
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 18a — the physics: the three rungs as theme tokens, `motionMs()` for the copied timers, the press on every tappable primitive, principle 5's ladder and event table (the spring on release per H-69 a) | open | — | — |
-| 18b — a figure rolls: `RollingFigure` on the counter, the station chip, the palette, the held send and the gear price; the never-list held by test over the roll call and the manifest | open | — | — |
-| 18c — a row closes its own gap: `useSettledRows` on the counter queue, the home's station, the wait list and the board's day, Undo reversed (the roster per H-69 c) | open | — | — |
-| 18d — the sheet follows the thumb: `useDragSheet` on the More sheet and the embed lightbox, the grab handle (the settle-back on the spring per H-69 a) | open | — | — |
-| 18e — the title folds into the bar on a phone: two scroll-driven keyframes under `@supports`, `data-page-title` on `ShopPageHeader`, the folded capture in the visual spec | open | — | — |
-| 18f — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's brand, updates from `trips.revision`, the two pass-service routes; `waiting-on-external` on H-69 b's accounts | open | — | — |
+| 18a — the physics: the three rungs as theme tokens, `motionMs()` for the ten copied timers, the press on every tappable primitive, principle 5's ladder and event table | shipped | `src/lib/motion.ts` | `src/app/motion-tokens.test.ts` |
+| 18b — a figure rolls: `RollingFigure` on the counter's instrument line and settled count and on the held send's seconds; the never-list held by test over the roll call and the manifest | shipped | `src/components/ui/RollingFigure.tsx` | `src/components/ui/RollingFigure.test.tsx`, `src/components/ui/RollingFigure.never-list.test.ts` |
+| 18c — a row closes its own gap: `SettledRows` on the counter's working queue and its settled group, Undo reversed (the manifest roster still waits on H-69 c) | shipped | `src/components/SettledRows.tsx` | `src/components/SettledRows.test.tsx` |
+| 18d — the sheet follows the thumb: `useDragSheet` on the dock's More sheet, with the grab handle; the scrim tracks the sheet's travel | shipped | `src/components/useDragSheet.ts` | `src/components/useDragSheet.test.tsx` |
+| 18e — the title folds into the bar on a phone | open | — | — |
+| 18f — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's brand, updates from `trips.revision`, the two pass-service routes | open | — | — |
+
+**What 18a–18d settled that the drawing left open, and what is still owed:**
+
+- **The press has two spellings, not one.** The boards drew every tappable
+  thing at 97%, and a full-bleed row scaling by three percent is six pixels of
+  travel on each edge of a phone: the page reads as flinching. A discrete
+  control scales (`.pressable`), a row tints (`.pressable-row`), and the timing
+  is identical, which is what keeps it one press.
+- **The spring on release ships** (H-69 a's recommended answer), on the sheet
+  settling back and on a control letting go. It is one token in two rules;
+  declining it is changing `--ease-spring` to `--ease-out-soft` there.
+- **The roll needs a whole sentence to compare**, not just a number: if
+  anything but the digits changed, the figure swaps. The Roll board draws only
+  the digits changing, which is the common case and not the only one.
+- **18e is open on a finding the boards did not anticipate.** The fold needs
+  the page's title inside the shell's bar, and this app renders the bar
+  (`ShopNav`, in the shop layout) and the title (`ShopPageHeader`, in the page)
+  in two different trees. Every CSS-only shape either covers the shop-identity
+  menu with a label that stays clickable underneath, or shrinks the heading —
+  which the ADR rules out. It needs a data-flow decision (a title slot on the
+  layout, or a portal) that is a change to the shell rather than to motion.
+- **18f is unbuilt and unbuildable here**: it waits on H-69 b and on
+  credentials a human holds.
 
 ## Implementing a slice
 

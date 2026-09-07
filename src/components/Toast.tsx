@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motionMs } from "@/lib/motion";
 
 // Matches `UndoToast`'s own exit timing — the `.toast-dismiss` keyframe
 // duration in globals.css.
-const EXIT_DURATION_MS = 200;
+const EXIT_DURATION_MS = motionMs("base");
 
 /**
  * A brief, auto-dismissing acknowledgement for an action that leaves no other

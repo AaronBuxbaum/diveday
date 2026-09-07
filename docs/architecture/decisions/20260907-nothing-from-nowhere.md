@@ -1,7 +1,8 @@
 # 20260907-nothing-from-nowhere — Every change on screen comes from somewhere, anything a finger is on obeys it, and one physics governs all of it
 
 - **Status:** Proposed — pending H-69 (the spring's ration, the Wallet pass, and whether structural
-  motion reaches the roll call). Slices 18a–18f in the roadmap
+  motion reaches the roll call). Slices 18a–18f in the roadmap; **18a–18d shipped 2026-09-07**,
+  taking H-69 a's recommended answer, holding H-69 b and c
 - **Date:** 2026-09-07
 - **Design:** [the canvas](../../design/canvases/20260907-nothing-from-nowhere/README.md) — seven
   artboards on two pages: the cover and the Physics sheet; then the roll, the counter, the sheet,
@@ -156,6 +157,33 @@ Wallet issuer account for the Android half: each an account, a yearly fee and a 
 a human can hold. **Recommended:** yes, with the slice filed `waiting-on-external` until the
 certificate exists, and nothing built ahead of it. Declined, the thread stays as it ships and the
 Pass board renders nothing.
+
+## What building it settled (2026-09-07)
+
+Slices 18a–18d shipped the same day the canvas was drawn. Three things the boards did not
+anticipate, recorded here because the ADR is what code obeys:
+
+1. **The press has two spellings, and they are one behaviour.** The boards drew every tappable
+   thing at 97%. Three percent of a 390px row is six pixels of travel on each edge, and a
+   full-bleed row that scales reads as the page flinching rather than as the row taking a finger's
+   weight. A discrete control scales (`.pressable`); a full-bleed row tints
+   (`.pressable-row`). The timing is identical — instant down, `--motion-quick` back up — which is
+   what keeps it one press rather than two conventions.
+2. **The roll compares a sentence, not a number.** If anything but the digits differs between two
+   renders — a plural form flipping, a remainder line rewriting itself — the figure swaps. Rolling
+   digits inside a line that rewrote itself claims a continuity that is not there.
+3. **The gesture's judgement is pure, and needed a guard.** `dismissOnRelease` is separated from
+   the hand that produced its numbers, because a hand's *speed* is the one input a DOM test cannot
+   express. Writing it exposed a real failure: a release landing in the same millisecond as the
+   last move divides by nothing and reads as a flick, so the sheet leaves from under a hand that
+   was putting it back. Below `MIN_VELOCITY_MS` a release is read as a distance.
+
+**18e is open on a finding rather than on effort.** The title fold needs the page's title inside
+the shell's bar, and this app renders the bar (`ShopNav`, in the shop layout) and the title
+(`ShopPageHeader`, in the page) in two different trees. A CSS-only fold would have to cover the
+shop-identity menu with an opaque label that stays clickable underneath, or shrink the heading —
+which decision 5 rules out. It needs a data-flow decision (a title slot on the layout, or a
+portal), which is a change to the shell rather than to motion, and it is filed for triage.
 
 ## Alternatives considered
 

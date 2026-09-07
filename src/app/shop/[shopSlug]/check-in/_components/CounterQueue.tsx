@@ -1,4 +1,6 @@
+import { SettledRows } from "@/components/SettledRows";
 import { LedgerGroup } from "@/components/ui/ledger";
+import { RollingFigure } from "@/components/ui/RollingFigure";
 import type { CheckInQueueRow as QueueRow } from "@/db/check-in";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { isSettledAtCounter } from "@/lib/check-in";
@@ -77,7 +79,10 @@ export function CounterQueue({
   return (
     <>
       {waiting.length > 0 ? (
-        <div>
+        // The rows beneath a check-in slide into its gap on the same clock the
+        // row took to sink, instead of jumping (ADR
+        // 20260907-nothing-from-nowhere, decision 3).
+        <SettledRows>
           {waiting.map((row) => (
             <CounterQueueRow
               key={row.bookingId}
@@ -91,7 +96,7 @@ export function CounterQueue({
               t={t}
             />
           ))}
-        </div>
+        </SettledRows>
       ) : null}
 
       {settled.length > 0 ? (
@@ -100,16 +105,18 @@ export function CounterQueue({
           className="mt-6"
           folded={!settledOpen}
           label={
-            // The count cross-fades on increment: a new `key` remounts the
-            // span, so the existing 150ms `fade-in` plays on the number that
-            // just changed and on nothing else. Reduced motion zeroes it and
-            // the number alone carries the fact.
-            <span key={settled.length} className="animate-fade-in tabular-nums">
+            // The count rolls on increment, and only its digits do — the words
+            // around it are the same statement (ADR
+            // 20260907-nothing-from-nowhere, decision 3). It replaces a
+            // keyed remount playing `fade-in` over the whole label, which
+            // faded the words too and so said "this line is new" rather than
+            // "this number changed". Reduced motion swaps, as it did.
+            <RollingFigure className="tabular-nums">
               {t("checkIn.settledGroup", { count: settled.length })}
-            </span>
+            </RollingFigure>
           }
         >
-          <div className="opacity-70">
+          <SettledRows className="opacity-70">
             {settled.map((row) => (
               <CounterQueueRow
                 key={row.bookingId}
@@ -123,7 +130,7 @@ export function CounterQueue({
                 t={t}
               />
             ))}
-          </div>
+          </SettledRows>
         </LedgerGroup>
       ) : null}
     </>

@@ -7,6 +7,7 @@ import { groupLabelClass } from "@/components/ui/ledger";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
+import { motionMs } from "@/lib/motion";
 
 /**
  * A roll-call event as it happened today. The server resolves the words and
@@ -20,7 +21,7 @@ export type PersonTrailEntry = {
   note?: string | null;
 };
 
-const SHEET_DURATION_MS = 200;
+const SHEET_DURATION_MS = motionMs("base");
 
 function TrailMark({ state }: { state: PersonTrailEntry["state"] }) {
   const className =

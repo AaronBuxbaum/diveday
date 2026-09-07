@@ -2,6 +2,7 @@
 
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { RollingFigure } from "@/components/ui/RollingFigure";
 import { fill } from "@/i18n/fill";
 import { heldSendSecondsLeft } from "@/lib/held-sends";
 
@@ -130,7 +131,16 @@ export function SendHold<Outcome>({
       >
         <HoldRing fraction={releasing ? 1 : Math.min(1, 1 - seconds / holdSeconds)} />
         <span className="text-sm">
-          {releasing ? copy.sendingNow : fill(copy.sendingIn, { seconds })}
+          {/* The seconds roll down as the hold drains, on the same clock the
+              ring beside them is drawn from — one change, one answer (ADR
+              20260907-nothing-from-nowhere, decision 3). The word "Sending
+              now" is a different sentence, so it swaps. The leaving digit is
+              `aria-hidden`, so this live region still announces one value. */}
+          {releasing ? (
+            copy.sendingNow
+          ) : (
+            <RollingFigure>{fill(copy.sendingIn, { seconds })}</RollingFigure>
+          )}
           {note ? <span className="text-muted"> {note}</span> : null}
         </span>
         <button
@@ -174,7 +184,7 @@ function HoldRing({ fraction }: { fraction: number }) {
         strokeLinecap="round"
         strokeDasharray={circumference}
         strokeDashoffset={circumference * fraction}
-        className="transition-[stroke-dashoffset] duration-200 ease-out-soft motion-reduce:transition-none"
+        className="transition-[stroke-dashoffset] duration-(--motion-base) ease-out-soft motion-reduce:transition-none"
       />
     </svg>
   );

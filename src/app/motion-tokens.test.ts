@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { MOTION_RUNGS } from "@/lib/motion";
 
 /**
  * **The motion language, checked against the stylesheet that carries it.**
@@ -44,7 +45,57 @@ describe("the motion tokens", () => {
    */
   it("points the default curve and duration at the app's own arrival", () => {
     expect(themeBlock).toContain("--default-transition-timing-function: var(--ease-out-soft)");
-    expect(themeBlock).toContain("--default-transition-duration: 200ms");
+    expect(themeBlock).toContain("--default-transition-duration: var(--motion-base)");
+  });
+
+  /**
+   * **The ladder is one ladder, in two languages.**
+   *
+   * CSS owns the motion; JS owns the timers that let an exit finish before
+   * React unmounts the node. Before this, every one of those timers was a
+   * keyframe's number copied into another file under a comment asking the next
+   * reader to keep the two in step — and nothing failed when the CSS moved and
+   * the copy did not, because a half-played exit reads as a stutter rather than
+   * as a bug (ADR 20260907-nothing-from-nowhere, decision 2).
+   *
+   * Reading the stylesheet here is what makes `motionMs("base")` a promise
+   * rather than a second opinion.
+   */
+  it("states the same three rungs to JS as it does to CSS", () => {
+    for (const [rung, ms] of Object.entries(MOTION_RUNGS)) {
+      expect(themeBlock, `--motion-${rung}`).toContain(`--motion-${rung}: ${ms}ms;`);
+    }
+  });
+
+  /**
+   * The rungs are the whole vocabulary, so a keyframe with a hand-written
+   * duration is either a new speed nobody agreed to or a rung spelled as a
+   * number. The two ceilings principle 5 grants are the exceptions and are
+   * listed by name: a ceiling is a limit rather than a speed.
+   */
+  it("runs every animation utility off a rung, bar the drawn moments", () => {
+    // Each of these is a drawn moment rather than a speed — the water closing
+    // over finished work, the boat leaving, and the marketing hero's one
+    // reveal. They state a duration because they *are* the exception the
+    // 600ms ceiling exists for, so the ceiling is asserted below rather than
+    // waived.
+    const MOMENTS = [
+      "swell-across",
+      "boat-leaves",
+      "marketing-device-arrive",
+      "marketing-roll-call-settle",
+    ];
+    const literals = [...CSS.matchAll(/animation:\s*([\w-]+)\s+(\d+)ms/g)];
+    expect(
+      literals.filter(([, name]) => !MOMENTS.includes(name)).map(([, n, ms]) => `${n} ${ms}ms`),
+      "a duration in milliseconds where a rung belongs",
+    ).toEqual([]);
+    for (const [, name, ms] of literals) {
+      expect(
+        Number(ms),
+        `${name} is a drawn moment and sits under the ceiling`,
+      ).toBeLessThanOrEqual(600);
+    }
   });
 
   it("keeps the curves out of :root, where they generated nothing", () => {

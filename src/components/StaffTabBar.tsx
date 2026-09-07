@@ -11,8 +11,10 @@ import {
 } from "@/components/ShopNavLinks";
 import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
+import { useDragSheet } from "@/components/useDragSheet";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
+import { motionMs } from "@/lib/motion";
 import {
   currentStaffNavDestinationId,
   isLiveManifestPath,
@@ -103,8 +105,18 @@ function StaffTabBarContent({
   // contract (useMenuDismissal). A tap on another dock tab both closes the
   // sheet (pointerdown) and navigates (click), so no second tap is owed.
   const closeSheet = useCallback(() => setMoreOpen(false), []);
-  // 200ms matches .sheet-out in globals.css — the two must move together.
-  const { mounted: sheetMounted, closing: sheetClosing } = useExitAnimation(moreOpen, 200);
+  // The rung `.sheet-out` is declared on, so the two cannot drift apart.
+  const { mounted: sheetMounted, closing: sheetClosing } = useExitAnimation(
+    moreOpen,
+    motionMs("base"),
+  );
+  // The third gesture in the app, under the contract the pull and the buddy
+  // drag already share (ADR 20260907-nothing-from-nowhere, decision 4). The
+  // scrim tap and Escape are untouched: this adds a way to close the sheet
+  // without reaching for the top of the screen, it does not take one away.
+  const drag = useDragSheet({ onDismiss: closeSheet, disabled: sheetClosing });
+  /** A thumb is on the sheet, or has just let go of it short of the line. */
+  const held = drag.dragging || drag.offset !== 0;
   useMenuDismissal({
     open: moreOpen,
     close: closeSheet,
@@ -146,7 +158,7 @@ function StaffTabBarContent({
   };
 
   const tabClass = (active: boolean) =>
-    `flex min-h-14 w-full flex-col items-center justify-center gap-0.5 px-0.5 pt-1.5 pb-1 transition-colors ${
+    `pressable flex min-h-14 w-full flex-col items-center justify-center gap-0.5 px-0.5 pt-1.5 pb-1 ${
       active ? "text-primary" : "text-muted hover:text-foreground"
     }`;
   // The active pill is the same grammar the header tabs speak (bg-primary/10
@@ -174,7 +186,13 @@ function StaffTabBarContent({
         // closes the sheet.
         <div
           aria-hidden="true"
-          className={`fixed inset-0 -z-10 bg-foreground/30 backdrop-blur-sm ${sheetClosing ? "animate-fade-out" : "animate-fade-in"}`}
+          // The scrim lightens with the sheet's own travel while a thumb is on
+          // it, so the page behind comes back as the sheet goes rather than
+          // waiting until it is gone.
+          style={drag.dragging ? { opacity: drag.scrim, transition: "none" } : undefined}
+          className={`fixed inset-0 -z-10 bg-foreground/30 backdrop-blur-sm ${
+            drag.dragging ? "" : sheetClosing ? "animate-fade-out" : "animate-fade-in"
+          }`}
         />
       ) : null}
       {/* Solid surface first, glass only where backdrop-filter exists: at 85%
@@ -305,9 +323,28 @@ function StaffTabBarContent({
           aria-modal="true"
           aria-labelledby={`${sheetId}-heading`}
           onKeyDown={trapSheetFocus}
-          className={`absolute inset-x-0 bottom-full max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-t-2xl border-t border-border bg-surface shadow-xl ${sheetClosing ? "sheet-out" : "rise-in"}`}
+          {...drag.handlers}
+          // While a finger is on it the sheet is where the finger put it and
+          // wears no animation class at all: the drag's transform and
+          // `rise-in`'s would otherwise compose, and the sheet would leave from
+          // somewhere nobody dragged it.
+          style={held ? drag.style : undefined}
+          className={`absolute inset-x-0 bottom-full max-h-[calc(100dvh-8rem)] touch-pan-y overflow-y-auto rounded-t-2xl border-t border-border bg-surface shadow-xl ${
+            held ? "" : sheetClosing ? "sheet-out" : "rise-in"
+          }`}
         >
           <div className="mx-auto w-full max-w-xl p-3 pb-2">
+            {/* The one thing the sheet gains at rest: the affordance that says
+                it can be held, and the one place a drag may start however far
+                the list beneath it has been scrolled. It is `aria-hidden` and
+                focusable by nobody — Escape and the scrim already close this
+                sheet for everyone not using a thumb, and a focusable handle
+                would add a tab stop that does nothing when it is reached. */}
+            <div
+              aria-hidden="true"
+              data-sheet-handle
+              className="mx-auto mb-2 h-1.5 w-10 shrink-0 rounded-full bg-border-strong/60"
+            />
             <h2 id={`${sheetId}-heading`} className="sr-only">
               {moreLabel}
             </h2>

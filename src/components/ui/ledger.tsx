@@ -374,7 +374,7 @@ export function LedgerRow({
     <Tag
       className={`relative flex items-center gap-3 border-t border-border last:border-b ${
         size === "lg" ? "min-h-14" : "min-h-13"
-      } ${stacked ? "max-sm:flex-wrap max-sm:py-2" : ""} ${href ? "transition-colors hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
+      } ${stacked ? "max-sm:flex-wrap max-sm:py-2" : ""} ${href ? "pressable-row hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
         .replace(/\s+/g, " ")
         .trim()}
     >
