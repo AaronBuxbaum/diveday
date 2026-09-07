@@ -117,10 +117,15 @@ export function WaiverGroup({
   // A delivery failure is a fact about the message we sent, not about the
   // standing — the diver has still simply not signed. `waiver-labels.ts`
   // carries the asymmetry; this is the one place the record composes it.
+  //
+  // It only reaches a diver who has signed *nothing*, which used to mean
+  // "anything but `current`". A minor's solo signature is the second state
+  // that is a signed release (ADR 20260907-guardian-co-signature), and letting
+  // a stale pending link overwrite its word read "Not signed" over a record
+  // whose own line underneath said the diver had signed it that morning.
+  const hasSigned = diver.waiver.state === "current" || diver.waiver.state === "guardian_missing";
   const state: WaiverRowState =
-    diver.waiverRequest === "failed" && diver.waiver.state !== "current"
-      ? "failed"
-      : diver.waiver.state;
+    diver.waiverRequest === "failed" && !hasSigned ? "failed" : diver.waiver.state;
   const needsAction =
     diver.waiver.state === "none" ||
     diver.waiver.state === "expired" ||
