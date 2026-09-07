@@ -4,7 +4,9 @@ import type { CourtesyProvider } from "@/lib/notifications/courtesy";
 import {
   type WhatsAppCredentials,
   type WhatsAppProviderOptions,
+  type WhatsAppTextSender,
   whatsAppProvider,
+  whatsAppTextSender,
 } from "@/lib/notifications/whatsapp";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import type { DbExecutor } from "./client";
@@ -198,6 +200,26 @@ export function whatsAppProviderForAccount(
     templateLanguage: account.templateLanguage,
   };
   return whatsAppProvider(credentials, options.fetchImpl ?? fetch, options.providerOptions);
+}
+
+/**
+ * The free-text sender for one shop's account — what a typed reply goes out
+ * through (ADR 20260907-two-way-inbox). Same key rule, same null for a shop
+ * with no usable WhatsApp; the caller has already checked the 24-hour window.
+ */
+export function whatsAppTextSenderForAccount(
+  account: ShopWhatsappAccount,
+  options: WhatsAppSenderOptions = {},
+): WhatsAppTextSender | null {
+  const key = resolveKey(options);
+  if (typeof key === "string") return null;
+  const accessToken = openSecret(account.accessTokenSealed, key);
+  if (!accessToken) return null;
+  return whatsAppTextSender(
+    { phoneNumberId: account.phoneNumberId, accessToken },
+    options.fetchImpl ?? fetch,
+    options.providerOptions,
+  );
 }
 
 /**

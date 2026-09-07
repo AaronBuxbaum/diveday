@@ -176,6 +176,19 @@ function oneClickUnsubscribeUrl(unsubscribeUrl: string): string | undefined {
   }
 }
 
+/**
+ * The two headers that file a staff reply into the diver's own thread (RFC
+ * 5322 §3.6.4): both name the message being answered. Only the reply kind
+ * carries one, and only when the diver's mail had a `Message-ID` at all.
+ */
+function replyThreadHeaders(notification: Notification): { Name: string; Value: string }[] {
+  if (notification.kind !== "staff_reply" || !notification.inReplyTo) return [];
+  return [
+    { Name: "In-Reply-To", Value: notification.inReplyTo },
+    { Name: "References", Value: notification.inReplyTo },
+  ];
+}
+
 /** See `ses-tags.ts` for why every send is tagged with its shop and kind. */
 function emailTagsOf(notification: Notification): { Name: string; Value: string }[] {
   return [
@@ -228,6 +241,7 @@ export function sesNotificationProvider(
                   // quiet instead of replying to a booking confirmation, and a
                   // reply that does come is a human's.
                   { Name: "Auto-Submitted", Value: "auto-generated" },
+                  ...replyThreadHeaders(notification),
                   // RFC 8058 one-click unsubscribe: `List-Unsubscribe` names the
                   // POST target and `List-Unsubscribe-Post` is the fixed token that
                   // tells Gmail/Yahoo/Outlook it's safe to POST there with no

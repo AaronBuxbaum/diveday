@@ -40,12 +40,26 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * The bare address out of anything an email header carries — `Priya Sharma
  * <priya@example.com>`, `<priya@example.com>`, `PRIYA@Example.com ` — as one
  * comparable string. Null when there is no `@` to compare on.
+ *
+ * **The mailbox is the *last* angle-addr.** RFC 5322's `name-addr` is
+ * `[display-name] angle-addr`, and a display name may be a quoted string
+ * holding anything, angle brackets included. Taking the first `<…>` therefore
+ * reads attacker-chosen text out of the display name rather than the address
+ * the mail came from — and this function decides *whose record a message lands
+ * on* in `/api/webhooks/email-inbound`, checked against a DMARC verdict SES
+ * computed over the real mailbox. Reading the wrong end let anyone with a
+ * DMARC-passing domain of their own write onto a named diver's record: the
+ * verdict authenticated `evil.example`, and the sentence was filed under the
+ * victim's address parked in the display name. `src/lib/inbox.test.ts` pins it.
  */
 export function normalizeEmailAddress(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  const angled = raw.match(/<([^<>]+)>/);
+  const angled = [...raw.matchAll(/<([^<>]*)>/g)].at(-1);
   const candidate = (angled ? angled[1] : raw).trim().toLowerCase();
-  if (!candidate.includes("@") || /\s/.test(candidate)) return null;
+  // An addr-spec, not merely "has an @": this is the value compared against the
+  // envelope and stored as the sender, so a header that is not one mailbox is
+  // refused outright rather than normalised into something that looks like one.
+  if (!/^[^\s@<>",;]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(candidate)) return null;
   return candidate;
 }
 

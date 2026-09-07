@@ -268,3 +268,39 @@ describe("the waiver group", () => {
     expect(screen.getByRole("button", { name: "Mark signed on paper" })).toBeTruthy();
   });
 });
+
+/**
+ * **A minor's solo signature is a signed release** (ADR
+ * 20260907-guardian-co-signature), so the record says what is actually missing.
+ */
+describe("a minor's release with no guardian on it", () => {
+  const signedAt = new Date("2026-08-27T14:00:00.000Z");
+
+  it("says what is missing rather than 'Not signed'", () => {
+    renderCard(diver({ waiver: { state: "guardian_missing", signedAt } }));
+    // Twice by design: the group's collapsed summary and the open row both
+    // carry the state word.
+    expect(screen.getAllByText("Guardian signature missing")).toHaveLength(2);
+    expect(
+      screen.getByText(
+        "Signed Aug 27, 2026 by the diver alone; a parent or guardian still has to sign",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText("Not signed")).toBeNull();
+    // The way out is the same as an expired release's: a fresh link.
+    expect(screen.getByText("Send options", { exact: true })).toBeTruthy();
+  });
+
+  /**
+   * The regression this was written for. A stale pending link makes
+   * `waiverRequest` "failed", which deliberately overwrites the standing word —
+   * because a failed *send* means the diver has not signed. It must not
+   * overwrite this one: the diver signed, and the missing half is somebody
+   * else's. The record read "Not signed" over its own line saying they had.
+   */
+  it("keeps its word when the last waiver message failed to send", () => {
+    renderCard(diver({ waiver: { state: "guardian_missing", signedAt }, waiverRequest: "failed" }));
+    expect(screen.getAllByText("Guardian signature missing")).toHaveLength(2);
+    expect(screen.queryByText("Not signed")).toBeNull();
+  });
+});

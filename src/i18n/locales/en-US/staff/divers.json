@@ -298,6 +298,7 @@
     "waiverMedicalReview": "Medical review",
     "waiverGoodUntil": "Good until {date}",
     "waiverLastSigned": "Last signed {date}",
+    "waiverGuardianMissing": "Signed {date} by the diver alone; a parent or guardian still has to sign",
     "waiverHeldSince": "Held since {date}",
     "waiverNotClearedOn": "Answered {date}",
     "sendWaiverViaEmail": "Email waiver",

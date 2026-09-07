@@ -29,6 +29,7 @@ import calendar from "./calendar.json";
 import checkIn from "./checkIn.json";
 import closeout from "./closeout.json";
 import courses from "./courses.json";
+import display from "./display.json";
 import divers from "./divers.json";
 import diveSites from "./diveSites.json";
 import feed from "./feed.json";
@@ -63,6 +64,7 @@ const staff = {
   divers,
   courses,
   diveSites,
+  display,
   orders,
   orderLine,
   promos,

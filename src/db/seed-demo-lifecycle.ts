@@ -24,6 +24,7 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   dayCloseouts,
+  displayTokens,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -326,6 +327,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(crewAssignmentRequests).where(eq(crewAssignmentRequests.shopId, shopId));
   await db.delete(crewAvailabilityBlocks).where(eq(crewAvailabilityBlocks.shopId, shopId));
   await db.delete(calendarFeeds).where(eq(calendarFeeds.shopId, shopId));
+  // The lobby-display links (issue #1426): they reference `people` through
+  // `created_by_person_id` with no cascade, the same 23503 shape as the rows
+  // above.
+  await db.delete(displayTokens).where(eq(displayTokens.shopId, shopId));
   // Deliveries reference the destination they were sent to, so they go first.
   await db.delete(shopBackupDeliveries).where(eq(shopBackupDeliveries.shopId, shopId));
   await db.delete(shopBackupDestinations).where(eq(shopBackupDestinations.shopId, shopId));

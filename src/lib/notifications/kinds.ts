@@ -4,6 +4,7 @@ import { isValidCalendarDate } from "@/lib/calendar-date";
 import { ALERTING_LEVELS, CEILING_UNITS, COST_PROVIDERS } from "@/lib/cost-guardrails";
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
+import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 
 /**
@@ -617,6 +618,27 @@ const passwordChangedSchema = z.object({
  * 16 CFR 316.2). A shop with neither on file sends without them; nothing
  * here guesses a street or an inbox on a shop's behalf.
  */
+/**
+ * What a staffer wrote back to a diver, on email (ADR 20260907-two-way-inbox).
+ * The body is the staffer's own words and the subject is the thread's; the
+ * only thing this kind adds to them is the `In-Reply-To`/`References` pair
+ * that files the mail into the diver's thread. `replyId` is the
+ * `staff_replies` row, minted before the send, so the idempotency key is
+ * stable across a retry.
+ */
+const staffReplySchema = z.object({
+  kind: z.literal("staff_reply"),
+  replyId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  subject: z.string().trim().min(1).max(500),
+  body: z.string().trim().min(1).max(REPLY_BODY_MAX_LENGTH),
+  /** The diver's own `Message-ID`, angle brackets included, when their mail carried one. */
+  inReplyTo: z.string().trim().min(3).max(998).optional(),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -651,6 +673,7 @@ export const notificationSchema = z
     demoStartedAlertSchema,
     usageCeilingAlertSchema,
     courseInquirySchema,
+    staffReplySchema,
   ])
   .and(z.object({ sender: notificationSenderSchema.optional() }));
 
@@ -821,5 +844,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One notification per submitted inquiry row.
     case "course_inquiry":
       return `course-inquiry/${notification.courseInquiryId}`;
+    // One send per reply row; the row exists before the send does.
+    case "staff_reply":
+      return `staff-reply/${notification.replyId}`;
   }
 }

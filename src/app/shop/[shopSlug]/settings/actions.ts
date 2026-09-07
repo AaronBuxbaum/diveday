@@ -41,6 +41,7 @@ import {
   setShopSendWindow,
   setShopTaxEnabled,
   setShopTemperatureUnit,
+  setShopTideWindowPublic,
   setShopTimezone,
 } from "@/db/shops";
 import {
@@ -1360,4 +1361,19 @@ export async function deleteTripLensAction(formData: FormData) {
   await deleteTripLens(db, session.user.shopId, lensId);
 
   revalidateAndRedirect(settings, noticeUrl(settings, "lens-deleted", { saved: "lenses" }));
+}
+
+/**
+ * Whether divers read a site's tide window on the public departure page (ADR
+ * 20260907-noaa-tide-predictions). One checkbox, off by default: the sentence
+ * names a clock time beside a Book button, and publishing it is the shop's call.
+ */
+export async function saveTideWindowAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const on = formData.get("tideWindowPublic") === "on";
+  await setShopTideWindowPublic(await getDb(), session.user.shopId, on);
+  const notice = on ? "tide-window-on" : "tide-window-off";
+  revalidateAndRedirect(settings, noticeUrl(settings, notice, { saved: "tideWindow" }));
 }

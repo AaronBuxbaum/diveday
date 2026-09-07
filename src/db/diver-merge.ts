@@ -161,6 +161,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "crew_assignment_requests.decided_by_person_id": "who answered the ask",
   "crew_availability_blocks.created_by_person_id": "who blocked the days",
   "day_closeouts.actor_person_id": "who closed the day",
+  "display_tokens.created_by_person_id": "who made the lobby screen's link",
   "dive_packages.created_by_person_id": "who wrote the package",
   "dive_sites.planning_note_by_person_id": "who wrote down what the site was like",
   "executed_dives.deleted_by_person_id": "who deleted the logged dive",
