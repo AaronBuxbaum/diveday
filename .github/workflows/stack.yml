@@ -42,12 +42,18 @@ on:
         required: true
 
 concurrency:
-  # One lane for the whole repository, and never cancelling. Two layers pushed
-  # together would otherwise both read "no stack yet" and both POST, and the
-  # second would get a stack whose order nobody chose. Serialising costs seconds
-  # — the job installs nothing.
-  group: stack-${{ github.repository }}
-  cancel-in-progress: false
+  # One lane **per pull request**, superseding itself. A repository-wide lane is
+  # the obvious way to serialise two layers of one chain opening together, and
+  # it is wrong: with `cancel-in-progress: false` GitHub keeps the in-progress
+  # run and the newest queued one and **cancels every other queued run in the
+  # group** — the trap ci.yml records costing five main commits their visual
+  # baseline on 2026-09-01, and observed here on this workflow's first five runs,
+  # three of which were cancelled before they registered anything. A cancelled
+  # registration is a silent one, which is the failure this whole workflow exists
+  # to remove, so losing a run is strictly worse than racing. The race is handled
+  # in the script instead: the loser re-reads and finds the chain registered.
+  group: stack-${{ github.event.pull_request.number || github.event.inputs.pull_request }}
+  cancel-in-progress: true
 
 jobs:
   register:
