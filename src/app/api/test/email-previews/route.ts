@@ -42,6 +42,28 @@ const SAMPLES: Notification[] = [
     },
   },
   {
+    kind: "trip_recap",
+    bookingId: dummyUuid,
+    shopId: dummyUuid,
+    to: "diver@example.com",
+    locale: DEFAULT_DIVER_LOCALE,
+    diverName: "Sam Diver",
+    shopName: "Blue Mantis Scuba",
+    tripTitle: "Two-Tank Coral Reef Departure",
+    startsAt: new Date("2026-09-01T13:00:00Z"),
+    timezone: "America/New_York",
+    sites: ["Molasses Reef", "French Reef"],
+    // Two dives, the last one out at 11:40 local, the shop's default 24 hours.
+    flySafe: {
+      from: new Date("2026-09-02T15:40:00Z"),
+      hours: 24,
+      basis: "repetitive",
+      anchor: "last_dive",
+    },
+    recapUrl: "https://diveday.example/recap/sample-token",
+    unsubscribeUrl: "https://diveday.example/unsubscribe/sample-token",
+  },
+  {
     kind: "trip_conditions_hold",
     tripId: dummyUuid,
     shopId: dummyUuid,

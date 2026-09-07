@@ -93,12 +93,50 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
     // let a missing prop compile, so the component was under test with
     // `undefined` where the routes always pass a value.
     diveRecord: null,
+    flySafe: null,
     fieldGuide: [],
     observedSpecies: [],
     actions: { submitReview: noop, uploadPhoto: noop, startTip: noop, submitPulse: noop },
     ...overrides,
   };
 }
+
+/**
+ * **"Fly-safe from"** (issue #1425). One sentence, two spellings — the clock
+ * started at the last recorded exit, or at the day's scheduled end — and
+ * nothing at all when the record could not say. It informs and gates nothing,
+ * so it is a paragraph rather than a status panel.
+ */
+describe("the fly-safe line", () => {
+  it("renders nothing when the record could not say", () => {
+    render(<AfterState {...props()} />);
+    expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.flySafe)).toBeNull();
+  });
+
+  it("names the instant, the hours, and the shop, worded off the last dive", () => {
+    render(
+      <AfterState
+        {...props({ flySafe: { when: "Sunday 10:20 AM", hours: 24, anchor: "last_dive" } })}
+      />,
+    );
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.flySafe).textContent).toBe(
+      "recap.flySafeAfterDive(Sunday 10:20 AM,24,Blue Mantis Divers)",
+    );
+  });
+
+  it("says so when the clock started at the scheduled return instead", () => {
+    render(
+      <AfterState
+        {...props({
+          flySafe: { when: "Sunday 10:20 AM", hours: 18, anchor: "scheduled_return" },
+        })}
+      />,
+    );
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.flySafe).textContent).toBe(
+      "recap.flySafeAfterReturn(Sunday 10:20 AM,18,Blue Mantis Divers)",
+    );
+  });
+});
 
 /**
  * **The field guide says what a place may hold, never what this dive held**

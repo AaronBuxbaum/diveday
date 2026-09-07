@@ -139,6 +139,22 @@ export function formatTime(date: Date, locale = "en-US", timeZone: string): stri
 }
 
 /**
+ * "Sunday 10:20 AM" — a weekday and a time, no date, for an instant within
+ * the next few days of the moment it is read: the fly-safe line on the recap
+ * (`src/lib/fly-safe.ts`), whose answer is never more than three days out.
+ * The weekday is what a diver checks against their flight; a month and day
+ * would be more to read for nothing more to know.
+ */
+export function formatWeekdayTime(date: Date, locale = "en-US", timeZone: string): string {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    weekday: "long",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+  }).format(date);
+}
+
+/**
  * A timezone as a **name a person says out loud** — "Eastern Daylight Time",
  * not `America/New_York`.
  *
