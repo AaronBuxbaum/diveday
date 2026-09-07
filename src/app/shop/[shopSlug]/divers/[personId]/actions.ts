@@ -7,6 +7,7 @@ import { z } from "zod";
 import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
 import { anonymizeDiver } from "@/db/anonymize";
 import {
+  canPersonAnswerShopInbox,
   canPersonDeleteDiver,
   canPersonErasePersonalData,
   canPersonMergeDiver,
@@ -49,6 +50,7 @@ import {
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, people } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
+import { sendStaffReply } from "@/db/staff-reply";
 import { getSupportNeeds, saveSupportNeeds } from "@/db/support-needs";
 import {
   hasUnansweredMedicalHold,
@@ -192,6 +194,7 @@ const FORM_ANCHORS: Record<string, string> = {
   support: "#support",
   story: "#the-story",
   notes: "#notes",
+  reply: "#conversation",
   book: "#book-departure",
   remove: "#remove",
   restore: "#removed-heading",
@@ -1495,4 +1498,50 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
     roster,
     result.ok ? noticeUrl(roster, erasedNotice) : backTo(base, "erase-refused", "erase"),
   );
+}
+
+/**
+ * **Answer the diver, in the channel they wrote on** (ADR
+ * 20260907-two-way-inbox).
+ *
+ * Two gates, in this order: the live staff check every action on this page
+ * makes, then the inbox's own owner/manager gate — re-read here rather than
+ * trusted from the render that drew the composer, because hiding a control is
+ * a courtesy and never the control itself.
+ *
+ * Everything after that belongs to `sendStaffReply`, which owns the whole
+ * consequence: the message decides the channel, the diver's own locale decides
+ * the language, and the outcome is recorded whether it went out or not. This
+ * only turns its code into a notice beside the composer.
+ */
+export async function replyToDiverAction(shopSlug: string, personId: string, formData: FormData) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-reply",
+    "reply",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  if (!(await canPersonAnswerShopInbox(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-reply", "reply"));
+  }
+  // A posted id is caller-controlled: narrowed before it reaches a `uuid`
+  // comparison, and answered with the same "no such message" a wrong-record or
+  // wrong-tenant id gets.
+  const messageId = uuidParam(String(formData.get("messageId") ?? ""));
+  if (!messageId) {
+    revalidateAndRedirect(base, backTo(base, "reply-message_not_found", "reply"));
+  }
+  const result = await sendStaffReply(db, {
+    shopId: staff.user.shopId,
+    personId,
+    messageId,
+    body: String(formData.get("body") ?? ""),
+    sentByPersonId: staff.user.personId,
+  });
+  // `noticeUrl` kebabs the code, so a domain reason spelt snake_case needs no
+  // translation here.
+  const notice = result.status === "sent" ? "reply-sent" : `reply-${result.reason}`;
+  revalidateAndRedirect(base, backTo(base, notice, "reply"));
 }

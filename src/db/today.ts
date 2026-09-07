@@ -26,6 +26,7 @@ import {
   openGearRegisterActionText,
   openGearUnitActionText,
   openGuestsActionText,
+  openInboxActionText,
   openLastMinuteDealActionText,
   openOrdersActionText,
   openPrepListActionText,
@@ -44,6 +45,8 @@ import {
   staffCredentialDueDetailText,
   stuckOperationKindText,
   stuckPaymentOperationDetailText,
+  unansweredMessagesDetailText,
+  unansweredMessagesSubjectText,
   uncrewedCourseDetailText,
   uncrewedDepartureDetailText,
   ungatedNitroxDetailText,
@@ -108,6 +111,7 @@ import {
   listOverdueGearReservations,
 } from "./gear";
 import { listTodayHelpRequests } from "./help-requests";
+import { countUnansweredMessages } from "./inbound-messages";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
 import { listDepartureCrewRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
@@ -1897,6 +1901,26 @@ export async function getTodayWork(
       href: reviewsAwaiting.onlyId
         ? `${reviewsHref}#review-${reviewsAwaiting.onlyId}`
         : reviewsHref,
+      dueAt: null,
+    });
+  }
+
+  // Divers who wrote back and are still waiting (ADR 20260907-two-way-inbox).
+  // One row for the whole inbox rather than one per message, `later` urgency
+  // and `dueAt: null` — the shape the reviews row above already has, and for
+  // the same reason: nothing sails on an unanswered message, and a row per
+  // message would be the inbox rendered twice. Nothing at all at zero.
+  const unanswered = await countUnansweredMessages(db, shopId);
+  if (unanswered > 0) {
+    actions.push({
+      id: "inbox:unanswered",
+      kind: "unanswered_messages",
+      urgency: "later",
+      subject: unansweredMessagesSubjectText(t, unanswered),
+      context: null,
+      detail: unansweredMessagesDetailText(t),
+      actionLabel: openInboxActionText(t),
+      href: `/shop/${shopSlug}/inbox`,
       dueAt: null,
     });
   }

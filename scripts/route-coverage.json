@@ -308,6 +308,7 @@
       "divers.spec.ts",
       "gear-fit-and-age.spec.ts",
       "import.spec.ts",
+      "inbox.spec.ts",
       "nitrox.spec.ts",
       "orders-demo.spec.ts",
       "waivers.spec.ts"
@@ -321,13 +322,18 @@
       "diver-profile-not-certified",
       "diver-profile-paper-waiver",
       "diver-profile-payments",
-      "diver-record-clear"
+      "diver-record-clear",
+      "staff-diver-conversation"
     ]
   },
   "/shop/[shopSlug]/divers/new": {
     "e2e": ["add-diver.spec.ts", "check-in.spec.ts", "divers.spec.ts", "gear-fit-and-age.spec.ts"],
     "visual": ["divers-new"],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/shop/[shopSlug]/inbox": {
+    "e2e": ["inbox.spec.ts"],
+    "visual": ["staff-inbox"]
   },
   "/shop/[shopSlug]/gear": {
     "e2e": ["gear.spec.ts"],

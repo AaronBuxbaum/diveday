@@ -7,6 +7,21 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The shop inbox, and answering from the record (delivered 2026-09-07)
+
+N-20's third and last slice (issue #1429; the tables and the inbound paths are ADR
+20260907-two-way-inbox and pull requests #1435 / #1451). `/shop/<slug>/inbox` is a worklist of
+what divers wrote back: the unanswered ones lead under a group carrying their count, the answered
+follow, each row saying the channel it came on and opening the diver's record — except a message
+from an address nobody holds, which shows that address because it has no record to open. The
+record grows a **Conversation** group, both directions in one column, with a composer that answers
+the diver's latest message on the channel it arrived on and in the diver's own recorded locale
+(`src/db/staff-reply.ts` owns the whole consequence: channel, language, Meta's 24-hour window
+checked before the send, and the outcome recorded whether it went or not). Today carries one
+`unanswered_messages` row and nothing at zero. Owner and manager only
+(`canAnswerShopInbox`): a reply leaves as the shop, and the list holds addresses for people who
+never booked.
+
 ## The departures board (delivered 2026-09-07)
 
 N-23 from the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1426). A shop mints

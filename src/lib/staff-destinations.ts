@@ -23,7 +23,7 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
  * destination is *absent* for anyone who fails the gate — never present and
  * disabled, never explained (ADR 20260724-role-gated-surfaces-hide-not-explain).
  */
-export type StaffDestinationGate = "waivers" | "reports" | "team" | "settings";
+export type StaffDestinationGate = "waivers" | "reports" | "team" | "settings" | "inbox";
 
 /** Which gates the current viewer passes. */
 export type StaffDestinationGates = Record<StaffDestinationGate, boolean>;
@@ -101,6 +101,7 @@ export type StaffDestinationId =
   | "courses"
   | "reviews"
   | "requests"
+  | "inbox"
   | "orders"
   | "waivers"
   | "reports"
@@ -156,6 +157,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   courses: "shared.shopNavLinks.courses",
   reviews: "shared.shopNavLinks.reviews",
   requests: "shared.shopNavLinks.requests",
+  inbox: "shared.shopNavLinks.inbox",
   orders: "shared.shopNavLinks.orders",
   waivers: "shared.shopNavLinks.waivers",
   reports: "shared.shopNavLinks.reports",
@@ -180,6 +182,7 @@ export const STAFF_DESTINATION_TITLE_KEYS: Partial<Record<StaffDestinationId, St
   reports: "reports.title",
   reviews: "reviews.title",
   requests: "requests.title",
+  inbox: "inbox.title",
   diveSites: "diveSites.list.title",
   promoCodes: "promos.title",
 };
@@ -299,6 +302,16 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // is the desk's. Absent for them, never shown and refused (ADR
   // 20260724-role-gated-surfaces-hide-not-explain).
   { id: "requests", suffix: "/requests", navGroup: "daily", inPalette: true, gate: "reports" },
+  // What divers wrote back (ADR 20260907-two-way-inbox). "Run the shop" work
+  // beside Requests and Reviews: a shop reads it on its own rhythm and empties
+  // it by answering, and it is deliberately not a sixth primary tab — the dock
+  // holds five and the sixth slot is More (ADR
+  // 20260813-more-is-the-shops-other-door). Its own gate rather than Reports'
+  // (`canAnswerShopInbox`): a reply leaves as the shop, and a message from an
+  // address nobody holds arrives with a stranger's contact details. Its
+  // pending-work signal is Today's `unanswered_messages` row, never a nav badge
+  // — the same rule Reviews follows.
+  { id: "inbox", suffix: "/inbox", navGroup: "daily", inPalette: true, gate: "inbox" },
   // Money the shop reads daily — a "Run the shop" destination, not one of the
   // five all-day tabs. Orders remains ungated and palette-visible, and the
   // page's own links keep the money workflow reachable from its context.

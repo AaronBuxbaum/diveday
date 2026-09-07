@@ -266,6 +266,39 @@ const NOTICE_KEYS: Record<
     key: "divers.notices.notAuthorizedNotes",
   },
 
+  // Answering a diver (ADR 20260907-two-way-inbox). The words live in the
+  // inbox namespace with the rest of that area's copy, not in `divers`: it is
+  // one conversation whether it is read on the record or on the inbox page.
+  //
+  // A *sent* reply is silent for the reason `captured` above is — the reply
+  // appears in the thread immediately above the composer, so a banner saying
+  // it was sent would be a caption on a photograph of itself. A send that
+  // **failed** is not silent: the row is there either way, and only the notice
+  // says the diver never got it.
+  "reply-sent": { form: "reply", tone: "success", silent: true },
+  "reply-send-failed": { form: "reply", tone: "danger", key: "inbox.notices.failed" },
+  "reply-not-configured": { form: "reply", tone: "warning", key: "inbox.notices.notConfigured" },
+  "reply-empty-body": { form: "reply", tone: "danger", key: "inbox.notices.emptyBody" },
+  "reply-body-too-long": { form: "reply", tone: "danger", key: "inbox.notices.tooLong" },
+  "reply-message-not-found": { form: "reply", tone: "danger", key: "inbox.notices.notFound" },
+  "reply-channel-unsupported": {
+    form: "reply",
+    tone: "danger",
+    key: "inbox.notices.channelUnsupported",
+  },
+  "reply-no-reply-address": { form: "reply", tone: "danger", key: "inbox.notices.noReplyAddress" },
+  "reply-whatsapp-window-closed": {
+    form: "reply",
+    tone: "danger",
+    key: "inbox.notices.whatsappWindowClosed",
+  },
+  "reply-whatsapp-not-connected": {
+    form: "reply",
+    tone: "danger",
+    key: "inbox.notices.whatsappNotConnected",
+  },
+  "not-authorized-reply": { form: "reply", tone: "danger", key: "inbox.notices.notAuthorized" },
+
   // Explicit duplicate resolution. A successful merge lands on the survivor,
   // where the candidate panel may no longer render, so its confirmation is a
   // page notice; refusals stay beside the survivor-choice control.

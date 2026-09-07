@@ -3589,6 +3589,10 @@
       "recoveryWithLinkHtml": "Si no fuiste tú, {link} de inmediato.",
       "recoveryLinkText": "solicita una contraseña nueva aquí"
     },
+    "staffReply": {
+      "subject": "Un mensaje de {shopName}",
+      "reSubject": "Re: {subject}"
+    },
     "waiverRequest": {
       "subject": "Completa tu waiver para {tripTitle}",
       "genericSubject": "Completa tu waiver",

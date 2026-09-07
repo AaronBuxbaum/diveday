@@ -362,6 +362,12 @@ export async function deleteInboundMessage(
 }
 
 export type RecordStaffReplyInput = {
+  /**
+   * The row's own id, when the caller minted one first. `sendStaffReply` does:
+   * the notification's idempotency key is `staff-reply/<id>`, so a queued
+   * retry has to name the row the reply already is rather than a second one.
+   */
+  id?: string;
   shopId: string;
   personId: string;
   inboundMessageId: string | null;
@@ -387,6 +393,7 @@ export async function recordStaffReply(db: DbExecutor, input: RecordStaffReplyIn
   const [reply] = await db
     .insert(staffReplies)
     .values({
+      ...(input.id ? { id: input.id } : {}),
       shopId: input.shopId,
       personId: input.personId,
       inboundMessageId: input.inboundMessageId,
