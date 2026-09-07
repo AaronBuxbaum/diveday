@@ -130,6 +130,39 @@ describe("fetchTidePredictions", () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(NOAA_PAYLOAD)));
     expect(await fetchTidePredictions("8723583", "2026-07-21", fetcher)).toHaveLength(4);
   });
+
+  /**
+   * **The e2e fleet is a production build.** `pnpm e2e:build` runs `next build`,
+   * so `NODE_ENV` is `"production"` inside every capture — which is why gating
+   * the fixture on `NODE_ENV !== "production"` left the branch dead in the one
+   * environment it exists for. The staff tide capture then waited its full
+   * 210s for a sentence no blocked fetch could produce, and shard 1 failed on
+   * every run. Vitest sets `NODE_ENV=test`, so nothing here caught it until the
+   * environment was named explicitly.
+   */
+  it("still serves the fixture in an e2e production build", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DIVEDAY_E2E", "1");
+    vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "1");
+    const live = vi.spyOn(globalThis, "fetch");
+    expect(await fetchTidePredictions("8726520", "2026-07-21")).toEqual(
+      fixtureTidePredictions("2026-07-20"),
+    );
+    expect(live).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The other half of the belt: a real deployment never invents a turn, even if
+   * the offline flag somehow reached it. `DIVEDAY_E2E` is what separates the
+   * fleet from production, and only `playwright.config.ts` sets it.
+   */
+  it("never invents turns in a real deployment", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "1");
+    const live = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("no network"));
+    expect(await fetchTidePredictions("8726607", "2026-07-21")).toBeNull();
+    expect(live).toHaveBeenCalled();
+  });
 });
 
 describe("fixtureTidePredictions", () => {
