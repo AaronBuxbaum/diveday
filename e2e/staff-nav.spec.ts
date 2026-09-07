@@ -143,10 +143,6 @@ test.describe("captain", () => {
       "Dive sites",
       "Gear",
       "Reviews",
-      // Ungated on this branch, unlike Requests below, and the difference is
-      // who is on the other end: these are divers already on the roster, whose
-      // details every staff role can already read on the record this row opens.
-      "Inbox",
       "Orders",
     ]);
     // "Set up" collapses to the one personal row — a visible heading over a
@@ -156,8 +152,21 @@ test.describe("captain", () => {
     ]);
     // Requests is gated with Reports and Promo codes: it holds contact details
     // for people who have not booked, and choosing which unscheduled day gets a
-    // boat is desk work, not the captain's.
-    for (const gated of ["Waivers", "Requests", "Reports", "Team", "Promo codes", "Settings"]) {
+    // boat is desk work, not the captain's. Inbox is gated for the neighbouring
+    // reason (`canAnswerShopInbox`, owner/manager): a reply leaves as the shop,
+    // and the list carries addresses for people who never booked. Named here
+    // rather than left to the length of the list above, so the gate is asserted
+    // rather than implied — whichever way #1518 is answered, this is the line
+    // that has to change with it.
+    for (const gated of [
+      "Waivers",
+      "Requests",
+      "Inbox",
+      "Reports",
+      "Team",
+      "Promo codes",
+      "Settings",
+    ]) {
       await expect(menu.getByRole("link", { name: gated })).toHaveCount(0);
     }
   });
