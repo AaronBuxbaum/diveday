@@ -1636,6 +1636,27 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "departures-board", scheme);
       });
 
+      /**
+       * **The regional pages** (issue #1436, N-49), the two anonymous surfaces
+       * a diver meets before a shop's own storefront. The demo shop is a demo
+       * and is excluded from both, so what is in the picture is the pair of
+       * real Key Largo neighbours `seedRegionNeighbours` seeds — a populated
+       * state on purpose, since an empty ledger would photograph the empty
+       * state rather than the page.
+       */
+      test(`the regional index renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/dive");
+        await page.getByRole("heading", { level: 1, name: "Dive shops by town" }).waitFor();
+        await capture(page, "regions-index", scheme);
+      });
+
+      test(`one town's dive shops render true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/dive/key-largo");
+        // The town's own <h1>, which the index never renders.
+        await page.getByRole("heading", { level: 1, name: "Dive shops in Key Largo" }).waitFor();
+        await capture(page, "region-shops", scheme);
+      });
+
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/");
         await capture(page, "landing", scheme);
