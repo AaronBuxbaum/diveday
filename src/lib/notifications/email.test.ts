@@ -318,7 +318,9 @@ describe("tripReminderEmail", () => {
       },
     });
     expect(email.text).toContain("Sunset 7:32 PM, dark by 7:55 PM. New moon, 2% lit.");
-    expect(email.text.indexOf("Warm and glassy")).toBeLessThan(email.text.indexOf("Sunset 7:32 PM"));
+    expect(email.text.indexOf("Warm and glassy")).toBeLessThan(
+      email.text.indexOf("Sunset 7:32 PM"),
+    );
     // One sentence needs no heading of its own; the conditions label above it
     // already frames both.
     expect(email.text).not.toContain("Light:");
