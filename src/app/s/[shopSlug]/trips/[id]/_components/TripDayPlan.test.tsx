@@ -159,6 +159,9 @@ describe("TripDayPlan's profile", () => {
     render(
       <TripDayPlan
         briefings={[briefing(), wall]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
       />,
@@ -172,7 +175,14 @@ describe("TripDayPlan's profile", () => {
 
   it("says nothing about a surface interval on a one-tank day", () => {
     render(
-      <TripDayPlan briefings={[briefing()]} locale={DEFAULT_DIVER_LOCALE} profile={profile} />,
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+      />,
     );
     expect(screen.queryByText(/on the surface/)).not.toBeInTheDocument();
   });
@@ -182,6 +192,9 @@ describe("TripDayPlan's profile", () => {
     render(
       <TripDayPlan
         briefings={[briefing(), wall]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
       />,
@@ -204,6 +217,9 @@ describe("TripDayPlan's profile", () => {
     render(
       <TripDayPlan
         briefings={[briefing(), wall]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
       />,
@@ -214,7 +230,14 @@ describe("TripDayPlan's profile", () => {
 
   it("offers no card to state when no site on the day has a depth", () => {
     render(
-      <TripDayPlan briefings={[briefing()]} locale={DEFAULT_DIVER_LOCALE} profile={profile} />,
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+      />,
     );
     // With nothing to compare against, the picker is a question the page cannot
     // answer.
