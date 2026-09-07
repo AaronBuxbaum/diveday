@@ -72,6 +72,28 @@ tracker hears, under three caps that bound the steady state.**
    body's quoted evidence is what remains, which is why the evidence is quoted rather than only
    pictured.
 
+8. **What the walk sees is published, so every finding is redacted before it is recorded.** This is
+   the decision the other seven imply and none of them state. A persona walk turns browser output —
+   URLs, console lines, Playwright messages, request failures — into the body of a **public** GitHub
+   issue, and Rob's walk stands on `/ready/<token>` and `/waivers/<token>`, where the URL *is* the
+   capability. So `record()` in `walk.spec.ts` is the single choke point into a finding, and
+   everything passing through it goes through the app's own `redactCapabilityUrl`
+   (`src/lib/capability-urls.ts`): the whole-URL field directly, the evidence through
+   `redactCapabilityText` (`scripts/persona-bots/redact.ts`), which hands each URL-shaped run in a
+   sentence to that same function. Delegating rather than matching prefixes locally is deliberate
+   and was a correction: the first version was a local regex over `CAPABILITY_ROUTE_PREFIXES` that
+   looked equivalent and was strictly weaker, missing a percent-encoded prefix and every
+   `CAPABILITY_QUERY_PARAMS` value. `redact.test.mjs` holds it to each of those shapes.
+
+   Two channels are deliberately **not** covered by that choke point, and both are accepted rather
+   than overlooked. The run's Playwright **trace**, uploaded only when the harness itself broke,
+   carries request headers and DOM snapshots that no lens ever reads; it is contained by the walk's
+   own topology instead — `DATABASE_URL: ""`, `PGLITE_DATA_DIR: memory` and
+   `reuseExistingServer: false` mean every token in a trace was minted against a database that no
+   longer exists, and `ci.yml` already uploads the e2e fleet's traces under the same setting. And a
+   filed issue's quoted evidence can name a **seeded demo person**, which is fixture data already
+   visible to anyone who opens the demo shop.
+
 ## Alternatives considered
 
 **No filing: write a report and let a human read it.** The cheapest thing that could work, and what
@@ -116,6 +138,11 @@ runs against the same caps means only that more of what it sees is suppressed.
 - The bot's throughput is bounded by triage. If nobody empties the inbox, the walk still runs, still
   reports, and files nothing — which is the intended behaviour and is stated in the summary every
   week.
+- The redactor is now the security-critical part of a reporting tool, which is an unusual place for
+  one. It is kept in `redact.ts` rather than inside the spec precisely so it can be unit-tested
+  without a browser, and it inherits `CAPABILITY_ROUTE_PREFIXES`, which `src/app/observability.test.ts`
+  derives from the `src/app/<prefix>/[token]` directories on disk — so a capability route added
+  later is covered here the day it is added, with nothing to remember.
 - The lens set is a subset of what the personas' checklists ask for, and will read as thin against
   them. That is deliberate; what it cannot see is not thereby fine, and the frame stays the thing a
   human reads before shipping.

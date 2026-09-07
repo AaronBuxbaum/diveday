@@ -74,6 +74,17 @@ try {
 }
 
 const runAt = walk.finishedAt ?? new Date().toISOString();
+
+// **Before the listing, not after it.** On the very first run the label does
+// not exist yet, and `gh issue list --label` against a label the repository has
+// never had can answer with an error rather than an empty list. That error is
+// indistinguishable from an unreachable GitHub, so the fail-closed branch below
+// would take it — and the bot would file nothing, quietly, forever, on a
+// repository where nothing was wrong. Creating it first costs one idempotent
+// call and removes the question. Read-only runs skip it: they file nothing
+// anyway, so a missing label there means "no persona issues", correctly.
+if (write) ensureLabel();
+
 const issues = listIssuesByLabel(ROOT, {
   label: PERSONA_LABEL,
   fields: "number,title,body,createdAt,comments",
@@ -111,7 +122,6 @@ const plan = planFilings({
 
 const failures = [];
 if (write) {
-  ensureLabel();
   for (const entry of plan.file) {
     const number = createIssue(entry.finding);
     if (number) entry.issueNumber = number;

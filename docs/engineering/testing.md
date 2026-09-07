@@ -94,6 +94,16 @@ existing issue at most every 28 days. Every run's summary names what it suppress
 a capped run that printed only its three issues would read as a clean week. A run that cannot ask
 GitHub what is already open files nothing, and says so.
 
+**What the walk sees is published**, so every finding is redacted before it is recorded. A persona
+walk turns browser output into the body of a public issue, and Rob stands on `/ready/<token>` and
+`/waivers/<token>`, where the URL *is* the capability. `record()` in `walk.spec.ts` is the single
+choke point, and everything through it goes through the app's own `redactCapabilityUrl`
+(`src/lib/capability-urls.ts`) — the whole-URL field directly, the evidence through
+`redactCapabilityText` (`scripts/persona-bots/redact.ts`), which hands each URL-shaped run in a
+sentence to that same function rather than matching prefixes itself. The trace uploaded when the
+harness breaks is outside that choke point and contained by the walk's own topology instead; ADR
+20260907-persona-bots-file-under-a-cap decision 8 states both.
+
 What the bot writes is validated by the guard that reads what a session writes:
 `scripts/persona-bots/lib.test.mjs` runs `check-follow-ups.mjs`'s own `findIssueProblems` over a
 rendered body for every lens, and `scripts/persona-bots/personas.test.mjs` pins the roster against

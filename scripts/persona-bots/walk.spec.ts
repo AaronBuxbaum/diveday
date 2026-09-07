@@ -14,10 +14,11 @@ import { seededTripId, signInAs } from "../../e2e/helpers";
 import { E2E_FROZEN_CLOCK, E2E_TEST_ROUTE_SECRET } from "../../e2e/servers";
 import { DEV_STAFF_LOGINS } from "../../src/db/dev-credentials";
 import { DEMO_RECAP_BOOKING_ID } from "../../src/db/seed";
-import { CAPABILITY_ROUTE_PREFIXES, redactCapabilityUrl } from "../../src/lib/capability-urls";
+import { redactCapabilityUrl } from "../../src/lib/capability-urls";
 import { signRecapToken } from "../../src/lib/recap-links";
 import { fingerprint } from "./lib.mjs";
 import { lensesFor, PERSONAS, personaLabel, WALK_SHOP_SLUG } from "./personas.mjs";
+import { redactCapabilityText } from "./redact";
 import {
   TAP_TARGET_FLOOR_PX,
   VIEWPORTS,
@@ -408,29 +409,15 @@ async function settled(page: Page) {
 }
 
 /**
- * A capability URL anywhere in a string, in the shape `src/lib/capability-urls.ts`
- * knows: `/waivers/<token>`, `/ready/<token>`, `/recap/<token>` and the rest.
- * Rob's walk is on two of those pages, so a Playwright error, a console line or
- * a refused request from there carries the token in its text.
+ * Everything a finding carries is on its way into a public issue, so the one
+ * class of value that must never travel there is taken out at a single choke
+ * point rather than at each call site. The whole-URL field goes through the
+ * app's own `redactCapabilityUrl`; the evidence, where a URL is one token
+ * inside a sentence, goes through `redactCapabilityText`, which hands each
+ * URL-shaped run to that same function. See `redact.ts` for why the second one
+ * delegates rather than matching prefixes itself, and `redact.test.mjs` for the
+ * shapes it is held to.
  */
-const CAPABILITY_IN_TEXT = new RegExp(
-  `/(${CAPABILITY_ROUTE_PREFIXES.join("|")})/[^\\s"'\`)\\]]+`,
-  "gi",
-);
-
-/**
- * **Everything a finding carries is on its way to a public issue**, so the one
- * class of value that must never travel there is stripped at the single choke
- * point rather than at each call site: the URL *is* the capability on those
- * pages ([capability-telemetry-runbook.md](../../docs/engineering/capability-telemetry-runbook.md)),
- * and a bot that published one would be handing out a signing link. The walk's
- * own tokens are minted against a database that dies with the run, which is
- * exactly why this has to be right before that stops being true.
- */
-function redact(text: string): string {
-  return String(text ?? "").replace(CAPABILITY_IN_TEXT, (_, prefix) => `/${prefix}/[token]`);
-}
-
 function record(
   persona: Persona,
   stop: Stop,
@@ -446,8 +433,8 @@ function record(
     url: redactCapabilityUrl(url),
     touches: [...(stop.touches ?? [])],
     ...found,
-    headline: redact(found.headline),
-    detail: redact(found.detail),
+    headline: redactCapabilityText(found.headline),
+    detail: redactCapabilityText(found.detail),
   };
   walk.findings.push({ ...base, fingerprint: fingerprint(base) });
 }
