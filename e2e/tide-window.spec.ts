@@ -18,8 +18,9 @@ import { openSettingsRow, openTripAbout } from "./helpers";
  * the same seeded Molasses Reef and keeps both tests on one fixture.
  */
 
-const STAFF_LINE = /Slack at \d{1,2}:\d{2} [AP]M; this departure reaches the site/;
-const DIVER_LINE = /Slack at \d{1,2}:\d{2} [AP]M; the boat reaches the site/;
+const TURN = /(Next|Last) (high|low) water at \d{1,2}:\d{2} [AP]M/;
+const STAFF_LINE = new RegExp(`${TURN.source}; this departure reaches the site`);
+const DIVER_LINE = new RegExp(`${TURN.source}; the boat reaches the site`);
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
 test.describe("the tide window", () => {

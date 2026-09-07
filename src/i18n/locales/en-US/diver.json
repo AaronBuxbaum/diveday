@@ -231,7 +231,7 @@
     "forecastUpdateUnavailable": "Update time unavailable.",
     "forecastCrewCall": "The crew confirms conditions and makes the final call at the dock.",
     "forecastCreditPrefix": "Forecast by",
-    "tideWindow": "Slack at {time}; the boat reaches the site {phase, select, slack {at slack water} flood {on the flood} other {on the ebb}}{fit, select, met {, when it dives best} missed {. It dives best {preference, select, slack {at slack water} flood {on the flood} other {on the ebb}}} other {}}.",
+    "tideWindow": "{turn, select, next {Next} other {Last}} {kind, select, high {high} other {low}} water at {time}; the boat reaches the site {phase, select, slack {at the turn of the tide} flood {on the flood} other {on the ebb}}{fit, select, met {, when it dives best} missed {. It dives best {preference, select, slack {at slack water} flood {on the flood} other {on the ebb}}} other {}}.",
     "timeline": {
       "arrive": "Arrive and check in",
       "gearSetup": "Set up your gear",

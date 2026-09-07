@@ -3531,7 +3531,9 @@ for (const scheme of ["light", "dark"] as const) {
         // so nothing typed is lost on a collapse (e2e/dive-sites.spec.ts says
         // the same thing at its own two call sites).
         await page.locator('select[name="diveSiteId"]').selectOption({ label: "Molasses Reef" });
-        await page.getByText(/Slack at .*; this departure reaches the site/).waitFor();
+        await page
+          .getByText(/(Next|Last) (high|low) water at .*; this departure reaches the site/)
+          .waitFor();
         await boardListSettled(page);
         await capture(page, "schedule-builder-add-tide", scheme);
       });

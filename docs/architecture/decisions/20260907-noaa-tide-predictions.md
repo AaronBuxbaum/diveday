@@ -9,7 +9,7 @@ Florida diving is planned around the tide, and the app knew nothing about it: th
 (Open-Meteo, `src/lib/marine-forecast.ts`) says what the surface is doing and the site briefing
 carries the shop's own `current_note`, but nothing said whether a departure reaches its site at
 the turn or in the middle of the ebb. N-01 of the 2026-09-07 improvement-ideas sheet asked for one
-sentence — "Slack at 09:40; this departure reaches the site on the flood" — on the staff site
+sentence — "Next high water at 09:40; this departure reaches the site on the flood" — on the staff site
 briefing, the board's add panel and the departure page, and on the diver's page when the shop
 chooses (owner decision 2026-09-07, improvement-ideas decision sheet).
 
@@ -72,3 +72,35 @@ costs a parser change and nothing else) and the seven-digit id format.
 Escape hatch: the provider lives behind `fetchTidePredictions`'s one signature, so a second source
 is a new module and a switch, not a data migration; dropping the feature is two columns and one
 shop flag (H-49, pre-pilot).
+
+## Amendment 2026-09-07 — the sentence names a height turn, because that is what we fetched
+
+The first cut of the wording opened with **"Slack at {time}"** over a turn taken from
+`predictions` at `hilo` interval. That endpoint publishes **water level**. Slack water is a
+property of the *current*, NOAA publishes it separately in `currents_predictions`, and the two
+are not interchangeable: checked against one real pair on 2026-07-21, station ACT8216 (Caesar
+Creek) reports slack at 02:15, 07:21 and 15:05 while the nearest water-level station, Virginia Key
+8723214, reports its turns at 00:48, 06:52 and 13:18. Slack lagged the height table by 87, 29 and
+107 minutes at one station on one day. The half hour either side of a turn catches one of those
+three and misses two.
+
+The Consequences above already said this in the abstract, and the sentence asserted it anyway. A
+captain reading "Slack at 9:19 AM" before a Spiegel Grove descent is being told something the data
+does not contain, on the surface that exists to give them that number — which is the case this
+record's own Context rules out: the sentence "must either be right or absent".
+
+The prefix now names what was fetched, and which side of the arrival it sits on: **"Next high
+water at 1:19 PM"**, **"Last low water at 6:45 AM"**. The second half of that is a separate defect
+the same review found — `nearestTurn` is nearest by absolute distance, so on most arrivals it is
+the turn already behind the boat, and `minutesToTurn` carried the sign with nothing reading it.
+The phase clause says **"at the turn of the tide"** rather than "at slack water" for the same
+reason.
+
+What did **not** change: `flood` and `ebb`, which are ordinary descriptions of the stream inferred
+from a height curve and are how tide-table dive planning has always worked; and the *shop's* own
+preference clause, where "It dives best at slack water" is the shop speaking about its own reef
+rather than DiveDay speaking about NOAA's data. The internal phase code stays `slack` — it names
+the half hour around a turn, which is what it has always computed.
+
+Pinned by `src/i18n/tide-labels.test.ts`, which fails on a sentence that opens with "Slack at" or
+its Spanish twin "Estoa a las".

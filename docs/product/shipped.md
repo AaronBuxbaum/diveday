@@ -11,8 +11,8 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
 
 N-01 of the improvement-ideas sheet, owner decision 2026-09-07. A dive site names a NOAA CO-OPS
 tide station and when it dives best (`any` / `slack` / `flood` / `ebb`); the staff site briefing,
-the board's add panel and the departure page then say one line — "Slack at 9:40 AM; this departure
-reaches the site on the flood" — read at the boat's own arrival there (`src/lib/tides.ts` for the
+the board's add panel and the departure page then say one line — "Next high water at 9:40 AM; this
+departure reaches the site on the flood" — read at the boat's own arrival there (`src/lib/tides.ts` for the
 window, `src/lib/departure-tides.ts` for the composition, `src/lib/tide-predictions.ts` for the
 seam). Divers read the same line on the public departure page only once the shop switches it on in
 Settings (`shops.tide_window_public`, default off). Informs; gates nothing. The demo reads both Key

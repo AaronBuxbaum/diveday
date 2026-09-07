@@ -21,6 +21,22 @@ import type { StaffTranslator } from "./staff-messages";
 
 type TideWindowParams = {
   time: string;
+  /**
+   * Which side of the arrival the named turn sits on. `nearestTurn` is nearest
+   * by absolute distance, so on any arrival away from a turn it is usually the
+   * one already behind the boat -- and a sentence naming a clock time without
+   * saying which side it is on is worse than no sentence. `minutesToTurn`
+   * carries the sign and nothing read it until now.
+   */
+  turn: "next" | "last";
+  /**
+   * High water or low water. The endpoint is `predictions` at `hilo` interval
+   * over MLLW, which publishes **water level** and says nothing about the
+   * current; NOAA publishes slack separately, in `currents_predictions`, and
+   * the two differ by tens of minutes to hours at a real station. So the
+   * sentence names the height turn it actually has.
+   */
+  kind: TideWindow["nearestTurn"]["kind"];
   phase: TideWindow["phase"];
   fit: "met" | "missed" | "none";
   preference: TidePreference;
@@ -34,6 +50,8 @@ function params(
   const met = tidePreferenceMet(window, preference);
   return {
     time,
+    turn: window.minutesToTurn < 0 ? "last" : "next",
+    kind: window.nearestTurn.kind,
     phase: window.phase,
     fit: met === null ? "none" : met ? "met" : "missed",
     preference: preference ?? "any",
