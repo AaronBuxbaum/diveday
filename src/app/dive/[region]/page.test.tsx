@@ -5,8 +5,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 /**
  * One town's page (issue #1436, N-49). The two refusals are the point of the
  * file: a `[region]` that is not a slug this app could have produced never
- * reaches the database, and a valid slug with nothing listed in it is a real
- * 404 rather than an indexable empty page.
+ * reaches the database, and a valid slug with nothing listed in it renders the
+ * not-found page rather than a heading over an empty ledger. What that refusal
+ * is worth over the wire is measured on `regionShops` in `./page.tsx` — under
+ * this app's `cacheComponents` setup it is a soft 404, the same as every other
+ * dynamic page here — so nothing in this file should read as if it were a 404
+ * status line.
  */
 
 vi.mock("next/navigation", () => ({
