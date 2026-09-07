@@ -455,7 +455,6 @@ const DIVER_FORMS = new Set([
   "story",
   "book",
   "notes",
-  "messages",
   "merge",
   "remove",
   "restore",
