@@ -8,6 +8,7 @@ import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
+import { motionMs } from "@/lib/motion";
 
 export type ShopIdentityMenuCopy = {
   language: string;
@@ -79,7 +80,7 @@ export function ShopIdentityMenu({
   const close = useCallback(() => setOpen(false), []);
   useMenuDismissal({ open, close, inside: [rootRef], returnFocus: triggerRef });
   // 180ms matches .animate-scale-out in globals.css — the two must move together.
-  const { mounted, closing } = useExitAnimation(open, 180);
+  const { mounted, closing } = useExitAnimation(open, motionMs("base"));
   const initials = shopInitials(shopName);
 
   return (

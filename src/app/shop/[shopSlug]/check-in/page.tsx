@@ -10,6 +10,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
+import { RollingFigure } from "@/components/ui/RollingFigure";
 import { FIGURE_HERO_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { CheckInOutcome, CheckInQueueRow, UndoCheckInOutcome } from "@/db/check-in";
 import { listCheckInQueue, listWalkInTrips } from "@/db/check-in";
@@ -428,8 +429,15 @@ export default async function CheckInPage({
             figure={t.rich("checkIn.instrument.hereOf", {
               here,
               expected,
+              // The one figure on this page a staffer watches change: a tap
+              // lands, the row sinks, and this rolls with it rather than
+              // swapping while the meter beneath it animates (ADR
+              // 20260907-nothing-from-nowhere, decision 3). ICU still formats
+              // the number; the roll only takes the characters apart.
               figure: (chunks) => (
-                <span className={`${FIGURE_HERO_CLASS} text-foreground`}>{chunks}</span>
+                <RollingFigure className={`${FIGURE_HERO_CLASS} text-foreground`}>
+                  {chunks}
+                </RollingFigure>
               ),
             })}
           />

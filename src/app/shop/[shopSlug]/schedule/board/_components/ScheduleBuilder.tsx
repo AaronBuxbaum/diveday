@@ -25,6 +25,7 @@ import {
   MIN_DECISION_HOURS,
   MINIMUM_SEATS_DECISION_HOURS_DEFAULT,
 } from "@/lib/minimum-seats";
+import { MOTION_STAGGER_MS, motionMs } from "@/lib/motion";
 import type { MovePreflight, MovePreflightSection } from "@/lib/move-preflight";
 import type { BuilderWeek, WeekDeparture } from "./WeekBoard";
 import { AllUnpricedNotice, WeekBoard } from "./WeekBoard";
@@ -1674,12 +1675,21 @@ function CopyPanel({
  * on the title. This surface is deliberately shallow.
  */
 /**
- * How long the row menu's fold runs before React unmounts it. It must outlast
- * the slowest child of `.animate-board-menu-out` in `globals.css` — the last
- * button's 100ms stagger plus its 280ms fold — or the fold is cut off partway.
- * Change one and change the other.
+ * How long the row menu's fold runs before React unmounts it: it must outlast
+ * the slowest child of `.animate-board-menu-out` in `globals.css`, which is
+ * the last button's two-step stagger plus its own fold, or the fold is cut off
+ * partway.
+ *
+ * It used to say `390` under a comment asking the next reader to change this
+ * and the stylesheet together (ADR 20260907-nothing-from-nowhere, decision 2).
+ * Stated as the sum it has to beat, it now moves when the rung moves, and the
+ * 10ms is the only hand-written part: a frame of slack, so the unmount lands
+ * after the last paint rather than on it.
+ *
+ * The whole gesture stays inside principle 5's 400ms ceiling for a staggered
+ * disclosure, which is why the stagger is two steps rather than three.
  */
-const MENU_CLOSE_MS = 390;
+const MENU_CLOSE_MS = motionMs("unfold") + MOTION_STAGGER_MS * 2 + 10;
 
 /**
  * The crew signature this board mostly runs with, or `null` when it has none.

@@ -5,6 +5,7 @@ import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoic
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { GroupLabel } from "@/components/ui/ledger";
 import { useExitAnimation } from "@/components/useExitAnimation";
+import { motionMs } from "@/lib/motion";
 
 export type LanguagePickerCopy = {
   /** Names the control for a screen reader — "Change language". */
@@ -61,7 +62,7 @@ export function LanguagePicker({
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   // 180ms matches .animate-scale-out in globals.css — the two must move together.
-  const { mounted, closing } = useExitAnimation(open, 180);
+  const { mounted, closing } = useExitAnimation(open, motionMs("base"));
 
   useEffect(() => {
     if (!open) return;

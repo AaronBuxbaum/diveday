@@ -219,7 +219,7 @@ export function SegmentedControl({
         // ragged — four tabs become a 2x2 block on a phone.
         const cls = `relative inline-flex ${
           fill ? "flex-1" : "grow"
-        } items-center justify-center rounded-lg font-semibold whitespace-nowrap transition-colors ${sizes[size]} ${
+        } pressable items-center justify-center rounded-lg font-semibold whitespace-nowrap ${sizes[size]} ${
           active
             ? `text-primary${pillReady ? "" : ` ${PILL_CLASS}`}`
             : "text-muted hover:bg-surface hover:text-foreground"

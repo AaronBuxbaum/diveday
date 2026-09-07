@@ -6,6 +6,7 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import { fill } from "@/i18n/fill";
+import { motionMs } from "@/lib/motion";
 
 export type WaterLockerCopy = {
   rainAlt: string;
@@ -71,7 +72,7 @@ export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
   // never wait out a fade-out; the `disabled` check below the render gate is
   // what keeps that path instant while the ordinary hold-to-unlock close
   // still gets the graceful exit (issue #832).
-  const { mounted, closing } = useExitAnimation(isLocked, 150);
+  const { mounted, closing } = useExitAnimation(isLocked, motionMs("quick"));
 
   useEffect(() => {
     setDisabled(readWaterLockerDisabled());

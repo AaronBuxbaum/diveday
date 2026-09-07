@@ -304,12 +304,47 @@
   --ease-spring: cubic-bezier(0.34, 1.42, 0.5, 1);
 
   /*
+   * **The ladder: three rungs, and the two ceilings that are not rungs.**
+   *
+   * The curves above answer *how* a thing moves and had no answer for *how
+   * long*. So the tree grew ten durations — 150, 180, 200, 220, 260, 280, 300,
+   * 320, 360 and 520ms — with one token among them, and every JS timer that
+   * had to outlast a keyframe was that keyframe's number copied by hand into
+   * another file, under a comment asking the next reader to keep the two in
+   * step (`MENU_CLOSE_MS`, `EXIT_DURATION_MS`, `useExitAnimation(open, 180)`).
+   * A material has a small number of speeds; ten is a list of decisions
+   * (ADR 20260907-nothing-from-nowhere, decision 2).
+   *
+   * `motionMs()` in `src/lib/motion.ts` is the same ladder for JS, and
+   * `motion-tokens.test.ts` reads these three lines to prove the two agree —
+   * so a timer names a rung and cannot drift from the CSS it must outlast.
+   *
+   * The two ceilings principle 5 already grants stay literals at their call
+   * sites, because a ceiling is a limit rather than a speed: 400ms for a
+   * staggered disclosure as a whole, and 600ms for a drawn moment (the swell
+   * at 320, the boat at 520 — budget rule 2).
+   */
+  /** A scrim fading, a control letting go, a pressed row lifting. */
+  --motion-quick: 150ms;
+  /**
+   * The default, and what nearly everything already chose independently: a
+   * figure rolling, a row sliding, a disclosure body arriving, a toast, a
+   * sheet leaving, a panel opening from its control.
+   */
+  --motion-base: 200ms;
+  /**
+   * A group of controls unfolding or folding, per child, staggered. The
+   * board's row menu ran 260 in and 280 out; one rung replaces both.
+   */
+  --motion-unfold: 280ms;
+
+  /*
    * An arrival, and the app's one unmarked duration. 200ms is what
    * `transition-brand`, every button and both progress bars already chose
    * independently; making it the default retires `duration-200` from every
    * class string that only ever said "the usual".
    */
-  --default-transition-duration: 200ms;
+  --default-transition-duration: var(--motion-base);
   --default-transition-timing-function: var(--ease-out-soft);
 
   /*
@@ -803,7 +838,7 @@ textarea {
 }
 
 .rise-in {
-  animation: rise-in 200ms var(--ease-out-soft) both;
+  animation: rise-in var(--motion-base) var(--ease-out-soft) both;
 }
 
 /*
@@ -837,7 +872,7 @@ textarea {
 }
 
 .settle-in {
-  animation: settle-in 200ms var(--ease-spring) both;
+  animation: settle-in var(--motion-base) var(--ease-spring) both;
 }
 
 /*
@@ -948,7 +983,7 @@ textarea {
 }
 
 .marketing-reveal-visible {
-  animation: rise-in 220ms var(--ease-out-soft) both;
+  animation: rise-in var(--motion-base) var(--ease-out-soft) both;
 }
 
 @keyframes marketing-device-arrive {
@@ -1001,7 +1036,7 @@ textarea {
 }
 
 .toast-dismiss {
-  animation: toast-dismiss 200ms var(--ease-in-soft) both;
+  animation: toast-dismiss var(--motion-base) var(--ease-in-soft) both;
 }
 
 /* The dock's "More" sheet closing (StaffTabBar) — issue #832. Same shape as
@@ -1020,7 +1055,7 @@ textarea {
 }
 
 .sheet-out {
-  animation: sheet-out 200ms var(--ease-in-soft) both;
+  animation: sheet-out var(--motion-base) var(--ease-in-soft) both;
 }
 
 /*
@@ -1075,7 +1110,7 @@ textarea {
 
 .animate-board-menu-in > * {
   transform-origin: left center;
-  animation: board-menu-in 260ms var(--ease-spring) both;
+  animation: board-menu-in var(--motion-unfold) var(--ease-spring) both;
 }
 
 /* Nearest the "⋯" first, so the row unrolls outward. */
@@ -1088,7 +1123,7 @@ textarea {
 }
 
 .animate-fade-in {
-  animation: fade-in 150ms var(--ease-out-soft) both;
+  animation: fade-in var(--motion-quick) var(--ease-out-soft) both;
 }
 
 /* The inverse of fade-in, for a scrim/backdrop layer closing (WaterLocker) —
@@ -1103,7 +1138,7 @@ textarea {
 }
 
 .animate-fade-out {
-  animation: fade-out 150ms var(--ease-in-soft) both;
+  animation: fade-out var(--motion-quick) var(--ease-in-soft) both;
 }
 
 /*
@@ -1123,7 +1158,7 @@ textarea {
  */
 
 .animate-scale-in {
-  animation: scale-in 200ms var(--ease-out-soft) both;
+  animation: scale-in var(--motion-base) var(--ease-out-soft) both;
 }
 
 @keyframes scale-out {
@@ -1165,7 +1200,7 @@ textarea {
 
 .animate-board-menu-out > * {
   transform-origin: left center;
-  animation: board-menu-out 280ms var(--ease-in-soft) both;
+  animation: board-menu-out var(--motion-unfold) var(--ease-in-soft) both;
 }
 
 /* Reverse order: the far end leaves first, so the row rolls back up into the "⋯". */
@@ -1178,7 +1213,7 @@ textarea {
 }
 
 .animate-scale-out {
-  animation: scale-out 180ms var(--ease-in-soft) both;
+  animation: scale-out var(--motion-base) var(--ease-in-soft) both;
 }
 
 /*
@@ -1187,6 +1222,198 @@ textarea {
  * `transition-*` does, so this cannot drift away from the rest of the app the
  * way a second hard-coded `200ms` eventually would.
  */
+/*
+ * **A figure rolls** — `RollingFigure`, ADR 20260907-nothing-from-nowhere,
+ * decision 3.
+ *
+ * A slot is one character's worth of clipped space: as wide as the character,
+ * one line tall, `overflow: hidden` so the digit on its way out is cut off by
+ * the slot's own edge rather than overlapping the line above. The slot stays
+ * in the flow and keeps its width, so the words beside a figure never move
+ * while it changes — which is the whole reason this is two absolutely
+ * positioned children inside a relative box rather than a `translateY` on the
+ * text itself.
+ *
+ * `1ch`-ish sizing is deliberately *not* used: the app's figures are
+ * `tabular-nums`, so a digit already occupies the font's figure width, and the
+ * slot inherits it by containing exactly one character.
+ *
+ * Both halves are on the ladder's base rung and on the two curves §5 already
+ * names: the leaving digit departs on `--ease-in-soft` (and says so in its
+ * name, for `check-exit-curves.mjs`), the arriving one lands on
+ * `--ease-out-soft`. The kill-switch below shortens both, but the component
+ * decides not to render a roll at all for a reduced-motion reader, so this is
+ * belt and braces rather than the mechanism.
+ */
+.rolling-figure-slot {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  /* The slot clips a digit travelling a full line-height, so it must be a line
+     tall and no taller; `vertical-align` keeps it sitting on the text's own
+     baseline rather than on the inline box's bottom. */
+  vertical-align: bottom;
+  line-height: inherit;
+}
+
+/* The arriving digit takes the slot's space and keeps it in the flow, so the
+   slot is exactly one digit wide; the leaving one is lifted out so the two
+   occupy one column rather than two. */
+.rolling-figure-slot > span {
+  display: inline-block;
+}
+
+.rolling-digit-out,
+.rolling-digit-out-down {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+}
+
+@keyframes rolling-digit-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+}
+
+@keyframes rolling-digit-out-down {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+@keyframes rolling-digit-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rolling-digit-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rolling-digit-out {
+  animation: rolling-digit-out var(--motion-base) var(--ease-in-soft) both;
+}
+
+.rolling-digit-out-down {
+  animation: rolling-digit-out-down var(--motion-base) var(--ease-in-soft) both;
+}
+
+.rolling-digit-in {
+  animation: rolling-digit-in var(--motion-base) var(--ease-out-soft) both;
+}
+
+.rolling-digit-in-down {
+  animation: rolling-digit-in-down var(--motion-base) var(--ease-out-soft) both;
+}
+
+/*
+ * **The press: what every tappable thing does under a finger** — ADR
+ * 20260907-nothing-from-nowhere, decision 2.
+ *
+ * Down takes **no easing and no time**: the thing is at 97% in the frame the
+ * finger lands, because a tap on a boat deck averages about 90ms and an eased
+ * 200ms shrink is a thing that has barely started when the finger is already
+ * gone. That is what `transition: none` on `:active` buys — the same
+ * declaration that lets the *release* animate, since leaving `:active`
+ * restores the rule above it. Up takes `--motion-quick` on the spring: a
+ * finger gave the thing weight, which is the one claim `--ease-spring` is
+ * rationed for (H-69 a; the arrival curve is the whole of the change if that
+ * ration is declined).
+ *
+ * Transform only. A pressed state that also wants a background says so at its
+ * own call site (`active:bg-surface-sunken` on a row, a darker fill on a
+ * button variant), because a primary button and a ledger row do not sink to
+ * the same colour and a rule here could not tell them apart.
+ *
+ * It is unlayered, so it beats Tailwind's own `transition-*` utilities
+ * wherever both land on one element — which is deliberate: a control that
+ * wants a different transition does not wear this class. The reduced-motion
+ * kill-switch below shortens the release to nothing, so that reader gets the
+ * state change and no travel; the *down* was already instant for everyone.
+ */
+.pressable {
+  transition:
+    color var(--motion-quick) var(--ease-out-soft),
+    background-color var(--motion-quick) var(--ease-out-soft),
+    border-color var(--motion-quick) var(--ease-out-soft),
+    transform var(--motion-quick) var(--ease-spring);
+}
+
+.pressable:active {
+  transition: none;
+  transform: scale(0.97);
+}
+
+/*
+ * **A full-bleed row presses by tinting, not by shrinking**, and that is this
+ * rule rather than the one above.
+ *
+ * The ADR's press is one behaviour with two spellings, because 97% is a
+ * different gesture on a 44px chip than on a 390px row: on the chip it reads
+ * as the object taking the finger's weight, and on the row it reads as the
+ * whole page flinching, since three percent of a phone's width is six pixels
+ * of travel on each edge for one tap. iOS makes the same split — a card
+ * scales, a table row highlights — and the honest reading of "anything a
+ * finger is on obeys it within a frame" is that the row answers in the frame,
+ * not that it answers by scaling.
+ *
+ * The timing is identical, which is what keeps it one press: instant down,
+ * `--motion-quick` back up. The tint sits above the row's own
+ * `hover:bg-surface-sunken/60`, so a mouse that hovers and then presses sees
+ * the same surface deepen rather than a second colour arrive.
+ */
+.pressable-row {
+  transition: background-color var(--motion-quick) var(--ease-out-soft);
+}
+
+/*
+ * `:has(> a:active)` is the ledger row's own construction: a row with a door
+ * is a static container plus an absolutely positioned stretched `<a>`, so the
+ * element a finger is actually on is that link and never the row. Direct-child
+ * only, deliberately — a button in the row's `trailing` slot is nested deeper,
+ * and pressing "Send waiver" must sink the button rather than the whole row.
+ */
+.pressable-row:active,
+.pressable-row:has(> a:active) {
+  transition: none;
+  background-color: var(--surface-sunken);
+}
+
+/*
+ * A control the browser has disabled is not pressable, and must not sink under
+ * a finger that cannot do anything with it — the busy `SubmitButton` whose own
+ * submit is in flight is the common case, where a sink reads as a second tap
+ * landing.
+ */
+.pressable:disabled:active,
+.pressable[aria-disabled="true"]:active {
+  transform: none;
+}
+
 .transition-brand {
   transition-property:
     color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow,
@@ -1339,9 +1566,9 @@ details::details-content {
   opacity: 0;
   translate: 0 -0.25rem;
   transition:
-    opacity 200ms var(--ease-in-soft),
-    translate 200ms var(--ease-in-soft),
-    content-visibility 200ms allow-discrete;
+    opacity var(--motion-base) var(--ease-in-soft),
+    translate var(--motion-base) var(--ease-in-soft),
+    content-visibility var(--motion-base) allow-discrete;
 }
 
 details[open]::details-content {

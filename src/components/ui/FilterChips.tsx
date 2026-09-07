@@ -25,7 +25,7 @@ export interface FilterChip {
 }
 
 const chipClass = (active: boolean) =>
-  `inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium whitespace-nowrap transition-colors ${
+  `inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium whitespace-nowrap pressable ${
     active
       ? // `-tint` rather than `bg-primary/10`: translucent, the selected pill
         // contrasts against the page behind it, which on `/divers` and

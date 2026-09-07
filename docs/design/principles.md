@@ -213,6 +213,39 @@ Animation exists to explain (where did it go, what changed), 150–250 ms, ease-
 kill-switch in `globals.css` stays, and it kills `animation-delay` as well as duration, so a
 stagger cannot survive it.
 
+**One ladder, in two languages** (ADR
+[20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md),
+decision 2). The tree held ten durations with one token among them, and every JS timer that had to
+outlast a keyframe was that keyframe's number copied into another file under a comment asking the
+next reader to keep the two in step. Three rungs now, declared in `@theme` and stated again in
+`src/lib/motion.ts`, with `motion-tokens.test.ts` reading the stylesheet to prove they agree:
+
+| Rung | | What takes it |
+| --- | --- | --- |
+| `--motion-quick` | 150 ms | A scrim fading, a control letting go, a pressed row lifting |
+| `--motion-base` | 200 ms | The default: a figure rolling, a row sliding, a body arriving, a toast, a sheet leaving, a panel opening from its control |
+| `--motion-unfold` | 280 ms | A group of controls unfolding or folding, per child, staggered 50 ms |
+
+A timer names a rung (`motionMs("base")`), never a number. The two ceilings below are limits rather
+than speeds and stay literals at their call sites: 400 ms for a staggered disclosure as a whole,
+600 ms for a drawn moment. The test refuses any other millisecond value in an animation utility.
+
+**Anything a finger is on answers within a frame.** The press goes down with **no easing and no
+time** — `.pressable` sets `transition: none` on `:active`, so the control is at 97% in the frame
+the finger lands — and comes back over `--motion-quick`. A tap on a wet dock averages about 90 ms,
+which the old `active:scale-[0.98]` on a 200 ms eased transition had barely started by the time the
+finger was gone: the control answered a press nobody saw, and a row, a chip and a dock tab did not
+answer at all. Two spellings, one behaviour: a discrete control scales (`.pressable`), a full-bleed
+row tints (`.pressable-row`), because three percent of a phone's width is six pixels of travel on
+each edge and a row that scales reads as the page flinching. A pressed state that also wants a
+colour says so at its own call site; the classes carry the timing.
+
+**A finger outranks a timer.** While something is under a finger it follows the finger one for one,
+resists past its edge, and no animation runs on it at all — the pull-to-refresh, the buddy drag and
+the dock's sheet share one contract for this (unified pointer and touch events, no gesture library,
+a cancel curve when released short, no fight with a scroll). Tracking a finger is not animation, so
+it is the one thing that still moves for a reader who asked for reduced motion.
+
 **A bar that fills scales, it does not resize.** All three of this app's progress bars animated (or
 failed to animate) their `width`, which is layout — the browser reflows every frame of the
 transition. `ProgressBar` in `src/components/ui/` is the one primitive: each fill is a sheet scaled

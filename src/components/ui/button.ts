@@ -49,8 +49,19 @@
  * button-shaped links behave alike. `disabled:cursor-not-allowed` still wins on
  * a disabled button — its variant selector carries the higher specificity.
  */
+/**
+ * **`pressable` is the press, and it replaces what this line used to spell
+ * out** (ADR 20260907-nothing-from-nowhere, decision 2). The base carried
+ * `transition-[color,background-color,border-color,transform] ease-out-soft
+ * active:scale-[0.98]`: a 2% shrink eased over the default 200ms, which a
+ * 90ms tap on a wet dock never reaches — the finger is gone before the
+ * transition is a quarter through, so the control answered a press nobody
+ * saw. The class sinks it in the frame the finger lands and springs it back
+ * over `--motion-quick`, and carries the same three colour transitions this
+ * string used to name.
+ */
 const base =
-  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg transition-[color,background-color,border-color,transform] ease-out-soft active:scale-[0.98]";
+  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg pressable";
 
 /**
  * What a disabled state *means*, which is two different things this app renders

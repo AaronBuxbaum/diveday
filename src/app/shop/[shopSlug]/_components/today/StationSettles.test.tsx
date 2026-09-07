@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { MOTION_RUNGS } from "@/lib/motion";
 import { StationSettles } from "./StationSettles";
 
 afterEach(() => {
@@ -52,6 +53,22 @@ function update(view: ReturnType<typeof render>, count: number) {
  * transition this reader watched, never by arriving on a page that was
  * already clear — the rule every earned moment in the tree keeps.
  */
+/**
+ * A duration as the stylesheet writes it — `200ms`, or a rung named through the
+ * ladder both languages share (`src/lib/motion.ts`).
+ */
+function durationMs(value: string): number {
+  const rung = value.match(/^var\(--motion-([a-z]+)\)$/)?.[1];
+  if (rung) {
+    const ms = MOTION_RUNGS[rung as keyof typeof MOTION_RUNGS];
+    if (ms === undefined) throw new Error(`unknown motion rung: ${value}`);
+    return ms;
+  }
+  const literal = value.match(/^(\d+)ms$/)?.[1];
+  if (!literal) throw new Error(`unreadable duration: ${value}`);
+  return Number(literal);
+}
+
 describe("StationSettles", () => {
   it("renders nothing for a station that arrives with no work", () => {
     mount(0);
@@ -144,15 +161,19 @@ describe("StationSettles", () => {
     );
     // The component's clock fallback has to agree with the stylesheet.
     expect(source).toContain(`const SWELL_MS = ${rule[1]};`);
-    const riseIn = css.match(/\.rise-in \{\n\s*animation: rise-in (\d+)ms/);
+    // `.rise-in` names a rung rather than a number (ADR
+    // 20260907-nothing-from-nowhere, decision 2), so the duration is resolved
+    // through the same ladder JS reads. Matching a literal here is what broke
+    // when the stylesheet moved onto it — and reading the token keeps this
+    // assertion about the moment's *length* rather than about its spelling.
+    const riseIn = css.match(/\.rise-in \{\n\s*animation: rise-in ([^\s;]+)/);
     if (!riseIn?.[1]) throw new Error("expected the rise-in rule in globals.css");
+    const riseInMs = durationMs(riseIn[1]);
     // The sentence rises behind the swell's start by the inline delay in the
     // component; the whole moment is over when the later of the two ends.
     const delay = source.match(/animationDelay: "(\d+)ms"/);
     if (!delay?.[1]) throw new Error("expected the sentence's animation delay");
-    expect(Math.max(Number(rule[1]), Number(delay[1]) + Number(riseIn[1]))).toBeLessThanOrEqual(
-      400,
-    );
+    expect(Math.max(Number(rule[1]), Number(delay[1]) + riseInMs)).toBeLessThanOrEqual(400);
     // It ends invisible: the swell is the transition, never a resting thing,
     // which is also what lets the reduced-motion kill-switch skip it entirely.
     expect(css).toMatch(/@keyframes swell-across \{[\s\S]*?to \{[^}]*opacity: 0;/);

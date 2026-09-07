@@ -10,6 +10,7 @@ import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import type { SearchResults } from "@/db/search";
 import type { GearItemStatus } from "@/lib/gear";
+import { motionMs } from "@/lib/motion";
 import {
   type StaffDestinationGates,
   type StaffDestinationLabels,
@@ -173,7 +174,7 @@ export function CommandPalette({
   // together. Restrained on purpose (docs/design/principles.md §5): a short
   // scale-and-fade, the same pair every other menu on the page uses, so the
   // palette reads as a layer arriving rather than a dialog performing.
-  const { mounted, closing } = useExitAnimation(open, 180);
+  const { mounted, closing } = useExitAnimation(open, motionMs("base"));
 
   // ⌘K / Ctrl-K from anywhere opens the palette.
   useEffect(() => {

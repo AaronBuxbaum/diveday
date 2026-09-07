@@ -41,7 +41,9 @@ describe("the disclosure body's motion", () => {
 
   /** Without it the closing half cannot run: the content is `content-visibility: hidden` when shut. */
   it("keeps the content visible long enough to fade out", () => {
-    expect(rule("details::details-content")).toContain("content-visibility 200ms allow-discrete");
+    expect(rule("details::details-content")).toContain(
+      "content-visibility var(--motion-base) allow-discrete",
+    );
   });
 
   it("arrives on the arrival curve and leaves on the exit one", () => {
