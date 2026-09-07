@@ -9,6 +9,8 @@ import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import type { DisplayLinkState } from "./display-panel-types";
 
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * The origin this app is served from, for the URL a staffer pastes into a
  * TV's browser. Read from the request rather than an env var so a preview
@@ -45,8 +47,14 @@ export async function displayLinkAction(
 
   if (formData.get("intent") === "revoke") {
     const id = formData.get("id");
-    if (typeof id !== "string" || id.length === 0) return { status: "denied" };
-    const revoked = await revokeDisplayToken(db, { shopId: session.user.shopId, id });
+    // A UUID or nothing: a malformed id is a refusal here, never a cast error
+    // from the database.
+    if (typeof id !== "string" || !UUID_SHAPE.test(id)) return { status: "denied" };
+    const revoked = await revokeDisplayToken(db, {
+      shopId: session.user.shopId,
+      personId: session.user.personId,
+      id,
+    });
     revalidatePath(path);
     return revoked ? { status: "revoked", id } : { status: "denied" };
   }

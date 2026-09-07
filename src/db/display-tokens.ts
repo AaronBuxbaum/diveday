@@ -138,15 +138,21 @@ export async function listDisplayTokens(
 }
 
 /**
- * Turns a link off. Shop-scoped in the predicate, so an id from another shop
- * revokes nothing, and idempotent: revoking a revoked link is `false`, not an
- * error. Revoking is the row's soft delete — `revoked_at` stays, the row
+ * Turns a link off. The same live owner/manager gate as `issueDisplayToken`,
+ * re-derived here rather than trusted from the page: a server action is a
+ * POST endpoint whether or not the settings page rendered a button, and a
+ * crew member must not be able to darken the lobby screen (security review,
+ * 2026-09-07). Shop-scoped in the predicate, so an id from another shop
+ * revokes nothing, and idempotent: revoking a revoked link is `false`, not
+ * an error. Revoking is the row's soft delete — `revoked_at` stays, the row
  * stays, and the board stops answering on the next refresh.
  */
 export async function revokeDisplayToken(
   db: AppDb,
-  input: { shopId: string; id: string; now?: Date },
+  input: { shopId: string; personId: string; id: string; now?: Date },
 ): Promise<boolean> {
+  const roles = await loadActiveStaffRoles(db, input.shopId, input.personId);
+  if (!roles || !canManageShopSettings(roles)) return false;
   const rows = await db
     .update(displayTokens)
     .set({ revokedAt: input.now ?? nowDate() })
