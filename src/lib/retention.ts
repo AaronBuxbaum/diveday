@@ -81,7 +81,9 @@ export type RetainedTable =
   | "push_subscriptions"
   | "trip_desk_events"
   | "trip_read_marks"
-  | "form_drafts";
+  | "form_drafts"
+  | "inbound_messages"
+  | "staff_replies";
 
 /**
  * The one place a human changes how long each trail is kept, in days.
@@ -202,6 +204,19 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * older than this, so the prune only takes out what nobody can see.
    */
   form_drafts: 1,
+  /**
+   * 400 days, the same window as `notification_deliveries` and for the same
+   * reason: a diver's reply and the shop's answer are the other half of the
+   * "you never told me" conversation that trail exists to settle, and a
+   * season plus a year keeps last year's exchange answerable during this
+   * year's same week (ADR 20260907-two-way-inbox). These rows carry a diver's
+   * own words and the address they wrote from, which is the argument for a
+   * window at all rather than for a shorter one — a shop that needs longer
+   * has the record's notes, and erasure clears them on request regardless.
+   */
+  inbound_messages: 400,
+  /** Measured on `sent_at`; a reply outliving the message it answered says nothing. */
+  staff_replies: 400,
 };
 
 /**
