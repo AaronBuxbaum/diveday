@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, isNotNull, isNull, lt } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { groupCrewAssignments } from "@/lib/crew-roles";
 import {
@@ -153,6 +153,12 @@ export async function getDeparturesBoard(
           .select({
             tripId: tripAssignments.tripId,
             personId: people.id,
+            // **The name they chose, never the one on their record.** Consent
+            // and `crew_public_name` are paired by a check constraint on
+            // `people`, so a consenting row always has one; publishing
+            // `full_name` instead is the surname bug issue #1351 fixed on the
+            // departure page, arriving by a second door.
+            publicName: people.crewPublicName,
             fullName: people.fullName,
             tripRole: tripAssignments.tripRole,
             role: personRoles.role,
@@ -163,15 +169,35 @@ export async function getDeparturesBoard(
             and(eq(people.id, tripAssignments.personId), eq(people.shopId, input.shopId)),
           )
           .leftJoin(personRoles, eq(personRoles.personId, people.id))
-          .where(inArray(tripAssignments.tripId, tripIds))
+          .where(
+            and(
+              inArray(tripAssignments.tripId, tripIds),
+              isNull(people.deletedAt),
+              // **Two different people decide two different things.**
+              // `show_names` is the owner saying this screen may carry names at
+              // all; `crew_public_consent_at` is each person saying theirs may
+              // be one of them, and `setCrewPublicConsent` refuses to record it
+              // for anybody but its own subject. A board link is read by
+              // everyone in the room and by anyone the URL reaches after that,
+              // so it owes the rule `tripPublicCrew` keeps for the departure
+              // page. `staffDefs` seeds two of five consenting on purpose, and
+              // says why: somebody who declined has to read as somebody who was
+              // never rostered.
+              isNotNull(people.crewPublicConsentAt),
+            ),
+          )
           // By name, for the reason the day spine gives: without it the same
-          // boat reads two crew orders on two refreshes of one screen.
+          // boat reads two crew orders on two refreshes of one screen. On the
+          // shop's own record rather than the public name, so the order holds
+          // still when somebody edits what divers see.
           .orderBy(asc(people.fullName), asc(people.id))
       : Promise.resolve([]),
   ]);
 
   const crewByTrip = new Map<string, string[]>();
-  const namesByPerson = new Map(crewRows.map((row) => [row.personId, row.fullName] as const));
+  const namesByPerson = new Map(
+    crewRows.flatMap((row) => (row.publicName ? [[row.personId, row.publicName] as const] : [])),
+  );
   const rowsByTrip = new Map<string, typeof crewRows>();
   for (const row of crewRows) {
     const list = rowsByTrip.get(row.tripId) ?? [];
@@ -181,7 +207,14 @@ export async function getDeparturesBoard(
   for (const [tripId, list] of rowsByTrip) {
     crewByTrip.set(
       tripId,
-      groupCrewAssignments(list).map((member) => namesByPerson.get(member.personId) ?? ""),
+      // Dropped rather than rendered blank when the name is missing. The check
+      // constraint pairing consent with `crew_public_name` means it cannot be,
+      // and if that pairing ever broke, one fewer person on the screen is the
+      // safe direction and a bullet with nothing after it is not.
+      groupCrewAssignments(list).flatMap((member) => {
+        const name = namesByPerson.get(member.personId);
+        return name ? [name] : [];
+      }),
     );
   }
 

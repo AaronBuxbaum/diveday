@@ -7,7 +7,7 @@
     "labelField": "Qué pantalla",
     "labelPlaceholder": "TV del lobby",
     "showNames": "Mostrar los nombres de la tripulación",
-    "showNamesDescription": "Cualquiera en la sala los lee. Los buceadores nunca aparecen con nombre.",
+    "showNamesDescription": "Cualquiera en la sala los lee. Solo aparece quien aceptó que se le nombre, y los buceadores nunca.",
     "submit": "Crear enlace",
     "submitting": "Creando…"
   },

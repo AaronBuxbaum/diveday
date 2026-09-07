@@ -7,7 +7,7 @@
     "labelField": "Which screen",
     "labelPlaceholder": "Lobby TV",
     "showNames": "Show the crew's names",
-    "showNamesDescription": "Anyone in the room reads them. Divers are never named.",
+    "showNamesDescription": "Anyone in the room reads them. Only the crew who agreed to be named appear, and divers never do.",
     "submit": "Create link",
     "submitting": "Creating…"
   },

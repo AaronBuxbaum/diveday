@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { bookings, people, trips } from "@/db/schema";
 import { listStaff, setTripCrew } from "@/db/trips";
@@ -67,9 +67,46 @@ describe("getDeparturesBoard", () => {
       timeZone: shop.timezone,
       showNames: true,
     });
-    const namedReef = named.find((row) => row.tripId === reef.tripId);
-    expect(namedReef?.crewNames).toContain(owner.person.fullName);
     expect(JSON.stringify(named)).not.toContain(diver.fullName);
+  });
+
+  /**
+   * `show_names` is the owner's decision that a screen may carry names; it is
+   * not anybody's decision that theirs is one of them. That second one lives in
+   * `people.crew_public_consent_at`, which `setCrewPublicConsent` refuses to
+   * record for anybody but its own subject, and the seeded cast has two of five
+   * who agreed. A board link is read by everyone in the room and by anyone the
+   * URL reaches afterwards, so somebody who declined has to read exactly like
+   * somebody who was never rostered.
+   */
+  it("names only the crew who agreed to it, by the name they chose", async () => {
+    const { db, shop, reef } = await todayBoard();
+
+    const staff = await listStaff(db, shop.id);
+    const declined = staff.find((entry) => entry.roles.includes("owner"));
+    if (!declined) throw new Error("seeded shop has no owner");
+
+    const [agreed] = await db
+      .select({ id: people.id, publicName: people.crewPublicName, fullName: people.fullName })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), isNotNull(people.crewPublicConsentAt)))
+      .limit(1);
+    if (!agreed?.publicName) throw new Error("the seeded cast names nobody to divers");
+
+    await setTripCrew(db, shop.id, reef.tripId, [declined.person.id, agreed.id]);
+    const named = await getDeparturesBoard(db, {
+      shopId: shop.id,
+      timeZone: shop.timezone,
+      showNames: true,
+    });
+    const namedReef = named.find((row) => row.tripId === reef.tripId);
+
+    expect(namedReef?.crewNames).toEqual([agreed.publicName]);
+    // Their record still reads "Tanaka Keiko"; the board may say only "Keiko".
+    // Publishing the surname is the bug issue #1351 closed on the departure
+    // page, and it would arrive here by a second door.
+    expect(JSON.stringify(named)).not.toContain(agreed.fullName);
+    expect(JSON.stringify(named)).not.toContain(declined.person.fullName);
   });
 
   it("counts the boarded from the roll call, not from bookings", async () => {
