@@ -429,8 +429,8 @@ export async function saveSendWindowAction(formData: FormData) {
  * How long after the last dive this shop tells a diver they may fly
  * (`src/lib/fly-safe.ts`, issue #1425). Refused whole, with a notice, on any
  * value outside DAN's floors and the three-day ceiling — never clamped, so a
- * forged form cannot quietly write a wait the recap would then attribute to
- * DAN.
+ * forged form cannot quietly write a wait shorter than the guidance the
+ * recap's own sentence then names.
  */
 export async function saveFlySafeHoursAction(formData: FormData) {
   const session = await requireStaffSession();

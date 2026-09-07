@@ -9,9 +9,21 @@ import { hasReturned } from "./trips";
  * surface interval — 12 hours after a single no-decompression dive, 18 after
  * repetitive dives or multiple days of diving — and a shop may ask its divers
  * to wait longer. So the hours are the shop's own pair (`shops.fly_safe_hours_*`,
- * defaults 18 and 24), and the floors below are DAN's minimums: the sentence
- * a diver reads attributes the number to "DAN's guidance and the shop's
- * setting", and a setting under DAN's floor would make that sentence a lie.
+ * defaults 18 and 24), and the floors below are DAN's minimums. The sentence
+ * a diver reads names the shop as the author of the figure and DAN as the
+ * practice behind it ("{shop} asks for 24 hours after your last dive,
+ * following DAN's guidance") rather than putting the figure in DAN's mouth:
+ * DAN publishes 12 and 18, so a sentence reading "24 hours, by DAN's
+ * guidance" misquotes it, and a setting under DAN's floor would leave even
+ * the weaker claim false.
+ *
+ * Two limits worth knowing before this is extended. DAN's guidance covers
+ * **no-decompression** recreational diving — a dive that took stops needs
+ * substantially longer, and nothing here can tell. And *repetitive* is
+ * decided from this departure alone, so a single dive today after diving
+ * yesterday reads as single, where DAN's 18 hours covers multiple days too
+ * (issue #1439; the 18-hour default already meets that figure, and only a
+ * shop that lowers `single` to DAN's 12 opens the gap).
  *
  * Two things this deliberately does not do. It never computes from a dive
  * profile — depth and bottom time are a computer's business, and DiveDay is

@@ -271,7 +271,7 @@
     "flySafe": {
       "heading": "Fly-safe hours",
       "value": "{single} h · {repetitive} h",
-      "description": "Hours after the last dive before a diver reads they can fly. Their recap names the time, and credits DAN and you.",
+      "description": "Hours after the last dive before a diver reads they can fly. Their recap names the time and says the wait is yours, following DAN’s guidance.",
       "singleLabel": "After one dive",
       "repetitiveLabel": "After two or more dives",
       "submit": "Save fly-safe hours",

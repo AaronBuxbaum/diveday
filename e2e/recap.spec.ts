@@ -294,7 +294,7 @@ test("the after-state says when the diver may fly, once the crew has logged the 
   expect(seeded.ok(), await seeded.text()).toBe(true);
   await page.reload();
   await expect(page.getByTestId(AFTER_STATE_TEST_IDS.flySafe)).toHaveText(
-    "Fly-safe from Wednesday 6:10 PM: 24 hours after your last dive, by DAN’s guidance and the setting at Blue Mantis Divers.",
+    "Fly-safe from Wednesday 6:10 PM: Blue Mantis Divers asks for 24 hours after your last dive, following DAN’s guidance.",
   );
 });
 

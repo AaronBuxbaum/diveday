@@ -290,10 +290,11 @@ export const shops = pgTable(
     /**
      * How long after the day's last dive a diver reads they may fly, in whole
      * hours — one figure for a single dive, one for a day of two or more
-     * (`src/lib/fly-safe.ts`, issue #1425). The sentence on the recap says
-     * "by DAN's guidance and the shop's setting", so the CHECK below floors
-     * each at DAN's published minimum (12 and 18): a shop may ask for more,
-     * never less, or the attribution would be false. Informs, never gates.
+     * (`src/lib/fly-safe.ts`, issue #1425). The sentence on the recap credits
+     * the figure to the shop and the practice to DAN, so the CHECK below
+     * floors each at DAN's published minimum (12 and 18): a shop may ask for
+     * more, never less, or even that weaker claim is false. Informs, never
+     * gates.
      */
     flySafeHoursSingle: integer("fly_safe_hours_single").notNull().default(18),
     flySafeHoursRepetitive: integer("fly_safe_hours_repetitive").notNull().default(24),

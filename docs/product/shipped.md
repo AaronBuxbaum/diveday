@@ -11,7 +11,7 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
 
 N-04 from the 2026-09-07 improvement-ideas decision sheet (issue #1425). Once the crew has logged
 the day, the thread's after-state and the `trip_recap` email say "Fly-safe from Wednesday 6:10 PM:
-24 hours after your last dive, by DAN's guidance and the setting at {shop}" — the shop's own pair of
+{shop} asks for 24 hours after your last dive, following DAN's guidance" — the shop's own pair of
 hours (`shops.fly_safe_hours_single` / `_repetitive`, a Settings row, floored at DAN's 12 and 18),
 counted from the last recorded exit by `src/lib/fly-safe.ts`, or from the scheduled return once the
 boat is home; repetitive whenever the day held more than one dive by record or by plan. Nothing at

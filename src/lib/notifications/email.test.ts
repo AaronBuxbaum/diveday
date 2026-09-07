@@ -356,7 +356,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive" },
     });
     expect(afterDive.text).toContain(
-      "Fly-safe from Sunday 10:10 AM: 24 hours after your last dive, by DAN’s guidance and the setting at Blue Mantis.",
+      "Fly-safe from Sunday 10:10 AM: Blue Mantis asks for 24 hours after your last dive, following DAN’s guidance.",
     );
     expect(afterDive.html).toContain("Fly-safe from Sunday 10:10 AM");
 

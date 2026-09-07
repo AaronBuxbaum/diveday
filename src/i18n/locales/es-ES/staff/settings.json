@@ -271,7 +271,7 @@
     "flySafe": {
       "heading": "Horas para volar",
       "value": "{single} h · {repetitive} h",
-      "description": "Horas después de la última inmersión antes de que un buceador lea que puede volar. Su resumen dice la hora y cita a DAN y a ti.",
+      "description": "Horas después de la última inmersión antes de que un buceador lea que puede volar. Su resumen dice la hora y que la espera la fijas tú, siguiendo la guía de DAN.",
       "singleLabel": "Tras una inmersión",
       "repetitiveLabel": "Tras dos o más inmersiones",
       "submit": "Guardar horas para volar",
