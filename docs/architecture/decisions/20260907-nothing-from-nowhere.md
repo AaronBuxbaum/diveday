@@ -183,7 +183,7 @@ the shell's bar, and this app renders the bar (`ShopNav`, in the shop layout) an
 (`ShopPageHeader`, in the page) in two different trees. A CSS-only fold would have to cover the
 shop-identity menu with an opaque label that stays clickable underneath, or shrink the heading —
 which decision 5 rules out. It needs a data-flow decision (a title slot on the layout, or a
-portal), which is a change to the shell rather than to motion, and it is filed for triage.
+portal), which is a change to the shell rather than to motion, and it is filed as issue #1422.
 
 ## Alternatives considered
 

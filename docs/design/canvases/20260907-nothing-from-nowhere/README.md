@@ -110,7 +110,7 @@ comment, and a test pins the rule.
 - **The roll needs a whole sentence to compare**, not just a number: if
   anything but the digits changed, the figure swaps. The Roll board draws only
   the digits changing, which is the common case and not the only one.
-- **18e is open on a finding the boards did not anticipate.** The fold needs
+- **18e is open on a finding the boards did not anticipate** (issue #1422). The fold needs
   the page's title inside the shell's bar, and this app renders the bar
   (`ShopNav`, in the shop layout) and the title (`ShopPageHeader`, in the page)
   in two different trees. Every CSS-only shape either covers the shop-identity

@@ -443,7 +443,7 @@ spring half, 18c's roster half and 18f wait on it.
   because a hand's *speed* is the one input a DOM test cannot express, and a velocity guard stops a
   release that lands in the same millisecond as the last move from reading as a flick. The embed
   lightbox is the same hook and follows.
-- **18e** — the title folds into the bar on a phone. **Open, on a finding.** The fold needs the
+- **18e** — the title folds into the bar on a phone. **Open, on a finding** (issue #1422). The fold needs the
   page's title inside the shell's bar, and this app renders the bar (`ShopNav`, in the shop layout)
   and the title (`ShopPageHeader`, in the page) in two different trees. Every CSS-only shape either
   covers the shop-identity menu with a label that stays clickable underneath, or shrinks the
