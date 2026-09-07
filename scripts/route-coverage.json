@@ -39,6 +39,7 @@
   "/offline-manifest": {
     "e2e": ["a11y.spec.ts", "manifest.spec.ts"],
     "visual": [
+      "offline-counter-settled",
       "offline-manifest-discarded",
       "offline-manifest-empty",
       "offline-manifest-list",

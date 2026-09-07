@@ -2,6 +2,7 @@ import { and, asc, eq, exists, isNull, or, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
+import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import {
   PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED,
   type PreDepartureCheckStatus,
@@ -230,22 +231,6 @@ export async function latestPreDepartureChecksForTrip(
     });
   }
   return latest;
-}
-
-function offlineEventOutOfBounds(input: {
-  clientEventId: string | undefined;
-  offlineSnapshotSavedAt: Date | undefined;
-  occurredAt: Date;
-  now: Date;
-}): boolean {
-  const OFFLINE_EVENT_SKEW_MS = 5 * 60 * 1000;
-  const savedAt = input.offlineSnapshotSavedAt;
-  return (
-    !input.clientEventId ||
-    !savedAt ||
-    savedAt.getTime() > input.occurredAt.getTime() + OFFLINE_EVENT_SKEW_MS ||
-    input.occurredAt.getTime() > input.now.getTime() + OFFLINE_EVENT_SKEW_MS
-  );
 }
 
 export type RecordPreDepartureCheckOutcome =
