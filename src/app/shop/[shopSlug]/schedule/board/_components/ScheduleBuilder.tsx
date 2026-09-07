@@ -541,6 +541,7 @@ function AddPanel({
    * reader's language; null is the ordinary case and renders nothing.
    */
   const [tideLine, setTideLine] = useState<string | null>(null);
+  const tideAnchor = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
     if (!loadTideWindow || !diveSiteId) {
       setTideLine(null);
@@ -548,8 +549,14 @@ function AddPanel({
     }
     const form = tideAnchor.current?.closest("form") ?? null;
     let live = true;
+    // Typing a time fires `change` per keystroke-committed box, so two asks
+    // can be in flight at once and the network decides which lands last.
+    // Only the newest one may write, or a stale answer overwrites the fresh.
+    let latest = 0;
     const ask = () => {
       const fields = form ? new FormData(form) : null;
+      latest += 1;
+      const asked = latest;
       void loadTideWindow({
         diveSiteId,
         date: startDate,
@@ -557,10 +564,10 @@ function AddPanel({
         diveMode: String(fields?.get("diveMode") ?? "boat"),
       }).then(
         (line) => {
-          if (live) setTideLine(line);
+          if (live && asked === latest) setTideLine(line);
         },
         () => {
-          if (live) setTideLine(null);
+          if (live && asked === latest) setTideLine(null);
         },
       );
     };
@@ -571,7 +578,6 @@ function AddPanel({
       form?.removeEventListener("change", ask);
     };
   }, [loadTideWindow, diveSiteId, startDate]);
-  const tideAnchor = useRef<HTMLParagraphElement>(null);
 
   /**
    * **The add panel already knows the weekday** (ADR 20260906-before-you-ask,

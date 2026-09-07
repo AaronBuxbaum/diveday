@@ -293,14 +293,23 @@ export default async function TripDetailPage({
         timeZone: shop.timezone,
       })
     : [];
-  const tideLines = tideWindows.map((entry) =>
-    diverTideWindowText(
-      t,
-      entry.window,
-      entry.preference,
-      formatTime(entry.window.nearestTurn.at, locale, shop.timezone),
-    ),
-  );
+  // One line per *site*, not per dive: a two-tank day on one wreck otherwise
+  // reads as the same sentence twice with a different clock time and nothing
+  // saying which dive is which. A diver plans around where the boat is going;
+  // the crew's own page keeps every leg.
+  const tideLines = tideWindows
+    .filter(
+      (entry, index) =>
+        tideWindows.findIndex((other) => other.siteName === entry.siteName) === index,
+    )
+    .map((entry) =>
+      diverTideWindowText(
+        t,
+        entry.window,
+        entry.preference,
+        formatTime(entry.window.nearestTurn.at, locale, shop.timezone),
+      ),
+    );
 
   // The embed's short confirmation renders only from a verified `confirm`
   // capability — never from a raw booking id in the URL (design principle 6:

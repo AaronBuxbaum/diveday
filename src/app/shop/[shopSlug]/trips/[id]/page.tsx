@@ -420,13 +420,14 @@ export default async function ManageTripPage({
         })
       : null,
   ].filter((part): part is string => Boolean(part));
-  // The tide rides the at-rest line too: on a day with no crew prediction it
-  // is the one conditions fact the page has, and "No conditions yet" beside a
-  // known slack would be the summary contradicting its own panel.
+  // The tide stands in for the at-rest line only when there is nothing else:
+  // "No conditions yet" beside a known slack would be the summary
+  // contradicting its own panel. It never joins a line that already has the
+  // crew's read — the strip is one line and truncates, and a full sentence
+  // appended to four readings pushes the readings off the end of it.
   const conditionsSummary = trip.conditionsHold
     ? t("trips.conditions.holdOnSummary")
-    : [...conditionParts, ...tideLines.map((line) => line.text)].join(" · ") ||
-      t("trips.about.noConditions");
+    : conditionParts.join(" · ") || tideLines[0]?.text || t("trips.about.noConditions");
   const assignedCrew = staff
     .filter((entry) => crewIds.includes(entry.person.id))
     .map((entry) => entry.person.fullName);

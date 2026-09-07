@@ -270,10 +270,13 @@ export function SiteFields({
               ),
             })}
           >
+            {/* No `pattern`: native constraint validation refuses the submit
+                outright, in the browser's own words, and the form never
+                reaches the refusal this repository already writes in both
+                languages and puts on the field. */}
             <input
               name="tideStationId"
               inputMode="numeric"
-              pattern="[0-9]{7}"
               maxLength={7}
               defaultValue={values?.tideStationId ?? ""}
               className={controlClass}

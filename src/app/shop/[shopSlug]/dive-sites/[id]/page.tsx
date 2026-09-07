@@ -68,6 +68,15 @@ export const metadata: Metadata = { title: "Edit dive site — DiveDay" };
 
 const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
 
+/**
+ * How many of the upcoming departures carry a tide line (ADR
+ * 20260907-noaa-tide-predictions). One week of a daily reef trip: far enough
+ * that a captain planning the week reads it on every row they care about,
+ * short enough that the page never queues a NOAA request per row down a list
+ * that runs to the series horizon.
+ */
+const TIDE_LINE_DEPARTURES = 7;
+
 // A notice/error query param maps to a message key, never to a sentence — the
 // words come from the staff bundle at render time (docs ADR
 // 20260730-staff-copy-localization).
@@ -150,44 +159,52 @@ export default async function EditDiveSitePage({
   // the instant the boat gets there rather than at departure (ADR
   // 20260907-noaa-tide-predictions). Empty for a site with no station, which
   // is most of them, and the list renders exactly as it did.
+  //
+  // Only the soonest few, and all of them at once. This list has no end — a
+  // daily reef trip materializes a departure a day out to the series horizon —
+  // and every distinct local day is its own NOAA request, so walking the whole
+  // list in order would put a four-second bound on the page once per row. The
+  // rows a captain plans tides against are the next ones; the rest read as they
+  // did before this feature.
   const rhythm = parseDockDayRhythm(shop);
   const tideLineByTrip = new Map<string, string>();
   if (site.tideStationId && rhythm) {
-    for (const trip of upcomingTrips) {
-      const dives = await listTripDives(db, shop.id, trip.tripId);
-      const windows = await tideWindowsForDeparture({
-        startsAt: trip.startsAt,
-        plannedDives: trip.plannedDives,
-        diveMode: trip.diveMode,
-        dives: dives.map(({ dive, diveSite }) => ({
-          diveNumber: dive.diveNumber,
-          travelMinutes: dive.travelMinutes,
-          // Only this site's own dive carries a station here: the row is
-          // about this site, and a second stationed site on the same day
-          // belongs to its own page.
-          site:
-            diveSite && diveSite.id === site.id
-              ? {
-                  name: diveSite.name,
-                  tideStationId: diveSite.tideStationId,
-                  tidePreference: diveSite.tidePreference,
-                  expectedBottomTimeMinutes: diveSite.expectedBottomTimeMinutes,
-                }
-              : diveSite
+    const lines = await Promise.all(
+      upcomingTrips.slice(0, TIDE_LINE_DEPARTURES).map(async (trip) => {
+        const dives = await listTripDives(db, shop.id, trip.tripId);
+        const windows = await tideWindowsForDeparture({
+          startsAt: trip.startsAt,
+          plannedDives: trip.plannedDives,
+          diveMode: trip.diveMode,
+          dives: dives.map(({ dive, diveSite }) => ({
+            diveNumber: dive.diveNumber,
+            travelMinutes: dive.travelMinutes,
+            // Only this site's own dive carries a station here: the row is
+            // about this site, and a second stationed site on the same day
+            // belongs to its own page.
+            site:
+              diveSite && diveSite.id === site.id
                 ? {
                     name: diveSite.name,
-                    tideStationId: null,
-                    tidePreference: "any",
+                    tideStationId: diveSite.tideStationId,
+                    tidePreference: diveSite.tidePreference,
                     expectedBottomTimeMinutes: diveSite.expectedBottomTimeMinutes,
                   }
-                : null,
-        })),
-        rhythm,
-        timeZone: shop.timezone,
-      });
-      const first = windows[0];
-      if (first) {
-        tideLineByTrip.set(
+                : diveSite
+                  ? {
+                      name: diveSite.name,
+                      tideStationId: null,
+                      tidePreference: "any",
+                      expectedBottomTimeMinutes: diveSite.expectedBottomTimeMinutes,
+                    }
+                  : null,
+          })),
+          rhythm,
+          timeZone: shop.timezone,
+        });
+        const first = windows[0];
+        if (!first) return null;
+        return [
           trip.tripId,
           staffTideWindowText(
             t,
@@ -195,8 +212,11 @@ export default async function EditDiveSitePage({
             first.preference,
             formatTime(first.window.nearestTurn.at, locale, shop.timezone),
           ),
-        );
-      }
+        ] as const;
+      }),
+    );
+    for (const line of lines) {
+      if (line) tideLineByTrip.set(line[0], line[1]);
     }
   }
 

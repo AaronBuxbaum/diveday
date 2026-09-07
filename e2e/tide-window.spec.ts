@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { openSettingsRow, openTripAbout } from "./helpers";
 
 /**
  * **The tide window** (ADR 20260907-noaa-tide-predictions): a site that names
@@ -37,9 +38,11 @@ test.describe("the tide window", () => {
     // Upcoming departures that dive here each carry the line.
     await expect(page.getByText(STAFF_LINE).first()).toBeVisible();
 
-    // The departure page says the same thing at rest, before About is opened.
+    // The departure page carries it beside the crew's own read of the water,
+    // in About's conditions block rather than in the strip that summarises it.
     await page.getByRole("link", { name: REEF_TRIP }).first().click();
     await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
+    await openTripAbout(page);
     await expect(page.getByText(STAFF_LINE).first()).toBeVisible();
 
     // An id of the wrong shape is refused by name, and nothing typed is lost.
@@ -50,6 +53,7 @@ test.describe("the tide window", () => {
     await expect(page.getByLabel("NOAA tide station")).toHaveValue("87235");
 
     // Clearing it takes the line off every surface — a blank says nothing.
+    await page.goto(siteUrl);
     await page.getByLabel("NOAA tide station").fill("");
     await page.getByRole("button", { name: "Save dive site" }).click();
     await page.getByText("Dive site saved.").waitFor();
@@ -66,6 +70,8 @@ test.describe("the tide window", () => {
     await expect(page.getByText(DIVER_LINE)).toHaveCount(0);
 
     await page.goto(`/shop/${privateShop.slug}/settings`);
+    // Settings rows are disclosures; the checkbox is inside a closed one.
+    await openSettingsRow(page, "Tide window");
     const toggle = page.getByLabel("Show the tide window on public departure pages");
     await toggle.check();
     await page
@@ -73,7 +79,9 @@ test.describe("the tide window", () => {
       .filter({ has: toggle })
       .getByRole("button", { name: "Save" })
       .click();
-    await expect(page.getByText("Divers now see the tide window on departure pages.")).toBeVisible();
+    await expect(
+      page.getByText("Divers now see the tide window on departure pages."),
+    ).toBeVisible();
 
     await page.goto(tripUrl);
     await page.getByRole("heading", { name: "The day" }).waitFor();

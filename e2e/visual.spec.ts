@@ -3460,7 +3460,11 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await page.getByRole("link", { name: "Add a departure", exact: true }).click();
         await addPanelSettled(page);
-        await page.getByLabel("Dive site", { exact: true }).selectOption({ label: "Molasses Reef" });
+        // By control name, not by label: the quick row and dive one both carry
+        // a "Dive site" select, and the expanded one stays mounted-but-hidden
+        // so nothing typed is lost on a collapse (e2e/dive-sites.spec.ts says
+        // the same thing at its own two call sites).
+        await page.locator('select[name="diveSiteId"]').selectOption({ label: "Molasses Reef" });
         await page.getByText(/Slack at .*; this departure reaches the site/).waitFor();
         await boardListSettled(page);
         await capture(page, "schedule-builder-add-tide", scheme);

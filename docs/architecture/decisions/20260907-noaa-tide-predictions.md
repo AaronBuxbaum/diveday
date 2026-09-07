@@ -42,6 +42,13 @@ sentence stably under the frozen clock. The flag is set only by `scripts/dev-ser
 **The diver's page is opt-in** (`shops.tide_window_public`, default off). Staff surfaces read the
 window whenever a site has a station.
 
+**One line per site for a diver, one per leg for the crew.** A two-tank day on one wreck would
+otherwise show a diver the same sentence twice with a different clock time and nothing saying which
+dive is which; the crew's own departure page keeps every leg, prefixed by the site. And the site
+briefing's "Upcoming dives here" list has no end — a daily reef trip materializes a departure a day
+out to the series horizon — so only the soonest seven rows carry a line, fetched concurrently. The
+rest read exactly as they did before this feature.
+
 ## Alternatives considered
 
 - **Compute tides locally from harmonic constituents** — no dependency, but the constituents are
