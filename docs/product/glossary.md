@@ -1594,6 +1594,11 @@ new domain concept, define it here in the same PR.
   since revoked, never satisfies it. Being signed in is not being stepped up; **and step-up is
   only demanded of an account that has enabled two-factor**, so it is a control a staff member
   opts into rather than a floor under every account.
+- **Display link** — a revocable bearer URL (`/board/[token]`, `display_tokens`) a shop puts on a
+  lobby TV or a dock tablet to show the **departures board**: today's boats, the crew's stage word,
+  an "n of capacity" count, the meeting point and the outlook, with no sign-in on that screen. Hashed
+  at rest, non-expiring like a calendar feed, revoked from Settings → Lobby display. It never names
+  a diver; its one switch, *show names*, adds the crew line (issue #1426).
 - **Recovery code** — one of ten single-use strings issued at two-factor enrolment, shown once and
   stored only as a salted HMAC under the deployment's own sealing key. It is a second factor, not
   a password reset: presenting one satisfies the same check a TOTP code does.

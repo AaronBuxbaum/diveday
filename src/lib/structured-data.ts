@@ -318,7 +318,20 @@ export function scheduleJsonLd(
   origin: string | null,
   aggregate: ReviewAggregate | null = null,
   reviews: readonly ReviewForStructuredData[] = [],
+  options: {
+    /**
+     * The shop's machine-readable availability document, when the shop is
+     * listed (`publicAvailabilityPath`, issue #1427); `null` or absent for a
+     * shop that opted out of search, whose document is a 404. Published as
+     * `subjectOf` — a `DataFeed` (a `Dataset`, so a `CreativeWork`) about this
+     * shop, which is the one schema.org property that means "here is a
+     * machine-readable thing describing this" without claiming it is a
+     * social profile (`sameAs`) or the same page (`url`).
+     */
+    availabilityUrl?: string | null;
+  } = {},
 ): JsonLdObject {
+  const subjectOf = availabilityFeedOf(options.availabilityUrl);
   // Built before the length test, not after: with no address on file every
   // Event is omitted, and a list of zero is the same noise an empty schedule
   // is. Positions are numbered over what survives, so the list never claims a
@@ -327,7 +340,11 @@ export function scheduleJsonLd(
     .map((trip) => tripJsonLd(shop, trip, origin, aggregate))
     .filter((event): event is JsonLdObject => event !== null);
   if (events.length === 0) {
-    return { "@context": SCHEMA_CONTEXT, ...shopJsonLd(shop, origin, aggregate, reviews) };
+    return {
+      "@context": SCHEMA_CONTEXT,
+      ...shopJsonLd(shop, origin, aggregate, reviews),
+      subjectOf,
+    };
   }
   return {
     "@context": SCHEMA_CONTEXT,
@@ -340,7 +357,14 @@ export function scheduleJsonLd(
       item,
     })),
     review: reviewsJsonLd(reviews),
+    subjectOf,
   };
+}
+
+/** The availability document as a `DataFeed`, or nothing when there is none to point at. */
+function availabilityFeedOf(url: string | null | undefined): JsonLdObject | undefined {
+  if (!url) return undefined;
+  return { "@type": "DataFeed", url, encodingFormat: "application/json" };
 }
 
 export type CourseForStructuredData = {

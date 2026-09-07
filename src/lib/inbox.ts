@@ -1,0 +1,134 @@
+import { HOUR_MS } from "@/lib/clock";
+import { phoneDigits } from "@/lib/person-fields";
+
+/**
+ * The rules of the shop inbox, free of any framework (ADR
+ * 20260907-two-way-inbox): how an inbound address is made comparable, when a
+ * stored phone counts as the same number, what the reply-to token looks like
+ * on the wire, and how long Meta lets a shop answer a WhatsApp in free text.
+ *
+ * Codes and values only — the words a staffer reads come from
+ * `staff/inbox.json`.
+ */
+
+export type InboundChannel = "email" | "sms" | "whatsapp";
+
+/**
+ * How much of a diver's message is kept. A reply to a confirmation is a
+ * paragraph; a forwarded thread with every quoted turn is not something a
+ * staffer reads at the counter, and the row is not an archive of it.
+ */
+export const INBOUND_BODY_MAX_LENGTH = 20_000;
+
+/** How much a staffer may write back in one go. */
+export const REPLY_BODY_MAX_LENGTH = 4_000;
+
+/**
+ * Meta's customer-service window: a business may send free-form text only
+ * within 24 hours of the customer's last message. Outside it, only an
+ * approved template goes through, which is what the courtesy sender uses and
+ * what a typed reply is not.
+ */
+export const WHATSAPP_REPLY_WINDOW_MS = 24 * HOUR_MS;
+
+/** The local-part prefix of every shop's inbound reply address. */
+export const INBOUND_REPLY_PREFIX = "reply+";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The bare address out of anything an email header carries — `Priya Sharma
+ * <priya@example.com>`, `<priya@example.com>`, `PRIYA@Example.com ` — as one
+ * comparable string. Null when there is no `@` to compare on.
+ */
+export function normalizeEmailAddress(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const angled = raw.match(/<([^<>]+)>/);
+  const candidate = (angled ? angled[1] : raw).trim().toLowerCase();
+  if (!candidate.includes("@") || /\s/.test(candidate)) return null;
+  return candidate;
+}
+
+/**
+ * Whether a stored phone number is the one a message came from.
+ *
+ * Both sides reduce to digits (`phoneDigits`) — the seed holds
+ * `+1-305-555-0110` and WhatsApp reports `13055550110`. A stored number that
+ * was typed without its country code (`305-555-0110`) still matches when the
+ * inbound number ends in it and it is long enough to be a whole local number,
+ * never on a short suffix that half the roster would share.
+ */
+export function phoneMatches(
+  storedPhone: string | null | undefined,
+  inboundDigits: string,
+): boolean {
+  if (!storedPhone || !inboundDigits) return false;
+  const stored = phoneDigits(storedPhone);
+  if (stored.length === 0) return false;
+  if (stored === inboundDigits) return true;
+  return stored.length >= 10 && inboundDigits.endsWith(stored);
+}
+
+/** The digits-only form a WhatsApp or SMS sender is compared and stored as. */
+export function normalizePhoneAddress(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const digits = phoneDigits(raw);
+  return digits.length >= 7 ? digits : null;
+}
+
+/** The address a shop's outbound mail asks replies to go to. */
+export function inboundReplyAddress(token: string, domain: string): string {
+  return `${INBOUND_REPLY_PREFIX}${token.toLowerCase()}@${domain.toLowerCase()}`;
+}
+
+/**
+ * The shop token out of an address a message was sent to, or null for any
+ * address that is not one of ours. Case-insensitive because mail servers are;
+ * strict about the shape because the token is the only thing that names the
+ * tenant, and "close enough" is how one shop reads another's mail.
+ */
+export function parseInboundReplyToken(
+  address: string | null | undefined,
+  domain: string,
+): string | null {
+  const normalized = normalizeEmailAddress(address);
+  if (!normalized) return null;
+  const at = normalized.lastIndexOf("@");
+  if (normalized.slice(at + 1) !== domain.toLowerCase()) return null;
+  const local = normalized.slice(0, at);
+  if (!local.startsWith(INBOUND_REPLY_PREFIX)) return null;
+  const token = local.slice(INBOUND_REPLY_PREFIX.length);
+  return UUID_PATTERN.test(token) ? token : null;
+}
+
+/**
+ * Whether a free-text WhatsApp reply may still go out, given when the diver
+ * last wrote. `null` — they never wrote on WhatsApp — is closed: a business
+ * cannot open the window itself.
+ */
+export function whatsAppReplyWindowOpen(lastInboundAt: Date | null, now: Date): boolean {
+  if (!lastInboundAt) return false;
+  const age = now.getTime() - lastInboundAt.getTime();
+  return age >= 0 && age < WHATSAPP_REPLY_WINDOW_MS;
+}
+
+/** Bound a body to what the row keeps, marking the cut. */
+export function truncateInboundBody(body: string): string {
+  const trimmed = body.replace(/\r\n/g, "\n").trim();
+  return trimmed.length <= INBOUND_BODY_MAX_LENGTH
+    ? trimmed
+    : `${trimmed.slice(0, INBOUND_BODY_MAX_LENGTH - 1).trimEnd()}…`;
+}
+
+/**
+ * The provider message id an email `In-Reply-To` header names, as the id SES
+ * returned at send time. SES writes `Message-ID: <id@email.amazonses.com>` (or
+ * `<id@<region>.amazonses.com>`) for every message it sends, so the local part
+ * before the `@` is exactly `SendEmail`'s `MessageId`. Null for any other
+ * sender's message id, which cannot match a delivery row anyway.
+ */
+export function sesMessageIdFromHeader(header: string | null | undefined): string | null {
+  if (!header) return null;
+  const match = header.match(/<([^<>@\s]+)@[^<>@\s]*amazonses\.com>/i);
+  return match ? match[1] : null;
+}

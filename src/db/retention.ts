@@ -13,12 +13,14 @@ import {
   activityEvents,
   bookingPaymentEvents,
   formDrafts,
+  inboundMessages,
   integrationEvents,
   integrationOauthStates,
   notificationDeliveries,
   notificationDeliveryAttempts,
   pushSubscriptions,
   shopContactEmailConfirmationTokens,
+  staffReplies,
   stripeWebhookEvents,
   tripDeskEvents,
   tripReadMarks,
@@ -331,6 +333,36 @@ export async function pruneExpiredRecords(
           .where(lt(tripReadMarks.lastSeenAt, cutoff("trip_read_marks")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(tripReadMarks).where(inArray(tripReadMarks.id, ids)),
+    ),
+  );
+
+  // The inbox (ADR 20260907-two-way-inbox), replies first: a reply names the
+  // message it answered with ON DELETE SET NULL, so either order is safe, but
+  // deleting the answer before the question keeps a half-pruned thread from
+  // reading as a message nobody answered. Both measured on the instant the
+  // words arrived or went out, never on the row's own insert.
+  outcomes.push(
+    await pruneBatch(
+      "staff_replies",
+      () =>
+        db
+          .select({ id: staffReplies.id })
+          .from(staffReplies)
+          .where(lt(staffReplies.sentAt, cutoff("staff_replies")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(staffReplies).where(inArray(staffReplies.id, ids)),
+    ),
+  );
+  outcomes.push(
+    await pruneBatch(
+      "inbound_messages",
+      () =>
+        db
+          .select({ id: inboundMessages.id })
+          .from(inboundMessages)
+          .where(lt(inboundMessages.receivedAt, cutoff("inbound_messages")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(inboundMessages).where(inArray(inboundMessages.id, ids)),
     ),
   );
 

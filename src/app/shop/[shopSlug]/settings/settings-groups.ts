@@ -360,6 +360,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "route", path: "/settings/calendar" },
   },
   {
+    id: "display",
+    labelKey: "settings.main.display.heading",
+    group: "data-integrations",
+    target: { kind: "route", path: "/settings/display" },
+  },
+  {
     id: "integrations",
     labelKey: "settings.main.integrations.heading",
     group: "data-integrations",

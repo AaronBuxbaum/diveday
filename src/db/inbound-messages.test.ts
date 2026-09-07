@@ -1,0 +1,271 @@
+import { and, eq } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
+import { seededShopContext } from "@/test/db";
+import {
+  countUnansweredMessages,
+  deleteInboundMessage,
+  lastInboundAt,
+  markInboundAnswered,
+  markPersonMessagesRead,
+  matchPersonByAddress,
+  pagedInboxMessages,
+  personThread,
+  recordInboundMessage,
+  recordStaffReply,
+  shopIdForInboundEmailToken,
+} from "./inbound-messages";
+import { inboundMessages, people, personRoles, shops } from "./schema";
+
+/**
+ * The inbox's contract (ADR 20260907-two-way-inbox): a message lands on the
+ * diver whose address it came from and only inside the shop it was sent to; a
+ * redelivered webhook changes nothing; the unanswered count is what Today
+ * reports and a sent reply is what empties it.
+ */
+
+const NOW = new Date("2026-07-21T13:30:00.000Z");
+
+async function firstDiver(db: Awaited<ReturnType<typeof seededShopContext>>["db"], shopId: string) {
+  const [row] = await db
+    .select({ id: people.id, email: people.email, phone: people.phone, fullName: people.fullName })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        eq(personRoles.role, "diver"),
+        // The seed's first customer (seed-cast.ts), who carries both an email
+        // and a phone; the earliest-created diver does not always.
+        eq(people.fullName, "Priya Sharma"),
+      ),
+    )
+    .limit(1);
+  if (!row?.email || !row.phone) throw new Error("seeded diver missing contact details");
+  return row as { id: string; email: string; phone: string; fullName: string };
+}
+
+describe("attribution by address", () => {
+  it("matches an email to the diver who holds it, however the header spelt it", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await firstDiver(db, shop.id);
+    const result = await recordInboundMessage(db, {
+      shopId: shop.id,
+      channel: "email",
+      fromAddress: `${diver.fullName} <${diver.email.toUpperCase()}>`,
+      subject: "Re: Saturday",
+      body: "Can I move to the afternoon boat?",
+      receivedAt: NOW,
+      providerMessageId: "email-1",
+    });
+    expect(result).toMatchObject({ status: "recorded", personId: diver.id });
+  });
+
+  it("matches a WhatsApp number to the diver by digits alone", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await firstDiver(db, shop.id);
+    const digits = diver.phone.replace(/\D/g, "");
+    expect(await matchPersonByAddress(db, shop.id, "whatsapp", digits)).toBe(diver.id);
+    // A number that merely ends the same way is somebody else.
+    expect(await matchPersonByAddress(db, shop.id, "whatsapp", `9${digits.slice(1)}`)).toBeNull();
+  });
+
+  it("leaves a stranger unmatched rather than guessing", async () => {
+    const { db, shop } = await seededShopContext();
+    const result = await recordInboundMessage(db, {
+      shopId: shop.id,
+      channel: "email",
+      fromAddress: "nobody.here@example.net",
+      body: "Do you run night dives?",
+      receivedAt: NOW,
+      providerMessageId: "email-stranger",
+    });
+    expect(result).toMatchObject({ status: "recorded", personId: null });
+  });
+
+  it("refuses an address that is not one", async () => {
+    const { db, shop } = await seededShopContext();
+    expect(
+      await recordInboundMessage(db, {
+        shopId: shop.id,
+        channel: "email",
+        fromAddress: "not an address",
+        body: "x",
+        receivedAt: NOW,
+        providerMessageId: "email-bad",
+      }),
+    ).toEqual({ status: "invalid_address" });
+  });
+
+  it("never matches a diver from another shop, even on the same address", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await firstDiver(db, shop.id);
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-inbox", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("shop insert failed");
+    expect(
+      await matchPersonByAddress(db, otherShop.id, "email", diver.email.toLowerCase()),
+    ).toBeNull();
+    const result = await recordInboundMessage(db, {
+      shopId: otherShop.id,
+      channel: "email",
+      fromAddress: diver.email,
+      body: "hello",
+      receivedAt: NOW,
+      providerMessageId: "email-cross",
+    });
+    expect(result).toMatchObject({ status: "recorded", personId: null });
+  });
+});
+
+describe("idempotency", () => {
+  it("records a redelivered provider message id once", async () => {
+    const { db, shop } = await seededShopContext();
+    const input = {
+      shopId: shop.id,
+      channel: "whatsapp" as const,
+      fromAddress: "+1 305 555 0199",
+      body: "on my way",
+      receivedAt: NOW,
+      providerMessageId: "wamid.dup",
+    };
+    expect((await recordInboundMessage(db, input)).status).toBe("recorded");
+    expect((await recordInboundMessage(db, input)).status).toBe("duplicate");
+    const rows = await db
+      .select()
+      .from(inboundMessages)
+      .where(eq(inboundMessages.providerMessageId, "wamid.dup"));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.fromAddress).toBe("13055550199");
+  });
+});
+
+describe("the reply-to token", () => {
+  it("resolves a shop from its token and nothing from a stranger's", async () => {
+    const { db, shop } = await seededShopContext();
+    const [row] = await db
+      .select({ token: shops.inboundEmailToken })
+      .from(shops)
+      .where(eq(shops.id, shop.id));
+    expect(row?.token).toMatch(/^[0-9a-f-]{36}$/);
+    expect(await shopIdForInboundEmailToken(db, row?.token ?? "")).toBe(shop.id);
+    expect(await shopIdForInboundEmailToken(db, "00000000-0000-4000-8000-000000000000")).toBeNull();
+  });
+});
+
+describe("the unanswered count and the inbox", () => {
+  it("counts live unanswered messages, and a sent reply takes one off", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await firstDiver(db, shop.id);
+    // The seed leaves three unanswered rows in the demo shop.
+    const before = await countUnansweredMessages(db, shop.id);
+    const recorded = await recordInboundMessage(db, {
+      shopId: shop.id,
+      channel: "email",
+      fromAddress: diver.email,
+      body: "Is nitrox available Saturday?",
+      receivedAt: NOW,
+      providerMessageId: "email-count",
+    });
+    if (recorded.status !== "recorded") throw new Error("not recorded");
+    expect(await countUnansweredMessages(db, shop.id)).toBe(before + 1);
+
+    const [staffer] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+      .limit(1);
+    if (!staffer) throw new Error("owner missing");
+
+    // A failed send answers nothing.
+    await recordStaffReply(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      inboundMessageId: recorded.id,
+      channel: "email",
+      toAddress: diver.email,
+      body: "Yes",
+      locale: "en-US",
+      sentByPersonId: staffer.id,
+      delivery: { status: "failed", errorCode: "boom" },
+      sentAt: NOW,
+    });
+    expect(await countUnansweredMessages(db, shop.id)).toBe(before + 1);
+
+    await recordStaffReply(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      inboundMessageId: recorded.id,
+      channel: "email",
+      toAddress: diver.email,
+      body: "Yes, 32% on every boat.",
+      locale: "en-US",
+      sentByPersonId: staffer.id,
+      delivery: { status: "sent", providerMessageId: "ses-reply-1" },
+      sentAt: NOW,
+    });
+    expect(await countUnansweredMessages(db, shop.id)).toBe(before);
+
+    const thread = await personThread(db, shop.id, diver.id);
+    const directions = thread.map((entry) => entry.direction);
+    expect(directions.filter((d) => d === "outbound")).toHaveLength(2);
+    const last = thread.at(-1);
+    expect(last?.direction).toBe("outbound");
+    if (last?.direction === "outbound") expect(last.reply.status).toBe("sent");
+  });
+
+  it("lists unanswered rows first, newest first, and never a deleted one", async () => {
+    const { db, shop } = await seededShopContext();
+    const page = await pagedInboxMessages(db, shop.id, { page: 1 });
+    expect(page.total).toBeGreaterThanOrEqual(4);
+    const answeredFlags = page.rows.map((row) => row.message.answeredAt !== null);
+    const firstAnswered = answeredFlags.indexOf(true);
+    if (firstAnswered >= 0) expect(answeredFlags.slice(firstAnswered).every(Boolean)).toBe(true);
+    const unknown = page.rows.find((row) => row.message.personId === null);
+    expect(unknown?.personName).toBeNull();
+
+    const victim = page.rows[0]?.message;
+    if (!victim) throw new Error("no rows");
+    expect(await deleteInboundMessage(db, shop.id, victim.id, NOW)).toBe(true);
+    const after = await pagedInboxMessages(db, shop.id, { page: 1 });
+    expect(after.total).toBe(page.total - 1);
+    expect(after.rows.some((row) => row.message.id === victim.id)).toBe(false);
+    // Gone from the shop's count too, and a second delete finds nothing.
+    expect(await deleteInboundMessage(db, shop.id, victim.id, NOW)).toBe(false);
+  });
+
+  it("refuses to answer or delete another shop's message", async () => {
+    const { db, shop } = await seededShopContext();
+    const page = await pagedInboxMessages(db, shop.id, { page: 1 });
+    const target = page.rows[0]?.message;
+    if (!target) throw new Error("no rows");
+    const otherShopId = "00000000-0000-4000-8000-000000000000";
+    expect(await markInboundAnswered(db, otherShopId, target.id, NOW)).toBe(false);
+    expect(await deleteInboundMessage(db, otherShopId, target.id, NOW)).toBe(false);
+    expect(await personThread(db, otherShopId, target.personId ?? "")).toEqual([]);
+  });
+});
+
+describe("the record's read marks and the WhatsApp window", () => {
+  it("marks a diver's unread messages read once, and reports when they last wrote", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await firstDiver(db, shop.id);
+    await recordInboundMessage(db, {
+      shopId: shop.id,
+      channel: "whatsapp",
+      fromAddress: diver.phone,
+      body: "here",
+      receivedAt: new Date("2026-07-21T12:00:00.000Z"),
+      providerMessageId: "wamid.read-1",
+    });
+    expect(await lastInboundAt(db, shop.id, diver.id, "whatsapp")).toEqual(
+      new Date("2026-07-21T12:00:00.000Z"),
+    );
+    expect(await lastInboundAt(db, shop.id, diver.id, "sms")).toBeNull();
+    const first = await markPersonMessagesRead(db, shop.id, diver.id, NOW);
+    expect(first).toBeGreaterThanOrEqual(1);
+    expect(await markPersonMessagesRead(db, shop.id, diver.id, NOW)).toBe(0);
+  });
+});

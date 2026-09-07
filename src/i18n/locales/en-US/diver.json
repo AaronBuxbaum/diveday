@@ -10,6 +10,27 @@
     "liveEyebrow": "Right now",
     "liveBack": "Back around {back}."
   },
+  "board": {
+    "empty": "No departures today.",
+    "aboard": "{boarded} of {booked, plural, one {# diver} other {# divers}} aboard",
+    "meetAt": "Meet at {place}",
+    "privateCharter": "Private charter",
+    "crew": "With {names}",
+    "stage": {
+      "boarding": "Boarding",
+      "underway": "Out on {site}",
+      "underwayNoSite": "Out on the water",
+      "surface": "On the surface",
+      "headingIn": "Heading in",
+      "home": "Back at the dock"
+    },
+    "updated": "Updated {time}",
+    "unavailableHeading": "This screen link isn’t available",
+    "unavailableBody": "Make a new one in Settings, under Lobby display.",
+    "seats": "{booked} of {capacity, plural, one {# seat booked} other {# seats booked}}",
+    "hold": "On a conditions hold",
+    "returned": "{boarded, plural, one {# diver} other {# divers}} went out"
+  },
   "conservation": {
     "shopClaimsDisclaimer": "Stated by the shop, not verified by DiveDay.",
     "commitments": {

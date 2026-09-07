@@ -10,6 +10,27 @@
     "liveEyebrow": "Ahora mismo",
     "liveBack": "De vuelta hacia las {back}."
   },
+  "board": {
+    "empty": "Hoy no hay salidas.",
+    "aboard": "{boarded} de {booked, plural, one {# buceador} other {# buceadores}} a bordo",
+    "meetAt": "Punto de encuentro: {place}",
+    "privateCharter": "Salida privada",
+    "crew": "Con {names}",
+    "stage": {
+      "boarding": "Embarcando",
+      "underway": "En {site}",
+      "underwayNoSite": "En el agua",
+      "surface": "En superficie",
+      "headingIn": "De regreso",
+      "home": "De vuelta en el muelle"
+    },
+    "updated": "Actualizado a las {time}",
+    "unavailableHeading": "Este enlace de pantalla no está disponible",
+    "unavailableBody": "Crea uno nuevo en Configuración, en Pantalla del lobby.",
+    "seats": "{booked} de {capacity, plural, one {# plaza reservada} other {# plazas reservadas}}",
+    "hold": "En espera por condiciones",
+    "returned": "{boarded, plural, one {salió # buceador} other {salieron # buceadores}}"
+  },
   "conservation": {
     "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",
     "commitments": {
