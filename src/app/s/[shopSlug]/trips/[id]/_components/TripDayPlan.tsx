@@ -1,12 +1,77 @@
+import { Fragment } from "react";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
-import { diverTranslator } from "@/i18n/messages";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
+import { depthText } from "@/i18n/unit-labels";
+import { NO_CERTIFICATION_ANSWER } from "@/lib/certification-options";
+import { type DayProfileRow, dayProfileRows } from "@/lib/day-profile";
+import { checkDepthCeiling, statedLevelDepthLimit } from "@/lib/depth-ceiling";
+import type { DepthUnit } from "@/lib/depth-units";
+import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
-import { siteFit } from "@/lib/diver-planning";
+import { type DiveMode, type DockDayRhythm, siteFit } from "@/lib/diver-planning";
 import { nightSkyFor } from "@/lib/sky";
+import { type DayCeilingOption, DayCeilingPicker } from "./DayCeilingPicker";
 import { NightSkyLine } from "./NightSkyLine";
 import type { DiveBriefing, Shop } from "./types";
+
+/**
+ * What the departure's own row and the shop's rhythm say about the shape of
+ * the day — the inputs "The day" needs beyond the dives themselves.
+ *
+ * Optional on purpose: a caller with no shop in hand renders the run of dives
+ * exactly as it always did, and a day whose figures say nothing renders none
+ * of this.
+ */
+export type DayProfileFacts = {
+  /** The shop's published rhythm; a `shops` row satisfies it. */
+  rhythm: DockDayRhythm;
+  depthUnit: DepthUnit;
+  diveMode: DiveMode;
+  /** How many days the departure meets on (`trip_schedule_days`). */
+  dayCount: number;
+};
+
+/**
+ * The five rungs plus "no card yet", each carrying the answer for this day
+ * already written out (`DayCeilingPicker`).
+ *
+ * The comparison is `checkDepthCeiling`'s, the same one the staff roster's
+ * depth advisory runs — in the shop's own unit, after rounding, because 18.288
+ * m > 18 m is an artefact of storing feet as metres rather than a fact about
+ * diving. And it is the same *kind* of answer: a warning, never a gate (H-08).
+ */
+function ceilingOptions(
+  t: DiverTranslator,
+  rows: readonly DayProfileRow[],
+  unit: DepthUnit,
+): DayCeilingOption[] {
+  const dives = rows.filter((row) => row.kind === "dive");
+  if (!dives.some((dive) => dive.siteMaxDepthMeters)) return [];
+  return [...DECLARABLE_CERTIFICATION_LEVELS, null].map((level) => {
+    const limit = statedLevelDepthLimit(level);
+    const limitText = depthText(t, limit.ceiling.meters, unit);
+    const deeper = dives.flatMap((dive) => {
+      const check = checkDepthCeiling(dive.siteMaxDepthMeters, limit, unit);
+      if (check.status !== "exceeds") return [];
+      const values = {
+        number: dive.number,
+        site: depthText(t, dive.siteMaxDepthMeters ?? 0, unit),
+        limit: limitText,
+      };
+      return [t(level ? "trip.dayProfile.over" : "trip.dayProfile.overNoCard", values)];
+    });
+    return {
+      value: level ?? NO_CERTIFICATION_ANSWER,
+      label: level ? t(DIVER_CERT_LEVEL_KEYS[level]) : t("common.certification.levelNone"),
+      // A clean day still answers. A control that appears to do nothing when
+      // the news is good teaches the reader it is broken.
+      lines: deeper.length > 0 ? deeper : [t("trip.dayProfile.within", { limit: limitText })],
+    };
+  });
+}
 
 /**
  * **"The day" and "Look for" — the pitch, in two ledger beats.**
@@ -32,6 +97,7 @@ export function TripDayPlan({
   startsAt,
   endsAt,
   locale,
+  profile,
 }: {
   briefings: DiveBriefing[];
   /** The shop, for the coordinates and zone the sky line is computed from. */
@@ -42,6 +108,11 @@ export function TripDayPlan({
   endsAt: Date;
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
+  /**
+   * The shop's rhythm and unit, when the caller has them. Without it the beat
+   * is the run of dives it always was.
+   */
+  profile?: DayProfileFacts;
 }) {
   const t = diverTranslator(locale);
   // The sky belongs to the day, so it rides in this beat rather than opening a
@@ -64,6 +135,32 @@ export function TripDayPlan({
       </section>
     ) : null;
   }
+  // Durations, never a clock. The beat stays time-neutral — the day's hours
+  // belong to the thread a booked diver walks — but how long a dive runs and
+  // how long the boat sits between two of them are facts about the day itself,
+  // and a diver deciding whether it is theirs was reading neither.
+  const rows = profile
+    ? dayProfileRows({
+        dives: briefings.map(({ dive, diveSite }) => ({
+          number: dive.diveNumber,
+          siteMaxDepthMeters: diveSite?.maxDepthMeters ?? null,
+          siteBottomTimeMinutes: diveSite?.expectedBottomTimeMinutes ?? null,
+          travelMinutes: dive.travelMinutes,
+        })),
+        rhythm: profile.rhythm,
+        diveMode: profile.diveMode,
+        dayCount: profile.dayCount,
+      })
+    : [];
+  const bottomTimes = new Map(
+    rows.flatMap((row) => (row.kind === "dive" ? [[row.number, row.bottomTimeMinutes]] : [])),
+  );
+  const intervals = new Map(
+    rows.flatMap((row) =>
+      row.kind === "surfaceInterval" ? [[row.afterDiveNumber, row.minutes]] : [],
+    ),
+  );
+  const options = profile ? ceilingOptions(t, rows, profile.depthUnit) : [];
   // A day where nothing is decided yet says so once. Two rows both reading
   // "Site to be confirmed" opened the sparse course session's pitch with the
   // one thing the shop has not decided, stated twice (principle 9; 2026-08-28
@@ -85,32 +182,69 @@ export function TripDayPlan({
       <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
       {sky}
       <ul className="mt-2">
-        {briefings.map(({ dive, diveSite }) => (
-          <LedgerRow
-            key={dive.id}
-            kind={{ word: t("trip.diveNumber", { number: dive.diveNumber }), tone: "neutral" }}
-            trailing={
-              diveSite?.depthRange ? (
-                <span className="text-sm text-muted tabular-nums">{diveSite.depthRange}</span>
-              ) : null
-            }
-          >
-            <span className="block text-sm font-medium">
-              {dive.title ?? diveSite?.name ?? t("trip.siteToBeConfirmed")}
-            </span>
-            {/* The site under the dive's own name, when the shop gave the dive
-                a name of its own that is not simply the site's. A departure
-                whose second tank has no site yet says so here rather than
-                reading as a one-site day. */}
-            {dive.title && diveSite?.name && dive.title !== diveSite.name ? (
-              <span className="block text-sm text-muted">{diveSite.name}</span>
-            ) : null}
-            {dive.title && !diveSite ? (
-              <span className="block text-sm text-muted">{t("trip.siteToBeConfirmed")}</span>
-            ) : null}
-          </LedgerRow>
-        ))}
+        {briefings.map(({ dive, diveSite }) => {
+          const bottomTime = bottomTimes.get(dive.diveNumber) ?? null;
+          const interval = intervals.get(dive.diveNumber) ?? null;
+          // The shop's own range where it wrote one ("18–40 m"), and the site's
+          // maximum where it did not. Without the fallback a day could name a
+          // depth in the ceiling sentence below that appears nowhere in the
+          // list the sentence is about.
+          const depth =
+            diveSite?.depthRange ??
+            (profile && diveSite?.maxDepthMeters
+              ? depthText(t, diveSite.maxDepthMeters, profile.depthUnit)
+              : null);
+          return (
+            <Fragment key={dive.id}>
+              <LedgerRow
+                kind={{ word: t("trip.diveNumber", { number: dive.diveNumber }), tone: "neutral" }}
+                trailing={
+                  depth ? <span className="text-sm text-muted tabular-nums">{depth}</span> : null
+                }
+              >
+                <span className="block text-sm font-medium">
+                  {dive.title ?? diveSite?.name ?? t("trip.siteToBeConfirmed")}
+                </span>
+                {/* The site under the dive's own name, when the shop gave the dive
+                    a name of its own that is not simply the site's. A departure
+                    whose second tank has no site yet says so here rather than
+                    reading as a one-site day. */}
+                {dive.title && diveSite?.name && dive.title !== diveSite.name ? (
+                  <span className="block text-sm text-muted">{diveSite.name}</span>
+                ) : null}
+                {dive.title && !diveSite ? (
+                  <span className="block text-sm text-muted">{t("trip.siteToBeConfirmed")}</span>
+                ) : null}
+                {bottomTime ? (
+                  <span className="block text-sm text-muted tabular-nums">
+                    {t("trip.dayProfile.bottomTime", { minutes: bottomTime })}
+                  </span>
+                ) : null}
+              </LedgerRow>
+              {/* The gap, on the hairline between the two dives it belongs to.
+                  Indented past the kind word so it reads as part of the run
+                  rather than as a third dive. */}
+              {interval ? (
+                <li className="flex items-center gap-3 border-t border-border py-2">
+                  <span className="min-w-23 shrink-0" />
+                  <span className="text-sm text-muted tabular-nums">
+                    {t("trip.dayProfile.surfaceInterval", { minutes: interval })}
+                  </span>
+                </li>
+              ) : null}
+            </Fragment>
+          );
+        })}
       </ul>
+      {/* Nothing is submitted and nothing is gated: the reader names a card,
+          and the day answers back (H-08). */}
+      {options.length > 0 ? (
+        <DayCeilingPicker
+          label={t("trip.dayProfile.pickerLabel")}
+          unsaidLabel={t("common.certification.levelUnsaid")}
+          options={options}
+        />
+      ) : null}
     </section>
   );
 }

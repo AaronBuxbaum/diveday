@@ -158,14 +158,25 @@ export type DockDayOffset = { step: DockDayStep; number?: number; minutesFromDep
  */
 export type SiteBottomTimes = readonly (number | null | undefined)[];
 
+/**
+ * How long the shop plans to be in the water on one dive: the site's own
+ * figure when it names one, the shop's otherwise.
+ *
+ * A *planned* figure, never an observed one. DiveDay records nothing about
+ * dives performed (glossary, **Dive record**), so every surface that renders
+ * this says so in its own words.
+ */
+export function plannedBottomTimeMinutes(shopMinutes: number, siteMinutes?: number | null): number {
+  return typeof siteMinutes === "number" && siteMinutes > 0 ? siteMinutes : shopMinutes;
+}
+
 /** Dive `number`'s own minutes, or the shop's when this site names none. */
 function bottomTimeForDive(
   rhythm: DockDayRhythm,
   siteBottomTimes: SiteBottomTimes | undefined,
   number: number,
 ): number {
-  const override = siteBottomTimes?.[number - 1];
-  return typeof override === "number" && override > 0 ? override : rhythm.bottomTimeMinutes;
+  return plannedBottomTimeMinutes(rhythm.bottomTimeMinutes, siteBottomTimes?.[number - 1]);
 }
 
 /**
@@ -187,7 +198,7 @@ function bottomTimeForDive(
 export type LegTravelTimes = readonly (number | null | undefined)[];
 
 /** Leg `number`'s own minutes, or the shop's ride out when the trip names none. */
-function travelForLeg(
+export function travelForLeg(
   rhythm: DockDayRhythm,
   legTravelTimes: LegTravelTimes | undefined,
   number: number,
@@ -212,6 +223,40 @@ function travelForLeg(
  * than one that is simply not consulted here.
  */
 export type DiveMode = "boat" | "shore" | "pool";
+
+/**
+ * **The window between two dives, and which fact names it.**
+ *
+ * The boat moves to the next site while the divers sit their interval out, so
+ * the gap is the longer of the two rather than their sum — which is also what
+ * keeps a shop that has filled nothing in reading exactly the day it read
+ * before: the default ride (20) fits inside the default interval (60), so
+ * nothing moves until a leg is genuinely longer than the rest. Adding them
+ * instead would have pushed every existing two-tank day out by a ride it
+ * already had, far enough on a tight window to lose dive two to the published
+ * return time.
+ *
+ * Whichever fact dominates gets to name the beat: a 90-minute run across the
+ * reef line under a 60-minute interval is a ride, not a rest. Off a boat there
+ * is no run at all, so a shore day's gap is the interval and nothing else.
+ *
+ * Exported because two surfaces read the same window from opposite ends — the
+ * dock-day timeline lays it on a clock, and the departure page's day profile
+ * states it as a duration before anybody has booked. `dayProfileRows`
+ * (src/lib/day-profile.ts) calls it, and the arithmetic stays here.
+ */
+export function betweenDivesMinutes(
+  rhythm: DockDayRhythm,
+  legTravelTimes: LegTravelTimes | undefined,
+  nextDiveNumber: number,
+  diveMode: DiveMode = "boat",
+): { minutes: number; dominatedByTravel: boolean } {
+  const travel = diveMode === "boat" ? travelForLeg(rhythm, legTravelTimes, nextDiveNumber) : 0;
+  return {
+    minutes: Math.max(rhythm.surfaceIntervalMinutes, travel),
+    dominatedByTravel: travel > rhythm.surfaceIntervalMinutes,
+  };
+}
 
 export function dockDayOffsets(
   rhythm: DockDayRhythm,
@@ -251,25 +296,16 @@ export function dockDayOffsets(
         cursor += travel;
       }
     } else {
-      // **Between two dives, the run and the rest are the same window.** The
-      // boat moves to the next site while the divers sit their interval out, so
-      // the gap is the longer of the two rather than their sum — which is also
-      // what keeps a shop that has filled nothing in reading exactly the day it
-      // read before: the default ride (20) fits inside the default interval
-      // (60), so nothing moves until a leg is genuinely longer than the rest.
-      // Adding them instead would have pushed every existing two-tank day out
-      // by a ride it already had, far enough on a tight window to lose dive two
-      // to the published return time.
-      const gap = Math.max(rhythm.surfaceIntervalMinutes, travel);
-      if (gap > 0) {
-        // Whichever fact dominates the window gets to name it. A 90-minute run
-        // across the reef line under a 60-minute interval is a ride, not a rest.
+      // The run and the rest are one window, and whichever fact dominates names
+      // the beat — `betweenDivesMinutes` above owns both halves of that.
+      const gap = betweenDivesMinutes(rhythm, legTravelTimes, number, diveMode);
+      if (gap.minutes > 0) {
         afterDeparture.push(
-          travel > rhythm.surfaceIntervalMinutes
+          gap.dominatedByTravel
             ? { step: "boatRide", number, minutesFromDeparture: cursor }
             : { step: "surfaceInterval", number: number - 1, minutesFromDeparture: cursor },
         );
-        cursor += gap;
+        cursor += gap.minutes;
       }
     }
     afterDeparture.push({ step: "dive", number, minutesFromDeparture: cursor });

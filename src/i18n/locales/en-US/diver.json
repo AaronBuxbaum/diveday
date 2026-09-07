@@ -103,6 +103,19 @@
     "conservationCommitmentsDisclaimer": "These are the shop's claims; DiveDay does not verify or endorse them.",
     "credit": "Bookings by DiveDay"
   },
+  "regions": {
+    "index": {
+      "title": "Dive shops by town",
+      "description": "Shops that publish a schedule and take bookings through DiveDay, grouped by the town they dive out of.",
+      "shopCount": "{count, plural, one {# shop} other {# shops}}",
+      "emptyTitle": "No towns listed yet",
+      "emptyBody": "A shop appears here once it puts a departure on its schedule."
+    },
+    "region": {
+      "title": "Dive shops in {name}",
+      "description": "Every shop here publishes its own schedule and takes bookings through DiveDay."
+    }
+  },
   "schedule": {
     "eyebrow": "Trips",
     "title": "Schedule",
@@ -255,6 +268,14 @@
         "lastQuarter": "Last quarter",
         "waningCrescent": "Waning crescent"
       }
+    },
+    "dayProfile": {
+      "bottomTime": "Usually {minutes, plural, one {# minute} other {# minutes}} in the water",
+      "surfaceInterval": "Usually {minutes, plural, one {# minute} other {# minutes}} on the surface",
+      "pickerLabel": "See these depths against your card",
+      "within": "Nothing on this day goes past {limit}.",
+      "over": "Dive {number} is at a site that reaches {site}, past the {limit} your card covers. You can still book: tell the crew and they will plan your dive to your limit.",
+      "overNoCard": "Dive {number} is at a site that reaches {site}. A first dive without a card stays inside {limit}. You can still book: ask the crew what this day needs."
     },
     "automatedOutlook": "Automated marine outlook",
     "waterTemperature": "Water temperature",
@@ -3379,6 +3400,24 @@
         "heading": "What this page does not yet say",
         "body": "DiveDay is in early access and some of this is unsettled: the retention period for waivers and medical answers, and the formal data-processing terms a shop signs. Rather than publish a policy that reads complete and is not, those are named here as open. Nothing above is aspirational. It describes what the code does today."
       }
+    },
+    "status": {
+      "eyebrow": "DiveDay status",
+      "headline": {
+        "ok": "Everything is running.",
+        "degraded": "Part of DiveDay is not working.",
+        "down": "DiveDay is not answering."
+      },
+      "checked": "Last checked {time}.",
+      "component": {
+        "serving": "The app",
+        "database": "The database"
+      },
+      "state": {
+        "up": "Running",
+        "down": "Not answering"
+      },
+      "contact": "If DiveDay is not working for you and this page says it is, write to {email} and tell us what you were doing."
     },
     "terms": {
       "eyebrow": "Terms of use",

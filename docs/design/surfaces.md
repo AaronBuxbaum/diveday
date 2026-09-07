@@ -258,6 +258,25 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
   a decided diver already is; the arrival card follows the hero and the change ledger follows the
   conditions reading so practical wayfinding never competes with the pitch.
 
+### The regional pages — `/dive` and `/dive/[region]`
+
+**Built 2026-09-07** — N-49 (issue #1436), the one place DiveDay lists shops beside each other: a
+town, and the shops that dive out of it.
+
+- **One idea:** a diver who knows *where* they will be, and not yet *who* with, gets a way in.
+- **The question it arrives with:** "who runs boats out of Key Largo?" — answered by the town's own
+  page, one row per shop, each row the shop's own name and its own line about itself.
+- **Controls that dissolved:** every filter anyone would reach for. There is no search box, no map,
+  no sort: a town has a handful of shops and a list of them needs no instrument.
+- **Remove first:** anything DiveDay would be saying *about* a shop. A row carries only what the
+  shop authored and its storefront already shows a stranger, so a shop that has written no tagline
+  gets a shorter row rather than a generated one. Departures stay on the storefront one tap away —
+  putting "next out" on every row would fan an unbounded town out to three reads a shop on a page
+  crawlers hit.
+- **Composition:** the marketing chrome with its trial pitch suppressed (a diver looking for a boat
+  is not that audience), the page's name, one line saying these shops book through DiveDay, then
+  the hairline ledger the diver-facing catalog already uses.
+
 ### The product page — `/product`
 
 **Reviewed 2026-08-31** — conversion surface, governed by
