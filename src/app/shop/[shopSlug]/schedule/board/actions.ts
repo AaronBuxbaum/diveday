@@ -6,7 +6,7 @@ import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
-import { listDiveSites } from "@/db/dive-sites";
+import { getDiveSite, listDiveSites } from "@/db/dive-sites";
 import { discardFormDraft } from "@/db/form-drafts";
 import { getMovePreflight } from "@/db/move-preflight";
 import { canPersonViewShopReports } from "@/db/reporting";
@@ -24,9 +24,14 @@ import {
 import { listStaff, setTripCrew } from "@/db/trips-crew";
 import { weekdayPatternFor } from "@/db/weekday-pattern";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { staffTideWindowText } from "@/i18n/tide-labels";
 import { trackEvent } from "@/lib/analytics";
 import { calendarDateWeekday, isValidCalendarDate } from "@/lib/calendar-date";
+import { tideWindowsForDeparture } from "@/lib/departure-tides";
+import { parseDockDayRhythm } from "@/lib/diver-planning";
 import { formatWallTime } from "@/lib/forgiving-fields";
+import { formatTime } from "@/lib/format";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { minorToMajor } from "@/lib/money";
 import type { MovePreflight } from "@/lib/move-preflight";
@@ -42,9 +47,10 @@ import { shopPath } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
 import { hasTripDiveContent, tripDiveDraftsFromForm } from "@/lib/trip-dives";
+import { uuidParam } from "@/lib/uuid";
 import type { PatternDeparture } from "@/lib/weekday-pattern";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
-import type { BuilderPattern } from "./_components/ScheduleBuilder";
+import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";
 
 /* -------------------------------------------------------------------------- *
  * The schedule builder
@@ -97,6 +103,58 @@ async function requireBoardAuthor(shopSlug: string) {
  * cannot define trips (H-14) — the panel they would fill in isn't rendered for
  * them either.
  */
+/**
+ * The tide at a chosen site for the departure being added, worded for the
+ * reader (ADR 20260907-noaa-tide-predictions). A brand-new departure states
+ * no legs, so the boat reaches its first site after the shop's own ride out.
+ * Null — no sentence — for a site with no station, an unparseable time, or a
+ * station that answers nothing; the panel renders nothing in every case.
+ */
+export async function loadTideWindowAction(input: BuilderTideWindowInput): Promise<string | null> {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  const shopId = session.user.shopId;
+  if (!(await canPersonConfigureTrips(db, shopId, session.user.personId))) return null;
+  if (!uuidParam(input.diveSiteId) || !isValidCalendarDate(input.date)) return null;
+  const [shop, site] = await Promise.all([
+    getShopById(db, shopId),
+    getDiveSite(db, shopId, input.diveSiteId),
+  ]);
+  if (!shop || !site?.tideStationId) return null;
+  const wall = parseWallTime(input.date, input.startTime);
+  const rhythm = parseDockDayRhythm(shop);
+  if (!wall || !rhythm) return null;
+  const diveMode =
+    input.diveMode === "shore" || input.diveMode === "pool" ? input.diveMode : "boat";
+  const [entry] = await tideWindowsForDeparture({
+    startsAt: wallTimeToUtc(wall, shop.timezone),
+    plannedDives: 1,
+    diveMode,
+    dives: [
+      {
+        diveNumber: 1,
+        travelMinutes: null,
+        site: {
+          name: site.name,
+          tideStationId: site.tideStationId,
+          tidePreference: site.tidePreference,
+          expectedBottomTimeMinutes: site.expectedBottomTimeMinutes,
+        },
+      },
+    ],
+    rhythm,
+    timeZone: shop.timezone,
+  });
+  if (!entry) return null;
+  const locale = await requestLocale(shop.defaultLocale);
+  return staffTideWindowText(
+    staffTranslator(locale),
+    entry.window,
+    entry.preference,
+    formatTime(entry.window.nearestTurn.at, locale, shop.timezone),
+  );
+}
+
 export async function loadBuilderOptionsAction() {
   const session = await requireStaffSession();
   const db = await getDb();

@@ -41,9 +41,9 @@ export async function getShopBySlug(db: AppDb, slug: string) {
  * seasons should stay indexed, because falling out of search is worse than
  * never entering it.
  */
-export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string }[]> {
+export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string; name: string }[]> {
   return db
-    .select({ slug: shops.slug })
+    .select({ slug: shops.slug, name: shops.name })
     .from(shops)
     .where(
       and(
@@ -583,6 +583,20 @@ export async function setShopHospitalityNotes(
       dockCallNote: clean(notes.dockCallNote),
       signOffNote: clean(notes.signOffNote),
     })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * Whether a site's tide window reaches the diver's public departure page
+ * (ADR 20260907-noaa-tide-predictions). Off by default; staff surfaces read
+ * the window regardless of this.
+ */
+export async function setShopTideWindowPublic(db: AppDb, shopId: string, on: boolean) {
+  const [shop] = await db
+    .update(shops)
+    .set({ tideWindowPublic: on })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

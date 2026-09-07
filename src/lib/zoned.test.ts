@@ -7,7 +7,37 @@ import {
   utcToWallTime,
   wallTimeDeltaMs,
   wallTimeToUtc,
+  zonedIsoString,
 } from "./zoned";
+
+describe("zonedIsoString", () => {
+  it("writes the wall clock with the zone's offset, never a Z", () => {
+    // 11:30Z is 07:30 in New York on a July morning (EDT, UTC-4)…
+    expect(zonedIsoString(new Date("2026-07-25T11:30:00Z"), "America/New_York")).toBe(
+      "2026-07-25T07:30:00-04:00",
+    );
+    // …and 06:30 there in January (EST, UTC-5).
+    expect(zonedIsoString(new Date("2026-01-25T11:30:00Z"), "America/New_York")).toBe(
+      "2026-01-25T06:30:00-05:00",
+    );
+  });
+
+  it("carries a positive offset, a half-hour zone, and UTC itself as written", () => {
+    expect(zonedIsoString(new Date("2026-07-25T02:00:00Z"), "Asia/Kolkata")).toBe(
+      "2026-07-25T07:30:00+05:30",
+    );
+    expect(zonedIsoString(new Date("2026-07-25T02:00:00Z"), "UTC")).toBe(
+      "2026-07-25T02:00:00+00:00",
+    );
+  });
+
+  it("rolls the calendar date with the zone", () => {
+    // Late evening UTC is already tomorrow morning in Tokyo.
+    expect(zonedIsoString(new Date("2026-07-25T22:15:00Z"), "Asia/Tokyo")).toBe(
+      "2026-07-26T07:15:00+09:00",
+    );
+  });
+});
 
 describe("wallTimeToUtc", () => {
   it("converts summer wall time in New York (EDT, UTC-4)", () => {

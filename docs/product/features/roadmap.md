@@ -455,8 +455,14 @@ spring half, 18c's roster half and 18f wait on it.
   The page's `<h1>` fades from 40px on — the bar is 85% of the page behind a blur, so without it a
   34px heading ghosts through the chrome under the folded label and the word is on screen twice.
 - **18f** — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's
-  brand, updates from `trips.revision`, the two pass-service routes. `waiting-on-external` on the
-  Apple Developer and Google Wallet accounts H-69 b decides; nothing built ahead of them.
+  brand, updates from `trips.revision` and the crew-set stage, the PassKit web service under
+  `/api/wallet/v1/**`, the Google object, a ten-minute push cron. **H-69 b decided yes 2026-09-07**:
+  built now, shipped dark — with no credential configured the thread renders as today and every
+  pass route 404s — so the slice merges ahead of the Apple Developer and Google Wallet accounts,
+  which are manual steps in §17's registry rather than blockers. One new dependency,
+  `passkit-generator`. The contract is the canvas's
+  [SPEC.md](../../design/canvases/20260907-nothing-from-nowhere/SPEC.md); the implementing prompt is
+  in the canvas README.
 
 ### 19. In your hands (design complete; H-70 decided)
 

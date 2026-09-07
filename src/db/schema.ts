@@ -348,6 +348,14 @@ export const shops = pgTable(
      * it and they come back.
      */
     searchListingOptOutAt: timestamp("search_listing_opt_out_at", { withTimezone: true }),
+    /**
+     * Whether the tide window a site carries reaches the diver's public
+     * departure page. Off by default: the sentence names a clock time beside
+     * a Book button, and whether that is a promise the shop wants to publish
+     * is the shop's call. Staff surfaces read it regardless (ADR
+     * 20260907-noaa-tide-predictions).
+     */
+    tideWindowPublic: boolean("tide_window_public").notNull().default(false),
     tagline: text("tagline"),
     description: text("description"),
     logoUrl: text("logo_url"),
@@ -1321,6 +1329,20 @@ export const courseInquiries = pgTable(
 export const diveSiteFitTone = pgEnum("dive_site_fit_tone", ["welcoming", "demanding", "unknown"]);
 
 /**
+ * When a site dives best, in the shop's own reading of its water: at the
+ * turn, on the rising tide, on the falling one, or `any` — the default, and
+ * the honest answer for a sheltered reef. Mirrors `TIDE_PREFERENCES` in
+ * `src/lib/tides.ts`; the tide window informs and gates nothing (ADR
+ * 20260907-noaa-tide-predictions).
+ */
+export const diveSiteTidePreference = pgEnum("dive_site_tide_preference", [
+  "any",
+  "slack",
+  "flood",
+  "ebb",
+]);
+
+/**
  * How demanding a site is, as a code rather than the shop's own adjective.
  *
  * `dive_sites.difficulty` was free text, and it read as the one untranslated
@@ -1359,6 +1381,14 @@ export const diveSites = pgTable(
     /** Offshore coordinate selected by staff for the automated marine forecast. */
     forecastLatitude: doublePrecision("forecast_latitude"),
     forecastLongitude: doublePrecision("forecast_longitude"),
+    /**
+     * The NOAA CO-OPS station whose high/low table this site is read against —
+     * seven digits, the nearest ocean-side station rather than the site itself,
+     * which is rarely a station. Null means the briefing says nothing about the
+     * tide, which is most sites (ADR 20260907-noaa-tide-predictions).
+     */
+    tideStationId: text("tide_station_id"),
+    tidePreference: diveSiteTidePreference("tide_preference").notNull().default("any"),
     satelliteImageUrl: text("satellite_image_url"),
     routeImageUrl: text("route_image_url"),
     imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
@@ -6118,6 +6148,53 @@ export const calendarFeeds = pgTable(
     uniqueIndex("calendar_feeds_live_person_scope_idx")
       .on(table.personId, table.scope)
       .where(sql`${table.revokedAt} IS NULL`),
+  ],
+);
+
+/**
+ * A long-lived, revocable bearer credential over the shop's **departures board**
+ * — the lobby TV / dock tablet at `/board/[token]` (issue #1426, N-23). Same
+ * discipline as `calendar_feeds`: only the hash is stored, the raw token exists
+ * solely in the response that minted it, and there is no expiry, because a
+ * screen on a wall that went dark after 60 days would be noticed by nobody
+ * until a diver asked why the board is blank. Revocation is the mitigation.
+ *
+ * What the board shows is decided at the reader (`src/db/departures-board.ts`),
+ * never by a column here: a boat's title, time, site, stage word, meeting point
+ * and an "n of capacity" count. `show_names` is the one knob — off, nobody is
+ * named at all; on, the **crew** line appears. Diver names never reach a
+ * lobby screen at any setting.
+ *
+ * Revoking *is* the delete: a revoked link has nothing left a shop could ask
+ * to remove, so `revoked_at` is the row's soft-delete stamp and the settings
+ * page lists only rows where it is null. Nothing hard-deletes a row except the
+ * demo cascade.
+ */
+export const displayTokens = pgTable(
+  "display_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tokenHash: text("token_hash").notNull().unique(),
+    /** "Lobby TV", "Dock B tablet" — the shop's own word for which screen this is. */
+    label: text("label").notNull(),
+    showNames: boolean("show_names").notNull().default(false),
+    createdByPersonId: uuid("created_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Stamped when the board renders, coarsely, so the settings page can tell
+     * a screen that is actually showing from a link nobody ever opened.
+     */
+    lastShownAt: timestamp("last_shown_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("display_tokens_token_hash_idx").on(table.tokenHash),
+    index("display_tokens_shop_live_idx").on(table.shopId, table.revokedAt),
   ],
 );
 

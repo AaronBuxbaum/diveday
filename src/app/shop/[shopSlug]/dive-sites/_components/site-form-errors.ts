@@ -17,6 +17,7 @@ export function siteFormErrorMessages(
   return {
     invalid: t(invalidKey),
     coordinatesIncomplete: t("diveSites.form.errorCoordinates"),
+    tideStationInvalid: t("diveSites.form.errorTideStation"),
     depthTooDeep: t("diveSites.form.errorDepth"),
     images: t("diveSites.form.errorImages"),
     imagesUnconfigured: t("diveSites.form.errorImagesUnconfigured"),

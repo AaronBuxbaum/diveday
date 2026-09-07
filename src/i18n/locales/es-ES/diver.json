@@ -10,6 +10,27 @@
     "liveEyebrow": "Ahora mismo",
     "liveBack": "De vuelta hacia las {back}."
   },
+  "board": {
+    "empty": "Hoy no hay salidas.",
+    "aboard": "{boarded} de {booked, plural, one {# buceador} other {# buceadores}} a bordo",
+    "meetAt": "Punto de encuentro: {place}",
+    "privateCharter": "Salida privada",
+    "crew": "Con {names}",
+    "stage": {
+      "boarding": "Embarcando",
+      "underway": "En {site}",
+      "underwayNoSite": "En el agua",
+      "surface": "En superficie",
+      "headingIn": "De regreso",
+      "home": "De vuelta en el muelle"
+    },
+    "updated": "Actualizado a las {time}",
+    "unavailableHeading": "Este enlace de pantalla no está disponible",
+    "unavailableBody": "Crea uno nuevo en Configuración, en Pantalla del lobby.",
+    "seats": "{booked} de {capacity, plural, one {# plaza reservada} other {# plazas reservadas}}",
+    "hold": "En espera por condiciones",
+    "returned": "{boarded, plural, one {salió # buceador} other {salieron # buceadores}}"
+  },
   "conservation": {
     "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",
     "commitments": {
@@ -231,6 +252,7 @@
     "forecastUpdateUnavailable": "Hora de actualización no disponible.",
     "forecastCrewCall": "Las condiciones se confirman en el muelle.",
     "forecastCreditPrefix": "Previsión de",
+    "tideWindow": "{turn, select, next {Próxima} other {Última}} {kind, select, high {pleamar} other {bajamar}} a las {time}; el barco llega al sitio {phase, select, slack {en el cambio de marea} flood {con marea entrante} other {con marea saliente}}{fit, select, met {, cuando mejor se bucea} missed {. Se bucea mejor {preference, select, slack {en la estoa} flood {con marea entrante} other {con marea saliente}}} other {}}.",
     "timeline": {
       "arrive": "Llegada y registro",
       "gearSetup": "Monta tu equipo",

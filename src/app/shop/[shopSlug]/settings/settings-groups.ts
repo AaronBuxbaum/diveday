@@ -43,6 +43,7 @@ export const SECTION_IDS = [
   "address",
   "reviewLink",
   "searchListing",
+  "tideWindow",
   "conservation",
   "packing",
   "dockCall",
@@ -226,6 +227,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "searchListing" },
   },
   {
+    id: "tideWindow",
+    labelKey: "settings.main.tideWindow.heading",
+    group: "your-shop",
+    target: { kind: "section", id: "tideWindow" },
+  },
+  {
     id: "conservation",
     labelKey: "settings.main.conservation.heading",
     group: "your-shop",
@@ -351,6 +358,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.calendar.heading",
     group: "data-integrations",
     target: { kind: "route", path: "/settings/calendar" },
+  },
+  {
+    id: "display",
+    labelKey: "settings.main.display.heading",
+    group: "data-integrations",
+    target: { kind: "route", path: "/settings/display" },
   },
   {
     id: "integrations",

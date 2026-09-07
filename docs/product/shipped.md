@@ -7,6 +7,32 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The departures board (delivered 2026-09-07)
+
+N-23 from the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1426). A shop mints
+a **display link** at Settings → Lobby display and opens it on a TV in the lobby or a tablet on the
+dock: `/board/[token]` shows today's boats in clock order — time, title, site and boat, the crew's
+stage word, "n of capacity aboard", the meeting point and the automated outlook — in display type,
+following the device's light or dark scheme at the manifest's `boat-mode` contrast, and re-reads the
+day every minute with no session. The reader (`src/db/departures-board.ts`) is the day spine's own
+readers in a lobby's shape and its row type is closed by test: no diver is ever named, no readiness,
+no phone, no money; the one switch on a link (`show_names`) adds the crew line. The token is hashed
+at rest (`src/lib/bearer-tokens.ts`), non-expiring like the calendar feed, revoked from the same
+settings page, redacted from telemetry (`CAPABILITY_ROUTE_PREFIXES`) and disallowed to crawlers. A
+private charter keeps its row under "Private charter", never its name.
+
+## The tide window (delivered 2026-09-07)
+
+N-01 of the improvement-ideas sheet, owner decision 2026-09-07. A dive site names a NOAA CO-OPS
+tide station and when it dives best (`any` / `slack` / `flood` / `ebb`); the staff site briefing,
+the board's add panel and the departure page then say one line — "Next high water at 9:40 AM; this
+departure reaches the site on the flood" — read at the boat's own arrival there (`src/lib/tides.ts` for the
+window, `src/lib/departure-tides.ts` for the composition, `src/lib/tide-predictions.ts` for the
+seam). Divers read the same line on the public departure page only once the shop switches it on in
+Settings (`shops.tide_window_public`, default off). Informs; gates nothing. The demo reads both Key
+Largo sites against Carysfort Reef (8723583). ADR
+[20260907-noaa-tide-predictions](../architecture/decisions/20260907-noaa-tide-predictions.md).
+
 ## Fly-safe from, on the recap (delivered 2026-09-07)
 
 N-04 from the 2026-09-07 improvement-ideas decision sheet (issue #1425). Once the crew has logged
@@ -16,6 +42,23 @@ hours (`shops.fly_safe_hours_single` / `_repetitive`, a Settings row, floored at
 counted from the last recorded exit by `src/lib/fly-safe.ts`, or from the scheduled return once the
 boat is home; repetitive whenever the day held more than one dive by record or by plan. Nothing at
 all while the record cannot say. Informs, never gates.
+
+## The agent-ready storefront (delivered 2026-09-07)
+
+Owner decision 2026-09-07 (improvement-ideas decision sheet, N-50; issue #1427). An AI travel agent
+can now find a departure and hand its reader to the booking page, which still does the booking.
+**`/llms.txt`** (`src/app/llms.txt/route.ts`, words in `src/lib/llms-txt.ts`) says what DiveDay
+is, the public URL shapes, where availability lives, the codes it uses, that bookings happen on
+the booking page, and lists the shops the sitemap lists. **`/s/<slug>/availability.json`**
+(`src/lib/availability.ts` for the shape, `src/db/availability.ts` for the rows, composed from the
+schedule page's own readers) is the next 14 days of public departures with a seat open — id,
+`starts_at` as the shop's wall clock with its offset (`zonedIsoString`), sites, price and
+currency, certification codes, `seats_open`, `booking_url` — and nothing about a person. A shop
+that opted out of search (ADR 20260813-search-listing-is-a-choice) gets a 404 there, not an empty
+list, and its schedule JSON-LD stops naming the document (`subjectOf` → `DataFeed`). `robots.txt`
+moved from Next's metadata convention to `src/app/robots.txt/route.ts` over `src/lib/robots.ts` for
+the one comment line that points an agent at `/llms.txt`. See
+[marketing.md](marketing.md)'s SEO section.
 
 ## Before you ask: DiveDay fills in what it already knows (delivered 2026-09-06)
 

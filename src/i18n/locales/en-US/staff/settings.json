@@ -29,6 +29,8 @@
       "reviewUrlInvalid": "Enter a full https:// link, or empty the box to stop asking for reviews.",
       "searchListingOn": "Your public pages are listed in search engines.",
       "searchListingOff": "Your public pages are hidden from search engines. Anything already indexed can take a few weeks to drop out.",
+      "tideWindowOn": "Divers now see the tide window on departure pages.",
+      "tideWindowOff": "The tide window is off divers' departure pages.",
       "conservationInvalid": "Check your conservation commitments selection.",
       "connected": "Stripe account connected.",
       "connectFailed": "The Stripe connection didn't complete. Try connecting again.",
@@ -202,6 +204,15 @@
       "submit": "Save",
       "submitting": "Saving…"
     },
+    "tideWindow": {
+      "heading": "Tide window",
+      "valueOn": "Shown to divers",
+      "valueOff": "Staff only",
+      "detail": "Sites with a NOAA tide station carry one line on staff pages: the nearest slack and which way the water is moving when the boat arrives. Tick this and divers read the same line on the departure page.",
+      "label": "Show the tide window on public departure pages",
+      "submit": "Save",
+      "submitting": "Saving…"
+    },
     "conservation": {
       "heading": "Conservation commitments",
       "detail": "Select the commitments your operation practices. These are published as your shop's own claim, never DiveDay's verification.",
@@ -363,6 +374,9 @@
     },
     "calendar": {
       "heading": "Calendar subscriptions"
+    },
+    "display": {
+      "heading": "Lobby display"
     },
     "counterQr": {
       "heading": "The counter card",

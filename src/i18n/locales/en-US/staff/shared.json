@@ -5,6 +5,9 @@
     "youWorkHere": "You work here. This is the page divers see.",
     "openTheBoard": "Open the board"
   },
+  "tide": {
+    "window": "{turn, select, next {Next} other {Last}} {kind, select, high {high} other {low}} water at {time}; this departure reaches the site {phase, select, slack {at the turn of the tide} flood {on the flood} other {on the ebb}}{fit, select, met {, when it dives best} missed {. It dives best {preference, select, slack {at slack water} flood {on the flood} other {on the ebb}}} other {}}."
+  },
   "imageInput": {
     "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
     "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
