@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); }
+    .body { font-size: 14px; line-height: 1.55; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .n { width: 28px; height: 28px; border-radius: 999px; background: var(--lagoon-wash); color: var(--lagoon); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .r { display: flex; gap: 16px; align-items: flex-start; padding: 16px 0; border-top: 1px solid var(--rope); }
+    .card { background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 18px 20px; }
+    .h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+    .rule { display: grid; grid-template-columns: 30px minmax(0, 1fr) 200px; gap: 16px; align-items: flex-start; padding: 14px 0; border-top: 1px solid var(--rope); }
+    .k { font-size: 12.5px; font-weight: 650; color: var(--muted); }
+    .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+  </style>
+</helmet>
+<div style="width: 1180px; min-height: 3200px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 56px 60px;">
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 40px;">
+    <div style="max-width: 800px; display: flex; flex-direction: column; gap: 14px;">
+      <p class="eyebrow">The twelfth canvas &middot; the second look &middot; five moves &middot; 2026-09-07</p>
+      <h1 style="font-size: 44px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.04;">In your hands.</h1>
+      <p class="lede">The same brief, read a second time. <em>Nothing from nowhere</em> answered the half about animation: one physics, six moves, three calls the owner still holds. This canvas answers the other half, features, and finds the same shape of gap. The phone in a crew member&#8217;s hand already knows whose face is looking at it; the counter iPad already has a camera and a diver standing in front of it; the phone already knows how big its owner likes their text. DiveDay asks for a password, asks for a card number, and sets its own type size. <strong style="color: var(--ink);">Where the device already knows a thing, DiveDay uses it, says where it came from, and leaves the last tap to a person.</strong> Five moves, each on the surface it lands on. Nothing here is normative; the ADR carries the decisions, three of them are the owner&#8217;s.</p>
+    </div>
+    <svg aria-hidden="true" viewBox="0 0 64 64" width="64" height="64" fill="none" style="flex-shrink: 0; margin-top: 8px;"><circle cx="22" cy="44" r="12" stroke="#0c2a35" stroke-width="2.5"></circle><circle cx="40" cy="26" r="8" stroke="#0c2a35" stroke-width="2.5"></circle><circle cx="52" cy="12" r="4.5" fill="#ff6f61"></circle></svg>
+  </div>
+
+  <div style="margin-top: 40px; display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 48px;">
+    <div>
+      <p class="tag">Five findings, from the running app</p>
+      <div class="r" style="margin-top: 10px;"><span class="n">1</span><p class="body"><strong>The door asks for a password on a phone that knows its owner&#8217;s face.</strong> Sign-in is email, password and, where enrolled, a six-digit code from another app. A crew member on a wet dock types all three with a thumb. The app runs on the one class of device where a glance is a credential, and never asks for it.</p></div>
+      <div class="r"><span class="n">2</span><p class="body"><strong>A diver at the counter with no waiver is sent a link, or handed paper.</strong> The counter row&#8217;s fix is <em>Send waiver</em>; beside it stands <em>Mark signed on paper</em>. Priya Sharma is standing at the desk, seventeen minutes before her boat, holding a phone with no signal in the shop. The iPad she is looking at could be turned around.</p></div>
+      <div class="r"><span class="n">3</span><p class="body"><strong>The card is photographed and then typed.</strong> <em>Capture for review</em> already lands a photo of the certification card on the record. The agency, the level, the number and the date are then typed off the same card, by hand, into four fields under the photo of them.</p></div>
+      <div class="r"><span class="n">4</span><p class="body"><strong>The type ignores the phone.</strong> Every size in the ladder is rem, so a desktop browser&#8217;s text setting reaches it. On an iPhone the setting that reaches every other app, the one a crew member with reading glasses has already turned up, reaches nothing here: the manifest reads at 16px whatever they chose.</p></div>
+      <div class="r" style="border-bottom: 1px solid var(--rope);"><span class="n">5</span><p class="body"><strong>The app can be installed and never says so.</strong> The web manifest declares <span class="mono">standalone</span>, the service worker keeps the next two days&#8217; manifests on the device, and nothing on any surface tells a crew member on their first phone sign-in that the roll call could open from their home screen with no browser bar and no signal.</p></div>
+
+      <p class="tag" style="margin-top: 36px;">The owner&#8217;s three (H-70)</p>
+      <div class="r" style="margin-top: 10px;"><span class="n" style="background: var(--coral-wash); color: var(--coral-deep);">a</span><p class="body">Whether staff may sign in with a passkey, and whether a passkey made with the device&#8217;s own check (a face, a finger) stands as the fresh factor the step-up asks for before money, exports and backup-destination changes. Recommended: yes to both.</p></div>
+      <div class="r"><span class="n" style="background: var(--coral-wash); color: var(--coral-deep);">b</span><p class="body">Whether a diver may sign the release on the shop&#8217;s own device at the counter, with the counter recorded on the signature. The words are H-01&#8217;s and H-03&#8217;s as ever; this is the device, not the text. Recommended: yes, provenance recorded.</p></div>
+      <div class="r" style="border-bottom: 1px solid var(--rope);"><span class="n" style="background: var(--coral-wash); color: var(--coral-deep);">c</span><p class="body">Whether a card photo may be sent to a text reader (Amazon Textract, in the region the shop&#8217;s data already lives in) to fill the four fields. A card carries a name and a number. Recommended: yes, nothing retained, the account&#8217;s AI-services opt-out set.</p></div>
+    </div>
+
+    <div>
+      <p class="tag">Five moves, each on its surface</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 12px;">
+        <div class="card"><p class="h2" style="font-size: 18px;">1 &middot; The door knows your face</p><p class="note" style="margin-top: 6px;">Door. On a device that holds a passkey for this account, sign-in is one button and the device&#8217;s own check; the password stays the door on every other device and the way in when a phone is lost. A passkey is added from the account&#8217;s security settings, named for the device it lives on, and removed from the same list. Where the account has the step-up, the same check answers it. Sign-out stays a two-tap confirm; the shared counter device keeps every rule it has.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">2 &middot; Hand it over</p><p class="note" style="margin-top: 6px;">Counter. A blocked row whose fix is the waiver gains <em>Sign here</em> beside <em>Send waiver</em>. One tap locks the desk behind the diver&#8217;s own waiver page, the same three steps she would see from her link, on the shop&#8217;s device turned to face her. When she is done the screen asks for the desk back; a staffer&#8217;s passkey or password reopens the counter with her row settled. The signature records that it was made at the counter, on the shop&#8217;s device, handed over by whom and when.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">3 &middot; Point the camera at the card</p><p class="note" style="margin-top: 6px;">Card. The certification form&#8217;s photo capture reads the card it just photographed: agency, level, number and certification date arrive in the four fields under one line saying they were read from the photo, each still a field. A person checks them against the card in their hand and taps <em>Mark certified</em>, as today. Nothing is verified by the reading, and a photo the reader cannot make out fills nothing and says nothing.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">4 &middot; The type follows the phone</p><p class="note" style="margin-top: 6px;">Device. On an iPhone or iPad the root size follows the device&#8217;s own text setting, upward: the crew member who turned their text up for every other app gets the same manifest at the same size, and nothing shrinks below the ladder it ships with. Measured before first paint, as the language script already runs, so nothing jumps. Every other platform already reached the ladder through the browser&#8217;s setting.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">5 &middot; On the home screen</p><p class="note" style="margin-top: 6px;">Device. A crew member&#8217;s first sign-in on a phone gets one line under the day&#8217;s spine saying the roll call can open from the home screen, without a browser bar and without signal, with the one act that does it: a button where the platform offers one, the platform&#8217;s own menu item where it does not. Dismissed once, it is gone; installed, it never renders; on a desktop it never renders.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 44px; padding: 24px 28px; border-radius: 28px; background: var(--shell); border: 1px solid var(--rope); box-shadow: var(--bed);">
+    <p class="tag">The rule every move passes, and what renders when it fails</p>
+    <div style="margin-top: 8px;">
+      <div class="rule"><span class="n">1</span><p class="body"><strong>The device already knows it.</strong> Every move uses a fact the device or the moment already holds: a face the phone has already checked, a card already in the viewfinder, a text size already chosen, a diver already standing at the desk. No move asks a person for something new so that DiveDay can be clever with it.</p><p class="k">Otherwise: nothing changes</p></div>
+      <div class="rule"><span class="n">2</span><p class="body"><strong>It says where it came from.</strong> A filled field says <em>read from the photo</em>; a signature says <em>signed at the counter</em>; a passkey is listed under the device it lives on. The same provenance grammar the last two loops wrote (budget rule 5, H-68&#8217;s source line), applied to what a device supplied.</p><p class="k">Otherwise: no fill</p></div>
+      <div class="rule"><span class="n">3</span><p class="body"><strong>The last tap is a person&#8217;s.</strong> The reading fills a field and never a status; the hand-over opens the page and never signs it; the passkey opens a session and never a payment. Every consequence the app already guards with a tap keeps that tap.</p><p class="k">Otherwise: nothing</p></div>
+      <div class="rule" style="border-bottom: 1px solid var(--rope);"><span class="n">4</span><p class="body"><strong>The safety floor is untouched.</strong> Verification stays a staffer&#8217;s tap on a card they can see. The release&#8217;s words, steps and consent are the ones counsel reads; the device changes and the text does not. Sign-out keeps its confirm. The manifest, the roll call and the payment step gain nothing from this canvas, and the photo of a card never leaves the region the record lives in.</p><p class="k">Otherwise: the page as it ships</p></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+    <div>
+      <p class="tag">What already works this way</p>
+      <p class="body" style="margin-top: 10px;">The booking page arrives knowing the diver who came through her thread, and says the day each fact was kept. The add panel opens filled from the shop&#8217;s own Thursdays, under a sentence saying so. A cert card&#8217;s photo already lands on the record. The manifest already saves itself to the device for the next two days and works with no signal. The step-up already binds a fresh factor to the session and the purpose for fifteen minutes.</p>
+      <p class="body" style="margin-top: 8px;">Each of those took something the product already held and put it where the question arose. This canvas does the same with what the <em>device</em> already holds.</p>
+    </div>
+    <div>
+      <p class="tag">What this canvas leaves alone</p>
+      <p class="body" style="margin-top: 10px;">Everything <em>Nothing from nowhere</em> decided or asked: the physics, the six moves, H-69. A native app: a passkey is a browser API, a hand-over is a locked session, a text size is a CSS keyword, and none of them needs a store listing. A barcode or a scan-to-check-in: the counter works by name and the last loop said why. Haptics, which are Android&#8217;s and already say so. A self-service kiosk: a diver checks in with a person, and a person taps. Sound. The manifest&#8217;s bans in full.</p>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+    <div>
+      <p class="tag">How to read the canvas</p>
+      <p class="body" style="margin-top: 10px;"><strong>This page</strong> argues: this cover. <strong>Page 2</strong> shows the surfaces: the door on a phone with a passkey and on one without, and the security settings where a passkey is added; the counter handing the iPad to Priya in four frames; Grace&#8217;s card in the viewfinder and the four fields it fills; and the two device moves side by side, the manifest row at three text sizes and the home-screen line as each platform draws it.</p>
+      <p class="body" style="margin-top: 8px;">Every board is Blue Mantis Divers in the week of Thursday, August 27, 2026, the fiction every canvas since Clearwater holds to. Reef in Geist on every staff board; the waiver page in DiveDay&#8217;s own tokens, as it ships, because the shop&#8217;s brand may never reach it. Every name is invented.</p>
+    </div>
+    <div>
+      <p class="tag">Why features, and why these five</p>
+      <p class="body" style="margin-top: 10px;">The owner&#8217;s brief said Apple, in animations and features. Apple&#8217;s features are rarely new capabilities; they are the device using what it already knows, then getting out of the way: the face unlocks, the camera reads the card, the text is the size you set once, the app is on the home screen. Read against that, DiveDay&#8217;s gaps are exactly the five above. Each is a browser API or a CSS rule the app already runs on, each says where its fact came from, each leaves the last tap where it is, and each renders the page as it ships when it is not true.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

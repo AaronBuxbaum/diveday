@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); }
+    .body { font-size: 14px; line-height: 1.55; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .phone { width: 390px; height: 760px; background: var(--sand); border-radius: 28px; border: 1px solid var(--rope); box-shadow: var(--bed); overflow: hidden; position: relative; box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; }
+    .bar { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: rgba(251,247,239,.92); border-bottom: 1px solid var(--rope); box-sizing: border-box; flex-shrink: 0; }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .flabel { font-size: 11.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .caption { width: 390px; display: flex; flex-direction: column; gap: 6px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .label { font-size: 14px; font-weight: 500; }
+    .control { height: 48px; border-radius: 10px; border: 1px solid var(--rope-strong); background: var(--shell); padding: 0 14px; display: flex; align-items: center; justify-content: space-between; font-size: 16px; box-sizing: border-box; }
+    .btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .link { color: var(--lagoon); font-weight: 500; }
+    .read { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--lagoon-deep); background: var(--lagoon-wash); border-radius: 999px; height: 22px; padding: 0 8px; }
+    .row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 18px; align-items: baseline; padding: 11px 0; border-top: 1px solid var(--rope); }
+    .row p { font-size: 14px; line-height: 1.5; }
+    .card { width: 300px; height: 190px; border-radius: 14px; background: linear-gradient(160deg, #eef3f1 0%, #d9e6e3 100%); border: 1px solid rgba(12,42,53,.18); box-sizing: border-box; padding: 16px 18px; position: relative; color: #1f3b45; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; }
+  </style>
+</helmet>
+<div style="width: 1360px; min-height: 2200px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 48px 52px;">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 960px;">
+    <p class="eyebrow">Move 3 &middot; point the camera at the card &middot; Grace Mensah&#8217;s record, 6:46 AM &middot; page 2</p>
+    <h1 style="font-size: 36px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.06;">The photo already lands on the record. Let it fill the fields under it.</h1>
+    <p class="lede" style="font-size: 16px;">Grace said Advanced on the booking form; her row on the counter is blocked until a staffer sees the card. Today Dana opens the record, photographs the card for review, and types the agency, the level, the number and the date off the card in her other hand. This board reads them off the photo instead, into the same four fields, under one line saying so. Dana still reads the card, still changes anything the reader got wrong, and still taps <em>Mark certified</em>: the reading fills, and never verifies.</p>
+  </div>
+
+  <div style="margin-top: 32px; display: flex; gap: 40px; align-items: flex-start;">
+
+    <!-- 1: the self-declared row -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="bar"><div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div><span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Grace Mensah</span></div>
+        <div style="padding: 18px 16px 0; display: flex; flex-direction: column; gap: 14px;">
+          <p class="eyebrow">Divers &middot; &larr; All divers</p>
+          <div class="panel" style="padding: 16px 18px;">
+            <p style="font-size: 20px; font-weight: 600; letter-spacing: -0.015em;">Certification records</p>
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rope); display: flex; flex-direction: column; gap: 10px;">
+              <div><p style="font-size: 16px; font-weight: 600;">Advanced Open Water</p><p class="note" style="font-size: 13px; margin-top: 2px;">Self-declared &mdash; certification card not sighted yet &middot; Diver says 2203 8871 04</p></div>
+              <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0 0; border-top: 1px dashed var(--rope);">
+                <p style="font-size: 15px; font-weight: 600;">Verify certification record</p>
+                <p class="note">The diver told us this level. Enter the agency and number from the certification record you verified.</p>
+                <span class="btn btn-s" style="margin-top: 6px;"><svg width="20" height="20" viewBox="0 0 20 20" class="hand" style="stroke-width: 1.7;"><path d="M3 7.5a2 2 0 0 1 2-2h1.6l1.2-1.8h4.4l1.2 1.8H15a2 2 0 0 1 2 2V15a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path><circle cx="10" cy="11" r="3"></circle></svg>Photograph the card</span>
+                <div class="field" style="margin-top: 8px;"><span class="label">Agency</span><span class="control" style="color: var(--muted);">Choose<svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg></span></div>
+                <div class="field"><span class="label">Level on the certification record</span><span class="control">Advanced Open Water<svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg></span></div>
+                <div class="field"><span class="label">Certification number</span><span class="control" style="color: var(--muted);">&nbsp;</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><span class="flabel">1 &middot; the record, the form open &middot; one door added</span><p class="note">The shipped <em>Verify certification record</em> form, with the photo capture that already exists moved to the top of it and given the camera&#8217;s name, because on a phone or an iPad that button opens the camera. The three fields are the ones that ship; the level is prefilled with Grace&#8217;s claim, as today, because the glance is the point.</p></div>
+    </div>
+
+    <!-- 2: the viewfinder -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone" style="background: #0c2a35;">
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 0 24px;">
+          <div style="position: relative; width: 330px; height: 220px; display: flex; align-items: center; justify-content: center;">
+            <svg width="330" height="220" viewBox="0 0 330 220" fill="none" style="position: absolute; inset: 0;"><path d="M2 30V2h28M300 2h28v28M328 190v28h-28M30 218H2v-28" stroke="#ffffff" stroke-width="3" stroke-linecap="round"></path></svg>
+            <div class="card">
+              <p style="font-size: 9px; letter-spacing: .18em; text-transform: uppercase; opacity: .7;">Certification agency</p>
+              <p style="font-size: 13px; font-weight: 700; letter-spacing: .06em; margin-top: 14px;">ADVANCED OPEN WATER DIVER</p>
+              <p style="font-size: 14px; margin-top: 22px;">GRACE MENSAH</p>
+              <div style="display: flex; justify-content: space-between; margin-top: 14px; font-size: 12px;"><span>No. 2203 8871 04</span><span>03/2024</span></div>
+              <div style="position: absolute; right: 16px; top: 14px; width: 42px; height: 42px; border-radius: 999px; border: 1.5px dashed rgba(31,59,69,.4);"></div>
+            </div>
+          </div>
+          <p style="font-size: 16px; color: #ffffff; font-weight: 500;">Hold the card inside the frame</p>
+        </div>
+        <div style="height: 120px; display: flex; align-items: center; justify-content: center; position: relative;"><span style="width: 72px; height: 72px; border-radius: 999px; border: 4px solid #ffffff; box-sizing: border-box; display: flex; align-items: center; justify-content: center;"><span style="width: 56px; height: 56px; border-radius: 999px; background: #ffffff;"></span></span><span style="position: absolute; left: 28px; color: #ffffff; font-size: 16px; font-weight: 500;">Cancel</span></div>
+      </div>
+      <div class="caption"><span class="flabel">2 &middot; the card in the frame &middot; the platform&#8217;s camera</span><p class="note">The device&#8217;s own camera sheet, opened by the capture input the form already has; DiveDay draws the frame and the one sentence and nothing else. The card here is invented and belongs to no agency: no logo is drawn, no real card is reproduced. What the reader is given is this photograph, and this photograph is what lands on the record as the evidence it always was.</p></div>
+    </div>
+
+    <!-- 3: filled -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="bar"><div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div><span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Grace Mensah</span></div>
+        <div style="padding: 18px 16px 0; display: flex; flex-direction: column; gap: 14px;">
+          <p class="eyebrow">Divers &middot; &larr; All divers</p>
+          <div class="panel" style="padding: 16px 18px;">
+            <p style="font-size: 20px; font-weight: 600; letter-spacing: -0.015em;">Certification records</p>
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rope); display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; gap: 12px; align-items: center;"><div style="width: 64px; height: 42px; border-radius: 8px; background: linear-gradient(160deg, #eef3f1 0%, #d9e6e3 100%); border: 1px solid var(--rope); flex-shrink: 0;"></div><p class="note" style="font-size: 13px;">Read from the photo just now. Check each against the card, then mark it.</p></div>
+              <div class="field"><span class="label" style="display: flex; justify-content: space-between; align-items: center;">Agency <span class="read">Read</span></span><span class="control">PADI<svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg></span></div>
+              <div class="field"><span class="label" style="display: flex; justify-content: space-between; align-items: center;">Level on the certification record <span class="read">Read</span></span><span class="control">Advanced Open Water<svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg></span></div>
+              <div class="field"><span class="label" style="display: flex; justify-content: space-between; align-items: center;">Certification number <span class="read">Read</span></span><span class="control num">2203 8871 04</span></div>
+              <div class="field"><span class="label" style="display: flex; justify-content: space-between; align-items: center;">Certified <span class="read">Read</span></span><span class="control num">March 2024</span></div>
+              <span class="btn btn-p" style="margin-top: 6px;">Mark certified</span>
+              <span class="link" style="text-align: center; font-size: 15px; padding: 6px 0;">Photograph it again</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><span class="flabel">3 &middot; 6:46 &middot; the four fields, filled and still fields</span><p class="note">Each field carries a <em>Read</em> mark that leaves the moment Dana edits it, so the form shows which values are the machine&#8217;s and which are hers. The one sentence says the source and asks for the check; the primary is the one that ships. The date field is the one addition to the form, because the card carries it and the record should. Nothing about the row&#8217;s state changed until the tap.</p></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 36px; display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 28px; align-items: start;">
+    <div class="panel" style="padding: 20px 24px; border-radius: 18px;">
+      <p class="tag">What the reading may fill, and what it never touches</p>
+      <div style="margin-top: 6px;">
+        <div class="row"><p><strong>Fills</strong></p><p>The four fields of the verification form: agency (matched to the app&#8217;s own agency list, or left empty), level (matched to the app&#8217;s own rungs, or left at the claim), the number, the certification date. Each marked <em>Read</em> until edited.</p></div>
+        <div class="row"><p><strong>Never</strong></p><p>The row&#8217;s status: <span class="mono">verified</span> is written by the tap alone, as ADR 20260824 requires, and the tap still refuses without a number. The diver&#8217;s name or date of birth, which the card may carry and the record already has. The nitrox table, whose evidence rules are its own (the hint that ships stays).</p></div>
+        <div class="row"><p><strong>Cannot read it</strong></p><p>Glare, a worn card, a language the reader does not know: the fields stay as they were, the sentence does not render, and the photo lands as evidence as today. No spinner longer than a beat; the photo uploads either way and the reading rides on it.</p></div>
+        <div class="row" style="border-bottom: 1px solid var(--rope);"><p><strong>Wrong</strong></p><p>A misread number becomes a number Dana typed over, the <em>Read</em> mark gone; the same check she makes today against the card in her hand. The reading is a fill, so a wrong fill costs a correction, never a wrong verification.</p></div>
+      </div>
+    </div>
+    <div class="panel" style="padding: 20px 24px; border-radius: 18px;">
+      <p class="tag">H-70 c &middot; where the photo goes</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+        <p class="body">No browser reads text on every phone the counter runs (Safari has no text detector), so the reading is a server call. The recommendation is Amazon Textract in the region the shop&#8217;s records already live in: the photo is already on DiveDay&#8217;s storage, the same AWS account, and Textract returns words and their boxes without keeping the image once the account&#8217;s AI-services opt-out policy is set, which is a manual step and goes in the registry of manual steps.</p>
+        <p class="body">A card carries a name and a number, so <span class="mono">/privacy</span> gains one disclosure sentence naming the reader and what it is given, as it does for the push service. Declined, the photo lands as evidence as today and the four fields stay typed; the camera door still moves to the top of the form.</p>
+      </div>
+    </div>
+    <div class="panel" style="padding: 20px 24px; border-radius: 18px;">
+      <p class="tag">Why this and not a scanner</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+        <p class="body">Agency cards carry no common barcode and several carry none; the eCard apps show a screen, not a code. What every card has is printed text and a person holding it. Reading the text and leaving the judgement to the person is the whole of the move.</p>
+        <p class="body">It is also H-68&#8217;s rule applied to a camera: fill what is known, show its source, leave the last tap to a person, render nothing otherwise, never reach a safety fact. Verification is the safety fact, and the tap keeps it.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

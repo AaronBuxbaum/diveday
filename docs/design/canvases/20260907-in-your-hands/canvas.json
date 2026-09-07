@@ -1,0 +1,105 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The second look"
+    },
+    {
+      "id": "page-2",
+      "name": "The surfaces"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "In your hands — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 3200,
+      "page": "page-1"
+    },
+    {
+      "file": "Door.dc.html",
+      "title": "Move 1 — the door knows your face",
+      "x": 0,
+      "y": 0,
+      "w": 1360,
+      "h": 2100,
+      "page": "page-2"
+    },
+    {
+      "file": "Card.dc.html",
+      "title": "Move 3 — point the camera at the card",
+      "x": 1480,
+      "y": 0,
+      "w": 1360,
+      "h": 2200,
+      "page": "page-2"
+    },
+    {
+      "file": "Counter.dc.html",
+      "title": "Move 2 — hand it over",
+      "x": 0,
+      "y": 2460,
+      "w": 1820,
+      "h": 1800,
+      "page": "page-2"
+    },
+    {
+      "file": "Device.dc.html",
+      "title": "Moves 4 and 5 — the type follows the phone, on the home screen",
+      "x": 1940,
+      "y": 2460,
+      "w": 1360,
+      "h": 1900,
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "read-order",
+      "x": 0,
+      "y": -170,
+      "w": 560,
+      "text": "Read the cover first: the five findings, the five moves, the four-part rule with what renders when it fails, and the owner's three calls (H-70). Page 2 holds the surfaces, one move each; moves 4 and 5 share a board.",
+      "page": "page-1"
+    },
+    {
+      "id": "sibling",
+      "x": 620,
+      "y": -170,
+      "w": 520,
+      "text": "This is the second look at the 2026-09-07 brief. The first, Nothing from nowhere, answered the half about animation and holds H-69. Nothing here repeats it; every move on this canvas is a feature, and the motion any of them takes is that canvas's physics.",
+      "page": "page-1"
+    },
+    {
+      "id": "fiction",
+      "x": 0,
+      "y": -170,
+      "w": 560,
+      "text": "Blue Mantis Divers, Thursday August 27, 2026: Keiko Tanaka's own iPhone at the door; Dana Reyes at the counter at 6:43 with Priya Sharma; Grace Mensah's card at 6:46. Every name is invented. Reef in Geist on every staff board; the waiver page in DiveDay's own tokens, as it ships.",
+      "page": "page-2"
+    },
+    {
+      "id": "marks",
+      "x": 1480,
+      "y": -110,
+      "w": 480,
+      "text": "The card in the viewfinder is invented and belongs to no agency: no logo, no real card. The phone's passkey sheet and camera sheet are the platform's own, drawn only to show where the glance happens.",
+      "page": "page-2"
+    },
+    {
+      "id": "owner-calls",
+      "x": 0,
+      "y": 2350,
+      "w": 520,
+      "text": "Sign here is H-70 b's whole existence: declined, the row keeps its two doors and the session lock is not built. The Read marks on the Card board are H-70 c's: declined, the camera door still moves to the top of the form and the fields stay typed.",
+      "page": "page-2"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

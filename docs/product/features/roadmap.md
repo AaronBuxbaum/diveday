@@ -437,6 +437,45 @@ spring half, 18c's roster half and 18f wait on it.
   brand, updates from `trips.revision`, the two pass-service routes. `waiting-on-external` on the
   Apple Developer and Google Wallet accounts H-69 b decides; nothing built ahead of them.
 
+### 19. In your hands (design complete; H-70 open)
+
+The second look at the 2026-09-07 brief, argued on
+[the canvas](../../design/canvases/20260907-in-your-hands/README.md) and proposed in ADR
+[20260907-in-your-hands](../../architecture/decisions/20260907-in-your-hands.md). Section 18 answered
+the half about animation; this one answers features, read against what Apple's features are — the
+device using a fact it already holds — and finds five gaps: the door asks for a password on a phone
+that knows its owner's face, a diver at the counter with no waiver is sent a link or handed paper,
+a certification card is photographed and then typed, the type ignores the phone's own text setting,
+and the app can be installed and never says so. The ADR states one rule (the device already knows
+it; what it supplied says where it came from; the last tap is a person's; the safety floor is
+untouched) and applies it in five moves, every one rendering the page as it ships when it is not
+true. Three calls are the owner's (H-70): passkeys and the step-up, the release signed on the shop's
+device, the card photo sent to a text reader. Each slice runs the `design-implementation` skill: the
+component names the ADR, a test pins the rule, the canvas README's slice table moves, and the visual
+diffs are explained. 19d and 19e do not depend on H-70 and may start on the ADR alone; 19a, 19b and
+19c wait on their call.
+
+- **19a** — the door knows your face: Better Auth's passkey plugin and its table (schema-change
+  skill), the passkey frame on `/sign-in` with the password as a link, the Passkeys panel in
+  Settings → Security (add this device, named per device, remove), the origin-binding test, the
+  security review. The step-up half waits on H-70 a.
+- **19b** — hand it over: *Sign here* as the primary on the counter's and the roster's blocked row
+  where the fix is the release, the session lock (`handed_over_at`) read by `requireShopSurface` and
+  pinned by a test that every `/shop` read refuses while it is set, the hand-over and who-sees-what
+  lines on the waiver page, the counter provenance on the signature row, the settled row's one line
+  on the counter. `dive-domain-expert` and security review. Waits on H-70 b.
+- **19c** — point the camera at the card: the capture at the top of `CardSightingForm` named for
+  the camera, the reader behind the existing upload (Amazon Textract, same region), the four fields
+  with *Read* marks and the added date field, the opt-out policy as a manual step in §17's registry,
+  the `/privacy` sentence, a test that the reading writes fields and never `status`. Waits on H-70 c;
+  the capture's move to the top of the form does not.
+- **19d** — the type follows the phone: the `-apple-system-body` probe in the pre-hydration script
+  that sets `lang` and `dir`, upward only from the app's 16px root, one visual capture of the
+  manifest at the largest root.
+- **19e** — on the home screen: one row under `DaySpine` on a phone or tablet in a browser tab for a
+  staffer whose role reaches the manifest, the platform's install prompt or its own menu item with the
+  share glyph, a device-kept dismissal, a test that it renders nothing when installed or on a desktop.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)

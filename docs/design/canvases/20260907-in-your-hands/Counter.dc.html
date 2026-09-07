@@ -1,0 +1,178 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); }
+    .body { font-size: 14px; line-height: 1.55; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .phone { width: 390px; height: 720px; background: var(--sand); border-radius: 28px; border: 1px solid var(--rope); box-shadow: var(--bed); overflow: hidden; position: relative; box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; }
+    .bar { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: rgba(251,247,239,.92); border-bottom: 1px solid var(--rope); box-sizing: border-box; flex-shrink: 0; }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .flabel { font-size: 11.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .caption { width: 390px; display: flex; flex-direction: column; gap: 6px; }
+    .qrow { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 0; border-top: 1px solid var(--rope); }
+    .name { font-size: 20px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+    .circle { width: 24px; height: 24px; border-radius: 999px; border: 2px solid currentColor; box-sizing: border-box; flex-shrink: 0; }
+    .btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; box-sizing: border-box; white-space: nowrap; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .link { color: var(--lagoon); font-weight: 500; }
+    .badge { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--danger-wash); color: var(--danger); }
+    .control { height: 48px; border-radius: 10px; border: 1px solid var(--rope-strong); background: var(--shell); padding: 0 14px; display: flex; align-items: center; font-size: 16px; box-sizing: border-box; }
+    .step { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--rope-strong); }
+    .row { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 18px; align-items: baseline; padding: 11px 0; border-top: 1px solid var(--rope); }
+    .row p { font-size: 14px; line-height: 1.5; }
+    .k { font-size: 12.5px; font-weight: 650; color: var(--muted); }
+    .dock { height: 74px; background: var(--shell); border-top: 1px solid var(--rope); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 6px 4px 14px; box-sizing: border-box; margin-top: auto; flex-shrink: 0; }
+    .dock div { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 500; color: var(--muted); }
+  </style>
+</helmet>
+<div style="width: 1820px; min-height: 1800px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 48px 52px;">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 980px;">
+    <p class="eyebrow">Move 2 &middot; hand it over &middot; the counter, 6:43 AM &middot; page 2</p>
+    <h1 style="font-size: 36px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.06;">The diver is at the desk. Turn the screen around.</h1>
+    <p class="lede" style="font-size: 16px;">Priya Sharma is standing at the counter with no signed release and a boat in seventeen minutes. Today the row offers to send her a link or to record a paper one. <em>Sign here</em> is the third door: Dana&#8217;s tap locks the desk behind Priya&#8217;s own waiver page, the one she would have opened from her link, on the shop&#8217;s device. When Priya is done the device asks for the desk back, and the counter reopens with her row settled.</p>
+  </div>
+
+  <div style="margin-top: 32px; display: flex; gap: 36px; align-items: flex-start;">
+
+    <!-- 1: the blocked row -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="bar"><div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div><span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Check-in</span></div>
+        <div style="padding: 18px 16px 0; display: flex; flex-direction: column; gap: 14px;">
+          <div><p class="glabel">7:00 AM &middot; Two-Tank Reef &middot; Mantis II</p><p class="num" style="font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; margin-top: 8px;">6 of 10 here</p><p class="note" style="margin-top: 4px;">2 to come &middot; 2 can&#8217;t board yet</p></div>
+          <div class="panel" style="padding: 4px 18px 14px;">
+            <div class="qrow" style="border-top: 0;"><div style="flex: 1; min-width: 0;"><p class="name">Hugo Marsh</p></div><span style="display: flex; align-items: center; gap: 8px; color: var(--lagoon); font-size: 16px; font-weight: 600;">Check in <span class="circle"></span></span></div>
+            <div class="qrow"><div style="flex: 1; min-width: 0;"><p class="name">Ben Okafor</p><p class="note" style="font-size: 13px;">First visit</p></div><span style="display: flex; align-items: center; gap: 8px; color: var(--lagoon); font-size: 16px; font-weight: 600;">Check in <span class="circle"></span></span></div>
+            <div class="qrow" style="flex-direction: column; align-items: stretch; gap: 10px; padding-bottom: 12px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;"><p class="name" style="color: var(--lagoon);">Priya Sharma</p><span class="badge">Blocked</span></div>
+              <p style="font-size: 15px;"><span style="font-weight: 650; color: var(--warning);">Waiver</span> &middot; Waiver has not been sent.</p>
+              <span class="btn btn-p">Sign here</span>
+              <div style="display: flex; gap: 18px; font-size: 15px;"><span class="link">Send waiver</span><span class="link">Mark signed on paper</span></div>
+            </div>
+            <div class="qrow" style="flex-direction: column; align-items: stretch; gap: 8px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;"><p class="name" style="color: var(--lagoon);">Grace Mensah</p><span class="badge">Blocked</span></div>
+              <p style="font-size: 15px;"><span style="font-weight: 650; color: var(--danger);">Certification</span> &middot; Advanced card is waiting for verification.</p>
+            </div>
+          </div>
+        </div>
+        <div class="dock"><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="11" cy="11" r="7.5"></circle><path d="M11 7v4l2.6 1.8"></path></svg>Today</div><div style="color: var(--lagoon); font-weight: 600;"><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><path d="M5 11.5l4 4 8-9"></path></svg>Check-in</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="8.5" cy="8" r="3"></circle><circle cx="15" cy="9" r="2.4"></circle><path d="M3 18c1-3.5 3-5 5.5-5s4.5 1.5 5.5 5M13.5 17c.6-2 1.8-3 3.5-3s2.6 1 3 3"></path></svg>Divers</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><rect x="3.5" y="4.5" width="15" height="14" rx="3"></rect><path d="M7 2.8v3.4M15 2.8v3.4M3.5 9.5h15"></path></svg>Board</div><div><svg width="22" height="22" viewBox="0 0 22 22" fill="#54676d"><circle cx="5" cy="11" r="1.8"></circle><circle cx="11" cy="11" r="1.8"></circle><circle cx="17" cy="11" r="1.8"></circle></svg>More</div></div>
+      </div>
+      <div class="caption"><span class="flabel">1 &middot; 6:43 &middot; the row, with a third door</span><p class="note">Priya is at the desk, so <em>Sign here</em> takes the row&#8217;s one primary; the send and the paper record demote to links beside it. The row is otherwise the shipped blocked row: the name is the door to her record, the badge is the state, the blocker names itself. Grace&#8217;s row is the Card board&#8217;s.</p></div>
+    </div>
+
+    <!-- 2: facing Priya -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone" style="background: #fbf7ef;">
+        <div style="padding: 22px 24px 0; display: flex; flex-direction: column; gap: 18px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; letter-spacing: -0.02em;"><svg aria-hidden="true" viewBox="0 0 64 64" width="20" height="20" fill="none"><circle cx="22" cy="44" r="12" stroke="#0c2a35" stroke-width="4"></circle><circle cx="40" cy="26" r="8" stroke="#0c2a35" stroke-width="4"></circle><circle cx="52" cy="12" r="4.5" fill="#ff6f61"></circle></svg>DiveDay</span><span class="note" style="font-size: 12.5px;">Handed to you by Dana &middot; 6:43</span></div>
+          <div style="text-align: center;"><p class="eyebrow" style="margin-bottom: 8px;">Blue Mantis Divers</p><h1 style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15;">Your waiver for Thursday&#8217;s Two-Tank Reef</h1></div>
+          <div style="display: flex; justify-content: center; gap: 14px;"><span class="step"><svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="color: var(--success); stroke-width: 2;"><path d="M2.5 6.5l2.5 2.5 4.5-5"></path></svg>Health</span><span class="step"><svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="color: var(--success); stroke-width: 2;"><path d="M2.5 6.5l2.5 2.5 4.5-5"></path></svg>Contact</span><span class="step" style="color: var(--ink); font-weight: 600;"><span class="dot" style="background: var(--lagoon);"></span>Sign</span></div>
+          <div class="panel" style="padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 14px;">
+            <p style="font-size: 15px; line-height: 1.5;">By typing your name you agree to the release above as written, for this trip.</p>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 14px; font-weight: 500;">Your full name</span><span class="control">Priya Sharma</span></div>
+            <label style="display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 1.45;"><span style="width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--rope-strong); background: var(--shell); flex-shrink: 0; margin-top: 1px;"></span>I have read the release and I agree to it.</label>
+            <span class="btn btn-p">Sign</span>
+          </div>
+          <p class="note" style="text-align: center; font-size: 13px;">Signing on the shop&#8217;s device at the counter. Your answers are kept on your own record; the desk sees that you signed, not what you answered.</p>
+        </div>
+      </div>
+      <div class="caption"><span class="flabel">2 &middot; 6:43 &middot; the device turned to face Priya</span><p class="note">The waiver page as it ships from her link: DiveDay&#8217;s tokens, never the shop&#8217;s brand, the three steps under the quiet rail, the typed name and the consent (H-03&#8217;s standard, unchanged). Two things are added: the hand-over line at the top, and the sentence at the bottom saying whose device this is and who sees what (budget rule 6&#8217;s grammar, drafted ahead of counsel). Nothing of the desk is reachable behind it.</p></div>
+    </div>
+
+    <!-- 3: the locked desk -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div style="padding: 120px 28px 0; display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center;">
+          <span style="width: 64px; height: 64px; border-radius: 999px; background: var(--lagoon-wash); color: var(--lagoon-deep); display: flex; align-items: center; justify-content: center;"><svg width="28" height="28" viewBox="0 0 28 28" class="hand" style="stroke-width: 1.8;"><rect x="6" y="12" width="16" height="11" rx="3"></rect><path d="M9.5 12V9a4.5 4.5 0 0 1 9 0v3"></path></svg></span>
+          <div style="display: flex; flex-direction: column; gap: 8px;"><h1 style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15;">Priya has signed.</h1><p style="font-size: 16px; color: var(--muted); line-height: 1.45;">The desk is locked until a staffer signs back in.</p></div>
+          <div style="width: 100%; display: flex; flex-direction: column; gap: 14px; margin-top: 10px;">
+            <span class="btn btn-p"><svg width="20" height="20" viewBox="0 0 20 20" class="hand" style="stroke-width: 1.8;"><circle cx="8" cy="7" r="3.2"></circle><path d="M2.8 16.5c.8-3 2.8-4.5 5.2-4.5 1.2 0 2.2.3 3 .9"></path><circle cx="14.5" cy="11.5" r="2.2"></circle><path d="M14.5 13.7v4l1.4-1.2M14.5 15.6l-1.3-1"></path></svg>Sign in with a passkey</span>
+            <span class="link" style="font-size: 15px; padding: 10px 0;">Use your password instead</span>
+          </div>
+        </div>
+        <p class="note" style="margin-top: auto; padding: 0 28px 28px; text-align: center; font-size: 13px;">Handed over by Dana Reyes at 6:43 &middot; signed 6:44</p>
+      </div>
+      <div class="caption"><span class="flabel">3 &middot; 6:44 &middot; the way back to the desk</span><p class="note">Move 1&#8217;s door, standing in for the counter. The lock is a fact on the <em>session</em>, set by the hand-over tap and cleared by a fresh sign-in, so a swipe back, a reload or a typed URL from Priya&#8217;s side all land here; it is the step-up&#8217;s session-bound grant run the other way. On the front desk iPad that holds Dana&#8217;s passkey this is one glance; without one, her password.</p></div>
+    </div>
+
+    <!-- 4: back at the counter -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="bar"><div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div><span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Check-in</span></div>
+        <div style="padding: 18px 16px 0; display: flex; flex-direction: column; gap: 14px;">
+          <div><p class="glabel">7:00 AM &middot; Two-Tank Reef &middot; Mantis II</p><p class="num" style="font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; margin-top: 8px;">6 of 10 here</p><p class="note" style="margin-top: 4px;">3 to come &middot; 1 can&#8217;t board yet</p></div>
+          <div class="panel" style="padding: 4px 18px 14px;">
+            <div class="qrow" style="border-top: 0;"><div style="flex: 1; min-width: 0;"><p class="name">Hugo Marsh</p></div><span style="display: flex; align-items: center; gap: 8px; color: var(--lagoon); font-size: 16px; font-weight: 600;">Check in <span class="circle"></span></span></div>
+            <div class="qrow"><div style="flex: 1; min-width: 0;"><p class="name">Ben Okafor</p><p class="note" style="font-size: 13px;">First visit</p></div><span style="display: flex; align-items: center; gap: 8px; color: var(--lagoon); font-size: 16px; font-weight: 600;">Check in <span class="circle"></span></span></div>
+            <div class="qrow" style="background: var(--lagoon-wash); margin: 0 -18px; padding: 8px 18px;"><div style="flex: 1; min-width: 0;"><p class="name">Priya Sharma</p><p class="note" style="font-size: 13px;">Signed at the counter &middot; 6:44</p></div><span style="display: flex; align-items: center; gap: 8px; color: var(--lagoon); font-size: 16px; font-weight: 600;">Check in <span class="circle"></span></span></div>
+            <div class="qrow" style="flex-direction: column; align-items: stretch; gap: 8px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;"><p class="name" style="color: var(--lagoon);">Grace Mensah</p><span class="badge">Blocked</span></div>
+              <p style="font-size: 15px;"><span style="font-weight: 650; color: var(--danger);">Certification</span> &middot; Advanced card is waiting for verification.</p>
+            </div>
+          </div>
+        </div>
+        <div class="dock"><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="11" cy="11" r="7.5"></circle><path d="M11 7v4l2.6 1.8"></path></svg>Today</div><div style="color: var(--lagoon); font-weight: 600;"><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><path d="M5 11.5l4 4 8-9"></path></svg>Check-in</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="8.5" cy="8" r="3"></circle><circle cx="15" cy="9" r="2.4"></circle><path d="M3 18c1-3.5 3-5 5.5-5s4.5 1.5 5.5 5M13.5 17c.6-2 1.8-3 3.5-3s2.6 1 3 3"></path></svg>Divers</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><rect x="3.5" y="4.5" width="15" height="14" rx="3"></rect><path d="M7 2.8v3.4M15 2.8v3.4M3.5 9.5h15"></path></svg>Board</div><div><svg width="22" height="22" viewBox="0 0 22 22" fill="#54676d"><circle cx="5" cy="11" r="1.8"></circle><circle cx="11" cy="11" r="1.8"></circle><circle cx="17" cy="11" r="1.8"></circle></svg>More</div></div>
+        </div>
+      <div class="caption"><span class="flabel">4 &middot; 6:44 &middot; the counter, back</span><p class="note">Priya&#8217;s row is a ready row now, with <em>Check in</em> and the empty circle, and the instrument reads 3 to come. The one line under her name says where the signature came from, for this morning only; it is the same provenance the record keeps. The wash on her row is the arrival the last canvas drew for a row that changed place, and leaves on the base rung.</p></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 36px; display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 28px; align-items: start;">
+    <div class="panel" style="padding: 20px 24px; border-radius: 18px;">
+      <p class="tag">What the signature records, and what the desk sees</p>
+      <div style="margin-top: 6px;">
+        <div class="row"><p><strong>As today</strong></p><p>The typed name, the consent, the timestamp, the template version and its integrity hash; the health answers and the emergency contact on the diver&#8217;s own record.</p></div>
+        <div class="row"><p><strong>Added</strong></p><p>Where: at the counter, on the shop&#8217;s device. Who handed it over and when: Dana Reyes, 6:43. A fact on the signature row, printed wherever the signature is shown to staff, never edited.</p></div>
+        <div class="row"><p><strong>The desk sees</strong></p><p>That Priya signed, and when. Not her answers: the hand-over page is her page, the answers post to her record, and the staff surface that reopens shows the readiness word it always did.</p></div>
+        <div class="row" style="border-bottom: 1px solid var(--rope);"><p><strong>Priya sees</strong></p><p>Her own three steps, the hand-over line, and the sentence saying whose device it is and who sees what. Never the queue, never another diver&#8217;s name: the desk is locked before her page opens, not after.</p></div>
+      </div>
+    </div>
+    <div class="panel" style="padding: 20px 24px; border-radius: 18px;">
+      <p class="tag">Where it is offered, and where it never is</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+        <p class="body"><strong>Offered</strong> on the counter&#8217;s blocked row and the departure&#8217;s roster row when the fix is the release: the two surfaces a diver stands in front of.</p>
+        <p class="body"><strong>Never</strong> on the manifest or the roll call, which have no waiver act and gain none; never for a minor&#8217;s release, which keeps the guardian flow it has; never while the desk holds an unsaved form, which keeps its draft and refuses the hand-over until saved.</p>
+        <p class="body"><strong>Never sends.</strong> The link Priya would have received is not sent; the token is minted for this booking, opened on this device and consumed. If she stops halfway, her draft is kept as any waiver draft is, and the desk unlocks with the row still blocked.</p>
+      </div>
+    </div>
+    <div class="panel" style="padding: 20px 24px; border-radius: 18px;">
+      <p class="tag">H-70 b, and what renders if declined</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+        <p class="body">The words on the release are H-01&#8217;s; whether a typed name is enough is H-03&#8217;s. This board changes neither. It asks a narrower thing: may the typed name be typed on the <em>shop&#8217;s</em> device, with that fact recorded on the signature. Recommended yes: it is the paper flow with the signature kept, and the paper flow already ships.</p>
+        <p class="body">Declined, <em>Sign here</em> renders nothing, the row keeps its two doors, and the session lock is not built. The shop keeps the paper.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
