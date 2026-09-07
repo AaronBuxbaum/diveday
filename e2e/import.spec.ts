@@ -403,21 +403,20 @@ test.describe("import ↔ switching guides", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings/import");
-    // **`exact`, on all three.** An accessible name matches as a
-    // case-insensitive *substring* by default, so "EVE" also matched the
-    // settings rail's "Seasons and events" the day that row landed (issue
-    // #1485) — a strict-mode violation naming two links, in a spec that has
-    // nothing to do with either. The incumbent's name is the whole name of the
-    // link this test means; nothing here wants a substring.
+    // `exact` because "EVE" is three letters and Playwright's `name` is a
+    // case-insensitive *substring*, so it also matched "Seasons and events" in
+    // the settings nav beside this page the moment that link existed. A
+    // vendor's name is the whole accessible name of its link, or it is a
+    // different link.
     await expect(page.getByRole("link", { name: "EVE", exact: true })).toHaveAttribute(
       "href",
       "/switching/eve",
     );
-    await expect(page.getByRole("link", { name: "DiveShop360", exact: true })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: "DiveShop360" })).toHaveAttribute(
       "href",
       "/switching/diveshop360",
     );
-    await expect(page.getByRole("link", { name: "a spreadsheet", exact: true })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: "a spreadsheet" })).toHaveAttribute(
       "href",
       "/switching/spreadsheet",
     );
