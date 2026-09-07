@@ -145,7 +145,7 @@ async function visitSurface(
     if (message.type() !== "error") return;
     if (/Failed to load resource|net::ERR_/.test(message.text())) return;
     if (HARNESS_NOISE.test(message.text())) return;
-    if (!String(message.location()?.url ?? "").startsWith(PERSONA_BASE_URL)) return;
+    if (originOf(message.location()?.url) !== OWN_ORIGIN) return;
     consoleErrors.push(message.text());
   });
 
@@ -198,6 +198,28 @@ async function visitSurface(
     record("console-error", `${consoleErrors.length}: ${short(consoleErrors[0])}`, "serious");
   }
   await page.close().catch(() => undefined);
+}
+
+/** The origin the walk's own server answers on, parsed once. */
+const OWN_ORIGIN = new URL(PERSONA_BASE_URL).origin;
+
+/**
+ * The origin of a URL, or `null` when it does not parse.
+ *
+ * Parsed and compared whole rather than tested with `startsWith`/`includes`:
+ * a substring test on a URL matches the host anywhere in the string, so
+ * `https://evil.example/?http://127.0.0.1:25438` would read as ours. Nothing
+ * here is security-relevant — the question is only whose script logged an
+ * error — but this repository has had three CodeQL alerts from exactly that
+ * habit in one file, and the habit is the thing worth not keeping.
+ */
+function originOf(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
 }
 
 /** A tab, a context or the browser itself going away underneath the walk. */
