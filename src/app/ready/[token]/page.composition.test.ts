@@ -295,3 +295,23 @@ describe("the boat's line on the thread", () => {
     expect(countOf("<ThreadStatus")).toBe(1);
   });
 });
+
+/**
+ * **Every "action" blocker on the sign step has something to tap** — ADR
+ * 20260907-guardian-co-signature.
+ *
+ * `BLOCKER_CATEGORY` (src/lib/readiness-summary.ts) files a code as `"action"`
+ * to say the reader can fix it *here*; the sign step then renders a button
+ * only for codes it names. `guardian_signature_missing` was filed as "action"
+ * and left out of that list, so a parent read "grab a fresh link and sign it
+ * together" above no control at all — and the link they hold is their only way
+ * in. Found by a security review of #1455; pinned here because nothing else
+ * ties the two lists together.
+ */
+describe("the sign step's actions", () => {
+  it("offers a control for every waiver blocker it calls the reader's to fix", () => {
+    for (const code of ["waiver_pending", "waiver_expired", "guardian_signature_missing"]) {
+      expect(SOURCE).toContain(`step.item?.code !== "${code}"`);
+    }
+  });
+});
