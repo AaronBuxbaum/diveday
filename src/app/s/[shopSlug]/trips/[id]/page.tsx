@@ -146,7 +146,7 @@ export default async function TripDetailPage({
     pay?: string;
     embed?: string;
     /** A diver's own handoff (ADR 20260906-before-you-ask, decision 3). */
-    from?: string;
+    handoff?: string | string[];
   }>;
 }) {
   await connection();
@@ -161,8 +161,11 @@ export default async function TripDetailPage({
     error,
     pay,
     embed,
-    from: handoffToken,
+    handoff: handoffParam,
   } = await searchParams;
+  // One string or nothing: a repeated `?handoff=` arrives as an array, and an
+  // array must read as no handoff rather than reach the hasher.
+  const handoffToken = typeof handoffParam === "string" ? handoffParam : null;
   // Embed mode is the compact surface a shop frames on its own website
   // (docs ADR 20260726-schedule-embed) — no "All trips" chrome pointing back
   // to a schedule the embedding page may never have shown at all.

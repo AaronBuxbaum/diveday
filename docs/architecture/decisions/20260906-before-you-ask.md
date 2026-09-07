@@ -157,10 +157,14 @@ filter admits.
 - **A drafts table** keyed by person, form and target, pruned at twenty-four hours through the
   retention path (`src/lib/retention.ts` gains a row), holding form fields only and never a
   payment or medical answer, which the schema check enforces by column allowlist.
-- **The handoff** from a diver's capability URL to the booking page is a signed, single-use,
-  ten-minute token minted by the thread and recap pages and consumed by the booking page; the
-  booking page reads facts only through it. Security-sensitive: it gets the `security-reviewer`
-  pass, and `page.composition.test.ts` pins that a cold request renders the shipped form.
+- **The handoff** from a diver's capability URL to the booking page is a revocable, ten-minute
+  `booking_capabilities` row (purpose `handoff`) minted by the **thread page only** and consumed by
+  the booking it carries; the booking page reads facts only through it. The recap page never
+  mints one: its link is signed for 180 days, cannot be revoked, and is written to be forwarded,
+  so a handoff off it would hand the diver's contact details to whoever the recap reached
+  (security review, 2026-09-06, which also moved the cold-email offer off the request path and
+  behind the per-IP bucket, and put the token's query key on the telemetry redaction list).
+  `page.composition.test.ts` pins that a cold request renders the shipped form.
 - **The pattern read** is a query over the shop's own live departures (`liveTrip()`) and is
   never cached; the crew half waits on H-68 c and ships with the crew-availability sentence only
   when the assignment reader can answer it.

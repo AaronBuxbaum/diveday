@@ -56,8 +56,18 @@ export async function buildAfterStateProps(input: {
   /** `?review=`, `?photo=`, `?tip=`, `?pulse=`, straight off the URL and never trusted. */
   params: { review?: string; photo?: string; tip?: string; pulse?: string };
   actions: AfterStateProps["actions"];
+  /**
+   * Whether the next-dive link may carry a booking handoff (ADR
+   * 20260906-before-you-ask, decision 3). True only from `/ready/<token>`,
+   * whose capability is revocable and already discloses prep state. **Never
+   * from `/recap/<token>`**: that link is signed for 180 days, cannot be
+   * revoked, and is written to be forwarded — a handoff minted off it would
+   * hand a diver's contact details to whoever the recap reached
+   * (security review, 2026-09-06).
+   */
+  mintHandoff: boolean;
 }): Promise<AfterStateProps> {
-  const { db, data, bookingId, locale, t, params, actions } = input;
+  const { db, data, bookingId, locale, t, params, actions, mintHandoff } = input;
   const { shop, trip } = data;
   const [ownReview, nextDeparture, ownPulse, nextDive] = await Promise.all([
     getReviewForBooking(db, bookingId),
@@ -138,7 +148,10 @@ export async function buildAfterStateProps(input: {
     // The door remembers who opened it (ADR 20260906-before-you-ask, decision
     // 3): the next dive's link carries a ten-minute handoff minted from this
     // booking, so the page it opens arrives with this diver's facts folded.
-    nextDiveHref: nextDive ? await nextDiveHandoffHref(db, shop, bookingId, nextDive.tripId) : null,
+    nextDiveHref:
+      nextDive && mintHandoff
+        ? await nextDiveHandoffHref(db, shop, bookingId, nextDive.tripId)
+        : null,
     actions,
   };
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { consumeBookingHandoff, offerBookingHandoffByEmail } from "@/db/booking-handoff";
@@ -407,9 +408,12 @@ export async function bookSpot(
   // The door remembers who opened it (ADR 20260906-before-you-ask, decision
   // 3): the handoff this page was opened through is single-use, and the
   // booking is its one use. A stale or forged value is a no-op.
-  const handoff = formData.get("handoff");
-  if (typeof handoff === "string" && handoff) {
-    await consumeBookingHandoff(dbi, { shopId: shopNow.id, token: handoff });
+  const handoff = z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{20,128}$/)
+    .safeParse(formData.get("handoff"));
+  if (handoff.success) {
+    await consumeBookingHandoff(dbi, { shopId: shopNow.id, token: handoff.data });
   }
   // This form is the diver's own — the public schedule page, submitted from
   // their device — so its `Accept-Language` is first-hand evidence of the
@@ -746,18 +750,35 @@ export async function offerHandoff({ shopSlug, tripId }: TripRef, email: string)
     .object({ email: diverEmailSchema, tripId: z.uuid() })
     .safeParse({ email, tripId });
   if (!parsed.success) return;
-  const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
-  if (!shop) return;
-  try {
-    await offerBookingHandoffByEmail(db, {
-      shopId: shop.id,
-      tripId: parsed.data.tripId,
-      email: parsed.data.email,
-      origin: publicAppUrl(),
-      requestLocale: await requestLocale(shop.defaultLocale),
-    });
-  } catch {
-    // A link that fails to send is the cold form the diver already has.
-  }
+  // The same per-IP bucket every capability action sits behind: this one is
+  // reachable by anyone, and without it is a way to make a shop mail a
+  // person on demand.
+  const ip = await clientIp();
+  const limit = await checkRateLimit(
+    rateLimitKey("booking-handoff-offer", ip),
+    RATE_LIMITS.capabilityAction,
+  );
+  if (!limit.allowed) return;
+  const origin = publicAppUrl();
+  const locale = await requestLocale();
+  // **Off the request path.** The lookup and the send run after the response
+  // has gone, so the action returns in the same time and shape whether the
+  // address is on file or not — a slower answer for a known address would be
+  // the oracle the page itself is built not to be.
+  after(async () => {
+    try {
+      const db = await getDb();
+      const shop = await getShopBySlug(db, shopSlug);
+      if (!shop) return;
+      await offerBookingHandoffByEmail(db, {
+        shopId: shop.id,
+        tripId: parsed.data.tripId,
+        email: parsed.data.email,
+        origin,
+        requestLocale: locale,
+      });
+    } catch {
+      // A link that fails to send is the cold form the diver already has.
+    }
+  });
 }

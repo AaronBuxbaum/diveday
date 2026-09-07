@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { WaiverRecord } from "@/db/schema";
+import { redactCapabilityUrl } from "@/lib/capability-urls";
 import {
   foldKnownDiverFacts,
   HANDOFF_TTL_MS,
@@ -172,7 +173,13 @@ describe("handoff", () => {
   it("lives ten minutes and rides the booking page's own path", () => {
     expect(HANDOFF_TTL_MS).toBe(10 * 60 * 1000);
     expect(handoffHref("/s/blue-mantis/trips/abc", "t/k+n")).toBe(
-      "/s/blue-mantis/trips/abc?from=t%2Fk%2Bn",
+      "/s/blue-mantis/trips/abc?handoff=t%2Fk%2Bn",
     );
+  });
+
+  it("never reaches telemetry raw: the query key is on the redaction list", () => {
+    const href = handoffHref("/s/blue-mantis/trips/abc", "secret-token");
+    expect(redactCapabilityUrl(href)).toBe("/s/blue-mantis/trips/abc?handoff=%5Btoken%5D");
+    expect(redactCapabilityUrl(href)).not.toContain("secret-token");
   });
 });

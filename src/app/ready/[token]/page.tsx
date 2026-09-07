@@ -1711,6 +1711,7 @@ export default async function DiverReadinessPage({
       bookingId,
       locale,
       t,
+      mintHandoff: true,
       // This route carries none of the three: each action redirects to
       // `/recap/<token>`, which is where its notice is read.
       params: {},

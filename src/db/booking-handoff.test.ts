@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HANDOFF_TTL_MS } from "@/lib/booking-handoff";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import {
   consumeBookingHandoff,
@@ -22,20 +23,24 @@ import { upcomingTripsWithCounts } from "./trips";
  */
 
 const APP_ORIGIN = "https://diveday.test";
-const NOW = new Date("2026-08-01T14:00:00Z");
+// The frozen test clock, so the delivery row the mock stamps with it and the
+// cooldown window measured from it agree.
+const NOW = nowDate();
 
 const sent = vi.fn();
 vi.mock("./notifications", () => ({
   sendAndRecordNotification: async (db: AppDb, notification: Record<string, unknown>) => {
     sent(notification);
     // The real one records a delivery row, which is what the cooldown reads.
+    // Hoisted factory: imports live here, not at the top of the file.
     const { notificationDeliveries } = await import("./schema");
+    const { nowDate: clock } = await import("@/lib/clock");
     await db.insert(notificationDeliveries).values({
       shopId: notification.shopId as string,
       bookingId: notification.bookingId as string,
       kind: "booking_handoff",
       status: "sent",
-      attemptedAt: new Date(),
+      attemptedAt: clock(),
     });
     return { status: "sent", providerMessageId: "test" };
   },
@@ -120,7 +125,7 @@ describe("booking handoff", () => {
     expect(notification.to).toBe("yara@example.com");
     expect(notification.bookingId).toBe(bookingId);
     expect(String(notification.bookingUrl)).toMatch(
-      new RegExp(`^${APP_ORIGIN}/s/${shop.slug}/trips/${nextTrip.id}\\?from=`),
+      new RegExp(`^${APP_ORIGIN}/s/${shop.slug}/trips/${nextTrip.id}\\?handoff=`),
     );
 
     expect(await offerBookingHandoffByEmail(db, input)).toBe("skipped");

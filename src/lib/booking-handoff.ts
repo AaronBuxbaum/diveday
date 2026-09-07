@@ -19,8 +19,13 @@ import { isCompletedWaiverCurrent } from "@/lib/waivers";
  * the name is enough to say "we have one" and the thread is where it changes.
  */
 export const HANDOFF_TTL_MS = 10 * MINUTE_MS;
-/** The query key the booking page reads the handoff off. */
-export const HANDOFF_QUERY_PARAM = "from";
+/**
+ * The query key the booking page reads the handoff off. Its own word, not
+ * `from`: that one is the marketing attribution tag on the same routes, and
+ * this one is a bearer credential — it sits on the telemetry redaction list
+ * (`src/lib/capability-urls.ts`), which `from` could not.
+ */
+export const HANDOFF_QUERY_PARAM = "handoff";
 /** One cold-email link per diver per hour (H-68 b), keyed on the delivery row. */
 export const HANDOFF_OFFER_COOLDOWN_MS = 60 * MINUTE_MS;
 
@@ -34,13 +39,15 @@ export type KnownDiverFact =
 /**
  * Field names that never fold into a fact, whatever a reader hands in. Held
  * by `booking-handoff.test.ts`: the fold's output is walked and any of these
- * keys, at any depth, fails it.
+ * keys, at any depth, fails it. The lead's own `phone` is deliberately not
+ * here — it is prefilled into the form's phone field, which is the door to
+ * change it — but the emergency contact's is: the panel names the contact
+ * and never the number.
  */
 export const NEVER_HANDED_OFF = [
   "answers",
   "medical",
   "dateOfBirth",
-  "phone",
   "emergencyContactPhone",
   "identifier",
   "declaredIdentifier",

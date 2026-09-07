@@ -195,19 +195,31 @@ export async function offerBookingHandoffByEmail(
     .orderBy(desc(trips.startsAt))
     .limit(1);
   if (!match?.personEmail) return "skipped";
+  // A public departure only: the mail names the trip, and a private one is
+  // not the shop's to announce to whoever typed an address.
   const [trip] = await db
     .select({ title: trips.title })
     .from(trips)
-    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+    .where(
+      and(
+        eq(trips.id, input.tripId),
+        eq(trips.shopId, input.shopId),
+        eq(trips.isPrivate, false),
+        liveTrip(),
+      ),
+    )
     .limit(1);
   if (!trip) return "skipped";
+  // One an hour per *person*, over every booking of theirs — keyed on the
+  // newest booking alone, a fresh public booking in their name would reset it.
   const [recent] = await db
     .select({ id: notificationDeliveries.id })
     .from(notificationDeliveries)
+    .innerJoin(bookings, eq(bookings.id, notificationDeliveries.bookingId))
     .where(
       and(
         eq(notificationDeliveries.shopId, input.shopId),
-        eq(notificationDeliveries.bookingId, match.bookingId),
+        eq(bookings.personId, match.personId),
         eq(notificationDeliveries.kind, "booking_handoff"),
         gt(notificationDeliveries.attemptedAt, new Date(now.getTime() - HANDOFF_OFFER_COOLDOWN_MS)),
       ),
