@@ -122,7 +122,17 @@ the registrar refuses stays an ordinary chained-base chain until a human reads t
 is the intended failure, but it is quiet, so the reason is printed in the job log and the run
 summary rather than only in an exit code.
 
-Commits us to: one extra ~20-second job per pull request event, on a repository whose ordinary gate
+Measured on the first five runs, and worth stating because the obvious design is wrong: the
+workflow's concurrency lane is one **pull request**, not the repository. A repository-wide lane
+looks like the way to serialise two layers of one chain opening together, and instead GitHub keeps
+the in-progress run and the newest queued one and *cancels every other queued run in the group* —
+the same trap `.github/workflows/ci.yml` records costing five main commits their visual baseline on
+2026-09-01. Three of those five runs were cancelled before they registered anything, which is a
+silent registration failure: precisely what this decision exists to remove. Losing a run is strictly
+worse than racing, so the race is handled in the script instead — the loser re-reads, finds the
+chain registered, and reports it.
+
+Commits us to: one extra ~5-second job per pull request event, on a repository whose ordinary gate
 is eighty-odd jobs; and to `scripts/stack-register.mjs` tracking the stacks preview API, which is
 still a preview and may change under us. If it does, the failure is a red job on a workflow nothing
 else depends on, and the fallback is the chained-base shape we already produce.

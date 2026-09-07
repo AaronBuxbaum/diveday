@@ -1,6 +1,6 @@
 import { expect, it, describe as suite } from "vitest";
 
-import { chainThrough, describe, MAX_LAYERS, planRegistration } from "./stack-register.mjs";
+import { chainThrough, describe, MAX_LAYERS, planRegistration, run } from "./stack-register.mjs";
 
 /**
  * The registrar acts unattended on every pull request event, so both halves of
@@ -50,6 +50,14 @@ suite("chainThrough", () => {
   it("refuses a fork, where two layers share one base", () => {
     const forked = [...chain3, pr(4, "l4", "l2")];
     expect(chainThrough(forked, forked[0], "main").error).toMatch(/forks and is not a stack/);
+  });
+
+  it("refuses a fork below where the walk started, which neither walk can see", () => {
+    // #3's own chain down to main is [1, 2, 3] and reads perfectly linear; the
+    // branch point is at l2, below it. Registering it would leave #4 looking
+    // like an ordinary extension of a stack whose top is not #4's base.
+    const forked = [...chain3, pr(4, "l4", "l2")];
+    expect(chainThrough(forked, forked[2], "main").error).toMatch(/forks and is not a stack/);
   });
 
   it("refuses a cycle rather than looping", () => {
@@ -138,6 +146,80 @@ suite("describe", () => {
   it("says why it left a chain alone", () => {
     expect(describe({ op: "refuse", why: "the chain forks" }, chain3)).toBe(
       "Left alone: the chain forks.",
+    );
+  });
+});
+
+suite("run", () => {
+  const env = {
+    GITHUB_REPOSITORY: "owner/repo",
+    GITHUB_TOKEN: "t",
+    STACK_PULL_REQUEST: "3",
+    STACK_DEFAULT_BRANCH: "main",
+  };
+
+  /**
+   * A stand-in for the API. `stacks` is read fresh on every call, so a test can
+   * mutate it between calls the way a concurrent run would.
+   */
+  const fake = ({ pulls = chain3, stacks = [], refuse = () => false } = {}) => {
+    const calls = [];
+    const call = async (pathname, init = {}) => {
+      calls.push({ pathname, method: init.method ?? "GET", body: init.body });
+      if (pathname.includes("/pulls?")) return pathname.includes("page=1") ? pulls : [];
+      if (init.method === "POST" && refuse(calls)) throw new Error("422 Unprocessable Entity");
+      if (init.method === "POST") return {};
+      return stacks;
+    };
+    return { call, calls };
+  };
+
+  it("registers a chain, bottom to top", async () => {
+    const { call, calls } = fake();
+    expect(await run(env, call)).toBe("Registered #1 -> #2 -> #3 as a new stack.");
+    const post = calls.find((c) => c.method === "POST");
+    expect(post.pathname).toBe("/repos/owner/repo/stacks");
+    expect(post.body).toEqual({ pull_requests: [1, 2, 3] });
+  });
+
+  it("writes nothing for a chain of one", async () => {
+    const { call, calls } = fake({ pulls: [pr(3, "l3", "main")] });
+    expect(await run(env, call)).toMatch(/chain of one/);
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
+  it("writes nothing when the chain is not linear", async () => {
+    const forked = [...chain3, pr(4, "l4", "l2")];
+    const { call, calls } = fake({ pulls: forked });
+    expect(await run(env, call)).toMatch(/forks and is not a stack/);
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
+  it("reports success when a concurrent run registered the chain first", async () => {
+    const stacks = [];
+    const calls = [];
+    const call = async (pathname, init = {}) => {
+      calls.push({ pathname, method: init.method ?? "GET" });
+      if (pathname.includes("/pulls?")) return pathname.includes("page=1") ? chain3 : [];
+      if (init.method === "POST") {
+        // the other run won between our read and our write
+        stacks.push({ number: 7, pull_requests: [{ number: 1 }, { number: 2 }, { number: 3 }] });
+        throw new Error("422 Unprocessable Entity");
+      }
+      return stacks;
+    };
+    expect(await run(env, call)).toMatch(/already stack #7.*concurrent run got there first/s);
+  });
+
+  it("rethrows when the refusal was not a lost race", async () => {
+    const { call } = fake({ refuse: () => true });
+    await expect(run(env, call)).rejects.toThrow(/422/);
+  });
+
+  it("refuses to run without its environment", async () => {
+    const { call } = fake();
+    await expect(run({ GITHUB_REPOSITORY: "owner/repo" }, call)).rejects.toThrow(
+      /GITHUB_REPOSITORY, GITHUB_TOKEN and STACK_PULL_REQUEST/,
     );
   });
 });

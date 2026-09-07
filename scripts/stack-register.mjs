@@ -115,16 +115,17 @@ export function chainThrough(pulls, start, defaultBranch) {
     cursor = next;
   }
 
+  const childrenOf = new Map();
+  for (const pull of pulls) {
+    childrenOf.set(pull.base.ref, [...(childrenOf.get(pull.base.ref) ?? []), pull]);
+  }
+
   const above = [];
   cursor = start;
   for (;;) {
-    const next = pulls.filter((pull) => pull.base.ref === cursor.head.ref);
+    const next = childrenOf.get(cursor.head.ref) ?? [];
     if (next.length === 0) break;
-    if (next.length > 1) {
-      return {
-        error: `\`${cursor.head.ref}\` is the base of ${next.length} open pull requests (${next.map((pull) => `#${pull.number}`).join(", ")}), so the chain forks and is not a stack`,
-      };
-    }
+    if (next.length > 1) break; // reported by the fork pass below, which sees the whole chain
     if (seen.has(next[0].number)) {
       return { error: `the base refs above #${start.number} form a cycle` };
     }
@@ -133,7 +134,25 @@ export function chainThrough(pulls, start, defaultBranch) {
     cursor = next[0];
   }
 
-  return { chain: [...below, start, ...above] };
+  const chain = [...below, start, ...above];
+
+  // A fork anywhere in the chain, not merely above where the walk started. A
+  // branch point *below* `start` is invisible to both walks — the down-walk
+  // follows one base ref and never asks who else shares it — and it is the
+  // dangerous half: each sibling's own chain reads as linear, so the first
+  // sibling registers, and the second then looks like an ordinary extension of
+  // a stack whose top is not its base at all. Caught by a test rather than by
+  // reasoning; the walks alone answered "linear" for a chain that was not.
+  for (const pull of chain) {
+    const children = childrenOf.get(pull.head.ref) ?? [];
+    if (children.length > 1) {
+      return {
+        error: `\`${pull.head.ref}\` is the base of ${children.length} open pull requests (${children.map((child) => `#${child.number}`).join(", ")}), so the chain forks and is not a stack`,
+      };
+    }
+  }
+
+  return { chain };
 }
 
 /**
@@ -236,10 +255,10 @@ async function request(pathname, { token, method = "GET", body } = {}) {
 }
 
 /** Every open pull request, following `Link` pagination the simple way. */
-async function openPulls(repo, token) {
+async function openPulls(repo, token, call = request) {
   const pulls = [];
   for (let page = 1; page <= 10; page += 1) {
-    const batch = await request(`/repos/${repo}/pulls?state=open&per_page=100&page=${page}`, {
+    const batch = await call(`/repos/${repo}/pulls?state=open&per_page=100&page=${page}`, {
       token,
     });
     pulls.push(...batch);
@@ -248,7 +267,43 @@ async function openPulls(repo, token) {
   return pulls;
 }
 
-export async function main(env = process.env) {
+/** The one write a plan implies, or nothing. */
+async function perform(plan, repo, token, call) {
+  if (plan.op === "create") {
+    await call(`/repos/${repo}/stacks`, {
+      token,
+      method: "POST",
+      body: { pull_requests: plan.numbers },
+    });
+  } else if (plan.op === "add") {
+    await call(`/repos/${repo}/stacks/${plan.stack}/add`, {
+      token,
+      method: "POST",
+      body: { pull_requests: plan.numbers },
+    });
+  }
+}
+
+/**
+ * `call` is injected so the test can drive the retry below without a network.
+ *
+ * **Two runs of this can be in flight at once, and that is deliberate.** The
+ * workflow's concurrency lane is one *pull request*, not the repository: a
+ * repository-wide lane looked like the way to serialise two layers of one chain
+ * opening together, and it is not — GitHub keeps the in-progress run and the
+ * newest queued one and **cancels every other queued run in the group**, which
+ * is the trap `.github/workflows/ci.yml` records costing five main commits their
+ * visual baseline on 2026-09-01. Observed here too, first time out: three of the
+ * five runs of this workflow were cancelled before they registered anything. A
+ * cancelled registration is a silent one, which is the exact failure this whole
+ * change exists to remove — so losing a run is strictly worse than racing.
+ *
+ * Racing is therefore handled rather than prevented. Both runs read "no stack
+ * yet" and both POST; one wins and the loser's request is refused. On a refusal
+ * this re-reads the stacks and re-plans once, and the ordinary outcome is that
+ * the chain is now registered, which is success and says so.
+ */
+export async function run(env, call = request) {
   const repo = env.GITHUB_REPOSITORY;
   const token = env.GITHUB_TOKEN;
   const number = Number(env.STACK_PULL_REQUEST);
@@ -258,7 +313,7 @@ export async function main(env = process.env) {
     );
   }
 
-  const pulls = await openPulls(repo, token);
+  const pulls = await openPulls(repo, token, call);
   const start = pulls.find((pull) => pull.number === number);
   if (!start) return `#${number} is not an open pull request in ${repo}; nothing to register.`;
 
@@ -266,21 +321,16 @@ export async function main(env = process.env) {
   const { chain, error } = chainThrough(pulls, start, defaultBranch);
   if (error) return `Left alone: ${error}.`;
 
-  const stacks = await request(`/repos/${repo}/stacks`, { token });
-  const plan = planRegistration(chain, stacks);
-
-  if (plan.op === "create") {
-    await request(`/repos/${repo}/stacks`, {
-      token,
-      method: "POST",
-      body: { pull_requests: plan.numbers },
-    });
-  } else if (plan.op === "add") {
-    await request(`/repos/${repo}/stacks/${plan.stack}/add`, {
-      token,
-      method: "POST",
-      body: { pull_requests: plan.numbers },
-    });
+  const plan = planRegistration(chain, await call(`/repos/${repo}/stacks`, { token }));
+  try {
+    await perform(plan, repo, token, call);
+  } catch (failure) {
+    const second = planRegistration(chain, await call(`/repos/${repo}/stacks`, { token }));
+    if (second.op === "none")
+      return `${describe(second, chain)} (a concurrent run got there first.)`;
+    if (second.op === plan.op) throw failure;
+    await perform(second, repo, token, call);
+    return describe(second, chain);
   }
 
   return describe(plan, chain);
@@ -288,7 +338,7 @@ export async function main(env = process.env) {
 
 // Imported by the test, which must not make a request or exit the process.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const summary = await main();
+  const summary = await run(process.env);
   console.log(summary);
   if (process.env.GITHUB_STEP_SUMMARY) {
     const { appendFile } = await import("node:fs/promises");
