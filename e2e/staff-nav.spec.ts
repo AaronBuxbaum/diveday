@@ -315,6 +315,22 @@ test.describe("a long shop name on a phone", () => {
       .locator("header [data-identity-menu] span")
       .filter({ hasText: /Blue Horizon/ });
     await expect(name).toHaveText("Blue Horizon Dive Charters");
+    // **At rest**, said out loud rather than assumed. This measures the bar's
+    // resting width, and since ADR 20260907-nothing-from-nowhere's fold the
+    // name gives way as the page scrolls — so a page that arrives at a restored
+    // or redirected scroll offset (this one lands at 24px) is measured a fifth
+    // of the way through a fold, and the name is legitimately clipped there.
+    // The assertion below is about the top of the page; this is what puts it
+    // there.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect
+      .poll(() =>
+        page
+          .locator("[data-chrome-shop-name]")
+          .first()
+          .evaluate((el) => Number(getComputedStyle(el).opacity)),
+      )
+      .toBe(1);
     // Rendered whole, and wider than the 10rem clamp that used to cut it.
     const width = await name.evaluate((el) => ({
       shown: el.clientWidth,
@@ -340,5 +356,116 @@ test.describe("a long shop name on a phone", () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
     expect(overflow).toBe(0);
+  });
+});
+
+/**
+ * **The title folds into the bar** — ADR 20260907-nothing-from-nowhere,
+ * decision 5, slice 18e (issue #1422).
+ *
+ * `e2e/visual.spec.ts` photographs the folded bar; these are the two things a
+ * photograph cannot answer. First, whether the words are on screen twice for a
+ * screen reader — the folded label is a copy of the page's `<h1>`, so the bar's
+ * accessible name has to stay the shop's and the heading has to stay the only
+ * announced one. Second, whether a page that never fills the slot still folds
+ * its shop name away and leaves a bar holding nothing but a mark.
+ */
+test.describe("the folding title", () => {
+  signedInAsOwner();
+
+  const PHONE = { width: 390, height: 844 };
+  // `.first()`: the attribute marks the shop's name *and* the caret beside it,
+  // because a caret with no label is pointing at nothing. They fold together,
+  // so reading either one reads the fold.
+  const opacityOf = (page: import("@playwright/test").Page, selector: string) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((node) => Number(getComputedStyle(node).opacity));
+
+  test("hands the bar the page's name without saying it twice", async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    await page.goto("/shop/blue-mantis/divers");
+    await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+    // The portal fills the slot after mount; its text is what the fold reveals.
+    await expect(page.locator("[data-chrome-title-slot]")).toHaveText("Divers");
+
+    // **At rest the bar is exactly what it has always been.** The label is
+    // present in the DOM and costs the row nothing: no width, no opacity.
+    expect(await opacityOf(page, "[data-chrome-title-slot]")).toBe(0);
+    expect(await opacityOf(page, "[data-chrome-shop-name]")).toBe(1);
+
+    await page.evaluate(() => window.scrollTo(0, 240));
+    // Waiting on the end state itself, not on a duration — the scroll is the
+    // clock, so there is no duration to wait out.
+    await expect
+      .poll(() => opacityOf(page, "[data-chrome-title-slot]"), {
+        message: "the page's title never folded into the bar",
+      })
+      .toBe(1);
+    expect(await opacityOf(page, "[data-chrome-shop-name]")).toBe(0);
+
+    // **The word is on screen twice and announced once.** The label is
+    // `aria-hidden`, so the shop's name is still what names the menu button and
+    // the page's own heading is still the only "Divers" a screen reader meets.
+    await expect(page.getByRole("button", { name: /Blue Mantis Divers/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Divers", exact: true })).toHaveCount(1);
+  });
+
+  /**
+   * **The one exemption the global kill-switch could not deliver.**
+   * `globals.css`'s universal reduced-motion block overrides
+   * `animation-duration`, `-delay` and `-iteration-count` — every one a
+   * statement about *time*, and an animation on a scroll progress timeline
+   * takes none of its progress from time. Without a rule naming
+   * `animation-timeline` this reader would still get the fold, and at a 0.01ms
+   * duration it would snap in within the first fraction of a pixel of scroll:
+   * louder than the motion the setting asked to remove. Asserted in a browser
+   * because that claim is about the cascade, not about the source.
+   */
+  test("gives a reduced-motion reader the bar exactly as it ships", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize(PHONE);
+    await page.goto("/shop/blue-mantis/divers");
+    await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+    await page.evaluate(() => window.scrollTo(0, 400));
+
+    // Well past the 120px range, and nothing has folded.
+    expect(await opacityOf(page, "[data-chrome-shop-name]")).toBe(1);
+    expect(await opacityOf(page, "[data-chrome-title-slot]")).toBe(0);
+    expect(await opacityOf(page, "[data-chrome-fold-title]")).toBe(1);
+  });
+
+  /**
+   * The four departure surfaces carry their own `TripPageHeader`, which fills
+   * no slot. Without the `:not(:empty)` gate in `globals.css` the shop's name
+   * would still fade out on them and the bar would end up holding a mark and a
+   * blank — a regression on a page that never asked for the feature.
+   */
+  test("leaves the bar alone on a page that fills no slot", async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    await page.goto("/shop/blue-mantis/schedule/board");
+    // Into a departure, which is where `TripPageHeader` lives. Clicked rather
+    // than addressed by id: the board is the door a staffer uses, and the id
+    // is the seed's to choose.
+    const departure = await page
+      .locator('a[href*="/shop/blue-mantis/trips/"]')
+      .first()
+      .getAttribute("href");
+    if (!departure) throw new Error("the board listed no departure to open");
+    await page.goto(departure);
+    await page.getByRole("heading", { level: 1 }).first().waitFor();
+    // Empty, not absent: the staff bar always renders the slot, and it is this
+    // page declining to fill it that the `:not(:empty)` gate reads. `toBeEmpty`
+    // rather than a `waitFor`, which would wait for visibility on an element
+    // that is deliberately zero-width and transparent.
+    await expect(page.locator("[data-chrome-title-slot]")).toBeEmpty();
+
+    await page.evaluate(() => window.scrollTo(0, 240));
+    await expect
+      .poll(() => opacityOf(page, "[data-chrome-shop-name]"), {
+        message: "the shop's name gave way to a label that was never there",
+      })
+      .toBe(1);
   });
 });

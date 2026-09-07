@@ -1600,6 +1600,123 @@ details[open]::details-content {
   }
 }
 
+/*
+ * **The title folds into the bar** — ADR 20260907-nothing-from-nowhere,
+ * decision 5, slice 18e (issue #1422).
+ *
+ * Below `lg` the staff bar carries the shop's name and nothing about the page,
+ * so a staffer halfway down Divers sees "Blue Mantis Divers" and 26 names. Over
+ * the first 120px of scroll the shop's name gives way and the page's own title
+ * takes its place at 17/600; the mark stays and still opens the shop menu. Two
+ * labels crossing, never one heading shrinking — a 34px heading scaled to half
+ * is a blur on a phone.
+ *
+ * **The scroll is the clock.** `animation-timeline: scroll(root block)` takes
+ * its progress from the page's own scroll position, so there is no duration to put on the
+ * motion ladder, no listener to throttle, and scrolling back up unfolds along
+ * the same path at the speed of the hand. That mechanism is also the new *fact*
+ * that reopened this: ADR 20260827-clearwater-surface-language deferred the
+ * behaviour and said it would need "a new fact (a CSS-only mechanism), not a
+ * fresh opinion".
+ *
+ * Three exemptions, all of them the bar exactly as it ships today: a browser
+ * with no scroll-driven animations (the `@supports`), every width from `lg` up
+ * (the tab strip already names the place), and a reduced-motion reader — see
+ * the explicit rule below, which the global kill-switch cannot do.
+ */
+@supports (animation-timeline: scroll()) and selector(:has(*)) {
+  @media (width < 64rem) {
+    /*
+     * **The gate is a slot with something in it.** Every staff page renders the
+     * bar, but not every one fills the slot: the four departure surfaces carry
+     * their own `TripPageHeader`, and before hydration no page has filled it
+     * yet. `:not(:empty)` is what keeps the shop's name from giving way to
+     * nothing on those — the bar simply does not fold, which is the behaviour
+     * it has always had. It is also why there is no flash on load.
+     */
+    /*
+     * `scroll(root block)`, never a bare `scroll()`: the bare form binds to the
+     * *nearest scrollable ancestor*, which is not the same scroller for all
+     * three of these — the bar's two live in a sticky header and the heading
+     * lives in the page. Measured on a freshly onboarded shop, the unqualified
+     * form had the label already 47px wide on arrival, a fifth of the way
+     * through a fold nobody had scrolled. The page is what the reader scrolls,
+     * so the page is what the fold reads.
+     */
+    body:has([data-chrome-title-slot]:not(:empty)) [data-chrome-shop-name] {
+      animation: chrome-shop-name-folds linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 120px;
+    }
+
+    body:has([data-chrome-title-slot]:not(:empty)) [data-chrome-title-slot] {
+      animation: chrome-title-folds-in linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 120px;
+    }
+
+    /*
+     * **And the heading itself gets out of the way.** The bar is 85% of the
+     * page behind a blur, so a 34px heading passing under it stays legible
+     * through it — which put the word "Divers" on screen twice, once at full
+     * size ghosting through the chrome and once as the folded label sitting on
+     * top of it. The canvas drew this fade for that reason and the first build
+     * without it showed why.
+     *
+     * It starts at 40px rather than 0: the heading is still the page's own at a
+     * glance's worth of scroll, and fading it from the first pixel would make
+     * the page feel like it was dissolving under the reader.
+     */
+    body:has([data-chrome-title-slot]:not(:empty)) [data-chrome-fold-title] {
+      animation: chrome-page-title-folds-away linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 40px 120px;
+    }
+  }
+}
+
+@keyframes chrome-shop-name-folds {
+  from {
+    opacity: 1;
+    max-width: 60vw;
+    margin-inline-start: 0;
+  }
+  to {
+    opacity: 0;
+    max-width: 0;
+    /* -0.5rem: the identity button's own `gap-2`, cancelled so the mark
+       does not sit beside a gap holding nothing. */
+    margin-inline-start: -0.5rem;
+  }
+}
+
+/* Arriving from 4px below, as the canvas drew it, into the width the name just
+   let go of. `both` so it holds its end state past 120px rather than snapping
+   back to the keyframe-less default. */
+@keyframes chrome-title-folds-in {
+  from {
+    opacity: 0;
+    max-width: 0;
+    translate: 0 4px;
+  }
+  to {
+    opacity: 1;
+    max-width: 60vw;
+    translate: 0 0;
+  }
+}
+
+/* Opacity alone: the heading is already travelling — the page is carrying it
+   up — so translating it as well would move it at two speeds at once. */
+@keyframes chrome-page-title-folds-away {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1641,6 +1758,26 @@ details[open]::details-content {
     animation: none !important;
     opacity: 1;
     transform: none;
+  }
+
+  /*
+   * **A scroll-driven animation needs its own stop.** The kill-switch below
+   * overrides `animation-duration`, `-delay` and `-iteration-count` — every one
+   * of them a statement about *time*, and an animation running on a scroll
+   * progress timeline takes no progress from time. A 0.01ms duration does not
+   * still the fold; at best it is ignored, at worst it snaps the label in
+   * within the first fraction of a pixel of scroll, which is louder than the
+   * fold it was meant to remove. Naming the timeline is what actually stops it,
+   * and what keeps the ADR's promise that a reduced-motion reader gets the bar
+   * as it ships today.
+   */
+  [data-chrome-shop-name],
+  [data-chrome-title-slot],
+  [data-chrome-fold-title] {
+    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    animation-timeline: none !important;
   }
 }
 
