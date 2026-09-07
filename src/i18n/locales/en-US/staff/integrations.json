@@ -60,6 +60,18 @@
     "notConnected": "No QuickBooks company is connected yet.",
     "setupRequired": "Connect a company and set its income account before paid orders can sync."
   },
+  "xero": {
+    "name": "Xero",
+    "description": "Write paid orders and refunds as bank transactions in your Xero organization.",
+    "connect": "Connect Xero",
+    "salesAccountLabel": "Sales account code",
+    "salesAccountPlaceholder": "e.g. 200",
+    "salesAccountDescription": "The revenue account each sale line lands on. Its code is in your Xero chart of accounts.",
+    "bankAccountLabel": "Bank account code",
+    "bankAccountPlaceholder": "e.g. 090",
+    "bankAccountDescription": "The account the money arrived in. Refunds go back out of the same one.",
+    "setupRequired": "Set both account codes before paid orders can sync."
+  },
   "zapier": {
     "name": "Zapier",
     "description": "Send selected order events to a Zapier Webhooks by Zapier Catch Hook.",

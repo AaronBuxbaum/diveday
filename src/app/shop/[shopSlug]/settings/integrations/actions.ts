@@ -22,6 +22,8 @@ import {
   shopifyConfigFromEnvironment,
   syncShopifyCatalog,
   updateShopIntegrationSettings,
+  xeroAuthorizationUrl,
+  xeroConfigFromEnvironment,
 } from "@/features/integrations";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -120,6 +122,26 @@ export async function startQuickBooksConnectionAction(): Promise<void> {
   );
 }
 
+export async function startXeroConnectionAction(): Promise<void> {
+  const { db, session, path } = await integrationContext();
+  const config = xeroConfigFromEnvironment();
+  const appHost = publicAppUrl();
+  const storageNotice = secureStorageNotice();
+  if (!config || !appHost || storageNotice) done(path, storageNotice ?? "not-configured");
+  const state = await createIntegrationOAuthState(db, {
+    shopId: session.user.shopId,
+    personId: session.user.personId,
+    provider: "xero",
+  });
+  redirect(
+    xeroAuthorizationUrl({
+      config,
+      state,
+      redirectUri: integrationCallbackUrl(appHost, "xero"),
+    }),
+  );
+}
+
 export async function saveZapierIntegrationAction(formData: FormData): Promise<void> {
   const { db, session, path } = await integrationContext();
   const url = normalizeZapierWebhookUrl(String(formData.get("webhookUrl") ?? ""));
@@ -177,6 +199,31 @@ export async function updateQuickBooksSettingsAction(formData: FormData): Promis
   done(path, "saved");
 }
 
+/** Xero account codes are up to ten characters of its own chart of accounts, letters included. */
+const XERO_ACCOUNT_CODE = /^[A-Za-z0-9-]{1,10}$/;
+
+export async function updateXeroSettingsAction(formData: FormData): Promise<void> {
+  const { db, session, path } = await integrationContext();
+  const salesAccountCode = String(formData.get("salesAccountCode") ?? "").trim();
+  const bankAccountCode = String(formData.get("bankAccountCode") ?? "").trim();
+  for (const code of [salesAccountCode, bankAccountCode]) {
+    if (code && !XERO_ACCOUNT_CODE.test(code)) done(path, "invalid");
+  }
+  const row = await getShopIntegration(db, session.user.shopId, "xero");
+  if (!row) done(path, "failed");
+  await updateShopIntegrationSettings(db, {
+    shopId: session.user.shopId,
+    provider: "xero",
+    settings: {
+      ...row.settings,
+      eventTypes: [...INTEGRATION_PROVIDER_REGISTRY.xero.eventTypes],
+      ...(salesAccountCode ? { salesAccountCode } : {}),
+      ...(bankAccountCode ? { bankAccountCode } : {}),
+    },
+  });
+  done(path, "saved");
+}
+
 export async function syncShopifyCatalogAction(): Promise<void> {
   const { db, session, path } = await integrationContext();
   const config = shopifyConfigFromEnvironment();
@@ -208,7 +255,12 @@ export async function testZapierIntegrationAction(): Promise<void> {
 export async function disconnectIntegrationAction(formData: FormData): Promise<void> {
   const { db, session, path } = await integrationContext();
   const provider = formData.get("provider");
-  if (provider !== "shopify" && provider !== "quickbooks" && provider !== "zapier")
+  if (
+    provider !== "shopify" &&
+    provider !== "quickbooks" &&
+    provider !== "xero" &&
+    provider !== "zapier"
+  )
     done(path, "invalid");
   await disconnectShopIntegration(db, session.user.shopId, provider);
   done(path, "disconnected");

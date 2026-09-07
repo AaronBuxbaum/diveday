@@ -54,6 +54,16 @@ export {
   syncShopifyCatalog,
 } from "./shopify";
 export {
+  deliverXeroEvent,
+  exchangeXeroCode,
+  fetchXeroTenant,
+  type XeroConfig,
+  type XeroCredentials,
+  xeroAuthorizationUrl,
+  xeroBankTransaction,
+  xeroConfigFromEnvironment,
+} from "./xero";
+export {
   deliverZapierEvent,
   normalizeZapierEventTypes,
   normalizeZapierWebhookUrl,

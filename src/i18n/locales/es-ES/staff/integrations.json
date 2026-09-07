@@ -60,6 +60,18 @@
     "notConnected": "Todavía no hay una empresa de QuickBooks conectada.",
     "setupRequired": "Conecta una empresa y define su cuenta de ingresos antes de sincronizar pedidos pagados."
   },
+  "xero": {
+    "name": "Xero",
+    "description": "Escribe pedidos pagados y reembolsos como transacciones bancarias en tu organización de Xero.",
+    "connect": "Conectar Xero",
+    "salesAccountLabel": "Código de cuenta de ventas",
+    "salesAccountPlaceholder": "p. ej., 200",
+    "salesAccountDescription": "La cuenta de ingresos donde cae cada línea de venta. Su código está en tu plan de cuentas de Xero.",
+    "bankAccountLabel": "Código de cuenta bancaria",
+    "bankAccountPlaceholder": "p. ej., 090",
+    "bankAccountDescription": "La cuenta donde entró el dinero. Los reembolsos salen de la misma.",
+    "setupRequired": "Define ambos códigos de cuenta antes de sincronizar pedidos pagados."
+  },
   "zapier": {
     "name": "Zapier",
     "description": "Envía eventos de pedidos seleccionados a un Catch Hook de Webhooks by Zapier.",

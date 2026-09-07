@@ -1,6 +1,6 @@
 # integrations
 
-Shop-owned Shopify, QuickBooks Online, and Zapier connections.
+Shop-owned Shopify, QuickBooks Online, Xero, and Zapier connections.
 
 The provider register in `registry.ts` is the extension point for future
 integrations. Each provider gets one definition, one credential/API handler,
@@ -20,8 +20,10 @@ in `src/db/schema.ts` and the integration database modules.
 - The settings projection never returns `credentials_sealed`.
 
 Shopify syncs priced rental/package catalog items on demand. QuickBooks writes
-idempotent SalesReceipts and RefundReceipts for paid/refunded orders. Zapier
-posts selected order events to a Catch Hook URL.
+idempotent SalesReceipts and RefundReceipts for paid/refunded orders. Xero writes
+the same two facts as `RECEIVE`/`SPEND` bank transactions, which is its cash-sale
+shape: no invoice, so nothing DiveDay reports lands in accounts receivable.
+Zapier posts selected order events to a Catch Hook URL.
 
 Calling a provider's API at all is governed by
 `docs/architecture/decisions/20260827-shop-authorized-provider-connectors.md`,
@@ -29,11 +31,12 @@ which supersedes the earlier emit-only rule. Two constraints from it bind every
 adapter here: a connector may push DiveDay's own facts out and read back only
 what keeps that push idempotent — never a provider's data as truth — and no app
 registered for these connectors is submitted to a public app directory. A fourth
-provider is a new ADR, not just a new file.
+provider is a new ADR, not just a new file. Xero's is
+`docs/architecture/decisions/20260907-xero-beside-quickbooks.md`.
 
 ## Deployment configuration
 
-All three providers are optional. The shared `SECRET_ENCRYPTION_KEY` must be a
+All four providers are optional. The shared `SECRET_ENCRYPTION_KEY` must be a
 base64-encoded 32-byte key before any credentials can be saved. Configure the
 provider app credentials only for the providers a deployment offers:
 
@@ -43,6 +46,10 @@ provider app credentials only for the providers a deployment offers:
 - QuickBooks Online: `QUICKBOOKS_CLIENT_ID`, `QUICKBOOKS_CLIENT_SECRET`, and
   optionally `QUICKBOOKS_ENVIRONMENT=sandbox`. Register
   `/api/integrations/quickbooks/callback` as the redirect path.
+- Xero: `XERO_CLIENT_ID` and `XERO_CLIENT_SECRET`. Register
+  `/api/integrations/xero/callback` as the app's redirect URI. There is no
+  sandbox host to name: Xero tests against a demo organisation on the same API,
+  so the organisation is chosen at connect time rather than in configuration.
 - Zapier: no app client secret is needed; a shop pastes its HTTPS Catch Hook
   URL in Settings. `APP_HOST` is still used for the OAuth redirect URLs above.
 
