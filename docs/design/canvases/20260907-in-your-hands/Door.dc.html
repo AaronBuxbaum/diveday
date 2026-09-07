@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); }
+    .body { font-size: 14px; line-height: 1.55; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .phone { width: 390px; height: 760px; background: var(--sand); border-radius: 28px; border: 1px solid var(--rope); box-shadow: var(--bed); overflow: hidden; position: relative; box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; }
+    .mnav { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; box-sizing: border-box; border-bottom: 1px solid var(--rope); background: rgba(251,247,239,.92); }
+    .wordmark { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+    .h1 { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; text-align: center; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .label { font-size: 14px; font-weight: 500; }
+    .control { height: 48px; border-radius: 10px; border: 1px solid var(--rope-strong); background: var(--shell); padding: 0 14px; display: flex; align-items: center; font-size: 16px; box-sizing: border-box; }
+    .btn { display: flex; align-items: center; justify-content: center; gap: 10px; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .link { color: var(--lagoon); font-weight: 500; font-size: 15px; }
+    .caption { width: 390px; display: flex; flex-direction: column; gap: 6px; }
+    .flabel { font-size: 11.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .bar { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: rgba(251,247,239,.92); border-bottom: 1px solid var(--rope); box-sizing: border-box; }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .srow { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 0; border-top: 1px solid var(--rope); font-size: 15px; }
+    .row { display: grid; grid-template-columns: 170px minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--rope); }
+    .row p { font-size: 14px; line-height: 1.5; }
+    .k { font-size: 12.5px; font-weight: 650; color: var(--muted); }
+    .sheet { position: absolute; left: 12px; right: 12px; bottom: 12px; background: #ffffff; border-radius: 22px; padding: 18px 18px 16px; box-shadow: 0 12px 40px rgba(12, 42, 53, .18); box-sizing: border-box; color: #1c1c1e; font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; }
+  </style>
+</helmet>
+<div style="width: 1360px; min-height: 2100px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 48px 52px;">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 960px;">
+    <p class="eyebrow">Move 1 &middot; the door knows your face &middot; sign-in and the security settings &middot; page 2</p>
+    <h1 style="font-size: 36px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.06;">One button on the phone that knows you; the form on every other one.</h1>
+    <p class="lede" style="font-size: 16px;">A passkey is a key the phone keeps and the phone&#8217;s own check unlocks. On a device that holds one for this account the door is a single button and a glance; a device that holds none gets the form as it ships, which is also the way back in when a phone is lost. Nothing about the door&#8217;s anatomy changes: wordmark, one question, one primary, the way out below (ADR 20260827-first-light).</p>
+  </div>
+
+  <div style="margin-top: 32px; display: flex; gap: 40px; align-items: flex-start;">
+
+    <!-- with a passkey -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="mnav"><span class="wordmark"><svg aria-hidden="true" viewBox="0 0 64 64" width="22" height="22" fill="none"><circle cx="22" cy="44" r="12" stroke="#0c2a35" stroke-width="4"></circle><circle cx="40" cy="26" r="8" stroke="#0c2a35" stroke-width="4"></circle><circle cx="52" cy="12" r="4.5" fill="#ff6f61"></circle></svg>DiveDay</span><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="color: var(--ink); stroke-width: 1.8;"><path d="M3 6h16M3 11h16M3 16h16"></path></svg></div>
+        <div style="padding: 44px 24px 0; display: flex; flex-direction: column; gap: 28px;">
+          <h1 class="h1">Sign in</h1>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <span class="btn btn-p"><svg width="20" height="20" viewBox="0 0 20 20" class="hand" style="stroke-width: 1.8;"><circle cx="8" cy="7" r="3.2"></circle><path d="M2.8 16.5c.8-3 2.8-4.5 5.2-4.5 1.2 0 2.2.3 3 .9"></path><circle cx="14.5" cy="11.5" r="2.2"></circle><path d="M14.5 13.7v4l1.4-1.2M14.5 15.6l-1.3-1"></path></svg>Sign in with a passkey</span>
+            <span class="link" style="text-align: center; padding: 10px 0;">Use your password instead</span>
+          </div>
+        </div>
+        <div class="sheet">
+          <div style="display: flex; align-items: center; gap: 12px;"><svg width="34" height="34" viewBox="0 0 34 34" fill="none"><rect x="1" y="1" width="32" height="32" rx="8" stroke="#1c1c1e" stroke-width="1.6"></rect><path d="M10 12c0-2 1.5-3.5 3.5-3.5M24 12c0-2-1.5-3.5-3.5-3.5M10 22c0 2 1.5 3.5 3.5 3.5M24 22c0 2-1.5 3.5-3.5 3.5M13 15v2M21 15v2M17 15v4.5h-1.5M14.5 21.5c1.4 1 3.6 1 5 0" stroke="#1c1c1e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg><div><p style="font-size: 16px; font-weight: 600; line-height: 1.25;">Sign in to diveday.app</p><p style="font-size: 13px; color: #6e6e73; margin-top: 2px;">keiko@bluemantis.example &middot; passkey on this iPhone</p></div></div>
+          <p style="font-size: 12px; color: #6e6e73; margin-top: 12px; line-height: 1.4;">The phone&#8217;s own sheet, drawn here only to show where the glance happens. DiveDay draws nothing of it.</p>
+        </div>
+      </div>
+      <div class="caption"><span class="flabel">Keiko&#8217;s iPhone &middot; holds a passkey for her account</span><p class="note">The email field is gone: the passkey names the account. One primary, one link out to the password. The phone raises its own sheet and checks her face; DiveDay never sees a face, a print or a password, only a signature the key made. From tap to the home: one glance.</p></div>
+    </div>
+
+    <!-- without -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="mnav"><span class="wordmark"><svg aria-hidden="true" viewBox="0 0 64 64" width="22" height="22" fill="none"><circle cx="22" cy="44" r="12" stroke="#0c2a35" stroke-width="4"></circle><circle cx="40" cy="26" r="8" stroke="#0c2a35" stroke-width="4"></circle><circle cx="52" cy="12" r="4.5" fill="#ff6f61"></circle></svg>DiveDay</span><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="color: var(--ink); stroke-width: 1.8;"><path d="M3 6h16M3 11h16M3 16h16"></path></svg></div>
+        <div style="padding: 44px 24px 0; display: flex; flex-direction: column; gap: 28px;">
+          <h1 class="h1">Sign in</h1>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="field"><span class="label">Email</span><span class="control" style="color: var(--muted);">keiko@bluemantis.example</span></div>
+            <div class="field"><span class="label">Password</span><span class="control" style="letter-spacing: .2em;">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span></div>
+            <span class="link" style="align-self: flex-end;">Forgot password?</span>
+            <span class="btn btn-p">Sign in</span>
+          </div>
+        </div>
+        <div style="margin-top: auto; padding: 0 24px 28px; text-align: center; font-size: 14px; color: var(--muted);">Need a shop? <span class="link" style="font-size: 14px;">Create one</span></div>
+      </div>
+      <div class="caption"><span class="flabel">A borrowed phone, a desktop, a lost phone &middot; as it ships</span><p class="note">No passkey on this device, so the form is the door, unchanged: email, password, the two-factor code where enrolled. The browser&#8217;s own autofill may still offer a passkey synced to this device, in the email field, which is why that field carries <span class="mono">autocomplete="username webauthn"</span> and nothing else changes.</p></div>
+    </div>
+
+    <!-- settings -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone" style="height: 760px;">
+        <div class="bar">
+          <div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div>
+          <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg>
+        </div>
+        <div style="padding: 20px 16px 0; display: flex; flex-direction: column; gap: 14px;">
+          <div><p class="eyebrow" style="color: var(--lagoon);">Settings &middot; Security</p><h1 style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin-top: 6px;">Your account</h1></div>
+          <div class="panel" style="padding: 16px 18px;">
+            <p style="font-size: 20px; font-weight: 600; letter-spacing: -0.015em;">Passkeys</p>
+            <p class="note" style="margin-top: 4px;">Sign in with this device&#8217;s own check instead of your password.</p>
+            <div style="margin-top: 12px;">
+              <div class="srow"><svg width="20" height="20" viewBox="0 0 20 20" class="hand" style="color: var(--muted); stroke-width: 1.7; flex-shrink: 0;"><rect x="5.5" y="2" width="9" height="16" rx="2"></rect><path d="M9 15.5h2"></path></svg><div style="flex: 1; min-width: 0;"><p style="font-weight: 500;">Keiko&#8217;s iPhone</p><p class="note" style="font-size: 13px;">Added Aug 20 &middot; last used today</p></div><span class="link" style="font-size: 14px;">Remove</span></div>
+              <div class="srow"><svg width="20" height="20" viewBox="0 0 20 20" class="hand" style="color: var(--muted); stroke-width: 1.7; flex-shrink: 0;"><rect x="2" y="4" width="16" height="12" rx="2"></rect><path d="M2 14h16"></path></svg><div style="flex: 1; min-width: 0;"><p style="font-weight: 500;">Front desk iPad</p><p class="note" style="font-size: 13px;">Added Aug 3 &middot; last used Tuesday</p></div><span class="link" style="font-size: 14px;">Remove</span></div>
+            </div>
+            <span class="btn btn-s" style="margin-top: 12px;">Add this device</span>
+          </div>
+          <div class="panel" style="padding: 16px 18px;">
+            <p style="font-size: 20px; font-weight: 600; letter-spacing: -0.015em;">Two-factor authentication</p>
+            <p class="note" style="margin-top: 4px;">Use an authenticator app for sensitive account actions. Disabling it removes the stored secret.</p>
+            <div class="srow" style="margin-top: 10px;"><div style="flex: 1;"><p style="font-weight: 500;">On</p><p class="note" style="font-size: 13px;">A passkey on this device also answers the check before money and exports.</p></div><span class="link" style="font-size: 14px;">Turn off</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><span class="flabel">Settings &middot; Security &middot; where a passkey is made</span><p class="note">A new panel above the two-factor one that ships. Each passkey is named for the device it lives on and listed with its last use, so the owner can see that the front desk iPad holds one and take it away when the iPad is sold. <em>Add this device</em> is the one way a passkey comes to exist: a signed-in staffer, on the device, with the device&#8217;s own check. The two-factor panel gains one sentence, and only when H-70 a says yes.</p></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 36px; display: grid; grid-template-columns: 1.6fr 1fr; gap: 28px; align-items: start;">
+    <div class="panel" style="padding: 22px 26px; border-radius: 18px;">
+      <p class="tag">What changes at each door, and what does not</p>
+      <div style="margin-top: 8px; display: grid; grid-template-columns: 170px minmax(0, 1fr) minmax(0, 1fr); gap: 18px; padding: 6px 0;"><span class="k">Moment</span><span class="k">With a passkey on the device</span><span class="k">Without one</span></div>
+      <div class="row"><p><strong>Sign-in</strong></p><p>One button, the device&#8217;s check, the home. The two-factor code is not asked: the passkey is both something held and something checked.</p><p>The form as it ships: email, password, the code where enrolled.</p></div>
+      <div class="row"><p><strong>Step-up</strong> (money, exports, backup destination)</p><p>H-70 a: the device&#8217;s check answers the challenge, bound to this session and purpose for fifteen minutes as today. Declined, the code is asked as today.</p><p>The authenticator code, as today.</p></div>
+      <div class="row"><p><strong>Sign-out</strong></p><p>Two taps, as today. A passkey makes the way back in short; it never makes the way out shorter, on a shared counter device least of all.</p><p>Unchanged.</p></div>
+      <div class="row"><p><strong>A lost phone</strong></p><p>The password door on any other device; then Settings &middot; Security removes the lost device&#8217;s passkey and, as today, revokes every session.</p><p>Unchanged.</p></div>
+      <div class="row" style="border-bottom: 1px solid var(--rope);"><p><strong>A diver</strong></p><p>Nothing. The thread, the waiver and the booking page have no account and gain no door; a passkey is a staff key.</p><p>Nothing.</p></div>
+    </div>
+    <div class="panel" style="padding: 22px 26px; border-radius: 18px;">
+      <p class="tag">What holds it in code</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+        <p class="body"><strong>Better Auth&#8217;s passkey plugin</strong>, the one auth library the app already runs on, which stores the public key, the device name and the counter; a new runtime dependency and so the ADR&#8217;s. The private key never leaves the device.</p>
+        <p class="body"><strong>The door keeps one primary.</strong> <span class="mono">EntryShell.test.tsx</span> already refuses a second button-shaped thing on a door; the passkey frame passes it because the password is a link.</p>
+        <p class="body"><strong>Live revalidation is untouched.</strong> A passkey opens the same database-backed session every staff page re-reads (ADR 20260824-staff-session-live-revalidation); a disabled account is refused on its next page whichever key opened it.</p>
+        <p class="body"><strong>Security review before merge</strong>, as any change to the door; the origin binding is the whole of a passkey&#8217;s safety and is asserted by a test against the app&#8217;s configured origin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

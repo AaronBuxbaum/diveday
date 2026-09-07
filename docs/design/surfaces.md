@@ -33,6 +33,9 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ### The shop home — `/shop/[shopSlug]`
 
+**Proposed 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
+on a phone or tablet in a browser tab, a staffer whose role reaches the manifest sees one line under the day's spine, once per device, saying the roll call can open from the home screen without a browser bar or signal, with the platform's install prompt or its two words; installed, on a desktop, or dismissed, it renders nothing.
+
 **Proposed 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), [canvas](canvases/20260907-nothing-from-nowhere/README.md)):
 on a phone the greeting folds into the header bar as the page scrolls, driven by the scroll position; a cleared row's neighbours slide into its gap; the station chip's count rolls; every row and chip answers a press in the frame the finger lands. Each renders the cut, the swap or the tap of today when it is not true.
 
@@ -185,6 +188,9 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
   the group (principle 9 applied to a table).
 
 ### The counter — `/shop/[shopSlug]/check-in`
+
+**Proposed 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
+a blocked row whose fix is the release gains *Sign here* as its primary, which locks the desk behind the diver's own waiver page on the shop's device and reopens the counter with the row settled once a staffer signs back in; the signature records the counter, the device, who handed it over and when. Waits on H-70 b; declined, the row keeps its two doors.
 
 **Proposed 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), [canvas](canvases/20260907-nothing-from-nowhere/README.md)):
 the instrument line's figures roll as a check-in lands, the sinking row's neighbours slide into its gap on the same 200ms, and Undo runs both in reverse. The optimistic commit principle 1 grants the counter is what the motion follows.
@@ -344,6 +350,9 @@ drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 
 ### The diver record — `/shop/[shopSlug]/divers/[personId]`
 
+**Proposed 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
+the certification form's photo capture moves to the top of the form and, on H-70 c, reads the card it photographed into the four fields as *Read* values under one sentence naming the source; *Mark certified* stays the one primary and the only writer of `verified`. A photo the reader cannot make out fills nothing and says nothing.
+
 **Answered 2026-08-27, shipped** — ADR
 [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md), drawn in
 [its canvas](canvases/20260827-people-not-lists/README.md), built as slice 8b. This entry replaces
@@ -365,6 +374,9 @@ primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
   facts, in that order; ten co-equal sections answered no question first.
 
 ### The doors — `/sign-in`, `/onboard`, and the token family
+
+**Proposed 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
+on a device that holds a passkey for the account, `/sign-in` is one primary and the device's own check, with the password as the link out; every other device gets the form as it ships. The door keeps its anatomy and its one primary; sign-out keeps its two taps. Waits on H-70 a.
 
 **Built 2026-08-29** — ADR
 [20260827-first-light](../architecture/decisions/20260827-first-light.md) (Accepted), drawn in

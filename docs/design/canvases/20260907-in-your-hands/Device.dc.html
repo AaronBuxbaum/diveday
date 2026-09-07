@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); }
+    .body { font-size: 14px; line-height: 1.55; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .flabel { font-size: 11.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .k { font-size: 12.5px; font-weight: 650; color: var(--muted); }
+    .row { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 18px; align-items: baseline; padding: 11px 0; border-top: 1px solid var(--rope); }
+    .row p { font-size: 14px; line-height: 1.5; }
+    /* The roll-call row at a given root size: every measure in em so one font-size scales the whole row, as rem does in the app. */
+    .rc { display: flex; align-items: center; gap: .75em; min-height: 3.25em; padding: .5em 0; border-top: 1px solid var(--rope); font-size: var(--root); }
+    .rc .nm { font-size: 1.25em; font-weight: 600; letter-spacing: -0.015em; flex: 1; min-width: 0; }
+    .rc .tap { width: 2.75em; height: 2.75em; border-radius: 999px; border: .125em solid var(--lagoon); box-sizing: border-box; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--lagoon); }
+    .rc .tap.on { background: var(--success); border-color: var(--success); color: #ffffff; }
+    .frame { width: 390px; background: var(--sand); border-radius: 28px; border: 1px solid var(--rope); box-shadow: var(--bed); overflow: hidden; box-sizing: border-box; padding: 0 0 8px; }
+    .bar { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: rgba(251,247,239,.92); border-bottom: 1px solid var(--rope); box-sizing: border-box; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; box-sizing: border-box; white-space: nowrap; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .link { color: var(--lagoon); font-weight: 500; }
+    .sitetile { width: 44px; height: 30px; border-radius: 10px; background: var(--lagoon-wash); color: var(--lagoon-deep); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--lagoon-wash); color: var(--lagoon-deep); }
+  </style>
+</helmet>
+<div style="width: 1360px; min-height: 1900px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 48px 52px;">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 980px;">
+    <p class="eyebrow">Moves 4 and 5 &middot; the type follows the phone &middot; on the home screen &middot; page 2</p>
+    <h1 style="font-size: 36px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.06;">Two things the phone already knows about its owner.</h1>
+    <p class="lede" style="font-size: 16px;">Neither needs a call and neither has a surface of its own. The first is a size the crew member set once, in the phone&#8217;s settings, for every app they use. The second is a place on their home screen the manifest could already open from. Both render nothing when they are not true.</p>
+  </div>
+
+  <div style="margin-top: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start;">
+
+    <!-- move 4 -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div><p class="tag">Move 4 &middot; the roll-call row at three text settings</p><p class="note" style="margin-top: 6px; max-width: 560px;">The manifest&#8217;s row is drawn here at the app&#8217;s ladder and then as it would read on Keiko&#8217;s phone at two of the sizes iOS offers. Every measure is a multiple of the root, so the name, the circle and the tap target grow together and nothing has to be redrawn: the ladder is already relative, it was only anchored to a number the phone never got to change.</p></div>
+
+      <div class="panel" style="padding: 16px 22px 8px;">
+        <p class="flabel">Default &middot; body 17 on the phone &middot; root 16px, as it ships</p>
+        <div style="--root: 16px; margin-top: 6px;">
+          <div class="rc" style="border-top: 0;"><p class="nm">Hugo Marsh</p><span class="tap on"><svg width="1.25em" height="1.25em" viewBox="0 0 20 20" class="hand" style="stroke-width: 2.2;"><path d="M4 10.5l4 4 8-9"></path></svg></span></div>
+          <div class="rc"><p class="nm">Priya Sharma</p><span class="tap"></span></div>
+          <div class="rc"><p class="nm">Grace Mensah</p><span class="tap"></span></div>
+        </div>
+      </div>
+
+      <div class="panel" style="padding: 16px 22px 8px;">
+        <p class="flabel">xxLarge &middot; body 21 on the phone &middot; root 19.8px</p>
+        <div style="--root: 19.8px; margin-top: 6px;">
+          <div class="rc" style="border-top: 0;"><p class="nm">Hugo Marsh</p><span class="tap on"><svg width="1.25em" height="1.25em" viewBox="0 0 20 20" class="hand" style="stroke-width: 2.2;"><path d="M4 10.5l4 4 8-9"></path></svg></span></div>
+          <div class="rc"><p class="nm">Priya Sharma</p><span class="tap"></span></div>
+        </div>
+      </div>
+
+      <div class="panel" style="padding: 16px 22px 8px;">
+        <p class="flabel">Accessibility 1 &middot; body 28 on the phone &middot; root 26.4px</p>
+        <div style="--root: 26.4px; margin-top: 6px;">
+          <div class="rc" style="border-top: 0;"><p class="nm">Hugo Marsh</p><span class="tap on"><svg width="1.25em" height="1.25em" viewBox="0 0 20 20" class="hand" style="stroke-width: 2.2;"><path d="M4 10.5l4 4 8-9"></path></svg></span></div>
+          <div class="rc"><p class="nm">Priya Sharma</p><span class="tap"></span></div>
+        </div>
+      </div>
+
+      <div class="panel" style="padding: 18px 22px; border-radius: 18px;">
+        <p class="tag">The rule</p>
+        <div style="margin-top: 4px;">
+          <div class="row"><p><strong>Upward only</strong></p><p>The root is the app&#8217;s 16px or the phone&#8217;s body size scaled to it, whichever is larger. A setting below the default changes nothing: the ladder&#8217;s floor is the dock test&#8217;s (16px critical text, 44px targets), and the floor stands.</p></div>
+          <div class="row"><p><strong>Measured once, before paint</strong></p><p>A one-line probe in the pre-hydration script that already sets the page&#8217;s language and direction reads the size the platform gives <span class="mono">-apple-system-body</span> and writes the root. Nothing jumps after first paint, and a platform that does not know the keyword writes nothing.</p></div>
+          <div class="row"><p><strong>Where</strong></p><p>Every staff surface, boat mode included: the manifest is the one a crew member with reading glasses holds at arm&#8217;s length in glare. The diver&#8217;s pages already follow the browser&#8217;s setting like any page; they take the same probe, since it costs nothing.</p></div>
+          <div class="row" style="border-bottom: 1px solid var(--rope);"><p><strong>What breaks, and is fixed</strong></p><p>Anything measured in px rather than rem stops scaling with its neighbours. The visual spec gains one capture of the manifest at the largest root, so a fixed-px width that clips a name is a diff, not a report from the rail.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- move 5 -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div><p class="tag">Move 5 &middot; the line under the day, once, on a phone</p><p class="note" style="margin-top: 6px; max-width: 560px;">The home on Keiko&#8217;s phone, her first sign-in on it, as each platform draws the one act. The manifest already declares <span class="mono">standalone</span> and the worker already keeps the next two days on the device; the line tells her, once, that the roll call can live on her home screen.</p></div>
+
+      <div class="frame">
+        <div class="bar"><div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div><span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span></div>
+        <div style="padding: 14px 16px 6px; display: flex; flex-direction: column; gap: 12px;">
+          <div class="panel" style="padding: 14px 18px 8px;">
+            <div style="display: flex; align-items: center; gap: 12px;"><div class="sitetile"><svg width="33" height="22" viewBox="0 0 120 80" class="hand" style="stroke-width: 2.4;"><path d="M30 42c10-16 30-22 50-16 8 2 14 6 18 12-4 6-10 10-18 12-20 6-40 0-50-8Z" fill="#fffdf8"></path><path d="M30 42 16 30v24Z" fill="#fffdf8"></path><circle cx="82" cy="37" r="3" fill="currentColor" stroke="none"></circle></svg></div><span class="num" style="font-size: 24px; font-weight: 700; letter-spacing: -0.015em; line-height: 1; white-space: nowrap;">7:00 AM</span><span class="chip" style="margin-left: auto;">Boarding &middot; 6 of 10</span></div>
+            <p style="font-size: 17px; font-weight: 600; line-height: 1.3; margin-top: 12px;">Two-Tank Reef &mdash; Molasses &amp; French</p>
+            <p style="font-size: 13.5px; color: var(--muted); margin-top: 3px; margin-bottom: 8px;">Mantis II &middot; Keiko, Sal &middot; <span class="num">10 of 12</span></p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px; padding: 12px 4px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" class="hand" style="color: var(--muted); stroke-width: 1.7; flex-shrink: 0;"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"></rect><path d="M12 9v6M9 12h6"></path></svg>
+            <p style="flex: 1; font-size: 15px; line-height: 1.4;">Put the roll call on your home screen. It opens without a browser bar and works with no signal.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px; padding: 0 4px 8px;"><span class="btn btn-s">Add to Home Screen</span><span class="link" style="font-size: 15px;">Not now</span></div>
+        </div>
+      </div>
+      <p class="note" style="max-width: 390px;"><span class="flabel">Android &middot; the platform offers a prompt</span><br>The button calls the browser&#8217;s own install prompt; the sheet is the platform&#8217;s and DiveDay draws none of it.</p>
+
+      <div class="frame">
+        <div style="padding: 10px 16px 6px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 14px; padding: 12px 4px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" class="hand" style="color: var(--muted); stroke-width: 1.7; flex-shrink: 0;"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"></rect><path d="M12 9v6M9 12h6"></path></svg>
+            <p style="flex: 1; font-size: 15px; line-height: 1.4;">Put the roll call on your home screen: tap <svg width="16" height="16" viewBox="0 0 16 16" class="hand" style="stroke-width: 1.7; vertical-align: -3px;"><path d="M8 10V2M5 5l3-3 3 3M3 8v5.5h10V8"></path></svg> below, then <strong>Add to Home Screen</strong>. It opens without a browser bar and works with no signal.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px; padding: 0 4px 8px;"><span class="link" style="font-size: 15px;">Got it</span></div>
+        </div>
+      </div>
+      <p class="note" style="max-width: 390px;"><span class="flabel">iPhone &middot; no prompt exists, so the two words of the platform&#8217;s own menu</span><br>The share glyph is drawn inline so the sentence names the button she will tap. One link dismisses it for good.</p>
+
+      <div class="panel" style="padding: 18px 22px; border-radius: 18px;">
+        <p class="tag">When it renders, and when it never does</p>
+        <div style="margin-top: 4px;">
+          <div class="row"><p><strong>Renders</strong></p><p>Under the day&#8217;s spine, on a phone or a tablet, in a browser tab, on an account that has never dismissed it on this device, and only for a staffer whose role reaches the manifest: the roll call is the sentence&#8217;s promise, so the reader must be someone it is true for.</p></div>
+          <div class="row"><p><strong>Never</strong></p><p>Installed (<span class="mono">display-mode: standalone</span> is true), on a desktop, after <em>Not now</em> or <em>Got it</em> once on this device (a device fact, kept where boat mode keeps its own), in an embed, or above the first thing panel: it is a line under the day, never a banner over it.</p></div>
+          <div class="row" style="border-bottom: 1px solid var(--rope);"><p><strong>Not a moment</strong></p><p>No coral, no drawing, no motion: the sentence is a fact about the device and takes the ledger row&#8217;s own weight. The one all-clear line and the one fact of scale keep the home&#8217;s budget.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
