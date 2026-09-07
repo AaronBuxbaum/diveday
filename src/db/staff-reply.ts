@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { type InboundChannel, REPLY_BODY_MAX_LENGTH, whatsAppReplyWindowOpen } from "@/lib/inbox";
 import { notify, recipientLocale } from "@/lib/notifications";
 import type { CourtesyDelivery } from "@/lib/notifications/courtesy";
+import { threadableMessageId } from "@/lib/notifications/kinds";
 import type { NotificationProvider } from "@/lib/notifications/provider";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
 import type { WhatsAppTextSender } from "@/lib/notifications/whatsapp";
@@ -162,6 +163,7 @@ export async function sendStaffReply(
     // by hand for the same reason, so the diver's own reply to the reply comes
     // back to this inbox (`shopSenderFor`).
     const sender = await shopSenderFor(db, input.shopId);
+    const inReplyTo = threadableMessageId(message.emailMessageId);
     const delivery = await notifySafely(
       {
         kind: "staff_reply",
@@ -174,13 +176,11 @@ export async function sendStaffReply(
           message.subject?.trim() ||
           diverTranslator(locale)("notifications.staffReply.subject", { shopName: shop.name }),
         body,
-        // Only a clean one-line header value threads the reply. A `Message-ID`
-        // from an unauthenticated sender that carries a control character is
-        // dropped rather than sent: the schema would refuse the whole
-        // notification, and losing the thread beats losing the answer.
-        ...(message.emailMessageId && !/\p{Cc}/u.test(message.emailMessageId)
-          ? { inReplyTo: message.emailMessageId }
-          : {}),
+        // Asked, never restated: `threadableMessageId` is the schema's own rule,
+        // so a `Message-ID` this send would be refused for is dropped here and
+        // the answer still goes. Restating one clause of it by hand is what let
+        // a diver silence their own thread with a two-character header.
+        ...(inReplyTo ? { inReplyTo } : {}),
         ...(sender ? { sender } : {}),
       },
       options.emailProvider,

@@ -320,4 +320,62 @@ describe("sendStaffReply", () => {
     ).toEqual({ status: "refused", reason: "message_unavailable" });
     expect(provider.sent).toHaveLength(0);
   });
+
+  /**
+   * **Regression (security review of #1509, finding 1).** The call site used to
+   * restate one clause of `staffReplySchema`'s rule for `inReplyTo` — the
+   * control-character test — without the length rules beside it. A diver could
+   * therefore poison their own thread for good by sending mail whose
+   * `Message-ID` is two characters: it cleared the call site, `notify`'s
+   * `parse` threw on `min(3)`, `notifySafely` reported that as a provider
+   * failure, and the shop's answer never left. Repeating the trick kept the
+   * newest message poisoned, so the shop could never answer that diver by mail
+   * again — remote, persistent, and dressed up as an SES outage.
+   *
+   * The rule now has one home. What this pins is the behaviour the code
+   * comment always claimed: the header is dropped, and the answer goes.
+   */
+  it("sends the answer without threading it when the diver's Message-ID is unusable", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await personNamed(db, shop.id, "Priya Sharma");
+    const staff = await anyStaff(db, shop.id);
+    const inbound = await recordInboundMessage(db, {
+      shopId: shop.id,
+      channel: "email",
+      fromAddress: diver.email,
+      subject: "Re: Saturday",
+      body: "Can I move to the afternoon boat?",
+      receivedAt: NOW,
+      providerMessageId: "email-reply-poisoned",
+      // Two characters: printable, single-line, and shorter than the schema's
+      // floor. The old call site passed it straight through.
+      emailMessageId: "ab",
+    });
+    if (inbound.status !== "recorded") throw new Error("fixture not recorded");
+
+    const provider = capturingEmailProvider();
+    const result = await sendStaffReply(
+      db,
+      {
+        shopId: shop.id,
+        messageId: inbound.id,
+        body: "Of course. You're on the 1pm boat.",
+        sentByPersonId: staff,
+        now: NOW,
+      },
+      { emailProvider: provider },
+    );
+
+    expect(result.status).toBe("sent");
+    const [notification] = provider.sent;
+    if (notification?.kind !== "staff_reply") throw new Error("no staff reply sent");
+    expect(notification.inReplyTo).toBeUndefined();
+    // And the message is answered, which is the whole point: an unusable header
+    // costs the thread, never the reply.
+    const [row] = await db
+      .select({ answeredAt: inboundMessages.answeredAt })
+      .from(inboundMessages)
+      .where(eq(inboundMessages.id, inbound.id));
+    expect(row?.answeredAt).not.toBeNull();
+  });
 });

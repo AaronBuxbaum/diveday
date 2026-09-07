@@ -1363,7 +1363,16 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // the day it happened, and nothing else. Keyed on the link first, then on the
   // address the diver held, for the same reason as the course-inquiry sweep:
   // a stranger's message that matched nobody at the time can still be theirs.
-  const blankMessage = { body: REDACTED_TEXT, subject: null, fromAddress: REDACTED_TEXT };
+  // `emailMessageId` goes with them: it is a string the diver's own mail client
+  // wrote, and many clients build it from the local part of the sender's
+  // address, so leaving it behind hands back the address the line above just
+  // redacted.
+  const blankMessage = {
+    body: REDACTED_TEXT,
+    subject: null,
+    fromAddress: REDACTED_TEXT,
+    emailMessageId: null,
+  };
   await tx
     .update(inboundMessages)
     .set(blankMessage)
@@ -1399,7 +1408,11 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   }
   await tx
     .update(staffReplies)
-    .set({ body: REDACTED_TEXT, toAddress: REDACTED_TEXT })
+    // `sendError` too, and not as tidiness: SES, SNS and Meta all quote the
+    // recipient back in their failure strings ("Email address is not
+    // verified: ..."), so a reply that failed to a diver who is later erased
+    // would leave their address in the one row this sweep had just cleaned.
+    .set({ body: REDACTED_TEXT, toAddress: REDACTED_TEXT, sendError: null })
     .where(and(eq(staffReplies.shopId, shopId), eq(staffReplies.personId, personId)));
 
   return { queuedMediaDeletions: queued, raisedProcessorErasures };
