@@ -52,6 +52,7 @@ test.describe("owner", () => {
       "Waivers",
       "Reviews",
       "Requests",
+      "Inbox",
       "Orders",
       "Reports",
     ]);
@@ -142,6 +143,10 @@ test.describe("captain", () => {
       "Dive sites",
       "Gear",
       "Reviews",
+      // Ungated, unlike Requests below: these are divers already on the
+      // roster, and the message that most wants reading at seven in the
+      // morning is read by whoever is at the dock.
+      "Inbox",
       "Orders",
     ]);
     // "Set up" collapses to the one personal row — a visible heading over a

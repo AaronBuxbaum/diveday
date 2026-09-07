@@ -49,6 +49,7 @@ import {
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, people } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
+import { type StaffReplyRefusal, sendStaffReply } from "@/db/staff-reply";
 import { getSupportNeeds, saveSupportNeeds } from "@/db/support-needs";
 import {
   hasUnansweredMedicalHold,
@@ -197,6 +198,7 @@ const FORM_ANCHORS: Record<string, string> = {
   restore: "#removed-heading",
   erase: "#erase-heading",
   merge: "#merge",
+  messages: "#messages",
   // `details` sits under the header, which is where a redirect lands anyway.
 };
 
@@ -264,6 +266,55 @@ export async function deleteDiverNoteAction(
       ? noticeUrl(`${base}#notes`, "note-deleted", { noteBody: result.body })
       : backTo(base, "invalid", "notes"),
   );
+}
+
+/**
+ * **The shop answering a diver, from their record** (ADR
+ * 20260907-two-way-inbox). The channel, the address and the language are the
+ * diver's own and are resolved by `sendStaffReply`; nothing about them is
+ * posted from this form, so a tampered field cannot redirect an answer to
+ * another mailbox or another person's thread.
+ *
+ * A send that worked says nothing: the reply lands in the thread directly
+ * above the box that was just used, which is the outcome (copy-restraint,
+ * deletion 1). Every refusal names what to do instead.
+ */
+const REPLY_NOTICES: Record<StaffReplyRefusal, string> = {
+  message_unavailable: "reply-unavailable",
+  empty_body: "reply-empty",
+  body_too_long: "reply-too-long",
+  no_address: "reply-unavailable",
+  window_closed: "reply-window-closed",
+  not_configured: "reply-not-configured",
+  send_failed: "reply-failed",
+};
+
+export async function sendReplyAction(shopSlug: string, personId: string, formData: FormData) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-notes",
+    "messages",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const messageId = uuidParam(String(formData.get("messageId") ?? ""));
+  if (!messageId) {
+    revalidateAndRedirect(base, backTo(base, "reply-unavailable", "messages"));
+    return;
+  }
+  const result = await sendStaffReply(db, {
+    shopId: staff.user.shopId,
+    messageId,
+    expectedPersonId: personId,
+    body: String(formData.get("reply") ?? ""),
+    sentByPersonId: staff.user.personId,
+  });
+  if (result.status === "refused") {
+    revalidateAndRedirect(base, backTo(base, REPLY_NOTICES[result.reason], "messages"));
+    return;
+  }
+  revalidatePath(base);
 }
 
 /** Restore a deleted diver note through the same audited insert path. */

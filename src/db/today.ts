@@ -13,6 +13,8 @@ import {
   helpRequestActionText,
   helpRequestDetailText,
   highWindAlertDetailText,
+  inboxUnansweredDetailText,
+  inboxUnansweredSubjectText,
   instructorMissingDetailText,
   inviteFromWaitlistActionText,
   lastMinuteFillDetailText,
@@ -26,6 +28,7 @@ import {
   openGearRegisterActionText,
   openGearUnitActionText,
   openGuestsActionText,
+  openInboxActionText,
   openLastMinuteDealActionText,
   openOrdersActionText,
   openPrepListActionText,
@@ -108,6 +111,7 @@ import {
   listOverdueGearReservations,
 } from "./gear";
 import { listTodayHelpRequests } from "./help-requests";
+import { countUnansweredMessages } from "./inbound-messages";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
 import { listDepartureCrewRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
@@ -1870,6 +1874,32 @@ export async function getTodayWork(
         dueAt: null,
       });
     }
+  }
+
+  // **What divers wrote back and nobody has answered** (ADR
+  // 20260907-two-way-inbox). Mirrored here, owned by the inbox page — the same
+  // arrangement the reviews queue below uses, and for the same reason: the row
+  // that ranks work belongs on the page that ranks work, not as a badge on a
+  // nav tab that never says what to do about itself.
+  //
+  // One row for the whole queue, `later` urgency and `dueAt: null`. A diver
+  // waiting on an answer is real work, but nothing sails or refunds on it, and
+  // a message from twenty minutes ago has no deadline the app can name — the
+  // count is the signal, and it empties as the shop answers. The count comes
+  // from the inbox page's own reader, never a second detector.
+  const unanswered = await countUnansweredMessages(db, shopId);
+  if (unanswered > 0) {
+    actions.push({
+      id: "inbox:unanswered",
+      kind: "inbox_unanswered",
+      urgency: "later",
+      subject: inboxUnansweredSubjectText(t, unanswered),
+      context: null,
+      detail: inboxUnansweredDetailText(t),
+      actionLabel: openInboxActionText(t),
+      href: `/shop/${shopSlug}/inbox`,
+      dueAt: null,
+    });
   }
 
   // Reviews waiting on moderation. This used to be a count badge on a nav row;

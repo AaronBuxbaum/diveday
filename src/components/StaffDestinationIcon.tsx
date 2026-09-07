@@ -289,6 +289,14 @@ const ICON_PATHS: Partial<Record<StaffDestinationId, ReactNode>> = {
       <path d="M12.5 18.5h.01" />
     </>
   ),
+  // Messages: what a diver wrote back — a speech bubble.
+  inbox: (
+    <>
+      <path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+      <path d="M8 9.5h8" />
+      <path d="M8 12.5h5" />
+    </>
+  ),
   // Reports: how the month went — bars.
   reports: (
     <>

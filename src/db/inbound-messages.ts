@@ -200,7 +200,12 @@ export async function pagedInboxMessages(db: AppDb, shopId: string, options: { p
       db
         .select({ message: inboundMessages, personName: people.fullName })
         .from(inboundMessages)
-        .leftJoin(people, eq(people.id, inboundMessages.personId))
+        // The shop condition is repeated on the join rather than inherited
+        // from `personId`, which is only ever written by a shop-scoped match.
+        // That is true today and is exactly the shape that stops being true
+        // quietly: a reader should be able to see the tenant condition in the
+        // query it is reading, not have to trust a writer three modules away.
+        .leftJoin(people, and(eq(people.id, inboundMessages.personId), eq(people.shopId, shopId)))
         .where(where)
         .orderBy(
           sql`case when ${inboundMessages.answeredAt} is null then 0 else 1 end`,
@@ -362,6 +367,14 @@ export async function deleteInboundMessage(
 }
 
 export type RecordStaffReplyInput = {
+  /**
+   * The row's own id, minted by the caller *before* the send. The email
+   * notification's idempotency key is `staff-reply/<replyId>`
+   * (`src/lib/notifications/kinds.ts`), so the id has to exist before the
+   * provider is called or a retry would key on a row that does not. Omitted
+   * on the text channels, which have no such key.
+   */
+  id?: string;
   shopId: string;
   personId: string;
   inboundMessageId: string | null;
@@ -387,6 +400,7 @@ export async function recordStaffReply(db: DbExecutor, input: RecordStaffReplyIn
   const [reply] = await db
     .insert(staffReplies)
     .values({
+      ...(input.id ? { id: input.id } : {}),
       shopId: input.shopId,
       personId: input.personId,
       inboundMessageId: input.inboundMessageId,

@@ -41,6 +41,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   failed_photo_deletion: "today.actionKind.failedPhotoDeletion",
   owed_refund: "today.actionKind.owedRefund",
   reviews_pending: "today.actionKind.reviewsPending",
+  inbox_unanswered: "today.actionKind.inboxUnanswered",
   gear_overdue: "today.actionKind.gearOverdue",
   gear_due_back: "today.actionKind.gearDueBack",
   gear_service_due: "today.actionKind.gearServiceDue",
@@ -518,6 +519,24 @@ export function reviewsPendingDetailText(t: StaffTranslator): string {
 
 export function openReviewsActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openReviews");
+}
+
+/**
+ * The unanswered-messages row: divers who wrote back and are still waiting
+ * (ADR 20260907-two-way-inbox). The detail says what these *are* — replies to
+ * the shop's own sends — because that is the one thing the count cannot, and
+ * it is what separates this queue from the date requests beside it.
+ */
+export function inboxUnansweredSubjectText(t: StaffTranslator, count: number): string {
+  return t("today.inboxUnanswered.subject", { count });
+}
+
+export function inboxUnansweredDetailText(t: StaffTranslator): string {
+  return t("today.inboxUnanswered.detail");
+}
+
+export function openInboxActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openInbox");
 }
 
 /**

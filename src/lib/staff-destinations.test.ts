@@ -225,6 +225,7 @@ describe("what each consumer derives", () => {
       "waivers",
       "reviews",
       "requests",
+      "inbox",
       "orders",
       "reports",
     ]);
