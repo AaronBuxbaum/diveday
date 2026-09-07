@@ -113,7 +113,12 @@ export function ForgivingInput({
         data-draft-for={name}
         inputMode={kind === "phone" ? "tel" : kind === "money" ? "decimal" : "text"}
         value={text}
-        aria-describedby={showReading ? readingId : input["aria-describedby"]}
+        // The reading joins whatever `Field` wired (a description, a refusal)
+        // rather than replacing it.
+        aria-describedby={
+          [showReading ? readingId : null, input["aria-describedby"]].filter(Boolean).join(" ") ||
+          undefined
+        }
         onChange={(event) => {
           const next = event.currentTarget.value;
           // A value that arrives while nobody is in the box — a draft picked

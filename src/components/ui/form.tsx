@@ -301,10 +301,16 @@ export function Field({
   // onto that wrapper instead of the real control it wraps leaves the label
   // pointing at an id nothing else has. The wrap-everything fallback below
   // handles those correctly via implicit label-wraps-control association.
+  //
+  // `ForgivingInput` counts as a control too: it forwards `id`, `required` and
+  // the aria attributes onto the visible box it renders, so the label can point
+  // at that box by id and the required marker can read the `required` off it.
+  // Left to the fallback, a required "Full name" lost its `*` the day the box
+  // became forgiving (found by the diver-record visual capture).
   const isControl =
     isValidElement<ControlProps>(children) &&
-    typeof children.type === "string" &&
-    CONTROL_TAGS.has(children.type);
+    ((typeof children.type === "string" && CONTROL_TAGS.has(children.type)) ||
+      children.type === ForgivingInput);
   const fieldId = scopedFieldId(useId(), isControl ? children.props.name : undefined);
   const descriptionId = description ? `${fieldId}-description` : undefined;
   const errorId = error ? `${fieldId}-error` : undefined;

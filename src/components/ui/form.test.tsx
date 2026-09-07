@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { ForgivingInput } from "./ForgivingInput";
 import {
   controlClass,
   Field,
@@ -14,6 +15,8 @@ import {
 } from "./form";
 
 afterEach(cleanup);
+
+const COPY = { typedAs: "typed as \u201c{raw}\u201d" };
 
 /**
  * The two halves of "a refusal belongs where the work is": `Field`'s `error`
@@ -277,6 +280,22 @@ describe("Field's required marker", () => {
       </Field>,
     );
     expect(screen.getByText("*")).toBeInTheDocument();
+  });
+
+  it("marks a required forgiving box the same way, and labels it by id", () => {
+    // A `ForgivingInput` is a component, not a native tag, and the fallback
+    // branch it used to land in has no marker at all: the diver record's
+    // "Full name" lost its `*` when the box became forgiving.
+    render(
+      <Field label="Full name">
+        <ForgivingInput kind="name" name="fullName" required locale="en-US" copy={COPY} />
+      </Field>,
+    );
+    expect(screen.getByText("*")).toBeInTheDocument();
+    const box = screen.getByLabelText("Full name");
+    expect(box).toBeRequired();
+    expect(box).toHaveAttribute("id");
+    expect(box).not.toHaveAttribute("name");
   });
 
   it("leaves an optional control unmarked", () => {
