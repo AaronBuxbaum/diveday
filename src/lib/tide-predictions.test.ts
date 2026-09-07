@@ -76,17 +76,12 @@ describe("fetchTidePredictions", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
-  it("answers null, and does not remember the failure, when NOAA refuses or the fetch throws", async () => {
-    const refusing = vi
-      .fn()
-      .mockResolvedValueOnce(new Response("nope", { status: 500 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify(NOAA_PAYLOAD)));
-    expect(await fetchTidePredictions("8723583", "2026-07-21", refusing)).toBeNull();
-    expect(await fetchTidePredictions("8723583", "2026-07-21", refusing)).toHaveLength(4);
-    expect(refusing).toHaveBeenCalledTimes(2);
-
+  it("answers null when NOAA refuses or the fetch throws", async () => {
     const throwing = vi.fn().mockRejectedValue(new Error("timeout"));
     expect(await fetchTidePredictions("8723583", "2026-07-21", throwing)).toBeNull();
+
+    const refusing = vi.fn().mockResolvedValue(new Response("nope", { status: 500 }));
+    expect(await fetchTidePredictions("8723583", "2026-07-21", refusing)).toBeNull();
 
     const unknownStation = vi
       .fn()
@@ -94,6 +89,35 @@ describe("fetchTidePredictions", () => {
         new Response(JSON.stringify({ error: { message: "The station is not a valid station" } })),
       );
     expect(await fetchTidePredictions("0000000", "2026-07-21", unknownStation)).toBeNull();
+  });
+
+  /**
+   * A failure used to be forgotten outright, so a provider that was down cost a
+   * fresh four-second timeout per station per render — on the unauthenticated
+   * page a diver books from, for every visitor. It is remembered for a minute
+   * now: short enough that a blip costs one render rather than the rest of the
+   * day, long enough that an outage costs one request a minute per station.
+   */
+  it("remembers a failure for a minute, then asks again", async () => {
+    // The suite runs on the frozen clock (`DIVEDAY_CLOCK` in vitest.config.ts),
+    // which is what `nowMs()` reads, so moving time means restubbing it.
+    vi.stubEnv("DIVEDAY_CLOCK", "2026-07-21T12:00:00.000Z");
+    let refuse = true;
+    const flaky = vi.fn().mockImplementation(() =>
+      // A fresh Response per call: a body reads once.
+      Promise.resolve(
+        refuse ? new Response("nope", { status: 500 }) : new Response(JSON.stringify(NOAA_PAYLOAD)),
+      ),
+    );
+
+    expect(await fetchTidePredictions("8723583", "2026-07-21", flaky)).toBeNull();
+    expect(await fetchTidePredictions("8723583", "2026-07-21", flaky)).toBeNull();
+    expect(flaky).toHaveBeenCalledTimes(1);
+
+    refuse = false;
+    vi.stubEnv("DIVEDAY_CLOCK", "2026-07-21T12:01:01.000Z");
+    expect(await fetchTidePredictions("8723583", "2026-07-21", flaky)).toHaveLength(4);
+    expect(flaky).toHaveBeenCalledTimes(2);
   });
 
   it("serves the deterministic fixture instead of live traffic when external HTTP is disabled", async () => {

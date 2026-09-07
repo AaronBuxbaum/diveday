@@ -32,6 +32,8 @@ type Fetcher = typeof fetch;
 const PREDICTION_RANGE_HOURS = 72;
 const PREDICTION_CACHE_TTL_MS = 12 * HOUR_MS;
 const PREDICTION_CACHE_MAX_ENTRIES = 256;
+/** How long a failed lookup is remembered, so an outage cannot be re-asked per render. */
+const PREDICTION_FAILURE_TTL_MS = 60_000;
 const PREDICTION_FETCH_TIMEOUT_MS = 4_000;
 
 type CachedPredictions = { expiresAt: number; value: Promise<TidePrediction[] | null> };
@@ -163,7 +165,16 @@ export async function fetchTidePredictions(
   }
   cache.set(key, { expiresAt: nowMs() + PREDICTION_CACHE_TTL_MS, value });
   const resolved = await value;
-  // A failed fetch is not remembered for twelve hours: the next render asks again.
-  if (resolved === null) cache.delete(key);
+  // **A failure is remembered briefly rather than not at all.** Twelve hours
+  // would lose the sentence for the rest of the day over one blip, which is
+  // why this used to forget it outright — but forgetting it meant a provider
+  // that was down cost a fresh four-second timeout per station per render, on
+  // an unauthenticated page, for every visitor. A minute is short enough that
+  // a blip costs one render and long enough that an outage costs one request
+  // a minute per station. Guarded on identity so a newer entry for the same
+  // key, or an eviction while this was in flight, is left alone.
+  if (resolved === null && cache.get(key)?.value === value) {
+    cache.set(key, { expiresAt: nowMs() + PREDICTION_FAILURE_TTL_MS, value });
+  }
   return resolved;
 }

@@ -51,31 +51,42 @@ export async function tideWindowsForDeparture(input: {
   const day = calendarDateInTimezone(input.startsAt, input.timeZone);
   const legTravelTimes = input.dives.map((dive) => dive.travelMinutes);
   const siteBottomTimes = input.dives.map((dive) => dive.site?.expectedBottomTimeMinutes ?? null);
-  const results: DepartureTideWindow[] = [];
-  // Sequential on purpose: the seam caches the in-flight promise per station
-  // and day, so a two-tank day on one station costs one request either way,
-  // and sequential keeps the order the dives are planned in.
-  for (const dive of withStations) {
+  const planned = withStations.flatMap((dive) => {
     const stationId = dive.site.tideStationId;
-    if (!stationId) continue;
+    if (!stationId) return [];
     const arrival = diveArrivalAt(input.startsAt, input.rhythm, dive.diveNumber, {
       plannedDives: input.plannedDives,
       siteBottomTimes,
       legTravelTimes,
       diveMode: input.diveMode,
     });
-    if (!arrival) continue;
-    const predictions = await fetchTidePredictions(stationId, day, input.fetcher);
-    if (!predictions) continue;
-    const window = tideWindowAt(predictions, arrival);
-    if (!window) continue;
+    if (!arrival) return [];
+    return [{ dive, stationId, arrival }];
+  });
+
+  // **Concurrent, and still in the order the dives are planned.** The seam
+  // shares one in-flight promise per station and local day, so a two-tank day
+  // on one station costs one request either way — but this ran sequentially,
+  // and a four-dive itinerary across four stations therefore cost four
+  // *serial* four-second timeouts whenever NOAA was unreachable, on the
+  // unauthenticated page a diver books from. `Promise.all` keeps the order.
+  const tables = await Promise.all(
+    planned.map((entry) => fetchTidePredictions(entry.stationId, day, input.fetcher)),
+  );
+
+  const results: DepartureTideWindow[] = [];
+  planned.forEach((entry, index) => {
+    const predictions = tables[index];
+    if (!predictions) return;
+    const window = tideWindowAt(predictions, entry.arrival);
+    if (!window) return;
     results.push({
-      diveNumber: dive.diveNumber,
-      siteName: dive.site.name,
-      arrival,
+      diveNumber: entry.dive.diveNumber,
+      siteName: entry.dive.site.name,
+      arrival: entry.arrival,
       window,
-      preference: dive.site.tidePreference,
+      preference: entry.dive.site.tidePreference,
     });
-  }
+  });
   return results;
 }
