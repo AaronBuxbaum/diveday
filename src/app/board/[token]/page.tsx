@@ -117,8 +117,17 @@ export default async function DeparturesBoardPage({
         </p>
       ) : (
         <ol className="mt-8 grid gap-4 lg:mt-10 lg:gap-5">
-          {departures.map((row) => (
-            <BoardRow key={row.tripId} row={row} shop={shop} locale={locale} now={now} t={t} />
+          {departures.map((row, index) => (
+            // A key reaches the RSC flight payload embedded in the HTML even
+            // though this is a Server Component and the props never cross the
+            // boundary -- the reasoning `TripCrewLine` carries. Here that would
+            // put every departure's trip uuid in view-source on a screen anyone
+            // in the lobby can photograph, including the row this page took
+            // trouble to render as "Private charter": `boardTitleFor` withholds
+            // the title and the id resolves to it on the public trip page. The
+            // list is server-ordered by start time and nothing here needs the id.
+            // biome-ignore lint/suspicious/noArrayIndexKey: see above
+            <BoardRow key={index} row={row} shop={shop} locale={locale} now={now} t={t} />
           ))}
         </ol>
       )}
