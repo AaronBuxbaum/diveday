@@ -199,4 +199,29 @@ describe("decodeEncodedWords and htmlToText", () => {
     expect(htmlToText("<p>hello</p><script>x()")).toBe("hello");
     expect(htmlToText(`<p>hi</p>${"<script>".repeat(120_000)}`)).toBe("hi");
   });
+
+  /**
+   * **Nothing that opened a tag survives as text.** `.replace(/<[^>]+>/g, "")`
+   * leaves a trailing `<img src=x onerror=…` — a `<` with no `>` after it —
+   * standing in the output, which is a live element the moment anything reads
+   * the string as markup. A browser treats an unterminated tag as running to
+   * the end of the document; so does this.
+   */
+  it("takes an unterminated tag with it rather than leaving a live one behind", () => {
+    expect(htmlToText("<p>hi</p><img src=x onerror=alert(1)")).toBe("hi");
+    expect(htmlToText("<p>hi</p><scr<b>ipt>")).toBe("hi\nipt>");
+  });
+
+  /**
+   * **Entities are decoded once, not six times over each other.** A sender who
+   * wrote a literal `&lt;` sends `&amp;lt;`; unescaping `&amp;` and then `&lt;`
+   * in separate passes turns that into `<` and puts a character in their
+   * message they never typed.
+   */
+  it("decodes an entity once, so an escaped entity stays escaped", () => {
+    expect(htmlToText("<p>&amp;lt; is how you write &lt;</p>")).toBe("&lt; is how you write <");
+    expect(htmlToText("<p>Tom &amp; Jerry &nbsp;&quot;hi&quot; &#39;yes&#39; &gt;</p>")).toBe(
+      "Tom & Jerry  \"hi\" 'yes' >",
+    );
+  });
 });

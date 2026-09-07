@@ -221,18 +221,61 @@ function stripRawTextElements(html: string): string {
   return kept + html.slice(cursor);
 }
 
+/**
+ * Drop every tag, and anything that *starts* one and never finishes.
+ *
+ * A scan rather than `.replace(/<[^>]+>/g, "")` for the second half of that
+ * sentence: the regex leaves a trailing `<script` — a `<` with no `>` after
+ * it — sitting in the output as ordinary text, which is a live element the
+ * moment anything treats this string as markup. A browser reads an
+ * unterminated tag as running to the end of the document, and so does this,
+ * which makes the result total: no `<` survives that opened a tag.
+ */
+function stripTags(html: string): string {
+  let text = "";
+  let cursor = 0;
+  for (;;) {
+    const open = html.indexOf("<", cursor);
+    if (open === -1) return text + html.slice(cursor);
+    text += html.slice(cursor, open);
+    const close = html.indexOf(">", open + 1);
+    if (close === -1) return text;
+    cursor = close + 1;
+  }
+}
+
+/**
+ * The five named entities and the numeric apostrophe, in **one** pass.
+ *
+ * Six chained `.replace` calls unescape each other's output: `&amp;lt;` — a
+ * sender writing a literal `&lt;` — becomes `&lt;` on the first and then `<`
+ * on the third, so the text says something they did not. One alternation
+ * consumes each entity exactly once and never looks at what it produced.
+ */
+const HTML_ENTITIES: Record<string, string> = {
+  "&nbsp;": " ",
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+};
+
+function decodeEntities(text: string): string {
+  return text.replace(
+    /&(?:nbsp|amp|lt|gt|quot|#39);/g,
+    (entity) => HTML_ENTITIES[entity] ?? entity,
+  );
+}
+
 /** HTML to readable text: block breaks kept, tags dropped, entities the common five. */
 export function htmlToText(html: string): string {
-  return stripRawTextElements(html)
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|li|h[1-6]|tr|blockquote)>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+  const withoutTags = stripTags(
+    stripRawTextElements(html)
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|li|h[1-6]|tr|blockquote)>/gi, "\n"),
+  );
+  return decodeEntities(withoutTags)
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
