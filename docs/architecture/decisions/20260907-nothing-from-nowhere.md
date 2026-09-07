@@ -45,10 +45,10 @@ one duration token):
    default 200ms transition, so a 90ms tap barely sees it; a row, a chip, a dock tab and a ledger
    line do nothing under a finger at all.
 
-What makes an Apple interface feel the way it does is not the amount of motion, which is small, nor
-page transitions, which this repository declined on 2026-08-27 for two reasons that still hold. It
-is that the interface behaves as a physical thing: it acknowledges the finger at once, it stays
-under the finger for as long as the finger stays, and a change on screen comes from somewhere.
+An Apple interface moves little, and this repository declined page transitions on 2026-08-27 for
+two reasons that still hold. What such an interface does is behave as a physical thing: it
+acknowledges the finger at once, it stays under the finger for as long as the finger stays, and a
+change on screen comes from somewhere.
 
 ## Decision
 
