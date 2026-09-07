@@ -3633,9 +3633,6 @@
       "divers": "How many divers: {divers}",
       "experience": "Experience so far: {experience}"
     },
-    "staffReply": {
-      "subject": "A message from {shopName}"
-    },
     "passwordReset": {
       "subject": "Reset your DiveDay password",
       "body": "Someone asked to reset the password on this DiveDay account.",
@@ -3649,6 +3646,10 @@
       "recoveryNoLink": "If it wasn't, request a new password from the sign-in page right away.",
       "recoveryWithLinkHtml": "If it wasn't, {link} right away.",
       "recoveryLinkText": "request a new password here"
+    },
+    "staffReply": {
+      "subject": "A message from {shopName}",
+      "reSubject": "Re: {subject}"
     },
     "waiverRequest": {
       "subject": "Complete your waiver for {tripTitle}",

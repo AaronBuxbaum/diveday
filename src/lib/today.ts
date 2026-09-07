@@ -87,7 +87,7 @@ export type TodayActionKind =
   | "failed_photo_deletion"
   | "owed_refund"
   | "reviews_pending"
-  | "inbox_unanswered"
+  | "unanswered_messages"
   | "gear_overdue"
   | "gear_due_back"
   | "gear_service_due"
@@ -194,11 +194,11 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // Ranked above the other two platform-health rows: a diver is waiting on
   // this one, and has already been told the shop would be in touch.
   owed_refund: 26,
-  // A diver wrote and nobody has written back. Above the reviews queue below
-  // it because somebody is waiting on an answer they asked for, and below the
-  // owed refund above it because that diver is waiting on money. Answering is
-  // desk work either way, so both sit under every per-diver departure row.
-  inbox_unanswered: 27,
+  // A diver wrote and nobody has written back (ADR 20260907-two-way-inbox).
+  // Above the reviews queue and below the money rows: somebody asked the shop
+  // a question and is waiting on the answer, which is more than a review asks
+  // for and less than a refund owes.
+  unanswered_messages: 27,
   // Divers said something worth publishing; nothing sails or refunds on it.
   reviews_pending: 28,
   // The gear register's rows (ADR 20260815-minimal-gear-register). All
@@ -273,9 +273,9 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   failed_photo_deletion: ["owner", "manager"],
   owed_refund: ["owner", "manager"],
   reviews_pending: ["owner", "manager"],
-  // Front-desk work, like every other row that answers a person: the shop
-  // writing back is the desk's job even when the message is about a boat.
-  inbox_unanswered: ["owner", "manager"],
+  // The same two roles the inbox itself is gated to (`canAnswerShopInbox`):
+  // a row pointing at a page its reader cannot open is a dead end.
+  unanswered_messages: ["owner", "manager"],
   gear_overdue: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_due_back: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_service_due: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
@@ -365,9 +365,9 @@ export const ACTION_KIND_META = {
   failed_photo_deletion: { tone: "warning" },
   owed_refund: { tone: "warning" },
   reviews_pending: { tone: "neutral" },
-  // Neutral: somebody is waiting, and nothing has gone wrong. A warning tone
-  // on "a diver said hello" is how a queue teaches its reader to stop looking.
-  inbox_unanswered: { tone: "neutral" },
+  // Neutral: somebody is waiting on an answer, which is the day's work
+  // rather than a thing that has gone wrong.
+  unanswered_messages: { tone: "neutral" },
   // Warning, not danger: a unit that is late is a phone call, not a diver in
   // the water. Due-back-today and a bench clock are ordinary counter work.
   gear_overdue: { tone: "warning" },

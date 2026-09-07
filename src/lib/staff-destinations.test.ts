@@ -23,12 +23,14 @@ const owner: StaffDestinationGates = {
   reports: true,
   team: true,
   settings: true,
+  inbox: true,
 };
 const crew: StaffDestinationGates = {
   waivers: false,
   reports: false,
   team: false,
   settings: false,
+  inbox: false,
 };
 
 describe("the staff destination registry", () => {
@@ -154,8 +156,18 @@ describe("permission gating", () => {
     // Requests carries the `reports` gate rather than none: it is a pile of
     // contact details for people who have not booked, and deciding which
     // unscheduled day is worth a boat is the same commercial work Reports and
-    // Promo codes sit behind.
-    expect(gated).toEqual(["waivers", "requests", "reports", "team", "promoCodes", "settings"]);
+    // Promo codes sit behind. The inbox carries a gate of its own
+    // (`canAnswerShopInbox`) for the near half of that reason plus one more: a
+    // reply typed there leaves as the shop.
+    expect(gated).toEqual([
+      "waivers",
+      "requests",
+      "inbox",
+      "reports",
+      "team",
+      "promoCodes",
+      "settings",
+    ]);
 
     const visible = visibleStaffDestinations(crew).map((destination) => destination.id);
     const palette = staffPaletteDestinations(crew).map((destination) => destination.id);
@@ -182,6 +194,7 @@ describe("permission gating", () => {
       reports: true,
       team: false,
       settings: false,
+      inbox: false,
     };
     const ids = visibleStaffDestinations(reportsOnly).map((destination) => destination.id);
     expect(ids).toContain("reports");

@@ -4,6 +4,7 @@ import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
 import {
+  canPersonAnswerShopInbox,
   canPersonDeleteDiver,
   canPersonErasePersonalData,
   canPersonMergeDiver,
@@ -21,13 +22,13 @@ import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { whatsAppReplyWindowOpen } from "@/lib/inbox";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { ActivitySection } from "./_components/ActivitySection";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationsGroup } from "./_components/CertificationsGroup";
+import { ConversationSection } from "./_components/ConversationSection";
 import { DiverHeader } from "./_components/DiverHeader";
 import { DiverNotesSection } from "./_components/DiverNotesSection";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
@@ -36,7 +37,6 @@ import { DownloadDiverExportButton } from "./_components/DownloadDiverExportButt
 import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { GearAndSizes } from "./_components/GearAndSizes";
 import { MergeDiver } from "./_components/MergeDiver";
-import { MessagesGroup } from "./_components/MessagesGroup";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { RemoveDiver } from "./_components/RemoveDiver";
 import { RestoreDiver } from "./_components/RestoreDiver";
@@ -157,12 +157,13 @@ export default async function DiverDetailPage({
     canErase,
     canExport,
     canOpenClearance,
+    canAnswer,
     stripeAccount,
     notes,
     activityPage,
     supportNeeds,
-    thread,
     status,
+    thread,
   ] = await Promise.all([
     canPersonDeleteDiver(db, shop.id, session.user.personId),
     canPersonMergeDiver(db, shop.id, session.user.personId),
@@ -178,6 +179,10 @@ export default async function DiverDetailPage({
     // is at `canReadMedicalClearanceDocument`. Hiding the link is a courtesy;
     // the route re-checks the same live roles before it signs anything.
     canPersonReadMedicalClearanceDocument(db, shop.id, session.user.personId),
+    // Answering a diver is the inbox's own gate (ADR 20260907-two-way-inbox):
+    // a reply leaves as the shop. Read live like the rest of them; the action
+    // re-checks before it sends.
+    canPersonAnswerShopInbox(db, shop.id, session.user.personId),
     getShopStripeAccount(db, shop.id),
     listDiverRecordNotes(db, shop.id, personId),
     // Shop-scoped from the session, never the slug, like every read on this
@@ -185,13 +190,13 @@ export default async function DiverDetailPage({
     // anything past the end, so a stale bookmark lands on the last real page.
     pagedDiverActivity(db, shop.id, personId, { page: Number.parseInt(activity ?? "", 10) }),
     getSupportNeeds(db, shop.id, personId),
-    // Both directions of the conversation, interleaved by time — the same
-    // reader the shop inbox uses, never a second one (ADR 20260907-two-way-inbox).
-    personThread(db, shop.id, personId),
     // The readiness of the departure this diver is next on, read through the
     // entry the Today queue and the manifest already use — never a second
     // detector (`_lib/status-load.ts`).
     diverStatusRows(db, shop.id, diver, now),
+    // What this diver wrote and what the shop wrote back, interleaved by time.
+    // Shop-scoped from the session like every read here.
+    personThread(db, shop.id, personId),
   ]);
   const mergeCandidates =
     canMerge && !removed ? await listDiverMergeCandidates(db, shop.id, personId) : [];
@@ -208,31 +213,6 @@ export default async function DiverDetailPage({
         ({ booking }) => booking.tripId === trip.id && booking.status !== "cancelled",
       ) && trip.booked < trip.capacity,
   );
-
-  /**
-   * **What the composer answers**: the diver's most recent message, which is
-   * what fixes the channel and, on email, the thread the reply lands in. A
-   * removed record gets none — a record nobody may seat is not one the shop
-   * strikes up a conversation from — and neither does a diver who has never
-   * written, where there is nothing to continue.
-   *
-   * The WhatsApp window is decided here on the same message, so the box is
-   * absent before a staffer types into it rather than after Meta refuses it
-   * (`whatsAppReplyWindowOpen`; `sendStaffReply` re-checks it, because this
-   * tab may be older than the window).
-   */
-  const latestInbound = thread.findLast((entry) => entry.direction === "inbound");
-  const replyTarget =
-    removed || !latestInbound || latestInbound.direction !== "inbound"
-      ? null
-      : {
-          messageId: latestInbound.message.id,
-          channel: latestInbound.message.channel,
-          open:
-            latestInbound.message.channel !== "whatsapp" ||
-            whatsAppReplyWindowOpen(latestInbound.message.receivedAt, now),
-          diverName: diver.person.fullName,
-        };
 
   /**
    * The page's `?notice=` resolved once, to words *and* to the group those
@@ -358,6 +338,21 @@ export default async function DiverDetailPage({
         status={noticeForForm(diverNotice, "story")}
         now={now}
       />
+      {/* After the story and before the file: what happened, then what was
+          said about it, then the record's own paperwork. Renders nothing for a
+          diver who has never written. */}
+      <ConversationSection
+        entries={thread}
+        diverName={diver.person.fullName}
+        shopSlug={shopSlug}
+        personId={personId}
+        locale={locale}
+        timezone={shop.timezone}
+        now={now}
+        canAnswer={canAnswer}
+        t={t}
+        status={noticeForForm(diverNotice, "reply")}
+      />
       <CertificationsGroup
         diver={diver}
         shop={shop}
@@ -386,18 +381,6 @@ export default async function DiverDetailPage({
         locale={locale}
         t={t}
         status={noticeForForm(diverNotice, "fit")}
-      />
-      {/* The conversation, before the shop's own notes about this diver: what
-          they said comes ahead of what we wrote down about them. */}
-      <MessagesGroup
-        entries={thread}
-        reply={replyTarget}
-        shopSlug={shopSlug}
-        personId={personId}
-        locale={locale}
-        timezone={shop.timezone}
-        t={t}
-        status={noticeForForm(diverNotice, "messages")}
       />
       <DiverNotesSection
         notes={notes}

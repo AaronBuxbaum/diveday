@@ -1,45 +1,48 @@
 {
-  "title": "Lo que respondieron los buceadores",
-  "emptyHeading": "Nadie espera tu respuesta",
-  "emptyDetail": "Cuando un buceador responde a uno de tus correos, SMS o WhatsApps, aparece aquí y en su ficha.",
+  "title": "Lo que escribieron los buceadores",
+  "emptyHeading": "Nada todavía",
+  "emptyDetail": "Las respuestas a los correos y mensajes de WhatsApp que envías llegan aquí.",
   "group": {
-    "waiting": "Esperan tu respuesta",
+    "waiting": "Esperan tu respuesta · {count}",
     "answered": "Respondidos"
   },
   "channel": {
     "email": "Correo",
-    "sms": "SMS",
-    "whatsapp": "WhatsApp"
+    "whatsapp": "WhatsApp",
+    "sms": "SMS"
   },
   "unknownSender": "Remitente desconocido",
-  "attachments": "{count, plural, one {# archivo adjunto} other {# archivos adjuntos}}, quedaron en {channel}",
-  "openRecord": "Ver ficha",
-  "markAnswered": "Marcar como respondido",
-  "markingAnswered": "Marcando…",
-  "delete": "Eliminar",
-  "deleting": "Eliminando…",
-  "notFound": "Ese mensaje ya no está aquí.",
+  "attachments": "{count, plural, one {# archivo adjunto, sigue con quien lo envió} other {# archivos adjuntos, siguen con quien los envió}}",
+  "openRecord": "Abrir la ficha de {name}",
   "pagination": {
     "total": "{count, plural, one {# mensaje} other {# mensajes}}"
   },
   "thread": {
-    "heading": "Mensajes",
+    "heading": "Conversación",
     "summary": "{count, plural, one {# mensaje} other {# mensajes}}",
-    "summaryWaiting": "{count, plural, one {# mensaje} other {# mensajes}}, {waiting} esperan tu respuesta",
-    "none": "Ninguno todavía",
-    "repliedBy": "{name} · {date}",
-    "sendFailed": "No se envió",
-    "replyLabel": "Responde por {channel}",
+    "received": "{name} · {date}",
+    "sent": "{name} respondió · {date}",
+    "sendFailed": "Este no les llegó.",
+    "unknownStaff": "Alguien del equipo"
+  },
+  "reply": {
+    "email": "Responder por correo",
+    "whatsapp": "Responder por WhatsApp",
+    "placeholder": "Escribe tu respuesta",
     "send": "Enviar",
-    "sending": "Enviando…",
-    "windowClosed": "WhatsApp lleva una respuesta escrita hasta un día después del último mensaje de {name}, y ese día ya pasó."
+    "sending": "Enviando",
+    "windowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo."
   },
   "notices": {
-    "replyEmpty": "Escribe algo para enviar.",
-    "replyTooLong": "Demasiado largo para enviarlo. Acórtalo e inténtalo de nuevo.",
-    "replyWindowClosed": "WhatsApp ya no llevará una respuesta escrita a esta conversación.",
-    "replyNotConfigured": "Este centro no tiene ningún remitente conectado para ese canal.",
-    "replyFailed": "No se envió. Inténtalo de nuevo.",
-    "replyUnavailable": "Ese mensaje ya no está aquí."
+    "failed": "No se envió, así que el mensaje sigue esperando respuesta.",
+    "notConfigured": "El correo no está activado en esta instalación de DiveDay, así que no salió nada.",
+    "emptyBody": "Escribe una respuesta antes de enviar.",
+    "tooLong": "Es más larga de lo que admite una respuesta. Recórtala y envíala otra vez.",
+    "notFound": "Ese mensaje ya no está en esta ficha.",
+    "channelUnsupported": "DiveDay todavía no puede responder un SMS.",
+    "noReplyAddress": "No hay ninguna dirección a la que responder.",
+    "whatsappWindowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo.",
+    "whatsappNotConnected": "Para responder por WhatsApp hace falta el remitente que conectas en Ajustes.",
+    "notAuthorized": "Responder a los buceadores es trabajo del propietario o del gerente."
   }
 }

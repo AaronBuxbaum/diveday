@@ -32,8 +32,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and ninety-nine key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 796 screenshots per run (see
+ * Visual regression coverage. Two hundred and six key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 824 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -55,7 +55,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
  * and `TABLET_SURFACES` adds 10: five staff surfaces get a third, portrait
  * tablet width, at one screenshot per scheme rather than the usual two. That
- * brings the run to 782 screenshots — the tablet width is a 1.3% addition, not
+ * brings the run to 842 screenshots — the tablet width is a 1.2% addition, not
  * the 50% a third viewport applied to every surface would have cost.
  *
  * ## One surface, one `test()`
@@ -5450,44 +5450,35 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staff-date-requests", scheme);
       });
 
-      // **The shop inbox** (ADR 20260907-two-way-inbox): everything divers
-      // wrote back, unanswered first, as two groups under one seam. The seed
-      // puts one of each state on it — an email from a diver on file, a
-      // WhatsApp inside Meta's window, a message from an address nobody holds,
-      // and an already-answered thread — so the capture is the whole grammar of
-      // the surface rather than a list of one shape. Waiting on the Answered
-      // group, which renders below the waiting one: a capture taken before it
-      // lands photographs half a page.
+      // What divers wrote back, as a worklist (ADR 20260907-two-way-inbox):
+      // the unanswered ones under a group carrying their count, the answered
+      // ones under theirs, and a stranger's row showing the address it came
+      // from because it has no record to open. The seed puts one of each in
+      // (`src/db/seed-inbox.ts`), which is the whole reason this surface can be
+      // photographed at all. Waiting on the second group as well as the
+      // heading: both render from one query, so a capture taken on the first
+      // alone can photograph a half-built list.
       test(`the shop inbox renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/inbox");
-        await page.getByRole("heading", { level: 1, name: "What divers wrote back" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "What divers wrote" }).waitFor();
         await page.getByRole("heading", { name: "Answered" }).waitFor();
         await capture(page, "staff-inbox", scheme);
       });
 
-      // **The conversation on the diver's record**, which is where the shop
-      // answers. Both voices in one ledger — the diver's words on the card, the
-      // shop's on the sunken fill — with the composer under them wearing the
-      // channel in its own label. Lena's is the seeded thread that already has
-      // both directions in it; her record is reached from the inbox row so the
-      // capture proves the door as well as the destination.
-      test(`the record's message thread renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      // The other half of the same feature: one diver's conversation on their
+      // own record, reached through the inbox row that opens it. It is the one
+      // file group rendering both directions — what they wrote and what the
+      // shop wrote back — with the composer beneath, and it opens itself
+      // because this diver is waiting on an answer.
+      test(`a diver's conversation renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/inbox");
+        await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
+        await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
         await page
-          .getByRole("main")
-          .getByRole("listitem")
-          .filter({ hasText: "Lena Fischer" })
-          .getByRole("link", { name: "Open record" })
-          .click();
-        await page.getByRole("heading", { level: 1, name: "Lena Fischer" }).waitFor();
-        // The group is folded at rest for an answered thread — open it, so the
-        // picture is of the conversation rather than of a closed summary line.
-        await page.getByText("Messages", { exact: true }).first().click();
-        await page.getByLabel("Write back by Email").waitFor();
-        await page.mouse.move(0, 0);
-        await capture(page, "staff-diver-message-thread", scheme);
+          .getByRole("region", { name: "Conversation" })
+          .getByText(/afternoon boat/)
+          .waitFor();
+        await capture(page, "staff-diver-conversation", scheme);
       });
 
       // Shop-wide discount codes: the create form, then the codes as one

@@ -368,11 +368,9 @@ export async function deleteInboundMessage(
 
 export type RecordStaffReplyInput = {
   /**
-   * The row's own id, minted by the caller *before* the send. The email
-   * notification's idempotency key is `staff-reply/<replyId>`
-   * (`src/lib/notifications/kinds.ts`), so the id has to exist before the
-   * provider is called or a retry would key on a row that does not. Omitted
-   * on the text channels, which have no such key.
+   * The row's own id, when the caller minted one first. `sendStaffReply` does:
+   * the notification's idempotency key is `staff-reply/<id>`, so a queued
+   * retry has to name the row the reply already is rather than a second one.
    */
   id?: string;
   shopId: string;

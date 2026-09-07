@@ -79,7 +79,7 @@
     "failedPhotoDeletion": "Cleanup",
     "owedRefund": "Refund owed",
     "reviewsPending": "Reviews",
-    "inboxUnanswered": "Messages",
+    "unansweredMessages": "Messages",
     "gearOverdue": "Gear overdue",
     "gearDueBack": "Gear due back",
     "gearServiceDue": "Gear service",
@@ -196,7 +196,7 @@
     "openOrders": "Review in Orders",
     "openDataSettings": "Review in Settings",
     "openReviews": "Open reviews",
-    "openInbox": "Open messages",
+    "openInbox": "Open inbox",
     "openGearRegister": "Open gear register",
     "openGearUnit": "Open unit record",
     "openStaffing": "Open staffing",
@@ -242,9 +242,9 @@
     "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you",
     "detail": "Divers wrote about their trips. Publish the good words or hide the rest."
   },
-  "inboxUnanswered": {
-    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on you",
-    "detail": "Divers replied to an email, a text or a WhatsApp."
+  "unansweredMessages": {
+    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer",
+    "detail": "Divers wrote back. Answer from their record, in the channel they used."
   },
   "seasonEvent": {
     "detail": "Opens {date}."

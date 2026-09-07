@@ -1,45 +1,48 @@
 {
-  "title": "What divers wrote back",
-  "emptyHeading": "Nobody is waiting on you",
-  "emptyDetail": "When a diver answers one of your emails, texts or WhatsApps, it lands here and on their record.",
+  "title": "What divers wrote",
+  "emptyHeading": "Nothing yet",
+  "emptyDetail": "Replies to the emails and WhatsApp messages you send land here.",
   "group": {
-    "waiting": "Waiting on you",
+    "waiting": "Waiting on you · {count}",
     "answered": "Answered"
   },
   "channel": {
     "email": "Email",
-    "sms": "Text",
-    "whatsapp": "WhatsApp"
+    "whatsapp": "WhatsApp",
+    "sms": "Text"
   },
   "unknownSender": "Unknown sender",
-  "attachments": "{count, plural, one {# attachment} other {# attachments}}, left with {channel}",
-  "openRecord": "Open record",
-  "markAnswered": "Mark answered",
-  "markingAnswered": "Marking…",
-  "delete": "Delete",
-  "deleting": "Deleting…",
-  "notFound": "That message is no longer here.",
+  "attachments": "{count, plural, one {# attachment, still with the sender} other {# attachments, still with the sender}}",
+  "openRecord": "Open the record for {name}",
   "pagination": {
     "total": "{count, plural, one {# message} other {# messages}}"
   },
   "thread": {
-    "heading": "Messages",
+    "heading": "Conversation",
     "summary": "{count, plural, one {# message} other {# messages}}",
-    "summaryWaiting": "{count, plural, one {# message} other {# messages}}, {waiting} waiting on you",
-    "none": "None yet",
-    "repliedBy": "{name} · {date}",
-    "sendFailed": "Did not send",
-    "replyLabel": "Write back by {channel}",
+    "received": "{name} · {date}",
+    "sent": "{name} replied · {date}",
+    "sendFailed": "This one did not reach them.",
+    "unknownStaff": "A staff member"
+  },
+  "reply": {
+    "email": "Reply by email",
+    "whatsapp": "Reply on WhatsApp",
+    "placeholder": "Type your answer",
     "send": "Send",
-    "sending": "Sending…",
-    "windowClosed": "WhatsApp carries a typed reply for one day after {name} last wrote, and that day is up."
+    "sending": "Sending",
+    "windowClosed": "WhatsApp takes a typed reply for 24 hours after a diver's last message. Theirs is older than that."
   },
   "notices": {
-    "replyEmpty": "Type something to send.",
-    "replyTooLong": "Too long to send. Shorten it and try again.",
-    "replyWindowClosed": "WhatsApp will not carry a typed reply to this conversation any more.",
-    "replyNotConfigured": "This shop has no sender connected for that channel.",
-    "replyFailed": "That did not send. Try again.",
-    "replyUnavailable": "That message is no longer here."
+    "failed": "That did not send, so the message is still waiting on an answer.",
+    "notConfigured": "Email is not switched on for this DiveDay setup, so nothing went out.",
+    "emptyBody": "Type an answer before sending.",
+    "tooLong": "That is longer than a reply can be. Trim it and send again.",
+    "notFound": "That message is no longer on this record.",
+    "channelUnsupported": "DiveDay cannot answer a text message yet.",
+    "noReplyAddress": "There is no address to answer on.",
+    "whatsappWindowClosed": "WhatsApp takes a typed reply for 24 hours after a diver's last message. Theirs is older than that.",
+    "whatsappNotConnected": "Answering on WhatsApp needs the sender you connect in Settings.",
+    "notAuthorized": "Answering divers is owner and manager work."
   }
 }

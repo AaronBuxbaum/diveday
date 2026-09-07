@@ -13,8 +13,6 @@ import {
   helpRequestActionText,
   helpRequestDetailText,
   highWindAlertDetailText,
-  inboxUnansweredDetailText,
-  inboxUnansweredSubjectText,
   instructorMissingDetailText,
   inviteFromWaitlistActionText,
   lastMinuteFillDetailText,
@@ -49,6 +47,8 @@ import {
   staffCredentialDueDetailText,
   stuckOperationKindText,
   stuckPaymentOperationDetailText,
+  unansweredMessagesDetailText,
+  unansweredMessagesSubjectText,
   uncrewedCourseDetailText,
   uncrewedDepartureDetailText,
   ungatedNitroxDetailText,
@@ -1880,32 +1880,6 @@ export async function getTodayWork(
     }
   }
 
-  // **What divers wrote back and nobody has answered** (ADR
-  // 20260907-two-way-inbox). Mirrored here, owned by the inbox page — the same
-  // arrangement the reviews queue below uses, and for the same reason: the row
-  // that ranks work belongs on the page that ranks work, not as a badge on a
-  // nav tab that never says what to do about itself.
-  //
-  // One row for the whole queue, `later` urgency and `dueAt: null`. A diver
-  // waiting on an answer is real work, but nothing sails or refunds on it, and
-  // a message from twenty minutes ago has no deadline the app can name — the
-  // count is the signal, and it empties as the shop answers. The count comes
-  // from the inbox page's own reader, never a second detector.
-  const unanswered = await countUnansweredMessages(db, shopId);
-  if (unanswered > 0) {
-    actions.push({
-      id: "inbox:unanswered",
-      kind: "inbox_unanswered",
-      urgency: "later",
-      subject: inboxUnansweredSubjectText(t, unanswered),
-      context: null,
-      detail: inboxUnansweredDetailText(t),
-      actionLabel: openInboxActionText(t),
-      href: `/shop/${shopSlug}/inbox`,
-      dueAt: null,
-    });
-  }
-
   // Reviews waiting on moderation. This used to be a count badge on a nav row;
   // when Reviews left the header, the signal moved here — the queue is the one
   // page that ranks pending work, and a badge on a menu was the only signal in
@@ -1931,6 +1905,26 @@ export async function getTodayWork(
       href: reviewsAwaiting.onlyId
         ? `${reviewsHref}#review-${reviewsAwaiting.onlyId}`
         : reviewsHref,
+      dueAt: null,
+    });
+  }
+
+  // Divers who wrote back and are still waiting (ADR 20260907-two-way-inbox).
+  // One row for the whole inbox rather than one per message, `later` urgency
+  // and `dueAt: null` — the shape the reviews row above already has, and for
+  // the same reason: nothing sails on an unanswered message, and a row per
+  // message would be the inbox rendered twice. Nothing at all at zero.
+  const unanswered = await countUnansweredMessages(db, shopId);
+  if (unanswered > 0) {
+    actions.push({
+      id: "inbox:unanswered",
+      kind: "unanswered_messages",
+      urgency: "later",
+      subject: unansweredMessagesSubjectText(t, unanswered),
+      context: null,
+      detail: unansweredMessagesDetailText(t),
+      actionLabel: openInboxActionText(t),
+      href: `/shop/${shopSlug}/inbox`,
       dueAt: null,
     });
   }

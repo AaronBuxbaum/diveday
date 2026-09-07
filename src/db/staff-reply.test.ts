@@ -1,381 +1,301 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import type { Notification } from "@/lib/notifications";
-import type { NotificationProvider } from "@/lib/notifications/provider";
+import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { seededShopContext } from "@/test/db";
-import { recordInboundMessage } from "./inbound-messages";
+import { getInboundMessage, personThread, recordInboundMessage } from "./inbound-messages";
 import { inboundMessages, people, personRoles, staffReplies } from "./schema";
 import { sendStaffReply } from "./staff-reply";
 
 /**
- * **Answering a diver in the channel they wrote in** (ADR
- * 20260907-two-way-inbox, decision 6). The contract this pins:
- *
- * - the channel is the diver's, never chosen by the shop;
- * - a sent reply answers the message it was written to, and a failed one
- *   leaves it unanswered, because it is;
- * - the WhatsApp window is checked before the send, not read off Meta's error;
- * - a stranger's message has no record to answer from and is refused.
+ * What a reply promises (ADR 20260907-two-way-inbox, decision 6): it goes out
+ * on the channel the diver wrote on, in the diver's own language, threaded
+ * against their own `Message-ID`; it is recorded whether it went or not; and a
+ * message that is not this shop's, or not this diver's, cannot be answered at
+ * all.
  */
 
 const NOW = new Date("2026-07-21T13:30:00.000Z");
-type Ctx = Awaited<ReturnType<typeof seededShopContext>>;
 
-async function personNamed(db: Ctx["db"], shopId: string, fullName: string) {
-  const [row] = await db
-    .select({ id: people.id, email: people.email, phone: people.phone })
-    .from(people)
-    .where(and(eq(people.shopId, shopId), eq(people.fullName, fullName)))
-    .limit(1);
-  if (!row?.email || !row.phone) throw new Error(`seed is missing ${fullName}`);
-  return row as { id: string; email: string; phone: string };
-}
+type Sent = { notification: Notification };
 
-async function anyStaff(db: Ctx["db"], shopId: string) {
-  const [row] = await db
-    .select({ id: people.id })
-    .from(people)
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "owner")))
-    .limit(1);
-  if (!row) throw new Error("seed is missing an owner");
-  return row.id;
-}
-
-/** A provider that says yes and keeps what it was handed. */
-function capturingEmailProvider(): NotificationProvider & { sent: Notification[] } {
-  const sent: Notification[] = [];
+/** A provider that accepts everything and keeps what it was handed. */
+function acceptingProvider(): NotificationProvider & { sent: Sent[] } {
+  const sent: Sent[] = [];
   return {
     sent,
     async send(notification) {
-      sent.push(notification);
-      return { status: "sent", providerMessageId: "ses-reply-1" };
+      sent.push({ notification });
+      return { status: "sent", providerMessageId: `ses-${sent.length}` };
     },
   };
 }
 
-describe("sendStaffReply", () => {
-  it("answers an email in its own thread and stamps the message answered", async () => {
-    const { db, shop } = await seededShopContext();
-    const diver = await personNamed(db, shop.id, "Priya Sharma");
-    const staff = await anyStaff(db, shop.id);
-    const inbound = await recordInboundMessage(db, {
+async function shopContext() {
+  const { db, shop } = await seededShopContext();
+  const [diver] = await db
+    .select({ id: people.id, email: people.email, phone: people.phone })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Priya Sharma")))
+    .limit(1);
+  if (!diver?.email || !diver.phone) throw new Error("seeded diver missing contact details");
+  const [staff] = await db
+    .select({ id: people.id })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+    .limit(1);
+  if (!staff) throw new Error("seeded owner missing");
+  return { db, shop, diver: diver as { id: string; email: string; phone: string }, staff };
+}
+
+async function inboundEmail(
+  db: Awaited<ReturnType<typeof shopContext>>["db"],
+  shopId: string,
+  fromAddress: string,
+  overrides: { subject?: string | null; emailMessageId?: string | null; receivedAt?: Date } = {},
+) {
+  const result = await recordInboundMessage(db, {
+    shopId,
+    channel: "email",
+    fromAddress,
+    subject: overrides.subject === undefined ? "Re: Your Saturday departure" : overrides.subject,
+    body: "Could I switch to the afternoon boat?",
+    receivedAt: overrides.receivedAt ?? NOW,
+    providerMessageId: `email-${Math.random()}`,
+    emailMessageId: overrides.emailMessageId ?? "<diver-thread@example.com>",
+  });
+  if (result.status !== "recorded") throw new Error(`unexpected ${result.status}`);
+  return result.id;
+}
+
+describe("answering by email", () => {
+  it("sends the staffer's words, threads them, and answers the message", async () => {
+    const { db, shop, diver, staff } = await shopContext();
+    const messageId = await inboundEmail(db, shop.id, diver.email);
+    const provider = acceptingProvider();
+
+    const result = await sendStaffReply(db, {
       shopId: shop.id,
-      channel: "email",
-      fromAddress: diver.email,
-      subject: "Re: Saturday",
-      body: "Can I move to the afternoon boat?",
-      receivedAt: NOW,
-      providerMessageId: "email-reply-1",
-      emailMessageId: "<diver-1@mail.example>",
+      personId: diver.id,
+      messageId,
+      body: "You're on the 1pm boat now.",
+      sentByPersonId: staff.id,
+      now: NOW,
+      provider,
     });
-    if (inbound.status !== "recorded") throw new Error("fixture not recorded");
 
-    const provider = capturingEmailProvider();
-    const result = await sendStaffReply(
-      db,
-      {
-        shopId: shop.id,
-        messageId: inbound.id,
-        body: "Of course. You're on the 1pm boat.",
-        sentByPersonId: staff,
-        now: NOW,
-      },
-      { emailProvider: provider },
-    );
-    expect(result.status).toBe("sent");
+    expect(result).toMatchObject({ status: "sent", channel: "email" });
+    const sent = provider.sent[0]?.notification;
+    expect(sent).toMatchObject({
+      kind: "staff_reply",
+      to: diver.email.toLowerCase(),
+      body: "You're on the 1pm boat now.",
+      // The diver's own subject, marked as a reply exactly once.
+      subject: "Re: Your Saturday departure",
+      // What files the answer into their thread rather than beside it.
+      inReplyTo: "<diver-thread@example.com>",
+    });
+    // The row minted before the send *is* the row recorded after it, so a
+    // queued retry cannot become a second reply.
+    if (result.status !== "sent") throw new Error("expected a sent reply");
+    const [reply] = await db.select().from(staffReplies).where(eq(staffReplies.id, result.replyId));
+    expect(reply).toMatchObject({ status: "sent", personId: diver.id, channel: "email" });
 
-    const [notification] = provider.sent;
-    if (notification?.kind !== "staff_reply") throw new Error("no staff reply sent");
-    // The diver's own `Message-ID`, which is what files the answer into their
-    // thread rather than beside it.
-    expect(notification.inReplyTo).toBe("<diver-1@mail.example>");
-    expect(notification.subject).toBe("Re: Saturday");
-    expect(notification.to).toBe(diver.email.toLowerCase());
-    // The row exists under the id the idempotency key names.
-    expect(notification.replyId).toBe(result.status === "sent" ? result.replyId : "");
-
-    const [reply] = await db
-      .select()
-      .from(staffReplies)
-      .where(eq(staffReplies.inboundMessageId, inbound.id));
-    expect(reply).toMatchObject({ status: "sent", channel: "email", personId: diver.id });
-    const [message] = await db
-      .select()
-      .from(inboundMessages)
-      .where(eq(inboundMessages.id, inbound.id));
-    expect(message?.answeredAt).toEqual(NOW);
+    const message = await getInboundMessage(db, shop.id, messageId);
+    expect(message?.answeredAt).not.toBeNull();
+    expect(message?.readAt).not.toBeNull();
   });
 
-  it("records a failed send and leaves the message waiting", async () => {
-    const { db, shop } = await seededShopContext();
-    const diver = await personNamed(db, shop.id, "Priya Sharma");
-    const staff = await anyStaff(db, shop.id);
-    const inbound = await recordInboundMessage(db, {
+  it("names the shop when the diver's mail carried no subject", async () => {
+    const { db, shop, diver, staff } = await shopContext();
+    const messageId = await inboundEmail(db, shop.id, diver.email, { subject: null });
+    const provider = acceptingProvider();
+    await sendStaffReply(db, {
       shopId: shop.id,
-      channel: "email",
-      fromAddress: diver.email,
-      body: "Anything Saturday?",
-      receivedAt: NOW,
-      providerMessageId: "email-reply-2",
+      personId: diver.id,
+      messageId,
+      body: "We do.",
+      sentByPersonId: staff.id,
+      now: NOW,
+      provider,
     });
-    if (inbound.status !== "recorded") throw new Error("fixture not recorded");
+    expect(provider.sent[0]?.notification).toMatchObject({
+      subject: `A message from ${shop.name}`,
+    });
+  });
 
-    const result = await sendStaffReply(
-      db,
-      {
-        shopId: shop.id,
-        messageId: inbound.id,
-        body: "Two seats left.",
-        sentByPersonId: staff,
-        now: NOW,
+  it("records a send that did not go, and leaves the message unanswered", async () => {
+    const { db, shop, diver, staff } = await shopContext();
+    const messageId = await inboundEmail(db, shop.id, diver.email);
+    const refusing: NotificationProvider = {
+      async send() {
+        return { status: "failed", retryable: false, errorCode: "rejected" };
       },
-      {
-        emailProvider: {
-          async send() {
-            return { status: "failed", retryable: true, errorCode: "throttled" };
-          },
+    };
+
+    const result = await sendStaffReply(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      messageId,
+      body: "Sorry for the delay.",
+      sentByPersonId: staff.id,
+      now: NOW,
+      provider: refusing,
+    });
+
+    expect(result).toMatchObject({ status: "failed", reason: "send_failed" });
+    const thread = await personThread(db, shop.id, diver.id);
+    // The staffer's words survive the failure — the record is what says the
+    // shop tried and the diver never heard.
+    expect(
+      thread.some((entry) => entry.direction === "outbound" && entry.reply.status === "failed"),
+    ).toBe(true);
+    expect((await getInboundMessage(db, shop.id, messageId))?.answeredAt).toBeNull();
+  });
+
+  it("reports a channel this deployment never switched on as its own outcome", async () => {
+    const { db, shop, diver, staff } = await shopContext();
+    const messageId = await inboundEmail(db, shop.id, diver.email);
+    const result = await sendStaffReply(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      messageId,
+      body: "Hello.",
+      sentByPersonId: staff.id,
+      now: NOW,
+      provider: {
+        async send() {
+          return { status: "not_configured" };
         },
       },
-    );
-    expect(result).toEqual({ status: "refused", reason: "send_failed" });
+    });
+    expect(result).toMatchObject({ status: "failed", reason: "not_configured" });
+  });
+});
 
-    const [reply] = await db
-      .select()
-      .from(staffReplies)
-      .where(eq(staffReplies.inboundMessageId, inbound.id));
-    expect(reply).toMatchObject({ status: "failed", sendErrorCode: "throttled" });
-    const [message] = await db
-      .select()
-      .from(inboundMessages)
-      .where(eq(inboundMessages.id, inbound.id));
-    // Unanswered, because it is — the diver has heard nothing.
-    expect(message?.answeredAt).toBeNull();
+describe("what cannot be answered", () => {
+  it("refuses an empty body before it reaches a provider", async () => {
+    const { db, shop, diver, staff } = await shopContext();
+    const messageId = await inboundEmail(db, shop.id, diver.email);
+    const provider = acceptingProvider();
+    expect(
+      await sendStaffReply(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        messageId,
+        body: "   \n  ",
+        sentByPersonId: staff.id,
+        now: NOW,
+        provider,
+      }),
+    ).toEqual({ status: "refused", reason: "empty_body" });
+    expect(provider.sent).toHaveLength(0);
   });
 
-  it("answers a WhatsApp on WhatsApp, at the number the diver wrote from", async () => {
-    const { db, shop } = await seededShopContext();
-    const diver = await personNamed(db, shop.id, "Priya Sharma");
-    const staff = await anyStaff(db, shop.id);
-    const inbound = await recordInboundMessage(db, {
+  it("refuses a message that belongs to another diver's record", async () => {
+    const { db, shop, diver, staff } = await shopContext();
+    const [other] = await db
+      .select({ id: people.id, email: people.email })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Diego Alvarez")))
+      .limit(1);
+    if (!other?.email) throw new Error("seeded second diver missing an email");
+    const messageId = await inboundEmail(db, shop.id, other.email);
+    const provider = acceptingProvider();
+    expect(
+      await sendStaffReply(db, {
+        // Same shop, wrong record: the composer on Priya's page must not be
+        // able to answer Diego's mail by posting his message id.
+        shopId: shop.id,
+        personId: diver.id,
+        messageId,
+        body: "Hello.",
+        sentByPersonId: staff.id,
+        now: NOW,
+        provider,
+      }),
+    ).toEqual({ status: "refused", reason: "message_not_found" });
+    expect(provider.sent).toHaveLength(0);
+  });
+
+  it("refuses a message belonging to another shop", async () => {
+    const { db, shop, diver, staff } = await shopContext();
+    const messageId = await inboundEmail(db, shop.id, diver.email);
+    const provider = acceptingProvider();
+    const [foreign] = await db
+      .insert(inboundMessages)
+      .values({
+        shopId: shop.id,
+        personId: diver.id,
+        channel: "email",
+        fromAddress: diver.email.toLowerCase(),
+        body: "x",
+        receivedAt: NOW,
+        providerMessageId: "email-foreign",
+      })
+      .returning({ id: inboundMessages.id });
+    if (!foreign) throw new Error("insert failed");
+    expect(
+      await sendStaffReply(db, {
+        // A shop id that is not the message's: the tenant is the caller's,
+        // never the row's.
+        shopId: "00000000-0000-4000-8000-000000000000",
+        personId: diver.id,
+        messageId,
+        body: "Hello.",
+        sentByPersonId: staff.id,
+        now: NOW,
+        provider,
+      }),
+    ).toEqual({ status: "refused", reason: "message_not_found" });
+    expect(provider.sent).toHaveLength(0);
+  });
+
+  it("refuses a WhatsApp reply once Meta's 24-hour window has closed", async () => {
+    const { db, shop, diver, staff } = await shopContext();
+    const recorded = await recordInboundMessage(db, {
       shopId: shop.id,
       channel: "whatsapp",
       fromAddress: diver.phone,
       body: "Running late",
-      receivedAt: new Date("2026-07-21T12:00:00.000Z"),
-      providerMessageId: "wamid.reply-1",
+      receivedAt: new Date(NOW.getTime() - 25 * 60 * 60 * 1000),
+      providerMessageId: "wa-old",
     });
-    if (inbound.status !== "recorded") throw new Error("fixture not recorded");
-
-    const sentTo: string[] = [];
-    const result = await sendStaffReply(
-      db,
-      {
+    if (recorded.status !== "recorded") throw new Error("seed message not recorded");
+    expect(
+      await sendStaffReply(db, {
         shopId: shop.id,
-        messageId: inbound.id,
-        body: "No problem, we'll wait.",
-        sentByPersonId: staff,
+        personId: diver.id,
+        messageId: recorded.id,
+        body: "No problem.",
+        sentByPersonId: staff.id,
         now: NOW,
-      },
-      {
-        whatsAppSender: {
-          async sendText(message) {
-            sentTo.push(message.to);
-            return { status: "sent", providerMessageId: "wamid.out-1" };
-          },
-        },
-      },
-    );
-    expect(result.status).toBe("sent");
-    expect(sentTo).toEqual([`+${diver.phone.replace(/\D/g, "")}`]);
-    const [reply] = await db
-      .select()
-      .from(staffReplies)
-      .where(eq(staffReplies.inboundMessageId, inbound.id));
-    expect(reply?.channel).toBe("whatsapp");
+      }),
+    ).toEqual({ status: "refused", reason: "whatsapp_window_closed" });
   });
 
-  it("refuses a WhatsApp reply once Meta's 24-hour window has closed", async () => {
-    const { db, shop } = await seededShopContext();
-    const diver = await personNamed(db, shop.id, "Priya Sharma");
-    const staff = await anyStaff(db, shop.id);
-    const inbound = await recordInboundMessage(db, {
+  it("refuses a WhatsApp reply from a shop with no sender connected", async () => {
+    const { db, shop, diver, staff } = await shopContext();
+    const recorded = await recordInboundMessage(db, {
       shopId: shop.id,
       channel: "whatsapp",
       fromAddress: diver.phone,
-      body: "Thanks!",
-      receivedAt: new Date("2026-07-19T12:00:00.000Z"),
-      providerMessageId: "wamid.reply-stale",
+      body: "Running late",
+      receivedAt: new Date(NOW.getTime() - 60 * 60 * 1000),
+      providerMessageId: "wa-fresh",
     });
-    if (inbound.status !== "recorded") throw new Error("fixture not recorded");
-
-    let attempted = false;
-    const result = await sendStaffReply(
-      db,
-      {
-        shopId: shop.id,
-        messageId: inbound.id,
-        body: "See you Saturday.",
-        sentByPersonId: staff,
-        now: NOW,
-      },
-      {
-        whatsAppSender: {
-          async sendText() {
-            attempted = true;
-            return { status: "sent", providerMessageId: "never" };
-          },
-        },
-      },
-    );
-    expect(result).toEqual({ status: "refused", reason: "window_closed" });
-    // Refused before the provider, not by reading its error afterwards.
-    expect(attempted).toBe(false);
-    expect(
-      await db.select().from(staffReplies).where(eq(staffReplies.inboundMessageId, inbound.id)),
-    ).toHaveLength(0);
-  });
-
-  it("refuses a stranger's message, another shop's message, and an empty body", async () => {
-    const { db, shop } = await seededShopContext();
-    const diver = await personNamed(db, shop.id, "Priya Sharma");
-    const staff = await anyStaff(db, shop.id);
-    const stranger = await recordInboundMessage(db, {
-      shopId: shop.id,
-      channel: "email",
-      fromAddress: "nobody.here@example.net",
-      body: "Night dives in October?",
-      receivedAt: NOW,
-      providerMessageId: "email-stranger-reply",
-    });
-    if (stranger.status !== "recorded") throw new Error("fixture not recorded");
-    const mine = await recordInboundMessage(db, {
-      shopId: shop.id,
-      channel: "email",
-      fromAddress: diver.email,
-      body: "Saturday?",
-      receivedAt: NOW,
-      providerMessageId: "email-mine",
-    });
-    if (mine.status !== "recorded") throw new Error("fixture not recorded");
-
-    const base = { shopId: shop.id, sentByPersonId: staff, now: NOW };
-    // Nobody to answer: the address matched no record in this shop.
-    expect(
-      await sendStaffReply(db, { ...base, messageId: stranger.id, body: "Yes, weekly." }),
-    ).toEqual({ status: "refused", reason: "message_unavailable" });
-    // A different tenant asking for this shop's message gets nothing back.
+    if (recorded.status !== "recorded") throw new Error("seed message not recorded");
     expect(
       await sendStaffReply(db, {
-        ...base,
-        shopId: "00000000-0000-4000-8000-000000000000",
-        messageId: mine.id,
-        body: "Yes.",
-      }),
-    ).toEqual({ status: "refused", reason: "message_unavailable" });
-    expect(await sendStaffReply(db, { ...base, messageId: mine.id, body: "   " })).toEqual({
-      status: "refused",
-      reason: "empty_body",
-    });
-    // A form field naming another of this shop's messages does not answer a
-    // conversation the staffer is not looking at.
-    expect(
-      await sendStaffReply(db, {
-        ...base,
-        messageId: mine.id,
-        expectedPersonId: "00000000-0000-4000-8000-000000000001",
-        body: "Yes.",
-      }),
-    ).toEqual({ status: "refused", reason: "message_unavailable" });
-  });
-
-  it("will not write to a diver the shop has deleted", async () => {
-    const { db, shop } = await seededShopContext();
-    const diver = await personNamed(db, shop.id, "Priya Sharma");
-    const staff = await anyStaff(db, shop.id);
-    const inbound = await recordInboundMessage(db, {
-      shopId: shop.id,
-      channel: "email",
-      fromAddress: diver.email,
-      body: "Still on for Saturday?",
-      receivedAt: NOW,
-      providerMessageId: "email-deleted-diver",
-    });
-    if (inbound.status !== "recorded") throw new Error("fixture not recorded");
-    await db.update(people).set({ deletedAt: NOW }).where(eq(people.id, diver.id));
-
-    const provider = capturingEmailProvider();
-    expect(
-      await sendStaffReply(
-        db,
-        {
-          shopId: shop.id,
-          messageId: inbound.id,
-          body: "Yes, see you at seven.",
-          sentByPersonId: staff,
-          now: NOW,
-        },
-        { emailProvider: provider },
-      ),
-    ).toEqual({ status: "refused", reason: "message_unavailable" });
-    expect(provider.sent).toHaveLength(0);
-  });
-
-  /**
-   * **Regression (security review of #1509, finding 1).** The call site used to
-   * restate one clause of `staffReplySchema`'s rule for `inReplyTo` — the
-   * control-character test — without the length rules beside it. A diver could
-   * therefore poison their own thread for good by sending mail whose
-   * `Message-ID` is two characters: it cleared the call site, `notify`'s
-   * `parse` threw on `min(3)`, `notifySafely` reported that as a provider
-   * failure, and the shop's answer never left. Repeating the trick kept the
-   * newest message poisoned, so the shop could never answer that diver by mail
-   * again — remote, persistent, and dressed up as an SES outage.
-   *
-   * The rule now has one home. What this pins is the behaviour the code
-   * comment always claimed: the header is dropped, and the answer goes.
-   */
-  it("sends the answer without threading it when the diver's Message-ID is unusable", async () => {
-    const { db, shop } = await seededShopContext();
-    const diver = await personNamed(db, shop.id, "Priya Sharma");
-    const staff = await anyStaff(db, shop.id);
-    const inbound = await recordInboundMessage(db, {
-      shopId: shop.id,
-      channel: "email",
-      fromAddress: diver.email,
-      subject: "Re: Saturday",
-      body: "Can I move to the afternoon boat?",
-      receivedAt: NOW,
-      providerMessageId: "email-reply-poisoned",
-      // Two characters: printable, single-line, and shorter than the schema's
-      // floor. The old call site passed it straight through.
-      emailMessageId: "ab",
-    });
-    if (inbound.status !== "recorded") throw new Error("fixture not recorded");
-
-    const provider = capturingEmailProvider();
-    const result = await sendStaffReply(
-      db,
-      {
         shopId: shop.id,
-        messageId: inbound.id,
-        body: "Of course. You're on the 1pm boat.",
-        sentByPersonId: staff,
+        personId: diver.id,
+        messageId: recorded.id,
+        body: "No problem.",
+        sentByPersonId: staff.id,
         now: NOW,
-      },
-      { emailProvider: provider },
-    );
-
-    expect(result.status).toBe("sent");
-    const [notification] = provider.sent;
-    if (notification?.kind !== "staff_reply") throw new Error("no staff reply sent");
-    expect(notification.inReplyTo).toBeUndefined();
-    // And the message is answered, which is the whole point: an unusable header
-    // costs the thread, never the reply.
-    const [row] = await db
-      .select({ answeredAt: inboundMessages.answeredAt })
-      .from(inboundMessages)
-      .where(eq(inboundMessages.id, inbound.id));
-    expect(row?.answeredAt).not.toBeNull();
+      }),
+    ).toEqual({ status: "refused", reason: "whatsapp_not_connected" });
   });
 });

@@ -21,6 +21,21 @@ enum value, two environment variables; the connection rows, sealed credentials, 
 state, outbox and retry ladder are the register's, unchanged. ADR
 [20260907-xero-beside-quickbooks](../architecture/decisions/20260907-xero-beside-quickbooks.md).
 
+## The shop inbox, and answering from the record (delivered 2026-09-07)
+
+N-20's third and last slice (issue #1429; the tables and the inbound paths are ADR
+20260907-two-way-inbox and pull requests #1435 / #1451). `/shop/<slug>/inbox` is a worklist of
+what divers wrote back: the unanswered ones lead under a group carrying their count, the answered
+follow, each row saying the channel it came on and opening the diver's record — except a message
+from an address nobody holds, which shows that address because it has no record to open. The
+record grows a **Conversation** group, both directions in one column, with a composer that answers
+the diver's latest message on the channel it arrived on and in the diver's own recorded locale
+(`src/db/staff-reply.ts` owns the whole consequence: channel, language, Meta's 24-hour window
+checked before the send, and the outcome recorded whether it went or not). Today carries one
+`unanswered_messages` row and nothing at zero. Owner and manager only
+(`canAnswerShopInbox`): a reply leaves as the shop, and the list holds addresses for people who
+never booked.
+
 ## The reef's calendar (delivered 2026-09-07)
 
 N-02 of the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1485). A shop writes
@@ -215,7 +230,6 @@ control remains available. The old `/guests` path remains as a compatibility rou
 while first-party links and redirects land on Trip. `TripAboutSection.test.tsx` pins the compact
 summary, disclosure, rows, and edit anchors.
 
-
 ## The person sheet and buried emergency reference (delivered 2026-08-29)
 
 Slices 5b and 5c of [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md). A roll-call row now opens one person sheet with the diver or crew member's contact reference, readiness facts, buddy context, today's trail, and the one deliberate exception act; it carries no call or `tel:` button. The manifest's emergency numbers are quiet at rest, available through More on mobile and a desktop footer, and remain complete in the printed packet. `PersonSheet.test.tsx` and `ManifestMoreMenu.test.tsx` pin both contracts.
@@ -223,7 +237,6 @@ Slices 5b and 5c of [20260827-the-departure-is-two-working-surfaces](../architec
 ## Staff status marks are drawn, not typed (delivered 2026-08-29)
 
 Slice 5f replaces status emoji with the shared `StatusMark` SVG primitive across live and offline manifests, prep, Today, forms, badges, notices, and trip surfaces. The words remain the accessible status; the marks provide a distinct monochrome shape. `StatusMark.test.tsx` and the migrated surface suites pin the mapping and the absence of decorative emoji.
-
 
 ## Reviews is a worklist (delivered 2026-08-28)
 
@@ -1450,6 +1463,7 @@ Two rules are pinned rather than remembered: `e2e/marketing.spec.ts` still count
 enabled controls (and now asserts the price arrived inside that budget as text carrying no link or
 button), and `src/lib/marketing.test.ts` refuses a currency figure anywhere in a `marketing.*`
 message in either locale, so H-12's single price source cannot be quietly copied into a bundle.
+
 ## Onboard is the shop's first form (delivered 2026-08-28)
 
 Slice 10b of [20260827-first-light](../architecture/decisions/20260827-first-light.md). `/onboard`
@@ -1472,6 +1486,7 @@ order, names, the timezone picker, error routing, value echo, the `trial_started
 `after()` alert fan-out are all untouched — the last of those now pinned, along with the sign-up
 form's deliberate "this address is already registered" exception to the account doors'
 enumeration silence.
+
 ## The diver record answers one question (delivered 2026-08-28)
 
 Slice 8b of [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md),
@@ -1496,6 +1511,7 @@ actions re-read the record and, when nothing is left waiting, answer with "That 
 instead of their ordinary success code. Pinned by `_lib/status.test.ts`,
 `_lib/record-primaries.test.ts`, `_components/DiverStatusLedger.test.tsx`,
 `_components/DiverStory.test.tsx` and `paper-waiver.action.test.ts`.
+
 ## The storefront leads with the shop (delivered 2026-08-28)
 
 Slice 6i of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
@@ -1560,6 +1576,7 @@ but the words. **Fourteen standing captions are deleted** in both locales — a 
 and the page it opens; explanation lives inside the row that opens, or on the destination. The
 hub's three groups now compose from 6a's `InsetGroup`, and the second spelling of that shell
 (`SettingsRowList`) is gone.
+
 ## Team's roles are edited a row at a time (delivered 2026-08-28)
 
 Slice 9h of [20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md).
@@ -1607,6 +1624,7 @@ it was, cursor pager and all: the two are readings of the same departures, not t
 their parameters never mix. The reader is `weekBoard()` (`src/db/trips-queries.ts`), one bounded
 week through `liveTrip()`; the move/copy/remove panels and the day's add panel are the board's
 existing ones, opened full width beneath the grid.
+
 ## The thread page is a step spine (delivered 2026-08-28)
 
 Slice 7c of [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md)
@@ -2454,6 +2472,7 @@ finally writes both water temperature and visibility in the shop's own units ins
 a whole-degree Fahrenheit entry round-trips exactly, the same reason `dive_sites.max_depth_meters`
 was floating point from the start. See the
 [amendment to 20260730-site-depth-and-diver-age-surfaces](../architecture/decisions/20260730-site-depth-and-diver-age-surfaces.md#amendment-2026-08-03--the-temperature-unit-is-a-sibling-setting-not-a-reading-of-this-one).
+
 ## The 2026-08-02 review: payments, data, and crew residuals delivered (2026-08-03)
 
 The six findings the [2026-08-02 review](archive/comprehensive-review-20260802.md) still carried

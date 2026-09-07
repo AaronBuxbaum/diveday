@@ -322,6 +322,7 @@
       "divers.spec.ts",
       "gear-fit-and-age.spec.ts",
       "import.spec.ts",
+      "inbox.spec.ts",
       "nitrox.spec.ts",
       "orders-demo.spec.ts",
       "waivers.spec.ts"
@@ -335,7 +336,8 @@
       "diver-profile-not-certified",
       "diver-profile-paper-waiver",
       "diver-profile-payments",
-      "diver-record-clear"
+      "diver-record-clear",
+      "staff-diver-conversation"
     ]
   },
   "/shop/[shopSlug]/divers/new": {
