@@ -215,6 +215,24 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
   });
 
   /**
+   * The regional pages (issue #1436, N-49) — the two anonymous surfaces a
+   * diver reaches before a shop's own storefront. Both are ledgers of links
+   * under one heading, which is exactly the shape that gets landmark and
+   * heading-order wrong when it is hand-rolled.
+   */
+  test("the regional index and one town have no automated a11y violations", async ({ page }) => {
+    await page.goto("/dive", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { level: 1, name: "Dive shops by town" })).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    await page.goto("/dive/key-largo", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Dive shops in Key Largo" }),
+    ).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
+
+  /**
    * The same page at depth, and the only scan in this file that emulates a
    * scheme (issue #1265).
    *

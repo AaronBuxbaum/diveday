@@ -27,6 +27,16 @@
     "e2e": ["demo-stories.spec.ts"],
     "visual": ["demo-story-door"]
   },
+  "/dive": {
+    "e2e": ["a11y.spec.ts", "regional-pages.spec.ts"],
+    "visual": ["regions-index"],
+    "a11y": ["a11y.spec.ts"]
+  },
+  "/dive/[region]": {
+    "e2e": ["a11y.spec.ts", "regional-pages.spec.ts"],
+    "visual": ["region-shops"],
+    "a11y": ["a11y.spec.ts"]
+  },
   "/forgot-password": {
     "e2e": ["account-lifecycle.spec.ts"],
     "visual": ["forgot-password"],
@@ -199,6 +209,7 @@
     "visual": [
       "booking-confirmed-embed",
       "booking-pitch-open",
+      "day-profile-ceiling",
       "shop-not-found",
       "site-briefing",
       "site-briefing-requirements"

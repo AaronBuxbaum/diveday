@@ -23,6 +23,19 @@ it is cached and nothing is hand-operated. ADR
 [20260907-external-uptime-monitor](../architecture/decisions/20260907-external-uptime-monitor.md);
 the browser canary that renders a real shop's schedule stays open, waiting on a pilot slug.
 
+## The day's profile, before booking (delivered 2026-09-07)
+
+N-06 from the 2026-09-07 improvement-ideas decision sheet (issue #1479). "The day" on the public
+departure page now states each dive's planned time in the water and the gap on the surface between
+two of them — the shop's own rhythm and any per-site or per-leg override, derived by
+`src/lib/day-profile.ts` off the dock-day timeline's own arithmetic, so the figures a diver reads
+before booking match the ones their thread reads after. No clock: durations promise no schedule, and
+the beat stays time-neutral. Under it, a reader with no account can name the card they hold and read
+which of the day's sites goes deeper than that card covers (`statedLevelDepthLimit`,
+`checkDepthCeiling` in the shop's own unit). The answer is held in that browser and nowhere else —
+no `people` row, nothing that travels with the booking — and it **gates nothing**: the site's
+maximum is not the dive plan (H-08).
+
 ## The departures board (delivered 2026-09-07)
 
 N-23 from the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1426). A shop mints
