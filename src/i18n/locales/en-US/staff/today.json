@@ -87,7 +87,8 @@
     "unitsUnconfirmed": "Setup",
     "helpRequest": "Help request",
     "sayHello": "Say hello",
-    "rentalFit": "Gear"
+    "rentalFit": "Gear",
+    "seasonEvent": "Season"
   },
   "blockerAction": {
     "setRequirements": "Set requirements",
@@ -200,7 +201,8 @@
     "openGearUnit": "Open unit record",
     "openStaffing": "Open staffing",
     "openUnits": "Open units",
-    "openDiver": "Open diver record"
+    "openDiver": "Open diver record",
+    "openSchedule": "Open the schedule"
   },
   "greeting": {
     "morning": "Good morning, {name}",
@@ -243,6 +245,9 @@
   "unansweredMessages": {
     "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer",
     "detail": "Divers wrote back. Answer from their record, in the channel they used."
+  },
+  "seasonEvent": {
+    "detail": "Opens {date}."
   },
   "unitsUnconfirmed": {
     "subject": "Which currency and depth unit does this shop work in?",

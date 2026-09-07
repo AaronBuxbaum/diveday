@@ -54,6 +54,7 @@ export const SECTION_IDS = [
   "emergency",
   "boats",
   "lenses",
+  "seasonEvents",
   "rentals",
   "rentalPricing",
   "divePackages",
@@ -294,6 +295,14 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "lenses.heading",
     group: "your-shop",
     target: { kind: "section", id: "lenses" },
+  },
+  // The shop's own year (issue #1485). Beside the words above it, and ungated
+  // for the same reason: a shore-diving shop still has a mini-season.
+  {
+    id: "seasonEvents",
+    labelKey: "seasonEvents.heading",
+    group: "your-shop",
+    target: { kind: "section", id: "seasonEvents" },
   },
   // Money.
   {

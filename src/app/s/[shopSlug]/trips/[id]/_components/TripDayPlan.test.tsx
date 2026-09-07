@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { TripDayPlan, TripLookFor, TripMoments, TripSiteNotes } from "./TripDayPlan";
@@ -13,6 +14,17 @@ import type { DiveBriefing } from "./types";
  */
 
 afterEach(cleanup);
+
+/** Key Largo, the demo shop's own coordinates, in its own zone. */
+const SHOP = { timezone: "America/New_York", latitude: 25.0865, longitude: -80.4473 };
+/** A shop that never finished its address, so the sky line has nothing to stand on. */
+const NO_ADDRESS = { timezone: "America/New_York", latitude: null, longitude: null };
+/** 9:00 AM to 12:30 PM Eastern: the two-tank reef trip, home well before dark. */
+const MORNING = new Date("2026-01-02T14:00:00Z");
+const MIDDAY = new Date("2026-01-02T17:30:00Z");
+/** 4:30 PM to 8:00 PM Eastern, over a 5:44 PM sunset: the night charter. */
+const AFTER_DARK = new Date("2026-01-02T21:30:00Z");
+const HOME_IN_THE_DARK = new Date("2026-01-03T01:00:00Z");
 
 function briefing(overrides: Partial<DiveBriefing> = {}): DiveBriefing {
   return {
@@ -39,6 +51,9 @@ describe("TripDayPlan", () => {
             diveSite: { id: "site-2", name: "White Sand", depthRange: "to 14 m" },
           } as unknown as DiveBriefing),
         ]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
       />,
     );
@@ -55,8 +70,178 @@ describe("TripDayPlan", () => {
   });
 
   it("renders nothing when the departure has no dive plan", () => {
-    const { container } = render(<TripDayPlan briefings={[]} locale={DEFAULT_DIVER_LOCALE} />);
+    const { container } = render(
+      <TripDayPlan
+        briefings={[]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("says when the light goes and what moon there is, on a night departure", () => {
+    // It casts off in daylight and is still out at sunset, which is what makes
+    // it a night dive — the shape of every real night charter.
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        startsAt={AFTER_DARK}
+        endsAt={HOME_IN_THE_DARK}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    expect(screen.getByText(/Sunset 5:44 PM, dark by 6:09 PM/)).toBeInTheDocument();
+    expect(screen.getByText(/Full moon, 100% lit/)).toBeInTheDocument();
+  });
+
+  it("keeps the sky line on a departure whose sites are not picked yet", () => {
+    // The one beat that would otherwise be a heading over nothing: sunset is a
+    // fact about the departure, not about the sites nobody has chosen.
+    render(
+      <TripDayPlan
+        briefings={[]}
+        shop={SHOP}
+        startsAt={AFTER_DARK}
+        endsAt={HOME_IN_THE_DARK}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    expect(screen.getByText(/Sunset 5:44 PM/)).toBeInTheDocument();
+  });
+
+  it("says nothing about the sky when the shop has set no address", () => {
+    const { container } = render(
+      <TripDayPlan
+        briefings={[]}
+        shop={NO_ADDRESS}
+        startsAt={AFTER_DARK}
+        endsAt={HOME_IN_THE_DARK}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+/**
+ * **The day's profile, before anybody has booked** (issue #1479).
+ *
+ * Two facts the shop already publishes and the page never said — how long each
+ * dive runs, and how long the day sits on the surface between two of them — and
+ * one question a page with no diver on file can still answer: does this day go
+ * deeper than the card I hold?
+ */
+describe("TripDayPlan's profile", () => {
+  const profile = {
+    rhythm: {
+      dockCallMinutes: 30,
+      gearSetupMinutes: 0,
+      briefingMinutes: 15,
+      boatRideMinutes: 20,
+      bottomTimeMinutes: 45,
+      surfaceIntervalMinutes: 60,
+    },
+    depthUnit: "meters",
+    diveMode: "boat",
+    dayCount: 1,
+  } as const;
+
+  const wall = briefing({
+    dive: { id: "dive-2", diveNumber: 2, title: null },
+    diveSite: { id: "site-2", name: "Spiegel Grove", depthRange: "18–40 m", maxDepthMeters: 40 },
+  } as unknown as Partial<DiveBriefing>);
+
+  it("states the time in the water and the gap between two dives", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing(), wall]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+      />,
+    );
+    expect(screen.getAllByText("Usually 45 minutes in the water")).toHaveLength(2);
+    expect(screen.getByText("Usually 60 minutes on the surface")).toBeInTheDocument();
+    // Durations, not a clock: the day's hours belong to the booked diver's own
+    // thread, and a schedule beside a Book button reads as a promise.
+    expect(screen.queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
+  });
+
+  it("says nothing about a surface interval on a one-tank day", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+      />,
+    );
+    expect(screen.queryByText(/on the surface/)).not.toBeInTheDocument();
+  });
+
+  it("tells a reader whose card stops shallower, and stops nothing", async () => {
+    const user = userEvent.setup();
+    render(
+      <TripDayPlan
+        briefings={[briefing(), wall]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+      />,
+    );
+    // Nothing until the reader says something: the page has no diver on file.
+    expect(screen.queryByText(/past the/)).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByRole("combobox"), "open_water");
+    expect(
+      screen.getByText(
+        "Dive 2 is at a site that reaches 40 m, past the 18 m your card covers. You can still book: tell the crew and they will plan your dive to your limit.",
+      ),
+    ).toBeInTheDocument();
+    // A warning, never a gate (H-08): the answer is prose beside a select, and
+    // nothing on this beat is disabled by it.
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("answers a clean day too, so the control never looks broken", async () => {
+    const user = userEvent.setup();
+    render(
+      <TripDayPlan
+        briefings={[briefing(), wall]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+      />,
+    );
+    await user.selectOptions(screen.getByRole("combobox"), "divemaster");
+    expect(screen.getByText("Nothing on this day goes past 40 m.")).toBeInTheDocument();
+  });
+
+  it("offers no card to state when no site on the day has a depth", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+      />,
+    );
+    // With nothing to compare against, the picker is a question the page cannot
+    // answer.
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 });
 

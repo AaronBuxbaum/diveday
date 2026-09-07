@@ -27,6 +27,16 @@
     "e2e": ["demo-stories.spec.ts"],
     "visual": ["demo-story-door"]
   },
+  "/dive": {
+    "e2e": ["a11y.spec.ts", "regional-pages.spec.ts"],
+    "visual": ["regions-index"],
+    "a11y": ["a11y.spec.ts"]
+  },
+  "/dive/[region]": {
+    "e2e": ["a11y.spec.ts", "regional-pages.spec.ts"],
+    "visual": ["region-shops"],
+    "a11y": ["a11y.spec.ts"]
+  },
   "/forgot-password": {
     "e2e": ["account-lifecycle.spec.ts"],
     "visual": ["forgot-password"],
@@ -143,6 +153,7 @@
       "schedule-filters.spec.ts",
       "schedule-lenses.spec.ts",
       "schedule-trip.spec.ts",
+      "season-events.spec.ts",
       "seo.spec.ts",
       "storefront-brand.spec.ts",
       "tenant-isolation.spec.ts",
@@ -199,8 +210,10 @@
     "visual": [
       "booking-confirmed-embed",
       "booking-pitch-open",
+      "day-profile-ceiling",
       "shop-not-found",
       "site-briefing",
+      "site-briefing-night-sky",
       "site-briefing-requirements"
     ],
     "a11y": ["a11y.spec.ts"]
@@ -432,6 +445,7 @@
       "nitrox.spec.ts",
       "recap.spec.ts",
       "role-permissions.spec.ts",
+      "season-events.spec.ts",
       "settings-findability.spec.ts",
       "tax.spec.ts",
       "tide-window.spec.ts",
@@ -442,6 +456,7 @@
       "settings-data-unfinished",
       "settings-hospitality",
       "settings-payments",
+      "settings-seasons",
       "settings-tax",
       "settings-trial"
     ],
@@ -631,6 +646,11 @@
   "/sign-in": {
     "e2e": ["account-lifecycle.spec.ts", "auth.spec.ts", "export.spec.ts"],
     "visual": ["sign-in"],
+    "a11y": ["a11y.spec.ts"]
+  },
+  "/status": {
+    "e2e": ["status.spec.ts", "a11y.spec.ts"],
+    "visual": ["status"],
     "a11y": ["a11y.spec.ts"]
   },
   "/switching": {

@@ -1590,6 +1590,24 @@ new domain concept, define it here in the same PR.
   stated between **consecutively numbered** executed dives that were both recorded and do not
   overlap; anything else is "not recorded". An interval measured across a dive nobody logged
   overstates the diver's rest, which is the one direction this figure must never err.
+- **Day profile** — what a shop's published rhythm says a departure will *look* like, laid over that
+  departure's own dives and read on the public booking page before anybody has a seat: each dive's
+  planned time in the water, the gap on the surface between two of them, and each site's maximum
+  depth (`src/lib/day-profile.ts`, rendered in "The day"). Every figure is **planned, never
+  observed** — the source is `shops.bottom_time_minutes` / `surface_interval_minutes`, a site's
+  `expected_bottom_time_minutes` and a departure's `trip_dives.travel_minutes`, so the copy says
+  "usually" and the page states no clock. Its gap is deliberately *not* the **surface interval**
+  above, which is measured between two executed dives; and it never crosses a night, so a course
+  weekend's day-one close and day-two open are two days rather than one long rest. The arithmetic is
+  the dock-day timeline's own (`betweenDivesMinutes`), so the figure a diver reads before booking is
+  the figure their thread reads after.
+- **Stated card** — a certification level a reader picks for themselves on a public page, held in
+  their own browser and nowhere else: no `people` row, no account, nothing that travels with a
+  booking. The departure page uses one to answer "does this day go deeper than what I hold?"
+  (`statedLevelDepthLimit`), and it is a claim about a **card** rather than about a person — no
+  junior age band, no Deep specialty, because neither has been said. It **informs and gates
+  nothing** (H-08), and it is not a **self-declared card**, which is an answer given *to the shop*
+  on a form and stored.
 - **Material generation** — a shop's explicit assertion that a new waiver version changes the
   bargain, and therefore that standing signatures no longer cover it
   (`waiver_materiality_decisions`, ADR
@@ -1661,6 +1679,22 @@ new domain concept, define it here in the same PR.
   (ADR
   [20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md),
   decision 2).
+- **Season event** — a week the shop plans its year around, written in the shop's own words:
+  lobster mini-season, a goliath grouper aggregation, turtle nesting, the lionfish derby it runs
+  every August. A `season_events` row is a name, an optional sentence, an inclusive calendar-date
+  range, and optionally one **lens** — the kind of day the week fills the board with. Like a site
+  briefing and unlike the conservation codes, the words are **the shop's** and DiveDay writes only
+  the frame around them; there is deliberately no catalog of seasons to pick from, because the
+  dates move by state rule and by species and the sentence that makes a visitor care is the one
+  the shop would say across the counter.
+  **The dates have no instant in them.** "The last Wednesday and Thursday of July" is two days on a
+  wall calendar, inclusive at both ends; whether the window is *live* is the only question with a
+  zone in it, and it is asked once, at the edge, against today's date in the shop's own timezone
+  (`src/lib/season-events.ts`). While it is live the storefront carries a band above the schedule;
+  a month before it opens the shop's own work queue carries one row about it, and then goes quiet
+  once the shop is standing in the week. It **informs and never gates** — nothing in
+  `src/lib/trip-admission.ts` or `src/lib/readiness.ts` reads one, and a season puts no departure
+  on the board by itself.
 - **Crew public name** — the string a consenting staff member shows divers on the departures they
   crew (`people.crew_public_name`). Theirs to type, not derived: `full_name` is one free-text box
   a shop fills in, so taking its first whitespace token assumes the given name was typed first and

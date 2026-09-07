@@ -136,6 +136,8 @@ type NightBeforeBriefInput = {
   whoToText?: string | null;
   /** Extra "what happens on the boat" reassurance for a first-timer, pre-resolved by the caller. */
   firstTimerNote?: string | null;
+  /** Sunset, dusk and moon for a night departure, pre-resolved by the caller; null in daylight. */
+  night?: string | null;
 };
 
 type TripReminderEmailInput = {
@@ -465,6 +467,7 @@ function briefSections(
   arrivalLine: string,
 ) {
   const forecast = brief?.forecast?.trim();
+  const night = brief?.night?.trim();
   const bring = (brief?.bring ?? []).map((item) => item.trim()).filter(Boolean);
   const whoToText = brief?.whoToText?.trim();
   const firstTimer = brief?.firstTimerNote?.trim();
@@ -479,6 +482,13 @@ function briefSections(
     const label = t("notifications.brief.conditionsLabel");
     textParts.push(`${label} ${forecast}`);
     htmlParts.push(`<p><strong>${label}</strong> ${escapeHtml(forecast)}</p>`);
+  }
+  // Under the conditions line and with no label of its own: it is the same
+  // answer to "what am I diving into", and a second heading for one sentence
+  // would be the caption this repository deletes.
+  if (night) {
+    textParts.push(night);
+    htmlParts.push(`<p>${escapeHtml(night)}</p>`);
   }
   if (bring.length) {
     const label = t("notifications.brief.bringLabel");

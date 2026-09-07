@@ -4,10 +4,13 @@
 // 20260731-notification-locale).
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { nightSkyLine } from "@/i18n/sky-labels";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { TemperatureUnit } from "@/lib/temperature-units";
+import { formatTime } from "./format";
 import { cachedListFormat } from "./intl-cache";
+import type { NightSky } from "./sky";
 
 /**
  * The night-before brief, shared by both channels (`src/lib/notifications/email.ts`
@@ -108,4 +111,26 @@ export function firstTimerReassuranceText(
   isFirstTimer: boolean,
 ): string | null {
   return isFirstTimer ? t("notifications.brief.firstTimer") : null;
+}
+
+/**
+ * The sky over a night departure, for the night-before brief: when the light
+ * goes, and how much moon there will be (`src/lib/sky.ts`).
+ *
+ * Null for every daylight departure and every shop with no coordinates, which
+ * is the ordinary case — the brief then reads exactly as it did before. It
+ * rides on the email only: the accompanying text is deliberately one readable
+ * message, and a diver who has the email in hand has the fuller answer.
+ */
+export function nightSkyText(
+  t: DiverTranslator,
+  locale: DiverLocale,
+  sky: NightSky | null,
+  timeZone: string,
+): string | null {
+  if (!sky) return null;
+  return nightSkyLine(t, sky, {
+    sunset: formatTime(sky.sunsetAt, locale, timeZone),
+    dusk: sky.civilDuskAt ? formatTime(sky.civilDuskAt, locale, timeZone) : null,
+  });
 }

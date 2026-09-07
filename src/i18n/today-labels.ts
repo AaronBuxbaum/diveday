@@ -49,6 +49,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   units_unconfirmed: "today.actionKind.unitsUnconfirmed",
   say_hello: "today.actionKind.sayHello",
   rental_fit_confirm: "today.actionKind.rentalFit",
+  season_event_upcoming: "today.actionKind.seasonEvent",
 };
 
 /** A blocked row's one-tap fix, singular ("Send waiver"). */
@@ -536,6 +537,19 @@ export function unansweredMessagesDetailText(t: StaffTranslator): string {
 
 export function openInboxActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openInbox");
+}
+
+/**
+ * A season a month out (issue #1485). The row's *subject* is the shop's own
+ * name for the week and never passes through here — only the date beside it is
+ * DiveDay's to word.
+ */
+export function seasonEventDetailText(t: StaffTranslator, date: string): string {
+  return t("today.seasonEvent.detail", { date });
+}
+
+export function openScheduleActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openSchedule");
 }
 
 /**

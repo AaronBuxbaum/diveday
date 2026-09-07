@@ -2794,3 +2794,41 @@ describe("unanswered messages", () => {
     expect(await unansweredRow()).toHaveLength(0);
   });
 });
+
+describe("a season the shop can still schedule for", () => {
+  /**
+   * The demo shop's own calendar (`src/db/seed-season-events.ts`) carries two
+   * windows anchored on the clock: turtle nesting, live now, and mini-season,
+   * eighteen days out. So the seeded fixture already holds both halves of the
+   * rule — one window inside the month-out horizon, and one the shop is
+   * standing in, which the queue must stay quiet about.
+   */
+  it("reminds the board about the window a month out and not the one already running", async () => {
+    const { db, shop } = ctx;
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const rows = work.actions.filter((action) => action.kind === "season_event_upcoming");
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      urgency: "later",
+      dueAt: null,
+      // The shop's own name for the week, verbatim — never a DiveDay sentence.
+      subject: "Lobster mini-season",
+      href: `/shop/${shop.slug}/schedule/board`,
+    });
+  });
+
+  it("says nothing about another shop's calendar", async () => {
+    const { db, shop } = ctx;
+
+    const otherWork = await getTodayWork(
+      db,
+      "00000000-0000-4000-8000-000000000000",
+      "other-shop",
+      shop.timezone,
+    );
+
+    expect(otherWork.actions.filter((row) => row.kind === "season_event_upcoming")).toEqual([]);
+  });
+});
