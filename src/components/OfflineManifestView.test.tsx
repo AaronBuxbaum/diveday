@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acknowledgeDiscardedOfflineRecords,
+  appendOfflineArrival,
   appendOfflineRollCall,
   listOfflineManifests,
   loadOfflineManifest,
@@ -39,6 +40,10 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
 }));
 vi.mock("@/lib/offline-manifest-store", () => ({
+  // The counter's queue is a *different* writer from roll call's, and this
+  // mock keeps them apart so a test can prove which one a tap reached
+  // (ADR 20260907-the-counter-survives-offline).
+  appendOfflineArrival: vi.fn(),
   appendOfflineRollCall: vi.fn(),
   listOfflineManifests: vi.fn(),
   loadOfflineManifest: vi.fn(),
@@ -300,7 +305,11 @@ function richPayload(
 function richEnvelope(
   tripId: string,
   opts: Parameters<typeof richPayload>[1] = {},
-  envOpts: { events?: OfflineManifestEnvelope["events"]; expiresAt?: string } = {},
+  envOpts: {
+    events?: OfflineManifestEnvelope["events"];
+    arrivalEvents?: OfflineManifestEnvelope["arrivalEvents"];
+    expiresAt?: string;
+  } = {},
 ): OfflineManifestEnvelope {
   const base = richPayload(tripId, opts);
   return {
@@ -313,6 +322,7 @@ function richEnvelope(
     },
     events: envOpts.events ?? [],
     checklistEvents: [],
+    arrivalEvents: envOpts.arrivalEvents ?? [],
   };
 }
 
@@ -1450,7 +1460,17 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
 
-    expect(screen.getByRole("button", { name: /Priya/ })).toBeInTheDocument();
+    // **Scoped to the grid this test is about**, the way the carried-result
+    // test above scopes to a row. Searching the whole document was unique by
+    // luck until the counter section landed (ADR
+    // 20260907-the-counter-survives-offline) and rendered a *second* button
+    // carrying this diver's name — `getByRole`'s `name` is a substring match,
+    // so a loose regex catches both. A `getAllBy…` would silence it without
+    // keeping the meaning: this asserts the tap target exists **in the grid**,
+    // and would still have to fail if the grid rendered nothing.
+    const grid = document.getElementById("missing-divers-grid");
+    if (!grid) throw new Error("the missing-divers grid is missing");
+    expect(within(grid).getByRole("button", { name: /Priya/ })).toBeInTheDocument();
   });
 
   it("ports the WaterLocker disable toggle onto the offline surface", async () => {
@@ -2147,5 +2167,131 @@ describe("the row grammar the live manifest already reads", () => {
     const exception = screen.getAllByRole("button", { name: "Mark not boarded" })[0];
     if (!exception) throw new Error("no exception control");
     expect(borderUtilities(exception.className)).not.toEqual([]);
+  });
+});
+
+/**
+ * **The counter on the offline shell** (ADR 20260907-the-counter-survives-offline).
+ *
+ * The section shares a page with the roll call, which is exactly why it is
+ * tested here rather than only in the domain layer: what has to hold is that
+ * the two lists stay two lists, and that a tap on one never reaches the other's
+ * writer.
+ */
+describe("OfflineManifestView — the counter", () => {
+  beforeEach(() => {
+    searchParams = new URLSearchParams({ trip: "trip-1" });
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+  });
+
+  it("offers a check-in on a ready seat, and says which act it is", async () => {
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const counter = screen.getByRole("region", { name: "At the counter" });
+    const row = within(counter).getByRole("button", { name: /Priya Shah/ });
+    // The visible word, not a screen-reader label: this page's *other* list
+    // boards people, and a row that is a name beside a circle does not say
+    // which of the two questions it answers.
+    expect(row).toHaveTextContent("Check in");
+    expect(row).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("queues an arrival, never a roll call, when the counter row is tapped", async () => {
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
+    vi.mocked(appendOfflineArrival).mockResolvedValue(
+      richEnvelope(
+        "trip-1",
+        {},
+        {
+          arrivalEvents: [
+            {
+              clientEventId: "arrival-1",
+              snapshotId: "snap-trip-1",
+              snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+              tripId: "trip-1",
+              bookingId: "diver-priya",
+              status: "arrived",
+              occurredAt: new Date(FROZEN_MS).toISOString(),
+              syncStatus: "pending",
+            },
+          ],
+        },
+      ),
+    );
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const counter = screen.getByRole("region", { name: "At the counter" });
+    fireEvent.click(within(counter).getByRole("button", { name: /Priya Shah/ }));
+
+    await waitFor(() =>
+      expect(vi.mocked(appendOfflineArrival)).toHaveBeenCalledWith("trip-1", {
+        bookingId: "diver-priya",
+        status: "arrived",
+        retractsClientEventId: undefined,
+      }),
+    );
+    // The rule this whole feature is built around, asserted where a finger
+    // lands: the desk's tap reaches the desk's writer and nothing else.
+    expect(vi.mocked(appendOfflineRollCall)).not.toHaveBeenCalled();
+
+    const settled = await within(screen.getByRole("region", { name: "At the counter" })).findByRole(
+      "button",
+      { name: /Priya Shah/ },
+    );
+    expect(settled).toHaveAttribute("aria-pressed", "true");
+    expect(settled).toHaveTextContent("Checked in");
+  });
+
+  it("retracts by naming the arrival it undoes", async () => {
+    const queued = {
+      clientEventId: "arrival-1",
+      snapshotId: "snap-trip-1",
+      snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+      tripId: "trip-1",
+      bookingId: "diver-priya",
+      status: "arrived" as const,
+      occurredAt: new Date(FROZEN_MS).toISOString(),
+      syncStatus: "pending" as const,
+    };
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      richEnvelope("trip-1", {}, { arrivalEvents: [queued] }),
+    );
+    vi.mocked(appendOfflineArrival).mockResolvedValue(richEnvelope("trip-1"));
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const counter = screen.getByRole("region", { name: "At the counter" });
+    fireEvent.click(within(counter).getByRole("button", { name: /Priya Shah/ }));
+
+    await waitFor(() =>
+      expect(vi.mocked(appendOfflineArrival)).toHaveBeenCalledWith("trip-1", {
+        bookingId: "diver-priya",
+        status: "cleared",
+        // The compare-and-set's other half: without this the server can only
+        // fall back to a timestamp comparison, which a retraction stamped at
+        // tap time always wins.
+        retractsClientEventId: "arrival-1",
+      }),
+    );
+  });
+
+  /**
+   * A seat readiness refuses gets no control at all — the live counter's own
+   * grammar, and the alternative is offering a tap the server refuses the
+   * moment the batch lands.
+   */
+  it("shows a blocked seat's reason instead of a control", async () => {
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      richEnvelope("trip-1", { readiness: "blocked" }),
+    );
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const counter = screen.getByRole("region", { name: "At the counter" });
+    expect(within(counter).queryByRole("button", { name: /Priya Shah/ })).not.toBeInTheDocument();
+    expect(within(counter).getByText("Priya Shah")).toBeInTheDocument();
   });
 });
