@@ -566,8 +566,10 @@ new domain concept, define it here in the same PR.
   horizon, so a departure can never reach **check-in** without also appearing in both of Today's
   views.
 - **Check-in** — a staff-recorded arrival state for a booked diver. It confirms the live readiness
-  result at the counter and changes the booking to `checked_in`; it is not boarding, which remains
-  a separate departure-time manifest decision.
+  result and changes the booking to `checked_in`; it is not boarding, which remains a separate
+  departure-time manifest decision. Readiness is confirmed **wherever the tap is applied**, which
+  since the counter went offline-capable is at the desk for a live tap and at reconciliation —
+  minutes or hours later, against readiness as it stands *then* — for a queued one.
 - **Arrival event** — one append-only row in `booking_arrival_events` recording a single tap at the
   counter: `arrived`, or the `cleared` that takes it back. `bookings.status` stays the projection
   every reader looks at; this is the history beneath it, and it is what lets a check-in be recorded

@@ -382,7 +382,12 @@
       "counter": {
         "heading": "En el mostrador",
         "checkedInLabel": "Registrado",
-        "notCheckedInLabel": "Registrar"
+        "notCheckedInLabel": "Registrar",
+        "checkedInWhenSavedLabel": "Registrado cuando se guardó",
+        "refusedNotReady": "Sin registrar: dejó de estar listo después de que presionaste. Abre el mostrador en vivo antes de que suba a bordo.",
+        "refusedNotBookable": "Sin registrar: esta reserva se canceló.",
+        "refusedBoarded": "Sigue registrado: la tripulación ya lo anotó a bordo.",
+        "refusedGeneric": "DiveDay no aplicó este toque. Abre el mostrador en vivo."
       }
     },
     "shellVersion": {

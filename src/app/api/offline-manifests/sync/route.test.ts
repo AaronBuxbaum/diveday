@@ -890,4 +890,58 @@ describe("POST /api/offline-manifests/sync — queued arrivals", () => {
     const response = await POST(postRequest({ events: [], arrivalEvents: [] }));
     expect(response.status).toBe(400);
   });
+
+  /**
+   * **Belt and braces on the never-boards invariant, at the byte level.**
+   *
+   * The invariant is structural — nothing on the arrival path can reach
+   * `roll_call_events`, whatever the body says — so this is not the thing
+   * holding it up. It is here because a body is the one part of this feature an
+   * attacker writes, and a schema that quietly *ignored* an unknown field would
+   * leave "the queue cannot board anybody" resting on a single import graph
+   * that a later refactor could reroute. `boarded` is refused as a status, and
+   * a stray `checkpoint` is refused as a field, so the refusal is visible at
+   * the boundary as well as absent from the writers.
+   */
+  it("refuses an arrival event that borrows roll call's vocabulary", async () => {
+    const { db, shop, trip, booking, staffPersonId } = await readyContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+    const before = await rollCallEventIds(db, shop.id);
+
+    const boarding = await POST(
+      postRequest({
+        events: [],
+        arrivalEvents: [
+          arrivalEvent({ bookingId: booking.id, tripId: trip.id, status: "boarded" }),
+        ],
+      }),
+    );
+    expect(boarding.status).toBe(400);
+
+    // The status is where a boarding would have to be smuggled, and the enum
+    // refuses it before anything is read. The seat is untouched.
+    const [afterBoarding] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(afterBoarding?.status).toBe("booked");
+
+    // A stray `checkpoint` is **stripped**, not refused, and that is the right
+    // behaviour rather than a gap: zod drops a key the schema does not name, so
+    // the field cannot reach a writer, and refusing the whole batch instead
+    // would let one unknown key from a newer device throw away every roll call
+    // queued beside it. What matters is the outcome, so that is what is
+    // asserted — the tap applies as the ordinary arrival it is, and roll call
+    // is still empty.
+    const smuggled = await POST(
+      postRequest({
+        events: [],
+        arrivalEvents: [
+          { ...arrivalEvent({ bookingId: booking.id, tripId: trip.id }), checkpoint: "departure" },
+        ],
+      }),
+    );
+    expect(smuggled.status).toBe(200);
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("checked_in");
+    expect(await rollCallEventIds(db, shop.id)).toEqual(before);
+  });
 });

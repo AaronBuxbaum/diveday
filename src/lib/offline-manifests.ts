@@ -21,6 +21,7 @@ import {
   rollCallCheckpoints,
 } from "./roll-call";
 import type { SupportArrangements } from "./support-needs";
+import { hasSailed } from "./trips";
 
 /**
  * Bumped whenever the snapshot shape changes. It is the AES-GCM additional
@@ -1072,8 +1073,11 @@ export function canRecordOfflineChecklistCheck(
  * Checking someone in puts them at a desk: it closes an arrival queue and
  * closes nothing else. The server still refuses an offline arrival whose diver
  * is not ready when the batch lands (`checkInBooking`'s live readiness
- * re-read), which is the check that matters and the one a device holding a
- * copy up to a fortnight old cannot make for itself.
+ * re-read) — and readiness is only one of the several answers it can give: the
+ * seat may also have been cancelled, the trip cancelled or completed, the copy
+ * ruled too old, or a newer statement already standing. All of them are
+ * questions a device holding a copy up to a fortnight old cannot answer for
+ * itself, which is the whole reason this gate is the narrow one.
  *
  * Both statuses are allowed for any seat this copy has heard of. A booking id
  * nothing here knows is refused outright rather than queuing a claim about
@@ -1117,14 +1121,20 @@ export function latestOfflineArrival(
   bookingId: string,
   queuedEvents: readonly OfflineArrivalEvent[],
 ): OfflineArrivalResult | undefined {
-  // **A refused tap does not stand.** The server rejects an arrival for
-  // exactly one reason a device cannot see coming — readiness stopped clearing
-  // this diver between the tap and the sync — and leaving it on screen tells a
-  // staffer somebody is through the counter when the counter refused them.
-  // Falling back to what is beneath it is safe in both directions here: a
-  // refused `arrived` reads back down to the saved copy's own answer, which is
-  // what DiveDay last said, and a refused `cleared` leaves the arrival it
-  // failed to take back standing, which is also what DiveDay last said.
+  // **A refused tap does not stand.** Leaving it on screen tells a staffer
+  // somebody is through the counter when the counter refused them. Falling
+  // back to what is beneath it is safe whatever the refusal was: a refused
+  // `arrived` reads back down to the saved copy's own answer, which is what
+  // DiveDay last said, and a refused `cleared` leaves the arrival it failed to
+  // take back standing, which is also what DiveDay last said.
+  //
+  // **There is more than one refusal.** `checkInBooking` also answers
+  // `not_bookable` (the seat or the trip was cancelled while the device was
+  // dark), `newer_event_exists`, `snapshot_invalid` and `staff_not_found`, and
+  // `undoCheckInBooking` adds `retraction_superseded` and `boarded`. Reading
+  // this rule as "readiness stopped clearing them" is how a later edit narrows
+  // it wrongly — the rule is *any* refusal falls back, and which one it was is
+  // {@link refusedOfflineArrival}'s job to say on the row.
   //
   // Roll call's own reader spends a rejection far more carefully
   // (`explicitResultAt`), because there a rejected correction can silence a
@@ -1147,6 +1157,74 @@ export function latestOfflineArrival(
     .flatMap((manifest) => manifest.divers)
     .find((diver) => diver.bookingId === bookingId);
   return saved?.checkedIn ? { state: "arrived", pending: false, local: false } : undefined;
+}
+
+/**
+ * **Is the counter still a question anybody is asking?**
+ *
+ * Checking somebody in is an act at a desk before a boat leaves. An hour past
+ * the scheduled departure the desk is done and the crew is at the rail, and on
+ * a twenty-four-diver morning the counter's list is two screens of settled rows
+ * sitting on top of the roll call — the one thing that still matters, at the
+ * one time it matters most.
+ *
+ * It reads the **shared** `hasSailed` rather than comparing the clock here:
+ * AGENTS.md's late-arrival buffer is one hour, in one function, and a
+ * fifteenth spelling of it is what that rule exists to stop. The snapshot
+ * already carries `trip.startsAt`, so a device with no signal can answer this
+ * for itself.
+ *
+ * Hiding the section is all this does — an arrival already queued still syncs,
+ * and `checkInBooking` still applies it, because refusing a real act after the
+ * fact would be a second time gate the live counter does not have (see the ADR's
+ * sailed-departure paragraph).
+ */
+export function offlineCounterIsOver(
+  manifest: { trip: { startsAt: string } },
+  now: Date = nowDate(),
+): boolean {
+  return hasSailed(new Date(manifest.trip.startsAt), now);
+}
+
+/**
+ * **Why the row went back**, for a seat whose newest tap the server refused.
+ *
+ * {@link latestOfflineArrival} drops a rejected event and the row settles back
+ * to what stands underneath — correct, and on its own indistinguishable from a
+ * tap the device never registered. A divemaster who checked Diego in at 07:40
+ * with no signal, and finds his row saying "Check in" again at 08:05, reads
+ * that as the tablet losing the tap; they tap again, it is refused again, and
+ * Diego walks to the boat with the desk believing it is a glitch. Every one of
+ * those refusals is a real answer about a real person, and `not_ready` in
+ * particular is a live hold raised **after** the tap — a refund reversing a
+ * payment, a medical flag, a certification that expired overnight — which is
+ * exactly what the counter exists to catch while the diver is still ashore.
+ *
+ * So the refusal is kept and shown, and the tap is still refused. Accepting it
+ * and flagging it would render "Checked in" over a live medical hold, which is
+ * the failure this surface is built to prevent.
+ *
+ * Returns nothing once the seat has moved on: a later tap that was applied or
+ * is still pending means the staffer has already acted, and a stale refusal
+ * shouting under a settled row is its own kind of lie. `reason` is the raw
+ * code (`not_ready`, `not_bookable`, …) — `src/lib` returns codes, the surface
+ * picks the words.
+ */
+export type RefusedOfflineArrival = { status: ArrivalStatus; reason: string };
+
+export function refusedOfflineArrival(
+  bookingId: string,
+  queuedEvents: readonly OfflineArrivalEvent[],
+): RefusedOfflineArrival | undefined {
+  let newest: OfflineArrivalEvent | undefined;
+  for (const event of queuedEvents) {
+    if (event.bookingId !== bookingId) continue;
+    // The same `>=`-in-queue-order tie-break `latestArrival` and the sync route
+    // apply, so "the newest tap" means one thing on this page.
+    if (!newest || event.occurredAt >= newest.occurredAt) newest = event;
+  }
+  if (newest?.syncStatus !== "rejected") return undefined;
+  return { status: newest.status, reason: newest.rejectionReason ?? "" };
 }
 
 /**

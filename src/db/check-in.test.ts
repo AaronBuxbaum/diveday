@@ -15,6 +15,7 @@ import {
   personRoles,
   priorVisits,
   rollCallEvents,
+  trips,
   userAccounts,
 } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -897,5 +898,192 @@ describe("a counter arrival queued with no signal", () => {
       .orderBy(bookingArrivalEvents.seq);
     expect(trail.map((row) => row.status)).toEqual(["arrived", "cleared"]);
     expect(trail.every((row) => row.source === "live" && row.clientEventId === null)).toBe(true);
+  });
+
+  /**
+   * **The ordinary bad morning**: somebody is checked in at the desk with no
+   * signal, and cancels before the tablet finds a bar. Readiness is not the
+   * only thing that can refuse a queued arrival, and this is the refusal a
+   * shop meets most often (domain review, 2026-09-07).
+   */
+  it("refuses a queued arrival for a seat cancelled while the device was dark", async () => {
+    const { db, shop, staff, booking } = await readySeat();
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued(),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "not_bookable" });
+
+    const trail = await db
+      .select()
+      .from(bookingArrivalEvents)
+      .where(eq(bookingArrivalEvents.bookingId, booking.id));
+    expect(trail).toHaveLength(0);
+  });
+
+  /**
+   * **The ADR's sailed-departure decision, pinned.**
+   * (`20260907-the-counter-survives-offline`, Consequences.) `checkInBooking`
+   * asks only whether the trip is still `scheduled` — the same question it
+   * asks a staffer at the desk — so a tap made before the boat left applies
+   * when the batch lands after it. Checking somebody in once the boat has gone
+   * is meaningless rather than dangerous: it closes an arrival queue and says
+   * nothing about who is aboard. A test rather than a paragraph, because the
+   * obvious "fix" is a second time gate the live counter does not have.
+   */
+  it("applies a queued arrival for a departure that has already sailed", async () => {
+    const { db, shop, reef, staff, booking } = await readySeat();
+    await db
+      .update(trips)
+      .set({ startsAt: new Date(nowDate().getTime() - 3 * HOUR) })
+      .where(eq(trips.id, reef.id));
+
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued(),
+      }),
+    ).resolves.toMatchObject({ ok: true, bookingId: booking.id });
+
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("checked_in");
+  });
+
+  /**
+   * **Two devices greeting the same diver.** Distinct idempotency keys, so the
+   * `client_event_id` dedup cannot see the second one; the `checked_in` guard
+   * catches it instead and answers success without writing.
+   *
+   * That is the sentence the ADR now carries rather than the one it used to:
+   * every tap that *changes the seat* writes a row, and a tap that changes
+   * nothing writes nothing.
+   */
+  it("greets a diver once when two devices both queue an arrival for them", async () => {
+    const { db, shop, staff, booking } = await readySeat();
+
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued(),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    expect(
+      await db
+        .select()
+        .from(bookingArrivalEvents)
+        .where(eq(bookingArrivalEvents.bookingId, booking.id)),
+    ).toHaveLength(1);
+
+    // The second tablet's own key, minted independently — not a retry.
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued(),
+      }),
+    ).resolves.toMatchObject({ ok: true, duplicate: true });
+
+    const trail = await db
+      .select()
+      .from(bookingArrivalEvents)
+      .where(eq(bookingArrivalEvents.bookingId, booking.id));
+    expect(trail).toHaveLength(1);
+  });
+
+  /**
+   * **Aboard outranks the desk.** A tablet that lost signal at 07:40 queues
+   * "this diver never turned up"; the crew records them onto the boat at 08:50;
+   * the batch syncs at 11:00. Applied, it would put a diver who is on a reef
+   * back on the counter's *still to come* list and somebody would ring a phone
+   * in a dry bag.
+   *
+   * A **read** of roll call, never a write — the invariant that no arrival
+   * path can reach `roll_call_events` is untouched, and asserted below.
+   */
+  it("refuses an offline retraction for a diver the rail has recorded aboard", async () => {
+    const { db, shop, reef, staff, booking } = await readySeat();
+    // The arrival, at 07:40 on the device's own clock.
+    const arrival = queued({ occurredAt: new Date(nowDate().getTime() - 40 * MINUTE) });
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...arrival,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    // The retraction is newer than the arrival and names it, so it clears both
+    // orderings above and reaches the one this test is about. Without the
+    // boarding check it would apply.
+    await expect(
+      undoCheckInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        ...queued({ occurredAt: new Date(nowDate().getTime() - 20 * MINUTE) }),
+        retractsClientEventId: arrival.clientEventId,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "boarded" });
+
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("checked_in");
+    const arrivals = await db
+      .select()
+      .from(bookingArrivalEvents)
+      .where(eq(bookingArrivalEvents.bookingId, booking.id));
+    expect(arrivals.map((row) => row.status)).toEqual(["arrived"]);
+    // The refusal read roll call and wrote nothing there.
+    expect(
+      await db.select().from(rollCallEvents).where(eq(rollCallEvents.bookingId, booking.id)),
+    ).toHaveLength(1);
+  });
+
+  /**
+   * The other half of the same rule, and the reason it is scoped to `offline`:
+   * a staffer undoing a live check-in is looking at the person, so the live
+   * counter keeps the power it has today even for a diver already aboard.
+   */
+  it("still lets a staffer at the desk undo a check-in for a boarded diver", async () => {
+    const { db, shop, reef, staff, booking } = await readySeat();
+    await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+    });
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+      status: "boarded",
+    });
+
+    await expect(
+      undoCheckInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+      }),
+    ).resolves.toMatchObject({ ok: true, bookingId: booking.id });
   });
 });

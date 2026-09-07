@@ -34,8 +34,16 @@ read-back ordering as `roll_call_events` and `pre_departure_check_events`. `book
 the projection every existing reader looks at; both are written in one transaction by
 `checkInBooking` / `undoCheckInBooking`.
 
-**Every tap writes a row, live ones included.** A live check-in that left no row would read as
-"nothing has been said" to a device syncing an hour-old retraction, and the retraction would win.
+**Every tap that changes the seat writes a row, live ones included.** A live check-in that left no
+row would read as "nothing has been said" to a device syncing an hour-old retraction, and the
+retraction would win.
+
+A tap that changes nothing writes nothing: both writers answer an idempotent repeat — a retried
+sync, a second device greeting the same diver, a re-tap of an undo already applied — with
+`duplicate` *before* the insert, so one arrival leaves one row however many times it is asked for.
+That is deliberate rather than an omission of the sentence above. The row it declines to write
+would carry no new statement, and the staleness bound plus newest-wins already close the sequence a
+second row might have been thought to protect (domain review, 2026-09-07).
 
 **2. One writer for both doors.** The sync route dispatches a queued arrival to the same two
 functions the live counter calls, with `source: "offline"` and the three queue fields. So an
@@ -77,14 +85,28 @@ also is, and the one mistake this surface must not invite is boarding somebody b
 wrong list — so the control carries the live counter's own two words, *Check in* and *Checked in*,
 rather than putting the state in a screen-reader label alone (domain review, 2026-09-07).
 
-**A tap the server refused stops standing on the device.** `latestOfflineArrival` skips a rejected
-event and reads back to what is underneath it. The one reason an arrival is refused is that
-readiness stopped clearing the diver after the tap, and a row still reading *Checked in* would say
-somebody is through a counter that refused them. Both directions are safe here: a refused arrival
-falls back to the saved copy's answer, and a refused undo leaves the arrival it failed to take back
-standing — both of which are what DiveDay last said. Roll call's own reader spends a rejection far
-more carefully (`explicitResultAt`) because there a rejected correction can silence a missing-diver
-alarm; nothing recorded here is that.
+**A tap the server refused stops standing on the device, and the row says why.**
+`latestOfflineArrival` skips a rejected event and reads back to what is underneath it, because a row
+still reading *Checked in* would say somebody is through a counter that refused them. Both
+directions are safe: a refused arrival falls back to the saved copy's answer, and a refused undo
+leaves the arrival it failed to take back standing — both of which are what DiveDay last said. Roll
+call's own reader spends a rejection far more carefully (`explicitResultAt`) because there a
+rejected correction can silence a missing-diver alarm; nothing recorded here is that.
+
+Falling back alone is indistinguishable from a tap the device never registered, which is a lie of a
+different shape: the divemaster reads it as the tablet dropping the tap, taps again, is refused
+again, and the diver walks to the boat with the desk believing it is a glitch. So `refusedOfflineArrival`
+keeps the refusal beside the person it is about and the row states it. **The refusal itself stands** —
+accepting the tap and flagging it would render *Checked in* over a live medical hold, which is the
+one thing the counter exists to catch while the diver is still ashore.
+
+**Readiness is not the only refusal, and no reader here may assume it is.** `checkInBooking` also
+answers `not_bookable` — the seat or the trip was cancelled while the device was dark, which is the
+ordinary "checked in offline, then cancelled" morning — as well as `newer_event_exists`,
+`snapshot_invalid` and `staff_not_found`; `undoCheckInBooking` adds `retraction_superseded` and
+`boarded`. The fallback behaviour is right for every one of them, which is exactly why the
+single-cause reading is dangerous rather than merely inaccurate: it survives, unfalsified, until
+somebody narrows the reader on the strength of it (domain review, 2026-09-07).
 
 **6. The snapshot carries one new field: `divers[].checkedIn`, a boolean.** No name, no timestamp —
 the allow-list exists to keep what sits on a deckhand's personal phone for a fortnight down to what
@@ -129,9 +151,9 @@ as its two siblings: an undo is a `cleared` row rather than a delete, and erasur
 through the live join to `people` rather than through a window.
 
 A queued arrival can still be refused for a reason a staffer only learns on reconnection — the
-diver was not ready, or somebody else spoke more recently. That is the same trade the offline roll
-call already makes, and the refusal is visible in the shell's pending/rejected counts, which now
-see all three queues.
+diver stopped being ready, the seat was cancelled, or somebody else spoke more recently. That is
+the same trade the offline roll call already makes; the shell's pending/rejected counts see all
+three queues, and the counter row itself names the person and the reason.
 
 **A queued arrival for a departure that has already sailed is applied, not refused**, because
 `checkInBooking` asks only whether the trip is still `scheduled` — the same question it asks a
@@ -139,6 +161,20 @@ staffer standing at the desk, whose own queue carries a look-back window. Checki
 after the boat left is meaningless rather than dangerous: it closes an arrival queue and says
 nothing about who is aboard. Refusing it would mean a second time gate here that the live counter
 does not have, and would discard an act a staffer really made.
+
+**An offline retraction may not take back a diver the rail has since recorded aboard.** The
+sequence is ordinary: a tablet loses signal at 07:40, somebody taps Diego off the arrival queue
+because he has not appeared, and the batch syncs at 11:00 — by which time the crew has recorded him
+onto the boat. Applied blindly, that puts a diver who is on a reef back on the counter's *still to
+come* list, and somebody rings a phone in a dry bag. So `undoCheckInBooking` refuses with `boarded`
+when a departure roll call standing for that seat says so.
+
+It is the same rule as the compare-and-set beside it — a statement a device made hours ago in
+ignorance may not overturn a stronger, later one — with "on the boat" as the stronger fact.
+**Offline only**, deliberately: a staffer undoing a live check-in is looking at the person, and the
+live counter keeps that power unchanged. And it is a **read** of roll call, never a write, so
+decision 3's invariant is untouched: nothing on the arrival path can record a boarding, and this
+path now cannot even contradict one.
 
 **Escape hatch.** Removing the offline half is the arrival array, its sync branch, its section and
 the worker's second navigation rule; the table and the live rows stay and cost nothing. Removing

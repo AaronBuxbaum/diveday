@@ -340,7 +340,12 @@ export async function listDepartureBoardedByTrip(
  * checkpoint means the opposite and must never be read through this function.
  */
 export async function listDepartureRollCallByTrip(
-  db: AppDb,
+  // `DbExecutor`, not `AppDb`: `undoCheckInBooking` asks this question from
+  // *inside* its own transaction, where "is this diver already aboard" has to
+  // be read on the same connection that holds the booking's `FOR UPDATE` row
+  // (ADR 20260907-the-counter-survives-offline). A pure widening — the union
+  // already contains `AppDb`, so every existing caller is unaffected.
+  db: DbExecutor,
   shopId: string,
   tripIds: string[],
 ): Promise<Map<string, Map<string, "boarded" | "not_boarded">>> {
@@ -401,7 +406,7 @@ export async function listDepartureRollCallByTrip(
  * `cleared`-drops-out rule and its cancelled-booking guard.
  */
 export async function departureRollCallForBooking(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   tripId: string,
   bookingId: string,

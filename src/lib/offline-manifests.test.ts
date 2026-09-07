@@ -13,11 +13,13 @@ import {
   type OfflineArrivalEvent,
   type OfflineManifestSnapshot,
   offlineArrivalEvents,
+  offlineCounterIsOver,
   offlineManifestAge,
   offlineManifestExpiresAt,
   offlineManifestFreshness,
   offlineRollCallSubject,
   pendingOfflineEventCount,
+  refusedOfflineArrival,
   rejectedOfflineEventCount,
   serializeManifests,
 } from "./offline-manifests";
@@ -1843,6 +1845,49 @@ describe("the counter, offline", () => {
       }),
     ];
     expect(latestOfflineArrival(saved, "ready", events)).toBeUndefined();
+  });
+
+  /**
+   * **The refusal a device must not swallow.** `latestOfflineArrival` drops a
+   * rejected event, which is right, and on its own leaves a reverted row
+   * indistinguishable from a tap the tablet never registered — so the reason is
+   * read back separately and shown beside the person (domain review,
+   * 2026-09-07).
+   */
+  it("keeps a refused tap's reason, and forgets it once the seat has moved on", () => {
+    const refused = arrival({
+      clientEventId: "a",
+      syncStatus: "rejected",
+      rejectionReason: "not_ready",
+    });
+    expect(refusedOfflineArrival("ready", [refused])).toEqual({
+      status: "arrived",
+      reason: "not_ready",
+    });
+    // The reading itself still falls back, which is what keeps "Checked in"
+    // off a seat the counter refused.
+    expect(latestOfflineArrival(snapshot(), "ready", [refused])).toBeUndefined();
+
+    // A later tap means the staffer has already acted; a stale refusal
+    // shouting under a settled row is its own kind of lie.
+    const since = arrival({ clientEventId: "b", occurredAt: "2026-07-20T11:35:00.000Z" });
+    expect(refusedOfflineArrival("ready", [refused, since])).toBeUndefined();
+    // And it never speaks for somebody else's seat.
+    expect(refusedOfflineArrival("blocked", [refused])).toBeUndefined();
+  });
+
+  /**
+   * An hour past the scheduled departure the desk is done. It reads the shared
+   * `hasSailed` rather than comparing the clock here, so AGENTS.md's
+   * late-arrival buffer keeps one spelling.
+   */
+  it("stands the counter down an hour after the departure time, not at it", () => {
+    const departure = { trip: { startsAt: "2026-07-21T13:00:00.000Z" } };
+    const at = (iso: string) => offlineCounterIsOver(departure, new Date(iso));
+    expect(at("2026-07-21T12:00:00.000Z")).toBe(false);
+    expect(at("2026-07-21T13:30:00.000Z")).toBe(false);
+    expect(at("2026-07-21T13:59:59.000Z")).toBe(false);
+    expect(at("2026-07-21T14:00:00.000Z")).toBe(true);
   });
 
   /**

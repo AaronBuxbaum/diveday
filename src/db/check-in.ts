@@ -10,7 +10,7 @@ import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
-import { listDepartureBoardedBookingIds } from "./manifests";
+import { departureRollCallForBooking, listDepartureBoardedBookingIds } from "./manifests";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
 import {
   activityEvents,
@@ -302,18 +302,24 @@ export type ArrivalOfflineInput = {
 };
 
 /**
- * The three refusals **only a queue can earn**, and the reason they are named
- * as a set: they answer a device reconciling minutes or hours after the tap,
- * never a staffer standing at the desk, so the counter's `?notice=` map
- * deliberately excludes them rather than carrying words nobody can reach.
- * Naming them here rather than spelling the exclusion at that call site is
- * what keeps the exhaustiveness the map does enforce — a *live* refusal added
- * to either union later is still a compile error there.
+ * The refusals **only a queue can earn**, and the reason they are named as a
+ * set: they answer a device reconciling minutes or hours after the tap, never
+ * a staffer standing at the desk, so the counter's `?notice=` map deliberately
+ * excludes them rather than carrying words nobody can reach. Naming them here
+ * rather than spelling the exclusion at that call site is what keeps the
+ * exhaustiveness the map does enforce — a *live* refusal added to either union
+ * later is still a compile error there.
+ *
+ * `boarded` is the newest member and the one worth reading twice: it exists
+ * because a queued retraction may arrive after the rail has put the diver on
+ * the boat, and the live counter has no way to produce it — a staffer undoing
+ * a check-in is looking at the person.
  */
 export type ArrivalOfflineRefusal =
   | "newer_event_exists"
   | typeof ARRIVAL_RETRACTION_SUPERSEDED
-  | "snapshot_invalid";
+  | "snapshot_invalid"
+  | "boarded";
 
 export type CheckInOutcome =
   | { ok: true; bookingId: string; personName: string; duplicate?: boolean }
@@ -614,7 +620,9 @@ export type UndoCheckInOutcome =
         | "staff_not_found"
         | "newer_event_exists"
         | typeof ARRIVAL_RETRACTION_SUPERSEDED
-        | "snapshot_invalid";
+        | "snapshot_invalid"
+        /** Offline only: the rail has since recorded this diver aboard. */
+        | "boarded";
     };
 
 /**
@@ -697,6 +705,28 @@ export async function undoCheckInBooking(
         retractsClientEventId: input.retractsClientEventId,
       });
       if (refusal) return { ok: false, reason: refusal };
+      // **Aboard outranks the desk.** A tablet that lost signal at 07:40 can
+      // queue "this diver never turned up" and sync it at 11:00, by which time
+      // the rail has recorded them onto the boat. Applied blindly that puts a
+      // diver who is on a reef back on the counter's "still to come" list, and
+      // somebody rings a phone in a dry bag.
+      //
+      // Same shape as the compare-and-set above it, and the same justification:
+      // a statement a device made hours ago in ignorance may not overturn a
+      // stronger, later one. Deliberately **offline only** — a staffer undoing
+      // a live check-in is looking at the person, and the live counter keeps
+      // that power exactly as it has it today.
+      //
+      // A read, never a write: this asks roll call a question and cannot record
+      // anything there, so the invariant that no arrival path reaches
+      // `roll_call_events` is untouched (ADR
+      // 20260907-the-counter-survives-offline).
+      if (
+        (await departureRollCallForBooking(tx, input.shopId, booking.tripId, booking.id)) ===
+        "boarded"
+      ) {
+        return { ok: false, reason: "boarded" };
+      }
     }
 
     const [updated] = await tx
