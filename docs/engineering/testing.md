@@ -26,6 +26,7 @@ pnpm e2e           # Playwright (auto-detects sandbox Chromium; CI installs its 
 pnpm visual        # capture screenshots and run reg-suit comparison and publish to S3
 pnpm check         # repo safeguards + lint + typecheck + unit — the pre-commit bar
 pnpm simulate:day  # one whole dive day against the built server, clock advancing (nightly)
+pnpm personas      # the fifteen personas walked through their own surfaces (weekly)
 ```
 
 ### The one-day simulation
@@ -59,6 +60,51 @@ screenshot — with a failed state named and everything after it marked *not att
 `.github/workflows/simulate-day.yml` runs it every night (and on `workflow_dispatch`), builds
 once, and uploads `simulation/` whether or not the day completed. Options: `--no-build` (reuse
 the build on disk, as the workflow does), `--keep`, `--out <dir>`, `--start <iso>`.
+
+### The weekly persona walk
+
+`pnpm personas` walks each of the fifteen people in
+[../product/personas.md](../product/personas.md) through their own surfaces — on their own device,
+in the language they ask for, signed in as whoever they are — against the seeded demo shop on the
+fleet's frozen clock, and reads a handful of lenses at every stop: a page that rendered no heading
+and almost no text, a request the page made that answered 4xx or 5xx, an error on the console, a
+serious or critical axe violation, a document that declares one language to a reader asking for
+another, a missing skip link, a control under the 44px floor on a phone. Where the walk is taken
+and what is read there is one registry, `scripts/persona-bots/personas.mjs`.
+
+**It reports and never gates.** A persona who cannot reach a stop records a `stop-unreachable`
+finding and walks on to the next; a non-zero exit means the harness broke, not that a persona found
+something. Nothing here is in `ci.yml`, and nothing it sees can redden a pull request. Like the
+one-day simulation it is the fleet's own machinery under a config of its own —
+`scripts/persona-bots/playwright.config.ts` starts one of the fleet's worker servers one port below
+the simulation's, and the spec drives it with `e2e/helpers.ts` and `e2e/fixtures.ts`'s
+`makeActivitySafe` — and it lives outside `e2e/` for the same reason: the fleet discovers every spec
+in that tree and CI shards them.
+
+What it leaves behind (`personas/`, gitignored): `findings.json`, a screenshot for every stop that
+found something, and `summary.md`.
+
+Filing is a **separate step**, `pnpm personas:file`, which needs a GitHub token and writes nothing
+without `--file` — so anyone can run the walk to reproduce a finding without touching the tracker.
+That step applies the volume policy in `scripts/persona-bots/lib.mjs`, and the policy is the point
+(ADR 20260907-persona-bots-file-under-a-cap): a finding is a fingerprint rather than an event so the
+same defect is never filed twice, a run may open at most three issues and at most one per persona,
+and while ten persona issues are open it files nothing at all. A recurrence is re-confirmed on its
+existing issue at most every 28 days. Every run's summary names what it suppressed and why, because
+a capped run that printed only its three issues would read as a clean week. A run that cannot ask
+GitHub what is already open files nothing, and says so.
+
+What the bot writes is validated by the guard that reads what a session writes:
+`scripts/persona-bots/lib.test.mjs` runs `check-follow-ups.mjs`'s own `findIssueProblems` over a
+rendered body for every lens, and `scripts/persona-bots/personas.test.mjs` pins the roster against
+`personas.md`'s headings and asserts every `Touches:` path exists.
+
+`.github/workflows/persona-bots.yml` runs it on Monday mornings (and on `workflow_dispatch`, where
+the filing is a checkbox), builds once, files under the caps, and uploads `personas/` for 90 days.
+The screenshots live in that artifact and are linked from each issue — nothing under `personas/` is
+committed — so a filed issue also quotes its evidence as text, which is what survives the artifact
+expiring. Options: `--no-build` (reuse the build on disk, as the workflow does), `--keep`,
+`--out <dir>`, `--persona <id>`.
 
 ### Why `playwright-core` is pinned in devDependencies
 

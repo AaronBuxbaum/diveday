@@ -7,6 +7,22 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The weekly persona walk (delivered 2026-09-07)
+
+N-61 of the improvement-ideas decision sheet, owner decision 2026-09-07. Every Monday a workflow
+walks each of the fifteen people in [personas.md](personas.md) through their own surfaces — their
+device, their language, their sign-in — against the seeded demo shop on the frozen clock, reading
+eight mechanical lenses at every stop (a blank render, a refused request, a console error, a serious
+axe violation, a document in the wrong language, a missing skip link, a control under the 44px
+floor, a stop it could not reach at all). It reports and never gates: nothing it sees can redden a
+pull request. What it filed is bounded rather than trusted — a finding is a fingerprint so the same
+defect is never opened twice, a run may open three issues and one per persona, and while ten are
+open it opens none — and every run's summary names what it held back, since a capped run that
+printed only its three issues would read as a clean week. `pnpm personas` walks;
+`pnpm personas:file` is the separate step that writes. Screenshots ride the workflow artifact, never
+the repository. ADR
+[20260907-persona-bots-file-under-a-cap](../architecture/decisions/20260907-persona-bots-file-under-a-cap.md).
+
 ## The departures board (delivered 2026-09-07)
 
 N-23 from the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1426). A shop mints

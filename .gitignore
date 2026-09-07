@@ -77,3 +77,8 @@ public/manifest-sw.js
 
 # One-day simulation output (`pnpm simulate:day`): a screenshot per state and the transcript.
 /simulation/
+
+# Persona walk output (`pnpm personas`): the findings, the run summary, and a
+# screenshot per stop that found something. These are the run's evidence, linked
+# from the issues it files and uploaded as a workflow artifact -- never committed.
+/personas/

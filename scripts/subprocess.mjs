@@ -159,6 +159,16 @@ export const SUBPROCESS_TIMEOUTS = {
    * stops mid-sentence and nothing saying why.
    */
   simulateDay: 1_500_000,
+  /**
+   * One `pnpm personas` Playwright run -- fifteen personas walked through their
+   * own surfaces against a built server, serially, with a handful of lenses read
+   * at every stop. Minutes in practice, and the same ceiling and the same
+   * reasoning as `simulateDay`: the weekly workflow that runs it caps the job at
+   * thirty (`.github/workflows/persona-bots.yml`), so a wedged walk has to
+   * report *which command* stopped rather than arrive as the job's own anonymous
+   * timeout with a half-written findings file and nothing saying why.
+   */
+  personaWalk: 1_500_000,
 };
 
 /** Whether a `spawnSync` result or a caught `execFileSync` error is a timeout kill. */

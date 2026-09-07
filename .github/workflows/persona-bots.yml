@@ -1,0 +1,74 @@
+name: Persona walk
+
+# The weekly persona walk (N-61): each of the fifteen personas in
+# docs/product/personas.md walked through their own surfaces on their own
+# device, in the language they ask for, against the seeded demo shop on the
+# frozen clock — and what they find filed as `needs-triage` issues, under a hard
+# cap (scripts/persona-bots/, docs/engineering/testing.md).
+#
+# Weekly rather than nightly, and reporting rather than gating. The thing it
+# looks for is standing wear rather than one commit's regression, so it decays
+# with time and other people's merges; and the tracker it writes into is one
+# person's inbox, which is why `scripts/persona-bots/lib.mjs` holds a filing
+# policy at all. `ci.yml` stays the pull-request gate; this workflow is not part
+# of it and nothing here can turn a pull request red.
+on:
+  schedule:
+    # 07:30 UTC on Mondays — after simulate-day.yml's nightly rehearsal and
+    # ci.yml's nightly real-postgres run, so a red rehearsal is still the first
+    # thing in the inbox and the week's persona reading arrives behind it.
+    - cron: "30 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      file:
+        description: "File what the walk finds (unchecked: walk and report only)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: persona-bots-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  # The walk's whole output is issues and comments on them.
+  issues: write
+
+jobs:
+  walk:
+    name: Fifteen personas, their own surfaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/playwright-shell
+      # One build, the same e2e build ci.yml's `build` job makes; the walk then
+      # reuses it (`--no-build`) rather than paying for a second one.
+      - run: pnpm e2e:build
+      - name: Walk
+        run: pnpm personas --no-build
+      # The walk reports and never gates, so the filing step runs whatever the
+      # walk's own exit status was: a walk that broke halfway still wrote down
+      # what the personas before it saw.
+      - name: File what it found
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm personas:file ${{ (github.event_name != 'workflow_dispatch' || inputs.file) && '--file' || '' }}
+      # The screenshots the filed issues link to. They live here rather than in
+      # the repository: nothing under `personas/` is ever committed.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: personas
+          path: personas/
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: personas-test-results
+          path: test-results/persona-bots/
+          if-no-files-found: ignore
+          retention-days: 7
