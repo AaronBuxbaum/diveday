@@ -7,6 +7,22 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Something watches from outside, and anyone can ask (delivered 2026-09-07)
+
+N-55 from the 2026-09-07 improvement-ideas decision sheet (issue #1466), closing H-04's last open
+item and the first row of H-45's sequence. A **Route 53 health check** polls `/api/health` every 30
+seconds from AWS's global checker fleet — outside the account, so it survives the outage that takes
+every other alerting path down with it — matching `"status":"ok"` in the body as well as the 200, so
+a parked domain or a CDN error shell reads as down. Its CloudWatch alarm is declared as
+`UPTIME_TARGETS` in `infra/lib/observability.ts`, reaches `alerts@dive.day` in about four minutes,
+and is the one alarm in the stack that treats **missing data as breaching**: a monitor gone quiet is
+indistinguishable from the outage it watches for. **`/status`** answers the same question in public
+— no session, live checks run in the request that renders it, the app and the database reported
+separately so a shop can tell our incident from their wifi, and a timestamp saying when. Nothing on
+it is cached and nothing is hand-operated. ADR
+[20260907-external-uptime-monitor](../architecture/decisions/20260907-external-uptime-monitor.md);
+the browser canary that renders a real shop's schedule stays open, waiting on a pilot slug.
+
 ## Fly-safe from, on the recap (delivered 2026-09-07)
 
 N-04 from the 2026-09-07 improvement-ideas decision sheet (issue #1425). Once the crew has logged

@@ -101,6 +101,18 @@ suite, and they are the ongoing cost, not the dollars.
 closes a gap that has been open and named for six days. Browser canaries once the synthetic-tenant
 question is answered.
 
+**Decided 2026-09-07 (owner: build now, N-55). The heartbeat shipped, and not as a canary.** A
+Route 53 health check polls `/api/health` every 30 seconds from AWS's global checker fleet, with
+`HTTPS_STR_MATCH` on `"status":"ok"` so a 200 from anything other than DiveDay's own route reads as
+down, and a CloudWatch alarm on `HealthCheckStatus` into the same SNS topic. It is $2.75/month
+rather than $10, needs no Lambda, no artifacts bucket and no bundled handler, and its checkers are
+in several regions at once. §22 of `infra/lib/infra-stack.ts`, declared as `UPTIME_TARGETS` in
+`infra/lib/observability.ts`, reasoned in
+[decisions/20260907-external-uptime-monitor](decisions/20260907-external-uptime-monitor.md). **The
+two browser canaries are still open and are still Synthetics' to do** — a health check cannot render
+a page, which is the whole point of items 2 and 3 above. They wait on the synthetic-tenant question
+and on a pilot shop's slug to point at.
+
 ### AWS-2 — Status page
 
 **Replaces:** the other half of H-04's open item.
@@ -114,6 +126,14 @@ content is written by a Lambda subscribed to the canary alarms' state changes vi
 from alarm state or do not build it.
 
 **Recommendation: yes, immediately after AWS-1.** It is nearly free once the canaries emit state.
+
+**Shipped 2026-09-07, in the opposite shape.** `/status` lives inside the app and runs its checks in
+the request that renders it, rather than mirroring alarm state from another region. The argument is
+in [decisions/20260907-external-uptime-monitor](decisions/20260907-external-uptime-monitor.md): the
+outage a mirrored page survives is the one the monitor already covers by mailing a human, and a page
+that only repeats an alarm cannot answer the common failure — the app serving, the database gone —
+which is the one a shop mistakes for its own wifi. The risk this row names is answered by
+construction: there is no hand-operated switch on the page, and nothing on it is cached.
 
 ### AWS-3 — Error monitoring: what it would take to leave Sentry
 

@@ -3329,6 +3329,24 @@
         "body": "DiveDay está en acceso anticipado y parte de esto está sin cerrar: el plazo de conservación de exenciones y respuestas médicas, y los términos formales de tratamiento de datos que firma un centro. En vez de publicar una política que parezca completa sin serlo, aquí se nombran como abiertas. Nada de lo anterior es aspiracional. Describe lo que hace el código hoy."
       }
     },
+    "status": {
+      "eyebrow": "Estado de DiveDay",
+      "headline": {
+        "ok": "Todo está funcionando.",
+        "degraded": "Una parte de DiveDay no está funcionando.",
+        "down": "DiveDay no responde."
+      },
+      "checked": "Última comprobación: {time}.",
+      "component": {
+        "serving": "La aplicación",
+        "database": "La base de datos"
+      },
+      "state": {
+        "up": "Funcionando",
+        "down": "Sin respuesta"
+      },
+      "contact": "Si DiveDay no te funciona y esta página dice que sí, escríbenos a {email} y cuéntanos qué estabas haciendo."
+    },
     "terms": {
       "eyebrow": "Condiciones de uso",
       "title": "Qué nos debemos",

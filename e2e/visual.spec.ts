@@ -2680,6 +2680,17 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "terms", scheme);
       });
 
+      // The page a shop owner opens on their worst morning, so the one whose
+      // dark mode and phone width are worth a baseline: a status mark, a
+      // headline, two ruled rows and a timestamp. The clock is frozen by the
+      // harness, so "Last checked …" is stable pixels rather than a mask
+      // (ADR 20260907-external-uptime-monitor).
+      test(`the status page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/status");
+        await page.getByRole("heading", { level: 1 }).waitFor();
+        await capture(page, "status", scheme);
+      });
+
       test(`the about page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/about");
         await capture(page, "about", scheme);

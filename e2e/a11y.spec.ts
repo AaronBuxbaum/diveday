@@ -1037,8 +1037,8 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
   /**
    * **The rest of the marketing tree** (issue #1056).
    *
-   * Nine routes a buyer reads before they ever sign up, every one of them
-   * photographed on every PR and none of them scanned. They are the cheapest
+   * Ten routes a buyer reads before they ever sign up, every one of them
+   * photographed on every PR and none of them scanned when this was written. They are the cheapest
    * scans in the file — no sign-in, no fixture, no navigation — and the
    * likeliest place for a contrast mistake to survive, because marketing pages
    * are where a tinted callout or a muted caption gets written by hand.
@@ -1049,7 +1049,7 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
    * all — which is itself the a11y defect worth catching here.
    */
   test("the marketing and switching pages have no automated a11y violations", async ({ page }) => {
-    // 9 scans at ~3.5s each, plus the first cold render.
+    // 10 scans at ~3.5s each, plus the first cold render.
     test.setTimeout(90_000);
     // **Scanned with the app's own reduced-motion state**, which is not a way
     // of avoiding an awkward answer: the hero's roll-call rows enter with
@@ -1068,6 +1068,10 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
       { path: "/about", heading: /\S/ },
       { path: "/terms", heading: /\S/ },
       { path: "/privacy", heading: /\S/ },
+      // The one page here whose meaning is carried by a coloured mark, so the
+      // one where a contrast miss would cost a reader the answer rather than
+      // the polish.
+      { path: "/status", heading: /\S/ },
       // The switching hub, one competitor guide, and the spreadsheet guide —
       // three different compositions rather than three copies of one.
       { path: "/switching", heading: /\S/ },
