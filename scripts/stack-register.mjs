@@ -306,10 +306,13 @@ async function perform(plan, repo, token, call) {
 export async function run(env, call = request) {
   const repo = env.GITHUB_REPOSITORY;
   const token = env.GITHUB_TOKEN;
+  // A positive integer, not merely an integer: `Number("")` is 0, so an
+  // unresolved workflow expression would otherwise sail through the guard and
+  // spend two API calls looking up pull request #0.
   const number = Number(env.STACK_PULL_REQUEST);
-  if (!repo || !token || !Number.isInteger(number)) {
+  if (!repo || !token || !Number.isInteger(number) || number < 1) {
     throw new Error(
-      "stack-register needs GITHUB_REPOSITORY, GITHUB_TOKEN and STACK_PULL_REQUEST in the environment.",
+      "stack-register needs GITHUB_REPOSITORY, GITHUB_TOKEN and a positive STACK_PULL_REQUEST in the environment.",
     );
   }
 

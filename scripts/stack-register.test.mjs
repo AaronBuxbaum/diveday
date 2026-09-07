@@ -219,7 +219,15 @@ suite("run", () => {
   it("refuses to run without its environment", async () => {
     const { call } = fake();
     await expect(run({ GITHUB_REPOSITORY: "owner/repo" }, call)).rejects.toThrow(
-      /GITHUB_REPOSITORY, GITHUB_TOKEN and STACK_PULL_REQUEST/,
+      /positive STACK_PULL_REQUEST/,
     );
+  });
+
+  it("refuses an unresolved pull request number rather than looking up #0", async () => {
+    const { call, calls } = fake();
+    await expect(run({ ...env, STACK_PULL_REQUEST: "" }, call)).rejects.toThrow(
+      /positive STACK_PULL_REQUEST/,
+    );
+    expect(calls).toHaveLength(0);
   });
 });
