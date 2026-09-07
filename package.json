@@ -79,7 +79,8 @@
     "db:reset": "node scripts/db-reset.mjs",
     "build:sw": "node scripts/build-service-worker.mjs",
     "check:context-budget": "node scripts/check-context-budget.mjs",
-    "agent:health": "node scripts/agent-health.mjs"
+    "agent:health": "node scripts/agent-health.mjs",
+    "simulate:day": "node scripts/simulate-day.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch-logs": "^3.1126.0",

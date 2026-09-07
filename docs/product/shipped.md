@@ -7,6 +7,21 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A machine rehearses the day every night (delivered 2026-09-07)
+
+N-60 (owner decision 2026-09-07, improvement-ideas decision sheet): `pnpm simulate:day` mints a
+fresh shop, sets its clock to six in the morning and drives one whole dive day against the
+production build — a diver books on the public page, signs the waiver from their link and files
+their certification card from it, the counter sights the card, verifies it and checks them in, the
+crew say *Boarding*, run roll call before departure, tap *Underway*,
+count heads after every dive, say *Heading in* and *Home*, the shop closes the day, the recap pass
+runs after its floor, the diver reads the recap — moving the frozen clock forward between states
+through `/api/test/clock`, and failing on the first state it cannot reach. It is the e2e fleet's
+own server, browser and helpers under a config of their own (`scripts/simulate-day/`), leaves a
+screenshot per state and a transcript (`simulation/day.md`) behind, and runs nightly in
+`.github/workflows/simulate-day.yml` — the machine's half of V-04's rehearsal. Written up in
+[docs/engineering/testing.md](../engineering/testing.md#the-one-day-simulation).
+
 ## Before you ask: DiveDay fills in what it already knows (delivered 2026-09-06)
 
 The 2026-09-06 loop, argued on [its canvas](../design/canvases/20260906-before-you-ask/README.md)

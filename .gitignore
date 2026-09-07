@@ -74,3 +74,6 @@ public/manifest-sw.js
 
 # Agent scratch output — never part of a change.
 .agent-out/
+
+# One-day simulation output (`pnpm simulate:day`): a screenshot per state and the transcript.
+/simulation/

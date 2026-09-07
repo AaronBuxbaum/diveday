@@ -127,6 +127,16 @@ const serverEnv = {
   NEXT_PUBLIC_SENTRY_DSN: "",
 };
 
+/**
+ * The fleet's server environment, for a runner that starts one of these
+ * servers under a config of its own. The one-day simulation
+ * (`scripts/simulate-day/playwright.config.ts`) is that runner: it boots a
+ * single worker server exactly as this file does — same build, same pinned
+ * secrets, same blanked providers — and differs only in the instant its
+ * `DIVEDAY_CLOCK` starts at, which it goes on to move.
+ */
+export const e2eServerEnv: Readonly<Record<string, string | undefined>> = serverEnv;
+
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",
