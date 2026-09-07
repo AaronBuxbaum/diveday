@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { dismissOnRelease, useDragSheet } from "./useDragSheet";
 
@@ -30,15 +30,47 @@ function Sheet({ onDismiss, height = 400 }: { onDismiss: () => void; height?: nu
 }
 
 /**
- * A press, a travel and a release, in one gesture. Every event lands in the
- * same millisecond, so the hook reads no speed from it — which is the point:
- * these tests are about the distance half and about what starts a gesture.
+ * `fireEvent` stamps a synthetic event with the wall clock and ignores a
+ * `timeStamp` in its init dict, so the only way to hold a gesture's speed still
+ * is to stamp the event after building it.
  */
-const drag = (to: number, { from = 0 }: { from?: number } = {}) => {
+const at = <E extends Event>(event: E, ms: number): E => {
+  Object.defineProperty(event, "timeStamp", { value: ms, configurable: true });
+  return event;
+};
+
+/** Any instant; the hook only ever reads differences. */
+const PRESSED_AT = 1_000;
+
+/**
+ * A press, a travel and a release, in one gesture, over a span this helper
+ * decides. `overMs` defaults to none, so the hook reads no speed and the
+ * distance half of the decision is the only variable — which is what most of
+ * these tests are about.
+ *
+ * It used to hope for that rather than hold it. The three events were left to
+ * the wall clock on the assumption that they would land in the same
+ * millisecond, and on an unloaded machine they do. On a loaded CI runner they
+ * do not: press and release straddling 8ms is enough for the hook to divide the
+ * whole 80px travel by the gap, read 10px/ms, and call a deliberate nudge a
+ * throw. That is how "settles back when the finger stopped short" failed once
+ * on PR #1443 while passing on every other branch built from the same commit.
+ */
+const drag = (to: number, { from = 0, overMs = 0 }: { from?: number; overMs?: number } = {}) => {
   const sheet = screen.getByTestId("sheet");
-  fireEvent.pointerDown(sheet, { clientY: from, pointerType: "touch", button: -1 });
-  fireEvent.pointerMove(sheet, { clientY: to, pointerType: "touch" });
-  fireEvent.pointerUp(sheet, { clientY: to, pointerType: "touch" });
+  const touch = { pointerType: "touch" } as const;
+  fireEvent(
+    sheet,
+    at(createEvent.pointerDown(sheet, { ...touch, clientY: from, button: -1 }), PRESSED_AT),
+  );
+  fireEvent(
+    sheet,
+    at(createEvent.pointerMove(sheet, { ...touch, clientY: to }), PRESSED_AT + overMs),
+  );
+  fireEvent(
+    sheet,
+    at(createEvent.pointerUp(sheet, { ...touch, clientY: to }), PRESSED_AT + overMs),
+  );
 };
 
 afterEach(cleanup);
@@ -94,6 +126,26 @@ describe("useDragSheet", () => {
     drag(80); // a fifth of the sheet
     expect(onDismiss).not.toHaveBeenCalled();
     expect(screen.getByTestId("sheet").style.transform).toBe("");
+  });
+
+  /**
+   * The same 80px, read two ways. Slow, it is a nudge and the sheet comes back;
+   * covered in 20ms it is 4px per millisecond and the hand meant it. Both are
+   * the hook working as designed — the point of pinning them together is that
+   * the *test* now decides which one it is asking for, rather than inheriting
+   * whatever gap the machine happened to leave between two synthetic events.
+   */
+  it("reads the same short travel as a throw only when it was fast", () => {
+    const slow = vi.fn();
+    render(<Sheet onDismiss={slow} />);
+    drag(80);
+    expect(slow).not.toHaveBeenCalled();
+    cleanup();
+
+    const thrown = vi.fn();
+    render(<Sheet onDismiss={thrown} />);
+    drag(80, { overMs: 20 });
+    expect(thrown).toHaveBeenCalledOnce();
   });
 
   it("does nothing for a tap: below the slop there is no gesture", () => {

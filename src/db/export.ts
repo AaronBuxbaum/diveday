@@ -851,6 +851,11 @@ export async function loadShopExportBundleInput(
             // texting at hours it had deliberately ruled out.
             "send_window_start_hour",
             "send_window_end_hour",
+            // The shop's own fly-safe hours (`src/lib/fly-safe.ts`). A restore
+            // that put a stricter shop back on the defaults would shorten a
+            // wait it had deliberately lengthened.
+            "fly_safe_hours_single",
+            "fly_safe_hours_repetitive",
             // Where the shop's season starts (ADR
             // 20260904-reef-all-the-way-down, Budget rule 3). Exported for the
             // same reason as the window above: it is a date the shop chose,
@@ -919,6 +924,8 @@ export async function loadShopExportBundleInput(
               JSON.stringify(shop.emergencyReference),
               shop.sendWindowStartHour,
               shop.sendWindowEndHour,
+              shop.flySafeHoursSingle,
+              shop.flySafeHoursRepetitive,
               shop.seasonStartMonth,
               shop.seasonStartDay,
               shop.searchListingOptOutAt,
