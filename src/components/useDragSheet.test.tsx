@@ -136,6 +136,32 @@ describe("useDragSheet", () => {
     expect(onDismiss).toHaveBeenCalledOnce();
   });
 
+  /**
+   * **A tap has to reach the row underneath**, which is the regression that got
+   * this hook onto a real page and straight into a red `staff-nav.spec.ts`:
+   * capturing the pointer on `pointerdown` retargets every later pointer event
+   * to the sheet, so a tap that never moves produces no `click` on the link it
+   * landed on — and every destination in the More sheet silently stopped
+   * navigating. Below the slop there is no gesture, so there is nothing to
+   * capture.
+   */
+  it("captures the pointer only once a drag begins, so a tap still clicks through", () => {
+    render(<Sheet onDismiss={vi.fn()} />);
+    const sheet = screen.getByTestId("sheet");
+    const captured: number[] = [];
+    sheet.setPointerCapture = (id: number) => captured.push(id);
+    sheet.releasePointerCapture = () => {};
+
+    fireEvent.pointerDown(sheet, { clientY: 0, pointerType: "touch", button: -1, pointerId: 7 });
+    expect(captured, "a press is not yet a gesture").toEqual([]);
+
+    fireEvent.pointerMove(sheet, { clientY: 3, pointerType: "touch", pointerId: 7 });
+    expect(captured, "still inside the slop").toEqual([]);
+
+    fireEvent.pointerMove(sheet, { clientY: 60, pointerType: "touch", pointerId: 7 });
+    expect(captured, "now it is a drag").toEqual([7]);
+  });
+
   it("runs no transition while a finger is on it: the finger is the clock", () => {
     render(<Sheet onDismiss={vi.fn()} />);
     const sheet = screen.getByTestId("sheet");
