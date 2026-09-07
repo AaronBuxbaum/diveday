@@ -13,7 +13,17 @@ export type SendHoldCopy = {
   undo: string;
 };
 
-export type HeldTicket = { id: string; runAt: number };
+/**
+ * What the hold action hands back. `runAt` is the server's instant, for the
+ * cron sweep; `holdMs` is how long the client counts down **on its own clock**
+ * — the two clocks are never compared, because a server whose clock is
+ * frozen (the e2e fleet) or skewed would otherwise hold a send forever, or
+ * release it at once.
+ */
+export type HeldTicket = { id: string; runAt: number; holdMs: number };
+
+/** The countdown's own beat. */
+const TICK_MS = 250;
 
 /**
  * A send you can take back (ADR 20260906-before-you-ask, decision 2).
@@ -56,16 +66,21 @@ export function SendHold<Outcome>({
 }) {
   const [ticket, setTicket] = useState<HeldTicket | null>(null);
   const [releasing, setReleasing] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
+  // How much of the hold has run, counted in ticks of the interval below —
+  // never read off a clock. `Date.now()` is pinned in the e2e fleet (and may
+  // be skewed anywhere), while timers keep running; a countdown that read the
+  // clock sat at eight seconds forever there.
+  const [elapsedMs, setElapsedMs] = useState(0);
   const busy = useRef(false);
 
   useEffect(() => {
     if (!ticket) return;
-    const timer = setInterval(() => setNow(Date.now()), 250);
+    const timer = setInterval(() => setElapsedMs((current) => current + TICK_MS), TICK_MS);
     return () => clearInterval(timer);
   }, [ticket]);
 
-  const seconds = ticket ? heldSendSecondsLeft(new Date(ticket.runAt), new Date(now)) : 0;
+  const seconds = ticket ? heldSendSecondsLeft(ticket.holdMs, elapsedMs) : 0;
+  const holdSeconds = ticket ? Math.max(1, ticket.holdMs / 1000) : 1;
 
   // Release at zero. The server decides whether the hold has drained; a
   // `pending` answer is a skewed clock, and the next tick asks again.
@@ -92,7 +107,7 @@ export function SendHold<Outcome>({
     const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
     const formData = new FormData(form, submitter ?? undefined);
     const next = await hold(formData);
-    setNow(Date.now());
+    setElapsedMs(0);
     setTicket(next);
   }
 
@@ -113,7 +128,7 @@ export function SendHold<Outcome>({
         aria-live="polite"
         className={`flex flex-wrap items-center gap-3 ${className ?? ""}`.trim()}
       >
-        <HoldRing fraction={releasing ? 1 : Math.min(1, 1 - seconds / 8)} />
+        <HoldRing fraction={releasing ? 1 : Math.min(1, 1 - seconds / holdSeconds)} />
         <span className="text-sm">
           {releasing ? copy.sendingNow : fill(copy.sendingIn, { seconds })}
           {note ? <span className="text-muted"> {note}</span> : null}

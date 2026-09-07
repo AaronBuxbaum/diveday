@@ -41,11 +41,10 @@ describe("isHeldSendDue", () => {
 });
 
 describe("heldSendSecondsLeft", () => {
-  it("counts whole seconds down to zero and never below", () => {
-    const runAt = new Date(now.getTime() + SEND_HOLD_MS);
-    expect(heldSendSecondsLeft(runAt, now)).toBe(8);
-    expect(heldSendSecondsLeft(runAt, new Date(now.getTime() + 3_100))).toBe(5);
-    expect(heldSendSecondsLeft(runAt, new Date(now.getTime() + 9_000))).toBe(0);
+  it("counts whole seconds down to zero and never below, from ticks rather than a clock", () => {
+    expect(heldSendSecondsLeft(SEND_HOLD_MS, 0)).toBe(8);
+    expect(heldSendSecondsLeft(SEND_HOLD_MS, 3_100)).toBe(5);
+    expect(heldSendSecondsLeft(SEND_HOLD_MS, 9_000)).toBe(0);
   });
 });
 

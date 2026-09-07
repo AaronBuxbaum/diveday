@@ -2834,8 +2834,8 @@ for (const scheme of ["light", "dark"] as const) {
           .slice(0, 10);
         await page.locator('input[name="title"]').fill("Two-Tank Morning Reef");
         await page.locator('input[name="date"]').fill(tomorrow);
-        await page.locator('input[name="startTime"]').fill("08:00");
-        await page.locator('input[name="endTime"]').fill("12:30");
+        await page.getByLabel("Departs").fill("08:00");
+        await page.getByLabel("Returns").fill("12:30");
         await page.getByRole("button", { name: "Put it on the board" }).click();
         await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
         await page.getByRole("heading", { name: /your shop is bookable/ }).waitFor();

@@ -18,12 +18,17 @@ test("the command palette finds a diver by name and ⌘K jumps to a page shortcu
   const box = page.getByRole("combobox", { name: /Search divers/ });
   await expect(box).toBeFocused();
 
-  await box.fill("Priya");
-  const option = page.getByRole("option", { name: /Priya Sharma/ });
+  await box.fill("Priya Sharma");
+  // The query names one diver, so the first row is the answer card — her
+  // next departure and its act (ADR 20260906-before-you-ask, decision 3) —
+  // and the doors that ship render beneath it. Keyboard-only: the card is
+  // active, so the record is one arrow down from the door, and Enter opens it.
+  const options = page.getByRole("option");
+  await expect(options.first()).toContainText("Priya Sharma");
+  await expect(options.first()).toHaveAttribute("aria-selected", "true");
+  const option = page.getByRole("option", { name: "Priya Sharma", exact: true });
   await expect(option).toBeVisible();
-
-  // Keyboard-only: first result is active, Enter navigates to the person record.
-  await box.press("Enter");
+  await option.click();
   await expect(page).toHaveURL(/\/divers\/[a-f0-9-]+$/);
   await expect(page.getByRole("heading", { name: /Priya Sharma/ })).toBeVisible();
 

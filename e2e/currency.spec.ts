@@ -117,7 +117,10 @@ test.describe("shop currency", () => {
     // must not invite one. setCurrency left us on settings; the box waits
     // behind the "Rental prices" row.
     await openSettingsRow(page, "Rental prices");
-    await expect(page.getByLabel(/Full set/).first()).toHaveAttribute("step", "1");
+    // The box reads what it holds back in the shop's own figure (ADR
+    // 20260906-before-you-ask, decision 3); in yen that is a whole number
+    // with no decimals to invite.
+    await expect(page.getByLabel(/Full set/).first()).toHaveValue(/^¥[\d,]+$/);
 
     expect(await reportedRevenueDigits(page, privateShop.slug, "¥")).toBe(euros * 100);
   });
@@ -140,10 +143,15 @@ test.describe("shop currency", () => {
       .getByLabel(/Full set/)
       .first()
       .inputValue();
-    expect(seeded).not.toBe("");
+    // The box shows the figure in the shop's currency ("$45"); the number is
+    // what must survive the switch, so it is compared without its symbol.
+    const digits = seeded.replace(/[^\d.]/g, "");
+    expect(digits).not.toBe("");
 
     await setCurrency(page, privateShop.slug, "eur");
     await openSettingsRow(page, "Rental prices");
-    await expect(page.getByLabel(/Full set/).first()).toHaveValue(seeded);
+    await expect(page.getByLabel(/Full set/).first()).toHaveValue(
+      new RegExp(`^€\\s?${digits.replace(/\./g, "\\.")}$`),
+    );
   });
 });

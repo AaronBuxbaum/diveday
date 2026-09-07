@@ -19,7 +19,11 @@ let outcome: WaiverOutcome = {
   alreadyDone: [],
   errors: [],
 };
-const holdSendAction = vi.fn(async (_formData: FormData) => ({ id: "held-1", runAt: Date.now() }));
+const holdSendAction = vi.fn(async (_formData: FormData) => ({
+  id: "held-1",
+  runAt: Date.now(),
+  holdMs: 0,
+}));
 const undoHeldSendAction = vi.fn(async (_id: string) => true);
 const releaseHeldSendAction = vi.fn(async (_id: string) => ({
   status: "done" as const,

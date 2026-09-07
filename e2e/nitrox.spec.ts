@@ -248,14 +248,16 @@ test("a freshly onboarded shop starts without nitrox, and turning it on unlocks 
   const nitroxCheckbox = page.getByRole("checkbox", { name: "Nitrox fills" });
   await expect(nitroxCheckbox).not.toBeChecked();
   // Most shops don't fill nitrox: no price field to fill in until it's ticked.
-  await expect(page.locator('input[name="nitroxPrice"]').filter({ visible: true })).toHaveCount(0);
+  // The box a person types in carries `data-draft-for`; the `name` is on the
+  // hidden control that submits the figure (ADR 20260906-before-you-ask).
+  await expect(page.locator('input[data-draft-for="nitroxPrice"]')).toHaveCount(0);
 
   await nitroxCheckbox.check();
   await page.getByRole("button", { name: "Save rental catalog" }).click();
   await expect(page.getByText("Rental catalog saved.")).toBeVisible();
   // The price boxes wait behind their own row.
   await openSettingsRow(page, "Rental prices");
-  await expect(page.locator('input[name="nitroxPrice"]').filter({ visible: true })).toHaveCount(1);
+  await expect(page.locator('input[data-draft-for="nitroxPrice"]')).toHaveCount(1);
 });
 
 test("the nitrox request is hidden until the diver files a nitrox card, then appears", async ({

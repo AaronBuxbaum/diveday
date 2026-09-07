@@ -14,6 +14,7 @@ import {
 } from "@/db/held-sends";
 import { getShopById } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
+import { nowMs } from "@/lib/clock";
 import { type HeldSendPayload, heldSendPayloadSchema } from "@/lib/held-sends";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -83,7 +84,13 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
     payload,
     actorPersonId: session.user.personId,
   });
-  return { id: held.id, runAt: held.runAt.getTime() };
+  // `holdMs` on the server's own clock, so the client counts it down on its
+  // own — the two are never compared (see `HeldTicket`).
+  return {
+    id: held.id,
+    runAt: held.runAt.getTime(),
+    holdMs: Math.max(0, held.runAt.getTime() - nowMs()),
+  };
 }
 
 export async function undoHeldSendAction(id: string): Promise<boolean> {

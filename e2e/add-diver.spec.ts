@@ -39,6 +39,10 @@ async function openPrivateNotes(page: Page) {
 }
 
 test("staff adds a walk-in diver, then wait-lists one once the trip is full", async ({ page }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
   // Longest sequential flow in this file: create a trip, add a diver, add a
   // private note, delete it, undo, delete again, then wait-list a second
   // diver — each its own status-toast wait. Same aggregate-cost reasoning as

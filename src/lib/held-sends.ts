@@ -82,6 +82,7 @@ export function isHeldSendDue(
 }
 
 /** Whole seconds left on a hold, for the row's countdown; never below zero. */
-export function heldSendSecondsLeft(runAt: Date, now: Date): number {
-  return Math.max(0, Math.ceil((runAt.getTime() - now.getTime()) / 1000));
+/** Seconds still to count, from a hold's length and how much of it has run. */
+export function heldSendSecondsLeft(holdMs: number, elapsedMs: number): number {
+  return Math.max(0, Math.ceil((holdMs - elapsedMs) / 1000));
 }
