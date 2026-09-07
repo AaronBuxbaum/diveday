@@ -25,6 +25,8 @@ import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/cou
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import type { DiveSiteTemplateUndo } from "@/lib/dive-site-template-sync";
 import type { EmergencyReference } from "@/lib/emergency-reference";
+import type { DraftFields } from "@/lib/form-drafts";
+import type { HeldSendPayload } from "@/lib/held-sends";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
@@ -2856,6 +2858,67 @@ export const tripStageEvents = pgTable(
 );
 
 /**
+ * A staff form's draft (ADR 20260906-before-you-ask, decision 3): what one
+ * person typed into one form, kept a day and applied when they next open it,
+ * on any device. One row per person and form; `saved_at` is bumped on every
+ * write and read by the retention prune. `fields` holds the draftable subset
+ * only (`src/lib/form-drafts.ts`): never a payment detail or a medical answer.
+ */
+export const formDrafts = pgTable(
+  "form_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    form: text("form").notNull(),
+    fields: jsonb("fields").$type<DraftFields>().notNull(),
+    savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("form_drafts_person_form_unique").on(table.shopId, table.personId, table.form),
+    index("form_drafts_saved_at_idx").on(table.savedAt),
+  ],
+);
+
+export const heldSendKind = pgEnum("held_send_kind", [
+  "waiver_send",
+  "last_minute_deal",
+  "waitlist_invite",
+]);
+
+/**
+ * A send that has been tapped and not yet left (ADR 20260906-before-you-ask,
+ * decision 2). The four sends that used to ask "are you sure?" take an
+ * eight-second hold instead: the row is written on the tap with `run_at` eight
+ * seconds out, Undo deletes it, and whichever claimant reaches it first once
+ * it is due — the client that counted down, or the hourly sweep for a closed
+ * tab — deletes it as the send begins. Nothing lingers, so nothing prunes it.
+ *
+ * `payload` carries **ids only** (`src/lib/held-sends.ts`): never a name or
+ * an address, so an erasure needs no sweep here and a backup holds no mail.
+ */
+export const heldSends = pgTable(
+  "held_sends",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    kind: heldSendKind("kind").notNull(),
+    payload: jsonb("payload").$type<HeldSendPayload>().notNull(),
+    /** Who tapped Send; the deal's creator, the trail's actor. Null once they are gone. */
+    actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
+    runAt: timestamp("run_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("held_sends_run_at_idx").on(table.runAt)],
+);
+
+/**
  * **A desk act a crew member coming back to this departure needs to know
  * about** (issues #1202 and #1187, delight report D42 with D27 folded in).
  *
@@ -3685,6 +3748,10 @@ export const bookingPaymentEvents = pgTable(
 export const notificationKind = pgEnum("notification_kind", [
   "booking_confirmation",
   "waiver_request",
+  // One link, to an address typed cold into a booking form that matches a
+  // diver on file, bringing their details across (H-68 b). Nothing on the
+  // page says whether it went; the delivery row is what keeps it to one.
+  "booking_handoff",
   // The diver's own rescue for a trip-prep link that aged out: they ask from
   // the dead page, and a replacement goes to the address already on the
   // booking (issue #850). Tracked like every other per-booking message so a
@@ -5708,6 +5775,10 @@ export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
   "readiness",
   "confirm",
   "claim",
+  // The door remembers who opened it (ADR 20260906-before-you-ask, decision
+  // 3): ten minutes, minted by the diver's own thread and consumed by the
+  // booking it leads to. The one purpose whose expiry is not the trip's.
+  "handoff",
 ]);
 
 /**

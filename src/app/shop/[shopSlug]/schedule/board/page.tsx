@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
+import { discardFormDraftAction, saveFormDraftAction } from "@/app/actions/form-drafts";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -10,6 +11,7 @@ import { listBoats, listBoatsForHistory } from "@/db/boats";
 import { listDateRequestsByIds } from "@/db/course-inquiries";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
+import { readFormDraft } from "@/db/form-drafts";
 import { canPersonViewShopReports } from "@/db/reporting";
 import { openAfterDiveRollCalls } from "@/db/today";
 import {
@@ -77,6 +79,7 @@ import {
   duplicateDepartureAction,
   loadBuilderOptionsAction,
   loadMovePreflightAction,
+  loadWeekdayPatternAction,
   moveDepartureAction,
   removeDepartureAction,
 } from "./actions";
@@ -189,6 +192,12 @@ export default async function ScheduleBoardPage({
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   const st = staffTranslator(locale);
   const now = nowDate();
+  // The reader's own half-typed add panel, if they left one in the last day
+  // (ADR 20260906-before-you-ask, decision 3).
+  const draft = await readFormDraft(db, shop.id, session.user.personId, "add_departure", now);
+  const addDraft = draft
+    ? { fields: draft.fields, savedAtLabel: formatTime(draft.savedAt, locale, shop.timezone) }
+    : null;
   const todayIso = toDateInputValue(utcToWallTime(now, tz));
   // Which week the desktop grid draws. Total by construction: a malformed or
   // missing `?week=` lands on the one the shop is in rather than refusing the
@@ -334,6 +343,15 @@ export default async function ScheduleBoardPage({
       }
     : undefined;
   const builderCopy: BuilderCopy = {
+    typedAs: st.raw("shared.forgiving.typedAs"),
+    draftPickedUp: st.raw("shared.formDraft.pickedUp"),
+    draftStartOver: st("shared.formDraft.startOver"),
+    patternFilled: st.raw("schedule.builder.patternFilled"),
+    patternStartBlank: st("schedule.builder.patternStartBlank"),
+    patternCrew: st.raw("schedule.builder.patternCrew"),
+    patternAlsoUsual: st.raw("schedule.builder.patternAlsoUsual"),
+    patternAlsoUsualUntitled: st.raw("schedule.builder.patternAlsoUsualUntitled"),
+    patternAddAlso: st("schedule.builder.patternAddAlso"),
     ariaLabel: st("schedule.builder.ariaLabel"),
     addDepartureOnDay: st.raw("schedule.builder.addDepartureOnDay"),
     add: st("schedule.builder.add"),
@@ -1033,6 +1051,9 @@ export default async function ScheduleBoardPage({
 
       <ScheduleBuilder
         shopSlug={shopSlug}
+        locale={locale}
+        addDraft={addDraft}
+        loadPattern={loadWeekdayPatternAction}
         days={builderDays}
         loadOptions={loadBuilderOptionsAction}
         loadMovePreflight={loadMovePreflightAction}
@@ -1055,6 +1076,7 @@ export default async function ScheduleBoardPage({
           move: moveDepartureAction.bind(null, shopSlug),
           duplicate: duplicateDepartureAction.bind(null, shopSlug),
           remove: removeDepartureAction.bind(null, shopSlug),
+          draft: { save: saveFormDraftAction, discard: discardFormDraftAction },
         }}
       />
 

@@ -2375,6 +2375,34 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The door remembers who opened it** (ADR 20260906-before-you-ask,
+       * decision 3). The booking page as a known diver reaches it from the
+       * thread's next-dive link: the standing facts folded into one panel above
+       * the fields, the lead's own details already in them, and "Not you?"
+       * beneath. Reached through `/api/test/seed-booking-handoff`, which mints
+       * the same ten-minute handoff the thread would; the cold page is every
+       * other booking capture in this file.
+       */
+      test(`the known diver's booking page renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await bookAVisualRegressionSeat(page, scheme);
+        const seeded = await request.post("/api/test/seed-booking-handoff", {
+          data: { shopSlug: "blue-mantis", email: `visual-regression-${scheme}@example.com` },
+        });
+        expect(seeded.ok()).toBe(true);
+        const { href } = (await seeded.json()) as { href: string };
+        await page.goto(href);
+        await page.getByText("Booking as Visual Regression Diver").waitFor();
+        await expect(page.getByLabel("Name", { exact: true })).toHaveValue(
+          "Visual Regression Diver",
+        );
+        await capture(page, "booking-known-diver", scheme);
+      });
+
+      /**
        * **The card a diver meets on their worst day**, which nothing had ever
        * photographed — in either language or either scheme (issue #859).
        *
@@ -2806,8 +2834,8 @@ for (const scheme of ["light", "dark"] as const) {
           .slice(0, 10);
         await page.locator('input[name="title"]').fill("Two-Tank Morning Reef");
         await page.locator('input[name="date"]').fill(tomorrow);
-        await page.locator('input[name="startTime"]').fill("08:00");
-        await page.locator('input[name="endTime"]').fill("12:30");
+        await page.getByLabel("Departs").fill("08:00");
+        await page.getByLabel("Returns").fill("12:30");
         await page.getByRole("button", { name: "Put it on the board" }).click();
         await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
         await page.getByRole("heading", { name: /your shop is bookable/ }).waitFor();

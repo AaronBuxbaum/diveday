@@ -1,3 +1,4 @@
+import { sendHoldCopy } from "@/components/send-hold-copy";
 import type { CertificationSummary } from "@/db/self-declared-cards";
 import {
   certificationSummaryBelowRequirementText,
@@ -30,7 +31,6 @@ export function WaitlistGroup({
   shopName,
   tripTitle,
   tripWhen,
-  inviteAction,
   certificationSummaries,
   departureRequirement,
   locale,
@@ -42,7 +42,6 @@ export function WaitlistGroup({
   shopName: string;
   tripTitle: string;
   tripWhen: string;
-  inviteAction: (entryId: string) => Promise<"sent" | "fallback">;
   /**
    * What each waiting diver can dive, by person id
    * (`listCertificationSummaries`). A joiner may name their own level on the
@@ -64,6 +63,7 @@ export function WaitlistGroup({
   // `window.location.origin`), so it gets templates plus a local `fill` helper
   // rather than fully composed strings.
   const inviteCopy: WaitlistInviteCopy = {
+    hold: sendHoldCopy(t),
     invitedRelative: t.raw("trips.waitlist.invitedRelative"),
     inviteEmailed: t("trips.waitlist.inviteEmailed"),
     reSendInvite: t("trips.waitlist.reSendInvite"),
@@ -132,7 +132,7 @@ export function WaitlistGroup({
                 shopName={shopName}
                 tripTitle={tripTitle}
                 tripWhen={tripWhen}
-                invite={inviteAction}
+                tripId={tripId}
                 copy={inviteCopy}
               />
             </li>

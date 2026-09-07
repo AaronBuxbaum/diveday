@@ -8,6 +8,7 @@ import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { SubmitButton } from "@/components/SubmitButton";
+import { sendHoldCopy } from "@/components/send-hold-copy";
 import { buttonClass } from "@/components/ui/button";
 import { GroupLabel, LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -17,6 +18,7 @@ import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
 import type { EveningClose } from "@/lib/closeout";
+import type { FormDraftKind } from "@/lib/form-drafts";
 import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import {
@@ -90,8 +92,9 @@ import { WaiverSendControl } from "./WaiverSendControl";
  * quietly.
  */
 
-/** Binds shopSlug + tripId server-side; the client control supplies the entry. */
-export type SpineInviteAction = (tripId: string, entryId: string) => Promise<"sent" | "fallback">;
+/** One of the reader's fresh form drafts, with the door back to it. */
+export type SpineDraft = { form: FormDraftKind; href: string };
+
 export type SpineHelpRequestAction = (
   requestId: string,
   status: "acknowledged" | "handled",
@@ -100,7 +103,6 @@ export type SpineHelpRequestAction = (
 type RowControls = {
   shopSlug: string;
   shopName: string;
-  inviteAction: SpineInviteAction;
   waiverCopy: WaiverSendCopy;
   resendCopy: ResendConfirmationCopy;
   inviteCopy: WaitlistInviteCopy;
@@ -192,7 +194,6 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
   );
   const control = action.waiver ? (
     <WaiverSendControl
-      shopSlug={controls.shopSlug}
       surface="today"
       bookingIds={action.waiver.bookingIds}
       label={action.actionLabel}
@@ -215,7 +216,7 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
       shopName={controls.shopName}
       tripTitle={action.invite.tripTitle}
       tripWhen={action.invite.tripWhen}
-      invite={controls.inviteAction.bind(null, action.invite.tripId)}
+      tripId={action.invite.tripId}
       copy={controls.inviteCopy}
     />
   ) : action.payment?.orderId ? (
@@ -383,8 +384,8 @@ export function DaySpine({
   currency,
   crewedTripIds,
   withheldCount = 0,
-  inviteAction,
   helpRequestAction,
+  drafts = [],
   showPaymentsRow = false,
   firstRun,
   firstBooking,
@@ -403,8 +404,12 @@ export function DaySpine({
   crewedTripIds?: readonly string[];
   /** How many rows the reader's role lens withheld (issue #715). */
   withheldCount?: number;
-  inviteAction: SpineInviteAction;
   helpRequestAction?: SpineHelpRequestAction;
+  /**
+   * The reader's own unfinished forms (ADR 20260906-before-you-ask, decision
+   * 3): one row per fresh draft under the desk group, and none otherwise.
+   */
+  drafts?: readonly SpineDraft[];
   /**
    * The desk group's one presence-derived row: the shop has departures, cannot
    * accept payments, and has never taken an order
@@ -440,7 +445,6 @@ export function DaySpine({
   const controls: RowControls = {
     shopSlug,
     shopName,
-    inviteAction,
     helpRequestAction,
     t,
     waiverCopy: waiverSendCopy(t),
@@ -458,6 +462,7 @@ export function DaySpine({
     // Component, so the full copy object is composed here rather than passing
     // a translator across the boundary.
     inviteCopy: {
+      hold: sendHoldCopy(t),
       invitedRelative: t.raw("trips.waitlist.invitedRelative"),
       inviteEmailed: t("trips.waitlist.inviteEmailed"),
       reSendInvite: t("trips.waitlist.reSendInvite"),
@@ -793,13 +798,40 @@ export function DaySpine({
         />
       ) : null}
 
-      {deskActions.length > 0 || showPaymentsRow ? (
+      {deskActions.length > 0 || showPaymentsRow || drafts.length > 0 ? (
         <LedgerGroup as="h2" label={t("shopHome.spine.deskLabel")}>
           <ul className="mt-1.5">
             {/* A closing leftover owns the row once the day settles. Keep
                 standing desk work here, but never paint one action twice. */}
             {deskActions.map((action) => (
               <StationRow key={rowKey(action)} action={action} controls={controls} />
+            ))}
+            {/* What the reader started and did not finish — a draft is theirs
+                alone, so the row is too. Renders nothing when there is none. */}
+            {drafts.map((draft) => (
+              <LedgerRow
+                key={`draft:${draft.form}`}
+                className="-mx-2 px-2"
+                kind={{ word: t("today.unfinished.label"), tone: "neutral" }}
+                href={draft.href}
+                linkLabel={t("today.unfinished.resume")}
+                trailing={
+                  <span
+                    aria-hidden="true"
+                    className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary"
+                  >
+                    {t("today.unfinished.resume")}
+                  </span>
+                }
+              >
+                <p className="py-2 text-sm text-muted">
+                  {t(
+                    draft.form === "add_departure"
+                      ? "today.unfinished.addDeparture"
+                      : "today.unfinished.newDiver",
+                  )}
+                </p>
+              </LedgerRow>
             ))}
             {showPaymentsRow ? (
               <LedgerRow

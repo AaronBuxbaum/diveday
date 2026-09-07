@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --lagoon-wash: #e6f3f5;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .field { border: 1px solid var(--rope-strong); border-radius: 10px; background: var(--shell); height: 44px; display: flex; align-items: center; padding: 0 12px; font-size: 15px; box-sizing: border-box; gap: 8px; }
+    .field.raw { color: var(--ink); font-family: 'Geist', system-ui, sans-serif; }
+    .spec { display: grid; grid-template-columns: 250px 32px 300px minmax(0, 1fr); gap: 20px; align-items: center; padding: 14px 0; border-top: 1px solid var(--rope); }
+    .src { font-size: 12.5px; color: var(--muted); margin-top: 5px; }
+    .where { font-size: 14px; color: var(--muted); }
+    .no { display: flex; align-items: center; gap: 14px; min-height: 48px; border-top: 1px solid var(--rope); font-size: 14.5px; }
+  </style>
+</helmet>
+<div style="width: 1180px; min-height: 1320px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 56px 60px;">
+  <p class="eyebrow">Move 5 &middot; every staff field</p>
+  <h1 style="font-size: 32px; font-weight: 700; letter-spacing: -0.024em; line-height: 1.1; margin-top: 10px;">Type it any way.</h1>
+  <p class="note" style="margin-top: 10px; max-width: 760px; font-size: 15px;">A field takes what a person would say out loud and shows what it made of it, with what they typed one line beneath for as long as the field has focus. The value that lands is the one shown. Nothing is corrected silently.</p>
+
+  <div style="margin-top: 32px; padding: 24px 28px 8px; border-radius: 28px; background: var(--shell); border: 1px solid var(--rope); box-shadow: var(--bed);">
+    <div class="spec" style="border-top: 0; padding-top: 0;">
+      <p class="tag">You type</p><span></span><p class="tag">The field shows</p><p class="tag">Where</p>
+    </div>
+
+    <div class="spec">
+      <div class="field raw">7</div>
+      <svg width="20" height="20" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M3 8h9M9 4.5 12.5 8 9 11.5"></path></svg>
+      <div><div class="field num">7:00 AM</div><p class="src">typed as &#8220;7&#8221;</p></div>
+      <p class="where">Leaves and Back, on the add panel and the move sheet. A bare hour before noon is morning on a dive boat; &#8220;1p&#8221;, &#8220;13&#8221; and &#8220;1:00 pm&#8221; are all 1:00 PM.</p>
+    </div>
+
+    <div class="spec">
+      <div class="field raw">sat</div>
+      <svg width="20" height="20" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M3 8h9M9 4.5 12.5 8 9 11.5"></path></svg>
+      <div><div class="field num">Sat, Aug 29</div><p class="src">typed as &#8220;sat&#8221; &middot; the next one</p></div>
+      <p class="where">Every date field. A weekday is the next one; &#8220;tomorrow&#8221; and &#8220;9/12&#8221; land too. The day of the week is always shown beside the date, because that is the word the desk thinks in.</p>
+    </div>
+
+    <div class="spec">
+      <div class="field raw num">3055550142</div>
+      <svg width="20" height="20" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M3 8h9M9 4.5 12.5 8 9 11.5"></path></svg>
+      <div><div class="field num">+1 305 555 0142</div><p class="src">for the shop&#8217;s country</p></div>
+      <p class="where">Phone, everywhere. Ten digits in a Florida shop is a US number; a leading + is taken as written. Spaces, dots and dashes are ignored.</p>
+    </div>
+
+    <div class="spec">
+      <div class="field raw">SHARMA, PRIYA</div>
+      <svg width="20" height="20" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M3 8h9M9 4.5 12.5 8 9 11.5"></path></svg>
+      <div><div class="field">Priya Sharma</div><p class="src">typed as &#8220;SHARMA, PRIYA&#8221; &middot; kept on the record</p></div>
+      <p class="where">Name, when pasted from a printed list or an agency card. The comma form and the all-capitals form are turned around; a name typed in mixed case is left exactly as typed, since &#8220;van der Berg&#8221; and &#8220;McKay&#8221; are not DiveDay&#8217;s to fix.</p>
+    </div>
+
+    <div class="spec">
+      <div class="field raw num">95</div>
+      <svg width="20" height="20" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M3 8h9M9 4.5 12.5 8 9 11.5"></path></svg>
+      <div><div class="field num">$95</div><p class="src">in the shop&#8217;s currency</p></div>
+      <p class="where">Price and deposit. &#8220;95&#8221;, &#8220;$95&#8221;, &#8220;95.00&#8221; are the same figure; the ledger keeps the cents (principle 6), the field shows the scanned form.</p>
+    </div>
+
+    <div class="spec">
+      <div class="field raw">molasses</div>
+      <svg width="20" height="20" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M3 8h9M9 4.5 12.5 8 9 11.5"></path></svg>
+      <div><div class="field">Molasses Reef<svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="margin-left: auto; color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg></div><p class="src">one match in the library</p></div>
+      <p class="where">Site, boat and crew pickers match on any word, in any order. One match fills; two or more open the list with the matches first.</p>
+    </div>
+
+    <div class="spec" style="border-bottom: 1px solid var(--rope); padding-bottom: 20px;">
+      <div class="field raw">ml long</div>
+      <svg width="20" height="20" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M3 8h9M9 4.5 12.5 8 9 11.5"></path></svg>
+      <div><div class="field">Wetsuit ML &middot; long</div><p class="src">typed as &#8220;ml long&#8221;</p></div>
+      <p class="where">Rental sizes at the counter, where the diver says it and the staffer types it while they talk.</p>
+    </div>
+  </div>
+
+  <div style="margin-top: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+    <div>
+      <p class="tag">Never</p>
+      <div style="margin-top: 8px; display: flex; flex-direction: column;">
+        <div class="no"><svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--danger); stroke-width: 1.9; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg><span>A certification card number, agency or level</span></div>
+        <div class="no"><svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--danger); stroke-width: 1.9; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg><span>A head count, a seat count on the manifest, a tank pressure</span></div>
+        <div class="no"><svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--danger); stroke-width: 1.9; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg><span>A nitrox mix or a maximum depth</span></div>
+        <div class="no" style="border-bottom: 1px solid var(--rope);"><svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--danger); stroke-width: 1.9; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg><span>Any medical answer, and the emergency contact&#8217;s name</span></div>
+      </div>
+      <p class="note" style="margin-top: 10px;">Shown exactly as typed, validated on save. A helpful guess on any of these is a wrong number on a safety document.</p>
+    </div>
+    <div>
+      <p class="tag">Three tests a forgiving field passes</p>
+      <div style="margin-top: 8px; display: flex; flex-direction: column;">
+        <div class="no"><span class="num" style="font-weight: 700; color: var(--lagoon); min-width: 20px;">1</span><span>The typed text is visible beneath the result while the field has focus.</span></div>
+        <div class="no"><span class="num" style="font-weight: 700; color: var(--lagoon); min-width: 20px;">2</span><span>Escape restores what was typed. Nothing is saved until the form is.</span></div>
+        <div class="no" style="border-bottom: 1px solid var(--rope);"><span class="num" style="font-weight: 700; color: var(--lagoon); min-width: 20px;">3</span><span>Input it cannot read is left alone and refused on save, on the field (forms-and-controls.md).</span></div>
+      </div>
+      <p class="note" style="margin-top: 10px;">The parsers are pure functions in <code style="font-size: 12.5px;">src/lib</code> with a table test per row above, in both locales, because &#8220;sat&#8221; is &#8220;s&aacute;b&#8221; to a shop in Cozumel.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

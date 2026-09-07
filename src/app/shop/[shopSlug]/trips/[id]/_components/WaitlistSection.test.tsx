@@ -35,7 +35,6 @@ function renderSection(
       shopName="Blue Mantis"
       tripTitle="Wreck Trip"
       tripWhen="Sat 15 Aug"
-      inviteAction={async () => "sent" as const}
       certificationSummaries={certificationSummaries}
       locale="en-US"
       timezone="America/New_York"

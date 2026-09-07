@@ -315,6 +315,10 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
   });
 
   test("the waiver page has no automated a11y violations", async ({ page }) => {
+    // A held send counts eight seconds down before it leaves (ADR
+    // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+    // the slow budget rather than racing the hold against the default.
+    test.slow();
     await page.goto("/shop/blue-mantis/schedule/board");
     await page
       .locator("li")

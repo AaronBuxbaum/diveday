@@ -7,6 +7,7 @@ import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
+import { discardFormDraft } from "@/db/form-drafts";
 import { getMovePreflight } from "@/db/move-preflight";
 import { canPersonViewShopReports } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
@@ -20,9 +21,14 @@ import {
   duplicateTrip,
   moveTrip,
 } from "@/db/trips";
+import { listStaff, setTripCrew } from "@/db/trips-crew";
+import { weekdayPatternFor } from "@/db/weekday-pattern";
+import { requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
-import { isValidCalendarDate } from "@/lib/calendar-date";
+import { calendarDateWeekday, isValidCalendarDate } from "@/lib/calendar-date";
+import { formatWallTime } from "@/lib/forgiving-fields";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
+import { minorToMajor } from "@/lib/money";
 import type { MovePreflight } from "@/lib/move-preflight";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
@@ -36,7 +42,9 @@ import { shopPath } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
 import { hasTripDiveContent, tripDiveDraftsFromForm } from "@/lib/trip-dives";
+import type { PatternDeparture } from "@/lib/weekday-pattern";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
+import type { BuilderPattern } from "./_components/ScheduleBuilder";
 
 /* -------------------------------------------------------------------------- *
  * The schedule builder
@@ -133,6 +141,72 @@ export async function loadBuilderOptionsAction() {
 }
 
 /**
+ * **The add panel already knows the weekday** (ADR 20260906-before-you-ask,
+ * decision 3). What this shop ran on this weekday over the last six weeks,
+ * read fresh when a panel opens on a day with no draft to pick up, shaped for
+ * the panel's own controls: every field as the string the control would hold,
+ * the crew as names the chips can show, and the second departure most of
+ * those days also carried as one row. Null for a shop with fewer than three
+ * such days, for anyone who cannot define trips, and for a date that is not
+ * one — the panel then opens blank, exactly as it always did.
+ *
+ * Reads only. The crew names come back with their ids so the panel can submit
+ * them as `crewPersonIds`, which `setTripCrew` re-checks against the shop's
+ * staff on the way in.
+ */
+export async function loadWeekdayPatternAction(dateIso: string): Promise<BuilderPattern | null> {
+  if (!isValidCalendarDate(dateIso)) return null;
+  const session = await requireStaffSession();
+  const db = await getDb();
+  const shopId = session.user.shopId;
+  if (!(await canPersonConfigureTrips(db, shopId, session.user.personId))) return null;
+  const shop = await getShopById(db, shopId);
+  if (!shop) return null;
+  const pattern = await weekdayPatternFor(db, shopId, dateIso, shop.timezone);
+  if (!pattern) return null;
+  const staff = await listStaff(db, shopId);
+  const nameOf = (personId: string) =>
+    staff.find((member) => member.person.id === personId)?.person.fullName ?? null;
+  const fields: Record<string, string> = { startTime: pattern.startTime };
+  const field = (name: string, value: string | number | null) => {
+    if (value !== null && value !== "") fields[name] = String(value);
+  };
+  field("endTime", pattern.endTime);
+  field("title", pattern.title);
+  field("diveMode", pattern.diveMode);
+  field("diveSiteId", pattern.diveSiteId);
+  field("boatId", pattern.boatId);
+  field("lensId", pattern.lensId);
+  // After the hull, deliberately: the boat select's own change handler puts the
+  // hull's number in the seats box, and the pattern's number has to land last.
+  field("capacity", pattern.capacity);
+  field(
+    "priceDollars",
+    pattern.priceCents === null ? null : minorToMajor(pattern.priceCents, shop.currency),
+  );
+  return {
+    weekday: calendarDateWeekday(dateIso),
+    sampledDays: pattern.sampledDays,
+    fields,
+    crew: pattern.crewPersonIds.flatMap((id) => {
+      const name = nameOf(id);
+      return name ? [{ id, name }] : [];
+    }),
+    alsoUsual: pattern.alsoUsual
+      ? {
+          startTime: pattern.alsoUsual.startTime,
+          timeLabel: formatWallTime(
+            pattern.alsoUsual.startTime,
+            await requestLocale(shop.defaultLocale),
+          ),
+          title: pattern.alsoUsual.title,
+          days: pattern.alsoUsual.days,
+        }
+      : null,
+  };
+}
+
+/**
  * Everything the one trip form asks. The quick path posts only the first
  * handful; every field the "More options" disclosure adds is optional or
  * defaulted, so a collapsed submission and a fully expanded one parse through
@@ -213,7 +287,25 @@ const addSchema = z.object({
     (value) => (value === "" || value === undefined ? undefined : value),
     z.string().refine(isValidCalendarDate).optional(),
   ),
+  // The pattern's second departure, ticked on: its start time, which the
+  // server re-reads from the board rather than trusting a field for.
+  alsoUsualStart: z.preprocess(
+    (value) => value || undefined,
+    z
+      .string()
+      .regex(/^\d{2}:\d{2}$/)
+      .optional(),
+  ),
 });
+
+/**
+ * The crew chips the pattern offered, minus any the desk took off. Repeats of
+ * one name, so read off the form directly like the weekday checkboxes.
+ */
+function crewPersonIdsFrom(formData: FormData): string[] | null {
+  const parsed = z.array(z.uuid()).safeParse(formData.getAll("crewPersonIds"));
+  return parsed.success ? parsed.data : null;
+}
 
 /**
  * The weekday checkboxes, which a `FormData` carries as repeats of one name and
@@ -267,7 +359,10 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     diveMode,
     boatId,
     lensId,
+    alsoUsualStart,
   } = parsed.data;
+  const crewPersonIds = crewPersonIdsFrom(formData);
+  if (!crewPersonIds) return await invalid();
 
   // The same tenant rule the hull obeys: a lens id arriving on this form has to
   // be one of *this* shop's live words.
@@ -371,6 +466,9 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     if (!series) return await invalid();
     const firstTrip = series.trips[0];
     if (!firstTrip) return await invalid();
+    for (const trip of series.trips) {
+      if (crewPersonIds.length > 0) await setTripCrew(db, shop.id, trip.id, crewPersonIds);
+    }
     await createTripRequestInvitations(db, {
       shopId: shop.id,
       tripId: firstTrip.id,
@@ -378,6 +476,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       createdByPersonId: session.user.personId,
     });
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
+    await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
     return await landAfterAdd(db, shop, shopSlug, title, series.trips.length);
   }
 
@@ -389,14 +488,100 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     scheduleDays,
   });
   if (!created) return await invalid();
+  if (crewPersonIds.length > 0) await setTripCrew(db, shop.id, created.id, crewPersonIds);
   await createTripRequestInvitations(db, {
     shopId: shop.id,
     tripId: created.id,
     requestIds: requestIds.data,
     createdByPersonId: session.user.personId,
   });
+  // "Add it as well": the pattern's second departure, read back off the board
+  // here rather than taken from the form, so what goes up is what the shop
+  // actually ran. Its own fields where the days agreed; this submission's
+  // where they did not. Never on the repeat path — a series carries one
+  // departure, and a second one on the anchor date alone would be a stray.
+  const also = alsoUsualStart
+    ? (await weekdayPatternFor(db, shop.id, date, shop.timezone))?.alsoUsual
+    : null;
+  const addedAlso =
+    also && also.startTime === alsoUsualStart
+      ? await addPatternDeparture(db, shop, {
+          also,
+          date,
+          fallback: { title, endTime, capacity, plannedDives, crewPersonIds },
+          boats: boatId ? await listBoats(db, shop.id) : null,
+        })
+      : false;
   await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
-  return await landAfterAdd(db, shop, shopSlug, title, 1);
+  await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
+  return await landAfterAdd(db, shop, shopSlug, title, addedAlso ? 2 : 1);
+}
+
+/**
+ * The pattern's second departure on the same day. Its return time, when the
+ * days disagreed, keeps this submission's — the desk can move it once it is on
+ * the board, and a departure that is there is easier to fix than one that is
+ * not. A shape the details reader refuses (a hull too small, an end before its
+ * start) simply is not added; the first departure still lands.
+ */
+async function addPatternDeparture(
+  db: AppDb,
+  shop: NonNullable<Awaited<ReturnType<typeof getShopById>>>,
+  input: {
+    also: PatternDeparture;
+    date: string;
+    fallback: {
+      title: string;
+      endTime: string;
+      capacity: number;
+      plannedDives: number;
+      crewPersonIds: string[];
+    };
+    boats: Awaited<ReturnType<typeof listBoats>> | null;
+  },
+): Promise<boolean> {
+  const { also, date, fallback } = input;
+  const boatId = also.boatId ?? undefined;
+  const boats = boatId ? (input.boats ?? (await listBoats(db, shop.id))) : null;
+  const details = tripDetailsPatch(
+    {
+      date,
+      startTime: also.startTime,
+      endTime: also.endTime ?? fallback.endTime,
+      dayCount: MIN_TRIP_DAYS,
+      priceDollars:
+        also.priceCents === null ? undefined : minorToMajor(also.priceCents, shop.currency),
+      diveMode: (also.diveMode as "boat" | "shore" | "pool" | null) ?? undefined,
+      boatId,
+      capacity: also.capacity ?? fallback.capacity,
+      boatCapacity: boatId ? (boats?.find((boat) => boat.id === boatId)?.capacity ?? null) : null,
+    },
+    shop,
+  );
+  if (!details.ok) return false;
+  if (also.lensId && !(await getTripLens(db, shop.id, also.lensId))) return false;
+  const created = await createTrip(db, {
+    shopId: shop.id,
+    title: also.title ?? fallback.title,
+    capacity: also.capacity ?? fallback.capacity,
+    plannedDives: fallback.plannedDives,
+    priceCents: details.patch.priceCents,
+    depositCents: details.patch.depositCents,
+    cancellationWindowHours: details.patch.cancellationWindowHours,
+    minimumBookings: details.patch.minimumBookings,
+    minimumDecisionHours: details.patch.minimumDecisionHours,
+    diveMode: details.patch.diveMode,
+    boatId: details.patch.boatId,
+    lensId: also.lensId,
+    diveSiteId: also.diveSiteId ?? undefined,
+    startsAt: details.patch.startsAt,
+    endsAt: details.patch.endsAt,
+    scheduleDays: details.patch.scheduleDays,
+  });
+  if (!created) return false;
+  const crew = also.crewPersonIds.length > 0 ? also.crewPersonIds : fallback.crewPersonIds;
+  if (crew.length > 0) await setTripCrew(db, shop.id, created.id, crew);
+  return true;
 }
 
 /**

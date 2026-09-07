@@ -12,6 +12,7 @@ import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
+import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import {
   controlClass,
   Field,
@@ -331,6 +332,7 @@ export default async function EditCoursePage({
                     cents={course.priceCents}
                     currency={currency}
                     locale={locale}
+                    copy={forgivingCopy(t)}
                   />
                   <PriceField
                     id="eLearningPrice"
@@ -340,6 +342,7 @@ export default async function EditCoursePage({
                     cents={course.eLearningPriceCents}
                     currency={currency}
                     locale={locale}
+                    copy={forgivingCopy(t)}
                   />
                   <PriceField
                     id="privatePrice"
@@ -349,6 +352,7 @@ export default async function EditCoursePage({
                     cents={course.privatePriceCents}
                     currency={currency}
                     locale={locale}
+                    copy={forgivingCopy(t)}
                   />
                 </FieldGrid>
               </EditorSection>

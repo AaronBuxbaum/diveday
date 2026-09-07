@@ -91,6 +91,14 @@ const CAPABILITY_QUERY_PARAMS = [
    * asking where it ends up).
    */
   "gate",
+  /**
+   * The booking handoff (ADR 20260906-before-you-ask, decision 3): a
+   * ten-minute bearer credential over a diver's booking, carried on the
+   * public trip page as `?handoff=`. `booking-handoff.test.ts` imports
+   * `HANDOFF_QUERY_PARAM` and asserts this list blanks it, so the two
+   * cannot drift.
+   */
+  "handoff",
 ] as const;
 
 function decodeSegment(segment: string): string {

@@ -65,6 +65,8 @@ export function BookingPartyFields({
   onSizeChange,
   contactEmail,
   contactPhone,
+  lead,
+  onLeadEmailSettled,
 }: {
   maxPartySize: number;
   /** Show an optional phone field for the lead booker (diver 1). */
@@ -83,14 +85,31 @@ export function BookingPartyFields({
    * hasn't set one. */
   contactEmail?: string | null;
   contactPhone?: string | null;
+  /**
+   * The lead diver as the shop already knows them, when the page was reached
+   * through their own handoff (ADR 20260906-before-you-ask, decision 3).
+   * Prefilled into the ordinary fields, which stay the doors to change them;
+   * outranks the device's remembered diver, which is a weaker claim.
+   */
+  lead?: { fullName: string; email: string | null; phone: string | null } | null;
+  /**
+   * The lead's email once they leave the field with something in it (H-68 b).
+   * The caller may offer one link to that address; nothing comes back here,
+   * and nothing on the form changes either way.
+   */
+  onLeadEmailSettled?: (email: string) => void;
 }) {
   const t = useTranslations();
   const [size, setSize] = useState(1);
   const [hydrated, setHydrated] = useState(false);
   const [party, setParty] = useState<PartyMember[]>(() =>
-    Array.from({ length: MAX_PUBLIC_PARTY_SIZE }, () => ({ ...emptyMember })),
+    Array.from({ length: MAX_PUBLIC_PARTY_SIZE }, (_, index) =>
+      index === 0 && lead
+        ? { fullName: lead.fullName, email: lead.email ?? "" }
+        : { ...emptyMember },
+    ),
   );
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(lead?.phone ?? "");
   const [blurred, setBlurred] = useState<Record<number, boolean>>({});
   const [rememberedDiver, setRememberedDiver] = useState<ReturningDiver | null>(null);
   // Per-member (index > 0 only): "use the main contact's email instead of
@@ -113,7 +132,7 @@ export function BookingPartyFields({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: only ever applied once on mount
   useEffect(() => {
-    if (!remember) return;
+    if (!remember || lead) return;
     const stored = loadReturningDiver();
     if (!stored) return;
     setRememberedDiver(stored);
@@ -338,7 +357,11 @@ export function BookingPartyFields({
                       autoComplete={index === 0 ? "email" : `section-diver${index} email`}
                       value={member.email}
                       onChange={(event) => updateMember(index, { email: event.target.value })}
-                      onBlur={() => setBlurred((current) => ({ ...current, [index]: true }))}
+                      onBlur={() => {
+                        setBlurred((current) => ({ ...current, [index]: true }));
+                        const settled = member.email.trim();
+                        if (index === 0 && settled) onLeadEmailSettled?.(settled);
+                      }}
                       className={controlClass}
                     />
                   </Field>

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The auth gate on the nine `seed-*` test routes, one table for all of them
+ * The auth gate on the ten `seed-*` test routes, one table for all of them
  * (`reset` has its own colocated route.test.ts, which also covers its success
  * path). Every case here is a *refusal*: the shared guard
  * (`src/lib/e2e-test-routes.ts`) must close these routes before they touch the
@@ -32,6 +32,7 @@ const seedEvening = await import("./seed-evening/route");
 const seedChangedDiveSite = await import("./seed-changed-dive-site/route");
 const seedObservedSpecies = await import("./seed-observed-species/route");
 const seedReturningDiver = await import("./seed-returning-diver/route");
+const seedBookingHandoff = await import("./seed-booking-handoff/route");
 
 const secret = "e2e-test-secret";
 
@@ -121,6 +122,15 @@ const routes: SeedRoute[] = [
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },
+  },
+  {
+    slug: "seed-booking-handoff",
+    POST: seedBookingHandoff.POST,
+    // A shop slug and an email, refused first — and it must be, because past
+    // that it mints a working ten-minute credential over a diver's booking. A
+    // route answering on a misconfigured deployment would be handing out the
+    // door to a real diver's contact details.
+    expectPastTheGuard: expectInvalidBody,
   },
   {
     slug: "seed-returning-diver",

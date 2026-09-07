@@ -125,6 +125,11 @@ const COUNT_THEN_PLURAL =
  */
 const allowed = new Map([
   [
+    "src/i18n/locales/en-US/staff/schedule.json:builder.patternFilled",
+    "The weekday pattern is read from at least three days (`PATTERN_MIN_AGREEING` in src/lib/weekday-pattern.ts); fewer is no pattern and no sentence.",
+  ],
+  ["src/i18n/locales/es-ES/staff/schedule.json:builder.patternFilled", "The same bound, Spanish."],
+  [
     "src/i18n/locales/en-US/diver.json:account.common.passwordErrors.tooLong",
     "A password bound. `MAX_PASSWORD_LENGTH` is 72; a one-character maximum is not a product we would ship.",
   ],

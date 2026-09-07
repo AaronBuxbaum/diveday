@@ -105,13 +105,16 @@ const TOLD_THE_DATE_KINDS: readonly DeliveryKind[] = [
  * around, named rather than left to the absence of a rule.
  *
  * The waiver and trip-prep links are administrative asks — they want a
- * signature, not an arrival. The recap, the blow-out and the not-met notice all
- * speak about a departure that is already over or already off, so nothing they
- * said is invalidated by a move.
+ * signature, not an arrival. The booking handoff is a link onto a booking page
+ * (ADR 20260906-before-you-ask, decision 3): it names a departure the diver
+ * has not booked, and the page it opens reads the live board. The recap, the
+ * blow-out and the not-met notice all speak about a departure that is already
+ * over or already off, so nothing they said is invalidated by a move.
  */
 const NOT_A_FUTURE_DATE_KINDS: readonly DeliveryKind[] = [
   "waiver_request",
   "readiness_link",
+  "booking_handoff",
   "trip_recap",
   "trip_blowout",
   "trip_minimum_not_met",

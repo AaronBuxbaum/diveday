@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
+import { drainHeldSends } from "@/db/held-sends";
 import { sendDueReminders } from "@/db/reminders";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
@@ -54,8 +55,16 @@ export async function GET(request: Request) {
     CRON_MONITOR_CONFIG,
   );
   try {
-    const summary = await sendDueReminders(await getDb());
-    log("cron_trip_reminders.scan_complete", "info", summary);
+    const db = await getDb();
+    const summary = await sendDueReminders(db);
+    // The held sends whose client never came back (ADR 20260906-before-you-ask,
+    // decision 2): a closed tab does not stop the mail, this tick sends it.
+    const heldSends = await drainHeldSends(db);
+    log("cron_trip_reminders.scan_complete", "info", {
+      ...summary,
+      heldSendsSent: heldSends.sent,
+      heldSendsFailed: heldSends.failed,
+    });
     Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
     return NextResponse.json(summary);
   } catch (error) {

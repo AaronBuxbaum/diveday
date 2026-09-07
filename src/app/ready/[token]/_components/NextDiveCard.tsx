@@ -25,12 +25,19 @@ export function NextDiveCard({
   t,
   shopSlug,
   pick,
+  href,
   when,
   reason,
   levelCovers,
 }: {
   t: DiverTranslator;
   shopSlug: string;
+  /**
+   * The booking page with this diver's handoff on it (ADR
+   * 20260906-before-you-ask, decision 3), so the door remembers who opened
+   * it. Falls back to the bare public path when none was minted.
+   */
+  href?: string | null;
   /** Null renders nothing — an empty board is not a heading over an absence. */
   pick: NextDivePick | null;
   /** The departure's day, already worded in the shop's zone. */
@@ -49,7 +56,10 @@ export function NextDiveCard({
           titles a screen reader reads in a row. Weighted rather than ramped for
           the same reason (`pnpm check:type-ramp`). */}
       <p className="mt-1 text-lg font-medium">
-        <Link href={publicTripPath(shopSlug, pick.tripId)} className="text-primary hover:underline">
+        <Link
+          href={href ?? publicTripPath(shopSlug, pick.tripId)}
+          className="text-primary hover:underline"
+        >
           {pick.title}
         </Link>
       </p>

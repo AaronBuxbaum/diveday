@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 12px; border-radius: 10px; font-size: 14px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 52px; border-top: 1px solid var(--rope); }
+    .kind { font-size: 13px; font-weight: 650; min-width: 96px; }
+    .act { font-size: 15px; font-weight: 600; color: var(--lagoon); white-space: nowrap; }
+    .body { font-size: 14px; line-height: 1.55; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .frame { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 28px; align-items: start; }
+    .cap { font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  </style>
+</helmet>
+<div style="width: 1180px; min-height: 1200px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 56px 60px;">
+  <p class="eyebrow">Move 3 &middot; the station row, 6:14 AM</p>
+  <h1 style="font-size: 32px; font-weight: 700; letter-spacing: -0.024em; line-height: 1.1; margin-top: 10px;">A send you can take back.</h1>
+  <p class="note" style="margin-top: 10px; max-width: 760px; font-size: 15px;">The waiver row on the 7:00 station, in three frames. The question the app asks today (&#8220;send this?&#8221;) moves to after the tap, where answering it costs nothing and not answering it sends the mail.</p>
+
+  <div style="margin-top: 36px; display: flex; flex-direction: column; gap: 22px;">
+
+    <div class="frame">
+      <div><p class="cap">Frame 1 &middot; before</p><p class="note" style="margin-top: 6px;">The row as it ships: one fix, at button weight.</p></div>
+      <div class="panel" style="padding: 4px 24px;">
+        <div class="row" style="border-top: 0;">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--warning); stroke-width: 1.8; flex-shrink: 0;"><path d="M9 2.4 16.6 15.2H1.4L9 2.4Z"></path><path d="M9 7.2v3.4"></path><circle cx="9" cy="12.9" r=".5" fill="#b45309"></circle></svg>
+          <span class="kind" style="color: var(--warning);">Waiver</span>
+          <span style="flex: 1; font-size: 15px;">Priya Sharma hasn&#8217;t been sent hers.</span>
+          <span class="btn btn-s">Send waiver</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div><p class="cap">Frame 2 &middot; the eight seconds</p><p class="note" style="margin-top: 6px;">One tap. The row says what happens and by when; Undo stands where Send was. The hold lives on the server, so closing the tab does not stop the mail.</p></div>
+      <div class="panel" style="padding: 4px 24px;">
+        <div class="row" style="border-top: 0;">
+          <div style="position: relative; width: 19px; height: 19px; flex-shrink: 0;">
+            <svg width="19" height="19" viewBox="0 0 20 20" fill="none" style="transform: rotate(-90deg);"><circle cx="10" cy="10" r="8" stroke="#e6dcc8" stroke-width="2"></circle><circle cx="10" cy="10" r="8" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-dasharray="50.3" stroke-dashoffset="19"></circle></svg>
+          </div>
+          <span class="kind" style="color: var(--lagoon-deep);">Sending</span>
+          <span style="flex: 1; font-size: 15px;">Priya Sharma gets her waiver by email in <span class="num">5 s</span>.</span>
+          <span class="btn btn-s" style="border-color: var(--rope-strong);">Undo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div><p class="cap">Frame 3 &middot; sent</p><p class="note" style="margin-top: 6px;">Who, when, by whom. The row sinks with the settled ones.</p></div>
+      <div class="panel" style="padding: 4px 24px;">
+        <div class="row" style="border-top: 0; opacity: .72;">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--success); stroke-width: 1.9; flex-shrink: 0;"><path d="M3.5 9.5 7.2 13 14.5 5.5"></path></svg>
+          <span class="kind" style="color: var(--muted);">Waiver</span>
+          <span style="flex: 1; font-size: 15px; color: var(--muted);">Sent to Priya Sharma at <span class="num">6:14 AM</span> by Dana.</span>
+          <span class="act" style="color: var(--muted); font-weight: 500;">Resend</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div><p class="cap">Undo, instead</p><p class="note" style="margin-top: 6px;">Nothing was sent; the row is frame 1 again. No toast, no trail entry.</p></div>
+      <div class="panel" style="padding: 4px 24px; border-style: dashed;">
+        <div class="row" style="border-top: 0;">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--warning); stroke-width: 1.8; flex-shrink: 0;"><path d="M9 2.4 16.6 15.2H1.4L9 2.4Z"></path><path d="M9 7.2v3.4"></path><circle cx="9" cy="12.9" r=".5" fill="#b45309"></circle></svg>
+          <span class="kind" style="color: var(--warning);">Waiver</span>
+          <span style="flex: 1; font-size: 15px;">Priya Sharma hasn&#8217;t been sent hers.</span>
+          <span class="btn btn-s">Send waiver</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+    <div>
+      <p class="tag">The four sends that ask a question today</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column;">
+        <div class="row"><span style="flex: 1; font-size: 14.5px;">Issuing or reissuing a waiver link</span><span class="note">the old link stops working</span></div>
+        <div class="row"><span style="flex: 1; font-size: 14.5px;">Resending a waiver to someone already notified</span><span class="note">a second email</span></div>
+        <div class="row"><span style="flex: 1; font-size: 14.5px;">Sending a last-minute deal</span><span class="note">many emails</span></div>
+        <div class="row" style="border-bottom: 1px solid var(--rope);"><span style="flex: 1; font-size: 14.5px;">Offering a freed seat to the wait list</span><span class="note">a promise to a diver</span></div>
+      </div>
+      <p class="note" style="margin-top: 12px;">Each takes the hold. The reissue keeps its one clause in the row itself (&#8220;the old link stops working&#8221;), because that consequence is real and the surface cannot show it.</p>
+    </div>
+    <div>
+      <p class="tag">What keeps a question</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column;">
+        <div class="row"><span style="flex: 1; font-size: 14.5px;">Removing a booking inside the refund window</span><span class="note">money moves</span></div>
+        <div class="row"><span style="flex: 1; font-size: 14.5px;">Sign out</span><span class="note">a shared device</span></div>
+        <div class="row"><span style="flex: 1; font-size: 14.5px;">Removing an untouched departure from the board</span><span class="note">several tables, no ghost</span></div>
+        <div class="row" style="border-bottom: 1px solid var(--rope);"><span style="flex: 1; font-size: 14.5px;">Removing a recap photo</span><span class="note">the deletion is queued with it</span></div>
+      </div>
+      <p class="note" style="margin-top: 12px;">Principle 7&#8217;s three carve-outs stand, and the refund window sits beside them. The hold is for a send, whose only cost was that it could not be unsent; now, for eight seconds, it can.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

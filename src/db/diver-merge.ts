@@ -173,6 +173,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "people.no_certification_cleared_by_person_id": "who cleared the no-card stamp",
   "pre_departure_check_events.recorded_by_person_id": "who ticked the check",
   "pre_departure_checklist_items.deleted_by_person_id": "who removed the check",
+  "held_sends.actor_person_id": "who tapped Send; the hold lives eight seconds",
   "processor_erasure_obligations.discharged_by_person_id": "who discharged the obligation",
   "recap_pulses.addressed_by_person_id": "which staffer picked the pulse up",
   "review_moderation_events.recorded_by_person_id": "who published or withheld the review",
@@ -218,6 +219,10 @@ export const PERSON_TABLES_DELIBERATELY_UNMOVED: Readonly<Record<string, string>
   // still owed. `mergeDiverRecords` refuses an anonymized person outright, so
   // no row here can ever belong to either side of a merge.
   processor_erasure_obligations: "provenance for an erasure, and anonymized rows never merge",
+  // A staffer's own half-typed form (ADR 20260906-before-you-ask, decision
+  // 3), gone within a day. Written by someone at the desk, never about a
+  // diver, so it belongs to whoever typed it and moves with nobody.
+  form_drafts: "a staffer's own half-typed form, gone in a day",
 };
 
 function quotedTable(tableName: string) {

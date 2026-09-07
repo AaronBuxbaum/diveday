@@ -38,7 +38,6 @@ import {
   confirmDiverIdentityAction,
   createDirectTripInvitationAction,
   deleteInternalNoteAction,
-  inviteWaitlistAction,
   markPaymentAction,
   markWaiverInPersonAction,
   recordTripInvitationAction,
@@ -46,7 +45,6 @@ import {
   restoreInternalNoteAction,
   saveCourseNextStepAction,
   saveRosterEmergencyContactAction,
-  sendLastMinuteDealAction,
   undoRemoveBookingAction,
   updateBookingPickupAction,
 } from "../actions";
@@ -187,7 +185,7 @@ async function TripGuestsBody({
   // Hidden, not explained, for a staffer who cannot use it (ADR
   // 20260724-role-gated-surfaces-hide-not-explain). Discounting is money work —
   // the same gate the shop-wide promo page carries on both its page and its
-  // actions — and `sendLastMinuteDealAction` refuses independently, because a
+  // actions — and the held send (`holdSendAction`) refuses independently, because a
   // hidden control is not a gate (issue #714).
   const mayDiscount = await canPersonManagePaymentSettings(db, shop.id, session.user.personId);
   // `waived` and `refunded` are decisions about money, gated by `canRefund`
@@ -381,7 +379,6 @@ async function TripGuestsBody({
               shopName={shop.name}
               tripTitle={trip.title}
               tripWhen={formatShortDate(trip.startsAt, locale, shop.timezone)}
-              inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
               certificationSummaries={certificationSummaries}
               /* The same folded gate the deal panel below states. The shared
                  predicate marks the row without reordering, filtering, or
@@ -476,7 +473,7 @@ async function TripGuestsBody({
                 promoRecipients={lastMinutePromoRecipients}
                 timezone={shop.timezone}
                 status={noticeForForm(tripNotice, "last-minute-deal")}
-                sendAction={sendLastMinuteDealAction.bind(null, shopSlug, tripId)}
+                tripId={tripId}
               />
             </div>
           </AutoOpenDetails>

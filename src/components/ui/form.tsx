@@ -8,8 +8,9 @@ import {
   type ReactNode,
   useId,
 } from "react";
-import { currencyFractionDigits, currencySymbol, maxPriceMajor, minorToMajor } from "@/lib/money";
+import { currencySymbol, minorToMajor } from "@/lib/money";
 import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
+import { type ForgivingCopy, ForgivingInput } from "./ForgivingInput";
 import { StatusMark } from "./StatusMark";
 import { toneMark } from "./tone";
 
@@ -300,10 +301,16 @@ export function Field({
   // onto that wrapper instead of the real control it wraps leaves the label
   // pointing at an id nothing else has. The wrap-everything fallback below
   // handles those correctly via implicit label-wraps-control association.
+  //
+  // `ForgivingInput` counts as a control too: it forwards `id`, `required` and
+  // the aria attributes onto the visible box it renders, so the label can point
+  // at that box by id and the required marker can read the `required` off it.
+  // Left to the fallback, a required "Full name" lost its `*` the day the box
+  // became forgiving (found by the diver-record visual capture).
   const isControl =
     isValidElement<ControlProps>(children) &&
-    typeof children.type === "string" &&
-    CONTROL_TAGS.has(children.type);
+    ((typeof children.type === "string" && CONTROL_TAGS.has(children.type)) ||
+      children.type === ForgivingInput);
   const fieldId = scopedFieldId(useId(), isControl ? children.props.name : undefined);
   const descriptionId = description ? `${fieldId}-description` : undefined;
   const errorId = error ? `${fieldId}-error` : undefined;
@@ -578,6 +585,7 @@ export function PriceField({
   cents,
   currency,
   locale,
+  copy,
 }: {
   id?: string;
   name: string;
@@ -586,23 +594,26 @@ export function PriceField({
   cents: number | null;
   currency: string;
   locale: string;
+  /** Words for the reading line under the box (`forgivingCopy`). */
+  copy: ForgivingCopy;
 }) {
-  const digits = currencyFractionDigits(currency);
+  // "95", "$95" and "95.00" are one figure (ADR 20260906-before-you-ask,
+  // decision 3): the box takes what a person types and settles to the scanned
+  // form, and the hidden control submits the major-unit figure the old number
+  // input sent, so the server sees no difference.
   return (
-    <Field label={label} hint={hint}>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted">{currencySymbol(currency, locale)}</span>
-        <input
+    <Field label={label} htmlFor={id} hint={hint}>
+      <div className="flex items-start gap-2">
+        <span className="pt-3 text-sm text-muted">{currencySymbol(currency, locale)}</span>
+        <ForgivingInput
+          kind="money"
           id={id}
           name={name}
-          type="number"
-          inputMode="decimal"
-          min={0}
-          max={maxPriceMajor(currency)}
-          step={digits === 0 ? "1" : `0.${"0".repeat(digits - 1)}1`}
+          locale={locale}
+          currency={currency}
+          copy={copy}
           defaultValue={cents === null ? "" : String(minorToMajor(cents, currency))}
           placeholder="—"
-          className={controlClass}
         />
       </div>
     </Field>

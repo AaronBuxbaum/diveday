@@ -80,7 +80,8 @@ export type RetainedTable =
   | "booking_payment_events"
   | "push_subscriptions"
   | "trip_desk_events"
-  | "trip_read_marks";
+  | "trip_read_marks"
+  | "form_drafts";
 
 /**
  * The one place a human changes how long each trail is kept, in days.
@@ -195,6 +196,12 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * because `deleteTrip` is soft.
    */
   trip_read_marks: 30,
+  /**
+   * 1 day. What a staffer had typed into a form when they were interrupted
+   * (ADR 20260906-before-you-ask, decision 3): the reader already drops a draft
+   * older than this, so the prune only takes out what nobody can see.
+   */
+  form_drafts: 1,
 };
 
 /**

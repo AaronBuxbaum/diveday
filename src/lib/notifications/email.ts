@@ -1167,6 +1167,50 @@ export function readinessLinkEmail(input: ReadinessLinkEmailInput): Notification
   };
 }
 
+type BookingHandoffEmailInput = {
+  locale: DiverLocale;
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  bookingUrl: string;
+  expiresAt: Date;
+  timezone: string;
+};
+
+/**
+ * **One link that brings a diver's details across** (ADR
+ * 20260906-before-you-ask, decision 3; H-68 b). Sent to an address typed cold
+ * into a booking form that matches a diver the shop already knows. Worded as
+ * the shortcut it is, and nothing more: the page it opens says what is on
+ * file, so this says only which departure, and for how long the link stands.
+ */
+export function bookingHandoffEmail(input: BookingHandoffEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
+  const body = t("notifications.bookingHandoff.body", {
+    shopName: input.shopName,
+    tripTitle: input.tripTitle,
+  });
+  const bodyHtml = t("notifications.bookingHandoff.body", {
+    shopName: escapeHtml(input.shopName),
+    tripTitle: `<strong>${escapeHtml(input.tripTitle)}</strong>`,
+  });
+  const openLink = t("notifications.bookingHandoff.openLink");
+
+  return {
+    subject: t("notifications.bookingHandoff.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${input.bookingUrl}\n\n${t(
+      "notifications.bookingHandoff.expiry",
+      { expiresAt },
+    )}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(
+      input.bookingUrl,
+      openLink,
+    )}<p>${t("notifications.bookingHandoff.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+  };
+}
+
 type CourseInquiryEmailInput = {
   locale: DiverLocale;
   shopName: string;

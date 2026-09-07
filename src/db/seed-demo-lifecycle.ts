@@ -31,9 +31,11 @@ import {
   diveSites,
   diveSupportNeeds,
   executedDives,
+  formDrafts,
   gearItems,
   gearReservations,
   gearServiceEvents,
+  heldSends,
   importedPaymentHistory,
   integrationDeliveries,
   integrationEvents,
@@ -151,6 +153,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(integrationEvents).where(eq(integrationEvents.shopId, shopId));
   await db.delete(integrationOauthStates).where(eq(integrationOauthStates.shopId, shopId));
   await db.delete(shopIntegrations).where(eq(shopIntegrations.shopId, shopId));
+  await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
+  await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
 
   // Order/checkout/booking dependents first.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));

@@ -1,15 +1,21 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
+import {
+  holdSendAction,
+  releaseHeldSendAction,
+  undoHeldSendAction,
+} from "@/app/actions/held-sends";
 import {
   IDLE_WAIVER_SEND_STATE,
   type WaiverSendChannel,
   type WaiverSendCopy,
   type WaiverSendState,
+  waiverSendStateFromOutcome,
 } from "@/app/actions/waiver-send-types";
-import { sendWaiversAction } from "@/app/actions/waivers";
 import { copyToClipboard } from "@/components/Copyable";
+import { SendHold } from "@/components/SendHold";
 import { Toast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import {
@@ -169,7 +175,6 @@ function ChannelButton({
  * can always hand it over themselves.
  */
 export function WaiverDeliveryActions({
-  shopSlug,
   personId,
   hasEmail,
   hasPhone,
@@ -178,7 +183,6 @@ export function WaiverDeliveryActions({
   sendCopy,
   children,
 }: {
-  shopSlug: string;
   personId: string;
   hasEmail: boolean;
   hasPhone: boolean;
@@ -199,10 +203,11 @@ export function WaiverDeliveryActions({
    */
   children?: React.ReactNode;
 }) {
-  const [state, formAction] = useActionState(
-    sendWaiversAction.bind(null, shopSlug, "diver", undefined),
-    IDLE_WAIVER_SEND_STATE,
-  );
+  // Email and text hold for eight seconds with Undo in the row (ADR
+  // 20260906-before-you-ask, decision 2); "Copy link" is a copy, not a send,
+  // and the server releases it at once. The outcome lands here in the shape
+  // the toast below has always read.
+  const [state, setState] = useState<WaiverSendState>(IDLE_WAIVER_SEND_STATE);
   const [tapped, setTapped] = useState<WaiverSendChannel | null>(null);
   // Bumped on every tap so a repeat of the same outcome still remounts the
   // toast below instead of sitting inert as an unchanged prop.
@@ -247,7 +252,16 @@ export function WaiverDeliveryActions({
   return (
     <>
       <div className="mt-5 flex flex-wrap items-start gap-2">
-        <form action={formAction} className="contents">
+        <SendHold
+          className="contents"
+          hold={holdSendAction}
+          undo={undoHeldSendAction}
+          release={releaseHeldSendAction}
+          onOutcome={(outcome) => setState(waiverSendStateFromOutcome(outcome))}
+          copy={sendCopy.hold}
+        >
+          <input type="hidden" name="holdKind" value="waiver_send" />
+          <input type="hidden" name="surface" value="diver" />
           <input type="hidden" name="personId" value={personId} />
           {hasEmail ? (
             <ChannelButton
@@ -285,7 +299,7 @@ export function WaiverDeliveryActions({
             tapped={tapped}
             onTap={tap}
           />
-        </form>
+        </SendHold>
         {children}
       </div>
       {toast ? <Toast key={toast.attempt} message={toast.message} /> : null}

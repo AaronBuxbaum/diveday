@@ -73,8 +73,8 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
     .slice(0, 10);
   await page.locator('input[name="title"]').fill("Two-Tank Morning Reef");
   await page.locator('input[name="date"]').fill(tomorrow);
-  await page.locator('input[name="startTime"]').fill("08:00");
-  await page.locator('input[name="endTime"]').fill("12:30");
+  await page.getByLabel("Departs").fill("08:00");
+  await page.getByLabel("Returns").fill("12:30");
   await page.getByRole("button", { name: "Put it on the board" }).click();
 
   // ── Screen 4: the bookable moment ────────────────────────────────────────
@@ -132,8 +132,8 @@ test("the second trip does not repeat the bookable moment", async ({ page }) => 
     await page.goto(`/shop/${unique}/schedule/board?add=1`);
     await page.locator('input[name="title"]').fill(title);
     await page.locator('input[name="date"]').fill(tomorrow);
-    await page.locator('input[name="startTime"]').fill(start);
-    await page.locator('input[name="endTime"]').fill(end);
+    await page.getByLabel("Departs").fill(start);
+    await page.getByLabel("Returns").fill(end);
     await page.getByRole("button", { name: "Put it on the board" }).click();
   };
 
@@ -191,8 +191,8 @@ test("a shop with a departure today is not treated as a shop with no departures"
   await page.goto(`/shop/${unique}/schedule/board?add=1`);
   await page.locator('input[name="title"]').fill("Afternoon Two-Tank");
   await page.locator('input[name="date"]').fill(today);
-  await page.locator('input[name="startTime"]').fill("16:00");
-  await page.locator('input[name="endTime"]').fill("19:30");
+  await page.getByLabel("Departs").fill("16:00");
+  await page.getByLabel("Returns").fill("19:30");
   await page.getByRole("button", { name: "Put it on the board" }).click();
 
   await page.goto(`/shop/${unique}`);

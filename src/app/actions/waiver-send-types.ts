@@ -1,3 +1,6 @@
+import type { SendHoldCopy } from "@/components/SendHold";
+import { sendHoldCopy } from "@/components/send-hold-copy";
+import type { HeldSendOutcome } from "@/db/held-sends";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**
@@ -83,6 +86,8 @@ export const IDLE_WAIVER_SEND_STATE: WaiverSendState = {
  * from the staff bundle (`staff/<namespace>.json`) and passed down as plain data, the same pattern as
  * `ResendConfirmationCopy` and `WaitlistInviteCopy`. */
 export type WaiverSendCopy = {
+  /** The held send's countdown row (ADR 20260906-before-you-ask, decision 2). */
+  hold: SendHoldCopy;
   /** Default pending label for the send button; a caller may override per-tap. */
   sending: string;
   copied: string;
@@ -125,6 +130,7 @@ export type WaiverSendCopy = {
 /** Built once per page and threaded to every `WaiverSendControl` on it. */
 export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
   return {
+    hold: sendHoldCopy(t),
     sending: t("shared.waiverSend.sending"),
     copied: t("shared.waiverSend.copied"),
     copyLink: t("shared.waiverSend.copyLink"),
@@ -149,5 +155,29 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     confirmResend: t("shared.waiverSend.confirmResend"),
     neverMind: t("shared.waiverSend.neverMind"),
     emptySelection: t("shared.waiverSend.emptySelection"),
+  };
+}
+
+/**
+ * A held send's outcome (`src/db/held-sends.ts`) in the shape every waiver
+ * surface renders. Names arrive as the executor found them; an empty name is
+ * the "A diver" the immediate path always used.
+ */
+export function waiverSendStateFromOutcome(outcome: HeldSendOutcome): WaiverSendState {
+  if (outcome.kind !== "waiver_send") return IDLE_WAIVER_SEND_STATE;
+  const named = (names: string[]) => names.map((name) => name || "A diver");
+  return {
+    status: "done",
+    channel: outcome.channel,
+    sent: named(outcome.sent),
+    // A link is handed over only when the send did not land, so `sent` never
+    // reaches here; the narrowing keeps the type honest rather than the data.
+    links: outcome.links.map((link) => ({
+      ...link,
+      reason: link.reason === "sent" ? "failed" : link.reason,
+    })),
+    alreadyDone: named(outcome.alreadyDone),
+    errors: named(outcome.errors),
+    emptySelection: false,
   };
 }

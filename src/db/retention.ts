@@ -12,6 +12,7 @@ import {
   accountTokens,
   activityEvents,
   bookingPaymentEvents,
+  formDrafts,
   integrationEvents,
   integrationOauthStates,
   notificationDeliveries,
@@ -298,6 +299,22 @@ export async function pruneExpiredRecords(
           .where(lt(tripDeskEvents.occurredAt, cutoff("trip_desk_events")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(tripDeskEvents).where(inArray(tripDeskEvents.id, ids)),
+    ),
+  );
+
+  // A staff form's draft (ADR 20260906-before-you-ask, decision 3), on the
+  // moment it was last typed into: the reader already hides one older than a
+  // day, so this clears rows nobody can reach.
+  outcomes.push(
+    await pruneBatch(
+      "form_drafts",
+      () =>
+        db
+          .select({ id: formDrafts.id })
+          .from(formDrafts)
+          .where(lt(formDrafts.savedAt, cutoff("form_drafts")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(formDrafts).where(inArray(formDrafts.id, ids)),
     ),
   );
 

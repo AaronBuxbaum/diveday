@@ -481,3 +481,68 @@ export async function emailFreshWaiverLink(
   // rejected recipient, a provider error. Never claim mail is on its way.
   return "failed";
 }
+
+export type WaiverBatchFallbackLink = { name: string; token: string; reason: WaiverDelivery };
+
+/**
+ * What a batch of waiver sends did, in the shape the surfaces already render:
+ * who got theirs, whose link the staffer must hand over and why, who already
+ * had a signed one, and who errored.
+ */
+export type WaiverBatchOutcome = {
+  channel: WaiverSendChannel;
+  sent: string[];
+  links: WaiverBatchFallbackLink[];
+  alreadyDone: string[];
+  errors: string[];
+};
+
+/**
+ * Issue and deliver a waiver to each booking (and optionally one person with
+ * no booking), on one channel. The loop `sendWaiversAction` used to carry,
+ * lifted here so a held send (ADR 20260906-before-you-ask, decision 2) and an
+ * immediate one run the very same code.
+ */
+export async function deliverWaiverBatch(
+  db: AppDb,
+  shopId: string,
+  input: { bookingIds: string[]; personId?: string; channel: WaiverSendChannel },
+): Promise<WaiverBatchOutcome> {
+  const outcome: WaiverBatchOutcome = {
+    channel: input.channel,
+    sent: [],
+    links: [],
+    alreadyDone: [],
+    errors: [],
+  };
+  const targets: Array<
+    { kind: "booking"; bookingId: string } | { kind: "person"; personId: string }
+  > = [...new Set(input.bookingIds)].map((bookingId) => ({ kind: "booking", bookingId }));
+  if (input.personId) targets.push({ kind: "person", personId: input.personId });
+  for (const target of targets) {
+    const result =
+      target.kind === "person"
+        ? await issueAndDeliverPersonWaiver(db, shopId, target.personId, {
+            channel: input.channel,
+          })
+        : await issueAndDeliverWaiver(db, shopId, target.bookingId, { channel: input.channel });
+    if (!result.ok) {
+      if (result.reason === "already_completed") {
+        outcome.alreadyDone.push(result.diverName ?? "");
+      } else {
+        outcome.errors.push(result.diverName ?? "");
+      }
+      continue;
+    }
+    if (result.delivery === "sent") {
+      outcome.sent.push(result.diverName);
+    } else {
+      outcome.links.push({
+        name: result.diverName,
+        token: result.token,
+        reason: result.delivery,
+      });
+    }
+  }
+  return outcome;
+}

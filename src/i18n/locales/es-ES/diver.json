@@ -313,6 +313,15 @@
   },
   "booking": {
     "heading": "Reserva tu plaza",
+    "knownDiver": {
+      "heading": "Reservando como {name}",
+      "card": "Certificación {level}, verificada el {date}",
+      "waiver": "Exención firmada el {date}, sigue cubriendo esta salida",
+      "ownGear": "Equipo propio, desde el {date}",
+      "sizes": "Tallas guardadas el {date}",
+      "contact": "Contacto de emergencia registrado: {name}",
+      "notYou": "¿No eres {name}? <a>Empieza con un formulario en blanco</a>"
+    },
     "money": {
       "fare": "{price} × {count, plural, one {# buceador} other {# buceadores}}",
       "courseFee": "Curso",
@@ -619,10 +628,10 @@
     "otherTipPlaceholder": "Otra",
     "otherTipAriaLabel": "Otra cantidad de propina",
     "course": {
-      "certified": "{shopName} registr\u00f3 tu {level} de esta sesi\u00f3n.",
-      "notYetCertified": "Tu sesi\u00f3n de {course} est\u00e1 registrada. {shopName} todav\u00eda no ha registrado una certificaci\u00f3n por ella.",
+      "certified": "{shopName} registró tu {level} de esta sesión.",
+      "notYetCertified": "Tu sesión de {course} está registrada. {shopName} todavía no ha registrado una certificación por ella.",
       "nextStepBy": "Siguiente paso de {name}",
-      "nextStepQuote": "\u201c{words}\u201d"
+      "nextStepQuote": "“{words}”"
     },
     "crewQuote": "“{words}”",
     "logbookHeading": "Registro del diario de inmersión",
@@ -3553,6 +3562,12 @@
       "body": "Aquí tienes un enlace nuevo con lo que te falta antes de salir con {shopName} en {tripTitle}. El anterior ha caducado.",
       "openLink": "Abre tu preparación",
       "expiry": "Este enlace privado caduca el {expiresAt}."
+    },
+    "bookingHandoff": {
+      "subject": "Reserva {tripTitle} con tus datos ya puestos",
+      "body": "Empezaste a reservar {tripTitle} con {shopName}. Abre la página desde este enlace y lo que {shopName} ya tiene de ti viene contigo: tu certificación, tu exención, tus tallas.",
+      "openLink": "Reservar con tus datos",
+      "expiry": "Este enlace privado caduca {expiresAt}."
     },
     "sms": {
       "whenWeek": "esta semana",

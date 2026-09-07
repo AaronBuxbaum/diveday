@@ -8,7 +8,7 @@ import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import { bookingCapabilities, bookings, trips } from "./schema";
 
-export type CapabilityPurpose = "readiness" | "confirm" | "claim";
+export type CapabilityPurpose = "readiness" | "confirm" | "claim" | "handoff";
 
 export type IssuedCapability = { token: string; expiresAt: Date };
 
@@ -52,7 +52,18 @@ export async function issueBookingCapability(
   // its transaction — the readiness rescue re-checks its live-link guard under
   // a row lock and issues inside the same one (issue #850).
   db: DbExecutor,
-  input: { shopId: string; bookingId: string; purpose: CapabilityPurpose; now?: Date },
+  input: {
+    shopId: string;
+    bookingId: string;
+    purpose: CapabilityPurpose;
+    now?: Date;
+    /**
+     * A shorter life than the trip's, for a purpose that is about the next
+     * ten minutes rather than the departure — the booking handoff. Never
+     * longer: the trip-anchored expiry stays the ceiling.
+     */
+    expiresAt?: Date;
+  },
 ): Promise<IssuedCapability | null> {
   const now = input.now ?? nowDate();
   const [booking] = await db
@@ -72,7 +83,8 @@ export async function issueBookingCapability(
   await retireOldestLiveCapabilities(db, input.shopId, input.bookingId, input.purpose, now);
 
   const token = createCapabilityToken();
-  const expiresAt = capabilityExpiryFor(booking.tripEndsAt, now);
+  const tripBound = capabilityExpiryFor(booking.tripEndsAt, now);
+  const expiresAt = input.expiresAt && input.expiresAt < tripBound ? input.expiresAt : tripBound;
   await db.insert(bookingCapabilities).values({
     shopId: input.shopId,
     bookingId: input.bookingId,

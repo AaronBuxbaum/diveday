@@ -200,7 +200,6 @@ export function WaiverGroup({
             </summary>
             <div className="mt-3">
               <WaiverDeliveryActions
-                shopSlug={shopSlug}
                 personId={personId}
                 hasEmail={Boolean(diver.person.email)}
                 // The same rule the send itself applies: a number with no

@@ -1,6 +1,7 @@
 import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import type { PaletteAnswerView } from "@/lib/palette-answer";
 import { MIN_PHONE_SEARCH_DIGITS, phoneDigits } from "@/lib/person-fields";
 import type { AppDb } from "./client";
 import {
@@ -44,6 +45,12 @@ export type GearHit = {
   detail: string | null;
 };
 export type SearchResults = {
+  /**
+   * The palette's answer card, when the query names one thing (ADR
+   * 20260906-before-you-ask, decision 3). Worded by the route, which has the
+   * translator; absent or null when the query names nothing.
+   */
+  answer?: PaletteAnswerView | null;
   divers: DiverHit[];
   trips: TripHit[];
   diveSites: DiveSiteHit[];

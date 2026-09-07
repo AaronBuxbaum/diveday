@@ -126,7 +126,19 @@
     "goToOfflineRollCall": "Abrir pase de lista sin conexión",
     "hintMove": "para moverte",
     "hintOpen": "para abrir",
-    "hintClose": "para cerrar"
+    "hintClose": "para cerrar",
+    "answer": {
+      "diverOn": "{name} en la salida de las {time} del {day} · {trip}",
+      "noDeparture": "Sin salida próxima",
+      "openRecord": "Abrir la ficha de {name}",
+      "openRoster": "Abrir el listado",
+      "openManifest": "Abrir el manifiesto",
+      "dayNothing": "Todavía no hay nada en el tablero",
+      "dayCounts": "{departures, plural, one {# salida} other {# salidas}} · {divers, plural, one {# buceador} other {# buceadores}}",
+      "openDay": "Abrir el {day} en el tablero",
+      "addDeparture": "Añadir una salida",
+      "departureSeats": "{booked} de {capacity} reservadas · {blocked, plural, =0 {todos listos} one {# bloqueado} other {# bloqueados}}"
+    }
   },
   "tripAdmission": {
     "level": "Esta salida exige {level}. La titulación más alta registrada de este buceador es {held}. Si tiene la certificación de {level}, añádela a su ficha; si no, resérvale una salida acorde a su nivel o el curso de {level}.",
@@ -471,5 +483,17 @@
     "deckWord": "Pidió hablar con el divemaster.",
     "easyFirstDive": "Pidió una primera inmersión tranquila.",
     "refresherCourse": "Preguntó por el curso de repaso."
+  },
+  "forgiving": {
+    "typedAs": "escrito como “{raw}”"
+  },
+  "sendHold": {
+    "sendingIn": "Se envía en {seconds} s.",
+    "sendingNow": "Enviando…",
+    "undo": "Deshacer"
+  },
+  "formDraft": {
+    "pickedUp": "Retomado del mostrador, {time}.",
+    "startOver": "Empezar de nuevo"
   }
 }

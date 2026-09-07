@@ -1,5 +1,6 @@
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
+  HELD_SEND_TIMEOUT_MS,
   openTripFromBoard,
   openTripTab,
   sendWaiverForFirstDiver,
@@ -95,6 +96,10 @@ test("the demo keeps its synthetic medical-review training hold on a future trip
 test("one waiver button sends a resumable link and a medical yes surfaces follow-up", async ({
   page,
 }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
   // Chains several sequential navigations and status-toast waits — same
   // aggregate-cost reasoning as visual.spec.ts's test.setTimeout: legitimate
   // per-step cost under 2-worker CI load can sum past the default 15s test
@@ -117,7 +122,11 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // than "Waiver sent to …".
   await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
   const resultNotice = diverSection.getByRole("status");
-  await expect(resultNotice).toContainText("send email from this deployment yet");
+  // The send holds eight seconds with Undo first (ADR 20260906-before-you-ask,
+  // decision 2); the outcome is allowed the hold plus the send.
+  await expect(resultNotice).toContainText("send email from this deployment yet", {
+    timeout: HELD_SEND_TIMEOUT_MS,
+  });
   const waiverHref = await waiverLinkFromResult(page, resultNotice);
 
   await page.goto(waiverHref);
@@ -263,6 +272,10 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
 test("the medical questionnaire refuses to complete with an unanswered question, even past client validation", async ({
   page,
 }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Trip");
@@ -310,6 +323,10 @@ test("the medical questionnaire refuses to complete with an unanswered question,
 test("a waiver signed under someone else's name is refused, and the link stays signable", async ({
   page,
 }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Trip");
@@ -377,6 +394,10 @@ test("a waiver signed under someone else's name is refused, and the link stays s
 test("an incomplete sign submit is blocked client-side and focuses the missing field", async ({
   page,
 }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Trip");
@@ -403,6 +424,10 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
   page,
   workerBaseURL,
 }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Trip");
@@ -433,6 +458,10 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
 });
 
 test("saving a draft preserves partial conditional questionnaire answers", async ({ page }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Trip");
@@ -476,6 +505,10 @@ test("saving a draft preserves partial conditional questionnaire answers", async
 test("a Box opened after a draft reload asks its questions rather than answering them", async ({
   page,
 }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Trip");
@@ -522,6 +555,10 @@ test("a Box opened after a draft reload asks its questions rather than answering
 test("the step rail paces the waiver and reaches 3 of 3 only once it is signed", async ({
   page,
 }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Trip");
@@ -584,6 +621,10 @@ test("the step rail paces the waiver and reaches 3 of 3 only once it is signed",
  * about to refuse, which is the one path that can lose a diver's answers.
  */
 test("a Box a diver's own yes opens keeps the rail's Medical step open", async ({ page }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Trip");
@@ -698,6 +739,10 @@ test("a paper release is recorded from the diver's own record, not just from a d
 test("a diver without a booking can receive an independent waiver from their record", async ({
   page,
 }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
   const stamp = Date.now();
   await page.goto("/shop/blue-mantis/divers/new");
   await page.getByLabel("Full name").fill(`Unscheduled E2E Diver ${stamp}`);
@@ -736,7 +781,9 @@ test("a diver without a booking can receive an independent waiver from their rec
    * the same "Copy link".
    */
   await page.getByRole("button", { name: "Text waiver" }).click();
-  await expect(page.getByRole("button", { name: /Text waiver.*Not set up/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Text waiver.*Not set up/ })).toBeVisible({
+    timeout: HELD_SEND_TIMEOUT_MS,
+  });
   await page.getByRole("button", { name: "Copy link" }).click();
   expect(await waiverLinkFromToast(page)).toBe(firstHref);
 
@@ -922,6 +969,10 @@ test("the signature audit pages both ways, and keeps a pinned record while it do
 test("the waiver page fits a phone even with unbreakable text in the template", async ({
   page,
 }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
   test.setTimeout(60_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);

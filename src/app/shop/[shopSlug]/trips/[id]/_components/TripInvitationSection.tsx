@@ -1,3 +1,4 @@
+import { sendHoldCopy } from "@/components/send-hold-copy";
 import type { listTripInvitations } from "@/db/trip-invitations";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
@@ -38,6 +39,7 @@ export function TripInvitationGroup({
   const t = staffTranslator(locale);
   const bookingPath = publicTripPath(shopSlug, tripId);
   const inviteCopy: WaitlistInviteCopy = {
+    hold: sendHoldCopy(t),
     invitedRelative: t.raw("trips.invitations.invitedRelative"),
     inviteEmailed: t("trips.invitations.inviteEmailed"),
     reSendInvite: t("trips.invitations.reSendInvite"),

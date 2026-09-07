@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import { controlClass, Field, FieldActions, FieldGrid, PriceField } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel, InsetGroup } from "@/components/ui/ledger";
@@ -2124,6 +2125,7 @@ export default async function SettingsPage({
                         cents={shop.rentalPricing.setCents}
                         currency={shopCurrency}
                         locale={locale}
+                        copy={forgivingCopy(t)}
                       />
                       {RENTABLE_ITEMS.filter((item) => offeredKinds.has(item.kind)).map((item) => (
                         <PriceField
@@ -2133,6 +2135,7 @@ export default async function SettingsPage({
                           cents={shop.rentalPricing.perItemCents[item.kind] ?? null}
                           currency={shopCurrency}
                           locale={locale}
+                          copy={forgivingCopy(t)}
                         />
                       ))}
                       {offeredKinds.has("nitrox") ? (
@@ -2143,6 +2146,7 @@ export default async function SettingsPage({
                           cents={shop.rentalPricing.nitroxCents}
                           currency={shopCurrency}
                           locale={locale}
+                          copy={forgivingCopy(t)}
                         />
                       ) : null}
                     </FieldGrid>
@@ -2327,6 +2331,7 @@ export default async function SettingsPage({
                         cents={passThroughFee?.amountCents ?? null}
                         currency={shopCurrency}
                         locale={locale}
+                        copy={forgivingCopy(t)}
                       />
                     </FieldGrid>
                     <p className="mt-3 text-sm text-muted">

@@ -224,6 +224,8 @@ export type AfterStateProps = {
   nextDive: NextDivePick | null;
   /** That pick's sentences, worded where every other fact on this page is worded. */
   nextDiveWorded: { when: string; reason: string; levelCovers: string | null } | null;
+  /** The pick's booking page carrying this diver's own handoff, or null. */
+  nextDiveHref?: string | null;
   /** The four recap actions, already bound to a signed recap token. */
   actions: {
     submitReview: (formData: FormData) => void | Promise<void>;
@@ -305,6 +307,7 @@ export function AfterState({
   postcard,
   nextDive,
   nextDiveWorded,
+  nextDiveHref = null,
   actions,
   siteMark,
 }: AfterStateProps) {
@@ -660,6 +663,7 @@ export function AfterState({
         t={t}
         shopSlug={shop.slug}
         pick={nextDive}
+        href={nextDiveHref}
         when={nextDiveWorded?.when ?? ""}
         reason={nextDiveWorded?.reason ?? ""}
         levelCovers={nextDiveWorded?.levelCovers ?? null}

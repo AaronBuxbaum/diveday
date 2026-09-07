@@ -185,7 +185,7 @@ describe("GET /api/search", () => {
     const response = await GET(new Request("http://localhost/api/search"));
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toEqual(EMPTY_RESULTS);
+    expect(body).toEqual({ ...EMPTY_RESULTS, answer: null });
   });
 
   /**
@@ -306,5 +306,35 @@ describe("GET /api/search", () => {
       expect(response.status).toBe(401);
       expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     });
+  });
+});
+
+/** ADR 20260906-before-you-ask, decision 3: ask it, and it answers. */
+describe("GET /api/search — the answer card", () => {
+  it("answers a query that names one diver, and stays silent on one that names nothing", async () => {
+    const { db, shop, personId } = await staffContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
+
+    const one = await (await GET(searchRequest("priya sharma"))).json();
+    expect(one.divers).toHaveLength(1);
+    expect(one.answer).toMatchObject({ kind: "diver" });
+    expect(one.answer.title).toContain("Priya Sharma");
+    expect(typeof one.answer.act.href).toBe("string");
+    expect(one.answer.act.href.startsWith(`/shop/${shop.slug}/`)).toBe(true);
+
+    const none = await (await GET(searchRequest("zzzz-nobody"))).json();
+    expect(none.answer).toBeNull();
+  });
+
+  it("answers a day typed as a weekday", async () => {
+    const { db, shop, personId } = await staffContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
+    const body = await (await GET(searchRequest("sat"))).json();
+    expect(body.answer).toMatchObject({ kind: "day" });
+    expect(body.answer.act.href).toMatch(
+      new RegExp(`^/shop/${shop.slug}/schedule/board\\?date=\\d{4}-\\d{2}-\\d{2}$`),
+    );
   });
 });

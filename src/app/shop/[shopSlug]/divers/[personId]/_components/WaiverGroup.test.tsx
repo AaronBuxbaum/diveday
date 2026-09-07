@@ -10,7 +10,11 @@ import { WaiverGroup } from "./WaiverGroup";
 // whole Next server runtime) in behind them; this suite is about which controls
 // the group offers, so they are stubbed rather than booted.
 vi.mock("../actions", () => ({ markWaiverInPersonAction: vi.fn() }));
-vi.mock("@/app/actions/waivers", () => ({ sendWaiversAction: vi.fn() }));
+vi.mock("@/app/actions/held-sends", () => ({
+  holdSendAction: vi.fn(),
+  undoHeldSendAction: vi.fn(),
+  releaseHeldSendAction: vi.fn(),
+}));
 
 function diver(overrides: {
   email?: string | null;
