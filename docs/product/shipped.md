@@ -7,6 +7,19 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The day's profile, before booking (delivered 2026-09-07)
+
+N-06 from the 2026-09-07 improvement-ideas decision sheet (issue #1479). "The day" on the public
+departure page now states each dive's planned time in the water and the gap on the surface between
+two of them — the shop's own rhythm and any per-site or per-leg override, derived by
+`src/lib/day-profile.ts` off the dock-day timeline's own arithmetic, so the figures a diver reads
+before booking match the ones their thread reads after. No clock: durations promise no schedule, and
+the beat stays time-neutral. Under it, a reader with no account can name the card they hold and read
+which of the day's sites goes deeper than that card covers (`statedLevelDepthLimit`,
+`checkDepthCeiling` in the shop's own unit). The answer is held in that browser and nowhere else —
+no `people` row, nothing that travels with the booking — and it **gates nothing**: the site's
+maximum is not the dive plan (H-08).
+
 ## Fly-safe from, on the recap (delivered 2026-09-07)
 
 N-04 from the 2026-09-07 improvement-ideas decision sheet (issue #1425). Once the crew has logged

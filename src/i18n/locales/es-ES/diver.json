@@ -221,6 +221,14 @@
     "diveNumber": "Inmersión {number}",
     "siteToBeConfirmed": "Sitio por confirmar",
     "sitesToBeConfirmed": "{count, plural, one {Una inmersión · sitio por confirmar} other {# inmersiones · sitios por confirmar}}",
+    "dayProfile": {
+      "bottomTime": "{minutes, plural, one {Alrededor de # minuto en el agua} other {Alrededor de # minutos en el agua}}",
+      "surfaceInterval": "{minutes, plural, one {Alrededor de # minuto en superficie} other {Alrededor de # minutos en superficie}}",
+      "pickerLabel": "Compara estas profundidades con tu certificación",
+      "within": "Nada de este día pasa de {limit}.",
+      "over": "La inmersión {number} es en un sitio que llega a {site}, más de los {limit} que cubre tu certificación. Puedes reservar igual: avisa a la tripulación y planificarán tu inmersión dentro de tu límite.",
+      "overNoCard": "La inmersión {number} es en un sitio que llega a {site}. Una primera inmersión sin certificación no pasa de {limit}. Puedes reservar igual: pregunta a la tripulación qué necesita este día."
+    },
     "automatedOutlook": "Previsión marina automática",
     "waterTemperature": "Temperatura del agua",
     "visibility": "Visibilidad",

@@ -658,7 +658,21 @@ export default async function TripDetailPage({
             scroll (ADR 20260827-the-divers-thread, decision 2). Packing left
             for the thread entirely: what to bring is preparation, and
             preparation is for a diver who has a seat. */}
-        <TripDayPlan briefings={diveBriefings} locale={locale} />
+        {/* The shape of the day as well as its sites: how long each dive runs,
+            how long the boat sits between two of them, and — once a reader
+            names a card — which of the day's sites go deeper than that card
+            covers. Facts the shop already publishes (issue #1479); the beat
+            stays time-neutral, since durations promise no clock. */}
+        <TripDayPlan
+          briefings={diveBriefings}
+          locale={locale}
+          profile={{
+            rhythm: shop,
+            depthUnit: shop.depthUnit,
+            diveMode: trip.diveMode,
+            dayCount: meetingDays.length,
+          }}
+        />
         {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
             route, the rest of the field guide, the moments strip, the shop's
             site prose and the crew used to run down the page as five more

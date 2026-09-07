@@ -1952,6 +1952,46 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The day's profile, answered** (issue #1479, N-06).
+       *
+       * The two captures above photograph "The day" as a run of sites. This one
+       * is the state a reader reaches by *using* it: the shop's planned times
+       * in the water and on the surface, and — once a card is named — the
+       * sentence saying which of the day's sites goes deeper than that card
+       * covers. It is the one place a public page says something depth-shaped
+       * to a diver, and nothing else can photograph it, since the answer only
+       * exists after a selection nobody else's spec makes.
+       *
+       * The Duane is the departure that produces it: 37 m against an Open Water
+       * card's 18. Its id comes off the staff board on a disposable context,
+       * the same CR-019 pattern as the requirement note above, so `page` stays
+       * the anonymous visitor being photographed.
+       */
+      test(`the day's profile answers a stated card (${scheme})`, async ({
+        page,
+        browser,
+        workerBaseURL,
+        staffStorageState,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await tripIdWithoutSigningIn(
+          browser,
+          workerBaseURL,
+          await staffStorageState("owner"),
+          DEEP_CHARTER,
+        );
+        await page.goto(`/s/blue-mantis/trips/${tripId}`);
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await page
+          .getByLabel("See these depths against your card")
+          .selectOption({ label: "Open Water" });
+        // The sentence the selection produces — waiting on it means the shot
+        // can never be of the picker before it answered.
+        await page.getByText(/past the 18 m your card covers/).waitFor();
+        await capture(page, "day-profile-ceiling", scheme);
+      });
+
+      /**
        * **A dock day the departure's own legs lay out** (ADR
        * 20260815-per-leg-travel-minutes).
        *
