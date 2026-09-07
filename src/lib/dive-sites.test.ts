@@ -97,6 +97,36 @@ describe("parseDiveSiteForm", () => {
     });
   });
 
+  it("keeps a seven-digit tide station and its preference, and reads blank as none", () => {
+    const stationed = parseDiveSiteForm(
+      formEntries({ tideStationId: " 8723583 ", tidePreference: "slack" }),
+      "meters",
+    );
+    expect(stationed.ok).toBe(true);
+    if (stationed.ok) {
+      expect(stationed.fields.tideStationId).toBe("8723583");
+      expect(stationed.fields.tidePreference).toBe("slack");
+    }
+    const blank = parseDiveSiteForm(formEntries({}), "meters");
+    expect(blank.ok).toBe(true);
+    if (blank.ok) {
+      expect(blank.fields.tideStationId).toBe("");
+      expect(blank.fields.tidePreference).toBe("any");
+    }
+  });
+
+  it("refuses a station id of the wrong shape with its own code", () => {
+    expect(parseDiveSiteForm(formEntries({ tideStationId: "87235" }), "meters")).toEqual({
+      ok: false,
+      error: "tideStationInvalid",
+    });
+    expect(parseDiveSiteForm(formEntries({ tideStationId: "carysfort" }), "meters")).toEqual({
+      ok: false,
+      error: "tideStationInvalid",
+    });
+    expect(parseDiveSiteForm(formEntries({ tidePreference: "spring" }), "meters").ok).toBe(false);
+  });
+
   it("names the depth ceiling rather than blaming the form at large", () => {
     // 600 m is past `MAX_ENTERED_DEPTH_METERS` but inside the schema's own
     // loose 1,000 outer guard, so only the unit-aware check can catch it.

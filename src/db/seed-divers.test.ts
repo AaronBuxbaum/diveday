@@ -9,6 +9,7 @@ import {
   people,
   specialtyCertifications,
   tripRequirements,
+  waiverRecords,
 } from "./schema";
 import { birthDateTurning } from "./seed-clock";
 
@@ -74,6 +75,50 @@ describe("seeded imported-card states", () => {
       emergencyContactPhone: "+49-30-555-0233",
     });
     expect(lena?.emergencyContactName).not.toMatch(/husband|wife|partner/i);
+  });
+
+  /**
+   * **The demo's minor boards** (ADR 20260907-guardian-co-signature). Her
+   * signed release is co-signed by the father already on her record, so the
+   * demo boat shows the co-signature rather than a permanent
+   * `guardian_signature_missing` blocker on the one diver half the e2e suite
+   * reads. `DEMO_GUARDIANS` in `src/db/seed-bookings.ts` is what puts it there,
+   * and a minor added to the cast without an entry fails the seed loudly — so
+   * this is the guard on the pair staying in step.
+   */
+  it("co-signs the seeded minor's release, so she is not blocked on the demo boat", async () => {
+    const { db, shop } = await seededShopContext();
+    const [lena] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Lena Fischer")))
+      .limit(1);
+    if (!lena) throw new Error("expected the seeded minor");
+
+    const releases = await db
+      .select()
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.personId, lena.id)));
+    const signed = releases.filter((record) => record.status === "completed");
+    expect(signed.length).toBeGreaterThan(0);
+    for (const record of signed) {
+      expect(record).toMatchObject({
+        guardianName: "Jonas Fischer",
+        guardianRelationship: "parent",
+      });
+      expect(record.guardianSignedAt).not.toBeNull();
+    }
+
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), eq(bookings.personId, lena.id)))
+      .limit(1);
+    if (!booking) throw new Error("expected the seeded minor to hold a seat");
+    const readiness = await getBookingReadiness(db, shop.id, booking.id);
+    expect(readiness?.blockers ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "guardian_signature_missing" }),
+    );
   });
 
   it("cards that diver without disturbing the readiness any other spec asserts", async () => {

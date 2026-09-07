@@ -383,6 +383,26 @@ describe("scheduleJsonLd", () => {
     expect(graph.itemListElement).toBeUndefined();
   });
 
+  it("points at the availability document as a DataFeed on both shapes, and only when given one", () => {
+    const feed = {
+      "@type": "DataFeed",
+      url: "https://diveday.example/s/blue-mantis/availability.json",
+      encodingFormat: "application/json",
+    };
+    const options = { availabilityUrl: feed.url };
+    expect(scheduleJsonLd(shop, [trip], ORIGIN, null, [], options).subjectOf).toEqual(feed);
+    expect(scheduleJsonLd(shop, [], ORIGIN, null, [], options).subjectOf).toEqual(feed);
+    // An opted-out shop's document is a 404, so the graph must not name it.
+    expect(
+      scheduleJsonLd(shop, [trip], ORIGIN, null, [], { availabilityUrl: null }).subjectOf,
+    ).toBeUndefined();
+    expect(scheduleJsonLd(shop, [trip], ORIGIN).subjectOf).toBeUndefined();
+    // And the feed never rides inside a departure's own organizer node.
+    const items = scheduleJsonLd(shop, [trip], ORIGIN, null, [], options)
+      .itemListElement as JsonLdObject[];
+    expect(at(items[0], "item.organizer.subjectOf")).toBeUndefined();
+  });
+
   it("omits review when the page passes none", () => {
     expect(scheduleJsonLd(shop, [trip], ORIGIN).review).toBeUndefined();
     expect(scheduleJsonLd(shop, [], ORIGIN).review).toBeUndefined();

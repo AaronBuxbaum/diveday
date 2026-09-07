@@ -63,6 +63,9 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   // is a conversation about a seat this diver can no longer take, and the
   // label stops there rather than choosing refund or rebook for the shop.
   medical_not_cleared: "today.blockerAction.contactDiver",
+  // The same tap as an expired link: a fresh link goes out, and this time it
+  // asks the guardian to sign too (ADR 20260907-guardian-co-signature).
+  guardian_signature_missing: "today.blockerAction.reissueWaiver",
   certification_missing: "today.blockerAction.addCard",
   certification_pending: "today.blockerAction.verifyCard",
   // Never "Verify card": there is no number to look up with an agency, only a
@@ -90,6 +93,7 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   waiver_expired: "today.blockerGroup.reissueWaivers",
   medical_review: "today.blockerGroup.reviewMedicals",
   medical_not_cleared: "today.blockerGroup.contactDivers",
+  guardian_signature_missing: "today.blockerGroup.reissueWaivers",
   certification_missing: "today.blockerGroup.reviewCards",
   certification_pending: "today.blockerGroup.verifyCards",
   certification_self_declared: "today.blockerGroup.askForCards",

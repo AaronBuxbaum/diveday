@@ -224,6 +224,7 @@ export async function shopSenderFor(
 ): Promise<NotificationSender | undefined> {
   const [shop] = await db
     .select({
+      inboundEmailToken: shops.inboundEmailToken,
       contactEmail: shops.contactEmail,
       contactEmailConfirmedAt: shops.contactEmailConfirmedAt,
       addressStreet: shops.addressStreet,

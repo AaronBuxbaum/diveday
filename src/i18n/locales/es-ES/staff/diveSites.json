@@ -66,6 +66,15 @@
     "namePlaceholder": "Molasses Reef",
     "forecastLegend": "Ubicación GPS",
     "forecastDescription": "El punto del sitio mar adentro, no la dirección del centro. Deja ambos en blanco para que el sitio no aparezca en los mapas de los buceadores.",
+    "tideStationLabel": "Estación de mareas NOAA",
+    "tideStationHint": "El id de siete dígitos de la estación mar adentro más cercana, de <link>las predicciones de marea de NOAA</link>.",
+    "tidePreferenceLabel": "Se bucea mejor",
+    "tidePreference": {
+      "any": "Con cualquier marea",
+      "slack": "En la estoa",
+      "flood": "Con marea entrante",
+      "ebb": "Con marea saliente"
+    },
     "latitudeLabel": "Latitud",
     "longitudeLabel": "Longitud",
     "locationLabel": "Ubicación",
@@ -184,6 +193,7 @@
     "saving": "Guardando…",
     "optionalHint": "(opcional)",
     "errorCoordinates": "Agrega ambas coordenadas GPS: una ubicación necesita latitud y longitud.",
+    "errorTideStation": "El id de una estación de mareas NOAA tiene siete dígitos, como 8723583.",
     "errorDepth": "Esa profundidad máxima es mayor que la de cualquier sitio de buceo.",
     "errorImages": "Una de esas fotos no se pudo guardar. Un sitio admite hasta seis, y cada una tiene que ser JPG, PNG, WebP o HEIC de menos de 5 MB. Todo lo demás que escribiste sigue aquí.",
     "errorImagesUnconfigured": "El almacenamiento de fotos aún no está configurado para este centro. Guarda el briefing sin fotos por ahora, o pide al propietario o gerente de tu centro que lo configure.",

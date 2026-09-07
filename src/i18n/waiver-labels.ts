@@ -19,6 +19,7 @@ const WAIVER_STATUS_KEYS: Record<ShopWaiverStatus["state"], StaffMessageKey> = {
   none: "shared.waiverStatus.none",
   current: "shared.waiverStatus.current",
   expired: "shared.waiverStatus.expired",
+  guardian_missing: "shared.waiverStatus.guardianMissing",
   medical_review: "shared.waiverStatus.medicalReview",
   medical_not_cleared: "shared.waiverStatus.medicalNotCleared",
 };

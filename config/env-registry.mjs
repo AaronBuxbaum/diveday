@@ -171,6 +171,40 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "Mail divers send back (ADR 20260907-two-way-inbox). SES's receipt rule stores",
+      "each message in the inbound bucket and publishes a notification to its own",
+      "SNS topic; /api/webhooks/email-inbound verifies the envelope, reads the",
+      "object with the SES sender's own credentials (the stack grants that user",
+      "s3:GetObject on this one bucket), and files it on the diver's record. The",
+      "receiving domain is compiled in (inbound.ses.dive.day, under the sending",
+      "identity so it needs no second verification); EMAIL_INBOUND_DOMAIN is an",
+      "override for a fork, and set *empty* it switches the reply-to address off,",
+      "leaving the confirmed front-desk Reply-To in place.",
+    ],
+    keys: [
+      {
+        key: "EMAIL_INBOUND_SNS_TOPIC_ARN",
+        from: "stack",
+        targets: LOCAL_AND_VERCEL,
+        absent: "replies to DiveDay email are not received; the webhook answers 503",
+      },
+      {
+        key: "EMAIL_INBOUND_S3_BUCKET",
+        from: "stack",
+        targets: LOCAL_AND_VERCEL,
+        absent: "replies to DiveDay email are not received; the webhook answers 503",
+      },
+      {
+        key: "EMAIL_INBOUND_DOMAIN",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent:
+          "the compiled default inbound.ses.dive.day is the reply-to domain, which is right for every deployment that *is* DiveDay",
+      },
+    ],
+  },
+  {
+    doc: [
       "Stripe Connect: shops bring their own Standard Stripe account (ADR",
       "20260719-stripe-connect-orders). STRIPE_SECRET_KEY is the *platform* account's",
       "secret key -- once a shop completes OAuth this key acts on its behalf via a",

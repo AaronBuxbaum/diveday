@@ -95,6 +95,12 @@ export const TOKEN_ROUTE_PREFIXES = [
   // the shop controls the address that becomes Reply-To, so the token must not
   // leave in a referrer either.
   "confirm-contact",
+  // The departures board's display link (issue #1426): the one capability
+  // page that renders an outbound link of its own — Open-Meteo's attribution,
+  // required by its licence — and the one whose browser is a TV left on all
+  // day. `rel="noreferrer"` on that anchor is a per-link promise; this is the
+  // header that holds for every subresource the page ever grows.
+  "board",
 ];
 
 export function securityHeaderRules(): ConfigHeaderRule[] {

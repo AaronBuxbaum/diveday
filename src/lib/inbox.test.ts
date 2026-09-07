@@ -29,6 +29,28 @@ describe("normalizeEmailAddress", () => {
     expect(normalizeEmailAddress("not an address")).toBeNull();
     expect(normalizeEmailAddress("two words@example.com")).toBeNull();
   });
+
+  /**
+   * **The mailbox is the last angle-addr, not the first.** RFC 5322 lets a
+   * display name be a quoted string holding anything at all, angle brackets
+   * included, and this function became a security boundary the day
+   * `/api/webhooks/email-inbound` started deciding *whose record a message
+   * lands on* by comparing its answer against SES's DMARC verdict. SES
+   * authenticates the real mailbox — the last angle-addr. Reading the first
+   * one instead let anyone who owns a DMARC-passing domain write a sentence
+   * onto a named diver's record: send from `mallory@evil.example` with the
+   * victim's address parked in the display name, and the verdict that
+   * authenticated `evil.example` was applied to `priya@example.com`.
+   */
+  it("reads the mailbox, not an address parked in the display name", () => {
+    expect(normalizeEmailAddress('"Priya <priya@example.com>" <mallory@evil.example>')).toBe(
+      "mallory@evil.example",
+    );
+    // The same shape after RFC 2047 decoding, which runs before this does.
+    expect(normalizeEmailAddress("<priya@example.com> <mallory@evil.example>")).toBe(
+      "mallory@evil.example",
+    );
+  });
 });
 
 describe("phoneMatches", () => {

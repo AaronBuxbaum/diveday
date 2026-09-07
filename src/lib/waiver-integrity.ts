@@ -98,6 +98,18 @@ function signedMetadata(record: WaiverRecord): IntegrityValue {
     signedAt: dateValue(record.signedAt),
     medicalAnswers: (record.medicalAnswers as IntegrityValue | null) ?? null,
     medicalReviewRequired: record.medicalReviewRequired,
+    // The guardian's half of a minor's release (ADR
+    // 20260907-guardian-co-signature): who co-signed, as what, when, and by
+    // which provider. Inside the seal for the same reason `signedName` is — a
+    // co-signature removed after the fact is the tampering this exists to
+    // catch. Null on every record a guardian never touched, which is what
+    // keeps an adult's seal over exactly the fields it always covered.
+    guardianName: record.guardianName,
+    guardianRelationship: record.guardianRelationship,
+    guardianEmail: record.guardianEmail,
+    guardianSignatureMethod: record.guardianSignatureMethod,
+    guardianConsentedAt: dateValue(record.guardianConsentedAt),
+    guardianSignedAt: dateValue(record.guardianSignedAt),
     completedAt: dateValue(record.completedAt),
     importedFromLabel: record.importedFromLabel,
     importSourceDocumentUrl: record.importSourceDocumentUrl,
@@ -137,6 +149,12 @@ function erasedMetadata(record: WaiverRecord): IntegrityValue {
     consentedAt: dateValue(record.consentedAt),
     signedAt: dateValue(record.signedAt),
     medicalReviewRequired: record.medicalReviewRequired,
+    // The guardian facts erasure leaves behind: that somebody co-signed, as
+    // what, when, and how. Their name and email go with the diver's own.
+    guardianRelationship: record.guardianRelationship,
+    guardianSignatureMethod: record.guardianSignatureMethod,
+    guardianConsentedAt: dateValue(record.guardianConsentedAt),
+    guardianSignedAt: dateValue(record.guardianSignedAt),
     completedAt: dateValue(record.completedAt),
     createdAt: dateValue(record.createdAt),
     anonymizedAt: dateValue(record.anonymizedAt),

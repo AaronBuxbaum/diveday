@@ -59,6 +59,12 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   // `expires_at` or a `revoked_at`, so an exposed token works forever, which
   // is a longer life than anything else here.
   "unsubscribe",
+  // The departures board's display link (issue #1426, N-23): `/board/[token]`
+  // is a lobby TV's credential over the shop's whole day — non-expiring like
+  // the calendar feed, revocable from `shop/[shopSlug]/settings/display`. A
+  // TV's browser is exactly the kind of client that would report a page URL
+  // to telemetry forever.
+  "board",
 ] as const;
 
 /**

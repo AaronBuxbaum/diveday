@@ -170,6 +170,120 @@ function retryDelayMs(attempt: number, random: () => number): number {
 }
 
 /**
+ * One request to Meta's send endpoint with the adapter's retry ladder around
+ * it, shared by the template send below and the free-text reply
+ * (`whatsAppTextSender`). Never logs the body or the recipient.
+ */
+async function postWhatsAppMessage(
+  endpoint: string,
+  accessToken: string,
+  body: unknown,
+  fetchImpl: typeof fetch,
+  options: Required<WhatsAppProviderOptions>,
+): Promise<CourtesyDelivery> {
+  for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
+    let info: WhatsAppErrorInfo;
+    try {
+      const response = await fetchImpl(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      const rawBody = await response.text();
+      if (response.ok) {
+        const parsed = sendResponseSchema.safeParse(safeJson(rawBody));
+        if (!parsed.success) {
+          return { status: "failed", retryable: true, errorCode: "invalid_response" };
+        }
+        return { status: "sent", providerMessageId: parsed.data.messages[0].id };
+      }
+      info = errorInfoFromResponse(response.status, rawBody);
+    } catch (error) {
+      info = {
+        retryable: true,
+        errorCode: "network_error",
+        detail: error instanceof Error ? error.message.slice(0, 500) : undefined,
+      };
+    }
+    if (info.retryable && attempt < options.maxAttempts) {
+      await options.sleep(retryDelayMs(attempt, options.random));
+      continue;
+    }
+    // Never log the body or the recipient — a courtesy message names a
+    // diver and their trip, and this line goes wherever logs go.
+    log("notification.whatsapp_send_failed", "warn", {
+      httpStatus: info.httpStatus,
+      errorCode: info.errorCode,
+      retryable: info.retryable,
+    });
+    return { status: "failed", ...info };
+  }
+  return { status: "failed", retryable: true, errorCode: "retry_exhausted" };
+}
+
+function resolvedOptions(
+  providerOptions: WhatsAppProviderOptions,
+): Required<WhatsAppProviderOptions> {
+  return {
+    sleep: providerOptions.sleep ?? sleep,
+    random: providerOptions.random ?? Math.random,
+    maxAttempts: providerOptions.maxAttempts ?? 3,
+  };
+}
+
+function sendEndpoint(phoneNumberId: string): string {
+  return `${GRAPH_API_ORIGIN}/${GRAPH_API_VERSION}/${encodeURIComponent(phoneNumberId)}/messages`;
+}
+
+/** WhatsApp's own cap on a free-text message body. */
+const MAX_TEXT_LENGTH = 4096;
+
+export interface WhatsAppTextSender {
+  sendText(message: { to: string; body: string }): Promise<CourtesyDelivery>;
+}
+
+/**
+ * Free-form text — the *reply* a staffer types (ADR 20260907-two-way-inbox),
+ * as opposed to the template the courtesy sender uses. Meta only accepts it
+ * inside the 24-hour window the diver's own message opened; outside it the
+ * send fails with error 131047, which the caller checks *before* sending by
+ * asking when the diver last wrote (`whatsAppReplyWindowOpen`) rather than
+ * by reading this error afterwards.
+ */
+export function whatsAppTextSender(
+  credentials: Pick<WhatsAppCredentials, "phoneNumberId" | "accessToken">,
+  fetchImpl: typeof fetch = fetch,
+  providerOptions: WhatsAppProviderOptions = {},
+): WhatsAppTextSender {
+  const options = resolvedOptions(providerOptions);
+  const endpoint = sendEndpoint(credentials.phoneNumberId);
+  return {
+    async sendText(message) {
+      const to = whatsAppRecipient(message.to);
+      if (!to) return { status: "failed", retryable: false, errorCode: "invalid_recipient" };
+      const text = message.body.trim();
+      if (!text) return { status: "failed", retryable: false, errorCode: "empty_body" };
+      return postWhatsAppMessage(
+        endpoint,
+        credentials.accessToken,
+        {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to,
+          type: "text",
+          text: { preview_url: false, body: text.slice(0, MAX_TEXT_LENGTH) },
+        },
+        fetchImpl,
+        options,
+      );
+    },
+  };
+}
+
+/**
  * A WhatsApp sender for one shop's connected account.
  *
  * The message body is passed as the template's second variable, with the shop
@@ -184,14 +298,8 @@ export function whatsAppProvider(
   fetchImpl: typeof fetch = fetch,
   providerOptions: WhatsAppProviderOptions = {},
 ): CourtesyProvider {
-  const options = {
-    sleep: providerOptions.sleep ?? sleep,
-    random: providerOptions.random ?? Math.random,
-    maxAttempts: providerOptions.maxAttempts ?? 3,
-  };
-  const endpoint = `${GRAPH_API_ORIGIN}/${GRAPH_API_VERSION}/${encodeURIComponent(
-    credentials.phoneNumberId,
-  )}/messages`;
+  const options = resolvedOptions(providerOptions);
+  const endpoint = sendEndpoint(credentials.phoneNumberId);
 
   return {
     async send(message: CourtesyMessage): Promise<CourtesyDelivery> {
@@ -218,48 +326,7 @@ export function whatsAppProvider(
           ],
         },
       };
-
-      for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
-        let info: WhatsAppErrorInfo;
-        try {
-          const response = await fetchImpl(endpoint, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${credentials.accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(body),
-          });
-          const rawBody = await response.text();
-          if (response.ok) {
-            const parsed = sendResponseSchema.safeParse(safeJson(rawBody));
-            if (!parsed.success) {
-              return { status: "failed", retryable: true, errorCode: "invalid_response" };
-            }
-            return { status: "sent", providerMessageId: parsed.data.messages[0].id };
-          }
-          info = errorInfoFromResponse(response.status, rawBody);
-        } catch (error) {
-          info = {
-            retryable: true,
-            errorCode: "network_error",
-            detail: error instanceof Error ? error.message.slice(0, 500) : undefined,
-          };
-        }
-        if (info.retryable && attempt < options.maxAttempts) {
-          await options.sleep(retryDelayMs(attempt, options.random));
-          continue;
-        }
-        // Never log the body or the recipient — a courtesy message names a
-        // diver and their trip, and this line goes wherever logs go.
-        log("notification.whatsapp_send_failed", "warn", {
-          httpStatus: info.httpStatus,
-          errorCode: info.errorCode,
-          retryable: info.retryable,
-        });
-        return { status: "failed", ...info };
-      }
-      return { status: "failed", retryable: true, errorCode: "retry_exhausted" };
+      return postWhatsAppMessage(endpoint, credentials.accessToken, body, fetchImpl, options);
     },
   };
 }

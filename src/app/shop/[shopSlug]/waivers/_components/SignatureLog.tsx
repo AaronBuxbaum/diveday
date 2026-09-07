@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { GroupLabel } from "@/components/ui/ledger";
 import type { SignedWaiverEntry } from "@/db/waivers";
+import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, groupByLocalDay } from "@/lib/calendar-date";
 import { formatShortDate, formatTime } from "@/lib/format";
@@ -137,6 +138,13 @@ function SignatureRow({
           <p className="text-muted tabular-nums">
             {t("waiversStaff.signatures.releaseVersion", { version: entry.templateVersion })}
           </p>
+          {/* A minor's release names its co-signer beside the version (ADR
+              20260907-guardian-co-signature) — a reviewer reading the log back
+              is asking exactly who signed, and the diver's name alone would
+              answer half of it. */}
+          {entry.guardian ? (
+            <p className="text-muted">{guardianCoSignedText(t, entry.guardian)}</p>
+          ) : null}
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             <Link
               href={`/shop/${shopSlug}/divers/${entry.personId}`}

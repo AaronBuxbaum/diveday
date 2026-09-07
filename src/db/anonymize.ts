@@ -531,8 +531,16 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         draftSignerName: null,
         draftMedicalAnswers: null,
         draftAcknowledged: false,
+        draftGuardian: null,
         signedName: null,
         medicalAnswers: null,
+        // The guardian's name and email are a third party's personal data
+        // held only because they are on this diver's release, and they go
+        // with the diver's own. The fact of the co-signature — relationship,
+        // provider, when — survives, exactly as `signed_at` does, and is what
+        // the v2 seal covers (ADR 20260907-guardian-co-signature).
+        guardianName: null,
+        guardianEmail: null,
         importedFromLabel: null,
         importSourceDocumentUrl: null,
         importSourceMedicalDocumentUrl: null,

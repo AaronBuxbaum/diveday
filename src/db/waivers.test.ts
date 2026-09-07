@@ -2587,3 +2587,245 @@ describe("physician medical clearance", () => {
     expect(record.medicalClearedByPersonId).toBe(staff.id);
   });
 });
+
+/**
+ * **A minor's release is signed twice** (ADR 20260907-guardian-co-signature).
+ *
+ * Safety-critical and adversarial by nature: the whole point of a second signer
+ * is that they are somebody else, so the cases that matter are the ones where a
+ * twelve-year-old tries to be both. The pure rule lives in `src/lib/guardian.ts`
+ * and is tested there; what is pinned here is what the *writers* do with it —
+ * refuse before touching the record, write all six columns inside the seal, and
+ * decline to treat a solo minor signature as a release that already stands.
+ */
+describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () => {
+  /** Twelve years old on the demo shop's calendar day at `now`. */
+  const MINOR_DOB = "2014-05-01";
+
+  const guardian = {
+    name: "Jonas Fischer",
+    relationship: "parent",
+    email: "Jonas@Example.com ",
+    agreed: true,
+  };
+
+  /** Put a date of birth on the seat's diver, which is what turns the rule on. */
+  async function makeMinor(
+    db: Awaited<ReturnType<typeof waiverContext>>["db"],
+    personId: string,
+    dateOfBirth = MINOR_DOB,
+  ) {
+    await db.update(people).set({ dateOfBirth }).where(eq(people.id, personId));
+  }
+
+  async function liveLink(ctx: Awaited<ReturnType<typeof waiverContext>>) {
+    const issued = await issueWaiverRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.booking.id,
+      now,
+    });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    return issued;
+  }
+
+  it("refuses a minor signing alone, and leaves the link signable", async () => {
+    const ctx = await waiverContext();
+    await makeMinor(ctx.db, ctx.person.id);
+    const issued = await liveLink(ctx);
+
+    expect(
+      await completeWaiver(ctx.db, issued.token, {
+        signerName: ctx.person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "guardian_required" });
+
+    // A family that missed the section keeps the link they were sent.
+    expect(await getWaiverForToken(ctx.db, issued.token, now)).toMatchObject({
+      state: "available",
+    });
+  });
+
+  it("refuses a guardian section that is not a signature", async () => {
+    const ctx = await waiverContext();
+    await makeMinor(ctx.db, ctx.person.id);
+
+    for (const bad of [
+      // The diver typing their own name twice: one signature in two hats, and
+      // the single case a browser's `required` attributes cannot catch.
+      { ...guardian, name: ctx.person.fullName },
+      // A relationship this product does not have a word for.
+      { ...guardian, relationship: "uncle" },
+      { ...guardian, email: "not-an-address" },
+      // A typed name is not a signature until the guardian's own box is ticked.
+      { ...guardian, agreed: false },
+    ]) {
+      const issued = await liveLink(ctx);
+      expect(
+        await completeWaiver(ctx.db, issued.token, {
+          signerName: ctx.person.fullName,
+          agreed: true,
+          medicalAnswers: clearAnswers,
+          guardian: bad,
+          now,
+        }),
+      ).toEqual({ ok: false, reason: "guardian_invalid" });
+      expect(await getWaiverForToken(ctx.db, issued.token, now)).toMatchObject({
+        state: "available",
+      });
+    }
+  });
+
+  it("writes the co-signature, seals it, and clears the boarding gate", async () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const ctx = await waiverContext();
+    await makeMinor(ctx.db, ctx.person.id);
+    const issued = await liveLink(ctx);
+
+    expect(
+      await completeWaiver(ctx.db, issued.token, {
+        signerName: ctx.person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        guardian,
+        now,
+      }),
+    ).toMatchObject({ ok: true, status: "completed" });
+
+    const [record] = await db_record(ctx, issued.recordId);
+    expect(record).toMatchObject({
+      guardianName: "Jonas Fischer",
+      guardianRelationship: "parent",
+      // Trimmed and lower-cased, like every other address the product stores.
+      guardianEmail: "jonas@example.com",
+      guardianSignatureMethod: "typed_consent",
+    });
+    expect(record?.guardianSignedAt).not.toBeNull();
+    expect(record?.guardianConsentedAt).not.toBeNull();
+    // The draft of the section goes with the rest of the unsubmitted state.
+    expect(record?.draftGuardian).toBeNull();
+    expect(verifyWaiverIntegrity(record)).toBe("valid");
+
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.booking.id);
+    expect(readiness?.blockers ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "guardian_signature_missing" }),
+    );
+  });
+
+  /**
+   * The backfill case, and the one a shop will actually meet: the release was
+   * signed before anyone asked the diver's age, and the date of birth lands
+   * afterwards. The standing signature becomes a blocker rather than a silent
+   * pass, and the ordinary "send the waiver" tap mints a fresh link instead of
+   * answering "already signed".
+   */
+  it("turns a release signed before the date of birth landed into a blocker, and re-issues over it", async () => {
+    const ctx = await waiverContext();
+    const issued = await liveLink(ctx);
+    expect(
+      await completeWaiver(ctx.db, issued.token, {
+        signerName: ctx.person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+
+    // Before the date of birth: an ordinary signed release, and no second link.
+    expect(
+      await issueWaiverRequest(ctx.db, { shopId: ctx.shop.id, bookingId: ctx.booking.id, now }),
+    ).toEqual({ ok: false, reason: "already_completed" });
+
+    await makeMinor(ctx.db, ctx.person.id);
+
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.booking.id);
+    expect(readiness?.blockers).toContainEqual(
+      expect.objectContaining({ code: "guardian_signature_missing" }),
+    );
+    const reissued = await issueWaiverRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.booking.id,
+      now,
+    });
+    expect(reissued.ok).toBe(true);
+  });
+
+  it("holds the paper path to the same rule, and records the staffer's attestation of it", async () => {
+    const ctx = await waiverContext();
+    await makeMinor(ctx.db, ctx.person.id);
+    const [staff] = await listStaff(ctx.db, ctx.shop.id);
+    if (!staff) throw new Error("demo staff missing");
+
+    const attempt = (guardianInput?: { name: string; relationship: string }) =>
+      recordInPersonWaiver(ctx.db, {
+        shopId: ctx.shop.id,
+        subject: { bookingId: ctx.booking.id },
+        recordedByPersonId: staff.person.id,
+        medicalAttested: true,
+        guardian: guardianInput,
+        now,
+      });
+
+    expect(await attempt()).toEqual({ ok: false, reason: "guardian_required" });
+    expect(await attempt({ name: ctx.person.fullName, relationship: "parent" })).toEqual({
+      ok: false,
+      reason: "guardian_invalid",
+    });
+    // Nothing was written by either refusal: the row is the document.
+    expect(
+      await ctx.db.select().from(waiverRecords).where(eq(waiverRecords.bookingId, ctx.booking.id)),
+    ).toEqual([]);
+
+    const recorded = await attempt({ name: "Jonas Fischer", relationship: "legal_guardian" });
+    if (!recorded.ok) throw new Error(`expected a record: ${recorded.reason}`);
+    const [record] = await db_record(ctx, recorded.recordId);
+    expect(record).toMatchObject({
+      signatureMethod: "in_person_attested",
+      guardianName: "Jonas Fischer",
+      guardianRelationship: "legal_guardian",
+      guardianSignatureMethod: "in_person_attested",
+      // No address on a paper form; the diver's own contact is how the shop
+      // reaches the family.
+      guardianEmail: null,
+    });
+  });
+
+  it("takes the guardian's name and address under erasure and keeps the signature's fact", async () => {
+    const ctx = await waiverContext();
+    await makeMinor(ctx.db, ctx.person.id);
+    const issued = await liveLink(ctx);
+    await completeWaiver(ctx.db, issued.token, {
+      signerName: ctx.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      guardian,
+      now,
+    });
+    const [staff] = await listStaff(ctx.db, ctx.shop.id);
+    if (!staff) throw new Error("demo staff missing");
+
+    const erased = await anonymizeDiver(ctx.db, {
+      shopId: ctx.shop.id,
+      personId: ctx.person.id,
+      actorPersonId: staff.person.id,
+    });
+    expect(erased.ok).toBe(true);
+
+    const [record] = await db_record(ctx, issued.recordId);
+    // A third party's personal data goes with the diver's own...
+    expect(record?.guardianName).toBeNull();
+    expect(record?.guardianEmail).toBeNull();
+    // ...and the fact that somebody co-signed, as what and when, survives —
+    // exactly as the diver's own `signed_at` does.
+    expect(record?.guardianRelationship).toBe("parent");
+    expect(record?.guardianSignedAt).not.toBeNull();
+    expect(record?.guardianSignatureMethod).toBe("typed_consent");
+  });
+
+  /** One release row by id, for the assertions above. */
+  function db_record(ctx: Awaited<ReturnType<typeof waiverContext>>, recordId: string) {
+    return ctx.db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
+  }
+});

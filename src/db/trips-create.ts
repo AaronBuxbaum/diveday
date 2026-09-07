@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import type { AppTransaction, DbExecutor } from "./client";
 import type { Course } from "./schema";
 import {
   boats,
@@ -317,7 +317,10 @@ export async function insertTripInstance(
   return trip;
 }
 
-export async function createTrip(db: AppDb, input: NewTrip) {
+// `DbExecutor` rather than `AppDb`: the whole body is one transaction, and a
+// caller that is already inside one (the seed runs under `client.ts`'s single
+// atomic seed transaction) opens a savepoint instead of a second connection.
+export async function createTrip(db: DbExecutor, input: NewTrip) {
   return db.transaction(async (tx) => {
     const plannedDives = normalizedDiveCount(input.plannedDives);
     if (!plannedDives) return null;

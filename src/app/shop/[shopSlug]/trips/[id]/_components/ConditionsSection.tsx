@@ -32,6 +32,7 @@ export function ConditionsSection({
   temperatureUnit,
   depthUnit,
   automatedForecast,
+  tideLines,
   embedded = false,
 }: {
   saveAction: (formData: FormData) => void;
@@ -46,6 +47,12 @@ export function ConditionsSection({
   temperatureUnit: TemperatureUnit;
   depthUnit: DepthUnit;
   automatedForecast?: AutomatedMarineForecast | null;
+  /**
+   * The tide at each stationed site, already worded in the reader's language
+   * with the time in the shop's zone (`src/i18n/tide-labels.ts`). Empty for
+   * a departure whose sites name no NOAA station, which is most of them.
+   */
+  tideLines?: { site: string; text: string }[];
   /** The Trip surface's About panel supplies the outer section chrome. */
   embedded?: boolean;
 }) {
@@ -195,6 +202,21 @@ export function ConditionsSection({
             ) : null}
           </div>
         </div>
+      ) : null}
+      {/* The tide, one line per stationed site, beside the model's read rather
+          than inside it: it comes from a different source (NOAA's table, not
+          the forecast) and it is here whether or not the crew has published
+          (ADR 20260907-noaa-tide-predictions). Informs; gates nothing. */}
+      {tideLines && tideLines.length > 0 ? (
+        <ul className="mt-3 space-y-1 text-sm text-muted">
+          {tideLines.map((line) => (
+            <li key={`${line.site}-${line.text}`}>
+              <span className="font-medium text-foreground">{line.site}</span>
+              <span aria-hidden="true"> · </span>
+              {line.text}
+            </li>
+          ))}
+        </ul>
       ) : null}
       <EditDisclosure
         label={published ? t("trips.conditions.editPublished") : t("trips.conditions.editEmpty")}
