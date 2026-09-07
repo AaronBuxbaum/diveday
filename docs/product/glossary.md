@@ -1563,6 +1563,19 @@ new domain concept, define it here in the same PR.
   diver climbs the ladder talking about. Informs and gates nothing, and it is an ornament rather than
   evidence — an unusable slug is dropped so the dive record still saves. Null means nobody said,
   never "all good".
+- **Fly-safe from** — the instant a diver reads they may board a plane after the day's diving
+  (`src/lib/fly-safe.ts`, issue #1425). The shop's own hours (`shops.fly_safe_hours_single` and
+  `_repetitive`, defaults 18 and 24, floored at DAN's published minimums of 12 and 18) counted from
+  the **last recorded exit**, or from the scheduled return once the boat is home by the one-hour
+  buffer. *Repetitive* whenever the day held more than one dive by either the record or the plan —
+  the longer wait is the one that costs nothing if wrong — and a record missing its last exit
+  anchors on the return, never on an earlier dive. Rendered on the thread's after-state and in the
+  recap email, in the shop's zone. The sentence names the **shop** as the author of the figure and
+  DAN as the practice behind it, because DAN publishes 12 and 18 and a shop may sit above them.
+  Two things it deliberately cannot know: whether a dive took decompression stops, which DAN says
+  needs substantially longer than 18 hours; and whether the diver dived on an earlier day, so a
+  single dive after a week of diving still reads *single*. Informs and gates nothing; never
+  computed from a depth profile, which is a dive computer's job.
 - **Surface interval** — the time between one dive's exit and the next dive's entry. Only ever
   stated between **consecutively numbered** executed dives that were both recorded and do not
   overlap; anything else is "not recorded". An interval measured across a dive nobody logged

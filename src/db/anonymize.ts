@@ -79,6 +79,7 @@ import {
   certifications,
   courseInquiries,
   diveSupportNeeds,
+  inboundMessages,
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -98,6 +99,7 @@ import {
   rollCallEvents,
   specialtyCertifications,
   staffCredentials,
+  staffReplies,
   tripReviews,
   tripWaitlistEntries,
   userAccounts,
@@ -1352,6 +1354,53 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       .returning({ id: courseInquiries.id });
     logFuzzyMatch(ctx, "course_inquiry_phone", byPhone.length);
   }
+
+  // --- the inbox (ADR 20260907-two-way-inbox) -------------------------------
+  // What the diver wrote is theirs end to end — the words, the subject, and the
+  // address they wrote from — and what the shop wrote back names them in the
+  // `To:` and usually in the body. Redacted rather than deleted, like the pulse
+  // above: the row stays as the shop's record that a conversation happened, on
+  // the day it happened, and nothing else. Keyed on the link first, then on the
+  // address the diver held, for the same reason as the course-inquiry sweep:
+  // a stranger's message that matched nobody at the time can still be theirs.
+  const blankMessage = { body: REDACTED_TEXT, subject: null, fromAddress: REDACTED_TEXT };
+  await tx
+    .update(inboundMessages)
+    .set(blankMessage)
+    .where(and(eq(inboundMessages.shopId, shopId), eq(inboundMessages.personId, personId)));
+  if (ctx.email) {
+    await tx
+      .update(inboundMessages)
+      .set(blankMessage)
+      .where(
+        and(
+          eq(inboundMessages.shopId, shopId),
+          eq(inboundMessages.channel, "email"),
+          eq(inboundMessages.fromAddress, ctx.email.toLowerCase()),
+        ),
+      );
+  }
+  if (ctx.phone) {
+    const digits = ctx.phone.replace(/\D/g, "");
+    if (digits.length >= 7) {
+      const byPhone = await tx
+        .update(inboundMessages)
+        .set(blankMessage)
+        .where(
+          and(
+            eq(inboundMessages.shopId, shopId),
+            ne(inboundMessages.channel, "email"),
+            eq(inboundMessages.fromAddress, digits),
+          ),
+        )
+        .returning({ id: inboundMessages.id });
+      logFuzzyMatch(ctx, "inbound_message_phone", byPhone.length);
+    }
+  }
+  await tx
+    .update(staffReplies)
+    .set({ body: REDACTED_TEXT, toAddress: REDACTED_TEXT })
+    .where(and(eq(staffReplies.shopId, shopId), eq(staffReplies.personId, personId)));
 
   return { queuedMediaDeletions: queued, raisedProcessorErasures };
 }

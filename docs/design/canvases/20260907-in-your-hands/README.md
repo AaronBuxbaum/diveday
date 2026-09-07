@@ -1,6 +1,6 @@
 # In your hands — five moves where the device already knows the thing
 
-- **Status:** Live (its ADR is Proposed, pending H-70)
+- **Status:** Live (its ADR is Accepted; H-70 decided 2026-09-07: a and b yes, c declined; slices 19a, 19b, 19d and 19e open, 19c dropped)
 - **Date:** 2026-09-07
 - **ADR:** [20260907-in-your-hands](../../../architecture/decisions/20260907-in-your-hands.md)
 - **Published:** https://claude.ai/code/artifact/63c1aaf1-8263-4ad0-8243-66c07654560a
@@ -66,6 +66,18 @@ ships. The platform's passkey sheet and camera sheet are drawn only to show wher
 DiveDay draws nothing of them. The motion any move takes (the settled row's wash, the door's arrival)
 is the sibling canvas's physics and is not redrawn here.
 
+## Decided, and one board corrected
+
+The owner ruled on 2026-09-07 (H-70): passkeys and the step-up, **yes**; the release signed on the
+shop's device, **yes**; the card reader, **declined** — "we should have no photo upload". The
+decline also corrected the board. The Card board and the cover's third finding say *Capture for
+review* already lands a photograph of the card on the record. It does not: that label is the
+typed add-certification form's own submit, and a card has carried no image since
+[20260811-retire-the-digital-card](../../../architecture/decisions/20260811-retire-the-digital-card.md)
+dropped `card_image_url`, for the reason the owner restated. Nothing on the certification form
+changes, no photo capture is added, and slice 19c is dropped in full. The board stands as the dated
+argument, wrong premise included; a canvas is never freshened after its ADR is decided.
+
 ## Known deviations, on purpose left in
 
 - **The Counter board draws the counter at 390.** The counter is an iPad on a stand and is captured
@@ -91,7 +103,7 @@ comment, and a test pins the rule.
 | --- | --- | --- | --- |
 | 19a — the door knows your face: Better Auth's passkey plugin and its table, the passkey frame on `/sign-in`, the Passkeys panel in Settings → Security, the origin-binding test; the step-up half per H-70 a | open | — | — |
 | 19b — hand it over: *Sign here* on the counter's and the roster's blocked row, the session lock read by `requireShopSurface`, the hand-over and who-sees-what lines on the waiver page, the counter provenance on the signature row (H-70 b) | open | — | — |
-| 19c — point the camera at the card: the capture at the top of the form, the reader behind the upload, the four fields with *Read* marks and the date field, the Textract opt-out step in the manual-actions registry, the `/privacy` sentence (H-70 c) | open | — | — |
+| 19c — point the camera at the card: the reader, the *Read* marks, the date field, the Textract opt-out step, the `/privacy` sentence (H-70 c declined 2026-09-07; the board's premise was wrong, see "Decided" above) | dropped | — | — |
 | 19d — the type follows the phone: the `-apple-system-body` probe in the pre-hydration script, upward only, the manifest captured at the largest root | open | — | — |
 | 19e — on the home screen: the one line under the day's spine with the platform's install prompt or its own menu item, the device-kept dismissal, nothing when installed or on a desktop | open | — | — |
 

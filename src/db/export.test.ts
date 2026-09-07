@@ -200,6 +200,15 @@ const EXCLUDED_TABLES = [
   // buddy_pairs.csv; this is the history of how they got that way.
   "buddy_team_events",
   "notification_delivery_attempts", // per-attempt retry mechanics behind notification_deliveries.csv, which carries the outcome
+  // The inbox (ADR 20260907-two-way-inbox). Correspondence *is* a shop record,
+  // and these two are out for a narrower reason than the rows around them: the
+  // bundle has no file for a conversation yet, and a message a diver sent is
+  // bounded by the same 400-day retention window as the delivery trail beside
+  // it, so nothing here outlives the evidence it answers. Carrying them out is
+  // a follow-up with its own file shape (issue filed with the inbox change),
+  // not a column on an existing one.
+  "inbound_messages",
+  "staff_replies",
   // Which way each waiver link was handed over and what happened on that
   // channel. The outcome another system could act on is already on
   // waiver_records.csv (`delivery_status` and the provider columns beside it);
@@ -318,6 +327,11 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // DiveDay's own, not a fact the shop entered: a restored shop is asked to
     // confirm again, and a CSV cannot vouch for an address on its behalf.
     "contact_email_confirmed_at",
+    // The routing token in the shop's inbound reply address (ADR
+    // 20260907-two-way-inbox). A credential in all but name: whoever holds it
+    // can address mail into this shop's inbox, and a restored shop is minted a
+    // fresh one by the database rather than carrying the old one in a CSV.
+    "inbound_email_token",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],
