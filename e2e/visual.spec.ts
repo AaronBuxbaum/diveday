@@ -1059,8 +1059,20 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
   // `scripts/screenshot.mjs` fell into wholesale (#643). Waiting for the last
   // `animate-pulse` to leave `<main>` is one rule that covers every capture,
   // including whichever is added next, without a per-capture selector.
+  //
+  // `[data-suspense-placeholder]` covers the same trap *outside* `<main>`: the
+  // public shop layout streams its whole chrome — header and the staffer's
+  // "you work here" bar — behind a boundary whose fallback is a bare band
+  // holding the height. That band is not a pulse and not in `<main>`, so
+  // neither half of the rule above could see it, and a capture fired while it
+  // stood photographed a header with no shop name. It is not hypothetical:
+  // `public-schedule-new-shop-dark` came back with the placeholder at vw-390
+  // and the real chrome at vw-1280 — the same page, one second apart.
   await page.waitForFunction(
-    () => !document.querySelector("main .animate-pulse:not([data-live-pulse])"),
+    () =>
+      !document.querySelector(
+        "main .animate-pulse:not([data-live-pulse]), [data-suspense-placeholder]",
+      ),
     undefined,
     {
       timeout: 15_000,
@@ -3617,6 +3629,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Emergency contact name").fill("Kojo Mensah");
         await page.getByLabel("Emergency contact phone").fill("+13055550177");
         await page.getByRole("button", { name: "Save details" }).click();
+        // **Wait for the save's own redirect before reloading over it.** The
+        // reload was already here to settle the page; on its own it *raced*
+        // the action instead, aborting the request mid-write. When the reload
+        // won, the contact was never saved, the record kept its one open item,
+        // and the earned moment 40 lines below correctly never rendered — the
+        // test then spent its whole 210s budget waiting for a banner that was
+        // right not to appear (CI run 34082101061).
+        await page.waitForURL(/notice=person-saved/);
         // Land the save before touching the Waiver group. The save redirects and
         // the record re-renders around the notice it carries, which is what left
         // the paper-waiver button "not stable" and then "detached from the DOM"
