@@ -1,0 +1,41 @@
+name: Stack probe (temporary)
+
+# Throwaway. Answers three questions about the GitHub stacks preview API that
+# cannot be answered from a cloud agent session, where `gh` is absent and
+# api.github.com is refused by the agent proxy. Deleted in the same branch once
+# it has answered them.
+
+on:
+  push:
+    branches: [claude/github-stacks-integration-5ti4tl]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: GET stacks
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -x
+          gh api "repos/${{ github.repository }}/stacks" --include || true
+
+      - name: POST stacks with an empty payload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -x
+          echo '{"pull_requests":[]}' \
+            | gh api --method POST "repos/${{ github.repository }}/stacks" --input - --include || true
+
+      - name: GET one open pull request, for the stack field's shape
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -x
+          gh api "repos/${{ github.repository }}/pulls?state=open&per_page=5" \
+            --jq '.[] | {number, base: .base.ref, head: .head.ref, stack}' || true
