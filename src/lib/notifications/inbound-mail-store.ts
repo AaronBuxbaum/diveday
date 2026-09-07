@@ -28,7 +28,14 @@ export const MAX_INBOUND_MESSAGE_BYTES = 2 * 1024 * 1024;
 
 export interface InboundMailObjectClient {
   send(command: GetObjectCommand): Promise<{
-    Body?: { transformToByteArray(): Promise<Uint8Array> } | null;
+    /**
+     * `destroy` is optional and present on the real SDK's stream: a body we
+     * decline to read on the `ContentLength` path would otherwise hold its
+     * socket until the agent times it out, and whoever holds a shop's reply
+     * address decides how many oversized messages arrive. The fakes in
+     * `inbound-mail-store.test.ts` may omit it.
+     */
+    Body?: { transformToByteArray(): Promise<Uint8Array>; destroy?(): void } | null;
     ContentLength?: number;
   }>;
 }
@@ -95,6 +102,10 @@ export function inboundMailStore(
           result.ContentLength > MAX_INBOUND_MESSAGE_BYTES
         ) {
           log("email_inbound.message_too_large", "warn", { bytes: result.ContentLength });
+          // Abandoning the body holds its socket until the agent times out, and
+          // whoever holds the shop's reply address chooses how many of these
+          // arrive. Release it rather than leaving it to a timeout.
+          result.Body?.destroy?.();
           return { status: "too_large" };
         }
         const bytes = await result.Body?.transformToByteArray();
