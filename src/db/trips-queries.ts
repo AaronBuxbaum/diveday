@@ -213,7 +213,12 @@ function hasSpaceHaving(hasSpace: boolean | undefined) {
 }
 
 /** The join that makes `booked` a count of live bookings rather than all of them. */
-const liveBookingJoin = and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled"));
+/**
+ * A booking that holds a seat: every status but cancelled. Exported so the
+ * departures board (`./departures-board.ts`) counts seats with the same
+ * predicate the schedule does, rather than a second spelling of it.
+ */
+export const liveBookingJoin = and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled"));
 
 /**
  * The schedule page's list, one keyset page at a time (ordered by departure,

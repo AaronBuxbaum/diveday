@@ -79,6 +79,7 @@ import {
   duplicateDepartureAction,
   loadBuilderOptionsAction,
   loadMovePreflightAction,
+  loadTideWindowAction,
   loadWeekdayPatternAction,
   moveDepartureAction,
   removeDepartureAction,
@@ -1054,6 +1055,7 @@ export default async function ScheduleBoardPage({
         locale={locale}
         addDraft={addDraft}
         loadPattern={loadWeekdayPatternAction}
+        loadTideWindow={loadTideWindowAction}
         days={builderDays}
         loadOptions={loadBuilderOptionsAction}
         loadMovePreflight={loadMovePreflightAction}

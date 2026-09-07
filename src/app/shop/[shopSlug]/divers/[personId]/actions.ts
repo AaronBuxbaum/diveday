@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
 import { anonymizeDiver } from "@/db/anonymize";
 import {
   canPersonDeleteDiver,
@@ -1155,6 +1156,11 @@ export async function markWaiverInPersonAction(
     subject: { personId },
     recordedByPersonId: staff.user.personId,
     medicalAttested: formData.get("medicalAttested") === "on",
+    // A minor's paper release names its co-signer (ADR
+    // 20260907-guardian-co-signature). Passed as typed; `recordInPersonWaiver`
+    // decides from the date of birth on file whether it is needed at all, and
+    // refuses a section that is not a signature.
+    guardian: paperGuardianFrom(formData),
   });
   revalidateAndRedirect(
     base,

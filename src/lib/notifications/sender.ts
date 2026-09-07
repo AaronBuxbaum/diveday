@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { shopAddressLines } from "@/lib/shop-address";
+import { shopInboundReplyAddress } from "./inbound-address";
 import { type NotificationSender, notificationSenderSchema } from "./kinds";
+import type { NotificationEnvironment } from "./provider";
 
 /**
  * The shop-row columns that become a notification's `sender` profile
@@ -8,6 +10,12 @@ import { type NotificationSender, notificationSenderSchema } from "./kinds";
  * holding the row passes it straight through.
  */
 export type ShopSenderSource = {
+  /**
+   * The token in the shop's inbound reply address (ADR 20260907-two-way-inbox).
+   * Optional only so a caller holding a partial row can still ask for the
+   * postal footer; every shop row carries one.
+   */
+  inboundEmailToken?: string | null;
   contactEmail: string | null;
   /** Null until the shop opened the confirmation link sent to `contactEmail` (issue #1288). */
   contactEmailConfirmedAt: Date | null;
@@ -47,6 +55,15 @@ export function deliverableShopContactEmail(shop: {
 /**
  * `Reply-To` and the postal footer, from what the shop has on file.
  *
+ * **`Reply-To` is the shop's inbound address** — `reply+<token>@<inbound
+ * domain>` — whenever inbound mail is switched on (ADR 20260907-two-way-inbox,
+ * amending 20260902-sender-standards-for-ses). A diver who hits reply then
+ * lands in the shop's own inbox on their record, in the channel they wrote in,
+ * rather than in a front-desk mailbox the app cannot see. The confirmed
+ * front-desk address is the fallback for a deployment that switched inbound
+ * mail off (`EMAIL_INBOUND_DOMAIN=`), and it keeps its proof-of-ownership rule
+ * there: an unconfirmed one is absent, exactly as before.
+ *
  * `undefined` when there is nothing: a shop with no front-desk address and no
  * street is a legitimate state, and the mail then goes out exactly as it did
  * before rather than with a guessed inbox or an empty line. A value the
@@ -64,8 +81,14 @@ export function deliverableShopContactEmail(shop: {
  * readiness email asked for -- routed to a stranger. An unconfirmed address is
  * simply absent here, exactly as if none were on file.
  */
-export function shopSenderOf(shop: ShopSenderSource): NotificationSender | undefined {
-  const replyTo = deliverableShopContactEmail(shop);
+export function shopSenderOf(
+  shop: ShopSenderSource,
+  env: NotificationEnvironment = process.env,
+): NotificationSender | undefined {
+  const inboundAddress = shop.inboundEmailToken
+    ? shopInboundReplyAddress(shop.inboundEmailToken, env)
+    : undefined;
+  const replyTo = inboundAddress ?? deliverableShopContactEmail(shop);
   const postalAddress = notificationSenderSchema.shape.postalAddress.safeParse(
     shopAddressLines({
       street: shop.addressStreet,

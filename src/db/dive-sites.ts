@@ -29,7 +29,9 @@ import {
   diveSiteTemplateSnapshotFromSite,
   mergedDiveSiteTemplateSnapshot,
 } from "@/lib/dive-site-template-sync";
+import type { DiveMode } from "@/lib/diver-planning";
 import type { CertificationLevel } from "@/lib/readiness";
+import type { TidePreference } from "@/lib/tides";
 import { type AppDb, type DbExecutor, violatesUniqueIndex } from "./client";
 import { isMarineLifeSlug, type MarineLifeSlug } from "./marine-life-catalog";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -53,6 +55,15 @@ export type DiveSiteInput = {
   locationName?: string;
   forecastLatitude?: number | null;
   forecastLongitude?: number | null;
+  /** The NOAA station this site's tide is read against; null/undefined says nothing about the tide. */
+  tideStationId?: string | null;
+  /**
+   * When the site dives best. Omitting it writes `"any"` rather than leaving
+   * the stored value standing -- this module overwrites every field it is
+   * given, the way `locationName` does, and the comment used to promise a
+   * partial update the two writers never performed.
+   */
+  tidePreference?: TidePreference;
   satelliteImageUrl?: string;
   routeImageUrl?: string;
   imageUrls?: string[];
@@ -374,6 +385,8 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
       locationName: input.locationName || null,
       forecastLatitude: input.forecastLatitude ?? null,
       forecastLongitude: input.forecastLongitude ?? null,
+      tideStationId: input.tideStationId || null,
+      tidePreference: input.tidePreference ?? "any",
       satelliteImageUrl: input.satelliteImageUrl || null,
       routeImageUrl: input.routeImageUrl || null,
       imageUrls: input.imageUrls ?? [],
@@ -469,6 +482,8 @@ export async function updateDiveSite(
       locationName: input.locationName || null,
       forecastLatitude: input.forecastLatitude ?? null,
       forecastLongitude: input.forecastLongitude ?? null,
+      tideStationId: input.tideStationId || null,
+      tidePreference: input.tidePreference ?? "any",
       satelliteImageUrl: input.satelliteImageUrl || null,
       routeImageUrl: input.routeImageUrl || null,
       imageUrls: input.imageUrls ?? [],
@@ -608,6 +623,11 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     locationName: source.locationName ?? undefined,
     forecastLatitude: source.forecastLatitude,
     forecastLongitude: source.forecastLongitude,
+    // Carried for the same reason the forecast point above it is: a copy that
+    // silently drops them leaves the new row with no station and `"any"`, and
+    // the shop has no way to see that the tide line stopped rendering.
+    tideStationId: source.tideStationId,
+    tidePreference: source.tidePreference,
     satelliteImageUrl: source.satelliteImageUrl ?? undefined,
     routeImageUrl: source.routeImageUrl ?? undefined,
     imageUrls: source.imageUrls,
@@ -1157,6 +1177,9 @@ export type UpcomingSiteTrip = {
   tripId: string;
   title: string;
   startsAt: Date;
+  /** What the tide window needs to place the boat at this site (src/lib/departure-tides.ts). */
+  plannedDives: number;
+  diveMode: DiveMode;
 };
 
 /**
@@ -1171,7 +1194,13 @@ export async function listUpcomingTripsForSite(
   now: Date = nowDate(),
 ): Promise<UpcomingSiteTrip[]> {
   const rows = await db
-    .selectDistinct({ tripId: trips.id, title: trips.title, startsAt: trips.startsAt })
+    .selectDistinct({
+      tripId: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      plannedDives: trips.plannedDives,
+      diveMode: trips.diveMode,
+    })
     .from(tripDives)
     .innerJoin(trips, eq(trips.id, tripDives.tripId))
     .where(

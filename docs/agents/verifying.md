@@ -63,6 +63,19 @@ find out, never to walk away. A pull request left red with nobody working it is 
 rule must not become — see AGENTS.md's rules on visual diffs and review threads, which apply from
 the moment it is open.
 
+## The rehearsal a machine runs every night
+
+`pnpm simulate:day` drives a fresh shop through one whole dive day against the built server with
+the frozen clock advancing — book, sign, check in, roll call, underway, home, close out, recap — and
+fails on the first state the day cannot reach (the machine's half of V-04's rehearsal; see
+[docs/engineering/testing.md](../engineering/testing.md#the-one-day-simulation)). It runs nightly
+in `.github/workflows/simulate-day.yml`, never on a pull request: it is minutes of serial browser
+work, and what it proves decays with other people's merges rather than with your diff. Run it by
+hand after a change that touches more than one stage of the day — the booking transaction, the
+waiver, the counter, the manifest, the closing block, the recap pass — and read `simulation/day.md`
+rather than the runner's output: the transcript names the state and the shop-clock hour, which is
+what a failure here is about.
+
 ## The one thing CI cannot answer
 
 Whether the surface looks right. Screenshots, light and dark, phone and desktop, are yours — the

@@ -17,6 +17,7 @@ import {
   certificationRank,
   REQUIRABLE_CERTIFICATION_LEVELS,
 } from "./readiness";
+import { isTideStationId, TIDE_PREFERENCES } from "./tides";
 
 /**
  * How many photos one site's gallery may hold in total — uploaded ones now,
@@ -47,6 +48,7 @@ export const MAX_SITE_IMAGES = 6;
 export type DiveSiteFormError =
   | "invalid"
   | "coordinatesIncomplete"
+  | "tideStationInvalid"
   | "depthTooDeep"
   | "images"
   | "imagesUnconfigured"
@@ -90,6 +92,16 @@ export const diveSiteFormSchema = z.object({
   locationName: z.string().trim().max(160),
   forecastLatitude: z.union([z.literal(""), z.coerce.number().min(-90).max(90)]),
   forecastLongitude: z.union([z.literal(""), z.coerce.number().min(-180).max(180)]),
+  /**
+   * The NOAA station id, or blank for a site that says nothing about the tide.
+   * Loose here; the seven-digit shape is checked in `parseDiveSiteForm` so the
+   * refusal can name the field rather than the whole form.
+   */
+  tideStationId: z.string().trim().max(20).optional().default(""),
+  tidePreference: z.preprocess(
+    (value) => (value === "" || value === undefined ? "any" : value),
+    z.enum(TIDE_PREFERENCES),
+  ),
   marineLife: z.string().trim().max(400),
   marineLifeDescription: z.string().trim().max(1_200),
   difficulty: z.string().trim().max(120),
@@ -209,6 +221,11 @@ export function parseDiveSiteForm(
     (forecastLatitude !== "" && forecastLongitude === "")
   ) {
     return { ok: false, error: "coordinatesIncomplete" };
+  }
+  // Seven digits or nothing: an id of the wrong shape can never answer, and a
+  // site saved with one would read as "no tide" forever without saying why.
+  if (parsed.data.tideStationId !== "" && !isTideStationId(parsed.data.tideStationId)) {
+    return { ok: false, error: "tideStationInvalid" };
   }
   const maxDepthMeters = maxDepth === "" ? null : depthToMeters(maxDepth, depthUnit);
   if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) {

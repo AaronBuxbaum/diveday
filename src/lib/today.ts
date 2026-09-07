@@ -522,11 +522,17 @@ export type TodayAction = {
   dueAt: Date | null;
 };
 
-/** The three blocker codes a one-tap send actually resolves. */
+/**
+ * The four blocker codes a one-tap send actually resolves. A minor's solo
+ * signature is the fourth: the issue path refuses to count that record as
+ * standing, so the tap supersedes it and mints a link that asks for both
+ * signatures (ADR 20260907-guardian-co-signature).
+ */
 const WAIVER_CODES = new Set<ReadinessBlockerCode>([
   "waiver_not_sent",
   "waiver_pending",
   "waiver_expired",
+  "guardian_signature_missing",
 ]);
 
 export function isWaiverCode(code: ReadinessBlockerCode): boolean {
@@ -564,6 +570,7 @@ export const BLOCKER_ACTIONS: Record<
   // refusal creates is entirely about the person — tell them, move them, refund
   // them — and none of it happens on the departure they can no longer join.
   medical_not_cleared: { kind: "medical_not_cleared", target: "diver" },
+  guardian_signature_missing: { kind: "waiver", target: "trip" },
   certification_missing: { kind: "certification", target: "diver" },
   certification_pending: { kind: "certification", target: "diver" },
   certification_self_declared: { kind: "certification", target: "diver" },

@@ -1,0 +1,61 @@
+name: Simulate a day
+
+# The one-day rehearsal (N-60): a fresh shop driven through a whole dive day
+# against the production build with the frozen clock advancing — book, sign,
+# check in, roll call, underway, home, close out, recap — failing on the first
+# state the day cannot reach and leaving a screenshot per state and a transcript
+# behind (`scripts/simulate-day.mjs`, docs/engineering/testing.md).
+#
+# Nightly rather than on every pull request, deliberately: the day takes minutes
+# of serial browser work that no pull request's diff needs to wait on, and what
+# it proves — that the whole day still joins up — decays with time and with
+# other people's merges rather than with one change. `ci.yml` stays the
+# pull-request gate; this workflow is not part of it.
+on:
+  schedule:
+    # 06:30 UTC, half an hour before ci.yml's nightly `real-postgres` run, so the
+    # two never share the morning's read and a red rehearsal is the first thing
+    # in the inbox rather than the third.
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: simulate-day-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  simulate:
+    name: One dive day, end to end
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/playwright-shell
+      # One build, the same e2e build ci.yml's `build` job makes; the simulation
+      # then reuses it (`--no-build`) rather than paying for a second one.
+      - run: pnpm e2e:build
+      - name: Drive the day
+        run: pnpm simulate:day --no-build
+      # The rehearsal artifacts V-04 asks for: `day.md` names every state, when
+      # on the shop's clock it was reached, and the screenshot it left. Uploaded
+      # whether or not the day completed — a failed run's transcript is the one
+      # worth reading.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: simulation
+          path: simulation/
+          if-no-files-found: error
+          retention-days: 14
+      # Playwright's own trace and failure screenshot for the state that failed.
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: simulation-test-results
+          path: test-results/simulate-day/
+          if-no-files-found: ignore
+          retention-days: 7

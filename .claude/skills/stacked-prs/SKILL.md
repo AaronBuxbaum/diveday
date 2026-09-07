@@ -59,9 +59,12 @@ under *What our pipeline does with it* below — never a reason to cut from `mai
 
 ## Building the chain
 
-A session does both halves itself: it builds the **shape** — the chained branches and pull requests —
-and then registers that shape as a stack. The shape is the whole substance; registering adds the
-cascading rebase and the group merge on top of it.
+A session builds the **shape** and only the shape: the chained branches and the pull requests on
+them. Registering that shape as a stack — which is what adds the cascading rebase and the bottom-up
+atomic merge on top of it — happens on a runner, off the pull request event
+(`.github/workflows/stack.yml`, ADR
+[20260907-a-runner-registers-the-stack](../../../docs/architecture/decisions/20260907-a-runner-registers-the-stack.md)).
+There is nothing for you to run and nothing to wait for.
 
 ```sh
 git fetch origin main                                  # first, every time — it decides the shape
@@ -69,24 +72,21 @@ git fetch origin main                                  # first, every time — i
 # layer 1: nothing of yours is open, so cut from the refreshed main
 git checkout -b claude/<slug>-1-schema origin/main
 # ... first commit ...
+git push -u origin claude/<slug>-1-schema
+# open its pull request now, as a draft, base `main`
 
 # layer 2, cut from layer 1 — not from main, whether or not it depends on layer 1
 git checkout -b claude/<slug>-2-reader claude/<slug>-1-schema
 # ... first commit ...
-
-# push both, open whichever pull requests are missing, register the stack — one command
-gh stack link claude/<slug>-1-schema claude/<slug>-2-reader
+git push -u origin claude/<slug>-2-reader
+# open its pull request now, as a draft, base `claude/<slug>-1-schema`
 ```
 
-**Open and register a layer at its first commit, not when its work is finished.** That is the whole
-of the discipline, and it is what the rest of this file assumes. `gh stack link` pushes each branch,
-reuses an open pull request where one exists and opens a **draft** where none does, chains the bases
-in the order given, and creates or extends the stack — so there is no `gh pr create --base <branch>`
-left to run hours later, against a branch that may no longer be there.
-
-Measured on 2026-08-23 in a throwaway four-layer stack (ADR
+**Open a layer's pull request at its first commit, not when its work is finished.** That is the
+whole of the discipline now, and the rest of this file assumes it. It is also the only part that has
+ever gone wrong: measured on 2026-08-23 (ADR
 [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md),
-"register at the first commit"): merging the bottom layer deleted its branch and GitHub **silently
+"register at the first commit"), merging the bottom layer deleted its branch and GitHub **silently
 retargeted the layer above onto the new base** — no timeline event, nothing to do, the pull request
 stayed open and its diff stayed honest. Run the same moment by hand and it fails outright:
 
@@ -98,76 +98,62 @@ No commits between claude/<slug>-1-schema and claude/<slug>-2-reader, Base ref m
 which is exactly what PR #893 recorded as a reason to stop stacking. The failure lives entirely in
 the gap between cutting a branch and opening its pull request; closing that gap removes it.
 
-Where the extension is not available — a cloud session, where installing it 403s — the same
-discipline is `gh pr create --base <branch> --draft` at the first commit plus the REST call below.
-Either way, every body states its position and what is beneath it, because a reviewer who lands on
-layer 3 from a notification has no other way to find the bottom:
+Every body states its position and what is beneath it, because a reviewer who lands on layer 3 from
+a notification has no other way to find the bottom:
 
 ```
 Layer 2 of 3 — based on `claude/<slug>-1-schema` (#641). Above: `claude/<slug>-3-surface` (#643).
 Review and merge bottom-up.
 ```
 
-Then say in the closing message that the chain is ready to register, listing the numbers bottom to
-top. Do not leave that in a comment on one of the pull requests only — see AGENTS.md's rule about
-queues that live in a message.
+## Registration, which is not yours to do
 
-## Registering and driving the stack
+`.github/workflows/stack.yml` fires on every same-repository pull request event, walks the chain of
+open pull requests through the one that fired — down through base refs to `main`, and up again —
+and registers it, or extends the stack that already holds its bottom. So layer 1 alone registers
+nothing (a chain of one is not a stack), layer 2 opening creates the stack, and every layer after
+that extends it.
 
-Register with `gh api`, which needs no extension and works wherever `gh` does — including cloud
-sessions, where `gh` is pre-installed and the GitHub proxy substitutes credentials on outbound
-requests, so there is no `gh auth login` step:
+It is a runner rather than the session because **a session cannot reach the endpoint at all.**
+Measured on 2026-09-07: `gh` is not installed, and `api.github.com` answers every repo-scoped
+request with `403 "GitHub access is not enabled for this session"` with or without an
+`Authorization` header. The GitHub MCP server is a session's only writable path and has no stack
+endpoints. Anything you read elsewhere about running `gh api --method POST .../stacks` yourself
+describes an environment that no longer exists — it is what silently stopped this repository
+registering anything between 2026-08-28 and 2026-09-07, while the chains themselves kept working.
 
-```sh
-# register existing chained-base PRs, bottom to top — -F, never -f
-gh api --method POST repos/{owner}/{repo}/stacks -F 'pull_requests[]=641' \
-  -F 'pull_requests[]=642' -F 'pull_requests[]=643'
+Three things to know, and none of them is a step:
 
-gh api repos/{owner}/{repo}/stacks                    # list stacks and their layers
-gh api --method POST repos/{owner}/{repo}/stacks/{n}/add -F 'pull_requests[]=644'  # extend
-gh api --method POST repos/{owner}/{repo}/stacks/{n}/unstack # dissolve
-```
+- **Registration is asynchronous.** Reading `stack` on a pull request in the same breath as opening
+  it gives `null`. The workflow's run summary says what it did; read that rather than racing it.
+- **A refusal is quiet and deliberate.** The registrar acts on a linear chain and nothing else — a
+  fork, a cycle, two open pull requests sharing a head branch, or layers spread across two stacks
+  are each named in the job log and left alone, because a stack is an *ordered* list that merges
+  bottom-up and atomically, so a guessed order is first noticed as the wrong pull request having
+  landed. If a chain of yours has not become a stack, that log says why.
+- **Nothing here dissolves one.** `POST /repos/{owner}/{repo}/stacks/{n}/unstack` is a human's call
+  and leaves ordinary chained-base pull requests behind.
 
-**`-f` does not work and this file said `-f` until 2026-08-23.** `gh api -f` sends every value as a
-string, and the endpoint types `pull_requests` as integers:
+On a workstation, where `gh` exists and is authenticated, the same endpoints are reachable directly
+and `gh stack link` / `view` / `sync` / `merge` wrap them. `gh api` needs `-F`, never `-f`: `-f`
+sends every value as a string and `pull_requests` is typed as integers, which returns
+`422 Invalid property /pull_requests/0: "641" is not of type integer`.
 
-```
-422 Invalid property /pull_requests/0: `"641"` is not of type `integer`
-```
-
-A session following the old form got that 422, concluded the write path was unavailable, and fell
-back to hand-chained `gh pr create --base` — which is the likeliest reason PR #893 met the
-vanished-base failure at all. `-F` sends typed values and is the only difference.
-
-`pull_requests` is ordered bottom to top and takes 2–100 entries. GraphQL is read-only (`stack`,
-`stackEntry` on `PullRequest`) — and in a cloud session the proxy serves only a pinned set of
-GraphQL operations, so reach for the REST forms above rather than GraphQL. A `404` means the preview
-is not enabled for the repository.
-
-Three refusals to expect, all of them GitHub protecting the stack rather than a broken command:
+Two refusals to expect from GitHub on a registered stack, both of it protecting the stack rather
+than a broken command:
 
 - **`gh pr merge` cannot merge a stacked pull request.** *"This pull request is part of a stack and
-  must be merged using the asynchronous merge REST API."* Use `gh stack merge <pr-or-stack> --yes`,
-  which merges everything up to and including that pull request in one all-or-nothing operation.
+  must be merged using the asynchronous merge REST API."* `gh stack merge <pr-or-stack> --yes`
+  merges everything up to and including that pull request in one all-or-nothing operation.
 - **`gh pr edit --base` is refused on a stacked pull request.** *"Cannot change the base branch
   because the pull request is part of a stack."* GitHub owns those refs — which is precisely what
   makes the retarget-on-merge above something you can rely on instead of watch for.
-- **`gh stack link` retargets the bottom pull request to the repository's default branch.** Silent,
-  and harmless for every real stack, since the bottom targets `main` anyway. The REST endpoint will
-  root a stack on any branch, which is what a throwaway experiment wants and what `link` will undo.
 
-One thing to do by hand: a branch cut from a layer *before* that layer merged, and attached *after*,
-still carries the pre-merge parent commit, so its pull request diff duplicates the merged layer's
-files. `gh stack merge` cascade-rebases the branches that were in the stack, not that one. Rebase it
-onto the new top — `git rebase --onto <top> <old parent sha> <branch>` — and the diff comes back to
-its own change.
-
-The `github/gh-stack` extension wraps the same REST endpoints (`gh stack link`, `view`, `sync`,
-`merge`) and is the shortest path on a workstation. Do **not** rely on it in a cloud session:
-installing an extension pulls a release asset from another repository, and the GitHub proxy scopes
-release-asset requests to repositories attached to the session, so the install is expected to 403.
-There, do the same thing in two calls: `gh pr create --base <branch> --draft` at the layer's first
-commit, then the `POST .../stacks` above.
+One thing still to do by hand: a branch cut from a layer *before* that layer merged, and attached
+*after*, still carries the pre-merge parent commit, so its pull request diff duplicates the merged
+layer's files. The cascading rebase moves the branches that were in the stack, not that one. Rebase
+it onto the new top — `git rebase --onto <top> <old parent sha> <branch>` — and the diff comes back
+to its own change.
 
 ## What our pipeline does with it
 
@@ -237,11 +223,15 @@ gh pr list --author '@me' --state open --json number,title,mergeable,statusCheck
 gh pr view <n> --comments
 ```
 
+In a cloud session, where `gh` is absent, those are the GitHub MCP server's `search_pull_requests`
+and `pull_request_read` (method `get_review_comments`, which reports `is_resolved` per thread) —
+see AGENTS.md's rule about answering review threads for the reply and resolve calls.
+
 **Answer a comment on the layer that owns the code, never the layer you are standing on.** The
 rule is the one that governs a red check in a stack, for the same reason: a stack merges bottom-up,
 so a fix committed above the layer being commented on arrives *after* that layer has already merged
-without it. Fix at the owning layer, then cascade — `gh stack sync --prune`, or rebase each layer
-above onto the one below.
+without it. Fix at the owning layer, then rebase each layer above onto the one below (on a
+workstation, `gh stack sync --prune` does that in one).
 
 Each thread ends in a state: fixed and replied to with the commit, declined with the reason, or
 filed as a `needs-triage` issue whose number is in the thread. Commit whatever you are holding at
@@ -249,11 +239,12 @@ the top of the stack before you go down (never `git stash` — AGENTS.md's *Para
 
 ## Landing it
 
-Merge bottom-up; merging a middle layer merges everything below it in one atomic operation, and the
-layers above retarget themselves. After each merge, `gh stack sync --prune` (or the pull request's
-own rebase control) brings the rest forward. A layer that goes red after a cascading rebase is
-ordinary red CI and belongs to whoever owns the stack — AGENTS.md's rule that a failing test is part
-of the work applies per layer.
+Merging is the human's, here as everywhere. It goes bottom-up; merging a middle layer merges
+everything below it in one atomic operation, GitHub cascade-rebases what is left and the layers
+above retarget themselves — that server-side cascade is precisely what registering bought, and it
+is why nothing has to bring the rest forward by hand. A layer that goes red after a cascading
+rebase is ordinary red CI and belongs to whoever owns the stack — AGENTS.md's rule that a failing
+test is part of the work applies per layer.
 
 ## Claiming
 

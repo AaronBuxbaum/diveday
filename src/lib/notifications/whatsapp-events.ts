@@ -108,6 +108,31 @@ const statusSchema = z.object({
     .optional(),
 });
 
+/**
+ * One message a diver sent to the shop's number. Meta's `type` names the
+ * shape; `text.body` is the only field whose bytes are kept. A media message
+ * (image, document, audio, video, sticker) carries an id to fetch the file
+ * by, which this deliberately never does — the row records that something
+ * arrived and its caption, and the bytes stay with Meta (ADR
+ * 20260907-two-way-inbox).
+ */
+const inboundMessageSchema = z
+  .object({
+    id: z.string().min(1),
+    from: z.string().min(1),
+    timestamp: z.string().optional(),
+    type: z.string().min(1),
+    text: z.object({ body: z.string() }).optional(),
+    image: z.object({ caption: z.string().optional() }).loose().optional(),
+    document: z.object({ caption: z.string().optional() }).loose().optional(),
+    video: z.object({ caption: z.string().optional() }).loose().optional(),
+    audio: z.object({}).loose().optional(),
+    sticker: z.object({}).loose().optional(),
+  })
+  .loose();
+
+const MEDIA_TYPES = new Set(["image", "document", "video", "audio", "sticker"]);
+
 const payloadSchema = z.object({
   entry: z
     .array(
@@ -117,7 +142,12 @@ const payloadSchema = z.object({
         changes: z
           .array(
             z.object({
-              value: z.object({ statuses: z.array(statusSchema).optional() }).loose(),
+              value: z
+                .object({
+                  statuses: z.array(statusSchema).optional(),
+                  messages: z.array(inboundMessageSchema).optional(),
+                })
+                .loose(),
             }),
           )
           .optional(),
@@ -148,10 +178,10 @@ export type WhatsAppDeliveryEvent = {
  * Every delivery outcome in a verified payload.
  *
  * A batch can carry several, and an inbound *message* (a diver replying) rides
- * the same `messages` webhook field — that is the shop's own WhatsApp inbox to
- * answer, not DiveDay's, so it is simply not represented here. Anything
- * unparseable is skipped rather than failing the batch: Meta retries a non-2xx,
- * and one malformed entry must not buy an endless redelivery of the good ones.
+ * the same `messages` webhook field — `parseWhatsAppInboundMessages` below
+ * reads those; this reads only the statuses. Anything unparseable is skipped
+ * rather than failing the batch: Meta retries a non-2xx, and one malformed
+ * entry must not buy an endless redelivery of the good ones.
  */
 export function parseWhatsAppDeliveryEvents(payload: string, now: Date): WhatsAppDeliveryEvent[] {
   let parsedJson: unknown;
@@ -180,6 +210,72 @@ export function parseWhatsAppDeliveryEvents(payload: string, now: Date): WhatsAp
     }
   }
   return events;
+}
+
+export type WhatsAppInboundMessage = {
+  /** The WABA the message arrived at — the tenant key, resolved to a shop by the caller. */
+  wabaId: string | null;
+  providerMessageId: string;
+  /** Digits only, as Meta reports the sender. */
+  from: string;
+  /** What they typed, or a media caption; empty for a bare attachment. */
+  body: string;
+  /** How many attachments rode with it: 1 for a media message, 0 for text. */
+  mediaCount: number;
+  receivedAt: Date;
+};
+
+/**
+ * Every message a diver sent in a verified payload (ADR 20260907-two-way-inbox).
+ *
+ * Text is kept; media is counted and its caption kept, never fetched. Anything
+ * else Meta can carry — a location, a contact card, a reaction, an interactive
+ * button reply, a message the diver deleted (`unsupported`) — is skipped: none
+ * of those is a sentence a staffer can answer, and a row saying "something
+ * arrived" with nothing to read would only make the inbox longer. Same
+ * skip-not-throw posture as the statuses, for the same redelivery reason.
+ */
+export function parseWhatsAppInboundMessages(payload: string, now: Date): WhatsAppInboundMessage[] {
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(payload);
+  } catch {
+    return [];
+  }
+  const body = payloadSchema.safeParse(parsedJson);
+  if (!body.success) return [];
+
+  const messages: WhatsAppInboundMessage[] = [];
+  for (const entry of body.data.entry ?? []) {
+    for (const change of entry.changes ?? []) {
+      for (const message of change.value.messages ?? []) {
+        if (message.type === "text") {
+          const text = message.text?.body?.trim();
+          if (!text) continue;
+          messages.push({
+            wabaId: entry.id ?? null,
+            providerMessageId: message.id,
+            from: message.from,
+            body: text,
+            mediaCount: 0,
+            receivedAt: timestampFrom(message.timestamp, now),
+          });
+        } else if (MEDIA_TYPES.has(message.type)) {
+          const caption =
+            message.image?.caption ?? message.document?.caption ?? message.video?.caption ?? "";
+          messages.push({
+            wabaId: entry.id ?? null,
+            providerMessageId: message.id,
+            from: message.from,
+            body: caption.trim(),
+            mediaCount: 1,
+            receivedAt: timestampFrom(message.timestamp, now),
+          });
+        }
+      }
+    }
+  }
+  return messages;
 }
 
 function failureDetail(errors: z.infer<typeof statusSchema>["errors"]): string | null {

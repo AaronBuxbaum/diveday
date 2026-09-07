@@ -1134,6 +1134,32 @@ export function passwordChangedEmail(input: PasswordChangedEmailInput): Notifica
   };
 }
 
+export type StaffReplyEmailInput = {
+  subject: string;
+  body: string;
+};
+
+/**
+ * A staffer's reply (ADR 20260907-two-way-inbox): their words, as typed, under
+ * the thread's subject. No greeting, no sign-off and no copy — the shop's name
+ * is the chrome's, and a sentence DiveDay added to a person's own message
+ * would be the one thing in it they did not say.
+ */
+export function staffReplyEmail(input: StaffReplyEmailInput): NotificationEmail {
+  const paragraphs = input.body
+    .replace(/\r\n/g, "\n")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0);
+  return {
+    subject: input.subject,
+    text: `${paragraphs.join("\n\n")}\n`,
+    html: paragraphs
+      .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`)
+      .join(""),
+  };
+}
+
 export function waiverRequestEmail(input: WaiverRequestEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));

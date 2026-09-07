@@ -1,5 +1,5 @@
 {
-  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `a11y` names the specs that run an axe scan on it, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose \u2014 see scripts/check-route-coverage.mjs.",
+  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `a11y` names the specs that run an axe scan on it, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.",
   "/": {
     "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
     "visual": ["landing"],
@@ -9,6 +9,10 @@
     "e2e": ["seo.spec.ts"],
     "visual": ["about"],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/board/[token]": {
+    "e2e": ["departures-board.spec.ts"],
+    "visual": ["departures-board"]
   },
   "/claim/[token]": {
     "e2e": ["a11y.spec.ts", "seat-claim.spec.ts"],
@@ -188,6 +192,7 @@
       "returning-diver.spec.ts",
       "schedule-embed.spec.ts",
       "seat-claim.spec.ts",
+      "tide-window.spec.ts",
       "trip-admission.spec.ts",
       "trips.spec.ts"
     ],
@@ -272,7 +277,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/dive-sites/[id]": {
-    "e2e": ["dive-sites.spec.ts"],
+    "e2e": ["dive-sites.spec.ts", "tide-window.spec.ts"],
     "visual": ["dive-site-edit"]
   },
   "/shop/[shopSlug]/dive-sites/new": {
@@ -285,6 +290,7 @@
       "certifications.spec.ts",
       "divers.spec.ts",
       "gear-fit-and-age.spec.ts",
+      "guardian-co-signature.spec.ts",
       "import.spec.ts",
       "nitrox.spec.ts",
       "orders-demo.spec.ts",
@@ -396,6 +402,7 @@
       "schedule-embed.spec.ts",
       "schedule-trip.spec.ts",
       "tenant-isolation.spec.ts",
+      "tide-window.spec.ts",
       "trip-admission.spec.ts",
       "trip-series.spec.ts",
       "trips.spec.ts",
@@ -405,6 +412,7 @@
       "schedule-builder",
       "schedule-builder-add",
       "schedule-builder-add-full",
+      "schedule-builder-add-tide",
       "schedule-builder-empty",
       "schedule-builder-move-impact"
     ],
@@ -421,6 +429,7 @@
       "role-permissions.spec.ts",
       "settings-findability.spec.ts",
       "tax.spec.ts",
+      "tide-window.spec.ts",
       "whatsapp-settings.spec.ts"
     ],
     "visual": [
@@ -437,6 +446,10 @@
     "e2e": ["calendar-sync.spec.ts"],
     "visual": ["settings-calendar"],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/shop/[shopSlug]/settings/display": {
+    "e2e": ["departures-board.spec.ts"],
+    "visual": ["settings-display"]
   },
   "/shop/[shopSlug]/settings/embed": {
     "e2e": ["schedule-embed.spec.ts"],
@@ -509,6 +522,7 @@
       "promo-codes.spec.ts",
       "recap.spec.ts",
       "refunds.spec.ts",
+      "tide-window.spec.ts",
       "trip-admission.spec.ts",
       "trip-series.spec.ts",
       "trips.spec.ts"
@@ -643,8 +657,8 @@
     "visual": ["verify-invalid"]
   },
   "/waivers/[token]": {
-    "e2e": ["a11y.spec.ts", "waivers.spec.ts"],
-    "visual": ["expired-link-unknown", "waiver-active"],
+    "e2e": ["a11y.spec.ts", "guardian-co-signature.spec.ts", "waivers.spec.ts"],
+    "visual": ["expired-link-unknown", "waiver-active", "waiver-guardian"],
     "a11y": ["a11y.spec.ts"]
   }
 }

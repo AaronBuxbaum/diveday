@@ -1,4 +1,6 @@
+import { staffGuardianRelationshipOptions } from "@/i18n/guardian-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { GuardianRelationship } from "@/lib/guardian";
 
 /**
  * Words for `PaperWaiverControl`, resolved server-side and passed down as plain
@@ -18,6 +20,18 @@ export type PaperWaiverCopy = {
   recording: string;
   recordPaperSignature: string;
   neverMind: string;
+  /**
+   * The guardian half of the form, shown only for a diver who is a minor
+   * today (ADR 20260907-guardian-co-signature). Always resolved — the words
+   * cost nothing to carry and the surface decides whether to draw them, which
+   * keeps `requiresGuardian` a single boolean rather than a copy handoff.
+   */
+  guardian: {
+    nameLabel: string;
+    relationshipLabel: string;
+    relationshipChoose: string;
+    relationshipOptions: Array<{ value: GuardianRelationship; label: string }>;
+  };
 };
 
 export function paperWaiverCopy(t: StaffTranslator): PaperWaiverCopy {
@@ -27,5 +41,11 @@ export function paperWaiverCopy(t: StaffTranslator): PaperWaiverCopy {
     recording: t("shared.paperWaiver.recording"),
     recordPaperSignature: t("shared.paperWaiver.recordPaperSignature"),
     neverMind: t("shared.waiverSend.neverMind"),
+    guardian: {
+      nameLabel: t("shared.paperWaiver.guardianNameLabel"),
+      relationshipLabel: t("shared.paperWaiver.guardianRelationshipLabel"),
+      relationshipChoose: t("shared.paperWaiver.guardianRelationshipChoose"),
+      relationshipOptions: staffGuardianRelationshipOptions(t),
+    },
   };
 }

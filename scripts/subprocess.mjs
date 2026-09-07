@@ -148,6 +148,17 @@ export const SUBPROCESS_TIMEOUTS = {
    * inside if it is to name the file that did it rather than time out anonymously.
    */
   biomeFile: 30_000,
+  /**
+   * One `pnpm simulate:day` Playwright run -- the whole rehearsed dive day,
+   * booking to recap, against a built server on the frozen clock. Minutes in
+   * practice. The ceiling is twenty-five because the nightly workflow that
+   * runs it caps the job at thirty (`.github/workflows/simulate-day.yml`):
+   * the same reasoning as `drizzleKitCheck` inside `check:repo`, which is that
+   * a day wedged on one state has to report *which command* stopped, rather
+   * than arriving as the job's own anonymous timeout with a transcript that
+   * stops mid-sentence and nothing saying why.
+   */
+  simulateDay: 1_500_000,
 };
 
 /** Whether a `spawnSync` result or a caught `execFileSync` error is a timeout kill. */
