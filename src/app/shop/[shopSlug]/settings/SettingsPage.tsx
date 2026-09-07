@@ -62,6 +62,7 @@ import {
   dockDayOffsets,
 } from "@/lib/diver-planning";
 import { EMERGENCY_LINE_SLOTS, hasEmergencyReference } from "@/lib/emergency-reference";
+import { FLY_SAFE_FIELDS, FLY_SAFE_LIMITS } from "@/lib/fly-safe";
 import {
   formatHourOfDay,
   formatMoneyScanned,
@@ -107,6 +108,7 @@ import {
   saveDivingOptionsAction,
   saveDockDayRhythmAction,
   saveEmergencyReferenceAction,
+  saveFlySafeHoursAction,
   saveHospitalityAction,
   savePackingAction,
   savePassThroughFeeAction,
@@ -149,6 +151,8 @@ function noticeMessages(
     "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
     "send-window-saved": { tone: "success", text: t("settings.main.notice.sendWindowSaved") },
     "send-window-invalid": { tone: "danger", text: t("settings.main.notice.sendWindowInvalid") },
+    "fly-safe-saved": { tone: "success", text: t("settings.main.notice.flySafeSaved") },
+    "fly-safe-invalid": { tone: "danger", text: t("settings.main.notice.flySafeInvalid") },
     "package-saved": { tone: "success", text: t("settings.main.notice.packageSaved") },
     "package-deleted": { tone: "success", text: t("settings.main.notice.packageDeleted") },
     "package-invalid": { tone: "danger", text: t("settings.main.notice.packageInvalid") },
@@ -632,6 +636,10 @@ export default async function SettingsPage({
   const sendWindowValue = t("settings.main.sendWindow.value", {
     start: formatHourOfDay(shop.sendWindowStartHour, locale),
     end: formatHourOfDay(shop.sendWindowEndHour, locale),
+  });
+  const flySafeValue = t("settings.main.flySafe.value", {
+    single: shop.flySafeHoursSingle,
+    repetitive: shop.flySafeHoursRepetitive,
   });
   const unitsValue = [
     t(shop.depthUnit === "feet" ? "settings.main.units.feet" : "settings.main.units.meters"),
@@ -1523,6 +1531,59 @@ export default async function SettingsPage({
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("settings.main.sendWindow.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            {/* Two whole numbers of hours, one save (issue #1425). The floors
+              are DAN's published minimums, read from the same table the
+              action and the column's CHECK read, so the form can never offer
+              a wait the recap's own sentence would then misattribute. */}
+            <SettingsRow
+              heading={t("settings.main.flySafe.heading")}
+              value={flySafeValue}
+              description={t("settings.main.flySafe.description")}
+              sectionId="flySafe"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="flySafe" active={activeSection} />
+              <FieldGrid
+                as="form"
+                action={saveFlySafeHoursAction}
+                columns={2}
+                className="mt-4 gap-x-5 gap-y-5"
+              >
+                {FLY_SAFE_FIELDS.map((field) => (
+                  <Field
+                    key={field}
+                    label={t(
+                      field === "single"
+                        ? "settings.main.flySafe.singleLabel"
+                        : "settings.main.flySafe.repetitiveLabel",
+                    )}
+                  >
+                    <input
+                      name={field}
+                      type="number"
+                      inputMode="numeric"
+                      required
+                      min={FLY_SAFE_LIMITS[field].min}
+                      max={FLY_SAFE_LIMITS[field].max}
+                      step={1}
+                      defaultValue={
+                        field === "single" ? shop.flySafeHoursSingle : shop.flySafeHoursRepetitive
+                      }
+                      className={`${controlClass} tabular-nums`}
+                    />
+                  </Field>
+                ))}
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.flySafe.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.flySafe.submit")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>

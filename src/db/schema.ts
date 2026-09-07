@@ -288,6 +288,17 @@ export const shops = pgTable(
     sendWindowStartHour: integer("send_window_start_hour").notNull().default(8),
     sendWindowEndHour: integer("send_window_end_hour").notNull().default(20),
     /**
+     * How long after the day's last dive a diver reads they may fly, in whole
+     * hours — one figure for a single dive, one for a day of two or more
+     * (`src/lib/fly-safe.ts`, issue #1425). The sentence on the recap credits
+     * the figure to the shop and the practice to DAN, so the CHECK below
+     * floors each at DAN's published minimum (12 and 18): a shop may ask for
+     * more, never less, or even that weaker claim is false. Informs, never
+     * gates.
+     */
+    flySafeHoursSingle: integer("fly_safe_hours_single").notNull().default(18),
+    flySafeHoursRepetitive: integer("fly_safe_hours_repetitive").notNull().default(24),
+    /**
      * Where the shop's season starts — the denominator behind the home's one
      * fact of scale (ADR 20260904-reef-all-the-way-down, decision 2, Budget
      * rule 3). "Your 400th diver of the season" is a claim about a count from
@@ -397,6 +408,15 @@ export const shops = pgTable(
       sql`${table.seasonStartDay} >= 1 and ${table.seasonStartDay} <= 31
         and not (${table.seasonStartMonth} = 2 and ${table.seasonStartDay} > 28)
         and not (${table.seasonStartMonth} in (4, 6, 9, 11) and ${table.seasonStartDay} > 30)`,
+    ),
+    // The same bounds `parseFlySafeHours` accepts (`src/lib/fly-safe.ts`):
+    // DAN's floors, a three-day ceiling, and a repetitive wait no shorter than
+    // the single one.
+    check(
+      "shops_fly_safe_hours_in_range",
+      sql`${table.flySafeHoursSingle} >= 12 and ${table.flySafeHoursSingle} <= 72
+        and ${table.flySafeHoursRepetitive} >= 18 and ${table.flySafeHoursRepetitive} <= 72
+        and ${table.flySafeHoursRepetitive} >= ${table.flySafeHoursSingle}`,
     ),
     // A year a shop could plausibly have opened in. Bounded at both ends like
     // every other numeric setting, so no caller can persist a figure the

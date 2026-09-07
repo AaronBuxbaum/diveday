@@ -5,6 +5,7 @@ import type { ConservationCommitmentCode } from "@/lib/conservation-commitments"
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
+import type { FlySafeHours } from "@/lib/fly-safe";
 import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
@@ -291,6 +292,21 @@ export async function setShopSendWindow(db: AppDb, shopId: string, window: SendW
   const [shop] = await db
     .update(shops)
     .set({ sendWindowStartHour: window.startHour, sendWindowEndHour: window.endHour })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * How long after the last dive this shop tells a diver they may fly
+ * (`src/lib/fly-safe.ts`, issue #1425). The pair is validated by
+ * `parseFlySafeHours` before it reaches here and by the table's own CHECK
+ * after, so a caller that skips the parser is refused rather than stored.
+ */
+export async function setShopFlySafeHours(db: AppDb, shopId: string, hours: FlySafeHours) {
+  const [shop] = await db
+    .update(shops)
+    .set({ flySafeHoursSingle: hours.single, flySafeHoursRepetitive: hours.repetitive })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

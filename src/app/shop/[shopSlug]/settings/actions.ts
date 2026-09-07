@@ -28,6 +28,7 @@ import {
   setShopDivingOptions,
   setShopDockDayRhythm,
   setShopEmergencyReference,
+  setShopFlySafeHours,
   setShopHospitalityNotes,
   setShopPackingList,
   setShopPassThroughFee,
@@ -68,6 +69,7 @@ import {
 } from "@/lib/divemaster-ratio";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
 import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
+import { FLY_SAFE_FIELDS, parseFlySafeHours } from "@/lib/fly-safe";
 import { isValidTimeZone } from "@/lib/format";
 import {
   isShopCurrency,
@@ -422,6 +424,27 @@ export async function saveSendWindowAction(formData: FormData) {
     settings,
     noticeUrl(settings, "send-window-saved", { saved: "sendWindow" }),
   );
+}
+
+/**
+ * How long after the last dive this shop tells a diver they may fly
+ * (`src/lib/fly-safe.ts`, issue #1425). Refused whole, with a notice, on any
+ * value outside DAN's floors and the three-day ceiling — never clamped, so a
+ * forged form cannot quietly write a wait shorter than the guidance the
+ * recap's own sentence then names.
+ */
+export async function saveFlySafeHoursAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const hours = parseFlySafeHours(
+    Object.fromEntries(FLY_SAFE_FIELDS.map((field) => [field, formData.get(field)])),
+  );
+  if (!hours) {
+    redirect(noticeUrl(settings, "fly-safe-invalid", { saved: "flySafe" }));
+  }
+  await setShopFlySafeHours(await getDb(), session.user.shopId, hours);
+  revalidateAndRedirect(settings, noticeUrl(settings, "fly-safe-saved", { saved: "flySafe" }));
 }
 
 /**

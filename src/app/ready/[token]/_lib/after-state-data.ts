@@ -12,7 +12,7 @@ import { DIVER_CERT_LEVEL_KEYS, NEXT_DIVE_REASON_KEYS } from "@/i18n/next-dive-l
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import { handoffHref } from "@/lib/booking-handoff";
 import { nowDate } from "@/lib/clock";
-import { formatOrdinal, formatRelativeDay, formatShortDate } from "@/lib/format";
+import { formatOrdinal, formatRelativeDay, formatShortDate, formatWeekdayTime } from "@/lib/format";
 import type { NextDivePick } from "@/lib/next-dive";
 import type { PostcardImage } from "@/lib/postcard-image";
 import { publicTripPath } from "@/lib/public-routes";
@@ -121,6 +121,15 @@ export async function buildAfterStateProps(input: {
     // Read once in `getRecapPageData`, beside the plan it is compared against,
     // so both routes rendering this surface get the same answer.
     diveRecord: data.diveRecord,
+    // Worded here, in the shop's zone: the instant is the shop's to state and
+    // the diver reads it against a flight in the same place they dived.
+    flySafe: data.flySafe
+      ? {
+          when: formatWeekdayTime(data.flySafe.from, locale, shop.timezone),
+          hours: data.flySafe.hours,
+          anchor: data.flySafe.anchor,
+        }
+      : null,
     fieldGuide: data.fieldGuide,
     observedSpecies: data.observedSpecies,
     shoutout: data.shoutout,

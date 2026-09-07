@@ -162,6 +162,9 @@ const VIEWPORTS = [
  * a real posture too; it is not photographed here, and should not be until
  * something other than a hunch says it needs to be.
  */
+/** The phone of `VIEWPORTS`, named — the fold is a phone behaviour and shoots there alone. */
+const PHONE_VIEWPORT = VIEWPORTS[0];
+
 const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
 
 /**
@@ -1164,6 +1167,42 @@ async function captureStickyFoot(page: Page, name: string, scheme: "light" | "da
   });
 }
 
+/**
+ * **The bar, folded** — ADR 20260907-nothing-from-nowhere, decision 5.
+ *
+ * A phone-width viewport shot at a scroll position, because both halves of the
+ * subject need it: the fold only runs below `lg`, and it only *has* a state
+ * worth photographing once the page has scrolled past 120px. `capture()` cannot
+ * take this — it shoots the whole document at scroll 0, which is the one
+ * position where the fold has deliberately done nothing.
+ *
+ * No `animations: "disabled"`: this animation's progress comes from the scroll
+ * offset, not from a clock, so at a fixed scroll it is already stationary and
+ * there is nothing to freeze. Disabling it would jump the label to its end
+ * state at *any* scroll, which would photograph the same picture whether the
+ * mechanism worked or not.
+ *
+ * The wait is on the label's own computed opacity reaching 1 — the state the
+ * shot is of, not a guess at how long it takes to get there.
+ */
+async function captureFolded(page: Page, name: string, scheme: "light" | "dark") {
+  const baseViewport = page.viewportSize();
+  await withTransitionsOff(page, async () => {
+    await page.setViewportSize(PHONE_VIEWPORT);
+    await paintWholeDocument(page);
+    // Past the 120px range, so the fold is complete rather than mid-cross.
+    await page.evaluate(() => window.scrollTo(0, 240));
+    await page.waitForFunction(() => {
+      const slot = document.querySelector("[data-chrome-title-slot]");
+      const name = document.querySelector("[data-chrome-shop-name]");
+      if (!slot || !name) return false;
+      return getComputedStyle(slot).opacity === "1" && Number(getComputedStyle(name).opacity) === 0;
+    });
+    await page.screenshot({ path: `e2e/screenshots/${name}-${scheme}-vw-390.png` });
+    if (baseViewport) await page.setViewportSize(baseViewport);
+  });
+}
+
 async function capturePrint(page: Page, name: string) {
   // Switching media repaints the whole document in print tokens, which is a
   // property change like any other and so can start transitions of its own —
@@ -2113,6 +2152,33 @@ for (const scheme of ["light", "dark"] as const) {
         // variant twice is the failure this exists to avoid.
         await page.getByTestId(AFTER_STATE_TEST_IDS.seen).filter({ visible: true }).waitFor();
         await capture(page, "recap-seen-on-the-day", scheme);
+      });
+
+      /**
+       * **The day the crew logged, with its times** (issue #1425, N-04).
+       *
+       * The `recap` capture above is the day with no `executed_dives` row,
+       * which is what most recaps look like at the moment they are opened, and
+       * it carries no fly-safe line: nothing on that record can say. This is
+       * the other branch — both tanks logged with a time out — and the one
+       * sentence it adds under the record: when this diver may fly, in the
+       * shop's zone, with the hours and who set them. A separate capture from
+       * the two beside it for the same reason they are separate from each
+       * other: a logged day, a changed site and a sighting are three states
+       * that do not travel together.
+       */
+      test(`a recap that says when the diver may fly renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const seeded = await request.post("/api/test/seed-dive-times");
+        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
+        // Waiting on the line itself, not on the page — see the capture above.
+        await page.getByTestId(AFTER_STATE_TEST_IDS.flySafe).filter({ visible: true }).waitFor();
+        await capture(page, "recap-fly-safe", scheme);
       });
 
       /**
@@ -3563,6 +3629,23 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The same roster, scrolled — the bar wearing the page's name.**
+       *
+       * This is the surface the fold was written for: a staffer halfway down
+       * Divers used to see "Blue Mantis Divers" and 26 names, with nothing on
+       * screen saying which page they were on (ADR
+       * 20260907-nothing-from-nowhere, decision 5; issue #1422). The capture is
+       * the only thing that can catch the label arriving at the wrong size, in
+       * the wrong place, or on top of the shop's mark rather than beside it.
+       */
+      test(`the bar folds the page's title in on a phone (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/divers");
+        await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+        await page.locator("main ul li").first().waitFor();
+        await captureFolded(page, "chrome-folded-title", scheme);
+      });
+
+      /**
        * The form the front desk fills in most often, and the one the command
        * palette's create flow lands on. Four specs reach it and none of them
        * had ever looked at it: `check:route-coverage` counted an e2e spec as
@@ -4471,6 +4554,20 @@ for (const scheme of ["light", "dark"] as const) {
         await openSettingsRow(page, "Dock-day rhythm");
         await page.getByLabel("Surface interval between dives").waitFor();
         await capture(page, "settings-dock-day-rhythm", scheme);
+      });
+
+      /**
+       * The fly-safe hours, open (issue #1425) — two whole-hour boxes whose
+       * floors are DAN's minimums. Its own capture for the reason the row
+       * above has one: closed everywhere else, and the form is the only place
+       * a shop sets the number the recap then credits to it.
+       */
+      test(`the fly-safe hours card renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await page.getByRole("heading", { name: "Fly-safe hours" }).waitFor();
+        await openSettingsRow(page, "Fly-safe hours");
+        await page.getByLabel("After two or more dives").waitFor();
+        await capture(page, "settings-fly-safe", scheme);
       });
 
       /**

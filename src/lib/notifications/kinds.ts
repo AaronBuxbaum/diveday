@@ -291,6 +291,20 @@ const tripRecapSchema = z.object({
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   sites: z.array(z.string().trim().min(1).max(120)).max(10).optional(),
+  /**
+   * When the diver may fly (`src/lib/fly-safe.ts`, issue #1425): the instant,
+   * the hours that produced it, and whether the clock started at the last
+   * recorded exit or the boat's scheduled return. Absent when nothing on the
+   * record could honestly say, and then the email says nothing about flying.
+   */
+  flySafe: z
+    .object({
+      from: z.date(),
+      hours: z.number().int().min(1).max(72),
+      basis: z.enum(["single", "repetitive"]),
+      anchor: z.enum(["last_dive", "scheduled_return"]),
+    })
+    .optional(),
   recapUrl: z.url().max(2_000),
   unsubscribeUrl: z.url().max(2_000),
 });

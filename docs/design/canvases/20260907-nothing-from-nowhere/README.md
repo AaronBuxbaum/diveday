@@ -94,7 +94,7 @@ comment, and a test pins the rule.
 | 18b — a figure rolls: `RollingFigure` on the counter's instrument line and settled count and on the held send's seconds; the never-list held by test over the roll call and the manifest | shipped | `src/components/ui/RollingFigure.tsx` | `src/components/ui/RollingFigure.test.tsx`, `src/components/ui/RollingFigure.never-list.test.ts` |
 | 18c — a row closes its own gap: `SettledRows` on the counter's working queue and its settled group, Undo reversed (the manifest roster still waits on H-69 c) | shipped | `src/components/SettledRows.tsx` | `src/components/SettledRows.test.tsx` |
 | 18d — the sheet follows the thumb: `useDragSheet` on the dock's More sheet, with the grab handle; the scrim tracks the sheet's travel | shipped | `src/components/useDragSheet.ts` | `src/components/useDragSheet.test.tsx` |
-| 18e — the title folds into the bar on a phone | open | — | — |
+| 18e — the title folds into the bar on a phone: `FoldedPageTitle` portals the page's title into `ShopNav`'s slot, three scroll-driven animations over 120px | shipped | `src/components/chrome/FoldedPageTitle.tsx` | `src/components/chrome/FoldedPageTitle.test.tsx`, `src/components/chrome/chrome.test.ts` |
 | 18f — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's brand, updates from `trips.revision`, the two pass-service routes | open | — | — |
 
 **What 18a–18d settled that the drawing left open, and what is still owed:**
@@ -110,13 +110,19 @@ comment, and a test pins the rule.
 - **The roll needs a whole sentence to compare**, not just a number: if
   anything but the digits changed, the figure swaps. The Roll board draws only
   the digits changing, which is the common case and not the only one.
-- **18e is open on a finding the boards did not anticipate** (issue #1422). The fold needs
-  the page's title inside the shell's bar, and this app renders the bar
-  (`ShopNav`, in the shop layout) and the title (`ShopPageHeader`, in the page)
-  in two different trees. Every CSS-only shape either covers the shop-identity
-  menu with a label that stays clickable underneath, or shrinks the heading —
-  which the ADR rules out. It needs a data-flow decision (a title slot on the
-  layout, or a portal) that is a change to the shell rather than to motion.
+- **18e took the portal, and the boards were right about the heading.** The
+  page delivers its title into an `aria-hidden` slot `ShopNav` renders; the
+  slot's absence is what keeps the storefront from folding, and its
+  *emptiness* is what keeps a page with its own header from fading the shop's
+  name away into nothing. The `Title` board drew the page's `<h1>` fading from
+  40px on and the first build without it showed why: the bar is 85% of the page
+  behind a blur, so a 34px heading ghosts straight through the chrome and the
+  word ends up on screen twice.
+- **A bare `scroll()` is not the page.** It binds to the nearest scrollable
+  ancestor, which is not the same scroller for a label in a sticky header and a
+  heading in the page. Measured on a freshly onboarded shop the fold was
+  already a fifth applied on arrival; `scroll(root block)` is what the boards
+  mean by "the scroll".
 - **18f is unbuilt and unbuildable here**: it waits on H-69 b and on
   credentials a human holds.
 
