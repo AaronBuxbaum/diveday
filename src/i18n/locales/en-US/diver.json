@@ -242,6 +242,14 @@
     "diveNumber": "Dive {number}",
     "siteToBeConfirmed": "Site to be confirmed",
     "sitesToBeConfirmed": "{count, plural, one {One dive · site to be confirmed} other {# dives · sites to be confirmed}}",
+    "dayProfile": {
+      "bottomTime": "Usually {minutes, plural, one {# minute} other {# minutes}} in the water",
+      "surfaceInterval": "Usually {minutes, plural, one {# minute} other {# minutes}} on the surface",
+      "pickerLabel": "See these depths against your card",
+      "within": "Nothing on this day goes past {limit}.",
+      "over": "Dive {number} is at a site that reaches {site}, past the {limit} your card covers. You can still book: tell the crew and they will plan your dive to your limit.",
+      "overNoCard": "Dive {number} is at a site that reaches {site}. A first dive without a card stays inside {limit}. You can still book: ask the crew what this day needs."
+    },
     "automatedOutlook": "Automated marine outlook",
     "waterTemperature": "Water temperature",
     "visibility": "Visibility",
