@@ -972,6 +972,7 @@
     "guardianIntro": "{name} is under 18, so a parent or legal guardian signs this waiver too.",
     "guardianName": "Guardian’s full name",
     "guardianRelationship": "Relationship to {name}",
+    "guardianRelationshipChoose": "Choose one",
     "guardianRelationshipParent": "Parent",
     "guardianRelationshipLegalGuardian": "Legal guardian",
     "guardianEmail": "Guardian’s email",

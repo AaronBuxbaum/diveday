@@ -18,12 +18,17 @@
     "recording": "Registrando…",
     "recordPaperSignature": "Registrar firma en papel",
     "guardianNameLabel": "Madre, padre o tutor que firmó",
-    "guardianRelationshipLabel": "Relación"
+    "guardianRelationshipLabel": "Relación",
+    "guardianRelationshipChoose": "Elige una opción"
   },
   "guardian": {
     "relationship": {
       "parent": "madre o padre",
       "legalGuardian": "tutor legal"
+    },
+    "relationshipOption": {
+      "parent": "Madre o padre",
+      "legalGuardian": "Tutor legal"
     },
     "coSignedBy": "Firmada también por {name} ({relationship})"
   },

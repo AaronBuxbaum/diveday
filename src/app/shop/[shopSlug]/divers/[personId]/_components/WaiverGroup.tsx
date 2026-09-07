@@ -12,6 +12,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type WaiverRowState, waiverRowStateText } from "@/i18n/waiver-labels";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { smsRecipient } from "@/lib/notifications/sms";
 import { markWaiverInPersonAction, recordMedicalClearanceAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
@@ -234,6 +235,13 @@ export function WaiverGroup({
                 <PaperWaiverControl
                   action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
                   copy={paperWaiverCopy(t)}
+                  // A minor's paper release names its co-signer too — measured
+                  // on today, the day the staffer records the signature
+                  // (ADR 20260907-guardian-co-signature).
+                  requiresGuardian={guardianSignatureRequired(
+                    diver.person.dateOfBirth,
+                    signingDate(nowDate(), timezone),
+                  )}
                   variant="secondary"
                   className=""
                   // A refused attestation lands back here with its notice;

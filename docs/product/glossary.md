@@ -405,9 +405,27 @@ new domain concept, define it here in the same PR.
   majority in the shop's jurisdiction (Florida at launch, H-01). The diving restrictions on
   under-15s are a separate rule and travel through the junior depth bands above, so the two never
   have to agree. Shown on the roster and manifest so a captain reading the boarding list can see it
-  without opening a profile (H-21). **A minor can still sign their own waiver solo** — accepted
-  as-is for now and explicitly flagged for the H-01–H-03 waiver legal review, not silently left
-  open.
+  without opening a profile (H-21). **A minor does not sign their own waiver alone** as of
+  2026-09-07 — see **Guardian co-signature** below. Note the two dates the word is measured on and
+  never confuse them: the roster's badge asks whether the diver is under 18 on the **trip** date,
+  because that is who is on the boat; the co-signature asks whether they were under 18 on the day
+  they **signed**, because a release a seventeen-year-old executed alone does not become valid on
+  their eighteenth birthday.
+- **Guardian co-signature** — the second signature a **minor's** liability release takes: a parent
+  or legal guardian signing the same release, on the same page, under the same signature provider
+  as the diver's own (ADR
+  [20260907-guardian-co-signature](../architecture/decisions/20260907-guardian-co-signature.md);
+  owner decision 2026-09-07, which closed H-21's open half). It is six columns on the release
+  record — who, what they are to the diver (**parent** or **legal guardian**, a code, never free
+  text), how to reach them, and the provider, consent and signature timestamps — never a `people`
+  row, because a guardian is a party to one document rather than a customer of the shop. Until both
+  signatures are on it, readiness raises **guardian signature missing** and the diver does not
+  board; the shop's fix is the same as an expired release's, a fresh link that asks for both. The
+  rule **fails open on an unknown date of birth**, exactly as the minimum-age gate does, so a diver
+  the shop never asked is treated as an adult — and the day a date of birth lands on their record,
+  the release they already signed becomes a blocker rather than a silent pass. It does not answer
+  H-01 or H-03: the release wording is unchanged, still English, and whether typed consent is a
+  sufficient assurance level is as open for the guardian as it is for the diver.
 - **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
   OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
   `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence

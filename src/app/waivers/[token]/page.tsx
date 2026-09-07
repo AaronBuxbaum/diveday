@@ -94,6 +94,7 @@ const guardianDraftSchema = z.object({
   guardianName: z.string().trim().max(120).optional(),
   guardianRelationship: z.string().trim().max(40).optional(),
   guardianEmail: z.string().trim().max(200).optional(),
+  guardianAcknowledged: z.string().max(4).optional(),
 });
 
 /**
@@ -109,6 +110,31 @@ const completeGuardianSchema = z.object({
   guardianAcknowledged: z.literal("on"),
 });
 
+/**
+ * The guardian section as typed, for the draft — or `undefined` when the page
+ * never rendered one, so an adult's draft carries no guardian and a stray
+ * field in a hand-built request stores nothing.
+ *
+ * **Module scope, not a closure inside the component.** The two inline
+ * `"use server"` actions below close over their enclosing scope, and Next
+ * serialises that scope to make the form work with no JavaScript at all — a
+ * *function* in it cannot be serialised, so declaring this beside them broke
+ * progressive enhancement for the whole waiver form ("Failed to serialize an
+ * action for progressive enhancement", every render). It takes the one fact it
+ * needs as an argument instead, so the actions close over a boolean.
+ */
+function guardianDraftFrom(formData: FormData, guardianRequired: boolean) {
+  if (!guardianRequired) return undefined;
+  const parsed = guardianDraftSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return undefined;
+  return {
+    name: parsed.data.guardianName || null,
+    relationship: parsed.data.guardianRelationship || null,
+    email: parsed.data.guardianEmail || null,
+    acknowledged: parsed.data.guardianAcknowledged === "on",
+  };
+}
+
 type WaiverInvalidField =
   | "medical"
   | "signerName"
@@ -119,6 +145,15 @@ type WaiverInvalidField =
   | "guardianRelationship"
   | "guardianEmail"
   | "guardianAcknowledged";
+
+/**
+ * The field names a zod refusal names, as a set. Aliased rather than written
+ * inline three times: a `ReadonlySet<PropertyKey>` parameter followed by
+ * another one puts a `>` and a `<` around two lines of prose-shaped text,
+ * which `pnpm check:copy` reads — correctly, by its own rule — as a JSX text
+ * node in a `.tsx` file.
+ */
+type IssuePaths = ReadonlySet<PropertyKey>;
 
 /** The guardian controls, in tab order, for the fallback error banner. */
 const GUARDIAN_FIELDS = [
@@ -139,9 +174,9 @@ const GUARDIAN_FIELDS = [
  * enforcement of record either way.
  */
 function firstInvalidWaiverField(
-  signatureIssuePaths: ReadonlySet<PropertyKey>,
+  signatureIssuePaths: IssuePaths,
   answers: MedicalAnswers | null,
-  guardianIssuePaths: ReadonlySet<PropertyKey> = new Set(),
+  guardianIssuePaths: IssuePaths = new Set(),
 ): WaiverInvalidField | undefined {
   if (!answers) return "medical";
   if (signatureIssuePaths.has("signerName")) return "signerName";
@@ -523,21 +558,6 @@ export default async function WaiverPage({
     signingDate(nowDate(), shop.timezone),
   );
   const draftGuardian = record.draftGuardian;
-  /**
-   * The guardian section as typed, for the draft — or `undefined` when the
-   * page never rendered one, so an adult's draft carries no guardian and a
-   * stray field in a hand-built request stores nothing.
-   */
-  function guardianDraftFrom(formData: FormData) {
-    if (!guardianRequired) return undefined;
-    const parsed = guardianDraftSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) return undefined;
-    return {
-      name: parsed.data.guardianName || null,
-      relationship: parsed.data.guardianRelationship || null,
-      email: parsed.data.guardianEmail || null,
-    };
-  }
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
   const draft = record.draftMedicalAnswers;
   /** Only pre-fill draft answers captured against this same questionnaire. */
@@ -640,7 +660,7 @@ export default async function WaiverPage({
       signerName: parsed.data.signerName,
       acknowledged: parsed.data.acknowledged === "on",
       medicalAnswers: answers,
-      guardian: guardianDraftFrom(formData),
+      guardian: guardianDraftFrom(formData, guardianRequired),
     });
     // Persist the contact now too, so "save and finish later" keeps it — blanks
     // never overwrite what's on file.
@@ -702,7 +722,7 @@ export default async function WaiverPage({
           signerName: typed.success ? typed.data.signerName : undefined,
           acknowledged: typed.success && typed.data.acknowledged === "on",
           medicalAnswers: answers,
-          guardian: guardianDraftFrom(formData),
+          guardian: guardianDraftFrom(formData, guardianRequired),
         });
       }
       redirect(refusedSubmitPath(token, invalidField));
@@ -750,7 +770,7 @@ export default async function WaiverPage({
         signerName: parsed.data.signerName,
         acknowledged: parsed.data.acknowledged === "on",
         medicalAnswers: answers,
-        guardian: guardianDraftFrom(formData),
+        guardian: guardianDraftFrom(formData, guardianRequired),
       });
       if (contact.success) {
         if (recordBookingId) {
@@ -1197,8 +1217,9 @@ export default async function WaiverPage({
                     defaultValue={draftGuardian?.relationship ?? ""}
                     className={controlClass}
                   >
-                    {/* i18n-exempt: an empty placeholder option, not copy. */}
-                    <option value="" disabled />
+                    <option value="" disabled>
+                      {t("waiver.guardianRelationshipChoose")}
+                    </option>
                     {diverGuardianRelationshipOptions(t).map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
@@ -1214,6 +1235,10 @@ export default async function WaiverPage({
                   type="checkbox"
                   value="on"
                   required
+                  // Kept across a refusal, like the diver's own box above: a
+                  // family that hit one refusal should not have to re-read and
+                  // re-tick the agreement to try the next answer.
+                  defaultChecked={draftGuardian?.acknowledged ?? false}
                   aria-invalid={
                     signatureCardError?.anchor === "guardianAcknowledged" ? "true" : undefined
                   }

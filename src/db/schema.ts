@@ -5420,6 +5420,8 @@ export type DraftGuardian = {
   name: string | null;
   relationship: string | null;
   email: string | null;
+  /** The guardian's own consent tick, kept across a refusal exactly as `draft_acknowledged` is. */
+  acknowledged: boolean;
 };
 
 /**

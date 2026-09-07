@@ -284,6 +284,7 @@
       "certifications.spec.ts",
       "divers.spec.ts",
       "gear-fit-and-age.spec.ts",
+      "guardian-co-signature.spec.ts",
       "import.spec.ts",
       "nitrox.spec.ts",
       "orders-demo.spec.ts",
@@ -642,8 +643,8 @@
     "visual": ["verify-invalid"]
   },
   "/waivers/[token]": {
-    "e2e": ["a11y.spec.ts", "waivers.spec.ts"],
-    "visual": ["expired-link-unknown", "waiver-active"],
+    "e2e": ["a11y.spec.ts", "guardian-co-signature.spec.ts", "waivers.spec.ts"],
+    "visual": ["expired-link-unknown", "waiver-active", "waiver-guardian"],
     "a11y": ["a11y.spec.ts"]
   }
 }

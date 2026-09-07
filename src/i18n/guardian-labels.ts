@@ -20,6 +20,16 @@ export const DIVER_GUARDIAN_RELATIONSHIP_KEYS: Record<GuardianRelationship, Dive
   legal_guardian: "waiver.guardianRelationshipLegalGuardian",
 };
 
+/**
+ * The same two codes as a `<select>` option rather than as the tail of a
+ * sentence — "Legal guardian" standing alone, where `coSignedBy` wants
+ * "(legal guardian)" inside its parentheses.
+ */
+const GUARDIAN_RELATIONSHIP_OPTION_KEYS: Record<GuardianRelationship, StaffMessageKey> = {
+  parent: "shared.guardian.relationshipOption.parent",
+  legal_guardian: "shared.guardian.relationshipOption.legalGuardian",
+};
+
 /** The one word a relationship code goes by, in the staff bundle's language. */
 export function guardianRelationshipText(
   t: StaffTranslator,
@@ -50,5 +60,15 @@ export function diverGuardianRelationshipOptions(
   return GUARDIAN_RELATIONSHIPS.map((value) => ({
     value,
     label: t(DIVER_GUARDIAN_RELATIONSHIP_KEYS[value]),
+  }));
+}
+
+/** The paper-release form's relationship options, in the staff bundle's language. */
+export function staffGuardianRelationshipOptions(
+  t: StaffTranslator,
+): Array<{ value: GuardianRelationship; label: string }> {
+  return GUARDIAN_RELATIONSHIPS.map((value) => ({
+    value,
+    label: t(GUARDIAN_RELATIONSHIP_OPTION_KEYS[value]),
   }));
 }

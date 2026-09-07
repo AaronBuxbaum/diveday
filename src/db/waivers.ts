@@ -932,6 +932,9 @@ export type CompleteWaiverOutcome =
  * the same assurance the diver's signature takes — a typed name is not a
  * signature until it is ticked.
  */
+/** Local part, `@`, domain with at least one dot — the shape an address has. */
+const GUARDIAN_EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export type GuardianInput = {
   name: string;
   relationship: string;
@@ -971,7 +974,11 @@ function guardianEvidence(
   if (!evidence) return { ok: false };
   if (!isGuardianRelationship(guardian.relationship)) return { ok: false };
   const email = guardian.email.trim().toLowerCase();
-  if (!email.includes("@")) return { ok: false };
+  // The writer's own shape check, not the page's. `/waivers/[token]` runs a
+  // zod `.email()` first and is the enforcement of record for a browser; this
+  // is what stands between a hand-built request and an address on a signed
+  // release that nobody can ever reach the guardian at.
+  if (!GUARDIAN_EMAIL_SHAPE.test(email)) return { ok: false };
   if (personNamesMatch(evidence.signerName, diverFullName)) return { ok: false };
   return {
     ok: true,

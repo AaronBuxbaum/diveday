@@ -54,9 +54,7 @@ describe("guardianSignatureMissing", () => {
   });
 
   it("clears a minor whose guardian co-signed", () => {
-    expect(
-      guardianSignatureMissing(record({ guardianSignedAt: signedAt }), minor),
-    ).toBe(false);
+    expect(guardianSignatureMissing(record({ guardianSignedAt: signedAt }), minor)).toBe(false);
   });
 
   it("never asks an adult, or a diver with no date on file, for a guardian", () => {
@@ -75,9 +73,9 @@ describe("guardianSignatureMissing", () => {
 
   it("is somebody else's blocker on a record nobody has signed", () => {
     expect(guardianSignatureMissing(record({ status: "pending" }), minor)).toBe(false);
-    expect(
-      guardianSignatureMissing(record({ signedAt: null, completedAt: null }), minor),
-    ).toBe(false);
+    expect(guardianSignatureMissing(record({ signedAt: null, completedAt: null }), minor)).toBe(
+      false,
+    );
   });
 
   it("holds over a medical-review record too, since that is a signed release parked", () => {

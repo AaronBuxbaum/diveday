@@ -481,9 +481,7 @@ export async function carriedPreparationForDiver(
     waiver: shopWaiverStatus({
       personSignedWaivers: signedWaivers.get(input.personId) ?? [],
       currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
-      signer: signer
-        ? { dateOfBirth: signer.dateOfBirth, timezone: signer.timezone }
-        : undefined,
+      signer: signer ? { dateOfBirth: signer.dateOfBirth, timezone: signer.timezone } : undefined,
     }),
     certifications: levelCards,
     hasRentalFit: input.hasRentalFit,

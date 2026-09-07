@@ -972,6 +972,7 @@
     "guardianIntro": "{name} es menor de 18 años, así que su madre, padre o tutor legal también firma esta exención.",
     "guardianName": "Nombre completo del tutor",
     "guardianRelationship": "Relación con {name}",
+    "guardianRelationshipChoose": "Elige una opción",
     "guardianRelationshipParent": "Madre o padre",
     "guardianRelationshipLegalGuardian": "Tutor legal",
     "guardianEmail": "Correo electrónico del tutor",

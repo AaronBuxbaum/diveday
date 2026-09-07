@@ -18,12 +18,17 @@
     "recording": "Recording…",
     "recordPaperSignature": "Record paper signature",
     "guardianNameLabel": "Parent or guardian who signed",
-    "guardianRelationshipLabel": "Relationship"
+    "guardianRelationshipLabel": "Relationship",
+    "guardianRelationshipChoose": "Choose one"
   },
   "guardian": {
     "relationship": {
       "parent": "parent",
       "legalGuardian": "legal guardian"
+    },
+    "relationshipOption": {
+      "parent": "Parent",
+      "legalGuardian": "Legal guardian"
     },
     "coSignedBy": "Co-signed by {name} ({relationship})"
   },

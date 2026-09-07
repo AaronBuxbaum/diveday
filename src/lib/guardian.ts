@@ -27,9 +27,7 @@ export const GUARDIAN_RELATIONSHIPS = ["parent", "legal_guardian"] as const;
 export type GuardianRelationship = (typeof GUARDIAN_RELATIONSHIPS)[number];
 
 export function isGuardianRelationship(value: unknown): value is GuardianRelationship {
-  return (
-    typeof value === "string" && (GUARDIAN_RELATIONSHIPS as readonly string[]).includes(value)
-  );
+  return typeof value === "string" && (GUARDIAN_RELATIONSHIPS as readonly string[]).includes(value);
 }
 
 /**
@@ -72,7 +70,7 @@ export function signingDate(signedAt: Date, timezone: string): CalendarDate {
 
 /** A record a guardian has co-signed, whatever else is true about it. */
 export function waiverSignedByGuardian(record: Pick<WaiverRecord, "guardianSignedAt">): boolean {
-  return record.guardianSignedAt !== null;
+  return Boolean(record.guardianSignedAt);
 }
 
 /**

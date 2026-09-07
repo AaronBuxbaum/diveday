@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
 import { canPersonConfigureTrips, canPersonRefund } from "@/db/authz";
 import { getBoatById } from "@/db/boats";
 import {
@@ -359,6 +360,12 @@ const IN_PERSON_WAIVER_NOTICE: Record<
   template_not_found: "waiver-error",
   staff_not_found: "waiver-error",
   invalid_signature: "waiver-error",
+  // A minor's paper release with no co-signer, or one that is not a signature
+  // (ADR 20260907-guardian-co-signature). The form asks for both fields and
+  // marks them required, so reaching either of these means the request did not
+  // come from it — the seventh's company, not its own message.
+  guardian_required: "waiver-error",
+  guardian_invalid: "waiver-error",
 };
 
 export async function saveDetails(shopSlug: string, tripId: string, formData: FormData) {
@@ -1279,6 +1286,11 @@ export async function markWaiverInPersonAction(
     subject: { bookingId },
     recordedByPersonId: s.user.personId,
     medicalAttested: formData.get("medicalAttested") === "on",
+    // A minor's paper release names its co-signer (ADR
+    // 20260907-guardian-co-signature). Passed as typed; `recordInPersonWaiver`
+    // decides from the date of birth on file whether it is needed at all, and
+    // refuses a section that is not a signature.
+    guardian: paperGuardianFrom(formData),
   });
   if (!outcome.ok) {
     revalidateAndRedirect(

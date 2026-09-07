@@ -22,6 +22,7 @@ import type { listBookingNotes } from "@/db/operations";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { STAFF_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
+import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import {
   CERTIFICATION_LEVEL_KEYS,
   diveRecencyText,
@@ -33,13 +34,13 @@ import {
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
-import { guardianSignatureOf } from "@/lib/guardian";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { formatDateTimeTz } from "@/lib/format";
+import { guardianSignatureOf, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
@@ -418,6 +419,11 @@ export function RosterSection({
     );
   };
 
+  // Today, in the shop's own zone: the guardian rule measures the diver's age
+  // on the day the release is *signed*, which for a paper release recorded
+  // here is now — never the departure's date (ADR 20260907-guardian-co-signature).
+  const signedToday = signingDate(nowDate(), shopTimezone);
+
   const stillToClear = roster.filter((entry) => !isSettled(entry));
   const ready = roster.filter((entry) => isSettled(entry));
   // The queue's own rule, stated once (src/lib/roster-filters.ts): an absent
@@ -455,6 +461,7 @@ export function RosterSection({
     const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
     const waiverStatus = waiverState(currentWaiver);
     const waiverControl = WAIVER_CONTROLS[waiverStatus];
+    const guardian = currentWaiver ? guardianSignatureOf(currentWaiver) : null;
     const flaggedPrompts =
       (waiverStatus === "medical_review" || waiverStatus === "medical_not_cleared") &&
       currentWaiver?.medicalAnswers
@@ -470,6 +477,7 @@ export function RosterSection({
     const dateOfBirth = person.dateOfBirth;
     const age = dateOfBirth ? ageOnDate(dateOfBirth, tripDate) : null;
     const minor = dateOfBirth ? isMinorOnDate(dateOfBirth, tripDate) : false;
+    const requiresGuardian = guardianSignatureRequired(dateOfBirth, signedToday);
     const birthday = birthdayCallout(dateOfBirth, tripDate);
     const hasEmergencyContact = Boolean(
       person.emergencyContactName && person.emergencyContactPhone,
@@ -877,6 +885,7 @@ export function RosterSection({
               action={markWaiverInPersonAction}
               bookingId={booking.id}
               copy={paperWaiverCopy(t)}
+              requiresGuardian={requiresGuardian}
               // The fallback under the row's leading action reads in quiet
               // ink — a teal link out-shouted the bordered send pill above it
               // (design review 2026-08-29).
@@ -1113,12 +1122,8 @@ export function RosterSection({
               {/* A minor's release names who co-signed it (ADR
                   20260907-guardian-co-signature) — the same sentence the
                   manifest and the signature log use. */}
-              {guardianSignatureOf(currentWaiver) ? (
-                <p className="mt-1 text-sm text-muted">
-                  {guardianCoSignedText(t, guardianSignatureOf(currentWaiver) as NonNullable<
-                    ReturnType<typeof guardianSignatureOf>
-                  >)}
-                </p>
+              {guardian ? (
+                <p className="mt-1 text-sm text-muted">{guardianCoSignedText(t, guardian)}</p>
               ) : null}
             </div>
           ) : null}

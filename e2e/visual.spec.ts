@@ -27,12 +27,13 @@ import {
   seededTripId,
   threadStatus,
   waiverLinkFromResult,
+  waiverLinkFromToast,
 } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and ninety-one key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 764 screenshots per run (see
+ * Visual regression coverage. A hundred and ninety-nine key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 796 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -2223,6 +2224,58 @@ for (const scheme of ["light", "dark"] as const) {
           .check();
         await page.getByTestId("waiver-step-rail").getByText("1 of 3 done").waitFor();
         await capture(page, "waiver-rail-follow-ups", scheme);
+      });
+
+      /**
+       * **The guardian's card** (ADR 20260907-guardian-co-signature): the
+       * second signature a minor's release takes, and the one composition on
+       * this page no other capture can reach — it renders from the diver's own
+       * date of birth, so an adult's link never draws it.
+       *
+       * Its own diver rather than the seeded thirteen-year-old, for the reason
+       * `e2e/guardian-co-signature.spec.ts` gives: hers is already co-signed so
+       * the demo boat is not permanently blocked, and a signed release issues
+       * no second link.
+       */
+      test(`the guardian's half of a minor's release renders true to the design (${scheme})`, async ({
+        page,
+        browser,
+        workerBaseURL,
+        staffStorageState,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const staffContext = await browser.newContext({
+          baseURL: workerBaseURL,
+          storageState: await staffStorageState("owner"),
+        });
+        const staffPage = makeActivitySafe(await staffContext.newPage());
+        // A minted diver keeps the capture's own name out of the frame: the
+        // page prints the diver's name in the guardian card's opening line, so
+        // a per-run stamp would change the picture on every run. Pinned words.
+        await staffPage.goto("/shop/blue-mantis/divers/new");
+        await staffPage.getByLabel("Full name").fill("Robin Delgado");
+        await staffPage.getByLabel("Email").fill("robin.delgado@example.com");
+        await staffPage.getByRole("button", { name: "Add diver" }).click();
+        await staffPage.waitForURL(/\/shop\/blue-mantis\/divers\/[0-9a-f-]{36}/);
+        // Thirteen against the frozen e2e clock, so the rendered page is the
+        // same picture on every run. `?edit=1` names the disclosure the date of
+        // birth lives behind rather than relying on where a fresh record lands.
+        await staffPage.goto(`${new URL(staffPage.url()).pathname}?edit=1`);
+        await staffPage.getByLabel("Date of birth").fill(daysFromNow(-365 * 13));
+        await staffPage.getByRole("button", { name: "Save details" }).click();
+        await staffPage.getByRole("status").getByText("Diver details updated").waitFor();
+        // Back to the record's own URL first: the save lands on a `?notice=`,
+        // whose banner is a second `role="status"` beside the copy toast
+        // `waiverLinkFromToast` reads.
+        await staffPage.goto(new URL(staffPage.url()).pathname);
+        await staffPage.getByText("Send options", { exact: true }).click();
+        await staffPage.getByRole("button", { name: "Copy link" }).click();
+        const waiverHref = await waiverLinkFromToast(staffPage);
+        await staffContext.close();
+
+        await page.goto(waiverHref);
+        await page.getByRole("heading", { name: "Parent or guardian" }).waitFor();
+        await capture(page, "waiver-guardian", scheme);
       });
 
       /**
