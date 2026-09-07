@@ -5,6 +5,11 @@ DiveDay's public pages are the homepage (`/`), product page (`/product`), pricin
 (`/switching/*`) join them as they ship. They are a truthful sales surface for the product that
 exists today.
 
+The regional pages (`/dive`, `/dive/<town>`, issue #1436) are public and carry DiveDay's own words,
+and they are **not** on that list: they are addressed to a diver looking for a boat rather than to
+an owner looking for software, so they carry no trial pitch and no price. The claims policy and the
+voice rules below still bind every sentence on them; the positioning spine does not.
+
 This document is the living rulebook for those pages: the positioning they argue, the claims they
 may make, the voice they use, and the maintenance loop that keeps them true. The dated case for the
 current direction is [archive/marketing-review-20260723.md](archive/marketing-review-20260723.md)

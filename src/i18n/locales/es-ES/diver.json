@@ -103,6 +103,19 @@
     "conservationCommitmentsDisclaimer": "Estas son declaraciones del centro; DiveDay no las verifica ni las respalda.",
     "credit": "Reservas con DiveDay"
   },
+  "regions": {
+    "index": {
+      "title": "Centros de buceo por localidad",
+      "description": "Centros que publican su calendario y aceptan reservas con DiveDay, agrupados por la localidad desde la que bucean.",
+      "shopCount": "{count, plural, one {# centro} other {# centros}}",
+      "emptyTitle": "Todavía no hay localidades",
+      "emptyBody": "Un centro aparece aquí en cuanto programa una salida."
+    },
+    "region": {
+      "title": "Centros de buceo en {name}",
+      "description": "Cada centro de esta lista publica su propio calendario y acepta reservas con DiveDay."
+    }
+  },
   "schedule": {
     "eyebrow": "Salidas",
     "title": "Calendario",
