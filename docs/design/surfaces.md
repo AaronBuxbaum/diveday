@@ -276,6 +276,9 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 
 ### The thread — `/ready/[token]` (and every state after booking)
 
+**Chosen 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), slice 18f, [spec](canvases/20260907-nothing-from-nowhere/SPEC.md)):
+one line beside Add to calendar, *Add to Wallet*, on every state after booking; the pass wears the shop's brand, carries the top card's facts, the diver's name and the crew-set stage, surfaces on the lock screen from the dock call, and updates when the plan moves. Never the thread's URL, a barcode, a price or a medical fact. Rendered only when a platform is configured; otherwise the thread as it ships.
+
 **Proposed 2026-09-04** (same ADR and canvas): one step, "Anything changed?", over the facts the shop kept; provenance on the arrival card; the boat's-back line on the day; the recap becomes a postcard with its number, an image to keep, a private pulse and the next dive with its reason.
 
 **Built 2026-08-29** (slices 7c and 7d) — same ADR and canvas. Extends ADR
