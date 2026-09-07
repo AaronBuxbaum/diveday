@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motionMs } from "@/lib/motion";
 
 /**
@@ -84,13 +84,12 @@ export type DragSheet = {
   offset: number;
   /** True while a finger is on it: the caller must not animate anything. */
   dragging: boolean;
-  /** Spread onto the sheet's own element. */
-  handlers: {
-    onPointerDown: (event: React.PointerEvent<HTMLElement>) => void;
-    onPointerMove: (event: React.PointerEvent<HTMLElement>) => void;
-    onPointerUp: (event: React.PointerEvent<HTMLElement>) => void;
-    onPointerCancel: () => void;
-  };
+  /**
+   * Spread onto the sheet's own element. Only the press is bound here — the
+   * rest of the gesture is tracked on the document, so a finger that wanders
+   * off the sheet is still the finger holding it.
+   */
+  handlers: { onPointerDown: (event: React.PointerEvent<HTMLElement>) => void };
   /** The style the sheet wears: the finger's travel, or the release settling. */
   style: React.CSSProperties;
   /** 1 at rest, 0 when the sheet is fully dragged away — the scrim's own opacity. */
@@ -111,15 +110,14 @@ export function useDragSheet({
   const start = useRef<{ y: number; height: number } | null>(null);
   const recent = useRef<{ y: number; at: number } | null>(null);
   const moved = useRef(false);
-  /** The pointer this gesture captured, so the release can hand it back. */
-  const captured = useRef<number | null>(null);
-  const sheetNode = useRef<HTMLElement | null>(null);
+  /** Removes this gesture's document listeners. Null when no press is live. */
+  const release = useRef<(() => void) | null>(null);
+  const dismiss = useRef(onDismiss);
+  dismiss.current = onDismiss;
 
   const end = useCallback(() => {
-    if (captured.current !== null) {
-      sheetNode.current?.releasePointerCapture?.(captured.current);
-      captured.current = null;
-    }
+    release.current?.();
+    release.current = null;
     start.current = null;
     recent.current = null;
     moved.current = false;
@@ -127,8 +125,32 @@ export function useDragSheet({
     setOffset(0);
   }, []);
 
+  // A press that never became a gesture still leaves listeners on the document
+  // if the sheet unmounts under the finger — which is exactly what happens when
+  // a tap on a row navigates away.
+  useEffect(() => () => release.current?.(), []);
+
+  /**
+   * **The gesture is tracked on the document, and the pointer is never
+   * captured.** Two failures, one answer:
+   *
+   * - `setPointerCapture` on the press retargets every later pointer event to
+   *   the sheet, so a tap that never moves produces no `click` on the row
+   *   underneath: every destination in the More sheet silently stopped
+   *   navigating (caught by `staff-nav.spec.ts`, fixed in #1423).
+   * - Capturing only once the drag begins fixes that and opens a second hole:
+   *   below the slop nothing is captured, so a finger that starts near the
+   *   sheet's bottom edge and crosses the slop over the dock is moving over an
+   *   element the sheet's own handlers never hear from, and the drag never
+   *   starts.
+   *
+   * Listening on the document for the life of the press answers both. It sees
+   * every move wherever the finger goes, which is what capture was for, and it
+   * retargets nothing, which is what the click needs. The listeners are scoped
+   * to this pointer id and removed on release, on cancel, and on unmount.
+   */
   const onPointerDown = (event: React.PointerEvent<HTMLElement>) => {
-    if (disabled) return;
+    if (disabled || release.current !== null) return;
     // Touch and pen report `button === -1`; only a non-primary *mouse* button
     // is not a press. The same line, for the same reason, as the pull.
     if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -138,71 +160,70 @@ export function useDragSheet({
     // Dragging from the handle works at any scroll position, because a handle
     // is not content.
     const onHandle = (event.target as HTMLElement | null)?.closest("[data-sheet-handle]") !== null;
-    const scrolled = findScrolled(sheet);
-    if (!onHandle && scrolled > 0) return;
-    sheetNode.current = sheet;
+    if (!onHandle && findScrolled(sheet) > 0) return;
+
+    const pointerId = event.pointerId;
     start.current = { y: event.clientY, height: sheet.getBoundingClientRect().height };
     recent.current = { y: event.clientY, at: event.timeStamp };
-  };
 
-  const onPointerMove = (event: React.PointerEvent<HTMLElement>) => {
-    const from = start.current;
-    if (from === null) return;
-    const delta = event.clientY - from.y;
-    if (!moved.current && Math.abs(delta) < SLOP_PX) return;
-    if (!moved.current) {
-      // **Capture only once this is a drag, never on the press.** Capturing on
-      // `pointerdown` retargets every later pointer event to the sheet, and a
-      // tap that never moves then produces no `click` on the row underneath —
-      // so every destination in the sheet silently stopped navigating, which
-      // is what `staff-nav.spec.ts` caught. Below the slop there is no
-      // gesture (the contract's own words), so there is nothing to capture.
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-      captured.current = event.pointerId;
-    }
-    moved.current = true;
-    setDragging(true);
-    // Down is one for one; up resists, so the sheet reads as attached at the
-    // top rather than as a thing that can be thrown off the screen upward.
-    setOffset(delta >= 0 ? delta : delta * RESISTANCE);
-    if (recent.current === null || event.timeStamp - recent.current.at > VELOCITY_WINDOW_MS) {
-      recent.current = { y: event.clientY, at: event.timeStamp };
-    }
-  };
+    const onMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      const from = start.current;
+      if (from === null) return;
+      const delta = moveEvent.clientY - from.y;
+      if (!moved.current && Math.abs(delta) < SLOP_PX) return;
+      moved.current = true;
+      // Once this is a drag, the finger owns the gesture: without this the
+      // browser scrolls the page (or the sheet's own list) under a hand that
+      // means to move the sheet. Registered `passive: false` for exactly this.
+      if (moveEvent.cancelable) moveEvent.preventDefault();
+      setDragging(true);
+      // Down is one for one; up resists, so the sheet reads as attached at the
+      // top rather than as a thing that can be thrown off the screen upward.
+      setOffset(delta >= 0 ? delta : delta * RESISTANCE);
+      if (recent.current === null || moveEvent.timeStamp - recent.current.at > VELOCITY_WINDOW_MS) {
+        recent.current = { y: moveEvent.clientY, at: moveEvent.timeStamp };
+      }
+    };
 
-  const onPointerUp = (event: React.PointerEvent<HTMLElement>) => {
-    const from = start.current;
-    if (from === null || !moved.current) {
+    const onUp = (upEvent: PointerEvent) => {
+      if (upEvent.pointerId !== pointerId) return;
+      const from = start.current;
+      if (from === null || !moved.current) {
+        end();
+        return;
+      }
+      const travelled = upEvent.clientY - from.y;
+      const since = recent.current;
+      const elapsed = since === null ? 0 : upEvent.timeStamp - since.at;
+      const velocity =
+        since === null || elapsed < MIN_VELOCITY_MS ? 0 : (upEvent.clientY - since.y) / elapsed;
+      const leaving = dismissOnRelease({ travelled, height: from.height, velocity });
+      // Either way the gesture is over and the offset goes back to zero: on a
+      // dismissal the caller's own exit animation takes the sheet the rest of
+      // the way, and holding the offset would fight it.
       end();
-      return;
-    }
-    const travelled = event.clientY - from.y;
-    const since = recent.current;
-    const elapsed = since === null ? 0 : event.timeStamp - since.at;
-    const velocity =
-      since === null || elapsed < MIN_VELOCITY_MS ? 0 : (event.clientY - since.y) / elapsed;
-    if (dismissOnRelease({ travelled, height: from.height, velocity })) {
-      // Leave from where the finger let go: the caller's own exit animation
-      // takes it the rest of the way, and holding the offset would fight it.
-      end();
-      onDismiss();
-      return;
-    }
-    if (captured.current !== null) {
-      sheetNode.current?.releasePointerCapture?.(captured.current);
-      captured.current = null;
-    }
-    setDragging(false);
-    moved.current = false;
-    start.current = null;
-    recent.current = null;
-    setOffset(0);
+      if (leaving) dismiss.current();
+    };
+
+    const onCancel = (cancelEvent: PointerEvent) => {
+      if (cancelEvent.pointerId === pointerId) end();
+    };
+
+    document.addEventListener("pointermove", onMove, { passive: false });
+    document.addEventListener("pointerup", onUp);
+    document.addEventListener("pointercancel", onCancel);
+    release.current = () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      document.removeEventListener("pointercancel", onCancel);
+    };
   };
 
   return {
     offset,
     dragging,
-    handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: end },
+    handlers: { onPointerDown },
     style: {
       transform: offset === 0 ? undefined : `translateY(${offset}px)`,
       // No transition while a finger is on it — the finger is the clock. On

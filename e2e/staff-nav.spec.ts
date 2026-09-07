@@ -227,6 +227,39 @@ test.describe("phone dock", () => {
     await expect(moreButton).toHaveAttribute("aria-current", "true");
   });
 
+  /**
+   * **The thumb that opened the sheet closes it, without reaching** (ADR
+   * 20260907-nothing-from-nowhere, decision 4). Dragged from the very bottom
+   * edge on purpose: every point after the press is over the dock rather than
+   * over the sheet, which is the case that first shipped broken — the gesture
+   * is tracked on the document precisely so a finger that leaves the sheet is
+   * still the finger holding it.
+   */
+  test("the sheet leaves with a thumb that drags it down from its bottom edge", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis");
+    await page.locator("[data-dock-more]").click();
+    const sheet = page.getByRole("dialog", { name: "More" });
+    await expect(sheet).toBeVisible();
+    const box = await sheet.boundingBox();
+    if (!box) throw new Error("sheet has no box");
+
+    const x = box.x + box.width / 2;
+    const bottomEdge = box.y + box.height - 2;
+    await page.mouse.move(x, bottomEdge);
+    await page.mouse.down();
+    // Past the slop while already outside the sheet, then well past the line.
+    await page.mouse.move(x, bottomEdge + 40, { steps: 6 });
+    await page.mouse.move(x, bottomEdge + 320, { steps: 10 });
+    await page.mouse.up();
+
+    await expect(page.getByRole("list", { name: "Run the shop" })).toHaveCount(0);
+    // It closed rather than navigated: a drag is not a tap on whatever row it
+    // started over.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+  });
+
   test("the sheet dismisses on an outside tap without navigating", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
     await page.locator("[data-dock-more]").click();
