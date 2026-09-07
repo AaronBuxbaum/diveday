@@ -26,6 +26,7 @@ pnpm e2e           # Playwright (auto-detects sandbox Chromium; CI installs its 
 pnpm visual        # capture screenshots and run reg-suit comparison and publish to S3
 pnpm check         # repo safeguards + lint + typecheck + unit — the pre-commit bar
 pnpm simulate:day  # one whole dive day against the built server, clock advancing (nightly)
+pnpm persona:bots  # the fifteen personas walked against the demo shop (weekly; --dry-run files nothing)
 ```
 
 ### The one-day simulation
@@ -59,6 +60,45 @@ screenshot — with a failed state named and everything after it marked *not att
 `.github/workflows/simulate-day.yml` runs it every night (and on `workflow_dispatch`), builds
 once, and uploads `simulation/` whether or not the day completed. Options: `--no-build` (reuse
 the build on disk, as the workflow does), `--keep`, `--out <dir>`, `--start <iso>`.
+
+### The weekly persona walk
+
+`pnpm persona:bots` re-reads [the persona frame](../product/personas.md) with a machine (N-61). It
+opens every surface the fifteen personas name, against the demo shop, as the persona who lives on
+it — anonymously for the diver-facing pages, signed in as that persona's role for the staff ones,
+and in Spanish for Ingrid, whose findings are invisible in English — runs a fixed set of probes on
+each, photographs the surfaces the findings name, and files what it found as `needs-triage` issues.
+
+**Every probe is deterministic.** Each one answers yes or no from the rendered DOM, the response
+status, or axe's own rule set: the WCAG 2.0 A/AA + 2.2 AA scan `e2e/a11y.spec.ts` already runs, a
+missing skip link, a message key that reached the screen instead of a sentence, a page that did not
+render, a browser console error, a `/s/**` page that does not name its shop, an image with neither
+dimensions nor lazy loading. The persona doc's softer lines stay a human's reading — a bot guessing
+at those would file opinions into a tracker one person reads.
+
+**It may file three issues a week, and stops filing at forty.** The volume policy is
+`scripts/persona-bots/findings.mjs`, unit-tested in `findings.test.mjs`: one issue per finding
+*class* however many surfaces it fires on, a comment rather than a second issue when the class is
+already open, never a re-file once a human has closed it, three new issues per run, and nothing at
+all once the `needs-triage` inbox is at forty. Every rendered body is put through
+`findIssueProblems` — the same function `pnpm check:follow-ups` runs over the live tracker inside
+every pull request — before anything is filed, because one malformed issue reddens every open PR in
+the repository. ADR
+[20260907-persona-bots-file-under-a-ceiling](../architecture/decisions/20260907-persona-bots-file-under-a-ceiling.md)
+carries the reasoning and the numbers.
+
+Like the one-day simulation it is the e2e fleet's own machinery under a config of its own:
+`scripts/persona-bots/playwright.config.ts` starts a worker server on this checkout's port block,
+`walk.spec.ts` drives it, and the screenshots come from `scripts/screenshot.mjs` rather than a
+capture driver written for the occasion. **Nothing in it is a gate**, in either direction: a
+finding is data written to `persona-bots/findings.json` and never a red test, and every way the run
+can break — no browser, no build, an incomplete walk, an unreachable `gh` — prints `DID NOT RUN` or
+`DID NOT FILE` with the reason and exits 0.
+
+`.github/workflows/persona-bots.yml` runs it at 07:00 UTC on Mondays (and on `workflow_dispatch`,
+which offers a dry run), builds once, and uploads `persona-bots/` whether or not the walk finished.
+Options: `--dry-run` (shape the issues and print them, file nothing — what a session runs),
+`--no-build`, `--keep`, `--out <dir>`.
 
 ### Why `playwright-core` is pinned in devDependencies
 

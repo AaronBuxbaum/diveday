@@ -159,6 +159,17 @@ export const SUBPROCESS_TIMEOUTS = {
    * stops mid-sentence and nothing saying why.
    */
   simulateDay: 1_500_000,
+  /**
+   * One `pnpm persona:bots` Playwright run -- the weekly walk over every
+   * surface `docs/product/personas.md` names, with an axe scan and a
+   * screenshot pass on top. Fewer states than the simulated day but more
+   * pages, and the screenshot pass spawns one `scripts/screenshot.mjs` per
+   * surface it photographs. The ceiling is twenty minutes against the weekly
+   * workflow's own thirty-minute job cap, for the same reason `simulateDay`
+   * sits under its own: a wedged walk has to name the command that stopped
+   * rather than arrive as the job's anonymous timeout.
+   */
+  personaWalk: 1_200_000,
 };
 
 /** Whether a `spawnSync` result or a caught `execFileSync` error is a timeout kill. */

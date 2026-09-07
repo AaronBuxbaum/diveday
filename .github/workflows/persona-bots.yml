@@ -1,0 +1,81 @@
+name: Persona bots
+
+# The weekly persona walk (N-61): every surface `docs/product/personas.md`
+# names, opened against the demo shop as the persona who lives on it, probed
+# deterministically (an axe scan plus a handful of DOM checks), photographed
+# through `scripts/screenshot.mjs`, and filed as `needs-triage` issues under a
+# hard weekly ceiling. `scripts/persona-bots.mjs` and
+# docs/engineering/testing.md say what it does; ADR
+# 20260907-persona-bots-file-under-a-ceiling says why the ceiling is where it is.
+#
+# Weekly rather than nightly, deliberately: what the walk measures is a slow
+# drift across the whole front end, not the effect of one merge, and the thing
+# it costs is a person's attention rather than a runner's minutes. Monday
+# morning, so a finding arrives at the start of a week somebody can spend on it.
+#
+# **Nothing here is a gate.** `scripts/persona-bots.mjs` exits 0 on every
+# failure it can have — no browser, no build, a walk that did not complete, an
+# unreachable `gh`, a body its own guard refuses — printing `DID NOT RUN` or
+# `DID NOT FILE` and the reason. A red X on a scheduled job that files issues
+# would train everyone to ignore it; the run log and the uploaded findings are
+# where this reports.
+on:
+  schedule:
+    # 07:00 UTC on Mondays — after ci.yml's nightly run and simulate-day's, so a
+    # red build is already in the inbox above a persona finding.
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Shape the issues and print them, but file nothing"
+        type: boolean
+        default: false
+
+concurrency:
+  group: persona-bots-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  walk:
+    name: Fifteen personas, one lap each
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # `gh issue create` and `gh issue comment`, plus the `gh issue list` reads
+      # that make the dedupe and the suppression rules work. Without write the
+      # run still walks and still reports; it just files nothing.
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/playwright-shell
+      # One build, the same e2e build ci.yml's `build` job makes; the walk then
+      # reuses it (`--no-build`) rather than paying for a second one.
+      - run: pnpm e2e:build
+      - name: Walk the personas
+        run: pnpm persona:bots --no-build ${{ inputs.dry_run && '--dry-run' || '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # The findings and the screenshots every filed issue links to. Uploaded
+      # whether or not the walk completed — a partial run's findings file is
+      # the one worth reading, and it is the only copy of the pictures.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: persona-bots
+          path: persona-bots/
+          if-no-files-found: warn
+          retention-days: 30
+      # Playwright's trace for a visit whose harness broke, which is the only
+      # thing that can fail a test here.
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: persona-bots-test-results
+          path: test-results/persona-bots/
+          if-no-files-found: ignore
+          retention-days: 7

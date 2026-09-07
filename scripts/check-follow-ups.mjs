@@ -252,16 +252,21 @@ export function findIssueProblems(issue, { waiting = false, parked = false } = {
   return { problems, touched };
 }
 
-/** `gh issue list --label <label> --state open`, bounded and JSON. Returns `null`
+/** `gh issue list --label <label> --state <state>`, bounded and JSON. Returns `null`
  *  (never throws) when `gh` cannot answer — unreachable, unauthenticated, not installed — so
  *  every caller can fail open rather than blocking on network state. `what` names the caller
- *  in the warning, since two different reports now share this reader. */
-export function listIssuesByLabel(root, { label, fields, what }) {
+ *  in the warning, since three different reports now share this reader.
+ *
+ *  `state` defaults to `open`, which is every caller inside `pnpm check`. The weekly persona
+ *  walk (`scripts/persona-bots.mjs`) is the one that asks for `closed`: a finding whose issue
+ *  a human has already ended is never filed again, and the closed list is the only way to
+ *  know that. */
+export function listIssuesByLabel(root, { label, fields, what, state = "open" }) {
   let raw;
   try {
     raw = readBounded(
       "gh",
-      ["issue", "list", "--label", label, "--state", "open", "--limit", "500", "--json", fields],
+      ["issue", "list", "--label", label, "--state", state, "--limit", "500", "--json", fields],
       { cwd: root, encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.ghCliInCheckGate },
     );
   } catch (error) {
