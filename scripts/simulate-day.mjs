@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 /**
  * `pnpm simulate:day` — rehearse one whole dive day against a real built
@@ -44,8 +44,16 @@ const outDir = path.resolve(
 const env = { ...process.env, SIMULATE_DAY_OUT: outDir };
 if (option("--start")) env.SIMULATE_DAY_START = option("--start");
 
-function run(command, commandArgs, label) {
-  const result = spawnSync(command, commandArgs, { stdio: "inherit", env, cwd: process.cwd() });
+// Every call below goes through `runBounded` rather than a bare synchronous
+// spawn: this script is started by a nightly workflow nobody is watching, and
+// an unbounded call is the exact shape `scripts/subprocess.test.mjs` refuses.
+function run(command, commandArgs, label, timeoutMs) {
+  const result = runBounded(command, commandArgs, {
+    timeoutMs,
+    stdio: "inherit",
+    env,
+    cwd: process.cwd(),
+  });
   if (result.error) {
     console.error(`simulate-day: could not start ${label}: ${result.error.message}`);
     process.exit(1);
@@ -58,12 +66,18 @@ function run(command, commandArgs, label) {
 
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
-run(pnpm, ["e2e:browser-check"], "the browser check");
+// `build`'s ceiling, not a tighter one: a cold machine downloads a Chromium here.
+run(pnpm, ["e2e:browser-check"], "the browser check", SUBPROCESS_TIMEOUTS.build);
 
 if (flag("--no-build")) {
-  run(process.execPath, ["scripts/check-e2e-build.mjs"], "the build check");
+  run(
+    process.execPath,
+    ["scripts/check-e2e-build.mjs"],
+    "the build check",
+    SUBPROCESS_TIMEOUTS.nodeScript,
+  );
 } else {
-  run(pnpm, ["e2e:build"], "the e2e build");
+  run(pnpm, ["e2e:build"], "the e2e build", SUBPROCESS_TIMEOUTS.build);
 }
 
 if (!flag("--keep") && existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
@@ -72,10 +86,15 @@ mkdirSync(outDir, { recursive: true });
 console.log(
   `simulate-day: driving the day; artifacts land in ${path.relative(process.cwd(), outDir) || "."}`,
 );
-const runner = spawnSync(
+const runner = runBounded(
   pnpm,
   ["exec", "playwright", "test", "--config", "scripts/simulate-day/playwright.config.ts"],
-  { stdio: "inherit", env, cwd: process.cwd() },
+  {
+    timeoutMs: SUBPROCESS_TIMEOUTS.simulateDay,
+    stdio: "inherit",
+    env,
+    cwd: process.cwd(),
+  },
 );
 
 const transcript = path.join(outDir, "day.md");
