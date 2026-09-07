@@ -53,6 +53,17 @@ export async function tideWindowsForDeparture(input: {
    * answer a sentence beside a Book button can give.
    */
   scheduleDayCount?: number;
+  /**
+   * **This departure does not exist yet.** The add panel's composer asks what
+   * the water would do for a departure a staffer is still typing, so the
+   * sailed check below must not apply: there is no boat, nothing has gone, and
+   * the time in the form is a proposal rather than a record. Without this the
+   * panel silently answers nothing whenever its own default start time is more
+   * than the late-arrival buffer old — which is every morning after about
+   * half past nine, and was every run of the e2e fleet, whose frozen clock
+   * sits exactly one buffer past the panel's 8:30 AM default.
+   */
+  proposed?: boolean;
   now?: Date;
   fetcher?: typeof fetch;
 }): Promise<DepartureTideWindow[]> {
@@ -63,7 +74,10 @@ export async function tideWindowsForDeparture(input: {
   // beside it has been gated to future departures all along
   // (`shouldShowAutomatedForecast`); this is the same rule through the app's
   // one buffered question.
-  if (hasSailed(input.startsAt, input.now ?? nowDate())) return [];
+  //
+  // A *proposed* departure is exempt, because the claim it would make is
+  // hypothetical rather than false -- see `proposed` above.
+  if (!input.proposed && hasSailed(input.startsAt, input.now ?? nowDate())) return [];
   const withStations = input.dives.filter(
     (dive): dive is DepartureTideDive & { site: NonNullable<DepartureTideDive["site"]> } =>
       Boolean(dive.site?.tideStationId),
