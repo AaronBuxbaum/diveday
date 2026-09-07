@@ -7,6 +7,23 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The agent-ready storefront (delivered 2026-09-07)
+
+Owner decision 2026-09-07 (improvement-ideas decision sheet, N-50; issue #1427). An AI travel agent
+can now find a departure and hand its reader to the booking page, which still does the booking.
+**`/llms.txt`** (`src/app/llms.txt/route.ts`, words in `src/lib/llms-txt.ts`) says what DiveDay
+is, the public URL shapes, where availability lives, the codes it uses, that bookings happen on
+the booking page, and lists the shops the sitemap lists. **`/s/<slug>/availability.json`**
+(`src/lib/availability.ts` for the shape, `src/db/availability.ts` for the rows, composed from the
+schedule page's own readers) is the next 14 days of public departures with a seat open — id,
+`starts_at` as the shop's wall clock with its offset (`zonedIsoString`), sites, price and
+currency, certification codes, `seats_open`, `booking_url` — and nothing about a person. A shop
+that opted out of search (ADR 20260813-search-listing-is-a-choice) gets a 404 there, not an empty
+list, and its schedule JSON-LD stops naming the document (`subjectOf` → `DataFeed`). `robots.txt`
+moved from Next's metadata convention to `src/app/robots.txt/route.ts` over `src/lib/robots.ts` for
+the one comment line that points an agent at `/llms.txt`. See
+[marketing.md](marketing.md)'s SEO section.
+
 ## Before you ask: DiveDay fills in what it already knows (delivered 2026-09-06)
 
 The 2026-09-06 loop, argued on [its canvas](../design/canvases/20260906-before-you-ask/README.md)

@@ -37,6 +37,86 @@ test("robots.txt disallows every token-route prefix and points at the sitemap", 
     expect(body).toContain(`Disallow: ${prefix}`);
   }
   expect(body).toMatch(/^Sitemap: .*\/sitemap\.xml$/m);
+  // The one line the old metadata convention could not carry (issue #1427).
+  expect(body).toMatch(/^# Agents: .*\/llms\.txt$/m);
+});
+
+/**
+ * The agent-facing storefront (issue #1427, N-50): a site-level `llms.txt`
+ * that says where a shop's schedule, availability and booking page live, and
+ * a per-shop `availability.json` an agent reads to find a departure before
+ * handing its reader to the booking page. The demo shop is served here (its
+ * document is what the fleet can read); the opt-out 404 is asserted in
+ * `settings-findability.spec.ts`, where a private shop flips the switch.
+ */
+test("llms.txt tells an agent where the schedule, availability and booking page are", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  const response = await page.request.get("/llms.txt");
+  expect(response.ok()).toBe(true);
+  expect(response.headers()["content-type"]).toMatch(/^text\/plain/);
+  const body = await response.text();
+  expect(body.startsWith("# DiveDay")).toBe(true);
+  expect(body).toContain("/s/<shop-slug>/availability.json");
+  expect(body).toContain("/s/<shop-slug>/trips/<trip-id>");
+  expect(body).toMatch(/Bookings happen on this page and only here/);
+  // The demo shop is a fixture, never a listed business (same scope as the sitemap).
+  expect(body).not.toContain(`/s/${DEMO_SHOP_SLUG}`);
+});
+
+test("a shop's availability.json carries only what an agent needs to find a seat and hand off", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  const response = await page.request.get(`/s/${DEMO_SHOP_SLUG}/availability.json`);
+  expect(response.ok()).toBe(true);
+  expect(response.headers()["content-type"]).toMatch(/^application\/json/);
+  expect(response.headers()["cache-control"]).toContain("max-age=");
+  expect(response.headers()["x-robots-tag"]).toBe("noindex");
+  const body = await response.json();
+  expect(body.schema).toBe("diveday/availability/v1");
+  expect(body.shop.slug).toBe(DEMO_SHOP_SLUG);
+  expect(
+    body.departures.length,
+    "the frozen-clock seed has open seats inside two weeks",
+  ).toBeGreaterThan(0);
+  for (const departure of body.departures) {
+    expect(departure.seats_open).toBeGreaterThan(0);
+    expect(departure.starts_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00[+-]\d{2}:\d{2}$/);
+    expect(departure.booking_url).toMatch(
+      new RegExp(`/s/${DEMO_SHOP_SLUG}/trips/${departure.id}$`),
+    );
+    expect(Object.keys(departure).sort()).toEqual(
+      [
+        "booking_url",
+        "certification",
+        "ends_at",
+        "id",
+        "price",
+        "seats_open",
+        "sites",
+        "starts_at",
+        "time_zone",
+        "title",
+      ].sort(),
+    );
+  }
+  // Nothing about a person: the seeded cast's names must never reach it.
+  const text = JSON.stringify(body);
+  for (const name of ["Adaeze", "Nwosu", "@"]) expect(text).not.toContain(name);
+});
+
+test("the schedule page's JSON-LD points at the availability document", { tag: READ_ONLY }, async ({
+  page,
+}) => {
+  await page.goto(`/s/${DEMO_SHOP_SLUG}`);
+  // `<script>` has no layout box — left unfiltered, like every head query in this file.
+  const graphs = await page.locator('script[type="application/ld+json"]').allTextContents();
+  const schedule = graphs.map((json) => JSON.parse(json)).find((graph) => graph.subjectOf);
+  expect(schedule?.subjectOf).toMatchObject({
+    "@type": "DataFeed",
+    encodingFormat: "application/json",
+  });
+  expect(schedule?.subjectOf.url).toMatch(new RegExp(`/s/${DEMO_SHOP_SLUG}/availability\\.json$`));
 });
 
 /**
