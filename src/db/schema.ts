@@ -5412,6 +5412,17 @@ export type MedicalAnswers = {
 };
 
 /**
+ * The guardian section of a minor's release as last saved for later — the
+ * sibling of `draft_signer_name`. Strings as typed, unvalidated: what a parent
+ * finds when they come back to the link, never what the record attests to.
+ */
+export type DraftGuardian = {
+  name: string | null;
+  relationship: string | null;
+  email: string | null;
+};
+
+/**
  * One issued link gets one row. Pending rows may be superseded; completed rows
  * are immutable evidence and never updated or re-used for a new template.
  */
@@ -5619,6 +5630,48 @@ export const waiverRecords = pgTable(
     medicalClearanceDeclinedByPersonId: uuid("medical_clearance_declined_by_person_id").references(
       () => people.id,
     ),
+    /**
+     * **The guardian's half of a minor's release** (ADR
+     * 20260907-guardian-co-signature). A diver under the age of majority on
+     * the day they sign (`src/lib/guardian.ts`, over `people.date_of_birth`)
+     * has a parent or legal guardian sign the same release, on the same page,
+     * with the same typed-consent evidence the diver's own signature takes —
+     * so these five columns are the diver's `signed_name` /
+     * `signature_method` / `consented_at` / `signed_at` block a second time,
+     * plus who the co-signer is to the diver (a code, `GuardianRelationship`)
+     * and how to reach them.
+     *
+     * All null on every record a guardian never touched: an adult's, a
+     * diver's with no date of birth on file (the rule fails open, as H-08's
+     * does), and every record signed before this shipped. **Null on a minor's
+     * record is the block**: `guardianSignatureMissing` raises
+     * `guardian_signature_missing` in readiness, and the issue path refuses to
+     * treat that record as standing so a fresh link can collect both
+     * signatures. The guardian is *not* a `people` row — they are a party to
+     * one document, not a customer, and giving them a record would invent a
+     * diver the shop never met.
+     *
+     * Inside the integrity seal (`src/lib/waiver-integrity.ts`, v1), because a
+     * guardian's signature removed after the fact is the tampering the seal
+     * exists to catch. `guardian_name` and `guardian_email` are personal data
+     * of a third party and go with the diver's own under erasure
+     * (`src/db/anonymize.ts`); the fact and date of the co-signature survive,
+     * exactly as the diver's `signed_at` does.
+     */
+    guardianName: text("guardian_name"),
+    guardianRelationship: text("guardian_relationship"),
+    guardianEmail: text("guardian_email"),
+    guardianSignatureMethod: text("guardian_signature_method"),
+    guardianConsentedAt: timestamp("guardian_consented_at", { withTimezone: true }),
+    guardianSignedAt: timestamp("guardian_signed_at", { withTimezone: true }),
+    /**
+     * The guardian section as last saved with "Save and finish later" — the
+     * sibling of `draft_signer_name`, so a parent who comes back to the link
+     * finds their own fields as they left them. Unsubmitted state, never
+     * evidence: excluded from the export bundle with the other drafts, and
+     * stripped by erasure.
+     */
+    draftGuardian: jsonb("draft_guardian").$type<DraftGuardian>(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     /** HMAC over the immutable signed metadata; null means legacy/unverified. */
     integrityHash: text("integrity_hash"),
@@ -5697,6 +5750,18 @@ export const waiverRecords = pgTable(
         ${table.medicalClearanceEvaluatedOn} is not null
         and (${table.medicalClearanceDocumentUrl} is not null
           or ${table.medicalClearancePhysicianName} is not null))`,
+    ),
+    // A guardian's signature is one act with four facts: when they signed,
+    // when they consented, by which provider, and who they are to the diver.
+    // Either all four are there or none is — a `guardian_signed_at` with no
+    // relationship would render as a co-signature by nobody in particular.
+    // The name and email are deliberately outside this rule: erasure strips
+    // them and the signature's fact survives (ADR 20260907-guardian-co-signature).
+    check(
+      "waiver_records_guardian_signature_whole",
+      sql`(${table.guardianSignedAt} is null) = (${table.guardianConsentedAt} is null)
+        and (${table.guardianSignedAt} is null) = (${table.guardianSignatureMethod} is null)
+        and (${table.guardianSignedAt} is null) = (${table.guardianRelationship} is null)`,
     ),
   ],
 );

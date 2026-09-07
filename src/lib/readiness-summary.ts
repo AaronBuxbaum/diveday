@@ -110,6 +110,10 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // the diver to do, and a refusal is the one state where that is most
   // emphatically true.
   medical_not_cleared: "waiting",
+  // "action", like `waiver_expired`: the fix is a fresh link the readiness
+  // page can mint in place, and the parent holding this page is the person
+  // who has to sign it (ADR 20260907-guardian-co-signature).
+  guardian_signature_missing: "action",
   certification_missing: "action",
   certification_pending: "waiting",
   // "action", not "waiting": the diver said a level and nobody has seen a card,

@@ -18,6 +18,15 @@ import {
 import { isStaff } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import {
+  type GuardianRelationship,
+  type GuardianSigner,
+  guardianSignatureMissing,
+  guardianSignatureOf,
+  guardianSignatureRequired,
+  isGuardianRelationship,
+  signingDate,
+} from "@/lib/guardian";
 import { flaggedMedicalPrompts, validateMedicalAnswers } from "@/lib/medical";
 import { operationalWindow } from "@/lib/operational-window";
 import { personNamesMatch } from "@/lib/person-name";
@@ -37,7 +46,7 @@ import {
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
-import type { MedicalAnswers } from "./schema";
+import type { DraftGuardian, MedicalAnswers } from "./schema";
 import {
   bookings,
   notificationDeliveries,
@@ -132,6 +141,8 @@ function toSignedWaiverEntry(row: WaiverAuditJoinRow) {
      * row. Already on `row.record`, so it costs no column and no join.
      */
     templateVersion: row.record.templateVersion,
+    /** Who co-signed a minor's release, or null (ADR 20260907-guardian-co-signature). */
+    guardian: guardianSignatureOf(row.record),
     integrity: verifyWaiverIntegrity(row.record),
     flaggedPrompts:
       row.record.status === "medical_review" && row.record.medicalAnswers
@@ -597,9 +608,15 @@ export async function issueWaiverRequest(
   return db.transaction(async (tx): Promise<IssueWaiverOutcome> => {
     const booking = input.bookingId
       ? await tx
-          .select({ id: bookings.id, personId: bookings.personId, tripStatus: trips.status })
+          .select({
+            id: bookings.id,
+            personId: bookings.personId,
+            dateOfBirth: people.dateOfBirth,
+            tripStatus: trips.status,
+          })
           .from(bookings)
           .innerJoin(trips, eq(trips.id, bookings.tripId))
+          .innerJoin(people, eq(people.id, bookings.personId))
           .where(
             and(
               eq(bookings.id, input.bookingId),
@@ -616,16 +633,22 @@ export async function issueWaiverRequest(
     }
     const personId = booking?.personId ?? input.personId;
     if (!personId) return { ok: false, reason: "person_not_found" };
+    let dateOfBirth = booking?.dateOfBirth ?? null;
     if (!booking) {
       const [person] = await tx
-        .select({ id: people.id })
+        .select({ id: people.id, dateOfBirth: people.dateOfBirth })
         .from(people)
         .where(
           and(eq(people.id, personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
         )
         .limit(1);
       if (!person) return { ok: false, reason: "person_not_found" };
+      dateOfBirth = person.dateOfBirth;
     }
+    // A minor's solo signature is not a standing release (ADR
+    // 20260907-guardian-co-signature): the tap that would have said "already
+    // signed" instead supersedes it and mints a link that asks for both.
+    const signer: GuardianSigner = { dateOfBirth, timezone: await shopTimezone(tx, input.shopId) };
 
     const [template] = await tx
       .select()
@@ -648,11 +671,14 @@ export async function issueWaiverRequest(
         ),
       );
     const alreadyStanding = booking
-      ? current.some((record) => record.status !== "pending")
+      ? current.some(
+          (record) => record.status !== "pending" && !guardianSignatureMissing(record, signer),
+        )
       : current.some(
           (record) =>
             isUnresolvedMedicalHold(record) ||
-            isCompletedWaiverCurrent(record, template.materialGeneration, now),
+            (isCompletedWaiverCurrent(record, template.materialGeneration, now) &&
+              !guardianSignatureMissing(record, signer)),
         );
     if (alreadyStanding) {
       return { ok: false, reason: "already_completed" };
@@ -858,7 +884,14 @@ export async function hasLivePersonWaiverRequest(
 export async function saveWaiverDraft(
   db: AppDb,
   token: string,
-  input: { signerName?: string; acknowledged: boolean; medicalAnswers: MedicalAnswers; now?: Date },
+  input: {
+    signerName?: string;
+    acknowledged: boolean;
+    medicalAnswers: MedicalAnswers;
+    /** The guardian section as typed, for a parent who comes back to the link. */
+    guardian?: DraftGuardian;
+    now?: Date;
+  },
 ): Promise<boolean> {
   const state = await getWaiverForToken(db, token, input.now);
   if (state.state !== "available") return false;
@@ -870,6 +903,7 @@ export async function saveWaiverDraft(
       draftSignerName: input.signerName?.trim() || null,
       draftAcknowledged: input.acknowledged,
       draftMedicalAnswers: input.medicalAnswers,
+      ...(input.guardian === undefined ? {} : { draftGuardian: input.guardian }),
     })
     .where(and(eq(waiverRecords.id, state.record.id), eq(waiverRecords.status, "pending")))
     .returning({ id: waiverRecords.id });
@@ -880,8 +914,75 @@ export type CompleteWaiverOutcome =
   | { ok: true; status: "completed" | "medical_review"; idempotent: boolean }
   | {
       ok: false;
-      reason: "unavailable" | "expired" | "invalid_signature" | "name_mismatch" | "invalid_medical";
+      reason:
+        | "unavailable"
+        | "expired"
+        | "invalid_signature"
+        | "name_mismatch"
+        | "invalid_medical"
+        /** The diver is a minor on the signing day and no guardian section came with the signature. */
+        | "guardian_required"
+        /** A guardian section came, and it is not a signature: no consent, no relationship, no email, or the diver's own name. */
+        | "guardian_invalid";
     };
+
+/**
+ * The guardian's half of a minor's release, as the page collects it (ADR
+ * 20260907-guardian-co-signature). `agreed` is the guardian's own consent box,
+ * the same assurance the diver's signature takes — a typed name is not a
+ * signature until it is ticked.
+ */
+export type GuardianInput = {
+  name: string;
+  relationship: string;
+  email: string;
+  agreed: boolean;
+};
+
+/**
+ * What the guardian section has to be before it counts as a signature, given
+ * the diver it is for. Returns the evidence to write, or the reason it is not.
+ *
+ * The name check is the co-signature's own version of the name-mismatch rule
+ * two lines below for the diver: a minor typing their own name twice is one
+ * signature wearing two hats, and the whole point of a second signer is that
+ * they are somebody else.
+ */
+function guardianEvidence(
+  guardian: GuardianInput,
+  diverFullName: string,
+  now: Date,
+):
+  | {
+      ok: true;
+      name: string;
+      relationship: GuardianRelationship;
+      email: string;
+      method: string;
+      consentedAt: Date;
+      signedAt: Date;
+    }
+  | { ok: false } {
+  const evidence = localTypedConsentProvider.capture({
+    signerName: guardian.name,
+    agreed: guardian.agreed,
+    signedAt: now,
+  });
+  if (!evidence) return { ok: false };
+  if (!isGuardianRelationship(guardian.relationship)) return { ok: false };
+  const email = guardian.email.trim().toLowerCase();
+  if (!email.includes("@")) return { ok: false };
+  if (personNamesMatch(evidence.signerName, diverFullName)) return { ok: false };
+  return {
+    ok: true,
+    name: evidence.signerName,
+    relationship: guardian.relationship,
+    email,
+    method: evidence.method,
+    consentedAt: evidence.consentedAt,
+    signedAt: evidence.signedAt,
+  };
+}
 
 function completedStatus(
   status: typeof waiverRecords.$inferSelect.status,
@@ -1005,6 +1106,13 @@ export async function completeWaiver(
     agreed: boolean;
     medicalAnswers: MedicalAnswers;
     emergencyContact?: EmergencyContactInput;
+    /**
+     * The guardian's half, when the page collected one. Required when the
+     * diver is a minor on the signing day; ignored otherwise — an adult's
+     * release carries no co-signer, whatever was typed into a section the
+     * page never rendered for them.
+     */
+    guardian?: GuardianInput;
     now?: Date;
   },
 ): Promise<CompleteWaiverOutcome> {
@@ -1034,12 +1142,27 @@ export async function completeWaiver(
   // signable rather than burning it. A diver whose booking genuinely holds the
   // wrong name is directed to the shop, which can correct the record.
   const [signer] = await db
-    .select({ fullName: people.fullName })
+    .select({ fullName: people.fullName, dateOfBirth: people.dateOfBirth })
     .from(people)
     .where(eq(people.id, state.record.personId))
     .limit(1);
   if (!signer || !personNamesMatch(evidence.signerName, signer.fullName)) {
     return { ok: false, reason: "name_mismatch" };
+  }
+
+  // A minor signs twice (ADR 20260907-guardian-co-signature): the same
+  // typed-consent evidence, from a parent or legal guardian, on the same
+  // sitting. Decided on the shop's calendar day the signature is given, from
+  // the date of birth on file — never from anything the form claims about
+  // the diver's age. Refused before the record is touched, like the name
+  // mismatch above, so a family that missed the section keeps the link.
+  const timezone = await shopTimezone(db, state.record.shopId);
+  const minor = guardianSignatureRequired(signer.dateOfBirth, signingDate(now, timezone));
+  let guardian: ReturnType<typeof guardianEvidence> | null = null;
+  if (minor) {
+    if (!input.guardian) return { ok: false, reason: "guardian_required" };
+    guardian = guardianEvidence(input.guardian, signer.fullName, now);
+    if (!guardian.ok) return { ok: false, reason: "guardian_invalid" };
   }
 
   // The form is conditional: closed boxes are not submitted, but every
@@ -1074,6 +1197,21 @@ export async function completeWaiver(
       // still *resolves* (a diver revisiting sees their signed release) — it
       // just can no longer be read back out of the database and re-sent.
       tokenSealed: null,
+      // The guardian's half, on a minor's release only. The draft goes with
+      // the rest of the unsubmitted state: what was typed is now what was
+      // signed, and a draft of a signed section is a second copy of personal
+      // data with no reader.
+      ...(guardian?.ok
+        ? {
+            guardianName: guardian.name,
+            guardianRelationship: guardian.relationship,
+            guardianEmail: guardian.email,
+            guardianSignatureMethod: guardian.method,
+            guardianConsentedAt: guardian.consentedAt,
+            guardianSignedAt: guardian.signedAt,
+          }
+        : {}),
+      draftGuardian: null,
     })
     .where(and(eq(waiverRecords.id, state.record.id), eq(waiverRecords.status, "pending")))
     .returning({ id: waiverRecords.id, status: waiverRecords.status });
@@ -1409,7 +1547,11 @@ export type InPersonWaiverOutcome =
         | "template_not_found"
         | "staff_not_found"
         | "medical_attestation_required"
-        | "invalid_signature";
+        | "invalid_signature"
+        /** The diver is a minor on the signing day and no guardian was named on the paper. */
+        | "guardian_required"
+        /** A guardian was named and is not one: too short a name, the diver's own, or no relationship. */
+        | "guardian_invalid";
     };
 
 /**
@@ -1457,7 +1599,26 @@ type WaiverSigner = {
   bookingId: string | null;
   personId: string;
   fullName: string;
+  /** For the guardian rule (`src/lib/guardian.ts`); null when the shop never asked. */
+  dateOfBirth: string | null;
 };
+
+/**
+ * The shop's own zone, which is what turns a signing instant into the calendar
+ * day the guardian rule measures the diver's age on. Every writer here that
+ * asks the rule reads it from the row rather than from a caller, for the same
+ * reason the writers resolve the shop from the record: a bearer token must
+ * never be able to name a different zone than the shop it belongs to.
+ */
+async function shopTimezone(tx: DbExecutor, shopId: string): Promise<string> {
+  const [shop] = await tx
+    .select({ timezone: shops.timezone })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  if (!shop) throw new Error(`waivers: shop ${shopId} not found`);
+  return shop.timezone;
+}
 
 async function bookingSigner(
   tx: DbExecutor,
@@ -1469,6 +1630,7 @@ async function bookingSigner(
       id: bookings.id,
       personId: bookings.personId,
       fullName: people.fullName,
+      dateOfBirth: people.dateOfBirth,
       tripStatus: trips.status,
     })
     .from(bookings)
@@ -1489,6 +1651,7 @@ async function bookingSigner(
     bookingId: booking.id,
     personId: booking.personId,
     fullName: booking.fullName,
+    dateOfBirth: booking.dateOfBirth,
   };
 }
 
@@ -1507,7 +1670,7 @@ async function personSigner(
   personId: string,
 ): Promise<WaiverSigner | Extract<InPersonWaiverOutcome, { ok: false }>> {
   const [person] = await tx
-    .select({ id: people.id, fullName: people.fullName })
+    .select({ id: people.id, fullName: people.fullName, dateOfBirth: people.dateOfBirth })
     .from(people)
     .where(
       and(
@@ -1519,7 +1682,13 @@ async function personSigner(
     )
     .limit(1);
   if (!person) return { ok: false, reason: "person_not_found" };
-  return { ok: true, bookingId: null, personId: person.id, fullName: person.fullName };
+  return {
+    ok: true,
+    bookingId: null,
+    personId: person.id,
+    fullName: person.fullName,
+    dateOfBirth: person.dateOfBirth,
+  };
 }
 
 /**
@@ -1538,6 +1707,8 @@ async function standingWaiverRecord(
     bookingId: string | null;
     personId: string;
     templateGeneration: number;
+    /** For the guardian rule: a minor's solo record is not "already done" (ADR 20260907-guardian-co-signature). */
+    signer: GuardianSigner;
     now: Date;
   },
 ) {
@@ -1547,7 +1718,9 @@ async function standingWaiverRecord(
       .from(waiverRecords)
       .where(and(eq(waiverRecords.bookingId, input.bookingId), isNull(waiverRecords.supersededAt)));
     return current.find(
-      (record) => record.status === "completed" || record.status === "medical_review",
+      (record) =>
+        (record.status === "completed" || record.status === "medical_review") &&
+        !guardianSignatureMissing(record, input.signer),
     );
   }
   const held = await tx
@@ -1563,7 +1736,8 @@ async function standingWaiverRecord(
   return held.find(
     (record) =>
       isUnresolvedMedicalHold(record) ||
-      isCompletedWaiverCurrent(record, input.templateGeneration, input.now),
+      (isCompletedWaiverCurrent(record, input.templateGeneration, input.now) &&
+        !guardianSignatureMissing(record, input.signer)),
   );
 }
 
@@ -1616,6 +1790,14 @@ export async function recordInPersonWaiver(
     subject: InPersonWaiverSubject;
     recordedByPersonId: string;
     medicalAttested: boolean;
+    /**
+     * Who countersigned the paper for a minor (ADR
+     * 20260907-guardian-co-signature): the staffer attests to the guardian's
+     * signature the way they attest to the diver's, so the evidence is the
+     * same `in_person_attested` shape. Required when the diver is a minor on
+     * the signing day; ignored for an adult.
+     */
+    guardian?: { name: string; relationship: string };
     now?: Date;
   },
 ): Promise<InPersonWaiverOutcome> {
@@ -1631,6 +1813,31 @@ export async function recordInPersonWaiver(
       : await personSigner(tx, input.shopId, (input.subject as { personId: string }).personId);
     if (!signer.ok) return signer;
 
+    const timezone = await shopTimezone(tx, input.shopId);
+    const guardianSigner: GuardianSigner = { dateOfBirth: signer.dateOfBirth, timezone };
+    const minor = guardianSignatureRequired(signer.dateOfBirth, signingDate(now, timezone));
+    // Refused before anything is read or written, like the medical attestation
+    // above: a paper release a minor signed alone is not a release the shop can
+    // record as complete, and the crew's roster would say so the moment it was.
+    let guardian: ReturnType<typeof inPersonAttestationProvider.capture> = null;
+    let guardianRelationship: GuardianRelationship | null = null;
+    if (minor) {
+      if (!input.guardian) return { ok: false, reason: "guardian_required" };
+      guardian = inPersonAttestationProvider.capture({
+        signerName: input.guardian.name,
+        agreed: true,
+        signedAt: now,
+      });
+      if (
+        !guardian ||
+        !isGuardianRelationship(input.guardian.relationship) ||
+        personNamesMatch(guardian.signerName, signer.fullName)
+      ) {
+        return { ok: false, reason: "guardian_invalid" };
+      }
+      guardianRelationship = input.guardian.relationship;
+    }
+
     const [template] = await tx
       .select()
       .from(waiverTemplates)
@@ -1644,6 +1851,7 @@ export async function recordInPersonWaiver(
       bookingId: signer.bookingId,
       personId: signer.personId,
       templateGeneration: template.materialGeneration,
+      signer: guardianSigner,
       now,
     });
     if (standing) return { ok: true, recordId: standing.id, alreadySigned: true };
@@ -1695,6 +1903,18 @@ export async function recordInPersonWaiver(
         consentedAt: evidence.consentedAt,
         signedAt: evidence.signedAt,
         completedAt: now,
+        ...(guardian && guardianRelationship
+          ? {
+              guardianName: guardian.signerName,
+              guardianRelationship,
+              // No address on a paper form: the staffer names who signed,
+              // and reaching them is the diver's own contact's job.
+              guardianEmail: null,
+              guardianSignatureMethod: guardian.method,
+              guardianConsentedAt: guardian.consentedAt,
+              guardianSignedAt: guardian.signedAt,
+            }
+          : {}),
       })
       .returning();
     if (!record) throw new Error("recordInPersonWaiver: insert returned no row");

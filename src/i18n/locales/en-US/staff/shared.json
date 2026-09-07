@@ -16,7 +16,16 @@
     "markSignedOnPaper": "Mark signed on paper",
     "medicalAttestationLabel": "I have this diver's signed release on file, I have reviewed their medical questionnaire, and no answer needs physician sign-off.",
     "recording": "Recording…",
-    "recordPaperSignature": "Record paper signature"
+    "recordPaperSignature": "Record paper signature",
+    "guardianNameLabel": "Parent or guardian who signed",
+    "guardianRelationshipLabel": "Relationship"
+  },
+  "guardian": {
+    "relationship": {
+      "parent": "parent",
+      "legalGuardian": "legal guardian"
+    },
+    "coSignedBy": "Co-signed by {name} ({relationship})"
   },
   "medicalClearance": {
     "recordClearance": "Record the physician's answer",
@@ -173,6 +182,7 @@
       "waiverExpired": "Waiver link expired; issue a fresh link.",
       "medicalReview": "A medical answer needs staff follow-up.",
       "medicalNotCleared": "A physician did not clear this diver to dive.",
+      "guardianSignatureMissing": "Signed by a minor alone. A parent or guardian has to sign too; send a fresh waiver link.",
       "certificationMissing": "No certification is on file for this trip.",
       "certificationPending": "Certification is waiting for staff verification.",
       "certificationSelfDeclared": "The diver said their level themselves. No certification record has been verified. Ask for the details and verify them.",
@@ -434,6 +444,7 @@
     "none": "Not signed",
     "current": "Signed",
     "expired": "Needs signing again",
+    "guardianMissing": "Guardian signature missing",
     "medicalReview": "Medical review",
     "medicalNotCleared": "Not cleared"
   },

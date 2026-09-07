@@ -16,7 +16,16 @@
     "markSignedOnPaper": "Marcar como firmado en papel",
     "medicalAttestationLabel": "Tengo la exención firmada de este buceador archivada, he revisado su cuestionario médico y ninguna respuesta necesita el visto bueno de un médico.",
     "recording": "Registrando…",
-    "recordPaperSignature": "Registrar firma en papel"
+    "recordPaperSignature": "Registrar firma en papel",
+    "guardianNameLabel": "Madre, padre o tutor que firmó",
+    "guardianRelationshipLabel": "Relación"
+  },
+  "guardian": {
+    "relationship": {
+      "parent": "madre o padre",
+      "legalGuardian": "tutor legal"
+    },
+    "coSignedBy": "Firmada también por {name} ({relationship})"
   },
   "medicalClearance": {
     "recordClearance": "Registrar la respuesta del médico",
@@ -173,6 +182,7 @@
       "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",
       "medicalReview": "Una respuesta médica necesita seguimiento del personal.",
       "medicalNotCleared": "Un médico no autorizó a esta persona a bucear.",
+      "guardianSignatureMissing": "Firmada por un menor sin acompañante. Falta la firma de su madre, padre o tutor legal; envía un enlace nuevo de la exención.",
       "certificationMissing": "No hay ninguna certificación registrada para esta salida.",
       "certificationPending": "La certificación espera verificación del personal.",
       "certificationSelfDeclared": "El buceador indicó su nivel por su cuenta. No se ha verificado ningún registro de certificación: pide los datos y verifícalos.",
@@ -434,6 +444,7 @@
     "none": "Sin firmar",
     "current": "Firmado",
     "expired": "Hay que firmarlo de nuevo",
+    "guardianMissing": "Falta la firma del tutor",
     "medicalReview": "Revisión médica",
     "medicalNotCleared": "No autorizado"
   },

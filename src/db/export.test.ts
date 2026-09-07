@@ -405,6 +405,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "draft_signer_name", // unsubmitted draft state, not a signed record
     "draft_acknowledged",
     "draft_medical_answers",
+    "draft_guardian", // the guardian section as typed, same class as the three above
     // Delivery plumbing is provider-specific operational state. The signed
     // waiver remains portable; a destination can issue its own link and
     // delivery attempt rather than importing stale provider ids or outcomes.

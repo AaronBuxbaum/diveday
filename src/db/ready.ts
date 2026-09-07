@@ -453,7 +453,7 @@ export async function carriedPreparationForDiver(
   db: AppDb,
   input: { shopId: string; personId: string; hasRentalFit: boolean },
 ): Promise<CarriedPreparation[]> {
-  const [levelCards, signedWaivers, waiverTemplate] = await Promise.all([
+  const [levelCards, signedWaivers, waiverTemplate, signerRows] = await Promise.all([
     db
       .select()
       .from(certifications)
@@ -466,12 +466,24 @@ export async function carriedPreparationForDiver(
       ),
     listSignedWaiversByPerson(db, input.shopId, [input.personId]),
     getCurrentWaiverTemplate(db, input.shopId),
+    // The guardian rule (src/lib/guardian.ts): a minor's solo signature is not
+    // a release that was kept, so it must not be told to a stranded family as one.
+    db
+      .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
+      .from(people)
+      .innerJoin(shops, eq(shops.id, people.shopId))
+      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+      .limit(1),
   ]);
+  const signer = signerRows[0];
 
   return carriedPreparation({
     waiver: shopWaiverStatus({
       personSignedWaivers: signedWaivers.get(input.personId) ?? [],
       currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
+      signer: signer
+        ? { dateOfBirth: signer.dateOfBirth, timezone: signer.timezone }
+        : undefined,
     }),
     certifications: levelCards,
     hasRentalFit: input.hasRentalFit,

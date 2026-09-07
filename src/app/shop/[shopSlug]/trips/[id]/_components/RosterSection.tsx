@@ -33,6 +33,7 @@ import {
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
+import { guardianSignatureOf } from "@/lib/guardian";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
@@ -1109,6 +1110,16 @@ export function RosterSection({
                         date: formatDateTimeTz(currentWaiver.completedAt, locale, shopTimezone),
                       })}
               </p>
+              {/* A minor's release names who co-signed it (ADR
+                  20260907-guardian-co-signature) — the same sentence the
+                  manifest and the signature log use. */}
+              {guardianSignatureOf(currentWaiver) ? (
+                <p className="mt-1 text-sm text-muted">
+                  {guardianCoSignedText(t, guardianSignatureOf(currentWaiver) as NonNullable<
+                    ReturnType<typeof guardianSignatureOf>
+                  >)}
+                </p>
+              ) : null}
             </div>
           ) : null}
 
