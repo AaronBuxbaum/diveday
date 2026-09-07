@@ -12,8 +12,10 @@ import type { DepthUnit } from "@/lib/depth-units";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { type DiveMode, type DockDayRhythm, siteFit } from "@/lib/diver-planning";
+import { nightSkyFor } from "@/lib/sky";
 import { type DayCeilingOption, DayCeilingPicker } from "./DayCeilingPicker";
-import type { DiveBriefing } from "./types";
+import { NightSkyLine } from "./NightSkyLine";
+import type { DiveBriefing, Shop } from "./types";
 
 /**
  * What the departure's own row and the shop's rhythm say about the shape of
@@ -91,10 +93,19 @@ function ceilingOptions(
  */
 export function TripDayPlan({
   briefings,
+  shop,
+  startsAt,
+  endsAt,
   locale,
   profile,
 }: {
   briefings: DiveBriefing[];
+  /** The shop, for the coordinates and zone the sky line is computed from. */
+  shop: Pick<Shop, "timezone" | "latitude" | "longitude">;
+  /** When this departure leaves. */
+  startsAt: Date;
+  /** When it comes home — a departure still out at sunset dives in the dark. */
+  endsAt: Date;
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
   /**
@@ -103,8 +114,27 @@ export function TripDayPlan({
    */
   profile?: DayProfileFacts;
 }) {
-  if (briefings.length === 0) return null;
   const t = diverTranslator(locale);
+  // The sky belongs to the day, so it rides in this beat rather than opening a
+  // section of its own — and a departure with no dive plan at all still gets
+  // it, because "sunset is at 7:35" is a fact about the departure, not about
+  // the sites nobody has picked yet.
+  const nightSky = nightSkyFor({
+    startsAt,
+    endsAt,
+    timeZone: shop.timezone,
+    latitude: shop.latitude,
+    longitude: shop.longitude,
+  });
+  const sky = <NightSkyLine sky={nightSky} timeZone={shop.timezone} locale={locale} />;
+  if (briefings.length === 0) {
+    return nightSky ? (
+      <section className="mt-8">
+        <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
+        {sky}
+      </section>
+    ) : null;
+  }
   // Durations, never a clock. The beat stays time-neutral — the day's hours
   // belong to the thread a booked diver walks — but how long a dive runs and
   // how long the boat sits between two of them are facts about the day itself,
@@ -140,6 +170,7 @@ export function TripDayPlan({
     return (
       <section className="mt-8">
         <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
+        {sky}
         <p className="mt-2 text-sm text-muted">
           {t("trip.sitesToBeConfirmed", { count: briefings.length })}
         </p>
@@ -149,6 +180,7 @@ export function TripDayPlan({
   return (
     <section className="mt-8">
       <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
+      {sky}
       <ul className="mt-2">
         {briefings.map(({ dive, diveSite }) => {
           const bottomTime = bottomTimes.get(dive.diveNumber) ?? null;

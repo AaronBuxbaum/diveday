@@ -28,6 +28,7 @@ const EXPECTED_FILES = [
   "shop.csv",
   "boats.csv",
   "trip_lenses.csv",
+  "season_events.csv",
   "contacts.csv",
   "people.csv",
   "certifications.csv",
@@ -103,6 +104,7 @@ const EXPORTED_TABLES = [
   "shops",
   "boats",
   "trip_lenses",
+  "season_events",
   "people",
   "certifications",
   "specialty_certifications",
@@ -343,6 +345,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],
+  // The shop's own year (issue #1485). `created_at` is when somebody typed the
+  // season into Settings, which says nothing about the season; the two date
+  // columns are the fact, and they are both exported.
+  season_events: ["shop_id", "created_at"],
   dive_packages: ["shop_id"],
   dive_package_entitlements: ["shop_id"],
   staff_shifts: ["shop_id"],

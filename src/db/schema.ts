@@ -1875,6 +1875,67 @@ export const tripLenses = pgTable(
   ],
 );
 
+/**
+ * **The reef's calendar** — the weeks a shop plans its year around, in the
+ * shop's own words (issue #1485).
+ *
+ * Lobster mini-season, a goliath grouper aggregation, turtle nesting, the
+ * lionfish derby the shop runs every August. A Florida shop's summer is
+ * organised by these and none of them is DiveDay's to name: the dates move by
+ * state rule and by species, and the sentence that makes a visitor care is the
+ * one the shop would say across the counter. So the words are the shop's,
+ * exactly like a dive site's fit tone (ADR
+ * 20260813-dive-site-briefings-are-the-shops-own-words) or a lens, and
+ * `src/i18n` supplies only the frame the storefront draws around them. There is
+ * deliberately no seeded catalog to pick from.
+ *
+ * **Calendar dates, not instants.** "The last Wednesday and Thursday of July"
+ * is two days on a wall calendar, inclusive at both ends; there is no clock in
+ * it, and a timestamp would slide the window under a reader in another zone.
+ * Whether it is live is the only question with a zone in it, and it is asked at
+ * the edge — today's date in `shops.timezone` (`src/lib/season-events.ts`).
+ *
+ * The optional `lens_id` is the shop's own word for the kind of day this season
+ * fills the board with, so the storefront band can hand a visitor the narrowed
+ * schedule rather than leaving them to find it. Null is the ordinary case.
+ */
+export const seasonEvents = pgTable(
+  "season_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    name: text("name").notNull(),
+    /** The shop's own sentence about the week. Null renders the name alone. */
+    note: text("note"),
+    startsOn: date("starts_on", { mode: "string" }).notNull(),
+    /** Inclusive: a one-day derby is `starts_on = ends_on`. */
+    endsOn: date("ends_on", { mode: "string" }).notNull(),
+    /**
+     * `set null` rather than a cascade: deleting the word must not delete the
+     * season, which is a fact about the shop's year and not about its
+     * vocabulary.
+     */
+    lensId: uuid("lens_id").references(() => tripLenses.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Deleting a season stamps this and leaves the row (ADR
+     * 20260820-every-delete-is-soft). The word on screen is still "Delete".
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    // Every reader asks the same question — this shop's live seasons in date
+    // order — whether it is the storefront band, the month-out reminder or the
+    // Settings inset.
+    index("season_events_shop_range_idx")
+      .on(table.shopId, table.startsOn, table.endsOn)
+      .where(sql`${table.deletedAt} is null`),
+    check("season_events_ends_on_or_after", sql`${table.endsOn} >= ${table.startsOn}`),
+  ],
+);
+
 export const trips = pgTable(
   "trips",
   {
