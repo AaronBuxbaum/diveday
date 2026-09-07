@@ -4074,6 +4074,14 @@ export const inboundMessages = pgTable(
     readAt: timestamp("read_at", { withTimezone: true }),
     answeredAt: timestamp("answered_at", { withTimezone: true }),
     providerMessageId: text("provider_message_id").notNull(),
+    /**
+     * The `Message-ID` header of an inbound email, kept apart from
+     * `provider_message_id` (SES's own id, which is what makes a redelivery a
+     * no-op). A reply sets `In-Reply-To` and `References` to *this*, which is
+     * what makes it land in the diver's thread rather than beside it. Null on
+     * every other channel and on a mail that carried none.
+     */
+    emailMessageId: text("email_message_id"),
     inReplyToDeliveryId: uuid("in_reply_to_delivery_id").references(
       () => notificationDeliveries.id,
       { onDelete: "set null" },

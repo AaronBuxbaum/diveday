@@ -38,6 +38,8 @@ export type RecordInboundMessageInput = {
   mediaCount?: number;
   receivedAt: Date;
   providerMessageId: string;
+  /** An email's own `Message-ID` header, for threading the reply; null elsewhere. */
+  emailMessageId?: string | null;
   /** The provider's id of the outbound message this answers, when a header names one. */
   inReplyToProviderMessageId?: string | null;
 };
@@ -134,6 +136,7 @@ export async function recordInboundMessage(
       mediaCount: Math.max(0, Math.floor(input.mediaCount ?? 0)),
       receivedAt: input.receivedAt,
       providerMessageId: input.providerMessageId,
+      emailMessageId: input.emailMessageId?.trim().slice(0, 998) || null,
       inReplyToDeliveryId,
     })
     .onConflictDoNothing({ target: [inboundMessages.channel, inboundMessages.providerMessageId] })

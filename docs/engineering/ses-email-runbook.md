@@ -176,7 +176,7 @@ Beyond the body, three things a receiving mailbox and a reviewer both read
 
 | | Where it comes from | When it is absent |
 | --- | --- | --- |
-| `Reply-To: <the shop's front desk>` | `shops.contact_email`, once the shop has opened the confirmation link sent there (`shops.contact_email_confirmed_at`, the `/confirm-contact/[token]` page; issue #1288). Any change to the address starts it unconfirmed again, and the settings row says "Awaiting confirmation" until it is | The shop has none on file, or has not confirmed it; a reply then goes to `noreply@ses.dive.day` and nobody |
+| `Reply-To: reply+<token>@inbound.ses.dive.day` | `shops.inbound_email_token`, minted by the database for every shop; a diver's reply lands on their record and in the shop's inbox (ADR [20260907-two-way-inbox](../architecture/decisions/20260907-two-way-inbox.md), [Mail divers send back](#mail-divers-send-back) below) | Only when inbound mail is switched off (`EMAIL_INBOUND_DOMAIN=`): then the confirmed front desk, `shops.contact_email` once the shop opened the confirmation link (`shops.contact_email_confirmed_at`, issue #1288), and nothing at all until it has |
 | `Auto-Submitted: auto-generated` (RFC 3834) on every message | Always | Never — a diver's out-of-office or ticketing auto-responder stays quiet instead of answering a booking confirmation |
 | A closing line `Shop name · street, town, region postcode, country` on every **commercial** message (the kinds carrying an unsubscribe link: wait-list invite, last-minute deal, checkout recovery, recap) | `shops.address_*` | The shop has no street on file; nothing is guessed and no blank line is rendered |
 | `List-Unsubscribe` + `List-Unsubscribe-Post` (RFC 8058 one-click) on those same kinds | The notification's own `unsubscribeUrl` | Never absent on a commercial kind — `kinds.ts` makes the URL required there |
@@ -402,6 +402,53 @@ signature, or a `TopicArn` mismatch, is rejected before the database is touched.
 **Local development** needs a public URL to receive SNS notifications. Tunnel with `ngrok http 3000`
 and create a *second* SNS subscription pointing at the tunnel — don't point production's subscription
 at your laptop.
+
+## Mail divers send back
+
+Every email the app sends carries `Reply-To: reply+<token>@inbound.ses.dive.day`, and a reply to
+it lands on the diver's record and in the shop's inbox at `/shop/<slug>/inbox`
+(ADR [20260907-two-way-inbox](../architecture/decisions/20260907-two-way-inbox.md)). The path is
+SES receipt rule → S3 → SNS → `POST {APP_HOST}/api/webhooks/email-inbound`.
+
+**What the stack creates** (`infra/lib/infra-stack.ts` S8b): the private inbound bucket
+(`diveday-inbound-mail`, objects expire after 30 days), the `diveday-ses-inbound-mail` topic with
+the webhook subscribed, and the `diveday-inbound` receipt rule set with one rule — recipients
+`inbound.ses.dive.day`, spam and virus scan on, action *store to S3 and notify the topic*. The
+receiving domain is a child of the verified `ses.dive.day` identity, so it needs no verification
+of its own. The SES sender user gets `s3:GetObject` on the bucket and nothing else new.
+
+**What is yours**, both in [manual-actions.md](manual-actions.md): the MX record for
+`inbound.ses.dive.day` (Vercel DNS, the `SesInboundMxRecord` output spells it out), and
+activating the rule set — `aws ses set-active-receipt-rule-set --rule-set-name diveday-inbound`.
+SES allows one active set per region and the switch has no CloudFormation resource, so the stack
+never flips it. Then set `EMAIL_INBOUND_SNS_TOPIC_ARN` and `EMAIL_INBOUND_S3_BUCKET` from the
+outputs (`pnpm infra:deploy` writes both) and redeploy the app; until they are set the route
+answers 503 and the subscription sits `PendingConfirmation`, same recovery as the delivery
+webhook above.
+
+**What the webhook does, in the order it trusts things.** Verifies the SNS envelope's signature,
+topic and freshness (`src/lib/notifications/sns.ts`); refuses a notification naming any bucket
+but the configured one; resolves the `reply+<token>` recipient to a shop
+(`shops.inbound_email_token`) and drops mail for a token nobody holds; only then reads the object
+(capped at 2 MB), takes the `text/plain` part with the quoted history cut
+(`src/lib/inbound-email.ts`), and files it against the diver whose `people.email` matches the
+sender inside that shop — or as an unknown sender when none does. A virus verdict is refused; a
+spam verdict is kept, because a diver's reply from hotel Wi-Fi trips it too often. Attachments
+are counted, never fetched. A failed S3 read answers 500 so SNS retries; everything else verified
+answers 200.
+
+**Reading a raw message by hand** — the bucket keeps SES's copy for 30 days:
+
+```bash
+aws s3 cp s3://diveday-inbound-mail/mail/<ses message id> - | less
+```
+
+**Switching it off** for a fork or a staging deploy: `EMAIL_INBOUND_DOMAIN=` (set empty) puts
+`Reply-To` back on the shop's confirmed front-desk address with no code change.
+
+**SMS is one-way.** SNS cannot receive a text; two-way SMS needs a dedicated number through AWS
+End User Messaging and is tracked as a `waiting-on-external` issue. The inbox's model already
+carries an `sms` channel for the day it lands.
 
 ## DiveDay's own addresses
 

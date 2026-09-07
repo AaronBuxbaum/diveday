@@ -1,10 +1,12 @@
 import { getDb } from "@/db/client";
+import { recordInboundMessage } from "@/db/inbound-messages";
 import { applyProviderEmailEvent } from "@/db/notifications";
 import { shopIdForWhatsAppWaba } from "@/db/whatsapp-accounts";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
   parseWhatsAppDeliveryEvents,
+  parseWhatsAppInboundMessages,
   verifyWhatsAppSignature,
   whatsAppChallengeResponse,
 } from "@/lib/notifications/whatsapp-events";
@@ -35,10 +37,16 @@ export async function GET(request: Request) {
 }
 
 /**
- * Delivery outcomes. Answers 200 for anything verified but not acted on: Meta
- * retries a non-2xx, so erroring on an event type we don't handle — or on a
- * message id we never tracked — would buy an endless redelivery loop and
- * nothing else. That is the same posture as the SES route.
+ * Delivery outcomes, and what divers write back (ADR 20260907-two-way-inbox).
+ * Answers 200 for anything verified but not acted on: Meta retries a non-2xx,
+ * so erroring on an event type we don't handle — or on a message id we never
+ * tracked — would buy an endless redelivery loop and nothing else. That is the
+ * same posture as the SES route.
+ *
+ * Both halves resolve the tenant the same way — the WABA in `entry[].id`,
+ * looked up to a shop — and an inbound message for a WABA no shop has
+ * connected is dropped rather than filed nowhere: the row has a `shop_id`, and
+ * there is no honest value for it.
  */
 export async function POST(request: Request) {
   // Read as text and verify *before* parsing: Meta signs the exact bytes, and a
@@ -52,20 +60,49 @@ export async function POST(request: Request) {
   if (verification.status === "not_configured") return new Response(null, { status: 503 });
   if (verification.status !== "verified") return new Response(null, { status: 400 });
 
-  const events = parseWhatsAppDeliveryEvents(payload, nowDate());
-  if (events.length === 0) return new Response(null, { status: 200 });
+  const now = nowDate();
+  const events = parseWhatsAppDeliveryEvents(payload, now);
+  const inbound = parseWhatsAppInboundMessages(payload, now);
+  if (events.length === 0 && inbound.length === 0) return new Response(null, { status: 200 });
 
   const db = await getDb();
   // Resolved once per batch: every event in one delivery names the same WABA,
   // and this is the tenant key the update is scoped to.
   const shopIdByWaba = new Map<string, string | null>();
+  const shopFor = async (wabaId: string) => {
+    if (!shopIdByWaba.has(wabaId))
+      shopIdByWaba.set(wabaId, await shopIdForWhatsAppWaba(db, wabaId));
+    return shopIdByWaba.get(wabaId) ?? null;
+  };
+
+  for (const message of inbound) {
+    const shopId = message.wabaId ? await shopFor(message.wabaId) : null;
+    if (!shopId) {
+      log("whatsapp_webhook.inbound_unknown_waba", "warn", { hasWaba: Boolean(message.wabaId) });
+      continue;
+    }
+    const result = await recordInboundMessage(db, {
+      shopId,
+      channel: "whatsapp",
+      fromAddress: message.from,
+      body: message.body,
+      mediaCount: message.mediaCount,
+      receivedAt: message.receivedAt,
+      providerMessageId: message.providerMessageId,
+    });
+    // Ids and outcomes only — never the sender or the words (PII-in-logs rule).
+    log("whatsapp_webhook.inbound_recorded", "info", {
+      shopId,
+      providerMessageId: message.providerMessageId,
+      status: result.status,
+      matched: result.status === "recorded" ? result.personId !== null : undefined,
+    });
+  }
+
   for (const event of events) {
     let shopId: string | null = null;
     if (event.wabaId) {
-      if (!shopIdByWaba.has(event.wabaId)) {
-        shopIdByWaba.set(event.wabaId, await shopIdForWhatsAppWaba(db, event.wabaId));
-      }
-      shopId = shopIdByWaba.get(event.wabaId) ?? null;
+      shopId = await shopFor(event.wabaId);
       // A signed event for a WABA no shop has connected — a disconnect that
       // raced an in-flight message, or a subscription Meta has not dropped yet.
       // Nothing to apply, and scoping to "no shop" would silently widen the
