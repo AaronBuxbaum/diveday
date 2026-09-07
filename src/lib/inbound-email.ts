@@ -34,7 +34,11 @@ type Headers = Map<string, string[]>;
 
 /** Split a message into unfolded headers and the raw body. */
 function splitHeaders(raw: string): { headers: Headers; body: string } {
-  const normalized = raw.replace(/\r\n/g, "\n");
+  // `\r\n?` and not `\r\n`: a **bare** CR is not a line terminator here, so
+  // normalising only CRLF lets one ride inside an unfolded header value and out
+  // again into an outbound `In-Reply-To`. Nothing downstream should have to
+  // strip a control character out of a header we parsed.
+  const normalized = raw.replace(/\r\n?/g, "\n");
   const boundaryIndex = normalized.indexOf("\n\n");
   const headerText = boundaryIndex === -1 ? normalized : normalized.slice(0, boundaryIndex);
   const body = boundaryIndex === -1 ? "" : normalized.slice(boundaryIndex + 2);
