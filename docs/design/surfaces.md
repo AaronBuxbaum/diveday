@@ -33,7 +33,7 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ### The shop home — `/shop/[shopSlug]`
 
-**Proposed 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
+**Accepted 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
 on a phone or tablet in a browser tab, a staffer whose role reaches the manifest sees one line under the day's spine, once per device, saying the roll call can open from the home screen without a browser bar or signal, with the platform's install prompt or its own menu item; installed, on a desktop, or dismissed, it renders nothing.
 
 **Proposed 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), [canvas](canvases/20260907-nothing-from-nowhere/README.md)):
@@ -189,8 +189,8 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
 
 ### The counter — `/shop/[shopSlug]/check-in`
 
-**Proposed 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
-a blocked row whose fix is the release gains *Sign here* as its primary, which locks the desk behind the diver's own waiver page on the shop's device and reopens the counter with the row settled once a staffer signs back in; the signature records the counter, the device, who handed it over and when. Waits on H-70 b; declined, the row keeps its two doors.
+**Chosen 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
+a blocked row whose fix is the release gains *Sign here* as its primary, which locks the desk behind the diver's own waiver page on the shop's device and reopens the counter with the row settled once a staffer signs back in; the signature records the counter, the device, who handed it over and when. H-70 b decided yes.
 
 **Proposed 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), [canvas](canvases/20260907-nothing-from-nowhere/README.md)):
 the instrument line's figures roll as a check-in lands, the sinking row's neighbours slide into its gap on the same 200ms, and Undo runs both in reverse. The optimistic commit principle 1 grants the counter is what the motion follows.
@@ -276,6 +276,9 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 
 ### The thread — `/ready/[token]` (and every state after booking)
 
+**Chosen 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), slice 18f, [spec](canvases/20260907-nothing-from-nowhere/SPEC.md)):
+one line beside Add to calendar, *Add to Wallet*, on every state after booking; the pass wears the shop's brand, carries the top card's facts, the diver's name and the crew-set stage, surfaces on the lock screen from the dock call, and updates when the plan moves. Never the thread's URL, a barcode, a price or a medical fact. Rendered only when a platform is configured; otherwise the thread as it ships.
+
 **Proposed 2026-09-04** (same ADR and canvas): one step, "Anything changed?", over the facts the shop kept; provenance on the arrival card; the boat's-back line on the day; the recap becomes a postcard with its number, an image to keep, a private pulse and the next dive with its reason.
 
 **Built 2026-08-29** (slices 7c and 7d) — same ADR and canvas. Extends ADR
@@ -350,8 +353,8 @@ drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 
 ### The diver record — `/shop/[shopSlug]/divers/[personId]`
 
-**Proposed 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
-the certification form's photo capture moves to the top of the form and, on H-70 c, reads the card it photographed into the four fields as *Read* values under one sentence naming the source; *Mark certified* stays the one primary and the only writer of `verified`. A photo the reader cannot make out fills nothing and says nothing.
+**Declined 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
+the card reader is not built and no photo capture is added; the certification form ships as it is, and a card carries no photograph (ADR 20260811-retire-the-digital-card). The canvas's premise that one already did was wrong.
 
 **Answered 2026-08-27, shipped** — ADR
 [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md), drawn in
@@ -393,8 +396,8 @@ Settings → Lobby display.
 
 ### The doors — `/sign-in`, `/onboard`, and the token family
 
-**Proposed 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
-on a device that holds a passkey for the account, `/sign-in` is one primary and the device's own check, with the password as the link out; every other device gets the form as it ships. The door keeps its anatomy and its one primary; sign-out keeps its two taps. Waits on H-70 a.
+**Chosen 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
+on a device that holds a passkey for the account, `/sign-in` is one primary and the device's own check, with the password as the link out; every other device gets the form as it ships. The door keeps its anatomy and its one primary; sign-out keeps its two taps. H-70 a decided yes, the step-up included.
 
 **Built 2026-08-29** — ADR
 [20260827-first-light](../architecture/decisions/20260827-first-light.md) (Accepted), drawn in

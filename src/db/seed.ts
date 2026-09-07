@@ -43,6 +43,7 @@ import {
   gearServiceEvents,
   heldSends,
   importedPaymentHistory,
+  inboundMessages,
   integrationDeliveries,
   integrationEvents,
   integrationOauthStates,
@@ -77,6 +78,7 @@ import {
   shops,
   specialtyCertifications,
   staffCredentials,
+  staffReplies,
   staffShifts,
   tips,
   tripAssignments,
@@ -123,6 +125,7 @@ import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
 import { seedGear } from "./seed-gear";
 import { seedHistory } from "./seed-history";
+import { seedInbox } from "./seed-inbox";
 import { seedLenses } from "./seed-lenses";
 import { seedMedicalReview } from "./seed-medical-review";
 import { seedMinimumSeats } from "./seed-minimum-seats";
@@ -855,6 +858,10 @@ export async function seedDemoSchedule(
   // board has nothing on — the rows the requests list groups by day
   // (src/lib/date-requests.ts).
   await seedDateRequests(db, shopId);
+  // What divers wrote back — the inbox and the record thread (ADR
+  // 20260907-two-way-inbox). After the divers, since every row but the
+  // stranger's names one.
+  await seedInbox(db, shopId, customers, instructor.id);
   await seedFrontDesk(db, shopId, customers, tripRows, bookingRows, opts.history !== false);
   // The trailing quarter of already-sailed trips that gives owner reporting
   // something to report. Off for the lean unit-test template and for trial
@@ -1127,6 +1134,12 @@ export async function resetDemoSchedule(
   // 20260904-reef-all-the-way-down, D40) — so it clears here for the same
   // reason and at the same point.
   await db.delete(recapPulses).where(eq(recapPulses.shopId, shopId));
+  // The inbox (ADR 20260907-two-way-inbox): a reply names the message it
+  // answers and the staffer who wrote it, a message names a diver and, when a
+  // header said so, a notification delivery — so replies go first, messages
+  // second, and both before the people and delivery rows they point at.
+  await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
+  await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
   // Stripe checkout/refund state references bookings, trips, and orders, so it
   // must be cleared before those parents or the deletes below FK-violate and
   // abort the whole reset mid-run — leaving a prior payment test's trips and

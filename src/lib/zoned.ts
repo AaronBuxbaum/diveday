@@ -212,3 +212,20 @@ export function parseWallTime(dateValue: string, timeValue: string): WallTime | 
   if (wall.hour > 23 || wall.minute > 59) return null;
   return wall;
 }
+
+/**
+ * A UTC instant written as the shop's own wall clock with its offset —
+ * `2026-07-25T07:30:00-04:00` — the one ISO shape that carries both the
+ * moment and the zone it was read in. A bare `.toISOString()` is honest but
+ * ends in `Z`, and a reader that is not a person (an agent composing "leaves
+ * at 7:30") would have to know the shop's zone to say the time the way the
+ * dock says it; this spells it for them. Seconds are always `00`: departures
+ * are scheduled to the minute.
+ */
+export function zonedIsoString(date: Date, timeZone: string): string {
+  const offsetMs = tzOffsetMs(date, timeZone);
+  const wall = new Date(date.getTime() + offsetMs).toISOString().slice(0, 16);
+  const offsetMinutes = Math.round(Math.abs(offsetMs) / 60_000);
+  const sign = offsetMs < 0 ? "-" : "+";
+  return `${wall}:00${sign}${pad(Math.floor(offsetMinutes / 60))}:${pad(offsetMinutes % 60)}`;
+}

@@ -466,7 +466,16 @@ substrate:
   `og:url` stays absent on bearer-token pages by design: there the URL *is* the credential, and an
   unfurl renders for bystanders who never clicked the link.
 - Site-level `robots` and `sitemap` cover the public surface; tokened pages (`/waivers/*`,
-  `/ready/*`, `/recap/*`, `/offline-manifest`) stay `noindex` individually.
+  `/ready/*`, `/recap/*`, `/offline-manifest`) stay `noindex` individually. `robots.txt` is
+  rendered by `src/app/robots.txt/route.ts` from `src/lib/robots.ts` (not Next's `robots.ts`
+  convention, which has no slot for the comment that points an agent at `/llms.txt`).
+- **The agent-ready storefront** (issue #1427, N-50): `/llms.txt` (`src/lib/llms-txt.ts`) tells a
+  model what DiveDay is, the public URL shapes, where availability lives and that bookings happen
+  on the booking page, and lists the shops the sitemap lists; each listed shop also serves
+  `/s/<slug>/availability.json` (`src/lib/availability.ts` for the shape, `src/db/availability.ts`
+  for the rows) — the next 14 days of public departures with a seat open, as codes and a
+  `booking_url`, nothing about a person. A shop that opted out of search gets a 404 there, not an
+  empty list, and its schedule JSON-LD stops naming the document (`subjectOf` → `DataFeed`).
 - Structured data where content already supports it: `FAQPage` on `/pricing`, `SoftwareApplication`
   on `/` — values read from `src/lib/marketing.ts`, never literals.
 - **High-intent pages beat high-volume pages** for us: switching guides (`/switching/<incumbent>`)

@@ -87,6 +87,13 @@ export const DIVER_HISTORY_TABLES = [
   // unique index is per *booking*, and the bookings move with them.
   "recap_pulses",
   "trip_blowout_divers",
+  // The diver's own messages and the shop's answers to them (ADR
+  // 20260907-two-way-inbox). A merge is the shop saying two records are one
+  // person, and a conversation with that person belongs on the record that
+  // survives — otherwise the survivor's thread opens on silence while the
+  // "running late" the crew acted on sits on a record nobody opens.
+  "inbound_messages",
+  "staff_replies",
 ] as const;
 
 /** These rows identify a staff account or crew assignment, not a diver history. */
@@ -177,6 +184,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "held_sends.actor_person_id": "who tapped Send; the hold lives eight seconds",
   "processor_erasure_obligations.discharged_by_person_id": "who discharged the obligation",
   "recap_pulses.addressed_by_person_id": "which staffer picked the pulse up",
+  "staff_replies.sent_by_person_id": "which staffer wrote the reply",
   "review_moderation_events.recorded_by_person_id": "who published or withheld the review",
   "roll_call_crew_events.recorded_by_person_id": "who called the crew roll",
   "roll_call_events.recorded_by_person_id": "who called the roll",

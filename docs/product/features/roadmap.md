@@ -455,10 +455,16 @@ spring half, 18c's roster half and 18f wait on it.
   The page's `<h1>` fades from 40px on — the bar is 85% of the page behind a blur, so without it a
   34px heading ghosts through the chrome under the folded label and the word is on screen twice.
 - **18f** — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's
-  brand, updates from `trips.revision`, the two pass-service routes. `waiting-on-external` on the
-  Apple Developer and Google Wallet accounts H-69 b decides; nothing built ahead of them.
+  brand, updates from `trips.revision` and the crew-set stage, the PassKit web service under
+  `/api/wallet/v1/**`, the Google object, a ten-minute push cron. **H-69 b decided yes 2026-09-07**:
+  built now, shipped dark — with no credential configured the thread renders as today and every
+  pass route 404s — so the slice merges ahead of the Apple Developer and Google Wallet accounts,
+  which are manual steps in §17's registry rather than blockers. One new dependency,
+  `passkit-generator`. The contract is the canvas's
+  [SPEC.md](../../design/canvases/20260907-nothing-from-nowhere/SPEC.md); the implementing prompt is
+  in the canvas README.
 
-### 19. In your hands (design complete; H-70 open)
+### 19. In your hands (design complete; H-70 decided)
 
 The second look at the 2026-09-07 brief, argued on
 [the canvas](../../design/canvases/20260907-in-your-hands/README.md) and proposed in ADR
@@ -470,11 +476,12 @@ a certification card is photographed and then typed, the type ignores the phone'
 and the app can be installed and never says so. The ADR states one rule (the device already knows
 it; what it supplied says where it came from; the last tap is a person's; the safety floor is
 untouched) and applies it in five moves, every one rendering the page as it ships when it is not
-true. Three calls are the owner's (H-70): passkeys and the step-up, the release signed on the shop's
-device, the card photo sent to a text reader. Each slice runs the `design-implementation` skill: the
+true. The owner ruled on 2026-09-07 (H-70): passkeys and the step-up yes, the release signed on the
+shop's device yes, the card reader declined — and the reader's premise was wrong, since a card has
+carried no photograph since ADR 20260811-retire-the-digital-card, so 19c is dropped in full and
+nothing on the certification form changes. Each slice runs the `design-implementation` skill: the
 component names the ADR, a test pins the rule, the canvas README's slice table moves, and the visual
-diffs are explained. 19d and 19e do not depend on H-70 and may start on the ADR alone; 19a, 19b and
-19c wait on their call.
+diffs are explained. All four remaining slices may start.
 
 - **19a** — the door knows your face: Better Auth's passkey plugin and its table (schema-change
   skill), the passkey frame on `/sign-in` with the password as a link, the Passkeys panel in
@@ -485,11 +492,9 @@ diffs are explained. 19d and 19e do not depend on H-70 and may start on the ADR 
   pinned by a test that every `/shop` read refuses while it is set, the hand-over and who-sees-what
   lines on the waiver page, the counter provenance on the signature row, the settled row's one line
   on the counter. `dive-domain-expert` and security review. Waits on H-70 b.
-- **19c** — point the camera at the card: the capture at the top of `CardSightingForm` named for
-  the camera, the reader behind the existing upload (Amazon Textract, same region), the four fields
-  with *Read* marks and the added date field, the opt-out policy as a manual step in §17's registry,
-  the `/privacy` sentence, a test that the reading writes fields and never `status`. Waits on H-70 c;
-  the capture's move to the top of the form does not.
+- **19c** — *dropped 2026-09-07* (H-70 c declined). The card reader is not built, no photo capture
+  is added, and the certification form ships as it is: a card carries no photograph (ADR
+  20260811-retire-the-digital-card).
 - **19d** — the type follows the phone: the `-apple-system-body` probe in the pre-hydration script
   that sets `lang` and `dir`, upward only from the app's 16px root, one visual capture of the
   manifest at the largest root.

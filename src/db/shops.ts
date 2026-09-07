@@ -41,9 +41,9 @@ export async function getShopBySlug(db: AppDb, slug: string) {
  * seasons should stay indexed, because falling out of search is worse than
  * never entering it.
  */
-export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string }[]> {
+export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string; name: string }[]> {
   return db
-    .select({ slug: shops.slug })
+    .select({ slug: shops.slug, name: shops.name })
     .from(shops)
     .where(
       and(

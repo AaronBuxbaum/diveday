@@ -38,6 +38,7 @@ import {
   gearServiceEvents,
   heldSends,
   importedPaymentHistory,
+  inboundMessages,
   integrationDeliveries,
   integrationEvents,
   integrationOauthStates,
@@ -78,6 +79,7 @@ import {
   shopWhatsappAccounts,
   specialtyCertifications,
   staffCredentials,
+  staffReplies,
   staffShifts,
   tips,
   tripAssignments,
@@ -193,6 +195,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
   // The review's private sibling, on the same parents (D40).
   await db.delete(recapPulses).where(eq(recapPulses.shopId, shopId));
+  // The inbox: replies before the messages and people they name.
+  await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
+  await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
