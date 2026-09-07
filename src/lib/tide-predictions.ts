@@ -138,14 +138,24 @@ export async function fetchTidePredictions(
   fetcher: Fetcher = fetch,
 ): Promise<TidePrediction[] | null> {
   const beginDate = beginDateFor(day);
-  // **Never in production, whatever the environment says.** Every other
+  // **Never in a real deployment, whatever the environment says.** Every other
   // consumer of this flag degrades to *off*; this one degrades to synthetic
   // turns that render byte-identically to real ones, against an ADR whose rule
   // for this feature is that the sentence must either be right or absent. The
   // flag is set only by `scripts/dev-server.mjs` and `playwright.config.ts`,
-  // and that was the whole guarantee until this line: a fact, not a check.
+  // and that was the whole guarantee until this belt: a fact, not a check.
+  //
+  // The belt reads `DIVEDAY_E2E`, **not** `NODE_ENV`, because the e2e fleet
+  // builds with `next build` and so *is* production by that measure. Guarding
+  // on `NODE_ENV !== "production"` alone left this branch dead in the one
+  // environment it exists to serve: the capture waited 210s for a sentence no
+  // blocked fetch could ever produce, and the tide surface timed out on every
+  // run. `playwright.config.ts` sets both flags together; `dev-server.mjs` sets
+  // only the HTTP one, which the non-production arm still covers.
+  const syntheticTurnsAllowed =
+    process.env.DIVEDAY_E2E === "1" || process.env.NODE_ENV !== "production";
   if (
-    process.env.NODE_ENV !== "production" &&
+    syntheticTurnsAllowed &&
     process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" &&
     fetcher === fetch
   ) {
