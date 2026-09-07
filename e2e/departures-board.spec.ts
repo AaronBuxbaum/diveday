@@ -36,7 +36,7 @@ test.describe("the departures board", () => {
       // Seats until a departure roll call has begun, divers once it has. The
       // seeded boat has no roll call yet, so it reads booked-of-capacity --
       // the pairing the glossary calls the fill rate.
-      await expect(board.getByText(/\b\d+ of 12 booked\b/).first()).toBeVisible();
+      await expect(board.getByText(/\b\d+ of 12 seats booked\b/).first()).toBeVisible();
       // A lobby sees a count, never a person: the link was made with names off,
       // and no setting names a diver.
       const text = await board.locator("main").innerText();
