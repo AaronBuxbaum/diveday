@@ -199,7 +199,7 @@
       "heading": "Aparecer en buscadores",
       "valueListed": "Visible",
       "valueHidden": "Oculto",
-      "detail": "Si desmarcas esto, lo que ya esté indexado puede tardar unas semanas en desaparecer, y una página que alguien haya enlazado sigue siendo accesible por ese enlace.",
+      "detail": "Estar visible también pone tu centro en la página de DiveDay para tu localidad. Si desmarcas esto, lo que ya esté indexado puede tardar unas semanas en desaparecer, y una página que alguien haya enlazado sigue siendo accesible por ese enlace.",
       "label": "Mostrar mis páginas públicas en los buscadores",
       "submit": "Guardar",
       "submitting": "Guardando…"

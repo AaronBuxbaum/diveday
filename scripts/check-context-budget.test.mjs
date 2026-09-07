@@ -4,7 +4,13 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { LINE_WORD_CAP, measure, overlongLines } from "./check-context-budget.mjs";
+import {
+  isPathScoped,
+  LINE_WORD_CAP,
+  measure,
+  overlongLines,
+  rules,
+} from "./check-context-budget.mjs";
 
 /**
  * What this check has to get right is *what counts as always loaded*. A skill's
@@ -61,6 +67,38 @@ describe("what counts as always-loaded context", () => {
     const measured = await measure(root);
     expect(measured["AGENTS.md"]).toBe(5);
     expect(measured["CLAUDE.md"]).toBe(1);
+  });
+});
+
+describe("what a rules file costs", () => {
+  const scoped = `---\npaths:\n  - "src/db/**"\n---\n\n${Array(40).fill("rule").join(" ")}\n`;
+  const unscoped = `# Always\n\n${Array(7).fill("word").join(" ")}\n`;
+
+  it("tells a path-scoped rule from one loaded at launch", () => {
+    expect(isPathScoped(scoped)).toBe(true);
+    expect(isPathScoped(unscoped)).toBe(false);
+    expect(isPathScoped("---\nname: x\n---\nbody")).toBe(false);
+  });
+
+  it("counts only the unscoped rules toward the budget, and lists both kinds", async () => {
+    const root = await fixture({ skill: SKILL, agent: AGENT });
+    await mkdir(path.join(root, ".claude/rules/nested"), { recursive: true });
+    await writeFile(path.join(root, ".claude/rules/db.md"), scoped);
+    await writeFile(path.join(root, ".claude/rules/nested/always.md"), unscoped);
+
+    const listed = await rules(root);
+    expect(listed.map((rule) => [rule.file, rule.scoped])).toEqual([
+      [".claude/rules/db.md", true],
+      [".claude/rules/nested/always.md", false],
+    ]);
+    const measured = await measure(root);
+    expect(measured[".claude/rules/*.md (without paths: frontmatter)"]).toBe(9);
+  });
+
+  it("measures zero when there is no rules directory at all", async () => {
+    const root = await fixture({ skill: SKILL, agent: AGENT });
+    expect(await rules(root)).toEqual([]);
+    expect((await measure(root))[".claude/rules/*.md (without paths: frontmatter)"]).toBe(0);
   });
 });
 

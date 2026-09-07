@@ -21,6 +21,48 @@ enum value, two environment variables; the connection rows, sealed credentials, 
 state, outbox and retry ladder are the register's, unchanged. ADR
 [20260907-xero-beside-quickbooks](../architecture/decisions/20260907-xero-beside-quickbooks.md).
 
+## The reef's calendar (delivered 2026-09-07)
+
+N-02 of the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1485). A shop writes
+the weeks it plans its year around in its own words — lobster mini-season, a grouper aggregation,
+turtle nesting, a lionfish derby — at Settings → Seasons and events: a name, its own sentence, an
+inclusive date range, and optionally one of the shop's kinds of day. While a window is live the
+storefront carries a band above the schedule with those words and a link to the narrowed board; a
+month before it opens, the shop's own queue carries one `later` row about it and then goes quiet
+once the week arrives. The dates are calendar dates with no instant in them and "live" is asked
+against today in the shop's timezone (`src/lib/season-events.ts`); `season_events` carries
+`deleted_at` and a partial index like every other table a user can delete from. DiveDay supplies the
+frame and nothing inside it — there is no seeded catalog of seasons, on the same argument as a dive
+site's briefing (ADR
+[20260813-dive-site-briefings-are-the-shops-own-words](../architecture/decisions/20260813-dive-site-briefings-are-the-shops-own-words.md)).
+
+## Moon and light on night departures (delivered 2026-09-07)
+
+N-03 from the 2026-09-07 improvement-ideas decision sheet (issue #1467). Any departure still out at
+sunset carries one line of sky: when the sun sets, when civil twilight ends, and the moon's phase
+and illuminated share. `src/lib/sky.ts` computes all of it from the shop's own coordinates with the
+standard low-precision solar and lunar series — no dependency, no network call, accurate to a minute
+against published tables — and hands back a phase *code* that `src/i18n/sky-labels.ts` words in the
+reader's language. It reaches a diver in three places: the briefing's "The day", the thread's
+dock-day rhythm, and the night-before email. It informs and gates nothing, and a shop that has never
+set its address gets no line rather than a guess.
+
+## Something watches from outside, and anyone can ask (delivered 2026-09-07)
+
+N-55 from the 2026-09-07 improvement-ideas decision sheet (issue #1466), closing H-04's last open
+item and the first row of H-45's sequence. A **Route 53 health check** polls `/api/health` every 30
+seconds from AWS's global checker fleet — outside the account, so it survives the outage that takes
+every other alerting path down with it — matching `"status":"ok"` in the body as well as the 200, so
+a parked domain or a CDN error shell reads as down. Its CloudWatch alarm is declared as
+`UPTIME_TARGETS` in `infra/lib/observability.ts`, reaches `alerts@dive.day` in about four minutes,
+and is the one alarm in the stack that treats **missing data as breaching**: a monitor gone quiet is
+indistinguishable from the outage it watches for. **`/status`** answers the same question in public
+— no session, live checks run in the request that renders it, the app and the database reported
+separately so a shop can tell our incident from their wifi, and a timestamp saying when. Nothing on
+it is cached and nothing is hand-operated. ADR
+[20260907-external-uptime-monitor](../architecture/decisions/20260907-external-uptime-monitor.md);
+the browser canary that renders a real shop's schedule stays open, waiting on a pilot slug.
+
 ## The day's profile, before booking (delivered 2026-09-07)
 
 N-06 from the 2026-09-07 improvement-ideas decision sheet (issue #1479). "The day" on the public

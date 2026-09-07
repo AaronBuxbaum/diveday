@@ -5,6 +5,11 @@ DiveDay's public pages are the homepage (`/`), product page (`/product`), pricin
 (`/switching/*`) join them as they ship. They are a truthful sales surface for the product that
 exists today.
 
+The regional pages (`/dive`, `/dive/<town>`, issue #1436) are public and carry DiveDay's own words,
+and they are **not** on that list: they are addressed to a diver looking for a boat rather than to
+an owner looking for software, so they carry no trial pitch and no price. The claims policy and the
+voice rules below still bind every sentence on them; the positioning spine does not.
+
 This document is the living rulebook for those pages: the positioning they argue, the claims they
 may make, the voice they use, and the maintenance loop that keeps them true. The dated case for the
 current direction is [archive/marketing-review-20260723.md](archive/marketing-review-20260723.md)
@@ -838,7 +843,8 @@ at the dock, the blocker queue, the no-login diver arc.
   new-feature skill's definition of done includes this check.
 - **A claim is invalidated** (feature removed, behavior changed) → fix the page in the same PR
   that invalidates it. If code and copy disagree, one of them is the bug.
-- **Verification is the product bar**: `pnpm check` green; `pnpm e2e marketing.spec.ts`;
+- **Verification is the product bar**: the local gate green (`pnpm check:repo`, `pnpm lint`,
+  `pnpm typecheck`, `pnpm test:changed`) and CI's `pnpm check`; `pnpm e2e marketing.spec.ts`;
   screenshots of every touched page in light + dark, desktop + phone, actually looked at
   (design-review skill); visual triage after push (visual-triage skill).
 - Copy changes update the e2e assertions that pin headlines/price visibility — deliberately: a

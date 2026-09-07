@@ -4,10 +4,12 @@ import type { MetadataRoute } from "next";
 import { cacheLife } from "next/cache";
 import { getDb } from "@/db/client";
 import { listActiveCoursesForSitemap } from "@/db/courses";
+import { listRegions } from "@/db/regions";
 import { listShopsForSitemap } from "@/db/shops";
 import { MIGRATION_GUIDE_SLUGS } from "@/lib/migration-guides";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicCoursePath, publicSchedulePath } from "@/lib/public-routes";
+import { REGIONS_PATH, regionPath } from "@/lib/region";
 
 /**
  * The public marketing surface (the pages in docs/product/marketing.md plus
@@ -40,16 +42,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/pricing", priority: 0.9 },
     { path: "/onboard", priority: 0.8 },
     { path: "/about", priority: 0.6 },
+    // The regional index (issue #1436, N-49). Its town pages are appended
+    // below, from the same reader the page itself uses, so a town appears here
+    // exactly while it has a listed shop to show.
+    { path: REGIONS_PATH, priority: 0.6 },
     { path: "/switching", priority: 0.7 },
     { path: "/switching/spreadsheet", priority: 0.8 },
     ...MIGRATION_GUIDE_SLUGS.map((slug) => ({ path: `/switching/${slug}`, priority: 0.8 })),
   ];
 
   const db = await getDb();
-  const [shopRows, courseRows] = await Promise.all([
+  const [shopRows, courseRows, regionRows] = await Promise.all([
     listShopsForSitemap(db),
     listActiveCoursesForSitemap(db),
+    listRegions(db),
   ]);
+  for (const region of regionRows) {
+    entries.push({ path: regionPath(region.slug), priority: 0.6 });
+  }
   for (const shop of shopRows) {
     entries.push({ path: publicSchedulePath(shop.slug), priority: 0.7 });
   }
