@@ -325,7 +325,17 @@ function PublicShopChromePlaceholder({ label }: { label: DiverTranslator }) {
   return (
     <>
       <SkipLink href="#public-shop-main-content" label={label("shopChrome.skipToContent")} />
-      <div className="h-(--chrome-h) border-b border-border bg-background" aria-hidden />
+      {/* Marked so a visual capture can tell this band from the real chrome.
+          `capture()` (e2e/visual.spec.ts) waits for the page's own skeleton to
+          leave `<main>`, and this bar is *above* `<main>` — so a shot fired
+          while it still stood photographed a header with no shop name and,
+          on a staffer's own shop, no "you work here" bar at all. One run had
+          that at vw-390 and the real chrome at vw-1280, a second apart. */}
+      <div
+        className="h-(--chrome-h) border-b border-border bg-background"
+        data-suspense-placeholder
+        aria-hidden
+      />
     </>
   );
 }

@@ -1059,8 +1059,20 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
   // `scripts/screenshot.mjs` fell into wholesale (#643). Waiting for the last
   // `animate-pulse` to leave `<main>` is one rule that covers every capture,
   // including whichever is added next, without a per-capture selector.
+  //
+  // `[data-suspense-placeholder]` covers the same trap *outside* `<main>`: the
+  // public shop layout streams its whole chrome — header and the staffer's
+  // "you work here" bar — behind a boundary whose fallback is a bare band
+  // holding the height. That band is not a pulse and not in `<main>`, so
+  // neither half of the rule above could see it, and a capture fired while it
+  // stood photographed a header with no shop name. It is not hypothetical:
+  // `public-schedule-new-shop-dark` came back with the placeholder at vw-390
+  // and the real chrome at vw-1280 — the same page, one second apart.
   await page.waitForFunction(
-    () => !document.querySelector("main .animate-pulse:not([data-live-pulse])"),
+    () =>
+      !document.querySelector(
+        "main .animate-pulse:not([data-live-pulse]), [data-suspense-placeholder]",
+      ),
     undefined,
     {
       timeout: 15_000,
