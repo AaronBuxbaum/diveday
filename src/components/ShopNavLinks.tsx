@@ -342,7 +342,18 @@ export function ShopNavLinks({
            * saying how, so which half held Reports and which held Promo codes was
            * a memory test.
            */}
-          <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col rounded-panel border border-border bg-surface p-2 shadow-xl">
+          {/* **The menu never grows past the window.** It is `absolute`, so a
+              panel taller than the space below the header simply hangs off the
+              bottom of the viewport with no way to reach what is down there —
+              and the row it hides first is Settings, the one this menu is
+              ordered to end on. At 1279x720 with fifteen destinations that is
+              exactly what happened: Calendar subscription and Settings were
+              off-screen and unreachable, on a menu whose whole promise is that
+              every place a shop can go is behind this one door. The cap is the
+              window minus the header and the page's own top padding; past it
+              the panel scrolls itself, the same answer the phone sheet has
+              carried since it shipped. */}
+          <div className="absolute right-0 z-20 mt-2 flex max-h-[calc(100dvh-5rem)] w-[min(15rem,calc(100vw-2rem))] flex-col overflow-y-auto overscroll-contain rounded-panel border border-border bg-surface p-2 shadow-xl">
             <MoreGroups
               daily={daily}
               setup={setup}

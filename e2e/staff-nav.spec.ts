@@ -52,6 +52,7 @@ test.describe("owner", () => {
       "Waivers",
       "Reviews",
       "Requests",
+      "Inbox",
       "Orders",
       "Reports",
     ]);
@@ -229,29 +230,41 @@ test.describe("phone dock", () => {
 
   /**
    * **The thumb that opened the sheet closes it, without reaching** (ADR
-   * 20260907-nothing-from-nowhere, decision 4). Dragged from the very bottom
-   * edge on purpose: every point after the press is over the dock rather than
-   * over the sheet, which is the case that first shipped broken — the gesture
-   * is tracked on the document precisely so a finger that leaves the sheet is
-   * still the finger holding it.
+   * 20260907-nothing-from-nowhere, decision 4).
+   *
+   * **Dragged from the handle, since 2026-09-07.** It used to press the
+   * sheet's very bottom edge, so that every point after the press was over the
+   * dock rather than over the sheet — the case that first shipped broken. That
+   * press is now on the *list*, and the list scrolls: the shop's fifteenth
+   * destination (Inbox) took the sheet's content past its
+   * `max-h-[calc(100dvh-8rem)]` cap, so a downward drag begun on a row is a
+   * scroll gesture the browser claims before `useDragSheet` sees a second
+   * move. The handle is the affordance the design added for exactly this — "the
+   * one place a drag may start however far the list beneath it has been
+   * scrolled" — and it is still 300px above the fold, so the finger still
+   * never reaches for the top of the screen, which is the whole claim.
+   *
+   * What is no longer covered here is dismissal begun on the sheet's own rows
+   * once the list overflows; that is issue #1512.
    */
-  test("the sheet leaves with a thumb that drags it down from its bottom edge", async ({
-    page,
-  }) => {
+  test("the sheet leaves with a thumb that drags it down by the handle", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
     await page.locator("[data-dock-more]").click();
     const sheet = page.getByRole("dialog", { name: "More" });
     await expect(sheet).toBeVisible();
-    const box = await sheet.boundingBox();
-    if (!box) throw new Error("sheet has no box");
+    const handle = sheet.locator("[data-sheet-handle]");
+    const box = await handle.boundingBox();
+    if (!box) throw new Error("sheet handle has no box");
 
     const x = box.x + box.width / 2;
-    const bottomEdge = box.y + box.height - 2;
-    await page.mouse.move(x, bottomEdge);
+    const grip = box.y + box.height / 2;
+    await page.mouse.move(x, grip);
     await page.mouse.down();
-    // Past the slop while already outside the sheet, then well past the line.
-    await page.mouse.move(x, bottomEdge + 40, { steps: 6 });
-    await page.mouse.move(x, bottomEdge + 320, { steps: 10 });
+    // Past the slop, then well past the line — the sheet's own height is what
+    // "far enough" is a share of (`dismissOnRelease`), so this clears it at any
+    // sheet size the dock can raise.
+    await page.mouse.move(x, grip + 40, { steps: 6 });
+    await page.mouse.move(x, grip + 700, { steps: 10 });
     await page.mouse.up();
 
     await expect(page.getByRole("list", { name: "Run the shop" })).toHaveCount(0);
