@@ -1,6 +1,6 @@
 # Before you ask — six moves where DiveDay fills in what it already knows
 
-- **Status:** Live (its ADR was Accepted on 2026-09-06 with H-68 Chosen; slices land below)
+- **Status:** Shipped (its ADR was Accepted on 2026-09-06 with H-68 Chosen; every slice landed the same day)
 - **Date:** 2026-09-06
 - **ADR:** [20260906-before-you-ask](../../../architecture/decisions/20260906-before-you-ask.md)
 - **Published:** https://claude.ai/code/artifact/b74389e3-06d8-42f4-aed8-2cf90b9be3c7
@@ -85,18 +85,18 @@ medical answer is never carried forward.
 **A canvas has authority over a surface only while that surface's slice is `open`**
 ([design-artifacts.md](../../design-artifacts.md)). Slice bodies, dependencies and the review
 each one takes are in the ADR and in
-[roadmap.md](../../../product/features/roadmap.md#17-before-you-ask-design-complete-h-68-chosen-2026-09-06).
+[shipped.md](../../../product/shipped.md#before-you-ask-diveday-fills-in-what-it-already-knows-delivered-2026-09-06).
 Each row ends with the standing obligation: the component that must not drift names this ADR in
 its doc comment, and a test pins the rule.
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 17a — a send you can take back: the eight-second server-side hold with Undo on the four sends, the confirm dialogs removed (H-68 a) | open | — | — |
-| 17b — nothing you typed is lost: per-person form drafts kept a day, the "picked up from" line, the home's one row while a draft exists | open | — | — |
-| 17c — type it any way: the pure parsers for time, date, phone, name, money, and the picker match, with the typed text shown beneath and the never-list held by test | open | — | — |
-| 17d — the add panel already knows the weekday: the pattern read over the shop's own departures, the one sentence, the second boat as a row (crew per H-68 c) | open | — | — |
-| 17e — the door remembers who opened it: a booking reached from a diver's own link arrives with the standing facts folded, each naming its date, and one button (the cold-email link per H-68 b) | open | — | — |
-| 17f — ask it, and it answers: the palette's answer card for a diver, a day or a departure, its primary act read from the same fix table as the home's rows | open | — | — |
+| 17a — a send you can take back: the eight-second server-side hold with Undo on the four sends, the confirm dialogs removed (H-68 a) | shipped | `src/components/SendHold.tsx` | `src/lib/held-sends.test.ts`, `src/db/held-sends.test.ts`, `src/app/actions/held-sends.test.ts`, `src/components/SendHold.test.tsx` |
+| 17b — nothing you typed is lost: per-person form drafts kept a day, the "picked up from" line, the home's one row while a draft exists | shipped | `src/components/FormDraft.tsx` | `src/lib/form-drafts.test.ts`, `src/db/form-drafts.test.ts`, `src/components/FormDraft.test.tsx` |
+| 17c — type it any way: the pure parsers for time, date, phone, name, money, and the picker match, with the typed text shown beneath and the never-list held by test | shipped | `src/components/ui/ForgivingInput.tsx` | `src/lib/forgiving-fields.test.ts`, `src/lib/forgiving-fields.never-list.test.ts`, `src/components/ui/ForgivingInput.test.tsx` |
+| 17d — the add panel already knows the weekday: the pattern read over the shop's own departures, the one sentence, the second boat as a row (crew per H-68 c) | shipped | `src/lib/weekday-pattern.ts` | `src/lib/weekday-pattern.test.ts`, `src/db/weekday-pattern.test.ts`, `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.test.tsx` |
+| 17e — the door remembers who opened it: a booking reached from a diver's own link arrives with the standing facts folded, each naming its date, and one button (the cold-email link per H-68 b) | shipped | `src/app/s/[shopSlug]/trips/[id]/_components/KnownDiverPanel.tsx` | `src/lib/booking-handoff.test.ts`, `src/db/booking-handoff.test.ts`, `src/app/s/[shopSlug]/trips/[id]/page.composition.test.ts` |
+| 17f — ask it, and it answers: the palette's answer card for a diver, a day or a departure, its primary act read from the same fix table as the home's rows | shipped | `src/lib/palette-answer.ts` | `src/lib/palette-answer.test.ts`, `src/db/palette-answer.test.ts`, `src/components/search/CommandPalette.test.tsx` |
 
 ## Implementing a slice
 

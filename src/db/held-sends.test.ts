@@ -46,11 +46,31 @@ describe("held sends", () => {
     });
     expect(held.runAt.getTime() - now.getTime()).toBe(SEND_HOLD_MS);
 
-    // Not yet: the client asks at zero, the server still says pending.
+    // Not yet, on the server's clock alone: the cron's reading says pending.
     expect(await claimHeldSend(db, shop.id, held.id, now)).toEqual({ status: "pending" });
     // Undo before it is due deletes the row: nothing was sent, nothing is logged.
     expect(await undoHeldSend(db, shop.id, held.id, new Date(now.getTime() + 3_000))).toBe(true);
     expect(await db.select().from(heldSends).where(eq(heldSends.id, held.id))).toHaveLength(0);
+    expect(await claimHeldSend(db, shop.id, held.id, held.runAt)).toEqual({ status: "gone" });
+  });
+
+  it("lets the actor's own release claim it before the server's clock says so", async () => {
+    const { db, shop, seat, owner } = await fixture();
+    const held = await holdSend(db, {
+      shopId: shop.id,
+      actorPersonId: owner.personId,
+      now,
+      payload: {
+        kind: "waiver_send",
+        bookingIds: [seat.bookingId],
+        channel: "email",
+        surface: "roster",
+        tripId: seat.tripId,
+      },
+    });
+    expect(await claimHeldSend(db, shop.id, held.id, now, { early: true })).toMatchObject({
+      status: "claimed",
+    });
     expect(await claimHeldSend(db, shop.id, held.id, held.runAt)).toEqual({ status: "gone" });
   });
 

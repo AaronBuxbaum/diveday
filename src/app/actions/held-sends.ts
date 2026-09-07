@@ -104,7 +104,10 @@ export type ReleasedSend =
 export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
   const session = await requireStaffSession();
   const db = await getDb();
-  const claim = await claimHeldSend(db, session.user.shopId, z.uuid().parse(id));
+  // The actor's own countdown is the clock (see `claimHeldSend`).
+  const claim = await claimHeldSend(db, session.user.shopId, z.uuid().parse(id), undefined, {
+    early: true,
+  });
   if (claim.status !== "claimed") return { status: claim.status };
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return { status: "gone" };

@@ -6,6 +6,7 @@ import {
   disclosureSettled,
   e2eNow,
   findTripOnBoard,
+  HELD_SEND_TIMEOUT_MS,
   openTripActivity,
   openTripFromBoard,
 } from "./helpers";
@@ -142,7 +143,11 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   // recorded state lands.
   const waitRow = page.locator("li").filter({ hasText: "Waitlist Wally" });
   await waitRow.getByRole("button", { name: /Email .* an invite/ }).click();
-  await expect(waitRow.getByText(/Invited/).filter({ visible: true })).toBeVisible();
+  // The invite holds eight seconds with Undo first (ADR 20260906-before-you-ask,
+  // decision 2), so the recorded state is allowed the hold before it shows.
+  await expect(waitRow.getByText(/Invited/).filter({ visible: true })).toBeVisible({
+    timeout: HELD_SEND_TIMEOUT_MS,
+  });
   await expect(waitRow.getByRole("button", { name: "Re-send invite" })).toBeVisible();
 });
 

@@ -7,6 +7,30 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Before you ask: DiveDay fills in what it already knows (delivered 2026-09-06)
+
+The 2026-09-06 loop, argued on [its canvas](../design/canvases/20260906-before-you-ask/README.md)
+and decided in ADR
+[20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md) with every
+recommended option chosen (H-68): one rule, drawn six times and shipped six times the same day.
+**A send you can take back** (17a) — the four sends that asked a confirming question take an
+eight-second server-side hold with Undo where Send was (`held_sends`, drained by the client's
+countdown or the hourly cron, whichever comes first; the dialogs are gone). **Nothing you typed is
+lost** (17b) — every staff form keeps a per-person draft for a day, picks it up with one line and
+Start over, and the home carries one "Unfinished" row while one exists; drafts never hold a payment
+or medical answer. **Type it any way** (17c) — pure readers for time, date, phone, name and money
+under `src/lib/forgiving-fields.ts`, `ForgivingInput` showing what it made of the typing, and a
+never-list held by test. **The add panel already knows the weekday** (17d) — the panel fills from
+the shop's own departures on that weekday over six weeks, crew included (H-68 c), under one
+sentence with "start blank"; the second boat is a row, never added on its own. **The door remembers
+who opened it** (17e) — a booking page reached from the thread's next-dive link carries a
+ten-minute revocable handoff and arrives with the standing facts folded, each naming its date; a
+cold-typed email that matches a diver on file may receive one link an hour (H-68 b), off the
+request path and behind the per-IP bucket, and the page never learns whether it went. **Ask it,
+and it answers** (17f) — the palette's first row is an answer card for a day, one diver or one
+departure, its act read from the same fix table as the home's rows, never mutating. Principle 7
+gained its sentence: a send that can be held is undone, not confirmed.
+
 ## Reef for the shop, Harbor for the diver (delivered 2026-09-01 to 2026-09-02)
 
 The whole-product direction the owner picked on 2026-09-01 (H-64), argued in ADR

@@ -1,4 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { HELD_SEND_TIMEOUT_MS } from "./helpers";
 
 signedInAsOwner();
 
@@ -139,9 +140,14 @@ test("the one-tap waiver send works from a station row, without leaving the home
   // row carrying a *later* blocker code. That is what `rowKey` in `DaySpine.tsx`
   // is for, and this assertion is the reason it exists: without it the link the
   // staffer needs vanishes between the tap and the render.
+  // An eight-second hold stands where the button was first (ADR
+  // 20260906-before-you-ask, decision 2), so the outcome is allowed the hold
+  // plus the send before it has to be on screen.
   const outcome = row.getByRole("status");
   await expect(outcome).toBeVisible();
-  await expect(outcome).toContainText("DiveDay can’t send email from this deployment yet");
+  await expect(outcome).toContainText("DiveDay can’t send email from this deployment yet", {
+    timeout: HELD_SEND_TIMEOUT_MS,
+  });
   await expect(outcome.getByRole("button", { name: "Copy link" })).toBeVisible();
 
   // Still on the home: the sweep never left it.

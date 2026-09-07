@@ -423,6 +423,15 @@ export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
  * sleeps or retries. Reading the clipboard back needs the permission, which is
  * granted per context and is a no-op the second time.
  */
+/**
+ * How long a spec allows a held send's outcome to appear: the eight-second
+ * hold every waiver, deal and wait-list send takes first (ADR
+ * 20260906-before-you-ask, decision 2), then the send itself. Deterministic —
+ * the hold is a fixed length the client counts down on its own clock — so it
+ * is a bound, not a guess.
+ */
+export const HELD_SEND_TIMEOUT_MS = 20_000;
+
 export async function waiverLinkFromResult(page: Page, resultNotice: Locator): Promise<string> {
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   // Matched on all three of the control's states, not just its resting label: a

@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { seededTripId, signInAsOwner } from "./helpers";
+import { HELD_SEND_TIMEOUT_MS, seededTripId, signInAsOwner } from "./helpers";
 
 /**
  * Fill-the-boat: a diver opts into the shop-wide last-minute list, staff see
@@ -61,9 +61,11 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   await request.post("/api/test/seed-stripe-account");
   await page.reload();
   await sendButton.click();
+  // The send holds eight seconds with Undo first (ADR 20260906-before-you-ask,
+  // decision 2); the outcome is allowed the hold plus the Stripe attempt.
   await expect(
     page.getByText("Stripe couldn't create the discount code. Try again in a moment."),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: HELD_SEND_TIMEOUT_MS });
 
   // The attempt is durable evidence even though it failed — a staffer sees
   // it, not silence. Not exact: the badge's text is "Failed at Stripe"
@@ -113,7 +115,7 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   // went out, so the nudge (which dedupes on a genuinely `sent` row) must
   // keep prompting staff to try again rather than reading the attempt as done.
   await page.getByRole("button", { name: /Send to \d+ divers?/ }).click();
-  await expect(page.getByText(/off · /)).toBeVisible();
+  await expect(page.getByText(/off · /)).toBeVisible({ timeout: HELD_SEND_TIMEOUT_MS });
 
   await page.goto("/shop/blue-mantis");
   await expect(page.getByText("3 seats open with no last-minute deal sent yet.")).toBeVisible();

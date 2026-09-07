@@ -93,19 +93,28 @@ export type HeldSendClaim =
 /**
  * Claim one held send to execute it. `pending` while the hold is still
  * draining; `gone` when it was undone or another claimant already took it.
+ *
+ * `early` is the actor's own release: the person who held the send counted
+ * the eight seconds down on their own screen and asked for it, and that ask
+ * is the clock — releasing their own send a moment sooner is a thing they
+ * could have done by not holding it. The server's clock still decides for
+ * the cron sweep (`claimDueHeldSends`), which is what sends a hold whose tab
+ * closed. Without `early`, a frozen or skewed server clock would answer
+ * `pending` to every ask and the send would never leave from the page.
  */
 export async function claimHeldSend(
   db: AppDb,
   shopId: string,
   id: string,
   now = nowDate(),
+  options: { early?: boolean } = {},
 ): Promise<HeldSendClaim> {
   const [row] = await db
     .select()
     .from(heldSends)
     .where(and(eq(heldSends.id, id), eq(heldSends.shopId, shopId)));
   if (!row) return { status: "gone" };
-  if (!isHeldSendDue(row.runAt, now)) return { status: "pending" };
+  if (!options.early && !isHeldSendDue(row.runAt, now)) return { status: "pending" };
   const [claimed] = await db
     .delete(heldSends)
     .where(and(eq(heldSends.id, id), eq(heldSends.shopId, shopId)))

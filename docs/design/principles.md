@@ -314,12 +314,17 @@ A reversible mutation gets an **undo**, never a blocking `confirm()` dialog. Two
 - **Destructive or rare** actions (delete a diver) confirm *after* the fact with an **Undo
   banner** — the action lands immediately and the banner offers a one-tap reversal.
 
-A blocking `confirm()` is reserved for what is genuinely **irreversible or a send** — issuing or
-reissuing a waiver link (the old link stops working, an email may go out), removing a booking
-(inside the shop's refund window it fires an automatic Stripe refund; undo restores the seat but
-can't claw back money already sent), or resending a waiver to someone already notified. A
-`confirm()` on a purely reversible action is a bug: it slows the common path to guard against a
-mistake that undo already handles calmly.
+A blocking `confirm()` is reserved for what is genuinely **irreversible** — removing a booking
+inside the shop's refund window (it fires an automatic Stripe refund; undo restores the seat but
+can't claw back money already sent). **A send that can be held is undone, not confirmed** (ADR
+20260906-before-you-ask, decision 4): issuing or reissuing a waiver link, resending one to someone
+already notified, a last-minute deal, a freed seat offered to the wait list — each takes an
+eight-second server-side hold with Undo standing where Send was, and the mail leaves when the hold
+drains. The confirm on a send is reserved for a send that cannot be held: an SMS already handed to
+the carrier, a payment. The reissue keeps its one clause in the row ("the old link stops working")
+because that consequence is real and the surface cannot show it. A `confirm()` on a purely
+reversible action is a bug: it slows the common path to guard against a mistake that undo already
+handles calmly.
 
 Three narrower carve-outs, found while sweeping the app's `confirm()` sites onto this rule — each
 looks like it should be undo-able on its face, but isn't, for a concrete reason rather than "hard
