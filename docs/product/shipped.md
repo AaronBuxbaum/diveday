@@ -7,6 +7,17 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Moon and light on night departures (delivered 2026-09-07)
+
+N-03 from the 2026-09-07 improvement-ideas decision sheet (issue #1467). Any departure still out at
+sunset carries one line of sky: when the sun sets, when civil twilight ends, and the moon's phase
+and illuminated share. `src/lib/sky.ts` computes all of it from the shop's own coordinates with the
+standard low-precision solar and lunar series — no dependency, no network call, accurate to a minute
+against published tables — and hands back a phase *code* that `src/i18n/sky-labels.ts` words in the
+reader's language. It reaches a diver in three places: the briefing's "The day", the thread's
+dock-day rhythm, and the night-before email. It informs and gates nothing, and a shop that has never
+set its address gets no line rather than a guess.
+
 ## Fly-safe from, on the recap (delivered 2026-09-07)
 
 N-04 from the 2026-09-07 improvement-ideas decision sheet (issue #1425). Once the crew has logged

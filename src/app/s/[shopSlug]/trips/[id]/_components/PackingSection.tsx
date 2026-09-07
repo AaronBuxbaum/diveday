@@ -13,7 +13,9 @@ import {
 } from "@/lib/diver-planning";
 import { formatTime } from "@/lib/format";
 import type { RentableItemKind } from "@/lib/rentals";
+import { nightSkyFor } from "@/lib/sky";
 import { EXPOSURE_SUIT_KEYS } from "./exposure-suit";
+import { NightSkyLine } from "./NightSkyLine";
 import type { RentalFit, Shop, Trip } from "./types";
 
 /**
@@ -349,6 +351,20 @@ export function PackingSection({
                       {t("trip.dockDayLabel", { number: dayIndex + 1 })}
                     </h4>
                   ) : null}
+                  {/* The sky over this evening, when this evening has one.
+                      Per day rather than per departure: a two-evening night
+                      course meets twice, and the moon has moved. */}
+                  <NightSkyLine
+                    sky={nightSkyFor({
+                      startsAt: window.startsAt,
+                      endsAt: window.endsAt,
+                      timeZone: shop.timezone,
+                      latitude: shop.latitude,
+                      longitude: shop.longitude,
+                    })}
+                    timeZone={shop.timezone}
+                    locale={locale}
+                  />
                   <ol className="relative mt-4 space-y-0 text-sm">
                     {(() => {
                       const timeline = dockDayTimeline(

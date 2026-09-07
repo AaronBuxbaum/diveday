@@ -498,6 +498,9 @@ const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 /** The seeded reef charter, the departure most of the staff tour hangs off. */
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
+/** The demo's night charter: 7:30 PM to 11:00 PM, in the water after dark. */
+const NIGHT_TRIP = "Night Dive — City of Washington";
+
 /**
  * A departure far enough out that D18's re-entry offers are still worth making.
  *
@@ -1231,6 +1234,11 @@ function publicReefCard(page: Page) {
   return page.locator("li").filter({ hasText: REEF_TRIP });
 }
 
+/** The same card, for the night charter. */
+function publicNightCard(page: Page) {
+  return page.locator("li").filter({ hasText: NIGHT_TRIP });
+}
+
 /** Open the seeded reef charter's staff record, the way staff reach it. */
 async function openReefTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -1889,6 +1897,32 @@ for (const scheme of ["light", "dark"] as const) {
         // the form mounting.
         await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "site-briefing", scheme);
+      });
+
+      /**
+       * **The one departure whose sky is an operational fact** (issue #1467).
+       *
+       * `site-briefing` above photographs the reef morning, where there is
+       * nothing to say about the light and the line is correctly absent. The
+       * night charter casts off at 7:30 PM, half an hour before a July sunset,
+       * and dives both tanks in the dark — so it is the only departure on the
+       * demo board that renders sunset, civil dusk and the moon, and without
+       * this capture that line has no baseline anywhere.
+       *
+       * The clock is frozen (`E2E_FROZEN_CLOCK`) and the shop's coordinates are
+       * seeded, so both times and the phase are fixed: a diff here is a change
+       * in the arithmetic or the copy, never the calendar moving.
+       */
+      test(`the night charter names the light and the moon (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        await publicNightCard(page).getByRole("link", { name: NIGHT_TRIP }).click();
+        await page.getByRole("heading", { name: "The day" }).waitFor();
+        // The line this capture exists for. Waiting on it means the shot can
+        // never be of a page that quietly decided the departure sails in
+        // daylight.
+        await page.getByText(/^Sunset /).waitFor();
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await capture(page, "site-briefing-night-sky", scheme);
       });
 
       /**

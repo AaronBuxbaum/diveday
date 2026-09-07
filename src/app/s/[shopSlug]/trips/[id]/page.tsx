@@ -658,7 +658,13 @@ export default async function TripDetailPage({
             scroll (ADR 20260827-the-divers-thread, decision 2). Packing left
             for the thread entirely: what to bring is preparation, and
             preparation is for a diver who has a seat. */}
-        <TripDayPlan briefings={diveBriefings} locale={locale} />
+        <TripDayPlan
+          briefings={diveBriefings}
+          shop={shop}
+          startsAt={trip.startsAt}
+          endsAt={trip.endsAt}
+          locale={locale}
+        />
         {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
             route, the rest of the field guide, the moments strip, the shop's
             site prose and the crew used to run down the page as five more

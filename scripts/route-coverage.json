@@ -196,6 +196,7 @@
       "booking-pitch-open",
       "shop-not-found",
       "site-briefing",
+      "site-briefing-night-sky",
       "site-briefing-requirements"
     ],
     "a11y": ["a11y.spec.ts"]

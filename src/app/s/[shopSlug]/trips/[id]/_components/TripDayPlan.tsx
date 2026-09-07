@@ -4,7 +4,9 @@ import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { siteFit } from "@/lib/diver-planning";
-import type { DiveBriefing } from "./types";
+import { nightSkyFor } from "@/lib/sky";
+import { NightSkyLine } from "./NightSkyLine";
+import type { DiveBriefing, Shop } from "./types";
 
 /**
  * **"The day" and "Look for" — the pitch, in two ledger beats.**
@@ -26,14 +28,42 @@ import type { DiveBriefing } from "./types";
  */
 export function TripDayPlan({
   briefings,
+  shop,
+  startsAt,
+  endsAt,
   locale,
 }: {
   briefings: DiveBriefing[];
+  /** The shop, for the coordinates and zone the sky line is computed from. */
+  shop: Pick<Shop, "timezone" | "latitude" | "longitude">;
+  /** When this departure leaves. */
+  startsAt: Date;
+  /** When it comes home — a departure still out at sunset dives in the dark. */
+  endsAt: Date;
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
 }) {
-  if (briefings.length === 0) return null;
   const t = diverTranslator(locale);
+  // The sky belongs to the day, so it rides in this beat rather than opening a
+  // section of its own — and a departure with no dive plan at all still gets
+  // it, because "sunset is at 7:35" is a fact about the departure, not about
+  // the sites nobody has picked yet.
+  const nightSky = nightSkyFor({
+    startsAt,
+    endsAt,
+    timeZone: shop.timezone,
+    latitude: shop.latitude,
+    longitude: shop.longitude,
+  });
+  const sky = <NightSkyLine sky={nightSky} timeZone={shop.timezone} locale={locale} />;
+  if (briefings.length === 0) {
+    return nightSky ? (
+      <section className="mt-8">
+        <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
+        {sky}
+      </section>
+    ) : null;
+  }
   // A day where nothing is decided yet says so once. Two rows both reading
   // "Site to be confirmed" opened the sparse course session's pitch with the
   // one thing the shop has not decided, stated twice (principle 9; 2026-08-28
@@ -43,6 +73,7 @@ export function TripDayPlan({
     return (
       <section className="mt-8">
         <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
+        {sky}
         <p className="mt-2 text-sm text-muted">
           {t("trip.sitesToBeConfirmed", { count: briefings.length })}
         </p>
@@ -52,6 +83,7 @@ export function TripDayPlan({
   return (
     <section className="mt-8">
       <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
+      {sky}
       <ul className="mt-2">
         {briefings.map(({ dive, diveSite }) => (
           <LedgerRow
