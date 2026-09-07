@@ -21,6 +21,16 @@ at rest (`src/lib/bearer-tokens.ts`), non-expiring like the calendar feed, revok
 settings page, redacted from telemetry (`CAPABILITY_ROUTE_PREFIXES`) and disallowed to crawlers. A
 private charter keeps its row under "Private charter", never its name.
 
+## Fly-safe from, on the recap (delivered 2026-09-07)
+
+N-04 from the 2026-09-07 improvement-ideas decision sheet (issue #1425). Once the crew has logged
+the day, the thread's after-state and the `trip_recap` email say "Fly-safe from Wednesday 6:10 PM:
+{shop} asks for 24 hours after your last dive, following DAN's guidance" — the shop's own pair of
+hours (`shops.fly_safe_hours_single` / `_repetitive`, a Settings row, floored at DAN's 12 and 18),
+counted from the last recorded exit by `src/lib/fly-safe.ts`, or from the scheduled return once the
+boat is home; repetitive whenever the day held more than one dive by record or by plan. Nothing at
+all while the record cannot say. Informs, never gates.
+
 ## Before you ask: DiveDay fills in what it already knows (delivered 2026-09-06)
 
 The 2026-09-06 loop, argued on [its canvas](../design/canvases/20260906-before-you-ask/README.md)

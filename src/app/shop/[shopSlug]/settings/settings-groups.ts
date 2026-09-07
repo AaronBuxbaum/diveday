@@ -47,6 +47,7 @@ export const SECTION_IDS = [
   "packing",
   "dockCall",
   "sendWindow",
+  "flySafe",
   "units",
   "divingOptions",
   "emergency",
@@ -75,6 +76,7 @@ const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
   divingOptions: "diving-options",
   dockCall: "dock-call",
   sendWindow: "send-window",
+  flySafe: "fly-safe",
   rentalPricing: "rental-pricing",
   divePackages: "dive-packages",
   passThrough: "pass-through",
@@ -246,6 +248,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.sendWindow.heading",
     group: "your-shop",
     target: { kind: "section", id: "sendWindow" },
+  },
+  {
+    id: "flySafe",
+    labelKey: "settings.main.flySafe.heading",
+    group: "your-shop",
+    target: { kind: "section", id: "flySafe" },
   },
   {
     id: "units",

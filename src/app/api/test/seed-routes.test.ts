@@ -31,6 +31,7 @@ const seedPrivateShop = await import("./seed-private-shop/route");
 const seedEvening = await import("./seed-evening/route");
 const seedChangedDiveSite = await import("./seed-changed-dive-site/route");
 const seedObservedSpecies = await import("./seed-observed-species/route");
+const seedDiveTimes = await import("./seed-dive-times/route");
 const seedReturningDiver = await import("./seed-returning-diver/route");
 const seedBookingHandoff = await import("./seed-booking-handoff/route");
 const seedDisplayToken = await import("./seed-display-token/route");
@@ -120,6 +121,18 @@ const routes: SeedRoute[] = [
     // deployment would put a sighting nobody made onto a real diver's keepsake,
     // over a shop's name. Reaching the database is what proves the guard let it
     // through.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-dive-times",
+    POST: seedDiveTimes.POST,
+    // The same `executed_dives` write as the two above, carrying times in and
+    // out — the instants the fly-safe line counts from. A route answering on a
+    // misconfigured deployment would be telling a real diver when they may
+    // board a plane off a dive nobody made. Reaching the database is what
+    // proves the guard let it through.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },

@@ -43,6 +43,8 @@
       "emergencySaved": "Referencia de emergencia guardada.",
       "sendWindowSaved": "Horario de mensajes guardado.",
       "sendWindowInvalid": "Eso no se guardó. La primera hora tiene que ir antes que la última, en formato de 24 horas.",
+      "flySafeSaved": "Horas para volar guardadas.",
+      "flySafeInvalid": "Eso no se guardó. Horas enteras, como mínimo las 12 y 18 de DAN, como máximo 72, y la espera tras dos inmersiones no puede ser menor que la de una.",
       "packageSaved": "Paquete añadido.",
       "packageDeleted": "Paquete eliminado.",
       "packageInvalid": "Eso no se guardó. Revisa el número de inmersiones, el precio y cuánto tiempo se puede usar."
@@ -264,6 +266,15 @@
       "startLabel": "No antes de (0–23)",
       "endLabel": "No después de (1–24)",
       "submit": "Guardar horario",
+      "submitting": "Guardando…"
+    },
+    "flySafe": {
+      "heading": "Horas para volar",
+      "value": "{single} h · {repetitive} h",
+      "description": "Horas después de la última inmersión antes de que un buceador lea que puede volar. Su resumen dice la hora y que la espera la fijas tú, siguiendo la guía de DAN.",
+      "singleLabel": "Tras una inmersión",
+      "repetitiveLabel": "Tras dos o más inmersiones",
+      "submit": "Guardar horas para volar",
       "submitting": "Guardando…"
     },
     "units": {

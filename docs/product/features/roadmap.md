@@ -403,7 +403,7 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
 
 16h, 16i and 16j landed as a stack, each cut from the layer below and merged bottom-up.
 
-### 18. Nothing from nowhere (18a–18d shipped 2026-09-07; 18e open, 18f waiting on H-69 b)
+### 18. Nothing from nowhere (18a–18e shipped 2026-09-07; 18f waiting on H-69 b)
 
 The 2026-09-07 loop over how the interface moves, argued on
 [the canvas](../../design/canvases/20260907-nothing-from-nowhere/README.md) and proposed in ADR
@@ -443,12 +443,17 @@ spring half, 18c's roster half and 18f wait on it.
   because a hand's *speed* is the one input a DOM test cannot express, and a velocity guard stops a
   release that lands in the same millisecond as the last move from reading as a flick. The embed
   lightbox is the same hook and follows.
-- **18e** — the title folds into the bar on a phone. **Open, on a finding** (issue #1422). The fold needs the
-  page's title inside the shell's bar, and this app renders the bar (`ShopNav`, in the shop layout)
-  and the title (`ShopPageHeader`, in the page) in two different trees. Every CSS-only shape either
-  covers the shop-identity menu with a label that stays clickable underneath, or shrinks the
-  heading, which the ADR rules out. It needs a data-flow decision — a title slot on the layout, or
-  a portal — which is a change to the shell rather than to motion.
+- **18e** — the title folds into the bar on a phone. **Shipped 2026-09-07** (issue #1422). The bar
+  and the title live in two trees, so the page delivers its title into an `aria-hidden` slot
+  `ShopNav` renders (`FoldedPageTitle`, a portal) — the smaller of the two answers, and the one that
+  leaves the layout's shape alone. Three facts hold it together, and each was a way to get it wrong:
+  the slot exists only in the staff shell, so `PublicShopChrome` has no target and the storefront
+  cannot fold; the gate is `:has([data-chrome-title-slot]:not(:empty))`, so a page carrying its own
+  header (the four departure surfaces) does not fade its shop name away and leave a bar holding
+  nothing; and the reduced-motion stop has to name `animation-timeline`, because the global
+  kill-switch overrides only durations and a scroll progress timeline takes no progress from time.
+  The page's `<h1>` fades from 40px on — the bar is 85% of the page behind a blur, so without it a
+  34px heading ghosts through the chrome under the folded label and the word is on screen twice.
 - **18f** — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's
   brand, updates from `trips.revision`, the two pass-service routes. `waiting-on-external` on the
   Apple Developer and Google Wallet accounts H-69 b decides; nothing built ahead of them.

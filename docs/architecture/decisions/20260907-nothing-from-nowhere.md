@@ -178,12 +178,34 @@ anticipate, recorded here because the ADR is what code obeys:
    last move divides by nothing and reads as a flick, so the sheet leaves from under a hand that
    was putting it back. Below `MIN_VELOCITY_MS` a release is read as a distance.
 
-**18e is open on a finding rather than on effort.** The title fold needs the page's title inside
-the shell's bar, and this app renders the bar (`ShopNav`, in the shop layout) and the title
-(`ShopPageHeader`, in the page) in two different trees. A CSS-only fold would have to cover the
-shop-identity menu with an opaque label that stays clickable underneath, or shrink the heading —
-which decision 5 rules out. It needs a data-flow decision (a title slot on the layout, or a
-portal), which is a change to the shell rather than to motion, and it is filed as issue #1422.
+**18e took the portal, and building it settled four things the drawing left open** (issue #1422).
+The title fold needs the page's title inside the shell's bar, and this app renders the bar
+(`ShopNav`, in the shop layout) and the title (`ShopPageHeader`, in the page) in two different
+trees. The page now delivers it into an `aria-hidden` slot through `createPortal`
+(`FoldedPageTitle`), which leaves the layout's shape alone; a title slot on the layout would have
+needed a mechanism plus a decision about what a page with no title renders, for a motion slice.
+
+4. **The heading has to get out of the way, and the boards were right to draw it.** The bar is 85%
+   of the page behind a blur, so a 34px heading passing under it stays legible *through* it — the
+   first build without the fade put the word "Divers" on screen twice, once ghosting through the
+   chrome at full size and once as the folded label on top of it. It fades from 40px on, opacity
+   only: the page is already carrying it upward, and translating it too would move it at two speeds.
+5. **The gate is a slot with something in it, not a slot.** Every staff page renders the bar, but
+   the four departure surfaces carry their own `TripPageHeader` and fill nothing. Gating on the
+   slot's existence alone would have faded the shop's name away on those and left a bar holding a
+   mark and a blank. `:has([data-chrome-title-slot]:not(:empty))` also means there is no flash
+   before hydration, when no page has filled it yet.
+6. **A bare `scroll()` is not the page.** It binds to the *nearest scrollable ancestor*, which is
+   not the same scroller for a label in a sticky header and a heading in the page. Measured on a
+   freshly onboarded shop, the unqualified form had the label already 47px wide on arrival — a
+   fifth of the way through a fold nobody had scrolled. `scroll(root block)` names the one scroller
+   the reader is actually moving.
+7. **The reduced-motion kill-switch does not reach a scroll-driven animation.** `globals.css`'s
+   universal block overrides `animation-duration`, `-delay` and `-iteration-count`, every one of
+   them a statement about *time*, and an animation on a scroll progress timeline takes no progress
+   from time. Stilling this one needs a rule that names `animation-timeline`; without it a
+   reduced-motion reader keeps the fold, and at a 0.01ms duration it snaps in within the first
+   fraction of a pixel of scroll — louder than the motion the setting asked to remove.
 
 ## Alternatives considered
 

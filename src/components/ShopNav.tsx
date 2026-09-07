@@ -135,20 +135,41 @@ export function ShopNav({
              10). Places in the shop (Settings included) live in the nav's More
              groups instead. Home stays one tap away as Today, in the tabs and
              the dock. */
-          <ShopIdentityMenu
-            shopName={shopName}
-            logoUrl={logoUrl}
-            signOutAction={signOutAction}
-            locale={locale}
-            languages={languages}
-            setLocaleAction={setLocale}
-            copy={{
-              language: t("shared.shopNav.language"),
-              signOut: t("shared.shopNav.signOut"),
-              signOutConfirm: t("shared.shopNav.signOutConfirm"),
-              signOutPending: t("shared.shopNav.signOutPending"),
-            }}
-          />
+          <div className="flex min-w-0 shrink items-center">
+            <ShopIdentityMenu
+              shopName={shopName}
+              logoUrl={logoUrl}
+              signOutAction={signOutAction}
+              locale={locale}
+              languages={languages}
+              setLocaleAction={setLocale}
+              copy={{
+                language: t("shared.shopNav.language"),
+                signOut: t("shared.shopNav.signOut"),
+                signOutConfirm: t("shared.shopNav.signOutConfirm"),
+                signOutPending: t("shared.shopNav.signOutPending"),
+              }}
+            />
+            {/* **Where the page's title lands when the bar folds** (ADR
+                20260907-nothing-from-nowhere, decision 5). Rendered here and
+                nowhere else, which is what keeps the fold to the staff shell:
+                `PublicShopChrome` composes the same `ChromeBar` and renders no
+                slot, so `FoldedPageTitle`'s portal has no target on the
+                storefront and no-ops.
+
+                Empty in the markup — the page fills it after mount — and
+                `aria-hidden`, because it is a second copy of a heading the page
+                already renders and the bar's accessible name stays the shop's.
+                `max-w-0` at rest so the label costs the row nothing wherever
+                the fold does not run — no scroll-driven animations, `lg` and
+                up, or a reduced-motion reader — and the fold gives it the width
+                the shop's name lets go of. */}
+            <span
+              data-chrome-title-slot
+              aria-hidden
+              className="max-w-0 min-w-0 truncate text-[17px] leading-none font-semibold tracking-tight opacity-0"
+            />
+          </div>
         }
         center={
           /* `w-full` inside the bar's centre slot: the strip's own nav is the
