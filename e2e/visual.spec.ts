@@ -2104,6 +2104,33 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The day the crew logged, with its times** (issue #1425, N-04).
+       *
+       * The `recap` capture above is the day with no `executed_dives` row,
+       * which is what most recaps look like at the moment they are opened, and
+       * it carries no fly-safe line: nothing on that record can say. This is
+       * the other branch — both tanks logged with a time out — and the one
+       * sentence it adds under the record: when this diver may fly, in the
+       * shop's zone, with the hours and who set them. A separate capture from
+       * the two beside it for the same reason they are separate from each
+       * other: a logged day, a changed site and a sighting are three states
+       * that do not travel together.
+       */
+      test(`a recap that says when the diver may fly renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const seeded = await request.post("/api/test/seed-dive-times");
+        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
+        // Waiting on the line itself, not on the page — see the capture above.
+        await page.getByTestId(AFTER_STATE_TEST_IDS.flySafe).filter({ visible: true }).waitFor();
+        await capture(page, "recap-fly-safe", scheme);
+      });
+
+      /**
        * **The field guide, open** (issue #1192, D32).
        *
        * The drawer is shut on arrival, so the `recap` capture above already
@@ -4429,6 +4456,20 @@ for (const scheme of ["light", "dark"] as const) {
         await openSettingsRow(page, "Dock-day rhythm");
         await page.getByLabel("Surface interval between dives").waitFor();
         await capture(page, "settings-dock-day-rhythm", scheme);
+      });
+
+      /**
+       * The fly-safe hours, open (issue #1425) — two whole-hour boxes whose
+       * floors are DAN's minimums. Its own capture for the reason the row
+       * above has one: closed everywhere else, and the form is the only place
+       * a shop sets the number the recap then credits to it.
+       */
+      test(`the fly-safe hours card renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await page.getByRole("heading", { name: "Fly-safe hours" }).waitFor();
+        await openSettingsRow(page, "Fly-safe hours");
+        await page.getByLabel("After two or more dives").waitFor();
+        await capture(page, "settings-fly-safe", scheme);
       });
 
       /**

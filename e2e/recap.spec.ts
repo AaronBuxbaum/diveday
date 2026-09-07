@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/AfterState";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
@@ -269,6 +270,32 @@ test("the day's facts render once, inside the one record a diver keeps", async (
   // Nothing outside the record repeats them.
   await expect(record.getByTestId("dive-record-conditions")).toHaveCount(1);
   await expect(record.getByTestId("dive-record-sites")).toHaveCount(1);
+});
+
+/**
+ * **"Fly-safe from"** (issue #1425, N-04). The line exists only once the record
+ * can honestly say: the demo reef boat is still hours from sailing at the
+ * frozen clock and nobody has logged a dive, so a cold recap carries no line
+ * at all. Once the crew logs both tanks with their times out, the after-state
+ * names the instant in the shop's zone, the shop's repetitive hours, and who
+ * set them. The exact string is pinned because every word of it is a claim
+ * about a diver's body: the weekday and time come from the seeded departure
+ * plus the route's fixed dive shape, and the 24 is the shop default.
+ */
+test("the after-state says when the diver may fly, once the crew has logged the day (N-04)", async ({
+  page,
+  request,
+}) => {
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await expect(page.getByRole("heading", { name: "Dive log entry" })).toBeVisible();
+  await expect(page.getByTestId(AFTER_STATE_TEST_IDS.flySafe)).toHaveCount(0);
+
+  const seeded = await request.post("/api/test/seed-dive-times");
+  expect(seeded.ok(), await seeded.text()).toBe(true);
+  await page.reload();
+  await expect(page.getByTestId(AFTER_STATE_TEST_IDS.flySafe)).toHaveText(
+    "Fly-safe from Wednesday 6:10 PM: 24 hours after your last dive, by DAN’s guidance and the setting at Blue Mantis Divers.",
+  );
 });
 
 /**
