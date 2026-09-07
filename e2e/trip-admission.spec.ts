@@ -129,6 +129,40 @@ test.describe("as owner", () => {
     ).toHaveCount(0);
   });
 
+  test("the day's profile answers the reader's own card and gates nothing", async ({ page }) => {
+    // N-06 (issue #1479). The other side of this file's subject: the trip's own
+    // gate refuses a seat, and this refuses nothing at all. A visitor with no
+    // record anywhere states a card, reads how the day sits against it, and
+    // still has every button they had — the site's maximum is not the dive
+    // plan, and a guide keeping a diver shallower than it is an ordinary day
+    // (H-08).
+    test.setTimeout(30_000);
+    const tripId = await seededTripId(page, "blue-mantis", DEEP_CHARTER);
+    await page.context().clearCookies();
+    await page.goto(`/s/blue-mantis/trips/${tripId}`);
+    await expect(page.getByRole("heading", { name: DEEP_CHARTER })).toBeVisible();
+
+    // The two figures the page never used to say, off the shop's own rhythm.
+    await expect(page.getByText("Usually 45 minutes in the water").first()).toBeVisible();
+    await expect(page.getByText("Usually 60 minutes on the surface")).toBeVisible();
+
+    // Nothing about anybody's card until the reader says something: this page
+    // has no diver on file and must not appear to.
+    await expect(page.getByText(/your card covers/)).toHaveCount(0);
+    await page
+      .getByLabel("See these depths against your card")
+      .selectOption({ label: "Open Water" });
+    // The Duane bottoms at 37 m; an Open Water card covers 18 m.
+    await expect(
+      page.getByText(/Dive 1 is at a site that reaches 37 m, past the 18 m your card covers/),
+    ).toBeVisible();
+
+    // And the seat is still there to buy.
+    await expect(
+      page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }),
+    ).toBeEnabled();
+  });
+
   test("the Guests tab names the level the charter wants and the level the diver holds", async ({
     page,
   }) => {
