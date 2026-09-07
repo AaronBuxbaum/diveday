@@ -150,8 +150,9 @@ test.describe("shop currency", () => {
 
     await setCurrency(page, privateShop.slug, "eur");
     await openSettingsRow(page, "Rental prices");
-    await expect(page.getByLabel(/Full set/).first()).toHaveValue(
-      new RegExp(`^€\\s?${digits.replace(/\./g, "\\.")}$`),
-    );
+    // The euro figure in the reader's locale carries no space after its
+    // symbol, so the expectation is the exact string rather than a pattern
+    // built from the digits.
+    await expect(page.getByLabel(/Full set/).first()).toHaveValue(`€${digits}`);
   });
 });
