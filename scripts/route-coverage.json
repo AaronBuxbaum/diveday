@@ -188,6 +188,7 @@
       "returning-diver.spec.ts",
       "schedule-embed.spec.ts",
       "seat-claim.spec.ts",
+      "tide-window.spec.ts",
       "trip-admission.spec.ts",
       "trips.spec.ts"
     ],
@@ -271,7 +272,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/dive-sites/[id]": {
-    "e2e": ["dive-sites.spec.ts"],
+    "e2e": ["dive-sites.spec.ts", "tide-window.spec.ts"],
     "visual": ["dive-site-edit"]
   },
   "/shop/[shopSlug]/dive-sites/new": {
@@ -395,6 +396,7 @@
       "schedule-embed.spec.ts",
       "schedule-trip.spec.ts",
       "tenant-isolation.spec.ts",
+      "tide-window.spec.ts",
       "trip-admission.spec.ts",
       "trip-series.spec.ts",
       "trips.spec.ts",
@@ -404,6 +406,7 @@
       "schedule-builder",
       "schedule-builder-add",
       "schedule-builder-add-full",
+      "schedule-builder-add-tide",
       "schedule-builder-empty",
       "schedule-builder-move-impact"
     ],
@@ -420,6 +423,7 @@
       "role-permissions.spec.ts",
       "settings-findability.spec.ts",
       "tax.spec.ts",
+      "tide-window.spec.ts",
       "whatsapp-settings.spec.ts"
     ],
     "visual": [
@@ -508,6 +512,7 @@
       "promo-codes.spec.ts",
       "recap.spec.ts",
       "refunds.spec.ts",
+      "tide-window.spec.ts",
       "trip-admission.spec.ts",
       "trip-series.spec.ts",
       "trips.spec.ts"

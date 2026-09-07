@@ -43,6 +43,7 @@ export const SECTION_IDS = [
   "address",
   "reviewLink",
   "searchListing",
+  "tideWindow",
   "conservation",
   "packing",
   "dockCall",
@@ -222,6 +223,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.searchListing.heading",
     group: "your-shop",
     target: { kind: "section", id: "searchListing" },
+  },
+  {
+    id: "tideWindow",
+    labelKey: "settings.main.tideWindow.heading",
+    group: "your-shop",
+    target: { kind: "section", id: "tideWindow" },
   },
   {
     id: "conservation",

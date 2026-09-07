@@ -15,9 +15,12 @@ import { languageNameIn } from "@/i18n/language-labels";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { staffTideWindowText } from "@/i18n/tide-labels";
 import { DSD_RATIO } from "@/lib/course-ratios";
+import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { depthInUnit } from "@/lib/depth-units";
-import { formatMoneyCents, formatShortDate, weekdayNames } from "@/lib/format";
+import { parseDockDayRhythm } from "@/lib/diver-planning";
+import { formatMoneyCents, formatShortDate, formatTime, weekdayNames } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { fetchAutomatedMarineForecast, shouldShowAutomatedForecast } from "@/lib/marine-forecast";
 import { toShopCurrency } from "@/lib/money";
@@ -328,6 +331,39 @@ export default async function ManageTripPage({
     forecastPoint && shouldShowAutomatedForecast(trip.startsAt)
       ? await fetchAutomatedMarineForecast(forecastPoint, trip.startsAt)
       : null;
+  // One sentence per stationed site, read at the boat's own arrival there
+  // (ADR 20260907-noaa-tide-predictions). Empty on most departures.
+  const rhythm = parseDockDayRhythm(shop);
+  const tideWindows = rhythm
+    ? await tideWindowsForDeparture({
+        startsAt: trip.startsAt,
+        plannedDives: trip.plannedDives,
+        diveMode: trip.diveMode,
+        dives: tripDiveList.map(({ dive, diveSite }) => ({
+          diveNumber: dive.diveNumber,
+          travelMinutes: dive.travelMinutes,
+          site: diveSite
+            ? {
+                name: diveSite.name,
+                tideStationId: diveSite.tideStationId,
+                tidePreference: diveSite.tidePreference,
+                expectedBottomTimeMinutes: diveSite.expectedBottomTimeMinutes,
+              }
+            : null,
+        })),
+        rhythm,
+        timeZone: shop.timezone,
+      })
+    : [];
+  const tideLines = tideWindows.map((entry) => ({
+    site: entry.siteName,
+    text: staffTideWindowText(
+      t,
+      entry.window,
+      entry.preference,
+      formatTime(entry.window.nearestTurn.at, locale, shop.timezone),
+    ),
+  }));
 
   const aboutForms = new Set([
     "details",
@@ -384,9 +420,13 @@ export default async function ManageTripPage({
         })
       : null,
   ].filter((part): part is string => Boolean(part));
+  // The tide rides the at-rest line too: on a day with no crew prediction it
+  // is the one conditions fact the page has, and "No conditions yet" beside a
+  // known slack would be the summary contradicting its own panel.
   const conditionsSummary = trip.conditionsHold
     ? t("trips.conditions.holdOnSummary")
-    : conditionParts.join(" · ") || t("trips.about.noConditions");
+    : [...conditionParts, ...tideLines.map((line) => line.text)].join(" · ") ||
+      t("trips.about.noConditions");
   const assignedCrew = staff
     .filter((entry) => crewIds.includes(entry.person.id))
     .map((entry) => entry.person.fullName);
@@ -730,6 +770,7 @@ export default async function ManageTripPage({
             temperatureUnit={temperatureUnitFor(shop)}
             depthUnit={shop.depthUnit}
             automatedForecast={automatedForecast}
+            tideLines={tideLines}
             embedded
           />
 

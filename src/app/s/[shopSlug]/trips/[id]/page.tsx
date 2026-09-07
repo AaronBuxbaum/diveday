@@ -37,11 +37,13 @@ import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { diverTideWindowText } from "@/i18n/tide-labels";
 import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
+import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { checkoutCharge } from "@/lib/deposits";
-import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
+import { conditionsChangedSinceBooking, parseDockDayRhythm } from "@/lib/diver-planning";
 import { formatDateTimeTz, formatDayParts, formatShortDate, formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -266,6 +268,39 @@ export default async function TripDetailPage({
     !crewPrediction && forecastPoint && shouldShowAutomatedForecast(trip.startsAt)
       ? await fetchAutomatedMarineForecast(forecastPoint, trip.startsAt)
       : null;
+  // The tide at each stationed site, only once the shop has chosen to publish
+  // it (ADR 20260907-noaa-tide-predictions) — the sentence names a clock time
+  // beside the Book button, and that is the shop's promise to make.
+  const rhythm = shop.tideWindowPublic ? parseDockDayRhythm(shop) : null;
+  const tideWindows = rhythm
+    ? await tideWindowsForDeparture({
+        startsAt: trip.startsAt,
+        plannedDives: trip.plannedDives,
+        diveMode: trip.diveMode,
+        dives: tripDives.map(({ dive, diveSite }) => ({
+          diveNumber: dive.diveNumber,
+          travelMinutes: dive.travelMinutes,
+          site: diveSite
+            ? {
+                name: diveSite.name,
+                tideStationId: diveSite.tideStationId,
+                tidePreference: diveSite.tidePreference,
+                expectedBottomTimeMinutes: diveSite.expectedBottomTimeMinutes,
+              }
+            : null,
+        })),
+        rhythm,
+        timeZone: shop.timezone,
+      })
+    : [];
+  const tideLines = tideWindows.map((entry) =>
+    diverTideWindowText(
+      t,
+      entry.window,
+      entry.preference,
+      formatTime(entry.window.nearestTurn.at, locale, shop.timezone),
+    ),
+  );
 
   // The embed's short confirmation renders only from a verified `confirm`
   // capability — never from a raw booking id in the URL (design principle 6:
@@ -673,6 +708,7 @@ export default async function TripDetailPage({
           crewPrediction={crewPrediction}
           automatedForecast={automatedForecast}
           crewLanguages={crewLanguagesLine}
+          tideLines={tideLines}
           locale={locale}
         />
         <TripChangeLedger

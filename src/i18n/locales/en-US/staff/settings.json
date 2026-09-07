@@ -29,6 +29,8 @@
       "reviewUrlInvalid": "Enter a full https:// link, or empty the box to stop asking for reviews.",
       "searchListingOn": "Your public pages are listed in search engines.",
       "searchListingOff": "Your public pages are hidden from search engines. Anything already indexed can take a few weeks to drop out.",
+      "tideWindowOn": "Divers now see the tide window on departure pages.",
+      "tideWindowOff": "The tide window is off divers' departure pages.",
       "conservationInvalid": "Check your conservation commitments selection.",
       "connected": "Stripe account connected.",
       "connectFailed": "The Stripe connection didn't complete. Try connecting again.",
@@ -197,6 +199,15 @@
       "valueHidden": "Hidden",
       "detail": "Untick this and anything already indexed can take a few weeks to disappear, and a page someone has linked to stays reachable by that link.",
       "label": "List my public pages in search engines",
+      "submit": "Save",
+      "submitting": "Saving…"
+    },
+    "tideWindow": {
+      "heading": "Tide window",
+      "valueOn": "Shown to divers",
+      "valueOff": "Staff only",
+      "detail": "Sites with a NOAA tide station carry one line on staff pages: the nearest slack and which way the water is moving when the boat arrives. Tick this and divers read the same line on the departure page.",
+      "label": "Show the tide window on public departure pages",
       "submit": "Save",
       "submitting": "Saving…"
     },

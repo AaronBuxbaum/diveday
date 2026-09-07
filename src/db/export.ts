@@ -864,6 +864,7 @@ export async function loadShopExportBundleInput(
             // bundle is also the *backup*: a shop that opted out and later
             // restored from one must not come back published.
             "search_listing_opt_out_at",
+            "tide_window_public",
             "conservation_commitments",
             "tagline",
             "description",
@@ -922,6 +923,7 @@ export async function loadShopExportBundleInput(
               shop.seasonStartMonth,
               shop.seasonStartDay,
               shop.searchListingOptOutAt,
+              shop.tideWindowPublic,
               JSON.stringify(shop.conservationCommitments),
               shop.tagline,
               shop.description,
@@ -3031,6 +3033,8 @@ export async function loadShopExportBundleInput(
             "requires_nitrox",
             "forecast_latitude",
             "forecast_longitude",
+            "tide_station_id",
+            "tide_preference",
             "satellite_image_url",
             "route_image_url",
             "route_points",
@@ -3075,6 +3079,8 @@ export async function loadShopExportBundleInput(
             row.requiresNitrox,
             row.forecastLatitude,
             row.forecastLongitude,
+            row.tideStationId,
+            row.tidePreference,
             row.satelliteImageUrl,
             row.routeImageUrl,
             // The drawn route travels with the site, so a shop that exports

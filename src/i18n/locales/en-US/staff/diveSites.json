@@ -66,6 +66,15 @@
     "namePlaceholder": "Molasses Reef",
     "forecastLegend": "GPS location",
     "forecastDescription": "The offshore dive point, not the shop address. Leave both blank to keep the site off divers' maps.",
+    "tideStationLabel": "NOAA tide station",
+    "tideStationHint": "The seven-digit id of the nearest ocean-side station, from <link>NOAA's tide predictions</link>.",
+    "tidePreferenceLabel": "Dives best",
+    "tidePreference": {
+      "any": "Any tide",
+      "slack": "At slack water",
+      "flood": "On the flood",
+      "ebb": "On the ebb"
+    },
     "latitudeLabel": "Latitude",
     "longitudeLabel": "Longitude",
     "locationLabel": "Location",
@@ -184,6 +193,7 @@
     "saving": "Saving…",
     "optionalHint": "(optional)",
     "errorCoordinates": "Add both GPS coordinates. A location needs a latitude and a longitude.",
+    "errorTideStation": "A NOAA tide station id is seven digits, like 8723583.",
     "errorDepth": "That maximum depth is deeper than any dive site.",
     "errorImages": "One of those photos couldn't be stored. A site holds up to six, and each has to be a JPG, PNG, WebP, or HEIC under 5 MB. Everything else you typed is still here.",
     "errorImagesUnconfigured": "Photo storage isn't set up for this shop yet. Save the briefing without photos for now, or ask your shop's owner or manager to configure it.",

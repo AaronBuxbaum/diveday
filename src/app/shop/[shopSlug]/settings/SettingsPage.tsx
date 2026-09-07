@@ -118,6 +118,7 @@ import {
   saveSeasonStartAction,
   saveSendWindowAction,
   saveTaxAction,
+  saveTideWindowAction,
   saveTimezoneAction,
   saveUnitsAction,
   updateBoatAction,
@@ -183,6 +184,8 @@ function noticeMessages(
     "review-url-invalid": { tone: "danger", text: t("settings.main.notice.reviewUrlInvalid") },
     "search-listing-on": { tone: "success", text: t("settings.main.notice.searchListingOn") },
     "search-listing-off": { tone: "success", text: t("settings.main.notice.searchListingOff") },
+    "tide-window-on": { tone: "success", text: t("settings.main.notice.tideWindowOn") },
+    "tide-window-off": { tone: "success", text: t("settings.main.notice.tideWindowOff") },
     "conservation-saved": { tone: "success", text: t("settings.main.notice.conservationSaved") },
     "conservation-invalid": { tone: "danger", text: t("settings.main.notice.conservationInvalid") },
     connected: { tone: "success", text: t("settings.main.notice.connected") },
@@ -1243,6 +1246,42 @@ export default async function SettingsPage({
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("settings.main.searchListing.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            {/* The third row about the shop's public face: whether the tide
+                window a stationed site carries reaches divers. Off by default
+                (ADR 20260907-noaa-tide-predictions). */}
+            <SettingsRow
+              heading={t("settings.main.tideWindow.heading")}
+              value={
+                shop.tideWindowPublic
+                  ? t("settings.main.tideWindow.valueOn")
+                  : t("settings.main.tideWindow.valueOff")
+              }
+              detail={t("settings.main.tideWindow.detail")}
+              sectionId="tideWindow"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="tideWindow" active={activeSection} />
+              <FieldGrid as="form" action={saveTideWindowAction} columns={1} className="mt-4">
+                <label className="flex min-h-11 items-center gap-3 text-sm">
+                  <input
+                    name="tideWindowPublic"
+                    type="checkbox"
+                    defaultChecked={shop.tideWindowPublic}
+                    className="size-4 accent-primary"
+                  />
+                  {t("settings.main.tideWindow.label")}
+                </label>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.tideWindow.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.tideWindow.submit")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>

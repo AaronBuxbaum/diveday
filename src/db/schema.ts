@@ -326,6 +326,14 @@ export const shops = pgTable(
      * it and they come back.
      */
     searchListingOptOutAt: timestamp("search_listing_opt_out_at", { withTimezone: true }),
+    /**
+     * Whether the tide window a site carries reaches the diver's public
+     * departure page. Off by default: the sentence names a clock time beside
+     * a Book button, and whether that is a promise the shop wants to publish
+     * is the shop's call. Staff surfaces read it regardless (ADR
+     * 20260907-noaa-tide-predictions).
+     */
+    tideWindowPublic: boolean("tide_window_public").notNull().default(false),
     tagline: text("tagline"),
     description: text("description"),
     logoUrl: text("logo_url"),
@@ -1289,6 +1297,20 @@ export const courseInquiries = pgTable(
 export const diveSiteFitTone = pgEnum("dive_site_fit_tone", ["welcoming", "demanding", "unknown"]);
 
 /**
+ * When a site dives best, in the shop's own reading of its water: at the
+ * turn, on the rising tide, on the falling one, or `any` — the default, and
+ * the honest answer for a sheltered reef. Mirrors `TIDE_PREFERENCES` in
+ * `src/lib/tides.ts`; the tide window informs and gates nothing (ADR
+ * 20260907-noaa-tide-predictions).
+ */
+export const diveSiteTidePreference = pgEnum("dive_site_tide_preference", [
+  "any",
+  "slack",
+  "flood",
+  "ebb",
+]);
+
+/**
  * How demanding a site is, as a code rather than the shop's own adjective.
  *
  * `dive_sites.difficulty` was free text, and it read as the one untranslated
@@ -1327,6 +1349,14 @@ export const diveSites = pgTable(
     /** Offshore coordinate selected by staff for the automated marine forecast. */
     forecastLatitude: doublePrecision("forecast_latitude"),
     forecastLongitude: doublePrecision("forecast_longitude"),
+    /**
+     * The NOAA CO-OPS station whose high/low table this site is read against —
+     * seven digits, the nearest ocean-side station rather than the site itself,
+     * which is rarely a station. Null means the briefing says nothing about the
+     * tide, which is most sites (ADR 20260907-noaa-tide-predictions).
+     */
+    tideStationId: text("tide_station_id"),
+    tidePreference: diveSiteTidePreference("tide_preference").notNull().default("any"),
     satelliteImageUrl: text("satellite_image_url"),
     routeImageUrl: text("route_image_url"),
     imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),

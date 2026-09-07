@@ -29,6 +29,8 @@
       "reviewUrlInvalid": "Introduce un enlace https:// completo, o vacía el campo para dejar de pedir reseñas.",
       "searchListingOn": "Tus páginas públicas aparecen en los buscadores.",
       "searchListingOff": "Tus páginas públicas están ocultas para los buscadores. Lo que ya esté indexado puede tardar unas semanas en desaparecer.",
+      "tideWindowOn": "Los buceadores ya ven la ventana de marea en las páginas de salida.",
+      "tideWindowOff": "La ventana de marea ya no aparece en las páginas de salida de los buceadores.",
       "conservationInvalid": "Revisa la selección de compromisos de conservación.",
       "connected": "Cuenta de Stripe conectada.",
       "connectFailed": "La conexión con Stripe no se completó. Inténtalo de nuevo.",
@@ -197,6 +199,15 @@
       "valueHidden": "Oculto",
       "detail": "Si desmarcas esto, lo que ya esté indexado puede tardar unas semanas en desaparecer, y una página que alguien haya enlazado sigue siendo accesible por ese enlace.",
       "label": "Mostrar mis páginas públicas en los buscadores",
+      "submit": "Guardar",
+      "submitting": "Guardando…"
+    },
+    "tideWindow": {
+      "heading": "Ventana de marea",
+      "valueOn": "Visible para buceadores",
+      "valueOff": "Solo personal",
+      "detail": "Los sitios con estación de mareas NOAA llevan una línea en las páginas del personal: la estoa más cercana y hacia dónde se mueve el agua cuando llega el barco. Marca esto y los buceadores leen la misma línea en la página de la salida.",
+      "label": "Mostrar la ventana de marea en las páginas públicas de salida",
       "submit": "Guardar",
       "submitting": "Guardando…"
     },

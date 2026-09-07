@@ -136,6 +136,7 @@ import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSupportNeeds } from "./seed-support-needs";
+import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
 import { seedTripStage } from "./seed-trip-stage";
 import { seedTrips } from "./seed-trips";
@@ -797,6 +798,9 @@ export async function seedDemoSchedule(
   // newer one.
   await seedDiveSiteCatalog(db);
   const { siteByName, benwood, french } = await seedDiveSites(db, shopId);
+  // Which NOAA station the two Key Largo sites read their tide from; the
+  // public toggle rides the history flag (ADR 20260907-noaa-tide-predictions).
+  await seedTides(db, shopId, opts.history !== false);
   const { tripRows, captainId, divemasterId } = await seedTrips(db, shopId, {
     instructor,
     reliefInstructor,

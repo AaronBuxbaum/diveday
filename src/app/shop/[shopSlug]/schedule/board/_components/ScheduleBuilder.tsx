@@ -104,6 +104,16 @@ export type BuilderDay = {
 };
 
 export type BuilderOption = { id: string; title: string };
+
+/** What the add panel sends to ask about the tide at a chosen site. */
+export type BuilderTideWindowInput = {
+  diveSiteId: string;
+  /** `YYYY-MM-DD`, the shop's own calendar. */
+  date: string;
+  /** `HH:MM` as the forgiving time box canonicalised it; anything else answers null. */
+  startTime: string;
+  diveMode: string;
+};
 export type BuilderCourseOption = BuilderOption & { agency: string };
 export type BuilderBoatOption = { id: string; name: string; capacity: number };
 
@@ -421,6 +431,7 @@ function AddPanel({
   addDraft,
   draftActions,
   loadPattern,
+  loadTideWindow,
   dateIso,
   options,
   price,
@@ -440,6 +451,8 @@ function AddPanel({
   draftActions: FormDraftActions;
   /** The weekday's pattern, fetched when the panel opens with nothing else to say. */
   loadPattern?: (dateIso: string) => Promise<BuilderPattern | null>;
+  /** The tide at the chosen site for this departure, worded; null renders nothing. */
+  loadTideWindow?: (input: BuilderTideWindowInput) => Promise<string | null>;
   dateIso: string;
   /** `null` until the panel's own fetch lands; the selects say so meanwhile. */
   options: BuilderOptions | null;
@@ -518,6 +531,47 @@ function AddPanel({
   };
   /** The departure's date, mirrored so the repeat fieldset can seed its weekday. */
   const [startDate, setStartDate] = useState(dateIso);
+
+  /**
+   * **The tide at the chosen site**, one line under the site select (ADR
+   * 20260907-noaa-tide-predictions). Asked of the server the moment a site
+   * is picked and again whenever the form's own "when" changes — the date is
+   * state, but the time and mode are uncontrolled boxes, so the form's
+   * `change` event is what re-asks. The answer is already a sentence in the
+   * reader's language; null is the ordinary case and renders nothing.
+   */
+  const [tideLine, setTideLine] = useState<string | null>(null);
+  useEffect(() => {
+    if (!loadTideWindow || !diveSiteId) {
+      setTideLine(null);
+      return;
+    }
+    const form = tideAnchor.current?.closest("form") ?? null;
+    let live = true;
+    const ask = () => {
+      const fields = form ? new FormData(form) : null;
+      void loadTideWindow({
+        diveSiteId,
+        date: startDate,
+        startTime: String(fields?.get("startTime") ?? ""),
+        diveMode: String(fields?.get("diveMode") ?? "boat"),
+      }).then(
+        (line) => {
+          if (live) setTideLine(line);
+        },
+        () => {
+          if (live) setTideLine(null);
+        },
+      );
+    };
+    ask();
+    form?.addEventListener("change", ask);
+    return () => {
+      live = false;
+      form?.removeEventListener("change", ask);
+    };
+  }, [loadTideWindow, diveSiteId, startDate]);
+  const tideAnchor = useRef<HTMLParagraphElement>(null);
 
   /**
    * **The add panel already knows the weekday** (ADR 20260906-before-you-ask,
@@ -1146,6 +1200,12 @@ function AddPanel({
           </select>
         </Field>
       </FieldGrid>
+      {/* Always mounted, empty or not: the effect above finds the form
+          through this element, and it has to be there before a site is
+          picked. Hidden rather than absent while there is nothing to say. */}
+      <p ref={tideAnchor} hidden={!tideLine} className="text-sm text-muted">
+        {tideLine}
+      </p>
       {diveSeed === null ? null : (
         <TripDiveFields
           diveSites={(options?.diveSites ?? []).map((site) => ({
@@ -1730,6 +1790,7 @@ export function ScheduleBuilder({
   locale,
   addDraft = null,
   loadPattern,
+  loadTideWindow,
   days,
   loadMovePreflight,
   loadOptions,
@@ -1752,6 +1813,8 @@ export function ScheduleBuilder({
   addDraft?: FormDraftProps["draft"];
   /** The weekday's usual departure, fetched when a panel opens with no draft. */
   loadPattern?: (dateIso: string) => Promise<BuilderPattern | null>;
+  /** The add panel's tide line for a chosen site (ADR 20260907-noaa-tide-predictions). */
+  loadTideWindow?: (input: BuilderTideWindowInput) => Promise<string | null>;
   days: BuilderDay[];
   /** Fetches the add panel's course and dive-site options, first time it opens. */
   loadOptions: () => Promise<BuilderOptions>;
@@ -2065,6 +2128,7 @@ export function ScheduleBuilder({
           addDraft={addDraft}
           draftActions={actions.draft}
           loadPattern={loadPattern}
+          loadTideWindow={loadTideWindow}
           dateIso={defaultDateIso}
           options={options}
           price={price}
@@ -2125,6 +2189,7 @@ export function ScheduleBuilder({
                 addDraft={addDraft}
                 draftActions={actions.draft}
                 loadPattern={loadPattern}
+                loadTideWindow={loadTideWindow}
                 dateIso={weekAdd}
                 options={options}
                 price={price}
@@ -2296,6 +2361,7 @@ export function ScheduleBuilder({
                 addDraft={addDraft}
                 draftActions={actions.draft}
                 loadPattern={loadPattern}
+                loadTideWindow={loadTideWindow}
                 dateIso={day.dateIso}
                 options={options}
                 price={price}

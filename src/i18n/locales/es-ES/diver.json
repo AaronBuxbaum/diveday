@@ -231,6 +231,7 @@
     "forecastUpdateUnavailable": "Hora de actualización no disponible.",
     "forecastCrewCall": "Las condiciones se confirman en el muelle.",
     "forecastCreditPrefix": "Previsión de",
+    "tideWindow": "Estoa a las {time}; el barco llega al sitio {phase, select, slack {en la estoa} flood {con marea entrante} other {con marea saliente}}{fit, select, met {, cuando mejor se bucea} missed {. Se bucea mejor {preference, select, slack {en la estoa} flood {con marea entrante} other {con marea saliente}}} other {}}.",
     "timeline": {
       "arrive": "Llegada y registro",
       "gearSetup": "Monta tu equipo",

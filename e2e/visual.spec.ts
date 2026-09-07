@@ -3436,6 +3436,24 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder-add", scheme);
       });
 
+      // The same quick panel once a stationed site is chosen: the one line the
+      // panel adds when it knows where the boat is going (ADR
+      // 20260907-noaa-tide-predictions), read off the fixture table the fleet
+      // serves in place of NOAA. Its own capture rather than a change to the
+      // one above, which is the baseline for the panel with nothing chosen.
+      test(`the add-a-departure panel with a tide window renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await page.getByRole("link", { name: "Add a departure", exact: true }).click();
+        await addPanelSettled(page);
+        await page.getByLabel("Dive site", { exact: true }).selectOption({ label: "Molasses Reef" });
+        await page.getByText(/Slack at .*; this departure reaches the site/).waitFor();
+        await boardListSettled(page);
+        await capture(page, "schedule-builder-add-tide", scheme);
+      });
+
       // The same panel at full depth — everything `/trips/new` used to be, now
       // disclosed inline (ADR 20260806-one-trip-create-form). This is the tall
       // one, and the only baseline that can catch the expanded form's own

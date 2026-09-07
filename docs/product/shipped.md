@@ -7,6 +7,18 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The tide window (delivered 2026-09-07)
+
+N-01 of the improvement-ideas sheet, owner decision 2026-09-07. A dive site names a NOAA CO-OPS
+tide station and when it dives best (`any` / `slack` / `flood` / `ebb`); the staff site briefing,
+the board's add panel and the departure page then say one line — "Slack at 9:40 AM; this departure
+reaches the site on the flood" — read at the boat's own arrival there (`src/lib/tides.ts` for the
+window, `src/lib/departure-tides.ts` for the composition, `src/lib/tide-predictions.ts` for the
+seam). Divers read the same line on the public departure page only once the shop switches it on in
+Settings (`shops.tide_window_public`, default off). Informs; gates nothing. The demo reads both Key
+Largo sites against Carysfort Reef (8723583). ADR
+[20260907-noaa-tide-predictions](../architecture/decisions/20260907-noaa-tide-predictions.md).
+
 ## Before you ask: DiveDay fills in what it already knows (delivered 2026-09-06)
 
 The 2026-09-06 loop, argued on [its canvas](../design/canvases/20260906-before-you-ask/README.md)

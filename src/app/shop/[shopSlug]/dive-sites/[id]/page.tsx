@@ -25,16 +25,20 @@ import {
 } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
+import { listTripDives } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { staffTideWindowText } from "@/i18n/tide-labels";
+import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import type {
   DiveSiteTemplateField,
   DiveSiteTemplateUpdateMode,
 } from "@/lib/dive-site-template-sync";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
-import { formatShortDate } from "@/lib/format";
+import { parseDockDayRhythm } from "@/lib/diver-planning";
+import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -142,6 +146,59 @@ export default async function EditDiveSitePage({
     listDiveSiteCreatures(db, shop.id, id),
   ]);
   const templateUpdate = await getDiveSiteTemplateUpdate(db, shop.id, id);
+  // The tide at *this* site on each upcoming departure that dives it, read at
+  // the instant the boat gets there rather than at departure (ADR
+  // 20260907-noaa-tide-predictions). Empty for a site with no station, which
+  // is most of them, and the list renders exactly as it did.
+  const rhythm = parseDockDayRhythm(shop);
+  const tideLineByTrip = new Map<string, string>();
+  if (site.tideStationId && rhythm) {
+    for (const trip of upcomingTrips) {
+      const dives = await listTripDives(db, shop.id, trip.tripId);
+      const windows = await tideWindowsForDeparture({
+        startsAt: trip.startsAt,
+        plannedDives: trip.plannedDives,
+        diveMode: trip.diveMode,
+        dives: dives.map(({ dive, diveSite }) => ({
+          diveNumber: dive.diveNumber,
+          travelMinutes: dive.travelMinutes,
+          // Only this site's own dive carries a station here: the row is
+          // about this site, and a second stationed site on the same day
+          // belongs to its own page.
+          site:
+            diveSite && diveSite.id === site.id
+              ? {
+                  name: diveSite.name,
+                  tideStationId: diveSite.tideStationId,
+                  tidePreference: diveSite.tidePreference,
+                  expectedBottomTimeMinutes: diveSite.expectedBottomTimeMinutes,
+                }
+              : diveSite
+                ? {
+                    name: diveSite.name,
+                    tideStationId: null,
+                    tidePreference: "any",
+                    expectedBottomTimeMinutes: diveSite.expectedBottomTimeMinutes,
+                  }
+                : null,
+        })),
+        rhythm,
+        timeZone: shop.timezone,
+      });
+      const first = windows[0];
+      if (first) {
+        tideLineByTrip.set(
+          trip.tripId,
+          staffTideWindowText(
+            t,
+            first.window,
+            first.preference,
+            formatTime(first.window.nearestTurn.at, locale, shop.timezone),
+          ),
+        );
+      }
+    }
+  }
 
   async function saveAction(_state: SiteFormState, formData: FormData): Promise<SiteFormState> {
     "use server";
@@ -438,12 +495,15 @@ export default async function EditDiveSitePage({
               <li key={trip.tripId}>
                 <Link
                   href={`/shop/${shopSlug}/trips/${trip.tripId}`}
-                  className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-surface-sunken"
+                  className="flex flex-col gap-1 px-4 py-3 text-sm hover:bg-surface-sunken sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-3"
                 >
                   <span className="font-medium">{trip.title}</span>
                   <span className="text-muted">
                     {formatShortDate(trip.startsAt, locale, shop?.timezone ?? "UTC")}
                   </span>
+                  {tideLineByTrip.has(trip.tripId) ? (
+                    <span className="basis-full text-muted">{tideLineByTrip.get(trip.tripId)}</span>
+                  ) : null}
                 </Link>
               </li>
             ))}

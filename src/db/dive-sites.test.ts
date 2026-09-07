@@ -183,6 +183,26 @@ describe("dive-site library", () => {
     );
   });
 
+  it("keeps a tide station and preference through create and edit, and clears them on a blank", async () => {
+    const { db, shop } = await seededShopContext();
+    const site = await createDiveSite(db, {
+      shopId: shop.id,
+      name: "Carysfort Wall",
+      tideStationId: "8723583",
+      tidePreference: "slack",
+    });
+    expect(site).toMatchObject({ tideStationId: "8723583", tidePreference: "slack" });
+    const bare = await createDiveSite(db, { shopId: shop.id, name: "Quiet Ledge" });
+    expect(bare).toMatchObject({ tideStationId: null, tidePreference: "any" });
+    // The form posts "" for a cleared box; the row reads null.
+    const cleared = await updateDiveSite(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: "Carysfort Wall",
+      tideStationId: "",
+    });
+    expect(cleared).toMatchObject({ tideStationId: null, tidePreference: "any" });
+  });
+
   it("keeps the full briefing and readiness gates through create and edit", async () => {
     const { db, shop } = await seededShopContext();
 
