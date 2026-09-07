@@ -326,6 +326,16 @@ export const shops = pgTable(
      * it and they come back.
      */
     searchListingOptOutAt: timestamp("search_listing_opt_out_at", { withTimezone: true }),
+    /**
+     * The shop's locality as a path segment — `key-largo` for a shop whose
+     * `address_locality` says "Key Largo" — written by `setShopAddress` from
+     * `regionSlugFromLocality` (src/lib/region.ts) every time the address
+     * saves, and never typed by anyone. `/dive/<region>` lists every listed
+     * shop that shares one (issue #1436). Null when the shop has no locality
+     * on file, which keeps it off every regional page rather than on a page
+     * called "null".
+     */
+    regionSlug: text("region_slug"),
     tagline: text("tagline"),
     description: text("description"),
     logoUrl: text("logo_url"),
@@ -393,6 +403,8 @@ export const shops = pgTable(
     // A year a shop could plausibly have opened in. Bounded at both ends like
     // every other numeric setting, so no caller can persist a figure the
     // storefront would print as nonsense.
+    // `/dive/<region>` reads listed shops by this one column (issue #1436).
+    index("shops_region_slug_idx").on(table.regionSlug),
     check(
       "shops_established_year_plausible",
       sql`${table.establishedYear} IS NULL OR (${table.establishedYear} >= 1900 AND ${table.establishedYear} <= 2100)`,
