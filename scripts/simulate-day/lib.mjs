@@ -207,6 +207,13 @@ function escapeCell(text) {
       // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escapes are exactly what this strips.
       .replace(/\u001b\[[0-9;]*m/g, "")
       .replace(/\r?\n/g, " ")
+      // **Backslashes first, or the pipe escape below eats its own.** A
+      // Playwright assertion message carries them routinely -- a regex in a
+      // locator, a Windows path. Escaping only the pipe turns `a\|b` into
+      // `a\\|b`, which Markdown reads as a literal backslash followed by an
+      // unescaped pipe: the row gains a column and the table goes crooked from
+      // there down.
+      .replace(/\\/g, "\\\\")
       .replace(/\|/g, "\\|")
   );
 }
