@@ -47,7 +47,19 @@ export default defineConfig({
     timezoneId: "America/New_York",
     colorScheme: "light",
     screenshot: "off",
-    trace: "retain-on-failure",
+    // **No trace, deliberately.** A Playwright trace carries request and
+    // response headers — `Authorization`, `Cookie` — DOM snapshots and a
+    // screenshot per action, and this run's artifacts are uploaded to a public
+    // repository where anyone can download them. None of that passes through
+    // the finding pipeline that decides what this bot is allowed to publish;
+    // it would bypass it entirely.
+    //
+    // What a trace would buy is a picture of the one thing that can fail a
+    // test here, a visit whose tab went away twice — and the run log already
+    // names that surface and the error, which is what a reader acts on. So the
+    // walk's published evidence is exactly `persona-bots/findings.json` and the
+    // screenshots the issues link to, and nothing else leaves the runner.
+    trace: "off",
     ...devices["Desktop Chrome"],
     viewport: { width: 1280, height: 900 },
   },

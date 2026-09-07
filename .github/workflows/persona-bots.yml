@@ -60,9 +60,14 @@ jobs:
         run: pnpm persona:bots --no-build ${{ inputs.dry_run && '--dry-run' || '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # The findings and the screenshots every filed issue links to. Uploaded
-      # whether or not the walk completed — a partial run's findings file is
-      # the one worth reading, and it is the only copy of the pictures.
+      # The findings and the screenshots every filed issue links to — the
+      # walk's whole published output, and deliberately the only thing that
+      # leaves the runner. Playwright's own trace is off (see the walk's
+      # config): it would carry headers, cookies and DOM snapshots to a public
+      # artifact without passing through the pipeline that decides what this
+      # bot may publish. Uploaded whether or not the walk completed — a partial
+      # run's findings file is the one worth reading, and it is the only copy
+      # of the pictures.
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -70,12 +75,3 @@ jobs:
           path: persona-bots/
           if-no-files-found: warn
           retention-days: 30
-      # Playwright's trace for a visit whose harness broke, which is the only
-      # thing that can fail a test here.
-      - uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: persona-bots-test-results
-          path: test-results/persona-bots/
-          if-no-files-found: ignore
-          retention-days: 7

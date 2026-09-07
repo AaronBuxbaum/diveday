@@ -73,6 +73,36 @@ the neighbouring rule over the source, where the answer is readable.
    yields to the inbox; the inbox never yields to the bot.
 6. A run that did not complete files nothing.
 
+**What this bot publishes, and the invariant that lets it.** A filed issue names every URL the
+probe fired on and links a screenshot of it, on a public tracker, from a public artifact. That is
+only safe because of a property that is currently invisible in the code: **the walk never opens a
+live capability URL.** On every `CAPABILITY_ROUTE_PREFIXES` route (`src/lib/capability-urls.ts`) the
+URL *is* the credential, so one capture of a real `/ready/<token>` page — or one issue body quoting
+that path — hands whoever reads it a working waiver link. The walk's single bearer-token stop is
+`/waivers/not-a-real-token`, which was never valid and is there to see what a dead link looks like.
+
+So there is no redaction layer in this pipeline, and that is a consequence rather than an oversight:
+there has never been anything to redact. Adding a stop that mints a real capability changes that, and
+`DEAD_CAPABILITY_TOKENS` in `scripts/persona-bots/personas.mjs` plus its test in `findings.test.mjs`
+are how the next person meets the rule instead of the incident — a capability-prefixed surface
+carrying a token that list does not vouch for fails `pnpm test`. The fix at that point is
+`redactCapabilityUrl` before the screenshot and before the issue body, never an exemption.
+
+For the same reason **Playwright's trace is off** (`trace: "off"`) and the workflow uploads only
+`persona-bots/`. A trace carries request and response headers, cookies, DOM snapshots and a
+screenshot per action, none of which passes through the pipeline that decides what this bot may
+publish — it would bypass it entirely, into a public artifact. What it would buy is a picture of the
+one thing that can fail a test here, a visit whose tab went away twice, and the run log already
+names that surface and its error.
+
+**It files under `needs-triage`, not a label of its own.** A bespoke `persona-bot` label reads
+tidier and carries a first-run trap: `gh issue list --label persona-bot` errors while the label does
+not exist yet, `listIssuesByLabel` returns `null`, the fail-closed path fires, and the bot silently
+files nothing — forever, since the label is only ever created by a successful file. Reusing
+`needs-triage` (the `LABEL` constant in `check-follow-ups.mjs`) means the list query works on the
+first run, and it puts the bot's findings in the one inbox a human already triages, under the ceiling
+above, rather than in a second queue beside it.
+
 **Every body is validated before anything is filed.** `scripts/persona-bots.mjs` imports
 `findIssueProblems` from `scripts/check-follow-ups.mjs` — the same function `pnpm check:repo` runs
 over the live tracker — and refuses to file a class whose rendered body does not pass, printing why.

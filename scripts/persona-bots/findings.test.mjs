@@ -10,6 +10,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { describe, expect, it } from "vitest";
+import { CAPABILITY_ROUTE_PREFIXES } from "../../src/lib/capability-urls";
 import { findIssueProblems } from "../check-follow-ups.mjs";
 import routeCoverage from "../route-coverage.json" with { type: "json" };
 import {
@@ -25,7 +26,7 @@ import {
   renderSummary,
   sourceFileForPath,
 } from "./findings.mjs";
-import { PERSONAS, PROBES, probeFor, walkPlan } from "./personas.mjs";
+import { DEAD_CAPABILITY_TOKENS, PERSONAS, PROBES, probeFor, walkPlan } from "./personas.mjs";
 
 const finding = (probe, path, extra = {}) => ({
   probe,
@@ -323,6 +324,50 @@ describe("the persona registry", () => {
 
     expect(spanish.length).toBeGreaterThan(0);
     expect(spanish.every((visit) => visit.personas.includes("ingrid"))).toBe(true);
+  });
+
+  /**
+   * **The invariant that means this bot needs no redactor.**
+   *
+   * The walk publishes browser output — a screenshot per surface, and an issue
+   * body naming every URL it visited — to a public tracker and a public
+   * artifact. It is safe to do that only because no surface it opens carries a
+   * live capability: the URL *is* the credential on every
+   * `CAPABILITY_ROUTE_PREFIXES` route, so one screenshot of a real
+   * `/ready/<token>` page, or one issue body quoting that path, hands the
+   * reader a working waiver link.
+   *
+   * The walk's single bearer-token stop is `/waivers/not-a-real-token`, which
+   * is deliberately invalid and is there to see what a dead link looks like.
+   * Nothing redacts anything downstream of that, because there has never been
+   * anything to redact — and that absence is invisible to somebody adding a
+   * stop in six months. This is the warning they get instead: add a surface
+   * that mints a live capability and this fails, and the fix is a redaction
+   * layer (`redactCapabilityUrl`, src/lib/capability-urls.ts) before the
+   * screenshot and the issue body, not an exemption here.
+   */
+  it("never walks a live capability URL, which is why nothing downstream redacts", () => {
+    for (const visit of walkPlan()) {
+      const [withoutQuery] = visit.path.split(/[?#]/, 1);
+      const [, prefix, segment] = withoutQuery.split("/");
+      if (!CAPABILITY_ROUTE_PREFIXES.includes(prefix)) continue;
+      expect(
+        DEAD_CAPABILITY_TOKENS,
+        `${visit.path} puts a token this list does not vouch for on a ${prefix} capability route. ` +
+          "The URL is the credential there, so a screenshot of that surface or an issue body " +
+          "quoting the path hands whoever reads it a working link. Either walk a token that was " +
+          "never valid and add it to DEAD_CAPABILITY_TOKENS, or redact through " +
+          "src/lib/capability-urls.ts before anything is published.",
+      ).toContain(segment);
+    }
+  });
+
+  it("actually looks at something — the guard above is worthless on an empty list", () => {
+    const capability = walkPlan().filter((visit) =>
+      CAPABILITY_ROUTE_PREFIXES.includes(visit.path.split("/")[1]),
+    );
+
+    expect(capability.length).toBeGreaterThan(0);
   });
 
   it("knows every probe it can report, axe rules included", () => {

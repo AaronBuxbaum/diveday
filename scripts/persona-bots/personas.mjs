@@ -33,6 +33,23 @@ export const DEMO_SHOP_SLUG = "blue-mantis";
 const MISSING_TRIP_ID = "00000000-0000-4000-8000-000000000000";
 
 /**
+ * The only tokens the walk may put in a capability URL, and they are all dead.
+ *
+ * On every `CAPABILITY_ROUTE_PREFIXES` route (`src/lib/capability-urls.ts`) the
+ * URL *is* the credential, and this bot publishes a screenshot of every surface
+ * it finds something on plus an issue body naming each path — to a public
+ * tracker and a public artifact. One capture of a real `/ready/<token>` page,
+ * or one issue quoting that path, hands whoever reads it a working link.
+ *
+ * So the walk visits those routes only with a token that was never valid, and
+ * that is what makes a redaction layer unnecessary rather than merely absent.
+ * `findings.test.mjs` fails on a capability surface carrying anything not on
+ * this list, so the next person to add one meets the rule instead of the
+ * incident.
+ */
+export const DEAD_CAPABILITY_TOKENS = Object.freeze(["not-a-real-token"]);
+
+/**
  * The fifteen personas, in the order `docs/product/personas.md` numbers them,
  * each with the surfaces its entry names under **Surfaces**.
  *
@@ -104,7 +121,7 @@ export const PERSONAS = Object.freeze([
     number: 6,
     name: "Rob",
     lens: "the diver the night before",
-    surfaces: [{ path: "/waivers/not-a-real-token", refusal: true }],
+    surfaces: [{ path: `/waivers/${DEAD_CAPABILITY_TOKENS[0]}`, refusal: true }],
   },
   {
     id: "amara",

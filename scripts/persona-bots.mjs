@@ -117,7 +117,7 @@ const walk = run(
 // partial and nothing in it is trustworthy enough to put in front of a human.
 if (walk !== 0) {
   console.error(
-    "persona-bots: DID NOT FILE — the walk did not complete. Read the Playwright output above and the trace under test-results/persona-bots/.",
+    "persona-bots: DID NOT FILE — the walk did not complete. The Playwright output above names the surface and the error; there is no trace to read, deliberately (see the walk's config).",
   );
   process.exit(0);
 }
