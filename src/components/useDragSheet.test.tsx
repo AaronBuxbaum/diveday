@@ -136,6 +136,70 @@ describe("useDragSheet", () => {
     expect(onDismiss).toHaveBeenCalledOnce();
   });
 
+  /**
+   * **A tap has to reach the row underneath**, which is the regression that got
+   * this hook onto a real page and straight into a red `staff-nav.spec.ts`:
+   * `setPointerCapture` on the press retargets every later pointer event to the
+   * sheet, so a tap that never moves produces no `click` on the link it landed
+   * on — and every destination in the More sheet silently stopped navigating.
+   * Nothing is captured now, at any point in the gesture.
+   */
+  it("never captures the pointer, so a tap still clicks through to the row", () => {
+    render(<Sheet onDismiss={vi.fn()} />);
+    const sheet = screen.getByTestId("sheet");
+    const captured: number[] = [];
+    sheet.setPointerCapture = (id: number) => captured.push(id);
+
+    fireEvent.pointerDown(sheet, { clientY: 0, pointerType: "touch", button: -1, pointerId: 7 });
+    fireEvent.pointerMove(sheet, { clientY: 3, pointerType: "touch", pointerId: 7 });
+    fireEvent.pointerMove(sheet, { clientY: 90, pointerType: "touch", pointerId: 7 });
+    fireEvent.pointerUp(sheet, { clientY: 90, pointerType: "touch", pointerId: 7 });
+    expect(captured).toEqual([]);
+  });
+
+  /**
+   * The hole that capturing-on-drag opened and the document listeners close: a
+   * finger starting near the sheet's bottom edge crosses the slop over the dock
+   * below it, so every move after the first lands on an element the sheet's own
+   * handlers never hear from. The gesture has to survive leaving the sheet.
+   */
+  it("keeps following a finger that has left the sheet", () => {
+    const onDismiss = vi.fn();
+    render(<Sheet onDismiss={onDismiss} />);
+    const sheet = screen.getByTestId("sheet");
+    const elsewhere = document.body;
+
+    fireEvent.pointerDown(sheet, { clientY: 0, pointerType: "touch", button: -1, pointerId: 3 });
+    // Every move and the release land outside the sheet entirely.
+    fireEvent.pointerMove(elsewhere, { clientY: 120, pointerType: "touch", pointerId: 3 });
+    expect(sheet.style.transform, "the sheet followed a finger it cannot see").toBe(
+      "translateY(120px)",
+    );
+    fireEvent.pointerUp(elsewhere, { clientY: 220, pointerType: "touch", pointerId: 3 });
+    expect(onDismiss).toHaveBeenCalledOnce();
+  });
+
+  /** A second finger's events are not this gesture's. */
+  it("ignores a pointer that is not the one that started the gesture", () => {
+    render(<Sheet onDismiss={vi.fn()} />);
+    const sheet = screen.getByTestId("sheet");
+    fireEvent.pointerDown(sheet, { clientY: 0, pointerType: "touch", button: -1, pointerId: 1 });
+    fireEvent.pointerMove(sheet, { clientY: 200, pointerType: "touch", pointerId: 2 });
+    expect(sheet.style.transform).toBe("");
+  });
+
+  it("stops listening once the sheet unmounts under the finger", () => {
+    const onDismiss = vi.fn();
+    const { unmount } = render(<Sheet onDismiss={onDismiss} />);
+    const sheet = screen.getByTestId("sheet");
+    fireEvent.pointerDown(sheet, { clientY: 0, pointerType: "touch", button: -1, pointerId: 5 });
+    unmount();
+    // A tap that navigated away takes the sheet with it; the release that
+    // follows must not reach a hook that is gone.
+    fireEvent.pointerUp(document.body, { clientY: 300, pointerType: "touch", pointerId: 5 });
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
   it("runs no transition while a finger is on it: the finger is the clock", () => {
     render(<Sheet onDismiss={vi.fn()} />);
     const sheet = screen.getByTestId("sheet");
