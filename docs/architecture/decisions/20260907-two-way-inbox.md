@@ -34,7 +34,14 @@ URL the app then acts on without checking it against what the stack provisioned.
    WhatsApp — and only then matches the sender's address to a live person in that shop: an email
    exactly, a phone by its digits. No match leaves `person_id` null and the row reads as an
    unknown sender; nothing is guessed across shops, and a message for a token or a WABA no shop
-   holds is dropped rather than filed unscoped.
+   holds is dropped rather than filed unscoped. **And the address itself has to be one the
+   provider vouched for.** Meta reports the number a WhatsApp message was sent from; email has no
+   such guarantee, because the reply-to address is on every message a shop has ever sent and a
+   `From:` header is written by whoever sent the mail. So the header address is taken when SES's
+   DMARC verdict passed, or when SPF passed and the envelope sender agrees with the header;
+   otherwise the row keeps the envelope's own address and `person_id` stays null. A sentence on a
+   named diver's record is a sentence a staffer acts on, and no unauthenticated header may put
+   one there.
 3. **`Reply-To` is a per-shop routable address.** `shops.inbound_email_token` is minted by the
    database, and every email the shop sends carries
    `Reply-To: reply+<token>@inbound.ses.dive.day`. The receiving subdomain sits *under* the
@@ -78,6 +85,9 @@ URL the app then acts on without checking it against what the stack provisioned.
 - **Attribute by the diver's name or the booking in the subject** — rejected: a typed name is
   attacker-controlled and a subject is rewritten by every client; the address is what the provider
   vouched for.
+- **Trust the `From:` header outright** — rejected for the same reason, one level down: the header
+  is as typed as the name is. SES's DMARC and SPF verdicts are the vouching, and a message with
+  neither is a stranger's.
 - **A parsing dependency for MIME** — rejected: thousands of lines for attachments and encodings
   the inbox never renders; the `text/plain` part of a reply is a page of code and a test file.
 - **SES's SNS action carrying the message inline** — rejected: it caps at 150 KB and drops the

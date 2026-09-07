@@ -432,10 +432,18 @@ but the configured one; resolves the `reply+<token>` recipient to a shop
 (`shops.inbound_email_token`) and drops mail for a token nobody holds; only then reads the object
 (capped at 2 MB), takes the `text/plain` part with the quoted history cut
 (`src/lib/inbound-email.ts`), and files it against the diver whose `people.email` matches the
-sender inside that shop — or as an unknown sender when none does. A virus verdict is refused; a
-spam verdict is kept, because a diver's reply from hotel Wi-Fi trips it too often. Attachments
-are counted, never fetched. A failed S3 read answers 500 so SNS retries; everything else verified
-answers 200.
+sender inside that shop — or as an unknown sender when none does.
+
+**Which address counts as the sender is SES's call, not the message's.** The reply-to address
+rides on every email a shop sends, so anyone who has ever had one can post here, and a `From:`
+header costs nothing to write. So the header address is used when SES's **DMARC** verdict passed
+(the only verdict that authenticates that header), or when **SPF** passed and the envelope sender
+agrees with it — between them, the ordinary reply, including from the many domains publishing no
+DMARC record. With neither, the row keeps the envelope's own address and is matched to nobody, so
+an unauthenticated message reads as an unknown sender rather than as words on a named diver's
+record. A virus verdict is refused; a spam verdict is kept, because a diver's reply from hotel
+Wi-Fi trips it too often. Attachments are counted, never fetched. A failed S3 read answers 500 so
+SNS retries; everything else verified answers 200.
 
 **Reading a raw message by hand** — the bucket keeps SES's copy for 30 days:
 
