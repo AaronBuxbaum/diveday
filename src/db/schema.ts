@@ -4915,6 +4915,7 @@ export const integrationProvider = pgEnum("integration_provider", [
   "shopify",
   "quickbooks",
   "zapier",
+  "xero",
 ]);
 
 export const integrationConnectionStatus = pgEnum("integration_connection_status", [
@@ -4935,6 +4936,9 @@ export type IntegrationSettings = {
   shopDomain?: string;
   environment?: "sandbox" | "production";
   incomeAccountId?: string;
+  /** Xero chart-of-accounts codes: where the sale lands, and which bank account took the money. */
+  salesAccountCode?: string;
+  bankAccountCode?: string;
 };
 
 /** The one encrypted credential envelope shared by OAuth and webhook providers. */
@@ -7939,6 +7943,94 @@ export const preDepartureCheckEvents = pgTable(
       table.occurredAt,
     ),
     uniqueIndex("pre_departure_check_events_shop_client_event_unique").on(
+      table.shopId,
+      table.clientEventId,
+    ),
+  ],
+);
+
+/**
+ * `cleared` is the counter's undo, mirroring roll call's own grammar: a
+ * settled "Checked in" row tapped again retracts the arrival rather than
+ * deleting it, so a mis-tap leaves a correction in the trail instead of a
+ * claim nobody can take back.
+ *
+ * **There is deliberately no `boarded` here.** Arrival is the desk's question
+ * and boarding is the rail's, and the two vocabularies are kept apart at the
+ * type and the table so a queue reconciling with no human present cannot
+ * promote one into the other (ADR 20260907-the-counter-survives-offline).
+ */
+export const arrivalStatus = pgEnum("arrival_status", ["arrived", "cleared"]);
+
+/**
+ * **One tap at the counter** — a diver turned up, or that was taken back.
+ * Append-only, one row per tap, and the newest row per booking is the current
+ * answer, exactly like `rollCallEvents` and `preDepartureCheckEvents`.
+ *
+ * `bookings.status` stays the projection every existing reader looks at
+ * (`checked_in` / `booked`); this table is the *history* underneath it, and
+ * both are written in one transaction by `checkInBooking` /
+ * `undoCheckInBooking` (`src/db/check-in.ts`). The projection alone could not
+ * answer the three questions an offline queue asks — has this exact tap
+ * already been applied, is the device's copy older than what stands now, and
+ * is the arrival this undo names still the one standing — which is why the
+ * counter needed a trail before it could survive a lost signal.
+ *
+ * **Every tap is written, including the ones made with a signal.** A live
+ * check-in that left no row here would read as "nothing has been said" to a
+ * device syncing an hour-old retraction, and the retraction would win. The
+ * `source` column is what tells the two apart afterwards.
+ *
+ * Not soft-deletable and not pruned, the same posture as the two tables it
+ * mirrors: an undo is a `cleared` row rather than a delete, and the trail is
+ * evidentiary — it is what a departure log says about who was at the desk and
+ * when. Erasure reaches it through the live join to `people`, not through a
+ * window.
+ */
+export const bookingArrivalEvents = pgTable(
+  "booking_arrival_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    status: arrivalStatus("status").notNull(),
+    /** Same offline contract as `rollCallEvents.source` — rides the same queue. */
+    source: rollCallSource("source").notNull().default("live"),
+    /** Device-generated idempotency key. Live taps leave this null. */
+    clientEventId: uuid("client_event_id"),
+    /**
+     * When the device's copy of the board was saved, for an offline tap. The
+     * staleness bound is checked against it before the event is applied, and
+     * it stays on the row so a later reader can see how old the copy behind a
+     * queued arrival was — the same field and the same reason as
+     * `rollCallEvents.offlineSnapshotSavedAt`.
+     */
+    offlineSnapshotSavedAt: timestamp("offline_snapshot_saved_at", { withTimezone: true }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** The same final tiebreak `rollCallEvents.seq` carries, and for the same
+     * reason: `occurred_at` ties constantly under a frozen e2e clock or a
+     * batched offline sync, and this trail is replayed in order. */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    index("booking_arrival_events_shop_trip_booking_occurred_idx").on(
+      table.shopId,
+      table.tripId,
+      table.bookingId,
+      table.occurredAt,
+    ),
+    uniqueIndex("booking_arrival_events_shop_client_event_unique").on(
       table.shopId,
       table.clientEventId,
     ),

@@ -7,6 +7,20 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Xero beside QuickBooks (delivered 2026-09-07)
+
+N-52 from the 2026-09-07 improvement-ideas sheet (issue #1490). A shop on Xero connects it from
+Settings -> Integrations exactly as it connects QuickBooks, and its paid orders and refunds land in
+its own organisation. Xero has no SalesReceipt entity, so each one is written as a bank transaction
+-- `RECEIVE` for a sale, `SPEND` for a refund -- against two chart-of-accounts codes the shop types
+in: nothing DiveDay reports ever lands in accounts receivable. Scopes are `offline_access
+accounting.transactions accounting.contacts` and nothing more, the organisation is read once at
+connect time into `external_account_id`, and the refund guard is keyed per refund so a sliced refund
+posts every slice. One adapter (`src/features/integrations/xero.ts`), one callback, one card, one
+enum value, two environment variables; the connection rows, sealed credentials, one-time OAuth
+state, outbox and retry ladder are the register's, unchanged. ADR
+[20260907-xero-beside-quickbooks](../architecture/decisions/20260907-xero-beside-quickbooks.md).
+
 ## The shop inbox, and answering from the record (delivered 2026-09-07)
 
 N-20's third and last slice (issue #1429; the tables and the inbound paths are ADR

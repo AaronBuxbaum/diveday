@@ -8,6 +8,7 @@ import {
 } from "@/db/integration-events";
 import { markIntegrationError, markIntegrationHealthy } from "@/db/integrations";
 import { deliverQuickBooksEvent, quickBooksConfigFromEnvironment } from "./quickbooks";
+import { deliverXeroEvent, xeroConfigFromEnvironment } from "./xero";
 import { deliverZapierEvent } from "./zapier";
 
 export type IntegrationDispatchSummary = {
@@ -43,6 +44,11 @@ export async function dispatchDueIntegrationDeliveries(
       result = config
         ? await deliverQuickBooksEvent(db, candidate.integration, event, config, fetchImpl)
         : { status: "failed", code: "quickbooks_not_configured", retryable: false };
+    } else if (candidate.integration.provider === "xero") {
+      const config = xeroConfigFromEnvironment();
+      result = config
+        ? await deliverXeroEvent(db, candidate.integration, event, config, fetchImpl)
+        : { status: "failed", code: "xero_not_configured", retryable: false };
     } else if (candidate.integration.provider === "zapier") {
       result = await deliverZapierEvent(candidate.integration, event, fetchImpl);
     } else {

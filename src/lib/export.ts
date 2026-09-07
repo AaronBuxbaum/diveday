@@ -90,6 +90,8 @@ export const EXPORT_FILE_NOTES = {
     "Which seats each checkout was paying for, one row per seat, with the rental gear charged on that seat. A checkout covers a whole party, so a single attempt in booking_checkouts.csv can carry several rows here — and the per-seat gear figure lives nowhere else, since the checkout total has it already folded in.",
   "executed_dives.csv":
     "What each dive actually recorded after the boat left: site, times, depth, observed conditions, and fields explicitly not recorded.",
+  "booking_arrival_events.csv":
+    "The counter's own ledger: every time a diver was checked in at the desk, and every time that was taken back. Read it append-only, the newest row per booking wins, and a 'cleared' row means the seat went back on the arrival queue. Arriving is not boarding — who was on the boat is roll_call_events.csv, and nothing in this file says anybody was. A row whose source is 'offline' was recorded on a device with no signal and applied when it reached DiveDay; its occurred_at is when somebody tapped it, which can be hours before the row was written.",
   "roll_call_events.csv":
     "The boarding and roll-call ledger — every head-count event, with who recorded it. Read it append-only and in checkpoint order (departure, then after each dive): within one checkpoint the newest event per booking wins, and a 'cleared' event erases that checkpoint's result. Then carry forward: an explicit 'not_boarded' fills every later checkpoint that has no explicit result of its own until an explicit 'boarded' breaks the chain — off the boat stays off the boat; a checkpoint with no result and nothing carried means awaiting. Never count 'boarded' rows naively; corrections would inflate the head count.",
   "roll_call_crew_events.csv":

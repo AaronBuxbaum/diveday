@@ -12,7 +12,12 @@ import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { RollingFigure } from "@/components/ui/RollingFigure";
 import { FIGURE_HERO_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { CheckInOutcome, CheckInQueueRow, UndoCheckInOutcome } from "@/db/check-in";
+import type {
+  ArrivalOfflineRefusal,
+  CheckInOutcome,
+  CheckInQueueRow,
+  UndoCheckInOutcome,
+} from "@/db/check-in";
 import { listCheckInQueue, listWalkInTrips } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { people, personRoles } from "@/db/schema";
@@ -77,7 +82,14 @@ export const metadata: Metadata = {
  */
 type CheckInRefusal = Extract<CheckInOutcome, { ok: false }>["reason"];
 type UndoRefusal = Extract<UndoCheckInOutcome, { ok: false }>["reason"];
-type CheckInNoticeCode = NoticeCodeOf<CheckInRefusal | Exclude<UndoRefusal, "not_checked_in">>;
+/**
+ * `ArrivalOfflineRefusal` is excluded because those three answer a device
+ * reconciling a queued tap, not a staffer at the desk — there is no redirect
+ * that can carry one here. See its own note in `src/db/check-in.ts`.
+ */
+type CheckInNoticeCode = NoticeCodeOf<
+  Exclude<CheckInRefusal | Exclude<UndoRefusal, "not_checked_in">, ArrivalOfflineRefusal>
+>;
 
 type NoticeDefinition = {
   tone: "success" | "danger" | "warning" | "neutral";

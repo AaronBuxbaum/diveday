@@ -1127,3 +1127,107 @@ test("a transposed dive log entry is refused out loud and keeps what was typed",
   await expect(summary).not.toContainText("not recorded yet");
   await expect(summary).toContainText("27");
 });
+
+/**
+ * **The counter with no signal** (ADR 20260907-the-counter-survives-offline).
+ *
+ * The desk is twenty metres from the rail and loses the same marina wifi, so
+ * an arrival queues on the same device copy a head count does — and comes back
+ * through the same round trip. Two things are proved here that no unit test
+ * can: the tap works with the network cut, and the seat is genuinely checked
+ * in on the live counter once signal returns.
+ */
+test("a counter check-in made offline queues, then syncs and lands on the live counter", async ({
+  page,
+  context,
+}) => {
+  // Nine server round trips before the tap even happens — board, trip,
+  // manifest, the copy's save and refresh, the shell, a reload, then the sync
+  // and the live counter afterwards. Same reasoning as the two long flows
+  // above: the budget bounds a *stuck* test, and this one is simply long.
+  test.setTimeout(45_000);
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
+
+  await offlineCopySaved(page);
+  await openOnThisPhone(page);
+  await page.getByRole("button", { name: "Refresh now" }).click();
+  await expect(page.getByText("Fresh copy")).toBeVisible();
+  await page.getByRole("link", { name: "Open offline roll call" }).click();
+  await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText("Fresh copy")).toBeVisible();
+
+  const counter = page.getByRole("region", { name: "At the counter" });
+  await expect(counter).toBeVisible();
+  // Blocked divers get no control here, the same grammar the live counter
+  // speaks: Priya's waiver has never been sent, so the row says what is in the
+  // way instead of offering a tap the server would refuse on arrival.
+  await expect(counter.getByRole("button", { name: /Priya Sharma/ })).toHaveCount(0);
+  await expect(counter.getByText("Priya Sharma")).toBeVisible();
+
+  // The row says which question it answers, in the live counter's own words —
+  // the one thing that must not be ambiguous on a page whose other list boards
+  // people.
+  const diego = counter.getByRole("button", { name: /Diego Alvarez/ });
+  await expect(diego).toContainText("Check in");
+  await expect(diego).toHaveAttribute("aria-pressed", "false");
+  await diego.click();
+  await expect(diego).toHaveAttribute("aria-pressed", "true");
+  await expect(diego).toContainText("Checked in");
+  await expect(
+    page.getByRole("status").filter({ hasText: "when you're back in service" }),
+  ).toBeVisible();
+
+  // Nothing about a desk tap says anybody is on the boat: the roll call below
+  // is untouched, and the arrival never becomes a boarding on reconnection.
+  // The tile's label and figure are two elements, so this reads the figure
+  // inside the tile the label names rather than one string spanning both.
+  const boardedTile = page
+    .locator("div")
+    .filter({ hasText: /^Boarded\d+$/ })
+    .first();
+  await expect(boardedTile).toContainText("0");
+  await expect(diego).toContainText("Checked in");
+
+  await context.setOffline(false);
+  await expect(page.getByRole("status").filter({ hasText: "Everything's sent" })).toBeVisible();
+
+  await page.goto("/shop/blue-mantis/check-in?q=Diego+Alvarez");
+  await expect(page.getByRole("button", { name: "Undo check-in for Diego Alvarez" })).toBeVisible();
+  // And still nobody aboard — the queue closed the arrival queue and nothing
+  // else.
+  await expect(page.getByText("Boarded")).toHaveCount(0);
+});
+
+/**
+ * The worker's second navigation fallback, scoped as narrowly as the first: a
+ * staffer who reloads the counter with no signal lands on the saved copy of
+ * the departure they were working, not the browser's offline error.
+ */
+test("a failed reload of the counter lands on this device's saved copy", async ({
+  page,
+  context,
+}) => {
+  test.setTimeout(45_000);
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  const tripUrl = new URL(page.url());
+  const tripId = tripUrl.pathname.split("/").at(-1) ?? "";
+  await openTripTab(page, "Manifest");
+  await waitForShellPrimed(page);
+
+  await page.goto(`/shop/blue-mantis/check-in?trip=${tripId}`);
+  await expect(page.getByRole("heading", { name: "Counter check-in" })).toBeVisible();
+
+  await context.setOffline(true);
+  await page.reload();
+
+  // The redirect carries the focus across, so the copy that opens is the boat
+  // the staffer was working rather than the device-wide list.
+  await expect(page).toHaveURL(new RegExp(`/offline-manifest\\?trip=${tripId}$`));
+  await expect(page.getByRole("region", { name: "At the counter" })).toBeVisible();
+});

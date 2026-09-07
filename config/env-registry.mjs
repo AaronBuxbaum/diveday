@@ -610,6 +610,18 @@ export const ENV_GROUPS = [
         targets: LOCAL_AND_VERCEL,
         absent: "defaults to sandbox, so nothing reaches a real company file",
       },
+      {
+        key: "XERO_CLIENT_ID",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "Xero cannot be connected; the card reads not configured",
+      },
+      {
+        key: "XERO_CLIENT_SECRET",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "as XERO_CLIENT_ID",
+      },
     ],
   },
   {

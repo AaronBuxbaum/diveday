@@ -10,6 +10,7 @@ import {
   fetchOfflineManifestShopSlug,
   offlineManifestPayloads,
   offlineManifestShopSlug,
+  pendingOfflineEventCount,
 } from "@/lib/offline-manifests";
 
 /**
@@ -46,6 +47,16 @@ const OFFLINE_SHELL = "/offline-manifest";
 // no signal lands on their saved device copy instead of the browser's own
 // offline error, without this worker reaching beyond the manifest.
 const LIVE_MANIFEST_PATTERN = /^\/shop\/[^/]+\/trips\/([^/]+)\/manifest(?:\/.*)?$/;
+// The counter, and only the counter — the second authenticated page this shell
+// backs up (ADR 20260907-the-counter-survives-offline). A staffer who reloads
+// the arrival queue with no signal lands on the saved copy of whichever
+// departure they were working rather than the browser's offline error. Its
+// focus lives in `?trip=`, the same place the live page keeps it, so the
+// redirect carries it across; with none, the shell's list answers instead.
+// The counter itself and nothing under it: the walk-in flow beneath this path
+// seats a diver, which needs a server, so redirecting it to a roster it cannot
+// act on would be a worse answer than the browser's own.
+const COUNTER_PATTERN = /^\/shop\/[^/]+\/check-in\/?$/;
 
 /**
  * Chunks the bundler's runtime loads *lazily*, which the shell HTML therefore
@@ -378,11 +389,11 @@ async function flushPendingRollCall(): Promise<void> {
   // phone must not cost a round trip. `syncOfflineManifest` would return early
   // on these anyway; the filter is here so "is there anything to flush?" is
   // answered before "who are we?", not after.
-  const pending = envelopes.filter(
-    (envelope) =>
-      envelope.events.some((event) => event.syncStatus === "pending") ||
-      envelope.checklistEvents.some((event) => event.syncStatus === "pending"),
-  );
+  // Through the shared count rather than a list of arrays spelled out here:
+  // the counter's queue joined the envelope on 2026-09-07, and a flush that
+  // could not see one of the three would leave that evidence sitting on the
+  // device until the purge that cannot see it either deletes the record.
+  const pending = envelopes.filter((envelope) => pendingOfflineEventCount(envelope) > 0);
   if (pending.length === 0) return;
 
   // **Whose events are these?** Resolved once, from the server, before
@@ -490,6 +501,23 @@ self.addEventListener("fetch", (event) => {
         const cachedShell = await caches.match(OFFLINE_SHELL);
         if (!cachedShell) return Response.error();
         return Response.redirect(new URL(OFFLINE_SHELL, self.location.origin).href, 302);
+      }),
+    );
+    return;
+  }
+
+  if (event.request.mode === "navigate" && COUNTER_PATTERN.test(url.pathname)) {
+    event.respondWith(
+      // Network-first, exactly like the live manifest below: the counter is
+      // never served from cache, and this only ever substitutes the device's
+      // own offline copy once the network genuinely fails.
+      fetch(event.request).catch(async () => {
+        const cachedShell = await caches.match(OFFLINE_SHELL);
+        if (!cachedShell) return Response.error();
+        const redirectTarget = new URL(OFFLINE_SHELL, self.location.origin);
+        const tripId = url.searchParams.get("trip");
+        if (tripId) redirectTarget.searchParams.set("trip", tripId);
+        return Response.redirect(redirectTarget.href, 302);
       }),
     );
     return;

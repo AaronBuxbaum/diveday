@@ -626,6 +626,38 @@ const passwordChangedSchema = z.object({
  * `staff_replies` row, minted before the send, so the idempotency key is
  * stable across a retry.
  */
+/**
+ * The rules a stored `Message-ID` must clear before it can thread a reply.
+ *
+ * Named and exported through `threadableMessageId` because the schema is not
+ * the only reader: the caller that decides whether to *populate* `inReplyTo`
+ * has to agree with it exactly. When it restated one clause of this by hand — a
+ * control-character test, without the length rules beside it — a diver could
+ * poison their own thread by sending mail with a two-character `Message-ID`:
+ * the call site passed it, `notify`'s `parse` threw, and the staffer's answer
+ * was reported to them as a provider failure that would never clear. Ask the
+ * rule, never restate it.
+ */
+const threadableMessageIdSchema = z
+  .string()
+  .trim()
+  .min(3)
+  .max(998)
+  .refine((value) => !/\p{Cc}/u.test(value));
+
+/**
+ * The stored `Message-ID` if it can thread a reply, `undefined` if it cannot.
+ *
+ * A value this refuses is dropped and the mail still goes: losing the thread
+ * beats losing the answer, and a sender who chose the header gets neither a
+ * broken conversation nor a silenced shop.
+ */
+export function threadableMessageId(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  const parsed = threadableMessageIdSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
+
 const staffReplySchema = z.object({
   kind: z.literal("staff_reply"),
   replyId: z.uuid(),
@@ -635,8 +667,18 @@ const staffReplySchema = z.object({
   shopName: z.string().trim().min(1).max(120),
   subject: z.string().trim().min(1).max(500),
   body: z.string().trim().min(1).max(REPLY_BODY_MAX_LENGTH),
-  /** The diver's own `Message-ID`, angle brackets included, when their mail carried one. */
-  inReplyTo: z.string().trim().min(3).max(998).optional(),
+  /**
+   * The diver's own `Message-ID`, angle brackets included, when their mail
+   * carried one — and the one field on any kind that becomes a **raw mail
+   * header** (`In-Reply-To`/`References`, `src/lib/notifications/ses.ts`).
+   *
+   * It arrives from an unauthenticated sender, so it is refused here unless it
+   * is a single line of printable text: a control character in a header value
+   * is how a header injection starts, and the check belongs at the schema
+   * every send passes through rather than at the one call site that happens to
+   * populate it today.
+   */
+  inReplyTo: threadableMessageIdSchema.optional(),
 });
 
 export const notificationSenderSchema = z.object({

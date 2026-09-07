@@ -114,7 +114,7 @@ when you open the file.
 | Starting content a shop copies, and species it picks | `src/db/dive-site-templates.ts`, `src/db/course-templates.ts` (copied, then the shop's); `src/db/marine-life-catalog.ts` (DiveDay's words, photos under `public/marine-life/`, added with `node scripts/fetch-marine-life-photo.mjs`) |
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
 | Feature modules | `src/features/<feature>/` — `index.ts` is the whole public surface; `calendar-sync`, `backup-export`, `integrations` |
-| Outbound integrations a shop connects for itself (Shopify, QuickBooks, Zapier) | `src/features/integrations/`; rows in `src/db/integrations.ts` + `src/db/integration-events.ts`; staff at `src/app/shop/[shopSlug]/settings/integrations`; callbacks under `src/app/api/integrations/` |
+| Outbound integrations a shop connects for itself (Shopify, QuickBooks, Xero, Zapier) | `src/features/integrations/`; rows in `src/db/integrations.ts` + `src/db/integration-events.ts`; staff at `src/app/shop/[shopSlug]/settings/integrations`; callbacks under `src/app/api/integrations/` |
 | Staff calendar subscriptions (iCalendar feeds) | `src/features/calendar-sync/` + `src/app/calendar/[token]/route.ts`; staff UI at `src/app/shop/[shopSlug]/settings/calendar/` |
 | Auth: session, gates, edge check | `src/lib/auth.ts` / `auth-secret.ts` / `authz.ts` + `session.ts`; edge layer `src/proxy.ts` |
 | Dev/e2e staff logins | `src/db/dev-credentials.ts` |

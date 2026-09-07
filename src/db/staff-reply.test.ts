@@ -107,6 +107,47 @@ describe("answering by email", () => {
     expect(message?.readAt).not.toBeNull();
   });
 
+  /**
+   * **Regression (security review of #1509).** `staffReplySchema.inReplyTo`
+   * enforces four rules — trimmed, at least 3 characters, at most 998, no
+   * control characters — and this call site passed the stored `Message-ID` on a
+   * bare truthiness check. The two arrived on this branch from different sides
+   * of the same merge, which is the worst pairing of them: a stricter schema
+   * with an unfiltered caller. A diver could therefore kill their own thread
+   * for good by sending mail whose `Message-ID` is two characters —
+   * `recordInboundMessage` stores it verbatim, the send's `parse` throws, and
+   * the shop's answer never leaves. The composer always answers the *latest*
+   * message, so repeating it keeps the newest one poisoned.
+   *
+   * `threadableMessageId` is the schema's own rule rather than a restatement
+   * of it, so what this pins is what the comment always claimed: the header is
+   * dropped, and the answer goes.
+   */
+  it("sends the answer unthreaded when the diver's Message-ID is unusable", async () => {
+    const { db, shop, diver, staff } = await shopContext();
+    // Two characters: printable, single-line, and under the schema's floor.
+    const messageId = await inboundEmail(db, shop.id, diver.email, { emailMessageId: "ab" });
+    const provider = acceptingProvider();
+
+    const result = await sendStaffReply(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      messageId,
+      body: "You're on the 1pm boat now.",
+      sentByPersonId: staff.id,
+      now: NOW,
+      provider,
+    });
+
+    expect(result).toMatchObject({ status: "sent", channel: "email" });
+    const sent = provider.sent[0]?.notification;
+    if (sent?.kind !== "staff_reply") throw new Error("no staff reply sent");
+    expect(sent.inReplyTo).toBeUndefined();
+    // The whole point: an unusable header costs the thread, never the reply.
+    const message = await getInboundMessage(db, shop.id, messageId);
+    expect(message?.answeredAt).not.toBeNull();
+  });
+
   it("names the shop when the diver's mail carried no subject", async () => {
     const { db, shop, diver, staff } = await shopContext();
     const messageId = await inboundEmail(db, shop.id, diver.email, { subject: null });

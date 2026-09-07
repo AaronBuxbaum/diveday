@@ -42,6 +42,8 @@ import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-label
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { supportNeedsLines } from "@/i18n/support-needs-labels";
+import type { ArrivalStatus } from "@/lib/arrival";
+import { isSettledAtCounter } from "@/lib/check-in";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -58,6 +60,7 @@ import {
 } from "@/lib/manifests";
 import {
   acknowledgeDiscardedOfflineRecords,
+  appendOfflineArrival,
   appendOfflineChecklistCheck,
   appendOfflineRollCall,
   type DiscardedOfflineRecord,
@@ -71,14 +74,20 @@ import {
 import {
   fetchOfflineManifestShopSlug,
   isOfflineManifestExpired,
+  latestOfflineArrival,
   latestOfflineChecklistCheck,
   latestOfflineCrewRollCall,
   latestOfflineRollCall,
   type OfflineManifestEnvelope,
   type OfflineRollCallEvent,
   type OfflineRollCallResult,
+  offlineArrivalEvents,
+  offlineCounterIsOver,
   offlineManifestAge,
   offlineManifestFreshness,
+  pendingOfflineEventCount,
+  refusedOfflineArrival,
+  rejectedOfflineEventCount,
 } from "@/lib/offline-manifests";
 import type { PreDepartureCheckStatus } from "@/lib/pre-departure-check";
 
@@ -415,6 +424,9 @@ export function OfflineManifestView() {
   const [discarded, setDiscarded] = useState<DiscardedOfflineRecord[]>([]);
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [busyChecklistItem, setBusyChecklistItem] = useState<string | null>(null);
+  // Its own busy key, like the checklist's: a counter tap must never appear to
+  // disable a diver's roll-call row, and vice versa.
+  const [busyArrival, setBusyArrival] = useState<string | null>(null);
   /**
    * The one row whose "aboard" control is currently asking to be confirmed —
    * a booking id or a crew person id, never more than one at a time (ADR
@@ -519,8 +531,11 @@ export function OfflineManifestView() {
       const next = await syncOfflineManifest(tripId);
       if (!next) return;
       dispatchSaved({ type: "loaded", envelope: next });
-      const rejected = next.events.filter((event) => event.syncStatus === "rejected").length;
-      const pending = next.events.filter((event) => event.syncStatus === "pending").length;
+      // All three queues, not roll call alone: a checklist tap or an arrival
+      // waiting to sync is evidence this device is holding, and a count that
+      // cannot see it tells a captain they are caught up when they are not.
+      const rejected = rejectedOfflineEventCount(next);
+      const pending = pendingOfflineEventCount(next);
       setMessage(
         rejected > 0
           ? t("shared.offlineManifest.reconcile.pendingRejectedSingle", { count: rejected })
@@ -542,9 +557,7 @@ export function OfflineManifestView() {
   const reconcileList = useCallback(
     async (saved: OfflineManifestEnvelope[], currentShopSlug: string | null) => {
       if (!navigator.onLine) return;
-      const withPending = saved.filter((envelope) =>
-        envelope.events.some((event) => event.syncStatus === "pending"),
-      );
+      const withPending = saved.filter((envelope) => pendingOfflineEventCount(envelope) > 0);
       if (withPending.length === 0) return;
       // Only ever sync a trip belonging to whichever shop this browser is
       // actually authenticated as right now. This view has no session context
@@ -580,15 +593,10 @@ export function OfflineManifestView() {
       });
       setList(merged);
       const rejected = merged.reduce(
-        (sum, envelope) =>
-          sum + envelope.events.filter((event) => event.syncStatus === "rejected").length,
+        (sum, envelope) => sum + rejectedOfflineEventCount(envelope),
         0,
       );
-      const pending = merged.reduce(
-        (sum, envelope) =>
-          sum + envelope.events.filter((event) => event.syncStatus === "pending").length,
-        0,
-      );
+      const pending = merged.reduce((sum, envelope) => sum + pendingOfflineEventCount(envelope), 0);
       if (rejected > 0) {
         setMessage(t("shared.offlineManifest.reconcile.listPendingRejected", { count: rejected }));
       } else if (pending === 0) {
@@ -1010,6 +1018,51 @@ export function OfflineManifestView() {
     envelope.snapshot.manifests.find((entry) => entry.checkpoint === checkpoint) ??
     envelope.snapshot.manifests[0];
   if (!manifest) return null;
+  // **The counter reads the departure's roster, whatever checkpoint the page
+  // is showing.** Checking in happens once, at the desk, before the boat
+  // leaves — the same reason the pre-departure checklist sits above the
+  // checkpoint switcher rather than inside it.
+  const counterManifest =
+    envelope.snapshot.manifests.find((entry) => entry.checkpoint === "departure") ?? manifest;
+  /**
+   * **The counter's seats, in the order a staffer works them**, and empty once
+   * the boat has gone.
+   *
+   * Settled sinks to the bottom, which is `CounterQueue`'s own composition and
+   * the same shared predicate (`isSettledAtCounter`, `src/lib/check-in.ts`) —
+   * "settled" is checked in *and still cleared*, so a diver who came through
+   * the door and has gone blocked since stays up in the working list wearing
+   * their reasons. On a twenty-four-diver morning the flat roster put eighteen
+   * receipts on top of the eight rows anybody could act on, and pushed the roll
+   * call two screens down.
+   *
+   * The live page folds its settled group behind a disclosure; this one only
+   * orders and dims it. A `<details>` is a second control on a wet-hands
+   * surface, and the ordering is what the length problem actually needed.
+   */
+  const counterOver = offlineCounterIsOver(counterManifest);
+  const counterSeats = counterOver
+    ? []
+    : counterManifest.divers
+        .map((diver) => {
+          const arrival = latestOfflineArrival(
+            envelope.snapshot,
+            diver.bookingId,
+            offlineArrivalEvents(envelope),
+          );
+          return {
+            diver,
+            arrival,
+            refused: refusedOfflineArrival(diver.bookingId, offlineArrivalEvents(envelope)),
+            settled: isSettledAtCounter({
+              bookingStatus: arrival ? "checked_in" : "booked",
+              readiness: diver.readiness,
+            }),
+          };
+        })
+        // Stable: `sort` keeps roster order inside each group, so a name does
+        // not move except across the one boundary that means something.
+        .sort((a, b) => Number(a.settled) - Number(b.settled));
   // Readiness gates boarding at departure only. After a dive, roll call is a
   // head count — a diver aboard is recorded present whatever the saved paperwork
   // said. The server re-checks the same way, so an offline board still syncs.
@@ -1019,8 +1072,8 @@ export function OfflineManifestView() {
   // it as not a boarding source, so no new roll call can be recorded here.
   const expired = isOfflineManifestExpired(envelope.snapshot);
   const freshness = offlineManifestFreshness(new Date(envelope.snapshot.savedAt));
-  const pending = envelope.events.filter((event) => event.syncStatus === "pending").length;
-  const rejected = envelope.events.filter((event) => event.syncStatus === "rejected").length;
+  const pending = pendingOfflineEventCount(envelope);
+  const rejected = rejectedOfflineEventCount(envelope);
   const localStates = manifest.divers.map((diver) =>
     latestOfflineRollCall(envelope.snapshot, envelope.events, diver.bookingId, checkpoint),
   );
@@ -1249,6 +1302,51 @@ export function OfflineManifestView() {
     }
   }
 
+  /**
+   * The counter's own tap (ADR 20260907-the-counter-survives-offline).
+   *
+   * Sibling to `record` and `recordChecklistCheck`, and it will never grow
+   * into either: an arrival says a diver reached the desk, and there is no
+   * status here that can say one is on the boat. `appendOfflineArrival` writes
+   * to its own queue, which the sync route hands to the same two functions the
+   * live counter calls.
+   */
+  async function recordArrival(bookingId: string, status: ArrivalStatus) {
+    if (!envelope) return;
+    if (expired) {
+      setMessage(t("shared.offlineManifest.single.record.expiredCannotRecord"));
+      return;
+    }
+    setBusyArrival(bookingId);
+    try {
+      const next = await appendOfflineArrival(tripId, {
+        bookingId,
+        status,
+        retractsClientEventId:
+          status === "cleared"
+            ? latestOfflineArrival(envelope.snapshot, bookingId, offlineArrivalEvents(envelope))
+                ?.clientEventId
+            : undefined,
+      });
+      dispatchSaved({ type: "loaded", envelope: next });
+      setMessage(t("shared.offlineManifest.single.record.saved"));
+      if (navigator.onLine) await reconcile();
+    } catch (error) {
+      if (error instanceof OfflineManifestError) {
+        setMessage(
+          error.code === "expired"
+            ? t("shared.offlineManifest.single.record.expiredCannotRecord")
+            : error.code === "not_allowed"
+              ? t("shared.offlineManifest.single.record.notAllowed")
+              : t("shared.offlineManifest.single.record.unavailable"),
+        );
+      } else {
+        setMessage(t("shared.offlineManifest.single.record.genericError"));
+      }
+    } finally {
+      setBusyArrival(null);
+    }
+  }
   const dateTime = cachedFormatter("dt", Intl.DateTimeFormat, deviceLocale(), {
     dateStyle: "medium",
     timeStyle: "short",
@@ -1372,6 +1470,136 @@ export function OfflineManifestView() {
                         </span>
                       </span>
                     </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ) : null}
+
+        {/* **The desk, with no signal** (ADR
+          20260907-the-counter-survives-offline). Above the checkpoint switcher
+          for the same reason the checklist is: arriving happens once, before
+          the boat leaves, not once per dive. It is deliberately a separate
+          list from the roll call below rather than a second control on those
+          rows — arrived and aboard are two different questions asked in two
+          different places, and a row that answered both would be the first
+          step toward a queue answering the second. */}
+        {counterSeats.length > 0 ? (
+          <section
+            className={sectionCardClass({ className: "mt-6" })}
+            aria-labelledby="offline-counter-heading"
+          >
+            <h2 id="offline-counter-heading" className="text-base font-semibold text-ink">
+              {t("shared.offlineManifest.single.counter.heading")}
+            </h2>
+            <ul className="mt-3 flex flex-col gap-2">
+              {counterSeats.map(({ diver, arrival, refused, settled }) => {
+                const arrived = arrival !== undefined;
+                const busy = busyArrival === diver.bookingId;
+                // **Why the row went back**, when the server refused this
+                // seat's newest tap. Without it a settled-then-reverted row is
+                // indistinguishable from a tap the tablet never registered, and
+                // the staffer taps again instead of looking at the blocker
+                // (`refusedOfflineArrival`, and the ADR's own paragraph).
+                const refusal = refused ? (
+                  <p className="mt-1 text-sm font-medium text-danger">
+                    {t(
+                      refused.reason === "not_ready"
+                        ? "shared.offlineManifest.single.counter.refusedNotReady"
+                        : refused.reason === "not_bookable"
+                          ? "shared.offlineManifest.single.counter.refusedNotBookable"
+                          : refused.reason === "boarded"
+                            ? "shared.offlineManifest.single.counter.refusedBoarded"
+                            : "shared.offlineManifest.single.counter.refusedGeneric",
+                    )}
+                  </p>
+                ) : null;
+                // **No tap on a diver readiness refuses**, which is the live
+                // counter's own grammar: that row shows what is in the way
+                // instead of a control (`CounterQueueRow`). Offering one here
+                // would offer a tap the server refuses the moment it lands.
+                // The blocker sentences were resolved into this copy when it
+                // was saved, so they are already in the reader's language.
+                if (diver.readiness.status !== "ready") {
+                  return (
+                    <li
+                      key={diver.bookingId}
+                      className="rounded-lg border border-border bg-surface-sunken px-4 py-3"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-medium text-ink">{diver.fullName}</p>
+                        {/* **The qualifier the rows below already wear.** These
+                          blockers were true when the copy was saved and this
+                          page cannot know whether they still are: Priya may
+                          have signed at 07:20 against a copy saved at 06:50,
+                          and a bare "Waiver has not been sent" sends her back
+                          to sign a second time. "A stale copy reading as
+                          current" is the one lie a roll-call surface must not
+                          tell (docs/product/glossary.md), and the counter on
+                          the same screen does not get an exemption from it. */}
+                        <Badge tone={readinessStatusTone("blocked")}>
+                          {t("shared.offlineManifest.single.blockedBadge")}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-sm text-muted">
+                        {diver.readiness.blockers.map((blocker) => blocker.text).join(" · ")}
+                      </p>
+                      {refusal}
+                    </li>
+                  );
+                }
+                return (
+                  <li key={diver.bookingId}>
+                    <button
+                      type="button"
+                      disabled={busy || expired}
+                      aria-busy={busy}
+                      aria-pressed={arrived}
+                      onClick={() =>
+                        recordArrival(diver.bookingId, arrived ? "cleared" : "arrived")
+                      }
+                      className={buttonClass({
+                        variant: arrived ? "primary" : "secondary",
+                        size: "boat",
+                        // Settled rows sink and dim, exactly as the live
+                        // counter's do (`CounterQueue`'s `opacity-70` group).
+                        className: `w-full justify-between gap-3 text-start${settled ? " opacity-70" : ""}`,
+                      })}
+                    >
+                      <StatusMark variant={arrived ? "checked" : "unchecked"} size="md" />
+                      <span className="min-w-0 flex-1 truncate">{diver.fullName}</span>
+                      {/* **The act, in words, on the row.** A name beside a
+                          circle is what every roll-call row on this page also
+                          is, and the one thing a crew member must never do
+                          here is board somebody by reaching for the wrong
+                          list. So the control says which question it answers,
+                          in the live counter's own two words. */}
+                      {/* `text-base`, matching the live counter's own trailing
+                          word rather than shrinking it: this is a wet-thumb
+                          surface in sun, and 14px on it is the size the
+                          critical-text rule exists about. */}
+                      <span className="shrink-0 text-base font-semibold whitespace-nowrap">
+                        {/* **Whose statement is this?** A tap this device made
+                            is this device's own and says so plainly, with roll
+                            call's "waiting to send" suffix while it is
+                            unsent. A reading that came off `snapshot.checkedIn`
+                            is the saved copy talking, and wears the same "when
+                            saved" hedge every readiness badge on this page
+                            wears — somebody may have undone it at the desk
+                            since. */}
+                        {!arrived
+                          ? t("shared.offlineManifest.single.counter.notCheckedInLabel")
+                          : arrival.local
+                            ? `${t("shared.offlineManifest.single.counter.checkedInLabel")}${
+                                arrival.pending
+                                  ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
+                                  : ""
+                              }`
+                            : t("shared.offlineManifest.single.counter.checkedInWhenSavedLabel")}
+                      </span>
+                    </button>
+                    {refusal}
                   </li>
                 );
               })}

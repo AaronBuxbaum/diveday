@@ -32,6 +32,13 @@ export const INTEGRATION_PROVIDER_REGISTRY = {
     capabilities: ["accounting_export"],
     eventTypes: ["order.paid", "order.refunded"],
   },
+  xero: {
+    id: "xero",
+    labelKey: "integrations.xero.name",
+    connection: "oauth",
+    capabilities: ["accounting_export"],
+    eventTypes: ["order.paid", "order.refunded"],
+  },
   zapier: {
     id: "zapier",
     labelKey: "integrations.zapier.name",

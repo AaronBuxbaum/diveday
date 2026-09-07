@@ -15,6 +15,7 @@ import {
   accountTokens,
   activityEvents,
   boats,
+  bookingArrivalEvents,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -1065,6 +1066,11 @@ export async function resetDemoSchedule(
   // child here surfaces as an FK-violation mid-run — e.g. a waitlist entry or
   // order left behind blocks the trips/bookings delete and dirties the next
   // test's fixture (regression tests live in seed.test.ts).
+  // The counter's own trail, beside roll call's and for the same reason: it is
+  // per-departure operational history keyed on bookings that are about to go,
+  // and a spec that checked somebody in would otherwise leave that arrival
+  // standing for the next one (ADR 20260907-the-counter-survives-offline).
+  await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(executedDives).where(eq(executedDives.shopId, shopId));

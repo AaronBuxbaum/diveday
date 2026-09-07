@@ -29,6 +29,7 @@ import type { AppDb } from "./client";
 import {
   activityEvents,
   boats,
+  bookingArrivalEvents,
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingPaymentEvents,
@@ -560,6 +561,15 @@ export async function loadShopExportBundleInput(
         .from(tripInvitations)
         .where(eq(tripInvitations.shopId, shopId))
         .orderBy(asc(tripInvitations.createdAt), asc(tripInvitations.id));
+
+      // The counter's own trail, oldest first for the same reason roll call's
+      // is: it is replayed, and `occurred_at` ties under a batched offline
+      // sync.
+      const arrivalRows = await tx
+        .select()
+        .from(bookingArrivalEvents)
+        .where(eq(bookingArrivalEvents.shopId, shopId))
+        .orderBy(asc(bookingArrivalEvents.occurredAt), asc(bookingArrivalEvents.seq));
 
       const rollCallRows = await tx
         .select()
@@ -2208,6 +2218,47 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["executed_dives.csv"],
         },
         {
+          file: "booking_arrival_events.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "trip_starts_at",
+            "booking_id",
+            "person_id",
+            "person_name",
+            "status",
+            "source",
+            "client_event_id",
+            "offline_snapshot_saved_at",
+            "recorded_by_person_id",
+            "recorded_by_name",
+            "occurred_at",
+            "created_at",
+          ],
+          rows: arrivalRows.map((row) => {
+            const personId = bookingPerson.get(row.bookingId);
+            return [
+              row.id,
+              row.tripId,
+              tripTitle.get(row.tripId),
+              tripStartsAt.get(row.tripId),
+              row.bookingId,
+              personId,
+              personId ? personName.get(personId) : null,
+              row.status,
+              row.source,
+              row.clientEventId,
+              row.offlineSnapshotSavedAt,
+              row.recordedByPersonId,
+              personName.get(row.recordedByPersonId),
+              row.occurredAt,
+              row.createdAt,
+            ];
+          }),
+          note: EXPORT_FILE_NOTES["booking_arrival_events.csv"],
+        },
+        {
           file: "roll_call_events.csv",
           header: [
             "id",
@@ -3797,6 +3848,19 @@ export async function loadDiverExportBundleInput(
             )
         : [];
 
+      const arrivalRows = bookingIds.length
+        ? await tx
+            .select()
+            .from(bookingArrivalEvents)
+            .where(
+              and(
+                eq(bookingArrivalEvents.shopId, shopId),
+                inArray(bookingArrivalEvents.bookingId, bookingIds),
+              ),
+            )
+            .orderBy(asc(bookingArrivalEvents.occurredAt), asc(bookingArrivalEvents.seq))
+        : [];
+
       const rollCallRows = bookingIds.length
         ? await tx
             .select()
@@ -4268,6 +4332,30 @@ export async function loadDiverExportBundleInput(
           // may not be this diver's — see the module docblock. This is only
           // this diver's own seat within any such attempt.
           note: "Rental gear charged on this diver's own seat within a checkout attempt.",
+        },
+        {
+          file: "booking_arrival_events.csv",
+          header: [
+            "id",
+            "trip_title",
+            "trip_starts_at",
+            "booking_id",
+            "status",
+            "source",
+            "recorded_by_name",
+            "occurred_at",
+          ],
+          rows: arrivalRows.map((row) => [
+            row.id,
+            tripTitle.get(row.tripId),
+            tripStartsAt.get(row.tripId),
+            row.bookingId,
+            row.status,
+            row.source,
+            personName.get(row.recordedByPersonId),
+            row.occurredAt,
+          ]),
+          note: "When this diver was checked in at the counter, and when that was taken back. Arriving is not boarding — that is roll_call_events.csv.",
         },
         {
           file: "roll_call_events.csv",
@@ -4933,6 +5021,12 @@ export async function loadShopExportCounts(
         .select({ n: count() })
         .from(tripLastMinutePromoRecipients)
         .where(eq(tripLastMinutePromoRecipients.shopId, shopId)),
+    ),
+    "booking_arrival_events.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(bookingArrivalEvents)
+        .where(eq(bookingArrivalEvents.shopId, shopId)),
     ),
     "roll_call_events.csv": await countOf(
       db.select({ n: count() }).from(rollCallEvents).where(eq(rollCallEvents.shopId, shopId)),
