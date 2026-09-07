@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Certification, SpecialtyCertification } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
-import { checkDepthCeiling, diverDepthLimit } from "./depth-ceiling";
+import { checkDepthCeiling, diverDepthLimit, statedLevelDepthLimit } from "./depth-ceiling";
 import { feetToMeters } from "./depth-units";
 import type { CertificationLevel } from "./readiness";
 
@@ -235,5 +235,43 @@ describe("checkDepthCeiling", () => {
         limitDepth: 18,
       });
     });
+  });
+});
+
+/**
+ * The reader who has *said* a rung rather than had one verified — the picker on
+ * the public departure page (issue #1479). A claim about a card, deliberately
+ * not about a person: no junior band, no Deep specialty.
+ */
+describe("statedLevelDepthLimit", () => {
+  it("reads the card's own rung off the same ladder", () => {
+    expect(statedLevelDepthLimit("open_water")).toEqual({
+      ceiling: { meters: 18, feet: 60 },
+      basis: "certification",
+      level: "open_water",
+    });
+    expect(statedLevelDepthLimit("divemaster")).toMatchObject({
+      ceiling: { meters: 40, feet: 130 },
+    });
+  });
+
+  it("answers the entry-level ceiling for a reader who holds nothing yet", () => {
+    expect(statedLevelDepthLimit(null)).toEqual({
+      ceiling: { meters: 12, feet: 40 },
+      basis: "no_card",
+      level: null,
+    });
+  });
+
+  it("never quietly lifts a stated card the way a verified specialty would", () => {
+    // A visitor picking "Open Water" has said nothing about a Deep specialty,
+    // and inferring one would put the deeper number on the screen — the wrong
+    // direction to guess in.
+    expect(statedLevelDepthLimit("open_water").ceiling).toEqual(
+      diverDepthLimit([card("open_water")], []).ceiling,
+    );
+    expect(statedLevelDepthLimit("open_water").ceiling).not.toEqual(
+      diverDepthLimit([card("open_water")], [specialty()]).ceiling,
+    );
   });
 });

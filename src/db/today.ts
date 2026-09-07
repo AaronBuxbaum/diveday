@@ -26,11 +26,13 @@ import {
   openGearRegisterActionText,
   openGearUnitActionText,
   openGuestsActionText,
+  openInboxActionText,
   openLastMinuteDealActionText,
   openOrdersActionText,
   openPrepListActionText,
   openReviewsActionText,
   openRollCallActionText,
+  openScheduleActionText,
   openStaffingActionText,
   openTripActionText,
   openUnitsActionText,
@@ -41,9 +43,12 @@ import {
   reviewsPendingDetailText,
   reviewsPendingSubjectText,
   rollCallGapDetailText,
+  seasonEventDetailText,
   staffCredentialDueDetailText,
   stuckOperationKindText,
   stuckPaymentOperationDetailText,
+  unansweredMessagesDetailText,
+  unansweredMessagesSubjectText,
   uncrewedCourseDetailText,
   uncrewedDepartureDetailText,
   ungatedNitroxDetailText,
@@ -85,6 +90,7 @@ import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
 import { publicTripPath } from "@/lib/public-routes";
 import { type AboardBlockerKind, groupAboardBlockers } from "@/lib/readiness";
 import { rentalFitCompleteness } from "@/lib/rentals";
+import { seasonEventNeedsReminder } from "@/lib/season-events";
 import {
   collapseDiverActions,
   filterActionsForRoles,
@@ -108,6 +114,7 @@ import {
   listOverdueGearReservations,
 } from "./gear";
 import { listTodayHelpRequests } from "./help-requests";
+import { countUnansweredMessages } from "./inbound-messages";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
 import { listDepartureCrewRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
@@ -131,6 +138,7 @@ import {
   trips,
   tripWaitlistEntries,
 } from "./schema";
+import { listSeasonEvents } from "./season-events";
 import { listStaffCredentials } from "./staff-credentials";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
@@ -1897,6 +1905,60 @@ export async function getTodayWork(
       href: reviewsAwaiting.onlyId
         ? `${reviewsHref}#review-${reviewsAwaiting.onlyId}`
         : reviewsHref,
+      dueAt: null,
+    });
+  }
+
+  // Divers who wrote back and are still waiting (ADR 20260907-two-way-inbox).
+  // One row for the whole inbox rather than one per message, `later` urgency
+  // and `dueAt: null` — the shape the reviews row above already has, and for
+  // the same reason: nothing sails on an unanswered message, and a row per
+  // message would be the inbox rendered twice. Nothing at all at zero.
+  const unanswered = await countUnansweredMessages(db, shopId);
+  if (unanswered > 0) {
+    actions.push({
+      id: "inbox:unanswered",
+      kind: "unanswered_messages",
+      urgency: "later",
+      subject: unansweredMessagesSubjectText(t, unanswered),
+      context: null,
+      detail: unansweredMessagesDetailText(t),
+      actionLabel: openInboxActionText(t),
+      href: `/shop/${shopSlug}/inbox`,
+      dueAt: null,
+    });
+  }
+
+  // **The reef's calendar, a month out** (issue #1485).
+  //
+  // The shop wrote mini-season down in Settings; this is the row that says it
+  // is nearly here while there is still time to put boats on the water. Filed
+  // through this queue rather than as a second detector, for the reason every
+  // other row on this page is: the queue is the one place the shop already
+  // reads to find out what today wants from it.
+  //
+  // `later` urgency and `dueAt: null` because nothing sails or refunds on a
+  // season — it informs, and it stops the moment the window opens, when the
+  // shop is standing in the week and a row about it is noise. The horizon and
+  // that rule both live in `src/lib/season-events.ts`; nothing here re-derives
+  // them.
+  //
+  // The subject is the shop's own name for the week, verbatim and untranslated
+  // — the same contract the storefront band and a lens have.
+  const shopToday = calendarDateInTimezone(now, timeZone);
+  for (const season of await listSeasonEvents(db, shopId)) {
+    if (!seasonEventNeedsReminder(season, shopToday)) continue;
+    actions.push({
+      id: `season-event:${season.id}`,
+      kind: "season_event_upcoming",
+      urgency: "later",
+      subject: season.name,
+      context: null,
+      detail: seasonEventDetailText(t, formatCalendarDate(season.startsOn, locale)),
+      // The board, because what a shop does about a season it can see coming is
+      // schedule departures for it.
+      actionLabel: openScheduleActionText(t),
+      href: `/shop/${shopSlug}/schedule/board`,
       dueAt: null,
     });
   }

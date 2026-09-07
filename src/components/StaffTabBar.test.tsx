@@ -22,6 +22,7 @@ const PROPS = {
     reports: true,
     team: true,
     settings: true,
+    inbox: true,
   },
   labels: Object.fromEntries(
     STAFF_DESTINATIONS.map((destination) => [destination.id, destination.id]),

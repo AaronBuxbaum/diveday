@@ -34,6 +34,7 @@ import divers from "./divers.json";
 import diveSites from "./diveSites.json";
 import feed from "./feed.json";
 import gear from "./gear.json";
+import inbox from "./inbox.json";
 import incidentExport from "./incidentExport.json";
 import integrations from "./integrations.json";
 import lenses from "./lenses.json";
@@ -45,6 +46,7 @@ import reports from "./reports.json";
 import requests from "./requests.json";
 import reviews from "./reviews.json";
 import schedule from "./schedule.json";
+import seasonEvents from "./seasonEvents.json";
 import seatDiver from "./seatDiver.json";
 import settings from "./settings.json";
 import shared from "./shared.json";
@@ -88,9 +90,11 @@ const staff = {
   seatDiver,
   blowout,
   incidentExport,
+  inbox,
   integrations,
   boats,
   lenses,
+  seasonEvents,
 };
 
 export default staff;

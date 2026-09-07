@@ -1,0 +1,48 @@
+{
+  "title": "What divers wrote",
+  "emptyHeading": "Nothing yet",
+  "emptyDetail": "Replies to the emails and WhatsApp messages you send land here.",
+  "group": {
+    "waiting": "Waiting on you · {count}",
+    "answered": "Answered"
+  },
+  "channel": {
+    "email": "Email",
+    "whatsapp": "WhatsApp",
+    "sms": "Text"
+  },
+  "unknownSender": "Unknown sender",
+  "attachments": "{count, plural, one {# attachment, still with the sender} other {# attachments, still with the sender}}",
+  "openRecord": "Open the record for {name}",
+  "pagination": {
+    "total": "{count, plural, one {# message} other {# messages}}"
+  },
+  "thread": {
+    "heading": "Conversation",
+    "summary": "{count, plural, one {# message} other {# messages}}",
+    "received": "{name} · {date}",
+    "sent": "{name} replied · {date}",
+    "sendFailed": "This one did not reach them.",
+    "unknownStaff": "A staff member"
+  },
+  "reply": {
+    "email": "Reply by email",
+    "whatsapp": "Reply on WhatsApp",
+    "placeholder": "Type your answer",
+    "send": "Send",
+    "sending": "Sending",
+    "windowClosed": "WhatsApp takes a typed reply for 24 hours after a diver's last message. Theirs is older than that."
+  },
+  "notices": {
+    "failed": "That did not send, so the message is still waiting on an answer.",
+    "notConfigured": "Email is not switched on for this DiveDay setup, so nothing went out.",
+    "emptyBody": "Type an answer before sending.",
+    "tooLong": "That is longer than a reply can be. Trim it and send again.",
+    "notFound": "That message is no longer on this record.",
+    "channelUnsupported": "DiveDay cannot answer a text message yet.",
+    "noReplyAddress": "There is no address to answer on.",
+    "whatsappWindowClosed": "WhatsApp takes a typed reply for 24 hours after a diver's last message. Theirs is older than that.",
+    "whatsappNotConnected": "Answering on WhatsApp needs the sender you connect in Settings.",
+    "notAuthorized": "Answering divers is owner and manager work."
+  }
+}

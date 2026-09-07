@@ -77,6 +77,17 @@ URL the app then acts on without checking it against what the stack provisioned.
    the same reason; erasure redacts the diver's words, address and subject and the shop's replies
    to them, by link and by address, and leaves the rows as the record that a conversation
    happened. A merge moves both tables with the diver; the export bundle excludes them for now.
+9. **The inbox is owner-and-manager work, and answering happens on the record.** Added
+   2026-09-07 with the surface (issue #1429, layer 3). `canAnswerShopInbox` is its own gate rather
+   than a reuse of Reports': what a staffer types leaves *as the shop*, over the shop's own sender,
+   which is the accountability `canManageMessagingSettings` already puts on connecting that sender
+   — and the list holds messages from addresses nobody on the roster holds, arriving with a
+   stranger's contact details, which is the argument that put the requests board behind a gate.
+   `/shop/<slug>/inbox` is therefore a **worklist and nothing more**: it ranks and it opens
+   records, and the composer lives on the diver's record, where the rest of the conversation is
+   and where the shop can see who it is talking to. One composer, one place. Widening the gate to
+   the daily crew is a decision for a shop that has run the inbox for a season, not for the change
+   that built it.
 
 ## Alternatives considered
 

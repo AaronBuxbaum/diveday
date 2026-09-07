@@ -410,3 +410,37 @@ export function coursePageJsonLd(
     timeRequired: course.durationText,
   };
 }
+
+/**
+ * A regional page's graph: the listed shops in one town as an ordered
+ * `ItemList` of dive operators (issue #1436, N-49).
+ *
+ * The same `SportsActivityLocation` node the shop's own storefront publishes,
+ * one per shop, and nothing this layer invents on top: no rating (that would
+ * need a per-shop read the page does not make), no departures (a region page
+ * shows none), no order beyond the one the page itself renders. `name` is the
+ * page's own heading, passed in rather than composed here — this module holds
+ * no prose and no locale.
+ *
+ * `/dive/<region>` 404s when a region has no listed shops, so an empty list
+ * never reaches this; the guard stays anyway, because an `ItemList` of zero is
+ * the same noise `scheduleJsonLd` refuses to emit.
+ */
+export function regionJsonLd(
+  name: string,
+  shops: readonly ShopForStructuredData[],
+  origin: string | null,
+): JsonLdObject | null {
+  if (shops.length === 0) return null;
+  return {
+    "@context": SCHEMA_CONTEXT,
+    "@type": "ItemList",
+    name,
+    numberOfItems: shops.length,
+    itemListElement: shops.map((shop, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      item: shopJsonLd(shop, origin),
+    })),
+  };
+}

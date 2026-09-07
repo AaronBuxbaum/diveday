@@ -87,13 +87,15 @@ export type TodayActionKind =
   | "failed_photo_deletion"
   | "owed_refund"
   | "reviews_pending"
+  | "unanswered_messages"
   | "gear_overdue"
   | "gear_due_back"
   | "gear_service_due"
   | "staff_credential_due"
   | "units_unconfirmed"
   | "say_hello"
-  | "rental_fit_confirm";
+  | "rental_fit_confirm"
+  | "season_event_upcoming";
 
 /**
  * Severity breaks ties inside a single departure. It ranks by how long the fix
@@ -192,31 +194,41 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // Ranked above the other two platform-health rows: a diver is waiting on
   // this one, and has already been told the shop would be in touch.
   owed_refund: 26,
+  // A diver wrote and nobody has written back (ADR 20260907-two-way-inbox).
+  // Above the reviews queue and below the money rows: somebody asked the shop
+  // a question and is waiting on the answer, which is more than a review asks
+  // for and less than a refund owes.
+  unanswered_messages: 27,
   // Divers said something worth publishing; nothing sails or refunds on it.
-  reviews_pending: 27,
+  reviews_pending: 28,
   // The gear register's rows (ADR 20260815-minimal-gear-register). All
   // counter work, never a boarding blocker — a unit that never came home
   // outranks one due back tonight, and both outrank a bench clock, because
   // that is the order the desk actually chases them in.
-  gear_overdue: 28,
-  gear_due_back: 29,
-  gear_service_due: 30,
-  staff_credential_due: 31,
+  gear_overdue: 29,
+  gear_due_back: 30,
+  gear_service_due: 31,
+  staff_credential_due: 32,
   // Bottom of the queue, and rightly: this is a question nobody has answered
   // rather than anything that has gone wrong. It is here at all because the
   // first-run checklist that asked it stops rendering at the shop's first
   // departure — step 4 of that same checklist — so a shop that scheduled a
   // trip before opening the Units row would never be asked again, and currency
   // decides what a diver's card is charged in (issue #835).
-  units_unconfirmed: 32,
+  units_unconfirmed: 33,
   // Below even that, and rightly: nothing has gone wrong and nothing is owed.
   // It is a courtesy the desk can pay if the morning allows, so it never
   // outranks a thing somebody has to do (issue #1182).
-  say_hello: 33,
+  say_hello: 34,
   // Lower still, because it is a question about *yesterday's* boat rather than
   // anything today wants: a unit came home in a size the fit does not record,
   // and the shop may keep it or leave it (issue #1174, D14).
-  rental_fit_confirm: 34,
+  rental_fit_confirm: 35,
+  // The bottom, and it belongs there: a season a month out is the only row in
+  // this queue about a week nobody is working yet. It is here so a shop finds
+  // out while it can still put boats on the water (issue #1485), and it must
+  // never outrank a diver standing at the counter today.
+  season_event_upcoming: 36,
 };
 
 /**
@@ -261,6 +273,9 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   failed_photo_deletion: ["owner", "manager"],
   owed_refund: ["owner", "manager"],
   reviews_pending: ["owner", "manager"],
+  // The same two roles the inbox itself is gated to (`canAnswerShopInbox`):
+  // a row pointing at a page its reader cannot open is a dead end.
+  unanswered_messages: ["owner", "manager"],
   gear_overdue: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_due_back: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_service_due: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
@@ -272,6 +287,10 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   // The same audience the other gear rows have, and for the same reason: the
   // person who handed the diver a different BCD is whoever was at the counter.
   rental_fit_confirm: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  // Whoever puts departures on the board. A captain reading the queue at the
+  // rail cannot schedule three boats for mini-season, and a row they can do
+  // nothing about is a row that teaches them to skim the queue.
+  season_event_upcoming: ["owner", "manager"],
 };
 
 /**
@@ -346,6 +365,9 @@ export const ACTION_KIND_META = {
   failed_photo_deletion: { tone: "warning" },
   owed_refund: { tone: "warning" },
   reviews_pending: { tone: "neutral" },
+  // Neutral: somebody is waiting on an answer, which is the day's work
+  // rather than a thing that has gone wrong.
+  unanswered_messages: { tone: "neutral" },
   // Warning, not danger: a unit that is late is a phone call, not a diver in
   // the water. Due-back-today and a bench clock are ordinary counter work.
   gear_overdue: { tone: "warning" },
@@ -361,6 +383,9 @@ export const ACTION_KIND_META = {
   // Neutral: a question about a size is not a problem, and a warning-toned row
   // asking whether to keep a wetsuit size would read as gear trouble.
   rental_fit_confirm: { tone: "neutral" },
+  // Neutral: a season the shop wrote down itself, arriving on schedule. A
+  // warning-toned row about mini-season would read as bad news about it.
+  season_event_upcoming: { tone: "neutral" },
 } as const satisfies Record<TodayActionKind, { tone: "danger" | "warning" | "neutral" }>;
 
 /**
