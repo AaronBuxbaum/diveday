@@ -291,6 +291,7 @@ export default async function TripDetailPage({
         })),
         rhythm,
         timeZone: shop.timezone,
+        scheduleDayCount: meetingDays.length,
       })
     : [];
   // One line per *site*, not per dive: a two-tank day on one wreck otherwise
@@ -302,14 +303,18 @@ export default async function TripDetailPage({
       (entry, index) =>
         tideWindows.findIndex((other) => other.siteName === entry.siteName) === index,
     )
-    .map((entry) =>
-      diverTideWindowText(
+    // Carried with its site so the list has a key the dedupe above has already
+    // made unique. Keying on the sentence collided the day two sites shared a
+    // NOAA station and produced byte-identical text.
+    .map((entry) => ({
+      site: entry.siteName,
+      text: diverTideWindowText(
         t,
         entry.window,
         entry.preference,
         formatTime(entry.window.nearestTurn.at, locale, shop.timezone),
       ),
-    );
+    }));
 
   // The embed's short confirmation renders only from a verified `confirm`
   // capability — never from a raw booking id in the URL (design principle 6:

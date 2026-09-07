@@ -353,6 +353,7 @@ export default async function ManageTripPage({
         })),
         rhythm,
         timeZone: shop.timezone,
+        scheduleDayCount: scheduleDays.length,
       })
     : [];
   const tideLines = tideWindows.map((entry) => ({
@@ -427,7 +428,12 @@ export default async function ManageTripPage({
   // appended to four readings pushes the readings off the end of it.
   const conditionsSummary = trip.conditionsHold
     ? t("trips.conditions.holdOnSummary")
-    : conditionParts.join(" · ") || tideLines[0]?.text || t("trips.about.noConditions");
+    : // Deliberately no tide fallback here. `tideLines[0]` is *one site's*
+      // water, and the strip strips the site prefix the panel below adds for
+      // exactly that reason -- so on a two-stationed-site day it stated dive
+      // one's tide as the whole departure's conditions. The tide is not the
+      // crew's conditions read, and the panel below already carries it in full.
+      conditionParts.join(" · ") || t("trips.about.noConditions");
   const assignedCrew = staff
     .filter((entry) => crewIds.includes(entry.person.id))
     .map((entry) => entry.person.fullName);
