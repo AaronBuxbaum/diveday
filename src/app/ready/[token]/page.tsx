@@ -2088,14 +2088,33 @@ export default async function DiverReadinessPage({
         // superseding whatever came before, so the only difference is what the
         // button promises. Naming it matters: "Sign your waiver" on a link the
         // diver already knows is dead reads as the page not having noticed.
-        if (step.item?.code !== "waiver_pending" && step.item?.code !== "waiver_expired") {
+        // `guardian_signature_missing` belongs here for the same reason
+        // `waiver_expired` does, and leaving it out was a dead end: its own
+        // detail line tells the family to "grab a fresh link and sign it
+        // together", and `BLOCKER_CATEGORY` files it as "action" on the
+        // strength of this page minting one — but with no case here the page
+        // rendered the instruction and no control to follow it, to a parent
+        // whose only way in is the link they are already holding.
+        // `issueWaiverRequest` is ready for it: `alreadyStanding` excludes a
+        // guardian-missing record, so signing from here supersedes the solo
+        // signature and mints a link that asks for both.
+        if (
+          step.item?.code !== "waiver_pending" &&
+          step.item?.code !== "waiver_expired" &&
+          step.item?.code !== "guardian_signature_missing"
+        ) {
           return null;
         }
         return (
           <form action={signWaiverFromReady.bind(null, token)}>
             <SubmitButton pendingLabel={t("ready.opening")} className={actionButton}>
               {t(
-                step.item.code === "waiver_expired" ? "ready.freshWaiverLink" : "ready.signWaiver",
+                step.item.code === "waiver_pending"
+                  ? "ready.signWaiver"
+                  : // Expired and guardian-missing both end in the same act, and
+                    // "Get a fresh waiver link" is what each one's own copy has
+                    // already told the reader to do.
+                    "ready.freshWaiverLink",
               )}
             </SubmitButton>
           </form>
