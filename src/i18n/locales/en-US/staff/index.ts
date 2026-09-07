@@ -34,6 +34,7 @@ import divers from "./divers.json";
 import diveSites from "./diveSites.json";
 import feed from "./feed.json";
 import gear from "./gear.json";
+import inbox from "./inbox.json";
 import incidentExport from "./incidentExport.json";
 import integrations from "./integrations.json";
 import lenses from "./lenses.json";
@@ -87,6 +88,7 @@ const staff = {
   bookings,
   seatDiver,
   blowout,
+  inbox,
   incidentExport,
   integrations,
   boats,

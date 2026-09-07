@@ -362,6 +362,14 @@ export async function deleteInboundMessage(
 }
 
 export type RecordStaffReplyInput = {
+  /**
+   * The row's own id, minted by the caller *before* the send. The email
+   * notification's idempotency key is `staff-reply/<replyId>`
+   * (`src/lib/notifications/kinds.ts`), so the id has to exist before the
+   * provider is called or a retry would key on a row that does not. Omitted
+   * on the text channels, which have no such key.
+   */
+  id?: string;
   shopId: string;
   personId: string;
   inboundMessageId: string | null;
@@ -387,6 +395,7 @@ export async function recordStaffReply(db: DbExecutor, input: RecordStaffReplyIn
   const [reply] = await db
     .insert(staffReplies)
     .values({
+      ...(input.id ? { id: input.id } : {}),
       shopId: input.shopId,
       personId: input.personId,
       inboundMessageId: input.inboundMessageId,

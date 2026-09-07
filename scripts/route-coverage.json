@@ -338,6 +338,10 @@
     "e2e": ["gear.spec.ts"],
     "visual": ["gear-unit", "gear-unit-deleted"]
   },
+  "/shop/[shopSlug]/inbox": {
+    "e2e": ["inbox.spec.ts"],
+    "visual": ["staff-inbox"]
+  },
   "/shop/[shopSlug]/orders": {
     "e2e": ["orders-demo.spec.ts", "scroll-preservation.spec.ts", "tenant-isolation.spec.ts"],
     "visual": ["orders", "orders-unconfirmed-and-owed"],

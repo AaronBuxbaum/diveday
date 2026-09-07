@@ -266,6 +266,32 @@ const NOTICE_KEYS: Record<
     key: "divers.notices.notAuthorizedNotes",
   },
 
+  // Answering a diver in the channel they wrote in (ADR
+  // 20260907-two-way-inbox). There is no success code: the reply lands in the
+  // thread directly above the box that was just used, so a line saying "sent"
+  // would be a caption on a photograph of itself.
+  "reply-empty": { form: "messages", tone: "danger", key: "inbox.notices.replyEmpty" },
+  "reply-too-long": { form: "messages", tone: "danger", key: "inbox.notices.replyTooLong" },
+  // Meta closes a conversation a day after the diver's last message. Warning
+  // rather than danger: nothing went wrong and nothing was lost — the shop
+  // simply cannot type into this thread until the diver writes again.
+  "reply-window-closed": {
+    form: "messages",
+    tone: "warning",
+    key: "inbox.notices.replyWindowClosed",
+  },
+  "reply-not-configured": {
+    form: "messages",
+    tone: "danger",
+    key: "inbox.notices.replyNotConfigured",
+  },
+  "reply-failed": { form: "messages", tone: "danger", key: "inbox.notices.replyFailed" },
+  "reply-unavailable": {
+    form: "messages",
+    tone: "danger",
+    key: "inbox.notices.replyUnavailable",
+  },
+
   // Explicit duplicate resolution. A successful merge lands on the survivor,
   // where the candidate panel may no longer render, so its confirmation is a
   // page notice; refusals stay beside the survivor-choice control.
@@ -422,6 +448,7 @@ const DIVER_FORMS = new Set([
   "story",
   "book",
   "notes",
+  "messages",
   "merge",
   "remove",
   "restore",

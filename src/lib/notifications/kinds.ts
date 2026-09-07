@@ -635,8 +635,24 @@ const staffReplySchema = z.object({
   shopName: z.string().trim().min(1).max(120),
   subject: z.string().trim().min(1).max(500),
   body: z.string().trim().min(1).max(REPLY_BODY_MAX_LENGTH),
-  /** The diver's own `Message-ID`, angle brackets included, when their mail carried one. */
-  inReplyTo: z.string().trim().min(3).max(998).optional(),
+  /**
+   * The diver's own `Message-ID`, angle brackets included, when their mail
+   * carried one — and the one field on any kind that becomes a **raw mail
+   * header** (`In-Reply-To`/`References`, `src/lib/notifications/ses.ts`).
+   *
+   * It arrives from an unauthenticated sender, so it is refused here unless it
+   * is a single line of printable text: a control character in a header value
+   * is how a header injection starts, and the check belongs at the schema
+   * every send passes through rather than at the one call site that happens to
+   * populate it today.
+   */
+  inReplyTo: z
+    .string()
+    .trim()
+    .min(3)
+    .max(998)
+    .refine((value) => !/\p{Cc}/u.test(value))
+    .optional(),
 });
 
 export const notificationSenderSchema = z.object({

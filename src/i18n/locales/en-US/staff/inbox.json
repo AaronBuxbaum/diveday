@@ -1,0 +1,45 @@
+{
+  "title": "What divers wrote back",
+  "emptyHeading": "Nobody is waiting on you",
+  "emptyDetail": "When a diver answers one of your emails, texts or WhatsApps, it lands here and on their record.",
+  "group": {
+    "waiting": "Waiting on you",
+    "answered": "Answered"
+  },
+  "channel": {
+    "email": "Email",
+    "sms": "Text",
+    "whatsapp": "WhatsApp"
+  },
+  "unknownSender": "Unknown sender",
+  "attachments": "{count, plural, one {# attachment} other {# attachments}}, left with {channel}",
+  "openRecord": "Open record",
+  "markAnswered": "Mark answered",
+  "markingAnswered": "Marking…",
+  "delete": "Delete",
+  "deleting": "Deleting…",
+  "notFound": "That message is no longer here.",
+  "pagination": {
+    "total": "{count, plural, one {# message} other {# messages}}"
+  },
+  "thread": {
+    "heading": "Messages",
+    "summary": "{count, plural, one {# message} other {# messages}}",
+    "summaryWaiting": "{count, plural, one {# message} other {# messages}}, {waiting} waiting on you",
+    "none": "None yet",
+    "repliedBy": "{name} · {date}",
+    "sendFailed": "Did not send",
+    "replyLabel": "Write back by {channel}",
+    "send": "Send",
+    "sending": "Sending…",
+    "windowClosed": "WhatsApp carries a typed reply for one day after {name} last wrote, and that day is up."
+  },
+  "notices": {
+    "replyEmpty": "Type something to send.",
+    "replyTooLong": "Too long to send. Shorten it and try again.",
+    "replyWindowClosed": "WhatsApp will not carry a typed reply to this conversation any more.",
+    "replyNotConfigured": "This shop has no sender connected for that channel.",
+    "replyFailed": "That did not send. Try again.",
+    "replyUnavailable": "That message is no longer here."
+  }
+}

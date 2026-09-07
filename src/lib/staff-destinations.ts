@@ -101,6 +101,7 @@ export type StaffDestinationId =
   | "courses"
   | "reviews"
   | "requests"
+  | "inbox"
   | "orders"
   | "waivers"
   | "reports"
@@ -156,6 +157,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   courses: "shared.shopNavLinks.courses",
   reviews: "shared.shopNavLinks.reviews",
   requests: "shared.shopNavLinks.requests",
+  inbox: "shared.shopNavLinks.inbox",
   orders: "shared.shopNavLinks.orders",
   waivers: "shared.shopNavLinks.waivers",
   reports: "shared.shopNavLinks.reports",
@@ -180,6 +182,7 @@ export const STAFF_DESTINATION_TITLE_KEYS: Partial<Record<StaffDestinationId, St
   reports: "reports.title",
   reviews: "reviews.title",
   requests: "requests.title",
+  inbox: "inbox.title",
   diveSites: "diveSites.list.title",
   promoCodes: "promos.title",
 };
@@ -299,6 +302,20 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // is the desk's. Absent for them, never shown and refused (ADR
   // 20260724-role-gated-surfaces-hide-not-explain).
   { id: "requests", suffix: "/requests", navGroup: "daily", inPalette: true, gate: "reports" },
+  // What divers wrote back, on any channel (ADR 20260907-two-way-inbox). "Run
+  // the shop" beside Reviews and Requests: a shop empties this on its own
+  // rhythm, and it is deliberately not a sixth primary tab — the dock holds
+  // five and the sixth slot is More (ADR 20260813-more-is-the-shops-other-door).
+  //
+  // **Ungated, unlike Requests above**, and the difference is who is on the
+  // other end. Requests is a pile of *prospects* who reached a public form and
+  // booked nothing; this is overwhelmingly divers already on the roster, whose
+  // names, addresses and phone numbers every staff role can already read on the
+  // record this page links to. And the message that most wants reading at 7am —
+  // "running fifteen minutes late" — is read by whoever is at the dock, which
+  // is as often the captain as the owner. Its pending-work signal is Today's
+  // `inbox_unanswered` row, never a nav badge, the same rule Reviews keeps.
+  { id: "inbox", suffix: "/inbox", navGroup: "daily", inPalette: true },
   // Money the shop reads daily — a "Run the shop" destination, not one of the
   // five all-day tabs. Orders remains ungated and palette-visible, and the
   // page's own links keep the money workflow reachable from its context.
