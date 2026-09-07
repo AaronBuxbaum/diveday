@@ -11,13 +11,18 @@ working, not when checks pass.
 ## 1. Always: static + unit
 
 ```bash
-pnpm check        # repo guards + biome lint + tsc + vitest
+pnpm check:repo   # the static guards, concurrently — one run reports every failure
+pnpm lint         # biome
+pnpm typecheck    # tsc
+pnpm test <file> --reporter=dot   # the test you are iterating on
 ```
 
-The four phases run concurrently and **fail slow**: one run reports every failure, not the
-first. So read the whole tail before fixing anything — the list at the bottom is complete, and
-fixing all of it in one pass is the point. A phase that passed prints one line; the failures
-print in full, last.
+`pnpm check` — the same four phases plus the **whole** unit suite, concurrently and fail-slow — is
+the bar, and CI is where you clear it: a full local unit run saturates the box for twenty minutes
+while CI's four shards answer in a few, and `scripts/guard-bash.mjs` refuses the bare form for that
+reason ([docs/agents/verifying.md](../../../docs/agents/verifying.md)). When you do read a
+`pnpm check` log, read the whole tail before fixing anything — the list at the bottom is complete,
+and fixing all of it in one pass is the point.
 
 Then, **before you push**, run what your diff *reaches* rather than only what you edited:
 
