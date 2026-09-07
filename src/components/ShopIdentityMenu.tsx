@@ -117,14 +117,29 @@ export function ShopIdentityMenu({
             width instead: this item is `shrink` inside a row whose other
             children are `shrink-0`, so the name truncates only when the row
             genuinely runs out of space, which is the only time it should. */}
-        <span className="min-w-0 truncate">{shopName}</span>
+        <span
+          // The half of the button the fold takes: below `lg` the name
+          // gives way to the page's title as the page scrolls, and the
+          // mark stays as the menu's door (ADR
+          // 20260907-nothing-from-nowhere, decision 5). It collapses its
+          // width as it fades, so nothing invisible is left holding a
+          // tap target where a label used to be.
+          data-chrome-shop-name
+          className="min-w-0 truncate"
+        >
+          {shopName}
+        </span>
         {/* The one visual cue that the identity block opens: a small caret,
             rotating with state (transform-only, ≤250ms, principle 5). */}
-        <DiveDayIcon
-          name="caret"
-          direction="down"
-          className={`size-3 text-muted transition-transform ${open ? "rotate-180" : ""}`}
-        />
+        {/* Folds with the name, for the same reason: a caret with no label
+            beside it is pointing at nothing. */}
+        <span data-chrome-shop-name className="flex shrink-0">
+          <DiveDayIcon
+            name="caret"
+            direction="down"
+            className={`size-3 text-muted transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </span>
       </button>
       {mounted ? (
         <div

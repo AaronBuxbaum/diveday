@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { FoldedPageTitle } from "@/components/chrome/FoldedPageTitle";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -149,10 +150,22 @@ export function ShopPageHeader({
               names ("Two-Tank Reef — Molasses & French"), and an even two
               lines reads better than a full line plus one orphaned word. */}
           <h1
+            // The heading fades as it passes under the bar, so it and the
+            // folded label are never the same word twice on one screen (ADR
+            // 20260907-nothing-from-nowhere, decision 5). Marked on every
+            // shell; the CSS only acts where a bar has a filled title slot,
+            // which is the staff shell alone.
+            data-chrome-fold-title
             className={`${titleFace === "brand" ? "font-brand-display " : ""}${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}`}
           >
             {title}
           </h1>
+          {/* The same words, delivered into the staff shell's bar so they can
+              fold into it as the page scrolls (ADR
+              20260907-nothing-from-nowhere, decision 5). Renders nothing at all
+              on the storefront, which has no slot to portal into — this header
+              serves both shells and only one of them folds. */}
+          <FoldedPageTitle title={title} />
           {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
           {meta ? <div className="mt-3">{meta}</div> : null}
         </div>

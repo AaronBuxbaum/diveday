@@ -194,6 +194,13 @@ test("a shop with a departure today is not treated as a shop with no departures"
   await page.getByLabel("Departs").fill("16:00");
   await page.getByLabel("Returns").fill("19:30");
   await page.getByRole("button", { name: "Put it on the board" }).click();
+  // **Wait for where the departure lands before navigating away from it.** The
+  // first trip ever redirects to Today's bookable moment; a `goto` fired while
+  // that action is still streaming aborts the request that is writing the row
+  // ("the destination stream closed early", in the server's own words), and
+  // the home below then honestly reports a shop with no departures. Both
+  // tests above already wait here; this one raced it.
+  await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
 
   await page.goto(`/shop/${unique}`);
   await expect(page.getByText("Afternoon Two-Tank").first()).toBeVisible();

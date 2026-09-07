@@ -345,6 +345,33 @@ describe("tripRecapEmail", () => {
     const email = tripRecapEmail(recapBase);
     expect(email.text).toContain("Thanks for diving Two-Tank Reef");
     expect(email.text).not.toContain("You dived .");
+    expect(email.text).not.toContain("Fly-safe");
+  });
+
+  it("carries the fly-safe line in the shop's zone, worded off the last dive or the scheduled end", () => {
+    // 2026-08-02T14:10Z is a Sunday, 10:10 AM in Key Largo.
+    const from = new Date("2026-08-02T14:10:00.000Z");
+    const afterDive = tripRecapEmail({
+      ...recapBase,
+      flySafe: { from, hours: 24, anchor: "last_dive" },
+    });
+    expect(afterDive.text).toContain(
+      "Fly-safe from Sunday 10:10 AM: Blue Mantis asks for 24 hours after your last dive, following DAN’s guidance.",
+    );
+    expect(afterDive.html).toContain("Fly-safe from Sunday 10:10 AM");
+
+    const afterReturn = tripRecapEmail({
+      ...recapBase,
+      flySafe: { from, hours: 18, anchor: "scheduled_return" },
+    });
+    expect(afterReturn.text).toContain("18 hours after the day was due to end");
+
+    const spanish = tripRecapEmail({
+      ...recapBase,
+      locale: "es-ES",
+      flySafe: { from, hours: 24, anchor: "last_dive" },
+    });
+    expect(spanish.text).toContain("Puedes volar a partir del domingo, 10:10");
   });
 });
 

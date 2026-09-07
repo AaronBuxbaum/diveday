@@ -7,6 +7,16 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Fly-safe from, on the recap (delivered 2026-09-07)
+
+N-04 from the 2026-09-07 improvement-ideas decision sheet (issue #1425). Once the crew has logged
+the day, the thread's after-state and the `trip_recap` email say "Fly-safe from Wednesday 6:10 PM:
+{shop} asks for 24 hours after your last dive, following DAN's guidance" — the shop's own pair of
+hours (`shops.fly_safe_hours_single` / `_repetitive`, a Settings row, floored at DAN's 12 and 18),
+counted from the last recorded exit by `src/lib/fly-safe.ts`, or from the scheduled return once the
+boat is home; repetitive whenever the day held more than one dive by record or by plan. Nothing at
+all while the record cannot say. Informs, never gates.
+
 ## The agent-ready storefront (delivered 2026-09-07)
 
 Owner decision 2026-09-07 (improvement-ideas decision sheet, N-50; issue #1427). An AI travel agent

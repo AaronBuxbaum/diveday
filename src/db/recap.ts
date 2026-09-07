@@ -7,6 +7,7 @@ import type { CertificationLevel } from "@/lib/certification-levels";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { compareDiveRecord, type DiveRecordComparison } from "@/lib/dive-record";
+import { type FlySafeResult, flySafeFrom } from "@/lib/fly-safe";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import {
   type Notification,
@@ -191,6 +192,15 @@ export type RecapPageData = {
    * `src/lib/dive-record.ts` for what counts as a difference (issue #1191).
    */
   diveRecord: DiveRecordComparison | null;
+  /**
+   * When this diver may fly, or null when nothing on the record can honestly
+   * say (a boat not yet home by the buffer, no exit recorded for the last
+   * dive) — `src/lib/fly-safe.ts`, issue #1425. Read here, beside the same
+   * `executed_dives` rows `diveRecord` compares, so both routes rendering the
+   * after-state and the recap email all get the one answer. Informs; the page
+   * gates nothing on it.
+   */
+  flySafe: FlySafeResult | null;
   /**
    * Per site the day dived, the species that site's field guide names — in the
    * shop's saved order, and only for sites that have one.
@@ -396,6 +406,8 @@ export async function getRecapPageData(
       brandColor: shops.brandColor,
       brandDisplayFont: shops.brandDisplayFont,
       signOffNote: shops.signOffNote,
+      flySafeHoursSingle: shops.flySafeHoursSingle,
+      flySafeHoursRepetitive: shops.flySafeHoursRepetitive,
       courseNextStep: bookings.courseNextStep,
       courseNextStepByPersonId: bookings.courseNextStepByPersonId,
     })
@@ -568,6 +580,17 @@ export async function getRecapPageData(
     })),
   );
 
+  const flySafe = flySafeFrom({
+    executedDives: livedDives.map(({ executed }) => ({
+      diveNumber: executed.diveNumber,
+      exitedAt: executed.exitedAt,
+    })),
+    plannedDives: trip.plannedDives,
+    endsAt: trip.endsAt,
+    now: nowDate(),
+    hours: { single: row.flySafeHoursSingle, repetitive: row.flySafeHoursRepetitive },
+  });
+
   const tripLocalDay = calendarDateInTimezone(trip.startsAt, row.timezone);
   const effectivePriorVisits = priorVisitRows.filter(
     (v) => priorVisitStanding(v.statusLabel) !== "did_not_happen" && v.visitedOn <= tripLocalDay,
@@ -640,6 +663,7 @@ export async function getRecapPageData(
     diverName: row.diverName,
     sites,
     diveRecord,
+    flySafe,
     fieldGuide,
     observedSpecies,
     bookingId,
@@ -1217,16 +1241,40 @@ async function sendRecaps(
   // once per distinct trip in the run rather than per booking, and all trips
   // resolved together rather than one round trip at a time.
   const siteNamesByTrip = new Map<string, string[]>();
+  // And when each trip's divers may fly (`src/lib/fly-safe.ts`), from the
+  // same `executed_dives` the after-state reads — once per trip, so every
+  // diver on the boat reads the same instant.
+  const flySafeByTrip = new Map<string, FlySafeResult | null>();
   await Promise.all(
     [...new Set(rows.map((r) => r.trip.id))].map(async (tripId) => {
-      const shopId = rows.find((r) => r.trip.id === tripId)?.shop.id;
-      if (!shopId) return;
-      const dives = await listTripDives(db, shopId, tripId);
+      const first = rows.find((r) => r.trip.id === tripId);
+      if (!first) return;
+      const shopId = first.shop.id;
+      const [dives, lived] = await Promise.all([
+        listTripDives(db, shopId, tripId),
+        listExecutedDives(db, shopId, tripId),
+      ]);
       const names: string[] = [];
       for (const { diveSite } of dives) {
         if (diveSite && !names.includes(diveSite.name)) names.push(diveSite.name);
       }
       siteNamesByTrip.set(tripId, names);
+      flySafeByTrip.set(
+        tripId,
+        flySafeFrom({
+          executedDives: lived.map(({ executed }) => ({
+            diveNumber: executed.diveNumber,
+            exitedAt: executed.exitedAt,
+          })),
+          plannedDives: first.trip.plannedDives,
+          endsAt: first.trip.endsAt,
+          now,
+          hours: {
+            single: first.shop.flySafeHoursSingle,
+            repetitive: first.shop.flySafeHoursRepetitive,
+          },
+        }),
+      );
     }),
   );
 
@@ -1304,6 +1352,7 @@ async function sendRecaps(
           startsAt: trip.startsAt,
           timezone: shop.timezone,
           sites,
+          flySafe: flySafeByTrip.get(trip.id) ?? undefined,
           recapUrl,
           unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
         },

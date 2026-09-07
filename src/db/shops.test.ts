@@ -11,6 +11,7 @@ import {
   listShopsForSitemap,
   setShopAddress,
   setShopDepthUnit,
+  setShopFlySafeHours,
   setShopSearchListing,
   setShopTemperatureUnit,
   shopHasPricedRecords,
@@ -307,5 +308,42 @@ describe("shopHasPricedRecords", () => {
       .insert(divePackages)
       .values({ shopId: rival.id, name: "Ten dives", diveCount: 10, priceCents: 40000 });
     expect(await shopHasPricedRecords(db, bare.id)).toBe(false);
+  });
+});
+
+describe("setShopFlySafeHours", () => {
+  it("defaults a brand-new shop to 18 and 24 hours", async () => {
+    const { shop } = await seededShopContext();
+    expect(shop.flySafeHoursSingle).toBe(18);
+    expect(shop.flySafeHoursRepetitive).toBe(24);
+  });
+
+  it("stores the shop's own pair and reads it back", async () => {
+    const { db, shop } = await seededShopContext();
+    const after = await setShopFlySafeHours(db, shop.id, { single: 24, repetitive: 36 });
+    expect(after?.flySafeHoursSingle).toBe(24);
+    expect(after?.flySafeHoursRepetitive).toBe(36);
+    const reread = await getShopBySlug(db, shop.slug);
+    expect(reread?.flySafeHoursRepetitive).toBe(36);
+  });
+
+  it("refuses, at the table, a wait under DAN's floor or a repetitive wait shorter than the single", async () => {
+    const { db, shop } = await seededShopContext();
+    // Below DAN's 12-hour single-dive minimum: the sentence on the recap
+    // attributes the number to DAN's guidance, so the table will not hold it.
+    // Drizzle wraps the driver's error, so the constraint's name is on the cause.
+    const namesTheConstraint = {
+      cause: expect.objectContaining({
+        message: expect.stringContaining("shops_fly_safe_hours_in_range"),
+      }),
+    };
+    await expect(
+      setShopFlySafeHours(db, shop.id, { single: 6, repetitive: 24 }),
+    ).rejects.toMatchObject(namesTheConstraint);
+    await expect(
+      setShopFlySafeHours(db, shop.id, { single: 30, repetitive: 24 }),
+    ).rejects.toMatchObject(namesTheConstraint);
+    const untouched = await getShopBySlug(db, shop.slug);
+    expect(untouched?.flySafeHoursSingle).toBe(18);
   });
 });
