@@ -109,6 +109,36 @@ describe("tideWindowsForDeparture", () => {
   });
 
   /**
+   * **A proposed departure is exempt from that guard**, because nothing has
+   * sailed: the add panel's composer is asking what the water would do for a
+   * departure a staffer is still typing.
+   *
+   * The instants here are the ones that actually broke it. The panel opens
+   * with an 8:30 AM local default, which on 2026-07-21 in Key Largo is
+   * 12:30Z, and the e2e fleet's frozen clock is 13:30Z — exactly one
+   * late-arrival buffer later, so `hasSailed` is true on the boundary and the
+   * composer answered nothing. That timed out the staff tide capture on both
+   * visual shards of every run. In production the same silence starts every
+   * morning at about half past nine.
+   */
+  it("still answers for a proposed departure whose start time has passed", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(NOAA_PAYLOAD)));
+    const windows = await tideWindowsForDeparture({
+      startsAt: new Date("2026-07-21T12:30:00Z"),
+      now: new Date("2026-07-21T13:30:00Z"),
+      proposed: true,
+      plannedDives: 1,
+      diveMode: "boat",
+      dives: [{ diveNumber: 1, travelMinutes: null, site: site("Molasses Reef", "8723583") }],
+      rhythm: DEFAULT_DOCK_DAY_RHYTHM,
+      timeZone: "America/New_York",
+      fetcher,
+    });
+    expect(windows).toHaveLength(1);
+    expect(fetcher).toHaveBeenCalled();
+  });
+
+  /**
    * The rhythm is laid over `startsAt` and `plannedDives` is the total across
    * every day, so a day-two dive would be handed a day-one arrival instant and
    * the wrong water. Each day owns its own `trip_schedule_days.startsAt`;
