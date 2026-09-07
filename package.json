@@ -80,7 +80,8 @@
     "build:sw": "node scripts/build-service-worker.mjs",
     "check:context-budget": "node scripts/check-context-budget.mjs",
     "agent:health": "node scripts/agent-health.mjs",
-    "simulate:day": "node scripts/simulate-day.mjs"
+    "simulate:day": "node scripts/simulate-day.mjs",
+    "persona:bots": "node scripts/persona-bots.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch-logs": "^3.1126.0",

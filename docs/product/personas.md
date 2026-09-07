@@ -11,6 +11,15 @@ surfaces it touches and check the change against their "what to hold the line on
 find a new gap for a persona, add it to `features/story-backlog.md` rather than editing the narrative here
 — this document should stay a stable frame, not a running bug list.
 
+**A machine reads it too, every Monday.** `pnpm persona:bots` walks each persona's surfaces against
+the demo shop and files what it finds as `needs-triage` issues, under a hard weekly ceiling —
+[testing.md](../engineering/testing.md#the-weekly-persona-walk) and ADR
+[20260907-persona-bots-file-under-a-ceiling](../architecture/decisions/20260907-persona-bots-file-under-a-ceiling.md).
+It only ever probes the lines that are decidable from the rendered page: an axe violation, a missing
+skip link, a message key on screen, a page that did not render. Everything below that reads as a
+judgement — whether a refusal's reason is *true*, whether the jargon is explained — is still a
+person's to make, and the surfaces the walk visits are listed in `scripts/persona-bots/personas.mjs`.
+
 ## Contents
 
 | # | Persona | Surfaces |

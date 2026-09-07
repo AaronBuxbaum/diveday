@@ -77,3 +77,6 @@ public/manifest-sw.js
 
 # One-day simulation output (`pnpm simulate:day`): a screenshot per state and the transcript.
 /simulation/
+
+# Weekly persona walk output (`pnpm persona:bots`): findings.json and a screenshot per surface.
+/persona-bots/
