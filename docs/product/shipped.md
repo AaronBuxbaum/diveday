@@ -22,6 +22,46 @@ frame and nothing inside it — there is no seeded catalog of seasons, on the sa
 site's briefing (ADR
 [20260813-dive-site-briefings-are-the-shops-own-words](../architecture/decisions/20260813-dive-site-briefings-are-the-shops-own-words.md)).
 
+## Moon and light on night departures (delivered 2026-09-07)
+
+N-03 from the 2026-09-07 improvement-ideas decision sheet (issue #1467). Any departure still out at
+sunset carries one line of sky: when the sun sets, when civil twilight ends, and the moon's phase
+and illuminated share. `src/lib/sky.ts` computes all of it from the shop's own coordinates with the
+standard low-precision solar and lunar series — no dependency, no network call, accurate to a minute
+against published tables — and hands back a phase *code* that `src/i18n/sky-labels.ts` words in the
+reader's language. It reaches a diver in three places: the briefing's "The day", the thread's
+dock-day rhythm, and the night-before email. It informs and gates nothing, and a shop that has never
+set its address gets no line rather than a guess.
+
+## Something watches from outside, and anyone can ask (delivered 2026-09-07)
+
+N-55 from the 2026-09-07 improvement-ideas decision sheet (issue #1466), closing H-04's last open
+item and the first row of H-45's sequence. A **Route 53 health check** polls `/api/health` every 30
+seconds from AWS's global checker fleet — outside the account, so it survives the outage that takes
+every other alerting path down with it — matching `"status":"ok"` in the body as well as the 200, so
+a parked domain or a CDN error shell reads as down. Its CloudWatch alarm is declared as
+`UPTIME_TARGETS` in `infra/lib/observability.ts`, reaches `alerts@dive.day` in about four minutes,
+and is the one alarm in the stack that treats **missing data as breaching**: a monitor gone quiet is
+indistinguishable from the outage it watches for. **`/status`** answers the same question in public
+— no session, live checks run in the request that renders it, the app and the database reported
+separately so a shop can tell our incident from their wifi, and a timestamp saying when. Nothing on
+it is cached and nothing is hand-operated. ADR
+[20260907-external-uptime-monitor](../architecture/decisions/20260907-external-uptime-monitor.md);
+the browser canary that renders a real shop's schedule stays open, waiting on a pilot slug.
+
+## The day's profile, before booking (delivered 2026-09-07)
+
+N-06 from the 2026-09-07 improvement-ideas decision sheet (issue #1479). "The day" on the public
+departure page now states each dive's planned time in the water and the gap on the surface between
+two of them — the shop's own rhythm and any per-site or per-leg override, derived by
+`src/lib/day-profile.ts` off the dock-day timeline's own arithmetic, so the figures a diver reads
+before booking match the ones their thread reads after. No clock: durations promise no schedule, and
+the beat stays time-neutral. Under it, a reader with no account can name the card they hold and read
+which of the day's sites goes deeper than that card covers (`statedLevelDepthLimit`,
+`checkDepthCeiling` in the shop's own unit). The answer is held in that browser and nowhere else —
+no `people` row, nothing that travels with the booking — and it **gates nothing**: the site's
+maximum is not the dive plan (H-08).
+
 ## The departures board (delivered 2026-09-07)
 
 N-23 from the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1426). A shop mints

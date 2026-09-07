@@ -157,6 +157,28 @@ export function diverDepthLimit(
   return { ceiling: levelLimit, basis: "certification", level };
 }
 
+/**
+ * The ceiling a **card** carries, read straight off the ladder — for the
+ * reader who has *stated* a rung rather than had one verified.
+ *
+ * The public departure page has no diver on file: an anonymous visitor picks
+ * their level from a control and is told how the day's sites sit against it
+ * (issue #1479). So this deliberately makes neither adjustment
+ * `diverDepthLimit` makes, because neither fact has been said: there is no date
+ * of birth to place a junior band with, and no specialty card to lift an Open
+ * Water diver to the recreational limit. It is a claim about the card, and the
+ * surfaces rendering it name the card in the same sentence, so a Deep specialty
+ * holder or a 13-year-old can see which fact it was answering.
+ *
+ * `null` is the reader saying they hold nothing yet, which is the entry-level
+ * DSD ceiling rather than silence — the same call `diverDepthLimit` makes, and
+ * for the same reason.
+ */
+export function statedLevelDepthLimit(level: CertificationLevel | null): DepthLimit {
+  if (!level) return { ceiling: NO_CARD_LIMIT, basis: "no_card", level: null };
+  return { ceiling: LEVEL_DEPTH_LIMIT[level], basis: "certification", level };
+}
+
 export type DepthCeilingCheck =
   /** No site depth recorded, or nothing to measure. Say nothing. */
   | { status: "unknown" }

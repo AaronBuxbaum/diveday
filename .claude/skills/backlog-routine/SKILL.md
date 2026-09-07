@@ -88,7 +88,8 @@ either build it or say why you are not.
    their nav label" (four already agreed, through a duplicate message key). When the premise does
    not survive, say so in the PR **and** the issue, and build what the evidence supports.
 7. **Cut the branch, commit once, open the draft PR and extend the stack** (below), then build it.
-8. **Verify.** `pnpm check` green, e2e for any flow you touched, and *look at* every surface you
+8. **Verify.** The local gate green (`pnpm check:repo`, `pnpm lint`, `pnpm typecheck`,
+   `pnpm test:changed`; the whole `pnpm check` runs on CI), a focused e2e for any flow you touched, and *look at* every surface you
    changed in both schemes. Read each visual diff against the actual image before writing a word
    about it — `pnpm visual:report --commit <sha>` writes the PNGs.
 9. **Finish the PR you already opened** at step 7 — body, position line, diff explanation — and

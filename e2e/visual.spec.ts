@@ -512,6 +512,9 @@ const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 /** The seeded reef charter, the departure most of the staff tour hangs off. */
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
+/** The demo's night charter: 7:30 PM to 11:00 PM, in the water after dark. */
+const NIGHT_TRIP = "Night Dive — City of Washington";
+
 /**
  * A departure far enough out that D18's re-entry offers are still worth making.
  *
@@ -1249,6 +1252,11 @@ function publicReefCard(page: Page) {
   return page.locator("li").filter({ hasText: REEF_TRIP });
 }
 
+/** The same card, for the night charter. */
+function publicNightCard(page: Page) {
+  return page.locator("li").filter({ hasText: NIGHT_TRIP });
+}
+
 /** Open the seeded reef charter's staff record, the way staff reach it. */
 async function openReefTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -1636,6 +1644,27 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "departures-board", scheme);
       });
 
+      /**
+       * **The regional pages** (issue #1436, N-49), the two anonymous surfaces
+       * a diver meets before a shop's own storefront. The demo shop is a demo
+       * and is excluded from both, so what is in the picture is the pair of
+       * real Key Largo neighbours `seedRegionNeighbours` seeds — a populated
+       * state on purpose, since an empty ledger would photograph the empty
+       * state rather than the page.
+       */
+      test(`the regional index renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/dive");
+        await page.getByRole("heading", { level: 1, name: "Dive shops by town" }).waitFor();
+        await capture(page, "regions-index", scheme);
+      });
+
+      test(`one town's dive shops render true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/dive/key-largo");
+        // The town's own <h1>, which the index never renders.
+        await page.getByRole("heading", { level: 1, name: "Dive shops in Key Largo" }).waitFor();
+        await capture(page, "region-shops", scheme);
+      });
+
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/");
         await capture(page, "landing", scheme);
@@ -1933,6 +1962,32 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The one departure whose sky is an operational fact** (issue #1467).
+       *
+       * `site-briefing` above photographs the reef morning, where there is
+       * nothing to say about the light and the line is correctly absent. The
+       * night charter casts off at 7:30 PM, half an hour before a July sunset,
+       * and dives both tanks in the dark — so it is the only departure on the
+       * demo board that renders sunset, civil dusk and the moon, and without
+       * this capture that line has no baseline anywhere.
+       *
+       * The clock is frozen (`E2E_FROZEN_CLOCK`) and the shop's coordinates are
+       * seeded, so both times and the phase are fixed: a diff here is a change
+       * in the arithmetic or the copy, never the calendar moving.
+       */
+      test(`the night charter names the light and the moon (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        await publicNightCard(page).getByRole("link", { name: NIGHT_TRIP }).click();
+        await page.getByRole("heading", { name: "The day" }).waitFor();
+        // The line this capture exists for. Waiting on it means the shot can
+        // never be of a page that quietly decided the departure sails in
+        // daylight.
+        await page.getByText(/^Sunset /).waitFor();
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await capture(page, "site-briefing-night-sky", scheme);
+      });
+
+      /**
        * **The same departure with the pitch's door open** (ADR
        * 20260904-reef-all-the-way-down, decision 1).
        *
@@ -1990,6 +2045,46 @@ for (const scheme of ["light", "dark"] as const) {
         // hydrate so the shot is of the settled page, not of the form mounting.
         await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "site-briefing-requirements", scheme);
+      });
+
+      /**
+       * **The day's profile, answered** (issue #1479, N-06).
+       *
+       * The two captures above photograph "The day" as a run of sites. This one
+       * is the state a reader reaches by *using* it: the shop's planned times
+       * in the water and on the surface, and — once a card is named — the
+       * sentence saying which of the day's sites goes deeper than that card
+       * covers. It is the one place a public page says something depth-shaped
+       * to a diver, and nothing else can photograph it, since the answer only
+       * exists after a selection nobody else's spec makes.
+       *
+       * The Duane is the departure that produces it: 37 m against an Open Water
+       * card's 18. Its id comes off the staff board on a disposable context,
+       * the same CR-019 pattern as the requirement note above, so `page` stays
+       * the anonymous visitor being photographed.
+       */
+      test(`the day's profile answers a stated card (${scheme})`, async ({
+        page,
+        browser,
+        workerBaseURL,
+        staffStorageState,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await tripIdWithoutSigningIn(
+          browser,
+          workerBaseURL,
+          await staffStorageState("owner"),
+          DEEP_CHARTER,
+        );
+        await page.goto(`/s/blue-mantis/trips/${tripId}`);
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await page
+          .getByLabel("See these depths against your card")
+          .selectOption({ label: "Open Water" });
+        // The sentence the selection produces — waiting on it means the shot
+        // can never be of the picker before it answered.
+        await page.getByText(/past the 18 m your card covers/).waitFor();
+        await capture(page, "day-profile-ceiling", scheme);
       });
 
       /**
@@ -2771,6 +2866,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/terms");
         await page.getByRole("heading", { level: 1 }).waitFor();
         await capture(page, "terms", scheme);
+      });
+
+      // The page a shop owner opens on their worst morning, so the one whose
+      // dark mode and phone width are worth a baseline: a status mark, a
+      // headline, two ruled rows and a timestamp. The clock is frozen by the
+      // harness, so "Last checked …" is stable pixels rather than a mask
+      // (ADR 20260907-external-uptime-monitor).
+      test(`the status page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/status");
+        await page.getByRole("heading", { level: 1 }).waitFor();
+        await capture(page, "status", scheme);
       });
 
       test(`the about page renders true to the design (${scheme})`, async ({ page }) => {

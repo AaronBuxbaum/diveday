@@ -27,6 +27,25 @@
 //     nine-hour wait-loop of 2026-08-15: a `pnpm test` piped through `tail`, backgrounded,
 //     watched for a marker that could never arrive.
 //
+//  4. The whole suite, locally. A bare `pnpm test`, `pnpm e2e`, `pnpm check` or `pnpm visual`
+//     with no file, spec or filter runs work that belongs to CI's sharded runners
+//     (docs/agents/verifying.md: measured 2026-08-28, twenty minutes local without finishing
+//     against a few on CI, and a saturated box starves everything else on it). The focused
+//     forms and `pnpm test:changed` are what a session runs. `DIVEDAY_ALLOW_WHOLE_SUITE=1`
+//     in front of the command is the escape hatch, for the rare run that is the point.
+//
+//  5. A generated artifact read through the shell — `cat pnpm-lock.yaml`, `head .next/...`,
+//     a Drizzle `snapshot.json`. The Read tool's own guard (`guard-read.mjs`) refuses these;
+//     this is the same rule at the other door, so the shell is not the way around it.
+//
+//  6. A wholesale discard on a dirty tree — `git reset --hard`, `git checkout .`,
+//     `git restore .`, `git clean -f`. AGENTS.md's Parallel-work section assumes another
+//     session's uncommitted work may be sitting in this checkout, and these are the commands
+//     that would throw it away without a trace. On a clean tree they discard nothing and pass;
+//     on a dirty one the refusal lists what would be lost. `git push --force` without
+//     `--force-with-lease`, and any push to `main`, are refused unconditionally: one
+//     overwrites a branch somebody else may have advanced, the other skips the pull request.
+//
 // The contract is Claude Code's: JSON on stdin, exit 2 with the reason on stderr to block,
 // exit 0 to stay out of the way. It **fails open** on anything it does not understand —
 // unparseable payload, unexpected shape, its own bug — because a guard that blocks the
@@ -37,7 +56,35 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+/** The escape hatch for rule 4, written in front of the command like any other variable. */
+export const WHOLE_SUITE_OVERRIDE = "DIVEDAY_ALLOW_WHOLE_SUITE=1";
+
+/** Package scripts that run a whole suite when handed nothing to focus on. */
+const WHOLE_SUITE_SCRIPTS = new Set(["test", "e2e", "e2e:run", "check", "visual"]);
+
+/** Flags that narrow a run to something a session can wait for. */
+const FOCUS_FLAGS =
+  /^(?:--changed|--related|--shard|-t|--testNamePattern|-g|--grep|--project|--last-failed)(?:=|$)/;
+
+/** Generated artifacts nobody reads whole; the shell's half of `guard-read.mjs`. */
+const GENERATED_ARTIFACT =
+  /(?:^|[\s/])(?:pnpm-lock\.yaml|\.next\/|playwright-report\/|test-results\/|drizzle\/[^\s]*\/(?:snapshot|_journal)\.json)/;
+
+/** Commands whose only purpose is to print a file. */
+const PRINTERS = /^(?:cat|head|tail|less|more|bat)\b/;
+
+function workingTreeChanges() {
+  const status = readBounded("git", ["status", "--porcelain"], {
+    cwd: ROOT,
+    encoding: "utf8",
+    timeoutMs: SUBPROCESS_TIMEOUTS.git,
+  });
+  return status.split("\n").filter(Boolean);
+}
 
 /** Commands whose output an agent has to wait minutes for. */
 const LONG_RUNNING = [
@@ -114,12 +161,125 @@ function segments(command) {
     .filter(Boolean);
 }
 
+/** The tokens after a leading run of `NAME=value` assignments. */
+function withoutEnvAssignments(tokens) {
+  let index = 0;
+  while (index < tokens.length && /^[A-Z_][A-Z0-9_]*=/.test(tokens[index])) index += 1;
+  return tokens.slice(index);
+}
+
+/**
+ * Whether a whole-suite script was handed nothing to focus on: no positional argument and no
+ * flag that narrows the run. `--reporter=dot` narrows nothing.
+ */
+function isUnfocused(args) {
+  return !args.some((token) => !token.startsWith("-") || FOCUS_FLAGS.test(token));
+}
+
+/**
+ * Rule 4's refusal for one segment, or null. Split out because it looks at three different
+ * command shapes — a package script, `pnpm exec vitest run`, `pnpm exec playwright test` —
+ * that share one reason.
+ */
+function wholeSuiteViolation(segment, scripts) {
+  const tokens = segment.split(/\s+/);
+  if (tokens.includes(WHOLE_SUITE_OVERRIDE)) return null;
+  const command = withoutEnvAssignments(tokens);
+  if (command[0] !== "pnpm") return null;
+
+  let script = null;
+  let args = [];
+  if (command[1] === "exec" && command[2] === "vitest" && command[3] === "run") {
+    script = "test";
+    args = command.slice(4);
+  } else if (command[1] === "exec" && command[2] === "playwright" && command[3] === "test") {
+    script = "e2e";
+    args = command.slice(4);
+  } else {
+    const name = command[1] === "run" ? command[2] : command[1];
+    if (!WHOLE_SUITE_SCRIPTS.has(name) || !scripts.has(name)) return null;
+    script = name;
+    args = command.slice(command[1] === "run" ? 3 : 2);
+  }
+  if (!isUnfocused(args)) return null;
+
+  const focused = {
+    test: "`pnpm test <file> --reporter=dot` for the test you are iterating on and `pnpm test:changed` before you push",
+    e2e: "`pnpm e2e <spec> --reporter=line` (or `pnpm e2e:run <spec>` after one `pnpm e2e:build`)",
+    "e2e:run": "`pnpm e2e:run <spec> --reporter=line`",
+    check:
+      "`pnpm check:repo`, `pnpm lint`, `pnpm typecheck` and `pnpm test:changed` — the four local halves of the gate",
+    visual: "a filtered visual-spec run (see the verify skill), or push and read CI's report",
+  }[script];
+  return (
+    `\`${segment}\` runs the whole suite on this box. That work belongs to CI, which shards it across ` +
+    `dedicated runners while a local run saturates the machine for twenty minutes and starves everything ` +
+    `else on it (docs/agents/verifying.md). Run ${focused}. If the whole run is genuinely the point, ` +
+    `say so in front of the command: \`${WHOLE_SUITE_OVERRIDE} ${segment}\`.`
+  );
+}
+
+/**
+ * Rule 6's refusal for one segment, or null. `changes` is the working tree's `git status
+ * --porcelain` lines, computed lazily and only for a command that would discard them.
+ */
+function discardViolation(segment, changes) {
+  const tokens = withoutEnvAssignments(segment.split(/\s+/));
+  if (tokens[0] !== "git") return null;
+  const [, subcommand, ...rest] = tokens;
+
+  if (subcommand === "push") {
+    const force = rest.some((token) => token === "--force" || token === "-f");
+    if (force && !rest.some((token) => token.startsWith("--force-with-lease"))) {
+      return (
+        `\`${segment}\` — \`--force\` overwrites whatever the branch holds now, including a commit another session or ` +
+        `a reviewer pushed since you last fetched. Use \`--force-with-lease\`, which refuses exactly that case.`
+      );
+    }
+    const toMain = rest.some(
+      (token) => token === "main" || token.endsWith(":main") || token === "refs/heads/main",
+    );
+    if (toMain) {
+      return (
+        `\`${segment}\` pushes to \`main\`. Nothing lands on \`main\` except through a pull request ` +
+        `(AGENTS.md, Parallel work) — push your branch with \`git push -u origin <branch>\` and open one.`
+      );
+    }
+    return null;
+  }
+
+  const wholesale =
+    (subcommand === "reset" && rest.includes("--hard")) ||
+    // `git checkout .` and `git checkout -- .` (never `git checkout <branch>`).
+    (subcommand === "checkout" && rest.length > 0 && rest[rest.length - 1] === ".") ||
+    (subcommand === "restore" && rest.some((token) => token === "." || token === ":/")) ||
+    (subcommand === "clean" &&
+      rest.some((token) => /^-[a-zA-Z]*f/.test(token) || token === "--force"));
+  if (!wholesale) return null;
+
+  const dirty = changes();
+  if (dirty.length === 0) return null;
+  const listed = dirty.slice(0, 8).join(", ");
+  const more = dirty.length > 8 ? `, and ${dirty.length - 8} more` : "";
+  return (
+    `\`${segment}\` would discard ${dirty.length} uncommitted change${dirty.length === 1 ? "" : "s"} in this checkout ` +
+    `(${listed}${more}), and AGENTS.md's Parallel-work section assumes some of them may belong to another session. ` +
+    `Commit yours as a WIP first, or move the experiment to a \`git worktree\`; on a clean tree this command passes.`
+  );
+}
+
 /**
  * The reason this command is refused, or null. Exported for the tests: what matters about
  * this guard is not that it blocks but that it never blocks something legitimate — a guard
  * that cries wolf gets worked around, and then it protects nothing.
+ *
+ * `changes` is how the tests stand in a working tree without needing one on disk.
  */
-export function violationFor(command, scripts = packageScripts()) {
+export function violationFor(
+  command,
+  scripts = packageScripts(),
+  { changes = workingTreeChanges } = {},
+) {
   for (const segment of segments(withoutInertText(command))) {
     const pnpmScript = segment.match(/^pnpm\s+(?:run\s+)?([\w:.-]+)\b/);
     if (pnpmScript && scripts.has(pnpmScript[1]) && hasBareDoubleDash(segment)) {
@@ -163,6 +323,24 @@ export function violationFor(command, scripts = packageScripts()) {
         `\`${withoutRedirection(segment.split("|")[0])} > /tmp/out.txt 2>&1\` — or filter with \`grep --line-buffered\`.`
       );
     }
+
+    const wholeSuite = wholeSuiteViolation(segment, scripts);
+    if (wholeSuite) return wholeSuite;
+
+    const printed = segment
+      .split("|")
+      .map((part) => part.trim())
+      .find((part) => PRINTERS.test(part) && GENERATED_ARTIFACT.test(part));
+    if (printed) {
+      return (
+        `\`${printed}\` prints a generated artifact whole — the lockfile, build output, a Drizzle snapshot or a ` +
+        `Playwright report is thousands of lines nobody reads (AGENTS.md, "Context economy"). For a specific ` +
+        `lookup, \`grep -n\` it for the line you need; \`src/db/schema.ts\` is the schema's source of truth.`
+      );
+    }
+
+    const discard = discardViolation(segment, changes);
+    if (discard) return discard;
   }
   return null;
 }
