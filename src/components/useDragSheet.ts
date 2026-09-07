@@ -111,8 +111,15 @@ export function useDragSheet({
   const start = useRef<{ y: number; height: number } | null>(null);
   const recent = useRef<{ y: number; at: number } | null>(null);
   const moved = useRef(false);
+  /** The pointer this gesture captured, so the release can hand it back. */
+  const captured = useRef<number | null>(null);
+  const sheetNode = useRef<HTMLElement | null>(null);
 
   const end = useCallback(() => {
+    if (captured.current !== null) {
+      sheetNode.current?.releasePointerCapture?.(captured.current);
+      captured.current = null;
+    }
     start.current = null;
     recent.current = null;
     moved.current = false;
@@ -133,7 +140,7 @@ export function useDragSheet({
     const onHandle = (event.target as HTMLElement | null)?.closest("[data-sheet-handle]") !== null;
     const scrolled = findScrolled(sheet);
     if (!onHandle && scrolled > 0) return;
-    sheet.setPointerCapture?.(event.pointerId);
+    sheetNode.current = sheet;
     start.current = { y: event.clientY, height: sheet.getBoundingClientRect().height };
     recent.current = { y: event.clientY, at: event.timeStamp };
   };
@@ -143,6 +150,16 @@ export function useDragSheet({
     if (from === null) return;
     const delta = event.clientY - from.y;
     if (!moved.current && Math.abs(delta) < SLOP_PX) return;
+    if (!moved.current) {
+      // **Capture only once this is a drag, never on the press.** Capturing on
+      // `pointerdown` retargets every later pointer event to the sheet, and a
+      // tap that never moves then produces no `click` on the row underneath —
+      // so every destination in the sheet silently stopped navigating, which
+      // is what `staff-nav.spec.ts` caught. Below the slop there is no
+      // gesture (the contract's own words), so there is nothing to capture.
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      captured.current = event.pointerId;
+    }
     moved.current = true;
     setDragging(true);
     // Down is one for one; up resists, so the sheet reads as attached at the
@@ -170,6 +187,10 @@ export function useDragSheet({
       end();
       onDismiss();
       return;
+    }
+    if (captured.current !== null) {
+      sheetNode.current?.releasePointerCapture?.(captured.current);
+      captured.current = null;
     }
     setDragging(false);
     moved.current = false;
