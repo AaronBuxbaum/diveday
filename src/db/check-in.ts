@@ -18,6 +18,13 @@ export type CheckInQueueRow = {
   personId: string;
   personName: string;
   email: string | null;
+  /**
+   * For the guardian rule (`src/lib/guardian.ts`): a minor's paper release
+   * names its co-signer, so the counter's own paper-signature form has to know
+   * whether to ask (ADR 20260907-guardian-co-signature). Null when the shop
+   * never asked — the rule fails open, as H-08's minimum-age gate does.
+   */
+  dateOfBirth: string | null;
   tripId: string;
   tripTitle: string;
   startsAt: Date;
@@ -87,6 +94,7 @@ export async function listCheckInQueue(
       personId: people.id,
       personName: people.fullName,
       email: people.email,
+      dateOfBirth: people.dateOfBirth,
       tripId: trips.id,
       tripTitle: trips.title,
       startsAt: trips.startsAt,

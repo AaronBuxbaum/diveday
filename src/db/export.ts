@@ -869,6 +869,7 @@ export async function loadShopExportBundleInput(
             // bundle is also the *backup*: a shop that opted out and later
             // restored from one must not come back published.
             "search_listing_opt_out_at",
+            "tide_window_public",
             "conservation_commitments",
             "tagline",
             "description",
@@ -929,6 +930,7 @@ export async function loadShopExportBundleInput(
               shop.seasonStartMonth,
               shop.seasonStartDay,
               shop.searchListingOptOutAt,
+              shop.tideWindowPublic,
               JSON.stringify(shop.conservationCommitments),
               shop.tagline,
               shop.description,
@@ -2393,6 +2395,16 @@ export async function loadShopExportBundleInput(
             "medical_clearance_declined_by_name",
             "medical_clearance_evaluated_on",
             "medical_clearance_physician_name",
+            // The guardian's half of a minor's release (ADR
+            // 20260907-guardian-co-signature): who co-signed, as what, how,
+            // and when. Inside the seal, so a destination that re-verified the
+            // hash without them would read every minor's release as tampered.
+            "guardian_name",
+            "guardian_relationship",
+            "guardian_email",
+            "guardian_signature_method",
+            "guardian_consented_at",
+            "guardian_signed_at",
             "integrity_hash",
             "integrity_version",
             "superseded_at",
@@ -2438,6 +2450,12 @@ export async function loadShopExportBundleInput(
               : null,
             row.medicalClearanceEvaluatedOn,
             row.medicalClearancePhysicianName,
+            row.guardianName,
+            row.guardianRelationship,
+            row.guardianEmail,
+            row.guardianSignatureMethod,
+            row.guardianConsentedAt,
+            row.guardianSignedAt,
             row.integrityHash,
             row.integrityVersion,
             row.supersededAt,
@@ -3038,6 +3056,8 @@ export async function loadShopExportBundleInput(
             "requires_nitrox",
             "forecast_latitude",
             "forecast_longitude",
+            "tide_station_id",
+            "tide_preference",
             "satellite_image_url",
             "route_image_url",
             "route_points",
@@ -3082,6 +3102,8 @@ export async function loadShopExportBundleInput(
             row.requiresNitrox,
             row.forecastLatitude,
             row.forecastLongitude,
+            row.tideStationId,
+            row.tidePreference,
             row.satelliteImageUrl,
             row.routeImageUrl,
             // The drawn route travels with the site, so a shop that exports
@@ -4320,6 +4342,16 @@ export async function loadDiverExportBundleInput(
             "medical_clearance_declined_by_name",
             "medical_clearance_evaluated_on",
             "medical_clearance_physician_name",
+            // Who co-signed, when the diver was a minor: the guardian's name
+            // and email are a third party's personal data, but they are on
+            // *this diver's* release, which is the record the subject-access
+            // bundle exists to hand over whole (ADR 20260907-guardian-co-signature).
+            "guardian_name",
+            "guardian_relationship",
+            "guardian_email",
+            "guardian_signature_method",
+            "guardian_consented_at",
+            "guardian_signed_at",
             "superseded_at",
             "expires_at",
             "created_at",
@@ -4347,6 +4379,12 @@ export async function loadDiverExportBundleInput(
               : null,
             row.medicalClearanceEvaluatedOn,
             row.medicalClearancePhysicianName,
+            row.guardianName,
+            row.guardianRelationship,
+            row.guardianEmail,
+            row.guardianSignatureMethod,
+            row.guardianConsentedAt,
+            row.guardianSignedAt,
             row.supersededAt,
             row.expiresAt,
             row.createdAt,

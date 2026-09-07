@@ -34,14 +34,17 @@ import {
 } from "@/db/waivers";
 import { diverContrastCopy } from "@/i18n/contrast-copy";
 import { fill, pluralForm } from "@/i18n/fill";
+import { diverGuardianRelationshipOptions } from "@/i18n/guardian-labels";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { telHref } from "@/lib/contact-links";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { GUARDIAN_RELATIONSHIPS, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import {
   medicalProgress,
@@ -83,7 +86,82 @@ const completeSignatureSchema = z.object({
   acknowledged: z.literal("on"),
 });
 
-type WaiverInvalidField = "medical" | "signerName" | "signerNameMismatch" | "acknowledged";
+/**
+ * The guardian section as typed, for "Save and finish later" — anything goes,
+ * because nothing here is evidence yet.
+ */
+const guardianDraftSchema = z.object({
+  guardianName: z.string().trim().max(120).optional(),
+  guardianRelationship: z.string().trim().max(40).optional(),
+  guardianEmail: z.string().trim().max(200).optional(),
+  guardianAcknowledged: z.string().max(4).optional(),
+});
+
+/**
+ * The guardian section as a signature (ADR 20260907-guardian-co-signature):
+ * a name, one of the two relationship codes, a reachable address, and the
+ * guardian's own consent box. Applied only when the diver is a minor on the
+ * signing day; an adult's form never renders these controls.
+ */
+const completeGuardianSchema = z.object({
+  guardianName: z.string().trim().min(2).max(120),
+  guardianRelationship: z.enum(GUARDIAN_RELATIONSHIPS),
+  guardianEmail: z.string().trim().email().max(200),
+  guardianAcknowledged: z.literal("on"),
+});
+
+/**
+ * The guardian section as typed, for the draft — or `undefined` when the page
+ * never rendered one, so an adult's draft carries no guardian and a stray
+ * field in a hand-built request stores nothing.
+ *
+ * **Module scope, not a closure inside the component.** The two inline
+ * `"use server"` actions below close over their enclosing scope, and Next
+ * serialises that scope to make the form work with no JavaScript at all — a
+ * *function* in it cannot be serialised, so declaring this beside them broke
+ * progressive enhancement for the whole waiver form ("Failed to serialize an
+ * action for progressive enhancement", every render). It takes the one fact it
+ * needs as an argument instead, so the actions close over a boolean.
+ */
+function guardianDraftFrom(formData: FormData, guardianRequired: boolean) {
+  if (!guardianRequired) return undefined;
+  const parsed = guardianDraftSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return undefined;
+  return {
+    name: parsed.data.guardianName || null,
+    relationship: parsed.data.guardianRelationship || null,
+    email: parsed.data.guardianEmail || null,
+    acknowledged: parsed.data.guardianAcknowledged === "on",
+  };
+}
+
+type WaiverInvalidField =
+  | "medical"
+  | "signerName"
+  | "signerNameMismatch"
+  | "acknowledged"
+  | "guardianName"
+  | "guardianNameIsDiver"
+  | "guardianRelationship"
+  | "guardianEmail"
+  | "guardianAcknowledged";
+
+/**
+ * The field names a zod refusal names, as a set. Aliased rather than written
+ * inline three times: a `ReadonlySet<PropertyKey>` parameter followed by
+ * another one puts a `>` and a `<` around two lines of prose-shaped text,
+ * which `pnpm check:copy` reads — correctly, by its own rule — as a JSX text
+ * node in a `.tsx` file.
+ */
+type IssuePaths = ReadonlySet<PropertyKey>;
+
+/** The guardian controls, in tab order, for the fallback error banner. */
+const GUARDIAN_FIELDS = [
+  "guardianName",
+  "guardianRelationship",
+  "guardianEmail",
+  "guardianAcknowledged",
+] as const satisfies readonly WaiverInvalidField[];
 
 /**
  * Which control to point the fallback error banner at, in the same order a
@@ -96,13 +174,14 @@ type WaiverInvalidField = "medical" | "signerName" | "signerNameMismatch" | "ack
  * enforcement of record either way.
  */
 function firstInvalidWaiverField(
-  signatureIssuePaths: ReadonlySet<PropertyKey>,
+  signatureIssuePaths: IssuePaths,
   answers: MedicalAnswers | null,
+  guardianIssuePaths: IssuePaths = new Set(),
 ): WaiverInvalidField | undefined {
   if (!answers) return "medical";
   if (signatureIssuePaths.has("signerName")) return "signerName";
   if (signatureIssuePaths.has("acknowledged")) return "acknowledged";
-  return undefined;
+  return GUARDIAN_FIELDS.find((field) => guardianIssuePaths.has(field));
 }
 
 /**
@@ -136,6 +215,19 @@ const WAIVER_FIELD_ERROR: Record<WaiverInvalidField, { textKey: DiverMessageKey;
     // it gets its own sentence rather than the generic "type your full name".
     signerNameMismatch: { textKey: "waiver.errorNameMismatch", anchor: "signerName" },
     acknowledged: { textKey: "waiver.errorAgreement", anchor: "acknowledged" },
+    // The guardian's controls, refused one at a time on the control itself.
+    guardianName: { textKey: "waiver.errorGuardianName", anchor: "guardianName" },
+    // A guardian who typed the diver's own name: same field, different fix.
+    guardianNameIsDiver: { textKey: "waiver.errorGuardianNameIsDiver", anchor: "guardianName" },
+    guardianRelationship: {
+      textKey: "waiver.errorGuardianRelationship",
+      anchor: "guardianRelationship",
+    },
+    guardianEmail: { textKey: "waiver.errorGuardianEmail", anchor: "guardianEmail" },
+    guardianAcknowledged: {
+      textKey: "waiver.errorGuardianAgreement",
+      anchor: "guardianAcknowledged",
+    },
   };
 
 /**
@@ -450,10 +542,22 @@ export default async function WaiverPage({
   // it is ever a refusal — and it discloses nothing this booking-scoped
   // bearer link doesn't already stand for.
   const [signerOnFile] = await db
-    .select({ fullName: people.fullName })
+    .select({ fullName: people.fullName, dateOfBirth: people.dateOfBirth })
     .from(people)
     .where(eq(people.id, record.personId))
     .limit(1);
+  /**
+   * **A minor signs twice** (ADR 20260907-guardian-co-signature). Decided from
+   * the date of birth the shop holds, on the shop's calendar day this page is
+   * being signed — the same rule `completeWaiver` refuses on, so the section
+   * is never rendered for a diver the writer would not ask, and never absent
+   * for one it would. No date on file reads as an adult (H-08's fail-open).
+   */
+  const guardianRequired = guardianSignatureRequired(
+    signerOnFile?.dateOfBirth,
+    signingDate(nowDate(), shop.timezone),
+  );
+  const draftGuardian = record.draftGuardian;
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
   const draft = record.draftMedicalAnswers;
   /** Only pre-fill draft answers captured against this same questionnaire. */
@@ -556,6 +660,7 @@ export default async function WaiverPage({
       signerName: parsed.data.signerName,
       acknowledged: parsed.data.acknowledged === "on",
       medicalAnswers: answers,
+      guardian: guardianDraftFrom(formData, guardianRequired),
     });
     // Persist the contact now too, so "save and finish later" keeps it — blanks
     // never overwrite what's on file.
@@ -594,11 +699,32 @@ export default async function WaiverPage({
     }
     const parsed = completeSignatureSchema.safeParse(Object.fromEntries(formData));
     const answers = readFormMedicalAnswers(formData, questionnaire);
-    if (!parsed.success || !answers) {
+    // The guardian section is validated only when the page rendered one — the
+    // writer decides the same way, from the date of birth on file, so a form
+    // that omits it for an adult and one that includes it for a minor both
+    // go through; only a minor's form missing it is refused here.
+    const guardian = guardianRequired
+      ? completeGuardianSchema.safeParse(Object.fromEntries(formData))
+      : null;
+    if (!parsed.success || !answers || (guardian && !guardian.success)) {
       const invalidField = firstInvalidWaiverField(
         parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
         answers,
+        guardian && !guardian.success
+          ? new Set(guardian.error.issues.map((issue) => issue.path[0]))
+          : new Set(),
       );
+      // A refused guardian section keeps what the family typed, exactly as the
+      // signature-card refusals below keep the diver's own answers.
+      if (answers) {
+        const typed = signatureSchema.safeParse(Object.fromEntries(formData));
+        await saveWaiverDraft(await getDb(), token, {
+          signerName: typed.success ? typed.data.signerName : undefined,
+          acknowledged: typed.success && typed.data.acknowledged === "on",
+          medicalAnswers: answers,
+          guardian: guardianDraftFrom(formData, guardianRequired),
+        });
+      }
       redirect(refusedSubmitPath(token, invalidField));
     }
     const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
@@ -622,6 +748,14 @@ export default async function WaiverPage({
             phone: contact.data.emergencyContactPhone,
           }
         : undefined,
+      guardian: guardian?.success
+        ? {
+            name: guardian.data.guardianName,
+            relationship: guardian.data.guardianRelationship,
+            email: guardian.data.guardianEmail,
+            agreed: true,
+          }
+        : undefined,
     });
     if (!outcome.ok) {
       // A refused sign-off (most often a typed name that doesn't match the
@@ -636,6 +770,7 @@ export default async function WaiverPage({
         signerName: parsed.data.signerName,
         acknowledged: parsed.data.acknowledged === "on",
         medicalAnswers: answers,
+        guardian: guardianDraftFrom(formData, guardianRequired),
       });
       if (contact.success) {
         if (recordBookingId) {
@@ -663,6 +798,17 @@ export default async function WaiverPage({
       if (outcome.reason === "invalid_signature") {
         redirect(refusedSubmitPath(token, undefined));
       }
+      // The writer asked for a guardian this page did not render (a date of
+      // birth landed on the record between paint and submit): the reload
+      // renders the section, and the refusal points at its first control.
+      if (outcome.reason === "guardian_required") {
+        redirect(refusedSubmitPath(token, "guardianName"));
+      }
+      // Past the schema above, the one way a guardian section is not a
+      // signature is a guardian who typed the diver's own name.
+      if (outcome.reason === "guardian_invalid") {
+        redirect(refusedSubmitPath(token, "guardianNameIsDiver"));
+      }
       redirect(`/waivers/${token}?error=unavailable`);
     }
     await trackEvent({ name: "waiver_signed" });
@@ -681,6 +827,55 @@ export default async function WaiverPage({
     const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
     revalidateAndRedirect(`/waivers/${token}`, readyPath ?? `/waivers/${token}`);
   }
+
+  /**
+   * **One primary** (ADR 20260827-the-divers-thread, decision 5). Sign and
+   * "Save and finish later" used to share a row as two buttons, which on a
+   * phone stacked them at inverted weight — the bordered secondary above the
+   * primary — so the page's one act was the second thing a thumb reached. Sign
+   * is the full width of the card it belongs to, and saving demotes to a text
+   * link on the line with the expiry sentence that explains why you'd want it.
+   * It is still a real submit, so it still works with no JavaScript at all.
+   *
+   * Rendered once, in the **last** card: the diver's signature card for an
+   * adult, the guardian's card for a minor (ADR 20260907-guardian-co-signature).
+   */
+  const signBlock = (
+    <>
+      <SubmitButton
+        pendingLabel={t("waiver.signing")}
+        className={buttonClass({
+          className: `mt-6 w-full disabled:opacity-70 ${labelTextBase}`,
+        })}
+      >
+        {t("waiver.signButton")}
+      </SubmitButton>
+      <p className="mt-4 text-sm text-muted">{t("waiver.signatureNote")}</p>
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted">
+        <button
+          type="submit"
+          formAction={saveDraftAction}
+          // Drafts intentionally accept partial answers — the `required`
+          // on signerName/acknowledged (and the pre-existing one on each
+          // medical radio) would otherwise let the browser block a
+          // legitimate "save what I have so far" submit.
+          formNoValidate
+          // `link`, flush: reads as inline text and still claims the
+          // 44px target `base` bakes in — the wrapper's own answer to
+          // "a control that is not the primary act".
+          className={buttonClass({ variant: "link", size: "sm", flush: true })}
+        >
+          {t("waiver.saveForLater")}
+        </button>
+        <span aria-hidden="true">·</span>
+        <span>
+          {t("waiver.linkExpiresAt", {
+            date: formatDateTimeTz(record.expiresAt, locale, shop.timezone),
+          })}
+        </span>
+      </div>
+    </>
+  );
 
   return (
     <ThreadShell
@@ -947,48 +1142,123 @@ export default async function WaiverPage({
                 {t(signatureCardError.textKey)}
               </FormStatus>
             ) : null}
-            {/* **One primary** (ADR 20260827-the-divers-thread, decision 5).
-                Sign and "Save and finish later" used to share a row as two
-                buttons, which on a phone stacked them at inverted weight — the
-                bordered secondary above the primary — so the page's one act
-                was the second thing a thumb reached. Sign is now the full
-                width of the card it belongs to, and saving demotes to a text
-                link on the line with the expiry sentence that explains why
-                you'd want it. It is still a real submit, so it still works with
-                no JavaScript at all. */}
-            <SubmitButton
-              pendingLabel={t("waiver.signing")}
-              className={buttonClass({
-                className: `mt-6 w-full disabled:opacity-70 ${labelTextBase}`,
-              })}
-            >
-              {t("waiver.signButton")}
-            </SubmitButton>
-            <p className="mt-4 text-sm text-muted">{t("waiver.signatureNote")}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted">
-              <button
-                type="submit"
-                formAction={saveDraftAction}
-                // Drafts intentionally accept partial answers — the `required`
-                // on signerName/acknowledged (and the pre-existing one on each
-                // medical radio) would otherwise let the browser block a
-                // legitimate "save what I have so far" submit.
-                formNoValidate
-                // `link`, flush: reads as inline text and still claims the
-                // 44px target `base` bakes in — the wrapper's own answer to
-                // "a control that is not the primary act".
-                className={buttonClass({ variant: "link", size: "sm", flush: true })}
-              >
-                {t("waiver.saveForLater")}
-              </button>
-              <span aria-hidden="true">·</span>
-              <span>
-                {t("waiver.linkExpiresAt", {
-                  date: formatDateTimeTz(record.expiresAt, locale, shop.timezone),
-                })}
-              </span>
-            </div>
+            {guardianRequired ? null : signBlock}
           </SectionCard>
+
+          {/* **The guardian's card** (ADR 20260907-guardian-co-signature): the
+              second signature a minor's release takes, in the same shape as
+              the first — a typed name, a consent box, the same fine print —
+              plus who they are to the diver and how to reach them. It carries
+              the page's one Sign button whenever it renders, so the last thing
+              on the page is still the act, and nobody signs above a section
+              they have not read. */}
+          {guardianRequired ? (
+            <SectionCard padding="lg">
+              <SectionHeading>{t("waiver.guardianHeading")}</SectionHeading>
+              <p className="mt-2 text-sm text-muted">
+                {t("waiver.guardianIntro", { name: signerOnFile?.fullName ?? "" })}
+              </p>
+              <FieldGrid columns={2} className="mt-4">
+                <Field
+                  label={t("waiver.guardianName")}
+                  error={
+                    signatureCardError?.anchor === "guardianName"
+                      ? t(signatureCardError.textKey)
+                      : undefined
+                  }
+                >
+                  <input
+                    id="guardianName"
+                    name="guardianName"
+                    autoComplete="off"
+                    required
+                    minLength={2}
+                    maxLength={120}
+                    defaultValue={draftGuardian?.name ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field
+                  label={t("waiver.guardianEmail")}
+                  error={
+                    signatureCardError?.anchor === "guardianEmail"
+                      ? t(signatureCardError.textKey)
+                      : undefined
+                  }
+                >
+                  <input
+                    id="guardianEmail"
+                    name="guardianEmail"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="off"
+                    required
+                    maxLength={200}
+                    defaultValue={draftGuardian?.email ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+              </FieldGrid>
+              <FieldGrid columns={1} className="mt-4">
+                <Field
+                  label={t("waiver.guardianRelationship", {
+                    name: signerOnFile?.fullName ?? "",
+                  })}
+                  error={
+                    signatureCardError?.anchor === "guardianRelationship"
+                      ? t(signatureCardError.textKey)
+                      : undefined
+                  }
+                >
+                  <select
+                    id="guardianRelationship"
+                    name="guardianRelationship"
+                    required
+                    defaultValue={draftGuardian?.relationship ?? ""}
+                    className={controlClass}
+                  >
+                    <option value="" disabled>
+                      {t("waiver.guardianRelationshipChoose")}
+                    </option>
+                    {diverGuardianRelationshipOptions(t).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </FieldGrid>
+              <label className="mt-4 flex min-h-11 items-start gap-3 text-base">
+                <input
+                  id="guardianAcknowledged"
+                  name="guardianAcknowledged"
+                  type="checkbox"
+                  value="on"
+                  required
+                  // Kept across a refusal, like the diver's own box above: a
+                  // family that hit one refusal should not have to re-read and
+                  // re-tick the agreement to try the next answer.
+                  defaultChecked={draftGuardian?.acknowledged ?? false}
+                  aria-invalid={
+                    signatureCardError?.anchor === "guardianAcknowledged" ? "true" : undefined
+                  }
+                  aria-describedby={
+                    signatureCardError?.anchor === "guardianAcknowledged"
+                      ? "guardianAcknowledged-error"
+                      : undefined
+                  }
+                  className="mt-1 size-4 shrink-0 accent-primary"
+                />
+                <span>{t("waiver.guardianAgreementCheckbox")}</span>
+              </label>
+              {signatureCardError?.anchor === "guardianAcknowledged" ? (
+                <FormStatus id="guardianAcknowledged-error" className="mt-2">
+                  {t(signatureCardError.textKey)}
+                </FormStatus>
+              ) : null}
+              {signBlock}
+            </SectionCard>
+          ) : null}
         </form>
       </WaiverPacing>
       <p className="mt-8 text-center text-sm text-muted">

@@ -276,6 +276,9 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 
 ### The thread — `/ready/[token]` (and every state after booking)
 
+**Chosen 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), slice 18f, [spec](canvases/20260907-nothing-from-nowhere/SPEC.md)):
+one line beside Add to calendar, *Add to Wallet*, on every state after booking; the pass wears the shop's brand, carries the top card's facts, the diver's name and the crew-set stage, surfaces on the lock screen from the dock call, and updates when the plan moves. Never the thread's URL, a barcode, a price or a medical fact. Rendered only when a platform is configured; otherwise the thread as it ships.
+
 **Proposed 2026-09-04** (same ADR and canvas): one step, "Anything changed?", over the facts the shop kept; provenance on the arrival card; the boat's-back line on the day; the recap becomes a postcard with its number, an image to keep, a private pulse and the next dive with its reason.
 
 **Built 2026-08-29** (slices 7c and 7d) — same ADR and canvas. Extends ADR
@@ -372,6 +375,24 @@ primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
   exist, and the redesign keeps it conditional.
 - **Composition:** status, story, file — a person is a readiness question, a history, and a set of
   facts, in that order; ten co-equal sections answered no question first.
+
+### The departures board — `/board/[token]`
+
+**Built 2026-09-07** — N-23 (owner decision 2026-09-07, issue #1426), the shop's day on a screen
+nobody touches: a TV in the lobby, a tablet on the dock, behind a display link minted at
+Settings → Lobby display.
+
+- **One idea:** the boat you are looking for, from across a room — when it leaves, where it is,
+  how full.
+- **The question it arrives with:** "is my boat still boarding, and where do I go?" — answered by
+  the time, the crew's own stage word and the meeting line on the same row, at 24px or larger.
+- **Controls that dissolved:** all of them. No nav, no session, no tap; the page re-reads itself
+  every minute and the only act (revoke) lives on the settings page that made the link.
+- **Remove first:** anyone's name. The row is a count ("3 of 12 aboard"), a private charter is
+  "Private charter", and the crew line exists only on a link minted with names on.
+- **Composition:** the shop's name and the date, then one row per departure in clock order —
+  time · title, site, meeting point, outlook · stage word and count — on the manifest's
+  `boat-mode` ground so it follows the device's light or dark; the footer says when it last read.
 
 ### The doors — `/sign-in`, `/onboard`, and the token family
 

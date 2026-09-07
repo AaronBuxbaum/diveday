@@ -10,6 +10,7 @@ import type {
 import { checkMinimumAge } from "./age";
 import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
+import { guardianSignatureMissing } from "./guardian";
 import { waiverState } from "./waivers";
 
 /**
@@ -182,6 +183,8 @@ export type ReadinessBlockerCode =
   | "waiver_expired"
   | "medical_review"
   | "medical_not_cleared"
+  /** A minor signed alone; a parent or guardian has not (ADR 20260907-guardian-co-signature). */
+  | "guardian_signature_missing"
   | "certification_missing"
   | "certification_pending"
   | "certification_self_declared"
@@ -226,6 +229,10 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   // usable, and folding it in keeps a diver from appearing under two headings
   // for one fact.
   medical_not_cleared: "waiver",
+  // The release is what is not usable: a minor's signature with no guardian's
+  // beside it is not a signed release, and the fix is the waiver's own (a
+  // fresh link that asks for both).
+  guardian_signature_missing: "waiver",
   certification_missing: "certification",
   certification_pending: "certification",
   certification_self_declared: "certification",
@@ -301,6 +308,10 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   waiver_not_sent: "unknown",
   waiver_pending: "unknown",
   waiver_expired: "unknown",
+  // A minor's release with no guardian on it is not a release the shop can
+  // rely on: as `unknown` as an unsigned one, and nobody aboard can supply
+  // the missing signature.
+  guardian_signature_missing: "unknown",
   identity_unconfirmed: "unknown",
   readiness_unavailable: "unknown",
   requirements_not_configured: "unknown",
@@ -412,6 +423,14 @@ export type ReadinessInput = {
   dateOfBirth?: CalendarDate | null;
   /** The shop-local calendar date the course runs, which is when age is measured. */
   courseDate?: CalendarDate | null;
+  /**
+   * The shop's zone, which turns the instant a release was signed into the
+   * calendar day the guardian rule measures the diver's age on
+   * (`src/lib/guardian.ts`). Defaults to UTC for a caller with no shop in hand
+   * — a day of slack at the boundary against a rule measured in years — and
+   * the one production caller (`src/db/readiness.ts`) passes the shop's own.
+   */
+  timezone?: string;
   now?: Date;
 };
 
@@ -724,6 +743,21 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     // "still waiting on the doctor" (issue #1283).
     if (state === "medical_not_cleared") {
       blockers.push({ code: "medical_not_cleared" });
+    }
+    // A signed release a minor gave alone (ADR 20260907-guardian-co-signature).
+    // Only ever raised over a record that *is* signed: an unsigned, expired or
+    // held release already has its own line above, and a second one here
+    // would tell the crew two things about one fact. Measured on the day the
+    // diver signed, in the shop's own zone — never on today's date.
+    if (
+      input.waiver &&
+      state === "complete" &&
+      guardianSignatureMissing(input.waiver, {
+        dateOfBirth: input.dateOfBirth,
+        timezone: input.timezone ?? "UTC",
+      })
+    ) {
+      blockers.push({ code: "guardian_signature_missing" });
     }
   }
 

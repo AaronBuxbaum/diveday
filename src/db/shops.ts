@@ -7,6 +7,7 @@ import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { FlySafeHours } from "@/lib/fly-safe";
 import type { ShopCurrency } from "@/lib/money";
+import { regionSlugFromLocality } from "@/lib/region";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
 import type { SendWindow } from "@/lib/send-window";
@@ -41,22 +42,28 @@ export async function getShopBySlug(db: AppDb, slug: string) {
  * seasons should stay indexed, because falling out of search is worse than
  * never entering it.
  */
-export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string }[]> {
-  return db
-    .select({ slug: shops.slug })
-    .from(shops)
-    .where(
-      and(
-        eq(shops.isDemo, false),
-        isNull(shops.searchListingOptOutAt),
-        exists(
-          db
-            .select({ one: trips.id })
-            .from(trips)
-            .where(and(eq(trips.shopId, shops.id), eq(trips.status, "scheduled"), liveTrip())),
-        ),
-      ),
-    );
+export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string; name: string }[]> {
+  return db.select({ slug: shops.slug, name: shops.name }).from(shops).where(listedShopScope(db));
+}
+
+/**
+ * **What "a listed shop" means, in one place** — the three conditions above,
+ * as a `where` fragment. The sitemap, `llms.txt` and the regional pages
+ * (`src/db/regions.ts`, issue #1436) all read through it, so a shop that
+ * said no to search is absent from every public list DiveDay publishes on
+ * its behalf, and a fourth reader cannot quietly widen the scope.
+ */
+export function listedShopScope(db: AppDb) {
+  return and(
+    eq(shops.isDemo, false),
+    isNull(shops.searchListingOptOutAt),
+    exists(
+      db
+        .select({ one: trips.id })
+        .from(trips)
+        .where(and(eq(trips.shopId, shops.id), eq(trips.status, "scheduled"), liveTrip())),
+    ),
+  );
 }
 
 export async function getShopById(db: AppDb, id: string) {
@@ -455,6 +462,9 @@ export async function setShopAddress(
       addressCountry: clean(address.addressCountry),
       latitude: address.latitude ?? null,
       longitude: address.longitude ?? null,
+      // Derived, never typed: the regional page a shop appears on follows
+      // its locality wherever the address goes (issue #1436).
+      regionSlug: regionSlugFromLocality(clean(address.addressLocality)),
     })
     .where(eq(shops.id, shopId))
     .returning();
@@ -583,6 +593,20 @@ export async function setShopHospitalityNotes(
       dockCallNote: clean(notes.dockCallNote),
       signOffNote: clean(notes.signOffNote),
     })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * Whether a site's tide window reaches the diver's public departure page
+ * (ADR 20260907-noaa-tide-predictions). Off by default; staff surfaces read
+ * the window regardless of this.
+ */
+export async function setShopTideWindowPublic(db: AppDb, shopId: string, on: boolean) {
+  const [shop] = await db
+    .update(shops)
+    .set({ tideWindowPublic: on })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

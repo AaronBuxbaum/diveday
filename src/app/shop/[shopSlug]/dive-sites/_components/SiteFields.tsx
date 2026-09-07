@@ -17,6 +17,7 @@ import { DOCK_DAY_LIMITS } from "@/lib/diver-planning";
 import { formatDateWithYear } from "@/lib/format";
 import type { CertificationLevel } from "@/lib/readiness";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
+import { TIDE_PREFERENCES, type TidePreference } from "@/lib/tides";
 import {
   type FieldGuideCatalogEntry,
   FieldGuideEditor,
@@ -40,6 +41,8 @@ export type SiteFieldValues = {
   name: string;
   forecastLatitude: number | null;
   forecastLongitude: number | null;
+  tideStationId: string | null;
+  tidePreference: TidePreference;
   locationName: string | null;
   description: string | null;
   satelliteImageUrl: string | null;
@@ -246,6 +249,51 @@ export function SiteFields({
               defaultValue={values?.forecastLongitude ?? ""}
               className={controlClass}
             />
+          </Field>
+          {/* The tide is read at a NOAA station, never at the coordinates
+              above — a reef is rarely a station — so the id is its own field,
+              and the hint carries the one link a staffer needs to find one.
+              A blank id says nothing about the tide anywhere (ADR
+              20260907-noaa-tide-predictions). */}
+          <Field
+            label={t("diveSites.form.tideStationLabel")}
+            hint={t.rich("diveSites.form.tideStationHint", {
+              link: (chunks) => (
+                <a
+                  href="https://tidesandcurrents.noaa.gov/tide_predictions.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary hover:underline"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
+          >
+            {/* No `pattern`: native constraint validation refuses the submit
+                outright, in the browser's own words, and the form never
+                reaches the refusal this repository already writes in both
+                languages and puts on the field. */}
+            <input
+              name="tideStationId"
+              inputMode="numeric"
+              maxLength={7}
+              defaultValue={values?.tideStationId ?? ""}
+              className={controlClass}
+            />
+          </Field>
+          <Field label={t("diveSites.form.tidePreferenceLabel")}>
+            <select
+              name="tidePreference"
+              defaultValue={values?.tidePreference ?? "any"}
+              className={controlClass}
+            >
+              {TIDE_PREFERENCES.map((preference) => (
+                <option key={preference} value={preference}>
+                  {t(`diveSites.form.tidePreference.${preference}`)}
+                </option>
+              ))}
+            </select>
           </Field>
         </FieldGrid>
       ),

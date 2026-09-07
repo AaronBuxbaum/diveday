@@ -34,6 +34,21 @@ export function publicShopRegisterPath(shopSlug: string): string {
   return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/register`;
 }
 
+/**
+ * The shop's machine-readable availability document — the next two weeks of
+ * open seats as JSON, for an agent that finds a departure and hands its
+ * reader to the booking page (issue #1427). Sits beside the schedule it
+ * summarises, and 404s for a shop that has taken itself out of search (ADR
+ * 20260813-search-listing-is-a-choice): a shop that said no to Google said
+ * no to the same fact reaching a travel agent's model.
+ */
+export function publicAvailabilityPath(shopSlug: string): string {
+  return `${publicSchedulePath(shopSlug)}/availability.json`;
+}
+
+/** The site-level overview an agent reads first, at the conventional path. */
+export const LLMS_TXT_PATH = "/llms.txt";
+
 /** One departure's public booking page. */
 export function publicTripPath(shopSlug: string, tripId: string): string {
   return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/trips/${tripId}`;

@@ -102,6 +102,23 @@ evidence, about a fortnight.
   setting, a page you were told to come back to. Both replace *comprobar*, which is understood
   everywhere but reads as Spain.
 
+## The tide turns at **la estoa**, and it comes in and goes out as **marea entrante / saliente**
+
+Settled 2026-09-07 with the tide window (ADR 20260907-noaa-tide-predictions). Slack water is
+**la estoa** — the word a Caribbean or Mexican captain uses for the turn, and the one that does not
+collide with anything: *marea muerta* is a neap tide and *repunte* is the moment it turns rather
+than the window either side. Flood and ebb are **marea entrante** and **marea saliente**, never the
+textbook *flujo* / *reflujo*, which read as physics rather than as water a diver can feel.
+
+| English | Spanish |
+| --- | --- |
+| slack (water) | la estoa |
+| at slack water | en la estoa |
+| on the flood | con marea entrante |
+| on the ebb | con marea saliente |
+| the tide window | la ventana de marea |
+| NOAA tide station | estación de mareas NOAA |
+
 ## A place you dive is **un sitio de buceo**
 
 One concept, one word — the same rule as *el centro*, settled on 2026-08-05 alongside the English

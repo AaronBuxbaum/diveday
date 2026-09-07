@@ -12,6 +12,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
+import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import {
   readinessBlockerText,
@@ -194,6 +195,14 @@ function DiverFacts({
           <span className="mt-0.5 block text-muted">
             {formatShortDate(diver.medicalWaiver.at, locale, timezone)}
           </span>
+          {/* A minor's release names who co-signed it (ADR
+              20260907-guardian-co-signature): the crew reading the rail is
+              entitled to know the release was countersigned, not just dated. */}
+          {diver.medicalWaiver.guardian ? (
+            <span className="mt-0.5 block text-muted">
+              {guardianCoSignedText(t, diver.medicalWaiver.guardian)}
+            </span>
+          ) : null}
           {/* The signature standing here replaced a referral instead of
               answering it — nobody's fault, and not a block, but a crew member
               at the rail is the person best placed to ask (issue #1282). */}

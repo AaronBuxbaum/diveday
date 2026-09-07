@@ -7,10 +7,12 @@ import { WaiverStateRow } from "@/components/person/rows";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { InsetGroup } from "@/components/ui/ledger";
+import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type WaiverRowState, waiverRowStateText } from "@/i18n/waiver-labels";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { smsRecipient } from "@/lib/notifications/sms";
 import { markWaiverInPersonAction, recordMedicalClearanceAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
@@ -54,7 +56,16 @@ function waiverDetail(
 ): string {
   const date = (value: Date) => formatCalendarDate(calendarDateInTimezone(value, timezone), locale);
   if (diver.waiver.state === "current") {
-    return t("divers.stats.waiverGoodUntil", { date: date(diver.waiver.expiresAt) });
+    const goodUntil = t("divers.stats.waiverGoodUntil", { date: date(diver.waiver.expiresAt) });
+    // A minor's release names its co-signer beside the date, so the record
+    // says who signed it the same way the roster and the manifest do.
+    const guardian = diver.waiver.medical?.guardian;
+    return guardian ? `${goodUntil} · ${guardianCoSignedText(t, guardian)}` : goodUntil;
+  }
+  // Signed and current, by the diver alone, on a day they were a minor (ADR
+  // 20260907-guardian-co-signature): the fix is a fresh link, like `expired`.
+  if (diver.waiver.state === "guardian_missing") {
+    return t("divers.stats.waiverGuardianMissing", { date: date(diver.waiver.signedAt) });
   }
   if (diver.waiver.state === "medical_review") {
     return t("divers.stats.waiverHeldSince", { date: date(diver.waiver.at) });
@@ -106,11 +117,19 @@ export function WaiverGroup({
   // A delivery failure is a fact about the message we sent, not about the
   // standing — the diver has still simply not signed. `waiver-labels.ts`
   // carries the asymmetry; this is the one place the record composes it.
+  //
+  // It only reaches a diver who has signed *nothing*, which used to mean
+  // "anything but `current`". A minor's solo signature is the second state
+  // that is a signed release (ADR 20260907-guardian-co-signature), and letting
+  // a stale pending link overwrite its word read "Not signed" over a record
+  // whose own line underneath said the diver had signed it that morning.
+  const hasSigned = diver.waiver.state === "current" || diver.waiver.state === "guardian_missing";
   const state: WaiverRowState =
-    diver.waiverRequest === "failed" && diver.waiver.state !== "current"
-      ? "failed"
-      : diver.waiver.state;
-  const needsAction = diver.waiver.state === "none" || diver.waiver.state === "expired";
+    diver.waiverRequest === "failed" && !hasSigned ? "failed" : diver.waiver.state;
+  const needsAction =
+    diver.waiver.state === "none" ||
+    diver.waiver.state === "expired" ||
+    diver.waiver.state === "guardian_missing";
   // A hold has exactly one way out, and it is not another link: the diver comes
   // back with a physician's evaluation and a staffer records it (issue #1252).
   // Before this the group offered nothing at all here, because the only lift in
@@ -221,6 +240,13 @@ export function WaiverGroup({
                 <PaperWaiverControl
                   action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
                   copy={paperWaiverCopy(t)}
+                  // A minor's paper release names its co-signer too — measured
+                  // on today, the day the staffer records the signature
+                  // (ADR 20260907-guardian-co-signature).
+                  requiresGuardian={guardianSignatureRequired(
+                    diver.person.dateOfBirth,
+                    signingDate(nowDate(), timezone),
+                  )}
                   variant="secondary"
                   className=""
                   // A refused attestation lands back here with its notice;

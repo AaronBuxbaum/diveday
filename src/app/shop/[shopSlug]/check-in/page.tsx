@@ -532,6 +532,7 @@ export default async function CheckInPage({
             <CounterQueue
               rows={focus.rows}
               shopSlug={shopSlug}
+              today={shopToday}
               isAmbiguousName={nameIsAmbiguous}
               showFirstVisit={showFirstVisit}
               checkInAction={checkIn}
@@ -561,6 +562,7 @@ export default async function CheckInPage({
                   <CounterQueue
                     rows={departure.rows}
                     shopSlug={shopSlug}
+                    today={shopToday}
                     isAmbiguousName={nameIsAmbiguous}
                     showFirstVisit={showFirstVisit}
                     checkInAction={checkIn}

@@ -53,6 +53,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import {
+  publicAvailabilityPath,
   publicCoursePath,
   publicCoursesPath,
   publicSchedulePath,
@@ -67,7 +68,7 @@ import {
   pushCursor,
 } from "@/lib/schedule-pagination";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
-import { scheduleJsonLd } from "@/lib/structured-data";
+import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
 import { resolveLens } from "@/lib/trip-lenses";
 import { STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
 import { capacityLabel, nextBookableDeparture } from "@/lib/trips";
@@ -1198,6 +1199,14 @@ async function ScheduleReviewsSection({
           ]
         : [],
     ),
+    {
+      // The agent-facing availability document (issue #1427) — named only
+      // while the shop is listed; an opted-out shop's document is a 404, and
+      // a graph that pointed at one would be publishing a broken link.
+      availabilityUrl: shop.searchListingOptOutAt
+        ? null
+        : absoluteUrl(origin, publicAvailabilityPath(shop.slug)),
+    },
   );
   return (
     <>

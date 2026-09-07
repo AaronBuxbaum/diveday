@@ -574,6 +574,89 @@ describe("calculateReadiness", () => {
 });
 
 /**
+ * **A minor's release is signed twice** (ADR 20260907-guardian-co-signature).
+ * The engine's own arm of it: everything about *whether* a guardian was needed
+ * is `src/lib/guardian.ts`'s and tested there, so what is pinned here is the
+ * one thing only the engine decides — that a solo minor signature raises
+ * exactly one blocker, in the waiver category, and never doubles up with the
+ * line an unsigned or expired release already carries.
+ */
+describe("calculateReadiness — the guardian co-signature", () => {
+  /** Signed 2026-07-18 at 23:30 New York, which is the 19th in UTC. */
+  const signedAt = new Date("2026-07-19T03:30:00.000Z");
+  const minorsSoloWaiver = {
+    ...signedWaiver,
+    signedAt,
+    completedAt: signedAt,
+    guardianSignedAt: null,
+  } as WaiverRecord;
+  const base = {
+    requirement,
+    certifications: [certification()],
+    timezone: "America/New_York",
+    now,
+  };
+
+  it("blocks a diver who was a minor on the day they signed alone", () => {
+    const result = calculateReadiness({
+      ...base,
+      waiver: minorsSoloWaiver,
+      dateOfBirth: "2012-03-04",
+    });
+    expect(result.status).toBe("blocked");
+    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["guardian_signature_missing"]);
+    expect(BLOCKER_CATEGORY.guardian_signature_missing).toBe("waiver");
+  });
+
+  it("clears the same diver once a guardian has co-signed", () => {
+    expect(
+      calculateReadiness({
+        ...base,
+        waiver: { ...minorsSoloWaiver, guardianSignedAt: signedAt } as WaiverRecord,
+        dateOfBirth: "2012-03-04",
+      }).status,
+    ).toBe("ready");
+  });
+
+  it("never raises it for an adult, or for a diver with no date of birth on file", () => {
+    for (const dateOfBirth of ["1990-03-04", null, undefined]) {
+      expect(calculateReadiness({ ...base, waiver: minorsSoloWaiver, dateOfBirth }).status).toBe(
+        "ready",
+      );
+    }
+  });
+
+  it("measures the signing day in the shop's zone, not the server's", () => {
+    // Eighteen on 2026-07-19. In New York the signature landed on the 18th, so
+    // they were still a minor; read in UTC the same instant is the 19th.
+    const turnsEighteenOnThe19th = { ...base, waiver: minorsSoloWaiver, dateOfBirth: "2008-07-19" };
+    expect(calculateReadiness(turnsEighteenOnThe19th).status).toBe("blocked");
+    expect(calculateReadiness({ ...turnsEighteenOnThe19th, timezone: "UTC" }).status).toBe("ready");
+  });
+
+  it("stays silent where the release itself is the blocker, so the crew reads one line", () => {
+    const minor = { dateOfBirth: "2012-03-04" };
+    const cases: Array<[WaiverRecord | null, string]> = [
+      [null, "waiver_not_sent"],
+      [{ ...minorsSoloWaiver, status: "pending" } as WaiverRecord, "waiver_pending"],
+      [
+        {
+          ...minorsSoloWaiver,
+          status: "pending",
+          expiresAt: new Date("2026-07-01"),
+        } as WaiverRecord,
+        "waiver_expired",
+      ],
+      [{ ...minorsSoloWaiver, status: "medical_review" } as WaiverRecord, "medical_review"],
+    ];
+    for (const [waiver, expected] of cases) {
+      const codes = calculateReadiness({ ...base, ...minor, waiver }).blockers.map((b) => b.code);
+      expect(codes).toEqual([expected]);
+    }
+  });
+});
+
+/**
  * The shared clearance predicate: course admission (`createBookingRecord`,
  * src/db/bookings.ts) and final trip readiness both ask this one question, so
  * a shop can never enrol a diver its own manifest would later block. Tested

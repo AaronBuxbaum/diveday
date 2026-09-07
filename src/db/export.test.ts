@@ -259,6 +259,7 @@ const EXCLUDED_TABLES = [
   "auth_provider_accounts",
   "auth_verifications",
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
+  "display_tokens", // bearer credentials for a lobby screen's departures board, never exported
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
@@ -419,6 +420,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "draft_signer_name", // unsubmitted draft state, not a signed record
     "draft_acknowledged",
     "draft_medical_answers",
+    "draft_guardian", // the guardian section as typed, same class as the three above
     // Delivery plumbing is provider-specific operational state. The signed
     // waiver remains portable; a destination can issue its own link and
     // delivery attempt rather than importing stale provider ids or outcomes.
