@@ -1,7 +1,9 @@
 # 20260907-nothing-from-nowhere — Every change on screen comes from somewhere, anything a finger is on obeys it, and one physics governs all of it
 
-- **Status:** Proposed — pending H-69 (the spring's ration, the Wallet pass, and whether structural
-  motion reaches the roll call). Slices 18a–18f in the roadmap; **18a–18d shipped 2026-09-07**,
+- **Status:** Proposed — pending H-69 a and c (the spring's ration, and whether structural motion
+  reaches the roll call). **H-69 b decided 2026-09-07 (Aaron Buxbaum, in session): yes, the Wallet
+  pass** — built now and shipped dark until the credentials are held; the implementation spec is
+  [SPEC.md](../../design/canvases/20260907-nothing-from-nowhere/SPEC.md). Slices 18a–18f in the roadmap; **18a–18d shipped 2026-09-07**,
   taking H-69 a's recommended answer, holding H-69 b and c
 - **Date:** 2026-09-07
 - **Design:** [the canvas](../../design/canvases/20260907-nothing-from-nowhere/README.md) — seven
@@ -158,6 +160,16 @@ a human can hold. **Recommended:** yes, with the slice filed `waiting-on-externa
 certificate exists, and nothing built ahead of it. Declined, the thread stays as it ships and the
 Pass board renders nothing.
 
+**Decided 2026-09-07: yes** ("we definitely want the wallet pass"), and one step further than the
+recommendation: the slice is **built now and ships dark**. With no credential configured the thread
+renders as it does today and every pass route answers 404, which is the same escape hatch every
+move on this canvas has; the credentials are manual steps in §17's registry and the feature lights
+up the day they are pasted in. The signing library is named: `passkit-generator` 3.5.8 (MIT).
+Apple's push for passes uses the Pass Type ID certificate itself over HTTP/2, so no separate push
+credential is needed; the Google half is signed with `node:crypto`. The full contract — journeys,
+the content table, interfaces, routes, configuration, acceptance tests and must-nots — is
+[SPEC.md](../../design/canvases/20260907-nothing-from-nowhere/SPEC.md), section 18f.
+
 ## What building it settled (2026-09-07)
 
 Slices 18a–18d shipped the same day the canvas was drawn. Three things the boards did not
@@ -243,11 +255,14 @@ needed a mechanism plus a decision about what a page with no title renders, for 
   that a drag never begins while the sheet's list is scrolled.
 - **The title fold** is two keyframes in `globals.css` under `@supports`, a `data-page-title` on
   `ShopPageHeader`, and nothing in JS; the visual spec captures the folded state at 390.
-- **The pass** is a new runtime dependency (a PassKit signing library, named when the slice starts)
-  plus two public routes for pass registration and update, which answer only to a pass's own
-  authentication token and carry no shop data beyond the pass; the certificate and the push
-  credential enter `config/env-registry.mjs` as `manual` values. The security reviewer reads the
-  slice. Nothing ships until H-69 b is Chosen and the certificate is held.
+- **The pass** is a new runtime dependency, `passkit-generator` 3.5.8 (with `node-forge`, `joi`,
+  `do-not-zip` and `tslib` beneath it), plus the PassKit web service under `/api/wallet/v1/**`, whose
+  routes answer only to a pass's own authentication token and carry no shop data beyond the pass;
+  the Apple certificate and key and the Google issuer credentials enter `config/env-registry.mjs`
+  as `manual` values, and the two accounts enter §17's manual-actions registry. The security
+  reviewer reads the slice. *Amended 2026-09-07 on H-69 b:* the slice ships dark rather than
+  waiting — a DiveDay with no credentials configured renders the thread as today and 404s every
+  pass route — so it lands ahead of the certificate and needs nothing from a human to merge.
 - Each slice ends in the standing obligation from
   [design-artifacts.md](../../design/design-artifacts.md): the component names this ADR and a test
   pins the rule. The escape hatch is the same as the last three ADRs': every move renders the cut,

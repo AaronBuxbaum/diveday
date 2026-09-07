@@ -95,7 +95,7 @@ comment, and a test pins the rule.
 | 18c — a row closes its own gap: `SettledRows` on the counter's working queue and its settled group, Undo reversed (the manifest roster still waits on H-69 c) | shipped | `src/components/SettledRows.tsx` | `src/components/SettledRows.test.tsx` |
 | 18d — the sheet follows the thumb: `useDragSheet` on the dock's More sheet, with the grab handle; the scrim tracks the sheet's travel | shipped | `src/components/useDragSheet.ts` | `src/components/useDragSheet.test.tsx` |
 | 18e — the title folds into the bar on a phone: `FoldedPageTitle` portals the page's title into `ShopNav`'s slot, three scroll-driven animations over 120px | shipped | `src/components/chrome/FoldedPageTitle.tsx` | `src/components/chrome/FoldedPageTitle.test.tsx`, `src/components/chrome/chrome.test.ts` |
-| 18f — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's brand, updates from `trips.revision`, the two pass-service routes | open | — | — |
+| 18f — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's brand, updates from `trips.revision`, the PassKit web service and the Google object (H-69 b decided yes 2026-09-07; built dark until the credentials are held; contract in [SPEC.md](SPEC.md)) | open | — | — |
 
 **What 18a–18d settled that the drawing left open, and what is still owed:**
 
@@ -151,6 +151,76 @@ roll call's and the manifest's component trees and fails on any import of it. Th
 the ADR in its doc comment. Update the README's slice table row to shipped with the file and the
 pinning test, run pnpm check:design-canvases, pnpm test:changed, pnpm lint and pnpm typecheck,
 look at the counter in light and dark, and open a pull request explaining any visual diff.
+```
+
+### Slice 18f, the Wallet pass
+
+Decided 2026-09-07 (H-69 b). The contract is [SPEC.md](SPEC.md), section 18f; the prompt below is
+self-contained and is what an implementing session is given.
+
+```text
+Implement slice 18f of ADR 20260907-nothing-from-nowhere: the departure on the lock screen (Apple
+Wallet and Google Wallet passes for a booked departure). H-69 b was decided yes on 2026-09-07; the
+feature is built now and ships dark until credentials are configured.
+
+Read, in this order, before writing code:
+1. AGENTS.md (the route map, the hard rules, the Next.js warning at the bottom).
+2. docs/architecture/decisions/20260907-nothing-from-nowhere.md, decision 1's four tests and
+   decision 6 with its "Decided" paragraph.
+3. docs/design/canvases/20260907-nothing-from-nowhere/SPEC.md, section 18f in full. It is the
+   contract: journeys J1–J8, the content table, the interfaces, the routes, the configuration, the
+   acceptance tests, and the must-nots.
+4. The current code the slice touches: src/app/ready/[token]/page.tsx and
+   src/app/s/[shopSlug]/trips/[id]/_components/TripActions.tsx (where Add to calendar lives),
+   src/db/booking-capabilities.ts (verifyBookingCapability), src/db/ready.ts (getReadyPageData),
+   src/db/trip-stages.ts (latestTripStage), src/lib/trip-calendar.ts and src/lib/trip-revision.ts
+   (how the calendar reads trips.revision), src/lib/brand.ts (deriveBrandTheme),
+   src/lib/bearer-tokens.ts, src/features/calendar-sync/ (the feature-module shape and README to
+   copy), src/app/api/cron/trip-series/route.ts (the cron pattern: CRON_SECRET gate, Sentry
+   monitor), config/env-registry.mjs, the manual-actions registry in infra/lib/infra-stack.ts §17,
+   infra/lib/observability.ts, src/db/anonymize.ts (the erasure hook),
+   docs/engineering/capability-telemetry-runbook.md.
+5. Only then the artboard docs/design/canvases/20260907-nothing-from-nowhere/Pass.dc.html. The
+   ADR outranks the spec, the spec outranks the artboard, and shipped code outranks a drawing for
+   any slice marked shipped in the README's slice table.
+
+Load the design-implementation, schema-change, i18n-copy, e2e-and-visual and verify skills as you
+reach each step.
+
+Build it as a stack of pull requests, bottom up, each cut from the one below (stacked-prs skill):
+(1) schema — the two tables and their migration, the retention window, the erasure hook;
+(2) the module — src/features/wallet-pass with the pure content builder and its hash, the Apple
+    renderer on passkit-generator@3.5.8 (the one new dependency, already named in the ADR; add it
+    with pnpm), the Google JWT and object client on node:crypto and fetch, the PassKit web-service
+    functions, the push function (APNs over node:http2 with the pass certificate), and
+    configuredWalletPlatforms;
+(3) the routes and the cron — /ready/[token]/wallet, /wallet/apple, /wallet/google,
+    /api/wallet/v1/**, /api/cron/wallet-passes with its vercel.json line and Sentry monitor;
+(4) the thread line beside Add to calendar, the copy in en-US and es-ES (read
+    src/i18n/locales/es-ES/README.md first), the env-registry entries and the regenerated
+    .env.example, the two manual actions and the regenerated docs/engineering/manual-actions.md
+    (pnpm test infra -u), the observability events and runbook row, the e2e spec and its
+    scripts/route-coverage.json entry, the README slice-table row moved to shipped with files and
+    tests, the roadmap and surfaces lines.
+
+Non-negotiable, from the spec: nothing on either pass but the departure's facts, the diver's name
+and the crew-set stage; never the capability URL, a booking id, a barcode, a price, or any waiver,
+medical or emergency fact; never log a capability token or a pass token, including in the /v1/log
+relay; with no platform configured the thread renders as today and every pass route is a 404; the
+test certificate is generated at test time and nothing secret is checked in; no dependency beyond
+passkit-generator; do not touch the manifest, the roll call, the counter, or the four writers of
+trips.revision.
+
+Write the spec's acceptance tests (1–8 and the e2e spec) as you go; they are what pin the rules.
+The module's index.ts and the component that renders the line name the ADR in their doc comments.
+Before each push run pnpm test:changed, pnpm lint, pnpm typecheck, pnpm check:architecture and
+pnpm check:repo. Run the security-reviewer agent over the web-service routes and the token handling
+before the routes PR leaves draft, and act on what it finds. Look at the thread at a phone width in
+light and dark (node scripts/screenshot.mjs against pnpm dev) once with a runtime-generated test
+credential configured and once without, and say in the PR what you looked at. Open each PR with
+its base set to the branch below, register the stack, and explain any visual diff. Anything you
+thought of and did not do becomes a needs-triage GitHub issue listed in the PR body, never a
+sentence in your closing message.
 ```
 
 ## Working on it
