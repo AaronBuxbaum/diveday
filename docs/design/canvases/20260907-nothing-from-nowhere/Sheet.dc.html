@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); }
+    .body { font-size: 14px; line-height: 1.55; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .phone { width: 390px; height: 760px; background: var(--sand); border-radius: 28px; border: 1px solid var(--rope); box-shadow: var(--bed); overflow: hidden; position: relative; box-sizing: border-box; flex-shrink: 0; }
+    .bar { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: rgba(251,247,239,.92); border-bottom: 1px solid var(--rope); box-sizing: border-box; }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .flabel { font-size: 11.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .scrim { position: absolute; inset: 0; background: rgba(12, 42, 53, .30); }
+    .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--shell); border-top: 1px solid var(--rope); border-radius: 28px 28px 0 0; padding: 10px 16px 88px; box-sizing: border-box; box-shadow: 0 -8px 30px rgba(12, 42, 53, .12); }
+    .grab { width: 40px; height: 5px; border-radius: 999px; background: var(--rope-strong); margin: 0 auto 14px; opacity: .6; }
+    .item { display: flex; align-items: center; gap: 12px; height: 52px; font-size: 16px; font-weight: 500; }
+    .item svg { color: var(--muted); }
+    .dock { position: absolute; left: 0; right: 0; bottom: 0; height: 74px; background: var(--shell); border-top: 1px solid var(--rope); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 6px 4px 14px; box-sizing: border-box; }
+    .dock div { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 500; color: var(--muted); }
+    .caption { width: 390px; display: flex; flex-direction: column; gap: 6px; }
+    .finger { position: absolute; width: 44px; height: 44px; border-radius: 999px; border: 2px solid var(--coral-deep); background: rgba(255, 111, 97, .18); box-sizing: border-box; }
+  </style>
+</helmet>
+<div style="width: 1360px; min-height: 1650px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 48px 52px;">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 900px;">
+    <p class="eyebrow">Move 3 &middot; the sheet follows the thumb &middot; the More sheet over the home &middot; page 2</p>
+    <h1 style="font-size: 36px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.06;">Opened from the dock with a thumb. Closed by the same thumb, without reaching.</h1>
+    <p class="lede" style="font-size: 16px;">The More sheet rises over 200ms and dismisses on a tap anywhere on the scrim, which on a phone means the top of the screen. The dock test forbids that reach. The pull-to-refresh and the buddy drag already have gesture physics with a written contract (unified pointer and touch events, resistance, a cancel curve, no fight with the scroll). This is the third gesture, under the same contract, and it makes the sheet a thing the thumb is holding.</p>
+  </div>
+
+  <div style="margin-top: 32px; display: flex; gap: 40px; align-items: flex-start;">
+
+    <!-- Frame 1: at rest -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="bar">
+          <div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div>
+          <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+        </div>
+        <div style="height: 168px; background: linear-gradient(180deg, #f6ecd9 0%, #e9f1ec 46%, #fbf7ef 100%); padding: 22px 20px 0; box-sizing: border-box;">
+          <p class="eyebrow">Today &middot; Thu, Aug 27 &middot; 6:40 AM</p>
+          <h1 style="font-size: 34px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.05; margin-top: 6px;">Good morning, Dana.</h1>
+          <p style="font-size: 16px; color: var(--muted); line-height: 1.4; margin-top: 6px;">Three boats. Two things need you before the 7:00 leaves.</p>
+        </div>
+        <div style="padding: 0 16px;"><div class="panel" style="padding: 16px 18px; border-color: #edcfc8;"><p class="glabel" style="color: var(--danger);">First thing &middot; 20 min</p><p style="font-size: 17px; font-weight: 600; line-height: 1.3; margin-top: 10px;">Grace Mensah can&#8217;t board the 7:00 until her Advanced card is verified.</p></div></div>
+        <div class="scrim"></div>
+        <div class="sheet" style="height: 520px;">
+          <div class="grab"></div>
+          <p class="glabel">Run the shop</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; margin-top: 4px;">
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><rect x="3" y="4" width="14" height="12" rx="2.5"></rect><path d="M3 8.5h14"></path></svg>Orders</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M4 5h12v9H8l-4 3z"></path></svg>Requests</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M10 3l2.2 4.6 5 .7-3.6 3.5.9 5L10 14.4 5.5 16.8l.9-5L2.8 8.3l5-.7z"></path></svg>Reviews</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><circle cx="10" cy="10" r="3"></circle><path d="M10 3v2M10 15v2M3 10h2M15 10h2"></path></svg>Gear</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><circle cx="8" cy="7" r="2.6"></circle><path d="M3 16c1-3 2.8-4.5 5-4.5s4 1.5 5 4.5"></path><circle cx="14.5" cy="8" r="2"></circle></svg>Staffing</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M4 4h9l3 3v9H4z"></path><path d="M7 10h6M7 13h6"></path></svg>Courses</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M10 17s-5-4.5-5-8.5a5 5 0 0 1 10 0c0 4-5 8.5-5 8.5z"></path><circle cx="10" cy="8.5" r="1.6"></circle></svg>Dive sites</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M4 15V9M9 15V5M14 15v-4"></path><path d="M3 17h14"></path></svg>Reports</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M5 3h10v14H5z"></path><path d="M8 7h4M8 10h4M8 13h2"></path></svg>Waivers</div>
+          </div>
+          <p class="glabel" style="margin-top: 14px;">Set up</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; margin-top: 4px;">
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><circle cx="7" cy="7" r="2.6"></circle><circle cx="13.5" cy="8" r="2.2"></circle><path d="M2.5 16c1-3 2.6-4.5 4.5-4.5s3.5 1.5 4.5 4.5M11.5 15c.5-2 1.6-3 3-3s2.4 1 2.8 3"></path></svg>Team</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M3 10l7-7 7 7-7 7z"></path><circle cx="10" cy="10" r="1.5"></circle></svg>Promo codes</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><rect x="3.5" y="4.5" width="13" height="12" rx="2.5"></rect><path d="M7 3v3M13 3v3M3.5 9h13"></path></svg>Calendar feed</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><circle cx="10" cy="10" r="2.5"></circle><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6"></path></svg>Settings</div>
+          </div>
+        </div>
+        <div class="dock" style="z-index: 2;"><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="11" cy="11" r="7.5"></circle><path d="M11 7v4l2.6 1.8"></path></svg>Today</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><path d="M5 11.5l4 4 8-9"></path></svg>Check-in</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="8.5" cy="8" r="3"></circle><circle cx="15" cy="9" r="2.4"></circle><path d="M3 18c1-3.5 3-5 5.5-5s4.5 1.5 5.5 5M13.5 17c.6-2 1.8-3 3.5-3s2.6 1 3 3"></path></svg>Divers</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><rect x="3.5" y="4.5" width="15" height="14" rx="3"></rect><path d="M7 2.8v3.4M15 2.8v3.4M3.5 9.5h15"></path></svg>Board</div><div style="color: var(--lagoon); font-weight: 600;"><svg width="22" height="22" viewBox="0 0 22 22" fill="#0e7490"><circle cx="5" cy="11" r="1.8"></circle><circle cx="11" cy="11" r="1.8"></circle><circle cx="17" cy="11" r="1.8"></circle></svg>More</div></div>
+      </div>
+      <div class="caption"><span class="flabel">Frame 1 &middot; at rest, open</span><p class="note">As it ships, plus a grab handle at the top edge, the one thing the sheet gains at rest: the affordance that says it can be held. The scrim at 30% and the dock beneath, unchanged.</p></div>
+    </div>
+
+    <!-- Frame 2: mid-drag -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="bar">
+          <div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div>
+          <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+        </div>
+        <div style="height: 168px; background: linear-gradient(180deg, #f6ecd9 0%, #e9f1ec 46%, #fbf7ef 100%); padding: 22px 20px 0; box-sizing: border-box;">
+          <p class="eyebrow">Today &middot; Thu, Aug 27 &middot; 6:40 AM</p>
+          <h1 style="font-size: 34px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.05; margin-top: 6px;">Good morning, Dana.</h1>
+          <p style="font-size: 16px; color: var(--muted); line-height: 1.4; margin-top: 6px;">Three boats. Two things need you before the 7:00 leaves.</p>
+        </div>
+        <div style="padding: 0 16px;"><div class="panel" style="padding: 16px 18px; border-color: #edcfc8;"><p class="glabel" style="color: var(--danger);">First thing &middot; 20 min</p><p style="font-size: 17px; font-weight: 600; line-height: 1.3; margin-top: 10px;">Grace Mensah can&#8217;t board the 7:00 until her Advanced card is verified.</p></div></div>
+        <div class="scrim" style="background: rgba(12, 42, 53, .19);"></div>
+        <div style="position: absolute; left: 0; right: 0; bottom: 312px; border-top: 2px dashed var(--coral-deep); opacity: .8; z-index: 2;"></div>
+        <p style="position: absolute; right: 14px; bottom: 318px; z-index: 2; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--coral-deep);">The line &middot; 40%</p>
+        <div class="sheet" style="height: 520px; transform: translateY(150px);">
+          <div class="grab" style="background: var(--ink); opacity: .9;"></div>
+          <p class="glabel">Run the shop</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; margin-top: 4px;">
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><rect x="3" y="4" width="14" height="12" rx="2.5"></rect><path d="M3 8.5h14"></path></svg>Orders</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M4 5h12v9H8l-4 3z"></path></svg>Requests</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M10 3l2.2 4.6 5 .7-3.6 3.5.9 5L10 14.4 5.5 16.8l.9-5L2.8 8.3l5-.7z"></path></svg>Reviews</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><circle cx="10" cy="10" r="3"></circle><path d="M10 3v2M10 15v2M3 10h2M15 10h2"></path></svg>Gear</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><circle cx="8" cy="7" r="2.6"></circle><path d="M3 16c1-3 2.8-4.5 5-4.5s4 1.5 5 4.5"></path><circle cx="14.5" cy="8" r="2"></circle></svg>Staffing</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M4 4h9l3 3v9H4z"></path><path d="M7 10h6M7 13h6"></path></svg>Courses</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M10 17s-5-4.5-5-8.5a5 5 0 0 1 10 0c0 4-5 8.5-5 8.5z"></path><circle cx="10" cy="8.5" r="1.6"></circle></svg>Dive sites</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M4 15V9M9 15V5M14 15v-4"></path><path d="M3 17h14"></path></svg>Reports</div>
+          </div>
+        </div>
+        <div class="finger" style="left: 173px; top: 384px;"></div>
+        <div class="dock" style="z-index: 2;"><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="11" cy="11" r="7.5"></circle><path d="M11 7v4l2.6 1.8"></path></svg>Today</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><path d="M5 11.5l4 4 8-9"></path></svg>Check-in</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="8.5" cy="8" r="3"></circle><circle cx="15" cy="9" r="2.4"></circle><path d="M3 18c1-3.5 3-5 5.5-5s4.5 1.5 5.5 5M13.5 17c.6-2 1.8-3 3.5-3s2.6 1 3 3"></path></svg>Divers</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><rect x="3.5" y="4.5" width="15" height="14" rx="3"></rect><path d="M7 2.8v3.4M15 2.8v3.4M3.5 9.5h15"></path></svg>Board</div><div style="color: var(--lagoon); font-weight: 600;"><svg width="22" height="22" viewBox="0 0 22 22" fill="#0e7490"><circle cx="5" cy="11" r="1.8"></circle><circle cx="11" cy="11" r="1.8"></circle><circle cx="17" cy="11" r="1.8"></circle></svg>More</div></div>
+      </div>
+      <div class="caption"><span class="flabel">Frame 2 &middot; held, 150px down</span><p class="note">The sheet is 150px below rest because the thumb is 150px below where it landed. The scrim has lightened in step (30% at rest, 0% when the sheet is gone). No timer runs. Dragged upward it resists at 40% of the finger&#8217;s travel, the pull-to-refresh&#8217;s own damping. The dashed line and the finger ring are the canvas&#8217;s own marks.</p></div>
+    </div>
+
+    <!-- Frame 3: released short, settling back -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="bar">
+          <div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div>
+          <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+        </div>
+        <div style="height: 168px; background: linear-gradient(180deg, #f6ecd9 0%, #e9f1ec 46%, #fbf7ef 100%); padding: 22px 20px 0; box-sizing: border-box;">
+          <p class="eyebrow">Today &middot; Thu, Aug 27 &middot; 6:40 AM</p>
+          <h1 style="font-size: 34px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.05; margin-top: 6px;">Good morning, Dana.</h1>
+          <p style="font-size: 16px; color: var(--muted); line-height: 1.4; margin-top: 6px;">Three boats. Two things need you before the 7:00 leaves.</p>
+        </div>
+        <div style="padding: 0 16px;"><div class="panel" style="padding: 16px 18px; border-color: #edcfc8;"><p class="glabel" style="color: var(--danger);">First thing &middot; 20 min</p><p style="font-size: 17px; font-weight: 600; line-height: 1.3; margin-top: 10px;">Grace Mensah can&#8217;t board the 7:00 until her Advanced card is verified.</p></div></div>
+        <div class="scrim" style="background: rgba(12, 42, 53, .31);"></div>
+        <div class="sheet" style="height: 520px; transform: translateY(-7px);">
+          <div class="grab"></div>
+          <p class="glabel">Run the shop</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; margin-top: 4px;">
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><rect x="3" y="4" width="14" height="12" rx="2.5"></rect><path d="M3 8.5h14"></path></svg>Orders</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M4 5h12v9H8l-4 3z"></path></svg>Requests</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M10 3l2.2 4.6 5 .7-3.6 3.5.9 5L10 14.4 5.5 16.8l.9-5L2.8 8.3l5-.7z"></path></svg>Reviews</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><circle cx="10" cy="10" r="3"></circle><path d="M10 3v2M10 15v2M3 10h2M15 10h2"></path></svg>Gear</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><circle cx="8" cy="7" r="2.6"></circle><path d="M3 16c1-3 2.8-4.5 5-4.5s4 1.5 5 4.5"></path><circle cx="14.5" cy="8" r="2"></circle></svg>Staffing</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M4 4h9l3 3v9H4z"></path><path d="M7 10h6M7 13h6"></path></svg>Courses</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M10 17s-5-4.5-5-8.5a5 5 0 0 1 10 0c0 4-5 8.5-5 8.5z"></path><circle cx="10" cy="8.5" r="1.6"></circle></svg>Dive sites</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M4 15V9M9 15V5M14 15v-4"></path><path d="M3 17h14"></path></svg>Reports</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M5 3h10v14H5z"></path><path d="M8 7h4M8 10h4M8 13h2"></path></svg>Waivers</div>
+          </div>
+          <p class="glabel" style="margin-top: 14px;">Set up</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; margin-top: 4px;">
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><circle cx="7" cy="7" r="2.6"></circle><circle cx="13.5" cy="8" r="2.2"></circle><path d="M2.5 16c1-3 2.6-4.5 4.5-4.5s3.5 1.5 4.5 4.5M11.5 15c.5-2 1.6-3 3-3s2.4 1 2.8 3"></path></svg>Team</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><path d="M3 10l7-7 7 7-7 7z"></path><circle cx="10" cy="10" r="1.5"></circle></svg>Promo codes</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><rect x="3.5" y="4.5" width="13" height="12" rx="2.5"></rect><path d="M7 3v3M13 3v3M3.5 9h13"></path></svg>Calendar feed</div>
+            <div class="item"><svg width="20" height="20" viewBox="0 0 20 20" class="hand"><circle cx="10" cy="10" r="2.5"></circle><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6"></path></svg>Settings</div>
+          </div>
+        </div>
+        <div class="dock" style="z-index: 2;"><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="11" cy="11" r="7.5"></circle><path d="M11 7v4l2.6 1.8"></path></svg>Today</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><path d="M5 11.5l4 4 8-9"></path></svg>Check-in</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="8.5" cy="8" r="3"></circle><circle cx="15" cy="9" r="2.4"></circle><path d="M3 18c1-3.5 3-5 5.5-5s4.5 1.5 5.5 5M13.5 17c.6-2 1.8-3 3.5-3s2.6 1 3 3"></path></svg>Divers</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><rect x="3.5" y="4.5" width="15" height="14" rx="3"></rect><path d="M7 2.8v3.4M15 2.8v3.4M3.5 9.5h15"></path></svg>Board</div><div style="color: var(--lagoon); font-weight: 600;"><svg width="22" height="22" viewBox="0 0 22 22" fill="#0e7490"><circle cx="5" cy="11" r="1.8"></circle><circle cx="11" cy="11" r="1.8"></circle><circle cx="17" cy="11" r="1.8"></circle></svg>More</div></div>
+      </div>
+      <div class="caption"><span class="flabel">Frame 3 &middot; let go short of the line</span><p class="note">Released at 150px, short of the line and without speed, the sheet settles back over 200ms. On H-69 a it settles on the spring, overshooting rest by a few pixels as drawn here; declined, it returns on the arrival curve. Let go past the line, or with a downward flick anywhere, and it leaves from where it is on the exit curve, the scrim finishing with it.</p></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px;">
+    <div style="background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 18px 20px;">
+      <p class="tag">The contract, shared with the two gestures that ship</p>
+      <p class="body" style="margin-top: 8px;">Unified pointer and touch events and no gesture library; resistance past the edge; a cancel curve when released short; no interference with a scroll: a drag begins only on the handle or when the sheet&#8217;s own list is at its top and the finger moves down. The finger&#8217;s speed at release decides with the distance. One hook holds it (the pull-to-refresh&#8217;s, generalised), so the third gesture and the fourth share one set of numbers.</p>
+    </div>
+    <div style="background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 18px 20px;">
+      <p class="tag">Where else</p>
+      <p class="body" style="margin-top: 8px;">The embed lightbox on a shop&#8217;s own website, which is a sheet over someone else&#8217;s page and today closes on a corner button. The palette on a phone, if it is ever a sheet. Never the palette on a desktop, which the keyboard opened and the keyboard closes, and never a dialog that carries a form mid-fill: a drag on a half-typed booking is a drag that loses words, and that sheet keeps its button.</p>
+    </div>
+    <div style="background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 18px 20px;">
+      <p class="tag">What renders otherwise</p>
+      <p class="body" style="margin-top: 8px;">The scrim tap and Escape stay, so nothing a keyboard or a switch user does changes. A reduced-motion reader&#8217;s sheet still follows the finger (tracking is not animation) and, let go, leaves in one frame. A pointer that is a mouse gets the tap and the button, as today; the handle is drawn for both and does nothing extra under a mouse.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

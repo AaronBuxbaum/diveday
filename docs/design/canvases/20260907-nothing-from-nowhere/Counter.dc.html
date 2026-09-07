@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); }
+    .body { font-size: 14px; line-height: 1.55; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .phone { width: 390px; height: 760px; background: var(--sand); border-radius: 28px; border: 1px solid var(--rope); box-shadow: var(--bed); overflow: hidden; position: relative; box-sizing: border-box; flex-shrink: 0; }
+    .bar { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: rgba(251,247,239,.92); border-bottom: 1px solid var(--rope); box-sizing: border-box; }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; font-size: 14px; font-weight: 600; white-space: nowrap; border: 1px solid var(--rope); background: var(--shell); color: var(--ink); }
+    .chip.on { background: var(--lagoon); color: #fff; border-color: var(--lagoon); }
+    .row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 4px; border-top: 1px solid var(--rope); }
+    .name { font-size: 16px; font-weight: 500; flex: 1; min-width: 0; }
+    .sub { font-size: 13px; color: var(--muted); }
+    .act { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; color: var(--lagoon); white-space: nowrap; height: 44px; padding: 0 6px; }
+    .ring { width: 24px; height: 24px; border-radius: 999px; border: 2px solid currentColor; box-sizing: border-box; }
+    .flabel { font-size: 11.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .field { height: 48px; border-radius: 10px; border: 1px solid var(--rope-strong); background: var(--shell); display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--muted); font-size: 16px; box-sizing: border-box; }
+    .dock { position: absolute; left: 0; right: 0; bottom: 0; height: 74px; background: var(--shell); border-top: 1px solid var(--rope); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 6px 4px 14px; box-sizing: border-box; }
+    .dock div { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 500; color: var(--muted); }
+    .toast { position: absolute; left: 16px; right: 16px; bottom: 88px; background: var(--ink); color: #fffdf8; border-radius: 18px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; box-shadow: 0 8px 24px rgba(12, 42, 53, .25); }
+    .caption { width: 390px; display: flex; flex-direction: column; gap: 6px; }
+  </style>
+</helmet>
+<div style="width: 1360px; min-height: 1560px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 48px 52px;">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 900px;">
+    <p class="eyebrow">Move 2 &middot; a row closes its own gap &middot; the counter, 6:41 AM &middot; page 2</p>
+    <h1 style="font-size: 36px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.06;">Hugo checks in. The row sinks, and the row beneath it follows.</h1>
+    <p class="lede" style="font-size: 16px;">The counter is the one surface principle 1 makes optimistic: the row answers the tap at once and the undo toast stands twelve seconds. Today the row sinks over 200ms and Ben&#8217;s row jumps 60px into the gap in one frame. Three frames of the same tap with the gap closing on the row&#8217;s own clock, and the two figures on the instrument line rolling with it.</p>
+  </div>
+
+  <div style="margin-top: 32px; display: flex; gap: 40px; align-items: flex-start;">
+
+    <!-- Frame 1: before -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="bar">
+          <div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div>
+          <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg>
+        </div>
+        <div style="padding: 18px 16px 0; display: flex; flex-direction: column; gap: 14px;">
+          <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.05;">Counter check-in</h2>
+          <div style="display: flex; gap: 8px; overflow: hidden;"><span class="chip on">7:00 AM &middot; Two-Tank Reef</span><span class="chip">1:00 PM &middot; Wreck</span><span class="chip">7:30 PM</span></div>
+          <p class="num" style="font-size: 22px; font-weight: 700; line-height: 1.2;">6 <span style="font-size: 16px; font-weight: 500; color: var(--muted);">of 10 here</span> <span style="font-size: 13.5px; font-weight: 500; color: var(--muted);">&middot; 2 to come &middot; 2 can&#8217;t board yet</span></p>
+          <div class="field"><svg width="16" height="16" viewBox="0 0 16 16" class="hand" style="stroke-width: 1.8;"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6 13.6 13.6"></path></svg>Name, email, or booking ID</div>
+          <div class="panel" style="padding: 4px 14px 0; display: flex; flex-direction: column;">
+            <div class="row" style="border-top: 0;"><div class="name">Hugo Marsh</div><span class="act">Check in <span class="ring"></span></span></div>
+            <div class="row"><div class="name">Ben Okafor<div class="sub">First visit</div></div><span class="act">Check in <span class="ring"></span></span></div>
+            <div class="row"><div class="name" style="color: var(--muted);">Grace Mensah<div class="sub"><span style="font-weight: 650; color: var(--danger);">Certification</span> &middot; Advanced card waiting</div></div><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg></div>
+            <div class="row"><div class="name" style="color: var(--muted);">Priya Sharma<div class="sub"><span style="font-weight: 650; color: var(--warning);">Waiver</span> &middot; not sent yet</div></div><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg></div>
+            <div class="row" style="min-height: 52px;"><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M3.5 6 8 10.5 12.5 6"></path></svg><p style="font-size: 15px; font-weight: 600;">Checked in &mdash; <span class="num">6</span></p></div>
+          </div>
+        </div>
+        <div class="dock"><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="11" cy="11" r="7.5"></circle><path d="M11 7v4l2.6 1.8"></path></svg>Today</div><div style="color: var(--lagoon); font-weight: 600;"><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><path d="M5 11.5l4 4 8-9"></path></svg>Check-in</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="8.5" cy="8" r="3"></circle><circle cx="15" cy="9" r="2.4"></circle><path d="M3 18c1-3.5 3-5 5.5-5s4.5 1.5 5.5 5M13.5 17c.6-2 1.8-3 3.5-3s2.6 1 3 3"></path></svg>Divers</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><rect x="3.5" y="4.5" width="15" height="14" rx="3"></rect><path d="M7 2.8v3.4M15 2.8v3.4M3.5 9.5h15"></path></svg>Board</div><div><svg width="22" height="22" viewBox="0 0 22 22" fill="#54676d"><circle cx="5" cy="11" r="1.8"></circle><circle cx="11" cy="11" r="1.8"></circle><circle cx="17" cy="11" r="1.8"></circle></svg>More</div></div>
+      </div>
+      <div class="caption"><span class="flabel">Frame 1 &middot; 0ms</span><p class="note">Dana taps Check in on Hugo&#8217;s row. The row is at 97% and on the tideline in the frame her thumb lands (the press, Physics).</p></div>
+    </div>
+
+    <!-- Frame 2: mid -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="bar">
+          <div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div>
+          <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg>
+        </div>
+        <div style="padding: 18px 16px 0; display: flex; flex-direction: column; gap: 14px;">
+          <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.05;">Counter check-in</h2>
+          <div style="display: flex; gap: 8px; overflow: hidden;"><span class="chip on">7:00 AM &middot; Two-Tank Reef</span><span class="chip">1:00 PM &middot; Wreck</span><span class="chip">7:30 PM</span></div>
+          <p class="num" style="font-size: 22px; font-weight: 700; line-height: 1.2;"><span style="display: inline-block; position: relative; width: .62em; height: 1em; overflow: hidden; vertical-align: -0.12em;"><span style="position: absolute; left: 0; top: 0; line-height: 1; transform: translateY(-58%); opacity: .35;">6</span><span style="position: absolute; left: 0; top: 0; line-height: 1; transform: translateY(42%); opacity: .7;">7</span></span> <span style="font-size: 16px; font-weight: 500; color: var(--muted);">of 10 here</span> <span style="font-size: 13.5px; font-weight: 500; color: var(--muted);">&middot; <span style="display: inline-block; position: relative; width: .62em; height: 1em; overflow: hidden; vertical-align: -0.15em;"><span style="position: absolute; left: 0; top: 0; line-height: 1; transform: translateY(58%); opacity: .35;">2</span><span style="position: absolute; left: 0; top: 0; line-height: 1; transform: translateY(-42%); opacity: .7;">1</span></span> to come &middot; 2 can&#8217;t board yet</span></p>
+          <div class="field"><svg width="16" height="16" viewBox="0 0 16 16" class="hand" style="stroke-width: 1.8;"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6 13.6 13.6"></path></svg>Name, email, or booking ID</div>
+          <div class="panel" style="padding: 4px 14px 0; display: flex; flex-direction: column; position: relative;">
+            <div class="row" style="border-top: 0; opacity: .38; transform: translateY(6px);"><div class="name">Hugo Marsh</div><span class="act" style="color: var(--muted);">Checking in&#8230; <span class="ring" style="opacity: .4;"></span></span></div>
+            <div class="row" style="transform: translateY(-30px); background: var(--shell); position: relative; z-index: 1;"><div class="name">Ben Okafor<div class="sub">First visit</div></div><span class="act">Check in <span class="ring"></span></span></div>
+            <div class="row" style="transform: translateY(-30px); background: var(--shell); position: relative; z-index: 1;"><div class="name" style="color: var(--muted);">Grace Mensah<div class="sub"><span style="font-weight: 650; color: var(--danger);">Certification</span> &middot; Advanced card waiting</div></div><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg></div>
+            <div class="row" style="transform: translateY(-30px); background: var(--shell); position: relative; z-index: 1;"><div class="name" style="color: var(--muted);">Priya Sharma<div class="sub"><span style="font-weight: 650; color: var(--warning);">Waiver</span> &middot; not sent yet</div></div><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg></div>
+            <div class="row" style="min-height: 52px; transform: translateY(-30px); background: var(--shell); position: relative; z-index: 1;"><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M3.5 6 8 10.5 12.5 6"></path></svg><p style="font-size: 15px; font-weight: 600;">Checked in &mdash; <span class="num">6</span></p></div>
+                      </div>
+        </div>
+        <div class="dock"><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="11" cy="11" r="7.5"></circle><path d="M11 7v4l2.6 1.8"></path></svg>Today</div><div style="color: var(--lagoon); font-weight: 600;"><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><path d="M5 11.5l4 4 8-9"></path></svg>Check-in</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="8.5" cy="8" r="3"></circle><circle cx="15" cy="9" r="2.4"></circle><path d="M3 18c1-3.5 3-5 5.5-5s4.5 1.5 5.5 5M13.5 17c.6-2 1.8-3 3.5-3s2.6 1 3 3"></path></svg>Divers</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><rect x="3.5" y="4.5" width="15" height="14" rx="3"></rect><path d="M7 2.8v3.4M15 2.8v3.4M3.5 9.5h15"></path></svg>Board</div><div><svg width="22" height="22" viewBox="0 0 22 22" fill="#54676d"><circle cx="5" cy="11" r="1.8"></circle><circle cx="11" cy="11" r="1.8"></circle><circle cx="17" cy="11" r="1.8"></circle></svg>More</div></div>
+      </div>
+      <div class="caption"><span class="flabel">Frame 2 &middot; ~100ms</span><p class="note">Hugo&#8217;s row sinks on the exit curve (ships). Every row beneath it slides up by transform on the same 200ms, half way here, so the gap and the row close together. The 6 rolls up to 7 and the 2 rolls down to 1.</p></div>
+    </div>
+
+    <!-- Frame 3: settled + undo -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+        <div class="bar">
+          <div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div>
+          <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg>
+        </div>
+        <div style="padding: 18px 16px 0; display: flex; flex-direction: column; gap: 14px;">
+          <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.05;">Counter check-in</h2>
+          <div style="display: flex; gap: 8px; overflow: hidden;"><span class="chip on">7:00 AM &middot; Two-Tank Reef</span><span class="chip">1:00 PM &middot; Wreck</span><span class="chip">7:30 PM</span></div>
+          <p class="num" style="font-size: 22px; font-weight: 700; line-height: 1.2;">7 <span style="font-size: 16px; font-weight: 500; color: var(--muted);">of 10 here</span> <span style="font-size: 13.5px; font-weight: 500; color: var(--muted);">&middot; 1 to come &middot; 2 can&#8217;t board yet</span></p>
+          <div class="field"><svg width="16" height="16" viewBox="0 0 16 16" class="hand" style="stroke-width: 1.8;"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6 13.6 13.6"></path></svg>Name, email, or booking ID</div>
+          <div class="panel" style="padding: 4px 14px 0; display: flex; flex-direction: column;">
+            <div class="row" style="border-top: 0;"><div class="name">Ben Okafor<div class="sub">First visit</div></div><span class="act">Check in <span class="ring"></span></span></div>
+            <div class="row"><div class="name" style="color: var(--muted);">Grace Mensah<div class="sub"><span style="font-weight: 650; color: var(--danger);">Certification</span> &middot; Advanced card waiting</div></div><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg></div>
+            <div class="row"><div class="name" style="color: var(--muted);">Priya Sharma<div class="sub"><span style="font-weight: 650; color: var(--warning);">Waiver</span> &middot; not sent yet</div></div><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg></div>
+            <div class="row" style="min-height: 52px;"><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M3.5 6 8 10.5 12.5 6"></path></svg><p style="font-size: 15px; font-weight: 600;">Checked in &mdash; <span class="num">7</span></p></div>
+          </div>
+        </div>
+        <div class="toast"><svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: #7fd0d6; stroke-width: 2; flex-shrink: 0;"><path d="M3.5 9.5 7.5 13.5 14.5 5.5"></path></svg><p style="flex: 1; font-size: 15px; line-height: 1.35;">Hugo Marsh checked in</p><span style="font-size: 15px; font-weight: 700; color: #7fd0d6; padding: 6px 4px;">Undo</span></div>
+        <div class="dock"><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="11" cy="11" r="7.5"></circle><path d="M11 7v4l2.6 1.8"></path></svg>Today</div><div style="color: var(--lagoon); font-weight: 600;"><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><path d="M5 11.5l4 4 8-9"></path></svg>Check-in</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="8.5" cy="8" r="3"></circle><circle cx="15" cy="9" r="2.4"></circle><path d="M3 18c1-3.5 3-5 5.5-5s4.5 1.5 5.5 5M13.5 17c.6-2 1.8-3 3.5-3s2.6 1 3 3"></path></svg>Divers</div><div><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><rect x="3.5" y="4.5" width="15" height="14" rx="3"></rect><path d="M7 2.8v3.4M15 2.8v3.4M3.5 9.5h15"></path></svg>Board</div><div><svg width="22" height="22" viewBox="0 0 22 22" fill="#54676d"><circle cx="5" cy="11" r="1.8"></circle><circle cx="11" cy="11" r="1.8"></circle><circle cx="17" cy="11" r="1.8"></circle></svg>More</div></div>
+      </div>
+      <div class="caption"><span class="flabel">Frame 3 &middot; 200ms, settled</span><p class="note">Hugo is in the settled group, its count rolled to 7, and the undo toast rises as it does today. Tap Undo and the three frames run in reverse: the rows part on the arrival curve, Hugo&#8217;s row arrives where it was, and both figures roll back down.</p></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px;">
+    <div style="background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 18px 20px;">
+      <p class="tag">How the gap closes</p>
+      <p class="body" style="margin-top: 8px;">Before the list changes, each row&#8217;s position is read; after it changes, each row is set back to where it was by transform and released to slide to where it now is. Nothing the browser lays out is animated, which is the rule the disclosure and the bar already keep. The leaving row is out of the flow the moment it starts to sink, so the rows beneath begin sliding on the same frame.</p>
+    </div>
+    <div style="background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 18px 20px;">
+      <p class="tag">Where else a row leaves or moves</p>
+      <p class="body" style="margin-top: 8px;">The manifest roster when a diver is removed (the one exit doing explanatory work today; the rows beneath jump). The home&#8217;s station when a blocker clears and the row goes. The wait list when a seat is offered. The board&#8217;s day when a departure moves. Each takes the same slide; none adds a control.</p>
+    </div>
+    <div style="background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 18px 20px;">
+      <p class="tag">What renders otherwise</p>
+      <p class="body" style="margin-top: 8px;">A reduced-motion reader: the row sinks in one frame and the rows beneath jump, as today. The roll call: the row leaving already moves there and the slide beneath it waits on H-69 c; nothing on the roll call moves before the server has the tap, and its head count never rolls.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

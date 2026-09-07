@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); }
+    .body { font-size: 14px; line-height: 1.55; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .card { background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 18px 20px; }
+    .h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+    .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+    .k { font-size: 12.5px; font-weight: 650; color: var(--muted); }
+    .row { display: grid; grid-template-columns: 250px minmax(0, 1fr) 96px 130px; gap: 18px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--rope); }
+    .row p { font-size: 14px; line-height: 1.5; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; background: var(--lagoon-wash); color: var(--lagoon-deep); }
+    .ledger { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 12px; border-radius: 10px; font-size: 15px; box-sizing: border-box; width: 300px; }
+    .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 500; color: var(--muted); width: 74px; height: 54px; border-radius: 10px; }
+    .spec { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+    .spec .lbl { font-size: 11.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .pressed { transform: scale(.97); background: var(--tideline) !important; }
+    .curve { width: 200px; height: 140px; background: var(--tideline); border-radius: 18px; padding: 16px; box-sizing: border-box; }
+  </style>
+</helmet>
+<div style="width: 1180px; min-height: 3050px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 56px 60px;">
+  <div style="display: flex; flex-direction: column; gap: 12px; max-width: 820px;">
+    <p class="eyebrow">The physics &middot; one ladder, three curves, one press &middot; page 1</p>
+    <h1 style="font-size: 40px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.06;">Written once, read by CSS and JS alike.</h1>
+    <p class="lede">Principle 5 was written one fix at a time: the bar, the exit curve, the disclosure, the menu. Each rule is right and the tree still holds ten durations and every timer as a copied number. This sheet is the same rules stated as a material: what a thing takes when it arrives, leaves, unfolds, or is held; how long; on which curve; and the events that get each. Nothing on it exceeds 250ms except the two ceilings the principle already grants.</p>
+  </div>
+
+  <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px;">
+    <div class="panel" style="padding: 24px 28px;">
+      <p class="tag">The ladder &middot; three rungs and two ceilings</p>
+      <div style="margin-top: 14px; display: flex; flex-direction: column;">
+        <div style="display: grid; grid-template-columns: 150px 60px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-top: 1px solid var(--rope); align-items: baseline;"><span class="mono">--motion-quick</span><span class="num" style="font-weight: 700;">150</span><p class="note">A scrim fading, a control letting go, a pressed row lifting.</p></div>
+        <div style="display: grid; grid-template-columns: 150px 60px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-top: 1px solid var(--rope); align-items: baseline;"><span class="mono">--motion-base</span><span class="num" style="font-weight: 700;">200</span><p class="note">The default, as today. A figure rolling, a row sliding, a body arriving, a toast, a sheet leaving, a panel opening from its control.</p></div>
+        <div style="display: grid; grid-template-columns: 150px 60px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-top: 1px solid var(--rope); align-items: baseline;"><span class="mono">--motion-unfold</span><span class="num" style="font-weight: 700;">280</span><p class="note">A group of controls unfolding and folding, per child, staggered 50ms (ships on the board&#8217;s row menu as 260 in and 280 out; one rung replaces both).</p></div>
+        <div style="display: grid; grid-template-columns: 150px 60px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-top: 1px solid var(--rope); align-items: baseline; color: var(--muted);"><span class="mono">ceiling</span><span class="num" style="font-weight: 700;">400</span><p class="note">A staggered disclosure as a whole (principle 5). Not a rung; a limit.</p></div>
+        <div style="display: grid; grid-template-columns: 150px 60px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-top: 1px solid var(--rope); border-bottom: 1px solid var(--rope); align-items: baseline; color: var(--muted);"><span class="mono">ceiling</span><span class="num" style="font-weight: 700;">600</span><p class="note">A drawn moment (budget rule 2): the swell at 320, the boat at 520. Unchanged, and never on a safety surface.</p></div>
+      </div>
+      <p class="note" style="margin-top: 14px;">The rungs are Tailwind theme tokens beside the three curves, so <span class="mono">duration-base</span> is a utility and <span class="mono">var(--motion-base)</span> a value. The JS half reads the same token once (<span class="mono">motionMs("base")</span>) and a timer names a rung, never a number. <span class="mono">motion-tokens.test.ts</span> extends to refuse a bare millisecond in a component.</p>
+    </div>
+
+    <div class="panel" style="padding: 24px 28px;">
+      <p class="tag">The three curves, and what takes each</p>
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; gap: 18px; align-items: flex-start;">
+          <div class="curve"><svg viewBox="-4 -4 108 108" width="168" height="108" style="overflow: visible;"><path d="M0 100 L100 100 M0 100 L0 0" stroke="#e6dcc8" stroke-width="1" fill="none"></path><path d="M0 100 C 22 0, 36 0, 100 0" stroke="#0e7490" stroke-width="2.5" fill="none" stroke-linecap="round"></path></svg></div>
+          <div><p style="font-size: 15px; font-weight: 600;">Arrive &middot; <span class="mono">--ease-out-soft</span></p><p class="note" style="margin-top: 4px;">Fast off the mark, settling. A digit arriving, a row sliding into place, a body arriving, a sheet rising, a panel opening. The default, as today.</p></div>
+        </div>
+        <div style="display: flex; gap: 18px; align-items: flex-start;">
+          <div class="curve"><svg viewBox="-4 -4 108 108" width="168" height="108" style="overflow: visible;"><path d="M0 100 L100 100 M0 100 L0 0" stroke="#e6dcc8" stroke-width="1" fill="none"></path><path d="M0 100 C 55 100, 85 70, 100 0" stroke="#0e7490" stroke-width="2.5" fill="none" stroke-linecap="round"></path></svg></div>
+          <div><p style="font-size: 15px; font-weight: 600;">Leave &middot; <span class="mono">--ease-in-soft</span></p><p class="note" style="margin-top: 4px;">Slow off the mark, then away. A digit leaving, a row going, a toast dismissing, a sheet leaving from where the thumb let it go. Named <span class="mono">-out</span>, held by the exit-curve check, as today.</p></div>
+        </div>
+        <div style="display: flex; gap: 18px; align-items: flex-start;">
+          <div class="curve"><svg viewBox="-4 -4 108 108" width="168" height="108" style="overflow: visible;"><path d="M0 100 L100 100 M0 100 L0 0" stroke="#e6dcc8" stroke-width="1" fill="none"></path><path d="M0 100 C 34 -42, 50 0, 100 0" stroke="#a83a2c" stroke-width="2.5" fill="none" stroke-linecap="round"></path></svg></div>
+          <div><p style="font-size: 15px; font-weight: 600;">Weight &middot; <span class="mono">--ease-spring</span> <span class="chip" style="background: var(--coral-wash); color: var(--coral-deep); height: 22px; font-size: 11px; margin-left: 6px;">H-69 a</span></p><p class="note" style="margin-top: 4px;">Overshoots and settles; claims the thing has weight. Rationed like coral: the unfolding menu (ships), and, on the owner&#8217;s call, the two places a finger gave weight: a sheet settling back from a short drag, and a pressed control letting go. Nothing that merely appears.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top: 28px; padding: 24px 28px;">
+    <p class="tag">The press &middot; every tappable thing, at rest and under a finger</p>
+    <p class="note" style="margin-top: 6px; max-width: 760px;">Down takes no easing and no time: the thing is at 97% and on the tideline in the frame the finger lands. Up takes <span class="mono">--motion-quick</span> on the spring (H-69 a; the arrival curve otherwise). Transform and background only. The button&#8217;s <span class="mono">active:scale-[0.98]</span> today eases down over 200ms, which a 90ms tap never sees; the row, the chip, the tab and the ledger line do nothing.</p>
+    <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px;">
+      <div class="spec"><span class="lbl">Button &middot; rest / pressed</span><span class="btn btn-p">Check in</span><span class="btn btn-p pressed" style="background: var(--lagoon-deep) !important; color: #fff;">Check in</span></div>
+      <div class="spec"><span class="lbl">Secondary &middot; rest / pressed</span><span class="btn btn-s">Send waiver</span><span class="btn btn-s pressed">Send waiver</span></div>
+      <div class="spec"><span class="lbl">Chip &middot; rest / pressed</span><span class="chip">Has space</span><span class="chip pressed" style="background: #d3e8ec !important;">Has space</span></div>
+      <div class="spec"><span class="lbl">Dock tab &middot; rest / pressed</span><span class="tab"><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><path d="M5 11.5l4 4 8-9"></path></svg>Check-in</span><span class="tab pressed"><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><path d="M5 11.5l4 4 8-9"></path></svg>Check-in</span></div>
+    </div>
+    <div style="margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px;">
+      <div class="spec"><span class="lbl">Ledger row &middot; rest</span>
+        <div class="ledger" style="border-top: 1px solid var(--rope); border-radius: 0; width: 100%;"><svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--warning); stroke-width: 1.8; flex-shrink: 0;"><path d="M9 2.4 16.6 15.2H1.4L9 2.4Z"></path><path d="M9 7.2v3.4"></path><circle cx="9" cy="12.9" r=".5" fill="#b45309"></circle></svg><p style="flex: 1;"><span style="font-weight: 650; color: var(--warning);">Waiver</span> &middot; Priya Sharma hasn&#8217;t been sent hers.</p><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg></div>
+      </div>
+      <div class="spec"><span class="lbl">Ledger row &middot; pressed (97%, tideline, the frame the finger lands)</span>
+        <div class="ledger pressed" style="width: 100%;"><svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--warning); stroke-width: 1.8; flex-shrink: 0;"><path d="M9 2.4 16.6 15.2H1.4L9 2.4Z"></path><path d="M9 7.2v3.4"></path><circle cx="9" cy="12.9" r=".5" fill="#b45309"></circle></svg><p style="flex: 1;"><span style="font-weight: 650; color: var(--warning);">Waiver</span> &middot; Priya Sharma hasn&#8217;t been sent hers.</p><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top: 28px; padding: 24px 28px;">
+    <p class="tag">What moves when &middot; the event table the code reads</p>
+    <div style="margin-top: 10px; display: grid; grid-template-columns: 250px minmax(0, 1fr) 96px 130px; gap: 18px; padding: 6px 0;"><span class="k">What happened</span><span class="k">What moves</span><span class="k">Rung</span><span class="k">Curve</span></div>
+    <div class="row"><p><strong>A figure changed in place</strong></p><p>Only the digits that changed: the old one up and out, the new one in from below. The word beside it stays.</p><p class="num">base</p><p>arrive / leave</p></div>
+    <div class="row"><p><strong>A row left</strong></p><p>The row on the exit curve (ships); the rows below slide up by transform into the gap on the same clock, so the gap and the row close together.</p><p class="num">base</p><p>leave, then arrive</p></div>
+    <div class="row"><p><strong>A row came back (Undo)</strong></p><p>The same path reversed: the rows part, the row arrives where it was.</p><p class="num">base</p><p>arrive</p></div>
+    <div class="row"><p><strong>Something opened from a control</strong></p><p>It scales and fades in from the control that opened it: the transform origin is the trigger, so the eye knows where it came from. A menu of several unfolds per child (ships).</p><p class="num">base / unfold</p><p>arrive; weight for the unfold</p></div>
+    <div class="row"><p><strong>Something closed</strong></p><p>Back toward its trigger, named <span class="mono">-out</span>.</p><p class="num">base / unfold</p><p>leave</p></div>
+    <div class="row"><p><strong>A finger is holding it</strong></p><p>It follows the finger one for one, resists past its edge, and no timer runs. The scrim tracks its position.</p><p class="num">none</p><p>the finger&#8217;s</p></div>
+    <div class="row"><p><strong>The finger let go</strong></p><p>Past the line, or with speed: it leaves from where it is. Short of the line: it settles back.</p><p class="num">base / quick</p><p>leave / weight (H-69 a)</p></div>
+    <div class="row"><p><strong>A control was pressed</strong></p><p>Down in the frame the finger lands, no easing; up when it lifts.</p><p class="num">0 / quick</p><p>none / weight (H-69 a)</p></div>
+    <div class="row"><p><strong>The page scrolled</strong></p><p>The title folds into the bar, driven by the scroll position. No duration exists: the scroll is the clock.</p><p class="num">scroll</p><p>linear on scroll</p></div>
+    <div class="row" style="border-bottom: 1px solid var(--rope);"><p><strong>The page changed</strong></p><p>The cut, and the skeleton (ADR 20260804-instant-navigation). Unchanged; issue #795 stands.</p><p class="num">0</p><p>none</p></div>
+  </div>
+
+  <div style="margin-top: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px;">
+    <div class="card" style="padding: 22px 24px;">
+      <p class="tag">What never moves</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+        <p class="body"><strong>A refusal.</strong> <span class="mono">role="alert"</span> text renders in place, in one frame, beside the control. Motion beside a refusal is banned (budget rule 8) and stays so.</p>
+        <p class="body"><strong>Anything while a field has focus.</strong> Budget rule 2 stands: nothing drawn moves while a person is typing, and neither does a row or a figure beside the field.</p>
+        <p class="body"><strong>A state the surface does not yet have.</strong> On the counter the roll follows the optimistic commit principle 1 grants it; on the roll call it would follow the server&#8217;s, and the head count never rolls at all (H-69 c). A figure&#8217;s first paint swaps: nothing changed in front of the reader.</p>
+        <p class="body"><strong>Money on a report.</strong> A total that was loaded with the page did not change; it is not a roll. Counting up to a figure claims scale, which the fact-of-scale rule reserves for divers and boats.</p>
+        <p class="body"><strong>Anything, for a reduced-motion reader,</strong> except a thing under their own finger. The kill-switch already zeroes every duration and delay; the sheet still follows the thumb, because tracking a finger is not animation.</p>
+      </div>
+    </div>
+    <div class="card" style="padding: 22px 24px;">
+      <p class="tag">What this sheet changes in principle 5, and what it keeps</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+        <p class="body"><strong>Keeps</strong> the 150&#8211;250ms rule, transform and opacity only, the exit curve and its name, the disclosure body that arrives and never its height, the 400ms stagger ceiling, no motion between pages, no cross-fade.</p>
+        <p class="body"><strong>Adds</strong> three rungs as tokens and one reader for JS; the press as a rule for every tappable thing; the finger as a clock that outranks every timer; the roll and the slide as the two answers to &#8220;what changed&#8221;; and the scroll as a clock for the title, and nothing else.</p>
+        <p class="body"><strong>Asks the owner</strong> to widen the spring&#8217;s ration from one use to three (a), and whether structural motion crosses onto the roll call at all (c). If either is declined, the boards on page 2 render the arrival curve and the swap, and nothing else on this sheet changes.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

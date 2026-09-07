@@ -33,6 +33,9 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ### The shop home — `/shop/[shopSlug]`
 
+**Proposed 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), [canvas](canvases/20260907-nothing-from-nowhere/README.md)):
+on a phone the greeting folds into the header bar as the page scrolls, driven by the scroll position; a cleared row's neighbours slide into its gap; the station chip's count rolls; every row and chip answers a press in the frame the finger lands. Each renders the cut, the swap or the tap of today when it is not true.
+
 **Shipped 2026-09-06** ([ADR 20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md), [canvas](canvases/20260906-before-you-ask/README.md)):
 the desk group carries one "Unfinished" row while a staff form draft exists, and none otherwise; the palette opened from here answers a diver, a day or a departure with the fact and its fix before the doors.
 
@@ -182,6 +185,9 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
   the group (principle 9 applied to a table).
 
 ### The counter — `/shop/[shopSlug]/check-in`
+
+**Proposed 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), [canvas](canvases/20260907-nothing-from-nowhere/README.md)):
+the instrument line's figures roll as a check-in lands, the sinking row's neighbours slide into its gap on the same 200ms, and Undo runs both in reverse. The optimistic commit principle 1 grants the counter is what the motion follows.
 
 **Built** — same ADR and canvas, slice 6h, delivered 2026-08-28. Safety-adjacent; gets the
 `dive-domain-expert` pass.
