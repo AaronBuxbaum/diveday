@@ -10,6 +10,7 @@ import {
   screenshotName,
 } from "./lib.mjs";
 
+const NEWLINE = String.fromCharCode(10);
 const dayStart = new Date("2026-07-21T10:00:00.000Z"); // 06:00 in New York
 const sailAt = new Date("2026-07-21T15:00:00.000Z"); // 11:00
 const endsAt = new Date("2026-07-21T18:30:00.000Z"); // 14:30
@@ -172,5 +173,33 @@ describe("renderTranscript", () => {
     });
     expect(md).toContain("| expect(locator).toBeVisible failed |");
     expect(md).not.toContain(esc);
+  });
+
+  /**
+   * A transcript row is a Markdown table cell, so a pipe in an error message
+   * has to be escaped -- and escaping only the pipe is worse than not escaping
+   * it, because the backslash it adds is itself unescaped. `a\\|b` became
+   * `a\\\\|b`: a literal backslash, then a live pipe, and every row below it
+   * shifted a column.
+   */
+  it("escapes a backslash before the pipe that follows it", () => {
+    const md = renderTranscript({
+      ...base,
+      results: [
+        {
+          id: "seat-booked",
+          label: "A diver books a seat",
+          status: "failed",
+          error: String.raw`waiting for locator('text=/a\|b/')`,
+        },
+      ],
+    });
+    expect(md).toContain(String.raw`| waiting for locator('text=/a\\\|b/') |`);
+    // One cell, not two: the row still has the six columns its header names,
+    // so splitting on unescaped pipes leaves 6 fields between 2 empty ends.
+    const row = md
+      .split(NEWLINE)
+      .find((line) => line.startsWith("|") && line.includes("A diver books a seat"));
+    expect(row?.split(/(?<!\\)\|/)).toHaveLength(8);
   });
 });
