@@ -1,10 +1,15 @@
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { paletteAnswerFacts } from "@/db/palette-answer";
 import { EMPTY_RESULTS, searchShop } from "@/db/search";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
+import { paletteAnswerView, paletteQueryNames } from "@/lib/palette-answer";
 
 const NO_STORE = { "Cache-Control": "private, no-store" } as const;
 
@@ -71,13 +76,31 @@ export async function GET(request: Request) {
     return Response.json({ error: "authentication_required" }, { status: 401, headers: NO_STORE });
   }
 
-  const results = await searchShop(
-    db,
-    session.user.shopId,
+  const locale = await requestLocale(shop.defaultLocale);
+  const results = await searchShop(db, session.user.shopId, query, shop.timezone, locale);
+  // **Ask it, and it answers** (ADR 20260906-before-you-ask, decision 3). When
+  // the query names one thing — a day, one diver, one departure — the card's
+  // facts are read through the same readers the home uses and worded here,
+  // where the translator is. A query that names nothing gets the doors alone.
+  const now = nowDate();
+  const naming = paletteQueryNames({
     query,
-    shop.timezone,
-    await requestLocale(shop.defaultLocale),
-  );
+    today: calendarDateInTimezone(now, shop.timezone),
+    locale,
+    divers: results.divers,
+    trips: results.trips,
+  });
+  const facts = naming
+    ? await paletteAnswerFacts(db, { shopId: shop.id, naming, timeZone: shop.timezone, now })
+    : null;
+  const answer = facts
+    ? paletteAnswerView(facts, {
+        shopSlug: shop.slug,
+        locale,
+        timeZone: shop.timezone,
+        t: staffTranslator(locale),
+      })
+    : null;
 
-  return Response.json(results, { headers: NO_STORE });
+  return Response.json({ ...results, answer }, { headers: NO_STORE });
 }

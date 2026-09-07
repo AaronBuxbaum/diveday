@@ -126,7 +126,19 @@
     "goToOfflineRollCall": "Open offline roll call",
     "hintMove": "to move",
     "hintOpen": "to open",
-    "hintClose": "to close"
+    "hintClose": "to close",
+    "answer": {
+      "diverOn": "{name} on the {time} {day} · {trip}",
+      "noDeparture": "No upcoming departure",
+      "openRecord": "Open {name}'s record",
+      "openRoster": "Open the roster",
+      "openManifest": "Open the manifest",
+      "dayNothing": "Nothing on the board yet",
+      "dayCounts": "{departures, plural, one {# departure} other {# departures}} · {divers, plural, one {# diver} other {# divers}}",
+      "openDay": "Open {day} on the board",
+      "addDeparture": "Add a departure",
+      "departureSeats": "{booked} of {capacity} booked · {blocked, plural, =0 {everyone ready} one {# blocked} other {# blocked}}"
+    }
   },
   "tripAdmission": {
     "level": "This charter requires {level}. This diver's highest certification on file is {held}. If they hold a {level} certification, add it to their record. Otherwise book them onto a trip at their level, or into the {level} course.",

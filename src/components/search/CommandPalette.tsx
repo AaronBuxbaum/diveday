@@ -32,6 +32,12 @@ type PaletteItem = {
   href?: string;
   run?: () => void;
   /**
+   * The answer card's body (ADR 20260906-before-you-ask, decision 3): the
+   * fact lines under the row's label, and the act Enter takes. Only the first
+   * row of a query that names one thing carries it.
+   */
+  card?: { lines: string[]; act: string };
+  /**
    * The row's left rail. Always decorative — every row's accessible name is
    * its `aria-label` — and always present, because a rail that appears on some
    * rows and not others is worse than no rail (issue #773).
@@ -277,6 +283,32 @@ export function CommandPalette({
       }
     }
     const out: PaletteGroup[] = [];
+    // **Ask it, and it answers.** The first row when the query names one
+    // thing: the fact, and the primary act the home's ledger rows would
+    // offer. The doors that ship today render beneath; a query that names
+    // nothing never has this row.
+    if (results.answer) {
+      const { answer } = results;
+      const glyph = answer.kind === "diver" ? "diver" : answer.kind === "day" ? "boarding" : "trip";
+      const items: PaletteItem[] = [
+        {
+          key: "answer",
+          label: answer.title,
+          href: answer.act.href,
+          card: { lines: answer.lines, act: answer.act.label },
+          icon: <PaletteGlyph name={glyph} />,
+        },
+      ];
+      if (answer.more) {
+        items.push({
+          key: "answer:more",
+          label: answer.more.label,
+          href: answer.more.href,
+          icon: <PaletteGlyph name={glyph} />,
+        });
+      }
+      out.push({ id: "answer", items });
+    }
     const diverItems: PaletteItem[] = results.divers.map((diver) => ({
       key: `diver:${diver.id}`,
       label: diver.fullName,
@@ -649,9 +681,23 @@ export function CommandPalette({
                               >
                                 {item.icon}
                               </span>
-                              <span className="min-w-0 flex-1 truncate font-medium">
-                                {item.label}
-                              </span>
+                              {item.card ? (
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate font-semibold">{item.label}</span>
+                                  {item.card.lines.map((line) => (
+                                    <span key={line} className="block truncate text-sm text-muted">
+                                      {line}
+                                    </span>
+                                  ))}
+                                  <span className="mt-1 block text-sm font-medium text-primary">
+                                    <kbd className={hintKeyClass}>↵</kbd> {item.card.act}
+                                  </span>
+                                </span>
+                              ) : (
+                                <span className="min-w-0 flex-1 truncate font-medium">
+                                  {item.label}
+                                </span>
+                              )}
                               {item.detail ? (
                                 <span className="shrink-0 truncate text-sm text-muted">
                                   {item.detail}
