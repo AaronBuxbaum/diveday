@@ -169,6 +169,11 @@
     "boatsHeading": "The boats",
     "boatSeats": "{count, plural, one {# diver} other {# divers}}"
   },
+  "season": {
+    "eyebrow": "In season",
+    "through": "Through {date}",
+    "lensLink": "See {lens} departures"
+  },
   "trip": {
     "courseSession": "Course session",
     "privateCharter": "Private charter",
@@ -255,6 +260,20 @@
     "diveNumber": "Dive {number}",
     "siteToBeConfirmed": "Site to be confirmed",
     "sitesToBeConfirmed": "{count, plural, one {One dive · site to be confirmed} other {# dives · sites to be confirmed}}",
+    "sky": {
+      "nightLine": "Sunset {sunset}, dark by {dusk}. {moon}, {percent}% lit.",
+      "nightLineNoDusk": "Sunset {sunset}. {moon}, {percent}% lit.",
+      "moon": {
+        "new": "New moon",
+        "waxingCrescent": "Waxing crescent",
+        "firstQuarter": "First quarter",
+        "waxingGibbous": "Waxing gibbous",
+        "full": "Full moon",
+        "waningGibbous": "Waning gibbous",
+        "lastQuarter": "Last quarter",
+        "waningCrescent": "Waning crescent"
+      }
+    },
     "dayProfile": {
       "bottomTime": "Usually {minutes, plural, one {# minute} other {# minutes}} in the water",
       "surfaceInterval": "Usually {minutes, plural, one {# minute} other {# minutes}} on the surface",
@@ -3387,6 +3406,24 @@
         "body": "DiveDay is in early access and some of this is unsettled: the retention period for waivers and medical answers, and the formal data-processing terms a shop signs. Rather than publish a policy that reads complete and is not, those are named here as open. Nothing above is aspirational. It describes what the code does today."
       }
     },
+    "status": {
+      "eyebrow": "DiveDay status",
+      "headline": {
+        "ok": "Everything is running.",
+        "degraded": "Part of DiveDay is not working.",
+        "down": "DiveDay is not answering."
+      },
+      "checked": "Last checked {time}.",
+      "component": {
+        "serving": "The app",
+        "database": "The database"
+      },
+      "state": {
+        "up": "Running",
+        "down": "Not answering"
+      },
+      "contact": "If DiveDay is not working for you and this page says it is, write to {email} and tell us what you were doing."
+    },
     "terms": {
       "eyebrow": "Terms of use",
       "title": "What we owe each other",
@@ -3609,6 +3646,10 @@
       "recoveryNoLink": "If it wasn't, request a new password from the sign-in page right away.",
       "recoveryWithLinkHtml": "If it wasn't, {link} right away.",
       "recoveryLinkText": "request a new password here"
+    },
+    "staffReply": {
+      "subject": "A message from {shopName}",
+      "reSubject": "Re: {subject}"
     },
     "waiverRequest": {
       "subject": "Complete your waiver for {tripTitle}",

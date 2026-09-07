@@ -1,0 +1,48 @@
+{
+  "title": "Lo que escribieron los buceadores",
+  "emptyHeading": "Nada todavía",
+  "emptyDetail": "Las respuestas a los correos y mensajes de WhatsApp que envías llegan aquí.",
+  "group": {
+    "waiting": "Esperan tu respuesta · {count}",
+    "answered": "Respondidos"
+  },
+  "channel": {
+    "email": "Correo",
+    "whatsapp": "WhatsApp",
+    "sms": "SMS"
+  },
+  "unknownSender": "Remitente desconocido",
+  "attachments": "{count, plural, one {# archivo adjunto, sigue con quien lo envió} other {# archivos adjuntos, siguen con quien los envió}}",
+  "openRecord": "Abrir la ficha de {name}",
+  "pagination": {
+    "total": "{count, plural, one {# mensaje} other {# mensajes}}"
+  },
+  "thread": {
+    "heading": "Conversación",
+    "summary": "{count, plural, one {# mensaje} other {# mensajes}}",
+    "received": "{name} · {date}",
+    "sent": "{name} respondió · {date}",
+    "sendFailed": "Este no les llegó.",
+    "unknownStaff": "Alguien del equipo"
+  },
+  "reply": {
+    "email": "Responder por correo",
+    "whatsapp": "Responder por WhatsApp",
+    "placeholder": "Escribe tu respuesta",
+    "send": "Enviar",
+    "sending": "Enviando",
+    "windowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo."
+  },
+  "notices": {
+    "failed": "No se envió, así que el mensaje sigue esperando respuesta.",
+    "notConfigured": "El correo no está activado en esta instalación de DiveDay, así que no salió nada.",
+    "emptyBody": "Escribe una respuesta antes de enviar.",
+    "tooLong": "Es más larga de lo que admite una respuesta. Recórtala y envíala otra vez.",
+    "notFound": "Ese mensaje ya no está en esta ficha.",
+    "channelUnsupported": "DiveDay todavía no puede responder un SMS.",
+    "noReplyAddress": "No hay ninguna dirección a la que responder.",
+    "whatsappWindowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo.",
+    "whatsappNotConnected": "Para responder por WhatsApp hace falta el remitente que conectas en Ajustes.",
+    "notAuthorized": "Responder a los buceadores es trabajo del propietario o del gerente."
+  }
+}

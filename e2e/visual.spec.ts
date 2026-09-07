@@ -32,8 +32,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and ninety-nine key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 796 screenshots per run (see
+ * Visual regression coverage. Two hundred and six key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 824 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -55,7 +55,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
  * and `TABLET_SURFACES` adds 10: five staff surfaces get a third, portrait
  * tablet width, at one screenshot per scheme rather than the usual two. That
- * brings the run to 782 screenshots — the tablet width is a 1.3% addition, not
+ * brings the run to 842 screenshots — the tablet width is a 1.2% addition, not
  * the 50% a third viewport applied to every surface would have cost.
  *
  * ## One surface, one `test()`
@@ -511,6 +511,9 @@ const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 
 /** The seeded reef charter, the departure most of the staff tour hangs off. */
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
+
+/** The demo's night charter: 7:30 PM to 11:00 PM, in the water after dark. */
+const NIGHT_TRIP = "Night Dive — City of Washington";
 
 /**
  * A departure far enough out that D18's re-entry offers are still worth making.
@@ -1249,6 +1252,11 @@ function publicReefCard(page: Page) {
   return page.locator("li").filter({ hasText: REEF_TRIP });
 }
 
+/** The same card, for the night charter. */
+function publicNightCard(page: Page) {
+  return page.locator("li").filter({ hasText: NIGHT_TRIP });
+}
+
 /** Open the seeded reef charter's staff record, the way staff reach it. */
 async function openReefTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -1951,6 +1959,32 @@ for (const scheme of ["light", "dark"] as const) {
         // the form mounting.
         await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "site-briefing", scheme);
+      });
+
+      /**
+       * **The one departure whose sky is an operational fact** (issue #1467).
+       *
+       * `site-briefing` above photographs the reef morning, where there is
+       * nothing to say about the light and the line is correctly absent. The
+       * night charter casts off at 7:30 PM, half an hour before a July sunset,
+       * and dives both tanks in the dark — so it is the only departure on the
+       * demo board that renders sunset, civil dusk and the moon, and without
+       * this capture that line has no baseline anywhere.
+       *
+       * The clock is frozen (`E2E_FROZEN_CLOCK`) and the shop's coordinates are
+       * seeded, so both times and the phase are fixed: a diff here is a change
+       * in the arithmetic or the copy, never the calendar moving.
+       */
+      test(`the night charter names the light and the moon (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        await publicNightCard(page).getByRole("link", { name: NIGHT_TRIP }).click();
+        await page.getByRole("heading", { name: "The day" }).waitFor();
+        // The line this capture exists for. Waiting on it means the shot can
+        // never be of a page that quietly decided the departure sails in
+        // daylight.
+        await page.getByText(/^Sunset /).waitFor();
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await capture(page, "site-briefing-night-sky", scheme);
       });
 
       /**
@@ -2832,6 +2866,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/terms");
         await page.getByRole("heading", { level: 1 }).waitFor();
         await capture(page, "terms", scheme);
+      });
+
+      // The page a shop owner opens on their worst morning, so the one whose
+      // dark mode and phone width are worth a baseline: a status mark, a
+      // headline, two ruled rows and a timestamp. The clock is frozen by the
+      // harness, so "Last checked …" is stable pixels rather than a mask
+      // (ADR 20260907-external-uptime-monitor).
+      test(`the status page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/status");
+        await page.getByRole("heading", { level: 1 }).waitFor();
+        await capture(page, "status", scheme);
       });
 
       test(`the about page renders true to the design (${scheme})`, async ({ page }) => {
@@ -4695,6 +4740,26 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * The shop's own year, open (issue #1485) — the reef's calendar, where a
+       * shop writes mini-season and the sentence a diver reads on the
+       * storefront while it is running.
+       *
+       * Its own capture for the reason the two rows above have one: it is
+       * closed in `settings-payments`, and this is the only place the form is
+       * looked at. The seeded calendar carries a window that is live, so the
+       * "Running now" badge — the one badge in the inset, and the whole reason
+       * a shop can find the week that is on its storefront at a glance — is in
+       * frame rather than theoretical.
+       */
+      test(`the seasons card renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await page.getByRole("heading", { name: "Seasons and events" }).waitFor();
+        await openSettingsRow(page, "Seasons and events");
+        await page.getByRole("button", { name: "Add" }).last().waitFor();
+        await capture(page, "settings-seasons", scheme);
+      });
+
+      /**
        * The dock-day rhythm, open — six minute boxes and the live strip of
        * beats they produce (ADR 20260812-configurable-dock-day-rhythm). Its own
        * capture for the same reason the address card has one: the row is closed
@@ -5351,6 +5416,37 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Requested dates" }).waitFor();
         await page.getByRole("link", { name: "Add a departure" }).first().waitFor();
         await capture(page, "staff-date-requests", scheme);
+      });
+
+      // What divers wrote back, as a worklist (ADR 20260907-two-way-inbox):
+      // the unanswered ones under a group carrying their count, the answered
+      // ones under theirs, and a stranger's row showing the address it came
+      // from because it has no record to open. The seed puts one of each in
+      // (`src/db/seed-inbox.ts`), which is the whole reason this surface can be
+      // photographed at all. Waiting on the second group as well as the
+      // heading: both render from one query, so a capture taken on the first
+      // alone can photograph a half-built list.
+      test(`the shop inbox renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/inbox");
+        await page.getByRole("heading", { level: 1, name: "What divers wrote" }).waitFor();
+        await page.getByRole("heading", { name: "Answered" }).waitFor();
+        await capture(page, "staff-inbox", scheme);
+      });
+
+      // The other half of the same feature: one diver's conversation on their
+      // own record, reached through the inbox row that opens it. It is the one
+      // file group rendering both directions — what they wrote and what the
+      // shop wrote back — with the composer beneath, and it opens itself
+      // because this diver is waiting on an answer.
+      test(`a diver's conversation renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/inbox");
+        await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
+        await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
+        await page
+          .getByRole("region", { name: "Conversation" })
+          .getByText(/afternoon boat/)
+          .waitFor();
+        await capture(page, "staff-diver-conversation", scheme);
       });
 
       // Shop-wide discount codes: the create form, then the codes as one

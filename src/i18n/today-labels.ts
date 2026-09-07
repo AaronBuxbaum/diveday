@@ -41,6 +41,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   failed_photo_deletion: "today.actionKind.failedPhotoDeletion",
   owed_refund: "today.actionKind.owedRefund",
   reviews_pending: "today.actionKind.reviewsPending",
+  unanswered_messages: "today.actionKind.unansweredMessages",
   gear_overdue: "today.actionKind.gearOverdue",
   gear_due_back: "today.actionKind.gearDueBack",
   gear_service_due: "today.actionKind.gearServiceDue",
@@ -48,6 +49,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   units_unconfirmed: "today.actionKind.unitsUnconfirmed",
   say_hello: "today.actionKind.sayHello",
   rental_fit_confirm: "today.actionKind.rentalFit",
+  season_event_upcoming: "today.actionKind.seasonEvent",
 };
 
 /** A blocked row's one-tap fix, singular ("Send waiver"). */
@@ -518,6 +520,36 @@ export function reviewsPendingDetailText(t: StaffTranslator): string {
 
 export function openReviewsActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openReviews");
+}
+
+/**
+ * The unanswered-inbox row (ADR 20260907-two-way-inbox): how many divers wrote
+ * and are still waiting. One row for the whole inbox, never one per message —
+ * the same shape the reviews queue above takes, and for the same reason.
+ */
+export function unansweredMessagesSubjectText(t: StaffTranslator, count: number): string {
+  return t("today.unansweredMessages.subject", { count });
+}
+
+export function unansweredMessagesDetailText(t: StaffTranslator): string {
+  return t("today.unansweredMessages.detail");
+}
+
+export function openInboxActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openInbox");
+}
+
+/**
+ * A season a month out (issue #1485). The row's *subject* is the shop's own
+ * name for the week and never passes through here — only the date beside it is
+ * DiveDay's to word.
+ */
+export function seasonEventDetailText(t: StaffTranslator, date: string): string {
+  return t("today.seasonEvent.detail", { date });
+}
+
+export function openScheduleActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openSchedule");
 }
 
 /**

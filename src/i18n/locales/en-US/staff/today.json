@@ -79,6 +79,7 @@
     "failedPhotoDeletion": "Cleanup",
     "owedRefund": "Refund owed",
     "reviewsPending": "Reviews",
+    "unansweredMessages": "Messages",
     "gearOverdue": "Gear overdue",
     "gearDueBack": "Gear due back",
     "gearServiceDue": "Gear service",
@@ -86,7 +87,8 @@
     "unitsUnconfirmed": "Setup",
     "helpRequest": "Help request",
     "sayHello": "Say hello",
-    "rentalFit": "Gear"
+    "rentalFit": "Gear",
+    "seasonEvent": "Season"
   },
   "blockerAction": {
     "setRequirements": "Set requirements",
@@ -194,11 +196,13 @@
     "openOrders": "Review in Orders",
     "openDataSettings": "Review in Settings",
     "openReviews": "Open reviews",
+    "openInbox": "Open inbox",
     "openGearRegister": "Open gear register",
     "openGearUnit": "Open unit record",
     "openStaffing": "Open staffing",
     "openUnits": "Open units",
-    "openDiver": "Open diver record"
+    "openDiver": "Open diver record",
+    "openSchedule": "Open the schedule"
   },
   "greeting": {
     "morning": "Good morning, {name}",
@@ -237,6 +241,13 @@
   "reviewsPending": {
     "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you",
     "detail": "Divers wrote about their trips. Publish the good words or hide the rest."
+  },
+  "unansweredMessages": {
+    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer",
+    "detail": "Divers wrote back. Answer from their record, in the channel they used."
+  },
+  "seasonEvent": {
+    "detail": "Opens {date}."
   },
   "unitsUnconfirmed": {
     "subject": "Which currency and depth unit does this shop work in?",

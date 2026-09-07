@@ -1679,6 +1679,22 @@ new domain concept, define it here in the same PR.
   (ADR
   [20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md),
   decision 2).
+- **Season event** — a week the shop plans its year around, written in the shop's own words:
+  lobster mini-season, a goliath grouper aggregation, turtle nesting, the lionfish derby it runs
+  every August. A `season_events` row is a name, an optional sentence, an inclusive calendar-date
+  range, and optionally one **lens** — the kind of day the week fills the board with. Like a site
+  briefing and unlike the conservation codes, the words are **the shop's** and DiveDay writes only
+  the frame around them; there is deliberately no catalog of seasons to pick from, because the
+  dates move by state rule and by species and the sentence that makes a visitor care is the one
+  the shop would say across the counter.
+  **The dates have no instant in them.** "The last Wednesday and Thursday of July" is two days on a
+  wall calendar, inclusive at both ends; whether the window is *live* is the only question with a
+  zone in it, and it is asked once, at the edge, against today's date in the shop's own timezone
+  (`src/lib/season-events.ts`). While it is live the storefront carries a band above the schedule;
+  a month before it opens the shop's own work queue carries one row about it, and then goes quiet
+  once the shop is standing in the week. It **informs and never gates** — nothing in
+  `src/lib/trip-admission.ts` or `src/lib/readiness.ts` reads one, and a season puts no departure
+  on the board by itself.
 - **Crew public name** — the string a consenting staff member shows divers on the departures they
   crew (`people.crew_public_name`). Theirs to type, not derived: `full_name` is one free-text box
   a shop fills in, so taking its first whitespace token assumes the given name was typed first and

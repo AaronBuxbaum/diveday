@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
@@ -9,6 +9,7 @@ import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { createGearItem, recordGearService, reserveGearUnit, returnGearReservation } from "./gear";
+import { markInboundAnswered, recordInboundMessage } from "./inbound-messages";
 import { joinLastMinuteList } from "./last-minute-list";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { queueMediaDeletion, resolveMediaDeletion } from "./media-deletions";
@@ -22,6 +23,7 @@ import { submitTripReview } from "./reviews";
 import {
   bookings as bookingsTable,
   courses,
+  inboundMessages,
   nitroxCertifications,
   people,
   rollCallCrewEvents as rollCallCrewEventsTable,
@@ -2737,5 +2739,96 @@ describe("reviews waiting on moderation (one row, and where it lands)", () => {
       dueAt: null,
       href: `/shop/${shop.slug}/reviews`,
     });
+  });
+});
+
+/**
+ * The inbox's one row (ADR 20260907-two-way-inbox): what nobody has answered
+ * yet, counted once for the whole shop and pointing at the page that empties
+ * it. The demo seed leaves three messages unanswered
+ * (`src/db/seed-inbox.ts`), which is what this counts.
+ */
+describe("unanswered messages", () => {
+  const ctx = fileScopedShopContext();
+
+  async function unansweredRow() {
+    const { db, shop } = ctx;
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    return work.actions.filter((action) => action.id === "inbox:unanswered");
+  }
+
+  it("counts what the shop has not answered and points at the inbox", async () => {
+    const { shop } = ctx;
+    const rows = await unansweredRow();
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "unanswered_messages",
+      urgency: "later",
+      dueAt: null,
+      href: `/shop/${shop.slug}/inbox`,
+    });
+    expect(rows[0]?.subject).toBe("3 messages are waiting on an answer");
+  });
+
+  it("grows by one message and renders nothing once every one is answered", async () => {
+    const { db, shop } = ctx;
+    const recorded = await recordInboundMessage(db, {
+      shopId: shop.id,
+      channel: "email",
+      fromAddress: "someone.new@example.net",
+      body: "Do you run night dives?",
+      receivedAt: nowDate(),
+      providerMessageId: "today-inbox-1",
+    });
+    if (recorded.status !== "recorded") throw new Error("message not recorded");
+    expect((await unansweredRow())[0]?.subject).toBe("4 messages are waiting on an answer");
+
+    const live = await db
+      .select({ id: inboundMessages.id })
+      .from(inboundMessages)
+      .where(and(eq(inboundMessages.shopId, shop.id), isNull(inboundMessages.deletedAt)));
+    for (const row of live) await markInboundAnswered(db, shop.id, row.id);
+
+    // Nothing waiting, no row — the queue never carries a zero.
+    expect(await unansweredRow()).toHaveLength(0);
+  });
+});
+
+describe("a season the shop can still schedule for", () => {
+  /**
+   * The demo shop's own calendar (`src/db/seed-season-events.ts`) carries two
+   * windows anchored on the clock: turtle nesting, live now, and mini-season,
+   * eighteen days out. So the seeded fixture already holds both halves of the
+   * rule — one window inside the month-out horizon, and one the shop is
+   * standing in, which the queue must stay quiet about.
+   */
+  it("reminds the board about the window a month out and not the one already running", async () => {
+    const { db, shop } = ctx;
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const rows = work.actions.filter((action) => action.kind === "season_event_upcoming");
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      urgency: "later",
+      dueAt: null,
+      // The shop's own name for the week, verbatim — never a DiveDay sentence.
+      subject: "Lobster mini-season",
+      href: `/shop/${shop.slug}/schedule/board`,
+    });
+  });
+
+  it("says nothing about another shop's calendar", async () => {
+    const { db, shop } = ctx;
+
+    const otherWork = await getTodayWork(
+      db,
+      "00000000-0000-4000-8000-000000000000",
+      "other-shop",
+      shop.timezone,
+    );
+
+    expect(otherWork.actions.filter((row) => row.kind === "season_event_upcoming")).toEqual([]);
   });
 });

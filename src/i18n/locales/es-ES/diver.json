@@ -169,6 +169,11 @@
     "boatsHeading": "Las embarcaciones",
     "boatSeats": "{count, plural, one {# buceador} other {# buceadores}}"
   },
+  "season": {
+    "eyebrow": "En temporada",
+    "through": "Hasta el {date}",
+    "lensLink": "Ver salidas de {lens}"
+  },
   "trip": {
     "courseSession": "Sesión de curso",
     "privateCharter": "Chárter privado",
@@ -255,6 +260,20 @@
     "diveNumber": "Inmersión {number}",
     "siteToBeConfirmed": "Sitio por confirmar",
     "sitesToBeConfirmed": "{count, plural, one {Una inmersión · sitio por confirmar} other {# inmersiones · sitios por confirmar}}",
+    "sky": {
+      "nightLine": "Puesta de sol a las {sunset}, oscuridad total a las {dusk}. {moon}, con un {percent} % de luz.",
+      "nightLineNoDusk": "Puesta de sol a las {sunset}. {moon}, con un {percent} % de luz.",
+      "moon": {
+        "new": "Luna nueva",
+        "waxingCrescent": "Luna creciente",
+        "firstQuarter": "Cuarto creciente",
+        "waxingGibbous": "Luna gibosa creciente",
+        "full": "Luna llena",
+        "waningGibbous": "Luna gibosa menguante",
+        "lastQuarter": "Cuarto menguante",
+        "waningCrescent": "Luna menguante"
+      }
+    },
     "dayProfile": {
       "bottomTime": "{minutes, plural, one {Alrededor de # minuto en el agua} other {Alrededor de # minutos en el agua}}",
       "surfaceInterval": "{minutes, plural, one {Alrededor de # minuto en superficie} other {Alrededor de # minutos en superficie}}",
@@ -3387,6 +3406,24 @@
         "body": "DiveDay está en acceso anticipado y parte de esto está sin cerrar: el plazo de conservación de exenciones y respuestas médicas, y los términos formales de tratamiento de datos que firma un centro. En vez de publicar una política que parezca completa sin serlo, aquí se nombran como abiertas. Nada de lo anterior es aspiracional. Describe lo que hace el código hoy."
       }
     },
+    "status": {
+      "eyebrow": "Estado de DiveDay",
+      "headline": {
+        "ok": "Todo está funcionando.",
+        "degraded": "Una parte de DiveDay no está funcionando.",
+        "down": "DiveDay no responde."
+      },
+      "checked": "Última comprobación: {time}.",
+      "component": {
+        "serving": "La aplicación",
+        "database": "La base de datos"
+      },
+      "state": {
+        "up": "Funcionando",
+        "down": "Sin respuesta"
+      },
+      "contact": "Si DiveDay no te funciona y esta página dice que sí, escríbenos a {email} y cuéntanos qué estabas haciendo."
+    },
     "terms": {
       "eyebrow": "Condiciones de uso",
       "title": "Qué nos debemos",
@@ -3609,6 +3646,10 @@
       "recoveryNoLink": "Si no fuiste tú, solicita una contraseña nueva desde la página de inicio de sesión de inmediato.",
       "recoveryWithLinkHtml": "Si no fuiste tú, {link} de inmediato.",
       "recoveryLinkText": "solicita una contraseña nueva aquí"
+    },
+    "staffReply": {
+      "subject": "Un mensaje de {shopName}",
+      "reSubject": "Re: {subject}"
     },
     "waiverRequest": {
       "subject": "Completa tu waiver para {tripTitle}",

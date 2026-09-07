@@ -62,7 +62,11 @@ Eleven signals. Eight are alarmed; three are counters only, declared once in
 `infra/lib/observability.ts` and still available as dashboard series. Every other event code the app emits stays queryable — see
 the saved queries below — it just does not have a metric. Two more alarms watch numbers AWS
 publishes rather than lines the app writes: SES's account bounce and complaint rates, at the bottom
-of the table.
+of the table. One more, `diveday-uptime-health-probe`, watches a Route 53 health check polling
+`/api/health` from outside this account — the only alarm here that can fire when the app is not
+running to write anything (ADR
+[20260907-external-uptime-monitor](../architecture/decisions/20260907-external-uptime-monitor.md)),
+and the only one whose missing data is treated as breaching rather than as quiet.
 
 | Alarm | Fires at | What it means | First move |
 | --- | --- | --- | --- |
@@ -188,13 +192,18 @@ does not depend on the account's age or plan. What that covers, and what this st
 | Always free, per month | Used | Billed |
 | --- | --- | --- |
 | 10 custom metrics | 15 (10 signals + 5 web vitals) | 5 × $0.30 = **$1.50** |
-| 10 standard-resolution alarms | 13 (8 alarmed signals + 3 alarmed vitals + 2 SES reputation rates) | 3 × $0.10 = **$0.30** |
+| 10 standard-resolution alarms | 14 (8 alarmed signals + 3 alarmed vitals + 2 SES reputation rates + the external uptime alarm) | 4 × $0.10 = **$0.40** |
 | 3 dashboards | 1 | **$0.00** (a 4th would be $3.00) |
 | 5 GB log ingestion + archive + Insights scan | well under | $0.50/GB ingested, $0.12/GB scanned beyond |
 | 1 Contributor Insights rule | 0 | — |
 | 1,800 minutes of Live Tail | 0 | — |
 
-So the fixed monthly cost of everything in this runbook is about **$1.80**. A counter-only signal
+One cost in this stack is not CloudWatch's: the Route 53 health check the uptime alarm watches is
+**$2.75/month** — $0.75 for a check against a non-AWS endpoint plus $1.00 each for HTTPS and string
+matching. It is the only signal that survives a total outage, and the reasoning is in ADR
+[20260907-external-uptime-monitor](../architecture/decisions/20260907-external-uptime-monitor.md).
+
+So the fixed monthly cost of everything in this runbook is about **$1.90**, plus that check. A counter-only signal
 added to the registry costs **$0.30**; an alarmed signal costs **$0.40** — $0.30 for the metric plus
 $0.10 for the alarm.
 

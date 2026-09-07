@@ -308,6 +308,24 @@ describe("tripReminderEmail", () => {
     expect(email.text).not.toContain("Aim to be at the dock by");
   });
 
+  it("carries the night sky under the conditions line, with no label of its own", () => {
+    const email = tripReminderEmail({
+      ...base,
+      lead: "day",
+      brief: {
+        forecast: "Warm and glassy",
+        night: "Sunset 7:32 PM, dark by 7:55 PM. New moon, 2% lit.",
+      },
+    });
+    expect(email.text).toContain("Sunset 7:32 PM, dark by 7:55 PM. New moon, 2% lit.");
+    expect(email.text.indexOf("Warm and glassy")).toBeLessThan(
+      email.text.indexOf("Sunset 7:32 PM"),
+    );
+    // One sentence needs no heading of its own; the conditions label above it
+    // already frames both.
+    expect(email.text).not.toContain("Light:");
+  });
+
   it("keeps the 7-day reminder light with no brief sections", () => {
     const email = tripReminderEmail({
       ...base,
