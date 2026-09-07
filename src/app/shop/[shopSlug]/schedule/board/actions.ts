@@ -128,6 +128,10 @@ export async function loadTideWindowAction(input: BuilderTideWindowInput): Promi
     input.diveMode === "shore" || input.diveMode === "pool" ? input.diveMode : "boat";
   const [entry] = await tideWindowsForDeparture({
     startsAt: wallTimeToUtc(wall, shop.timezone),
+    // Nothing has sailed: this departure is being typed, not read back. The
+    // panel's own default start time is 8:30 AM, so without this the composer
+    // answers nothing for the rest of any working day.
+    proposed: true,
     plannedDives: 1,
     diveMode,
     dives: [
