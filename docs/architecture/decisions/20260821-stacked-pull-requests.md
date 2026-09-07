@@ -47,8 +47,17 @@ of them could have made it a bad fit and one nearly does:
   through the GitHub MCP server, whose tool surface has `create_branch` and `create_pull_request`
   but no stack endpoints.
 
-  **Amended 2026-08-22 — this is no longer true, and the Decision below is written to the corrected
-  fact (issue #645).** `gh` *is* pre-installed in cloud sessions, and it authenticates without a
+  **Amended 2026-09-07 — the original observation above is true again, and the 2026-08-22 amendment
+  that follows it is stale. Read it as history.** `gh` is gone from cloud sessions once more and
+  `api.github.com` refuses every repo-scoped request, so no session can reach the stacks endpoints
+  by any route. That reverted silently and cost this repository nine days of chains that never
+  became stacks; registration now happens on a runner instead, and is nobody's step. See
+  [20260907-a-runner-registers-the-stack](20260907-a-runner-registers-the-stack.md), which
+  supersedes this bullet, the `gh api` half of Decision 2 below, and the "Measured: register at the
+  first commit" section's registration commands — the *rest* of that section, about opening a
+  layer's pull request at its first commit, is unchanged and is now the whole discipline.
+
+  **Amended 2026-08-22 — superseded 2026-09-07, see directly above (issue #645).** `gh` *is* pre-installed in cloud sessions, and it authenticates without a
   `gh auth login`: the GitHub proxy substitutes real credentials on outbound requests, leaving
   `GH_TOKEN` reading as the placeholder `proxy-injected` inside the VM. The proxy's documented REST
   path, `gh api repos/{owner}/{repo}/...`, reaches the stacks endpoints against the attached
