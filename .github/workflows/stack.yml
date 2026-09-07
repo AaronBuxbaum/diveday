@@ -1,0 +1,83 @@
+name: Stack
+
+# Registers a chain of chained-base pull requests as a GitHub stack.
+#
+# The chain itself is built by whoever opens the pull requests — each branch cut
+# from the one below, each `base` set to that branch. That half needs nothing
+# but git and `create_pull_request`, and an agent session still does it. What a
+# session can no longer do is the one REST call that turns the chain into a
+# registered stack, which is what buys the cascading rebase, the bottom-up
+# atomic merge, and the `github.event.pull_request.stack` field ci.yml reads to
+# skip a middle layer's gate.
+#
+# Measured in a cloud session on 2026-09-07: `gh` is not installed, and
+# api.github.com refuses every repo-scoped request with "GitHub access is not
+# enabled for this session" whether or not an Authorization header is sent. The
+# GitHub MCP server is the only writable path a session has, and it has no stack
+# endpoints. So the chain was being built and never registered — PRs #1456 and
+# #1457 were an open two-layer chain reading `"stack": null`, and the newest
+# registered stack in this repository was #1074, from 2026-08-28.
+#
+# A runner has what the session lost, on the default token: a probe against this
+# repository answered `GET .../stacks` with 200 and `POST .../stacks` carrying an
+# empty list with 422 "2 items required", which is the endpoint accepting the
+# caller and declining only the payload.
+#
+# Deliberately not a `workflow_dispatch`-only bridge. A dispatch is dispatchable
+# only from the default branch, so a session would have to wait for this file to
+# merge before it could register anything — and, worse, it would put the
+# registration back where ADR 20260821-stacked-pull-requests measured every
+# stacking failure this repository has had: in the gap between cutting a branch
+# and getting round to the follow-up step. A pull request event closes the gap by
+# removing the step. The dispatch below is for the cases an event cannot reach:
+# a chain assembled before this workflow existed, or a re-run after a refusal.
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: Any open pull request in the chain; the rest is walked from it.
+        required: true
+
+concurrency:
+  # One lane **per pull request**, superseding itself. A repository-wide lane is
+  # the obvious way to serialise two layers of one chain opening together, and
+  # it is wrong: with `cancel-in-progress: false` GitHub keeps the in-progress
+  # run and the newest queued one and **cancels every other queued run in the
+  # group** — the trap ci.yml records costing five main commits their visual
+  # baseline on 2026-09-01, and observed here on this workflow's first five runs,
+  # three of which were cancelled before they registered anything. A cancelled
+  # registration is a silent one, which is the failure this whole workflow exists
+  # to remove, so losing a run is strictly worse than racing. The race is handled
+  # in the script instead: the loser re-reads and finds the chain registered.
+  group: stack-${{ github.event.pull_request.number || github.event.inputs.pull_request }}
+  cancel-in-progress: true
+
+jobs:
+  register:
+    name: Register the chain as a stack
+    # A fork's pull request is skipped rather than refused: the head branch is
+    # not in this repository, so no chain through it can be registered here, and
+    # the token this job carries must not act on one either.
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # `pull_requests=write` is exactly what POST .../stacks asks for, per the
+      # X-Accepted-Github-Permissions header on the probe's 422.
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      # No `./.github/actions/setup`: this script imports nothing outside Node's
+      # standard library, so the runner's own Node runs it in a second rather
+      # than paying an install for a file that makes three API calls.
+      - run: node scripts/stack-register.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STACK_PULL_REQUEST: ${{ github.event.inputs.pull_request || github.event.pull_request.number }}
+          STACK_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
