@@ -14,7 +14,16 @@ test.describe("the departures board", () => {
 
   test("a lobby link shows today's boats to a signed-out screen, and revoking it goes dark", async ({
     page,
+    request,
   }) => {
+    // A second screen, so the list holds two rows. Without it the revoke button
+    // is unambiguous by accident, and the defect this spec now pins -- two rows
+    // announcing as "Revoke, button" twice -- cannot appear at all.
+    const seeded = await request.post("/api/test/seed-display-token", {
+      data: { label: "Dock B tablet" },
+    });
+    expect(seeded.ok()).toBe(true);
+
     await page.goto(DISPLAY_SETTINGS);
     await page.getByLabel("Which screen").fill("Lobby TV");
     await page.getByRole("button", { name: "Create link" }).click();
@@ -48,13 +57,23 @@ test.describe("the departures board", () => {
       // locator on purpose.
       await expect(board.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 
-      // The settings page lists the screen, and revoking it is what turns the
-      // board off on its next refresh.
+      // The settings page lists both screens, and revoking one is what turns
+      // that board off on its next refresh.
       await page.goto(DISPLAY_SETTINGS);
       await expect(page.getByText("Lobby TV")).toBeVisible();
-      await page.getByRole("button", { name: "Revoke" }).click();
+      await expect(page.getByText("Dock B tablet")).toBeVisible();
+      // Two DISTINCT accessible names, which is the whole point: a count of two
+      // buttons passes just as happily when both are called "Revoke", and that
+      // is the bug. The screen's own name sits in a sibling paragraph outside
+      // the button, so only an explicit label puts it in the accessible name.
+      await expect(page.getByRole("button", { name: "Revoke Dock B tablet" })).toBeVisible();
+      await page.getByRole("button", { name: "Revoke Lobby TV" }).click();
+      // Only one row is armed at a time, so the confirm stays unambiguous.
       await page.getByRole("button", { name: "Yes, revoke it" }).click();
       await expect(page.getByText("Link revoked.")).toBeVisible();
+      // The named trigger hit the row it named, not merely some row.
+      await expect(page.getByText("Dock B tablet")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Revoke Lobby TV" })).toHaveCount(0);
 
       // The screen goes dark in place: a capability route refuses in its own
       // words rather than through DiveDay's 404, whose one button goes to a

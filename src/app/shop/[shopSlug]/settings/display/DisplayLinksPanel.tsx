@@ -55,7 +55,10 @@ export function DisplayLinksPanel({
   const namesId = useId();
   const issued = state.status === "issued" ? state : null;
   const invalidLabel = state.status === "invalid_label";
-  const denied = state.status === "denied";
+  // Split, because the panel has two forms. A refused revoke printed under the
+  // create form is a message about something the staffer never submitted.
+  const deniedIssue = state.status === "denied" && state.intent === "issue";
+  const deniedRevoke = state.status === "denied" && state.intent === "revoke";
   // The server list was rendered before a revoke ran; the revoked row is gone
   // on the next render, and hidden here in the meantime.
   const live = screens.filter((screen) => !(state.status === "revoked" && state.id === screen.id));
@@ -95,7 +98,7 @@ export function DisplayLinksPanel({
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <SubmitButton label={copy.submit} pendingLabel={copy.submitting} />
-            <FormStatus>{denied ? copy.denied : null}</FormStatus>
+            <FormStatus>{deniedIssue ? copy.denied : null}</FormStatus>
           </div>
         </FieldGrid>
 
@@ -123,6 +126,13 @@ export function DisplayLinksPanel({
             {copy.revoked}
           </ShopNotice>
         ) : null}
+        {/* Beside the thing it is about, and `role="alert"` so it is announced —
+            the idiom `CalendarFeedPanel` uses for a client-action refusal. */}
+        {deniedRevoke ? (
+          <ShopNotice tone="danger" role="alert" className="mb-4">
+            {copy.denied}
+          </ShopNotice>
+        ) : null}
         {live.length === 0 ? (
           <p className="text-sm text-muted">{copy.listEmpty}</p>
         ) : (
@@ -144,6 +154,7 @@ export function DisplayLinksPanel({
                   <input type="hidden" name="id" value={screen.id} />
                   <InlineConfirm
                     triggerLabel={copy.revoke}
+                    ariaLabel={screen.revokeLabel}
                     triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
                     message={copy.confirmRevoke}
                     confirmLabel={copy.confirmRevokeButton}

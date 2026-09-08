@@ -80,6 +80,7 @@ export default async function LobbyDisplayPage({
           when: formatDateTimeTz(link.lastShownAt, locale, shop.timezone),
         })
       : null,
+    revokeLabel: t("display.list.revokeNamed", { label: link.label }),
   }));
 
   return (

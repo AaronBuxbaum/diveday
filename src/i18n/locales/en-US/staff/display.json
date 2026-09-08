@@ -28,6 +28,7 @@
     "namesOn": "Crew named",
     "namesOff": "Nobody named",
     "revoke": "Revoke",
+    "revokeNamed": "Revoke {label}",
     "revoking": "Revoking…",
     "confirmRevoke": "Revoke this link? The screen goes dark on its next refresh.",
     "confirmRevokeButton": "Yes, revoke it",

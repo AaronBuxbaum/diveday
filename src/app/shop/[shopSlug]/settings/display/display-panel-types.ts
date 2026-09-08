@@ -10,7 +10,10 @@ export type DisplayLinkState =
   | { status: "issued"; id: string; label: string; url: string }
   | { status: "revoked"; id: string }
   | { status: "invalid_label" }
-  | { status: "denied" };
+  // Which act was refused, because the panel has two forms and a refusal shown
+  // under the wrong one is worse than none: a staffer whose revoke was refused
+  // read a message under a create form they never submitted.
+  | { status: "denied"; intent: "issue" | "revoke" };
 
 export const IDLE_DISPLAY_LINK_STATE: DisplayLinkState = { status: "idle" };
 
@@ -55,4 +58,11 @@ export type DisplayLinkView = {
   createdLabel: string;
   /** Localized on the server; null when no screen has opened it yet. */
   lastShownLabel: string | null;
+  /**
+   * The revoke button's accessible name, "Revoke Lobby TV". Never rendered —
+   * the visible label stays "Revoke". Two screens otherwise announce as
+   * "Revoke, button" twice, and the screen's own name sits in a sibling
+   * paragraph outside the button, so it is not part of the accessible name.
+   */
+  revokeLabel: string;
 };
