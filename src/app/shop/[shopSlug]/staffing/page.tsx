@@ -7,7 +7,14 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  controlClass,
+  DateField,
+  Field,
+  FieldActions,
+  FieldGrid,
+  FormStatus,
+} from "@/components/ui/form";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { listCrewAssignmentRequests, listCrewAvailabilityBlocks } from "@/db/crew-requests";
 import type { staffCredentials } from "@/db/schema";
@@ -461,13 +468,7 @@ export default async function StaffingPage({
                   </select>
                 </Field>
                 <Field label={t("staffing.addShift.date")}>
-                  <input
-                    name="date"
-                    type="date"
-                    required
-                    defaultValue={defaultShiftDate}
-                    className={controlClass}
-                  />
+                  <DateField name="date" required defaultValue={defaultShiftDate} />
                 </Field>
                 <Field label={t("staffing.addShift.starts")}>
                   <input
@@ -539,22 +540,10 @@ export default async function StaffingPage({
                 <input type="hidden" name="personId" value={session.user.personId} />
               )}
               <Field label={t("staffing.away.from")}>
-                <input
-                  name="startsOn"
-                  type="date"
-                  required
-                  defaultValue={defaultShiftDate}
-                  className={controlClass}
-                />
+                <DateField name="startsOn" required defaultValue={defaultShiftDate} />
               </Field>
               <Field label={t("staffing.away.to")}>
-                <input
-                  name="endsOn"
-                  type="date"
-                  required
-                  defaultValue={defaultShiftDate}
-                  className={controlClass}
-                />
+                <DateField name="endsOn" required defaultValue={defaultShiftDate} />
               </Field>
               <Field label={t("staffing.away.note")}>
                 <input
@@ -703,10 +692,10 @@ export default async function StaffingPage({
                       <input name="identifier" maxLength={120} className={controlClass} />
                     </Field>
                     <Field label={t("staffing.credentials.issuedAt")}>
-                      <input name="issuedAt" type="date" className={controlClass} />
+                      <DateField name="issuedAt" />
                     </Field>
                     <Field label={t("staffing.credentials.renewsAt")}>
-                      <input name="renewsAt" type="date" className={controlClass} />
+                      <DateField name="renewsAt" />
                     </Field>
                     <FieldActions>
                       <SubmitButton

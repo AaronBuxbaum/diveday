@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import { fill, pluralForm } from "@/i18n/fill";
@@ -822,13 +822,11 @@ function AddPanel({
         <Field label={copy.date}>
           {/* Read here as well as submitted: the repeat fieldset below pre-checks
               this date's own weekday, so it has to see the date change. */}
-          <input
+          <DateField
             name="date"
-            type="date"
             required
             defaultValue={dateIso}
             onChange={(event) => setStartDate(event.currentTarget.value)}
-            className={controlClass}
           />
         </Field>
         {/* "7" is 7:00 AM and "1p" is 1:00 PM (ADR 20260906-before-you-ask,
@@ -1626,13 +1624,11 @@ function MovePanel({
           trip.dayCount > 1 ? fill(copy.multiDayNote, { count: trip.dayCount }) : undefined
         }
       >
-        <input
+        <DateField
           name="date"
-          type="date"
           required
           value={date}
           onChange={(event) => setDate(event.target.value)}
-          className={controlClass}
           ref={focusOnMount}
         />
       </Field>
@@ -1691,12 +1687,10 @@ function CopyPanel({
           so there is no bundle key to translate. */}
       <p className="sm:col-span-2 text-sm font-medium">{trip.title}</p>
       <Field label={copy.copyTo} description={copy.copyDescription}>
-        <input
+        <DateField
           name="date"
-          type="date"
           required
           defaultValue={shiftCalendarDate(trip.dateIso, 7)}
-          className={controlClass}
           ref={focusOnMount}
         />
       </Field>

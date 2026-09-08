@@ -7,7 +7,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  controlClass,
+  DateField,
+  Field,
+  FieldActions,
+  FieldGrid,
+  FormStatus,
+} from "@/components/ui/form";
 import { type GearItemDetail, getGearItemDetail } from "@/db/gear";
 import {
   gearItemKindLabel,
@@ -411,12 +418,7 @@ export default async function GearUnitPage({
                 />
               </Field>
               <Field label={t("gear.form.purchasedOn")} hint={t("gear.form.optionalHint")}>
-                <input
-                  type="date"
-                  name="purchasedOn"
-                  defaultValue={item.purchasedOn ?? ""}
-                  className={controlClass}
-                />
+                <DateField name="purchasedOn" defaultValue={item.purchasedOn ?? ""} />
               </Field>
               <FieldActions>
                 <SubmitButton
@@ -539,20 +541,14 @@ function ServiceCard({
             </select>
           </Field>
           <Field label={t("gear.unit.service.servicedOn")}>
-            <input
-              type="date"
-              name="servicedOn"
-              required
-              defaultValue={todayLocal}
-              className={controlClass}
-            />
+            <DateField name="servicedOn" required defaultValue={todayLocal} />
           </Field>
           <Field
             label={t("gear.unit.service.nextDueOn")}
             hint={t("gear.form.optionalHint")}
             description={t("gear.unit.service.nextDueHint")}
           >
-            <input type="date" name="nextDueOn" className={controlClass} />
+            <DateField name="nextDueOn" />
           </Field>
           <Field
             label={t("gear.unit.service.nextDueDives")}

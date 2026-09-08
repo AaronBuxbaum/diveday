@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
 import { calendarDateWeekday, isValidCalendarDate } from "@/lib/calendar-date";
 
 export type RepeatFieldsCopy = {
@@ -202,14 +202,12 @@ export function RepeatFields({
 
       {endsOnDate ? (
         <Field label={copy.endsOnLabel}>
-          <input
+          <DateField
             name="repeatEndsOn"
-            type="date"
             min={startDate}
             defaultValue={initial?.endsOn ?? undefined}
             required
             disabled={disabled}
-            className={controlClass}
           />
         </Field>
       ) : null}

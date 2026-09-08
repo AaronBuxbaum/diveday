@@ -9,7 +9,14 @@ import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneO
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
-import { controlClass, Field, FieldActions, FieldGrid, PriceField } from "@/components/ui/form";
+import {
+  controlClass,
+  DateField,
+  Field,
+  FieldActions,
+  FieldGrid,
+  PriceField,
+} from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel, InsetGroup } from "@/components/ui/ledger";
 import {
@@ -2193,22 +2200,10 @@ export default async function SettingsPage({
                             </select>
                           </Field>
                           <Field label={t("seasonEvents.startLabel")}>
-                            <input
-                              name="startsOn"
-                              type="date"
-                              required
-                              defaultValue={season.startsOn}
-                              className={controlClass}
-                            />
+                            <DateField name="startsOn" required defaultValue={season.startsOn} />
                           </Field>
                           <Field label={t("seasonEvents.endLabel")}>
-                            <input
-                              name="endsOn"
-                              type="date"
-                              required
-                              defaultValue={season.endsOn}
-                              className={controlClass}
-                            />
+                            <DateField name="endsOn" required defaultValue={season.endsOn} />
                           </Field>
                           <Field label={t("seasonEvents.noteLabel")} className="sm:col-span-2">
                             <textarea
@@ -2268,10 +2263,10 @@ export default async function SettingsPage({
                       </select>
                     </Field>
                     <Field label={t("seasonEvents.startLabel")}>
-                      <input name="startsOn" type="date" required className={controlClass} />
+                      <DateField name="startsOn" required />
                     </Field>
                     <Field label={t("seasonEvents.endLabel")}>
-                      <input name="endsOn" type="date" required className={controlClass} />
+                      <DateField name="endsOn" required />
                     </Field>
                     {/* The one line that earns its place here, for the same
                       reason the vocabulary's hint does: it names the consequence
@@ -2537,11 +2532,7 @@ export default async function SettingsPage({
                       label={t("settings.main.divePackages.validityLabel")}
                       description={t("settings.main.divePackages.validityDescription")}
                     >
-                      <input
-                        name="validUntil"
-                        type="date"
-                        className={`${controlClass} tabular-nums`}
-                      />
+                      <DateField name="validUntil" className="tabular-nums" />
                     </Field>
                     <Field label={t("settings.main.divePackages.scopeLabel")}>
                       <select name="scope" defaultValue="fun_dives" className={controlClass}>
