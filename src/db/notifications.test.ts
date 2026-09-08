@@ -181,6 +181,52 @@ describe("the shop's sender profile", () => {
   });
 });
 
+/**
+ * A notification the schema refuses never reaches a provider, so calling it a
+ * `provider_error` names a call that did not happen — and because that code is
+ * retryable, it was also written into `notification_send_queue` to fail
+ * identically on every drain until the attempt cap. Nothing about the payload
+ * changes between attempts, so there was never a run in which it could succeed.
+ */
+describe("a notification the schema will not take", () => {
+  it("is refused without a provider call, and never enters the retry queue", async () => {
+    const { db, shop, trip, booking } = await seededBooking();
+    const seen: Notification[] = [];
+    const watching: NotificationProvider = {
+      async send(notification) {
+        seen.push(notification);
+        return { status: "sent", providerMessageId: "should-never-happen" };
+      },
+    };
+    const invalid = {
+      kind: "booking_confirmation",
+      bookingId: booking.bookingId,
+      shopId: shop.id,
+      // Not an address. Nothing downstream can make this sendable.
+      to: "not-an-address",
+      locale: "en-US",
+      diverName: "Nora Quinn",
+      shopName: shop.name,
+      tripTitle: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      timezone: shop.timezone,
+    } as unknown as Notification;
+
+    const delivery = await sendNotification(db, invalid, watching);
+
+    expect(delivery).toMatchObject({
+      status: "failed",
+      retryable: false,
+      errorCode: "invalid_notification",
+    });
+    // The provider was never asked.
+    expect(seen).toHaveLength(0);
+    // And nothing was left behind to re-fail on every future drain.
+    expect(await db.select().from(notificationSendQueue)).toHaveLength(0);
+  });
+});
+
 describe("notification delivery status", () => {
   it("queues a retryable provider failure and drains it later", async () => {
     const { db, shop, trip, booking } = await seededBooking();

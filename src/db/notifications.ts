@@ -29,6 +29,7 @@ import {
   type NotificationSender,
   notificationIdempotencyKey,
   notificationProviderFromEnvironment,
+  notificationSchema,
   notificationSubjectEmail,
   notificationSubjectPhone,
   notify,
@@ -264,8 +265,31 @@ export async function sendNotification(
   input: Notification,
   provider?: NotificationProvider,
 ): Promise<NotificationDelivery> {
+  // Checked here rather than left to `notify`'s own hard `parse` below. A
+  // notification the schema refuses never reached a provider, so reporting it
+  // as `provider_error` names the wrong thing — and, because that code is
+  // retryable, it was also written into `notification_send_queue` to fail
+  // identically on every drain until the attempt cap. Nothing about the payload
+  // changes between attempts, so the only honest answer is a refusal.
+  //
+  // Field paths only, never values: the payload carries a diver's address and,
+  // on a staff reply, the staffer's own words.
+  const parsed = notificationSchema.safeParse(input);
+  if (!parsed.success) {
+    log("notification.invalid", "error", {
+      kind: input.kind,
+      issues: parsed.error.issues
+        .map((issue) => issue.path.join("."))
+        .slice(0, 5)
+        .join(","),
+    });
+    return { status: "failed", retryable: false, errorCode: "invalid_notification" };
+  }
+
   let delivery: NotificationDelivery;
   try {
+    // Left catching everything on purpose: `withShopSender` reads the database
+    // and can still throw, and that genuinely is retryable.
     delivery = await notify(await withShopSender(db, input), notificationProviderForDb(provider));
   } catch (error) {
     delivery = {

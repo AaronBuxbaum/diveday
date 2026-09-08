@@ -135,6 +135,55 @@ describe("the words the es-ES README settled", () => {
     });
   });
 
+  describe("you press a control", () => {
+    it("refuses the pulsar family the offline checklist used", () => {
+      expect(rules({ k: "Comprobado — pulsa para quitar la marca" })).toEqual(["press", "check"]);
+      expect(rules({ k: "Mantén pulsada a una persona y arrástrala" })).toEqual(["press"]);
+      expect(rules({ k: "Puedes pulsar el botón" })).toEqual(["press"]);
+    });
+
+    it("accepts presiona and mantén presionado", () => {
+      expect(rules({ k: "Verificado — presiona para quitar la marca" })).toEqual([]);
+      expect(rules({ k: "Mantén presionada a una persona y arrástrala" })).toEqual([]);
+    });
+
+    /**
+     * The anchoring is the rule. These carry the letters mid-word and are all
+     * correct: two are in the bundles today, and `pulso`/`pulsera` are nouns a
+     * medical or incident string may yet need.
+     */
+    it("leaves impulso, expulse, pulso and pulsera alone", () => {
+      expect(rules({ k: "Impulso para reservar antes del viernes" })).toEqual([]);
+      expect(rules({ k: "para que el aire se expulse del regulador" })).toEqual([]);
+      expect(rules({ k: "Tómale el pulso y anota la hora" })).toEqual([]);
+      expect(rules({ k: "Lleva la pulsera de identificación" })).toEqual([]);
+    });
+  });
+
+  describe("confirming a fact is verificar", () => {
+    it("refuses the comprobar family across its inflections", () => {
+      expect(rules({ k: "Lista de comprobación previa a la salida" })).toEqual(["check"]);
+      expect(rules({ k: "Comprobando este dispositivo…" })).toEqual(["check"]);
+      expect(rules({ k: "trae tu tarjeta y la comprobamos" })).toEqual(["check"]);
+      expect(rules({ k: "La tripulación comprobará tu tarjeta" })).toEqual(["check"]);
+    });
+
+    it("accepts verificar and revisar, which split the two meanings", () => {
+      expect(rules({ k: "Lista de verificación previa a la salida" })).toEqual([]);
+      expect(rules({ k: "Revisa la lista antes de salir" })).toEqual([]);
+    });
+
+    /**
+     * The one noun the lookahead exists for: a rental receipt, in `diver.json`'s
+     * capabilities list, and correct. Without the exclusion this rule would
+     * refuse a string nobody should change.
+     */
+    it("leaves comprobante alone, which is a receipt", () => {
+      expect(rules({ k: "Un comprobante de alquiler imprimible" })).toEqual([]);
+      expect(rules({ k: "Guarda los comprobantes de pago" })).toEqual([]);
+    });
+  });
+
   it("reports every rule a single string breaks, not only the first", () => {
     // A string can be wrong twice, and reporting one at a time turns a sweep
     // into as many rounds as the string has mistakes.

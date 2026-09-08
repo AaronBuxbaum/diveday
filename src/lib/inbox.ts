@@ -90,6 +90,20 @@ export function normalizePhoneAddress(raw: string | null | undefined): string | 
   return digits.length >= 7 ? digits : null;
 }
 
+/**
+ * The destination a staff reply will actually be sent to, as a human can read
+ * it.
+ *
+ * Email is the address verbatim. A phone address is stored digits-only
+ * (`normalizePhoneAddress`), so it gets its `+` back and no grouping: DiveDay
+ * does not know the country, and a guessed grouping would be a lie about a
+ * number the staffer is being asked to eyeball before they send.
+ */
+export function replyDestination(channel: InboundChannel, fromAddress: string): string {
+  if (channel === "email") return fromAddress;
+  return fromAddress.startsWith("+") ? fromAddress : `+${fromAddress}`;
+}
+
 /** The address a shop's outbound mail asks replies to go to. */
 export function inboundReplyAddress(token: string, domain: string): string {
   return `${INBOUND_REPLY_PREFIX}${token.toLowerCase()}@${domain.toLowerCase()}`;

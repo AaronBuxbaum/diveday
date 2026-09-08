@@ -482,7 +482,7 @@
     "waiverSigned": "Exención firmada"
   },
   "offlineManifestManager": {
-    "checkingDevice": "Comprobando este dispositivo…",
+    "checkingDevice": "Verificando este dispositivo…",
     "reconcileRejectedOne": "1 cambio necesita revisión. Abre el manifiesto en vivo para resolverlo.",
     "reconcileRejectedOther": "{count} cambios necesitan revisión. Abre el manifiesto en vivo para resolverlo.",
     "reconcilePendingOne": "1 cambio todavía se está enviando.",
@@ -602,13 +602,13 @@
     "dueBody": "La fecha límite venció el {deadline}. DiveDay cancelará esta salida y avisará por correo a quienes iban en su próxima pasada; quita el mínimo en Detalles si quieres realizarla igualmente."
   },
   "preDepartureCheck": {
-    "heading": "Comprobación previa a la salida",
-    "checkedBy": "Comprobado por {name} · {date}",
+    "heading": "Antes de salir del muelle",
+    "checkedBy": "Verificado por {name} · {date}",
     "printLineChecked": "{label} — {status}",
-    "printLineNotChecked": "{label} — No comprobado",
+    "printLineNotChecked": "{label} — Sin verificar",
     "errorRefusal": "Eso no se guardó. Inténtalo de nuevo.",
-    "checkedLabel": "Comprobado — pulsa para quitar la marca",
-    "uncheckedLabel": "No comprobado — pulsa para marcarlo",
-    "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# comprobado} other {# comprobados}}"
+    "checkedLabel": "Verificado — presiona para quitar la marca",
+    "uncheckedLabel": "Sin verificar — presiona para marcarlo",
+    "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}"
   }
 }

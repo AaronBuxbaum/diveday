@@ -350,6 +350,10 @@ export default async function DiverDetailPage({
         timezone={shop.timezone}
         now={now}
         canAnswer={canAnswer}
+        // `removed` alone, never `removed || anonymizedAt`: the CHECK
+        // `people_anonymized_stays_removed` makes an anonymized person removed
+        // by construction, so the second term could never add a case.
+        removed={removed}
         t={t}
         status={noticeForForm(diverNotice, "reply")}
       />
