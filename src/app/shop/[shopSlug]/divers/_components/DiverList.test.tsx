@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DiverFilter } from "@/db/divers";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -75,6 +76,9 @@ function renderList({
   canRestore = true,
   quickAddAction = (() => {}) as ((formData: FormData) => void) | null,
   copyOverrides = {} as Partial<typeof copy>,
+  // Null by default so no existing test's markup shifts; the pager arrives as
+  // a rendered element in production too (it is a Server Component).
+  pager = null as ReactNode,
 } = {}) {
   return render(
     <DiverList
@@ -87,6 +91,7 @@ function renderList({
       canRestore={canRestore}
       quickAddAction={quickAddAction}
       copy={{ ...copy, ...copyOverrides }}
+      pager={pager}
     />,
   );
 }
@@ -521,6 +526,69 @@ describe("DiverList removed view", () => {
 
       // The record owns this navigation now. A replace landing behind it is
       // the staffer's tap being silently undone.
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(replace).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /**
+   * The third door, and the one that had no cancel at all.
+   *
+   * The pager is a Server Component handed in as an element, so unlike the view
+   * chips it cannot take an `onNavigate`, and it sat *outside* the ledger the
+   * capture listener was attached to. Meanwhile `hrefFor` carries only `q` and
+   * `filter` — never `page` — so the pending replace does not merely arrive
+   * late, it actively sends the staffer back to page one. Type, turn the page
+   * inside 250ms, and land back where you started.
+   */
+  it("does not let a pending search undo a page turn taken inside the debounce window", () => {
+    vi.useFakeTimers();
+    try {
+      renderList({
+        rows: [rosterRow()],
+        total: 40,
+        pager: (
+          <a href="/shop/blue-mantis/divers?page=2" className="mt-8">
+            Next
+          </a>
+        ),
+      });
+      const input = screen.getByRole("searchbox", { name: "Search divers" });
+      fireEvent.change(input, { target: { value: "Mira" } });
+
+      fireEvent.click(screen.getByRole("link", { name: "Next" }));
+
+      // Page two owns this navigation. A replace landing behind it carries no
+      // `page`, so it would not just arrive late — it would undo the turn.
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(replace).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /**
+   * The roster wrapper renders whether or not there are rows, so the listener
+   * can no longer mount against a null ref. Before, a roster that first
+   * rendered empty attached nothing, and the `[]`-deps effect never ran again —
+   * so once rows arrived, every door in the ledger had lost its cancel.
+   */
+  it("still cancels for a roster that first rendered empty", () => {
+    vi.useFakeTimers();
+    try {
+      renderList({
+        rows: [],
+        pager: <a href="/shop/blue-mantis/divers?page=2">Next</a>,
+      });
+      const input = screen.getByRole("searchbox", { name: "Search divers" });
+      fireEvent.change(input, { target: { value: "Mira" } });
+      fireEvent.click(screen.getByRole("link", { name: "Next" }));
       act(() => {
         vi.advanceTimersByTime(1000);
       });
