@@ -36,6 +36,26 @@ checked before the send, and the outcome recorded whether it went or not). Today
 (`canAnswerShopInbox`): a reply leaves as the shop, and the list holds addresses for people who
 never booked.
 
+## The counter survives a lost signal (delivered 2026-09-07)
+
+N-53 from the 2026-09-07 improvement-ideas sheet (issue #1496). The boat manifest already worked
+with the radio off; the desk twenty metres away did not, and marina wifi drops on both sides of the
+same wall. `/offline-manifest?trip=<id>` now carries an **At the counter** section above the
+checkpoint switcher, so a diver can be checked in and un-checked-in with no signal, and the taps
+queue on the device until it can sync. Arrival gets an append-only trail of its own,
+`booking_arrival_events` -- one row per tap, live taps included, with the device's own
+`client_event_id` unique per shop -- while `bookings.status` stays the projection every existing
+reader looks at, both written in one transaction. Reconciliation is roll call's rules rather than a
+second set: dedup on the event id, the shared staleness bound in `src/lib/offline-events.ts`,
+newest-wins, and a retraction that names the arrival it undoes so a tablet's honest hour-old undo
+cannot take back a desk that checked the diver in five minutes ago. A queued arrival takes the same
+live readiness re-read at sync time, so a card that expired while the tablet was out of signal is
+refused on reconciliation exactly as it would have been at the desk. **The queue cannot say
+"aboard", structurally rather than by a check**: `ArrivalStatus` is `"arrived" | "cleared"`, the
+arrival queue is its own array on the envelope, and its writers cannot reach `roll_call_events` at
+all. A person is aboard when somebody at the rail says so. ADR
+[20260907-the-counter-survives-offline](../architecture/decisions/20260907-the-counter-survives-offline.md).
+
 ## The reef's calendar (delivered 2026-09-07)
 
 N-02 of the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1485). A shop writes
