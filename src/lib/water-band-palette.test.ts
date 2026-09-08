@@ -108,10 +108,25 @@ describe("the band's own rules", () => {
   const css = readFileSync("src/app/globals.css", "utf8");
   const band = css.slice(css.indexOf(".water-band {"), css.indexOf(".marketing-reveal-pending"));
 
-  it("names a crest token for each of the three washes that are not the default", () => {
-    for (const wash of ["dawn", "dusk", "night"] as const) {
-      expect(band).toContain(`.water-band[data-water-band="${wash}"]`);
-      expect(band).toContain(`--water-crest: var(--water-${wash});`);
+  it("defaults to the day wash, which is the hour a surface with no shop wears", () => {
+    expect(band).toContain("--water-crest: var(--water-day);");
+  });
+
+  /**
+   * The other three hours are re-pointed by `src/components/WaterBandStyle.tsx`
+   * rather than by three rules here, because setting the attribute those rules
+   * selected on meant reading the shop's clock above `{children}` and costing
+   * every staff route its static shell (issue #1446). What the stylesheet still
+   * has to hold up is the *other* end: the component interpolates
+   * `var(--water-${band})` from the closed `WaterBand` union, so every value of
+   * that union must name a token the palette actually carries. A wash renamed
+   * in one file and not the other resolves to nothing and the band silently
+   * disappears — no error, no diff anyone would read as a bug.
+   */
+  it("carries a crest token for every hour the shell can ask for", () => {
+    for (const wash of WASHES) {
+      expect(tokens("light")[`water-${wash}`], `--water-${wash} in the light palette`).toMatch(HEX);
+      expect(tokens("dark")[`water-${wash}`], `--water-${wash} in the dark palette`).toMatch(HEX);
     }
   });
 

@@ -29,9 +29,13 @@ rules below are the ones sessions have already gotten wrong, each with the shipp
   its static shell. Put the read in an async child component inside its own `<Suspense>` with a
   height-holding fallback. (This is how the bearer-token pages — the ones divers open from a text
   on marina Wi-Fi — were once all blocked by a locale read that only fed an error boundary.)
-- `instant = false` survives on exactly one layout: `src/app/shop/[shopSlug]/layout.tsx`, whose
-  cross-tenant `notFound()` must run before `{children}` — a security gate, not a precedent. Do
-  not add a second without an ADR-level reason.
+- `instant = false` survives on exactly one layout: `src/app/shop/[shopSlug]/trips/[id]/layout.tsx`.
+  Do not add a second without an ADR-level reason. The staff shell used to be one, on the grounds
+  that its cross-tenant `notFound()` had to run before `{children}` — the App Shell restructure
+  (issue 1446) moved that gate into `_components/ShopChrome.tsx` alongside the reads it protects,
+  which is safe because it was never the only copy: every staff page gates itself too, and every
+  piece of chrome that could name another tenant is already behind `ownShop`. A security gate is a
+  reason to double a refusal, not a reason to block every route beneath it.
 
 ## Redirect routes are Route Handlers, not pages
 
