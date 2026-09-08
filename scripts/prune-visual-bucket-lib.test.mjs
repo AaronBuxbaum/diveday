@@ -13,8 +13,11 @@ const SHA_3 = "cccccccccccccccccccccccccccccccccccccccc";
 
 const NOW = Date.UTC(2026, 7, 26, 4, 0, 0);
 const DAY = 24 * 60 * 60 * 1000;
+const HOUR = 60 * 60 * 1000;
 const OLD = new Date(NOW - 30 * DAY);
-const RECENT = new Date(NOW - 2 * DAY);
+const RECENT = new Date(NOW - 2 * HOUR);
+/** Older than the one-day floor, younger than anything anyone would call stale. */
+const TWO_DAYS_OLD = new Date(NOW - 2 * DAY);
 
 /** An S3 client that answers `out.json` probes for exactly `shasWithSnapshots`. */
 function probeClient(shasWithSnapshots) {
@@ -229,6 +232,29 @@ describe("prune-visual-bucket-lib", () => {
 
       expect(result.keptRecentPrefixes).toEqual([`${SHA_2}/`]);
       expect(deletedKeys()).toEqual([]);
+    });
+
+    /**
+     * The floor is a day, not a week: a branch that published two days ago and
+     * is not a main baseline is captures nobody is comparing against any more.
+     */
+    it("deletes a prefix published two days ago", async () => {
+      const { s3Client, deletedKeys } = fakeBucket({
+        [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, Size: 10, LastModified: OLD }],
+        [`${SHA_2}/`]: [{ Key: `${SHA_2}/out.json`, Size: 20, LastModified: TWO_DAYS_OLD }],
+      });
+
+      const result = await pruneVisualBucket({
+        s3Client,
+        bucket: "test-bucket",
+        keepShas: [SHA_1],
+        now: NOW,
+        log: () => {},
+      });
+
+      expect(result.keptRecentPrefixes).toEqual([]);
+      expect(result.deletedPrefixes).toEqual([`${SHA_2}/`]);
+      expect(deletedKeys()).toEqual([`${SHA_2}/out.json`]);
     });
 
     it("refuses to prune when nothing is named to keep", async () => {

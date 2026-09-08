@@ -25,8 +25,15 @@ export const KEEP_MAIN_BASELINES = 10;
  * A stacked pull request's baseline is the layer below's head commit, which is
  * never on main and so can never be found by the walk above (ADR
  * 20260821-stacked-pull-requests). Age is the only thing that knows about it.
+ *
+ * One day, not seven: the floor exists to cover a baseline the walk cannot
+ * name, and a stack's lower layer is re-pushed — and so re-published — far
+ * inside a day of the layer above running. A week of every branch's captures
+ * was paying for that safety many times over, so the count-based
+ * `KEEP_MAIN_BASELINES` carries the main history and this carries only the
+ * in-flight work.
  */
-export const MIN_PRUNE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+export const MIN_PRUNE_AGE_MS = 24 * 60 * 60 * 1000;
 
 const GITHUB_API = process.env.GITHUB_API_URL || "https://api.github.com";
 
