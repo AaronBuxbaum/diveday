@@ -150,6 +150,138 @@ describe("empty .all()", () => {
   });
 });
 
+describe("action races", () => {
+  it("catches a navigation in the statement straight after a submit", () => {
+    // The two that reached CI. The first closed the destination's stream early
+    // and read as a server error; the second burned the visual shard's whole
+    // 210-second budget and failed forty lines below, which is how a race like
+    // this gets misread as slow CI.
+    expect(
+      ruleIds(
+        [
+          'await page.getByRole("button", { name: "Put it on the board" }).click();',
+          "await page.goto(`/shop/${unique}`);",
+        ].join("\n"),
+      ),
+    ).toEqual(["action-race"]);
+    expect(
+      ruleIds(
+        [
+          'await page.getByRole("button", { name: "Save details" }).click();',
+          "await page.reload();",
+        ].join("\n"),
+      ),
+    ).toEqual(["action-race"]);
+  });
+
+  it("catches the two the sweep found live, in the shape they were written", () => {
+    expect(
+      ruleIds(
+        [
+          'await deepCard.getByRole("button", { name: "Confirm certification" }).click();',
+          "",
+          'await page.goto("/shop/blue-mantis/schedule/board");',
+        ].join("\n"),
+      ),
+    ).toEqual(["action-race"]);
+    expect(
+      ruleIds(
+        [
+          'await page.getByRole("button", { name: "Save changes" }).click();',
+          "",
+          "    // Back on the week, the warning is gone and the figure is on the entry.",
+          "await page.goto(`${BOARD}?week=${addDay}`);",
+        ].join("\n"),
+      ),
+    ).toEqual(["action-race"]);
+  });
+
+  it("reads a click built over several lines", () => {
+    expect(
+      ruleIds(
+        [
+          "await page",
+          '  .getByRole("button", { name: "Publish course" })',
+          "  .click();",
+          'await page.goto("/s/blue-mantis/courses");',
+        ].join("\n"),
+      ),
+    ).toEqual(["action-race"]);
+  });
+
+  /**
+   * The negatives carry more weight here than the positives. Nearly every spec
+   * in this suite clicks, asserts, then navigates, and a rule that started
+   * flagging *that* would be silenced everywhere within a week — which is the
+   * failure mode issue #1438 names in its own body.
+   */
+  it("leaves the prevailing convention alone: an assertion between the two", () => {
+    // Verbatim from e2e/dive-sites.spec.ts.
+    expect(
+      ruleIds(
+        [
+          'await page.getByRole("button", { name: "Save site" }).click();',
+          'await expect(page.getByText("Molasses Reef")).toBeVisible();',
+          'await page.goto("/shop/blue-mantis/dive-sites");',
+        ].join("\n"),
+      ),
+    ).toEqual([]);
+    expect(
+      ruleIds(
+        [
+          'await page.getByRole("button", { name: "Save changes" }).click();',
+          "await page.waitForURL(/[?&]notice=/);",
+          "await page.goto(`${BOARD}?week=${addDay}`);",
+        ].join("\n"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("leaves a click whose label is not a submit alone", () => {
+    // Both live instances of this shape — `waiverLinkFromToast` opens by
+    // awaiting the toast, so the navigation cannot outrun anything. Dropping
+    // the label clause would take the sweep from 2 hits and 0 false positives
+    // to 2 and 2.
+    expect(
+      ruleIds(
+        [
+          'await waiverGroup.getByRole("button", { name: "Copy link" }).click();',
+          "await page.goto(await waiverLinkFromToast(page));",
+        ].join("\n"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("leaves a navigation with no click before it alone", () => {
+    expect(
+      ruleIds(["const title = uniqueTitle();", 'await page.goto("/shop/blue-mantis");'].join("\n")),
+    ).toEqual([]);
+  });
+
+  it("is not fooled by a comment sitting between the click and the navigation", () => {
+    // Prose does not make a race safe, so the lookback skips it — the same
+    // trimmed test the scanner uses to ignore comment lines outright.
+    expect(
+      ruleIds(
+        [
+          'await page.getByRole("button", { name: "Confirm certification" }).click();',
+          "// the board shows it straight away",
+          'await page.goto("/shop/blue-mantis/schedule/board");',
+        ].join("\n"),
+      ),
+    ).toEqual(["action-race"]);
+  });
+
+  it("takes the acknowledgement, like every other rule", () => {
+    const source = [
+      'await page.getByRole("button", { name: "Send" }).click();',
+      `// ${ACKNOWLEDGEMENT} action-race: "Send" here is a client-only clipboard button with no server action behind it.`,
+      "await page.goto(target);",
+    ].join("\n");
+    expect(ruleIds(source)).toEqual([]);
+  });
+});
+
 describe("comment lines", () => {
   it("never flags prose about a banned pattern", () => {
     expect(ruleIds("// never reaches the `networkidle` state the scan waits for")).toEqual([]);

@@ -559,6 +559,10 @@ test.describe("schedule builder", () => {
     await page.getByText("Edit details", { exact: true }).click();
     await page.getByLabel(/Price per diver/).fill("110");
     await page.getByRole("button", { name: "Save changes" }).click();
+    // The save redirects through `noticeUrl`, so its own notice is the signal
+    // that the write landed. Navigating straight from the click would race it
+    // and read the week back at the price from before the edit.
+    await page.waitForURL(/[?&]notice=/);
 
     // Back on the week, the warning is gone and the figure is on the entry.
     await page.goto(`${BOARD}?week=${addDay}`);
