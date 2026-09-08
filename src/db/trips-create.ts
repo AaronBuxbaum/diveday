@@ -1,15 +1,19 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { seasonLensForDay } from "@/lib/season-events";
 import type { AppTransaction, DbExecutor } from "./client";
 import type { Course } from "./schema";
 import {
   boats,
   courses,
   diveSites,
+  shops,
   tripDives,
   tripRequirements,
   tripScheduleDays,
   trips,
 } from "./schema";
+import { listSeasonEvents } from "./season-events";
 
 /**
  * Materializing a departure.
@@ -317,6 +321,46 @@ export async function insertTripInstance(
   return trip;
 }
 
+/**
+ * **The kind of day a new departure starts with** — the shop's own choice, or
+ * the one a live season names for that date (issue #1492).
+ *
+ * Three things about where this lives, each of which is the decision rather
+ * than an implementation detail.
+ *
+ * **It fills a blank; it never overwrites.** A shop that chose a word keeps it,
+ * and a shop that chose "None" keeps None, because the board sends null only
+ * when nobody picked. A season is a suggestion about an empty field.
+ *
+ * **It is here rather than in `insertTripInstance`.** That function is the
+ * chokepoint every creation path passes through, which is exactly why the
+ * default must not live in it: a *copied* departure would then silently acquire
+ * a season's word with no human on the other side to see it, and the schedule
+ * board shows this one before Save. Copy and the series roll get their words
+ * from what they are copying, not from the calendar.
+ *
+ * **Asked on the shop's own calendar day**, not the server's, because a season
+ * is a range of dates with no instant in it — a 7 AM departure in Key Largo is
+ * yesterday in UTC for five hours every evening.
+ *
+ * No backfill: a season written after the board was filled leaves those
+ * departures alone. Rewriting a column the shop may have deliberately left
+ * empty is not a default, it is an edit nobody asked for.
+ */
+async function lensForNewTrip(tx: DbExecutor, input: NewTrip): Promise<string | null> {
+  if (input.lensId) return input.lensId;
+  const [shop] = await tx
+    .select({ timezone: shops.timezone })
+    .from(shops)
+    .where(eq(shops.id, input.shopId))
+    .limit(1);
+  if (!shop) return null;
+  return seasonLensForDay(
+    await listSeasonEvents(tx, input.shopId),
+    calendarDateInTimezone(input.startsAt, shop.timezone),
+  );
+}
+
 // `DbExecutor` rather than `AppDb`: the whole body is one transaction, and a
 // caller that is already inside one (the seed runs under `client.ts`'s single
 // atomic seed transaction) opens a savepoint instead of a second connection.
@@ -333,6 +377,7 @@ export async function createTrip(db: DbExecutor, input: NewTrip) {
     const { ok, course } = await resolveCourse(tx, input.shopId, input.courseId);
     if (!ok) return null;
     return insertTripInstance(tx, {
+      lensId: await lensForNewTrip(tx, input),
       shopId: input.shopId,
       courseId: input.courseId,
       course,
@@ -353,7 +398,6 @@ export async function createTrip(db: DbExecutor, input: NewTrip) {
       selfGuided: input.selfGuided,
       diveMode: input.diveMode,
       boatId: input.boatId,
-      lensId: input.lensId,
     });
   });
 }

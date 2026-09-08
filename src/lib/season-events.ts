@@ -115,6 +115,31 @@ export function liveSeasonEvents<T extends SeasonEventWindow>(
     .sort((a, b) => (a.endsOn < b.endsOn ? -1 : a.endsOn > b.endsOn ? 1 : 0));
 }
 
+/**
+ * **The kind of day a departure on this date inherits**, or null when no live
+ * season names one (issue #1492).
+ *
+ * `find`, deliberately not `[0]`. {@link liveSeasonEvents} orders soonest-to-end
+ * first, which is right for the storefront band it was written for, but a live
+ * season that names no kind of day must not *shadow* one that does. The demo
+ * shop's own calendar is exactly that shape — a lensless "Coral spawning"
+ * ending in two days beside "Turtle nesting" carrying "After dark" for another
+ * ten weeks — so `[0]` would answer null on the very data the feature ships
+ * with. Among the seasons that actually answer the question, the soonest to end
+ * still wins.
+ *
+ * It reads the **joined** `lens`, never a raw `lens_id`. Deleting a kind of day
+ * is soft and leaves a live id in `season_events.lens_id`, so defaulting to the
+ * column would write a word the public rail no longer renders — a departure
+ * labelled with something a diver can never tap.
+ */
+export function seasonLensForDay<T extends SeasonEventWindow & { lens: { id: string } | null }>(
+  events: readonly T[],
+  day: CalendarDate,
+): string | null {
+  return liveSeasonEvents(events, day).find((event) => event.lens)?.lens?.id ?? null;
+}
+
 /** Why a season could not be saved. Codes, never sentences — the UI picks the words. */
 export type SeasonEventIssue =
   | "name_required"
