@@ -973,8 +973,7 @@ function AddPanel({
               // something nobody typed.
               description={
                 lensFromSeason && seasonForDate
-                  ? (copy.lensFromSeason?.replace("{season}", seasonForDate.name) ??
-                    `From ${seasonForDate.name}`)
+                  ? fill(copy.lensFromSeason ?? "From {season}", { season: seasonForDate.name })
                   : undefined
               }
             >

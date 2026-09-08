@@ -507,7 +507,10 @@ export default async function ScheduleBoardPage({
     unassignedBoat: st("boats.unassignedBoat"),
     lensLabel: st("lenses.tripFieldLabel"),
     lensNone: st("lenses.tripFieldNone"),
-    lensFromSeason: st("lenses.tripFieldFromSeason"),
+    // The season's own name is only known on the client — which season covers
+    // the date the panel is currently on changes as the staffer moves it — so
+    // this crosses as a template for `fill()`, never formatted here.
+    lensFromSeason: st.raw("lenses.tripFieldFromSeason"),
   };
 
   // The rare half of the add panel: bounds the domain owns, and the per-dive

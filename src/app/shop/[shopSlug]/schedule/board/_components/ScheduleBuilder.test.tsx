@@ -2716,6 +2716,20 @@ describe("the kind of day a season offers", () => {
     expect(select).toHaveValue("");
   });
 
+  it("fills the season's name into the template the server handed across", async () => {
+    // The hint crosses the boundary as `st.raw("lenses.tripFieldFromSeason")` —
+    // the unformatted "From {season}" — because *which* season covers the
+    // panel's date is only known here, as the staffer moves it. Formatting it
+    // on the server instead asks next-intl for an argument that by definition
+    // is not there yet; `src/i18n/raw-messages.test.ts` refuses that half, and
+    // this pins the other one: the template arrives with its placeholder and
+    // `fill()` resolves it.
+    renderBoard({ copy: { ...COPY, lensFromSeason: "From {season}" } });
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    await screen.findByLabelText(/Kind of day/);
+    expect(screen.getByText("From Turtle nesting")).toBeInTheDocument();
+  });
+
   it("names no season for a word the staffer picked themselves", async () => {
     const select = await openPanel();
     await userEvent.selectOptions(select, "easygoing");
