@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * The common-sites catalog is no longer a page: it is the dive-site library's
@@ -40,6 +41,6 @@ export async function GET(
   // `127.0.0.1` and landed a signed-in owner on /sign-in.
   return new Response(null, {
     status: 308,
-    headers: { Location: `/shop/${shopSlug}/dive-sites?${query.toString()}` },
+    headers: { Location: `${shopPath(shopSlug, "dive-sites")}?${query.toString()}` },
   });
 }

@@ -1,4 +1,5 @@
 import { requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * **Close-out is no longer a destination** (H-62, 2026-08-27; ADR
@@ -33,6 +34,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ shop
   // `127.0.0.1` and landed a signed-in owner on /sign-in.
   return new Response(null, {
     status: 308,
-    headers: { Location: `/shop/${shopSlug}${search}` },
+    headers: { Location: `${shopPath(shopSlug)}${search}` },
   });
 }

@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * 308 to `/waivers`, which is now the whole waiver surface — the release and
@@ -49,7 +50,7 @@ export async function GET(
   return new Response(null, {
     status: 308,
     headers: {
-      Location: `/shop/${encodeURIComponent(shopSlug)}/waivers${search ? `?${search}` : ""}${fragment}`,
+      Location: `${shopPath(shopSlug, "waivers")}${search ? `?${search}` : ""}${fragment}`,
     },
   });
 }
