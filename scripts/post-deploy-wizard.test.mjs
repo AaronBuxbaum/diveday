@@ -647,6 +647,65 @@ describe("post-deploy wizard", () => {
       false,
     );
   });
+
+  /**
+   * **The AWS read runs after `cdk deploy` has already succeeded, so it may not
+   * throw** (issue #1525). It used to: `readSesDnsPlan` opened with an
+   * `aws sesv2 get-email-identity` inside a `JSON.parse`, and the yes-branch
+   * called it outside any `try`.
+   *
+   * The pre-check is no defence, which is the part worth pinning. Supplying
+   * `checkUpdates.sesDns` — the CI path through `infra-deploy.mjs`, and what
+   * every other test here does — skips the guarded pre-check entirely, leaving
+   * the unguarded call as the only one. So this case answers **yes** with a
+   * throwing `aws`, which before this change killed the wizard with a stack
+   * trace after the stack was updated and before the remaining handoffs ran.
+   */
+  it("survives an unreadable SES identity, says why, and finishes the rest", async () => {
+    const messages = [];
+    const commands = [];
+    await expect(
+      wizard({
+        // Only the two that matter: the SES DNS handoff under test, and the
+        // Vercel deploy that follows it — the wizard's deliberately final
+        // action, and so the proof that the run carried on past the failure.
+        ask: async (question) => (/SES DNS|Deploy the linked/.test(question) ? "yes" : "no"),
+        cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+        credentialsDocument: "",
+        syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+        execute: (command, arguments_) => {
+          commands.push({ command, arguments_ });
+          if (command === "aws" && arguments_[1] === "get-email-identity") {
+            throw new Error("ExpiredToken: the security token included in the request is expired");
+          }
+          return "";
+        },
+        log: (message) => messages.push(message),
+      }),
+    ).resolves.not.toThrow();
+
+    // Named, never silent: the reason travels with the refusal.
+    expect(messages.some((message) => message.includes("ExpiredToken"))).toBe(true);
+    expect(messages.some((message) => message.includes("Could not read the SES DKIM tokens"))).toBe(
+      true,
+    );
+    // And never a positive claim about a zone it failed to read.
+    expect(messages.some((message) => /already present|nothing added/.test(message))).toBe(false);
+    // Nothing was added on a plan that could not be built.
+    expect(
+      commands.some(({ arguments_ }) => arguments_[2] === "dns" && arguments_[3] === "add"),
+    ).toBe(false);
+    // The listing is skipped rather than run and reported over the top of the
+    // first failure — one reason, the one that actually happened.
+    expect(commands.some(({ arguments_ }) => arguments_[3] === "ls")).toBe(false);
+    // The point of not throwing: the handoff after this one still gets to run.
+    expect(
+      commands.some(
+        ({ command, arguments_ }) =>
+          command === "pnpm" && arguments_?.[1] === "vercel" && arguments_?.includes("--prod"),
+      ),
+    ).toBe(true);
+  });
 });
 
 // The wizard's CI credentials arrive as job env from `.github/workflows/infra.yml`,

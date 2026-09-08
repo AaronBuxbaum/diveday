@@ -262,22 +262,49 @@ export async function runPostDeployWizard({
     const emailDomain = contextValue(cdkArguments, "sesEmailDomain", "ses.dive.day");
     const mailFromDomain = contextValue(cdkArguments, "sesMailFromDomain", `mail.${emailDomain}`);
     const dnsZone = syncEnvironment?.VERCEL_DNS_ZONE?.trim() || "dive.day";
-    const tokens = JSON.parse(
-      execute(
-        "aws",
-        [
-          "sesv2",
-          "get-email-identity",
-          "--email-identity",
-          emailDomain,
-          "--query",
-          "DkimAttributes.Tokens",
-          "--output",
-          "json",
-        ],
-        { encoding: "utf8", env: syncEnvironment, timeoutMs: SUBPROCESS_TIMEOUTS.awsApi },
-      ),
-    );
+    // **This read is the one that runs after `cdk deploy` has already
+    // succeeded**, so it may not throw (issue #1525). The `aws` call fails for
+    // ordinary reasons — expired credentials, the identity not yet existing in
+    // a fresh account, a region mismatch, a timeout — and `JSON.parse` fails on
+    // a non-JSON error body; before this, either one killed the wizard with a
+    // stack trace *after* the CloudFormation stack was updated and *before* the
+    // remaining handoffs ran. That is the exact shape the deploy job's
+    // credential pre-flight exists to prevent: a late, unattributed failure in
+    // a step that runs after the irreversible one.
+    //
+    // It is not the pre-check that saves you. Whenever `checkUpdates.sesDns` is
+    // supplied — CI's own path through `infra-deploy.mjs`, and every wizard
+    // test — the guarded pre-check is skipped entirely and the yes-branch call
+    // is the only one there is.
+    //
+    // So it degrades exactly the way an unreadable Vercel listing does: name
+    // what could not be read, add nothing, keep the question visible, and let
+    // the rest of the wizard finish. Unknown state, never empty state.
+    let unreadableReason;
+    let tokens = [];
+    try {
+      tokens = JSON.parse(
+        execute(
+          "aws",
+          [
+            "sesv2",
+            "get-email-identity",
+            "--email-identity",
+            emailDomain,
+            "--query",
+            "DkimAttributes.Tokens",
+            "--output",
+            "json",
+          ],
+          { encoding: "utf8", env: syncEnvironment, timeoutMs: SUBPROCESS_TIMEOUTS.awsApi },
+        ),
+      );
+    } catch (error) {
+      unreadableReason = error instanceof Error ? error.message : String(error);
+      log(
+        `Could not read the SES DKIM tokens for ${emailDomain} (${unreadableReason}); cannot tell which DNS records are needed, so none will be added.`,
+      );
+    }
 
     // `vercel dns add` has no upsert semantics: adding a record that already
     // matches by name/type/value creates a duplicate rather than updating one.
@@ -300,8 +327,11 @@ export async function runPostDeployWizard({
     // infrastructure runbook already states for a read-only check that cannot
     // prove its handoff is current.
     let existingRecords = "";
-    let unreadableReason;
+    // Skipped when the tokens are already unknown: there is nothing to compare
+    // a listing against, and running it would replace the reason above with a
+    // second one, hiding which read actually failed first.
     try {
+      if (unreadableReason) throw new Error(unreadableReason);
       existingRecords = execute(
         "pnpm",
         ["exec", "vercel", "dns", "ls", dnsZone, "--limit", "100", ...vercelScopeArguments],
@@ -311,10 +341,13 @@ export async function runPostDeployWizard({
         },
       );
     } catch (error) {
-      unreadableReason = error instanceof Error ? error.message : String(error);
-      log(
-        `Could not list existing Vercel DNS records in ${dnsZone} (${unreadableReason}); cannot tell which are already there, so none will be added.`,
-      );
+      const reason = error instanceof Error ? error.message : String(error);
+      if (!unreadableReason) {
+        unreadableReason = reason;
+        log(
+          `Could not list existing Vercel DNS records in ${dnsZone} (${unreadableReason}); cannot tell which are already there, so none will be added.`,
+        );
+      }
     }
 
     // A raw `.includes()` would treat "foo.example.com" as present inside
