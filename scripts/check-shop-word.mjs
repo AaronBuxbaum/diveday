@@ -20,12 +20,19 @@ import { pathToFileURL } from "node:url";
  * table. Each rule below is a decision the README states as binding, quoted at
  * the rule; none of them is a preference this file invented.
  *
+ * That sentence was written on 2026-09-04 and said `comprobar` and `pulsar`
+ * were "absent from both bundles". They were not: six files carried 24 of them
+ * at the moment it was written, which is the same fortnight-decay this file's
+ * own header describes, happening to the file's own prose. Both are rules now;
+ * each needed a pattern that excludes its innocent reading, which is what took
+ * the time rather than the decision.
+ *
  * **What is deliberately not here.** A rule needs a settled answer *and* a
- * pattern that cannot mean anything else. `comprobar`, `pulsar` and `coger` are
- * on the README's peninsular-vocabulary list and are absent from both bundles,
- * but each has an innocent reading in a compound; they are left to review. And
- * `viaje` is banned only in `staff/`, not in `diver.json`, which is the one
- * scoped rule here — see its own note.
+ * pattern that cannot mean anything else. `coger` is on the README's
+ * peninsular-vocabulary list and is genuinely absent — the only near hit is
+ * `recoge` — but its innocent readings are common enough that it is left to
+ * review. And `viaje` is banned only in `staff/`, not in `diver.json`, which is
+ * the one scoped rule here — see its own note.
  */
 
 const ROOT = process.cwd();
@@ -110,6 +117,29 @@ const RULES = [
     pattern: /\bviajes?\b/i,
     scope: isStaffBundle,
     says: 'a departure is "la salida" in the staff bundles, which say it 302 times against 7',
+  },
+  {
+    id: "press",
+    // README:94 — "pulsar / pulsa / mantén pulsado" -> "presionar / presiona /
+    // mantén presionado".
+    //
+    // Anchored word-initial and enumerated by inflection on purpose:
+    // `Impulso` (staff/promos.json) and `expulse` (diver.json's octopus tip)
+    // both carry the letters mid-word, and `pulso` and `pulsera` are correct
+    // nouns a medical or incident string may yet need.
+    pattern: /\bpuls(a|as|ar|ad[oa]s?|ando)\b/i,
+    says: 'you press a control: "presiona", "mantén presionado". "Pulsar" reads as Spain',
+  },
+  {
+    id: "check",
+    // README:98, and its verificar/revisar paragraph at :100-103.
+    //
+    // The negative lookahead is the whole rule: `comprobante` is a rental
+    // receipt in diver.json's capabilities list and is correct. Everything else
+    // inflects — comprobar, comprobación, comprobado, comprobamos, comprobará,
+    // Comprobando — so this matches the stem and excludes the one noun.
+    pattern: /\bcomprob(?!antes?\b)\w*/i,
+    says: 'confirming a fact against evidence is "verificar"; looking something over is "revisar". "Comprobar/comprobación" reads as Spain',
   },
 ];
 

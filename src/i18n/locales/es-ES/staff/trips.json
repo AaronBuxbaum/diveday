@@ -79,7 +79,8 @@
     "diverUnavailable": "Esta salida no puede aceptar nuevos buceadores ahora mismo.",
     "waiverComplete": "Ese buceador ya tiene una exención de responsabilidad completada.",
     "waiverMedicalAttestation": "Confirma que revisaste el cuestionario médico antes de registrar una exención en papel, o envía el enlace digital para que el buceador lo responda.",
-    "waiverError": "No se pudo crear ese enlace de exención. Prueba con una reserva y una plantilla vigentes.",
+    "waiverGuardianName": "El nombre de la madre, padre o tutor es el mismo del buceador, así que esta exención mostraría a una sola persona firmando dos veces. Escribe ese nombre tal como aparece en su propia identificación, y si el registro del buceador es más corto que su identificación, corrige el registro. Dos identificaciones idénticas no se pueden registrar aquí.",
+    "waiverError": "No se pudo registrar esa exención en papel. Abre el registro del buceador para ver por qué.",
     "recapNote": "Nota de resumen guardada. Acompaña el resumen de cada buceador.",
     "recapPhotoRemoved": "Foto eliminada del resumen.",
     "arrivalPhotoFailed": "No se pudo guardar la foto de llegada. Comprueba la imagen e inténtalo de nuevo.",
@@ -482,7 +483,7 @@
     "waiverSigned": "Exención firmada"
   },
   "offlineManifestManager": {
-    "checkingDevice": "Comprobando este dispositivo…",
+    "checkingDevice": "Verificando este dispositivo…",
     "reconcileRejectedOne": "1 cambio necesita revisión. Abre el manifiesto en vivo para resolverlo.",
     "reconcileRejectedOther": "{count} cambios necesitan revisión. Abre el manifiesto en vivo para resolverlo.",
     "reconcilePendingOne": "1 cambio todavía se está enviando.",
@@ -602,13 +603,13 @@
     "dueBody": "La fecha límite venció el {deadline}. DiveDay cancelará esta salida y avisará por correo a quienes iban en su próxima pasada; quita el mínimo en Detalles si quieres realizarla igualmente."
   },
   "preDepartureCheck": {
-    "heading": "Comprobación previa a la salida",
-    "checkedBy": "Comprobado por {name} · {date}",
+    "heading": "Antes de salir del muelle",
+    "checkedBy": "Verificado por {name} · {date}",
     "printLineChecked": "{label} — {status}",
-    "printLineNotChecked": "{label} — No comprobado",
+    "printLineNotChecked": "{label} — Sin verificar",
     "errorRefusal": "Eso no se guardó. Inténtalo de nuevo.",
-    "checkedLabel": "Comprobado — pulsa para quitar la marca",
-    "uncheckedLabel": "No comprobado — pulsa para marcarlo",
-    "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# comprobado} other {# comprobados}}"
+    "checkedLabel": "Verificado — presiona para quitar la marca",
+    "uncheckedLabel": "Sin verificar — presiona para marcarlo",
+    "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}"
   }
 }

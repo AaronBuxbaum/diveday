@@ -19,12 +19,14 @@ describe("flySafeFrom", () => {
       executedDives: [{ diveNumber: 1, exitedAt: exit }],
       plannedDives: 1,
       endsAt,
+      divedRecently: false,
       now: home,
       hours,
     });
     expect(result).toEqual({
       from: new Date(exit.getTime() + 18 * HOUR_MS),
       basis: "single",
+      reason: "one_dive",
       anchor: "last_dive",
       hours: 18,
     });
@@ -40,11 +42,103 @@ describe("flySafeFrom", () => {
       ],
       plannedDives: 2,
       endsAt,
+      divedRecently: false,
       now: home,
       hours,
     });
     expect(result).toMatchObject({ basis: "repetitive", anchor: "last_dive", hours: 24 });
     expect(result?.from).toEqual(new Date(second.getTime() + 24 * HOUR_MS));
+  });
+
+  it("reads today's single tank as repetitive for a diver who already dived here yesterday", () => {
+    // The case issue #1439 is about. DAN's 18 hours covers "repetitive dives
+    // *or* multiple days of diving", and this is the second half: one tank
+    // today, but not this diver's first day in the water.
+    const exit = new Date("2026-07-25T20:10:00.000Z");
+    const result = flySafeFrom({
+      executedDives: [{ diveNumber: 1, exitedAt: exit }],
+      plannedDives: 1,
+      endsAt,
+      divedRecently: true,
+      now: home,
+      hours,
+    });
+    expect(result).toEqual({
+      from: new Date(exit.getTime() + 24 * HOUR_MS),
+      basis: "repetitive",
+      reason: "earlier_day",
+      anchor: "last_dive",
+      hours: 24,
+    });
+  });
+
+  it("leaves a first day of diving alone", () => {
+    // The inverse of the case above, and the only one that can catch the flag
+    // being read backwards — a `!divedRecently` would pass that test and fail
+    // this one.
+    const exit = new Date("2026-07-25T20:10:00.000Z");
+    expect(
+      flySafeFrom({
+        executedDives: [{ diveNumber: 1, exitedAt: exit }],
+        plannedDives: 1,
+        endsAt,
+        divedRecently: false,
+        now: home,
+        hours,
+      }),
+    ).toMatchObject({ basis: "single", hours: 18 });
+  });
+
+  it("names which of the three routes reached repetitive, recorded count first", () => {
+    // The diver's sentence branches on this, so it is not a label: a day the
+    // crew logged as two tanks must say so rather than be explained by
+    // yesterday, which is why the recorded count is read before the flag.
+    const exit = new Date("2026-07-25T20:10:00.000Z");
+    const one = { diveNumber: 1, exitedAt: exit };
+    const two = { diveNumber: 2, exitedAt: exit };
+    const reasonOf = (
+      executedDives: (typeof one)[],
+      plannedDives: number,
+      divedRecently: boolean,
+    ) =>
+      flySafeFrom({ executedDives, plannedDives, endsAt, divedRecently, now: home, hours })?.reason;
+    expect(reasonOf([one], 1, false)).toBe("one_dive");
+    expect(reasonOf([one, two], 2, false)).toBe("dives_recorded");
+    expect(reasonOf([one], 2, false)).toBe("dives_planned");
+    expect(reasonOf([one], 1, true)).toBe("earlier_day");
+    // A two-tank day is explained by its own record, not by yesterday.
+    expect(reasonOf([one, two], 2, true)).toBe("dives_recorded");
+  });
+
+  it("is one more route to repetitive, never a different answer", () => {
+    // A two-tank day by a diver who also dived yesterday is repetitive once,
+    // not twice: the flag may widen who reaches this basis and may never move
+    // the hours it carries.
+    const first = new Date("2026-07-25T19:00:00.000Z");
+    const second = new Date("2026-07-25T21:15:00.000Z");
+    const dives = [
+      { diveNumber: 1, exitedAt: first },
+      { diveNumber: 2, exitedAt: second },
+    ];
+    expect(
+      flySafeFrom({
+        executedDives: dives,
+        plannedDives: 2,
+        endsAt,
+        divedRecently: true,
+        now: home,
+        hours,
+      }),
+    ).toEqual(
+      flySafeFrom({
+        executedDives: dives,
+        plannedDives: 2,
+        endsAt,
+        divedRecently: false,
+        now: home,
+        hours,
+      }),
+    );
   });
 
   it("reads a two-dive plan as repetitive even when the crew logged only one tank", () => {
@@ -53,6 +147,7 @@ describe("flySafeFrom", () => {
       executedDives: [{ diveNumber: 1, exitedAt: exit }],
       plannedDives: 2,
       endsAt,
+      divedRecently: false,
       now: home,
       hours,
     });
@@ -64,12 +159,14 @@ describe("flySafeFrom", () => {
       executedDives: [],
       plannedDives: 2,
       endsAt,
+      divedRecently: false,
       now: home,
       hours,
     });
     expect(result).toEqual({
       from: new Date(endsAt.getTime() + 24 * HOUR_MS),
       basis: "repetitive",
+      reason: "dives_planned",
       anchor: "scheduled_return",
       hours: 24,
     });
@@ -78,10 +175,24 @@ describe("flySafeFrom", () => {
   it("says nothing while the boat is still out by the one-hour buffer", () => {
     const justPastReturn = new Date(endsAt.getTime() + 30 * 60 * 1000);
     expect(
-      flySafeFrom({ executedDives: [], plannedDives: 2, endsAt, now: justPastReturn, hours }),
+      flySafeFrom({
+        executedDives: [],
+        plannedDives: 2,
+        endsAt,
+        divedRecently: false,
+        now: justPastReturn,
+        hours,
+      }),
     ).toBeNull();
     expect(
-      flySafeFrom({ executedDives: [], plannedDives: 2, endsAt: null, now: home, hours }),
+      flySafeFrom({
+        executedDives: [],
+        plannedDives: 2,
+        endsAt: null,
+        divedRecently: false,
+        now: home,
+        hours,
+      }),
     ).toBeNull();
   });
 
@@ -93,16 +204,31 @@ describe("flySafeFrom", () => {
     ];
     // Boat home: the return is the later of the two instants, so it anchors.
     expect(
-      flySafeFrom({ executedDives: dives, plannedDives: 2, endsAt, now: home, hours }),
+      flySafeFrom({
+        executedDives: dives,
+        plannedDives: 2,
+        endsAt,
+        divedRecently: false,
+        now: home,
+        hours,
+      }),
     ).toEqual({
       from: new Date(endsAt.getTime() + 24 * HOUR_MS),
       basis: "repetitive",
+      reason: "dives_recorded",
       anchor: "scheduled_return",
       hours: 24,
     });
     // Boat not yet home: no honest answer at all, rather than dive one's.
     expect(
-      flySafeFrom({ executedDives: dives, plannedDives: 2, endsAt, now: endsAt, hours }),
+      flySafeFrom({
+        executedDives: dives,
+        plannedDives: 2,
+        endsAt,
+        divedRecently: false,
+        now: endsAt,
+        hours,
+      }),
     ).toBeNull();
   });
 
@@ -115,6 +241,7 @@ describe("flySafeFrom", () => {
       ],
       plannedDives: 2,
       endsAt,
+      divedRecently: false,
       now: new Date(lateExit.getTime() + 3 * HOUR_MS),
       hours,
     });
@@ -127,6 +254,7 @@ describe("flySafeFrom", () => {
       executedDives: [{ diveNumber: 1, exitedAt: exit }],
       plannedDives: 1,
       endsAt,
+      divedRecently: false,
       now: home,
       hours,
     });

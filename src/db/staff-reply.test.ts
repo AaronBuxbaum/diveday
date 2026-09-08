@@ -233,6 +233,52 @@ describe("what cannot be answered", () => {
     expect(provider.sent).toHaveLength(0);
   });
 
+  /**
+   * A reply the outbound schema will not take. The address on the record is a
+   * real one the diver wrote from, and it is long enough that the notification
+   * schema refuses the whole payload — so nothing can be sent, and no amount of
+   * pressing the button changes that.
+   *
+   * Before this, that came back as `provider_error`: a `staff_replies` row
+   * filing a provider call that never happened, and a queue entry re-failing on
+   * every drain until the attempt cap. The refusal has to be its own, because
+   * `no_reply_address` would say "There is no address to answer on" about a
+   * message that plainly has one.
+   */
+  it("refuses a reply the outbound schema cannot take, without recording a send", async () => {
+    const { db, shop, diver, staff } = await shopContext();
+    // Recorded from the diver's own address so the message is genuinely theirs,
+    // then widened on the stored row — which is the real shape: an address the
+    // inbound side accepted and filed, that the outbound schema will not take.
+    // Well past `DIVER_EMAIL_MAX`, so the payload is refused whatever else is
+    // true of it.
+    const messageId = await inboundEmail(db, shop.id, diver.email);
+    const overlong = `${"a".repeat(320)}@example.com`;
+    await db
+      .update(inboundMessages)
+      .set({ fromAddress: overlong })
+      .where(eq(inboundMessages.id, messageId));
+    const provider = acceptingProvider();
+    const before = (await db.select().from(staffReplies)).length;
+
+    expect(
+      await sendStaffReply(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        messageId,
+        body: "We can move you to the afternoon boat.",
+        sentByPersonId: staff.id,
+        now: NOW,
+        provider,
+      }),
+    ).toEqual({ status: "refused", reason: "cannot_be_sent" });
+
+    // Never asked, so never recorded as asked. Counted as a delta because the
+    // seeded shop already has replies of its own on file.
+    expect(provider.sent).toHaveLength(0);
+    expect(await db.select().from(staffReplies)).toHaveLength(before);
+  });
+
   it("refuses a message that belongs to another diver's record", async () => {
     const { db, shop, diver, staff } = await shopContext();
     const [other] = await db

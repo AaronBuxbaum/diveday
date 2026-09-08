@@ -113,4 +113,52 @@ test.describe("the departures board", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Lobby display" })).toBeVisible();
     await expect(page.getByText("No screens yet.")).toBeVisible();
   });
+
+  /**
+   * The names-on half, which the test above cannot see: it mints with names off
+   * and asserts the negative, so the crew line never renders in it at all.
+   *
+   * What is pinned here is that the line says *what* the names are. A row
+   * reading "With Ana Ruiz, Luis Perez" across a lobby, under a heading that is
+   * the shop's own name and beside a seat count, does not tell a stranger
+   * whether those are the crew, the divers already aboard, or who booked
+   * (issue #1464) — and the setting that turns it on promises "only the crew who
+   * agreed to be named appear, and divers never do". The role word is what makes
+   * the promise legible on the wall rather than only in the settings copy.
+   *
+   * Minted through the seed route rather than the settings form because the
+   * token is hashed at rest and shown once, the same way `e2e/visual.spec.ts`
+   * photographs this surface.
+   */
+  test("with names on, the board says the names are the crew — and still names no diver", async ({
+    page,
+    request,
+  }) => {
+    const seeded = await request.post("/api/test/seed-display-token", {
+      data: { label: "Lobby TV", showNames: true },
+    });
+    expect(seeded.ok()).toBe(true);
+    const { path } = (await seeded.json()) as { path: string };
+
+    const visitor = await page.context().browser()?.newContext();
+    if (!visitor) throw new Error("no browser to open a signed-out context with");
+    try {
+      const board = makeActivitySafe(await visitor.newPage());
+      await board.goto(path);
+      await expect(board.getByText(REEF_TRIP)).toBeVisible();
+
+      // By shape, not by a literal name: which cast member consents is seed
+      // data, and `departures-board.test.ts` already pins that the reef trip
+      // resolves to exactly one consented public name.
+      await expect(board.getByText(/^Crew: \S/).first()).toBeVisible();
+
+      // Consent is the only gate, and it is a crew gate: turning names on must
+      // never turn on a diver's.
+      const text = await board.locator("main").innerText();
+      expect(text).not.toContain("Priya Sharma");
+      expect(text).not.toContain("Tom Okafor");
+    } finally {
+      await visitor.close();
+    }
+  });
 });

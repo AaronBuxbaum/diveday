@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { readStatedLevel, writeStatedLevel } from "@/components/stated-diver-level";
 import { controlClass, Field } from "@/components/ui/form";
 
 /**
@@ -19,9 +20,6 @@ export type DayCeilingOption = {
   /** What this day looks like against that rung: one line, or one per dive that is deeper. */
   lines: string[];
 };
-
-/** Where a reader's own answer is kept: this browser, and nowhere else. */
-const STORED_LEVEL_KEY = "diveday.diver-level";
 
 /**
  * **"Is this day inside what my card covers?", asked without an account.**
@@ -59,8 +57,8 @@ export function DayCeilingPicker({
   // the one the server sent.
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem(STORED_LEVEL_KEY);
-      if (stored !== null && options.some((option) => option.value === stored)) setValue(stored);
+      const stored = readStatedLevel();
+      if (stored !== "" && options.some((option) => option.value === stored)) setValue(stored);
     } catch {
       // A browser refusing storage is not a reason to render nothing.
     }
@@ -89,11 +87,9 @@ export function DayCeilingPicker({
           value={value}
           onChange={(event) => {
             setValue(event.target.value);
-            try {
-              window.localStorage.setItem(STORED_LEVEL_KEY, event.target.value);
-            } catch {
-              // Same again: the page works, the answer just is not remembered.
-            }
+            // Shared with the wait-list field below, which offers this answer
+            // back rather than asking again (`src/components/stated-diver-level`).
+            writeStatedLevel(event.target.value);
           }}
         >
           <option value="">{unsaidLabel}</option>

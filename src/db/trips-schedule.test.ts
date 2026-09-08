@@ -4,6 +4,7 @@ import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { courses, rollCallCrewEvents, tripDives, trips } from "./schema";
+import { createTripLens, deleteTripLens } from "./trip-lenses";
 import {
   createTrip,
   deleteTrip,
@@ -600,5 +601,83 @@ describe("moveTrip and the calendar revision", () => {
     if (!copied) throw new Error("duplicateTrip returned nothing");
     const [row] = await db.select().from(trips).where(eq(trips.id, copied.id));
     expect(row?.revision).toBe(0);
+  });
+});
+
+/**
+ * **A copy is a copy** (issue #1492). `duplicateTrip` carried every other
+ * stated fact about a departure — the hull, the dive mode, the self-guided
+ * mark, the dives, the days — and silently dropped `lens_id`, so a shop that
+ * copied its Saturday night dive to next Saturday got a departure with no
+ * kind of day on it and no sign anything had been lost.
+ *
+ * Not only a staff-facing loss: the public lens rail narrows in SQL on
+ * `trips.lens_id`, so the copy was missing from the list a diver reaches by
+ * tapping the shop's own word for that kind of day.
+ */
+describe("duplicateTrip and the shop's kind of day", () => {
+  const tz = "America/New_York";
+  const at = (iso: string) => new Date(iso);
+
+  it("carries the source's kind of day onto the copy", async () => {
+    const { db, shop } = await seededShopContext();
+    expect(shop.timezone).toBe(tz);
+    const lens = await createTripLens(db, shop.id, "After dark");
+    if (!lens) throw new Error("lens not created");
+
+    const source = await createTrip(db, {
+      shopId: shop.id,
+      title: "Night dive",
+      startsAt: at("2030-09-07T23:00:00.000Z"),
+      endsAt: at("2030-09-08T02:00:00.000Z"),
+      capacity: 6,
+      lensId: lens.id,
+    });
+    if (!source) throw new Error("source trip not created");
+    expect(source.lensId).toBe(lens.id);
+
+    const copy = await duplicateTrip(db, shop.id, source.id, at("2030-09-14T23:00:00.000Z"));
+    expect(copy?.lensId).toBe(lens.id);
+  });
+
+  it("keeps a copy of a departure with no kind of day without one", async () => {
+    // The inverse, so the fix cannot be a blanket write — and the guarantee
+    // that copying never *invents* a word for a day nobody chose one for.
+    const { db, shop } = await seededShopContext();
+    const source = await createTrip(db, {
+      shopId: shop.id,
+      title: "Ordinary charter",
+      startsAt: at("2030-09-07T13:00:00.000Z"),
+      endsAt: at("2030-09-07T17:00:00.000Z"),
+      capacity: 6,
+    });
+    if (!source) throw new Error("source trip not created");
+
+    const copy = await duplicateTrip(db, shop.id, source.id, at("2030-09-14T13:00:00.000Z"));
+    expect(copy).not.toBeNull();
+    expect(copy?.lensId).toBeNull();
+  });
+
+  it("carries a kind of day the shop has since deleted", async () => {
+    // `deleteTripLens` is soft, and its own comment says a past day still says
+    // which kind of day it was — so unlike `boatId` this is copied rather than
+    // re-validated. A shop retiring a word must not silently rewrite the
+    // departures that carried it.
+    const { db, shop } = await seededShopContext();
+    const lens = await createTripLens(db, shop.id, "After dark");
+    if (!lens) throw new Error("lens not created");
+    const source = await createTrip(db, {
+      shopId: shop.id,
+      title: "Night dive",
+      startsAt: at("2030-09-07T23:00:00.000Z"),
+      endsAt: at("2030-09-08T02:00:00.000Z"),
+      capacity: 6,
+      lensId: lens.id,
+    });
+    if (!source) throw new Error("source trip not created");
+    await deleteTripLens(db, shop.id, lens.id);
+
+    const copy = await duplicateTrip(db, shop.id, source.id, at("2030-09-14T23:00:00.000Z"));
+    expect(copy?.lensId).toBe(lens.id);
   });
 });

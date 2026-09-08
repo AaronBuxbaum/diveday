@@ -6,7 +6,7 @@ import { DiveCertificationField } from "@/components/DiveDeclarationFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { joinLastMinuteListAction, type LastMinuteListFormState } from "../actions";
 
 const INITIAL_STATE: LastMinuteListFormState = {};
@@ -71,10 +71,10 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
           </Field>
           <DiveCertificationField />
           <Field label={t("lastMinute.availableFrom")} hint={t("common.optional")}>
-            <input name="availableFrom" type="date" className={controlClass} />
+            <DateField name="availableFrom" />
           </Field>
           <Field label={t("lastMinute.availableUntil")} hint={t("common.optional")}>
-            <input name="availableUntil" type="date" className={controlClass} />
+            <DateField name="availableUntil" />
           </Field>
         </FieldGrid>
         <div className="flex flex-wrap items-center gap-3">

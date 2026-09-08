@@ -425,7 +425,13 @@ new domain concept, define it here in the same PR.
   the shop never asked is treated as an adult — and the day a date of birth lands on their record,
   the release they already signed becomes a blocker rather than a silent pass. It does not answer
   H-01 or H-03: the release wording is unchanged, still English, and whether typed consent is a
-  sufficient assurance level is as open for the guardian as it is for the diver.
+  sufficient assurance level is as open for the guardian as it is for the diver. **A co-signer whose
+  name reads as the diver's own is not a co-signature**, on either path and with no override: the
+  writer compares significant name tokens, so a middle initial is not a difference and a spelled-out
+  middle name or a suffix is. That refusal is a name-match check, not an identity one, so it also
+  catches the family it cannot help — a parent and child whose IDs read identically have no path to
+  a recorded release anywhere in the product today, which is an owner's call and not an agent's
+  (issue 1573).
 - **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
   OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
   `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence
@@ -1588,15 +1594,27 @@ new domain concept, define it here in the same PR.
   (`src/lib/fly-safe.ts`, issue #1425). The shop's own hours (`shops.fly_safe_hours_single` and
   `_repetitive`, defaults 18 and 24, floored at DAN's published minimums of 12 and 18) counted from
   the **last recorded exit**, or from the scheduled return once the boat is home by the one-hour
-  buffer. *Repetitive* whenever the day held more than one dive by either the record or the plan —
-  the longer wait is the one that costs nothing if wrong — and a record missing its last exit
-  anchors on the return, never on an earlier dive. Rendered on the thread's after-state and in the
-  recap email, in the shop's zone. The sentence names the **shop** as the author of the figure and
-  DAN as the practice behind it, because DAN publishes 12 and 18 and a shop may sit above them.
-  Two things it deliberately cannot know: whether a dive took decompression stops, which DAN says
-  needs substantially longer than 18 hours; and whether the diver dived on an earlier day, so a
-  single dive after a week of diving still reads *single*. Informs and gates nothing; never
-  computed from a depth profile, which is a dive computer's job.
+  buffer. *Repetitive* by any of three routes — the day held more than one dive by the record, or by
+  the plan, or **this diver already had a dive day at this shop on one of the two local days before
+  the departure** (issue #1439). That third route is DiveDay's *reading* of DAN's "multiple days of
+  diving", not a quotation: DAN publishes no window for that clause. It counts local calendar days in
+  the shop's own zone rather than a span of hours, because two boats leaving at the same time on
+  consecutive days are exactly 24 hours apart — and 25 across a fall-back boundary — so an hours
+  window let the tide and the clock change decide the answer. The evidence is a live booking on a
+  live departure the shop still says ran, not a dive log row: crews do not reliably log, and
+  requiring a row would have let today's boat speak from its plan while yesterday's fell silent.
+  The longer wait is the one that costs nothing if wrong, and reaching repetitive can never shorten
+  one, because a shop's `repetitive` may not be set below its `single`. A record missing its last
+  exit anchors on the return, never on an earlier dive. Rendered on the thread's after-state and in
+  the recap email, in the shop's zone; on the earlier-day route the sentence says so, because two
+  divers who did the identical thing today otherwise read different numbers with nothing on a recap
+  of today explaining it. The sentence names the **shop** as the author of the figure and DAN as the
+  practice behind it, because DAN publishes 12 and 18 and a shop may sit above them. Three things it
+  deliberately cannot know: whether a dive took decompression stops, which DAN says needs
+  substantially longer than 18 hours; any dive not booked at this shop, so a week with another
+  operator is invisible; and that two days belong to one diver when the bookings carry no email —
+  a walk-up is a fresh `people` row each time. Informs and gates nothing; never computed from a
+  depth profile, which is a dive computer's job.
 - **Surface interval** — the time between one dive's exit and the next dive's entry. Only ever
   stated between **consecutively numbered** executed dives that were both recorded and do not
   overlap; anything else is "not recorded". An interval measured across a dive nobody logged

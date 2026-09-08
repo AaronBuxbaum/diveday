@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ForgivingInput } from "./ForgivingInput";
 import {
   controlClass,
+  DateField,
   Field,
   FieldActions,
   FieldGrid,
@@ -52,6 +53,89 @@ describe("SearchField", () => {
     expect(box).toHaveValue("reef");
     expect(box).toHaveAttribute("data-hydrated", "true");
     expect(box).toHaveAttribute("name", "q");
+  });
+});
+
+describe("DateField", () => {
+  it("is a date input the label reaches through its positioning wrapper", () => {
+    // The wrapper is the whole reason this needs a test: `Field` clones the
+    // minted id onto `children`, and a wrapper that swallowed it would leave
+    // the label pointing at an id nothing carries. Every e2e spec that fills
+    // a date does it `getByLabel`, and would find this out as a timeout.
+    render(
+      <Field label="Preferred date">
+        <DateField name="preferredDate" />
+      </Field>,
+    );
+    const box = screen.getByLabelText("Preferred date");
+    expect(box).toHaveAttribute("type", "date");
+    expect(box).toHaveAttribute("name", "preferredDate");
+  });
+
+  it("marks a required date the same way every other control is marked", () => {
+    // Goes red exactly when `DateField` is dropped from `Field`'s `isControl`
+    // set, which is otherwise a silent regression across thirteen fields.
+    render(
+      <Field label="Sails on">
+        <DateField name="startsOn" required />
+      </Field>,
+    );
+    expect(screen.getByText("*")).toBeInTheDocument();
+    expect(screen.getByLabelText("Sails on")).toBeRequired();
+  });
+
+  it("carries the field's description and error onto the input, not the wrapper", () => {
+    render(
+      <Field
+        label="Serviced on"
+        description="The last time it went to the bench"
+        error="Not a date"
+      >
+        <DateField name="servicedOn" />
+      </Field>,
+    );
+    const box = screen.getByLabelText("Serviced on");
+    expect(box).toHaveAccessibleDescription(/last time it went to the bench/);
+    expect(box).toHaveAccessibleDescription(/Not a date/);
+    expect(box).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("hides the platform indicator by opacity, never by display", () => {
+    // `display: none` would take Chromium's picker tap target away with the
+    // pixels and leave our glyph looking live and doing nothing. Hidden by
+    // opacity it stays in the layout underneath, which is what `pe-9` and the
+    // glyph's `end-3` are sized against.
+    const { container } = render(<DateField name="on" />);
+    const box = screen.getByDisplayValue("");
+    expect(box.className).toContain("[&::-webkit-calendar-picker-indicator]:opacity-0");
+    expect(box.className).not.toContain("calendar-picker-indicator]:hidden");
+    expect(box).toHaveClass("pe-9");
+    const glyph = container.querySelector("svg");
+    expect(glyph).toHaveAttribute("aria-hidden", "true");
+    expect(glyph).toHaveClass("pointer-events-none");
+  });
+
+  it("passes every native prop through, including a callback ref", () => {
+    // The schedule builder focuses a date box on mount; a wrapper that ate the
+    // ref would break that with nothing failing.
+    let focused: HTMLInputElement | null = null;
+    render(
+      <DateField
+        name="on"
+        defaultValue="2026-07-25"
+        min="2026-07-01"
+        max="2026-08-31"
+        className="tabular-nums"
+        ref={(node) => {
+          focused = node;
+        }}
+      />,
+    );
+    const box = screen.getByDisplayValue("2026-07-25");
+    expect(box).toHaveAttribute("min", "2026-07-01");
+    expect(box).toHaveAttribute("max", "2026-08-31");
+    expect(box).toHaveClass("tabular-nums");
+    expect(focused).toBe(box);
   });
 });
 

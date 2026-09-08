@@ -8,8 +8,11 @@
 // that mechanism: there is no StaffIntlProvider and staff copy deliberately
 // never crosses to the client as a bundle (src/i18n/staff-messages.ts). The
 // staff-shaped version is a `copy`-prop context — `staffTranslator` resolves
-// three strings in shop/[shopSlug]/layout.tsx, a tiny client provider carries
-// them down — which ships no bundle and is the change to make here. Until
+// three strings in the staff shell's `ShopChrome`, a tiny client provider
+// carries them down — which ships no bundle and is the change to make here.
+// (The shell's own layout resolves nothing since issue 1446; the translator
+// lives in `_components/ShopChrome.tsx` with the rest of the request reads.)
+// Until
 // then these three strings stay English; the ADR names this as the known
 // remainder rather than an unexamined tradeoff.
 import { ErrorPage } from "@/components/ErrorPage";

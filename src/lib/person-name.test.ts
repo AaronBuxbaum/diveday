@@ -29,6 +29,23 @@ describe("personNamesMatch — a different person, flagged", () => {
     expect(personNamesMatch("Jane Doe", "John Doe")).toBe(false);
   });
 
+  /**
+   * **The father-and-son line, and the two edits a front desk is told about**
+   * (issue 1539). A minor's paper release is refused when its co-signer's name
+   * reads as the diver's own, and the staff notice tells the shop what does and
+   * does not make a difference. That advice is only worth giving if this is
+   * where the line actually sits: a suffix is two characters and survives, a
+   * bare initial is one and does not.
+   */
+  it("counts a suffix as a difference and a bare initial as none", () => {
+    expect(personNamesMatch("John Smith Jr.", "John Smith")).toBe(false);
+    expect(personNamesMatch("John A Smith", "John Smith")).toBe(true);
+    expect(personNamesMatch("John Andrew Smith", "John Smith")).toBe(false);
+    // And a diver whose record already carries the middle name is unaffected:
+    // the sets differ in size either way round.
+    expect(personNamesMatch("John Smith", "John Andrew Smith")).toBe(false);
+  });
+
   it("does not match a different surname", () => {
     expect(personNamesMatch("Priya Sharma", "Priya Patel")).toBe(false);
   });

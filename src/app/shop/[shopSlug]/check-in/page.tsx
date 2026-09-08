@@ -26,12 +26,17 @@ import { upcomingScheduleStats } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
-import { counterIsClear, counterTally, firstVisitMarksAnException } from "@/lib/check-in";
+import {
+  counterIsClear,
+  counterTally,
+  firstVisitMarksAnException,
+  isSettledAtCounter,
+} from "@/lib/check-in";
 import { nowDate } from "@/lib/clock";
 import { formatDayParts, formatTime } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type NoticeCodeOf, noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { type NoticeCodeOf, noticeForForm, noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { hasSailed } from "@/lib/trips";
 import { CounterInstrument } from "./_components/CounterInstrument";
 import { CounterQueue } from "./_components/CounterQueue";
@@ -43,12 +48,12 @@ import { CheckInSearch } from "./CheckInSearch";
 import { counterQueuePath, selectFocusedDeparture } from "./focus";
 
 // `instant = true` asserts that navigating *into* this page paints
-// immediately. It is not a claim that the route has a static shell: the staff
-// shell layout declares `instant = false` (read its comment for why), so a
-// cold, direct visit still blocks on the session and the shop row. What this
-// validates is the navigation staff actually make all day — arriving from
-// another `/shop` page, where that shell is already mounted and this
-// segment's `loading.tsx` is what paints. See ADR 20260804-instant-navigation.
+// immediately — this segment's `loading.tsx`, with no request read above it.
+// Since the staff shell became synchronous (issue 1446) that holds for a cold,
+// direct visit too: the shell's session, shop row and nav stream in beside the
+// page from `ShopChrome` rather than above it, so the route gets a static
+// shell and its own reads are the only ones the reader waits on. See ADR
+// 20260804-instant-navigation.
 export const instant = true;
 
 export const metadata: Metadata = {
@@ -94,6 +99,14 @@ type CheckInNoticeCode = NoticeCodeOf<
 type NoticeDefinition = {
   tone: "success" | "danger" | "warning" | "neutral";
   key: StaffMessageKey;
+  /**
+   * The form these words belong beside, when they belong beside one at all.
+   * The roster's table carries the same field for the same reason
+   * (`TripNoticeBanner.tsx`): a refusal about one booking in a list of them is
+   * only useful next to that booking. Absent means page-level — the banner is
+   * the right home, and most of this table is that.
+   */
+  form?: string;
 };
 
 type BorrowedNoticeMap = Record<string, NoticeDefinition>;
@@ -148,8 +161,22 @@ const noticeCopy: NoticeMap = {
   // No `waiver_in_person` either, for the same reason: the diver's row loses
   // its waiver blocker and starts offering check-in, right where the paper
   // control was.
-  "waiver-medical-attestation": { tone: "warning", key: "checkIn.notice.waiverMedicalAttestation" },
-  "waiver-error": { tone: "danger", key: "checkIn.notice.waiverError" },
+  //
+  // All three carry `form: "waiver"`, so they land on the row whose paper
+  // release was refused rather than at the top of the page (issue 1574). Each
+  // is a refusal a staffer has to *act* on with the diver in front of them,
+  // which is the case the roster's `form` routing exists for.
+  "waiver-medical-attestation": {
+    tone: "warning",
+    key: "checkIn.notice.waiverMedicalAttestation",
+    form: "waiver",
+  },
+  "waiver-guardian-name": {
+    tone: "danger",
+    key: "checkIn.notice.waiverGuardianName",
+    form: "waiver",
+  },
+  "waiver-error": { tone: "danger", key: "checkIn.notice.waiverError", form: "waiver" },
 };
 
 /**
@@ -204,6 +231,23 @@ export default async function CheckInPage({
       : copy
         ? t(copy.key)
         : null;
+  // **A refusal about one booking belongs beside that booking.** The roster
+  // settled the mechanism and this follows it rather than inventing a second:
+  // the notice names the form it belongs to, the section owning that form
+  // renders it (`noticeForForm`), and whatever is left over falls through to
+  // the page banner. Here "left over" is real and not theoretical — the
+  // refused booking may not be in the visible queue at all, because the
+  // staffer typed a search or switched departures on the way back, and a
+  // notice routed to a row that is not on screen would simply vanish.
+  //
+  // Widened with `bookingId`, which `noticeForForm` is generic to preserve.
+  const waiverNotice =
+    copy?.form && bid
+      ? noticeForForm(
+          { form: copy.form, tone: copy.tone, text: t(copy.key), bookingId: bid },
+          "waiver",
+        )
+      : undefined;
   const bookedPersonIds = new Set(queue.map((row) => row.personId));
   const otherMatchingDivers = query
     ? await db
@@ -273,6 +317,30 @@ export default async function CheckInPage({
   // page keys off this one distinction.
   const focus = query ? null : selectFocusedDeparture(departures, trip, now);
   const focusedTripId = focus?.tripId ?? null;
+  // **Suppress the banner only for a row that is actually on screen**, which is
+  // not the same question as "is this booking in the queue". A search renders
+  // every departure; focus mode renders exactly one, and the refused booking
+  // can easily be on another — the staffer switched boats on the way back.
+  // Asking the wrong one costs the message entirely: the banner steps aside for
+  // a row that never renders, and the refusal is said nowhere at all. Measured
+  // against the dev server before this was written that way round.
+  const renderedRows = query ? queue : (focus?.rows ?? []);
+  const waiverNoticeOnRow =
+    waiverNotice &&
+    renderedRows.some(
+      (row) =>
+        row.bookingId === waiverNotice.bookingId &&
+        // **And a row that can actually show it.** A settled seat renders as a
+        // compact receipt with no blocker block and no `extra` slot at all
+        // (`CounterQueueRow`'s early return), so routing a refusal there and
+        // standing the banner down says it nowhere. `isSettledAtCounter` is the
+        // same predicate that early return uses and that `CounterQueue` splits
+        // its two groups on, shared rather than restated, so the page and the
+        // row cannot drift into disagreeing about where a message can land.
+        !isSettledAtCounter(row),
+    )
+      ? waiverNotice
+      : undefined;
   const checkIn = checkInAction.bind(null, shopSlug, focusedTripId);
   const undo = undoCheckInAction.bind(null, shopSlug, focusedTripId);
   const recordPaperWaiver = markWaiverInPersonFromCheckIn.bind(null, shopSlug, focusedTripId);
@@ -383,9 +451,14 @@ export default async function CheckInPage({
         }
       />
 
-      {copy ? (
+      {copy && !waiverNoticeOnRow ? (
         // Seven of this page's codes are refusals (walk-in full, not found,
         // invalid…) — noticeRole gives those `role="alert"` so they announce.
+        //
+        // Suppressed only once the message has actually landed on a row, never
+        // merely because it named a form: a waiver refusal whose booking the
+        // visible queue no longer holds still belongs here, or it is said
+        // nowhere at all (issue 1574).
         <ShopNotice tone={copy.tone} role={noticeRole(copy.tone)} className="mb-6">
           {noticeContent}
         </ShopNotice>
@@ -550,6 +623,7 @@ export default async function CheckInPage({
               checkInAction={checkIn}
               undoAction={undo}
               waiverAction={recordPaperWaiver}
+              waiverNotice={waiverNoticeOnRow}
               // A boat that has sailed is one the counter is reading rather
               // than working: its receipts are the point, so they arrive open.
               settledOpen={hasSailed(focus.startsAt, now)}
@@ -580,6 +654,7 @@ export default async function CheckInPage({
                     checkInAction={checkIn}
                     undoAction={undo}
                     waiverAction={recordPaperWaiver}
+                    waiverNotice={waiverNoticeOnRow}
                     // **A search is a lookup, so nothing it found is folded
                     // away.** This branch renders only while `query` is set,
                     // and the row a staffer typed a name to reach is very often

@@ -7,7 +7,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { maxPlausibleBirthDate } from "@/lib/age";
 import { mailtoHref, telHref } from "@/lib/contact-links";
@@ -208,15 +208,13 @@ export function DiverHeader({
               label={t("divers.header.dateOfBirthLabel")}
               hint={t("divers.header.optionalHint")}
             >
-              <input
+              <DateField
                 name="dateOfBirth"
-                type="date"
                 // Mirrors the server-side plausibility bound so a mistyped year
                 // is caught in the field, not by a redirect to `?notice=invalid`.
                 max={maxPlausibleBirthDate()}
                 min="1900-01-01"
                 defaultValue={diver.person.dateOfBirth ?? ""}
-                className={controlClass}
               />
             </Field>
             <Field

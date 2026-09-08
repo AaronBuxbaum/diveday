@@ -9,6 +9,7 @@ import {
   seasonEventIssues,
   seasonEventNeedsReminder,
   seasonEventState,
+  seasonLensForDay,
 } from "./season-events";
 
 /** Lobster mini-season 2026: the last Wednesday and Thursday of July. */
@@ -122,5 +123,62 @@ describe("seasonEventIssues", () => {
 
   it("says nothing about the order when a date is unreadable", () => {
     expect(seasonEventIssues({ ...good, endsOn: "nope" })).toEqual(["ends_on_invalid"]);
+  });
+});
+
+/**
+ * The write-side reader (issue #1492). Its own tests rather than leaning on
+ * `liveSeasonEvents`': that helper's ordering was written for the storefront
+ * band, and if a later change re-orders it for the band, the *default a
+ * departure is created with* must fail loudly here rather than change in
+ * silence.
+ */
+describe("seasonLensForDay", () => {
+  const window = (startsOn: string, endsOn: string, lensId: string | null) => ({
+    startsOn,
+    endsOn,
+    lens: lensId === null ? null : { id: lensId },
+  });
+
+  it("answers the live season's kind of day, on either edge of the window", () => {
+    const seasons = [window("2026-07-01", "2026-07-31", "after-dark")];
+    expect(seasonLensForDay(seasons, "2026-07-01")).toBe("after-dark");
+    expect(seasonLensForDay(seasons, "2026-07-15")).toBe("after-dark");
+    expect(seasonLensForDay(seasons, "2026-07-31")).toBe("after-dark");
+  });
+
+  it("answers null on a day no season covers", () => {
+    const seasons = [window("2026-07-01", "2026-07-31", "after-dark")];
+    expect(seasonLensForDay(seasons, "2026-06-30")).toBeNull();
+    expect(seasonLensForDay(seasons, "2026-08-01")).toBeNull();
+  });
+
+  it("is not shadowed by a live season that names no kind of day", () => {
+    // The case `[0]` gets wrong, and it is the demo shop's own calendar: a
+    // lensless "Coral spawning" ending in two days sits ahead of a
+    // lens-carrying "Turtle nesting" in soonest-to-end order, so reading the
+    // first live season would default every departure to null on the very data
+    // the feature ships with.
+    const seasons = [
+      window("2026-07-01", "2026-07-03", null),
+      window("2026-06-01", "2026-09-10", "after-dark"),
+    ];
+    expect(seasonLensForDay(seasons, "2026-07-02")).toBe("after-dark");
+  });
+
+  it("takes the soonest to end among the seasons that answer", () => {
+    const seasons = [
+      window("2026-06-01", "2026-09-10", "easygoing-reef"),
+      window("2026-07-01", "2026-07-20", "after-dark"),
+    ];
+    expect(seasonLensForDay(seasons, "2026-07-02")).toBe("after-dark");
+  });
+
+  it("answers null when the only covering season's kind of day was deleted", () => {
+    // Deleting a kind of day is soft and leaves a live id in
+    // `season_events.lens_id`; the joined read is what reports it as gone. A
+    // default off the raw column would label a departure with a word the
+    // public rail no longer renders.
+    expect(seasonLensForDay([window("2026-07-01", "2026-07-31", null)], "2026-07-15")).toBeNull();
   });
 });

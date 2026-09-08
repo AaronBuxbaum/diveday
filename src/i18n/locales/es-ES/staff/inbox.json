@@ -26,12 +26,13 @@
     "unknownStaff": "Alguien del equipo"
   },
   "reply": {
-    "email": "Responder por correo",
-    "whatsapp": "Responder por WhatsApp",
+    "email": "Responder por correo a {address}",
+    "whatsapp": "Responder por WhatsApp a {address}",
     "placeholder": "Escribe tu respuesta",
     "send": "Enviar",
     "sending": "Enviando",
-    "windowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo."
+    "windowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo.",
+    "diverRemoved": "El registro de este buceador fue eliminado, así que las respuestas están desactivadas."
   },
   "notices": {
     "failed": "No se envió, así que el mensaje sigue esperando respuesta.",
@@ -41,6 +42,7 @@
     "notFound": "Ese mensaje ya no está en esta ficha.",
     "channelUnsupported": "DiveDay todavía no puede responder un SMS.",
     "noReplyAddress": "No hay ninguna dirección a la que responder.",
+    "cannotBeSent": "Esta respuesta no se puede enviar tal como está. No salió nada, y volver a intentarlo no cambiará eso.",
     "whatsappWindowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo.",
     "whatsappNotConnected": "Para responder por WhatsApp hace falta el remitente que conectas en Ajustes.",
     "notAuthorized": "Responder a los buceadores es trabajo del propietario o del gerente."

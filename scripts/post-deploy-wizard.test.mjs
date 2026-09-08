@@ -572,7 +572,11 @@ describe("post-deploy wizard", () => {
     ]);
   });
 
-  it("falls back to adding every DNS record when listing existing ones fails", async () => {
+  // A listing failure is unknown state, not empty state. `vercel dns add` has no
+  // upsert, so inferring "empty" from "unreadable" is what would put a second
+  // "v=spf1" TXT on the live zone and break SPF for every outbound mail -- the
+  // path infra run 34176404605 actually took. Zero adds, and the reason on screen.
+  it("adds nothing when it cannot list the existing DNS records", async () => {
     const answers = ["no", "no", "no", "no", "no", "yes", "no"];
     const commands = [];
     const messages = [];
@@ -596,8 +600,159 @@ describe("post-deploy wizard", () => {
       ({ command, arguments_ }) =>
         command === "pnpm" && arguments_[2] === "dns" && arguments_[3] === "add",
     );
-    expect(dnsAdds).toHaveLength(3);
+    expect(dnsAdds).toHaveLength(0);
     expect(messages.some((message) => message.includes("Could not list existing"))).toBe(true);
+    expect(messages.some((message) => message.includes("not authenticated"))).toBe(true);
+    // The trap this inversion has to avoid: emptying `missingRecords` without a
+    // flag makes the wizard claim the records are already there, which is a
+    // positive statement about a zone it never managed to read.
+    expect(messages.some((message) => /already present|nothing added/.test(message))).toBe(false);
+  });
+
+  // The sibling of the test above, on the other of the two `readSesDnsPlan()`
+  // call sites: this one omits `sesDns` from `checkUpdates`, so the plan is read
+  // by the pre-check at the top rather than inside the yes-branch. An unreadable
+  // check must leave the question standing -- the runbook's rule for a read-only
+  // check that cannot prove its handoff is current.
+  it("keeps the SES DNS question visible when the listing cannot be read", async () => {
+    const questions = [];
+    const messages = [];
+    await runPostDeployWizard({
+      ask: async (question) => {
+        questions.push(question);
+        return "no";
+      },
+      checkUpdates: {
+        awsProfiles: true,
+        vercelEnvironment: true,
+        githubSecrets: true,
+        cdkVariables: true,
+        githubEnvironment: true,
+      },
+      cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2", VERCEL_ORG_ID: "team_123" },
+      execute: (command, arguments_) => {
+        if (command === "aws") return JSON.stringify(["first"]);
+        if (arguments_[2] === "dns" && arguments_[3] === "ls") {
+          throw new Error("not authenticated");
+        }
+        return "";
+      },
+      log: (message) => messages.push(message),
+    });
+
+    expect(questions).toContain("Add the SES DNS records through Vercel DNS? [y/N] ");
+    expect(messages.some((message) => /already present|skipping its question/.test(message))).toBe(
+      false,
+    );
+  });
+
+  /**
+   * **The AWS read runs after `cdk deploy` has already succeeded, so it may not
+   * throw** (issue #1525). It used to: `readSesDnsPlan` opened with an
+   * `aws sesv2 get-email-identity` inside a `JSON.parse`, and the yes-branch
+   * called it outside any `try`.
+   *
+   * The pre-check is no defence, which is the part worth pinning. Supplying
+   * `checkUpdates.sesDns` — the CI path through `infra-deploy.mjs`, and what
+   * every other test here does — skips the guarded pre-check entirely, leaving
+   * the unguarded call as the only one. So this case answers **yes** with a
+   * throwing `aws`, which before this change killed the wizard with a stack
+   * trace after the stack was updated and before the remaining handoffs ran.
+   */
+  it("survives an unreadable SES identity, says why, and finishes the rest", async () => {
+    const messages = [];
+    const commands = [];
+    // Awaited plainly rather than through a matcher: the wizard resolves with
+    // nothing, so `.resolves.not.toThrow()` would be doing its work through
+    // `.resolves` alone while reading as though the matcher were the point.
+    // A rejection fails this test on its own (Sourcery finding on #1563).
+    await wizard({
+      // Only the two that matter: the SES DNS handoff under test, and the
+      // Vercel deploy that follows it — the wizard's deliberately final
+      // action, and so the proof that the run carried on past the failure.
+      ask: async (question) => (/SES DNS|Deploy the linked/.test(question) ? "yes" : "no"),
+      cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws" && arguments_[1] === "get-email-identity") {
+          throw new Error("ExpiredToken: the security token included in the request is expired");
+        }
+        return "";
+      },
+      log: (message) => messages.push(message),
+    });
+
+    // Named, never silent: the reason travels with the refusal.
+    expect(messages.some((message) => message.includes("ExpiredToken"))).toBe(true);
+    expect(messages.some((message) => message.includes("Could not read the SES DKIM tokens"))).toBe(
+      true,
+    );
+    // And never a positive claim about a zone it failed to read.
+    expect(messages.some((message) => /already present|nothing added/.test(message))).toBe(false);
+    // Nothing was added on a plan that could not be built.
+    expect(
+      commands.some(({ arguments_ }) => arguments_[2] === "dns" && arguments_[3] === "add"),
+    ).toBe(false);
+    // The listing is skipped rather than run and reported over the top of the
+    // first failure — one reason, the one that actually happened.
+    expect(commands.some(({ arguments_ }) => arguments_[3] === "ls")).toBe(false);
+    // The point of not throwing: the handoff after this one still gets to run.
+    expect(
+      commands.some(
+        ({ command, arguments_ }) =>
+          command === "pnpm" && arguments_?.[1] === "vercel" && arguments_?.includes("--prod"),
+      ),
+    ).toBe(true);
+  });
+
+  /**
+   * Two ways the read fails *without* throwing where the guard could see it,
+   * both from a `sourcery-ai` review of #1563. Each one put the wizard back
+   * where it started: dead after `cdk deploy`, or adding records on a plan it
+   * had not actually read.
+   */
+  it.each([
+    // `--query DkimAttributes.Tokens` answers `null`, not `[]`, for an identity
+    // with no DKIM tokens yet — a fresh account, which is exactly when somebody
+    // runs this. `JSON.parse` accepts it and the `.map` after it does not.
+    ["an identity with no DKIM tokens", () => "null", /expected a list of DKIM tokens, got null/],
+    ["a scalar where a list belongs", () => '"nope"', /got string/],
+    // An `Error("")` set the reason to "", which every truthiness check below
+    // reads as *readable* — so the zone got listed and records added on a token
+    // read that had failed.
+    [
+      "a failure with an empty message",
+      () => {
+        throw new Error("");
+      },
+      /no reason given/,
+    ],
+  ])("degrades on %s rather than dying after the deploy", async (_name, aws, expected) => {
+    const messages = [];
+    const commands = [];
+    await wizard({
+      ask: async (question) => (/SES DNS|Deploy the linked/.test(question) ? "yes" : "no"),
+      cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws" && arguments_[1] === "get-email-identity") return aws();
+        return "";
+      },
+      log: (message) => messages.push(message),
+    });
+
+    expect(messages.some((message) => expected.test(message))).toBe(true);
+    // The one that matters: nothing added on a plan that was never read.
+    expect(
+      commands.some(({ arguments_ }) => arguments_[2] === "dns" && arguments_[3] === "add"),
+    ).toBe(false);
+    expect(commands.some(({ arguments_ }) => arguments_[3] === "ls")).toBe(false);
   });
 });
 

@@ -158,6 +158,11 @@ const NOTICE_KEYS: Record<
     tone: "warning",
     key: "divers.notices.waiverMedicalAttestation",
   },
+  "waiver-guardian-name": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.waiverGuardianName",
+  },
   "waiver-error": { form: "waiver", tone: "danger", key: "divers.notices.waiverError" },
 
   // The physician clearance that ends a medical hold (issue #1252).
@@ -287,6 +292,9 @@ const NOTICE_KEYS: Record<
     key: "inbox.notices.channelUnsupported",
   },
   "reply-no-reply-address": { form: "reply", tone: "danger", key: "inbox.notices.noReplyAddress" },
+  // There *is* an address; the reply cannot be built into something sendable,
+  // so nothing was attempted and a retry would do the same thing again.
+  "reply-cannot-be-sent": { form: "reply", tone: "danger", key: "inbox.notices.cannotBeSent" },
   "reply-whatsapp-window-closed": {
     form: "reply",
     tone: "danger",

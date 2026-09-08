@@ -160,13 +160,13 @@
       "value": "{count, plural, one {# escrita} other {# escritas}}",
       "hint": "Los buceadores leen esto en el idioma en que lo escribas.",
       "welcomeLabel": "Lo que lee quien bucea contigo por primera vez",
-      "dockCallLabel": "Qu\u00e9 esperar en el muelle",
-      "signOffLabel": "C\u00f3mo despides un d\u00eda terminado",
+      "dockCallLabel": "Qué esperar en el muelle",
+      "signOffLabel": "Cómo despides un día terminado",
       "save": "Guardar tus palabras",
-      "saving": "Guardando\u2026",
+      "saving": "Guardando…",
       "notice": {
         "saved": "Guardado.",
-        "tooLong": "Mant\u00e9n cada una por debajo de 280 caracteres."
+        "tooLong": "Mantén cada una por debajo de 280 caracteres."
       }
     },
     "address": {
@@ -283,8 +283,8 @@
       "heading": "Horas para volar",
       "value": "{single} h · {repetitive} h",
       "description": "Horas después de la última inmersión antes de que un buceador lea que puede volar. Su resumen dice la hora y que la espera la fijas tú, siguiendo la guía de DAN.",
-      "singleLabel": "Tras una inmersión",
-      "repetitiveLabel": "Tras dos o más inmersiones",
+      "singleLabel": "Tras una sola inmersión",
+      "repetitiveLabel": "Tras inmersiones repetitivas o más de un día de buceo",
       "submit": "Guardar horas para volar",
       "submitting": "Guardando…"
     },
@@ -423,7 +423,7 @@
       "heading": "Plantilla de exención"
     },
     "safetyChecklist": {
-      "heading": "Lista de comprobación previa a la salida"
+      "heading": "Lista de verificación previa a la salida"
     },
     "security": {
       "heading": "Seguridad de la cuenta"
@@ -589,9 +589,9 @@
   },
   "safetyChecklist": {
     "eyebrow": "Ajustes",
-    "title": "Lista de comprobación previa a la salida",
+    "title": "Lista de verificación previa a la salida",
     "description": "Las líneas que tu tripulación confirma antes de que el barco zarpe. Tú escribes cada elemento, y DiveDay no añade ninguno propio.",
-    "listHeading": "Lista de comprobación",
+    "listHeading": "Lista de verificación",
     "empty": {
       "title": "Aún no hay nada en la lista",
       "body": "Añade la primera línea abajo. La tripulación la ve en el manifiesto de cada salida."
@@ -603,8 +603,8 @@
     "moveUp": "Subir",
     "moveDown": "Bajar",
     "notice": {
-      "added": "Añadido a la lista de comprobación.",
-      "deleted": "Eliminado de la lista de comprobación.",
+      "added": "Añadido a la lista de verificación.",
+      "deleted": "Eliminado de la lista de verificación.",
       "invalid": "Eso no se guardó. Inténtalo de nuevo.",
       "duplicateLabel": "Esa línea ya está en la lista.",
       "notAuthorized": "No tienes permiso para cambiar esto.",

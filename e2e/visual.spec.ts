@@ -3384,6 +3384,74 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "check-in-checked", scheme);
       });
 
+      /**
+       * **The counter's refused paper release** — the class
+       * `.claude/rules/surfaces.md` names outright: a panel that renders only
+       * when something has gone wrong, warning-toned and dense, on the one
+       * screen a diver is standing in front of. It shipped with no baseline
+       * (issue #1580), verified by hand against a browser session that left
+       * nothing behind for the next change to fail against.
+       *
+       * **What the seed has to make, and why the demo has not got it.** The
+       * paper control is offered to a row whose *worst* blocker is a waiver,
+       * and it draws the guardian name and relationship fields only for a
+       * diver the co-signature rule asks it of. The demo has a blocked adult
+       * (Priya Sharma) and a co-signed minor (Lena Fischer) and nobody who is
+       * both — so shot against the adult this would photograph a namesake
+       * refusal above a form with no name field in it, which is the wrong
+       * subject rendered silently. `?blockedMinor=1` supersedes Lena's release
+       * and hands back the seat it made.
+       *
+       * **The URL is the subject, not the action.** `?notice=` is untrusted
+       * input on this page, so this proves the *rendering* and cannot regress
+       * if `markWaiverInPersonFromCheckIn` stops sending `bid` —
+       * `CounterQueueRow.test.tsx` holds that half. It is also how every other
+       * notice on this surface is photographed (`check-in-walk-in-notice`).
+       *
+       * **`?trip=` pins the departure**, rather than trusting whichever boat
+       * the instrument focuses, and every assertion below is scoped to the
+       * row. The notice falls back to a page banner for a row that is not
+       * rendered or has settled (`waiverNoticeOnRow`, `check-in/page.tsx`), so
+       * an unscoped `getByText` would pass just as happily on a capture of the
+       * banner — the one way this test could photograph the wrong thing and
+       * still be green.
+       */
+      test(`the counter's refused paper release renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?blockedMinor=1");
+        expect(seeded.ok()).toBe(true);
+        const { blockedMinor } = (await seeded.json()) as {
+          blockedMinor?: { bookingId: string; tripId: string };
+        };
+        if (!blockedMinor)
+          throw new Error("seed-trouble-states found no seat for the demo's minor");
+
+        await page.goto(
+          `/shop/blue-mantis/check-in?trip=${blockedMinor.tripId}` +
+            `&notice=waiver-guardian-name&bid=${blockedMinor.bookingId}`,
+        );
+        // The search box focuses itself from a mount effect, and the ring it
+        // paints is in the frame — same race, same signal, as the two captures
+        // above.
+        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
+        const refusal = page.getByText("The co-signer’s name is the diver’s own", { exact: false });
+        // Said once, on the row it names: the page banner and the row are
+        // mutually exclusive by construction, and a count of one is what tells
+        // a working capture from one that fell back.
+        await expect(refusal).toHaveCount(1);
+        const row = page.locator("article").filter({ hasText: "Lena Fischer" });
+        await expect(row.getByText("The co-signer’s name is the diver’s own")).toBeVisible();
+        // Re-opened, and carrying the field the message is about — the half
+        // that needs the diver to be a minor.
+        await expect(row.getByLabel("Parent or guardian who signed")).toBeVisible();
+        await capture(page, "check-in-waiver-refused", scheme);
+      });
+
       // **The home's evening reading** (ADR 20260804-day-closeout, folded into
       // the home by 20260827-clearwater-surface-language's decision 4). The
       // ritual that ends every working day is a *state* the spine settles
@@ -4819,7 +4887,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings");
         await page.getByRole("heading", { name: "Fly-safe hours" }).waitFor();
         await openSettingsRow(page, "Fly-safe hours");
-        await page.getByLabel("After two or more dives").waitFor();
+        await page.getByLabel("After repetitive dives or more than one day of diving").waitFor();
         await capture(page, "settings-fly-safe", scheme);
       });
 
@@ -6425,6 +6493,31 @@ test.describe("print", () => {
  * photographing it rather than asserting a class name, and this file's own
  * docblock asks that it be stated rather than absorbed.
  */
+/**
+ * The wash the staff content wrapper is actually painting, and the token it
+ * should be — resolved by the browser, not read off the DOM.
+ *
+ * Waiting on `style[data-water-band="…"]` proves the shell rendered as this
+ * shop; it does not prove the declaration *won*. Since issue 1446 the hour is
+ * set by an id selector from a `<style>` (`src/components/WaterBandStyle.tsx`)
+ * rather than by an attribute the stylesheet selects on, so a specificity
+ * mistake would leave every one of these captures painting the day wash while
+ * the wait still resolved — an unexplained pixel diff at best, and a silently
+ * wrong baseline if one were taken in that state.
+ */
+async function waterCrest(page: Page, wash: string) {
+  return await page.evaluate((band) => {
+    const wrapper = document.querySelector("#shop-main-content");
+    if (!wrapper) throw new Error("no #shop-main-content");
+    const root = getComputedStyle(document.documentElement);
+    return {
+      crest: getComputedStyle(wrapper).getPropertyValue("--water-crest").trim(),
+      expected: root.getPropertyValue(`--water-${band}`).trim(),
+      day: root.getPropertyValue("--water-day").trim(),
+    };
+  }, wash);
+}
+
 for (const scheme of ["light", "dark"] as const) {
   // Three describes rather than a loop over a table, because the capture name
   // has to be a literal: `scripts/check-route-coverage.mjs` reads the
@@ -6441,9 +6534,17 @@ for (const scheme of ["light", "dark"] as const) {
     test(`the shop home wears the dawn wash (${scheme})`, async ({ page, privateShop }) => {
       await page.goto(`/shop/${privateShop.slug}`);
       // The attribute the wash is chosen by, not a timing guess: it is
-      // server-rendered, so its presence is the page having rendered as this
-      // shop rather than as the shell.
-      await page.locator('#shop-main-content[data-water-band="dawn"]').waitFor();
+      // server-rendered by `ShopChrome`, so its presence is the page having
+      // rendered as this shop rather than as the shell. It moved from the
+      // content wrapper onto the `<style>` that sets the wash when the staff
+      // shell became synchronous (issue #1446) — same fact, same render, and
+      // `attached` rather than the default `visible` because a `<style>` never
+      // is.
+      await page.locator('style[data-water-band="dawn"]').waitFor({ state: "attached" });
+      // The declaration won, not merely rendered — see `waterCrest`.
+      const wash = await waterCrest(page, "dawn");
+      expect(wash.crest).toBe(wash.expected);
+      expect(wash.crest).not.toBe(wash.day);
       await capture(page, "today-band-dawn", scheme);
     });
   });
@@ -6458,7 +6559,11 @@ for (const scheme of ["light", "dark"] as const) {
 
     test(`the shop home wears the dusk wash (${scheme})`, async ({ page, privateShop }) => {
       await page.goto(`/shop/${privateShop.slug}`);
-      await page.locator('#shop-main-content[data-water-band="dusk"]').waitFor();
+      await page.locator('style[data-water-band="dusk"]').waitFor({ state: "attached" });
+      // The declaration won, not merely rendered — see `waterCrest`.
+      const wash = await waterCrest(page, "dusk");
+      expect(wash.crest).toBe(wash.expected);
+      expect(wash.crest).not.toBe(wash.day);
       await capture(page, "today-band-dusk", scheme);
     });
   });
@@ -6473,7 +6578,11 @@ for (const scheme of ["light", "dark"] as const) {
 
     test(`the shop home wears the night wash (${scheme})`, async ({ page, privateShop }) => {
       await page.goto(`/shop/${privateShop.slug}`);
-      await page.locator('#shop-main-content[data-water-band="night"]').waitFor();
+      await page.locator('style[data-water-band="night"]').waitFor({ state: "attached" });
+      // The declaration won, not merely rendered — see `waterCrest`.
+      const wash = await waterCrest(page, "night");
+      expect(wash.crest).toBe(wash.expected);
+      expect(wash.crest).not.toBe(wash.day);
       await capture(page, "today-band-night", scheme);
     });
   });

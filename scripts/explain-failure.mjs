@@ -63,6 +63,14 @@ export const SIGNATURES = [
     explain:
       "`pnpm db:reset` refuses while a dev server holds the database, naming the pid. Stop the server first (run skill); the refusal is protecting the running process's writes.",
   },
+  // Last on purpose: this one is a *bystander*. It rides along in the output of
+  // an e2e run that failed for some other reason, and the whole point is that
+  // it is not the failure — so anything more specific must match first.
+  {
+    match: /The destination stream closed early/,
+    explain:
+      "That line is almost certainly not your failure. It is React's own cancellation text (`createCancelHandler`, on the destination stream's `close` event): a client closed a streaming response before React finished writing it, and in this suite that is nearly always a `<Link>` prefetch the next navigation abandoned. It can mark a real action-race, so check whether an assertion sits between the click and the navigation. Look elsewhere in the output for the actual failure. The debug skill's symptom table has the short form, docs/agents/repo-checks.md's action-race section the measurement.",
+  },
 ];
 
 /** The answer for a failure, or null when nothing here recognises it. */

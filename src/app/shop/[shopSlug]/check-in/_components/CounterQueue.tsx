@@ -5,7 +5,7 @@ import type { CheckInQueueRow as QueueRow } from "@/db/check-in";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { isSettledAtCounter } from "@/lib/check-in";
-import { CounterQueueRow } from "./CounterQueueRow";
+import { CounterQueueRow, type CounterWaiverNotice } from "./CounterQueueRow";
 
 /**
  * **One departure's divers: who still needs something, then who has settled** —
@@ -40,6 +40,7 @@ export function CounterQueue({
   checkInAction,
   undoAction,
   waiverAction,
+  waiverNotice,
   settledOpen,
   settledHeadingLevel,
   t,
@@ -65,6 +66,14 @@ export function CounterQueue({
   checkInAction: (formData: FormData) => Promise<{ ok: true }>;
   undoAction: (formData: FormData) => Promise<{ ok: true }>;
   waiverAction: (formData: FormData) => Promise<void>;
+  /**
+   * A refused paper-waiver recording, passed straight through: the row it
+   * names is the one that renders it, and every other row ignores it. Handed
+   * to both groups rather than only the working one — a refusal leaves the row
+   * blocked, so it is never settled today, and a prop that quietly depended on
+   * that would be a trap for whoever changes `isSettledAtCounter`.
+   */
+  waiverNotice?: CounterWaiverNotice;
   /**
    * Open the settled group on arrival. True for a boat that has already
    * sailed, where the receipts *are* what the counter is for, and true under a
@@ -102,6 +111,7 @@ export function CounterQueue({
               checkInAction={checkInAction}
               undoAction={undoAction}
               waiverAction={waiverAction}
+              waiverNotice={waiverNotice}
               t={t}
             />
           ))}
@@ -137,6 +147,7 @@ export function CounterQueue({
                 checkInAction={checkInAction}
                 undoAction={undoAction}
                 waiverAction={waiverAction}
+                waiverNotice={waiverNotice}
                 t={t}
               />
             ))}

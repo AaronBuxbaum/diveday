@@ -176,6 +176,14 @@ reader already is.
 ​```
 ```
 
+**Check the body before you file it.** Draft it to a file and run:
+
+```sh
+node scripts/check-follow-ups.mjs --body <path> --title "<the title you intend>"
+```
+
+That runs the same validation `pnpm check:follow-ups` runs, on one drafted body, with no `gh` and no network — so it works in the cloud containers where these issues are usually written and where the whole-tracker run reports SKIPPED. Twenty seconds, and the reason to spend them is that a malformed `needs-triage` issue fails `Repository safeguards` on **every open pull request in the repository at once**, on branches whose diffs could not possibly have caused it, until somebody edits the issue by hand. That has happened three times: once from a hand-written entry (#1097), and twice on 2026-09-08 in a single session, from bodies that looked right and used a `Kind:` outside the vocabulary (#1526, #1555). In each case the first news came from an unrelated pull request, forty minutes later.
+
 **`Touches:` names paths that exist on `main` today.** The mechanism is not that, and the gap is the
 whole point: `pnpm check:follow-ups` resolves every backticked path on that line against **whatever
 tree it is run in**. So a path your own unmerged branch adds passes on your branch — where you file

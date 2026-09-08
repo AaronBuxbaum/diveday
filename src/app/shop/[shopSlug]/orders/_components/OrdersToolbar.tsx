@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, SearchField } from "@/components/ui/form";
+import { controlClass, DateField, SearchField } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 
 /**
@@ -192,27 +192,13 @@ export function OrdersToolbar({
             <label className="sr-only" htmlFor="orders-from">
               {copy.fromLabel}
             </label>
-            <input
-              id="orders-from"
-              type="date"
-              name="from"
-              defaultValue={from}
-              onChange={submit}
-              className={controlClass}
-            />
+            <DateField id="orders-from" name="from" defaultValue={from} onChange={submit} />
           </div>
           <div className={FIELD_CLASS}>
             <label className="sr-only" htmlFor="orders-to">
               {copy.toLabel}
             </label>
-            <input
-              id="orders-to"
-              type="date"
-              name="to"
-              defaultValue={to}
-              onChange={submit}
-              className={controlClass}
-            />
+            <DateField id="orders-to" name="to" defaultValue={to} onChange={submit} />
           </div>
         </>
       ) : null}

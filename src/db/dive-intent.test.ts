@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNotNull, notInArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
@@ -17,15 +17,27 @@ async function makeDiver(db: AppDb, shopId: string) {
   return person.id;
 }
 
-/** Two seeded departures. Which two does not matter — every seat asserted here is inserted below. */
+/**
+ * Two seeded departures that carry no answers of their own.
+ *
+ * The exclusion is the whole point: the demo seeds intents onto today's reef
+ * boat so the aggregate line has a visual baseline (issue #1413), and a fixture
+ * that took the first two rows would sometimes take that one — making "a silent
+ * departure is left out of the map" fail on seed colour rather than on the
+ * behaviour it names.
+ */
 async function twoTrips(db: AppDb, shopId: string) {
+  const answered = db
+    .select({ tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.shopId, shopId), isNotNull(bookings.diveIntent)));
   const rows = await db
     .select({ id: trips.id })
-    .from(trips) // diveday:allow-deleted-trips: fixture lookup — any two departures will do
-    .where(eq(trips.shopId, shopId))
+    .from(trips) // diveday:allow-deleted-trips: fixture lookup — any two silent departures will do
+    .where(and(eq(trips.shopId, shopId), notInArray(trips.id, answered)))
     .limit(2);
   const [a, b] = rows;
-  if (!a || !b) throw new Error("expected the seeded shop to have two departures");
+  if (!a || !b) throw new Error("expected the seeded shop to have two departures with no answers");
   return [a.id, b.id] as const;
 }
 

@@ -205,6 +205,13 @@ test.describe("contact import — specialty cards", () => {
     // nothing about this diver's Deep card counts until a staffer confirms it.
     const deepCard = page.locator("li").filter({ hasText: "PADI · Deep" });
     await deepCard.getByRole("button", { name: "Confirm certification" }).click();
+    // Wait for the gate to actually clear before navigating: `MarkCertifiedControl`
+    // is a `useActionState` form that re-renders this row in place and never
+    // redirects, so there is no URL to wait on — the row's own text is the only
+    // proof the write landed. The same string is asserted *visible* a few lines
+    // above, deliberately adjacent: a `toHaveCount(0)` on a string that no longer
+    // exists anywhere would pass without proving anything.
+    await expect(page.getByText("certified · confirm to clear")).toHaveCount(0);
 
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);

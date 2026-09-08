@@ -5,6 +5,7 @@ import { ALERTING_LEVELS, CEILING_UNITS, COST_PROVIDERS } from "@/lib/cost-guard
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
+import { DIVER_EMAIL_MAX } from "@/lib/person-fields";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 
 /**
@@ -20,7 +21,12 @@ import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
  * enforces the last two.
  */
 
-const emailAddressSchema = z.email().max(200);
+// 320, matching `DIVER_EMAIL_MAX` and therefore every diver-facing form: 64
+// local + @ + 255 domain, the RFC 5321 practical limit. The old 200 was an
+// arbitrary tighter cap, and it made a real address the app had already
+// accepted and stored unsendable — not only on a staff reply but on that
+// diver's booking confirmations and waiver links too.
+const emailAddressSchema = z.email().max(DIVER_EMAIL_MAX);
 
 /**
  * A date with no instant in it — "2026-08-06". Refused unless it is a date that
@@ -297,12 +303,16 @@ const tripRecapSchema = z.object({
    * the hours that produced it, and whether the clock started at the last
    * recorded exit or the boat's scheduled return. Absent when nothing on the
    * record could honestly say, and then the email says nothing about flying.
+   *
+   * `reason` is not a detail the email prints — it picks *which* sentence the
+   * diver reads, because only the earlier-day route explains itself.
    */
   flySafe: z
     .object({
       from: z.date(),
       hours: z.number().int().min(1).max(72),
       basis: z.enum(["single", "repetitive"]),
+      reason: z.enum(["one_dive", "dives_recorded", "dives_planned", "earlier_day"]),
       anchor: z.enum(["last_dive", "scheduled_return"]),
     })
     .optional(),

@@ -87,7 +87,81 @@ export const rules = [
     message:
       "a hand-rolled retry loop is the same hack as retries: — it converts a deterministic failure into an intermittent pass. Find what the loop is racing and wait for it directly.",
   },
+  {
+    id: "action-race",
+    pattern: /\.(?:goto|reload)\s*\(/,
+    predicate: submitFollowedByNavigation,
+    message:
+      "navigating away in the statement straight after submitting a server action races it: the click returns when the request is *sent*, not when the write has landed, so the goto/reload can tear the page down mid-flight and the destination then renders the state from before the save. Wait for what the destination itself shows — `page.waitForURL()` on the action's own `?notice=`/`?created=` redirect, or, for a `useActionState` form that re-renders in place and never redirects, an `expect(locator)` on what the row shows once it has landed. Never a timeout, a retry, or networkidle. Both instances that reached CI pointed nowhere near the cause: one closed the destination's stream early and read as a server error, and the other spent the visual shard's whole 210-second budget before failing on an assertion forty lines below, which is exactly how this gets misread as slow CI.",
+  },
 ];
+
+/**
+ * A submit-shaped click as the **immediately preceding code statement** of a
+ * `goto`/`reload`.
+ *
+ * Two clauses, and each one earns its place against the current suite:
+ *
+ * *Immediately preceding* is what clears the prevailing convention. Nearly every
+ * spec here clicks, asserts what the click produced, and then navigates; an
+ * `expect`, a `waitFor` or a `waitForURL` between the two makes this not fire,
+ * which is precisely the shape the rule is asking for.
+ *
+ * *Submit-shaped* is what clears the two `"Copy link"` clicks that are followed
+ * by `page.goto(await waiverLinkFromToast(page))` — not races at all, since that
+ * helper opens by awaiting the toast. Dropping this clause would take the sweep
+ * from two hits and no false positives to two and two, and a rule that fires on
+ * correct code is one people learn to silence.
+ *
+ * The list was drawn from the labels the suite actually clicks — `Add`, `Save`,
+ * `Book`, `Mark`, `Create`, `Send`, `Sign`, `Record`, `Import` and the rest are
+ * all in it because they are all in `e2e/` — and it accepts the three forms a
+ * name is written in here: a quoted string, a template literal, and a regular
+ * expression with or without a leading `^`. It is a maintenance surface and is
+ * **not** meant to be complete. It only matters when a click carrying one of
+ * these labels is immediately followed by a navigation, which is rare; a
+ * client-only button that happens to say "Send" would be a false positive, and
+ * the acknowledgement marker covers it.
+ */
+const SUBMIT_LABEL =
+  /name:\s*(?:["'`]|\/\^?)(?:Save|Add|Create|Put it on the board|Confirm|Book|Send|Sign|Publish|Delete|Remove|Update|Submit|Reinstate|Import|Mark|Record|Check in|Apply|Approve|Issue)/;
+
+/** The trimmed-comment test the scanner already applies, reused so a comment
+ *  between the click and the navigation does not hide the race. */
+const isProse = (line) => {
+  const trimmed = line.trim();
+  return (
+    !trimmed || trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")
+  );
+};
+
+/**
+ * The whole statement holding a `.click()`, read upward from it.
+ *
+ * Bounded by the *previous statement* rather than by a line count: a click is
+ * often built over several lines, and how many depends on how the formatter
+ * broke the chain that day, so a fixed window is a guess that silently stops
+ * catching anything longer (Sourcery finding on #1561). A preceding line that
+ * ends in `;` is a different statement and is where this stops; so is a blank
+ * line or a comment. The hard cap only exists so a malformed file cannot walk
+ * the scanner to the top.
+ */
+function statementAbove(lines, at) {
+  let from = at;
+  while (from > 0 && at - from < 12) {
+    const previous = lines[from - 1];
+    if (isProse(previous) || previous.trimEnd().endsWith(";")) break;
+    from -= 1;
+  }
+  return lines.slice(from, at + 1).join("\n");
+}
+
+function submitFollowedByNavigation(lines, index) {
+  let at = index - 1;
+  while (at >= 0 && isProse(lines[at])) at -= 1;
+  if (at < 0 || !/\.click\s*\(/.test(lines[at])) return false;
+  return SUBMIT_LABEL.test(statementAbove(lines, at));
+}
 
 /**
  * Pure scanner, exported for tests. Returns { rule, line, text } per hit;
@@ -115,6 +189,10 @@ export function findHygieneViolations(source) {
         const before = lines.slice(from, index + 1).join("\n");
         if (rule.precededBy.test(before)) continue;
       }
+      // The mirror of `precededBy`: a lookback that *creates* the hit rather
+      // than clearing it — see `action-race`, where the pattern alone matches
+      // every navigation in the suite and only what precedes it is the defect.
+      if (rule.predicate && !rule.predicate(lines, index)) continue;
       violations.push({ rule: rule.id, line: index + 1, text: line.trim() });
     }
   });

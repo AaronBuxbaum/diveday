@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { e2eNow, seededTripId } from "./helpers";
 
@@ -9,6 +10,26 @@ import { e2eNow, seededTripId } from "./helpers";
  * so nothing a test adds, deletes, or reserves leaks into the next spec.
  */
 
+/**
+ * Open the "Add a unit" disclosure, once React owns the door.
+ *
+ * Opening it is a client handler (`AddUnitLink`) talking to a client listener
+ * (`AddUnitDetails`), so a click that lands before hydration is swallowed in
+ * silence — no error, no open panel, and fifteen seconds later `getByLabel`
+ * times out on a field behind a door that never opened. That window used to be
+ * closed by accident, because `/shop/**` had no static shell and nothing
+ * painted until the server had finished; giving the staff surfaces one (issue
+ * 1446) is what made it a window at all, and shard 2/4 found it.
+ *
+ * `data-hydrated` is the same flag the rest of the staff surfaces publish
+ * (`CheckInSearch`, `OrdersToolbar`, `CrewSection`) for exactly this.
+ */
+async function openAddGear(page: Page) {
+  const door = page.getByRole("button", { name: "Add gear" });
+  await expect(door).toHaveAttribute("data-hydrated", "true");
+  await door.click();
+}
+
 test.describe("staff", () => {
   signedInAsOwner();
 
@@ -16,7 +37,7 @@ test.describe("staff", () => {
     const tag = `BCD E2E-${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/gear");
     // "Add a unit" is a closed disclosure at rest; the header's own door opens it.
-    await page.getByRole("button", { name: "Add gear" }).click();
+    await openAddGear(page);
     await page.getByLabel("Tag").fill(tag);
     await page.getByLabel("Size").first().fill("M");
     await page.getByRole("button", { name: "Add to the register" }).click();
@@ -29,7 +50,7 @@ test.describe("staff", () => {
     const tag = `Reg E2E-${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/gear");
     // "Add a unit" is a closed disclosure at rest; the header's own door opens it.
-    await page.getByRole("button", { name: "Add gear" }).click();
+    await openAddGear(page);
     await page.getByLabel("Tag").fill(tag);
     await page.getByRole("button", { name: "Add to the register" }).click();
     await expect(page.getByRole("status").filter({ hasText: "On the register." })).toBeVisible();
@@ -43,8 +64,9 @@ test.describe("staff", () => {
     await expect(page.getByRole("link", { name: tag })).toBeVisible();
 
     // A successful add redirects with `?notice=added` — a real navigation
-    // that remounts the page, so the disclosure is closed again.
-    await page.getByRole("button", { name: "Add gear" }).click();
+    // that remounts the page, so the disclosure is closed again, and the
+    // remounted door has to be hydrated again before it answers.
+    await openAddGear(page);
     await page.getByLabel("Tag").fill(tag);
     await page.getByRole("button", { name: "Add to the register" }).click();
     // The refusal lands on the Tag field itself (role="alert" via Field's

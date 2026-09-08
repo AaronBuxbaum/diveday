@@ -746,6 +746,26 @@ wrapped the caption onto two lines and left the box about 130px wide. It wears `
 issue #1230; Enter submits the GET form before and after hydration, which is all the button did,
 and "Add diver" is the band's one primary again.
 
+## Date entry: `DateField`
+
+A date is entered through **`DateField`** in `src/components/ui/form.tsx`, never a bare `<input type="date">`. It is a `type="date"` control wearing `controlClass` with a calendar glyph in its trailing inset, and it goes inside a `Field` like any other control.
+
+```tsx
+import { DateField, Field } from "@/components/ui/form";
+
+<Field label={t("gear.serviceDueLabel")}>
+  <DateField name="nextDueOn" min={today} required />
+</Field>
+```
+
+The glyph is ours because the platforms disagree about whether an empty date box shows anything at all. Chromium paints `mm/dd/yyyy` **and** its own calendar indicator; iOS Safari paints neither, so an empty date field there is a blank rounded rectangle indistinguishable from the text boxes stacked above it, with nothing saying a tap opens a picker (issue #1415, reported on an iPhone against the date-request form).
+
+Chromium's own indicator is hidden with `opacity-0`, never `display: none`. Hidden by opacity it stays in the layout underneath ours, so a Chromium tap on that spot still opens the native picker; removing it would take the tap target away with the pixels and leave our glyph looking live and doing nothing. The input's `pe-9` and the glyph's `end-3` are sized against each other for the same reason — drift them apart and the visible glyph stops sitting over the real control.
+
+Firefox draws a calendar icon of its own and exposes no pseudo-element that reaches it, so a Firefox reader sees two glyphs. Known and accepted: the only alternative is sniffing the browser in JavaScript to hide ours, which costs more than the duplicate.
+
+`DateField` is a composite control that `Field` treats as a native one, alongside `ForgivingInput` — it forwards `id`, `required` and the aria attributes onto the input it renders, so the caption reaches it by id and the required marker reads its `required`. A composite control added without joining that set in `Field`'s `isControl` silently loses its `*` and its `aria-describedby` wiring, which is what happened to "Full name" when that box became forgiving.
+
 ## Action rows: one primary, not many
 
 Principle 8 ([principles.md](principles.md)) says a screen gets one obvious next action **per

@@ -37,10 +37,13 @@ import { pagedUpcomingTripsWithCounts } from "./trips";
  * pipeline four times each, and a `cache()`d clock reading placed above both
  * was itself invoked eight times, once per caller, at eight different instants
  * — so the second call never even reached the same memo table as the first.
- * The shell is `instant = false` (its cross-tenant `notFound()` must run before
- * `{children}`) while every page beneath it is `instant = true`, so under Cache
- * Components the two are rendered in separate passes. That is ADR
- * 20260804-instant-navigation working as designed, not a bug to route around.
+ * The shell and the page are rendered in separate passes under Cache
+ * Components, which is ADR 20260804-instant-navigation working as designed and
+ * not a bug to route around. That was true when the shell was `instant = false`
+ * and it is still true now that it is a synchronous App Shell (issue 1446):
+ * `ShopChrome` is a `<Suspense>` child streaming beside the page rather than a
+ * layout blocking above it, which puts it further from the page's pass, not
+ * nearer. The badge's read is measured and commented in `ShopChrome` itself.
  *
  * Two things that would work, and neither is a one-line cache: hoisting the
  * badge's own read into the same pass as the page's, or a cache keyed outside
