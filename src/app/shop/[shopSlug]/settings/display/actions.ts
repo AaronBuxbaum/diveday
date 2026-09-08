@@ -49,14 +49,15 @@ export async function displayLinkAction(
     const id = formData.get("id");
     // A UUID or nothing: a malformed id is a refusal here, never a cast error
     // from the database.
-    if (typeof id !== "string" || !UUID_SHAPE.test(id)) return { status: "denied" };
+    if (typeof id !== "string" || !UUID_SHAPE.test(id))
+      return { status: "denied", intent: "revoke" };
     const revoked = await revokeDisplayToken(db, {
       shopId: session.user.shopId,
       personId: session.user.personId,
       id,
     });
     revalidatePath(path);
-    return revoked ? { status: "revoked", id } : { status: "denied" };
+    return revoked ? { status: "revoked", id } : { status: "denied", intent: "revoke" };
   }
 
   const outcome = await issueDisplayToken(db, {
@@ -66,7 +67,9 @@ export async function displayLinkAction(
     showNames: formData.get("showNames") === "true",
   });
   if (!outcome.ok) {
-    return outcome.reason === "invalid_label" ? { status: "invalid_label" } : { status: "denied" };
+    return outcome.reason === "invalid_label"
+      ? { status: "invalid_label" }
+      : { status: "denied", intent: "issue" };
   }
   const origin = await requestOrigin();
   revalidatePath(path);

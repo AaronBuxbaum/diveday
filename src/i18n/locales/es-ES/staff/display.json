@@ -28,6 +28,7 @@
     "namesOn": "Tripulación con nombre",
     "namesOff": "Nadie con nombre",
     "revoke": "Revocar",
+    "revokeNamed": "Revocar {label}",
     "revoking": "Revocando…",
     "confirmRevoke": "¿Revocar este enlace? La pantalla se apaga en su próxima actualización.",
     "confirmRevokeButton": "Sí, revocarlo",

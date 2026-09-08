@@ -77,6 +77,35 @@ const ORPHAN_PATTERNS = [
   { label: "playwright", match: /\bplaywright\b.*\btest\b/ },
 ];
 
+/**
+ * Commands that cannot do what they were written to do *in this container*, so
+ * a watch built on one is wrong from its first iteration rather than after ten
+ * minutes.
+ *
+ * On 2026-09-07 four CI monitors polled `api.github.com/repos/...` with `curl`.
+ * Repo-scoped REST is refused here (403, "GitHub access is not enabled for this
+ * session"), and a 403 body has no `check_runs` key -- so the parse yielded
+ * nothing without erroring, and a loop whose exit condition was the *absence*
+ * of failures could not tell an empty response from a green run. One reported
+ * "CI COMPLETE" while the run was still live; three timed out while CI finished
+ * normally. No error anywhere.
+ *
+ * `api.github.com/repos/` and not the bare host: `curl
+ * https://api.github.com/user` answers 200 here and is a legitimate probe, so
+ * widening this pattern would label a working command as broken.
+ */
+const REFUSED_PATTERNS = [
+  {
+    note: "repo-scoped api.github.com is 403 here — this watch can never see a check",
+    match: /api\.github\.com\/repos\//,
+  },
+];
+
+/** The note for a command this container refuses, or undefined if it is fine. */
+export function diagnoseCommand(command) {
+  return REFUSED_PATTERNS.find((pattern) => pattern.match.test(command))?.note;
+}
+
 /** `[[DD-]HH:]MM:SS` as ps prints it, in seconds. */
 export function parseElapsedSeconds(etime) {
   const match = /^(?:(?:(\d+)-)?(\d+):)?(\d+):(\d+)$/.exec(etime.trim());
@@ -198,7 +227,15 @@ export function staleSessionShells(rows, exclude, sessionPid) {
         (row) =>
           !exclude.includes(row.pid) &&
           row.command.includes(".claude/shell-snapshots") &&
-          row.elapsedSeconds >= STALE_MINUTES * 60,
+          // A refused command skips the age threshold. The threshold exists to
+          // tell a job still doing something from one that has stopped, and a
+          // watch this container refuses was never doing anything -- the worst
+          // monitor of the 2026-09-07 incident exited in ninety seconds, well
+          // under ten minutes, having already reported the wrong answer. The
+          // false positive the `--kill` comment below guards against does not
+          // reach here either: `gh` is absent from this container and every
+          // repo-scoped call 403s, so no working command matches.
+          (row.elapsedSeconds >= STALE_MINUTES * 60 || Boolean(diagnoseCommand(row.command))),
       )
       // `ppid === 1` is its own answer: the shell outlived whoever started it,
       // so no live session owns it and reaping it can interrupt nobody. Without
@@ -268,6 +305,11 @@ function main() {
       lines.push(
         `  pid ${row.pid}  ${humanElapsed(row.elapsedSeconds)}  [${owner}]  ${summarizeCommand(row.command)}`,
       );
+      // Said under the line rather than in the roster's closing advice: the
+      // advice tells you to leave a sibling's live work alone, and this is the
+      // one case where a sibling's watch is not live work at all.
+      const refused = diagnoseCommand(row.command);
+      if (refused) lines.push(`    ^ ${refused}`);
     }
     lines.push(
       "  If one is a job you are still waiting on, leave it. If it is a wait-loop whose",

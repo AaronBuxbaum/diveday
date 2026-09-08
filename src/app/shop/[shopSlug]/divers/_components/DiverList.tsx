@@ -171,7 +171,7 @@ export function DiverList({
   // prop outright — every focus-on-mount in this repo goes the same way.
   const searchRef = useRef<HTMLInputElement>(null);
   const quickAddFormRef = useRef<HTMLFormElement>(null);
-  const ledgerRef = useRef<HTMLDivElement>(null);
+  const rosterRef = useRef<HTMLDivElement>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the input in sync when navigation (back/forward, a view chip) changes
   // the query underneath us — but never while the user is mid-debounce: the
@@ -188,28 +188,43 @@ export function DiverList({
   }, []);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
   /**
-   * One capture-phase listener for every row link in the ledger, rather than an
-   * `onClick` threaded through `LedgerRow` — the primitive's door is a stretched
-   * `<Link>` with no handler slot, and a click anywhere in the ledger means the
-   * staffer is leaving. That is exactly when a keystroke still sitting in the
-   * debounce must not land 250ms later and replace the record they just opened
-   * with the list they just left (see `cancelPendingSearch`).
+   * One capture-phase listener over the whole roster body — the rows *and* the
+   * pager — rather than an `onClick` threaded through `LedgerRow`: the
+   * primitive's door is a stretched `<Link>` with no handler slot, and a click
+   * anywhere in here means the staffer is leaving. That is exactly when a
+   * keystroke still sitting in the debounce must not land 250ms later and
+   * replace the page they just turned to, or the record they just opened, with
+   * the list they just left (see `cancelPendingSearch`).
+   *
+   * **The pager has no other door.** `Pager` is a Server Component that arrives
+   * as an element through the `pager` prop, so unlike `FilterChips` it cannot
+   * take an `onNavigate`, and `hrefFor` carries no `page` — so a pending search
+   * replacing the URL puts the staffer back on page one. Every other way out of
+   * this surface already cancels; the pager was the one that did not.
+   *
+   * **Scoped to the roster body and deliberately not to the `<section>`**,
+   * which also holds the search box: clicking back into your own search field
+   * must not drop your own keystroke.
    *
    * A native listener on a ref rather than React's `onClickCapture`, because
    * the container is a plain `<div>`: an interaction handler on one is a
    * static-element-interaction the linter is right to ask about, and the honest
    * answer is that this is not an interaction at all — it is a timer being
    * dropped as the page unloads under the reader.
+   *
+   * The wrapper renders unconditionally, so this `[]`-deps effect can never
+   * mount against a null ref — which it did whenever the roster first rendered
+   * empty, leaving the ledger uncovered once rows arrived.
    */
   useEffect(() => {
-    const ledger = ledgerRef.current;
-    if (!ledger) return;
+    const roster = rosterRef.current;
+    if (!roster) return;
     const drop = () => {
       if (debounce.current) clearTimeout(debounce.current);
       debounce.current = null;
     };
-    ledger.addEventListener("click", drop, true);
-    return () => ledger.removeEventListener("click", drop, true);
+    roster.addEventListener("click", drop, true);
+    return () => roster.removeEventListener("click", drop, true);
   }, []);
 
   // One place builds every roster URL, so search, a view chip, and the pager all
@@ -384,92 +399,96 @@ export function DiverList({
           {filter === "removed" ? copy.removedNote : copy.countLabel}
         </p>
       </div>
-      {rows.length === 0 ? (
-        <EmptyState
-          className="mt-6"
-          title={narrowed ? copy.noDiversMatchView : copy.noDiversOnFile}
-          body={narrowed ? null : copy.addOneHere}
-          /* Narrowed to nothing and empty on day one are different problems,
+      {/* Bare and class-less on purpose: the ledger's `mt-8` and the pager's
+          own `mt-8` keep the exact gaps they had as direct section children. */}
+      <div ref={rosterRef}>
+        {rows.length === 0 ? (
+          <EmptyState
+            className="mt-6"
+            title={narrowed ? copy.noDiversMatchView : copy.noDiversOnFile}
+            body={narrowed ? null : copy.addOneHere}
+            /* Narrowed to nothing and empty on day one are different problems,
              so they get different doors: widen the view, or start the roster. */
-          action={
-            narrowed ? (
-              <Link
-                href={hrefFor("", "all")}
-                scroll={false}
-                // Same reasoning as the view chips: this link clears the search
-                // and the view together, so a pending keystroke must not land
-                // afterwards and put half of it back.
-                onClick={cancelPendingSearch}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {copy.emptyShowAll}
-              </Link>
-            ) : importHref ? (
-              <div className="flex flex-col items-center gap-2">
-                <p className="max-w-md text-sm text-muted">{copy.emptyImportBody}</p>
+            action={
+              narrowed ? (
                 <Link
-                  href={importHref}
+                  href={hrefFor("", "all")}
+                  scroll={false}
+                  // Same reasoning as the view chips: this link clears the search
+                  // and the view together, so a pending keystroke must not land
+                  // afterwards and put half of it back.
+                  onClick={cancelPendingSearch}
                   className={buttonClass({ variant: "secondary", size: "sm" })}
                 >
-                  {copy.emptyImportAction}
+                  {copy.emptyShowAll}
                 </Link>
-              </div>
-            ) : null
-          }
-        />
-      ) : (
-        <div ref={ledgerRef} className="mt-8 flex flex-col gap-7">
-          {groups.map((group, index) => {
-            const labelId = `roster-letter-${index}`;
-            return (
-              <LedgerGroup
-                // The index is part of the key on purpose: a collation can put
-                // the same letter in two runs, and `groupByLetter` renders both
-                // rather than reordering the page under the pager.
-                key={labelId}
-                as="h2"
-                id={labelId}
-                label={group.letter ?? copy.letterOther}
-              >
-                <ul className="mt-2" aria-labelledby={labelId}>
-                  {group.rows.map((row) => (
-                    // Everything sits in the row's own content rather than in
-                    // `LedgerRow`'s `trailing` slot, and the row carries no
-                    // control at all: `trailing` is `z-10`, deliberately, so
-                    // that a real button sits *above* the stretched link — and
-                    // a quiet date parked there would be a strip of dead pixels
-                    // down the right of every row on a page whose whole
-                    // interaction is "tap the row".
-                    <LedgerRow key={row.personId} href={row.href} linkLabel={row.fullName}>
-                      <div className="min-w-0 flex-1 py-2 sm:flex sm:items-center sm:gap-3">
-                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                          <span className="break-words font-semibold">{row.fullName}</span>
-                          {row.badges.map((badge) => (
-                            <Badge
-                              key={badge.label}
-                              tone={badge.tone}
-                              size="sm"
-                              className="shrink-0"
-                            >
-                              {badge.label}
-                            </Badge>
-                          ))}
-                        </div>
-                        {row.fact ? (
-                          <div className="mt-1 flex min-w-0 shrink-0 items-center gap-2 text-sm text-muted tabular-nums sm:mt-0 sm:max-w-[45%]">
-                            <span className="min-w-0 truncate">{row.fact}</span>
+              ) : importHref ? (
+                <div className="flex flex-col items-center gap-2">
+                  <p className="max-w-md text-sm text-muted">{copy.emptyImportBody}</p>
+                  <Link
+                    href={importHref}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
+                    {copy.emptyImportAction}
+                  </Link>
+                </div>
+              ) : null
+            }
+          />
+        ) : (
+          <div className="mt-8 flex flex-col gap-7">
+            {groups.map((group, index) => {
+              const labelId = `roster-letter-${index}`;
+              return (
+                <LedgerGroup
+                  // The index is part of the key on purpose: a collation can put
+                  // the same letter in two runs, and `groupByLetter` renders both
+                  // rather than reordering the page under the pager.
+                  key={labelId}
+                  as="h2"
+                  id={labelId}
+                  label={group.letter ?? copy.letterOther}
+                >
+                  <ul className="mt-2" aria-labelledby={labelId}>
+                    {group.rows.map((row) => (
+                      // Everything sits in the row's own content rather than in
+                      // `LedgerRow`'s `trailing` slot, and the row carries no
+                      // control at all: `trailing` is `z-10`, deliberately, so
+                      // that a real button sits *above* the stretched link — and
+                      // a quiet date parked there would be a strip of dead pixels
+                      // down the right of every row on a page whose whole
+                      // interaction is "tap the row".
+                      <LedgerRow key={row.personId} href={row.href} linkLabel={row.fullName}>
+                        <div className="min-w-0 flex-1 py-2 sm:flex sm:items-center sm:gap-3">
+                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                            <span className="break-words font-semibold">{row.fullName}</span>
+                            {row.badges.map((badge) => (
+                              <Badge
+                                key={badge.label}
+                                tone={badge.tone}
+                                size="sm"
+                                className="shrink-0"
+                              >
+                                {badge.label}
+                              </Badge>
+                            ))}
                           </div>
-                        ) : null}
-                      </div>
-                    </LedgerRow>
-                  ))}
-                </ul>
-              </LedgerGroup>
-            );
-          })}
-        </div>
-      )}
-      {pager}
+                          {row.fact ? (
+                            <div className="mt-1 flex min-w-0 shrink-0 items-center gap-2 text-sm text-muted tabular-nums sm:mt-0 sm:max-w-[45%]">
+                              <span className="min-w-0 truncate">{row.fact}</span>
+                            </div>
+                          ) : null}
+                        </div>
+                      </LedgerRow>
+                    ))}
+                  </ul>
+                </LedgerGroup>
+              );
+            })}
+          </div>
+        )}
+        {pager}
+      </div>
     </section>
   );
 }

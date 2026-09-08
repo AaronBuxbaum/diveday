@@ -14,6 +14,103 @@ import { gunzipSync } from "node:zlib";
 
 export const DEFAULT_BUCKET = "diveday-vrt";
 export const GZIP_MAGIC = Buffer.from([0x1f, 0x8b]);
+export const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/**
+ * A PNG's dimensions, read out of its IHDR chunk, or `null` if the bytes are
+ * not a PNG we can measure.
+ *
+ * Hand-rolled rather than a library: this file is built on node builtins on
+ * purpose (see the header), and pngjs/pixelmatch are reg-cli's transitive
+ * dependencies rather than ours — depending on one directly would need an ADR
+ * and would break the bare-`node` invocation CI uses when `pnpm install` is
+ * itself the thing that failed.
+ *
+ * Never throws. This script's entire job is to report when something upstream
+ * has already gone wrong, so a truncated or half-written file has to degrade to
+ * "unreadable" rather than take the report down with it.
+ */
+export function readPngSize(bytes) {
+  if (!Buffer.isBuffer(bytes) || bytes.length < 24) return null;
+  if (!bytes.subarray(0, 8).equals(PNG_SIGNATURE)) return null;
+  const width = bytes.readUInt32BE(16);
+  const height = bytes.readUInt32BE(20);
+  if (!width || !height) return null;
+  return { width, height };
+}
+
+/**
+ * One `- geometry:` line for an item, from its expected and actual sizes.
+ *
+ * The height delta is the point. A full-page capture that grew by the same
+ * number of pixels as a sibling pull request's capture of the same surface is
+ * the stale baseline moving underneath both; one that grew by a different
+ * amount is this branch's own change. A name list cannot tell those apart, and
+ * on PR #1484 that cost sixteen captures carrying the feature's own 121px block
+ * being filed as somebody else's noise.
+ *
+ * Every branch says something. An omitted line reads as "nothing to report",
+ * which is the failure this is here to prevent.
+ */
+export function geometryLine({ expected, actual }) {
+  const size = (s) => `${s.width}x${s.height}`;
+  if (expected && actual) {
+    if (expected.height === actual.height && expected.width === actual.width) {
+      return `- geometry: ${size(actual)} unchanged`;
+    }
+    if (expected.height === actual.height) {
+      return `- geometry: expected ${size(expected)} -> actual ${size(actual)} (same height)`;
+    }
+    const delta = actual.height - expected.height;
+    return `- geometry: expected ${size(expected)} -> actual ${size(actual)} (${delta > 0 ? "+" : ""}${delta})`;
+  }
+  // One side only: a new or deleted item by design, or a download that failed.
+  if (actual) return `- geometry: actual ${size(actual)} (no expected image on disk)`;
+  if (expected) return `- geometry: expected ${size(expected)} (no actual image on disk)`;
+  return "- geometry: unavailable (no images on disk)";
+}
+
+/**
+ * The markdown block for one item: its heading, one line per downloaded image,
+ * then its geometry. `files` arrives already relativized so this stays free of
+ * `process.cwd()` and therefore testable.
+ */
+export function itemRows({ name, kind, files = {}, sizes = {} }) {
+  const rows = [`## ${name} (${kind})`];
+  for (const [dirKind, file] of Object.entries(files)) rows.push(`- ${dirKind}: ${file}`);
+  const hasFile = Object.keys(files).length > 0;
+  const unreadable = hasFile && !sizes.expected && !sizes.actual;
+  rows.push(unreadable ? "- geometry: unreadable PNG" : geometryLine(sizes));
+  rows.push("");
+  return rows;
+}
+
+/**
+ * The one line at the top that says whether geometry moved at all, over the
+ * changed items only.
+ *
+ * At the top rather than after 101 sections: a reader meets the counts there,
+ * and "76 of 101 moved" is the tell that the baseline is stale — which is the
+ * thing worth knowing before opening a single image. `null` when there is
+ * nothing changed to count, so the caller can omit the line entirely.
+ */
+export function geometrySummaryLine(items) {
+  const changed = items.filter((item) => item.kind === "changed");
+  if (changed.length === 0) return null;
+  let moved = 0;
+  let unmeasured = 0;
+  for (const { sizes = {} } of changed) {
+    if (!sizes.expected || !sizes.actual) unmeasured++;
+    else if (sizes.expected.height !== sizes.actual.height) moved++;
+  }
+  const measured = changed.length - unmeasured;
+  // Never a silent cap (AGENTS.md): if some pair could not be measured, the
+  // denominator has to say so rather than quietly shrinking.
+  return (
+    `Geometry moved on ${moved} of ${measured} changed capture(s).` +
+    (unmeasured ? ` · ${unmeasured} could not be measured` : "")
+  );
+}
 
 // Marks the CI comment so a later run can find and edit it instead of posting a
 // second one. Never change this string: a comment posted under an older marker

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   currentSessionPid,
   descendsFrom,
+  diagnoseCommand,
   humanElapsed,
   orphanedDevProcesses,
   parseElapsedSeconds,
@@ -237,5 +238,61 @@ describe("the nine-hour regression", () => {
     expect(stray).toMatchObject({ pid: 40001, mine: true });
     expect(summarizeCommand(stray.command)).toBe("until grep -q X /tmp/f; do sleep 5; done");
     expect(orphanedDevProcesses(rows, []).map((row) => row.label)).toEqual(["next-server"]);
+  });
+});
+
+describe("diagnoseCommand", () => {
+  /**
+   * The 2026-09-07 incident: four CI monitors polled repo-scoped GitHub REST
+   * with `curl`. That is a 403 in this container, a 403 body has no
+   * `check_runs`, and a loop exiting on the *absence* of failures cannot tell
+   * an empty answer from a green run — so they reported confidently and wrongly
+   * without erroring once.
+   */
+  it("names a watch built on GitHub REST this container refuses", () => {
+    expect(
+      diagnoseCommand(
+        "/bin/bash -c until curl -s https://api.github.com/repos/AaronBuxbaum/diveday/commits/x/check-runs | grep -q failure; do sleep 30; done",
+      ),
+    ).toMatch(/403/);
+  });
+
+  /**
+   * The pattern is `api.github.com/repos/`, never the bare host. `curl
+   * https://api.github.com/user` answers 200 here — measured — so labelling it
+   * broken would send someone to fix a command that works.
+   */
+  it("leaves alone the endpoints that do answer", () => {
+    expect(diagnoseCommand("curl -s https://api.github.com/user")).toBeUndefined();
+    expect(diagnoseCommand("curl -s https://api.github.com/rate_limit")).toBeUndefined();
+    expect(diagnoseCommand("git ls-remote origin HEAD")).toBeUndefined();
+    expect(diagnoseCommand("pnpm test src/db/trips.test.ts")).toBeUndefined();
+  });
+});
+
+describe("a refused watch skips the age threshold", () => {
+  const snapshot = (command) =>
+    `/bin/zsh -c source ~/.claude/shell-snapshots/s.sh && eval '${command}' < /dev/null`;
+
+  /**
+   * The threshold separates a job still doing something from one that has
+   * stopped. A watch this container refuses was never doing anything, and the
+   * incident's worst monitor exited in ninety seconds — well inside ten
+   * minutes, having already reported the wrong answer. Waiting out the
+   * threshold to say so would miss exactly the case worth catching.
+   */
+  it("reports a young shell whose command cannot work, and still ignores a young ordinary one", () => {
+    const rows = [
+      { pid: 10, ppid: 1, elapsedSeconds: 0, rssMb: 0, command: "claude --session-id abc" },
+      {
+        pid: 11,
+        ppid: 10,
+        elapsedSeconds: 20,
+        rssMb: 0,
+        command: snapshot("curl -s https://api.github.com/repos/o/r/commits/x/check-runs"),
+      },
+      { pid: 12, ppid: 10, elapsedSeconds: 20, rssMb: 0, command: snapshot("pnpm test foo") },
+    ];
+    expect(staleSessionShells(rows, [], 10).map((row) => row.pid)).toEqual([11]);
   });
 });
