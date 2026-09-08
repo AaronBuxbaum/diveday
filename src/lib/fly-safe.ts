@@ -19,11 +19,12 @@ import { hasReturned } from "./trips";
  *
  * Two limits worth knowing before this is extended. DAN's guidance covers
  * **no-decompression** recreational diving — a dive that took stops needs
- * substantially longer, and nothing here can tell. And *repetitive* is
- * decided from this departure alone, so a single dive today after diving
- * yesterday reads as single, where DAN's 18 hours covers multiple days too
- * (issue #1439; the 18-hour default already meets that figure, and only a
- * shop that lowers `single` to DAN's 12 opens the gap).
+ * substantially longer, and nothing here can tell. And the only dives it can
+ * see are the ones booked at *this* shop: a diver who spent the week with
+ * another operator and made one dive here today still reads *single*, because
+ * nothing in DiveDay records the week (issue #1439 closed the narrower gap —
+ * an earlier day at this shop — and left this one, which no amount of code
+ * here can close).
  *
  * Two things this deliberately does not do. It never computes from a dive
  * profile — depth and bottom time are a computer's business, and DiveDay is
@@ -57,6 +58,21 @@ export const FLY_SAFE_FIELDS = ["single", "repetitive"] as const satisfies Reado
 >;
 
 /**
+ * How far back "multiple days of diving" reaches, counted back from this
+ * departure's start (issue #1439).
+ *
+ * DAN publishes no window at all — 18 hours covers "repetitive dives or
+ * multiple days of diving" and stops there — so this figure is a reading, not
+ * a quotation: a dive the previous calendar day is inside it, a dive three
+ * days ago is not. 24 rather than the more conservative 72 because the error
+ * it makes is already in the safe direction — {@link parseFlySafeHours}
+ * refuses a `repetitive` shorter than `single`, so reading repetitive can only
+ * ever lengthen a wait — and a window wide enough to catch a dive nobody
+ * would call recent buys nothing for that.
+ */
+export const FLY_SAFE_MULTI_DAY_LOOKBACK_HOURS = 24;
+
+/**
  * A submitted pair, or `null` if either is not a whole number inside its own
  * bounds, or the repetitive wait is shorter than the single one — a shop that
  * asked less of a two-tank day than of a one-tank day has typed them the wrong
@@ -86,6 +102,15 @@ export type FlySafeInput = {
   plannedDives: number;
   /** The departure's scheduled return, or null for a departure with none. */
   endsAt: Date | null;
+  /**
+   * This diver has a dive recorded at *this shop* inside
+   * {@link FLY_SAFE_MULTI_DAY_LOOKBACK_HOURS} before this departure — DAN's
+   * "multiple days of diving", which its 18 hours covers alongside repetitive
+   * dives on one boat. A fact about a *person*, not about the departure: two
+   * divers on one boat may honestly differ here, and anything memoising this
+   * result must be keyed accordingly.
+   */
+  divedRecently: boolean;
   now: Date;
   hours: FlySafeHours;
 };
@@ -102,20 +127,24 @@ export type FlySafeResult = {
  * The instant a diver may fly from, or `null` when nothing on the record can
  * honestly say.
  *
- * - **Basis.** Repetitive when the day held more than one dive by *either*
- *   count — dives the crew recorded, or dives the departure planned. A record
- *   short of its plan is a crew that logged one tank of two more often than
- *   it is a day cut to one tank, and the longer wait is the one that costs a
- *   diver nothing if wrong.
+ * - **Basis.** Repetitive by any of three routes: more than one dive the crew
+ *   recorded, more than one dive the departure planned, or a dive this diver
+ *   already had at this shop inside
+ *   {@link FLY_SAFE_MULTI_DAY_LOOKBACK_HOURS}. A record short of its plan is a
+ *   crew that logged one tank of two more often than it is a day cut to one
+ *   tank, and the longer wait is the one that costs a diver nothing if wrong.
+ *   None of the three can ever *shorten* a wait: {@link parseFlySafeHours}
+ *   refuses a `repetitive` shorter than `single`, so reaching repetitive is
+ *   monotonic by construction.
  * - **Anchor.** The latest recorded exit, provided no later-numbered dive was
  *   recorded without one. Otherwise the boat's scheduled return, and only once
  *   {@link hasReturned} says it is home — a "fly-safe from" for a boat still
  *   at sea would be a guess dressed as a fact.
  */
 export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
-  const { executedDives, plannedDives, endsAt, now, hours } = input;
+  const { executedDives, plannedDives, endsAt, divedRecently, now, hours } = input;
   const diveCount = Math.max(executedDives.length, plannedDives);
-  const basis: FlySafeBasis = diveCount > 1 ? "repetitive" : "single";
+  const basis: FlySafeBasis = diveCount > 1 || divedRecently ? "repetitive" : "single";
   const wait = basis === "repetitive" ? hours.repetitive : hours.single;
 
   let lastExit: { diveNumber: number; exitedAt: Date } | null = null;

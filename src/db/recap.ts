@@ -32,7 +32,7 @@ import { getBoatForHistory } from "./boats";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { listSiteFieldGuides } from "./dive-sites";
-import { listExecutedDives } from "./executed-dives";
+import { listExecutedDives, peopleWhoDivedBefore } from "./executed-dives";
 import {
   notificationProviderForDb,
   recordNotificationDelivery,
@@ -434,6 +434,7 @@ export async function getRecapPageData(
   const [
     dives,
     livedDives,
+    divedRecentlyIds,
     boat,
     crewMap,
     nativeBookings,
@@ -449,6 +450,10 @@ export async function getRecapPageData(
     // already drops soft-deleted rows and non-live trips, which is what keeps
     // a deleted dive off a diver's keepsake.
     listExecutedDives(db, row.shopId, row.tripId),
+    // Did this diver dive here yesterday? DAN's 18 hours covers multiple days
+    // as well as repetitive dives, so the answer widens the fly-safe basis
+    // below. One more element of this `Promise.all`, not a second round trip.
+    peopleWhoDivedBefore(db, row.shopId, [row.personId], trip.startsAt),
     trip.boatId ? getBoatForHistory(db, row.shopId, trip.boatId) : Promise.resolve(null),
     tripCrewByTrip(db, row.shopId, [row.tripId]),
     db
@@ -587,6 +592,7 @@ export async function getRecapPageData(
     })),
     plannedDives: trip.plannedDives,
     endsAt: trip.endsAt,
+    divedRecently: divedRecentlyIds.has(row.personId),
     now: nowDate(),
     hours: { single: row.flySafeHoursSingle, repetitive: row.flySafeHoursRepetitive },
   });
@@ -1241,40 +1247,58 @@ async function sendRecaps(
   // once per distinct trip in the run rather than per booking, and all trips
   // resolved together rather than one round trip at a time.
   const siteNamesByTrip = new Map<string, string[]>();
-  // And when each trip's divers may fly (`src/lib/fly-safe.ts`), from the
-  // same `executed_dives` the after-state reads — once per trip, so every
-  // diver on the boat reads the same instant.
-  const flySafeByTrip = new Map<string, FlySafeResult | null>();
+  // And when each diver may fly (`src/lib/fly-safe.ts`), from the same
+  // `executed_dives` the after-state reads.
+  //
+  // **Keyed by booking, not by trip.** The reads are still once per departure
+  // — the dive record and the who-dived-yesterday set are both fetched inside
+  // this loop — but the *answer* is per diver, because "dived on an earlier
+  // day" is a fact about a person (issue #1439). Two divers on one boat may
+  // honestly read 18 and 24. The invariant that survives, and the one the
+  // regression test pins, is that this email and `getRecapPageData` never
+  // disagree about **one diver** — not that a boat agrees with itself.
+  const flySafeByBooking = new Map<string, FlySafeResult | null>();
   await Promise.all(
     [...new Set(rows.map((r) => r.trip.id))].map(async (tripId) => {
-      const first = rows.find((r) => r.trip.id === tripId);
+      const tripRows = rows.filter((r) => r.trip.id === tripId);
+      const first = tripRows[0];
       if (!first) return;
       const shopId = first.shop.id;
-      const [dives, lived] = await Promise.all([
+      const [dives, lived, divedRecentlyIds] = await Promise.all([
         listTripDives(db, shopId, tripId),
         listExecutedDives(db, shopId, tripId),
+        peopleWhoDivedBefore(
+          db,
+          shopId,
+          tripRows.map((r) => r.booking.personId),
+          first.trip.startsAt,
+        ),
       ]);
       const names: string[] = [];
       for (const { diveSite } of dives) {
         if (diveSite && !names.includes(diveSite.name)) names.push(diveSite.name);
       }
       siteNamesByTrip.set(tripId, names);
-      flySafeByTrip.set(
-        tripId,
-        flySafeFrom({
-          executedDives: lived.map(({ executed }) => ({
-            diveNumber: executed.diveNumber,
-            exitedAt: executed.exitedAt,
-          })),
-          plannedDives: first.trip.plannedDives,
-          endsAt: first.trip.endsAt,
-          now,
-          hours: {
-            single: first.shop.flySafeHoursSingle,
-            repetitive: first.shop.flySafeHoursRepetitive,
-          },
-        }),
-      );
+      const executed = lived.map(({ executed: dive }) => ({
+        diveNumber: dive.diveNumber,
+        exitedAt: dive.exitedAt,
+      }));
+      for (const r of tripRows) {
+        flySafeByBooking.set(
+          r.booking.id,
+          flySafeFrom({
+            executedDives: executed,
+            plannedDives: first.trip.plannedDives,
+            endsAt: first.trip.endsAt,
+            divedRecently: divedRecentlyIds.has(r.booking.personId),
+            now,
+            hours: {
+              single: first.shop.flySafeHoursSingle,
+              repetitive: first.shop.flySafeHoursRepetitive,
+            },
+          }),
+        );
+      }
     }),
   );
 
@@ -1352,7 +1376,7 @@ async function sendRecaps(
           startsAt: trip.startsAt,
           timezone: shop.timezone,
           sites,
-          flySafe: flySafeByTrip.get(trip.id) ?? undefined,
+          flySafe: flySafeByBooking.get(booking.id) ?? undefined,
           recapUrl,
           unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
         },

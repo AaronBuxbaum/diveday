@@ -866,6 +866,167 @@ describe("sendDueRecaps", () => {
     expect(data?.flySafe).toEqual(mine.flySafe);
   });
 
+  /**
+   * **The regression test the per-booking memo exists for** (issue #1439).
+   *
+   * "Dived on an earlier day" is a fact about a *person*, so two divers on one
+   * boat may honestly read different hours. `flySafeByTrip` — one entry per
+   * departure, which is what this was before — passes every single-diver case
+   * in this file and quietly hands both divers whichever answer happened to be
+   * computed first.
+   */
+  it("gives two divers on one boat their own fly-safe answer, and the page agrees with each", async () => {
+    const { db, shop, reef, bookingId, afterTrip } = await recapContext();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("no staff");
+
+    // A second diver on the same reef boat, who also dived here yesterday.
+    const alsoToday = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: reef.id,
+        fullName: "Sam Secondday",
+        email: "recap-sam@example.com",
+      },
+    ]);
+    if (!alsoToday.ok) throw new Error(`booking failed: ${alsoToday.reason}`);
+    const samBookingId = alsoToday.bookings[0].bookingId;
+
+    const yesterdayStart = new Date(reef.startsAt.getTime() - 20 * 60 * 60 * 1000);
+    const yesterday = await createTrip(db, {
+      shopId: shop.id,
+      title: "Yesterday's single tank",
+      startsAt: yesterdayStart,
+      endsAt: new Date(yesterdayStart.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 6,
+      plannedDives: 1,
+    });
+    if (!yesterday) throw new Error("createTrip refused yesterday's departure");
+    // Inserted rather than booked: `createBookingParty` refuses a departure
+    // that has already sailed, which yesterday's has.
+    await db
+      .insert(bookings)
+      .values({
+        shopId: shop.id,
+        tripId: yesterday.id,
+        personId: alsoToday.bookings[0].personId,
+      })
+      .returning();
+    const yesterdayDive = await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: yesterday.id,
+      diveNumber: 1,
+      exitedAt: new Date(yesterdayStart.getTime() + 2 * 60 * 60 * 1000),
+      recordedByPersonId: staff.person.id,
+    });
+    expect(yesterdayDive.ok).toBe(true);
+
+    // Today: one tank for everybody aboard. On its own that reads *single*.
+    const lastExit = new Date(reef.endsAt.getTime() - 30 * 60 * 1000);
+    const todayDive = await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      diveNumber: 1,
+      exitedAt: lastExit,
+      recordedByPersonId: staff.person.id,
+    });
+    expect(todayDive.ok).toBe(true);
+    await db.update(trips).set({ plannedDives: 1 }).where(eq(trips.id, reef.id));
+    await setShopFlySafeHours(db, shop.id, { single: 12, repetitive: 24 });
+
+    const email = fakeEmail();
+    await sendDueRecaps(db, {
+      now: afterTrip,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    });
+    const flySafeFor = (id: string) => {
+      const sent = email.sent.find((n) => n.kind === "trip_recap" && n.bookingId === id);
+      if (sent?.kind !== "trip_recap") throw new Error(`no recap for ${id}`);
+      return sent.flySafe;
+    };
+
+    // Rae's first day in the water: 12 hours, the shop's single-dive figure.
+    expect(flySafeFor(bookingId)).toEqual({
+      from: new Date(lastExit.getTime() + 12 * 60 * 60 * 1000),
+      hours: 12,
+      basis: "single",
+      anchor: "last_dive",
+    });
+    // Sam's second: DAN's clause covers multiple days, so 24 from the same exit.
+    expect(flySafeFor(samBookingId)).toEqual({
+      from: new Date(lastExit.getTime() + 24 * 60 * 60 * 1000),
+      hours: 24,
+      basis: "repetitive",
+      anchor: "last_dive",
+    });
+
+    // And the page agrees with the email about each diver — the invariant that
+    // survives the rekey. It was never that a boat agrees with itself.
+    for (const id of [bookingId, samBookingId]) {
+      expect((await getRecapPageData(db, id))?.flySafe).toEqual(flySafeFor(id));
+    }
+  });
+
+  it("does not credit a diver for a day they cancelled or never showed", async () => {
+    // The two booking statuses that leave an active row on a departure the
+    // diver spent ashore. Crediting either would hand them the longer wait for
+    // nothing.
+    for (const status of ["cancelled", "no_show"] as const) {
+      const { db, shop, reef, bookingId, afterTrip } = await recapContext();
+      const [staff] = await listStaff(db, shop.id);
+      if (!staff) throw new Error("no staff");
+      const yesterdayStart = new Date(reef.startsAt.getTime() - 20 * 60 * 60 * 1000);
+      const yesterday = await createTrip(db, {
+        shopId: shop.id,
+        title: "Yesterday's single tank",
+        startsAt: yesterdayStart,
+        endsAt: new Date(yesterdayStart.getTime() + 4 * 60 * 60 * 1000),
+        capacity: 6,
+        plannedDives: 1,
+      });
+      if (!yesterday) throw new Error("createTrip refused yesterday's departure");
+      const [rae] = await db
+        .select({ personId: bookings.personId })
+        .from(bookings)
+        .where(eq(bookings.id, bookingId));
+      if (!rae) throw new Error("today's booking missing");
+      // Inserted rather than booked: `createBookingParty` refuses a departure
+      // that has already sailed, which yesterday's has.
+      await db
+        .insert(bookings)
+        .values({ shopId: shop.id, tripId: yesterday.id, personId: rae.personId, status });
+      const recorded = await upsertExecutedDive(db, {
+        shopId: shop.id,
+        tripId: yesterday.id,
+        diveNumber: 1,
+        exitedAt: new Date(yesterdayStart.getTime() + 2 * 60 * 60 * 1000),
+        recordedByPersonId: staff.person.id,
+      });
+      expect(recorded.ok).toBe(true);
+
+      const lastExit = new Date(reef.endsAt.getTime() - 30 * 60 * 1000);
+      const todayDive = await upsertExecutedDive(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        diveNumber: 1,
+        exitedAt: lastExit,
+        recordedByPersonId: staff.person.id,
+      });
+      expect(todayDive.ok).toBe(true);
+      await db.update(trips).set({ plannedDives: 1 }).where(eq(trips.id, reef.id));
+      await setShopFlySafeHours(db, shop.id, { single: 12, repetitive: 24 });
+
+      expect((await getRecapPageData(db, bookingId))?.flySafe, status).toMatchObject({
+        basis: "single",
+        hours: 12,
+      });
+      void afterTrip;
+    }
+  });
+
   it("sends the recap after the minimum delay, records it, and is a no-op on a second run", async () => {
     const { db, bookingId, afterTrip } = await recapContext();
     const email = fakeEmail();

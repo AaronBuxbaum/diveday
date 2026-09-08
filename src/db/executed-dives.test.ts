@@ -1,17 +1,29 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { HOUR_MS } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
-import { deleteExecutedDive, listExecutedDives, upsertExecutedDive } from "./executed-dives";
+import { createBookingParty } from "./bookings";
+import type { AppDb } from "./client";
+import {
+  deleteExecutedDive,
+  listExecutedDives,
+  peopleWhoDivedBefore,
+  upsertExecutedDive,
+} from "./executed-dives";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
 import {
+  bookings,
   diveSiteCreatures,
   diveSites,
+  executedDives,
   people,
   personRoles,
+  shops,
   tripDeskEvents,
   tripDives,
   trips,
 } from "./schema";
+import { createTrip } from "./trips";
 
 async function logFixture() {
   const { db, shop } = await seededShopContext();
@@ -475,5 +487,193 @@ describe("upsertExecutedDive — the plan change", () => {
       .from(tripDeskEvents)
       .where(and(eq(tripDeskEvents.shopId, shop.id), eq(tripDeskEvents.tripId, trip.id)));
     expect(events).toEqual([]);
+  });
+});
+
+/**
+ * `peopleWhoDivedBefore` answers the "multiple days of diving" half of DAN's
+ * 18-hour preflight clause for a whole boat at once (issue #1439). Every case
+ * below is a row it must *not* count — the false positives are the ones that
+ * matter, because each hands a diver a longer wait for a day they did not
+ * spend in the water.
+ */
+describe("peopleWhoDivedBefore", () => {
+  /**
+   * Two departures a day apart, one diver aboard both, with a dive recorded on
+   * the earlier one. `after` is the one being asked about.
+   */
+  async function twoDays(gapHours = 20) {
+    const { db, shop } = await seededShopContext();
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+      .limit(1);
+    if (!owner) throw new Error("fixture needs the seeded owner");
+    const base = new Date("2026-07-25T13:00:00.000Z");
+    const departure = async (title: string, startsAt: Date) => {
+      const trip = await createTrip(db, {
+        shopId: shop.id,
+        title,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS),
+        capacity: 6,
+        plannedDives: 1,
+      });
+      if (!trip) throw new Error(`createTrip refused ${title}`);
+      return trip;
+    };
+    const before = await departure("Yesterday", new Date(base.getTime() - gapHours * HOUR_MS));
+    const after = await departure("Today", base);
+    const seat = async (tripId: string) => {
+      const party = await createBookingParty(db, [
+        {
+          actor: "staff",
+          shopId: shop.id,
+          tripId,
+          fullName: "Nadia Twoday",
+          email: "nadia-twoday@example.com",
+        },
+      ]);
+      if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+      return party.bookings[0];
+    };
+    const earlierBooking = await seat(before.id);
+    const laterBooking = await seat(after.id);
+    // Same person on both departures — `createBookingParty` matches on email.
+    expect(earlierBooking.personId).toBe(laterBooking.personId);
+    const recorded = await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: before.id,
+      diveNumber: 1,
+      exitedAt: new Date(before.startsAt.getTime() + 2 * HOUR_MS),
+      recordedByPersonId: owner.id,
+    });
+    expect(recorded.ok).toBe(true);
+    const ask = () => peopleWhoDivedBefore(db, shop.id, [laterBooking.personId], after.startsAt);
+    return { db, shop, owner, before, after, personId: laterBooking.personId, earlierBooking, ask };
+  }
+
+  it("counts a dive on an earlier departure inside the window", async () => {
+    const { personId, ask } = await twoDays();
+    expect([...(await ask())]).toEqual([personId]);
+  });
+
+  it("does not reach past the lookback window", async () => {
+    // 23 hours before is inside a 24-hour window; 25 is not. Bracketing both
+    // sides is what pins the constant rather than merely reading it back.
+    expect((await (await twoDays(23)).ask()).size).toBe(1);
+    expect((await (await twoDays(25)).ask()).size).toBe(0);
+  });
+
+  it("counts neither this departure's own dives nor a later one's", async () => {
+    // Today's tanks are the caller's to count; double-counting them here would
+    // make every second dive of a day look like a second day. And a dive the
+    // crew has already logged on the *afternoon* boat is not a reason to tell
+    // the morning boat's divers they have been at this for days.
+    const { db, shop, owner, after, personId } = await twoDays(25);
+    const evening = await createTrip(db, {
+      shopId: shop.id,
+      title: "This evening",
+      startsAt: new Date(after.startsAt.getTime() + 6 * HOUR_MS),
+      endsAt: new Date(after.startsAt.getTime() + 10 * HOUR_MS),
+      capacity: 6,
+      plannedDives: 1,
+    });
+    if (!evening) throw new Error("createTrip refused the evening departure");
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: evening.id,
+        fullName: "Nadia Twoday",
+        email: "nadia-twoday@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    for (const tripId of [after.id, evening.id]) {
+      const recorded = await upsertExecutedDive(db, {
+        shopId: shop.id,
+        tripId,
+        diveNumber: 1,
+        exitedAt: new Date(after.startsAt.getTime() + 2 * HOUR_MS),
+        recordedByPersonId: owner.id,
+      });
+      expect(recorded.ok).toBe(true);
+    }
+    const found = await peopleWhoDivedBefore(db, shop.id, [personId], after.startsAt);
+    expect(found.size).toBe(0);
+  });
+
+  it("does not count a diver who cancelled or never showed", async () => {
+    for (const status of ["cancelled", "no_show"] as const) {
+      const { db, shop, after, personId, earlierBooking } = await twoDays();
+      await db.update(bookings).set({ status }).where(eq(bookings.id, earlierBooking.bookingId));
+      const found = await peopleWhoDivedBefore(db, shop.id, [personId], after.startsAt);
+      expect(found.size, `a ${status} booking is not a dive day`).toBe(0);
+    }
+  });
+
+  it("does not count a blown-out or deleted earlier departure", async () => {
+    for (const strike of ["cancelled", "deleted"] as const) {
+      const { db, shop, before, after, personId } = await twoDays();
+      await db
+        .update(trips)
+        .set(
+          strike === "cancelled"
+            ? { status: "cancelled" }
+            : { deletedAt: new Date("2026-07-25T09:00:00.000Z") },
+        )
+        .where(eq(trips.id, before.id));
+      const found = await peopleWhoDivedBefore(db, shop.id, [personId], after.startsAt);
+      expect(found.size, `a ${strike} departure is not a dive day`).toBe(0);
+    }
+  });
+
+  it("does not count a dive the crew struck from the record", async () => {
+    const { db, shop, owner, before, after, personId } = await twoDays();
+    const [dive] = await listExecutedDives(db, shop.id, before.id);
+    if (!dive) throw new Error("fixture dive missing");
+    await deleteExecutedDive(db, {
+      shopId: shop.id,
+      tripId: before.id,
+      diveNumber: dive.executed.diveNumber,
+      deletedByPersonId: owner.id,
+    });
+    const found = await peopleWhoDivedBefore(db, shop.id, [personId], after.startsAt);
+    expect(found.size).toBe(0);
+  });
+
+  it("is scoped on all three tables of its join, not only the one it reads from", async () => {
+    // The join reaches `executed_dives -> trips -> bookings`, so a scope on
+    // the first table alone would leave two paths into another tenant's rows.
+    // Re-pointing each table's `shop_id` in turn is the only probe that shows
+    // all three predicates carry weight — a synthetic shop id fails on the
+    // first one and proves nothing about the other two.
+    const reassign = {
+      executed_dives: (db: AppDb, tripId: string, shopId: string) =>
+        db.update(executedDives).set({ shopId }).where(eq(executedDives.tripId, tripId)),
+      trips: (db: AppDb, tripId: string, shopId: string) =>
+        db.update(trips).set({ shopId }).where(eq(trips.id, tripId)),
+      bookings: (db: AppDb, tripId: string, shopId: string) =>
+        db.update(bookings).set({ shopId }).where(eq(bookings.tripId, tripId)),
+    };
+    for (const [table, moveToOtherShop] of Object.entries(reassign)) {
+      const { db, shop, before, after, personId } = await twoDays();
+      const [other] = await db
+        .insert(shops)
+        .values({ name: "Other Reef", slug: "other-reef-flysafe", timezone: "America/New_York" })
+        .returning();
+      if (!other) throw new Error("other shop insert failed");
+      await moveToOtherShop(db, before.id, other.id);
+      const found = await peopleWhoDivedBefore(db, shop.id, [personId], after.startsAt);
+      expect(found.size, `${table}.shop_id is not scoped`).toBe(0);
+    }
+  });
+
+  it("answers an empty roster with an empty set", async () => {
+    const { db, shop, after } = await twoDays();
+    expect(await peopleWhoDivedBefore(db, shop.id, [], after.startsAt)).toEqual(new Set());
   });
 });
