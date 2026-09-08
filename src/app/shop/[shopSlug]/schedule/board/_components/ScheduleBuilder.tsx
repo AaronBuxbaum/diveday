@@ -132,6 +132,13 @@ export type BuilderOptions = {
   boats?: BuilderBoatOption[];
   /** The shop's own words for its kinds of day (ADR 20260904-reef-all-the-way-down). */
   lenses?: BuilderOption[];
+  /**
+   * The shop's seasons that name a kind of day, so a departure landing inside
+   * one can be *offered* that word rather than having it filled in server-side
+   * after Save (issue #1492). Windows only — a season's note stays on the
+   * server, since nothing on this panel renders one.
+   */
+  seasons?: { startsOn: string; endsOn: string; lensId: string; name: string }[];
   hasBoatDiving?: boolean;
   hasShoreDiving?: boolean;
   hasPoolDiving?: boolean;
@@ -329,6 +336,8 @@ export type BuilderCopy = {
   unassignedBoat?: string;
   lensLabel?: string;
   lensNone?: string;
+  /** "From {season}", under the select when a season offered the word. */
+  lensFromSeason?: string;
 };
 
 /**
@@ -598,6 +607,28 @@ function AddPanel({
   const plain = addDraft === null && !initialCourse && !initialSite && !requestPlan;
   const [pattern, setPattern] = useState<BuilderPattern | null>(null);
   const [patternApplied, setPatternApplied] = useState(false);
+  /**
+   * **The kind of day, controlled so a season can offer one** (issue #1492).
+   *
+   * `lensTouched` is what keeps the offer from becoming an override: once a
+   * staffer has picked anything — including "None" — the date moving must not
+   * change it back. A ref rather than state because nothing renders from it,
+   * and it must not re-run the effect that reads it.
+   */
+  const [lensId, setLensId] = useState("");
+  const lensTouched = useRef(false);
+  const seasonForDate = (options?.seasons ?? []).find(
+    (season) => startDate >= season.startsOn && startDate <= season.endsOn,
+  );
+  const lensFromSeason = !lensTouched.current && seasonForDate && lensId === seasonForDate.lensId;
+  useEffect(() => {
+    // The weekday pattern wins. It is what this shop actually ran on this
+    // weekday, applied through `applyFormFields` in the effect above; a season
+    // is the weaker signal, and overwriting a repeat of last Saturday with it
+    // would be the panel arguing with the shop's own history.
+    if (lensTouched.current || patternApplied) return;
+    setLensId(seasonForDate?.lensId ?? "");
+  }, [seasonForDate?.lensId, patternApplied]);
   const [crew, setCrew] = useState<BuilderPattern["crew"]>([]);
   useEffect(() => {
     if (!plain || !loadPattern) return;
@@ -629,6 +660,11 @@ function AddPanel({
     }
     setCrew([]);
     setPattern(null);
+    // A blank form has nothing typed in it, so the season may offer again —
+    // without this, "Start blank" would leave the field permanently untouchable
+    // by the default it is meant to reset to.
+    lensTouched.current = false;
+    setLensId("");
   };
   const crewNames = cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
     crew.map((member) => member.name),
@@ -929,8 +965,28 @@ function AddPanel({
               the shop has written a vocabulary, the same silence the hull
               select keeps with no boats. */}
           {options?.lenses && options.lenses.length > 0 ? (
-            <Field label={copy.lensLabel ?? "Kind of day"} hint={copy.optional}>
-              <select name="lensId" defaultValue="" className={controlClass}>
+            <Field
+              label={copy.lensLabel ?? "Kind of day"}
+              hint={copy.optional}
+              // Named, never silent: a word the panel chose has to say where it
+              // came from before Save, or a shop reads its own board saying
+              // something nobody typed.
+              description={
+                lensFromSeason && seasonForDate
+                  ? (copy.lensFromSeason?.replace("{season}", seasonForDate.name) ??
+                    `From ${seasonForDate.name}`)
+                  : undefined
+              }
+            >
+              <select
+                name="lensId"
+                value={lensId}
+                onChange={(event) => {
+                  lensTouched.current = true;
+                  setLensId(event.target.value);
+                }}
+                className={controlClass}
+              >
                 <option value="">{copy.lensNone ?? "None"}</option>
                 {options.lenses.map((lens) => (
                   <option key={lens.id} value={lens.id}>

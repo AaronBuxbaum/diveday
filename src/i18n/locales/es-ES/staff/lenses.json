@@ -19,5 +19,6 @@
   "deleted": "Tipo de día eliminado.",
   "invalid": "Ponle un nombre al tipo de día.",
   "tripFieldLabel": "Tipo de día",
-  "tripFieldNone": "Ninguno"
+  "tripFieldNone": "Ninguno",
+  "tripFieldFromSeason": "De {season}"
 }

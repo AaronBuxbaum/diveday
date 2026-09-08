@@ -19,5 +19,6 @@
   "deleted": "Kind of day deleted.",
   "invalid": "Give the kind of day a name.",
   "tripFieldLabel": "Kind of day",
-  "tripFieldNone": "None"
+  "tripFieldNone": "None",
+  "tripFieldFromSeason": "From {season}"
 }

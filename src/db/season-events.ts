@@ -12,7 +12,7 @@
 
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { seasonEvents, tripLenses } from "./schema";
 
 export type SeasonEvent = typeof seasonEvents.$inferSelect;
@@ -31,7 +31,10 @@ export type SeasonEventWithLens = SeasonEvent & {
  * narrowed to live words, so a band never links a visitor at a chip the rail
  * has stopped rendering.
  */
-export async function listSeasonEvents(db: AppDb, shopId: string): Promise<SeasonEventWithLens[]> {
+export async function listSeasonEvents(
+  db: DbExecutor,
+  shopId: string,
+): Promise<SeasonEventWithLens[]> {
   const rows = await db
     .select({ event: seasonEvents, lens: tripLenses })
     .from(seasonEvents)

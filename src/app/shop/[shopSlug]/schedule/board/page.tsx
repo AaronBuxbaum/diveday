@@ -507,6 +507,7 @@ export default async function ScheduleBoardPage({
     unassignedBoat: st("boats.unassignedBoat"),
     lensLabel: st("lenses.tripFieldLabel"),
     lensNone: st("lenses.tripFieldNone"),
+    lensFromSeason: st("lenses.tripFieldFromSeason"),
   };
 
   // The rare half of the add panel: bounds the domain owns, and the per-dive

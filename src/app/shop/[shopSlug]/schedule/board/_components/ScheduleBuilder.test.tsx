@@ -2620,3 +2620,106 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     expect(loadMovePreflight).toHaveBeenCalledTimes(3);
   });
 });
+
+/**
+ * **A season offers a kind of day; it never applies one behind your back**
+ * (issue #1492).
+ *
+ * The server fills `trips.lens_id` from a live season when the board sends
+ * nothing, so if the panel said nothing a shop would save a departure and find
+ * a word on it that it never typed. The panel shows the offer, names where it
+ * came from, and gets out of the way the moment a staffer touches the field.
+ */
+describe("the kind of day a season offers", () => {
+  const days = [
+    {
+      dateIso: "2026-08-01",
+      label: "Sat, Aug 1",
+      parts: { weekday: "Sat", day: "1", month: "Aug" },
+      trips: [],
+    },
+  ];
+  const withSeasons = vi.fn(async () => ({
+    courses: [],
+    diveSites: [{ id: "site-1", title: "Molasses Reef" }],
+    lenses: [
+      { id: "after-dark", title: "After dark" },
+      { id: "easygoing", title: "Easygoing reef" },
+    ],
+    seasons: [
+      {
+        startsOn: "2026-08-01",
+        endsOn: "2026-08-31",
+        lensId: "after-dark",
+        name: "Turtle nesting",
+      },
+    ],
+  }));
+
+  function renderBoard(extra: Partial<ComponentProps<typeof ScheduleBuilder>> = {}) {
+    return render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={withSeasons}
+        loadMovePreflight={loadMovePreflight}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        locale="en-US"
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+        {...extra}
+      />,
+    );
+  }
+
+  const openPanel = async () => {
+    renderBoard();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    return await screen.findByLabelText(/Kind of day/);
+  };
+
+  it("preselects the season's word and says where it came from", async () => {
+    const select = await openPanel();
+    expect(select).toHaveValue("after-dark");
+    expect(screen.getByText("From Turtle nesting")).toBeInTheDocument();
+  });
+
+  it("clears when the date moves out of the window", async () => {
+    const select = await openPanel();
+    expect(select).toHaveValue("after-dark");
+
+    await userEvent.clear(screen.getByLabelText("Date"));
+    await userEvent.type(screen.getByLabelText("Date"), "2026-09-05");
+
+    await waitFor(() => expect(select).toHaveValue(""));
+    expect(screen.queryByText("From Turtle nesting")).toBeNull();
+  });
+
+  it("keeps None when a staffer chose None, even as the date moves", async () => {
+    // The offer must not become an override. Choosing "None" is a choice, and
+    // a date change putting the season's word back would be the panel arguing
+    // with the person filling it in.
+    const select = await openPanel();
+    await userEvent.selectOptions(select, "");
+    expect(select).toHaveValue("");
+    expect(screen.queryByText("From Turtle nesting")).toBeNull();
+
+    await userEvent.clear(screen.getByLabelText("Date"));
+    await userEvent.type(screen.getByLabelText("Date"), "2026-08-15");
+
+    await waitFor(() => expect(screen.getByLabelText("Date")).toHaveValue("2026-08-15"));
+    expect(select).toHaveValue("");
+  });
+
+  it("names no season for a word the staffer picked themselves", async () => {
+    const select = await openPanel();
+    await userEvent.selectOptions(select, "easygoing");
+    expect(select).toHaveValue("easygoing");
+    expect(screen.queryByText("From Turtle nesting")).toBeNull();
+  });
+});

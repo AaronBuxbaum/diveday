@@ -16,6 +16,7 @@ import {
   type TripRecurrenceFrequency,
   type WeekdaySet,
 } from "@/lib/recurrence";
+import { seasonLensForDay } from "@/lib/season-events";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type AppDb, type AppTransaction, queryAll } from "./client";
@@ -30,6 +31,7 @@ import {
   tripSeriesSkips,
   trips,
 } from "./schema";
+import { listSeasonEvents } from "./season-events";
 import {
   insertTripInstance,
   type NewTrip,
@@ -240,6 +242,10 @@ async function materializeWindow(
   for (const row of taken) if (row.date) spokenFor.add(row.date);
   for (const row of skipped) spokenFor.add(row.date);
 
+  // One read for the whole window rather than one per date. Only consulted for
+  // a template that carries no word of its own — see the `lensId` line below.
+  const seasons = template.trip.lensId ? [] : await listSeasonEvents(tx, series.shopId);
+
   const created = [];
   for (const occurrenceDate of proposed) {
     if (spokenFor.has(occurrenceDate)) continue;
@@ -274,7 +280,13 @@ async function materializeWindow(
         // Dropping it here meant a shop that set "Kind of day" on a repeating
         // departure lost it on every occurrence the nightly roll materialized,
         // and the public lens rail under-reported the shop's own board.
-        lensId: template.trip.lensId,
+        //
+        // Where the template says nothing, a live season may (issue #1492), and
+        // it is asked against **this occurrence's own date** rather than
+        // today's — so the same slot gets the same word whenever the roll
+        // happens to reach it, and a departure four months out is not labelled
+        // by the season the cron ran inside.
+        lensId: template.trip.lensId ?? seasonLensForDay(seasons, occurrenceDate),
         boatId: template.trip.boatId,
         drafts: template.drafts,
         scheduleDays: days,
@@ -399,7 +411,9 @@ export async function createTripSeries(db: AppDb, input: NewTripSeries) {
       // `NewTripSeries` already carries it and the board already passes it;
       // this was the one call site that dropped it, so the very first
       // occurrence of a series disagreed with what the shop had just typed.
-      lensId: input.lensId,
+      // Where the shop said nothing, the season covering the seed's own date
+      // answers — the same rule `createTrip` applies to a one-off.
+      lensId: input.lensId ?? seasonLensForDay(await listSeasonEvents(tx, input.shopId), seedDate),
       boatId: input.boatId,
       drafts,
       scheduleDays: seedDays,
