@@ -14,7 +14,10 @@ import {
   countsLine,
   DEFAULT_BUCKET,
   fetchFromBucket,
+  geometrySummaryLine,
   hostedReportUrl,
+  itemRows,
+  readPngSize,
   summarizeReport,
   verdictHeadline,
 } from "./visual-report-lib.mjs";
@@ -97,10 +100,17 @@ async function main() {
       mkdirSync(path.dirname(local), { recursive: true });
       writeFileSync(local, result.body);
       item.files[dirKind] = local;
+      // Measured from the buffer in hand, not re-read from disk: `fetchFromBucket`
+      // has already gunzipped it, so these are the raw PNG bytes.
+      item.sizes ??= {};
+      item.sizes[dirKind] = readPngSize(result.body);
       downloadCount++;
     }
   }
 
+  // Before the sections, deliberately: "76 of 101 moved" is the stale-baseline
+  // tell, and it is worth knowing before opening a single image.
+  const geometrySummary = geometrySummaryLine(items);
   const lines = [
     `# reg-suit report — ${commit}`,
     "",
@@ -111,6 +121,7 @@ async function main() {
     "",
     countsLine(summary),
     `Baseline images downloaded: ${summary.baselineCount} · Captured: ${summary.capturedCount}`,
+    ...(geometrySummary ? [geometrySummary] : []),
     "",
     `Hosted report (needs a browser, not agent-fetchable): ${hostedReportUrl(bucket, commit)}`,
     "",
@@ -119,11 +130,17 @@ async function main() {
   for (const warning of summary.warnings) lines.push(`> ${warning}`, "");
 
   for (const item of items) {
-    lines.push(`## ${item.name} (${item.kind})`);
-    for (const [dirKind, local] of Object.entries(item.files)) {
-      lines.push(`- ${dirKind}: ${path.relative(process.cwd(), local)}`);
-    }
-    lines.push("");
+    lines.push(
+      ...itemRows({
+        ...item,
+        files: Object.fromEntries(
+          Object.entries(item.files).map(([dirKind, local]) => [
+            dirKind,
+            path.relative(process.cwd(), local),
+          ]),
+        ),
+      }),
+    );
   }
 
   if (!args.all && report.passedItems.length) {

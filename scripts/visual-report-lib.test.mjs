@@ -8,6 +8,11 @@ import {
   countsLine,
   fetchFromBucket,
   formatPrComment,
+  geometryLine,
+  geometrySummaryLine,
+  itemRows,
+  PNG_SIGNATURE,
+  readPngSize,
   summarizeReport,
   verdictHeadline,
 } from "./visual-report-lib.mjs";
@@ -303,5 +308,155 @@ describe("the comment agrees with the check", () => {
       expect(body).toContain("This fails the `visual-report` check");
       expect(body).not.toContain("A visual difference never fails the build");
     }
+  });
+});
+
+/** A minimal but real PNG header: signature, then an IHDR carrying the size. */
+function pngOf(width, height) {
+  const bytes = Buffer.alloc(24);
+  PNG_SIGNATURE.copy(bytes, 0);
+  bytes.write("IHDR", 12, "ascii");
+  bytes.writeUInt32BE(width, 16);
+  bytes.writeUInt32BE(height, 20);
+  return bytes;
+}
+
+describe("readPngSize", () => {
+  it("reads the dimensions out of the IHDR chunk", () => {
+    expect(readPngSize(pngOf(1280, 1327))).toEqual({ width: 1280, height: 1327 });
+    expect(readPngSize(pngOf(390, 12_000))).toEqual({ width: 390, height: 12_000 });
+  });
+
+  /**
+   * This script reports on runs where something upstream already broke, so
+   * every malformed input has to come back `null` rather than throw and take
+   * the whole report down with it.
+   */
+  it("returns null for anything it cannot measure, and never throws", () => {
+    expect(readPngSize(undefined)).toBeNull();
+    expect(readPngSize(null)).toBeNull();
+    expect(readPngSize("not a buffer")).toBeNull();
+    expect(readPngSize(Buffer.alloc(0))).toBeNull();
+    // Truncated mid-IHDR: the signature is right, the size is not there yet.
+    expect(readPngSize(pngOf(1280, 1327).subarray(0, 20))).toBeNull();
+    // A gzip member, i.e. the un-gunzipped path having gone wrong upstream.
+    expect(readPngSize(gzipSync(Buffer.from("nope")))).toBeNull();
+    // A PNG claiming a zero dimension is not a measurement.
+    expect(readPngSize(pngOf(0, 1327))).toBeNull();
+    expect(readPngSize(pngOf(1280, 0))).toBeNull();
+  });
+});
+
+describe("geometryLine", () => {
+  /**
+   * The height delta is the whole point: the same growth as a sibling PR's
+   * report of the same surface means the baseline moved under both, a different
+   * growth means this branch did it. PR #1484 is the worked case — sixteen
+   * captures carrying the feature's own 121px block were filed as somebody
+   * else's noise, because a name list cannot tell those apart.
+   */
+  it("states the signed height delta when the capture grew or shrank", () => {
+    expect(
+      geometryLine({
+        expected: { width: 1280, height: 1327 },
+        actual: { width: 1280, height: 1569 },
+      }),
+    ).toBe("- geometry: expected 1280x1327 -> actual 1280x1569 (+242)");
+    expect(
+      geometryLine({
+        expected: { width: 1280, height: 1569 },
+        actual: { width: 1280, height: 1327 },
+      }),
+    ).toBe("- geometry: expected 1280x1569 -> actual 1280x1327 (-242)");
+  });
+
+  /** Said explicitly, because an omitted line reads as "nothing to report". */
+  it("says so when the geometry did not move at all", () => {
+    expect(
+      geometryLine({
+        expected: { width: 1280, height: 1327 },
+        actual: { width: 1280, height: 1327 },
+      }),
+    ).toBe("- geometry: 1280x1327 unchanged");
+  });
+
+  it("names a width-only change rather than printing a zero delta", () => {
+    expect(
+      geometryLine({
+        expected: { width: 1280, height: 1327 },
+        actual: { width: 1300, height: 1327 },
+      }),
+    ).toBe("- geometry: expected 1280x1327 -> actual 1300x1327 (same height)");
+  });
+
+  /** A new or deleted item by design, or a download that 404'd. */
+  it("reports one side alone without producing NaN", () => {
+    expect(geometryLine({ actual: { width: 390, height: 800 } })).toBe(
+      "- geometry: actual 390x800 (no expected image on disk)",
+    );
+    expect(geometryLine({ expected: { width: 390, height: 800 } })).toBe(
+      "- geometry: expected 390x800 (no actual image on disk)",
+    );
+    expect(geometryLine({})).toBe("- geometry: unavailable (no images on disk)");
+  });
+});
+
+describe("itemRows", () => {
+  it("keeps the heading and file rows, and adds geometry beneath them", () => {
+    expect(
+      itemRows({
+        name: "recap-light-vw-390.png",
+        kind: "changed",
+        files: { expected: "a/expected.png", actual: "a/actual.png", diff: "a/diff.png" },
+        sizes: { expected: { width: 390, height: 800 }, actual: { width: 390, height: 921 } },
+      }),
+    ).toEqual([
+      "## recap-light-vw-390.png (changed)",
+      "- expected: a/expected.png",
+      "- actual: a/actual.png",
+      "- diff: a/diff.png",
+      "- geometry: expected 390x800 -> actual 390x921 (+121)",
+      "",
+    ]);
+  });
+
+  /** A file that downloaded but could not be parsed is a different state from
+   * a file that never arrived, and the reader has to be able to tell. */
+  it("distinguishes an unreadable PNG from a missing one", () => {
+    expect(
+      itemRows({ name: "x.png", kind: "changed", files: { actual: "a/actual.png" }, sizes: {} }),
+    ).toContain("- geometry: unreadable PNG");
+    expect(itemRows({ name: "x.png", kind: "changed" })).toContain(
+      "- geometry: unavailable (no images on disk)",
+    );
+  });
+});
+
+describe("geometrySummaryLine", () => {
+  const changed = (expected, actual) => ({ kind: "changed", sizes: { expected, actual } });
+  const at = (height) => ({ width: 1280, height });
+
+  it("counts only the changed items whose height actually moved", () => {
+    expect(
+      geometrySummaryLine([
+        changed(at(1327), at(1569)),
+        changed(at(1327), at(1327)),
+        changed(at(900), at(1021)),
+        { kind: "new", sizes: { actual: at(400) } },
+      ]),
+    ).toBe("Geometry moved on 2 of 3 changed capture(s).");
+  });
+
+  /** AGENTS.md forbids a silent cap: an unmeasurable pair leaves the
+   * denominator and says so, rather than quietly shrinking it. */
+  it("names the pairs it could not measure instead of dropping them", () => {
+    expect(geometrySummaryLine([changed(at(1327), at(1569)), { kind: "changed", sizes: {} }])).toBe(
+      "Geometry moved on 1 of 1 changed capture(s). · 1 could not be measured",
+    );
+  });
+
+  it("returns null when nothing changed, so the caller omits the line", () => {
+    expect(geometrySummaryLine([])).toBeNull();
+    expect(geometrySummaryLine([{ kind: "passed", sizes: {} }])).toBeNull();
   });
 });

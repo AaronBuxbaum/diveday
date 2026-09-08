@@ -82,7 +82,10 @@ published a report for that commit.
 
 `REPORT.md` leads with the same verdict headline as the PR comment, above the counts, and prints how
 many baseline images were downloaded — so a run that compared nothing cannot read as a clean one
-here either.
+here either. Beside those counts it says how many changed captures **moved geometry**, and each
+item's section states its expected and actual dimensions and the signed height delta. Read those
+before opening a single image: `unchanged` means the pixels moved inside a stable box, and a height
+delta means the surface itself got taller or shorter.
 
 ## Triage loop
 
@@ -127,6 +130,20 @@ Read the *shape* of a no-code-change diff before assuming a baseline moved:
 antialiasing". It deliberately does **not** set `matchingThreshold` — the comparison runs at
 reg-cli's default of `0`, meaning any per-pixel difference counts. Loosening that is not triage: if
 a diff is noise, the renderer is the thing to fix.
+
+### A capture can have two causes at once
+
+The trap is assuming one. A capture changes because the **baseline is stale** — somebody else's
+merged work moved the surface and your branch inherited it — *and* because **your branch moved it
+too**. Both at once is the ordinary case on a stack, and a name shared with a sibling pull request's
+report proves only the first. It never explains the capture, and treating it as if it did is how
+work gets filed as somebody else's noise: on PR #1484 six changed captures were reported as the
+PR's own when twenty-two were, and sixteen of them carried the feature's own 121px block.
+
+The geometry line is what separates the two. Identical growth across both reports points at the
+shared baseline; growth that differs — or a delta where the sibling reads `unchanged` — is this
+branch's own and yours to explain. `unchanged` on both sides means neither moved the box, so the
+difference is pixel content: a colour, a glyph, a photo that decoded differently, never a reflow.
 
 ## Handoff
 
