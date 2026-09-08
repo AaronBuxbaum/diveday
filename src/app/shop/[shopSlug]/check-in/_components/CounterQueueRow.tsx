@@ -249,6 +249,25 @@ export function CounterQueueRow({
     },
     t,
   );
+  // A diver at the counter with a signed paper release in hand: record it here
+  // rather than sending them off to the trip's guest list. Offered only when
+  // the waiver is the one fix this row is showing.
+  const paperControl = fix?.sendsWaiver ? (
+    <PaperWaiverControl
+      action={waiverAction}
+      bookingId={row.bookingId}
+      copy={paperWaiverCopy(t)}
+      // A minor's paper release names its co-signer too (ADR
+      // 20260907-guardian-co-signature).
+      requiresGuardian={guardianSignatureRequired(row.dateOfBirth, today)}
+      className="mt-2"
+      // A refused recording lands back here with its notice below; re-open the
+      // form so the staffer can correct what it names rather than hunt for the
+      // trigger again. The diver record does exactly this (`WaiverGroup.tsx`),
+      // and the counter is where the diver is standing there waiting.
+      defaultOpen={Boolean(refusedWaiver)}
+    />
+  ) : null;
   return (
     <LedgerRow as="article" size="lg" className="px-4 py-3 sm:px-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -299,33 +318,29 @@ export function CounterQueueRow({
         collapseReasons={counterBlockerDisclosure(t, row.readiness.blockers) ?? undefined}
         t={t}
         extra={
-          // A diver at the counter with a signed paper release in hand: record
-          // it here rather than sending them off to the trip's guest list.
-          fix?.sendsWaiver ? (
-            <>
-              <PaperWaiverControl
-                action={waiverAction}
-                bookingId={row.bookingId}
-                copy={paperWaiverCopy(t)}
-                // A minor's paper release names its co-signer too (ADR
-                // 20260907-guardian-co-signature).
-                requiresGuardian={guardianSignatureRequired(row.dateOfBirth, today)}
-                className="mt-2"
-                // A refused recording lands back here with its notice below;
-                // re-open the form so the staffer can correct what it names
-                // rather than hunt for the trigger again. The diver record
-                // does exactly this (`WaiverGroup.tsx`), and the counter is
-                // the surface where the diver is actually standing there
-                // waiting (issue 1574).
-                defaultOpen={Boolean(refusedWaiver)}
-              />
-              {refusedWaiver ? (
-                <FormStatus tone={refusedWaiver.tone} className="mt-2">
-                  {refusedWaiver.text}
-                </FormStatus>
-              ) : null}
-            </>
-          ) : null
+          // **The message is not nested inside the control**, and that is the
+          // whole correctness of it. `blockerFixFor` offers one fix, so a diver
+          // held back by four things at once may not be offered the paper
+          // control at all — and the first shape of this put the refusal inside
+          // that branch, so the page banner stepped aside for a row that then
+          // said nothing. Measured against the dev server, not reasoned about:
+          // `?notice=…` alone rendered the banner, `?notice=…&bid=…` rendered
+          // neither (issue 1574).
+          //
+          // `BlockedDiverRow` renders `extra` unconditionally in both layouts,
+          // so a refusal routed to a rendered row always has somewhere to land.
+          refusedWaiver ? (
+            <div className="min-w-0">
+              {paperControl}
+              <FormStatus tone={refusedWaiver.tone} className="mt-2">
+                {refusedWaiver.text}
+              </FormStatus>
+            </div>
+          ) : (
+            // Unwrapped when nothing was refused, so every ordinary row keeps
+            // the exact flex child it had before this change.
+            paperControl
+          )
         }
       />
     </LedgerRow>

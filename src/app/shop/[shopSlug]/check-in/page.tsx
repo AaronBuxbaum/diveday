@@ -26,7 +26,12 @@ import { upcomingScheduleStats } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
-import { counterIsClear, counterTally, firstVisitMarksAnException } from "@/lib/check-in";
+import {
+  counterIsClear,
+  counterTally,
+  firstVisitMarksAnException,
+  isSettledAtCounter,
+} from "@/lib/check-in";
 import { nowDate } from "@/lib/clock";
 import { formatDayParts, formatTime } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
@@ -243,10 +248,6 @@ export default async function CheckInPage({
           "waiver",
         )
       : undefined;
-  const waiverNoticeOnRow =
-    waiverNotice && queue.some((row) => row.bookingId === waiverNotice.bookingId)
-      ? waiverNotice
-      : undefined;
   const bookedPersonIds = new Set(queue.map((row) => row.personId));
   const otherMatchingDivers = query
     ? await db
@@ -316,6 +317,30 @@ export default async function CheckInPage({
   // page keys off this one distinction.
   const focus = query ? null : selectFocusedDeparture(departures, trip, now);
   const focusedTripId = focus?.tripId ?? null;
+  // **Suppress the banner only for a row that is actually on screen**, which is
+  // not the same question as "is this booking in the queue". A search renders
+  // every departure; focus mode renders exactly one, and the refused booking
+  // can easily be on another — the staffer switched boats on the way back.
+  // Asking the wrong one costs the message entirely: the banner steps aside for
+  // a row that never renders, and the refusal is said nowhere at all. Measured
+  // against the dev server before this was written that way round.
+  const renderedRows = query ? queue : (focus?.rows ?? []);
+  const waiverNoticeOnRow =
+    waiverNotice &&
+    renderedRows.some(
+      (row) =>
+        row.bookingId === waiverNotice.bookingId &&
+        // **And a row that can actually show it.** A settled seat renders as a
+        // compact receipt with no blocker block and no `extra` slot at all
+        // (`CounterQueueRow`'s early return), so routing a refusal there and
+        // standing the banner down says it nowhere. `isSettledAtCounter` is the
+        // same predicate that early return uses and that `CounterQueue` splits
+        // its two groups on, shared rather than restated, so the page and the
+        // row cannot drift into disagreeing about where a message can land.
+        !isSettledAtCounter(row),
+    )
+      ? waiverNotice
+      : undefined;
   const checkIn = checkInAction.bind(null, shopSlug, focusedTripId);
   const undo = undoCheckInAction.bind(null, shopSlug, focusedTripId);
   const recordPaperWaiver = markWaiverInPersonFromCheckIn.bind(null, shopSlug, focusedTripId);

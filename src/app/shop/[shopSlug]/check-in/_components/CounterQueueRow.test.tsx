@@ -255,4 +255,28 @@ describe("a refused paper waiver", () => {
 
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
+
+  /**
+   * **The coupling the page depends on, pinned here.** A settled seat returns
+   * early as a compact receipt with no blocker block and no `extra` slot, so it
+   * can show no notice at all — which is why `page.tsx` stands the banner down
+   * only for a row that is *not* `isSettledAtCounter`.
+   *
+   * Found by looking, not by reasoning: pointed at a checked-in, cleared
+   * booking the first version suppressed the banner and rendered nothing on the
+   * row, so the refusal was said nowhere on the page. If someone later gives
+   * the settled row an `extra`, this test goes green-for-the-wrong-reason and
+   * the page's guard becomes needlessly strict — read it before changing that
+   * early return.
+   */
+  it("says nothing on a settled seat, which has nowhere to say it", () => {
+    renderRow(
+      { bookingStatus: "checked_in", readiness: { status: "ready", blockers: [] } },
+      false,
+      true,
+      refusal("booking-1"),
+    );
+
+    expect(screen.queryByText("That paper waiver could not be recorded.")).not.toBeInTheDocument();
+  });
 });
