@@ -7,6 +7,31 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Fifteen personas walk the product every Monday (delivered 2026-09-07)
+
+N-61 from the 2026-09-07 improvement-ideas sheet (issue #1494). `docs/product/personas.md` was a
+standing frame nothing re-read on a schedule, and its own archived predecessor was a human pass
+never repeated. Now `pnpm persona:bots` opens every surface that document names, as the persona who
+lives on it -- anonymously for the diver-facing pages, signed in as the role the persona holds for
+the staff ones, and in Spanish for Ingrid, whose findings are invisible in English -- against the
+demo shop on the e2e fleet's own server and frozen clock, under a config of its own
+(`scripts/persona-bots/`). Every probe is deterministic or it is not a probe: an axe scan of the
+same WCAG rules `e2e/a11y.spec.ts` runs, a skip link, a message key that reached the screen instead
+of a sentence, a page that did not render, a console error the app itself raised, and a public page
+that does not name its shop. The persona doc's softer lines -- is the refusal's reason *true*, is
+the jargon explained -- stay a human's reading, because a bot guessing at those files opinions.
+
+**The volume policy is in code, not in intention**, because the inbox on the other end is one
+person: a finding *class* is one issue however many surfaces it fires on, a class with an open issue
+gets a comment rather than a second issue, a class whose issue was closed is never filed again,
+**three** new issues per run is the ceiling, and at **forty** open `needs-triage` issues the bot
+stops filing entirely and says so. Nothing about it is a gate -- it exits 0 on every failure it can
+have, printing `DID NOT RUN` or `DID NOT FILE` and the reason, because a red X on a scheduled job
+trains everyone to ignore it. It runs Mondays at 07:00 UTC in
+`.github/workflows/persona-bots.yml`, after the nightly build and the day simulation, so a red build
+is already above a persona finding in the inbox. ADR
+[20260907-persona-bots-file-under-a-ceiling](../architecture/decisions/20260907-persona-bots-file-under-a-ceiling.md).
+
 ## Xero beside QuickBooks (delivered 2026-09-07)
 
 N-52 from the 2026-09-07 improvement-ideas sheet (issue #1490). A shop on Xero connects it from
