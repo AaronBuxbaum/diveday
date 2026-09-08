@@ -13,7 +13,7 @@ with the whole tree counted: DiveDay has a good design system and still feels in
 five design passes landed in twelve days (Clearwater, Reef, Reef all the way down, Before you ask,
 Nothing from nowhere) and each added a vocabulary without deleting the one before, so the six things
 no checker can see — a page's width, what its eyebrow says, how a group carries its count, what a row
-is, how a thing is added, how a state is drawn — each have between five and twenty-seven spellings,
+is, how a thing is added, how a state is drawn — each have between three and nineteen spellings (and the disclosure beside them twenty-seven),
 and the voice, with one rule and thirty-six bundle authors, has the same shape of problem. An
 **audit sheet** that draws the evidence: one diver's row in eight anatomies, "add a thing" in six
 spellings, one state in five drawings, the eyebrow saying four kinds of thing, the clipboard failing
@@ -47,8 +47,9 @@ August 27, 2026**: 7:00–10:30 AM Two-Tank Reef — Molasses & French, 10 of 12
 certification awaiting verification, Priya Sharma's waiver not sent, three divers without rental
 sizes, Nadia Petrov without an emergency contact; 1:00–5:00 PM Wreck Trip — Spiegel Grove, full,
 no crew assigned, Tomás Ferreira without a certification for a deep wreck; 7:30–11:00 PM Night Dive
-— City of Washington, 3 of 8, no last-minute deal sent. Gear: 37 units, every one on the wall, BCD #2
-reserved for Priya Sharma from Sep 13, Reg #4 needing service, AL80-03 due a visual inspection.
+— City of Washington, 3 of 8, no last-minute deal sent. Gear: 37 units, 36 on the wall and BCD #5 out
+with Tom Okafor and due back today, BCD #2 reserved for Priya Sharma from Sep 13, Reg #4 needing
+service, AL80-03 due a visual inspection.
 
 ## What the directions share, and where they differ
 
