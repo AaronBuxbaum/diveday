@@ -502,6 +502,45 @@ diffs are explained. All four remaining slices may start.
   staffer whose role reaches the manifest, the platform's install prompt or its own menu item with the
   share glyph, a device-kept dismissal, a test that it renders nothing when installed or on a desktop.
 
+### 20. One hand (design complete; H-71 pending)
+
+The 2026-09-08 loop over why the app feels like four products, argued on
+[the canvas](../../design/canvases/20260908-one-hand/README.md) and proposed in ADR
+[20260908-one-hand](../../architecture/decisions/20260908-one-hand.md). Read from the running app with
+the whole tree counted, the design system is good and mostly adopted, and the seams are in the six
+things no checker sees — a page's width, what the eyebrow says, how a group carries its count, what a
+row is, how a thing is added, how a state is drawn — each with between five and twenty-seven spellings
+after five design passes in twelve days that added vocabularies without deleting the last; the voice
+has the same shape of problem across 7,390 strings. The ADR states a floor (six jobs, one spelling
+each, held by guards; a voice sheet) that every direction shares, and draws four directions on the same
+two surfaces: A finishes Reef by subtraction, B is a paper logbook, C a dive computer, D the voice as
+the system. The pick is the owner's (H-71). Each slice runs the `design-implementation` skill: the
+component names the ADR, a test pins the rule, the canvas README's slice table moves, and the visual
+diffs are explained. 20a–20e may start on the ADR alone.
+
+- **20a** — one width, one header: the `<main>` width guard over `src/app/shop/**`; `ShopPageHeader`
+  takes the destination group from `src/lib/staff-destinations.ts` instead of an eyebrow string; the
+  title as the tab's word (the title half waits on H-71 b).
+- **20b** — one row: `LedgerRow` on the five densest hand-rolled lists (`WaitlistSection`,
+  `CrewSection`, `PersonBuddyList`, `CrewRollCall`, `TripInvitationSection`), `person/rows.tsx`
+  rendering it, the group's count as right-aligned meta, the add row as the last row of every list,
+  and a guard on `divide-y` outside `src/components/ui/`.
+- **20c** — one state: `Badge` loses its neutral tone, Gear's all-clear becomes the check-and-sentence
+  line, the counter's meter turns lagoon and `ProgressBar` is the one bar, one row joins Reef's coral
+  table (never a wash behind reading text, never a meter), and the two bugs — `bg-card` on the
+  dive-sites empty state, the rental-fit glow's hard-coded rgba.
+- **20d** — one link, one skeleton, one disclosure: `button.test.ts` refuses the raw link string and
+  the 104 sites move to the link variant; `src/components/ui/skeleton.tsx` and the twenty
+  shell-less `loading.tsx`; the 27-spelling `<summary>` sweep onto `ui/disclosure.tsx`;
+  `ActionResultNotice` folds into `FormStatus`.
+- **20e** — the voice sheet written into brand.md, `check:voice` grown to its mechanical half, and the
+  bundle sweep in both locales: one actor, one spelling, one separator, one word for fine and one for
+  not, one sentence per event, descriptions under 120 characters or deleted, no arrows, exclamation
+  marks or emoji.
+- **20f** — the earned moment inside `EntryDone`, once, for the twelve shared terminal outcomes.
+  Waits on H-71 c.
+- **20g** — the surface: B, C or D as drawn, sliced when picked. Waits on H-71 a (and d, for B).
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)

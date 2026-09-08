@@ -1,0 +1,225 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;900&family=Geist+Mono:wght@500&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #0c2a35; background: #fbf7ef; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; } a:hover { color: #0a4d61; text-decoration: underline; }
+    h2 { margin: 0; font-size: 18px; font-weight: 600; }
+    .sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid #e6dcc8; }
+    .finding { font-size: 15px; line-height: 23px; color: #0c2a35; margin: 0; max-width: 980px; }
+    .finding b { font-weight: 600; }
+    .cap { font-size: 12px; line-height: 16px; color: #8a8065; font-family: "Geist Mono", ui-monospace, Menlo, monospace; }
+    .num { font-size: 40px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .stat { display: flex; flex-direction: column; gap: 6px; padding: 16px 0; border-top: 2px solid #0c2a35; }
+    .stat .l { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d; }
+    .stat .n { font-size: 14px; line-height: 20px; color: #54676d; }
+    .specimen { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: #fffdf8; border: 1px solid #e6dcc8; border-radius: 10px; min-width: 0; }
+    .row { display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid #e6dcc8; border-bottom: 1px solid #e6dcc8; font-size: 15px; }
+    .muted { color: #54676d; }
+    .pill { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 500; line-height: 20px; }
+    .chev { color: #54676d; font-size: 16px; }
+    .link { color: #0e7490; font-weight: 500; font-size: 14px; white-space: nowrap; }
+    .btn { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #e6dcc8; background: #fffdf8; font-size: 14px; font-weight: 500; }
+    .mono { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-weight: 500; }
+    .rule { height: 1px; background: #e6dcc8; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; box-sizing: border-box; background: #fbf7ef; padding-bottom: 48px;">
+
+  <div style="padding: 40px 48px 28px 48px; background: #fffdf8; border-bottom: 1px solid #e6dcc8; display: flex; flex-direction: column; gap: 12px;">
+    <span style="font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490;">The audit · read from the running app, 2026-09-08</span>
+    <h1 style="margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">The same job, drawn N ways</h1>
+    <p class="finding" style="font-size: 17px; line-height: 27px;">Every specimen below is lifted from a screenshot of the tree at HEAD or from a count over it. None of it is a matter of taste: each section is one job the interface does, and the number of ways the interface currently does it. The counts are what a guard could hold at one; the drawings are why a shop owner feels the seams without being able to name them.</p>
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 24px; margin-top: 8px;">
+      <div class="stat"><span class="l">Page widths</span><span class="num">5</span><span class="n">2xl · 3xl · 4xl · 5xl · 6xl across 45 staff pages</span></div>
+      <div class="stat"><span class="l">Title spellings</span><span class="num">18</span><span class="n">distinct h1 class strings in src/app</span></div>
+      <div class="stat"><span class="l">Eyebrow spellings</span><span class="num">18</span><span class="n">3 "canonical" constants + 15 one-offs · 4 sizes · 5 trackings</span></div>
+      <div class="stat"><span class="l">Row grammars</span><span class="num">5</span><span class="n">plus 31 files that hand-roll divide-y lists</span></div>
+      <div class="stat"><span class="l">Disclosure spellings</span><span class="num">27</span><span class="n">for one &lt;summary&gt;; 5 leak the native triangle</span></div>
+      <div class="stat"><span class="l">Skeleton spellings</span><span class="num">305</span><span class="n">472 bars in 87 files, no primitive at all</span></div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 24px;">
+      <div class="stat" style="border-top-width: 1px; border-top-color: #e6dcc8;"><span class="l">Spacing values</span><span class="num">147</span><span class="n">5,021 margin/gap/padding utilities; the documented section rhythm on 9 of 47 pages</span></div>
+      <div class="stat" style="border-top-width: 1px; border-top-color: #e6dcc8;"><span class="l">Link spellings</span><span class="num">57</span><span class="n">131 of 270 links hand-classed; 104 without the 44px floor</span></div>
+      <div class="stat" style="border-top-width: 1px; border-top-color: #e6dcc8;"><span class="l">h2 spellings</span><span class="num">44</span><span class="n">a card's heading is 24px, a bare one 18px, 3:1 against the written rule</span></div>
+      <div class="stat" style="border-top-width: 1px; border-top-color: #e6dcc8;"><span class="l">Bare "rounded"</span><span class="num">396</span><span class="n">4px corners, off the 10/18/28 ladder, mostly skeletons</span></div>
+      <div class="stat" style="border-top-width: 1px; border-top-color: #e6dcc8;"><span class="l">Notice shapes</span><span class="num">5</span><span class="n">7 components; 5 dialog implementations beside them</span></div>
+      <div class="stat" style="border-top-width: 1px; border-top-color: #e6dcc8;"><span class="l">Colour drift</span><span class="num">0</span><span class="n">the one axis a guard holds; 2 escapes, both bugs</span></div>
+    </div>
+  </div>
+
+  <!-- 1 widths -->
+  <div class="sec">
+    <h2>1 · Five page widths, one app</h2>
+    <p class="finding">Walk from Check-in to Divers to Board and the content column moves: <b>848 → 976 → 1104px</b>. Reading pages sit at 672 and 768. A shop owner does not count pixels; they feel the page shift under them on every tab.</p>
+    <div style="position: relative; height: 96px;">
+      <div style="position: absolute; left: 0; top: 0; width: 1084px; height: 96px; border: 1px dashed #8a8065; border-radius: 6px;"><span class="cap" style="position: absolute; right: 8px; top: 6px;">6xl · Board, Staffing</span></div>
+      <div style="position: absolute; left: 62px; top: 12px; width: 960px; height: 72px; border: 1px solid #0e7490; border-radius: 6px; background: rgba(14,116,144,0.05);"><span class="cap" style="position: absolute; right: 8px; top: 6px; color: #0e7490;">5xl · Today, Orders, Divers, Gear, Reports</span></div>
+      <div style="position: absolute; left: 126px; top: 24px; width: 832px; height: 48px; border: 1px solid #b45309; border-radius: 6px; background: rgba(180,83,9,0.06);"><span class="cap" style="position: absolute; right: 8px; top: 6px; color: #b45309;">4xl · Check-in, Inbox</span></div>
+      <div style="position: absolute; left: 190px; top: 36px; width: 704px; height: 24px; border: 1px solid #8a8065; border-radius: 6px;"><span class="cap" style="position: absolute; right: 8px; top: 4px;">3xl · Courses, forms · 2xl · 6 more</span></div>
+    </div>
+  </div>
+
+  <!-- 2 eyebrows and titles -->
+  <div class="sec">
+    <h2>2 · The eyebrow says four different kinds of thing, at four sizes</h2>
+    <p class="finding">On the staff pages captured today the eyebrow is a <b>date</b> (Today), an <b>area</b> (Front desk, Run the shop, Operations), or <b>the page's own name repeated</b> (Settings, Check-in, Reports, Inbox, Reviews). Cross to the trip page and it is 11px; cross to /pricing and the same slot is 14px. The three constants that each claim to be canonical are drawn at true size on the right.</p>
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 32px;">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+        <div class="specimen"><span style="font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490;">Today · Tue, Sep 8</span><span class="cap">a date</span></div>
+        <div class="specimen"><span style="font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490;">Front desk</span><span class="cap">an area — Orders and Divers</span></div>
+        <div class="specimen"><span style="font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490;">Run the shop</span><span class="cap">an area — Gear</span></div>
+        <div class="specimen"><span style="font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490;">Settings</span><span class="cap">the title, again — "Shop settings"</span></div>
+        <div class="specimen"><span style="font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490;">Reports</span><span class="cap">the tab name — title is "How's your month"</span></div>
+        <div class="specimen"><span style="font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490;">Inbox</span><span class="cap">the tab name — title is "What divers wrote"</span></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="specimen"><span style="font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490;">Eyebrow · 11 / 700 / 0.16em</span><span class="cap">EYEBROW_CLASS · 8 call sites</span></div>
+        <div class="specimen"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d;">Group label · 12 / 600 / 0.14em</span><span class="cap">groupLabelClass · 31 files, 5 inks</span></div>
+        <div class="specimen"><span style="font-size: 14px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #0e7490;">Marketing · 14 / 600 / widest</span><span class="cap">hand-rolled · 19 sites in 8 files</span></div>
+      </div>
+    </div>
+    <p class="finding" style="margin-top: 6px;">The title beneath is a <b>noun</b> on five pages (Gear, Orders, Divers, Board, Staffing), a <b>noun phrase</b> on two (Shop settings, Counter check-in), a <b>sentence</b> on three (How's your month, What divers said, What divers wrote) and a <b>greeting</b> on one. The nav tab says "Check-in"; the page says "Counter check-in". The tab says "Reports"; the page asks a question.</p>
+  </div>
+
+  <!-- 3 group label counts -->
+  <div class="sec">
+    <h2>3 · A group's count is attached three ways</h2>
+    <p class="finding">The same small-caps line carries its number with an <b>em dash</b> on Reviews and Gear, a <b>middle dot</b> on Inbox, and as <b>right-aligned meta</b> on Orders and Reports — three pages apart, one component.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+      <div class="specimen"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d;">Waiting on you — 1</span><span class="cap">Reviews · also "On the wall — 37", "Published — 83"</span></div>
+      <div class="specimen"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d;">Waiting on you · 3</span><span class="cap">Inbox, the same words with a different separator</span></div>
+      <div class="specimen"><span style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d;"><span>Mon, Sep 7</span><span style="letter-spacing: 0; text-transform: none; font-weight: 500;">9 orders · $1,168.18</span></span><span class="cap">Orders, Reports: meta on the right</span></div>
+    </div>
+  </div>
+
+  <!-- 4 rows -->
+  <div class="sec">
+    <h2>4 · One diver, eight row anatomies</h2>
+    <p class="finding">Priya Sharma appears on Today, Check-in, Divers, Orders, Gear, Inbox, Reviews and the manifest. Each page lays her out differently: where her name sits, whether there is a kind word, what is on the right, and whether the row is a door. Below, the eight rows as they render today, at the same width.</p>
+    <div style="display: flex; flex-direction: column; gap: 0;">
+      <div class="row" style="border-bottom: 0;"><span style="width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid #b45309; box-sizing: border-box;"></span><span style="flex: 0 0 92px; font-size: 14px; font-weight: 500; color: #b45309;">Waiver</span><span style="flex: 1;"><b>Priya Sharma</b> <span class="muted">· Waiver has not been sent.</span></span><span class="btn">Send waiver</span><span class="cap" style="flex: 0 0 120px; text-align: right;">Today</span></div>
+      <div class="row" style="border-bottom: 0;"><span style="flex: 1; font-weight: 600; color: #0e7490;">Priya Sharma</span><span class="pill" style="background: #f8e8e6; color: #b91c1c;">⊗ Blocked</span><span class="cap" style="flex: 0 0 120px; text-align: right;">Check-in</span></div>
+      <div class="row" style="border-bottom: 0;"><span style="flex: 1; font-weight: 600;">Priya Sharma</span><span class="pill" style="background: #f8e8e6; color: #b91c1c;">⊗ Blocked — paperwork</span><span class="muted" style="font-size: 14px;">booked Sat, Sep 12 · 6:30 AM</span><span class="chev">›</span><span class="cap" style="flex: 0 0 120px; text-align: right;">Divers</span></div>
+      <div class="row" style="border-bottom: 0;"><span style="flex: 0 0 220px; font-weight: 600;">Priya Sharma</span><span style="flex: 1;" class="muted">Two-Tank Reef — Molasses &amp; French</span><span class="pill" style="background: #e6f3f5; color: #0e7490;">Open</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">$139.75</span><span class="chev">›</span><span class="cap" style="flex: 0 0 120px; text-align: right;">Orders</span></div>
+      <div class="row" style="border-bottom: 0;"><span class="mono" style="flex: 0 0 92px; font-size: 14px;">BCD #2</span><span style="flex: 1;" class="muted">Cressi Start · S &nbsp; Reserved for Priya Sharma · from Sep 13, 2026</span><span class="chev">›</span><span class="cap" style="flex: 0 0 120px; text-align: right;">Gear</span></div>
+      <div class="row" style="border-bottom: 0;"><span style="flex: 0 0 92px; font-size: 14px;" class="muted">Email</span><span style="flex: 0 0 180px; font-weight: 600;">Priya Sharma</span><span style="flex: 1;"><span style="font-weight: 500;">Re: Your Saturday departure</span><br><span class="muted" style="font-size: 14px;">Hi! Could I switch to the afternoon boat…</span></span><span class="muted" style="font-size: 14px;">Sep 8, 3:30 PM EDT</span><span class="chev">›</span><span class="cap" style="flex: 0 0 120px; text-align: right;">Inbox</span></div>
+      <div class="row" style="border-bottom: 0; align-items: flex-start; padding: 10px 0;"><span style="flex: 1;"><span style="color: #b45309;">★★★★★</span><br>A warm, patient crew and a brilliant final drift over the reef.<br><span class="link" style="font-size: 13px;">Priya Sharma · Reef Refresh — Christ of the Abyss</span> <span class="muted" style="font-size: 13px;">· Sun, Aug 23</span></span><span class="link" style="padding-top: 22px;">Hide</span><span class="btn" style="margin-top: 12px;">Publish</span><span class="cap" style="flex: 0 0 120px; text-align: right; padding-top: 24px;">Reviews</span></div>
+      <div class="row" style="align-items: flex-start; padding: 10px 0;"><span style="flex: 1;"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #54676d;">Your shop</span><br><span style="font-weight: 500;">Public contact details</span></span><span class="muted" style="font-size: 14px; padding-top: 22px;">hello@demo.invalid · +1 305 555 0142</span><span class="chev" style="padding-top: 22px;">⌄</span><span class="cap" style="flex: 0 0 120px; text-align: right; padding-top: 24px;">Settings</span></div>
+    </div>
+    <p class="finding" style="margin-top: 6px;">Counted over the tree: <b>LedgerRow</b> in 30 files, <b>Table</b> in 6, the person-record <b>FILE_ROW</b> in 4, and <b>31 files</b> that hand-roll a <span class="mono">divide-y</span> list of their own — three of them rendering the same diver on the same trip in three paddings (WaitlistSection, CrewSection, PersonBuddyList).</p>
+  </div>
+
+  <!-- 5 add -->
+  <div class="sec">
+    <h2>5 · "Add a thing" has six spellings</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+      <div class="specimen"><span class="btn" style="align-self: flex-start;">Add gear</span><span class="cap">Gear · secondary button in the header</span></div>
+      <div class="specimen"><span class="btn" style="align-self: flex-start; background: #0e7490; color: #fff; border-color: #0e7490;">Add diver</span><span class="cap">Divers · primary button beside the search</span></div>
+      <div class="specimen"><div class="row" style="border: 0; min-height: 40px;"><span class="link" style="font-size: 16px;">+ Add a walk-in</span><span style="flex: 1;"></span><span class="chev">›</span></div><span class="cap">Check-in · a row with a chevron</span></div>
+      <div class="specimen"><div style="border: 1px solid #e6dcc8; border-radius: 18px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center;"><span><b>Add a unit</b><br><span class="muted" style="font-size: 13px;">One row per physical thing on the wall, tagged the way you'd say it out loud.</span></span><span class="chev">›</span></div><span class="cap">Gear · a card with a caption, at the foot of the same page as "Add gear"</span></div>
+      <div class="specimen"><span class="link" style="font-size: 17px;">Add a shift</span><span class="cap">Staffing · a bare 17px link</span></div>
+      <div class="specimen"><span class="link" style="font-size: 14px;">+ Add</span><span class="cap">Board · per column, 14px</span></div>
+    </div>
+  </div>
+
+  <!-- 6 status -->
+  <div class="sec">
+    <h2>6 · One state, five drawings; and good news wearing the alarm's colour</h2>
+    <p class="finding">"Waiver not signed" is a bold red word on the diver record, a pill plus a mark on the roster, a pill plus a left rule on the manifest, a mark plus a kind word on Today, and a pill plus a check on the counter. Meanwhile Gear's <b>all-clear</b> renders in coral's wash — a pink box with dark text, which is the shape of an error — while Today's all-clear is a green check and a sentence, and Check-in's progress bar is <b>coral</b>, which the palette says is never a status.</p>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;">
+      <div class="specimen"><span style="font-weight: 700; color: #b91c1c;">Not signed</span><span class="cap">diver record · word only</span></div>
+      <div class="specimen"><span class="pill" style="background: #f8e8e6; color: #b91c1c; align-self: flex-start;">⊗ Waiver not signed</span><span class="cap">roster · pill + mark</span></div>
+      <div class="specimen"><div style="border-left: 4px solid #b91c1c; background: #f8e8e6; padding: 6px 10px; border-radius: 0 6px 6px 0;">Priya Sharma <span class="pill" style="background: #fff; color: #b91c1c;">Waiver</span></div><span class="cap">manifest · rule + tint + pill</span></div>
+      <div class="specimen"><span><span style="display: inline-block; width: 16px; height: 16px; border-radius: 999px; border: 1.5px solid #b45309; vertical-align: -3px; box-sizing: border-box;"></span> <span style="color: #b45309; font-size: 14px; font-weight: 500;">Waiver</span> Priya Sharma</span><span class="cap">Today · mark + kind word</span></div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 4px;">
+      <div class="specimen"><div style="background: #ffeee9; border: 1px solid rgba(255,111,97,0.4); border-radius: 10px; padding: 8px 12px; font-size: 14px; font-weight: 500;">All home. Every unit is back on the wall.</div><span class="cap">Gear · the earned moment, in a box that reads as a warning</span></div>
+      <div class="specimen"><span><span style="color: #15803d;">✓</span> <b>All home</b> <span class="muted" style="font-size: 14px;">8 of 8 back by 8:30 AM</span></span><span class="cap">Today · the same fact, inline</span></div>
+      <div class="specimen"><div><span style="font-size: 28px; font-weight: 700; color: #a83a2c;">0</span> <span class="muted">of 9 here</span></div><div style="height: 4px; background: #f3ecdd; border-radius: 2px;"><div style="width: 12%; height: 4px; background: #d97b6c; border-radius: 2px;"></div></div><span class="cap">Check-in · a coral count and a coral meter, for a number that is not a moment</span></div>
+    </div>
+    <p class="finding" style="margin-top: 6px;">Pills in the wild today: <span class="pill" style="background: #f8e8e6; color: #b91c1c;">⊗ Blocked — certification</span> <span class="pill" style="background: #f3ecdd; color: #54676d;">No emergency contact</span> <span class="pill" style="background: #e6f3f5; color: #0e7490;">Open</span> <span class="pill" style="background: #e6f3f5; color: #0e7490;">Boarding · 6:23 PM</span> <span class="pill" style="background: #f8eee2; color: #b45309;">△ Not connected</span> <span class="pill" style="background: #f3ecdd; color: #54676d;">Unverified import</span> <span class="pill" style="background: #e6f3f5; color: #0e7490;">Standout</span> — plus "Needs service" as bare amber text and "Under target" as bare grey text. <b>84 Badge instances plus 13 hand-rolled translucent pills</b>, the form badge.tsx itself documents as failing contrast.</p>
+  </div>
+
+  <!-- 7 meters and figures -->
+  <div class="sec">
+    <h2>7 · Four progress meters, five figure treatments</h2>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;">
+      <div class="specimen"><div style="width: 56px; height: 56px; border-radius: 999px; background: linear-gradient(to top, #7fd0d6 0 75%, #f3ecdd 75%); display: flex; flex-direction: column; align-items: center; justify-content: center;"><span style="font-size: 20px; font-weight: 700; line-height: 1;">9</span><span style="font-size: 10px; color: #54676d;">of 12</span></div><span class="cap">Today · the dial</span></div>
+      <div class="specimen"><div style="height: 4px; background: #f3ecdd; border-radius: 2px;"><div style="width: 30%; height: 4px; background: #d97b6c;"></div></div><span class="cap">Check-in · a coral bar</span></div>
+      <div class="specimen"><span style="font-size: 13px; color: #54676d;">8 of 12 seats <span style="display: inline-block; width: 60px; height: 3px; background: #54676d; vertical-align: middle;"></span><span style="display: inline-block; width: 30px; height: 3px; background: #f3ecdd; vertical-align: middle;"></span></span><span class="cap">Reports · a grey mini-meter, amber when short</span></div>
+      <div class="specimen"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d;">Fill</span><span style="font-size: 32px; font-weight: 600; letter-spacing: -0.02em;">53%</span><span class="cap">Reports · a stat tile with a percentage</span></div>
+    </div>
+    <p class="finding" style="margin-top: 6px;">Reports alone draws a number five ways on one screen: the five stat tiles, the "vs $0 in September 2025" comparison lines (a comparison to zero is a sentence that earns nothing), the "so far" superscript, the mini-meters, and the pager. The counter's "0 of 9 here" is 40px coral; Today's "9 of 12" is 24px ink in a dial; Reports' "121" is 32px ink in a tile.</p>
+  </div>
+
+  <!-- 8 actions -->
+  <div class="sec">
+    <h2>8 · The thing on the right of a row is one of seven things</h2>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+      <span class="specimen" style="flex-direction: row; align-items: center; gap: 8px;"><span class="link">Open crew</span><span class="chev">›</span><span class="cap">Today</span></span>
+      <span class="specimen" style="flex-direction: row; align-items: center; gap: 8px;"><span class="btn">Send waiver</span><span class="cap">Today, same list</span></span>
+      <span class="specimen" style="flex-direction: row; align-items: center; gap: 8px;"><span class="link">Hide</span><span class="btn">Publish</span><span class="cap">Reviews</span></span>
+      <span class="specimen" style="flex-direction: row; align-items: center; gap: 8px;"><span class="link" style="font-size: 16px;">Check in</span><span style="width: 24px; height: 24px; border-radius: 999px; border: 2px solid #0e7490; box-sizing: border-box;"></span><span class="cap">Check-in</span></span>
+      <span class="specimen" style="flex-direction: row; align-items: center; gap: 8px;"><span class="link">Assign ›</span><span class="link" style="font-size: 16px;">Ask for this one</span><span class="cap">Staffing</span></span>
+      <span class="specimen" style="flex-direction: row; align-items: center; gap: 8px;"><span class="link">Generate log</span><span class="cap">Today, no chevron</span></span>
+      <span class="specimen" style="flex-direction: row; align-items: center; gap: 8px;"><span class="link">Open reviews</span><span class="btn">Dismiss</span><span class="cap">Close the day</span></span>
+    </div>
+    <p class="finding" style="margin-top: 6px;">Over the tree: <b>104</b> hand-rolled <span class="mono">text-primary hover:underline</span> links against <b>41</b> through the button primitive's link variant — pixel-identical at rest, and only the 41 keep the 44px tap floor the dock test requires.</p>
+  </div>
+
+  <!-- 9 surfaces and chrome -->
+  <div class="sec">
+    <h2>9 · Where a list lives, and what a notice looks like</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <p class="finding">On one screen of Today a departure's rows sit inside a <b>28px shell panel with a bed shadow</b>, the desk's rows sit <b>bare on the sand</b>, and the horizons sit in <b>sunken pills</b>. Settings uses an 18px inset group with a caret. Gear closes with an 18px card. Staffing ends in a bordered form panel. Reports' tiles are hairline cells. <b>202 panels go through the card primitive; 100 are hand-rolled</b>, ten of them in the schedule builder alone; 26 use a radius the docs say the guard refuses.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <p class="finding">A message to the staffer has <b>seven components in five shapes</b>: the tinted box (43 sites), the inline mark-and-text (62), a near-duplicate of the inline one that only the home uses, a fixed toast (3), a fixed toast with Undo (15), and four page banners. Of 33 files that read the <span class="mono">?notice=</span> param, 17 render it through the shared banner and 16 place the box themselves with their own margin. Dialogs: <b>five independent implementations</b>, the shared one with a single caller.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10 delight -->
+  <div class="sec">
+    <h2>10 · Delight is spent along one seam and nowhere across it</h2>
+    <p class="finding">Every earned moment — the coral panel with bubbles on a signed waiver, the line on the counter clearing, the swell over a finished station — sits on a page that draws its own layout. Every one of the <b>twelve terminal outcomes</b> that go through the shared door (email verified, password reset, party claimed, contact confirmed, review submitted, course completed) gets a plain sentence. A diver signs a waiver and gets bubbles; verifies their email one step later and gets nothing. Same flow, same completion, two products. And the demo banner still wears an emoji crown the brand banned on 2026-08-27.</p>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+      <div class="specimen" style="background: #ffeee9; border-color: rgba(255,111,97,0.4);"><span style="font-size: 18px; font-weight: 600;">You're all set, Priya.</span><span class="muted" style="font-size: 14px;">Your waiver is signed for Saturday's Two-Tank Reef.</span><span class="cap">/waivers/[token] · coral panel, bubbles rise</span></div>
+      <div class="specimen"><span style="font-size: 18px; font-weight: 600;">Email verified</span><span class="muted" style="font-size: 14px;">You can sign in now.</span><span class="cap">/verify/[token] · EntryDone, plain</span></div>
+    </div>
+  </div>
+
+  <!-- 11 voice -->
+  <div class="sec">
+    <h2>11 · The voice: one rule, thirty-six authors</h2>
+    <p class="finding">7,390 strings across 37 bundles. The rule is one sentence (a good briefing); the guard checks five mechanical tells and passes everything else. So each namespace is internally consistent and the tree is not: second person runs at 24% of strings in the WhatsApp bundle and 0% in the departure log; the real ellipsis appears 232 times and the ASCII one 8, all in three late files; straight and curly apostrophes split 595 to 201 inside the same families. Inside a locale called <span class="mono">en-US</span>: colour 15, color 0; cancelled 30, canceled 0; metres and meters both, for the depth unit itself.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+      <div class="specimen"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d;">One event, seven sentences</span><span style="font-size: 14px; line-height: 21px;">"Couldn't copy. Select the link above instead." · "Couldn't copy — select it manually" · "Couldn't copy, select it manually" · "Copy didn't work. Select the link instead" · "Couldn't copy. Copy it from the address bar instead." · "Couldn't copy. Write the message down instead." · "Try again"</span><span class="cap">the clipboard failing, across 10 keys</span></div>
+      <div class="specimen"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d;">"We" is four people</span><span style="font-size: 14px; line-height: 21px;">"What <b>we</b> rent" (the shop) · "When <b>we</b> message divers" (DiveDay) · "isn't a specialty <b>we</b> gate on" (the engineers) · "<b>the app</b> never confirmed how it went" (a fourth actor)</span><span class="cap">principle 4 names one actor: DiveDay, when it acts</span></div>
+      <div class="specimen"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d;">"Fine" has nine words</span><span style="font-size: 14px; line-height: 21px;">Ready · Cleared · All clear · All good · Complete · Done · Approved · Connected · In service — and "not fine" has eight, including "Needs attention" on an integration failure, the word the readiness resolver deliberately retired.</span><span class="cap">where a resolver file exists, one word holds; nowhere else</span></div>
+      <div class="specimen"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d;">Headings in six grammars</span><span style="font-size: 14px; line-height: 21px;">Gear · Shop settings · The release · What divers wrote · How's your month · Close the day — a noun, a qualified noun, a definite article, a relative clause, a question without its mark, an imperative. Seven nav tabs name their page one way and the page names itself another.</span><span class="cap">plus three that end in a period, and two that end in a colon</span></div>
+      <div class="specimen"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d;">Empty states in five shapes</span><span style="font-size: 14px; line-height: 21px;">Teaching (12) · Blank "No notes yet." (14) · Shrug "Nothing scheduled this week." (8) · Celebratory (5) · one imperative. The rule says empty states teach.</span><span class="cap">40 empty-state strings sorted by hand</span></div>
+      <div class="specimen"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d;">The machinery shows</span><span style="font-size: 14px; line-height: 21px;">"This DiveDay <b>instance</b>'s <b>encryption key</b> is misconfigured" (12 strings) · "Your provider's <b>S3 API origin</b>" · "<b>idempotent</b> SalesReceipts" · "See the <b>README</b>" · "It arrives in a <b>release</b>, not today" · "Pull down to <b>sync</b>"</span><span class="cap">every word principle 4 bans, in copy a shop owner reads</span></div>
+    </div>
+    <p class="finding" style="margin-top: 6px;">Also: 353 strings over 140 characters (142 on staff pages, 42 over 200; the longest is 518, a data inventory); the guest list has five names and the departure four; "Delete", "Remove", "Release", "Disconnect" and "Erase" divide one act by namespace; 13 exclamation marks, 7 emoji strings and 26 "→" arrows survive in the bundles; and a diver's email sign-off ("See you in the water!") lives in the staff bundle while the diver's checklist carries one clinical passive ("verified Nitrox certification is required") among warm siblings.</p>
+  </div>
+
+  <!-- 12 diagnosis -->
+  <div class="sec" style="background: #fffdf8; border-bottom: 1px solid #e6dcc8;">
+    <h2>The diagnosis, top-down</h2>
+    <p class="finding">None of this is a missing primitive. The primitives exist and most are well adopted — buttons in 162 files, one control class in 461 places, one page header in 114 files, one empty state in 33, one chrome bar shared by staff and public. The seams come from <b>five design passes in twelve days</b> (Clearwater 08-27, Reef 09-01, Reef-all-the-way-down 09-04, Before-you-ask 09-06, Nothing-from-nowhere 09-07), each adding a vocabulary — a panel, a dial, a moment, a stage word, a fold — and none deleting the previous one. Three grammars now coexist on one screen: Clearwater's bare ledger, Reef's soft panel, and per-page inventions that predate both. The fix is not another vocabulary. It is one grammar for six jobs — <b>width, header, group, row, add, state</b> — with every second spelling deleted and a guard holding each at one, and then, if the owner wants "wow", a surface change that keeps that grammar.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "One hand — read me first", "x": 0, "y": 0, "w": 1180, "h": 3400 },
+    { "file": "Audit.dc.html", "title": "The audit — the same job, drawn N ways", "x": 1300, "y": 0, "w": 1180, "h": 3400 },
+    { "file": "DirectionA.dc.html", "title": "Direction A — Finish the sentence", "x": 0, "y": 3600, "w": 1180, "h": 2650 },
+    { "file": "DirectionB.dc.html", "title": "Direction B — The logbook", "x": 1300, "y": 3600, "w": 1180, "h": 2750 },
+    { "file": "DirectionC.dc.html", "title": "Direction C — The instrument", "x": 0, "y": 6500, "w": 1180, "h": 2650 },
+    { "file": "DirectionD.dc.html", "title": "Direction D — The briefing", "x": 1300, "y": 6500, "w": 1180, "h": 2750 }
+  ],
+  "annotations": [
+    { "id": "how-to-read", "x": 0, "y": -150, "w": 560, "text": "Read Main first (the diagnosis and the four directions), then the Audit (the evidence, drawn), then the four directions below. Each direction redraws the same two surfaces — the shop home and Gear — for the same shop on the same morning, so they compare like for like." },
+    { "id": "pick", "x": 1300, "y": -150, "w": 520, "text": "The pick is the owner's (H-71). Nothing here is normative until the ADR moves to Accepted. Direction A is the floor every other direction also has to clear; B, C and D each replace the surface and keep A's deletions." }
+  ],
+  "launch": { "view": "canvas" }
+}
