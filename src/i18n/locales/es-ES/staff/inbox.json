@@ -41,6 +41,7 @@
     "notFound": "Ese mensaje ya no está en esta ficha.",
     "channelUnsupported": "DiveDay todavía no puede responder un SMS.",
     "noReplyAddress": "No hay ninguna dirección a la que responder.",
+    "cannotBeSent": "Esta respuesta no se puede enviar tal como está. No salió nada, y volver a intentarlo no cambiará eso.",
     "whatsappWindowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo.",
     "whatsappNotConnected": "Para responder por WhatsApp hace falta el remitente que conectas en Ajustes.",
     "notAuthorized": "Responder a los buceadores es trabajo del propietario o del gerente."

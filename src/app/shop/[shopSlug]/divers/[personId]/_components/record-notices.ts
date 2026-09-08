@@ -287,6 +287,9 @@ const NOTICE_KEYS: Record<
     key: "inbox.notices.channelUnsupported",
   },
   "reply-no-reply-address": { form: "reply", tone: "danger", key: "inbox.notices.noReplyAddress" },
+  // There *is* an address; the reply cannot be built into something sendable,
+  // so nothing was attempted and a retry would do the same thing again.
+  "reply-cannot-be-sent": { form: "reply", tone: "danger", key: "inbox.notices.cannotBeSent" },
   "reply-whatsapp-window-closed": {
     form: "reply",
     tone: "danger",

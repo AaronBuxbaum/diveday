@@ -52,6 +52,11 @@ export type SendStaffReplyRefusal =
   | "message_not_found"
   | "channel_unsupported"
   | "no_reply_address"
+  // Distinct from `no_reply_address`, whose sentence ("There is no address to
+  // answer on.") would be false here: there is an address, and this reply
+  // cannot be built into something sendable. Nothing left, and a retry changes
+  // nothing, so the surface has to say that rather than offer the same button.
+  | "cannot_be_sent"
   | "whatsapp_window_closed"
   | "whatsapp_not_connected";
 
@@ -220,6 +225,12 @@ export async function sendStaffReply(
     },
     input.provider,
   );
+  // Before the record, deliberately. `sendNotification` refuses a notification
+  // its own schema will not take without ever calling a provider, so writing a
+  // `staff_replies` row for it would file an attempt that never happened.
+  if (delivery.status === "failed" && delivery.errorCode === "invalid_notification") {
+    return { status: "refused", reason: "cannot_be_sent" };
+  }
   await recordStaffReply(db, {
     ...common,
     delivery:
