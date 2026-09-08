@@ -34,18 +34,23 @@ describe("personNamesMatch — a different person, flagged", () => {
   });
 
   /**
-   * A suffix is two characters, so it survives `significantNameTokens` and
-   * makes a father a different person from his son.
+   * The two ways a same-named parent can reach the guardian signature, which
+   * `waiver.errorGuardianNameIsDiver` now names — so these are promises the
+   * product makes, not only properties of the comparison.
    *
-   * `waiver.errorGuardianNameIsDiver` tells a same-named parent to do exactly
-   * this, so it is a promise the product makes and not only a property of the
-   * comparison — and note the asymmetry it depends on: a middle *initial* is
-   * dropped and would still match (pinned above), which is why that copy says
-   * "spelled out".
+   * Note the asymmetry the copy depends on: a middle name written **in full**
+   * is a third token and reads as a different person, while a middle *initial*
+   * is dropped and would still match (pinned above). That is why the copy says
+   * "in full".
+   *
+   * The suffix pair is Sr./Jr. deliberately. A suffix does distinguish two
+   * people, but the error does not tell a same-named father to add one: by
+   * convention the *son* is Jr., so that advice would have him print his
+   * child's name on the child's release (dive-domain review, 2026-09-08).
    */
-  it("does not match a suffix that distinguishes a parent from their child", () => {
-    expect(personNamesMatch("John Smith", "John Smith Jr.")).toBe(false);
-    expect(personNamesMatch("John Smith", "John Smith II")).toBe(false);
+  it("does not match a parent who writes more of their own name", () => {
+    expect(personNamesMatch("John Smith", "John Michael Smith")).toBe(false);
+    expect(personNamesMatch("John Smith Sr.", "John Smith Jr.")).toBe(false);
   });
 
   it("does not match when a surname is added or dropped (a minor under a parent's email)", () => {

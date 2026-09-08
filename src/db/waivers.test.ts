@@ -2651,18 +2651,21 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
   /**
    * **A father and son of the same legal name.** The refusal above exists to
    * stop a minor signing as their own guardian, so it must not be relaxed — but
-   * the family still has to be able to get through, and until now the error said
-   * only that the name could not be the diver's. It now names the two ways out,
-   * and this is what makes those two ways true.
+   * a real family has to be able to get through, and the error used to name no
+   * way out at all. It now names three, and this is what makes them true.
    *
-   * The first is the one a session is most likely to get wrong. A middle
-   * *initial* does not escape the refusal: `significantNameTokens` drops tokens
-   * shorter than two characters, so "John Q. Smith" and "John Smith" are the
-   * same two tokens. That is why the copy says **spelled out** rather than just
-   * "add your middle name" — advice that would fail the exact parent who
-   * followed it.
+   * The first two are the honest ones: another parent signs, or the parent
+   * writes more of his *own* name. Both leave the release naming the adult who
+   * actually assumed the risk, which is the whole evidentiary point of the
+   * printed guardian name.
+   *
+   * The copy says a middle name **in full** because a middle *initial* does not
+   * escape the refusal: `significantNameTokens` drops tokens shorter than two
+   * characters, so "John Q. Smith" and "John Smith" are the same two tokens.
+   * Advice that said only "add your middle name" would fail the exact parent
+   * who followed it (dive-domain review, 2026-09-08).
    */
-  it("lets a same-named parent through with a suffix, but not with a middle initial", async () => {
+  it("lets a same-named family through by the routes the error names", async () => {
     const ctx = await waiverContext();
     await makeMinor(ctx.db, ctx.person.id);
     await ctx.db.update(people).set({ fullName: "John Smith" }).where(eq(people.id, ctx.person.id));
@@ -2679,20 +2682,51 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
       }),
     ).toEqual({ ok: false, reason: "guardian_invalid" });
 
-    // A suffix is two characters, so it survives normalization and reads as a
-    // different person — the way through the copy points at.
+    // The other parent: the cheapest way through, and the one the error now
+    // offers first. Nothing has to be typed differently from the truth.
     expect(
       await completeWaiver(ctx.db, initial.token, {
         signerName: "John Smith",
         agreed: true,
         medicalAnswers: clearAnswers,
-        guardian: { ...guardian, name: "John Smith Jr." },
+        guardian: { ...guardian, name: "Mary Smith" },
         now,
       }),
     ).toMatchObject({ ok: true, status: "completed" });
 
-    const [record] = await db_record(ctx, initial.recordId);
-    expect(record).toMatchObject({ guardianName: "John Smith Jr." });
+    const [byOtherParent] = await db_record(ctx, initial.recordId);
+    expect(byOtherParent).toMatchObject({ guardianName: "Mary Smith" });
+  });
+
+  /**
+   * The same-named parent signing alone, with his middle name written out.
+   *
+   * A separate seat because the route above already completed that waiver, and
+   * because this is the case that decides what ends up printed on a minor's
+   * release: the father's own fuller name, never a suffix. Told to "add a
+   * suffix like Jr." a father writes **his son's** legal name, and a reader
+   * opening the file later sees a release where diver and co-signer are the
+   * same person — the exact thing the refusal exists to prevent (dive-domain
+   * review, 2026-09-08). The copy does not offer that, and neither does this.
+   */
+  it("accepts a same-named parent who writes his middle name in full", async () => {
+    const ctx = await waiverContext();
+    await makeMinor(ctx.db, ctx.person.id);
+    await ctx.db.update(people).set({ fullName: "John Smith" }).where(eq(people.id, ctx.person.id));
+    const issued = await liveLink(ctx);
+
+    expect(
+      await completeWaiver(ctx.db, issued.token, {
+        signerName: "John Smith",
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        guardian: { ...guardian, name: "John Michael Smith" },
+        now,
+      }),
+    ).toMatchObject({ ok: true, status: "completed" });
+
+    const [record] = await db_record(ctx, issued.recordId);
+    expect(record).toMatchObject({ guardianName: "John Michael Smith" });
   });
 
   it("refuses a guardian section that is not a signature", async () => {

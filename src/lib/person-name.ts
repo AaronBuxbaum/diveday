@@ -17,6 +17,15 @@
  * confirm reflexively, which is as unsafe as not firing at all. Anything that
  * changes an actual name token — a different first or last name, an added or
  * dropped surname — is a mismatch and routes to staff confirmation.
+ *
+ * **A second caller depends on the two-character floor below, and it is
+ * safety-critical.** `guardianEvidence` (`src/db/waivers.ts`) uses this to
+ * refuse a guardian whose name is the diver's own, so that a minor cannot
+ * co-sign their own release. Because a middle *initial* is dropped and a middle
+ * name written out is not, `waiver.errorGuardianNameIsDiver` tells a same-named
+ * parent to write their middle name **in full** — advice that becomes silently
+ * false if the floor is raised. `src/lib/person-name.test.ts` pins both halves;
+ * read that copy before changing the filter.
  */
 
 /**
