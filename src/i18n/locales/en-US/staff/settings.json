@@ -163,7 +163,7 @@
       "dockCallLabel": "What to expect at the dock",
       "signOffLabel": "How you sign off a finished day",
       "save": "Save your words",
-      "saving": "Saving\u2026",
+      "saving": "Saving…",
       "notice": {
         "saved": "Saved.",
         "tooLong": "Keep each one under 280 characters."
@@ -283,8 +283,8 @@
       "heading": "Fly-safe hours",
       "value": "{single} h · {repetitive} h",
       "description": "Hours after the last dive before a diver reads they can fly. Their recap names the time and says the wait is yours, following DAN’s guidance.",
-      "singleLabel": "After one dive",
-      "repetitiveLabel": "After two or more dives",
+      "singleLabel": "After a single dive",
+      "repetitiveLabel": "After repetitive dives or more than one day of diving",
       "submit": "Save fly-safe hours",
       "submitting": "Saving…"
     },

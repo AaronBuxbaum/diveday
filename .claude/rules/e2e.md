@@ -25,6 +25,14 @@ Loaded when a spec, fixture or the coverage ledger is read. The **e2e-and-visual
   `diveday:allow-e2e-hygiene <rule>: <why>` naming the mechanism that makes it deterministic. The
   suite runs `retries: 0` so a flake fails loudly and gets root-caused; the fix for a race is always
   waiting for what the destination page itself renders.
+- **Never navigate straight off a submit.** A `goto`/`reload` as the next statement after a
+  submit-shaped click races the action it just sent, and `check:e2e-hygiene`'s `action-race` rule
+  refuses it: the click resolves when the request leaves, not when the write lands, so the
+  navigation can tear the page down mid-flight and the destination renders the state from before
+  the save. Put the wait between them — `page.waitForURL()` on the action's own `?notice=`
+  redirect, or an `expect(locator)` on what the row shows for a `useActionState` form that
+  re-renders in place. Both instances that reached CI failed dozens of lines away from the cause
+  ([docs/agents/repo-checks.md](../../docs/agents/repo-checks.md)).
 - **A failing or flaky test is part of the work, even when unrelated to your change.** Never skip
   it, widen a timeout, or leave it red. Search open PRs first for a fix already in flight on the same
   spec.

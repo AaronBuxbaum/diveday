@@ -160,13 +160,13 @@
       "value": "{count, plural, one {# escrita} other {# escritas}}",
       "hint": "Los buceadores leen esto en el idioma en que lo escribas.",
       "welcomeLabel": "Lo que lee quien bucea contigo por primera vez",
-      "dockCallLabel": "Qu\u00e9 esperar en el muelle",
-      "signOffLabel": "C\u00f3mo despides un d\u00eda terminado",
+      "dockCallLabel": "Qué esperar en el muelle",
+      "signOffLabel": "Cómo despides un día terminado",
       "save": "Guardar tus palabras",
-      "saving": "Guardando\u2026",
+      "saving": "Guardando…",
       "notice": {
         "saved": "Guardado.",
-        "tooLong": "Mant\u00e9n cada una por debajo de 280 caracteres."
+        "tooLong": "Mantén cada una por debajo de 280 caracteres."
       }
     },
     "address": {
@@ -283,8 +283,8 @@
       "heading": "Horas para volar",
       "value": "{single} h · {repetitive} h",
       "description": "Horas después de la última inmersión antes de que un buceador lea que puede volar. Su resumen dice la hora y que la espera la fijas tú, siguiendo la guía de DAN.",
-      "singleLabel": "Tras una inmersión",
-      "repetitiveLabel": "Tras dos o más inmersiones",
+      "singleLabel": "Tras una sola inmersión",
+      "repetitiveLabel": "Tras inmersiones repetitivas o más de un día de buceo",
       "submit": "Guardar horas para volar",
       "submitting": "Guardando…"
     },

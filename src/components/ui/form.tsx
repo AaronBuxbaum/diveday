@@ -102,6 +102,72 @@ export function SearchField({
   );
 }
 
+/**
+ * **A date box that looks like one on every platform** — a `type="date"`
+ * control wearing `controlClass`, with our own calendar glyph in its trailing
+ * inset (issue #1415).
+ *
+ * A bare `<input type="date">` is drawn by the platform, and the platforms
+ * disagree about whether an empty one shows anything at all. Chromium paints
+ * `mm/dd/yyyy` *and* its own calendar indicator; **iOS Safari paints neither**
+ * — an empty date field there is a blank rounded rectangle, indistinguishable
+ * from the text boxes above it, with no cue that tapping it opens a picker.
+ * The glyph is ours so the box reads the same everywhere, and it is why every
+ * date input in the app renders this rather than spelling itself.
+ *
+ * **`opacity-0`, never `hidden`.** Chromium's own indicator stays in the
+ * layout underneath ours, so a Chromium tap on that spot still opens the
+ * native picker; `display: none` would take the tap target away with the
+ * pixels and leave the glyph looking live and doing nothing. Which is also
+ * why `pe-9` and `end-3` are a pair: drift them apart and the visible glyph
+ * stops sitting over the real control.
+ *
+ * Firefox draws a calendar icon of its own and exposes no pseudo-element to
+ * hide it, so a Firefox reader sees two. Known and accepted — there is no CSS
+ * that reaches it, and the alternative is measuring the browser in JavaScript
+ * to hide our own glyph, which costs more than the duplicate.
+ *
+ * Every native prop passes through — `min`/`max`, `value`/`onChange`,
+ * `defaultValue`, and a callback `ref` (the schedule builder focuses one on
+ * mount) — so a surface never has a reason to reach past this.
+ */
+export function DateField({
+  className = "",
+  wrapperClassName = "",
+  ...input
+}: {
+  /** Extra classes on the input itself, e.g. `tabular-nums`. */
+  className?: string;
+  /** Sizes the wrapper; `controlClass` already sets `w-full` on the input. */
+  wrapperClassName?: string;
+} & Omit<ComponentPropsWithRef<"input">, "type" | "className">) {
+  return (
+    <div className={`relative ${wrapperClassName}`.trim()}>
+      <input
+        {...input}
+        type="date"
+        className={`${controlClass} pe-9 [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`.trim()}
+      />
+      {/* Inert and aria-hidden, like SearchField's magnifier: the input's own
+          accessible name says what it is, and a tap here must reach the
+          control rather than the decoration. */}
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+      >
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M8 3v4M16 3v4M3 11h18" />
+      </svg>
+    </div>
+  );
+}
+
 const columnClass = {
   1: "",
   2: "sm:grid-cols-2",
@@ -307,10 +373,18 @@ export function Field({
   // at that box by id and the required marker can read the `required` off it.
   // Left to the fallback, a required "Full name" lost its `*` the day the box
   // became forgiving (found by the diver-record visual capture).
+  //
+  // `DateField` joins them for exactly that reason and no other: it is an
+  // `<input>` inside a positioning wrapper, so the tag test above cannot see
+  // it, and the fallback would silently drop the `*` from the thirteen date
+  // fields rendered `required` and stop `description`/`error` reaching four
+  // more. A composite control that forwards these props belongs in this set;
+  // one that does not belongs in the fallback.
   const isControl =
     isValidElement<ControlProps>(children) &&
     ((typeof children.type === "string" && CONTROL_TAGS.has(children.type)) ||
-      children.type === ForgivingInput);
+      children.type === ForgivingInput ||
+      children.type === DateField);
   const fieldId = scopedFieldId(useId(), isControl ? children.props.name : undefined);
   const descriptionId = description ? `${fieldId}-description` : undefined;
   const errorId = error ? `${fieldId}-error` : undefined;

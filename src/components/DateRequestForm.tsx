@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
 import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { telHref } from "@/lib/contact-links";
 import {
@@ -311,21 +311,17 @@ export function DateRequestForm({
             <legend className={SECTION_TITLE_CLASS}>{copy.dateOptionsHeading}</legend>
             <FieldGrid columns={2} className="mt-3 gap-y-5">
               <Field label={copy.preferredDate} hint={copy.optional}>
-                <input
+                <DateField
                   name="preferredDate"
-                  type="date"
                   value={preferredDate}
                   onChange={(event) => setPreferredDate(event.target.value)}
-                  className={controlClass}
                 />
               </Field>
               <Field label={copy.alternateDate} hint={copy.optional}>
-                <input
+                <DateField
                   name="alternateDate"
-                  type="date"
                   value={alternateDate}
                   onChange={(event) => setAlternateDate(event.target.value)}
-                  className={controlClass}
                 />
               </Field>
               <Field label={copy.whenSuits} hint={copy.optional} className="sm:col-span-2">

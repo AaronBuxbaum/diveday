@@ -73,6 +73,7 @@ describe("seeded tide stations", () => {
       .where(eq(shops.slug, slug));
     expect(minted?.on).toBe(false);
     // The station is site content and travels to a mint like any other seed.
-    expect((await tideOf(db, minted!.id, "Molasses Reef")).stationId).toBe("8723583");
+    if (!minted) throw new Error("minted shop missing");
+    expect((await tideOf(db, minted.id, "Molasses Reef")).stationId).toBe("8723583");
   });
 });

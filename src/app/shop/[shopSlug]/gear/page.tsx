@@ -11,7 +11,14 @@ import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
-import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  controlClass,
+  DateField,
+  Field,
+  FieldActions,
+  FieldGrid,
+  FormStatus,
+} from "@/components/ui/form";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
@@ -415,7 +422,7 @@ export default async function GearRegisterPage({
                 hint={t("gear.form.optionalHint")}
                 error={fieldError("purchasedOn")}
               >
-                <input type="date" name="purchasedOn" className={controlClass} />
+                <DateField name="purchasedOn" />
               </Field>
               <FieldActions>
                 <SubmitButton pendingLabel={t("gear.addUnit.pending")} className={buttonClass()}>

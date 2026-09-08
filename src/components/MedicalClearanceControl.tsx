@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { MedicalClearanceCopy } from "@/components/medical-clearance-copy";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
 import { WaiverActionIcon } from "@/components/WaiverActionIcon";
 
 /**
@@ -127,14 +127,7 @@ export function MedicalClearanceControl({
           </div>
         </fieldset>
         <Field label={copy.evaluatedOnLabel} htmlFor="evaluatedOn">
-          <input
-            id="evaluatedOn"
-            type="date"
-            name="evaluatedOn"
-            required
-            max={today}
-            className={controlClass}
-          />
+          <DateField id="evaluatedOn" name="evaluatedOn" required max={today} />
         </Field>
         {/* `description`, not `hint`: `hint` renders inside the caption `<label>`,
             so a whole sentence there becomes part of the control's accessible

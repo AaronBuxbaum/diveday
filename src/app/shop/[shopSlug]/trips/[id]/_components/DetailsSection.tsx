@@ -4,7 +4,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
 import {
@@ -329,13 +329,7 @@ export function DetailsSection({
               a departure's when-and-how-many is typed now look alike. */}
           <FieldGrid columns={3} className="gap-x-5 gap-y-5">
             <Field label={t("trips.details.dateLabel")}>
-              <input
-                name="date"
-                type="date"
-                required
-                defaultValue={toDateInputValue(startWall)}
-                className={controlClass}
-              />
+              <DateField name="date" required defaultValue={toDateInputValue(startWall)} />
             </Field>
             <Field label={t("trips.details.departsLabel")}>
               <input

@@ -58,6 +58,7 @@ const SAMPLES: Notification[] = [
       from: new Date("2026-09-02T15:40:00Z"),
       hours: 24,
       basis: "repetitive",
+      reason: "dives_recorded",
       anchor: "last_dive",
     },
     recapUrl: "https://diveday.example/recap/sample-token",

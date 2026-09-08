@@ -1022,9 +1022,11 @@ export async function seedDemoSchedule(
   // boat runs on the three departures where the answer is not the shop's usual
   // twenty minutes (src/db/seed-trip-legs.ts). After every scenario that creates
   // a departure, since it sets a column on their dives; before the waiver seal
-  // below, which nothing may write after. Canonical demo only — a stated leg
-  // beats the shop's own ride-out figure, which is exactly what a spec taking a
-  // shop of its own is usually testing.
+  // below, which nothing may write after. Any demo with history, so the
+  // visitor's mint gets them too — the one that goes without is `privateShop`,
+  // which mints with `history: false`, because a stated leg beats the shop's own
+  // ride-out figure and that figure is exactly what a spec taking a shop of its
+  // own is usually testing.
   // The demo's boat says where it is, once, on today's departure (ADR
   // 20260904-reef-all-the-way-down, Budget rule 4) — after the trips exist and
   // their plans have sites on them, since the tap stamps the site it reads.

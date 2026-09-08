@@ -303,12 +303,16 @@ const tripRecapSchema = z.object({
    * the hours that produced it, and whether the clock started at the last
    * recorded exit or the boat's scheduled return. Absent when nothing on the
    * record could honestly say, and then the email says nothing about flying.
+   *
+   * `reason` is not a detail the email prints — it picks *which* sentence the
+   * diver reads, because only the earlier-day route explains itself.
    */
   flySafe: z
     .object({
       from: z.date(),
       hours: z.number().int().min(1).max(72),
       basis: z.enum(["single", "repetitive"]),
+      reason: z.enum(["one_dive", "dives_recorded", "dives_planned", "earlier_day"]),
       anchor: z.enum(["last_dive", "scheduled_return"]),
     })
     .optional(),

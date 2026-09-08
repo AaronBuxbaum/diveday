@@ -27,6 +27,21 @@ describe("the written answers", () => {
     ).toMatch(/db:generate/);
   });
 
+  /**
+   * The bystander. Unlike every other signature here it does not describe the
+   * failure — it rides along in a passing-or-failing e2e run's output and looks
+   * far more alarming than it is (issue 1560), so the answer's whole job is to
+   * send the reader back to the real failure rather than into React's internals.
+   */
+  it("names the stream-cancel line as a bystander, not a cause", () => {
+    const explanation = explanationFor(
+      "pnpm e2e e2e/gear.spec.ts",
+      "[WebServer] ⨯ Error: The destination stream closed early.\n  digest: '843112864'",
+    );
+    expect(explanation).toMatch(/not your failure/i);
+    expect(explanation).toMatch(/Look elsewhere/);
+  });
+
   it("every answer points at something a session can open or run", () => {
     for (const { explain } of SIGNATURES) {
       expect(explain).toMatch(/skill|scripts\/|ADR|src\/|`pnpm |`node /);

@@ -330,3 +330,112 @@ describe("exit codes", () => {
     expect(result.status).toBe(0);
   });
 });
+
+/**
+ * The pre-flight door onto the same rules (issue #1537). Its whole reason to
+ * exist is that a malformed issue reddens `Repository safeguards` on **every
+ * open pull request**, and the whole-tracker run needs `gh`, which the cloud
+ * containers these issues are written in do not have — so before this, an agent
+ * could not check its own draft and CI was the first answer. These cases run
+ * the script with **no `gh` on PATH at all**, which is the condition that
+ * matters: the draft mode must work exactly where the tracker mode cannot.
+ */
+describe("--body, the pre-flight for one drafted issue", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "follow-ups-draft-"));
+  const emptyPath = mkdtempSync(path.join(tmpdir(), "follow-ups-nopath-"));
+
+  const draft = (name, body) => {
+    const file = path.join(dir, name);
+    writeFileSync(file, body);
+    return file;
+  };
+
+  const run = (...args) =>
+    spawnSync(process.execPath, [path.join(import.meta.dirname, "check-follow-ups.mjs"), ...args], {
+      // No `gh` anywhere: the point of this mode is working without one.
+      env: { ...process.env, PATH: emptyPath },
+      cwd: path.join(import.meta.dirname, ".."),
+      encoding: "utf8",
+    });
+
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(emptyPath, { recursive: true, force: true });
+  });
+
+  it("exits 0 on a body that would pass in the tracker", () => {
+    const result = run("--body", draft("good.md", valid.body), "--title", valid.title);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/valid follow-up body/);
+  });
+
+  it("exits non-zero and names each problem on a body that would not", () => {
+    // The exact shape that took out four CI runs on 2026-09-08 (#1526): plain
+    // labels instead of bold metadata, a Kind and Effort outside the
+    // vocabulary, an unbackticked path, and none of the four sections.
+    const result = run(
+      "--body",
+      draft(
+        "bad.md",
+        "Kind: docs / correctness-of-comment\nEffort: XS\nTouches: src/db/seed-trip-legs.ts\n\nThe comment disagrees with the code.\n",
+      ),
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/\*\*Kind:\*\* must be one of/);
+    expect(result.stderr).toMatch(/\*\*Effort:\*\* must be one of/);
+    expect(result.stderr).toMatch(/missing section “What I noticed”/);
+    // And it says *why* this is worth fixing before filing rather than after.
+    expect(result.stderr).toMatch(/every open pull request/);
+  });
+
+  it("does not blame the draft for a title the caller has not written yet", () => {
+    // A title under three words is its own finding, and a caller checking a
+    // body has often not settled one. The placeholder keeps that complaint out
+    // of a list about the body.
+    const result = run("--body", draft("untitled.md", valid.body));
+    expect(result.status).toBe(0);
+  });
+
+  /**
+   * Strict on purpose. This tool exists to catch a mistake before it costs
+   * every open pull request an hour, so an invocation that quietly succeeds
+   * while checking something other than what was meant is the one outcome
+   * worth engineering against — a silently-ignored typo would defeat the whole
+   * point of having it (Sourcery finding on #1559).
+   */
+  it.each([
+    ["a --body with no path", ["--body", "--title", "x"], /needs a path/],
+    ["a mistyped flag", ["--body", "good.md", "--boddy", "other.md"], /unrecognised argument/],
+    ["a repeated flag", ["--body", "a.md", "--body", "b.md"], /given twice/],
+    ["a stray positional", ["good.md"], /unrecognised argument/],
+    ["a --title with no body", ["--title", "x"], /only meaningful beside/],
+    ["a --title with no value", ["--body", "good.md", "--title"], /--title needs/],
+  ])("refuses %s", (_name, args, expected) => {
+    // `good.md` is real, so a case that fails here failed on the arguments
+    // rather than on a missing file.
+    draft("good.md", valid.body);
+    const result = run(...args);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(expected);
+  });
+
+  it("says so when the file is not there", () => {
+    const result = run("--body", path.join(dir, "absent.md"));
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/could not read/);
+  });
+
+  it("warns about a Touches path that is not on disk, without failing", () => {
+    // Not a failure here: a draft written on a branch may legitimately name a
+    // path that branch adds. It is still worth saying, because the
+    // whole-tracker run resolves these against the working tree and will
+    // redden every *other* session's check until the branch merges.
+    const body = valid.body.replace(
+      "**Touches:** `src/lib`, `docs/agents/issue-tracker.md`",
+      "**Touches:** `src/lib/not-a-real-file-here.ts`",
+    );
+    const result = run("--body", draft("future.md", body));
+    expect(result.status).toBe(0);
+    expect(result.stderr).toMatch(/not on disk here/);
+  });
+});
