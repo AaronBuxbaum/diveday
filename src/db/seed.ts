@@ -118,6 +118,7 @@ import { seedDateRequests } from "./seed-date-requests";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDeskHandoff } from "./seed-desk-handoff";
 import { seedDeskTrail } from "./seed-desk-trail";
+import { seedDiveIntents } from "./seed-dive-intents";
 import { seedDiveRecency } from "./seed-dive-recency";
 import { seedDiveSiteCatalog } from "./seed-dive-site-catalog";
 import { seedDiveSites } from "./seed-dive-sites";
@@ -990,6 +991,11 @@ export async function seedDemoSchedule(
   // count or roster membership moves (ADR
   // 20260821-currency-is-what-catches-people).
   await seedDiveRecency(db, shopId);
+  // Beside the recency answers and written the same way: a column on bookings
+  // that already exist, so no readiness count, head count or roster membership
+  // moves. Scoped to today's reef departure, which is the one board the
+  // aggregate line needs in order to have a visual baseline at all (issue #1413).
+  await seedDiveIntents(db, shopId);
   // Which partner's link sent a seat — beside the recency answers, and written
   // the same way: a column on bookings that already exist (issue #1285).
   await seedPartnerReferrals(db, shopId);
