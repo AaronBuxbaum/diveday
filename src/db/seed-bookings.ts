@@ -227,11 +227,16 @@ export async function seedBookings(
   // Post-trip recap demo: a crew shout-out on the pinned reef trip and a couple
   // of diver photos on the pinned recap booking, so /recap/[token] shows the
   // shout-out block and the photo strip out of the box.
+  //
+  // The words name no shop. This seed runs for the canonical demo and for every
+  // shop minted through /api/test/seed-private-shop (ADR
+  // 20260815-per-test-private-shops), so a shop name baked in here turns up on a
+  // recap belonging to a shop of another name (issue #1513).
   await db
     .update(trips)
     .set({
       recapShoutout:
-        "What a day on the water — glassy surface and a curious green turtle on the second tank. Thanks for diving with us, and tag Blue Mantis in your shots!",
+        "What a day on the water — glassy surface and a curious green turtle on the second tank. Thanks for diving with us, and tag us in your shots!",
     })
     .where(eq(trips.id, reef.id));
   // The first reef booking carries the recap photos. On the canonical demo this

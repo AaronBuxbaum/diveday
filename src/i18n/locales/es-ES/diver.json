@@ -15,7 +15,7 @@
     "aboard": "{boarded} de {booked, plural, one {# buceador} other {# buceadores}} a bordo",
     "meetAt": "Punto de encuentro: {place}",
     "privateCharter": "Salida privada",
-    "crew": "Con {names}",
+    "crew": "Tripulación: {names}",
     "stage": {
       "boarding": "Embarcando",
       "underway": "En {site}",

@@ -572,7 +572,11 @@ describe("post-deploy wizard", () => {
     ]);
   });
 
-  it("falls back to adding every DNS record when listing existing ones fails", async () => {
+  // A listing failure is unknown state, not empty state. `vercel dns add` has no
+  // upsert, so inferring "empty" from "unreadable" is what would put a second
+  // "v=spf1" TXT on the live zone and break SPF for every outbound mail -- the
+  // path infra run 34176404605 actually took. Zero adds, and the reason on screen.
+  it("adds nothing when it cannot list the existing DNS records", async () => {
     const answers = ["no", "no", "no", "no", "no", "yes", "no"];
     const commands = [];
     const messages = [];
@@ -596,8 +600,52 @@ describe("post-deploy wizard", () => {
       ({ command, arguments_ }) =>
         command === "pnpm" && arguments_[2] === "dns" && arguments_[3] === "add",
     );
-    expect(dnsAdds).toHaveLength(3);
+    expect(dnsAdds).toHaveLength(0);
     expect(messages.some((message) => message.includes("Could not list existing"))).toBe(true);
+    expect(messages.some((message) => message.includes("not authenticated"))).toBe(true);
+    // The trap this inversion has to avoid: emptying `missingRecords` without a
+    // flag makes the wizard claim the records are already there, which is a
+    // positive statement about a zone it never managed to read.
+    expect(messages.some((message) => /already present|nothing added/.test(message))).toBe(false);
+  });
+
+  // The sibling of the test above, on the other of the two `readSesDnsPlan()`
+  // call sites: this one omits `sesDns` from `checkUpdates`, so the plan is read
+  // by the pre-check at the top rather than inside the yes-branch. An unreadable
+  // check must leave the question standing -- the runbook's rule for a read-only
+  // check that cannot prove its handoff is current.
+  it("keeps the SES DNS question visible when the listing cannot be read", async () => {
+    const questions = [];
+    const messages = [];
+    await runPostDeployWizard({
+      ask: async (question) => {
+        questions.push(question);
+        return "no";
+      },
+      checkUpdates: {
+        awsProfiles: true,
+        vercelEnvironment: true,
+        githubSecrets: true,
+        cdkVariables: true,
+        githubEnvironment: true,
+      },
+      cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2", VERCEL_ORG_ID: "team_123" },
+      execute: (command, arguments_) => {
+        if (command === "aws") return JSON.stringify(["first"]);
+        if (arguments_[2] === "dns" && arguments_[3] === "ls") {
+          throw new Error("not authenticated");
+        }
+        return "";
+      },
+      log: (message) => messages.push(message),
+    });
+
+    expect(questions).toContain("Add the SES DNS records through Vercel DNS? [y/N] ");
+    expect(messages.some((message) => /already present|skipping its question/.test(message))).toBe(
+      false,
+    );
   });
 });
 

@@ -147,6 +147,7 @@ itself came from. If a value needs to persist across deploys and isn't stack-pro
 Each of these three sync steps only pushes what actually changed, not the whole document every
 time — answering "yes" is safe to do on every deploy. DNS records (inline in
 `post-deploy-wizard.mjs`) diff against what's already live, by listing the current records first.
+If that listing fails the wizard adds nothing, prints the zone and the reason it could not check, and leaves the records for you to add by hand — because `vercel dns add` has no upsert, and a second `v=spf1` TXT on the mail-from domain breaks SPF for every outbound mail the product sends.
 Vercel variables (`import-vercel-env.mjs`) and GitHub secrets (`sync-github-secrets.mjs`) can't do
 that — every value is pushed `--sensitive`, and Vercel never returns a sensitive value again once
 set, exactly like the Actions secrets API never returns a value to any token. Vercel's diff instead
