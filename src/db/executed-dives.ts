@@ -1,6 +1,7 @@
-import { and, asc, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import { FLY_SAFE_MULTI_DAY_LOOKBACK_HOURS } from "@/lib/fly-safe";
+import { FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS } from "@/lib/fly-safe";
 import { PLAN_CHANGE_NOTE_MAX, type PlanChangeReason } from "@/lib/plan-change";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
@@ -66,24 +67,39 @@ export async function listExecutedDives(db: DbExecutor, shopId: string, tripId: 
 }
 
 /**
- * Which of these people already have a dive recorded at this shop in the
- * window before a departure — the "multiple days of diving" half of DAN's
- * 18-hour clause (issue #1439; the reading of it is in `src/lib/fly-safe.ts`).
+ * Which of these people already had a **dive day** at this shop in the local
+ * days before a departure — the "multiple days of diving" half of DAN's
+ * 18-hour preflight clause (issue #1439; the reading of it is in
+ * `src/lib/fly-safe.ts`).
  *
  * A `Set` rather than a boolean because the recap run answers a whole boat at
  * once, and this must stay **one query per departure**, never one per booking.
  *
- * The window is measured against `trips.starts_at` rather than the earlier
- * dive's own timestamps, and the approximation is deliberate: `entered_at` and
- * `exited_at` are both nullable, so anchoring on either would silently drop a
- * dive the crew logged without times — the one record most likely to belong to
- * a busy multi-day diver. Against a 24-hour window the difference is minutes.
+ * **Local calendar days, not a span of hours.** DAN's clause is about days,
+ * and counting hours got all three of these wrong: two 8 AM departures on
+ * consecutive days are exactly 24 hours apart, so a schedule that slips
+ * fifteen minutes for the tide decides the answer; the same two are 25
+ * absolute hours apart across a fall-back boundary, so every two-day diver at
+ * a US shop would quietly drop to the shorter advice on one Sunday in
+ * November; and a Monday-morning to Tuesday-afternoon pair is 30 hours and
+ * unambiguously multiple days of diving. Asked as calendar days in the shop's
+ * own zone, all three answer correctly and the question is DAN's own.
+ *
+ * **A booking on a departure that ran is the evidence, not a dive log row.**
+ * Crews do not reliably log: `flySafeFrom` exists in its current shape
+ * precisely because it has to answer from `planned_dives` when nothing was
+ * recorded. Requiring a row here would have made today's boat speak from the
+ * plan and yesterday's fall silent — which at a busy dock is the *normal*
+ * case, and it fails toward the shorter advice. So the rule is the one
+ * `src/db/recap.ts` already uses for the prior-visit count: a live booking,
+ * on a live departure the shop still says ran.
  */
 export async function peopleWhoDivedBefore(
   db: DbExecutor,
   shopId: string,
   personIds: readonly string[],
   departureStartsAt: Date,
+  timeZone: string,
 ): Promise<Set<string>> {
   // Nobody to ask about: skip the round trip. Drizzle answers an empty
   // `inArray` with no rows rather than an error, so this is speed, not
@@ -91,46 +107,71 @@ export async function peopleWhoDivedBefore(
   // is entirely cancelled.
   if (personIds.length === 0) return new Set();
 
-  const since = new Date(departureStartsAt.getTime() - FLY_SAFE_MULTI_DAY_LOOKBACK_HOURS * HOUR_MS);
+  const firstDay = shiftCalendarDate(
+    calendarDateInTimezone(departureStartsAt, timeZone),
+    -FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS,
+  );
+  // The SQL bound is a deliberate *superset*, and the calendar comparison
+  // below is the answer. Two days of slack rather than one because a zone's
+  // offset reaches ±14 hours and a local day can straddle two UTC ones, so one
+  // day of margin is on the edge in the extreme zones rather than clear of it.
+  // Doing it this way keeps the zone arithmetic in `calendar-date.ts`, where
+  // it is tested, rather than reconstructing a local midnight inside a query.
+  const slack = (FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS + 2) * 24 * HOUR_MS;
   const rows = await db
-    .selectDistinct({ personId: bookings.personId })
-    .from(executedDives)
-    .innerJoin(trips, eq(trips.id, executedDives.tripId))
-    .innerJoin(bookings, eq(bookings.tripId, trips.id))
+    .select({ personId: bookings.personId, startsAt: trips.startsAt })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    // Only to let a logged dive speak for a departure the shop later marked
+    // something other than `scheduled` — see the status filter below.
+    .leftJoin(
+      executedDives,
+      and(
+        eq(executedDives.tripId, trips.id),
+        eq(executedDives.shopId, shopId),
+        isNull(executedDives.deletedAt),
+      ),
+    )
     .where(
       and(
-        // All three tables scoped, not just the one this read starts from:
-        // the join reaches `bookings`, and a diver-facing answer must not be
-        // reachable from another shop's row by any path.
-        eq(executedDives.shopId, shopId),
-        eq(trips.shopId, shopId),
+        // Both tables scoped, not only the one this read starts from: a
+        // diver-facing answer must not be reachable from another shop's row
+        // by any path.
         eq(bookings.shopId, shopId),
+        eq(trips.shopId, shopId),
         inArray(bookings.personId, [...personIds]),
         // A diver who cancelled or never showed was not aboard, whatever the
-        // crew recorded for the boat. Crediting them a dive would hand them
-        // the longer wait for a day they spent ashore — the same argument
-        // `src/db/recap.ts` already makes for the prior-visit count.
+        // crew recorded for the boat. Crediting them would hand them the
+        // longer wait for a day they spent ashore.
         ne(bookings.status, "cancelled"),
         ne(bookings.status, "no_show"),
-        // The three filters `listExecutedDives` carries, for the same reasons:
-        // a blown-out day is not a dive day, a deleted departure is off the
-        // board, and a deleted dive row was struck from the record.
-        eq(trips.status, "scheduled"),
+        // A blown-out departure is not a dive day — a cancellation leaves its
+        // bookings active by design, so without this the answer counts days
+        // nobody dived. **Unless the crew logged a dive on it**, which is
+        // affirmative evidence that people went in the water and beats a
+        // status column changed afterwards for a refund or a re-papered
+        // charter.
+        or(eq(trips.status, "scheduled"), isNotNull(executedDives.id)),
+        // A deleted departure is off the board, and here that reads as a row
+        // staff say should not exist rather than a day to count.
         liveTrip(),
-        isNull(executedDives.deletedAt),
-        gte(trips.startsAt, since),
-        // Strictly earlier, which is what excludes this departure's own dives
-        // — the caller already counts those, and counting them here would make
-        // every second tank of a day look like a second day. It carries that
-        // exclusion alone, which is why this takes no trip id: a redundant
-        // `ne(trips.id, tripId)` beside it was a predicate no test could ever
-        // reach. Deliberately *not* a whole-day exclusion: a morning boat and
-        // an afternoon boat are two departures and genuinely are repetitive
-        // diving.
-        lt(trips.startsAt, departureStartsAt),
+        gte(trips.startsAt, new Date(departureStartsAt.getTime() - slack)),
+        lt(trips.startsAt, new Date(departureStartsAt.getTime() + slack)),
       ),
     );
-  return new Set(rows.map((row) => row.personId));
+
+  const dived = new Set<string>();
+  for (const row of rows) {
+    // Any departure that already sailed, from the first day of the window
+    // onward. Strictly earlier than this one, because this departure's own
+    // dives are the caller's to count and counting them here would make every
+    // second tank of a day look like a second day — but a *morning* boat
+    // counts for the afternoon one, because `flySafeFrom` sees only its own
+    // departure's dives and would otherwise read a two-boat day as a single.
+    if (row.startsAt.getTime() >= departureStartsAt.getTime()) continue;
+    if (calendarDateInTimezone(row.startsAt, timeZone) >= firstDay) dived.add(row.personId);
+  }
+  return dived;
 }
 
 /**

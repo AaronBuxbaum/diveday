@@ -371,7 +371,7 @@ describe("tripRecapEmail", () => {
     const from = new Date("2026-08-02T14:10:00.000Z");
     const afterDive = tripRecapEmail({
       ...recapBase,
-      flySafe: { from, hours: 24, anchor: "last_dive" },
+      flySafe: { from, hours: 24, anchor: "last_dive", reason: "dives_recorded" },
     });
     expect(afterDive.text).toContain(
       "Fly-safe from Sunday 10:10 AM: Blue Mantis asks for 24 hours after your last dive, following DAN’s guidance.",
@@ -380,14 +380,14 @@ describe("tripRecapEmail", () => {
 
     const afterReturn = tripRecapEmail({
       ...recapBase,
-      flySafe: { from, hours: 18, anchor: "scheduled_return" },
+      flySafe: { from, hours: 18, anchor: "scheduled_return", reason: "one_dive" },
     });
     expect(afterReturn.text).toContain("18 hours after the day was due to end");
 
     const spanish = tripRecapEmail({
       ...recapBase,
       locale: "es-ES",
-      flySafe: { from, hours: 24, anchor: "last_dive" },
+      flySafe: { from, hours: 24, anchor: "last_dive", reason: "dives_recorded" },
     });
     expect(spanish.text).toContain("Puedes volar a partir del domingo, 10:10");
   });

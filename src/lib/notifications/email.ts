@@ -5,6 +5,7 @@ import type { DiverLocale } from "@/i18n/settings";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
 import type { DemoRoleId } from "@/lib/demo-roles";
+import { type FlySafeResult, flySafeMessageKey } from "@/lib/fly-safe";
 import {
   formatDateTimeTz,
   formatShortDate,
@@ -768,7 +769,7 @@ type TripRecapEmailInput = {
    * shop's zone. Absent means the record could not say, and the email keeps
    * quiet rather than guess.
    */
-  flySafe?: { from: Date; hours: number; anchor: "last_dive" | "scheduled_return" };
+  flySafe?: Pick<FlySafeResult, "from" | "hours" | "anchor" | "reason">;
   /** The diver's shareable recap page. */
   recapUrl: string;
   /** Self-serve opt-out of `waitlist_invite`/`trip_recap` courtesy email. */
@@ -809,16 +810,11 @@ export function tripRecapEmail(input: TripRecapEmailInput): NotificationEmail {
   // The same sentence the after-state carries, in the same words: one fact,
   // read the same way on the page and in the inbox.
   const flySafe = input.flySafe
-    ? t(
-        input.flySafe.anchor === "last_dive"
-          ? "notifications.tripRecap.flySafeAfterDive"
-          : "notifications.tripRecap.flySafeAfterReturn",
-        {
-          when: formatWeekdayTime(input.flySafe.from, input.locale, input.timezone),
-          count: input.flySafe.hours,
-          shopName: input.shopName,
-        },
-      )
+    ? t(`notifications.tripRecap.${flySafeMessageKey(input.flySafe)}`, {
+        when: formatWeekdayTime(input.flySafe.from, input.locale, input.timezone),
+        count: input.flySafe.hours,
+        shopName: input.shopName,
+      })
     : null;
   const flySafeText = flySafe ? `\n\n${flySafe}` : "";
   const flySafeHtml = flySafe ? `<p>${escapeHtml(flySafe)}</p>` : "";

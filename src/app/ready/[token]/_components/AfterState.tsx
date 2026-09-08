@@ -22,7 +22,7 @@ import { depthText, temperatureText } from "@/i18n/unit-labels";
 import type { BrandDisplayFontCode } from "@/lib/brand";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DiveRecordComparison } from "@/lib/dive-record";
-import type { FlySafeAnchor } from "@/lib/fly-safe";
+import { type FlySafeAnchor, type FlySafeReason, flySafeMessageKey } from "@/lib/fly-safe";
 import { formatOrdinal } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { currencySymbol, minorToMajor, type ShopCurrency } from "@/lib/money";
@@ -155,7 +155,7 @@ export type AfterStateProps = {
    * say. `anchor` picks the sentence: the clock started at the last recorded
    * exit, or at the day's scheduled end. Informs, gates nothing.
    */
-  flySafe: { when: string; hours: number; anchor: FlySafeAnchor } | null;
+  flySafe: { when: string; hours: number; anchor: FlySafeAnchor; reason: FlySafeReason } | null;
   /**
    * Per site the day dived, the species that site's field guide names.
    *
@@ -417,10 +417,11 @@ export function AfterState({
           is the keepsake alone. */}
       {flySafe ? (
         <p data-testid={AFTER_STATE_TEST_IDS.flySafe} className="mt-6 text-base print:hidden">
-          {t(
-            flySafe.anchor === "last_dive" ? "recap.flySafeAfterDive" : "recap.flySafeAfterReturn",
-            { when: flySafe.when, count: flySafe.hours, shopName: shop.name },
-          )}
+          {t(`recap.${flySafeMessageKey(flySafe)}`, {
+            when: flySafe.when,
+            count: flySafe.hours,
+            shopName: shop.name,
+          })}
         </p>
       ) : null}
 

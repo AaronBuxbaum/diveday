@@ -858,6 +858,7 @@ describe("sendDueRecaps", () => {
       from: new Date(lastExit.getTime() + 30 * 60 * 60 * 1000),
       hours: 30,
       basis: "repetitive",
+      reason: "dives_recorded",
       anchor: "last_dive",
     });
 
@@ -953,13 +954,17 @@ describe("sendDueRecaps", () => {
       from: new Date(lastExit.getTime() + 12 * 60 * 60 * 1000),
       hours: 12,
       basis: "single",
+      reason: "one_dive",
       anchor: "last_dive",
     });
     // Sam's second: DAN's clause covers multiple days, so 24 from the same exit.
+    // `earlier_day`, not merely `repetitive`: it is what makes Sam's sentence
+    // explain itself, and Rae's not.
     expect(flySafeFor(samBookingId)).toEqual({
       from: new Date(lastExit.getTime() + 24 * 60 * 60 * 1000),
       hours: 24,
       basis: "repetitive",
+      reason: "earlier_day",
       anchor: "last_dive",
     });
 

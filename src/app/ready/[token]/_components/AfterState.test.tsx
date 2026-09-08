@@ -116,7 +116,14 @@ describe("the fly-safe line", () => {
   it("names the instant, the hours, and the shop, worded off the last dive", () => {
     render(
       <AfterState
-        {...props({ flySafe: { when: "Sunday 10:20 AM", hours: 24, anchor: "last_dive" } })}
+        {...props({
+          flySafe: {
+            when: "Sunday 10:20 AM",
+            hours: 24,
+            anchor: "last_dive",
+            reason: "dives_recorded",
+          },
+        })}
       />,
     );
     expect(screen.getByTestId(AFTER_STATE_TEST_IDS.flySafe).textContent).toBe(
@@ -128,13 +135,45 @@ describe("the fly-safe line", () => {
     render(
       <AfterState
         {...props({
-          flySafe: { when: "Sunday 10:20 AM", hours: 18, anchor: "scheduled_return" },
+          flySafe: {
+            when: "Sunday 10:20 AM",
+            hours: 18,
+            anchor: "scheduled_return",
+            reason: "one_dive",
+          },
         })}
       />,
     );
     expect(screen.getByTestId(AFTER_STATE_TEST_IDS.flySafe).textContent).toBe(
       "recap.flySafeAfterReturn(Sunday 10:20 AM,18,Blue Mantis Divers)",
     );
+  });
+
+  /**
+   * Two divers who did the identical thing today read different numbers when
+   * one of them dived here yesterday, and a recap of *today* shows the cause
+   * nowhere. Standing on the dock comparing phones, the difference has to
+   * explain itself or both of them discount it (issue #1439).
+   */
+  it("says why, and only when the reason is a day this recap does not show", () => {
+    for (const [reason, key] of [
+      ["earlier_day", "recap.flySafeAfterDiveEarlierDay"],
+      ["dives_recorded", "recap.flySafeAfterDive"],
+      ["dives_planned", "recap.flySafeAfterDive"],
+      ["one_dive", "recap.flySafeAfterDive"],
+    ] as const) {
+      cleanup();
+      render(
+        <AfterState
+          {...props({
+            flySafe: { when: "Sunday 10:20 AM", hours: 24, anchor: "last_dive", reason },
+          })}
+        />,
+      );
+      expect(screen.getByTestId(AFTER_STATE_TEST_IDS.flySafe).textContent, reason).toBe(
+        `${key}(Sunday 10:20 AM,24,Blue Mantis Divers)`,
+      );
+    }
   });
 });
 

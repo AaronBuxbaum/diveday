@@ -1589,17 +1589,26 @@ new domain concept, define it here in the same PR.
   `_repetitive`, defaults 18 and 24, floored at DAN's published minimums of 12 and 18) counted from
   the **last recorded exit**, or from the scheduled return once the boat is home by the one-hour
   buffer. *Repetitive* by any of three routes — the day held more than one dive by the record, or by
-  the plan, or **this diver already dived at this shop in the 24 hours before the departure**, which
-  is DAN's "multiple days of diving" (issue #1439). The longer wait is the one that costs nothing if
-  wrong, and reaching repetitive can never shorten one, because a shop's `repetitive` may not be set
-  below its `single`. A record missing its last exit anchors on the return, never on an earlier dive.
-  Rendered on the thread's after-state and in the recap email, in the shop's zone. The sentence names
-  the **shop** as the author of the figure and DAN as the practice behind it, because DAN publishes
-  12 and 18 and a shop may sit above them. Two things it deliberately cannot know: whether a dive
-  took decompression stops, which DAN says needs substantially longer than 18 hours; and any dive not
-  booked at this shop, so a diver who spent the week with another operator and made one dive here
-  today still reads *single*. Informs and gates nothing; never computed from a depth profile, which
-  is a dive computer's job.
+  the plan, or **this diver already had a dive day at this shop on one of the two local days before
+  the departure** (issue #1439). That third route is DiveDay's *reading* of DAN's "multiple days of
+  diving", not a quotation: DAN publishes no window for that clause. It counts local calendar days in
+  the shop's own zone rather than a span of hours, because two boats leaving at the same time on
+  consecutive days are exactly 24 hours apart — and 25 across a fall-back boundary — so an hours
+  window let the tide and the clock change decide the answer. The evidence is a live booking on a
+  live departure the shop still says ran, not a dive log row: crews do not reliably log, and
+  requiring a row would have let today's boat speak from its plan while yesterday's fell silent.
+  The longer wait is the one that costs nothing if wrong, and reaching repetitive can never shorten
+  one, because a shop's `repetitive` may not be set below its `single`. A record missing its last
+  exit anchors on the return, never on an earlier dive. Rendered on the thread's after-state and in
+  the recap email, in the shop's zone; on the earlier-day route the sentence says so, because two
+  divers who did the identical thing today otherwise read different numbers with nothing on a recap
+  of today explaining it. The sentence names the **shop** as the author of the figure and DAN as the
+  practice behind it, because DAN publishes 12 and 18 and a shop may sit above them. Three things it
+  deliberately cannot know: whether a dive took decompression stops, which DAN says needs
+  substantially longer than 18 hours; any dive not booked at this shop, so a week with another
+  operator is invisible; and that two days belong to one diver when the bookings carry no email —
+  a walk-up is a fresh `people` row each time. Informs and gates nothing; never computed from a
+  depth profile, which is a dive computer's job.
 - **Surface interval** — the time between one dive's exit and the next dive's entry. Only ever
   stated between **consecutively numbered** executed dives that were both recorded and do not
   overlap; anything else is "not recorded". An interval measured across a dive nobody logged

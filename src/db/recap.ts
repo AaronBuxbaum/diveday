@@ -453,7 +453,7 @@ export async function getRecapPageData(
     // Did this diver dive here yesterday? DAN's 18 hours covers multiple days
     // as well as repetitive dives, so the answer widens the fly-safe basis
     // below. One more element of this `Promise.all`, not a second round trip.
-    peopleWhoDivedBefore(db, row.shopId, [row.personId], trip.startsAt),
+    peopleWhoDivedBefore(db, row.shopId, [row.personId], trip.startsAt, row.timezone),
     trip.boatId ? getBoatForHistory(db, row.shopId, trip.boatId) : Promise.resolve(null),
     tripCrewByTrip(db, row.shopId, [row.tripId]),
     db
@@ -1272,6 +1272,7 @@ async function sendRecaps(
           shopId,
           tripRows.map((r) => r.booking.personId),
           first.trip.startsAt,
+          first.shop.timezone,
         ),
       ]);
       const names: string[] = [];

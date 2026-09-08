@@ -26,6 +26,7 @@ describe("flySafeFrom", () => {
     expect(result).toEqual({
       from: new Date(exit.getTime() + 18 * HOUR_MS),
       basis: "single",
+      reason: "one_dive",
       anchor: "last_dive",
       hours: 18,
     });
@@ -65,6 +66,7 @@ describe("flySafeFrom", () => {
     expect(result).toEqual({
       from: new Date(exit.getTime() + 24 * HOUR_MS),
       basis: "repetitive",
+      reason: "earlier_day",
       anchor: "last_dive",
       hours: 24,
     });
@@ -85,6 +87,27 @@ describe("flySafeFrom", () => {
         hours,
       }),
     ).toMatchObject({ basis: "single", hours: 18 });
+  });
+
+  it("names which of the three routes reached repetitive, recorded count first", () => {
+    // The diver's sentence branches on this, so it is not a label: a day the
+    // crew logged as two tanks must say so rather than be explained by
+    // yesterday, which is why the recorded count is read before the flag.
+    const exit = new Date("2026-07-25T20:10:00.000Z");
+    const one = { diveNumber: 1, exitedAt: exit };
+    const two = { diveNumber: 2, exitedAt: exit };
+    const reasonOf = (
+      executedDives: (typeof one)[],
+      plannedDives: number,
+      divedRecently: boolean,
+    ) =>
+      flySafeFrom({ executedDives, plannedDives, endsAt, divedRecently, now: home, hours })?.reason;
+    expect(reasonOf([one], 1, false)).toBe("one_dive");
+    expect(reasonOf([one, two], 2, false)).toBe("dives_recorded");
+    expect(reasonOf([one], 2, false)).toBe("dives_planned");
+    expect(reasonOf([one], 1, true)).toBe("earlier_day");
+    // A two-tank day is explained by its own record, not by yesterday.
+    expect(reasonOf([one, two], 2, true)).toBe("dives_recorded");
   });
 
   it("is one more route to repetitive, never a different answer", () => {
@@ -143,6 +166,7 @@ describe("flySafeFrom", () => {
     expect(result).toEqual({
       from: new Date(endsAt.getTime() + 24 * HOUR_MS),
       basis: "repetitive",
+      reason: "dives_planned",
       anchor: "scheduled_return",
       hours: 24,
     });
@@ -191,6 +215,7 @@ describe("flySafeFrom", () => {
     ).toEqual({
       from: new Date(endsAt.getTime() + 24 * HOUR_MS),
       basis: "repetitive",
+      reason: "dives_recorded",
       anchor: "scheduled_return",
       hours: 24,
     });

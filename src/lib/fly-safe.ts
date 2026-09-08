@@ -17,14 +17,24 @@ import { hasReturned } from "./trips";
  * guidance" misquotes it, and a setting under DAN's floor would leave even
  * the weaker claim false.
  *
- * Two limits worth knowing before this is extended. DAN's guidance covers
- * **no-decompression** recreational diving — a dive that took stops needs
- * substantially longer, and nothing here can tell. And the only dives it can
- * see are the ones booked at *this* shop: a diver who spent the week with
- * another operator and made one dive here today still reads *single*, because
- * nothing in DiveDay records the week (issue #1439 closed the narrower gap —
- * an earlier day at this shop — and left this one, which no amount of code
- * here can close).
+ * Three limits worth knowing before this is extended, and none of them can be
+ * closed from inside this module.
+ *
+ * DAN's guidance covers **no-decompression** recreational diving — a dive that
+ * took stops needs substantially longer, and nothing in DiveDay records
+ * whether one did.
+ *
+ * The only dives it can see are the ones booked at *this* shop: a diver who
+ * spent the week with another operator and made one dive here today still
+ * reads *single*, because nothing in DiveDay records the week.
+ *
+ * And it sees an earlier day only when both days resolve to one `people` row.
+ * A booking taken without an email always inserts a fresh person (the unique
+ * index is partial, so nulls never collide), so the cash walk-up who dives
+ * Monday and comes back Tuesday is two people as far as this is concerned —
+ * and walk-ups are a large share of a busy shop's multi-day divers. Issue
+ * #1439 widened this to a second day at this shop; it did not make the shop's
+ * records of a person complete.
  *
  * Two things this deliberately does not do. It never computes from a dive
  * profile — depth and bottom time are a computer's business, and DiveDay is
@@ -37,6 +47,13 @@ export type FlySafeBasis = "single" | "repetitive";
 
 /** Where the clock started: the last recorded exit, or the boat's scheduled return. */
 export type FlySafeAnchor = "last_dive" | "scheduled_return";
+
+/**
+ * Why the basis is what it is. `one_dive` is the single-dive case; the other
+ * three each reach `repetitive`, and only `earlier_day` is invisible on the
+ * surface that renders the answer.
+ */
+export type FlySafeReason = "one_dive" | "dives_recorded" | "dives_planned" | "earlier_day";
 
 export type FlySafeHours = { single: number; repetitive: number };
 
@@ -58,19 +75,27 @@ export const FLY_SAFE_FIELDS = ["single", "repetitive"] as const satisfies Reado
 >;
 
 /**
- * How far back "multiple days of diving" reaches, counted back from this
- * departure's start (issue #1439).
+ * How far back "multiple days of diving" reaches: this many **local calendar
+ * days** in the shop's own zone, counted back from the departure's day (issue
+ * #1439). Two means yesterday and the day before.
  *
- * DAN publishes no window at all — 18 hours covers "repetitive dives or
- * multiple days of diving" and stops there — so this figure is a reading, not
- * a quotation: a dive the previous calendar day is inside it, a dive three
- * days ago is not. 24 rather than the more conservative 72 because the error
- * it makes is already in the safe direction — {@link parseFlySafeHours}
- * refuses a `repetitive` shorter than `single`, so reading repetitive can only
- * ever lengthen a wait — and a window wide enough to catch a dive nobody
- * would call recent buys nothing for that.
+ * DAN publishes no window for that clause at all — 18 hours covers
+ * "repetitive dives or multiple days of diving" and stops there — so the
+ * figure is DiveDay's reading, not a quotation. What is *not* a judgement call
+ * is the unit: DAN's clause counts days, and so does this. A span of hours got
+ * three ordinary cases wrong at once — two 8 AM departures on consecutive days
+ * are exactly 24 hours apart, the same pair is 25 across a fall-back boundary,
+ * and Monday morning to Tuesday afternoon is 30 — and each error fell toward
+ * the shorter advice.
+ *
+ * Two rather than one because a diver on a three-day package who takes a day
+ * off the boat is still diving multiple days; more than two starts describing
+ * a holiday rather than a surface interval. Erring wide costs a diver hours
+ * ashore and nothing else: {@link parseFlySafeHours} refuses a `repetitive`
+ * shorter than a `single`, so reading repetitive can only ever lengthen a
+ * wait.
  */
-export const FLY_SAFE_MULTI_DAY_LOOKBACK_HOURS = 24;
+export const FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS = 2;
 
 /**
  * A submitted pair, or `null` if either is not a whole number inside its own
@@ -103,12 +128,12 @@ export type FlySafeInput = {
   /** The departure's scheduled return, or null for a departure with none. */
   endsAt: Date | null;
   /**
-   * This diver has a dive recorded at *this shop* inside
-   * {@link FLY_SAFE_MULTI_DAY_LOOKBACK_HOURS} before this departure — DAN's
-   * "multiple days of diving", which its 18 hours covers alongside repetitive
-   * dives on one boat. A fact about a *person*, not about the departure: two
-   * divers on one boat may honestly differ here, and anything memoising this
-   * result must be keyed accordingly.
+   * This diver already had a dive day at *this shop* on one of the
+   * {@link FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS} local days before this departure
+   * — DAN's "multiple days of diving", which its 18 hours covers alongside
+   * repetitive dives on one boat. A fact about a *person*, not about the
+   * departure: two divers on one boat may honestly differ here, and anything
+   * memoising this result must be keyed accordingly.
    */
   divedRecently: boolean;
   now: Date;
@@ -118,6 +143,14 @@ export type FlySafeInput = {
 export type FlySafeResult = {
   from: Date;
   basis: FlySafeBasis;
+  /**
+   * Which of the three routes reached this basis. The diver's sentence reads
+   * it for one reason: on `earlier_day`, two divers who did the identical
+   * thing today read different numbers, and nothing on a recap of *today*
+   * shows the cause. The other two routes need no explanation — the day's own
+   * dive count is on the same page.
+   */
+  reason: FlySafeReason;
   anchor: FlySafeAnchor;
   /** The hours that produced `from`, for the sentence that names them. */
   hours: number;
@@ -127,10 +160,10 @@ export type FlySafeResult = {
  * The instant a diver may fly from, or `null` when nothing on the record can
  * honestly say.
  *
- * - **Basis.** Repetitive by any of three routes: more than one dive the crew
- *   recorded, more than one dive the departure planned, or a dive this diver
- *   already had at this shop inside
- *   {@link FLY_SAFE_MULTI_DAY_LOOKBACK_HOURS}. A record short of its plan is a
+ * - **Basis.** Repetitive by any of three routes, and `reason` says which: more
+ *   than one dive the crew recorded, more than one dive the departure planned,
+ *   or a dive day this diver already had at this shop inside
+ *   {@link FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS}. A record short of its plan is a
  *   crew that logged one tank of two more often than it is a day cut to one
  *   tank, and the longer wait is the one that costs a diver nothing if wrong.
  *   None of the three can ever *shorten* a wait: {@link parseFlySafeHours}
@@ -143,8 +176,17 @@ export type FlySafeResult = {
  */
 export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
   const { executedDives, plannedDives, endsAt, divedRecently, now, hours } = input;
-  const diveCount = Math.max(executedDives.length, plannedDives);
-  const basis: FlySafeBasis = diveCount > 1 || divedRecently ? "repetitive" : "single";
+  // The recorded count is read first so a day the crew logged as two tanks
+  // says so, rather than being explained by a plan or by yesterday.
+  const reason: FlySafeReason =
+    executedDives.length > 1
+      ? "dives_recorded"
+      : plannedDives > 1
+        ? "dives_planned"
+        : divedRecently
+          ? "earlier_day"
+          : "one_dive";
+  const basis: FlySafeBasis = reason === "one_dive" ? "single" : "repetitive";
   const wait = basis === "repetitive" ? hours.repetitive : hours.single;
 
   let lastExit: { diveNumber: number; exitedAt: Date } | null = null;
@@ -162,6 +204,7 @@ export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
     return {
       from: new Date(lastExit.exitedAt.getTime() + wait * HOUR_MS),
       basis,
+      reason,
       anchor: "last_dive",
       hours: wait,
     };
@@ -175,9 +218,40 @@ export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
     return {
       from: new Date(anchorAt.getTime() + wait * HOUR_MS),
       basis,
+      reason,
       anchor: "scheduled_return",
       hours: wait,
     };
   }
   return null;
+}
+
+/**
+ * The message key for a diver's fly-safe sentence, given where the clock
+ * started and why the basis is what it is.
+ *
+ * One function rather than a condition spelled at each of the two call sites,
+ * because the page and the email must never word this differently — the whole
+ * point of the shared result is that a diver reads one fact twice. Callers
+ * prefix it with their own namespace (`recap.` on the page,
+ * `notifications.tripRecap.` in the inbox).
+ *
+ * Only `earlier_day` gets its own sentence. The other two routes to
+ * *repetitive* are visible on the page that renders the answer — the day's own
+ * dive record is a few lines above it — but a dive on an earlier day appears
+ * nowhere on a recap of today, so two divers who did the identical thing today
+ * read different numbers with nothing saying why. That is the one clause here
+ * that carries something the surface cannot show on its own.
+ */
+export type FlySafeMessageKey =
+  | "flySafeAfterDive"
+  | "flySafeAfterReturn"
+  | "flySafeAfterDiveEarlierDay"
+  | "flySafeAfterReturnEarlierDay";
+
+export function flySafeMessageKey(
+  result: Pick<FlySafeResult, "anchor" | "reason">,
+): FlySafeMessageKey {
+  const anchor = result.anchor === "last_dive" ? "flySafeAfterDive" : "flySafeAfterReturn";
+  return result.reason === "earlier_day" ? (`${anchor}EarlierDay` as const) : anchor;
 }

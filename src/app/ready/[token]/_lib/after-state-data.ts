@@ -128,6 +128,9 @@ export async function buildAfterStateProps(input: {
           when: formatWeekdayTime(data.flySafe.from, locale, shop.timezone),
           hours: data.flySafe.hours,
           anchor: data.flySafe.anchor,
+          // Not cosmetic: it picks which of the two sentences the diver reads,
+          // and only the `earlier_day` one explains itself.
+          reason: data.flySafe.reason,
         }
       : null,
     fieldGuide: data.fieldGuide,
