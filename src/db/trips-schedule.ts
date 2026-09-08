@@ -359,6 +359,13 @@ export async function duplicateTrip(
       // not find the copy raising the row the mark exists to silence.
       selfGuided: source.selfGuided,
       diveMode: source.diveMode,
+      // Copied outright, and deliberately *not* re-checked through
+      // `getTripLens` the way `boatId` is below. A boat id is re-validated
+      // because rows predate `validateBoat`; `lens_id` has only ever been
+      // written behind a tenant check, and a soft-deleted lens must keep
+      // travelling — `deleteTripLens` says in as many words that a past day
+      // still says which kind of day it was.
+      lensId: source.lensId,
       // Re-checked rather than trusted, even though it is being copied from a
       // row this shop already owns: a bad id written before `validateBoat`
       // existed would otherwise propagate on every copy, which is how one

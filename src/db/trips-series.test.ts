@@ -13,6 +13,7 @@ import {
   tripSeries,
   trips,
 } from "./schema";
+import { createTripLens } from "./trip-lenses";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
@@ -219,6 +220,63 @@ describe("recurring trip series (in-memory PGlite)", () => {
     expect(rolled?.created).toBe(30);
     const latestAfter = await getLatestSeriesInstance(db, shop.id, result.series.id);
     expect(latestAfter?.startsAt.getTime()).toBeGreaterThan(latestBefore?.startsAt.getTime() ?? 0);
+  });
+
+  /**
+   * **A repeating departure keeps the shop's word for it** (issue #1492).
+   *
+   * `lens_id` was dropped on both of a series' write paths — the seed instance
+   * `createTripSeries` inserts, and every occurrence `materializeWindow` rolls
+   * forward. `NewTripSeries` carries it and the schedule board passes it, so a
+   * shop setting "Kind of day" on a repeating Saturday typed a word that was
+   * silently discarded on the very first instance and on all of them after.
+   *
+   * It is not only a staff-facing loss: the public lens rail narrows in SQL on
+   * `trips.lens_id`, so those departures were missing from the list a diver
+   * reaches by tapping the shop's own word.
+   */
+  it("carries the shop's kind of day onto the seed instance and every roll", async () => {
+    const { db, shop } = await seededShopContext();
+    const lens = await createTripLens(db, shop.id, "After dark");
+    if (!lens) throw new Error("lens not created");
+
+    const result = await createTripSeries(
+      db,
+      seriesInput({ shopId: shop.id, lensId: lens.id, weekdays: EVERY_WEEKDAY, endsOn: null }),
+    );
+    if (!result) throw new Error("series not created");
+
+    // The seed instance, which was the one a staffer saw immediately.
+    const [seed] = result.trips;
+    expect(seed?.lensId).toBe(lens.id);
+    // And every occurrence materialized with it.
+    expect(result.trips.every((trip) => trip.lensId === lens.id)).toBe(true);
+
+    // Then the nightly horizon roll, which is the path that would have kept
+    // producing wordless departures forever.
+    const rolled = await rollSeriesForward(
+      db,
+      shop.id,
+      result.series.id,
+      at("2030-10-07T12:00:00.000Z"),
+    );
+    expect(rolled?.created).toBeGreaterThan(0);
+    const materialized = await db
+      .select({ lensId: trips.lensId })
+      .from(trips)
+      .where(and(eq(trips.seriesId, result.series.id), isNull(trips.deletedAt)));
+    expect(materialized.every((trip) => trip.lensId === lens.id)).toBe(true);
+  });
+
+  it("leaves a series with no kind of day without one", async () => {
+    // The inverse, so the fix above cannot be a blanket write.
+    const { db, shop } = await seededShopContext();
+    const result = await createTripSeries(
+      db,
+      seriesInput({ shopId: shop.id, endsOn: "2030-09-21" }),
+    );
+    if (!result) throw new Error("series not created");
+    expect(result.trips.every((trip) => trip.lensId === null)).toBe(true);
   });
 
   it("rolling twice over the same window changes nothing the second time", async () => {
