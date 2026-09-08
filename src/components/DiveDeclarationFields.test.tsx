@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { NO_CERTIFICATION_ANSWER } from "@/lib/dive-declaration";
 import { DiveDeclarationFields } from "./DiveDeclarationFields";
+import { STATED_LEVEL_STORAGE_KEY } from "./stated-diver-level";
 
 afterEach(cleanup);
 
@@ -20,7 +21,9 @@ afterEach(cleanup);
  * they told the shop about an enriched-air card — the same broken promise as
  * asking a question and discarding the answer.
  */
-function renderFields(props: { showNitrox?: boolean; locale?: "en-US" | "es-ES" } = {}) {
+function renderFields(
+  props: { showNitrox?: boolean; offerStatedLevel?: boolean; locale?: "en-US" | "es-ES" } = {},
+) {
   const { locale = "en-US", ...fieldProps } = props;
   return render(
     // The same two namespaces the public forms mount it under: `common` for the
@@ -124,5 +127,52 @@ describe("DiveDeclarationFields", () => {
     // Not silently re-ticked: an unticked box is silence, and a box that ticks
     // itself back on would be the app claiming something nobody said.
     expect(nitrox).not.toBeChecked();
+  });
+});
+
+/**
+ * **The reader already answered this at the top of the page.**
+ *
+ * The day-ceiling picker keeps a stated level in this browser (ADR
+ * 20260814-self-declared-cards), and the wait-list form below it used to ask
+ * the same question again from "Rather not say". It now offers the answer back.
+ *
+ * An offer, never a pre-selection: what a diver says their card is has to stay
+ * an explicit act of theirs, so the select is still at "" until they press it.
+ */
+describe("the level a reader already stated", () => {
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("is offered back as a button the reader has to press", async () => {
+    window.localStorage.setItem(STATED_LEVEL_STORAGE_KEY, "advanced_open_water");
+    renderFields({ offerStatedLevel: true });
+
+    const offer = await screen.findByRole("button", { name: /Use .*, as you said above/ });
+    // The select has not moved: nothing is claimed on the reader's behalf.
+    expect(screen.getByLabelText(/Certification level/)).toHaveValue("");
+
+    await userEvent.click(offer);
+    expect(screen.getByLabelText(/Certification level/)).toHaveValue("advanced_open_water");
+    // Taken, so gone — and there is no way back to it, which is why no dismiss
+    // control is needed.
+    expect(screen.queryByRole("button", { name: /as you said above/ })).toBeNull();
+  });
+
+  it("offers nothing when the reader stated nothing", () => {
+    renderFields({ offerStatedLevel: true });
+    expect(screen.queryByRole("button", { name: /as you said above/ })).toBeNull();
+  });
+
+  /**
+   * The last-minute list mounts this field on a page with no picker, so it must
+   * not start reading a level somebody stated on a different page.
+   */
+  it("offers nothing where the form did not ask for it", async () => {
+    window.localStorage.setItem(STATED_LEVEL_STORAGE_KEY, "advanced_open_water");
+    renderFields();
+    await screen.findByLabelText(/Certification level/);
+    expect(screen.queryByRole("button", { name: /as you said above/ })).toBeNull();
   });
 });

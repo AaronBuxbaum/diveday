@@ -73,6 +73,7 @@
       },
       "cardNumber": "Certification number",
       "levelUnsaid": "Rather not say",
+      "useStatedLevel": "Use {level}, as you said above",
       "levelNone": "I'm not certified yet",
       "levelInfoLabel": "Why we ask about certification",
       "levelDescription": "The shop matches this against what each trip asks for. Answer it even if your card isn't to hand.",
