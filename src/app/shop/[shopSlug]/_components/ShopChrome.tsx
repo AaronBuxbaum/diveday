@@ -51,24 +51,60 @@ import { waterBandFor } from "@/lib/water-band";
  * This is the same shape `src/app/s/[shopSlug]/layout.tsx` already uses for the
  * diver-facing shell.
  *
- * **The tenant gate moved with it, and that is safe by two independent
- * mechanisms**, not by this component being careful. Every staff *page* below
- * gates itself: 43 of the 47 call `requireShopSurface` (`src/lib/session.ts`),
- * which `notFound()`s when the session's shop disagrees with the slug, and the
- * other four gate inline on `session.user.shopId`. And every piece of chrome
- * that could name another tenant — the shop's name, its counts, its next
- * departure, the offline priming — is already behind `ownShop` here, so a
- * cross-tenant visit renders nothing of the other shop even in the frames
- * before this component's own `notFound()` resolves. The refusal is doubled;
- * moving one copy of it does not leave the other missing.
+ * **The tenant gate moved with it, and that is safe because it was never the
+ * only copy** — not because this component is careful. Every staff *page*
+ * below gates itself: 43 of the 47 call `requireShopSurface`
+ * (`src/lib/session.ts`), which `notFound()`s when the session's shop
+ * disagrees with the slug; `check-in`, `check-in/walk-in` and `courses` assert
+ * the same two conditions inline; and the shop home does now too. The home is
+ * worth naming because it did **not** before this change — it resolved its own
+ * shop by `session.user.shopId` and never compared the slug, because this
+ * shell compared it on the home's behalf. A shell that streams beside the page
+ * cannot do that any more, which is exactly what a `security-reviewer` pass on
+ * this change found. The doubling is real; it just had one hole, and closing
+ * it is part of the same change.
+ *
+ * What `ownShop` adds is the second half: every piece of chrome that names a
+ * shop — its name, its counts, its next departure, the demo banner, the water
+ * band, the offline priming — is behind it, so nothing here renders for a
+ * request that has not proved it may see this shop. That matters most for a
+ * request whose session did not resolve at all: the two refusals below both
+ * require a session, and the edge check in `src/proxy.ts` is a cookie-presence
+ * test rather than a signature one, so a forged cookie arrives here with
+ * `session` null. The page beside this one refuses it; this renders it
+ * nothing.
  */
 export async function ShopChrome({ params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
   const db = await getDb();
   // The shop row and the session don't depend on one another — resolve them
-  // together instead of serially. The tenant checks below still run before
-  // anything renders, so the notFound() gating is unchanged.
+  // together instead of serially, and nothing else is read until the two
+  // refusals below have run — so the gate's correctness does not depend on
+  // where a later line happens to sit in this file.
   const [shop, session] = await Promise.all([getShopBySlug(db, shopSlug), auth()]);
+
+  // INVARIANT: staff chrome and counts are scoped to the session's own shop —
+  // a mismatched slug renders nothing of the other tenant.
+  //
+  // This component resolves the shop from the URL slug, but every staff *page*
+  // beside it reads its data from `session.user.shopId`. Without this check the
+  // two disagree the moment someone signed into shop A opens
+  // /shop/shop-b/anything: the page shows A's rows while the shell around it
+  // shows B's name, B's next departure, and B's pending-work counts (reviews
+  // awaiting moderation, blocked divers — which include medical review). Those
+  // counts are another tenant's operational data, and no page-level gate can
+  // catch them because they are read here, in the shell. Since the public
+  // namespace split (ADR 20260803-public-shop-namespace) everything under
+  // /shop is staff-only, so a cross-tenant visit has no public carve-out:
+  // it is refused outright rather than rendered as a mix of two shops.
+  const ownShop = Boolean(session?.user && shop && session.user.shopId === shop.id);
+  if (session?.user && shop && !ownShop) notFound();
+  // An unknown slug is nobody's shop: without this, a signed-in staffer
+  // visiting /shop/no-such-shop/divers would get their *own* roster rendered
+  // under a foreign-looking URL — not a leak, but a phishing-shaped breach of
+  // the "slug and session agree" invariant above.
+  if (session?.user && !shop) notFound();
+
   const showBanner = shop?.isDemo ?? false;
   // Staff read chrome in the language their own device asks for, same
   // negotiation as every other staff surface.
@@ -111,29 +147,13 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
   const demoT = showBanner ? diverTranslator(locale) : undefined;
   const staffT = staffTranslator(locale);
 
-  // INVARIANT: staff chrome and counts are scoped to the session's own shop —
-  // a mismatched slug renders nothing of the other tenant.
-  //
-  // This component resolves the shop from the URL slug, but every staff *page*
-  // beside it reads its data from `session.user.shopId`. Without this check the
-  // two disagree the moment someone signed into shop A opens
-  // /shop/shop-b/anything: the page shows A's rows while the shell around it
-  // shows B's name, B's next departure, and B's pending-work counts (reviews
-  // awaiting moderation, blocked divers — which include medical review). Those
-  // counts are another tenant's operational data, and no page-level gate can
-  // catch them because they are read here, in the shell. Since the public
-  // namespace split (ADR 20260803-public-shop-namespace) everything under
-  // /shop is staff-only, so a cross-tenant visit has no public carve-out:
-  // it is refused outright rather than rendered as a mix of two shops.
-  const ownShop = Boolean(session?.user && shop && session.user.shopId === shop.id);
-  if (session?.user && shop && !ownShop) notFound();
-  // An unknown slug is nobody's shop: without this, a signed-in staffer
-  // visiting /shop/no-such-shop/divers would get their *own* roster rendered
-  // under a foreign-looking URL — not a leak, but a phishing-shaped breach of
-  // the "slug and session agree" invariant above.
-  if (session?.user && !shop) notFound();
-
-  const showNav = ownShop;
+  // Staff, not merely this shop's session. `OfflineManifestAutoSave` below
+  // already asks both questions; the nav asked only the first, and it carries
+  // the blocked-diver count — divers held back by medical review — as well as
+  // the shop's next departure. Nothing can reach here without a staff role
+  // today (`verifyCredentials` refuses a non-staff sign-in and the proxy
+  // bounces one), but neither of those is this file's boundary to lean on.
+  const showNav = ownShop && session?.user ? isStaff(session.user.roles) : false;
   // The blocked-diver count for Today's nav badge (task 83) and the
   // boat-boarding link, gated the same way the nav itself is so a render that
   // shows no nav never pays for them. They do not depend on one another, so
@@ -163,16 +183,21 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
   return (
     <>
       {/* Reef's page top, at the shop's own hour — see `WaterBandStyle` for why
-          it is a `<style>` and not an attribute. An unknown slug has no shop
-          and no zone, so nothing is emitted and the day wash, the one that
-          ships on the base class, stands. */}
-      {shop ? <WaterBandStyle band={waterBandFor(nowDate(), shop.timezone)} /> : null}
+          it is a `<style>` and not an attribute. Behind `ownShop` like every
+          other shop read here, so nothing is emitted and the day wash on the
+          base class stands: an unknown slug has no zone, and a request whose
+          session did not resolve has not proved it may see this one. The
+          refusals above only fire for a request that *has* a session, and the
+          proxy's own bounce is a cookie-presence check rather than a signature
+          one, so a forged cookie reaches here with `session` null — the page
+          beside this one still refuses it, and this renders it nothing. */}
+      {ownShop && shop ? <WaterBandStyle band={waterBandFor(nowDate(), shop.timezone)} /> : null}
       {/* Every /shop page fronts ShopNav's 10-15 header tab stops (persona 14,
           ux-personas-20260730-findings.md) — this jumps a keyboard user past it and the
           demo banner straight to the page's own content. Unconditional, like
           the manifest's own skip link. */}
       <SkipLink href="#shop-main-content" label={staffT("shared.skipToContent")} />
-      {showBanner && demoT ? (
+      {ownShop && showBanner && demoT ? (
         <DemoBanner
           switchRole={switchDemoRoleAction}
           currentRole={currentRole}

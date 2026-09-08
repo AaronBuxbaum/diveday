@@ -296,6 +296,18 @@ async function TodayBody({
   // itself because it runs inside the page's `<Suspense>` boundary, with the
   // session already resolved above it.
   if (!shop) notFound();
+  // **And the slug has to be this shop's own.** Every other staff page asks
+  // `requireShopSurface` for both halves — the session's shop exists, and the
+  // URL names it — and this one only ever asked the first, because the staff
+  // shell above it asked the second. That shell is now an App Shell (issue
+  // 1446): its refusal streams beside this body rather than resolving above
+  // it, so a page that relies on it is relying on a race. The consequence is
+  // not a cross-tenant read — `getShopById` reads the *session's* shop, so the
+  // rows are the reader's own — it is this console rendering under another
+  // shop's slug, with all fifteen of its links built from that slug. Refusing
+  // is the same answer `requireShopSurface` gives, spelled out here because
+  // the helper cannot run inside this boundary.
+  if (shop.slug !== shopSlug) notFound();
   const t = staffTranslator(locale);
   // `Object.hasOwn`, not `AUTH_NOTICES[notice]`: `notice` is an attacker-supplied
   // query param, and a bare lookup resolves `?notice=constructor` off the

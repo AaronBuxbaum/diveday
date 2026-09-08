@@ -245,14 +245,24 @@ also the `{count}` of the badge's pluralised accessible label, so streaming it a
 by medical review until the real number arrived. Buying ~37ms off the chrome by mislabelling a
 safety count is not a trade worth making; the whole chrome already streams, which is the point.
 
-**Why the tenant gate could move.** This is the objection the original decision recorded, and the
-answer is that the refusal was never a single copy. Every staff *page* gates itself — 43 of the 47
-through `requireShopSurface` (`src/lib/session.ts`), which `notFound()`s when the session's shop
-disagrees with the slug, the other four inline on `session.user.shopId` — and every piece of chrome
-that could name another tenant (the shop's name, its counts, its next departure, the offline
-priming) is behind `ownShop` inside `ShopChrome`. So a cross-tenant visit renders nothing of the
-other shop even in the frames before `ShopChrome`'s own `notFound()` resolves. Moving one copy of a
-doubled refusal leaves the other in place; it does not create a window.
+**Why the tenant gate could move, and the hole that had to be closed first.** This is the objection
+the original decision recorded, and the answer is that the refusal was never a single copy — with
+one exception, which a `security-reviewer` pass on this change found. Every staff *page* gates
+itself: 43 of the 47 through `requireShopSurface` (`src/lib/session.ts`), which `notFound()`s when
+the session's shop disagrees with the slug, and `check-in`, `check-in/walk-in` and `courses` assert
+the same two conditions inline. The **shop home did not**: it resolved its own shop by
+`session.user.shopId` and never compared the slug at all, because this shell compared it on the
+home's behalf. A shell that streams beside the page cannot, so `src/app/shop/[shopSlug]/page.tsx`
+now makes the comparison itself, and `e2e/tenant-isolation.spec.ts` asserts it in the *bytes* — a
+`page.request.get` with no JavaScript, where a refusal that arrives as a client-render instruction
+would not count.
+
+Every piece of chrome that names a shop — its name, its counts, its next departure, the demo
+banner, the water band, the offline priming — sits behind `ownShop` inside `ShopChrome`, which is
+what covers the request whose session does not resolve at all: both refusals require a session, and
+`src/proxy.ts` tests for a cookie's *presence*, not its signature, so a forged cookie reaches the
+component with `session` null. The page beside it refuses that request; the chrome renders it
+nothing.
 
 This is **not** the third alternative above — the gate did not move to the edge, `src/proxy.ts` is
 unchanged, and `e2e/tenant-isolation.spec.ts` still asserts a rendered `notFound()` on the same

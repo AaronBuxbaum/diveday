@@ -24,9 +24,9 @@ import { ShopChrome, ShopChromeSkeleton } from "./_components/ShopChrome";
  * own `loading.tsx` paints immediately and the chrome streams in.
  *
  * The tenant gate moved into `ShopChrome` with the reads it protects. Read its
- * docblock before touching it: it is safe because the refusal is doubled — every
- * staff page gates itself, and every piece of chrome that could name another
- * tenant is behind `ownShop` — not because of where it sits.
+ * docblock before touching it: it is safe because the refusal is doubled at
+ * every staff page, not because of where it sits — and closing the one hole in
+ * that doubling, on the shop home, is part of this change.
  */
 export default function ShopLayout({
   children,
