@@ -245,8 +245,18 @@ export async function runPostDeployWizard({
   // the Vercel DNS commands resolve their scope independently. CI has no
   // persisted `.vercel` link to supply that scope, so pass it explicitly or
   // DNS listing/addition can target the operator's personal account.
+  //
+  // Only for a team, though. `VERCEL_ORG_ID` is `.vercel/project.json`'s
+  // `orgId`, which names a team *or* a personal account, and the CLI refuses
+  // the latter outright: `--scope <personal account>` exits non-zero with "You
+  // cannot set your Personal Account as the scope." On 2026-09-08 that failed
+  // the Infra workflow after `cdk deploy` had already succeeded -- the DNS
+  // listing fell back to adding everything, and the first add died. Vercel
+  // prefixes team ids with `team_`; anything else is the token's own personal
+  // account, which is already the scope every unscoped call resolves to, so
+  // the correct argument there is none at all.
   const vercelScope = syncEnvironment?.VERCEL_ORG_ID?.trim();
-  const vercelScopeArguments = vercelScope ? ["--scope", vercelScope] : [];
+  const vercelScopeArguments = vercelScope?.startsWith("team_") ? ["--scope", vercelScope] : [];
 
   const readSesDnsPlan = () => {
     const emailDomain = contextValue(cdkArguments, "sesEmailDomain", "ses.dive.day");

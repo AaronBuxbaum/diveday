@@ -327,6 +327,53 @@ describe("post-deploy wizard", () => {
     ).toBe(true);
   });
 
+  it("omits the scope for a personal-account org id, which the Vercel CLI refuses", async () => {
+    // `vercel dns` exits non-zero on `--scope <personal account>` ("You cannot
+    // set your Personal Account as the scope."), which on 2026-09-08 failed the
+    // Infra workflow after the stack had already deployed. A personal account
+    // is the scope an unscoped call already resolves to, so the fix is to send
+    // no scope rather than a rejected one.
+    const answers = ["no", "no", "no", "no", "no", "yes", "no"];
+    const commands = [];
+    await runPostDeployWizard({
+      ask: async () => answers.shift() ?? "no",
+      checkUpdates: {
+        awsProfiles: true,
+        vercelEnvironment: true,
+        githubSecrets: true,
+        cdkVariables: true,
+        githubEnvironment: true,
+      },
+      cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+      credentialsDocument: "",
+      syncEnvironment: {
+        AWS_DEFAULT_REGION: "us-east-2",
+        VERCEL_ORG_ID: "sHqSY0BvVUqYNlLGH1WjeXAe",
+      },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws") return JSON.stringify(["first"]);
+        return "";
+      },
+      log: () => {},
+    });
+
+    const dnsCommands = commands.filter(
+      ({ command, arguments_ }) => command === "pnpm" && arguments_[2] === "dns",
+    );
+    expect(dnsCommands).toHaveLength(4);
+    expect(dnsCommands[0].arguments_).toEqual([
+      "exec",
+      "vercel",
+      "dns",
+      "ls",
+      "dive.day",
+      "--limit",
+      "100",
+    ]);
+    expect(dnsCommands.every(({ arguments_ }) => !arguments_.includes("--scope"))).toBe(true);
+  });
+
   it("syncs the infra-deploy environment only on a workstation, never in CI", async () => {
     // The CI path skips this outright: it would have the deploy job rewrite
     // the very approval gate it is running inside, add the CI PAT's owner as
