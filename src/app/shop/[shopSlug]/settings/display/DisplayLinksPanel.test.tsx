@@ -113,13 +113,18 @@ describe("where a refusal lands", () => {
     await userEvent.click(screen.getByRole("button", { name: "Revoke Lobby TV" }));
     await userEvent.click(screen.getByRole("button", { name: copy.confirmRevokeButton }));
 
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(copy.denied);
-    // On the Screens card, which is the one holding the list it is about.
-    expect(within(screen.getByRole("region", { name: copy.listHeading })).getByRole("alert")).toBe(
-      alert,
-    );
-    // And exactly once — not also under the create form.
+    // Found by its words inside the Screens card, never by `findByRole("alert")`
+    // alone: `InlineConfirm`'s own "Revoke this screen's link?" prompt is also
+    // an alert and is still mounted at this moment, so a bare role lookup
+    // resolves to whichever won the race. It did locally and lost on CI.
+    const list = screen.getByRole("region", { name: copy.listHeading });
+    const notice = await within(list).findByText(copy.denied);
+    // Announced, not merely printed.
+    expect(notice.closest('[role="alert"]')).not.toBeNull();
+    // And not also under the create form.
+    expect(
+      within(screen.getByRole("region", { name: copy.createHeading })).queryByText(copy.denied),
+    ).toBeNull();
     expect(screen.getAllByText(copy.denied)).toHaveLength(1);
   });
 
