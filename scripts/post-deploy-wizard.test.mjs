@@ -664,25 +664,27 @@ describe("post-deploy wizard", () => {
   it("survives an unreadable SES identity, says why, and finishes the rest", async () => {
     const messages = [];
     const commands = [];
-    await expect(
-      wizard({
-        // Only the two that matter: the SES DNS handoff under test, and the
-        // Vercel deploy that follows it — the wizard's deliberately final
-        // action, and so the proof that the run carried on past the failure.
-        ask: async (question) => (/SES DNS|Deploy the linked/.test(question) ? "yes" : "no"),
-        cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
-        credentialsDocument: "",
-        syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
-        execute: (command, arguments_) => {
-          commands.push({ command, arguments_ });
-          if (command === "aws" && arguments_[1] === "get-email-identity") {
-            throw new Error("ExpiredToken: the security token included in the request is expired");
-          }
-          return "";
-        },
-        log: (message) => messages.push(message),
-      }),
-    ).resolves.not.toThrow();
+    // Awaited plainly rather than through a matcher: the wizard resolves with
+    // nothing, so `.resolves.not.toThrow()` would be doing its work through
+    // `.resolves` alone while reading as though the matcher were the point.
+    // A rejection fails this test on its own (Sourcery finding on #1563).
+    await wizard({
+      // Only the two that matter: the SES DNS handoff under test, and the
+      // Vercel deploy that follows it — the wizard's deliberately final
+      // action, and so the proof that the run carried on past the failure.
+      ask: async (question) => (/SES DNS|Deploy the linked/.test(question) ? "yes" : "no"),
+      cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws" && arguments_[1] === "get-email-identity") {
+          throw new Error("ExpiredToken: the security token included in the request is expired");
+        }
+        return "";
+      },
+      log: (message) => messages.push(message),
+    });
 
     // Named, never silent: the reason travels with the refusal.
     expect(messages.some((message) => message.includes("ExpiredToken"))).toBe(true);
@@ -705,6 +707,52 @@ describe("post-deploy wizard", () => {
           command === "pnpm" && arguments_?.[1] === "vercel" && arguments_?.includes("--prod"),
       ),
     ).toBe(true);
+  });
+
+  /**
+   * Two ways the read fails *without* throwing where the guard could see it,
+   * both from a `sourcery-ai` review of #1563. Each one put the wizard back
+   * where it started: dead after `cdk deploy`, or adding records on a plan it
+   * had not actually read.
+   */
+  it.each([
+    // `--query DkimAttributes.Tokens` answers `null`, not `[]`, for an identity
+    // with no DKIM tokens yet — a fresh account, which is exactly when somebody
+    // runs this. `JSON.parse` accepts it and the `.map` after it does not.
+    ["an identity with no DKIM tokens", () => "null", /expected a list of DKIM tokens, got null/],
+    ["a scalar where a list belongs", () => '"nope"', /got string/],
+    // An `Error("")` set the reason to "", which every truthiness check below
+    // reads as *readable* — so the zone got listed and records added on a token
+    // read that had failed.
+    [
+      "a failure with an empty message",
+      () => {
+        throw new Error("");
+      },
+      /no reason given/,
+    ],
+  ])("degrades on %s rather than dying after the deploy", async (_name, aws, expected) => {
+    const messages = [];
+    const commands = [];
+    await wizard({
+      ask: async (question) => (/SES DNS|Deploy the linked/.test(question) ? "yes" : "no"),
+      cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws" && arguments_[1] === "get-email-identity") return aws();
+        return "";
+      },
+      log: (message) => messages.push(message),
+    });
+
+    expect(messages.some((message) => expected.test(message))).toBe(true);
+    // The one that matters: nothing added on a plan that was never read.
+    expect(
+      commands.some(({ arguments_ }) => arguments_[2] === "dns" && arguments_[3] === "add"),
+    ).toBe(false);
+    expect(commands.some(({ arguments_ }) => arguments_[3] === "ls")).toBe(false);
   });
 });
 

@@ -280,10 +280,17 @@ export async function runPostDeployWizard({
     // So it degrades exactly the way an unreadable Vercel listing does: name
     // what could not be read, add nothing, keep the question visible, and let
     // the rest of the wizard finish. Unknown state, never empty state.
+    // Never an empty string. An `Error("")` would set this to "", which every
+    // check below reads as *readable* — so the zone would be listed and records
+    // added on a token read that had actually failed. It would also log an
+    // empty parenthesis, which tells the operator nothing.
+    const reasonOf = (error) =>
+      (error instanceof Error ? error.message : String(error)) || "no reason given";
+
     let unreadableReason;
     let tokens = [];
     try {
-      tokens = JSON.parse(
+      const parsed = JSON.parse(
         execute(
           "aws",
           [
@@ -299,8 +306,19 @@ export async function runPostDeployWizard({
           { encoding: "utf8", env: syncEnvironment, timeoutMs: SUBPROCESS_TIMEOUTS.awsApi },
         ),
       );
+      // `--query DkimAttributes.Tokens` answers `null`, not `[]`, for an
+      // identity that has no DKIM tokens yet — a fresh account before DKIM is
+      // generated, which is exactly when somebody runs this. `JSON.parse` is
+      // happy with that and the `.map` below is not, so the throw landed
+      // outside this block and killed the wizard anyway.
+      if (!Array.isArray(parsed)) {
+        throw new Error(
+          `expected a list of DKIM tokens, got ${parsed === null ? "null" : typeof parsed}`,
+        );
+      }
+      tokens = parsed;
     } catch (error) {
-      unreadableReason = error instanceof Error ? error.message : String(error);
+      unreadableReason = reasonOf(error);
       log(
         `Could not read the SES DKIM tokens for ${emailDomain} (${unreadableReason}); cannot tell which DNS records are needed, so none will be added.`,
       );
@@ -341,7 +359,7 @@ export async function runPostDeployWizard({
         },
       );
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
+      const reason = reasonOf(error);
       if (!unreadableReason) {
         unreadableReason = reason;
         log(
