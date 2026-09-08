@@ -4819,7 +4819,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings");
         await page.getByRole("heading", { name: "Fly-safe hours" }).waitFor();
         await openSettingsRow(page, "Fly-safe hours");
-        await page.getByLabel("After two or more dives").waitFor();
+        await page.getByLabel("After repetitive dives or more than one day of diving").waitFor();
         await capture(page, "settings-fly-safe", scheme);
       });
 
