@@ -284,9 +284,23 @@ export async function runPostDeployWizard({
     // For a TXT record like SPF that is actively harmful -- two "v=spf1"
     // records break SPF validation for every outbound mail. List what Vercel
     // already has once, and skip any add whose exact name/type/value already
-    // appears together on one line of it. If the listing itself fails, fall
-    // back to adding everything rather than silently skipping real work.
+    // appears together on one line of it.
+    //
+    // A listing that fails is unknown state, never empty state. An expired
+    // token, a rate limit, a rejected --scope or a network blip is no evidence
+    // the zone is bare, and this code used to infer exactly that: infra run
+    // 34176404605 (2026-09-08) had `dns ls` refused with "You cannot set your
+    // Personal Account as the scope." and went on to attempt all five adds --
+    // nothing was duplicated only because the adds failed for the same reason
+    // the listing did. Had the listing alone been broken, a second "v=spf1"
+    // TXT would have landed on the live zone and silently degraded
+    // deliverability for every diver-facing email until somebody read the zone
+    // by hand. So an unreadable listing adds nothing, keeps its question
+    // visible, and names what it could not check -- the convention the
+    // infrastructure runbook already states for a read-only check that cannot
+    // prove its handoff is current.
     let existingRecords = "";
+    let unreadableReason;
     try {
       existingRecords = execute(
         "pnpm",
@@ -297,8 +311,9 @@ export async function runPostDeployWizard({
         },
       );
     } catch (error) {
+      unreadableReason = error instanceof Error ? error.message : String(error);
       log(
-        `Could not list existing Vercel DNS records (${error instanceof Error ? error.message : error}); adding all records instead of only what's missing.`,
+        `Could not list existing Vercel DNS records in ${dnsZone} (${unreadableReason}); cannot tell which are already there, so none will be added.`,
       );
     }
 
@@ -350,9 +365,15 @@ export async function runPostDeployWizard({
 
     return {
       dnsZone,
-      missingRecords: desiredRecords.filter(
-        ({ name, type, value }) => !dnsRecordExists(name, type, value),
-      ),
+      unreadable: Boolean(unreadableReason),
+      unreadableReason,
+      // An unreadable zone has no missing records because it has no known
+      // records at all. That emptiness must never read as "already present":
+      // `unreadable` is what the caller checks first, both to keep the question
+      // visible and to refuse the adds.
+      missingRecords: unreadableReason
+        ? []
+        : desiredRecords.filter(({ name, type, value }) => !dnsRecordExists(name, type, value)),
     };
   };
 
@@ -365,7 +386,7 @@ export async function runPostDeployWizard({
   } else {
     try {
       sesDnsPlan = readSesDnsPlan();
-      sesDnsNeedsUpdate = sesDnsPlan.missingRecords.length > 0;
+      sesDnsNeedsUpdate = sesDnsPlan.unreadable || sesDnsPlan.missingRecords.length > 0;
     } catch {
       log("Could not check the SES DNS handoff; leaving its question visible.");
       sesDnsNeedsUpdate = true;
@@ -374,31 +395,40 @@ export async function runPostDeployWizard({
 
   if (sesDnsNeedsUpdate && yes(await ask("Add the SES DNS records through Vercel DNS? [y/N] "))) {
     sesDnsPlan ??= readSesDnsPlan();
-    let added = 0;
-    for (const { name, type, value, extraArguments } of sesDnsPlan.missingRecords) {
-      run(
-        "pnpm",
-        [
-          "exec",
-          "vercel",
-          "dns",
-          "add",
-          sesDnsPlan.dnsZone,
-          name,
-          type,
-          value,
-          ...extraArguments,
-          ...vercelScopeArguments,
-        ],
-        SUBPROCESS_TIMEOUTS.vercelCli,
+    if (sesDnsPlan.unreadable) {
+      // The refusal has to live here rather than in the question above it: CI
+      // answers yes to every question the wizard shows (`infra-deploy.mjs`), so
+      // keeping the question visible does not by itself stop a single add.
+      log(
+        `Adding no SES DNS records to Vercel zone ${sesDnsPlan.dnsZone}: its existing records could not be listed (${sesDnsPlan.unreadableReason}), and adding a record that is already there duplicates it. Add them by hand, or re-run once the listing works.`,
       );
-      added += 1;
+    } else {
+      let added = 0;
+      for (const { name, type, value, extraArguments } of sesDnsPlan.missingRecords) {
+        run(
+          "pnpm",
+          [
+            "exec",
+            "vercel",
+            "dns",
+            "add",
+            sesDnsPlan.dnsZone,
+            name,
+            type,
+            value,
+            ...extraArguments,
+            ...vercelScopeArguments,
+          ],
+          SUBPROCESS_TIMEOUTS.vercelCli,
+        );
+        added += 1;
+      }
+      log(
+        added === 0
+          ? `SES DNS records already present in Vercel zone ${sesDnsPlan.dnsZone}; nothing added.`
+          : `Added ${added} SES DNS record(s) to Vercel zone ${sesDnsPlan.dnsZone}.`,
+      );
     }
-    log(
-      added === 0
-        ? `SES DNS records already present in Vercel zone ${sesDnsPlan.dnsZone}; nothing added.`
-        : `Added ${added} SES DNS record(s) to Vercel zone ${sesDnsPlan.dnsZone}.`,
-    );
   } else if (!sesDnsNeedsUpdate && sesDnsPlan) {
     log(
       `SES DNS records already present in Vercel zone ${sesDnsPlan.dnsZone}; skipping its question.`,
