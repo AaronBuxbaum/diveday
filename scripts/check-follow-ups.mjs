@@ -311,9 +311,15 @@ export function listOpenFollowUps(root) {
  * so the capability existed and only lacked a door. This is the door.
  *
  * Deliberately *not* a second implementation of anything: same
- * `findIssueProblems`, same rules, same messages. The one check it cannot make
- * is whether a `**Touches:**` path exists on disk — that one belongs to the
- * whole-tracker run, which resolves against the working tree.
+ * `findIssueProblems`, same rules, same messages.
+ *
+ * It resolves `**Touches:**` paths against **this** working tree, which is all
+ * any run of this guard can do — but here that answer is advisory rather than
+ * fatal, because a draft written on a branch may legitimately name a path that
+ * branch adds. What no local check can tell you is whether the path will exist
+ * in the tree of every *other* session running `pnpm check` before your branch
+ * merges, which is the case that actually reddens their builds. Hence a warning
+ * that says so rather than a pass or a failure.
  */
 async function checkDraft(bodyPath, title) {
   let body;
@@ -363,29 +369,60 @@ async function checkDraft(bodyPath, title) {
 }
 
 /**
- * `--body <path>` / `--title <text>`, and nothing else — this is not a general
- * CLI. `present` is separate from `value` so `--body --title x` is an error
- * naming the missing path rather than a silent attempt to read a file called
- * `--title`.
+ * `--body <path>` and an optional `--title <text>`, and **nothing else**.
+ *
+ * Strict on purpose, which for a ten-line argument parser needs saying. This
+ * tool exists to catch a mistake before it costs every open pull request an
+ * hour, so a mistyped invocation that quietly succeeds is the one outcome worth
+ * engineering against: `--body draft.md --boddy other.md` must not validate
+ * `draft.md` and exit 0, leaving the agent believing it checked something it
+ * did not. Anything unrecognised, repeated, or positional is an error.
+ *
+ * `present` is separate from `value` for the same reason, so `--body --title x`
+ * reports a missing path rather than trying to read a file called `--title`.
+ *
+ * Returns `{ error }` instead of exiting, so the tests can read the message.
  */
 export function parseDraftArgs(argv) {
-  const flag = (name) => {
-    const at = argv.indexOf(name);
-    if (at === -1) return { present: false, value: undefined };
+  const flags = { "--body": undefined, "--title": undefined };
+  const seen = new Set();
+  for (let at = 0; at < argv.length; at += 1) {
+    const name = argv[at];
+    if (!(name in flags)) {
+      return {
+        error: `follow-ups: unrecognised argument \`${name}\` — only --body <path> and --title <text>`,
+      };
+    }
+    if (seen.has(name)) return { error: `follow-ups: ${name} given twice` };
+    seen.add(name);
     const value = argv[at + 1];
-    return { present: true, value: value?.startsWith("--") ? undefined : value };
-  };
-  return { body: flag("--body"), title: flag("--title") };
+    if (value === undefined || value in flags) {
+      return {
+        error:
+          name === "--body"
+            ? "follow-ups: --body needs a path to the drafted issue body"
+            : "follow-ups: --title needs the title you intend to file",
+      };
+    }
+    flags[name] = value;
+    at += 1;
+  }
+  return { body: flags["--body"], title: flags["--title"] };
 }
 
 async function main() {
-  const { body, title } = parseDraftArgs(process.argv.slice(2));
-  if (body.present) {
-    if (body.value === undefined) {
-      console.error("follow-ups: --body needs a path to the drafted issue body");
+  const args = process.argv.slice(2);
+  if (args.length > 0) {
+    const { error, body, title } = parseDraftArgs(args);
+    if (error) {
+      console.error(error);
       process.exit(1);
     }
-    await checkDraft(body.value, title.value);
+    if (body === undefined) {
+      console.error("follow-ups: --title is only meaningful beside a --body <path>");
+      process.exit(1);
+    }
+    await checkDraft(body, title);
     return;
   }
 

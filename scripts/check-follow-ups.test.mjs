@@ -396,10 +396,27 @@ describe("--body, the pre-flight for one drafted issue", () => {
     expect(result.status).toBe(0);
   });
 
-  it("refuses a --body with no path rather than reading the next flag as one", () => {
-    const result = run("--body", "--title", "x");
+  /**
+   * Strict on purpose. This tool exists to catch a mistake before it costs
+   * every open pull request an hour, so an invocation that quietly succeeds
+   * while checking something other than what was meant is the one outcome
+   * worth engineering against — a silently-ignored typo would defeat the whole
+   * point of having it (Sourcery finding on #1559).
+   */
+  it.each([
+    ["a --body with no path", ["--body", "--title", "x"], /needs a path/],
+    ["a mistyped flag", ["--body", "good.md", "--boddy", "other.md"], /unrecognised argument/],
+    ["a repeated flag", ["--body", "a.md", "--body", "b.md"], /given twice/],
+    ["a stray positional", ["good.md"], /unrecognised argument/],
+    ["a --title with no body", ["--title", "x"], /only meaningful beside/],
+    ["a --title with no value", ["--body", "good.md", "--title"], /--title needs/],
+  ])("refuses %s", (_name, args, expected) => {
+    // `good.md` is real, so a case that fails here failed on the arguments
+    // rather than on a missing file.
+    draft("good.md", valid.body);
+    const result = run(...args);
     expect(result.status).toBe(1);
-    expect(result.stderr).toMatch(/needs a path/);
+    expect(result.stderr).toMatch(expected);
   });
 
   it("says so when the file is not there", () => {
