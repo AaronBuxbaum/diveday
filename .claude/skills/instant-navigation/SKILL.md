@@ -29,9 +29,13 @@ rules below are the ones sessions have already gotten wrong, each with the shipp
   its static shell. Put the read in an async child component inside its own `<Suspense>` with a
   height-holding fallback. (This is how the bearer-token pages — the ones divers open from a text
   on marina Wi-Fi — were once all blocked by a locale read that only fed an error boundary.)
-- `instant = false` survives on exactly one layout: `src/app/shop/[shopSlug]/layout.tsx`, whose
-  cross-tenant `notFound()` must run before `{children}` — a security gate, not a precedent. Do
-  not add a second without an ADR-level reason.
+- `instant = false` survives on exactly one layout: `src/app/shop/[shopSlug]/trips/[id]/layout.tsx`.
+  Do not add a second without an ADR-level reason. The staff shell used to be one, on the grounds
+  that its cross-tenant `notFound()` had to run before `{children}` — the App Shell restructure
+  (issue 1446) moved that gate into `_components/ShopChrome.tsx` alongside the reads it protects,
+  which is safe because it was never the only copy: every staff page gates itself too, and every
+  piece of chrome that could name another tenant is already behind `ownShop`. A security gate is a
+  reason to double a refusal, not a reason to block every route beneath it.
 
 ## Redirect routes are Route Handlers, not pages
 
@@ -52,6 +56,26 @@ streams in after. Two consequences sessions have paid for:
   `debug` skill ("A race is fixed by naming what you wait for") and `pnpm check:e2e-hygiene`.
 - **In the app**: a `<Link>` transition does not run the browser's fragment scroll or reset
   focus; `src/components/ScrollToHash.tsx` exists for the anchor case.
+
+## A static shell paints a control before React owns it
+
+The moment a route gains a static shell, its buttons are on screen and clickable while their
+handlers are still on the way. A click that lands in that window is **swallowed in silence** — no
+error, no effect, and fifteen seconds later a spec times out on something behind a door that never
+opened. It only bites a control whose whole behaviour is client-side (a disclosure opened by React
+state, a search that debounces, a toolbar that rewrites the query): a link and an uncontrolled form
+work perfectly well without JavaScript, which is why most of the suite never noticed.
+
+This window was closed by accident on `/shop/**` until issue 1446, because nothing painted until
+the server had finished. Giving the staff surfaces a shell is what made it real, and the first
+thing to find it was `e2e/gear.spec.ts` on a loaded CI shard — measured at 53ms on an idle local
+machine, and long enough to fail there.
+
+The answer is the flag this repo already uses: a `hydrated` state set in an effect, published as
+`data-hydrated` on the element the suite interacts with (`CheckInSearch`, `OrdersToolbar`,
+`CrewSection`, `BookingPartyFields`, …), and `await expect(el).toHaveAttribute("data-hydrated",
+"true")` before the click. **Expect to add one whenever you give a surface a shell**, and reach for
+it rather than for a wait on something that merely happens to appear later.
 
 ## cacheComponents can re-render your state away
 

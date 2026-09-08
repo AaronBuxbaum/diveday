@@ -158,6 +158,25 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   expect(spoofedBody).toContain("We couldn’t find that page");
   expect(spoofedBody).not.toContain(OTHER_SHOP_DIVER);
 
+  // **The same probe on the shop home, which is the page most worth it.**
+  // Every assertion above this line runs in a browser, so it is satisfied by a
+  // refusal that arrives as a client-render instruction and swaps the page out.
+  // A client that never runs JS — curl, a link-preview fetcher, a logging
+  // proxy, "Save page as" — keeps whatever bytes were already streamed. Since
+  // the staff shell became an App Shell (issue 1446) the static shell flushes
+  // before any gate resolves, so the shell can no longer be the thing that
+  // stops a page rendering into those bytes: each page's own refusal is, and
+  // this asserts the home's. It is the one surface where the reader's *own*
+  // shop is what renders, so the failure is not a cross-tenant read but a
+  // slug that lies about whose console this is.
+  const spoofedHome = await page.request.get("/shop/blue-mantis");
+  const spoofedHomeBody = await spoofedHome.text();
+  expect(spoofedHomeBody).toContain("We couldn’t find that page");
+  // The spine's own greeting — "Good morning, <first name>" — is rendered by
+  // the home's body and by nothing else, whichever shop it is for, so its
+  // absence is the page having been refused rather than merely covered.
+  expect(spoofedHomeBody).not.toMatch(/Good (morning|afternoon|evening|night),/);
+
   // Their own console is untouched by any of it.
   await page.goto(`/shop/${unique}/divers`);
   await expect(page.getByRole("heading", { level: 1, name: "Divers" })).toBeVisible();

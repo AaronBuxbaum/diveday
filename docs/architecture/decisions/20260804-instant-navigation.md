@@ -109,6 +109,9 @@ precisely because nothing opted in explicitly) is now a live option rather than 
 
 ### 2. A layout declares `instant = false` only when it genuinely cannot be instant, and says why
 
+> **Superseded in part by the amendment of 2026-09-08 below**: the staff shell was restructured and
+> no longer declares `instant = false`. The rule stands; the example changed.
+
 One layout still does: `src/app/shop/[shopSlug]/layout.tsx`. It reads the session, the shop row, and
 two pending-work counts, and — the part that cannot move — it enforces the cross-tenant invariant
 with `notFound()` **before** rendering `{children}`
@@ -169,7 +172,8 @@ covers all ten boundaries.
   `cookies`) on every validated route, which is fifty declarations against an explicitly `unstable_`
   API for a check the dev overlay already gives. The framework default `'warning'` stays.
 - **Restructure `/shop/[shopSlug]/layout.tsx` too, moving the tenant gate into `src/proxy.ts`** —
-  genuinely attractive: the session JWT already carries `shopSlug` (`src/lib/auth.config.ts`), so
+  genuinely attractive: the session already carries the shop (`src/lib/auth.ts`, read through
+  `session.user.shopId`), so
   the gate could run at the edge with no database read, *earlier* and stronger than it does now, and
   the whole staff namespace would gain a static shell. Not taken here. It converts a rendered
   `notFound()` into an edge refusal, which changes what `e2e/tenant-isolation.spec.ts` asserts on
@@ -215,3 +219,60 @@ Revisit when: the staff shell's tenant gate moves to the edge (the third alterna
 would leave `instant = false` in this codebase only where a layout is genuinely, permanently
 request-bound — or when `instant` graduates from experimental and the resolution rules change, at
 which point re-verify both mechanisms against `instant-config.js` rather than against this file.
+
+## Amendment 2026-09-08 — the staff shell is an App Shell, and the tenant gate moved with its reads
+
+Decision 2's one remaining example is gone. `src/app/shop/[shopSlug]/layout.tsx` is now
+synchronous, and the only layout in the tree still declaring `instant = false` is
+`src/app/shop/[shopSlug]/trips/[id]/layout.tsx`.
+
+**What was actually costing the page.** The shell held six awaits above `{children}` — `params`, the
+db handle, the shop row and the session together, the negotiated locale, a demo-role query, and the
+blocked-diver count with the boat link. A layout wraps its page, so no `<Suspense>` can be placed
+between the two: every one of those was an await the *page* waited on, on every navigation, for
+chrome that had not changed. `instant = false` did not cause that; it only made the build stop
+objecting to it.
+
+**The restructure.** All six moved into `src/app/shop/[shopSlug]/_components/ShopChrome.tsx`, which
+the layout renders *beside* `{children}` inside a `<Suspense>` whose fallback holds the bar's own
+height (`--chrome-h`). This is the shape `src/app/s/[shopSlug]/layout.tsx` already used for the
+diver-facing shell. `next build` now reports the staff routes as `◐ (Partial Prerender)`; the
+page's own `loading.tsx` paints immediately and the chrome streams in.
+
+One read did **not** move into a slot of its own, and that is deliberate: the blocked-diver count is
+also the `{count}` of the badge's pluralised accessible label, so streaming it as an opaque
+`ReactNode` would leave a screen reader hearing "0 blocked" on a badge that counts divers held back
+by medical review until the real number arrived. Buying ~37ms off the chrome by mislabelling a
+safety count is not a trade worth making; the whole chrome already streams, which is the point.
+
+**Why the tenant gate could move, and the hole that had to be closed first.** This is the objection
+the original decision recorded, and the answer is that the refusal was never a single copy — with
+one exception, which a `security-reviewer` pass on this change found. Every staff *page* gates
+itself: 43 of the 47 through `requireShopSurface` (`src/lib/session.ts`), which `notFound()`s when
+the session's shop disagrees with the slug, and `check-in`, `check-in/walk-in` and `courses` assert
+the same two conditions inline. The **shop home did not**: it resolved its own shop by
+`session.user.shopId` and never compared the slug at all, because this shell compared it on the
+home's behalf. A shell that streams beside the page cannot, so `src/app/shop/[shopSlug]/page.tsx`
+now makes the comparison itself, and `e2e/tenant-isolation.spec.ts` asserts it in the *bytes* — a
+`page.request.get` with no JavaScript, where a refusal that arrives as a client-render instruction
+would not count.
+
+Every piece of chrome that names a shop — its name, its counts, its next departure, the demo
+banner, the water band, the offline priming — sits behind `ownShop` inside `ShopChrome`, which is
+what covers the request whose session does not resolve at all: both refusals require a session, and
+`src/proxy.ts` tests for a cookie's *presence*, not its signature, so a forged cookie reaches the
+component with `session` null. The page beside it refuses that request; the chrome renders it
+nothing.
+
+This is **not** the third alternative above — the gate did not move to the edge, `src/proxy.ts` is
+unchanged, and `e2e/tenant-isolation.spec.ts` still asserts a rendered `notFound()` on the same
+nineteen paths. That alternative remains open and still wants its own change.
+
+**What the reader sees that is different.** Nothing, by construction. The one visual detail worth
+recording is the water band: which of Reef's four washes a staff page wears is the shop's clock (ADR
+20260904-reef-all-the-way-down, decision 2), and it used to be a `data-water-band` attribute on the
+element wrapping `{children}` — a shop read above the page by another name. It is now
+`src/components/WaterBandStyle.tsx`, a `<style>` that re-points `--water-crest`, emitted by
+`ShopChrome`. A `<style>` applies wherever it lands, which is why `BrandStyle` already solves the
+same problem on the diver-facing shell. The three dead attribute rules came out of `globals.css`;
+the pixels are identical and no baseline moves.

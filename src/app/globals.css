@@ -943,7 +943,7 @@ textarea {
  */
 .water-band {
   /* One gradient, four crests. The shape is the shipped one — the crest
-     settling into the sand it sits on — and `data-water-band` swaps only
+     settling into the sand it sits on — and `--water-crest` swaps only
      which water it is. The 55% stop stays a mix *of the crest with the
      ground*, which is what makes the band fade rather than end, and is why
      each skin (boat, glare, print, high contrast) still gets its own water
@@ -959,20 +959,18 @@ textarea {
   background-size: 100% 168px;
 }
 
-/* The shop's clock, read once in the staff shell (`src/lib/water-band.ts`).
-   No attribute means the day wash, so a page rendered without a shop — and
-   every other surface wearing this class — reads exactly as it does today. */
-.water-band[data-water-band="dawn"] {
-  --water-crest: var(--water-dawn);
-}
+/* The other three hours are re-pointed by `src/components/WaterBandStyle.tsx`,
+   which the staff shell streams in beside the page: an id selector on the
+   staff content wrapper, which outranks this class. They were three rules
+   here, selected by a `data-water-band` attribute on that same element — but
+   setting an attribute meant reading the shop's clock *above* `{children}`,
+   which cost every staff route its static shell (issue 1446). The default
+   above is still the day wash, so a page rendered without a shop — and every
+   other surface wearing this class — reads exactly as it did.
 
-.water-band[data-water-band="dusk"] {
-  --water-crest: var(--water-dusk);
-}
-
-.water-band[data-water-band="night"] {
-  --water-crest: var(--water-night);
-}
+   Written without a `#`: the rule below this block is checked for a literal
+   colour by `water-band-palette.test.ts`, which reads the stylesheet as text
+   and cannot tell an id selector or an issue number from a hex triple. */
 
 /* Marketing sections reveal once, only after the browser has confirmed they
    start below the first viewport. The client component leaves above-fold

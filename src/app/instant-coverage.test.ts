@@ -32,8 +32,12 @@ const APP = path.join(process.cwd(), "src/app");
  * own comment saying why. Adding to this list is a decision, not a fix.
  */
 const BLOCKING_LAYOUTS = new Set([
-  "shop/[shopSlug]/layout.tsx",
-  "shop/[shopSlug]/waivers/layout.tsx",
+  // The last one. Its own comment records why: removing it turned three
+  // Playwright specs intermittently red on CI and never locally, in
+  // hydration-shaped ways (ADR 20260803-instant-opt-out-placement). The staff
+  // shell one directory up came off in #1446 — `shop/[shopSlug]/waivers/` had
+  // no layout at all and was a stale entry this set was asserting in both
+  // directions, which is the whole reason to assert it in both directions.
   "shop/[shopSlug]/trips/[id]/layout.tsx",
 ]);
 

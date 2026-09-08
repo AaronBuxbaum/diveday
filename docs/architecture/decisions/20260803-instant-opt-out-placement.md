@@ -6,6 +6,9 @@
   for an unwrapped request-scoped read; it gets a `loading.tsx` and declares `instant = true`. Rule 1
   survives verbatim, as does the two-jobs reading of `instant-config.js` this record established and
   the 2026-08-04 amendment holding `waivers/layout.tsx` and `trips/[id]/layout.tsx` unchanged.
+  Rule 1's first example is stale as of 2026-09-08: `src/app/shop/[shopSlug]/layout.tsx` is now a
+  synchronous App Shell and declares no `instant` at all — see 20260804's amendment of that date.
+  Rule 1 itself is unaffected; it says where an opt-out goes *if* one is needed.
 - **Date:** 2026-08-03
 
 ## Context

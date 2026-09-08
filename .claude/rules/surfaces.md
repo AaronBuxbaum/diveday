@@ -127,9 +127,11 @@ a layout wraps the page, so no boundary can be placed between them, and one requ
 there costs every route beneath it its static shell — put the read in an async child inside its
 own `<Suspense>`, with a fallback that holds its height. `next build` fails on a route that breaks
 this (`blocking-prerender-dynamic` / `blocking-prerender-client-hook`), naming the component.
-`instant = false` survives on exactly one shell, `src/app/shop/[shopSlug]/layout.tsx`, whose
-cross-tenant `notFound()` must run before `{children}` (ADR 20260804-instant-navigation; the
-**instant-navigation** skill).
+`instant = false` survives on exactly one layout, `src/app/shop/[shopSlug]/trips/[id]/layout.tsx`.
+The staff shell is no longer the second: its six reads — session, shop row, locale, demo roles, nav
+badge, boat link — moved into `_components/ShopChrome.tsx` behind a `<Suspense>` that holds the
+bar's height, and its cross-tenant `notFound()` went with them, which is safe because every staff
+page gates itself as well (ADR 20260804-instant-navigation; the **instant-navigation** skill).
 
 ## Never hard-code a locale, and every rendered date names its zone
 
