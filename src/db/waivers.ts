@@ -1557,8 +1557,28 @@ export type InPersonWaiverOutcome =
         | "invalid_signature"
         /** The diver is a minor on the signing day and no guardian was named on the paper. */
         | "guardian_required"
-        /** A guardian was named and is not one: too short a name, the diver's own, or no relationship. */
-        | "guardian_invalid";
+        /**
+         * A guardian was named and cannot be one: an unusable signature, or a
+         * relationship outside the allowed set. The relationship arm is
+         * genuinely unreachable from the form, whose `<select>` offers only the
+         * two codes. The signature arm is *nearly* so — the input carries
+         * `minLength={2}`, which the browser measures on the raw value while
+         * `inPersonAttestationProvider.capture` trims first, so `"J "` reaches
+         * here. Retyping fixes that, which is why a generic refusal is still
+         * the honest answer for both, unlike the one below.
+         */
+        | "guardian_invalid"
+        /**
+         * A guardian was named and it is the diver's own name.
+         *
+         * Its own reason rather than `guardian_invalid`'s company (issue 1539),
+         * because it is the one cause here an *honest* submission produces: a
+         * father and son who share a legal name (#1454's family). The staffer
+         * typing it in can act on that, and cannot act on "invalid" — and
+         * telling them the names match would be wrong for either of the two
+         * above, which is why splitting beats re-wording.
+         */
+        | "guardian_name_matches_diver";
     };
 
 /**
@@ -1835,12 +1855,17 @@ export async function recordInPersonWaiver(
         agreed: true,
         signedAt: now,
       });
-      if (
-        !guardian ||
-        !isGuardianRelationship(input.guardian.relationship) ||
-        personNamesMatch(guardian.signerName, signer.fullName)
-      ) {
+      if (!guardian || !isGuardianRelationship(input.guardian.relationship)) {
         return { ok: false, reason: "guardian_invalid" };
+      }
+      // Separated from the two above on purpose. Those mean the request did not
+      // come from the form; this one is what the form produces for a family who
+      // share a legal name, and it is the last door before somebody gives up or
+      // writes something untrue on a liability release (issue 1539). The
+      // refusal itself does not move — it is what stops a minor signing as
+      // their own guardian — only what the staffer is told about it.
+      if (personNamesMatch(guardian.signerName, signer.fullName)) {
+        return { ok: false, reason: "guardian_name_matches_diver" };
       }
       guardianRelationship = input.guardian.relationship;
     }

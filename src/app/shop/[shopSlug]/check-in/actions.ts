@@ -147,7 +147,12 @@ export async function markWaiverInPersonFromCheckIn(
       back,
       outcome.reason === "medical_attestation_required"
         ? "waiver-medical-attestation"
-        : "waiver-error",
+        : // The counter is where a family who share a legal name ends up after
+          // the online path refused them, so it is the surface that most needs
+          // to say why rather than "try again" (issue 1539).
+          outcome.reason === "guardian_name_matches_diver"
+          ? "waiver-guardian-name"
+          : "waiver-error",
     ),
   );
 }

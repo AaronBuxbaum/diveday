@@ -2752,6 +2752,22 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     expect(reissued.ok).toBe(true);
   });
 
+  /**
+   * The two edits a front desk is told to try when a father and son share a
+   * name. `personNamesMatch` compares tokens of two characters or more, so the
+   * initial changes nothing and the spelled-out name changes everything —
+   * stated here as fixtures rather than in prose, because the notice's advice
+   * is only worth giving if it is true.
+   */
+  const withMiddleInitial = (name: string) => {
+    const [first, ...rest] = name.split(" ");
+    return [first, "A", ...rest].join(" ");
+  };
+  const withMiddleName = (name: string) => {
+    const [first, ...rest] = name.split(" ");
+    return [first, "Aurelio", ...rest].join(" ");
+  };
+
   it("holds the paper path to the same rule, and records the staffer's attestation of it", async () => {
     const ctx = await waiverContext();
     await makeMinor(ctx.db, ctx.person.id);
@@ -2769,10 +2785,32 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
       });
 
     expect(await attempt()).toEqual({ ok: false, reason: "guardian_required" });
-    expect(await attempt({ name: ctx.person.fullName, relationship: "parent" })).toEqual({
+    // **The three refusals are not one refusal** (issue 1539). These two keep
+    // the generic notice: retyping fixes the first, and the second cannot come
+    // from the form at all, whose `<select>` offers only the two codes.
+    //
+    // `"J "` rather than whitespace: `paperGuardianFrom` drops a blank name, so
+    // that lands on `guardian_required` above and no surface can produce it
+    // here. This one can — the browser counts `minLength` on the raw value and
+    // `inPersonAttestationProvider.capture` trims first.
+    expect(await attempt({ name: "J ", relationship: "parent" })).toEqual({
       ok: false,
       reason: "guardian_invalid",
     });
+    expect(await attempt({ name: "Jonas Fischer", relationship: "uncle" })).toEqual({
+      ok: false,
+      reason: "guardian_invalid",
+    });
+    // This one the form produces from an honest submission: a family who share
+    // a legal name. It keeps its own reason so the staffer who typed it can be
+    // told what to do, since "try again" cannot work.
+    expect(await attempt({ name: ctx.person.fullName, relationship: "parent" })).toEqual({
+      ok: false,
+      reason: "guardian_name_matches_diver",
+    });
+    expect(
+      await attempt({ name: withMiddleInitial(ctx.person.fullName), relationship: "parent" }),
+    ).toEqual({ ok: false, reason: "guardian_name_matches_diver" });
     // Nothing was written by either refusal: the row is the document.
     expect(
       await ctx.db.select().from(waiverRecords).where(eq(waiverRecords.bookingId, ctx.booking.id)),
@@ -2790,6 +2828,34 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
       // reaches the family.
       guardianEmail: null,
     });
+  });
+
+  /**
+   * **The notice's advice, made true** (issue 1539). The staff notice tells a
+   * front desk that a spelled-out middle name clears the refusal and a single
+   * initial does not, which is only worth saying if `personNamesMatch` behaves
+   * that way: it compares tokens of two characters or more, so the initial is
+   * dropped and changes nothing. The refusal above pins the initial; this pins
+   * the other half, on its own booking because it records a real release.
+   */
+  it("clears the same refusal once the guardian's middle name is spelled out", async () => {
+    const ctx = await waiverContext();
+    await makeMinor(ctx.db, ctx.person.id);
+    const [staff] = await listStaff(ctx.db, ctx.shop.id);
+    if (!staff) throw new Error("demo staff missing");
+
+    const recorded = await recordInPersonWaiver(ctx.db, {
+      shopId: ctx.shop.id,
+      subject: { bookingId: ctx.booking.id },
+      recordedByPersonId: staff.person.id,
+      medicalAttested: true,
+      guardian: { name: withMiddleName(ctx.person.fullName), relationship: "parent" },
+      now,
+    });
+
+    if (!recorded.ok) throw new Error(`expected a record: ${recorded.reason}`);
+    const [record] = await db_record(ctx, recorded.recordId);
+    expect(record).toMatchObject({ guardianName: withMiddleName(ctx.person.fullName) });
   });
 
   it("takes the guardian's name and address under erasure and keeps the signature's fact", async () => {

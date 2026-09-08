@@ -158,6 +158,11 @@ const NOTICE_KEYS: Record<
     tone: "warning",
     key: "divers.notices.waiverMedicalAttestation",
   },
+  "waiver-guardian-name": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.waiverGuardianName",
+  },
   "waiver-error": { form: "waiver", tone: "danger", key: "divers.notices.waiverError" },
 
   // The physician clearance that ends a medical hold (issue #1252).

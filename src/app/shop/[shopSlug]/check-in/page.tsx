@@ -149,6 +149,7 @@ const noticeCopy: NoticeMap = {
   // its waiver blocker and starts offering check-in, right where the paper
   // control was.
   "waiver-medical-attestation": { tone: "warning", key: "checkIn.notice.waiverMedicalAttestation" },
+  "waiver-guardian-name": { tone: "danger", key: "checkIn.notice.waiverGuardianName" },
   "waiver-error": { tone: "danger", key: "checkIn.notice.waiverError" },
 };
 
