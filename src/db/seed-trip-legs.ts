@@ -32,18 +32,22 @@ import { tripDives, trips } from "./schema";
  * Abyss morning and every course session are left alone, and the demo shows
  * both halves of the model.
  *
- * **The canonical demo only, never a minted one** (the history flag, which is
- * also what the lean unit-test template runs without). A minted demo shop is the
- * lean schedule by design — no history, no orders, no last-minute list — and it
- * is also the shop a spec takes when it needs to own a shop's whole
- * configuration (`privateShop`, ADR 20260815-per-test-private-shops). A leg on
- * one of *those* departures silently defeats the shop-level setting such a spec
- * is testing, because a stated leg beats `shops.boat_ride_minutes` — which is
- * the entire point of the column. It is not hypothetical: seeding these
- * unconditionally made `e2e/dock-day-rhythm.spec.ts`'s "shop that walks in off
- * the beach" read a fifteen-minute ride out on a shop that had just set the ride
- * to zero, and the shop was right. Per-leg travel is content a shop fills in
- * over time; a starter schedule should read exactly the numbers its owner typed.
+ * **These legs ride the history flag**, so they are seeded for *any* demo with
+ * history — the canonical `blue-mantis` fixture and the visitor's "Try the live
+ * demo" mint alike, since `createDemoShop` defaults history on. The one demo
+ * that goes without is `privateShop` (ADR 20260815-per-test-private-shops), and
+ * only because `/api/test/seed-private-shop` mints with `history: false`.
+ * Nothing in this module reads a slug.
+ *
+ * That exemption is the one worth keeping, because `privateShop` is the shop a
+ * spec takes when it needs to own a shop's whole configuration. A leg on one of
+ * *those* departures silently defeats the shop-level setting such a spec is
+ * testing, since a stated leg beats `shops.boat_ride_minutes` — which is the
+ * entire point of the column. Not hypothetical: seeding these unconditionally
+ * made `e2e/dock-day-rhythm.spec.ts`'s "shop that walks in off the beach" read a
+ * fifteen-minute ride out on a shop that had just set the ride to zero, and the
+ * shop was right. Per-leg travel is content a shop fills in over time; a starter
+ * schedule should read exactly the numbers its owner typed.
  */
 
 /**
