@@ -6,7 +6,6 @@ import {
   deleteInboundMessage,
   lastInboundAt,
   markInboundAnswered,
-  markPersonMessagesRead,
   matchPersonByAddress,
   pagedInboxMessages,
   personThread,
@@ -248,8 +247,8 @@ describe("the unanswered count and the inbox", () => {
   });
 });
 
-describe("the record's read marks and the WhatsApp window", () => {
-  it("marks a diver's unread messages read once, and reports when they last wrote", async () => {
+describe("the WhatsApp window", () => {
+  it("reports when a diver last wrote, per channel", async () => {
     const { db, shop } = await seededShopContext();
     const diver = await firstDiver(db, shop.id);
     await recordInboundMessage(db, {
@@ -264,8 +263,5 @@ describe("the record's read marks and the WhatsApp window", () => {
       new Date("2026-07-21T12:00:00.000Z"),
     );
     expect(await lastInboundAt(db, shop.id, diver.id, "sms")).toBeNull();
-    const first = await markPersonMessagesRead(db, shop.id, diver.id, NOW);
-    expect(first).toBeGreaterThanOrEqual(1);
-    expect(await markPersonMessagesRead(db, shop.id, diver.id, NOW)).toBe(0);
   });
 });

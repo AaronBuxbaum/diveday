@@ -19,7 +19,6 @@ const MESSAGE: InboxMessageRow["message"] = {
   body: "Could I switch to the afternoon boat on Saturday?",
   mediaCount: 0,
   receivedAt: new Date("2026-07-21T13:30:00.000Z"),
-  readAt: null,
   answeredAt: null,
   providerMessageId: "ses-1",
   emailMessageId: null,

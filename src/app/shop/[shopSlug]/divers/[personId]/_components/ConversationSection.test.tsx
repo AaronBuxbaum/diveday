@@ -27,7 +27,6 @@ function inbound(overrides: Partial<ThreadEntry & { direction: "inbound" }> = {}
       body: "Could I switch to the afternoon boat?",
       mediaCount: 0,
       receivedAt: new Date(NOW.getTime() - HOUR_MS),
-      readAt: null,
       answeredAt: null,
       providerMessageId: "ses-1",
       emailMessageId: null,

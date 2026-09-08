@@ -4194,7 +4194,6 @@ export const inboundMessages = pgTable(
      */
     mediaCount: integer("media_count").notNull().default(0),
     receivedAt: timestamp("received_at", { withTimezone: true }).notNull(),
-    readAt: timestamp("read_at", { withTimezone: true }),
     answeredAt: timestamp("answered_at", { withTimezone: true }),
     providerMessageId: text("provider_message_id").notNull(),
     /**
