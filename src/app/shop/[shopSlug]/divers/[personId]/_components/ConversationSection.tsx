@@ -5,7 +5,7 @@ import { InsetGroup } from "@/components/ui/ledger";
 import type { ThreadEntry } from "@/db/inbound-messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
-import { REPLY_BODY_MAX_LENGTH, whatsAppReplyWindowOpen } from "@/lib/inbox";
+import { REPLY_BODY_MAX_LENGTH, replyDestination, whatsAppReplyWindowOpen } from "@/lib/inbox";
 import { replyToDiverAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -59,8 +59,14 @@ export function ConversationSection({
   // last WhatsApp message — measured from that message, not from the one being
   // answered, which may be older.
   const whatsAppOpen = whatsAppReplyWindowOpen(latestWhatsApp?.message.receivedAt ?? null, now);
-  const replyTo =
-    latest && (latest.message.channel !== "whatsapp" || whatsAppOpen) ? latest : undefined;
+  // Named positively, over the channels that can actually be answered. The
+  // previous form was "not whatsapp, or whatsapp with an open window", which
+  // let SMS through — and SMS then fell to the `else` of the label ternary
+  // below and announced itself as email. Answerability and the label now come
+  // from the same fact.
+  const answerable =
+    latest?.message.channel === "email" || (latest?.message.channel === "whatsapp" && whatsAppOpen);
+  const replyTo = answerable ? latest : undefined;
   // Nothing to answer *on*: SMS is recorded and cannot be answered yet, and a
   // closed WhatsApp window is the case worth a sentence.
   const closedWhatsApp = Boolean(latest && latest.message.channel === "whatsapp" && !whatsAppOpen);
@@ -121,6 +127,12 @@ export function ConversationSection({
                     replyTo.message.channel === "whatsapp"
                       ? "inbox.reply.whatsapp"
                       : "inbox.reply.email",
+                    {
+                      address: replyDestination(
+                        replyTo.message.channel,
+                        replyTo.message.fromAddress,
+                      ),
+                    },
                   )}
                 >
                   <textarea

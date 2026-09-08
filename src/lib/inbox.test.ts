@@ -6,6 +6,7 @@ import {
   normalizePhoneAddress,
   parseInboundReplyToken,
   phoneMatches,
+  replyDestination,
   sesMessageIdFromHeader,
   truncateInboundBody,
   whatsAppReplyWindowOpen,
@@ -76,6 +77,27 @@ describe("normalizePhoneAddress", () => {
     expect(normalizePhoneAddress("+1 305-555-0110")).toBe("13055550110");
     expect(normalizePhoneAddress("12345")).toBeNull();
     expect(normalizePhoneAddress(null)).toBeNull();
+  });
+});
+
+/**
+ * What a staffer reads above the composer before they send. A phone address is
+ * stored digits-only, so the `+` has to come back — and nothing else does:
+ * DiveDay does not know the country, and a guessed grouping would be a lie
+ * about a number somebody is being asked to check.
+ */
+describe("replyDestination", () => {
+  it("shows an email address exactly as it was received", () => {
+    expect(replyDestination("email", "p.sharma@bigcorp.example")).toBe("p.sharma@bigcorp.example");
+  });
+
+  it("gives a stored phone address its plus back, and groups nothing", () => {
+    expect(replyDestination("whatsapp", "13055550110")).toBe("+13055550110");
+    expect(replyDestination("sms", "447700900123")).toBe("+447700900123");
+  });
+
+  it("does not double a plus that survived", () => {
+    expect(replyDestination("whatsapp", "+13055550110")).toBe("+13055550110");
   });
 });
 

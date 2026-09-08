@@ -26,8 +26,8 @@
     "unknownStaff": "Alguien del equipo"
   },
   "reply": {
-    "email": "Responder por correo",
-    "whatsapp": "Responder por WhatsApp",
+    "email": "Responder por correo a {address}",
+    "whatsapp": "Responder por WhatsApp a {address}",
     "placeholder": "Escribe tu respuesta",
     "send": "Enviar",
     "sending": "Enviando",

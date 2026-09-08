@@ -49,9 +49,14 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   const conversation = page.getByRole("region", { name: "Conversation" });
   await expect(conversation.getByText(/Could I switch to the afternoon boat/)).toBeVisible();
 
-  await page
-    .getByLabel("Reply by email")
-    .fill("Yes, you're on the 1pm boat now. See you at the dock.");
+  // The composer names where the answer is going, not only how it will travel:
+  // a diver can write from an address that is not the one on their record, and
+  // a staffer should be able to see that before they send rather than after
+  // (issue #1515). Exact, so the label carrying the address is what is asserted
+  // rather than a substring that would also match the old channel-only text.
+  const composer = page.getByLabel("Reply by email to priya.sharma@example.com", { exact: true });
+  await expect(composer).toBeVisible();
+  await composer.fill("Yes, you're on the 1pm boat now. See you at the dock.");
   await page.getByRole("button", { name: "Send", exact: true }).click();
 
   // The reply is on the record whatever the provider did, and this fleet has

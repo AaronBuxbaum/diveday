@@ -102,12 +102,45 @@ describe("a conversation", () => {
 
   it("offers the composer on the channel the diver used", () => {
     renderSection([inbound()]);
-    expect(screen.getByLabelText("Reply by email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Reply by email to priya.sharma@example.com")).toBeInTheDocument();
+  });
+
+  /**
+   * The composer used to name only the channel, so a staffer answering a diver
+   * whose message came from an address that is *not* the one on their record —
+   * a work account, a partner's phone, a stranger who wrote about somebody
+   * else's booking — could not see where the answer was going until after they
+   * sent it. The label carries the destination now, in the sentence the
+   * textarea is already announced by rather than as a caption beside it.
+   */
+  it("names the address it will write to, not only the channel", () => {
+    renderSection([
+      inbound({
+        message: { fromAddress: "p.sharma@bigcorp.example" },
+      } as Partial<ThreadEntry & { direction: "inbound" }>),
+    ]);
+    expect(screen.getByLabelText("Reply by email to p.sharma@bigcorp.example")).toBeInTheDocument();
+  });
+
+  /**
+   * SMS is recorded and cannot be answered yet. The answerable test used to
+   * read "not WhatsApp, or WhatsApp with an open window", so SMS passed it and
+   * then fell to the `else` of the label ternary — offering a composer that
+   * announced itself as **email** and would have written to a phone number.
+   */
+  it("offers no composer for a channel that cannot be answered", () => {
+    renderSection([
+      inbound({
+        message: { channel: "sms", fromAddress: "13055550110", subject: null },
+      } as Partial<ThreadEntry & { direction: "inbound" }>),
+    ]);
+    expect(screen.queryByLabelText(/^Reply by/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
   });
 
   it("hides the composer from a staffer who may not answer", () => {
     renderSection([inbound()], false);
-    expect(screen.queryByLabelText("Reply by email")).toBeNull();
+    expect(screen.queryByLabelText(/^Reply by email/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
   });
 });
@@ -126,12 +159,12 @@ describe("Meta's 24-hour window", () => {
 
   it("takes a typed reply while it is open", () => {
     renderSection([whatsApp(2 * HOUR_MS)]);
-    expect(screen.getByLabelText("Reply on WhatsApp")).toBeInTheDocument();
+    expect(screen.getByLabelText("Reply on WhatsApp to +13055550110")).toBeInTheDocument();
   });
 
   it("replaces the composer with the reason once it has closed", () => {
     renderSection([whatsApp(30 * HOUR_MS)]);
-    expect(screen.queryByLabelText("Reply on WhatsApp")).toBeNull();
+    expect(screen.queryByLabelText(/^Reply on WhatsApp/)).toBeNull();
     expect(screen.getByText(/WhatsApp takes a typed reply for 24 hours/)).toBeInTheDocument();
   });
 });
