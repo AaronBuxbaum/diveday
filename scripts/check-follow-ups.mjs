@@ -1,4 +1,4 @@
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -292,7 +292,103 @@ export function listOpenFollowUps(root) {
   });
 }
 
+/**
+ * **Pre-flight for one drafted body, before it becomes an issue.**
+ *
+ * A malformed `needs-triage` issue fails this guard, and this guard runs inside
+ * every pull request's `pnpm check` — so one bad issue reddens *every open pull
+ * request in the repository* until somebody edits it by hand. That is not a
+ * hypothetical: it happened from one hand-written issue (#1097), and twice more
+ * on 2026-09-08 in a single session (#1526 and #1555), each time taking out CI
+ * runs on branches whose diffs could not possibly have caused it, and each time
+ * discovered from a pull request several tickets downstream.
+ *
+ * The gap was never the rules or the docs. It was that an agent could not check
+ * its own follow-up **before filing it**: the whole-tracker run needs `gh`, which
+ * is absent from the cloud containers where most of these are written, so
+ * `pnpm check:follow-ups` reported SKIPPED locally and CI was the first real
+ * answer — after the damage. `findIssueProblems` was already exported and pure,
+ * so the capability existed and only lacked a door. This is the door.
+ *
+ * Deliberately *not* a second implementation of anything: same
+ * `findIssueProblems`, same rules, same messages. The one check it cannot make
+ * is whether a `**Touches:**` path exists on disk — that one belongs to the
+ * whole-tracker run, which resolves against the working tree.
+ */
+async function checkDraft(bodyPath, title) {
+  let body;
+  try {
+    body = await readFile(path.resolve(process.cwd(), bodyPath), "utf8");
+  } catch (error) {
+    console.error(`follow-ups: could not read ${bodyPath} — ${error.message}`);
+    process.exit(1);
+  }
+  // A title under three words is its own finding, so a caller who passes none
+  // gets a placeholder long enough not to raise a second, unrelated complaint
+  // about text they have not written yet.
+  const { problems, touched } = findIssueProblems({
+    number: 0,
+    title: title ?? "draft follow-up title placeholder",
+    body,
+  });
+  const missing = [];
+  for (const item of touched) {
+    try {
+      await access(path.join(process.cwd(), item));
+    } catch {
+      missing.push(item);
+    }
+  }
+  if (problems.length > 0) {
+    console.error(
+      `Draft follow-up (${bodyPath}):\n${problems
+        .map((item) => `- ${item.replace(/^#0 “[^”]*”: /, "")}`)
+        .join("\n")}`,
+    );
+    console.error(
+      "Fix these before filing: a malformed issue fails `check:follow-ups` inside every open pull request's `pnpm check`, not just your own. See docs/agents/issue-tracker.md's Filing a follow-up section.",
+    );
+    process.exit(1);
+  }
+  // Not a failure. The whole-tracker run resolves these against the working
+  // tree, and a draft filed from a branch may legitimately name a path that
+  // branch adds — but it will redden every *other* session's check until the
+  // branch merges, so it is worth knowing now rather than from CI.
+  if (missing.length > 0) {
+    console.warn(
+      `follow-ups: ${bodyPath} names ${missing.length} path(s) not on disk here — ${missing.join(", ")}. If your branch adds them, name them in prose instead; **Touches:** is resolved against the working tree of every session that runs \`pnpm check\`.`,
+    );
+  }
+  console.log(`follow-ups: ${bodyPath} is a valid follow-up body`);
+}
+
+/**
+ * `--body <path>` / `--title <text>`, and nothing else — this is not a general
+ * CLI. `present` is separate from `value` so `--body --title x` is an error
+ * naming the missing path rather than a silent attempt to read a file called
+ * `--title`.
+ */
+export function parseDraftArgs(argv) {
+  const flag = (name) => {
+    const at = argv.indexOf(name);
+    if (at === -1) return { present: false, value: undefined };
+    const value = argv[at + 1];
+    return { present: true, value: value?.startsWith("--") ? undefined : value };
+  };
+  return { body: flag("--body"), title: flag("--title") };
+}
+
 async function main() {
+  const { body, title } = parseDraftArgs(process.argv.slice(2));
+  if (body.present) {
+    if (body.value === undefined) {
+      console.error("follow-ups: --body needs a path to the drafted issue body");
+      process.exit(1);
+    }
+    await checkDraft(body.value, title.value);
+    return;
+  }
+
   const root = process.cwd();
   const issues = listOpenFollowUps(root);
   // Fail open, but say so — see the module doc comment. The warning naming the reason has
@@ -326,6 +422,14 @@ async function main() {
     );
     console.error(
       "Each entry is a task a human runs cold, months later — see docs/agents/issue-tracker.md's Filing a follow-up section.",
+    );
+    // The one thing the list above does not say, and the reason this guard is
+    // confusing to meet: these are problems in the *tracker*, not in the branch
+    // that happens to be running. This check reads the live issue list, so a
+    // malformed issue fails it on every open pull request at once, and nothing
+    // in your diff caused it or can fix it.
+    console.error(
+      "These are tracker problems, not branch problems: edit the issues named above. Nothing in this branch caused them, and every other open pull request is failing the same way until they are fixed. Draft a body to a file and run `node scripts/check-follow-ups.mjs --body <path>` before filing, to avoid adding to this.",
     );
     process.exit(1);
   }
