@@ -376,9 +376,9 @@
         "unavailable": "Esta copia guardada ya no está disponible. Abre el manifiesto en vivo para registrar el pase de lista."
       },
       "checklist": {
-        "heading": "Comprobación previa a la salida",
-        "checkedLabel": "Comprobado — pulsa para quitar la marca",
-        "uncheckedLabel": "No comprobado — pulsa para marcarlo"
+        "heading": "Antes de salir del muelle",
+        "checkedLabel": "Verificado — presiona para quitar la marca",
+        "uncheckedLabel": "Sin verificar — presiona para marcarlo"
       },
       "counter": {
         "heading": "En el mostrador",

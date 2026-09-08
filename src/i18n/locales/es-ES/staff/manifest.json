@@ -121,7 +121,7 @@
   "buddyNewTeamHint": "Marca dos o más. La tripulación cuenta, y un divemaster puede llevar varios equipos.",
   "buddyDiverGroupLabel": "Buceadores",
   "buddyCrewGroupLabel": "Tripulación",
-  "buddyDragHint": "Mantén pulsada a una persona y arrástrala sobre su compañero. Marcar casillas también sirve.",
+  "buddyDragHint": "Mantén presionada a una persona y arrástrala sobre su compañero. Marcar casillas también sirve.",
   "buddyDragHolding": "Tienes a {name}. Arrástralo sobre un compañero para emparejarlos.",
   "buddyDragOver": "Suelta para emparejar a {a} con {b}.",
   "buddyFormSubmit": "Crear equipo de buceo",

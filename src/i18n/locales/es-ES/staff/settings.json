@@ -423,7 +423,7 @@
       "heading": "Plantilla de exención"
     },
     "safetyChecklist": {
-      "heading": "Lista de comprobación previa a la salida"
+      "heading": "Lista de verificación previa a la salida"
     },
     "security": {
       "heading": "Seguridad de la cuenta"
@@ -589,9 +589,9 @@
   },
   "safetyChecklist": {
     "eyebrow": "Ajustes",
-    "title": "Lista de comprobación previa a la salida",
+    "title": "Lista de verificación previa a la salida",
     "description": "Las líneas que tu tripulación confirma antes de que el barco zarpe. Tú escribes cada elemento, y DiveDay no añade ninguno propio.",
-    "listHeading": "Lista de comprobación",
+    "listHeading": "Lista de verificación",
     "empty": {
       "title": "Aún no hay nada en la lista",
       "body": "Añade la primera línea abajo. La tripulación la ve en el manifiesto de cada salida."
@@ -603,8 +603,8 @@
     "moveUp": "Subir",
     "moveDown": "Bajar",
     "notice": {
-      "added": "Añadido a la lista de comprobación.",
-      "deleted": "Eliminado de la lista de comprobación.",
+      "added": "Añadido a la lista de verificación.",
+      "deleted": "Eliminado de la lista de verificación.",
       "invalid": "Eso no se guardó. Inténtalo de nuevo.",
       "duplicateLabel": "Esa línea ya está en la lista.",
       "notAuthorized": "No tienes permiso para cambiar esto.",

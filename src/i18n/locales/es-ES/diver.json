@@ -428,7 +428,7 @@
     "sailedForNext": "para la próxima salida.",
     "holdHeading": "Aquí todavía no hay nada que reservar",
     "holdBody": "Consulta arriba la actualización de condiciones. Quien ya reservó conserva su plaza y puede seguirlo aquí en directo.",
-    "certBelowRequirement": "Esta salida es para buceadores con certificación {required}: trae tu tarjeta y la comprobamos en el centro.",
+    "certBelowRequirement": "Esta salida es para buceadores con certificación {required}: trae tu tarjeta y la verificamos en el centro.",
     "certNoneOnGatedTrip": "Esta salida es para buceadores certificados. Reserva si quieres y habla con el centro: también hacen cursos e inmersiones más sencillas.",
     "confirmedHeading": "¡Estás a bordo, {name}! 🤿",
     "confirmedDockCall": "{date}, {time}. Preséntate en el muelle {minutes, plural, one {# minuto} other {# minutos}} antes y nos encargamos del resto.",
@@ -753,7 +753,7 @@
     "phoneLabel": "Teléfono",
     "contactHint": "Uno de los dos, para poder enviarte la exención.",
     "certHeading": "Tu certificación",
-    "certHint": "Lo que indiques aquí queda archivado como tu propia declaración. Trae la tarjeta y la comprobamos el día de la inmersión.",
+    "certHint": "Lo que indiques aquí queda archivado como tu propia declaración. Trae la tarjeta y la verificamos el día de la inmersión.",
     "agencyLabel": "Agencia",
     "agencyNone": "Aún sin certificar",
     "levelLabel": "Nivel",
@@ -1122,7 +1122,7 @@
     "nitroxReserveWithPrice": "Me gustaría nitrox ({price} por inmersión)",
     "nitroxReserveNoPrice": "Me gustaría nitrox (se cobra por inmersión)",
     "nitroxVerifiedNote": "La tripulación reservará tanques compatibles con nitrox. Analizarás tus propios tanques y firmarás la mezcla en la estación de llenado, como siempre.",
-    "nitroxCardOnFile": "La tripulación comprobará tu tarjeta de nitrox antes de la inmersión.",
+    "nitroxCardOnFile": "La tripulación verificará tu tarjeta de nitrox antes de la inmersión.",
     "bcdSize": "Talla de chaleco",
     "finSizePlaceholder": "US 9 / EU 42",
     "weightPlaceholder": "p. ej. 7 kg con un traje de 3 mm",
@@ -3414,7 +3414,7 @@
         "degraded": "Una parte de DiveDay no está funcionando.",
         "down": "DiveDay no responde."
       },
-      "checked": "Última comprobación: {time}.",
+      "checked": "Última verificación: {time}.",
       "component": {
         "serving": "La aplicación",
         "database": "La base de datos"
