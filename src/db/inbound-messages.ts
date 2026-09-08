@@ -334,7 +334,7 @@ export async function lastInboundAt(
   return row?.receivedAt ?? null;
 }
 
-/** Stamp a message answered (and read). Idempotent; a no-op outside the shop. */
+/** Stamp a message answered. Idempotent; a no-op outside the shop. */
 export async function markInboundAnswered(
   db: DbExecutor,
   shopId: string,
@@ -343,34 +343,10 @@ export async function markInboundAnswered(
 ): Promise<boolean> {
   const updated = await db
     .update(inboundMessages)
-    .set({ answeredAt: now, readAt: sql`coalesce(${inboundMessages.readAt}, ${now})` })
+    .set({ answeredAt: now })
     .where(and(liveMessage(shopId), eq(inboundMessages.id, messageId)))
     .returning({ id: inboundMessages.id });
   return updated.length > 0;
-}
-
-/**
- * Stamp everything this diver wrote as read — what opening their record
- * means. Only rows still unread, so the first look is the recorded one.
- */
-export async function markPersonMessagesRead(
-  db: DbExecutor,
-  shopId: string,
-  personId: string,
-  now: Date = nowDate(),
-): Promise<number> {
-  const updated = await db
-    .update(inboundMessages)
-    .set({ readAt: now })
-    .where(
-      and(
-        liveMessage(shopId),
-        eq(inboundMessages.personId, personId),
-        isNull(inboundMessages.readAt),
-      ),
-    )
-    .returning({ id: inboundMessages.id });
-  return updated.length;
 }
 
 /** Soft delete (ADR 20260820-every-delete-is-soft). A no-op outside the shop. */

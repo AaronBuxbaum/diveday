@@ -104,7 +104,6 @@ describe("answering by email", () => {
 
     const message = await getInboundMessage(db, shop.id, messageId);
     expect(message?.answeredAt).not.toBeNull();
-    expect(message?.readAt).not.toBeNull();
   });
 
   /**

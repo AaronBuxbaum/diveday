@@ -47,7 +47,6 @@ export async function seedInbox(
       // i18n-exempt: fixture text — what a diver typed, stored verbatim
       body: "Do you rent 5mm suits in a women's medium? The water was colder than I expected last time.",
       receivedAt: hoursFromNow(-48),
-      readAt: answeredAt,
       answeredAt,
       providerMessageId: `seed-inbox-${shopId}-lena`,
     })
