@@ -196,6 +196,67 @@ describe("action races", () => {
     ).toEqual(["action-race"]);
   });
 
+  it("reads a name in every form the suite writes one", () => {
+    // A string, a template literal, and a regular expression with or without a
+    // leading anchor. The regex forms were missed until a review caught them
+    // (#1561), and `{ name: /Save changes/ }` is ordinary in this suite — a
+    // label pattern that only understood quotes let the commonest alternative
+    // through in silence.
+    for (const name of [
+      '"Save changes"',
+      "'Save changes'",
+      "`Save ${what}`",
+      "/Save changes/",
+      "/^Save changes/",
+      "/^Confirm certification$/",
+    ]) {
+      expect(
+        ruleIds(
+          [
+            `await page.getByRole("button", { name: ${name} }).click();`,
+            'await page.goto("/shop/blue-mantis");',
+          ].join("\n"),
+        ),
+        name,
+      ).toEqual(["action-race"]);
+    }
+  });
+
+  it("reads the whole click statement, however the formatter broke it", () => {
+    // Bounded by the previous statement rather than a line count: how many
+    // lines a chain occupies is a formatting accident, and a fixed window
+    // silently stops catching anything longer.
+    expect(
+      ruleIds(
+        [
+          "const other = 1;",
+          "await page",
+          '  .getByRole("button", {',
+          '    name: "Save changes",',
+          "    exact: true,",
+          "  })",
+          "  .click();",
+          'await page.goto("/shop/blue-mantis");',
+        ].join("\n"),
+      ),
+    ).toEqual(["action-race"]);
+  });
+
+  it("does not borrow a label from the statement before the click", () => {
+    // The lookback stops at a line ending in `;`. Without that it would read
+    // the label off an unrelated earlier click and flag a navigation after a
+    // perfectly ordinary one.
+    expect(
+      ruleIds(
+        [
+          'await page.getByRole("button", { name: "Save changes" }).click();',
+          'await sidebar.getByRole("link", { name: "Next week" }).click();',
+          'await page.goto("/shop/blue-mantis");',
+        ].join("\n"),
+      ),
+    ).toEqual([]);
+  });
+
   it("reads a click built over several lines", () => {
     expect(
       ruleIds(

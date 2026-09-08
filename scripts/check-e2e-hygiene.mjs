@@ -113,13 +113,18 @@ export const rules = [
  * from two hits and no false positives to two and two, and a rule that fires on
  * correct code is one people learn to silence.
  *
- * The label list is a maintenance surface and is **not** meant to be complete. It
- * only matters when a click carrying one of these labels is immediately followed
- * by a navigation, which is rare; a client-only button that happens to say "Send"
- * would be a false positive, and the acknowledgement marker covers it.
+ * The list was drawn from the labels the suite actually clicks — `Add`, `Save`,
+ * `Book`, `Mark`, `Create`, `Send`, `Sign`, `Record`, `Import` and the rest are
+ * all in it because they are all in `e2e/` — and it accepts the three forms a
+ * name is written in here: a quoted string, a template literal, and a regular
+ * expression with or without a leading `^`. It is a maintenance surface and is
+ * **not** meant to be complete. It only matters when a click carrying one of
+ * these labels is immediately followed by a navigation, which is rare; a
+ * client-only button that happens to say "Send" would be a false positive, and
+ * the acknowledgement marker covers it.
  */
 const SUBMIT_LABEL =
-  /name:\s*(["'`])(?:Save|Add|Create|Put it on the board|Confirm|Book|Send|Sign|Publish|Delete|Remove|Update|Submit|Reinstate)/;
+  /name:\s*(?:["'`]|\/\^?)(?:Save|Add|Create|Put it on the board|Confirm|Book|Send|Sign|Publish|Delete|Remove|Update|Submit|Reinstate|Import|Mark|Record|Check in|Apply|Approve|Issue)/;
 
 /** The trimmed-comment test the scanner already applies, reused so a comment
  *  between the click and the navigation does not hide the race. */
@@ -130,13 +135,32 @@ const isProse = (line) => {
   );
 };
 
+/**
+ * The whole statement holding a `.click()`, read upward from it.
+ *
+ * Bounded by the *previous statement* rather than by a line count: a click is
+ * often built over several lines, and how many depends on how the formatter
+ * broke the chain that day, so a fixed window is a guess that silently stops
+ * catching anything longer (Sourcery finding on #1561). A preceding line that
+ * ends in `;` is a different statement and is where this stops; so is a blank
+ * line or a comment. The hard cap only exists so a malformed file cannot walk
+ * the scanner to the top.
+ */
+function statementAbove(lines, at) {
+  let from = at;
+  while (from > 0 && at - from < 12) {
+    const previous = lines[from - 1];
+    if (isProse(previous) || previous.trimEnd().endsWith(";")) break;
+    from -= 1;
+  }
+  return lines.slice(from, at + 1).join("\n");
+}
+
 function submitFollowedByNavigation(lines, index) {
   let at = index - 1;
   while (at >= 0 && isProse(lines[at])) at -= 1;
   if (at < 0 || !/\.click\s*\(/.test(lines[at])) return false;
-  // A click is often built over several lines — `await page\n.getByRole(...)\n
-  // .click()` — so the label may sit above the line holding `.click()`.
-  return SUBMIT_LABEL.test(lines.slice(Math.max(0, at - 3), at + 1).join("\n"));
+  return SUBMIT_LABEL.test(statementAbove(lines, at));
 }
 
 /**
