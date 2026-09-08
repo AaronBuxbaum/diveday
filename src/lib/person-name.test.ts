@@ -33,6 +33,21 @@ describe("personNamesMatch — a different person, flagged", () => {
     expect(personNamesMatch("Priya Sharma", "Priya Patel")).toBe(false);
   });
 
+  /**
+   * A suffix is two characters, so it survives `significantNameTokens` and
+   * makes a father a different person from his son.
+   *
+   * `waiver.errorGuardianNameIsDiver` tells a same-named parent to do exactly
+   * this, so it is a promise the product makes and not only a property of the
+   * comparison — and note the asymmetry it depends on: a middle *initial* is
+   * dropped and would still match (pinned above), which is why that copy says
+   * "spelled out".
+   */
+  it("does not match a suffix that distinguishes a parent from their child", () => {
+    expect(personNamesMatch("John Smith", "John Smith Jr.")).toBe(false);
+    expect(personNamesMatch("John Smith", "John Smith II")).toBe(false);
+  });
+
   it("does not match when a surname is added or dropped (a minor under a parent's email)", () => {
     expect(personNamesMatch("Jane Doe", "Jane Doe Smith")).toBe(false);
     expect(personNamesMatch("Jane", "Jane Doe")).toBe(false);

@@ -2648,6 +2648,53 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     });
   });
 
+  /**
+   * **A father and son of the same legal name.** The refusal above exists to
+   * stop a minor signing as their own guardian, so it must not be relaxed — but
+   * the family still has to be able to get through, and until now the error said
+   * only that the name could not be the diver's. It now names the two ways out,
+   * and this is what makes those two ways true.
+   *
+   * The first is the one a session is most likely to get wrong. A middle
+   * *initial* does not escape the refusal: `significantNameTokens` drops tokens
+   * shorter than two characters, so "John Q. Smith" and "John Smith" are the
+   * same two tokens. That is why the copy says **spelled out** rather than just
+   * "add your middle name" — advice that would fail the exact parent who
+   * followed it.
+   */
+  it("lets a same-named parent through with a suffix, but not with a middle initial", async () => {
+    const ctx = await waiverContext();
+    await makeMinor(ctx.db, ctx.person.id);
+    await ctx.db.update(people).set({ fullName: "John Smith" }).where(eq(people.id, ctx.person.id));
+
+    // A middle initial is dropped, so this is still the diver's own name.
+    const initial = await liveLink(ctx);
+    expect(
+      await completeWaiver(ctx.db, initial.token, {
+        signerName: "John Smith",
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        guardian: { ...guardian, name: "John Q. Smith" },
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "guardian_invalid" });
+
+    // A suffix is two characters, so it survives normalization and reads as a
+    // different person — the way through the copy points at.
+    expect(
+      await completeWaiver(ctx.db, initial.token, {
+        signerName: "John Smith",
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        guardian: { ...guardian, name: "John Smith Jr." },
+        now,
+      }),
+    ).toMatchObject({ ok: true, status: "completed" });
+
+    const [record] = await db_record(ctx, initial.recordId);
+    expect(record).toMatchObject({ guardianName: "John Smith Jr." });
+  });
+
   it("refuses a guardian section that is not a signature", async () => {
     const ctx = await waiverContext();
     await makeMinor(ctx.db, ctx.person.id);

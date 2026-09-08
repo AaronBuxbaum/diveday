@@ -1042,7 +1042,7 @@
     "guardianEmail": "Correo electrónico del tutor",
     "guardianAgreementCheckbox": "Soy la madre, el padre o el tutor legal de este buceador. He leído esta exención, la entiendo y la acepto en su nombre.",
     "errorGuardianName": "Escribe el nombre completo del tutor.",
-    "errorGuardianNameIsDiver": "El nombre del tutor no puede ser el del buceador. Aquí firma su madre, padre o tutor legal.",
+    "errorGuardianNameIsDiver": "El nombre del tutor no puede ser el del buceador. Si compartes nombre con este buceador, añade tu segundo nombre completo o un sufijo como Jr. Si los nombres son idénticos, pide al centro que corrija el registro del buceador.",
     "errorGuardianRelationship": "Elige la relación del tutor con el buceador.",
     "errorGuardianEmail": "Escribe el correo electrónico del tutor.",
     "errorGuardianAgreement": "El tutor tiene que marcar la casilla de aceptación para firmar.",

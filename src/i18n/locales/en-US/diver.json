@@ -1042,7 +1042,7 @@
     "guardianEmail": "Guardian’s email",
     "guardianAgreementCheckbox": "I am this diver’s parent or legal guardian. I have read this waiver, understand it, and agree to it on their behalf.",
     "errorGuardianName": "Type the guardian’s full name.",
-    "errorGuardianNameIsDiver": "The guardian’s name can’t be the diver’s own. A parent or legal guardian signs here.",
+    "errorGuardianNameIsDiver": "The guardian’s name can’t be the diver’s own. If you share a name with this diver, add your middle name spelled out, or a suffix like Jr. If your names are identical, ask the shop to correct the diver’s record.",
     "errorGuardianRelationship": "Choose the guardian’s relationship to the diver.",
     "errorGuardianEmail": "Enter the guardian’s email address.",
     "errorGuardianAgreement": "The guardian has to tick the agreement to sign.",
