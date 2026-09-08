@@ -147,7 +147,19 @@ export async function markWaiverInPersonFromCheckIn(
       back,
       outcome.reason === "medical_attestation_required"
         ? "waiver-medical-attestation"
-        : "waiver-error",
+        : // The counter is where a family who share a legal name ends up after
+          // the online path refused them, so it is the surface that most needs
+          // to say why rather than "try again" (issue 1539).
+          outcome.reason === "guardian_name_matches_diver"
+          ? "waiver-guardian-name"
+          : "waiver-error",
+      // **Which row.** The queue can hold three families at once, and a
+      // refusal that names none of them is one the staffer has to guess at —
+      // on a page where the collapsed form has just shut underneath it. The
+      // roster and the diver record both carry `bid` for this reason; the
+      // counter, the surface those families are actually standing at, was the
+      // one that did not (issue 1574).
+      { bid: bookingId },
     ),
   );
 }

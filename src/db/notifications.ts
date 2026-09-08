@@ -328,19 +328,70 @@ export async function sendNotificationBatch(
   const senders = new Map<string, NotificationSender | undefined>();
   for (let offset = 0; offset < inputs.length; offset += 100) {
     const batch = inputs.slice(offset, offset + 100);
-    let results: NotificationDelivery[];
-    try {
-      const addressed: Notification[] = [];
-      for (const input of batch) addressed.push(await withShopSender(db, input, senders));
-      if (resolved.sendBatch) {
-        results = await resolved.sendBatch(addressed);
-      } else {
-        results = [];
-        for (const input of addressed) results.push(await notify(input, resolved));
+    const results: (NotificationDelivery | undefined)[] = new Array(batch.length);
+
+    // **Partition before the send, or one bad member costs ninety-nine good
+    // ones a delivery cycle** (issue 1544). `notify` parses hard, so a single
+    // member the schema refuses used to throw out of the whole chunk's try:
+    // every member of that hundred was reported failed and written into
+    // `notification_send_queue`, none of them having reached the provider at
+    // all. A fan-out is exactly where one recipient's bad row must not be the
+    // other ninety-nine's problem.
+    //
+    // Same refusal `sendNotification` gives one notification — non-retryable,
+    // because nothing about the payload changes between attempts — and the same
+    // discipline about what is logged: field paths only, never values, since
+    // these payloads carry divers' addresses.
+    const sendable: { index: number; input: Notification }[] = [];
+    for (let index = 0; index < batch.length; index += 1) {
+      const input = batch[index];
+      const parsed = notificationSchema.safeParse(input);
+      if (parsed.success) {
+        sendable.push({ index, input });
+        continue;
       }
-    } catch {
-      results = batch.map(() => ({ status: "failed" as const, retryable: true }));
+      log("notification.invalid", "error", {
+        kind: input.kind,
+        issues: parsed.error.issues
+          .map((issue) => issue.path.join("."))
+          .slice(0, 5)
+          .join(","),
+      });
+      results[index] = { status: "failed", retryable: false, errorCode: "invalid_notification" };
     }
+
+    if (sendable.length > 0) {
+      let sent: NotificationDelivery[];
+      try {
+        // Still catching everything: `withShopSender` reads the database and
+        // can throw, and that genuinely is retryable — the same reasoning
+        // `sendNotification` states at its own try.
+        const addressed: Notification[] = [];
+        for (const { input } of sendable) addressed.push(await withShopSender(db, input, senders));
+        if (resolved.sendBatch) {
+          sent = await resolved.sendBatch(addressed);
+        } else {
+          sent = [];
+          for (const input of addressed) sent.push(await notify(input, resolved));
+        }
+      } catch (error) {
+        sent = sendable.map(() => ({
+          status: "failed" as const,
+          retryable: true,
+          errorCode: "provider_error" as const,
+          detail: error instanceof Error ? error.message.slice(0, 500) : undefined,
+        }));
+      }
+      // `sendBatch` answers aligned to what it was *given*, which is now the
+      // sendable subset — so each result goes back to the position its input
+      // came from. Callers index this array against their own work list
+      // (`trip-promos.ts`, `reminders.ts`, `recap.ts` all do), so a shifted
+      // answer would credit one diver's delivery to another.
+      for (let position = 0; position < sendable.length; position += 1) {
+        results[sendable[position].index] = sent[position];
+      }
+    }
+
     for (let index = 0; index < batch.length; index += 1) {
       const delivery = results[index] ?? { status: "failed" as const, retryable: true };
       deliveries.push(delivery);

@@ -219,6 +219,36 @@ describe("recording a paper waiver from the diver record", () => {
     expect(await completedWaivers(db, shop.id, personId)).toHaveLength(0);
   });
 
+  /**
+   * **The last door before somebody writes something untrue** (issue 1539).
+   *
+   * A family who share a legal name are refused online, take the paper release
+   * instead, and hand it to the front desk — which until now answered "that
+   * paper waiver couldn't be recorded, try again", the one thing guaranteed not
+   * to work, since the input is not wrong in a way retrying fixes. The refusal
+   * itself does not move: it is what stops a minor signing as their own
+   * guardian. Only what the staffer is told about it.
+   */
+  it("names the shared-name refusal instead of telling the desk to try again", async () => {
+    const { db, shop, personId } = await context();
+    const [diver] = await db.select().from(people).where(eq(people.id, personId));
+    if (!diver) throw new Error("diver missing");
+    // A minor on the signing day, so the release needs a co-signature at all.
+    await db.update(people).set({ dateOfBirth: "2012-01-01" }).where(eq(people.id, personId));
+
+    const form = attested();
+    form.set("guardianName", diver.fullName);
+    form.set("guardianRelationship", "parent");
+    const to = await redirectedTo(() => markWaiverInPersonAction(shop.slug, personId, form));
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${personId}?notice=waiver-guardian-name&form=waiver#waiver`,
+    );
+    // Not the generic one, which is the whole point.
+    expect(to).not.toContain("notice=waiver-error");
+    expect(await completedWaivers(db, shop.id, personId)).toHaveLength(0);
+  });
+
   it("does not stack a second record on a diver who already holds a current one", async () => {
     const { db, shop, personId } = await context();
     await redirectedTo(() => markWaiverInPersonAction(shop.slug, personId, attested()));

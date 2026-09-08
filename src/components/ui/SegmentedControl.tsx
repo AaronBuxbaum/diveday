@@ -154,11 +154,32 @@ export function SegmentedControl({
       }
       const navBox = nav.getBoundingClientRect();
       const box = current.getBoundingClientRect();
+      // **Snapped to the device pixel grid, and that is load-bearing.**
+      // `getBoundingClientRect` answers in fractions, and the fraction is not
+      // stable: measured three times on one commit under the e2e harness, the
+      // same option reported heights of 44.0608, 44.046 and 44.0319 and tops of
+      // 4.9696, 4.97702 and 4.98404 — text metrics still settling as the run
+      // warmed. Written straight through as inline styles, a box that lands a
+      // hundredth of a pixel differently antialiases its top and bottom edges
+      // differently, and reg-suit reported `prep-by-diver` as changed on
+      // branches that render nothing on that page: 898 pixels at a maximum
+      // channel delta of 47, on the pill's horizontal edges across its full
+      // width and nowhere else (issue 1578).
+      //
+      // The pill is a decorative fill *behind* an option whose own box is what
+      // a reader sees and what the pointer hits, so moving it by at most half a
+      // device pixel costs nothing visible and removes the whole class — every
+      // `SegmentedControl` in the suite, not just the one that was caught.
+      // Device pixels rather than CSS pixels because the grid antialiasing
+      // happens on is physical: at dpr 2 a half-pixel edge is exact, and
+      // rounding it away would be the only visible thing this does.
+      const dpr = window.devicePixelRatio || 1;
+      const snap = (value: number) => Math.round(value * dpr) / dpr;
       const next = {
-        left: box.left - navBox.left,
-        top: box.top - navBox.top,
-        width: box.width,
-        height: box.height,
+        left: snap(box.left - navBox.left),
+        top: snap(box.top - navBox.top),
+        width: snap(box.width),
+        height: snap(box.height),
       };
       pill.style.opacity = "1";
       pill.style.left = `${next.left}px`;

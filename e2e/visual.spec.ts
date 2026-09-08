@@ -3384,6 +3384,74 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "check-in-checked", scheme);
       });
 
+      /**
+       * **The counter's refused paper release** — the class
+       * `.claude/rules/surfaces.md` names outright: a panel that renders only
+       * when something has gone wrong, warning-toned and dense, on the one
+       * screen a diver is standing in front of. It shipped with no baseline
+       * (issue #1580), verified by hand against a browser session that left
+       * nothing behind for the next change to fail against.
+       *
+       * **What the seed has to make, and why the demo has not got it.** The
+       * paper control is offered to a row whose *worst* blocker is a waiver,
+       * and it draws the guardian name and relationship fields only for a
+       * diver the co-signature rule asks it of. The demo has a blocked adult
+       * (Priya Sharma) and a co-signed minor (Lena Fischer) and nobody who is
+       * both — so shot against the adult this would photograph a namesake
+       * refusal above a form with no name field in it, which is the wrong
+       * subject rendered silently. `?blockedMinor=1` supersedes Lena's release
+       * and hands back the seat it made.
+       *
+       * **The URL is the subject, not the action.** `?notice=` is untrusted
+       * input on this page, so this proves the *rendering* and cannot regress
+       * if `markWaiverInPersonFromCheckIn` stops sending `bid` —
+       * `CounterQueueRow.test.tsx` holds that half. It is also how every other
+       * notice on this surface is photographed (`check-in-walk-in-notice`).
+       *
+       * **`?trip=` pins the departure**, rather than trusting whichever boat
+       * the instrument focuses, and every assertion below is scoped to the
+       * row. The notice falls back to a page banner for a row that is not
+       * rendered or has settled (`waiverNoticeOnRow`, `check-in/page.tsx`), so
+       * an unscoped `getByText` would pass just as happily on a capture of the
+       * banner — the one way this test could photograph the wrong thing and
+       * still be green.
+       */
+      test(`the counter's refused paper release renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?blockedMinor=1");
+        expect(seeded.ok()).toBe(true);
+        const { blockedMinor } = (await seeded.json()) as {
+          blockedMinor?: { bookingId: string; tripId: string };
+        };
+        if (!blockedMinor)
+          throw new Error("seed-trouble-states found no seat for the demo's minor");
+
+        await page.goto(
+          `/shop/blue-mantis/check-in?trip=${blockedMinor.tripId}` +
+            `&notice=waiver-guardian-name&bid=${blockedMinor.bookingId}`,
+        );
+        // The search box focuses itself from a mount effect, and the ring it
+        // paints is in the frame — same race, same signal, as the two captures
+        // above.
+        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
+        const refusal = page.getByText("The co-signer’s name is the diver’s own", { exact: false });
+        // Said once, on the row it names: the page banner and the row are
+        // mutually exclusive by construction, and a count of one is what tells
+        // a working capture from one that fell back.
+        await expect(refusal).toHaveCount(1);
+        const row = page.locator("article").filter({ hasText: "Lena Fischer" });
+        await expect(row.getByText("The co-signer’s name is the diver’s own")).toBeVisible();
+        // Re-opened, and carrying the field the message is about — the half
+        // that needs the diver to be a minor.
+        await expect(row.getByLabel("Parent or guardian who signed")).toBeVisible();
+        await capture(page, "check-in-waiver-refused", scheme);
+      });
+
       // **The home's evening reading** (ADR 20260804-day-closeout, folded into
       // the home by 20260827-clearwater-surface-language's decision 4). The
       // ritual that ends every working day is a *state* the spine settles

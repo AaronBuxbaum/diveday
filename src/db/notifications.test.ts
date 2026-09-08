@@ -11,6 +11,7 @@ import {
   recordNotificationDelivery,
   retryBookingConfirmation,
   sendNotification,
+  sendNotificationBatch,
 } from "./notifications";
 import {
   bookings,
@@ -223,6 +224,95 @@ describe("a notification the schema will not take", () => {
     // The provider was never asked.
     expect(seen).toHaveLength(0);
     // And nothing was left behind to re-fail on every future drain.
+    expect(await db.select().from(notificationSendQueue)).toHaveLength(0);
+  });
+});
+
+/**
+ * **A fan-out is exactly where one bad row must not be everyone else's
+ * problem** (issue 1544).
+ *
+ * The batch used to wrap its whole hundred in one try. `notify` parses hard, so
+ * a single member the schema refused threw out of it, and every member of that
+ * chunk was reported failed *and* written into `notification_send_queue` —
+ * ninety-nine notifications that never reached the provider, queued to be sent
+ * late for a reason that had nothing to do with any of them.
+ */
+describe("a batch carrying one notification the schema will not take", () => {
+  it("still delivers the valid members, and refuses only the bad one", async () => {
+    const { db, shop, trip, booking } = await seededBooking();
+    const seen: Notification[] = [];
+    const watching: NotificationProvider = {
+      async send(notification) {
+        seen.push(notification);
+        return { status: "sent", providerMessageId: `sent-${seen.length}` };
+      },
+    };
+    const confirmation = (to: string): Notification =>
+      ({
+        kind: "booking_confirmation",
+        bookingId: booking.bookingId,
+        shopId: shop.id,
+        to,
+        locale: "en-US",
+        diverName: "Nora Quinn",
+        shopName: shop.name,
+        tripTitle: trip.title,
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        timezone: shop.timezone,
+      }) as unknown as Notification;
+
+    // The bad one sits in the middle on purpose: a fix that merely dropped
+    // invalid members would still pass with it first or last, and would return
+    // the third diver's delivery against the second diver's row.
+    const deliveries = await sendNotificationBatch(
+      db,
+      [
+        confirmation("first@example.com"),
+        confirmation("not-an-address"),
+        confirmation("third@example.com"),
+      ],
+      watching,
+    );
+
+    expect(deliveries).toHaveLength(3);
+    expect(deliveries[0]).toMatchObject({ status: "sent" });
+    expect(deliveries[1]).toMatchObject({
+      status: "failed",
+      retryable: false,
+      errorCode: "invalid_notification",
+    });
+    expect(deliveries[2]).toMatchObject({ status: "sent" });
+    // The provider saw the two good ones and only those, in their own order.
+    expect(seen.map((notification) => notification.to)).toEqual([
+      "first@example.com",
+      "third@example.com",
+    ]);
+  });
+
+  it("leaves nothing behind to re-fail on every future drain", async () => {
+    const { db, shop, trip, booking } = await seededBooking();
+    const invalid = {
+      kind: "booking_confirmation",
+      bookingId: booking.bookingId,
+      shopId: shop.id,
+      to: "not-an-address",
+      locale: "en-US",
+      diverName: "Nora Quinn",
+      shopName: shop.name,
+      tripTitle: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      timezone: shop.timezone,
+    } as unknown as Notification;
+
+    await sendNotificationBatch(db, [invalid], {
+      async send() {
+        throw new Error("the provider must never be asked");
+      },
+    });
+
     expect(await db.select().from(notificationSendQueue)).toHaveLength(0);
   });
 });

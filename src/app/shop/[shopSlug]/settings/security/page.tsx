@@ -9,9 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
 import { getAccountSecurity, getTotpSecret, listAccountSessions } from "@/db/account-security";
-import { getDb } from "@/db/client";
 import { userAccounts } from "@/db/schema";
-import { getShopBySlug } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
@@ -32,17 +30,22 @@ import {
 // loading boundary still provides the static shell while those reads resolve.
 export const instant = true;
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ shopSlug: string }>;
-}): Promise<Metadata> {
-  const { shopSlug } = await params;
-  const shop = await getShopBySlug(await getDb(), shopSlug);
-  const locale = await requestLocale(shop?.defaultLocale);
-  const t = staffTranslator(locale);
-  return { title: `${t("settings.security.title")} — DiveDay` };
-}
+/**
+ * Static, like every other page under `/shop/**` (issue 1569).
+ *
+ * This was the tree's one staff `generateMetadata`, and it resolved the shop
+ * **by the URL slug** to negotiate a locale for the title — a read of a tenant
+ * row before anyone had shown the reader owns it. The body below is gated
+ * properly by `requireShopSurface`, so nothing of that shop rendered; what
+ * leaked was its configured language, in a `<title>`, to anyone who could
+ * guess a slug. Small, and not a reason to keep the only exception in the
+ * subtree.
+ *
+ * The English title is what the other forty-six staff pages do — route
+ * metadata is a browser tab and a bookmark, not a surface, so the locale it
+ * cost a tenant read to negotiate was never worth the negotiation.
+ */
+export const metadata: Metadata = { title: "Account security — DiveDay" };
 
 export default async function SecurityPage({
   params,

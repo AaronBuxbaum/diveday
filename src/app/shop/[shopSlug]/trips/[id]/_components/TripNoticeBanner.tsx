@@ -177,6 +177,11 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.waiverMedicalAttestation",
   },
+  "waiver-guardian-name": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.waiverGuardianName",
+  },
   "waiver-error": { form: "roster", tone: "danger", key: "trips.notices.waiverError" },
   "series-applied": { form: "series", tone: "success", key: "tripSeries.notices.seriesApplied" },
   "series-applied-partial": {

@@ -425,7 +425,13 @@ new domain concept, define it here in the same PR.
   the shop never asked is treated as an adult — and the day a date of birth lands on their record,
   the release they already signed becomes a blocker rather than a silent pass. It does not answer
   H-01 or H-03: the release wording is unchanged, still English, and whether typed consent is a
-  sufficient assurance level is as open for the guardian as it is for the diver.
+  sufficient assurance level is as open for the guardian as it is for the diver. **A co-signer whose
+  name reads as the diver's own is not a co-signature**, on either path and with no override: the
+  writer compares significant name tokens, so a middle initial is not a difference and a spelled-out
+  middle name or a suffix is. That refusal is a name-match check, not an identity one, so it also
+  catches the family it cannot help — a parent and child whose IDs read identically have no path to
+  a recorded release anywhere in the product today, which is an owner's call and not an agent's
+  (issue 1573).
 - **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
   OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
   `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence

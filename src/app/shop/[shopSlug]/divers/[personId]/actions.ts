@@ -1173,7 +1173,12 @@ export async function markWaiverInPersonAction(
         ? "waiver-paper-recorded"
         : outcome.reason === "medical_attestation_required"
           ? "waiver-medical-attestation"
-          : "waiver-error",
+          : // A guardian whose name matches the diver's is the one refusal here
+            // an honest submission produces, so it gets its own words (issue
+            // 1539) rather than "try again", which cannot work.
+            outcome.reason === "guardian_name_matches_diver"
+            ? "waiver-guardian-name"
+            : "waiver-error",
       "waiver",
       outcome.ok,
     ),

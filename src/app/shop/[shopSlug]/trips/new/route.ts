@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * 308 to the board's add panel, which is now the only trip form
@@ -28,6 +29,6 @@ export async function GET(
   // `127.0.0.1` and landed a signed-in owner on /sign-in.
   return new Response(null, {
     status: 308,
-    headers: { Location: `/shop/${shopSlug}/schedule/board?${query.toString()}` },
+    headers: { Location: `${shopPath(shopSlug, "schedule", "board")}?${query.toString()}` },
   });
 }

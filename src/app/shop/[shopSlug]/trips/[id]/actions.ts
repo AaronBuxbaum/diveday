@@ -360,12 +360,18 @@ const IN_PERSON_WAIVER_NOTICE: Record<
   template_not_found: "waiver-error",
   staff_not_found: "waiver-error",
   invalid_signature: "waiver-error",
-  // A minor's paper release with no co-signer, or one that is not a signature
-  // (ADR 20260907-guardian-co-signature). The form asks for both fields and
-  // marks them required, so reaching either of these means the request did not
-  // come from it — the seventh's company, not its own message.
+  // A minor's paper release with no co-signer, or one whose co-signer cannot be
+  // one — an unusable signature, or a relationship outside the allowed set (ADR
+  // 20260907-guardian-co-signature). The form asks for each field and marks it
+  // required, so reaching either of these means the request did not come from
+  // it: the seventh's company, not its own message.
   guardian_required: "waiver-error",
   guardian_invalid: "waiver-error",
+  // This one is different, and used to sit with them (issue 1539). It is what
+  // the form produces for a family who share a legal name, so the staffer who
+  // typed it in can act on it — and "try again" is the one thing guaranteed not
+  // to work, because the input is not wrong in a way retrying fixes.
+  guardian_name_matches_diver: "waiver-guardian-name",
 };
 
 export async function saveDetails(shopSlug: string, tripId: string, formData: FormData) {

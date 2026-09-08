@@ -1,4 +1,5 @@
 import { requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * Not ready is no longer a page, and no longer a view of one either: the shop
@@ -36,6 +37,6 @@ export async function GET(
   // `127.0.0.1` and landed a signed-in owner on /sign-in.
   return new Response(null, {
     status: 308,
-    headers: { Location: `/shop/${shopSlug}` },
+    headers: { Location: shopPath(shopSlug) },
   });
 }
