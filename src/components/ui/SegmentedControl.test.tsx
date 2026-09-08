@@ -109,3 +109,56 @@ describe("SegmentedControl", () => {
     expect(screen.getByText("12")).toBeVisible();
   });
 });
+
+/**
+ * **The pill's box is snapped to the device pixel grid** (issue 1578).
+ *
+ * `getBoundingClientRect` answers in fractions and the fraction is not stable:
+ * measured three times on one commit under the e2e harness, the same option
+ * reported heights of 44.0608, 44.046 and 44.0319 and tops of 4.9696, 4.97702
+ * and 4.98404 — text metrics still settling as the run warmed. Written through
+ * as inline styles that antialiases the pill's horizontal edges differently
+ * every run, and reg-suit reported `prep-by-diver` changed on branches that
+ * render nothing on that page: 898 pixels at a maximum channel delta of 47.
+ *
+ * jsdom does no layout, so the boxes are stubbed on the prototype **before**
+ * render — the effect that writes the styles runs on mount, so a stub applied
+ * afterwards measures nothing and the test proves nothing. (It was written that
+ * way first and passed with the fix removed.) What is under test is the
+ * arithmetic between the measurement and the inline style, which is where the
+ * fix lives.
+ */
+describe("the pill's measured box", () => {
+  const NAV_BOX = { left: 10.1234, top: 20.5678, width: 300.4321, height: 54.8765 };
+  const OPTION_BOX = { left: 84.3369, top: 24.9696, width: 74.3369, height: 44.0608 };
+
+  it("writes whole device pixels, never the fraction it measured", () => {
+    const original = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function stubbed(this: Element) {
+      const box = this.tagName === "NAV" ? NAV_BOX : OPTION_BOX;
+      return { ...box, right: 0, bottom: 0, x: box.left, y: box.top, toJSON: () => box } as DOMRect;
+    };
+    try {
+      render(<SegmentedControl ariaLabel="Trip" items={items} currentKey="guests" />);
+      const nav = screen.getByRole("navigation", { name: "Trip" });
+      const pill = nav.querySelector('span[aria-hidden="true"]') as HTMLElement;
+
+      // Every written value is whole at dpr 1 — and none of them is empty, or
+      // the assertion below would be satisfied by a pill that measured nothing.
+      for (const [name, value] of Object.entries({
+        left: pill.style.left,
+        top: pill.style.top,
+        width: pill.style.width,
+        height: pill.style.height,
+      })) {
+        expect(value, `${name} should have been written`).not.toBe("");
+        expect(value, `${name} was ${value}, not a whole pixel at dpr 1`).toMatch(/^-?\d+px$/);
+      }
+      // And snapped to the nearest, not truncated: 84.3369 - 10.1234 = 74.2135.
+      expect(pill.style.left).toBe("74px");
+      expect(pill.style.height).toBe("44px");
+    } finally {
+      Element.prototype.getBoundingClientRect = original;
+    }
+  });
+});
