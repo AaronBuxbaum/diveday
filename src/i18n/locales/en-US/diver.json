@@ -15,7 +15,7 @@
     "aboard": "{boarded} of {booked, plural, one {# diver} other {# divers}} aboard",
     "meetAt": "Meet at {place}",
     "privateCharter": "Private charter",
-    "crew": "With {names}",
+    "crew": "Crew: {names}",
     "stage": {
       "boarding": "Boarding",
       "underway": "Out on {site}",
