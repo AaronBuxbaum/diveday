@@ -31,7 +31,8 @@
     "placeholder": "Type your answer",
     "send": "Send",
     "sending": "Sending",
-    "windowClosed": "WhatsApp takes a typed reply for 24 hours after a diver's last message. Theirs is older than that."
+    "windowClosed": "WhatsApp takes a typed reply for 24 hours after a diver's last message. Theirs is older than that.",
+    "diverRemoved": "This diver's record was removed, so replies are switched off."
   },
   "notices": {
     "failed": "That did not send, so the message is still waiting on an answer.",

@@ -35,6 +35,7 @@ export function ConversationSection({
   timezone,
   now,
   canAnswer,
+  removed,
   t,
   status,
 }: {
@@ -47,6 +48,13 @@ export function ConversationSection({
   now: Date;
   /** `canAnswerShopInbox`, live-checked by the page. The action re-checks. */
   canAnswer: boolean;
+  /**
+   * A removed diver's record stays readable, and their thread with it —
+   * deleting is soft, and the history is the point. But `sendStaffReply`
+   * refuses to write to a removed record, so the composer is absent rather
+   * than taking a staffer's words and refusing them afterwards.
+   */
+  removed: boolean;
   t: StaffTranslator;
   status?: DiverNotice;
 }) {
@@ -65,7 +73,9 @@ export function ConversationSection({
   // below and announced itself as email. Answerability and the label now come
   // from the same fact.
   const answerable =
-    latest?.message.channel === "email" || (latest?.message.channel === "whatsapp" && whatsAppOpen);
+    !removed &&
+    (latest?.message.channel === "email" ||
+      (latest?.message.channel === "whatsapp" && whatsAppOpen));
   const replyTo = answerable ? latest : undefined;
   // Nothing to answer *on*: SMS is recorded and cannot be answered yet, and a
   // closed WhatsApp window is the case worth a sentence.
@@ -155,6 +165,10 @@ export function ConversationSection({
                   {t("inbox.reply.send")}
                 </SubmitButton>
               </form>
+            ) : removed ? (
+              // Before the WhatsApp arm on purpose: a removed diver on a stale
+              // thread gets the removal sentence, which is the truer of the two.
+              <p className="text-sm text-muted">{t("inbox.reply.diverRemoved")}</p>
             ) : closedWhatsApp ? (
               <p className="text-sm text-muted">{t("inbox.reply.windowClosed")}</p>
             ) : null}

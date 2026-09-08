@@ -111,6 +111,28 @@ function normalizeAddress(channel: InboundChannel, raw: string): string | null {
 }
 
 /**
+ * A stored subject, with control characters taken out.
+ *
+ * Cleaned where the row is written rather than in the notification schema,
+ * because every reader of the row inherits it — the inbox list, the record's
+ * conversation, an export — whereas the schema only protects the send path.
+ *
+ * Each control character becomes a **space** and the runs are then collapsed,
+ * so a subject folded across lines reads "a b" rather than "ab". Truncation
+ * comes last, so the 500 cap applies to the cleaned string. Only `\p{Cc}` is
+ * touched: ordinary spaces, accents and emoji all survive.
+ */
+function sanitizeSubject(subject: string | null | undefined): string | null {
+  return (
+    subject
+      ?.replace(/\p{Cc}/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 500) || null
+  );
+}
+
+/**
  * File one inbound message. Attribution and the reply link are resolved
  * here, in one place, so the two webhook routes cannot disagree about either.
  */
@@ -147,7 +169,7 @@ export async function recordInboundMessage(
       personId,
       channel: input.channel,
       fromAddress,
-      subject: input.subject?.trim().slice(0, 500) || null,
+      subject: sanitizeSubject(input.subject),
       body: truncateInboundBody(input.body),
       mediaCount: Math.max(0, Math.floor(input.mediaCount ?? 0)),
       receivedAt: input.receivedAt,

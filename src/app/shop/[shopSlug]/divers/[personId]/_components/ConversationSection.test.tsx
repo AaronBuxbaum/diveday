@@ -64,7 +64,7 @@ function outbound(status: "sent" | "failed" = "sent"): ThreadEntry {
   } as ThreadEntry;
 }
 
-function renderSection(entries: ThreadEntry[], canAnswer = true) {
+function renderSection(entries: ThreadEntry[], canAnswer = true, removed = false) {
   return render(
     <ConversationSection
       entries={entries}
@@ -75,6 +75,7 @@ function renderSection(entries: ThreadEntry[], canAnswer = true) {
       timezone="America/Cancun"
       now={NOW}
       canAnswer={canAnswer}
+      removed={removed}
       t={t}
     />,
   );
@@ -142,6 +143,54 @@ describe("a conversation", () => {
     renderSection([inbound()], false);
     expect(screen.queryByLabelText(/^Reply by email/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
+  });
+});
+
+/**
+ * Deleting a diver is soft, so their record and their thread stay readable —
+ * the history is the point. What goes is the composer: `sendStaffReply` refuses
+ * to write to a removed record, so offering the box would take a staffer's
+ * words and refuse them afterwards.
+ */
+describe("a removed diver", () => {
+  it("keeps the conversation readable but offers no composer", () => {
+    renderSection([inbound()], true, true);
+    expect(screen.getByText("Could I switch to the afternoon boat?")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Reply by/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
+  });
+
+  it("says why the box is gone rather than letting it vanish", () => {
+    renderSection([inbound()], true, true);
+    expect(
+      screen.getByText("This diver's record was removed, so replies are switched off."),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * The removal sentence wins over the WhatsApp one. Both are true of a removed
+   * diver on a stale thread, and the removal is the durable reason: waiting for
+   * a new message would not reopen this composer.
+   */
+  it("gives the removal reason, not the closed-window one, when both apply", () => {
+    renderSection(
+      [
+        inbound({
+          message: {
+            channel: "whatsapp",
+            subject: null,
+            fromAddress: "13055550110",
+            receivedAt: new Date(NOW.getTime() - 30 * HOUR_MS),
+          },
+        } as Partial<ThreadEntry & { direction: "inbound" }>),
+      ],
+      true,
+      true,
+    );
+    expect(
+      screen.getByText("This diver's record was removed, so replies are switched off."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/WhatsApp takes a typed reply for 24 hours/)).toBeNull();
   });
 });
 

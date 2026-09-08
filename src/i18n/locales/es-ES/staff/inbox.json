@@ -31,7 +31,8 @@
     "placeholder": "Escribe tu respuesta",
     "send": "Enviar",
     "sending": "Enviando",
-    "windowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo."
+    "windowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo.",
+    "diverRemoved": "El registro de este buceador fue eliminado, así que las respuestas están desactivadas."
   },
   "notices": {
     "failed": "No se envió, así que el mensaje sigue esperando respuesta.",

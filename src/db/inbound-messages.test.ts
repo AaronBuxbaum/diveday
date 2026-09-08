@@ -4,6 +4,7 @@ import { seededShopContext } from "@/test/db";
 import {
   countUnansweredMessages,
   deleteInboundMessage,
+  getInboundMessage,
   lastInboundAt,
   markInboundAnswered,
   markPersonMessagesRead,
@@ -245,6 +246,58 @@ describe("the unanswered count and the inbox", () => {
     expect(await markInboundAnswered(db, otherShopId, target.id, NOW)).toBe(false);
     expect(await deleteInboundMessage(db, otherShopId, target.id, NOW)).toBe(false);
     expect(await personThread(db, otherShopId, target.personId ?? "")).toEqual([]);
+  });
+});
+
+/**
+ * A subject is provider-supplied text that every reader of the row inherits —
+ * the inbox list, the record's conversation, an export. Cleaned where the row
+ * is written rather than in the notification schema, which only guards the
+ * send path.
+ *
+ * Not a vulnerability: SESv2 takes headers as JSON over HTTPS and builds the
+ * MIME itself, so a folded or control-laden subject was never going to inject
+ * a header. It is a consistency hardening, so what is stored is what a person
+ * can read.
+ */
+describe("a subject with control characters in it", () => {
+  it("keeps the words, loses the control characters, and does not glue them together", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await firstDiver(db, shop.id);
+    const result = await recordInboundMessage(db, {
+      shopId: shop.id,
+      channel: "email",
+      fromAddress: diver.email ?? "",
+      // A folded header, the ordinary way this arrives.
+      subject: "Re: Saturday\r\n departure\u0000 plan",
+      body: "here",
+      receivedAt: new Date("2026-07-21T12:00:00.000Z"),
+      providerMessageId: "ses.control-chars",
+    });
+    if (result.status !== "recorded") throw new Error(`unexpected ${result.status}`);
+
+    const stored = await getInboundMessage(db, shop.id, result.id);
+    // Each control character became a space, the run collapsed, and nothing
+    // was glued together across the fold.
+    expect(stored?.subject).toBe("Re: Saturday departure plan");
+  });
+
+  it("leaves accents and emoji alone", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await firstDiver(db, shop.id);
+    const result = await recordInboundMessage(db, {
+      shopId: shop.id,
+      channel: "email",
+      fromAddress: diver.email ?? "",
+      subject: "¿Mañana a las 8? 🤿",
+      body: "here",
+      receivedAt: new Date("2026-07-21T12:00:00.000Z"),
+      providerMessageId: "ses.accents",
+    });
+    if (result.status !== "recorded") throw new Error(`unexpected ${result.status}`);
+
+    const stored = await getInboundMessage(db, shop.id, result.id);
+    expect(stored?.subject).toBe("¿Mañana a las 8? 🤿");
   });
 });
 
