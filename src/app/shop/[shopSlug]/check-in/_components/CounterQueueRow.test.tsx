@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CheckInQueueRow } from "@/db/check-in";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { CounterQueueRow } from "./CounterQueueRow";
+import { CounterQueueRow, type CounterWaiverNotice } from "./CounterQueueRow";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
@@ -41,6 +41,7 @@ function renderRow(
   overrides: Partial<CheckInQueueRow> = {},
   showEmail = false,
   showFirstVisit = true,
+  waiverNotice?: CounterWaiverNotice,
 ) {
   return render(
     <CounterQueueRow
@@ -52,10 +53,23 @@ function renderRow(
       checkInAction={vi.fn().mockResolvedValue({ ok: true })}
       undoAction={vi.fn().mockResolvedValue({ ok: true })}
       waiverAction={vi.fn().mockResolvedValue(undefined)}
+      waiverNotice={waiverNotice}
       t={t}
     />,
   );
 }
+
+/** A row whose paper release is the thing still owed — where the control lives. */
+const owesWaiver = {
+  readiness: { status: "blocked", blockers: [{ code: "waiver_not_sent" }] },
+} satisfies Partial<CheckInQueueRow>;
+
+const refusal = (bookingId: string): CounterWaiverNotice => ({
+  form: "waiver",
+  tone: "danger",
+  text: "That paper waiver could not be recorded.",
+  bookingId,
+});
 
 describe("a blocked row", () => {
   /**
@@ -203,5 +217,42 @@ describe("the quiet facts a row carries", () => {
     cleanup();
     renderRow({}, true);
     expect(screen.getByText(/nadia@example\.com/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * **The counter can hold three families at once**, which is what makes an
+ * anonymous banner at the top of the page useless here: it says what went
+ * wrong and nothing about who it went wrong for, while the collapsed form it
+ * is about has just shut underneath it (issue 1574).
+ *
+ * The roster and the diver record both route a refusal to the form that
+ * produced it (`noticeForForm`, `src/lib/staff-notices.ts`); these pin that
+ * the counter now does too, and — the half that actually costs a staffer time
+ * — that it lands on the *right* row.
+ */
+describe("a refused paper waiver", () => {
+  it("says so on the row it names, and re-opens that row's form", () => {
+    renderRow(owesWaiver, false, true, refusal("booking-1"));
+
+    expect(screen.getByText("That paper waiver could not be recorded.")).toBeInTheDocument();
+    // Open, not merely present: the staffer has to correct what the message
+    // names, and the attestation checkbox only exists in the open form.
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
+  });
+
+  it("leaves the other families at the desk alone", () => {
+    renderRow(owesWaiver, false, true, refusal("booking-2"));
+
+    expect(screen.queryByText("That paper waiver could not be recorded.")).not.toBeInTheDocument();
+    // And this row's form stays shut, so one diver's problem does not reopen
+    // the form on every other row in the queue.
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("leaves a row alone when nothing was refused at all", () => {
+    renderRow(owesWaiver);
+
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 });
