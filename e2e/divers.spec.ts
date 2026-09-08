@@ -299,9 +299,24 @@ test("the roster pages both ways, and back one page is the page you came from", 
     .click();
   await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
   expect(await page.locator("main ul li a").first().getAttribute("aria-label")).toBe(secondName);
+});
 
-  // A search resets to the first page rather than stranding the reader on a
-  // page the narrowed result set does not have.
+/**
+ * **A search resets to the first page** rather than stranding the reader on a
+ * page the narrowed result set does not have.
+ *
+ * Its own test, and the split is the point. This assertion used to be the tail
+ * of the paging test above, which by then had already made four server round
+ * trips; adding a debounced fifth put the whole thing at the edge of the 15s
+ * test budget, and it went over on a loaded shard while passing in isolation.
+ * The fix for that is never a wider timeout — it is a test that does one thing.
+ * Landing on page two by URL costs one navigation instead of two and asks
+ * exactly the question this is about.
+ */
+test("a search from a later page comes back to the first", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/divers?page=2");
+  await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
+
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await expect(page.getByRole("link", { name: "Priya Sharma", exact: true })).toBeVisible();
   await expect(page).not.toHaveURL(/page=/);
