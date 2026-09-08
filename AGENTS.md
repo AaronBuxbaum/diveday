@@ -184,7 +184,10 @@ for anything touching auth, tokens, personal or medical data, or export/import.
   `node scripts/stray-processes.mjs --list` reads the process table, which is the only honest
   answer; the `Stop` hook runs it for you. Never pipe a long-running command through `tail`/`head`
   (neither can flush — the shell guard refuses it); never write a wait whose only exit is a success
-  marker; when you kill a producer, stop its watcher in the same breath.
+  marker; when you kill a producer, stop its watcher in the same breath. A CI watch built on `curl`
+  against `api.github.com` is the same failure wearing a different hat — repo-scoped REST is
+  refused here, and an empty response reads as green
+  ([docs/agents/verifying.md](docs/agents/verifying.md)).
 - **Verify before commit, and let CI run anything whole.** Targeted checks are yours — the one
   guard you touched, `pnpm test <file>`, `pnpm typecheck`, `pnpm lint`, one focused
   `pnpm e2e <spec>`, and **before you push** `pnpm test:changed`, the only one that reaches a
