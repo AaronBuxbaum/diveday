@@ -260,13 +260,14 @@ test("a Guests card shows an emergency contact only when it is missing", async (
  * The roster paged forward-only by cursor: "Show more divers" and, once you
  * had moved, "Back to the top of the list" — so a staffer three pages into the
  * roster could only start over, and was never told how much roster was left.
- * It wears the shared pager now (ADR 20260803-one-pagination-model), and the
- * thing that spec must prove is the thing that was missing: going *back* one
- * page lands on the page you came from, not at the top.
+ * It wears the shared pager now (ADR 20260803-one-pagination-model).
+ *
+ * This half is the forward walk, and what it is really for is the last line:
+ * a pager that moves the URL and leaves the rows alone would satisfy every
+ * other assertion here. The half that was missing before the shared pager —
+ * going *back* one page — is the test below.
  */
-test("the roster pages both ways, and back one page is the page you came from", async ({
-  page,
-}) => {
+test("the roster pages forward, and page two is not page one", async ({ page }) => {
   await page.goto("/shop/blue-mantis/divers");
   const pager = page.getByRole("navigation", { name: "Pages" });
   // Not "skip when there's nothing to page": the demo roster is well past one
@@ -287,16 +288,39 @@ test("the roster pages both ways, and back one page is the page you came from", 
   // assertion budget, which is the first thing to run out on a loaded shard.
   await page.waitForURL(/[?&]page=2/);
   await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
-  const secondName = await page.locator("main ul li a").first().getAttribute("aria-label");
-  expect(secondName).not.toBe(firstName);
+  // The page turned, and it turned to different divers — a pager that moves
+  // the URL and not the rows would pass every assertion above this one.
+  expect(await page.locator("main ul li a").first().getAttribute("aria-label")).not.toBe(firstName);
+});
 
-  // Forward once more, then back one — page 2 again, not page 1 and not the top.
-  await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name: "Next" }).click();
+/**
+ * The half that was missing before the shared pager, and the reason this file
+ * has a paging test at all: **Previous** goes back one page, and lands on the
+ * page you came from rather than at the top of the roster.
+ *
+ * Split from the forward walk above, for the reason the search test below was
+ * split from it in its turn — this was four server round trips in one 15s
+ * budget (page 1, page 2, page 3, back to 2), and it went over on a loaded
+ * shard twice in a row on 2026-09-09 while passing in isolation. The remedy
+ * that file already prescribes is not a wider timeout, it is a test that does
+ * one thing: landing on page two by URL costs one navigation instead of two
+ * and asks exactly the question this is about.
+ */
+test("back one page is the page you came from, not the top", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/divers?page=2");
+  const pager = page.getByRole("navigation", { name: "Pages" });
+  await expect(pager).toContainText("Page 2 of");
+  const secondName = await page.locator("main ul li a").first().getAttribute("aria-label");
+
+  await pager.getByRole("link", { name: "Next" }).click();
+  await page.waitForURL(/[?&]page=3/);
   await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 3 of");
+
   await page
     .getByRole("navigation", { name: "Pages" })
     .getByRole("link", { name: "Previous" })
     .click();
+  await page.waitForURL(/[?&]page=2/);
   await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
   expect(await page.locator("main ul li a").first().getAttribute("aria-label")).toBe(secondName);
 });

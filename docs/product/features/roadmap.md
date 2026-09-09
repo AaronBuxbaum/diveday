@@ -502,6 +502,70 @@ diffs are explained. All four remaining slices may start.
   staffer whose role reaches the manifest, the platform's install prompt or its own menu item with the
   share glyph, a device-kept dismissal, a test that it renders nothing when installed or on a desktop.
 
+### 20. One hand (design complete; H-71 pending)
+
+The 2026-09-08 loop over why the app feels like four products, argued on
+[the canvas](../../design/canvases/20260908-one-hand/README.md) and proposed in ADR
+[20260908-one-hand](../../architecture/decisions/20260908-one-hand.md). Read from the running app with
+the whole tree counted, the design system is good and mostly adopted, and the seams are in the six
+things no checker sees — a page's width, what the eyebrow says, how a group carries its count, what a
+row is, how a thing is added, how a state is drawn — each with between five and twenty-seven spellings
+after five design passes in twelve days that added vocabularies without deleting the last; the voice
+has the same shape of problem across 7,390 strings. The ADR states a floor (six jobs, one spelling
+each, held by guards; a voice sheet) that every direction shares, and draws four directions on the same
+two surfaces: A finishes Reef by subtraction, B is a paper logbook, C a dive computer, D the voice as
+the system. The pick is the owner's (H-71). Each slice runs the `design-implementation` skill: the
+component names the ADR, a test pins the rule, the canvas README's slice table moves, and the visual
+diffs are explained. 20a–20e may start on the ADR alone.
+
+- **20a** — one width, one header: the `<main>` width guard over `src/app/shop/**`; `ShopPageHeader`
+  takes the destination group from `src/lib/staff-destinations.ts` instead of an eyebrow string; the
+  title as the tab's word (the title half waits on H-71 b).
+- **20b** — one row: `LedgerRow` on the five densest hand-rolled lists (`WaitlistSection`,
+  `CrewSection`, `PersonBuddyList`, `CrewRollCall`, `TripInvitationSection`), `person/rows.tsx`
+  rendering it, the group's count as right-aligned meta, the add row as the last row of every list,
+  and a guard on `divide-y` outside `src/components/ui/`.
+- **20c** — one state: `Badge` loses its neutral tone, Gear's all-clear becomes the check-and-sentence
+  line, the counter's meter turns lagoon and `ProgressBar` is the one bar, one row joins Reef's coral
+  table (never a wash behind reading text, never a meter), and the two bugs — `bg-card` on the
+  dive-sites empty state, the rental-fit glow's hard-coded rgba.
+- **20d** — one link, one skeleton, one disclosure: `button.test.ts` refuses the raw link string and
+  the 104 sites move to the link variant; `src/components/ui/skeleton.tsx` and the twenty
+  shell-less `loading.tsx`; the 27-spelling `<summary>` sweep onto `ui/disclosure.tsx`;
+  `ActionResultNotice` folds into `FormStatus`.
+- **20e** — the voice sheet written into brand.md, `check:voice` grown to its mechanical half, and the
+  bundle sweep in both locales: one actor, one spelling, one separator, one word for fine and one for
+  not, one sentence per event, descriptions under 120 characters or deleted, no arrows, exclamation
+  marks or emoji.
+- **20f** — the earned moment inside `EntryDone`, once, for the twelve shared terminal outcomes.
+  Waits on H-71 c.
+- **20g** — the levers on A: F (the tide line), H (their sea) and K (together) as composed on the
+  canvas's second page and drawn on every surface on its third; E is answered by 20l and I stays on
+  the canvas as the phone-first alternative. B, C and D were declined on 2026-09-09. Waits on H-71 a.
+
+Round 3 (2026-09-09, after the owner's read of round 2 — "keep pushing these concepts farther,
+keep cleaning up, design every surface") adds the kit that composes A with F, H and K, redraws all
+eighty-one page routes on it across fifteen boards that each name their deletions, and eight more
+levers, L–S. The ADR's decision 5 records it; the owner's calls are H-71 (a) and (e)–(h).
+
+- **20h** — L, the trip's own line: drawn once and shown on the staff trip page, the diver's trip
+  page and thread, the lobby board and the reminder email; moves on the crew's stage taps, says
+  "as of" when stale. Waits on 20g's F and H-71 h.
+- **20i** — M, the pass: booking confirmed becomes a pass in the shop's colour with the site's
+  photo, the boat, the slip, the time, what to bring and a code carrying the booking id only; the
+  counter scans it with the device's camera; the diver's screen says "You're aboard" as the desk's
+  row settles. Composes 18f. Waits on H-71 e and f.
+- **20j** — O, the log: the close-out writes the day's entry from a sentence DiveDay proposes;
+  Reports keeps its title and becomes the log with the season as a strip of days and the month's
+  figures from the entries. Waits on H-71 g.
+- **20k** — N, the postcard: the recap printed from the crew's log, front and back, the review as
+  one line, "next time" with a reason; the recap email carries the front. Waits on 20h.
+- **20l** — P the six room drawings in the empty states and on the lobby board; R the shop's card as
+  the settings index's pane with the live brand preview; S first light on a new shop's first Today;
+  Q's two new answers (a unit, a day's line) in the palette.
+- **20m** — the surface sweep: each round-3 board's "Deleted here" list applied to its family of
+  pages, one family per session, with the visual diffs explained in the PR. Waits on 20a–20e.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)
@@ -620,6 +684,201 @@ These are per-feature rough edges on shipped work, not future subsystems. They a
   with a `dive-domain-expert` review before widening a safety-adjacent enum further, or add the
   free-text companion instead of another enum value. Carried out of the archived
   [2026-08-02 review](../archive/comprehensive-review-20260802.md), DOM-L1.
+
+## Deferred from the 2026-09-07 idea review
+
+The thirty-five ideas the owner marked **After pilot** in
+[../assessments/improvement-ideas-20260907.md](../assessments/improvement-ideas-20260907.md)'s
+decision register, carried here so each one survives without the report. *After pilot* is a
+deferral, not a rejection — the five the owner refused (N-05, N-27, N-28, N-34, N-58) stay in the
+register and are deliberately **not** repeated here. **Nothing in this section is sequenced**: an
+item leaves it by earning a numbered slot above and whatever ADR, domain review or human decision
+its line names.
+
+Effort letters and review needs are the report's own estimates, made against the tree as it stood
+on 2026-09-07 — re-verify before planning from any of them, and check
+[../shipped.md](../shipped.md) first, since the twenty-two *Build now* siblings that landed
+alongside them moved several of these prerequisites.
+
+### The worst day, and the boat as a machine
+
+- **N-07 Missing-diver mode.** One act on the manifest, "Diver unaccounted", starts an elapsed
+  timer, captures last seen (time, site, depth, buddy), lays the shop's own EAP prose and emergency
+  lines under it, and records each step the crew taps (called shore, called Coast Guard, searching,
+  found) as append-only events with a time. Ends in "Found" or "Handed to authorities". Nothing
+  here gates; the roll-call sentence from ADR 20260828 is where it starts. *Build:*
+  `missing_diver_events` table, `src/lib/missing-diver.ts`, a boat-mode surface under the manifest
+  and the offline copy; the incident export gains the trail. *Effort:* L. *Needs:* domain,
+  security, ADR.
+- **N-08 Safety kit as register units.** O2 kit, AED, first-aid kit and flares become `gear_items`
+  kinds with the service clocks the register already has (O2 cylinder hydro, AED pad and battery
+  expiry, kit inspection), so the pre-departure check can say "AED pads expire in 12 days" beside
+  the shop's own safety line. Opt-in by presence, like the rest of the register. *Build:* new
+  `gear_item_kind` values + service-event kinds, one line in `pre-departure-check.ts`. *Effort:* M.
+  *Needs:* domain.
+- **N-09 Drill log.** A shop records an emergency drill (missing diver, O2 administration,
+  man-overboard) as a dated event with who took part. Renders on Reports and feeds N-46. *Build:*
+  `shop_drills` table, one Settings inset. *Effort:* S.
+- **N-10 Boat clocks.** Engine hours and fuel per departure (the crew enters both at *Home*), Coast
+  Guard inspection, registration and hull-insurance dates, and the safety-equipment expiries that
+  belong to the vessel rather than a kit. Renders as one "Boat" panel with the register's
+  service-clock sentences. Never touches capacity authority — the proposed boat-resource ADR owns
+  that. *Build:* `boat_log_entries` + `boat_clocks`, a stage-event hook, one page under Settings or
+  the gear shelf. *Effort:* M.
+
+### Regulators and paper
+
+- **N-12 Float plan filed on Underway.** When the crew taps *Underway*, DiveDay sends the shop's
+  shore contact a float plan (vessel, souls aboard by name, sites, planned return, captain), and
+  sends "All home, 14 souls" on *Home*. Both ride `trip_stage_events` and the emergency reference's
+  `shoreContact`; the message is the manifest facts and nothing else. *Build:* a `float_plan`
+  notification kind, a stage-event listener, one Settings switch. *Effort:* M. *Needs:* domain,
+  security (a manifest leaves the tenant).
+- **N-13 Captain's hours.** Sum of a captain's assigned departure durations per day and rolling
+  week against a shop-set ceiling (many small passenger vessels run a 12-hour rule). One line on
+  the staffing week when it is exceeded; informs only, like credential clocks (H-59). *Build:*
+  `src/lib/crew-hours.ts` over `tripAssignments`, one line in `staffing-week.ts`. *Effort:* S.
+  *Needs:* domain.
+- **N-14 Manifest retention as a declared window.** Passenger records carry a legal retention
+  expectation; `RETENTION_DAYS` should name the manifest's window explicitly and the export should
+  say it. *Effort:* S. *Needs:* owner (H-02).
+
+### Money beyond the ticket
+
+- **N-11 Break-even on the board.** A shop states fuel, crew day-rate and mooring or park fees per
+  departure; the week cell says "6 seats to break even" and Reports adds a margin line per month.
+  Display arithmetic only, never accounting. *Build:* `shops.departure_cost_defaults` jsonb +
+  `trips.cost_override`, `src/lib/break-even.ts`, one figure on the cell and Reports. *Effort:* M.
+  *Needs:* owner call on money appearing on the board.
+- **N-15 Chargeback evidence pack.** On `charge.dispute.created`, assemble the booking's evidence
+  (the policy shown at checkout, the waiver signature time, check-in, the roll-call *aboard* event,
+  the recap opened) into one PDF and a pre-filled Stripe dispute submission; Today shows "Dispute ·
+  respond by Friday". *Build:* webhook branch, `src/lib/payments/dispute-evidence.ts`, a Today row,
+  an owner-only download. *Effort:* M. *Needs:* security.
+- **N-16 Seat transfer.** A paid diver hands their seat to a named friend from the thread: the
+  friend gets a claim link, waiver-on-join, and is gated on their own evidence; the money stays
+  with the payer, and the original booking becomes `transferred` with a trail. *Build:* extends
+  `seat-claims.ts` with a transfer origin, one thread action, a `booking_transfers` trail.
+  *Effort:* M. *Needs:* domain, security.
+- **N-17 Damage deposit hold on rentals.** An optional manual-capture Stripe hold on the rental
+  line, released at gear return or captured with a reason. *Effort:* M. *Needs:* owner policy
+  (H-07).
+- **N-18 Cash and tip reconciliation at close-out.** The evening block counts cash taken at the
+  counter and card tips for the day and records "matches" or "short by 20" as an act in
+  `day_closeouts`. *Build:* one closeout fact + one input. *Effort:* S.
+- **N-19 Pay your own share.** Each claimant on a party booking pays their own seat at claim time
+  through Checkout; the organizer pays only their own. No credit ledger needed. *Build:*
+  `seat-claims.ts` + `checkouts.ts`, a per-seat `bookingPayments` row. *Effort:* M. *Needs:* owner
+  (H-07, H-61).
+
+### The lobby, sound, and hands-free capture
+
+- **N-25 Lost and found.** "Left aboard" on a departure with a photo and a claimant; the diver's
+  thread says "We have your mask." *Build:* `lost_items` + one thread line. *Effort:* S.
+- **N-26 A rationed sound layer.** Opt-in per device beside boat mode, three sounds and no more:
+  the roll-call tick, the refusal, the head count reaching the brim. Unlocked by the first tap (the
+  iOS WebAudio rule), off under any silent switch it can detect, never the only carrier of a state.
+  *Build:* `src/components/sound.ts` beside `haptics.ts`, three short synthesized tones, no asset.
+  *Effort:* S. *Needs:* a design ADR amendment (principles §2).
+- **N-29 Scan then discard for cards.** [ai-ml.md](ai-ml.md)'s cert-card OCR idea, re-shaped after
+  ADR 20260804 removed the stored photo: a capture that proposes agency, level and number and keeps
+  nothing. *Effort:* M. *Needs:* domain, and an ADR for the first LLM dependency — the owner
+  refused N-28 (voice to conditions), which was the other candidate to carry that ADR, so this item
+  now has to justify it alone.
+
+### Courses, groups and the traveller
+
+- **N-30 Skills ledger.** Per enrollment, the course template's standard skill list (mask clearing,
+  CESA, buoyancy…) signed off one tap at a time by the instructor; the student's thread shows
+  progress; nothing issues a card. *Build:* `course_skill_templates` + `enrollment_skills`, a
+  roster inset, one thread step. *Effort:* M. *Needs:* domain, H-08.
+- **N-31 Referral handoff.** A student who finishes knowledge and confined water here and does open
+  water elsewhere gets a referral document generated from N-30's ledger, in the agency's field
+  layout; an incoming referral is a course inquiry with the paperwork attached. *Effort:* M.
+  *Needs:* domain, H-08.
+- **N-32 The organizer's ledger.** The organizer's link shows every seat's state (claimed, signed,
+  paid, ready) with one nudge per person and a group deadline; a group hold ("8 seats until
+  Friday") releases itself when the deadline passes. *Build:* `booking_holds` with expiry, a cron
+  sweep beside minimum-seats, an organizer view on `/claim`. *Effort:* M. *Needs:* owner (H-61),
+  security.
+- **N-33 The club's Thursday.** A recurring series with a standing organizer and a hold each
+  occurrence, for the dive club that takes the same boat monthly. *Effort:* S after N-32.
+- **N-35 The diver's passport.** A diver-held record (which shop verified which card and when, a
+  waiver on file, fit sizes) presented by consent at another DiveDay shop through a link; the
+  receiving shop sees "verified by Blue Mantis, 2026-08-12" and decides for itself. No profile
+  page, no feed, so the non-goal on social networks holds. *Effort:* L. *Needs:* ADR, security,
+  owner (H-26).
+
+### Languages
+
+- **N-36 pt-BR as the third diver locale.** Drafted by the translation script
+  [ai-ml.md](ai-ml.md) scopes, reviewed by a human, with the same terminology README `es-ES` has.
+  *Effort:* M. *Needs:* owner (whether Brazil is a target market).
+- **N-37 The briefing in the reader's language.** Shop prose is the shop's own words and is never
+  rewritten; the diver's page may offer a machine rendering labelled as such below the original.
+  *Effort:* M. *Needs:* ADR (translation provider), owner (whether a shop's words may be machine-
+  rendered at all).
+
+### Minors, families and adaptive diving
+
+- **N-39 Junior ceilings at booking.** Where the stated card is a junior rating, the departure page
+  says which dive exceeds its depth before the seat is sold, using `depth-ceiling.ts`. *Effort:* S.
+  *Needs:* domain. (N-38, guardian co-signature, shipped — this is its sibling.)
+- **N-40 Adaptive-diving readiness.** Adaptive programs (HSA, DDI) set buddy counts by level; the
+  ratio math reads the support-need record, the staffing week says "adaptive-trained crew aboard"
+  from a new credential kind, and the departure page can state "adaptive-capable" when the shop
+  says so. *Effort:* M. *Needs:* domain, owner (scope).
+
+### The crew
+
+- **N-41 Crew skills matrix on the staffing week.** A shop states which credential kinds a
+  departure needs (oxygen provider, captain, instructor for a course session); the week says "No
+  oxygen provider on the 1 pm boat" from `staffCredentials`. Informs, per H-59. *Build:*
+  `shops.departure_crew_requirements`, `src/lib/crew-coverage.ts`, one gap line. *Effort:* S.
+- **N-42 First shift.** A new staff account's first sessions get one sentence per surface from the
+  same registry the palette's answer card reads, dismissed forever after the third visit; first
+  light did this for the shop, this does it for the person. *Effort:* M. *Needs:* a copy-restraint
+  pass — this is the shape of feature that grows into a tour nobody wants.
+- **N-44 The season letter.** At the shop-set season end, an owner-facing page: dive days run,
+  divers, first-timers who returned, most-run site, blow-outs, no-show rate, exported as a PDF or
+  image. Never a send to divers. *Build:* `src/lib/season-letter.ts` over Reports' readers.
+  *Effort:* M.
+
+### Trust as evidence
+
+- **N-46 Insurer renewal pack.** Owner-only PDF from real data: roll-call completion,
+  pre-departure check completion, drills logged (N-09), credential coverage, waiver-before-arrival
+  rate, incidents, with the period stated. Builds on `incident-export.ts`. Claims policy: a
+  document for a renewal conversation, never a marketing claim. *Effort:* M. *Needs:* security.
+- **N-47 The public safety record.** The brainstorm's page, made concrete as the opt-in public half
+  of N-46 at `/s/<slug>/safety`, honest numbers only. *Effort:* S after N-46. *Needs:* owner.
+
+### Software talking to software
+
+- **N-51 A shop's MCP server.** A token-scoped Model Context Protocol endpoint over the export
+  schema, read-only first, so an owner's own assistant answers "who is not ready for Saturday's
+  wreck boat" from DiveDay's facts. This is [ai-ml.md](ai-ml.md)'s ops assistant with no chat UI to
+  build, and the read API's first customer. *Build:* `src/app/api/mcp/`, scoped `api_tokens`, tools
+  named after the export tables. *Effort:* M read-only. *Needs:* ADR, security.
+
+### The founder's cockpit
+
+- **N-56 The north star from real data.** "Dive days run end-to-end per week" computed as
+  [../rollout.md](../rollout.md) defines it, per shop, with the activation timeline (signup, first
+  trip, first booking, first waiver, first roll call), in a founder-only page and a Monday email to
+  the alert mailbox. *Build:* `src/lib/north-star.ts`, a platform reader, one cron. *Effort:* M.
+  *Needs:* security (a cross-tenant reader is its own risk class).
+- **N-57 What's new.** An in-app page and a monthly note derived from
+  [../shipped.md](../shipped.md), so a shop learns what changed under it. *Effort:* S. *Needs:* i18n for the frame; the notes land
+  in both locales.
+- **N-59 Self-serve billing.** Stripe Billing for the $99: trial to subscription, invoices,
+  cancel-with-export. *Effort:* M. *Needs:* owner (H-12's open half).
+
+### The reef itself
+
+- **N-62 Sightings to science.** Opt-in per shop, observed-species logs export in REEF survey and
+  iNaturalist CSV shapes; the storefront's conservation panel then has a real fact ("your divers
+  logged 40 turtle sightings this season"), which is what D39 (#1199) waits on. *Effort:* S–M.
 
 ## Accessibility contrast fixes (blocked on a color-guide decision)
 

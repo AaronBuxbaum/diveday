@@ -588,6 +588,16 @@ test.describe("staff", () => {
     await expect(note).toHaveValue("");
     await note.fill("The mooring ball moved south. Brief the swim-through first.");
     await page.getByRole("button", { name: "Save dive site" }).click();
+    // Wait for the save's own redirect, not for the field. Every other save in
+    // this file lands on a *new* site, so waiting for its heading proves the
+    // round trip; this one edits a site that is already open, whose heading and
+    // whose typed-in field both read the same before the save as after. A
+    // `toHaveValue` here passes the instant `fill` returns and synchronizes
+    // nothing, so the navigation below used to race the action — green on a
+    // quiet machine, red on a loaded CI runner (Playwright shard 1/4,
+    // 2026-09-09). `revalidateAndRedirect` lands on `?notice=saved`, which is
+    // true only once the write has happened.
+    await page.waitForURL(/[?&]notice=saved/);
     // The form settles in place — the note it was given is what it reads back.
     await expect(note).toHaveValue("The mooring ball moved south. Brief the swim-through first.");
 
@@ -611,6 +621,9 @@ test.describe("staff", () => {
     const cleared = page.getByLabel("What to remember about running this site");
     await cleared.fill("");
     await page.getByRole("button", { name: "Save dive site" }).click();
+    // Same reason, and worse here: the field is empty before the save too, so
+    // this is the assertion that raced.
+    await page.waitForURL(/[?&]notice=saved/);
     await expect(cleared).toHaveValue("");
     await page.goto("/shop/blue-mantis/dive-sites");
     await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();

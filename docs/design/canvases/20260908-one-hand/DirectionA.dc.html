@@ -1,0 +1,280 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #0c2a35; background: #fbf7ef; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; } a:hover { color: #0a4d61; text-decoration: underline; }
+    .row { display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid #e6dcc8; padding: 0 4px; }
+    .row { border-bottom: 1px solid #e6dcc8; }
+    .row + .row { border-top: 0; }
+    .kind { flex: 0 0 92px; font-size: 14px; font-weight: 500; color: #54676d; }
+    .kind.warn { color: #b45309; }
+    .kind.danger { color: #b91c1c; }
+    .sentence { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: #54676d; }
+    .sentence b { font-weight: 600; color: #0c2a35; }
+    .door { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 500; color: #0e7490; white-space: nowrap; }
+    .mark { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid #8a8065; box-sizing: border-box; }
+    .mark.warn { border-color: #b45309; }
+    .eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490; }
+    .group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d; }
+    .panel { background: #fffdf8; border: 1px solid #e6dcc8; border-radius: 28px; box-shadow: 0 2px 10px rgba(88,66,30,0.06); padding: 24px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 16px; border-radius: 10px; font-size: 16px; font-weight: 500; box-sizing: border-box; }
+    .btn.primary { background: #0e7490; color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .btn.secondary { background: #fffdf8; color: #0c2a35; border: 1px solid #e6dcc8; }
+    .btn.sm { min-height: 40px; padding: 8px 12px; font-size: 14px; }
+    .pill { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 500; line-height: 20px; }
+    .pill.danger { background: #f8e8e6; color: #b91c1c; }
+    .pill.warn { background: #f8eee2; color: #b45309; }
+    .pill.primary { background: #e6f3f5; color: #0e7490; }
+    .note { font-size: 14px; line-height: 22px; color: #54676d; }
+    .swatch { width: 44px; height: 44px; border-radius: 10px; border: 1px solid rgba(12,42,53,0.12); }
+    .tag { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 14px; font-weight: 500; color: #0c2a35; flex: 0 0 92px; }
+    .chip { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #e6dcc8; font-size: 14px; font-weight: 500; color: #54676d; }
+    .chip.on { border-color: #0e7490; background: #e6f3f5; color: #0e7490; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; box-sizing: border-box; background: #fbf7ef; padding: 0 0 48px 0;">
+
+  <!-- The case -->
+  <div style="display: flex; flex-direction: column; gap: 16px; padding: 40px 48px 32px 48px; border-bottom: 1px solid #e6dcc8; background: #fffdf8;">
+    <div style="display: flex; align-items: baseline; gap: 16px;">
+      <span class="eyebrow">Direction A · least change</span>
+      <span class="note">Cost: 2–3 sessions · Wow: low · Risk: the sixth pass on the same look</span>
+    </div>
+    <h1 style="margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Finish the sentence</h1>
+    <p style="margin: 0; max-width: 880px; font-size: 18px; line-height: 28px; color: #0c2a35;">Reef stays. What changes is subtraction: one page anatomy, one row, one word for "add", one status set, one width, and a guard that refuses a second spelling of any of them. Nothing new is drawn. The app stops looking like four redesigns because the three older ones are finally deleted.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 8px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="group">Why it coheres</span>
+        <p class="note" style="margin: 0;">Every staff page is the same five things in the same order: eyebrow (the area), title (a noun), one lede sentence, then groups of the one row. A departure is the only thing that gets a panel, because it is the only thing with edges.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="group">What it deletes</span>
+        <p class="note" style="margin: 0;">Five page widths → one. Six "add" spellings → the last row of the list. Eight row anatomies → one with slots. Coral washes behind text. The stat-tile grid on Reports. The greeting's date eyebrow. Every hand-rolled chevron link.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="group">The honest tradeoff</span>
+        <p class="note" style="margin: 0;">It will look like DiveDay does today, only tidier. A shop leaving FareHarbor will not say "wow" at a list that lines up. If the goal is a product people show each other, this is the floor, not the answer.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- The system strip -->
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; padding: 32px 48px; border-bottom: 1px solid #e6dcc8;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="group">Face &amp; ramp</span>
+      <div style="font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Title 40</div>
+      <div style="font-size: 18px; font-weight: 600;">Section 18</div>
+      <div style="font-size: 16px; line-height: 24px;">Row 16 · sentence 16 muted</div>
+      <div class="group">Group label 12 · 0.14em</div>
+      <div class="eyebrow">Eyebrow 11 · 0.16em</div>
+      <p class="note" style="margin: 4px 0 0 0;">Geist only, as decided. Five rungs, no sixth. Figures are 24 semibold tabular; inside a dial, bold.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="group">Palette (unchanged)</span>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <div class="swatch" style="background: #fbf7ef;"></div>
+        <div class="swatch" style="background: #fffdf8;"></div>
+        <div class="swatch" style="background: #f3ecdd;"></div>
+        <div class="swatch" style="background: #e6dcc8;"></div>
+        <div class="swatch" style="background: #0c2a35;"></div>
+        <div class="swatch" style="background: #0e7490;"></div>
+        <div class="swatch" style="background: #ff6f61;"></div>
+        <div class="swatch" style="background: #7fd0d6;"></div>
+      </div>
+      <p class="note" style="margin: 4px 0 0 0;">Sand, shell, tideline, rope, ink, lagoon, coral, shallows. The one rule added: coral's wash never sits behind reading text — it is a 4px cap or a glyph, so good news stops wearing the alarm's pink.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="group">The one row</span>
+      <div style="display: flex; flex-direction: column;">
+        <div class="row" style="border-top: 1px solid #e6dcc8;">
+          <span class="mark warn"></span>
+          <span class="kind warn">Waiver</span>
+          <span class="sentence"><b>Priya Sharma</b> · not sent.</span>
+          <span class="btn secondary sm">Send waiver</span>
+        </div>
+        <div class="row">
+          <span class="tag">BCD #2</span>
+          <span class="sentence">Cressi Start · S · <b>Priya Sharma</b> from Sep 13</span>
+          <span class="door">›</span>
+        </div>
+      </div>
+      <p class="note" style="margin: 4px 0 0 0;">Leading · kind · sentence · one trailing thing · chevron if it is a door. Today, gear, orders, divers and check-in all render this component; the slots differ, the geometry never does.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="group">The one add · the three pills</span>
+      <div class="row" style="border-top: 1px solid #e6dcc8; border-bottom: 1px solid #e6dcc8;">
+        <span style="flex: 0 0 92px; color: #0e7490; font-size: 20px; line-height: 20px;">+</span>
+        <span class="sentence" style="color: #0e7490; font-weight: 500;">Add a unit</span>
+        <span class="door">›</span>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <span class="pill danger">⊗ Blocked</span>
+        <span class="pill warn">△ Needs service</span>
+        <span class="pill primary">Boarding · 6:23 AM</span>
+      </div>
+      <p class="note" style="margin: 4px 0 0 0;">Adding is always the last row of the list it adds to. A pill is danger, warning or live; a neutral fact ("No emergency contact", "Open", "Unverified import") is words in the sentence, never a grey capsule.</p>
+    </div>
+  </div>
+
+  <!-- The home -->
+  <div style="padding: 0 48px;">
+    <div style="padding: 24px 0 8px 0;"><span class="group" style="color: #8a8065;">The shop home · Thursday, August 27, 2026 · 1180 desktop</span></div>
+
+    <!-- chrome -->
+    <div style="display: flex; align-items: center; gap: 24px; height: 56px; margin: 0 -48px; padding: 0 102px; background: #fffdf8; border-bottom: 1px solid #e6dcc8;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 36px; height: 36px; border-radius: 10px; background: #0e7490; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div>
+        <span style="font-size: 16px; font-weight: 600;">Blue Mantis Divers</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 4px; margin-left: 8px;">
+        <span style="padding: 10px 14px; border-radius: 10px; background: #e6f3f5; color: #0e7490; font-size: 15px; font-weight: 500;">Today</span>
+        <span style="padding: 10px 14px; font-size: 15px; color: #54676d;">Check-in</span>
+        <span style="padding: 10px 14px; font-size: 15px; color: #54676d;">Divers</span>
+        <span style="padding: 10px 14px; font-size: 15px; color: #54676d;">Board</span>
+      </div>
+      <div style="margin-left: auto; display: flex; gap: 12px; align-items: center;">
+        <span style="font-size: 15px; color: #54676d;">More ⌄</span>
+        <span class="btn secondary sm" style="min-height: 40px;">Search ⌘K</span>
+      </div>
+    </div>
+
+    <div style="width: 976px; margin: 0 auto; padding-top: 40px;">
+      <header style="margin-bottom: 32px;">
+        <p class="eyebrow" style="margin: 0;">Front desk</p>
+        <h2 style="margin: 8px 0 0 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Good morning, Dana</h2>
+        <p style="margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: #54676d;">Thursday, August 27 · 3 departures. 4 things need you before Mantis II leaves at 7:00.</p>
+      </header>
+
+      <!-- departure panel -->
+      <section class="panel" style="display: flex; flex-direction: column; gap: 0; margin-bottom: 24px;">
+        <div style="display: flex; align-items: flex-start; gap: 16px; padding-bottom: 16px;">
+          <div style="width: 84px; height: 56px; border-radius: 18px; background: #0a4d61; display: flex; align-items: center; justify-content: center;">
+            <svg width="44" height="24" viewBox="0 0 44 24" fill="none" stroke="#e6f3f5" stroke-width="1.5" stroke-linecap="round"><path d="M4 12c6-7 16-7 24 0-8 7-18 7-24 0Z"/><path d="M28 12l8-6v12l-8-6Z"/><circle cx="12" cy="11" r="1" fill="#e6f3f5"/></svg>
+          </div>
+          <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: baseline; gap: 12px;">
+              <span style="font-size: 24px; font-weight: 600; letter-spacing: -0.01em;">7:00 AM</span>
+              <span style="font-size: 14px; color: #54676d;">until 10:30 AM</span>
+              <span class="pill primary">Boarding · 6:23 AM</span>
+            </div>
+            <div style="font-size: 18px; font-weight: 600;">Two-Tank Reef — Molasses &amp; French <span style="color: #54676d; font-weight: 400;">›</span></div>
+            <div style="font-size: 14px; color: #54676d;">Molasses Reef · Mantis II · Keiko Tanaka, Sal Moretti · $95</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="text-align: right; font-size: 14px; color: #54676d;">2 spots open</div>
+            <div style="width: 72px; height: 72px; border-radius: 999px; background: linear-gradient(to top, #7fd0d6 0 83%, #f3ecdd 83% 100%); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <span style="font-size: 24px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums;">10</span>
+              <span style="font-size: 11px; color: #54676d;">of 12</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="sentence"><b>Grace Mensah</b> · Advanced Open Water awaits verification.</span><span class="door">Open diver ›</span></div>
+          <div class="row"><span class="mark warn"></span><span class="kind warn">Waiver</span><span class="sentence"><b>Priya Sharma</b> · not sent.</span><span class="btn secondary sm">Send waiver</span></div>
+          <div class="row"><span class="mark"></span><span class="kind">Prep</span><span class="sentence">3 divers still need rental sizes.</span><span class="door">Open prep list ›</span></div>
+          <div class="row"><span class="mark"></span><span class="kind">Contact</span><span class="sentence"><b>Nadia Petrov</b> · no emergency contact on file.</span><span class="door">Open diver ›</span></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding-top: 16px; font-size: 14px; color: #54676d;"><span style="color: #8a8065;">›</span><b style="font-weight: 600; color: #0c2a35;">Recap</b> goes out at 12:30 PM.</div>
+      </section>
+
+      <section class="panel" style="display: flex; flex-direction: column; margin-bottom: 40px;">
+        <div style="display: flex; align-items: flex-start; gap: 16px; padding-bottom: 16px;">
+          <div style="width: 84px; height: 56px; border-radius: 18px; background: #0a4d61; display: flex; align-items: center; justify-content: center;">
+            <svg width="44" height="24" viewBox="0 0 44 24" fill="none" stroke="#e6f3f5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h32l-4-8H12l-6 8Z"/><path d="M18 10V5h10v5"/><path d="M4 21h36"/></svg>
+          </div>
+          <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: baseline; gap: 12px;">
+              <span style="font-size: 24px; font-weight: 600; letter-spacing: -0.01em;">1:00 PM</span>
+              <span style="font-size: 14px; color: #54676d;">until 5:00 PM</span>
+            </div>
+            <div style="font-size: 18px; font-weight: 600;">Wreck Trip — Spiegel Grove <span style="color: #54676d; font-weight: 400;">›</span></div>
+            <div style="font-size: 14px; color: #54676d;">Spiegel Grove · Mantis II · no crew yet · $145</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="text-align: right; font-size: 14px; color: #54676d;">Full</div>
+            <div style="width: 72px; height: 72px; border-radius: 999px; background: #7fd0d6; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <span style="font-size: 24px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums;">10</span>
+              <span style="font-size: 11px; color: #0c2a35;">of 10</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <div class="row"><span class="mark warn"></span><span class="kind warn">Crew</span><span class="sentence">10 divers booked and nobody in the water to supervise them.</span><span class="door">Open crew ›</span></div>
+          <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="sentence"><b>Tomás Ferreira</b> · no certification on file for a deep wreck.</span><span class="door">Open diver ›</span></div>
+        </div>
+      </section>
+
+      <section class="panel" style="display: flex; flex-direction: column; margin-bottom: 40px;">
+        <div style="display: flex; align-items: flex-start; gap: 16px; padding-bottom: 16px;">
+          <div style="width: 84px; height: 56px; border-radius: 18px; background: #0a4d61; display: flex; align-items: center; justify-content: center;">
+            <svg width="44" height="24" viewBox="0 0 44 24" fill="none" stroke="#e6f3f5" stroke-width="1.5" stroke-linecap="round"><circle cx="22" cy="12" r="6"/><circle cx="9" cy="7" r="1.5"/><circle cx="35" cy="17" r="1.5"/><circle cx="33" cy="6" r="1"/></svg>
+          </div>
+          <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: baseline; gap: 12px;">
+              <span style="font-size: 24px; font-weight: 600; letter-spacing: -0.01em;">7:30 PM</span>
+              <span style="font-size: 14px; color: #54676d;">until 11:00 PM</span>
+            </div>
+            <div style="font-size: 18px; font-weight: 600;">Night Dive — City of Washington <span style="color: #54676d; font-weight: 400;">›</span></div>
+            <div style="font-size: 14px; color: #54676d;">City of Washington · Skiff · $120</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="text-align: right; font-size: 14px; color: #54676d;">5 spots open</div>
+            <div style="width: 72px; height: 72px; border-radius: 999px; background: linear-gradient(to top, #7fd0d6 0 38%, #f3ecdd 38% 100%); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <span style="font-size: 24px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums;">3</span>
+              <span style="font-size: 11px; color: #54676d;">of 8</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <div class="row"><span class="mark"></span><span class="kind">Fill seats</span><span class="sentence">5 seats open with no last-minute deal sent.</span><span class="door">Open last-minute deal ›</span></div>
+        </div>
+      </section>
+
+      <!-- the desk, a bare group -->
+      <section style="margin-bottom: 40px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 8px;"><span class="group">At the desk</span><span style="font-size: 12px; font-weight: 500; color: #54676d; font-variant-numeric: tabular-nums;">3</span></div>
+        <div class="row"><span class="mark"></span><span class="kind">Messages</span><span class="sentence"><b>3 divers wrote back</b> · answer from their record, in the channel they used.</span><span class="door">Open inbox ›</span></div>
+        <div class="row"><span class="mark"></span><span class="kind">Reviews</span><span class="sentence"><b>1 review is waiting</b> · publish it or hide it.</span><span class="door">Open reviews ›</span></div>
+        <div class="row"><span class="mark"></span><span class="kind">Gear</span><span class="sentence"><b>Tom Okafor</b> · BCD #5 is due back today.</span><span class="door">Open gear ›</span></div>
+      </section>
+
+      <!-- horizons: same row, one group, no pill panels -->
+      <section style="margin-bottom: 48px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 8px;"><span class="group">Later</span></div>
+        <div class="row"><span class="sentence"><b>Tomorrow</b> · Fri, Aug 28</span><span style="font-size: 14px; color: #54676d; font-variant-numeric: tabular-nums;">2 departures · 7 jobs</span><span class="door">›</span></div>
+        <div class="row"><span class="sentence"><b>This week</b></span><span style="font-size: 14px; color: #54676d; font-variant-numeric: tabular-nums;">25 jobs</span><span class="door">›</span></div>
+      </section>
+
+      <!-- Gear, the same grammar -->
+      <div style="padding: 24px 0 8px 0; border-top: 1px dashed #e6dcc8;"><span class="group" style="color: #8a8065;">Gear · the same page anatomy, the same row, the same add</span></div>
+      <header style="display: flex; align-items: flex-end; justify-content: space-between; margin: 16px 0 24px 0;">
+        <div>
+          <p class="eyebrow" style="margin: 0;">Run the shop</p>
+          <h2 style="margin: 8px 0 0 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Gear</h2>
+          <p style="margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: #54676d;">37 units · 36 on the wall; BCD #5 is out with Tom Okafor.</p>
+        </div>
+      </header>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;">
+        <span class="chip on">All · 37</span><span class="chip">BCD · 6</span><span class="chip">Regulator · 5</span><span class="chip">Wetsuit · 6</span><span class="chip">Tank · 8</span><span class="chip">Service due · 2</span>
+      </div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 8px;"><span class="group">On the wall</span><span style="font-size: 12px; font-weight: 500; color: #54676d; font-variant-numeric: tabular-nums;">36</span></div>
+      <div class="row"><span class="tag">BCD #1</span><span class="sentence">Cressi Start · XS</span><span class="door">›</span></div>
+      <div class="row"><span class="tag">BCD #2</span><span class="sentence">Cressi Start · S · <b>Priya Sharma</b> from Sep 13</span><span class="door">›</span></div>
+      <div class="row"><span class="tag">Reg #4</span><span class="sentence">ScubaPro MK11/C370</span><span class="pill warn">△ Needs service</span><span class="door">›</span></div>
+      <div class="row"><span class="tag">AL80-03</span><span class="sentence">AL80 · visual inspection due Sep 29</span><span class="door">›</span></div>
+      <div class="row"><span style="flex: 0 0 92px; color: #0e7490; font-size: 20px; line-height: 20px;">+</span><span class="sentence" style="color: #0e7490; font-weight: 500;">Add a unit</span><span class="door">›</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

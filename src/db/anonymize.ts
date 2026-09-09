@@ -746,10 +746,11 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     await tx
       .update(userAccounts)
       .set({
-        // `email` is NOT NULL and globally unique, and `hashed_password` is
-        // NOT NULL, so both take unique unusable values rather than null. The
-        // replacement hash is not a hash of anything: no password verifies
-        // against it, which is the point.
+        // `email` is NOT NULL and globally unique, so it takes a unique
+        // unusable value. `hashed_password` is nullable (issue #1588) and
+        // still takes one too, deliberately: an explicit value that is not a
+        // hash of anything says "this was erased", where a null says only
+        // "never set". Nothing verifies against either, which is the point.
         email: `${redactedUniqueValue("erased")}@invalid`,
         hashedPassword: redactedUniqueValue("erased"),
         emailVerifiedAt: null,

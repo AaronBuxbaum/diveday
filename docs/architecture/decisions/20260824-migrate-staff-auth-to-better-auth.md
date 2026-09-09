@@ -33,10 +33,17 @@ Postgres/PGlite this app already runs. No new infrastructure.
   by Better Auth's core `user` model, otherwise unused — the real display name is
   `people.full_name`). New tables: `account_sessions` (Better Auth's `session` model, with
   `personId`/`shopId`/`shopSlug`/`roles`/`name` snapshotted once at sign-in — exactly what
-  next-auth's `jwt()` callback used to do) and minimal, functionally-unused
+  next-auth's `jwt()` callback used to do) and functionally-unused
   `auth_provider_accounts`/`auth_verifications` (required adapter scaffolding; no OAuth, and
   email verification/password reset/invites all still run through the pre-existing, untouched
-  `src/db/account-tokens.ts`).
+  `src/db/account-tokens.ts`). *Amended 2026-09-09 (issue #1588):* scaffolding is not the same as
+  minimal. Better Auth 1.7.3 compares both tables against its models on the first request and
+  refuses to serve anything while a column it writes is missing, so `auth_provider_accounts`
+  carries all seven of the account model's token/scope/password columns, nullable and empty, and
+  `user_accounts.hashed_password` is nullable because Better Auth never writes it. Whoever enables
+  an OAuth provider inherits those columns already in place — including `password`, which is Better
+  Auth's own place for a credentials hash and must stay empty while `src/lib/credentials.ts` reads
+  `user_accounts.hashed_password`.
 - **Credential verification stays ours.** A custom Better Auth plugin
   (`diveDayCredentialsPlugin`, `src/lib/auth.ts`) ports the old Credentials provider's
   `authorize()` body unchanged — rate limiting, the account-enumeration timing defense
