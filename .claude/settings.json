@@ -2,8 +2,11 @@
   "permissions": {
     "defaultMode": "auto",
     "allow": [
+      "Artifact",
       "ScheduleWakeup",
       "RemoteTrigger",
+      "PushNotification",
+      "ReportFindings",
       "WebSearch",
       "mcp__claude-code-remote",
       "Bash(pnpm lint)",
