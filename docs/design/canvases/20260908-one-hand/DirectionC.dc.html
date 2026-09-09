@@ -1,0 +1,176 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #e8f0f2; background: #0b1116; -webkit-font-smoothing: antialiased; }
+    a { color: #2fd4ee; text-decoration: none; } a:hover { color: #7fe9f9; }
+    .mono { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+    .label { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #8ea3ad; }
+    .line { display: grid; grid-template-columns: 72px minmax(0, 1fr) 128px 160px; gap: 16px; align-items: center; min-height: 48px; border-top: 1px solid #22303a; }
+    .line { border-bottom: 1px solid #22303a; }
+    .line + .line { border-top: 0; }
+    .t { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 14px; color: #8ea3ad; font-variant-numeric: tabular-nums; }
+    .who { font-size: 16px; line-height: 22px; color: #b9c8ce; }
+    .who b { font-weight: 600; color: #e8f0f2; }
+    .state { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; }
+    .state.warn { color: #ffb020; }
+    .state.danger { color: #ff5c5c; }
+    .state.ok { color: #3ddc84; }
+    .state.live { color: #2fd4ee; }
+    .verb { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; color: #2fd4ee; text-align: right; }
+    .readout { display: flex; flex-direction: column; gap: 6px; padding: 16px 0; border-top: 1px solid #22303a; }
+    .fig { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 40px; line-height: 1; font-weight: 500; color: #e8f0f2; font-variant-numeric: tabular-nums; }
+    .fig small { font-size: 16px; color: #8ea3ad; font-weight: 400; }
+    .note { font-size: 14px; line-height: 22px; color: #8ea3ad; }
+    .swatch { width: 44px; height: 44px; border-radius: 4px; border: 1px solid rgba(232,240,242,0.14); }
+    .bar { height: 6px; background: #22303a; border-radius: 2px; overflow: hidden; }
+    .bar i { display: block; height: 100%; background: #2fd4ee; }
+    .tab { padding: 8px 0; border-bottom: 2px solid transparent; font-size: 14px; font-weight: 500; color: #8ea3ad; }
+    .tab.on { color: #e8f0f2; border-bottom-color: #2fd4ee; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; box-sizing: border-box; background: #0b1116; padding: 0 0 48px 0;">
+
+  <div style="display: flex; flex-direction: column; gap: 16px; padding: 40px 48px 32px 48px; border-bottom: 1px solid #22303a; background: #0f171d;">
+    <div style="display: flex; align-items: baseline; gap: 16px;">
+      <span class="label" style="color: #2fd4ee;">Direction C · a new surface</span>
+      <span class="note">Cost: 6–8 sessions · Wow: high with crews · Risk: cold, and it throws away Reef's warmth on the staff side</span>
+    </div>
+    <h1 style="margin: 0; font-size: 48px; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em;">The instrument</h1>
+    <p style="margin: 0; max-width: 880px; font-size: 20px; line-height: 30px; color: #b9c8ce;">The tool a crew looks at on a deck should look like the other tool they look at on a deck: a dive computer. Dark by default, one bright action colour, every number a figure, every state a word in a fixed slot, nothing rounded past 4px, nothing that floats. Two components exist — a readout and a line — and every surface is made of them, under one chrome bar whose tabs are the one other thing drawn. The shop's warmth lives on its storefront, which wears the shop's brand already.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 8px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="label">Why it coheres</span>
+        <p class="note" style="margin: 0;">A readout is label · figure · unit. A line is time · who · state · verb, on four fixed columns. There is no third component, so there is no third look: the home, gear, orders, the manifest, reports and settings are the same two things at different densities.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="label">What it deletes</span>
+        <p class="note" style="margin: 0;">Panels, shadows, every radius above 4, the sand, the water band, the drawn creatures on staff pages, capsules, chips, the greeting, the coloured eyebrow, and the four progress meters (one bar remains). Glare mode's toggle goes because this is glare-grade contrast all the time; boat mode's own rules still hold.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="label">The honest tradeoff</span>
+        <p class="note" style="margin: 0;">It is cold on purpose, and an owner at a desk at 6 AM may want warm. The light scheme (the surface) is the second-class citizen here. And Reef's three shipped moments — the swell, the fill, the postcard — are re-cut in monochrome or moved to the diver's side.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; padding: 32px 48px; border-bottom: 1px solid #22303a;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="label">Faces &amp; ramp</span>
+      <div style="font-size: 32px; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em;">Title 32</div>
+      <div class="fig">10<small> of 12</small></div>
+      <div style="font-size: 16px; line-height: 22px; color: #b9c8ce;">Who 16, Geist</div>
+      <div class="state warn">State 12 mono</div>
+      <div class="label">Label 11 mono</div>
+      <p class="note" style="margin: 4px 0 0 0;">Geist for people and places, Geist Mono for every time, tag, figure, state and verb. Four rungs. Titles get smaller because the figures get bigger.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="label">Palette</span>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <div class="swatch" style="background: #0b1116;"></div>
+        <div class="swatch" style="background: #0f171d;"></div>
+        <div class="swatch" style="background: #22303a;"></div>
+        <div class="swatch" style="background: #e8f0f2;"></div>
+        <div class="swatch" style="background: #8ea3ad;"></div>
+        <div class="swatch" style="background: #2fd4ee;"></div>
+        <div class="swatch" style="background: #ffb020;"></div>
+        <div class="swatch" style="background: #ff5c5c;"></div>
+        <div class="swatch" style="background: #3ddc84;"></div>
+      </div>
+      <p class="note" style="margin: 4px 0 0 0;">Abyss, panel, line, ink, dim, one cyan for every action and live state, amber, red, and green for settled. Every pair clears 7:1. Coral is gone from the staff app entirely; the storefront keeps whatever the shop set.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="label">The line</span>
+      <div>
+        <div class="line"><span class="t">7:00</span><span class="who"><b>Grace Mensah</b> · AOW awaits verification</span><span class="state warn">Cert</span><span class="verb">Open diver →</span></div>
+        <div class="line"><span class="t">BCD 2</span><span class="who">Cressi Start · S · <b>Priya Sharma</b> Sep 13</span><span class="state live">Reserved</span><span class="verb">→</span></div>
+      </div>
+      <p class="note" style="margin: 4px 0 0 0;">Time · who · state · verb. On a departure's own line the time slot carries its count and the state slot a figure; on every other line the state slot is a word. The slot is 128px wide and always present, so a column of states reads down the page like a gauge. A verb is mono caps with an arrow.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="label">The readout · add</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+        <div class="readout"><span class="label">Aboard</span><span class="fig">10<small> /12</small></span><div class="bar"><i style="width: 83%;"></i></div></div>
+        <div class="readout"><span class="label">Waivers</span><span class="fig">9<small> /10</small></span><div class="bar"><i style="width: 90%; background: #ffb020;"></i></div></div>
+      </div>
+      <div class="line" style="border-bottom: 1px solid #22303a;"><span class="t" style="color: #2fd4ee;">+</span><span class="who" style="color: #2fd4ee;">Add a unit</span><span></span><span class="verb">→</span></div>
+      <p class="note" style="margin: 4px 0 0 0;">One meter for everything that fills. Adding is the last line, in the action colour.</p>
+    </div>
+  </div>
+
+  <!-- home -->
+  <div style="padding: 0 48px;">
+    <div style="padding: 24px 0 8px 0;"><span class="label">The shop home · Thursday, August 27, 2026 · 1180 desktop</span></div>
+
+    <div style="display: flex; align-items: center; gap: 32px; height: 56px; margin: 0 -48px; padding: 0 102px; border-bottom: 1px solid #22303a; background: #0f171d;">
+      <span style="font-size: 15px; font-weight: 600;">Blue Mantis Divers</span>
+      <div style="display: flex; gap: 24px;"><span class="tab on">Today</span><span class="tab">Check-in</span><span class="tab">Divers</span><span class="tab">Board</span><span class="tab">More</span></div>
+      <span class="t" style="margin-left: auto;">THU 27 AUG · 05:48 · ⌘K</span>
+    </div>
+
+    <div style="width: 976px; margin: 0 auto; padding-top: 36px;">
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin-bottom: 40px;">
+        <div class="readout" style="border-top-color: #e8f0f2;"><span class="label">Departures today</span><span class="fig">3</span><span class="note">Mantis II ×2 · Skiff</span></div>
+        <div class="readout" style="border-top-color: #e8f0f2;"><span class="label">Need you before 7:00</span><span class="fig" style="color: #ffb020;">4</span><span class="note">cert · waiver · prep · contact</span></div>
+        <div class="readout" style="border-top-color: #e8f0f2;"><span class="label">Aboard today</span><span class="fig">23<small> /30</small></span><div class="bar"><i style="width: 77%;"></i></div></div>
+        <div class="readout" style="border-top-color: #e8f0f2;"><span class="label">Next boat</span><span class="fig">7:00</span><span class="note">boarding 6:23 · in 35 min</span></div>
+      </div>
+
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 8px;"><span class="label" style="color: #e8f0f2;">7:00 · Two-Tank Reef — Molasses &amp; French</span><span class="t">Mantis II · Tanaka, Moretti · $95 · until 10:30</span></div>
+      <div class="line"><span class="t">10<span style="color: #3a4c58;">/12</span></span><span class="who">Molasses Reef</span><span class="state live">Boarding</span><span class="verb">Open trip →</span></div>
+      <div class="line"><span class="t">0:35</span><span class="who"><b>Grace Mensah</b> · AOW awaits verification</span><span class="state warn">Cert</span><span class="verb">Open diver →</span></div>
+      <div class="line"><span class="t"></span><span class="who"><b>Priya Sharma</b> · waiver not sent</span><span class="state warn">Waiver</span><span class="verb">Send →</span></div>
+      <div class="line"><span class="t"></span><span class="who">3 divers without rental sizes</span><span class="state">Prep</span><span class="verb">Prep list →</span></div>
+      <div class="line"><span class="t"></span><span class="who"><b>Nadia Petrov</b> · no emergency contact</span><span class="state">Contact</span><span class="verb">Open diver →</span></div>
+
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 36px 0 8px 0;"><span class="label" style="color: #e8f0f2;">13:00 · Wreck Trip — Spiegel Grove</span><span class="t">Mantis II · no crew · $145 · until 17:00</span></div>
+      <div class="line"><span class="t">10<span style="color: #3a4c58;">/10</span></span><span class="who">Spiegel Grove</span><span class="state ok">Full</span><span class="verb">Open trip →</span></div>
+      <div class="line"><span class="t"></span><span class="who">10 divers booked and nobody in the water</span><span class="state danger">Crew</span><span class="verb">Assign →</span></div>
+      <div class="line"><span class="t"></span><span class="who"><b>Tomás Ferreira</b> · no certification for a deep wreck</span><span class="state warn">Cert</span><span class="verb">Open diver →</span></div>
+
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 36px 0 8px 0;"><span class="label" style="color: #e8f0f2;">19:30 · Night Dive — City of Washington</span><span class="t">Skiff · $120 · until 23:00</span></div>
+      <div class="line"><span class="t">3<span style="color: #3a4c58;">/8</span></span><span class="who">City of Washington</span><span class="state">5 open</span><span class="verb">Send a deal →</span></div>
+
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 36px 0 8px 0;"><span class="label" style="color: #e8f0f2;">At the desk</span><span class="t">3</span></div>
+      <div class="line"><span class="t">3</span><span class="who"><b>Divers wrote back</b> · answer from their record</span><span class="state">Inbox</span><span class="verb">Open →</span></div>
+      <div class="line"><span class="t">1</span><span class="who"><b>Review waiting</b> · publish it or hide it</span><span class="state">Reviews</span><span class="verb">Open →</span></div>
+      <div class="line"><span class="t">3</span><span class="who"><b>Tom Okafor</b> · BCD 5 due back today</span><span class="state">Gear</span><span class="verb">Open →</span></div>
+
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 36px 0 8px 0;"><span class="label" style="color: #e8f0f2;">Later</span></div>
+      <div class="line"><span class="t">FRI 28</span><span class="who"><b>Tomorrow</b></span><span class="state">2 boats · 7</span><span class="verb">→</span></div>
+      <div class="line"><span class="t">WK 35</span><span class="who"><b>This week</b></span><span class="state">25</span><span class="verb">→</span></div>
+
+      <!-- Gear -->
+      <div style="padding: 48px 0 8px 0;"><span class="label">Gear · the same two components</span></div>
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; margin: 12px 0 24px 0;">
+        <div>
+          <span class="label">Run the shop</span>
+          <h2 style="margin: 6px 0 0 0; font-size: 32px; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em;">Gear</h2>
+        </div>
+        <div style="display: flex; gap: 24px;"><span class="tab on">All 37</span><span class="tab">BCD 6</span><span class="tab">Reg 5</span><span class="tab">Wetsuit 6</span><span class="tab">Tank 8</span><span class="tab" style="color: #ffb020;">Service due 2</span></div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin-bottom: 32px;">
+        <div class="readout"><span class="label">On the wall</span><span class="fig">36<small> /37</small></span><span class="state">1 out</span></div>
+        <div class="readout"><span class="label">Reserved</span><span class="fig">1</span><span class="note">BCD 2 · Sharma · Sep 13</span></div>
+        <div class="readout"><span class="label">Service due</span><span class="fig" style="color: #ffb020;">2</span><span class="note">Reg 4 · AL80-03</span></div>
+        <div class="readout"><span class="label">Out</span><span class="fig">1</span><span class="note">BCD 5 · Okafor · due today</span></div>
+      </div>
+      <div class="line"><span class="t">BCD 1</span><span class="who">Cressi Start · XS</span><span class="state"></span><span class="verb">→</span></div>
+      <div class="line"><span class="t">BCD 2</span><span class="who">Cressi Start · S · <b>Priya Sharma</b> Sep 13</span><span class="state live">Reserved</span><span class="verb">→</span></div>
+      <div class="line"><span class="t">REG 4</span><span class="who">ScubaPro MK11/C370</span><span class="state warn">Service</span><span class="verb">→</span></div>
+      <div class="line"><span class="t">AL80-03</span><span class="who">AL80 · visual inspection Sep 29</span><span class="state warn">Inspect</span><span class="verb">→</span></div>
+      <div class="line"><span class="t" style="color: #2fd4ee;">+</span><span class="who" style="color: #2fd4ee;">Add a unit</span><span class="state"></span><span class="verb">→</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

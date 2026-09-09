@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #0c2a35; background: #fbf7ef; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; } a:hover { color: #0a4d61; text-decoration: underline; }
+    .eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490; }
+    .group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d; }
+    .note { font-size: 14px; line-height: 22px; color: #54676d; }
+    .board { background: #fffdf8; border: 1px solid #e6dcc8; border-radius: 28px; box-shadow: 0 2px 10px rgba(88,66,30,0.06); padding: 20px; }
+    .col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .colhead { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 18px; background: #0a4d61; color: #fffdf8; }
+    .colhead .t { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+    .colhead .n { font-size: 14px; color: #cfe6ea; }
+    .magnets { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 4px; }
+    .magnet { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 4px; border-radius: 999px; background: #fffdf8; color: #0c2a35; font-size: 12px; font-weight: 500; }
+    .magnet i { width: 18px; height: 18px; border-radius: 999px; background: #7fd0d6; display: inline-block; }
+    .magnet.empty { background: transparent; border: 1px dashed #cfe6ea; color: #cfe6ea; padding: 2px 10px; }
+    .cardn { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #fbf7ef; border: 1px solid #e6dcc8; font-size: 15px; }
+    .cardn b { font-weight: 600; }
+    .cardn .s { margin-left: auto; font-size: 12px; color: #54676d; white-space: nowrap; }
+    .cardn.need { background: #f8eee2; border-color: rgba(180,83,9,0.35); }
+    .cardn.need .k { color: #b45309; font-size: 12px; font-weight: 600; }
+    .cardn.need .s { color: #0e7490; font-weight: 500; }
+    .cardn.danger { background: #f8e8e6; border-color: rgba(185,28,28,0.35); }
+    .cardn.danger .k { color: #b91c1c; font-size: 12px; font-weight: 600; }
+    .mark { width: 16px; height: 16px; border-radius: 999px; border: 1.5px solid #8a8065; box-sizing: border-box; flex: 0 0 16px; }
+    .mark.ok { border-color: #15803d; background: #e6f0e8; }
+    .mark.warn { border-color: #b45309; }
+    .tray { display: flex; gap: 12px; padding: 16px 20px; border-radius: 18px; background: #f3ecdd; }
+    .hook { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 84px; }
+    .hook .peg { width: 8px; height: 8px; border-radius: 999px; background: #8a8065; }
+    .tag { width: 76px; padding: 8px 6px; border-radius: 10px; background: #fffdf8; border: 1px solid #e6dcc8; text-align: center; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 500; }
+    .tag small { display: block; font-family: Geist, system-ui, sans-serif; font-size: 11px; color: #54676d; font-weight: 400; margin-top: 2px; }
+    .tag.out { background: #f3ecdd; border-style: dashed; color: #54676d; }
+    .tag.res { border-color: #0e7490; }
+    .tag.svc { border-color: #b45309; background: #f8eee2; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; box-sizing: border-box; background: #fbf7ef; padding-bottom: 48px;">
+
+  <div style="display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid #e6dcc8; background: #fffdf8;">
+    <div style="display: flex; align-items: baseline; gap: 16px;"><span class="eyebrow">Lever E · a place</span><span class="note">On top of A · Cost 5–7 sessions · Combines with F, H, K</span></div>
+    <h1 style="margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Rooms — the shop drawn as its own places</h1>
+    <p style="margin: 0; max-width: 900px; font-size: 17px; line-height: 27px;">Every dive shop already runs its day on a whiteboard behind the counter: a column per boat, names in marker, crew on magnets, a strip along the bottom for what the desk owes. DiveDay draws that board, and the other places too — the gear wall, the counter, the drawer of diver cards — each with a layout the shop already knows, all made of <b>one card</b> at three sizes on Reef's tokens. Nothing skeuomorphic: no wood, no marker font, no shadows beyond the bed. A place, not a picture of one.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+      <div><span class="group">Why it coheres</span><p class="note" style="margin: 6px 0 0 0;">One card: a name card (44px), a work card (the same, tinted), a tag (76px, mono). One column head. One tray. Every room composes those; the difference between rooms is where they sit, which is the point — spatial memory is faster than reading.</p></div>
+      <div><span class="group">What it changes in A</span><p class="note" style="margin: 6px 0 0 0;">Today's departure panels become columns side by side rather than stacked; the desk becomes a tray beneath. The ledger row survives everywhere a list is genuinely a list (orders, inbox, reviews). Gear's list becomes the wall; a unit's page stays a page.</p></div>
+      <div><span class="group">The honest tradeoff</span><p class="note" style="margin: 6px 0 0 0;">Three columns need 900px; on a phone the board is columns you swipe between, with the tray under each. It is a second grammar beside the ledger, so it must win as the whole staff app or not at all. And the lobby display already wants exactly this board — if E is declined for the home, it should still be the display.</p></div>
+    </div>
+  </div>
+
+  <div style="padding: 24px 48px 8px 48px;"><span class="group" style="color: #8a8065;">Today, as the board · Thursday, August 27, 2026 · 1180 desktop</span></div>
+  <div style="display: flex; align-items: center; gap: 24px; height: 56px; margin: 0; padding: 0 102px; background: #fffdf8; border-bottom: 1px solid #e6dcc8;">
+    <span style="font-size: 16px; font-weight: 600;">Blue Mantis Divers</span>
+    <div style="display: flex; gap: 20px; font-size: 15px; color: #54676d;"><span style="color: #0e7490; font-weight: 500;">Today</span><span>Check-in</span><span>Divers</span><span>Board</span><span>More</span></div>
+    <span style="margin-left: auto; font-size: 14px; color: #54676d;">Search ⌘K</span>
+  </div>
+
+  <div style="width: 976px; margin: 0 auto; padding-top: 36px;">
+    <header style="margin-bottom: 24px;">
+      <p class="eyebrow" style="margin: 0;">Front desk</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Good morning, Dana</h2>
+      <p style="margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: #54676d;">Thursday, August 27 · 3 departures. 4 things need you before Mantis II leaves at 7:00.</p>
+    </header>
+
+    <div class="board">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+        <!-- 7:00 -->
+        <div class="col">
+          <div class="colhead">
+            <span class="t">7:00 <span style="font-size: 13px; font-weight: 500; color: #cfe6ea;">Mantis II</span></span>
+            <span class="n" style="display: flex; justify-content: space-between;"><span>Two-Tank Reef — Molasses &amp; French</span><span style="font-variant-numeric: tabular-nums;">10 of 12</span></span>
+            <div class="magnets"><span class="magnet"><i></i>Keiko</span><span class="magnet"><i></i>Sal</span></div>
+          </div>
+          <div class="cardn need"><span class="mark warn"></span><span><span class="k">Cert</span> <b>Grace Mensah</b></span><span class="s">Check ›</span></div>
+          <div class="cardn need"><span class="mark warn"></span><span><span class="k">Waiver</span> <b>Priya Sharma</b></span><span class="s">Send ›</span></div>
+          <div class="cardn need"><span class="mark"></span><span><span class="k">Prep</span> 3 without sizes</span><span class="s">Prep list ›</span></div>
+          <div class="cardn need"><span class="mark"></span><span><span class="k">Contact</span> <b>Nadia Petrov</b></span><span class="s">Ask ›</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Diego Alvarez</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Ines Costa</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>June Park</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Lena Fischer</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Marisol Vega</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Omar Haddad</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Sam Whitfield</b><span class="s">Ready</span></div>
+          <div class="cardn" style="color: #54676d; border-style: dashed; background: transparent;">+ 2 open seats</div>
+        </div>
+        <!-- 13:00 -->
+        <div class="col">
+          <div class="colhead">
+            <span class="t">1:00 <span style="font-size: 13px; font-weight: 500; color: #cfe6ea;">Mantis II</span></span>
+            <span class="n" style="display: flex; justify-content: space-between;"><span>Wreck Trip — Spiegel Grove</span><span>full</span></span>
+            <div class="magnets"><span class="magnet empty">no crew yet</span></div>
+          </div>
+          <div class="cardn danger"><span class="mark warn" style="border-color: #b91c1c;"></span><span><span class="k">Crew</span> 10 divers, no supervisor</span><span class="s">Assign ›</span></div>
+          <div class="cardn need"><span class="mark warn"></span><span><span class="k">Cert</span> <b>Tomás Ferreira</b></span><span class="s">Check ›</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Aisha Bello</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Bjorn Aasen</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Dominic Rossi</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Emmet O'Brien</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Henrik Nilsson</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Kenji Watanabe</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Lars Petersen</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Priscilla Adeyemi</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Sofia Marchetti</b><span class="s">Ready</span></div>
+        </div>
+        <!-- 19:30 -->
+        <div class="col">
+          <div class="colhead" style="background: #0c2a35;">
+            <span class="t">7:30 <span style="font-size: 13px; font-weight: 500; color: #cfe6ea;">Skiff · night</span></span>
+            <span class="n" style="display: flex; justify-content: space-between;"><span>Night Dive — City of Washington</span><span style="font-variant-numeric: tabular-nums;">3 of 8</span></span>
+            <div class="magnets"><span class="magnet empty">no crew yet</span></div>
+          </div>
+          <div class="cardn need"><span class="mark"></span><span><span class="k">Seats</span> 5 open, no deal sent</span><span class="s">Send ›</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Anjali Krishnan</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Callum Fraser</b><span class="s">Ready</span></div>
+          <div class="cardn"><span class="mark ok"></span><b>Yara Halabi</b><span class="s">Ready</span></div>
+          <div class="cardn" style="color: #54676d; border-style: dashed; background: transparent;">+ 5 open seats</div>
+        </div>
+      </div>
+
+      <div class="tray" style="margin-top: 20px;">
+        <span class="group" style="align-self: center; flex: 0 0 96px;">The desk</span>
+        <div class="cardn" style="flex: 1;"><span class="mark"></span><span><b>3 messages</b> waiting on an answer</span><span class="s">Inbox ›</span></div>
+        <div class="cardn" style="flex: 1;"><span class="mark"></span><span><b>1 review</b> waiting on you</span><span class="s">Reviews ›</span></div>
+        <div class="cardn" style="flex: 1;"><span class="mark"></span><span><b>BCD #5</b> due back from Tom Okafor</span><span class="s">Gear ›</span></div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 16px; margin-top: 20px;">
+      <div class="cardn" style="flex: 1; background: #fffdf8;"><b>Tomorrow</b> <span style="color: #54676d;">· Fri, Aug 28</span><span class="s">2 departures · 7 jobs ›</span></div>
+      <div class="cardn" style="flex: 1; background: #fffdf8;"><b>This week</b><span class="s">25 jobs ›</span></div>
+    </div>
+
+    <!-- The wall -->
+    <div style="padding: 48px 0 8px 0; border-top: 1px dashed #e6dcc8; margin-top: 40px;"><span class="group" style="color: #8a8065;">Gear, as the wall · the same card, as a tag on a hook</span></div>
+    <header style="margin: 12px 0 20px 0;">
+      <p class="eyebrow" style="margin: 0;">Run the shop</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Gear</h2>
+      <p style="margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: #54676d;">37 units · 36 on the wall; BCD #5 is out with Tom Okafor.</p>
+    </header>
+    <div class="board" style="display: flex; flex-direction: column; gap: 20px;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="group">BCDs</span><span class="note" style="font-variant-numeric: tabular-nums;">6 · 1 out · 1 reserved</span></div>
+        <div style="display: flex; gap: 12px; margin-top: 10px; padding-top: 8px; border-top: 2px solid #e6dcc8;">
+          <div class="hook"><span class="peg"></span><div class="tag">BCD #1<small>XS</small></div></div>
+          <div class="hook"><span class="peg"></span><div class="tag res">BCD #2<small>S · Sharma, Sep 13</small></div></div>
+          <div class="hook"><span class="peg"></span><div class="tag">BCD #3<small>M</small></div></div>
+          <div class="hook"><span class="peg"></span><div class="tag">BCD #4<small>M</small></div></div>
+          <div class="hook"><span class="peg"></span><div class="tag out">BCD #5<small>L · Okafor, due today</small></div></div>
+          <div class="hook"><span class="peg"></span><div class="tag">BCD #6<small>XL</small></div></div>
+        </div>
+      </div>
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="group">Regulators</span><span class="note" style="font-variant-numeric: tabular-nums;">5 · 1 needs service</span></div>
+        <div style="display: flex; gap: 12px; margin-top: 10px; padding-top: 8px; border-top: 2px solid #e6dcc8;">
+          <div class="hook"><span class="peg"></span><div class="tag">Reg #1<small>Aqualung</small></div></div>
+          <div class="hook"><span class="peg"></span><div class="tag">Reg #2<small>Aqualung</small></div></div>
+          <div class="hook"><span class="peg"></span><div class="tag">Reg #3<small>Aqualung</small></div></div>
+          <div class="hook"><span class="peg"></span><div class="tag svc">Reg #4<small>needs service</small></div></div>
+          <div class="hook"><span class="peg"></span><div class="tag">Reg #5<small>ScubaPro</small></div></div>
+        </div>
+      </div>
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="group">Tanks</span><span class="note" style="font-variant-numeric: tabular-nums;">8 · 1 inspection due</span></div>
+        <div style="display: flex; gap: 12px; margin-top: 10px; padding-top: 8px; border-top: 2px solid #e6dcc8; flex-wrap: wrap;">
+          <div class="hook"><span class="peg"></span><div class="tag">AL63-01</div></div>
+          <div class="hook"><span class="peg"></span><div class="tag">AL63-02</div></div>
+          <div class="hook"><span class="peg"></span><div class="tag">AL80-01</div></div>
+          <div class="hook"><span class="peg"></span><div class="tag">AL80-02</div></div>
+          <div class="hook"><span class="peg"></span><div class="tag svc">AL80-03<small>inspect Sep 29</small></div></div>
+          <div class="hook"><span class="peg"></span><div class="tag">AL80-04</div></div>
+          <div class="hook"><span class="peg"></span><div class="tag">AL80-05</div></div>
+          <div class="hook"><span class="peg"></span><div class="tag">AL80-06</div></div>
+          <div class="hook"><span class="peg" style="background: #0e7490;"></span><div class="tag" style="border-style: dashed; color: #0e7490;">+ Add</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
