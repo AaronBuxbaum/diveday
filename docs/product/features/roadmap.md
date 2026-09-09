@@ -539,7 +539,9 @@ diffs are explained. 20a–20e may start on the ADR alone.
   marks or emoji.
 - **20f** — the earned moment inside `EntryDone`, once, for the twelve shared terminal outcomes.
   Waits on H-71 c.
-- **20g** — the surface: B, C or D as drawn, sliced when picked. Waits on H-71 a (and d, for B).
+- **20g** — the levers on A: E (rooms), F (the tide line), H (their sea), I (the one page) or K
+  (together) as drawn on the canvas's second page, sliced when picked. B, C and D were declined on
+  2026-09-09. Waits on H-71 a.
 
 ## Concept-model simplification (proposed — each row needs an owner decision)
 

@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #0c2a35; background: #fbf7ef; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; } a:hover { color: #0a4d61; text-decoration: underline; }
+    /* Blue Mantis's brand, derived by Harbor's rules: brand #1d7a5f (their green), tint, deep */
+    .eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #1d7a5f; }
+    .group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d; }
+    .note { font-size: 14px; line-height: 22px; color: #54676d; }
+    .row { display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid #e6dcc8; border-bottom: 1px solid #e6dcc8; padding: 0 4px; }
+    .row + .row { border-top: 0; }
+    .kind { flex: 0 0 92px; font-size: 14px; font-weight: 500; color: #54676d; }
+    .kind.warn { color: #b45309; }
+    .sentence { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: #54676d; }
+    .sentence b { font-weight: 600; color: #0c2a35; }
+    .door { font-size: 14px; font-weight: 500; color: #1d7a5f; white-space: nowrap; }
+    .mark { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid #8a8065; box-sizing: border-box; }
+    .mark.warn { border-color: #b45309; }
+    .panel { background: #fffdf8; border: 1px solid #e6dcc8; border-radius: 28px; box-shadow: 0 2px 10px rgba(88,66,30,0.06); overflow: hidden; }
+    .photo { position: relative; height: 150px; display: flex; align-items: flex-end; padding: 20px 24px; color: #fffdf8; }
+    .photo .ph { position: absolute; inset: 0; }
+    .photo .cap { position: absolute; right: 16px; top: 12px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: rgba(255,253,248,0.85); }
+    .photo .t { position: relative; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+    .photo .n { position: relative; font-size: 14px; color: rgba(255,253,248,0.9); text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+    .btn { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e6dcc8; background: #fffdf8; font-size: 14px; font-weight: 500; }
+    .swatch { width: 44px; height: 44px; border-radius: 10px; border: 1px solid rgba(12,42,53,0.12); }
+  </style>
+</helmet>
+
+<div style="width: 1180px; box-sizing: border-box; background: #fbf7ef; padding-bottom: 48px;">
+
+  <div style="display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid #e6dcc8; background: #fffdf8;">
+    <div style="display: flex; align-items: baseline; gap: 16px;"><span class="eyebrow" style="color: #0e7490;">Lever H · the shop's own sea</span><span class="note">On top of A · Cost 2–3 sessions · Combines with everything</span></div>
+    <h1 style="margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Their sea — Harbor comes inside</h1>
+    <p style="margin: 0; max-width: 900px; font-size: 17px; line-height: 27px;">On 09-01 the owner decided the diver-facing pages wear the shop's brand and the staff app wears DiveDay's. This lever moves the line: the staff app also takes the shop's colour for its lagoon — the chrome's active tab, the primary button, every door — through the derivation rules Harbor already has, and each departure's header carries a photograph of the site, the shop's own or the catalogue's. Blue Mantis is green; its app is green; Molasses Reef at the top of the 7:00 panel looks like Molasses Reef. It is the warmest lever here and the cheapest, because everything it needs is built.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+      <div><span class="group">Why it coheres</span><p class="note" style="margin: 6px 0 0 0;">One token set with one input: the shop's colour. Harbor's rules already derive the tint, the deep and the contrast floor from it, and the storefront has run on them for a week. The staff app reads the same tokens; nothing is drawn twice, and a shop that sets no colour gets Reef exactly as today.</p></div>
+      <div><span class="group">What it changes in A</span><p class="note" style="margin: 6px 0 0 0;">A 150px photo band on the departure panel's head, the site name over it; the panel's time and figures move into the band. The hand's site mark survives as the fallback when the site has no photo. The chrome's identity square is the shop's logo, which it is already.</p></div>
+      <div><span class="group">The honest tradeoff</span><p class="note" style="margin: 6px 0 0 0;">A photograph is a decoration, and the illustration ban's reasons apply: no photo on a manifest, roll call, waiver or payment, and none on the counter. A garish brand colour is the shop's own problem, bounded by the derivation's contrast floor. Photos cost bytes on a dock with one bar of signal, so they load after the words.</p></div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 32px; padding: 24px 48px; border-bottom: 1px solid #e6dcc8; align-items: center;">
+    <span class="group">Blue Mantis's tokens, derived</span>
+    <div style="display: flex; gap: 8px;"><div class="swatch" style="background: #1d7a5f;"></div><div class="swatch" style="background: #145a46;"></div><div class="swatch" style="background: #e4f1ea;"></div><div class="swatch" style="background: #fbf7ef;"></div><div class="swatch" style="background: #0c2a35;"></div><div class="swatch" style="background: #ff6f61;"></div></div>
+    <span class="note">brand · deep · tint · sand · ink · coral (DiveDay's, unchanged — the earned moments stay DiveDay's). Signal colours never move.</span>
+  </div>
+
+  <div style="padding: 24px 48px 8px 48px;"><span class="group" style="color: #8a8065;">Today in the shop's sea · Thursday, August 27, 2026 · 1180 desktop</span></div>
+  <div style="display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 102px; background: #fffdf8; border-bottom: 1px solid #e6dcc8;">
+    <div style="display: flex; align-items: center; gap: 10px;"><div style="width: 36px; height: 36px; border-radius: 10px; background: #1d7a5f; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div><span style="font-size: 16px; font-weight: 600;">Blue Mantis Divers</span></div>
+    <div style="display: flex; gap: 4px;"><span style="padding: 10px 14px; border-radius: 10px; background: #e4f1ea; color: #1d7a5f; font-size: 15px; font-weight: 500;">Today</span><span style="padding: 10px 14px; font-size: 15px; color: #54676d;">Check-in</span><span style="padding: 10px 14px; font-size: 15px; color: #54676d;">Divers</span><span style="padding: 10px 14px; font-size: 15px; color: #54676d;">Board</span><span style="padding: 10px 14px; font-size: 15px; color: #54676d;">More</span></div>
+    <span style="margin-left: auto; font-size: 14px; color: #54676d;">Search ⌘K</span>
+  </div>
+
+  <div style="width: 976px; margin: 0 auto; padding-top: 40px;">
+    <header style="margin-bottom: 32px;">
+      <p class="eyebrow" style="margin: 0;">Front desk</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Good morning, Dana</h2>
+      <p style="margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: #54676d;">Thursday, August 27 · 3 departures. 4 things need you before Mantis II leaves at 7:00.</p>
+    </header>
+
+    <section class="panel" style="margin-bottom: 24px;">
+      <div class="photo">
+        <div class="ph" style="background: radial-gradient(120% 90% at 30% 20%, #6fb9b0 0%, #2a7f8a 45%, #123f52 100%);"></div>
+        <div class="ph" style="background: repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0 6px, transparent 6px 22px);"></div>
+        <span class="cap">Molasses Reef · the shop's photo</span>
+        <div style="position: relative; display: flex; align-items: flex-end; justify-content: space-between; width: 100%;">
+          <div><div class="t">7:00 AM · Two-Tank Reef — Molasses &amp; French</div><div class="n">Mantis II · Keiko Tanaka, Sal Moretti · $95 · until 10:30</div></div>
+          <div style="text-align: right;"><div class="t" style="font-variant-numeric: tabular-nums;">10 <span style="font-size: 14px; font-weight: 500;">of 12</span></div><div class="n">boarding from 6:23</div></div>
+        </div>
+      </div>
+      <div style="padding: 8px 24px 20px 24px;">
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="sentence"><b>Grace Mensah</b> · Advanced Open Water awaits verification.</span><span class="door">Open diver ›</span></div>
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Waiver</span><span class="sentence"><b>Priya Sharma</b> · not sent.</span><span class="btn">Send waiver</span></div>
+        <div class="row"><span class="mark"></span><span class="kind">Prep</span><span class="sentence">3 divers still need rental sizes.</span><span class="door">Open prep list ›</span></div>
+        <div class="row"><span class="mark"></span><span class="kind">Contact</span><span class="sentence"><b>Nadia Petrov</b> · no emergency contact on file.</span><span class="door">Open diver ›</span></div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-bottom: 24px;">
+      <div class="photo">
+        <div class="ph" style="background: radial-gradient(110% 100% at 70% 30%, #4d7d8c 0%, #1f4657 50%, #0b2230 100%);"></div>
+        <div class="ph" style="background: repeating-linear-gradient(100deg, rgba(255,255,255,0.04) 0 8px, transparent 8px 26px);"></div>
+        <span class="cap">Spiegel Grove · from the catalogue</span>
+        <div style="position: relative; display: flex; align-items: flex-end; justify-content: space-between; width: 100%;">
+          <div><div class="t">1:00 PM · Wreck Trip — Spiegel Grove</div><div class="n">Mantis II · no crew yet · $145 · until 5:00</div></div>
+          <div style="text-align: right;"><div class="t" style="font-variant-numeric: tabular-nums;">10 <span style="font-size: 14px; font-weight: 500;">of 10</span></div><div class="n">full</div></div>
+        </div>
+      </div>
+      <div style="padding: 8px 24px 20px 24px;">
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Crew</span><span class="sentence">10 divers booked and nobody in the water to supervise them.</span><span class="door">Open crew ›</span></div>
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="sentence"><b>Tomás Ferreira</b> · no certification on file for a deep wreck.</span><span class="door">Open diver ›</span></div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-bottom: 40px;">
+      <div class="photo" style="height: 110px;">
+        <div class="ph" style="background: linear-gradient(180deg, #0c2a35 0%, #071720 100%);"></div>
+        <span class="cap">City of Washington · no photo yet — the hand's mark</span>
+        <svg style="position: absolute; right: 24px; top: 22px;" width="56" height="40" viewBox="0 0 56 40" fill="none" stroke="#7fd0d6" stroke-width="1.5" stroke-linecap="round"><circle cx="28" cy="20" r="9"/><circle cx="10" cy="10" r="1.5"/><circle cx="46" cy="30" r="1.5"/><circle cx="44" cy="8" r="1"/></svg>
+        <div style="position: relative; display: flex; align-items: flex-end; justify-content: space-between; width: 100%;">
+          <div><div class="t">7:30 PM · Night Dive — City of Washington</div><div class="n">Skiff · $120 · until 11:00</div></div>
+          <div style="text-align: right;"><div class="t" style="font-variant-numeric: tabular-nums;">3 <span style="font-size: 14px; font-weight: 500;">of 8</span></div><div class="n">5 spots open</div></div>
+        </div>
+      </div>
+      <div style="padding: 8px 24px 20px 24px;">
+        <div class="row"><span class="mark"></span><span class="kind">Fill seats</span><span class="sentence">5 seats open with no last-minute deal sent.</span><span class="door">Open last-minute deal ›</span></div>
+      </div>
+    </section>
+
+    <section style="margin-bottom: 40px;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 8px;"><span class="group">At the desk</span><span class="note" style="font-size: 12px;">3</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Messages</span><span class="sentence"><b>3 divers wrote back</b> · answer from their record.</span><span class="door">Open inbox ›</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Reviews</span><span class="sentence"><b>1 review is waiting</b> · publish it or hide it.</span><span class="door">Open reviews ›</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Gear</span><span class="sentence"><b>Tom Okafor</b> · BCD #5 is due back today.</span><span class="door">Open gear ›</span></div>
+    </section>
+
+    <div style="padding: 24px 0 8px 0; border-top: 1px dashed #e6dcc8;"><span class="group" style="color: #8a8065;">Where the sea stops</span></div>
+    <p class="note" style="margin: 0; max-width: 900px; font-size: 15px; line-height: 23px;">The manifest, the roll call, the waiver, the payment and the counter stay in Reef's own tokens with no photograph — the same line the drawn hand already respects, for the same reason: a surface someone acts on carries nothing that is not a fact. The shop's colour still reaches those pages' primary action, because a colour is not a decoration; a photo is.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,15 +1,27 @@
 {
+  "pages": [
+    { "id": "page-1", "name": "Round 1 — the audit and four directions" },
+    { "id": "page-2", "name": "Round 2 — five levers on A" }
+  ],
   "artboards": [
-    { "file": "Main.dc.html", "title": "One hand — read me first", "x": 0, "y": 0, "w": 1180, "h": 4000 },
-    { "file": "Audit.dc.html", "title": "The audit — the same job, drawn too many ways", "x": 1300, "y": 0, "w": 1180, "h": 6200 },
-    { "file": "DirectionA.dc.html", "title": "Direction A — Finish the sentence", "x": 0, "y": 6400, "w": 1180, "h": 3150 },
-    { "file": "DirectionB.dc.html", "title": "Direction B — The logbook", "x": 1300, "y": 6400, "w": 1180, "h": 2900 },
-    { "file": "DirectionC.dc.html", "title": "Direction C — The instrument", "x": 0, "y": 9700, "w": 1180, "h": 2800 },
-    { "file": "DirectionD.dc.html", "title": "Direction D — The briefing", "x": 1300, "y": 9700, "w": 1180, "h": 3700 }
+    { "file": "Main.dc.html", "title": "One hand — read me first", "x": 0, "y": 0, "w": 1180, "h": 4000, "page": "page-1" },
+    { "file": "Audit.dc.html", "title": "The audit — the same job, drawn too many ways", "x": 1300, "y": 0, "w": 1180, "h": 6200, "page": "page-1" },
+    { "file": "DirectionA.dc.html", "title": "Direction A — Finish the sentence", "x": 0, "y": 6400, "w": 1180, "h": 3150, "page": "page-1" },
+    { "file": "DirectionB.dc.html", "title": "Direction B — The logbook", "x": 1300, "y": 6400, "w": 1180, "h": 2900, "page": "page-1" },
+    { "file": "DirectionC.dc.html", "title": "Direction C — The instrument", "x": 0, "y": 9700, "w": 1180, "h": 2800, "page": "page-1" },
+    { "file": "DirectionD.dc.html", "title": "Direction D — The briefing", "x": 1300, "y": 9700, "w": 1180, "h": 3700, "page": "page-1" },
+    { "file": "Round2.dc.html", "title": "Round 2 — read me first", "x": 0, "y": 0, "w": 1180, "h": 2500, "page": "page-2" },
+    { "file": "LeverE.dc.html", "title": "Lever E — Rooms", "x": 1300, "y": 0, "w": 1180, "h": 2750, "page": "page-2" },
+    { "file": "LeverF.dc.html", "title": "Lever F — The tide line", "x": 0, "y": 3000, "w": 1180, "h": 2650, "page": "page-2" },
+    { "file": "LeverH.dc.html", "title": "Lever H — Their sea", "x": 1300, "y": 3000, "w": 1180, "h": 2650, "page": "page-2" },
+    { "file": "LeverI.dc.html", "title": "Lever I — The one page", "x": 0, "y": 5900, "w": 1180, "h": 2950, "page": "page-2" },
+    { "file": "LeverK.dc.html", "title": "Lever K — Together", "x": 1300, "y": 5900, "w": 1180, "h": 2500, "page": "page-2" }
   ],
   "annotations": [
-    { "id": "how-to-read", "x": 0, "y": -260, "w": 560, "text": "Read Main first (the diagnosis and the four directions), then the Audit (the evidence, drawn), then the four directions below. Each direction redraws the same two surfaces — the shop home and Gear — for the same shop on the same morning, so they compare like for like." },
-    { "id": "pick", "x": 1300, "y": -260, "w": 520, "text": "The pick is the owner's (H-71). Nothing here is normative until the ADR moves to Accepted. Direction A is the floor every other direction also has to clear; B, C and D each replace the surface and keep A's deletions." }
+    { "id": "how-to-read", "x": 0, "y": -260, "w": 560, "page": "page-1", "text": "Round 1, 2026-09-08. Read Main first (the diagnosis and the four directions), then the Audit (the evidence, drawn), then the four directions below. The owner's read on 09-09: A is the base; B, C and D are out. The new ideas are on the Round 2 page." },
+    { "id": "pick", "x": 1300, "y": -260, "w": 520, "page": "page-1", "text": "The pick is the owner's (H-71). Nothing here is normative until the ADR moves to Accepted. Direction A is the floor every other direction also has to clear." },
+    { "id": "round2-read", "x": 0, "y": -260, "w": 560, "page": "page-2", "text": "Round 2, 2026-09-09. Five levers, each one thing on top of A that no earlier canvas drew: a place (E), an instrument that travels (F), the shop's own sea (H), a single page (I), other people (K). Each board redraws the same home for the same morning. Round2 has the scoring, the combinations and the recommendation." },
+    { "id": "round2-letters", "x": 1300, "y": -260, "w": 520, "page": "page-2", "text": "Letters continue from round 1 (A–D) and skip G and J, which were considered and dropped before drawing: G was Deck's figure-first ramp again, J was gestures the dock test already limits." }
   ],
-  "launch": { "view": "canvas" }
+  "launch": { "view": "canvas", "page": "page-2" }
 }

@@ -1,6 +1,6 @@
 # One hand — why DiveDay feels like four products, and four ways to make it one
 
-- **Status:** Live (its ADR is Proposed, pending H-71; no slice has started)
+- **Status:** Live (its ADR is Proposed, pending H-71; round 2 drawn 2026-09-09 on the owner's read of round 1; no slice has started)
 - **Date:** 2026-09-08
 - **ADR:** [20260908-one-hand](../../../architecture/decisions/20260908-one-hand.md)
 - **Published:** https://claude.ai/code/artifact/cfd0c597-1a70-4990-a171-4548ebae401f
@@ -24,7 +24,9 @@ pick is the owner's (H-71), and code obeys the ADR.
 
 ## Artboards
 
-One page, three rows: the argument on top, the four directions beneath.
+Two pages. The first is round 1 (2026-09-08): the argument on top, the four directions beneath.
+The second is round 2 (2026-09-09): five levers on top of A, drawn after the owner's read of the
+first page.
 
 | File | What it shows |
 | --- | --- |
@@ -35,7 +37,27 @@ One page, three rows: the argument on top, the four directions beneath.
 | `DirectionC.dc.html` | **The instrument** — the staff tool as a dive computer: dark by default, one cyan for every action, every number a figure, every state a word in a fixed slot; two components, a readout and a line, and nothing else |
 | `DirectionD.dc.html` | **The briefing** — the voice as the system: every surface opens by telling you the state in five sentence shapes (State, Need, Fact, Offer, Done) and the controls are verbs inside the sentences; the kind word, the chevron and the right-hand action go |
 
-`canvas.json` lays the six boards out and pins two notes. The audit's counts come from three read-only
+### Round 2 — five levers on A
+
+The owner's read of round 1, 2026-09-09: A is the best of the four but wants more "wow"; the
+instrument (C) is hard to move around in and not warm enough; the logbook (B) is not efficient and
+not what a dive shop wants to deal with; the briefing (D) feels like too many existing apps; and all
+four felt too close to ideas already tried — which, read against the twelve earlier canvases, is
+fair (the instrument was Deck on 09-01, the paper page was Tide). So round 2 keeps A as the base and
+adds one lever per board, none of which any canvas has drawn. Letters continue from round 1 and skip
+G and J, dropped before drawing (G was Deck's figure-first ramp again; J was gestures the dock test
+already limits).
+
+| File | What it shows |
+| --- | --- |
+| `Round2.dc.html` | The page's cover: what the owner said and what it rules out, the five levers with their case and risk, how they score against warm · efficient · not-another-list · lands-on-the-home, how they combine, the recommendation, the owner's round-2 calls |
+| `LeverE.dc.html` | **Rooms** — the shop drawn as its own places: Today as the board behind the counter (a column per boat, name cards, crew magnets, the desk as a tray), Gear as the wall (tags on hooks by kind); one card at three sizes |
+| `LeverF.dc.html` | **The tide line** — one 64px strip under the chrome on every staff page: the day as a line, departures as blocks that fill as divers board, a moving "now", the next boat lit; drawn on Today at 5:48 and on Gear at 6:31 |
+| `LeverH.dc.html` | **Their sea** — Harbor comes inside: the staff app takes the shop's colour through Harbor's derivation, and each departure's header carries a site photograph (the shop's own, the catalogue's, or the hand's mark when there is none); where the sea stops |
+| `LeverI.dc.html` | **The one page** — no tabs: Now, Later, the desk, the shop as one scroll with a rail; a register opens as a sheet over the page |
+| `LeverK.dc.html` | **Together** — who is in the shop and where, a chip on the row a colleague is acting on, a one-tap hand-off on a Need, and the counter updating live on the desk's screen |
+
+`canvas.json` lays the twelve boards out on two pages and pins four notes. The audit's counts come from three read-only
 sweeps of the tree on 2026-09-08 (styling drift, component duplication, voice), and the screenshots
 from `node scripts/screenshot.mjs` against the seeded shop at 1280 and 390.
 
@@ -83,11 +105,11 @@ are the floor and move on the ADR alone; 20f waits on H-71 c and 20g on H-71 a.
 | 20d — one link, one skeleton, one disclosure: the link guard, `ui/skeleton.tsx`, the summary sweep | open | — | — |
 | 20e — the voice sheet in brand.md, `check:voice` grown to it, the bundle sweep | open | — | — |
 | 20f — the earned moment on the shared door (H-71 c) | open | — | — |
-| 20g — the surface (H-71 a): B, C or D as drawn, sliced when picked | open | — | — |
+| 20g — the levers on A (H-71 a, round 2): E, F, H, I or K as drawn, sliced when picked | open | — | — |
 
 ## Working on it
 
 The sources here are the working files. To change a board, edit its `.dc.html`, re-seed a fresh
-copy with the design skill's helper (all six artboards, `canvas.json`, the title "One hand"), check
+copy with the design skill's helper (all twelve artboards, `canvas.json`, the title "One hand"), check
 it, and republish to the URL above. The seeded output is build output and is never committed
 ([design-artifacts.md](../../design-artifacts.md)).
