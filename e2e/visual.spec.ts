@@ -3563,6 +3563,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "check-in-walk-in", scheme);
       });
 
+      /**
+       * **"Took a call"** (N-22), on the branch that shows the most: the date
+       * request, whose extra block is the only part of this form that is not
+       * the caller's own three boxes. Photographed with the branch chosen from
+       * the URL rather than by clicking, so the picture cannot depend on a
+       * click landing before the shot.
+       */
+      test(`the desk phone's door renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/calls?outcome=date-request");
+        await page.getByRole("heading", { name: "Took a call", level: 1 }).waitFor();
+        await page.getByLabel("What they asked about").waitFor();
+        await capture(page, "took-a-call", scheme);
+      });
+
       test(`the walk-in picker explains an invalid submission (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/check-in/walk-in?notice=walkin-invalid");
         await expect(page.getByRole("alert").filter({ hasText: "Choose a boat" })).toBeVisible();

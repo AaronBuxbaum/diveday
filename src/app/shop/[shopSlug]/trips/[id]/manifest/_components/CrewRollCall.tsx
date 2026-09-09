@@ -11,6 +11,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { scopedId } from "@/lib/element-id";
 import { formatDateTimeTz } from "@/lib/format";
 import {
   type ManifestBuddyTeam,
@@ -89,6 +90,7 @@ function CrewFacts({
 export function CrewRollCall({
   crew,
   checkpoint,
+  idPrefix,
   isDeparture,
   shopSlug,
   tripId,
@@ -103,6 +105,8 @@ export function CrewRollCall({
 }: {
   crew: TripManifest["crew"];
   checkpoint: RollCallCheckpoint;
+  /** Set when a document repeats this block per departure — see `scopedId`. */
+  idPrefix?: string;
   isDeparture: boolean;
   shopSlug: string;
   tripId: string;
@@ -201,7 +205,7 @@ export function CrewRollCall({
                   // panel's chips name uncalled *crew* too, and this row sits
                   // below the whole diver roster — so on a phone the chip is
                   // often several screens from the person it names.
-                  id={`crew-row-${member.id}`}
+                  id={scopedId(idPrefix, `crew-row-${member.id}`)}
                   // `break-inside-avoid` for the same reason a diver's row
                   // carries it: this sheet is printed and goes ashore, and a
                   // crew member's name split across a page boundary is a

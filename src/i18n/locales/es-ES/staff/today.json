@@ -275,6 +275,7 @@
     "label": "Sin terminar",
     "addDeparture": "Una salida que empezaste a añadir.",
     "newDiver": "Un buceador que empezaste a añadir.",
+    "tookACall": "Una llamada que empezaste a anotar.",
     "resume": "Retomar"
   }
 }

@@ -35,7 +35,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import { groupCatchUp } from "@/lib/desk-events";
-import { scopedHash } from "@/lib/element-id";
+import { scopedHash, scopedId } from "@/lib/element-id";
 import { formatDateTimeTz, formatTime, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -808,6 +808,7 @@ export default async function TripManifestPage({
           subject. */}
       <CrewRollCall
         crew={manifest.crew}
+        idPrefix={idPrefix}
         divers={manifest.divers}
         checkpoint={checkpoint}
         isDeparture={isDeparture}
@@ -884,7 +885,7 @@ export default async function TripManifestPage({
       <div className="hidden print:block">
         <EmergencyReferenceCard
           className="mt-6"
-          headingId="emergency-reference-print-heading"
+          headingId={scopedId(idPrefix, "emergency-reference-print-heading")}
           reference={shop.emergencyReference}
           copy={emergencyCopy}
         />
@@ -926,6 +927,7 @@ export default async function TripManifestPage({
           only thing that can render it. The rest of the group rides in as its
           children. */}
       <OfflineManifestManager
+        idPrefix={idPrefix}
         locale={locale}
         payload={serializeManifests(
           completeManifests,

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { listBoats } from "@/db/boats";
 import { listDateRequestsForStaff } from "@/db/course-inquiries";
 import { canPersonViewShopReports } from "@/db/reporting";
@@ -12,7 +13,7 @@ import { groupDateRequests } from "@/lib/date-requests";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import {
   addDepartureHref,
   RequestDayGroup,
@@ -58,10 +59,10 @@ export default async function RequestsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; notice?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { page } = await searchParams;
+  const { page, notice } = await searchParams;
   // Checked against the database, not the JWT, so a demoted manager loses the
   // contact details on this page immediately — the same live check Reports
   // makes, and for the same reason (canPersonViewShopReports).
@@ -94,6 +95,11 @@ export default async function RequestsPage({
   );
   const { groups, undated } = groupDateRequests(requestPage.rows, (row) => row);
   const base = shopPath(shopSlug, "requests");
+  // The one notice this page answers, and it is genuinely about the page rather
+  // than about a form on it: the staffer wrote a caller down on "Took a call"
+  // and arrived here, where the lead now lives (`?notice=` via `noticeFromParam`,
+  // never a bare index — the param is attacker-supplied).
+  const logged = noticeFromParam(notice, { "call-logged": true as const });
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
 
   return (
@@ -103,6 +109,12 @@ export default async function RequestsPage({
         title={t("requests.title")}
         description={t("requests.description")}
       />
+
+      {logged ? (
+        <StaffNoticeBanner tone="success" className="mt-6">
+          {t("calls.notice.logged")}
+        </StaffNoticeBanner>
+      ) : null}
 
       {requestPage.total === 0 ? (
         <EmptyState title={t("requests.emptyHeading")} body={t("requests.emptyDetail")} />

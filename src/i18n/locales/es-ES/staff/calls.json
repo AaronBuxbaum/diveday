@@ -1,0 +1,32 @@
+{
+  "eyebrow": "Mostrador",
+  "title": "Llamada recibida",
+  "callerHeading": "Quién llamó",
+  "outcomeHeading": "Qué quería",
+  "outcome": {
+    "dateRequest": "Un día que no está en el calendario",
+    "waitlist": "Una plaza en una salida llena",
+    "booking": "Una plaza en una salida con sitio"
+  },
+  "departureLabel": "Qué salida",
+  "departureUnchosen": "Elige una salida",
+  "departureOpen": "{title} · {date} · {time} · {seats, plural, one {queda # plaza} other {quedan # plazas}}",
+  "departureFull": "{title} · {date} · {time} · llena",
+  "noDepartures": "No hay nada en el calendario donde poner a nadie. Añade una salida primero, o anota esto como petición de un día.",
+  "interestLabel": "Por qué preguntó",
+  "interestPlaceholder": "Dos tanques en el arrecife en marzo",
+  "preferredDateLabel": "Día que quiere",
+  "diversLabel": "Cuántos buceadores",
+  "noteLabel": "Algo más que dijera",
+  "submit": "Anotar la llamada",
+  "submitting": "Anotando…",
+  "notice": {
+    "invalid": "Revisa los datos de quien llamó y vuelve a intentarlo.",
+    "name": "Toma primero el nombre de quien llama.",
+    "reply": "Toma un correo o un teléfono, o nadie podrá devolverle la llamada.",
+    "email": "Una entrada en lista de espera necesita un correo: por ahí se ofrece una plaza que se libera.",
+    "departure": "Elige la salida por la que preguntó.",
+    "interest": "Di por qué preguntó.",
+    "logged": "Llamada anotada."
+  }
+}

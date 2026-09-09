@@ -457,8 +457,8 @@ test.describe("automated accessibility scans of the static staff routes", () => 
   test("the front-desk and scheduling surfaces have no automated a11y violations", async ({
     page,
   }) => {
-    // 7 scans at ~3.5s each, plus the sign-in state and first cold render.
-    test.setTimeout(90_000);
+    // 8 scans at ~3.5s each, plus the sign-in state and first cold render.
+    test.setTimeout(105_000);
     await scanStaticRoutes(page, [
       // Today, which is now one composition rather than two views of one
       // (ADR 20260827-clearwater-surface-language, decision 4) — so the second
@@ -468,6 +468,10 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis", heading: /Good (morning|afternoon|evening|night), Dana/ },
       { path: "/shop/blue-mantis/check-in", heading: "Counter check-in" },
       { path: "/shop/blue-mantis/check-in/walk-in", heading: "Walk-in" },
+      // The desk phone's door (N-22), on the branch that renders its extra
+      // block: the two inactive branches are `disabled` fieldsets that stay in
+      // the DOM, so this scan sees the whole form either way.
+      { path: "/shop/blue-mantis/calls?outcome=date-request", heading: "Took a call" },
       { path: "/shop/blue-mantis/schedule/board", heading: "Board" },
       // Creating a trip is the board's own add panel now (ADR
       // 20260806-one-trip-create-form), and `?add=full` is the deep end of it

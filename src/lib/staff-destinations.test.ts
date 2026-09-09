@@ -252,12 +252,12 @@ describe("what each consumer derives", () => {
 
   it("keeps only non-places out of the nav", () => {
     // `navGroup: null` is not a demotion — it is the statement that the entry
-    // is an action (addBooking) or a way into a page (walkIn), not a place a
-    // menu should list.
+    // is an action (addBooking, tookACall) or a way into a page (walkIn), not
+    // a place a menu should list.
     const outOfNav = STAFF_DESTINATIONS.filter((destination) => destination.navGroup === null).map(
       (destination) => destination.id,
     );
-    expect(outOfNav).toEqual(["addBooking", "walkIn"]);
+    expect(outOfNav).toEqual(["addBooking", "walkIn", "tookACall"]);
   });
 
   it("puts Settings last in the whole registry, so no consumer can list it mid-menu", () => {

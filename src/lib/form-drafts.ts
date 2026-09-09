@@ -1,3 +1,4 @@
+import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { DAY_MS } from "./clock";
 
 /**
@@ -9,8 +10,35 @@ import { DAY_MS } from "./clock";
  * framework-free half: which forms draft, how long a draft lives, and which
  * fields may never be in one.
  */
-export const FORM_DRAFT_KINDS = ["add_departure", "new_diver"] as const;
+export const FORM_DRAFT_KINDS = ["add_departure", "new_diver", "took_a_call"] as const;
 export type FormDraftKind = (typeof FORM_DRAFT_KINDS)[number];
+
+/**
+ * Where a kept draft is picked back up, below `/shop/<shopSlug>`, and what
+ * Today's "unfinished" row calls it.
+ *
+ * **Exhaustive records rather than the ternaries they replace.** Today's spine
+ * resolved both of these with `form === "add_departure" ? … : …`, which is
+ * correct for exactly two kinds and silently wrong for a third: a `took_a_call`
+ * draft would have offered "Resume" on a link to the new-diver form, carrying a
+ * caller's answers into somebody else's page. A record keyed by the union is a
+ * compile error instead.
+ *
+ * Keys, never words — `src/lib` picks neither (ADR
+ * 20260731-domain-layer-copy-leaks); the spine resolves them against the staff
+ * bundle.
+ */
+export const FORM_DRAFT_RESUME_SUFFIX: Record<FormDraftKind, string> = {
+  add_departure: "/schedule/board?add=1",
+  new_diver: "/divers/new",
+  took_a_call: "/calls",
+};
+
+export const FORM_DRAFT_LABEL_KEYS: Record<FormDraftKind, StaffMessageKey> = {
+  add_departure: "today.unfinished.addDeparture",
+  new_diver: "today.unfinished.newDiver",
+  took_a_call: "today.unfinished.tookACall",
+};
 
 export function isFormDraftKind(value: unknown): value is FormDraftKind {
   return typeof value === "string" && (FORM_DRAFT_KINDS as readonly string[]).includes(value);
