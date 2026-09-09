@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, isNull, lt } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, isNull, lte, ne } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { trackEvent } from "@/lib/analytics";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -204,7 +204,15 @@ async function cancelPending(
         isNull(inboundMessages.deletedAt),
         // Two windows, matching what `confirmationCodeMatches` will accept.
         gte(inboundMessages.receivedAt, new Date(now.getTime() - 2 * CONFIRMATION_WINDOW_MS)),
-        lt(inboundMessages.receivedAt, message.receivedAt),
+        // "An earlier request, and not this message" — bounded at this
+        // message's own instant and excluded by id, rather than strictly
+        // before it. Two messages can share a `received_at`: the e2e fleet
+        // freezes the clock, so the `C` and the code that answers it land on
+        // the same timestamp and a strict `<` found no pending request at all,
+        // which read as "six characters somebody typed". A real inbox can do
+        // the same thing at a lower rate, and would have failed the same way.
+        lte(inboundMessages.receivedAt, message.receivedAt),
+        ne(inboundMessages.id, message.id),
       ),
     )
     .orderBy(desc(inboundMessages.receivedAt))

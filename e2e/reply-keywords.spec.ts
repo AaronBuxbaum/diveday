@@ -87,7 +87,15 @@ test.describe("reply keywords", () => {
 
     // The seat is still theirs until the code comes back.
     await page.goto("/shop/blue-mantis/schedule/board");
-    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    // Named exactly, not "the link in this row": a departure row on the board
+    // carries a second anchor — the "Set a price for …" nudge, whose accessible
+    // name starts with the trip's own title — so a bare `getByRole("link")`
+    // resolved to two elements and failed strict mode on CI.
+    await page
+      .locator("li")
+      .filter({ hasText: title })
+      .getByRole("link", { name: title, exact: true })
+      .click();
     await expect(page.locator("#roster").getByText("Nora Quinn")).toBeVisible();
 
     const confirmed = await request.post("/api/test/inbound-message", {
@@ -161,7 +169,15 @@ test.describe("reply keywords", () => {
 
     // The seat is untouched by either message.
     await page.goto("/shop/blue-mantis/schedule/board");
-    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    // Named exactly, not "the link in this row": a departure row on the board
+    // carries a second anchor — the "Set a price for …" nudge, whose accessible
+    // name starts with the trip's own title — so a bare `getByRole("link")`
+    // resolved to two elements and failed strict mode on CI.
+    await page
+      .locator("li")
+      .filter({ hasText: title })
+      .getByRole("link", { name: title, exact: true })
+      .click();
     await expect(page.locator("#roster").getByText("Ivan Petrov")).toBeVisible();
   });
 });

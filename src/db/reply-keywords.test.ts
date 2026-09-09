@@ -405,6 +405,42 @@ describe("handleInboundReplyKeyword — what it does", () => {
     expect(confirmed?.answeredAt).not.toBeNull();
   });
 
+  /**
+   * **Two messages can share an instant.** The pending-request lookup used to
+   * ask for a `C` strictly *before* the code that answers it, and a `received_at`
+   * is only as fine-grained as whatever wrote it: the e2e fleet freezes the
+   * clock, so the request and its answer landed on the same timestamp and the
+   * code read as "six characters somebody typed". A busy real inbox can put two
+   * deliveries on one timestamp too, and would have failed the same way — a
+   * diver giving up a seat, told their own code was not a code.
+   */
+  it("releases the seat when the code arrives on the same instant as the request", async () => {
+    const { db, shop, bookingId, personId, now } = await context();
+    const provider = acceptingProvider();
+    await handleInboundReplyKeyword(db, {
+      shopId: shop.id,
+      inboundMessageId: await inbound(db, shop.id, "C", { receivedAt: now }),
+      now,
+      provider,
+    });
+    const code = confirmationCode(
+      { shopId: shop.id, bookingId, personId, channel: "email", toAddress: DIVER.email },
+      now.getTime(),
+    );
+    // The same `receivedAt`, not a later one.
+    const confirmId = await inbound(db, shop.id, code, { receivedAt: now });
+
+    expect(
+      await handleInboundReplyKeyword(db, {
+        shopId: shop.id,
+        inboundMessageId: confirmId,
+        now,
+        provider,
+      }),
+    ).toBe("cancelled");
+    expect(await statusOf(db, bookingId)).toBe("cancelled");
+  });
+
   it("refuses a code that has aged past its two windows", async () => {
     const { db, shop, bookingId, personId, now } = await context();
     const provider = acceptingProvider();
