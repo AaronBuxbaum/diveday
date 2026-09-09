@@ -8,6 +8,7 @@ import {
   accountTokens,
   activityEvents,
   authProviderAccounts,
+  authVerifications,
   bookings,
   buddyTeamEvents,
   globalDiveSites,
@@ -452,6 +453,14 @@ describe("deleteDemoShopCascade", () => {
       accountId: "google-subject-demo",
       refreshToken: "live-refresh-token",
     });
+    // No foreign key reaches this one — it names its person as text — so the
+    // reap sweeps it by `identifier` or not at all, and a row left behind
+    // holds the demo owner's address and a live token.
+    await db.insert(authVerifications).values({
+      identifier: ownerEmail,
+      value: "a-live-reset-token",
+      expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+    });
 
     await deleteDemoShopCascade(db, shop.id);
 
@@ -462,6 +471,14 @@ describe("deleteDemoShopCascade", () => {
           .select()
           .from(authProviderAccounts)
           .where(eq(authProviderAccounts.userAccountId, ownerAccount.id))
+      ).length,
+    ).toBe(0);
+    expect(
+      (
+        await db
+          .select()
+          .from(authVerifications)
+          .where(eq(authVerifications.identifier, ownerEmail))
       ).length,
     ).toBe(0);
   });

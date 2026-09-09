@@ -9,6 +9,7 @@ import { saveShopIntegration } from "./integrations";
 import { recordRollCall } from "./manifests";
 import {
   authProviderAccounts,
+  authVerifications,
   bookings,
   integrationEvents,
   orders,
@@ -419,6 +420,22 @@ describe("anonymizeDiver — a provider login (issue #1594)", () => {
       password: "a-credentials-hash",
       scope: "openid email",
     });
+    // better-auth's `verification` model, the same gap with no foreign key to
+    // find it by: `identifier` is the address or the account id and `value` is
+    // a live bearer token, so a row surviving an erasure is both the diver's
+    // email and a credential that still opens their account.
+    await db.insert(authVerifications).values([
+      {
+        identifier: "rafaela@example.com",
+        value: "a-live-reset-token",
+        expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+      },
+      {
+        identifier: account.id,
+        value: "a-live-verification-token",
+        expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+      },
+    ]);
 
     const erased = await anonymizeDiver(db, {
       shopId: shop.id,
@@ -433,5 +450,6 @@ describe("anonymizeDiver — a provider login (issue #1594)", () => {
         .from(authProviderAccounts)
         .where(eq(authProviderAccounts.userAccountId, account.id)),
     ).toEqual([]);
+    expect(await db.select().from(authVerifications)).toEqual([]);
   });
 });

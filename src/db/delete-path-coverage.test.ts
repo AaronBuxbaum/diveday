@@ -44,6 +44,16 @@ import { createDemoShop, deleteDemoShopCascade, resetDemoSchedule } from "./seed
  * and follows foreign keys outward, which catches that table and any sibling
  * added the same way.
  *
+ * **What the closure cannot reach is written down rather than left silent.**
+ * It follows declared foreign keys, so a table that names a tenant as *text* —
+ * a denormalized slug, a polymorphic subject id, an email — is outside it no
+ * matter how many hops it runs. `UNSCOPED_REASONS` below is the complement,
+ * asserted exactly: every table the closure does not reach must carry a
+ * written reason, so the next table of that shape is a failure here rather
+ * than a silence. `auth_verifications` is the live example — better-auth's
+ * `verification` model has no foreign key at all, and both paths sweep it by
+ * `identifier` instead.
+ *
  * One limit, stated rather than papered over: this proves a table is *named*,
  * not that it is named in the right *order*. Ordering is what the FK violations
  * in `reap-demos.test.ts` prove, and both guards are needed: this one says "you
@@ -81,7 +91,16 @@ function shopScopedTableNames(): string[] {
       references: config.foreignKeys.map((key) => getTableName(key.reference().foreignTable)),
     });
   }
-  const scoped = new Set([...tables].filter(([, table]) => table.hasShopId).map(([name]) => name));
+  // `shops` is a root beside the `shop_id` carriers: it has no such column of
+  // its own, and leaving it out made both paths' answers about the shop row
+  // unassertable — `RESET_KEEPS`'s "the shop itself survives" entry was inert
+  // prose rather than a claim this file checks.
+  const scoped = new Set(
+    [...tables]
+      .filter(([name, table]) => table.hasShopId || name === "shops")
+      .map(([name]) => name),
+  );
+
   for (let grew = true; grew; ) {
     grew = false;
     for (const [name, table] of tables) {
@@ -93,6 +112,37 @@ function shopScopedTableNames(): string[] {
   }
   return [...scoped];
 }
+
+/** Every table in the schema, by name. */
+function allTableNames(): string[] {
+  const names: string[] = [];
+  for (const value of Object.values(schema)) {
+    try {
+      getTableConfig(value as Parameters<typeof getTableConfig>[0]);
+    } catch {
+      continue;
+    }
+    names.push(getTableName(value as Parameters<typeof getTableName>[0]));
+  }
+  return names;
+}
+
+/**
+ * The complement of the closure: every table no foreign key connects to a
+ * shop, and why that is the right answer for it. Adding a table that belongs
+ * to a person or a shop but names them as *text* fails here, which is the only
+ * place it can fail — see the note above.
+ */
+const UNSCOPED_REASONS: Record<string, string> = {
+  auth_verifications:
+    "better-auth's `verification` model: no foreign key, names its person as text in `identifier`. Both paths sweep it by that column, and so does the erasure (src/db/anonymize.ts) — a pending row holds an address and a live token",
+  global_dive_sites: "DiveDay's own catalogue of sites, shared by every shop and owned by none",
+  global_dive_site_versions: "the catalogue's own history, beside the table above",
+  notification_rate_limit_state:
+    "provider coordination keyed by ceiling and period, holding no person",
+  stripe_webhook_events:
+    "the platform's delivery ledger, pruned by retention; it carries no payload",
+};
 
 /**
  * Run `work` with a db that records every table it deletes from, and otherwise
@@ -208,6 +258,15 @@ const CASCADE_KEEPS: Record<string, string> = {
 describe("shop-scoped delete-path coverage", () => {
   it("enumerates enough tables to be worth asserting on", () => {
     expect(shopScopedTableNames().length).toBeGreaterThan(30);
+  });
+
+  it("has a written reason for every table the foreign-key closure cannot reach", () => {
+    const scoped = new Set(shopScopedTableNames());
+    expect(
+      allTableNames()
+        .filter((name) => !scoped.has(name))
+        .sort(),
+    ).toEqual(Object.keys(UNSCOPED_REASONS).sort());
   });
 
   it("deletes or deliberately keeps every shop-scoped table in resetDemoSchedule", async () => {

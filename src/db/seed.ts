@@ -15,6 +15,7 @@ import {
   accountTokens,
   activityEvents,
   authProviderAccounts,
+  authVerifications,
   boats,
   bookingArrivalEvents,
   bookingCapabilities,
@@ -1355,12 +1356,11 @@ export async function resetDemoSchedule(
     // the same chain — a forgot-password request against a purged person's
     // account leaves one behind, so it must go before user_accounts for the
     // identical reason (security review finding on 20260725-account-lifecycle-emails).
-    const purgeAccountIds = (
-      await db
-        .select({ id: userAccounts.id })
-        .from(userAccounts)
-        .where(inArray(userAccounts.personId, purgeIds))
-    ).map((row) => row.id);
+    const purgeAccounts = await db
+      .select({ id: userAccounts.id, email: userAccounts.email })
+      .from(userAccounts)
+      .where(inArray(userAccounts.personId, purgeIds));
+    const purgeAccountIds = purgeAccounts.map((row) => row.id);
     if (purgeAccountIds.length > 0) {
       await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, purgeAccountIds));
       // A provider login references the account row and carries no cascade, so
@@ -1372,6 +1372,18 @@ export async function resetDemoSchedule(
       await db
         .delete(authProviderAccounts)
         .where(inArray(authProviderAccounts.userAccountId, purgeAccountIds));
+      // better-auth's verification rows reach nothing by foreign key — they
+      // name a person as text in `identifier` — so they are cleared by the
+      // handles better-auth writes them under rather than by a join. They
+      // would not FK-violate; they would simply outlive the person, holding
+      // their address and a live token (issue #1594's security review).
+      await db
+        .delete(authVerifications)
+        .where(
+          inArray(authVerifications.identifier, [
+            ...new Set(purgeAccounts.flatMap((row) => [row.id, row.email])),
+          ]),
+        );
       await db.delete(accountStepUps).where(inArray(accountStepUps.userAccountId, purgeAccountIds));
       await db
         .delete(accountSecurity)
