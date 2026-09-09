@@ -9,6 +9,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
+import { settleWithLimit } from "@/lib/settle-with-limit";
 import { AutoPrint } from "../trips/[id]/_components/AutoPrint";
 import { keptSheets } from "../trips/[id]/print/_components/kept-sheets";
 import {
@@ -22,6 +23,17 @@ export const metadata: Metadata = {
 };
 
 export const instant = true;
+
+/**
+ * How many departures this document composes at once.
+ *
+ * Three, against a pool of five connections and roughly forty reads per
+ * departure: enough to keep the pool busy, small enough that one captain's
+ * printout cannot hold the whole instance's database access while a twenty-boat
+ * day assembles (issue #1598). The reasoning in full, and the ordering and
+ * failure guarantees this relies on, are in `src/lib/settle-with-limit.ts`.
+ */
+const DEPARTURES_IN_FLIGHT = 3;
 
 /**
  * **The paper day** (N-54): every departure of the shop's own calendar day as
@@ -62,7 +74,26 @@ export default async function ShopDayPrintPage({
   const now = nowDate();
   const db = await getDb();
   const departures = await listShopDayDepartures(db, shop.id, shop.timezone, now);
-  // **`allSettled`, because one departure must never cost the other eleven.**
+  // **A few boats at a time, and `settled` rather than `all`.**
+  //
+  // The ceiling first, because it is the newer half (issue #1598). Each packet
+  // is roughly forty database round trips — `getTripOverview`'s fifteen, the
+  // manifest page's twelve and its field-guide follow-up, the prep page's own —
+  // and the pool this instance holds is five connections
+  // (`DEFAULT_POOL_MAX`). Asking for twenty departures at once does not run
+  // eight hundred queries at once; it queues them, and while they queue this
+  // one document owns every connection the app has. Any staff role can open
+  // this page, and holding refresh multiplies it. Three in flight keeps those
+  // five connections busy with a short queue behind them and leaves the rest of
+  // the shop able to reach the database while a captain prints.
+  //
+  // Not `<Suspense>` per departure, which was the other candidate on the issue:
+  // boundaries change when bytes flush, not how many reads start, so the
+  // fan-out would have been exactly the same — and this document is only useful
+  // whole (`AutoPrint` waits for `PacketReady` before opening the dialog), so
+  // there is nobody to hand an early sheet to.
+  //
+  // **And settled, because one departure must never cost the other eleven.**
   // A manager can tap Delete on today's board while a captain's request for
   // this document is in flight, and the composed manifest page answers a
   // vanished departure the only way a page can — `notFound()`, which throws.
@@ -72,17 +103,15 @@ export default async function ShopDayPrintPage({
   // window that is left, and for anything else one departure's readers can
   // raise. A dropped sheet is not silent: the count in the header below is
   // `sheets.length`, so the paper says eleven when eleven is what it holds.
-  const packets = await Promise.allSettled(
-    departures.map((departure) =>
-      TripPacket({
-        shopSlug,
-        shop,
-        tripId: departure.id,
-        actorPersonId: session.user.personId,
-        locale,
-        t,
-      }),
-    ),
+  const packets = await settleWithLimit(departures, DEPARTURES_IN_FLIGHT, (departure) =>
+    TripPacket({
+      shopSlug,
+      shop,
+      tripId: departure.id,
+      actorPersonId: session.user.personId,
+      locale,
+      t,
+    }),
   );
   const sheets = keptSheets(
     packets,
