@@ -156,6 +156,7 @@
       "last-minute-fill.spec.ts",
       "next-departure.spec.ts",
       "nitrox.spec.ts",
+      "off-season.spec.ts",
       "partner-referral.spec.ts",
       "readiness.spec.ts",
       "refunds.spec.ts",
@@ -179,6 +180,7 @@
       "schedule-above-level",
       "schedule-embed",
       "schedule-lens",
+      "schedule-off-season",
       "shopfront-known-diver"
     ],
     "a11y": ["a11y.spec.ts"]

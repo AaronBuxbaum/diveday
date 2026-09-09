@@ -162,6 +162,12 @@
     "noTripsPublic": "Check back soon. Tell us below what you’d like to dive, or reach us at the foot of the page.",
     "noTripsPublicNoPhone": "Check back soon, or tell us below what you’d like to dive.",
     "noTripsMonth": "No trips this month. Try another month.",
+    "offSeason": {
+      "heading": "Nothing on the water for a while",
+      "back": "We’re back out {date}.",
+      "nextSeason": "{name} opens {date}.",
+      "requestHeading": "Ask us for a day"
+    },
     "filters": {
       "tripType": "Trip type",
       "allTrips": "All trips",

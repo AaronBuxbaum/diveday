@@ -55,6 +55,7 @@ import {
 import { cachedListFormat } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
+import { offSeason } from "@/lib/off-season";
 import {
   publicAvailabilityPath,
   publicBoatPath,
@@ -84,6 +85,7 @@ import { FindMyBookingForm } from "./_components/FindMyBookingForm";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 import { LiveBoatPanel } from "./_components/LiveBoatPanel";
 import { NextBoatCard } from "./_components/NextBoatCard";
+import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { SeasonBand } from "./_components/SeasonBand";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
@@ -280,9 +282,12 @@ export default async function SchedulePage({
    * "Live" is asked on the shop's own calendar day, never the server's: a Key
    * Largo mini-season closes at midnight in Key Largo (`src/lib/season-events.ts`).
    */
-  const liveSeasons = isEmbed
-    ? []
-    : liveSeasonEvents(await listSeasonEvents(db, shop.id), calendarDateInTimezone(now, tz));
+  const today = calendarDateInTimezone(now, tz);
+  // The whole calendar, not only the live half: the off-season card below
+  // needs the *upcoming* windows, which is the one honest date a shop with an
+  // empty board still has on file (`src/lib/off-season.ts`).
+  const seasonRows = isEmbed ? [] : await listSeasonEvents(db, shop.id);
+  const liveSeasons = liveSeasonEvents(seasonRows, today);
 
   // The view a diver has built — month, embed mode, the lens, and every list
   // filter — must survive every link that re-renders this page. A pager or
@@ -447,6 +452,41 @@ export default async function SchedulePage({
    * case the cheap signal already says no.
    */
   const everHadDeparture = hasUpcoming || (await countShopTrips(db, shop.id)) > 0;
+
+  /**
+   * **The off-season as a designed state** (N-45).
+   *
+   * Nothing public on the board for the next thirty days is a state the
+   * storefront is now designed for rather than an empty list under "No trips
+   * on the books yet" — see `src/lib/off-season.ts` for why the answer is
+   * derived from a departure the shop scheduled or a season it wrote, and
+   * never from a fourth column somebody has to remember to update.
+   *
+   * Never inside the frame. `?embed=1` is a window onto the next few
+   * departures on somebody else's website; a card about the shop's year, and
+   * a composer under it, are both things the host page did not ask for, and
+   * the widget already keeps its own terminal state below.
+   */
+  const quiet = isEmbed
+    ? { quiet: false, opensAt: null, nextSeason: null }
+    : offSeason({ now, firstDeparture: range.first, today, seasons: seasonRows });
+  /**
+   * The one sentence the card is allowed, already zoned and already worded.
+   *
+   * A departure outranks a written season and only one ever renders — see
+   * `offSeason`. `formatShortDate` for the departure (a real instant, read in
+   * the shop's own zone, the same words the week rows below use) and
+   * `formatCalendarDate` for the season, whose two dates have no instant in
+   * them at all.
+   */
+  const quietLine = quiet.opensAt
+    ? t("schedule.offSeason.back", { date: formatShortDate(quiet.opensAt, locale, tz) })
+    : quiet.nextSeason
+      ? t("schedule.offSeason.nextSeason", {
+          name: quiet.nextSeason.name,
+          date: formatCalendarDate(quiet.nextSeason.startsOn, locale),
+        })
+      : null;
   // Where each departure on this page actually goes. One read for the page,
   // not one per card — and read off the *dives* rather than `trips.dive_site_id`
   // (dive one's site, copied onto the trip row), so a two-site day names both
@@ -819,6 +859,17 @@ export default async function SchedulePage({
               locale={locale}
               t={t}
             />
+            {/* **The quiet, before the boat** (N-45). A shop with nothing on
+                the water for a month leads with that fact rather than with a
+                departure seven weeks out, which a visitor would otherwise have
+                to date-subtract for themselves. It replaces the schedule's
+                terminal empty state below rather than joining it, and the
+                page's one primary becomes the composer's own submit — the
+                arrangement `NextBoatCard` has always promised for a page with
+                no bookable boat. */}
+            {quiet.quiet ? (
+              <OffSeasonPanel heading={t("schedule.offSeason.heading")} line={quietLine} />
+            ) : null}
             {/* **The boat that is out** — ADR 20260904-reef-all-the-way-down,
                 decision 2, Budget rule 4. Above the next departure, because a
                 visitor who can see a boat leave from the dock is asking about
@@ -890,191 +941,206 @@ export default async function SchedulePage({
         />
       ) : null}
 
-      <div className={isEmbed ? undefined : "mt-10"}>
-        {isEmbed ? null : (
-          <div className="mb-4">
-            <h2 className={`font-brand-display ${SECTION_TITLE_CLASS}`}>{t("schedule.title")}</h2>
-            {/* Whose morning is "7:30 AM"? A diver comparing boats from another
-                timezone reads these times against their own clock unless
-                something says otherwise (review finding I18N-L2) — so it is
-                said once, with the times it qualifies rather than in a masthead
-                two sections above them. Anchored to a real departure, because a
-                zone's *name* moves with daylight saving and a schedule read in
-                March may be listing July boats. */}
-            {(() => {
-              const anchor = upcoming[0]?.startsAt ?? range.first;
-              if (!anchor) return null;
-              return (
-                <p className="mt-1 text-sm text-muted">
-                  {t("schedule.timesInZone", {
-                    shop: shop.name,
-                    zone: timeZoneLabel(anchor, locale, tz),
+      {/* **The board itself, and nothing where there is no board** (N-45).
+          A shop with nothing public on the books renders no "Schedule"
+          heading, no timezone line and no dashed box: the off-season card
+          above has already said what there is to say, and a section heading
+          over nothing is the page apologising. The frame keeps its own
+          terminal state (see the empty state inside). */}
+      {hasUpcoming || isEmbed ? (
+        <div className={isEmbed ? undefined : "mt-10"}>
+          {isEmbed ? null : (
+            <div className="mb-4">
+              <h2 className={`font-brand-display ${SECTION_TITLE_CLASS}`}>{t("schedule.title")}</h2>
+              {/* Whose morning is "7:30 AM"? A diver comparing boats from another
+                  timezone reads these times against their own clock unless
+                  something says otherwise (review finding I18N-L2) — so it is
+                  said once, with the times it qualifies rather than in a masthead
+                  two sections above them. Anchored to a real departure, because a
+                  zone's *name* moves with daylight saving and a schedule read in
+                  March may be listing July boats. */}
+              {(() => {
+                const anchor = upcoming[0]?.startsAt ?? range.first;
+                if (!anchor) return null;
+                return (
+                  <p className="mt-1 text-sm text-muted">
+                    {t("schedule.timesInZone", {
+                      shop: shop.name,
+                      zone: timeZoneLabel(anchor, locale, tz),
+                    })}
+                  </p>
+                );
+              })()}
+            </div>
+          )}
+
+          {hasUpcoming && !isEmbed && (prevMonthKey || nextMonthKey || explicitMonth) ? (
+            // A labeled region rather than a `<nav>` landmark, matching the month
+            // grid it replaced: the embed widget promises "no page chrome" as
+            // literally zero navigation landmarks inside the iframe
+            // (e2e/schedule-embed.spec.ts), and two month arrows don't merit one.
+            <section
+              aria-label={t("schedule.monthNav")}
+              className="mb-4 flex flex-wrap items-center gap-2"
+            >
+              {/* The arrows sit beside the label they page, not floated to the
+                  far edge of the viewport — a control detached from its object is
+                  a control the reader has to go looking for (principle 10; the
+                  lone `›` at the right margin read as a stray glyph on a phone). */}
+              <p className="text-base font-semibold">{monthLabel(currentMonth, locale)}</p>
+              {prevMonthKey ? (
+                <Link
+                  href={`${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
+                  aria-label={t("schedule.previousMonth")}
+                  scroll={false}
+                  className={buttonClass({
+                    variant: "ghost",
+                    size: "sm",
+                    className: "min-w-11 text-base",
                   })}
-                </p>
-              );
-            })()}
-          </div>
-        )}
+                >
+                  <DiveDayIcon name="chevron-left" className="size-4" />
+                </Link>
+              ) : null}
+              {nextMonthKey ? (
+                <Link
+                  href={`${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
+                  aria-label={t("schedule.nextMonth")}
+                  scroll={false}
+                  className={buttonClass({
+                    variant: "ghost",
+                    size: "sm",
+                    className: "min-w-11 text-base",
+                  })}
+                >
+                  <DiveDayIcon name="chevron-right" className="size-4" />
+                </Link>
+              ) : null}
+            </section>
+          ) : null}
 
-        {hasUpcoming && !isEmbed && (prevMonthKey || nextMonthKey || explicitMonth) ? (
-          // A labeled region rather than a `<nav>` landmark, matching the month
-          // grid it replaced: the embed widget promises "no page chrome" as
-          // literally zero navigation landmarks inside the iframe
-          // (e2e/schedule-embed.spec.ts), and two month arrows don't merit one.
-          <section
-            aria-label={t("schedule.monthNav")}
-            className="mb-4 flex flex-wrap items-center gap-2"
-          >
-            {/* The arrows sit beside the label they page, not floated to the
-                far edge of the viewport — a control detached from its object is
-                a control the reader has to go looking for (principle 10; the
-                lone `›` at the right margin read as a stray glyph on a phone). */}
-            <p className="text-base font-semibold">{monthLabel(currentMonth, locale)}</p>
-            {prevMonthKey ? (
-              <Link
-                href={`${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
-                aria-label={t("schedule.previousMonth")}
-                scroll={false}
-                className={buttonClass({
-                  variant: "ghost",
-                  size: "sm",
-                  className: "min-w-11 text-base",
-                })}
-              >
-                <DiveDayIcon name="chevron-left" className="size-4" />
-              </Link>
-            ) : null}
-            {nextMonthKey ? (
-              <Link
-                href={`${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
-                aria-label={t("schedule.nextMonth")}
-                scroll={false}
-                className={buttonClass({
-                  variant: "ghost",
-                  size: "sm",
-                  className: "min-w-11 text-base",
-                })}
-              >
-                <DiveDayIcon name="chevron-right" className="size-4" />
-              </Link>
-            ) : null}
-          </section>
-        ) : null}
+          {/* **The lens rail** — ADR 20260904-reef-all-the-way-down, decision 2
+              (issue #1162): the shop's own words for its kinds of day, as a row
+              of views onto the list below.
 
-        {/* **The lens rail** — ADR 20260904-reef-all-the-way-down, decision 2
-            (issue #1162): the shop's own words for its kinds of day, as a row
-            of views onto the list below.
+              **Above the filter form, never between it and the list.** Seven
+              assertions across `e2e/schedule-filters.spec.ts` and
+              `e2e/trip-admission.spec.ts` address the departures as the `ul`
+              directly after the form, and an element sibling in between breaks
+              every one of them silently; `page.composition.test.ts` pins the
+              order. And never inside the frame: `FilterChips` renders a `<nav>`
+              landmark, and `?embed=1` promises the host page zero navigation
+              landmarks. */}
+          {hasUpcoming && !isEmbed && lenses.length > 0 ? (
+            <FilterChips
+              label={t("schedule.lenses.railLabel")}
+              className="mb-4"
+              chips={[
+                {
+                  key: "all",
+                  href: lensHref(null),
+                  active: !activeLens,
+                  label: t("schedule.lenses.all"),
+                },
+                // The shop's own word, verbatim and untranslated — the same
+                // contract as a boat's line or a site's fit tone. Only the reset
+                // chip and the rail's accessible name are DiveDay's to say.
+                ...lenses.map((entry) => ({
+                  key: entry.slug,
+                  href: lensHref(entry.slug),
+                  active: activeLens?.id === entry.id,
+                  label: entry.name,
+                })),
+              ]}
+            />
+          ) : null}
 
-            **Above the filter form, never between it and the list.** Seven
-            assertions across `e2e/schedule-filters.spec.ts` and
-            `e2e/trip-admission.spec.ts` address the departures as the `ul`
-            directly after the form, and an element sibling in between breaks
-            every one of them silently; `page.composition.test.ts` pins the
-            order. And never inside the frame: `FilterChips` renders a `<nav>`
-            landmark, and `?embed=1` promises the host page zero navigation
-            landmarks. */}
-        {hasUpcoming && !isEmbed && lenses.length > 0 ? (
-          <FilterChips
-            label={t("schedule.lenses.railLabel")}
-            className="mb-4"
-            chips={[
-              {
-                key: "all",
-                href: lensHref(null),
-                active: !activeLens,
-                label: t("schedule.lenses.all"),
-              },
-              // The shop's own word, verbatim and untranslated — the same
-              // contract as a boat's line or a site's fit tone. Only the reset
-              // chip and the rail's accessible name are DiveDay's to say.
-              ...lenses.map((entry) => ({
-                key: entry.slug,
-                href: lensHref(entry.slug),
-                active: activeLens?.id === entry.id,
-                label: entry.name,
-              })),
-            ]}
-          />
-        ) : null}
+          {/* No filters in the frame. A month pager and a "has space" checkbox are
+              page furniture inside a 900px window whose whole job is "here is
+              what's next" — and every control in there is one more thing competing
+              with the shop's own page around it (issue #805). */}
+          {hasUpcoming && !isEmbed ? (
+            // Server-fed, same house pattern as the roster search in
+            // AddDiverSection.tsx: the URL carries the filters and the list below
+            // re-renders filtered. Changing a filter submits the form itself —
+            // there is no Apply button for anyone (ADR
+            // 20260812-javascript-is-required).
+            <ScheduleFilters
+              embed={isEmbed}
+              month={month ?? null}
+              lens={activeLens?.slug ?? null}
+              tripTypeFilter={tripTypeFilter ?? null}
+              hasSpaceFilter={hasSpaceFilter}
+              canDiveFilter={canDiveFilter ?? null}
+              hideAboveFilter={hideAboveFilter}
+              aboveLevelNotice={
+                canDiveFilter && !hideAboveFilter && aboveStatedLevel.size > 0
+                  ? // It says the trips are still bookable, because they are: this
+                    // is a stated preference, and a shop will take an Open Water
+                    // diver on an Advanced charter as a guided dive or sell them the
+                    // specialty.
+                    t("schedule.filters.aboveLevelCount", {
+                      count: aboveStatedLevel.size,
+                      level: t(DIVER_CERTIFICATION_LEVEL_KEYS[canDiveFilter]),
+                    })
+                  : null
+              }
+              copy={{
+                tripType: t("schedule.filters.tripType"),
+                allTrips: t("schedule.filters.allTrips"),
+                funDive: t("schedule.filters.funDive"),
+                course: t("schedule.filters.course"),
+                hasSpace: t("schedule.filters.hasSpace"),
+                canDive: t("schedule.filters.canDive"),
+                canDiveUnsaid: t("schedule.filters.canDiveUnsaid"),
+                // Ladder order, and the same words the public booking form's own
+                // certification select uses — the vocabulary a diver has already
+                // been asked in is the one to ask them in again.
+                canDiveLevels: DECLARABLE_CERTIFICATION_LEVELS.map((level) => ({
+                  value: level,
+                  label: t(DIVER_CERTIFICATION_LEVEL_KEYS[level]),
+                })),
+                hideAboveLevel: t("schedule.filters.hideAboveLevel"),
+              }}
+            />
+          ) : null}
 
-        {/* No filters in the frame. A month pager and a "has space" checkbox are
-            page furniture inside a 900px window whose whole job is "here is
-            what's next" — and every control in there is one more thing competing
-            with the shop's own page around it (issue #805). */}
-        {hasUpcoming && !isEmbed ? (
-          // Server-fed, same house pattern as the roster search in
-          // AddDiverSection.tsx: the URL carries the filters and the list below
-          // re-renders filtered. Changing a filter submits the form itself —
-          // there is no Apply button for anyone (ADR
-          // 20260812-javascript-is-required).
-          <ScheduleFilters
-            embed={isEmbed}
-            month={month ?? null}
-            lens={activeLens?.slug ?? null}
-            tripTypeFilter={tripTypeFilter ?? null}
-            hasSpaceFilter={hasSpaceFilter}
-            canDiveFilter={canDiveFilter ?? null}
-            hideAboveFilter={hideAboveFilter}
-            aboveLevelNotice={
-              canDiveFilter && !hideAboveFilter && aboveStatedLevel.size > 0
-                ? // It says the trips are still bookable, because they are: this
-                  // is a stated preference, and a shop will take an Open Water
-                  // diver on an Advanced charter as a guided dive or sell them the
-                  // specialty.
-                  t("schedule.filters.aboveLevelCount", {
-                    count: aboveStatedLevel.size,
-                    level: t(DIVER_CERTIFICATION_LEVEL_KEYS[canDiveFilter]),
-                  })
-                : null
-            }
-            copy={{
-              tripType: t("schedule.filters.tripType"),
-              allTrips: t("schedule.filters.allTrips"),
-              funDive: t("schedule.filters.funDive"),
-              course: t("schedule.filters.course"),
-              hasSpace: t("schedule.filters.hasSpace"),
-              canDive: t("schedule.filters.canDive"),
-              canDiveUnsaid: t("schedule.filters.canDiveUnsaid"),
-              // Ladder order, and the same words the public booking form's own
-              // certification select uses — the vocabulary a diver has already
-              // been asked in is the one to ask them in again.
-              canDiveLevels: DECLARABLE_CERTIFICATION_LEVELS.map((level) => ({
-                value: level,
-                label: t(DIVER_CERTIFICATION_LEVEL_KEYS[level]),
-              })),
-              hideAboveLevel: t("schedule.filters.hideAboveLevel"),
-            }}
-          />
-        ) : null}
-
-        {/* **The shipped terminal state, unchanged.** A shop with nothing on the
-            books says so and points at the composer below; the page's one
-            primary becomes that composer's own submit. */}
-        {!hasUpcoming ? (
-          <EmptyState
-            title={t("schedule.noTrips")}
-            body={t(
-              shop.contactPhone || shop.contactEmail
-                ? "schedule.noTripsPublic"
-                : "schedule.noTripsPublicNoPhone",
-            )}
-          />
-        ) : visibleUpcoming.length === 0 ? (
-          <EmptyState
-            title={
-              hasSpaceFilter || tripTypeFilter || hideAboveFilter || activeLens
-                ? t("schedule.filters.noMatches")
-                : t("schedule.noTripsMonth")
-            }
-          />
-        ) : (
-          <WeekLedger
-            rows={weekRows}
-            listLabel={t("schedule.tripListLabel")}
-            stickyTop={isEmbed ? "top-0" : "top-(--chrome-h)"}
-          />
-        )}
-      </div>
+          {/* **The terminal state, now only inside the frame.** On the page
+              itself an empty board is the off-season card above plus the
+              composer below it (N-45) — a heading, a dashed box and a "check
+              back soon" underneath that card would be the same news three times,
+              and the middle one is the sentence that reads as a shop which has
+              stopped. The widget keeps it: `?embed=1` renders neither of those
+              two, and a blank iframe on a shop's own website says nothing at
+              all. */}
+          {!hasUpcoming ? (
+            isEmbed ? (
+              <EmptyState
+                title={t("schedule.noTrips")}
+                body={t(
+                  shop.contactPhone || shop.contactEmail
+                    ? "schedule.noTripsPublic"
+                    : "schedule.noTripsPublicNoPhone",
+                )}
+              />
+            ) : null
+          ) : visibleUpcoming.length === 0 ? (
+            <EmptyState
+              title={
+                hasSpaceFilter || tripTypeFilter || hideAboveFilter || activeLens
+                  ? t("schedule.filters.noMatches")
+                  : t("schedule.noTripsMonth")
+              }
+            />
+          ) : (
+            <WeekLedger
+              rows={weekRows}
+              listLabel={t("schedule.tripListLabel")}
+              stickyTop={isEmbed ? "top-0" : "top-(--chrome-h)"}
+            />
+          )}
+        </div>
+      ) : null}
       {/* No pager in the frame either. "Show later departures" is the same
           nested navigation the fixed height caused — a second page loaded
           inside somebody else's site — and the widget already offers the way
@@ -1138,6 +1204,33 @@ export default async function SchedulePage({
             </Link>
           ) : null}
         </div>
+      ) : null}
+      {/* **The ask, promoted** (N-45). On a quiet board this is the page's one
+          primary and its whole job, so it stands as its own section with the
+          form already open rather than as the first collapsed row of a group
+          of three — a shop between seasons cannot afford its one available
+          conversion to be behind a chevron. It is the same component, the same
+          action and the same `#request-a-date` anchor; only the heading and the
+          disclosure change, and the collapsed row below stands down so the id
+          is never rendered twice.
+
+          Its own provider, matching the course page's exactly: this form is
+          the only Client Component in it, and `inquiry` is the only namespace
+          it reads. */}
+      {quiet.quiet ? (
+        <DiverIntlProvider locale={locale} timeZone={tz} namespaces={["inquiry"]}>
+          <DateRequestForm
+            submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
+            askInterest
+            sectionId="request-a-date"
+            contactEmail={null}
+            contactPhone={null}
+            copy={{
+              ...dateRequestCopy(t, "dive"),
+              heading: t("schedule.offSeason.requestHeading"),
+            }}
+          />
+        </DiverIntlProvider>
       ) : null}
       {/* **The shelves.** What the shop teaches, then what divers said about
           it — the two things a diver weighs after the boats and before the
@@ -1228,7 +1321,11 @@ export default async function SchedulePage({
           The Client Components on this page that read copy sit under one
           provider, so the diver bundle crosses to the browser once, for the
           namespaces those components need and no more. */}
-      {!isEmbed ? (
+      {/* The group stands down entirely when nothing is left in it: a shop
+          that has never run a departure offers neither the deal list nor the
+          find-my-link door, and on a quiet board the date request has moved
+          above — which between them can empty the list under the heading. */}
+      {!isEmbed && (everHadDeparture || !quiet.quiet) ? (
         <section aria-labelledby="more-ways-heading" className="mt-12">
           <h2 id="more-ways-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
             {t("schedule.moreWaysHeading")}
@@ -1260,15 +1357,20 @@ export default async function SchedulePage({
                   The footer four rows below already carries the shop's email and
                   phone, so omitting them here prevents duplicate contact lines
                   on the same screen (issue #777). */}
-              <DateRequestForm
-                submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
-                askInterest
-                sectionId="request-a-date"
-                contactEmail={null}
-                contactPhone={null}
-                collapsible
-                copy={dateRequestCopy(t, "dive")}
-              />
+              {/* Not while the off-season card is up: the same composer is
+                  already open above, and two of them would render the same
+                  `#request-a-date` id twice (N-45). */}
+              {quiet.quiet ? null : (
+                <DateRequestForm
+                  submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
+                  askInterest
+                  sectionId="request-a-date"
+                  contactEmail={null}
+                  contactPhone={null}
+                  collapsible
+                  copy={dateRequestCopy(t, "dive")}
+                />
+              )}
               {/* The deal list stands down for a shop that has never had a
                   departure. It asks a diver to be told when a boat needs to fill
                   seats at a discount, and points them at "that trip's own page"

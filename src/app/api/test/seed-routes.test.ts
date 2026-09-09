@@ -39,6 +39,7 @@ const seedShelfToken = await import("./seed-shelf-token/route");
 const seedDisplayToken = await import("./seed-display-token/route");
 const seedYearBandShop = await import("./seed-year-band-shop/route");
 const inboundMessage = await import("./inbound-message/route");
+const seedOffSeason = await import("./seed-off-season/route");
 
 const secret = "e2e-test-secret";
 
@@ -184,6 +185,18 @@ const routes: SeedRoute[] = [
     // working, non-expiring link over a shop's whole day for a lobby screen —
     // a route answering on a misconfigured deployment would be handing out a
     // real shop's board to anyone.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-off-season",
+    POST: seedOffSeason.POST,
+    // No body is a valid ask (the shared fixture is the default), so reaching
+    // the database is what proves the guard let it through. Past that it soft-
+    // deletes every upcoming departure a shop has, so a route answering on a
+    // misconfigured deployment would take a real shop's whole board off its own
+    // storefront.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },

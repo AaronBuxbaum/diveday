@@ -162,6 +162,12 @@
     "noTripsPublic": "Vuelve pronto. Cuéntanos abajo qué te gustaría bucear, o contáctanos con los datos del pie de página.",
     "noTripsPublicNoPhone": "Vuelve pronto, o cuéntanos abajo qué te gustaría bucear.",
     "noTripsMonth": "No hay salidas este mes. Prueba otro mes.",
+    "offSeason": {
+      "heading": "No hay salidas durante un tiempo",
+      "back": "Volvemos al agua el {date}.",
+      "nextSeason": "{name} comienza el {date}.",
+      "requestHeading": "Pídenos un día"
+    },
     "filters": {
       "tripType": "Tipo de salida",
       "allTrips": "Todas las salidas",

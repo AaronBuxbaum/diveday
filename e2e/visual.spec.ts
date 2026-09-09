@@ -32,8 +32,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Two hundred and six key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 824 screenshots per run (see
+ * Visual regression coverage. Two hundred and seven key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 828 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -56,7 +56,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
  * and `TABLET_SURFACES` adds 10: five staff surfaces get a third, portrait
  * tablet width, at one screenshot per scheme rather than the usual two. That
- * brings the run to 843 screenshots — the tablet width is a 1.2% addition, not
+ * brings the run to 846 screenshots — the tablet width is a 1.2% addition, not
  * the 50% a third viewport applied to every surface would have cost.
  *
  * ## One surface, one `test()`
@@ -1839,6 +1839,36 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/s/blue-mantis");
         await publicReefCard(page).getByRole("link").waitFor();
         await capture(page, "schedule", scheme);
+      });
+
+      /**
+       * **The off-season** (N-45) — the storefront a shop between seasons shows
+       * a stranger, which no existing capture can be: `blue-mantis` exists to
+       * have a full board, so this one empties it first.
+       *
+       * Its own baseline because the whole change is what the page becomes
+       * when there is nothing to list: the card where the next boat would be,
+       * no schedule heading standing over nothing, and the date-request
+       * composer open as the page's one primary rather than collapsed into a
+       * row three sections down. A diff on this one is a diff on the shape of
+       * an empty page, which is exactly the thing a passing e2e assertion
+       * cannot see.
+       *
+       * The line under the heading is the demo shop's own "Lobster mini-season"
+       * eighteen days out — the fallback for a shop with nothing scheduled at
+       * all (`src/db/seed-season-events.ts`).
+       */
+      test(`the off-season storefront renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-off-season");
+        await page.goto("/s/blue-mantis");
+        // The card itself, not a timing guess: it is server-rendered, so its
+        // heading being on the page is the page having rendered as a quiet
+        // shop rather than as its own skeleton.
+        await page.getByRole("heading", { name: "Nothing on the water for a while" }).waitFor();
+        await capture(page, "schedule-off-season", scheme);
       });
 
       /**
