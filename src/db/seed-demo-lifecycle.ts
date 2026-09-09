@@ -8,6 +8,7 @@ import {
   accountStepUps,
   accountTokens,
   activityEvents,
+  authProviderAccounts,
   boats,
   bookingArrivalEvents,
   bookingCapabilities,
@@ -362,6 +363,15 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     ).map((row) => row.id);
     if (demoAccountIds.length > 0) {
       await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, demoAccountIds));
+      // A provider login references the account row and carries no cascade, so
+      // it must go before user_accounts for the same reason the tokens above
+      // do. Nothing writes this table yet — no OAuth provider is configured —
+      // so today this deletes nothing and costs one statement; the day a
+      // provider is enabled it is the difference between this path working and
+      // FK-violating mid-run (issue #1594).
+      await db
+        .delete(authProviderAccounts)
+        .where(inArray(authProviderAccounts.userAccountId, demoAccountIds));
       await db.delete(accountStepUps).where(inArray(accountStepUps.userAccountId, demoAccountIds));
       await db
         .delete(accountSecurity)

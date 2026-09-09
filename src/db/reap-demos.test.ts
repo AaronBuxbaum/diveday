@@ -7,6 +7,7 @@ import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import {
   accountTokens,
   activityEvents,
+  authProviderAccounts,
   bookings,
   buddyTeamEvents,
   globalDiveSites,
@@ -422,6 +423,45 @@ describe("deleteDemoShopCascade", () => {
           .select()
           .from(accountTokens)
           .where(eq(accountTokens.userAccountId, ownerAccount.id))
+      ).length,
+    ).toBe(0);
+  });
+
+  /**
+   * The same finding one table over, written before it can bite. A provider
+   * login references `user_accounts` and carries no `ON DELETE CASCADE`, so a
+   * demo owner who had ever signed in with a provider would strand their shop
+   * past the reaper's TTL on a 23503 (issue #1594). Nothing writes the table
+   * today — no provider is configured — so the row here is inserted by hand,
+   * which is the only way to exercise the ordering before the feature that
+   * fills it exists.
+   */
+  it("deletes an owner's provider login instead of FK-violating (issue #1594)", async () => {
+    const db = await seededTestDb();
+    const { slug, ownerEmail } = await createDemoShop(db);
+    const shop = await requireShop(db, slug);
+    const [ownerAccount] = await db
+      .select()
+      .from(userAccounts)
+      .where(eq(userAccounts.email, ownerEmail))
+      .limit(1);
+    if (!ownerAccount) throw new Error("test setup: demo owner account missing");
+    await db.insert(authProviderAccounts).values({
+      userAccountId: ownerAccount.id,
+      providerId: "google",
+      accountId: "google-subject-demo",
+      refreshToken: "live-refresh-token",
+    });
+
+    await deleteDemoShopCascade(db, shop.id);
+
+    expect(await findShop(db, slug)).toBeUndefined();
+    expect(
+      (
+        await db
+          .select()
+          .from(authProviderAccounts)
+          .where(eq(authProviderAccounts.userAccountId, ownerAccount.id))
       ).length,
     ).toBe(0);
   });

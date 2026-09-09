@@ -69,6 +69,7 @@ import {
   accountSessions,
   accountTokens,
   activityEvents,
+  authProviderAccounts,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -739,6 +740,16 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   if (account) {
     await tx.delete(accountTokens).where(eq(accountTokens.userAccountId, account.id));
     await tx.delete(accountSecurity).where(eq(accountSecurity.userAccountId, account.id));
+    // A provider login for this account, if one ever existed. Nothing writes
+    // this table today — no OAuth provider is configured and no route mounts
+    // better-auth's handler — so this deletes nothing, which is exactly why it
+    // belongs here now rather than in the change that enables a provider: the
+    // row it will one day remove carries `password`, `access_token`,
+    // `refresh_token` and `id_token` (issue #1588's columns), the credential
+    // material ADR 20260802-diver-data-erasure promises is destroyed, and the
+    // person adding a provider will be thinking about sign-in rather than
+    // erasure (issue #1594).
+    await tx.delete(authProviderAccounts).where(eq(authProviderAccounts.userAccountId, account.id));
     // Revoke any session issued before this instant — status alone
     // (`disabled` below) is not read by the session lookup itself, so a
     // live sign-in would otherwise keep working until it naturally expires.

@@ -128,7 +128,7 @@ deleted; rows that are evidence are kept and their personal fields scrubbed.**
 | `booking_payments` | `note` → null |
 | `booking_capabilities` | revoked and expired |
 | `calendar_feeds` | revoked (a live feed URL is a standing read credential) |
-| `user_accounts` (if any) | `email` → a unique unusable address (NOT NULL + globally unique), `hashed_password` → a value nothing verifies against, `email_verified_at` → null, `status` → disabled; `account_tokens` deleted |
+| `user_accounts` (if any) | `email` → a unique unusable address (NOT NULL + globally unique), `hashed_password` → a value nothing verifies against, `email_verified_at` → null, `status` → disabled; `account_tokens`, `account_security`, `account_sessions` and `auth_provider_accounts` deleted. The last of those is better-auth's `account` model — nothing writes it while no provider is configured, and the delete is there ahead of the row so that enabling a provider does not quietly make an erasure incomplete (issue #1594). `account_step_ups` needs no delete of its own: it cascades from the sessions above it. |
 | `prior_visits` | `title`, `status_label`, `amount_label`, `source_label`, `source_reference` → null; `dedupe_key` → a unique redacted value; `visited_on` stays (the shop's own history) |
 | `trip_reviews` | `comment` → null, **unpublished** (`is_published` false, `published_at` null) |
 | `orders` | `hosted_invoice_url`, `invoice_pdf_url` → null — publicly reachable Stripe pages rendering the customer's name and email |

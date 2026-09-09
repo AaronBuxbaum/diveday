@@ -1,4 +1,5 @@
-import { eq, getTableColumns, getTableName } from "drizzle-orm";
+import { eq, getTableName } from "drizzle-orm";
+import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { seededTestDb } from "@/test/db";
 import type { AppDb, DbExecutor } from "./client";
@@ -32,40 +33,65 @@ import { createDemoShop, deleteDemoShopCascade, resetDemoSchedule } from "./seed
  * `db.delete(table)`. A delete moved into a helper still counts; a delete
  * inside a branch that never runs does not, which is the honest answer.
  *
- * Two limits, stated rather than papered over:
+ * **Scope is the foreign-key graph, not the `shop_id` column.** It used to be
+ * the column, and that left the tables reached through a parent's id list —
+ * `user_accounts`, `account_tokens`, `person_roles`, `trip_assignments` —
+ * invisible to the guard whose whole job is finding tables nobody deletes.
+ * `auth_provider_accounts` is what made the cost visible: it reaches a shop
+ * only as `user_account_id` -> `person_id` -> `shop_id`, so it sat with no
+ * delete path in either ordering from the day it was added, and neither guard
+ * could say so (issue #1594). The sweep now starts at the `shop_id` carriers
+ * and follows foreign keys outward, which catches that table and any sibling
+ * added the same way.
  *
- * - Tables with **no** `shop_id` (`trip_assignments`, `person_roles`,
- *   `user_accounts`, `account_tokens`, `course_path_steps`) are out of scope
- *   here. They are reached through a parent's id list, and there is no shop
- *   column to enumerate them by. `reap-demos.test.ts` keeps its hand-written
- *   cases for those.
- * - This proves a table is *named*, not that it is named in the right *order*.
- *   Ordering is what the FK violations in `reap-demos.test.ts` prove, and both
- *   guards are needed: this one says "you did not forget", that one says "you
- *   did not put it in the wrong place".
+ * One limit, stated rather than papered over: this proves a table is *named*,
+ * not that it is named in the right *order*. Ordering is what the FK violations
+ * in `reap-demos.test.ts` prove, and both guards are needed: this one says "you
+ * did not forget", that one says "you did not put it in the wrong place".
  */
 
-/** Every table in the schema that carries a `shop_id` column. */
+/**
+ * Every table that belongs to a shop: the ones carrying a `shop_id` column,
+ * plus every table that reaches one of those through a foreign key, however
+ * many hops it takes. `auth_provider_accounts` -> `user_accounts` -> `people`
+ * is three tables and one shop.
+ *
+ * The closure is run to a fixed point rather than one hop deep, because the
+ * chain length is an accident of how a table was modelled and a guard that
+ * stopped at one hop would be a guard with a boundary nobody can remember. It
+ * adds nine tables to the eleven-dozen the column alone finds, and leaves
+ * standing only what genuinely belongs to nobody: better-auth's
+ * `auth_verifications`, the two `global_dive_site*` catalogue tables, and the
+ * two provider ledgers (`notification_rate_limit_state`,
+ * `stripe_webhook_events`) that `RESET_KEEPS` already names in prose.
+ */
 function shopScopedTableNames(): string[] {
-  const names: string[] = [];
+  const tables = new Map<string, { hasShopId: boolean; references: string[] }>();
   for (const value of Object.values(schema)) {
-    let name: string;
+    // `getTableConfig` throws on everything in the schema that is not a table —
+    // the enums and the views — which is how they are skipped.
+    let config: ReturnType<typeof getTableConfig>;
     try {
-      name = getTableName(value as Parameters<typeof getTableName>[0]);
+      config = getTableConfig(value as Parameters<typeof getTableConfig>[0]);
     } catch {
       continue;
     }
-    // `getTableName` also succeeds on enums and views, which have no columns.
-    let columns: Record<string, { name: string }>;
-    try {
-      columns = getTableColumns(value as Parameters<typeof getTableColumns>[0]);
-    } catch {
-      continue;
-    }
-    if (!columns) continue;
-    if (Object.values(columns).some((column) => column.name === "shop_id")) names.push(name);
+    tables.set(getTableName(value as Parameters<typeof getTableName>[0]), {
+      hasShopId: config.columns.some((column) => column.name === "shop_id"),
+      references: config.foreignKeys.map((key) => getTableName(key.reference().foreignTable)),
+    });
   }
-  return names;
+  const scoped = new Set([...tables].filter(([, table]) => table.hasShopId).map(([name]) => name));
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const [name, table] of tables) {
+      if (scoped.has(name)) continue;
+      if (!table.references.some((target) => scoped.has(target))) continue;
+      scoped.add(name);
+      grew = true;
+    }
+  }
+  return [...scoped];
 }
 
 /**
@@ -142,6 +168,7 @@ const RESET_KEEPS: Record<string, string> = {
   push_subscriptions: "ON DELETE CASCADE from trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
+  trip_schedule_days: "ON DELETE CASCADE from trips clears it",
 };
 
 /**
@@ -175,6 +202,7 @@ const CASCADE_KEEPS: Record<string, string> = {
   integration_sync_records: "ON DELETE CASCADE from shops clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
+  trip_schedule_days: "ON DELETE CASCADE from trips clears it",
 };
 
 describe("shop-scoped delete-path coverage", () => {

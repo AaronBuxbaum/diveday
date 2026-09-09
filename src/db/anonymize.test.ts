@@ -8,6 +8,7 @@ import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { saveShopIntegration } from "./integrations";
 import { recordRollCall } from "./manifests";
 import {
+  authProviderAccounts,
   bookings,
   integrationEvents,
   orders,
@@ -16,6 +17,7 @@ import {
   recapPulses,
   rollCallEvents,
   trips,
+  userAccounts,
 } from "./schema";
 
 async function erasureFixtures() {
@@ -370,5 +372,66 @@ describe("anonymizeDiver — the integration outbox (issue #1016)", () => {
     expect(serialized).not.toContain(diver.fullName);
     if (diver.email) expect(serialized).not.toContain(diver.email);
     if (diver.phone) expect(serialized).not.toContain(diver.phone);
+  });
+});
+describe("anonymizeDiver — a provider login (issue #1594)", () => {
+  /**
+   * `auth_provider_accounts` is better-auth's `account` model, and every column
+   * that matters on it is credential material: `password`, `access_token`,
+   * `refresh_token`, `id_token` and two expiries (issue #1588 added them,
+   * because the adapter refuses to serve a request while one is missing).
+   *
+   * Nothing writes a row today — no OAuth provider is configured and no route
+   * mounts the handler — so this test inserts one by hand. That is the point of
+   * writing it now: the erasure ADR promises the material is destroyed, and the
+   * person who eventually enables a provider will be reading a sign-in flow,
+   * not this file. A test that fails the moment the delete is removed is what
+   * carries the promise across that change.
+   */
+  it("destroys the tokens a provider sign-in would have left behind", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    const [diver] = await db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Rafaela Costa",
+        email: "rafaela@example.com",
+      })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("fixture insert failed");
+    const [account] = await db
+      .insert(userAccounts)
+      .values({
+        personId: diver.id,
+        email: "rafaela@example.com",
+        hashedPassword: "argon2-of-something",
+        status: "active",
+      })
+      .returning({ id: userAccounts.id });
+    if (!account) throw new Error("fixture insert failed");
+    await db.insert(authProviderAccounts).values({
+      userAccountId: account.id,
+      providerId: "google",
+      accountId: "google-subject-1",
+      accessToken: "live-access-token",
+      refreshToken: "live-refresh-token",
+      idToken: "live-id-token",
+      password: "a-credentials-hash",
+      scope: "openid email",
+    });
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: owner.id,
+    });
+    expect(erased.ok).toBe(true);
+
+    expect(
+      await db
+        .select()
+        .from(authProviderAccounts)
+        .where(eq(authProviderAccounts.userAccountId, account.id)),
+    ).toEqual([]);
   });
 });
