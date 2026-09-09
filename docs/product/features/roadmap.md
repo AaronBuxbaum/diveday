@@ -539,9 +539,32 @@ diffs are explained. 20a–20e may start on the ADR alone.
   marks or emoji.
 - **20f** — the earned moment inside `EntryDone`, once, for the twelve shared terminal outcomes.
   Waits on H-71 c.
-- **20g** — the levers on A: E (rooms), F (the tide line), H (their sea), I (the one page) or K
-  (together) as drawn on the canvas's second page, sliced when picked. B, C and D were declined on
-  2026-09-09. Waits on H-71 a.
+- **20g** — the levers on A: F (the tide line), H (their sea) and K (together) as composed on the
+  canvas's second page and drawn on every surface on its third; E is answered by 20l and I stays on
+  the canvas as the phone-first alternative. B, C and D were declined on 2026-09-09. Waits on H-71 a.
+
+Round 3 (2026-09-09, after the owner's read of round 2 — "keep pushing these concepts farther,
+keep cleaning up, design every surface") adds the kit that composes A with F, H and K, redraws all
+eighty-one page routes on it across fifteen boards that each name their deletions, and eight more
+levers, L–S. The ADR's decision 5 records it; the owner's calls are H-71 (a) and (e)–(h).
+
+- **20h** — L, the trip's own line: drawn once and shown on the staff trip page, the diver's trip
+  page and thread, the lobby board and the reminder email; moves on the crew's stage taps, says
+  "as of" when stale. Waits on 20g's F and H-71 h.
+- **20i** — M, the pass: booking confirmed becomes a pass in the shop's colour with the site's
+  photo, the boat, the slip, the time, what to bring and a code carrying the booking id only; the
+  counter scans it with the device's camera; the diver's screen says "You're aboard" as the desk's
+  row settles. Composes 18f. Waits on H-71 e and f.
+- **20j** — O, the log: the close-out writes the day's entry from a sentence DiveDay proposes;
+  Reports keeps its title and becomes the log with the season as a strip of days and the month's
+  figures from the entries. Waits on H-71 g.
+- **20k** — N, the postcard: the recap printed from the crew's log, front and back, the review as
+  one line, "next time" with a reason; the recap email carries the front. Waits on 20h.
+- **20l** — P the six room drawings in the empty states and on the lobby board; R the shop's card as
+  the settings index's pane with the live brand preview; S first light on a new shop's first Today;
+  Q's two new answers (a unit, a day's line) in the palette.
+- **20m** — the surface sweep: each round-3 board's "Deleted here" list applied to its family of
+  pages, one family per session, with the visual diffs explained in the PR. Waits on 20a–20e.
 
 ## Concept-model simplification (proposed — each row needs an owner decision)
 

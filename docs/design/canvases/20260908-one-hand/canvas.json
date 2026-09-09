@@ -7,6 +7,10 @@
     {
       "id": "page-2",
       "name": "Round 2 — five levers on A"
+    },
+    {
+      "id": "page-3",
+      "name": "Round 3 — every surface, one hand"
     }
   ],
   "artboards": [
@@ -135,6 +139,24 @@
       "w": 390,
       "h": 1180,
       "page": "page-2"
+    },
+    {
+      "file": "Round3.dc.html",
+      "title": "Round 3 — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 6850,
+      "page": "page-3"
+    },
+    {
+      "file": "Kit.dc.html",
+      "title": "The kit — one hand, on every surface",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 6650,
+      "page": "page-3"
     }
   ],
   "annotations": [
@@ -177,10 +199,34 @@
       "w": 520,
       "page": "page-2",
       "text": "The composite is the recommendation drawn once: A underneath, the tide line under the chrome, the shop's green and site photographs (H), and presence (K). On a phone the tide line folds to one 36px strip with the next boat only, and the rows stack the way A already does at 390."
+    },
+    {
+      "id": "round3-read",
+      "x": 0,
+      "y": -260,
+      "w": 560,
+      "page": "page-3",
+      "text": "Round 3, 2026-09-09. The owner liked round 2 and asked for more, on every surface. Read Round3 first (the eight levers, every surface and its board, the order to build, the calls), then the Kit (the whole vocabulary), then the boards in the order of a day down the two columns. Every board is drawn from the Kit and holds one fiction."
+    },
+    {
+      "id": "round3-kit",
+      "x": 1300,
+      "y": -260,
+      "w": 520,
+      "page": "page-3",
+      "text": "The Kit is A + F + H + K composed: one width, the eyebrow as the group, one row, one add, three pills, the tide line under the chrome, the shop's colour and site photographs, presence. The round-3 additions (the line, the pass, the postcard, the log, the rooms) are specimens on it and drawn in place on the surface boards."
+    },
+    {
+      "id": "round3-honest",
+      "x": 2560,
+      "y": 0,
+      "w": 520,
+      "page": "page-3",
+      "text": "What is honest about the pictures: photographs are gradients standing in for the shop's own; the fonts are the real faces; the numbers agree across boards. A frame is one moment, and each board's aside says which. Nothing here is normative until the ADR moves to Accepted (H-71 a)."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-2"
+    "page": "page-3"
   }
 }
