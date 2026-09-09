@@ -29,16 +29,15 @@
     /* the tide line */
     .tide { position: relative; height: 64px; margin: 0; padding: 0 102px; background: linear-gradient(180deg, #e6f3f5 0%, #fbf7ef 100%); border-bottom: 1px solid #e6dcc8; }
     .tide .inner { position: relative; width: 976px; margin: 0 auto; height: 64px; }
+    .tide .track { position: absolute; left: 0; top: 0; width: 740px; height: 64px; }
     .tide .axis { position: absolute; left: 0; right: 0; top: 40px; height: 2px; background: #cfe6ea; }
     .tide .hour { position: absolute; top: 46px; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 10px; color: #8a8065; transform: translateX(-50%); }
     .tide .boat { position: absolute; top: 14px; height: 24px; border-radius: 6px; background: #f3ecdd; border: 1px solid #cfe6ea; overflow: hidden; box-sizing: border-box; }
     .tide .boat i { position: absolute; left: 0; top: 0; bottom: 0; background: #7fd0d6; }
     .tide .boat span { position: absolute; left: 8px; top: 3px; font-size: 12px; font-weight: 600; color: #0c2a35; white-space: nowrap; }
     .tide .boat.next { border-color: #0e7490; box-shadow: 0 0 0 2px rgba(14,116,144,0.18); }
-    .tide .boat.done { background: #e6f0e8; border-color: #e6f0e8; }
-    .tide .boat.done i { background: #cfe3d4; }
     .tide .now { position: absolute; top: 6px; width: 2px; height: 40px; background: #0c2a35; transform: translateX(-1px); }
-    .tide .now::after { content: "now · 5:48"; position: absolute; top: -2px; left: 6px; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 10px; font-weight: 500; color: #0c2a35; white-space: nowrap; }
+    .tide .now::after { content: attr(data-t); position: absolute; top: -2px; left: 6px; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 10px; font-weight: 500; color: #0c2a35; white-space: nowrap; }
     .tide .until { position: absolute; right: 0; top: 10px; font-size: 13px; color: #0c2a35; text-align: right; }
     .tide .until b { font-weight: 700; font-variant-numeric: tabular-nums; }
   </style>
@@ -49,7 +48,7 @@
   <div style="display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid #e6dcc8; background: #fffdf8;">
     <div style="display: flex; align-items: baseline; gap: 16px;"><span class="eyebrow">Lever F · an instrument that travels</span><span class="note">On top of A · Cost 1–2 sessions · Combines with everything</span></div>
     <h1 style="margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">The tide line — the day on every page</h1>
-    <p style="margin: 0; max-width: 900px; font-size: 17px; line-height: 27px;">One 64px strip under the chrome, on every staff page: the day from first light to the last boat as a line, each departure a block that fills as divers board, the boat that has sailed settled green, the next one lit, and a mark that moves with the clock. The page beneath is A, untouched. It is the one thing a shop looks at forty times a day — how long until the lines come off — and today they open Today to find it. Here it is wherever they are, and it is what makes the app look like nobody else's from across the room.</p>
+    <p style="margin: 0; max-width: 900px; font-size: 17px; line-height: 27px;">One 64px strip under the chrome, on every staff page: the day from first light to the last boat as a line, each departure a block filled to its bookings, the next one lit, the boat that has sailed settled green (after 10:30 here — both drawings are before the first boat leaves), and a mark that moves with the clock. The page beneath is A; the strip takes over three things A said in words. It is the one thing a shop looks at forty times a day — how long until the lines come off — and today they open Today to find it. Here it is wherever they are, and it is what makes the app look like nobody else's from across the room.</p>
     <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
       <div><span class="group">Why it coheres</span><p class="note" style="margin: 6px 0 0 0;">One instrument, shared. The eyebrow says which area you are in; the tide line says what time it is in the shop. Together they are the whole of a page's orientation, and neither is drawn twice.</p></div>
       <div><span class="group">What it changes in A</span><p class="note" style="margin: 6px 0 0 0;">The greeting's lede loses its "before 7:00" clause — the line carries it. The counter's departure switcher becomes a tap on the line's blocks. Reef's water band by the hour becomes the line's wash, so the band stops being decoration and starts being the axis.</p></div>
@@ -65,12 +64,14 @@
   </div>
   <div class="tide">
     <div class="inner">
+      <div class="track">
       <div class="axis"></div>
       <div class="hour" style="left: 0;">5:00</div><div class="hour" style="left: 16.6%;">8:00</div><div class="hour" style="left: 33.3%;">11:00</div><div class="hour" style="left: 50%;">2:00</div><div class="hour" style="left: 66.6%;">5:00</div><div class="hour" style="left: 83.3%;">8:00</div><div class="hour" style="left: 100%;">11:00</div>
-      <div class="boat next" style="left: 11.1%; width: 19.4%;"><i style="width: 83%;"></i><span>7:00 Two-Tank Reef · 10/12</span></div>
+      <div class="boat next" style="left: 11.1%; width: 19.4%;"><i style="width: 83%;"></i><span>7:00 Two-Tank Reef · 10 of 12</span></div>
       <div class="boat" style="left: 44.4%; width: 22.2%;"><i style="width: 100%; opacity: 0.55;"></i><span>1:00 Spiegel Grove · full</span></div>
-      <div class="boat" style="left: 80.5%; width: 19.4%;"><i style="width: 37%;"></i><span>7:30 Night · 3/8</span></div>
-      <div class="now" style="left: 4.4%;"></div>
+      <div class="boat" style="left: 80.5%; width: 19.4%;"><i style="width: 37%;"></i><span>7:30 Night · 3 of 8</span></div>
+      <div class="now" data-t="now · 5:48" style="left: 4.4%;"></div>
+      </div>
       <div class="until">Mantis II leaves in <b>1 h 12</b><br><span class="note" style="font-size: 12px;">boarding from 6:23</span></div>
     </div>
   </div>
@@ -122,13 +123,15 @@
   </div>
   <div class="tide">
     <div class="inner">
+      <div class="track">
       <div class="axis"></div>
       <div class="hour" style="left: 0;">5:00</div><div class="hour" style="left: 16.6%;">8:00</div><div class="hour" style="left: 33.3%;">11:00</div><div class="hour" style="left: 50%;">2:00</div><div class="hour" style="left: 66.6%;">5:00</div><div class="hour" style="left: 83.3%;">8:00</div><div class="hour" style="left: 100%;">11:00</div>
-      <div class="boat next" style="left: 11.1%; width: 19.4%;"><i style="width: 92%;"></i><span>7:00 Two-Tank Reef · boarding 7/12</span></div>
+      <div class="boat next" style="left: 11.1%; width: 19.4%;"><i style="width: 83%;"></i><span>7:00 Two-Tank Reef · boarding</span></div>
       <div class="boat" style="left: 44.4%; width: 22.2%;"><i style="width: 100%; opacity: 0.55;"></i><span>1:00 Spiegel Grove · full</span></div>
-      <div class="boat" style="left: 80.5%; width: 19.4%;"><i style="width: 37%;"></i><span>7:30 Night · 3/8</span></div>
-      <div class="now" style="left: 8.4%;"></div>
-      <div class="until">Mantis II leaves in <b>29 min</b><br><span class="note" style="font-size: 12px;">7 of 12 aboard</span></div>
+      <div class="boat" style="left: 80.5%; width: 19.4%;"><i style="width: 37%;"></i><span>7:30 Night · 3 of 8</span></div>
+      <div class="now" data-t="now · 6:31" style="left: 8.4%;"></div>
+      </div>
+      <div class="until">Mantis II leaves in <b>29 min</b><br><span class="note" style="font-size: 12px;">7 of 10 aboard</span></div>
     </div>
   </div>
   <div style="width: 976px; margin: 0 auto; padding-top: 36px;">

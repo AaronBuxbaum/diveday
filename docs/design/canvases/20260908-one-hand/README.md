@@ -64,7 +64,7 @@ from `node scripts/screenshot.mjs` against the seeded shop at 1280 and 390.
 ## The fiction every board holds to
 
 The same one as every canvas since Clearwater. **Blue Mantis Divers**, Key Largo, boats *Mantis II*
-and *Skiff*, Dana Reyes at the desk, Keiko Tanaka and Sal Moretti as crew. The day is **Thursday,
+and *Skiff*, Dana Reyes at the desk, Keiko Tanaka and Sal Moretti as crew, Marcus Webb teaching the courses. The day is **Thursday,
 August 27, 2026**: 7:00–10:30 AM Two-Tank Reef — Molasses & French, 10 of 12, Grace Mensah's
 certification awaiting verification, Priya Sharma's waiver not sent, three divers without rental
 sizes, Nadia Petrov without an emergency contact; 1:00–5:00 PM Wreck Trip — Spiegel Grove, full,

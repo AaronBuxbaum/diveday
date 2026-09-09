@@ -10,11 +10,11 @@
     { "file": "DirectionB.dc.html", "title": "Direction B — The logbook", "x": 1300, "y": 6400, "w": 1180, "h": 2900, "page": "page-1" },
     { "file": "DirectionC.dc.html", "title": "Direction C — The instrument", "x": 0, "y": 9700, "w": 1180, "h": 2800, "page": "page-1" },
     { "file": "DirectionD.dc.html", "title": "Direction D — The briefing", "x": 1300, "y": 9700, "w": 1180, "h": 3700, "page": "page-1" },
-    { "file": "Round2.dc.html", "title": "Round 2 — read me first", "x": 0, "y": 0, "w": 1180, "h": 2500, "page": "page-2" },
+    { "file": "Round2.dc.html", "title": "Round 2 — read me first", "x": 0, "y": 0, "w": 1180, "h": 2700, "page": "page-2" },
     { "file": "LeverE.dc.html", "title": "Lever E — Rooms", "x": 1300, "y": 0, "w": 1180, "h": 2750, "page": "page-2" },
     { "file": "LeverF.dc.html", "title": "Lever F — The tide line", "x": 0, "y": 3000, "w": 1180, "h": 2650, "page": "page-2" },
     { "file": "LeverH.dc.html", "title": "Lever H — Their sea", "x": 1300, "y": 3000, "w": 1180, "h": 2650, "page": "page-2" },
-    { "file": "LeverI.dc.html", "title": "Lever I — The one page", "x": 0, "y": 5900, "w": 1180, "h": 2950, "page": "page-2" },
+    { "file": "LeverI.dc.html", "title": "Lever I — The one page", "x": 0, "y": 5900, "w": 1180, "h": 3300, "page": "page-2" },
     { "file": "LeverK.dc.html", "title": "Lever K — Together", "x": 1300, "y": 5900, "w": 1180, "h": 2500, "page": "page-2" }
   ],
   "annotations": [
