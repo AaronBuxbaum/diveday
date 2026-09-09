@@ -630,6 +630,22 @@
       "text": "copias de manifiesto sin conexión, colas de reintento de notificaciones, la vinculación con Stripe, los rastros de cierre del día y de equipos de buceo, el estado de cancelación por clima, los libros de conciliación de DiveDay y las URL de imágenes pegadas sin guardar. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>sí</mono> se exportan. Las fotos y los recibos importados guardados de forma segura se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
     }
   },
+  "crewSheet": {
+    "heading": "Hoja de tripulación",
+    "description": "Salidas trabajadas, horas y la parte de las propinas de cada miembro de la tripulación, en un CSV.",
+    "note": "Registra el mes tal como ocurrió; lo que se le debe a cada persona lo decide tu contabilidad.",
+    "monthLabel": "Mes",
+    "download": "Descargar hoja de tripulación",
+    "column": {
+      "person": "Miembro de la tripulación",
+      "roles": "Rol",
+      "departures": "Salidas",
+      "hours": "Horas",
+      "tips": "Propinas",
+      "currency": "Moneda"
+    },
+    "unassigned": "Sin tripulación registrada"
+  },
   "import": {
     "eyebrow": "Ajustes",
     "title": "Importar contactos",

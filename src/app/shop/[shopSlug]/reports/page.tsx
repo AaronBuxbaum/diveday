@@ -43,7 +43,7 @@ import {
 } from "@/lib/reporting";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
 
@@ -161,14 +161,7 @@ export default async function ReportsPage({
   const current = clampMonth(parseMonthKey(month) ?? thisMonth, floorMonth);
   const next = addMonths(current, 1);
 
-  const monthStart = wallTimeToUtc(
-    { year: current.year, month: current.month, day: 1, hour: 0, minute: 0 },
-    tz,
-  );
-  const monthEnd = wallTimeToUtc(
-    { year: next.year, month: next.month, day: 1, hour: 0, minute: 0 },
-    tz,
-  );
+  const { from: monthStart, to: monthEnd } = shopMonthBounds(current, tz);
   // The revenue card's "View orders" link (task 158) — the same month range as
   // the report itself, expressed as the `<input type="date">` values the
   // Orders index's own filter form reads.
