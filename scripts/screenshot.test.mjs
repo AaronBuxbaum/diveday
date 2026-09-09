@@ -72,3 +72,29 @@ describe("the staff sign-in", () => {
     expect(body).toContain("DIVEDAY_RATE_LIMIT_DISABLED=1");
   });
 });
+
+/**
+ * The third: the camera does not edit the page.
+ *
+ * Playwright's screenshot defaults to `caret: "hide"`, which sets an inline
+ * `caret-color: transparent` on every element for the duration of the shot. A
+ * capture taken while a client component is still hydrating leaves React
+ * comparing its own render against a DOM carrying an attribute nothing
+ * rendered, and it says so — "A tree hydrated but some attributes of the
+ * server rendered HTML didn't match the client properties" — naming a
+ * component of the app rather than the tool. It was filed against the Today
+ * spine's `LedgerRow` as issue #1593 and read as a real defect in the shop's
+ * primary surface until the attribute in the diff turned out to be the
+ * camera's own.
+ */
+describe("the capture itself", () => {
+  const source = readFileSync(path.join(process.cwd(), "scripts/screenshot.mjs"), "utf8");
+
+  it("opts out of caret hiding, so the shot does not mutate the DOM being hydrated", () => {
+    expect(source).toMatch(/page\.screenshot\(\{[^}]*caret: "initial"/);
+  });
+
+  it("takes exactly one screenshot call, so there is no second one with the default", () => {
+    expect(source.match(/page\.screenshot\(/g)).toHaveLength(1);
+  });
+});

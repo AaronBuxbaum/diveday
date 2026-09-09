@@ -482,7 +482,20 @@ try {
         // caller's own repetition, but a file left by an earlier run is a
         // picture about to vanish, and the caller may still want it.
         if (!written.includes(file) && fs.existsSync(file)) replaced.add(file);
-        await page.screenshot({ path: file, fullPage: true });
+        // **`caret: "initial"` — Playwright must not rewrite the document it
+        // is photographing.** Its default (`"hide"`) writes an inline
+        // `style="caret-color: transparent"` onto every element before the
+        // shot and takes it off after, and on a page still hydrating React
+        // compares its render against a DOM that now carries an attribute
+        // nothing rendered: "A tree hydrated but some attributes … didn't
+        // match … This won't be patched up", naming whichever client component
+        // the capture caught mid-flight. That was filed as a defect in the
+        // Today spine (issue #1593) and cost a triage cycle before the
+        // attribute turned out to belong to the camera. Nothing here focuses
+        // an editable element, so there is no caret to hide; if a surface ever
+        // autofocuses one, a hairline in a look-at-it capture is the cheaper
+        // half of this trade — review-grade pixels come from the visual specs.
+        await page.screenshot({ path: file, fullPage: true, caret: "initial" });
         written.push(file);
       }
 
