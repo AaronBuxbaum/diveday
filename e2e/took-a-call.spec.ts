@@ -26,7 +26,10 @@ const CALLS = "/shop/blue-mantis/calls";
  */
 async function chooseOpenDeparture(page: Page) {
   const select = page.getByLabel("Which departure");
-  const open = select.locator("option").filter({ hasText: /seat(s)? left/ }).first();
+  const open = select
+    .locator("option")
+    .filter({ hasText: /seat(s)? left/ })
+    .first();
   const value = await open.getAttribute("value");
   expect(value, "the fixture's board holds no departure with a seat left").toBeTruthy();
   await select.selectOption(value as string);
