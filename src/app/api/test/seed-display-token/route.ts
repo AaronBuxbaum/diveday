@@ -7,8 +7,8 @@ import { issueDisplayToken } from "@/db/display-tokens";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { boardPath } from "@/lib/display-tokens";
-import { kioskCheckInPath } from "@/lib/kiosk-check-in";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { kioskCheckInPath } from "@/lib/kiosk-check-in";
 
 /**
  * Mints a real display link for a demo shop and hands back the raw token — the

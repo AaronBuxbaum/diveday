@@ -67,7 +67,7 @@
     "title": "Registro de llegada",
     "prompt": "Apellido",
     "submit": "Registrar llegada",
-    "submitting": "Comprobando…",
+    "submitting": "Verificando…",
     "ready": "Todo listo, {name}.",
     "readyAgain": "Ya estás registrado, {name}.",
     "departure": "{title} · {time}",

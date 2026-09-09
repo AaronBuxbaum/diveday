@@ -436,6 +436,26 @@ Settings → Lobby display.
   time · title, site, meeting point, outlook · stage word and count — on the manifest's
   `boat-mode` ground so it follows the device's light or dark; the footer says when it last read.
 
+### Self check-in at the counter — `/check-in/[token]`
+
+**Built 2026-09-09** — N-24, the other thing a display link can open: a tablet on the counter that
+a diver operates unaided, behind the same credential and the same revocation door as the board.
+
+- **One idea:** type your last name, learn whether you are set — and if you are not, learn it
+  standing in front of somebody who can fix it.
+- **The question it arrives with:** "am I checked in, and where do I go?" — answered in one
+  submission, because a lookup step would mean a screen listing who was found.
+- **Controls that dissolved:** all but one box and one button. No nav, no session, no account, no
+  second step; the answer clears itself after twelve seconds so the next diver walks up to a blank
+  prompt.
+- **Remove first:** every reason. A miss, an ambiguous surname and a diver readiness will not clear
+  are one identical sentence — the screen is operated by whoever walks up to it, so an answer that
+  varied with *why* would answer questions about a stranger's booking to anyone willing to type.
+- **What it must never do:** board anybody. It records an arrival; boarding stays a roll-call act
+  the crew performs at the rail.
+- **Composition:** the shop's name and today's date, the prompt, one box, one button — then one
+  card, in success or caution tone, at 24-32px so it reads at arm's length across a counter.
+
 ### The doors — `/sign-in`, `/onboard`, and the token family
 
 **Chosen 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):

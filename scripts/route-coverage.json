@@ -21,6 +21,10 @@
     "e2e": ["departures-board.spec.ts"],
     "visual": ["departures-board"]
   },
+  "/check-in/[token]": {
+    "e2e": ["self-check-in.spec.ts"],
+    "visual": ["self-check-in"]
+  },
   "/claim/[token]": {
     "e2e": ["a11y.spec.ts", "gift.spec.ts", "seat-claim.spec.ts"],
     "visual": ["seat-claim", "gift-claim"],

@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { normalizeDisplayLabel } from "@/lib/display-tokens";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { displayTokens, displayTokenPurpose, shops } from "./schema";
+import { type displayTokenPurpose, displayTokens, shops } from "./schema";
 
 /**
  * **Display links: the credential behind `/board/[token]`** (issue #1426).

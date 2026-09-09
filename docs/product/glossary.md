@@ -585,6 +585,10 @@ new domain concept, define it here in the same PR.
   checkpoint, and its writers cannot reach `roll_call_events`: an arrival is never promoted to
   aboard by the queue
   ([ADR 20260907-the-counter-survives-offline](../architecture/decisions/20260907-the-counter-survives-offline.md)).
+  Two doors write these rows. A staffer at the desk is the usual one. The other is
+  **self check-in**: `display_token_id` names the counter tablet it was tapped on, and
+  `recorded_by_person_id` is the diver themselves — which is what lets a shop reading its own trail
+  tell "Dana checked Priya in" from "Priya checked herself in", on a shop where staff dive too.
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.
@@ -1725,11 +1729,14 @@ new domain concept, define it here in the same PR.
   since revoked, never satisfies it. Being signed in is not being stepped up; **and step-up is
   only demanded of an account that has enabled two-factor**, so it is a control a staff member
   opts into rather than a floor under every account.
-- **Display link** — a revocable bearer URL (`/board/[token]`, `display_tokens`) a shop puts on a
-  lobby TV or a dock tablet to show the **departures board**: today's boats, the crew's stage word,
-  an "n of capacity" count, the meeting point and the outlook, with no sign-in on that screen. Hashed
-  at rest, non-expiring like a calendar feed, revoked from Settings → Lobby display. It never names
-  a diver; its one switch, *show names*, adds the crew line (issue #1426).
+- **Display link** — a revocable bearer URL (`display_tokens`) a shop opens on a screen of its own,
+  with no sign-in on that screen. Hashed at rest, non-expiring like a calendar feed, revoked from
+  Settings → Lobby display. A link says which of two surfaces it opens, and the two never cross: a
+  **board** link (`/board/[token]`) is the **departures board** — today's boats, the crew's stage
+  word, an "n of capacity" count, the meeting point and the outlook, never a diver's name; its one
+  switch, *show names*, adds the crew line (issue #1426). A **check-in** link
+  (`/check-in/[token]`) is the **self check-in kiosk** below, and unlike the board it writes
+  (N-24).
 - **Follow link** — the public page for one departure's day (`/s/<shopSlug>/boats/<tripId>`), which
   a diver hands to whoever is waiting for them on the dock. Deliberately **not** a bearer credential
   and deliberately not revocable: the trip id is in the URL unhashed because the page holds no
@@ -1740,6 +1747,14 @@ new domain concept, define it here in the same PR.
   takes all three with it when it goes back off; a private charter, a cancelled departure and a day
   that has closed are each a 404 rather than an empty state (ADR
   [20260908-one-hand](../architecture/decisions/20260908-one-hand.md), decision 6, lever U).
+- **Self check-in** — a diver typing their own last name, or scanning their arrival card, on a
+  counter tablet behind a check-in display link, and reading "You're set" or "See the desk". What
+  it records is an **arrival**, never a boarding: the tablet writes the same
+  `booking_arrival_events` row the desk does, stamped with the tablet it was tapped on
+  (`display_token_id`) and recorded as the diver's own act, and it touches nothing the manifest
+  reads. Boarding stays a roll-call act a crew member performs at the rail with the diver in front
+  of them. Readiness is re-read at the tap, so a diver with an unsigned waiver is turned toward the
+  desk while there is still somebody to talk to (N-24).
 - **Recovery code** — one of ten single-use strings issued at two-factor enrolment, shown once and
   stored only as a salted HMAC under the deployment's own sealing key. It is a second factor, not
   a password reset: presenting one satisfies the same check a TOTP code does.

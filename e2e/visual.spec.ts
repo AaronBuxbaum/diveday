@@ -205,6 +205,9 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
   // The dock tablet is one of the two devices the departures board is for
   // (issue #1426); the other is the TV below.
   "departures-board",
+  // A counter tablet is what the self check-in kiosk *is* (N-24), so its
+  // tablet width is the width it ships at rather than a third variant.
+  "self-check-in",
 ]);
 
 /**
@@ -1662,6 +1665,35 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Blue Mantis Divers" }).waitFor();
         await page.getByText("Two-Tank Reef — Molasses & French").waitFor();
         await capture(page, "departures-board", scheme);
+      });
+
+      /**
+       * **Self check-in at the counter** (N-24): the other thing a display link
+       * can open, and the one surface in DiveDay a stranger operates unaided.
+       * Minted through the test seed route, like the board above — the token is
+       * hashed at rest and shown once.
+       *
+       * **The idle prompt, and deliberately not the answer card.** The answer
+       * names a diver and stands in a lobby, so it wipes itself after twelve
+       * seconds (`CLEAR_AFTER_MS`) — which is shorter than a multi-viewport
+       * `capture()` takes, and a baseline that sometimes photographs a blank
+       * panel is worse than no baseline at all. What the card says is pinned by
+       * `e2e/self-check-in.spec.ts`, which reads it in one pass and is done.
+       */
+      test(`the counter kiosk renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-display-token", {
+          data: { label: "Counter tablet", purpose: "check_in" },
+        });
+        expect(seeded.ok()).toBe(true);
+        const { path } = (await seeded.json()) as { path: string };
+        await page.goto(path);
+        await page.getByRole("heading", { level: 1, name: "Blue Mantis Divers" }).waitFor();
+        await page.getByLabel("Last name").waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "self-check-in", scheme);
       });
 
       /**

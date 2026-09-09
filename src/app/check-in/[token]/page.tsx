@@ -48,11 +48,7 @@ export const metadata: Metadata = {
  * date, one box. Everything else this page could know about the day belongs to
  * the board, which is a different link on a different screen.
  */
-export default async function KioskCheckInPage({
-  params,
-}: {
-  params: Promise<{ token: string }>;
-}) {
+export default async function KioskCheckInPage({ params }: { params: Promise<{ token: string }> }) {
   await connection();
   const { token } = await params;
   const db = await getDb();
@@ -95,7 +91,6 @@ export default async function KioskCheckInPage({
       <KioskConsole
         token={token}
         copy={{
-          title: t("kiosk.title"),
           prompt: t("kiosk.prompt"),
           submit: t("kiosk.submit"),
           submitting: t("kiosk.submitting"),

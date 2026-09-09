@@ -420,7 +420,15 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_promotion_code_id",
   ],
   trip_last_minute_promo_recipients: ["shop_id"],
-  booking_arrival_events: ["shop_id"],
+  booking_arrival_events: [
+    "shop_id",
+    // Which counter tablet an arrival was tapped on (N-24). `display_tokens` is
+    // never exported — it holds bearer credentials at rest — so this id would
+    // resolve to nothing inside the bundle. What the column is *for* survives
+    // the export anyway: a self check-in's `recorded_by_person_id` is the
+    // diver's own, and a desk check-in's is the staffer who served them.
+    "display_token_id",
+  ],
   roll_call_events: ["shop_id"],
   roll_call_crew_events: ["shop_id"],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),

@@ -29,7 +29,6 @@ export const IDLE_KIOSK_RESULT: KioskResult = { status: "idle" };
 
 /** Every word the console renders, resolved on the server and handed down. */
 export type KioskCopy = {
-  title: string;
   prompt: string;
   submit: string;
   submitting: string;

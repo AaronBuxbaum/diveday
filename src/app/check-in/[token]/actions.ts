@@ -10,8 +10,8 @@ import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
 import { formatTime } from "@/lib/format";
 import { kioskSelection, readKioskInput } from "@/lib/kiosk-check-in";
-import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { firstNameOf } from "@/lib/person-name";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import type { KioskResult } from "./kiosk-types";
 
 /**
@@ -54,16 +54,17 @@ export async function kioskCheckInAction(
   };
   if (!display || !shop) return desk;
 
-  const budget = await checkRateLimit(rateLimitKey("kiosk-lookup", display.id), RATE_LIMITS.kioskLookup);
+  const budget = await checkRateLimit(
+    rateLimitKey("kiosk-lookup", display.id),
+    RATE_LIMITS.kioskLookup,
+  );
   if (!budget.allowed) return desk;
 
   const lookup = readKioskInput(formData.get("who"));
   if (!lookup) return desk;
 
   const now = nowDate();
-  const seat = kioskSelection(
-    await findKioskSeats(db, { shopId: shop.id, lookup, now }),
-  );
+  const seat = kioskSelection(await findKioskSeats(db, { shopId: shop.id, lookup, now }));
   if (!seat) return desk;
 
   const outcome = await checkInAtKiosk(db, {
