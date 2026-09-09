@@ -16,10 +16,16 @@ test.describe("the paper day", () => {
   signedInAsOwner();
 
   test("the morning end of the day spine prints every departure of today", async ({ page }) => {
-    // Composing the manifest and prep readers once per departure is the
+    // Composing the manifest and prep readers once per departure is still the
     // slowest staff render in the app, and it is a document nobody navigates
-    // twice — the budget belongs to the printer, not to the 15s default.
-    test.setTimeout(90_000);
+    // twice — the budget belongs to the printer, not to the 15s default. It no
+    // longer belongs at ninety seconds, though: the page now composes three
+    // departures at a time instead of all of them at once (issue #1598), and
+    // measured here at one worker on an idle machine the whole test is 6.5s.
+    // Forty-five is about seven times that, which covers a four-shard runner
+    // with room to spare and still fails a genuinely stuck render inside a
+    // minute rather than inside two.
+    test.setTimeout(45_000);
 
     await page.goto("/shop/blue-mantis");
     // The day's own stations, by the heading each one wears. Read before the
