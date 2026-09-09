@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Fragment } from "react";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
@@ -9,6 +10,7 @@ import { nowDate } from "@/lib/clock";
 import { formatDateWithYear } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { AutoPrint } from "../trips/[id]/_components/AutoPrint";
+import { keptSheets } from "../trips/[id]/print/_components/kept-sheets";
 import {
   PACKET_READY_SELECTOR,
   PacketReady,
@@ -60,7 +62,17 @@ export default async function ShopDayPrintPage({
   const now = nowDate();
   const db = await getDb();
   const departures = await listShopDayDepartures(db, shop.id, shop.timezone, now);
-  const packets = await Promise.all(
+  // **`allSettled`, because one departure must never cost the other eleven.**
+  // A manager can tap Delete on today's board while a captain's request for
+  // this document is in flight, and the composed manifest page answers a
+  // vanished departure the only way a page can — `notFound()`, which throws.
+  // Inside `Promise.all` that rejection is the *day's* answer: the captain
+  // gets a 404 instead of every other boat. `TripPacket` short-circuits the
+  // ordinary case before it composes anything; this is the backstop for the
+  // window that is left, and for anything else one departure's readers can
+  // raise. A dropped sheet is not silent: the count in the header below is
+  // `sheets.length`, so the paper says eleven when eleven is what it holds.
+  const packets = await Promise.allSettled(
     departures.map((departure) =>
       TripPacket({
         shopSlug,
@@ -72,10 +84,9 @@ export default async function ShopDayPrintPage({
       }),
     ),
   );
-  // A departure deleted between the list and the read renders nothing at all,
-  // rather than a blank block with a heading and no boat under it.
-  const sheets = packets.flatMap((packet, index) =>
-    packet ? [{ id: departures[index].id, packet }] : [],
+  const sheets = keptSheets(
+    packets,
+    departures.map((departure) => departure.id),
   );
 
   return (
@@ -89,17 +100,26 @@ export default async function ShopDayPrintPage({
             page 7 has no other way to know a boat is missing from it. */}
         <p className="mt-2 text-muted">
           {t("shared.printPacket.daySubtitle", {
-            count: departures.length,
+            // `sheets.length`, never `departures.length`: this number is the
+            // only thing that tells a captain holding page seven that a boat
+            // is missing from the stack.
+            count: sheets.length,
             date: formatDateWithYear(now, locale, shop.timezone),
           })}
         </p>
       </header>
+      {/* **A `Fragment`, not a wrapper div.** The page breaks between sheets
+          are `globals.css`'s `.print-bundle-page:first-of-type { break-before:
+          auto }`, which exempts the *first* section of its parent — so a
+          per-departure wrapper made every departure's dive plan a first child
+          and printed it on the back of the previous boat's packing list.
+          `display: contents` does not help: it is a layout value and selectors
+          still match the real tree. Keeping every section a sibling is what
+          makes exactly one of them the first. */}
       {sheets.map((sheet) => (
-        <div key={sheet.id} className="contents">
-          {sheet.packet}
-        </div>
+        <Fragment key={sheet.id}>{sheet.packet}</Fragment>
       ))}
-      {departures.length === 0 ? <p>{t("shared.printPacket.dayEmpty")}</p> : null}
+      {sheets.length === 0 ? <p>{t("shared.printPacket.dayEmpty")}</p> : null}
       <PacketReady />
     </div>
   );

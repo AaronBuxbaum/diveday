@@ -4,6 +4,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessStatusText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { scopedId } from "@/lib/element-id";
 import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
 import { HeadCount } from "./HeadCount";
 
@@ -36,6 +37,7 @@ import { HeadCount } from "./HeadCount";
  * it that way: re-introducing a wrapper here silently un-pins the panel again.
  */
 export function SummaryPanel({
+  idPrefix,
   checkpoint,
   isDeparture,
   rollCallComplete,
@@ -48,6 +50,8 @@ export function SummaryPanel({
   notBackAboardCrew,
   t,
 }: {
+  /** Scopes this section's element ids to one departure — see `scopedId`. */
+  idPrefix?: string;
   checkpoint: RollCallCheckpoint;
   /**
    * "Not boarded" is the dock's word for *never left*; after a dive the same
@@ -256,14 +260,14 @@ export function SummaryPanel({
           that fills (slice 13h) — the water at the brim and the heading's
           word, never a wash behind the reading text. */}
       <section
-        aria-labelledby="roll-call-progress-heading"
+        aria-labelledby={scopedId(idPrefix, "roll-call-progress-heading")}
         className="sticky top-(--chrome-h) z-10 mt-4 rounded-panel border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur print:hidden"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className={groupLabelClass("primary")}>{t("manifest.activeCheckpoint")}</p>
             <h2
-              id="roll-call-progress-heading"
+              id={scopedId(idPrefix, "roll-call-progress-heading")}
               className={`mt-1 flex items-center gap-2 ${SECTION_TITLE_CLASS}`}
             >
               {rollCallComplete ? <StatusMark variant="success" size="md" /> : null}

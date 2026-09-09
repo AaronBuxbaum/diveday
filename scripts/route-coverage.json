@@ -373,8 +373,9 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/print": {
-    "e2e": ["paper-day.spec.ts", "tenant-isolation.spec.ts"],
-    "visual": ["day-packet"]
+    "e2e": ["a11y.spec.ts", "paper-day.spec.ts", "tenant-isolation.spec.ts"],
+    "visual": ["day-packet"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/promos": {
     "e2e": ["promo-codes.spec.ts", "settings-findability.spec.ts"],

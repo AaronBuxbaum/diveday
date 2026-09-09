@@ -26,6 +26,7 @@ import {
   UNSIZED_ITEM_KINDS,
 } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
+import { scopedId } from "@/lib/element-id";
 import { groupUnitsForSize } from "@/lib/gear";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
@@ -105,10 +106,19 @@ export default async function TripPrepPage({
     notice?: string;
     /** Which grouping; anything unrecognised reads as the by-item default. */
     group?: string;
+    /**
+     * **Not part of this route's URL contract** — see the same field on the
+     * manifest page. The paper day composes this page once per departure, and
+     * without a prefix every `aria-labelledby` below the first one points at
+     * the first departure's heading. Narrowed by `uuidParam`, so a hand-typed
+     * value on this route changes nothing.
+     */
+    idPrefix?: string;
   }>;
 }) {
   const { shopSlug, id: tripId } = await params;
-  const { notice, group } = await searchParams;
+  const { notice, group, idPrefix: requestedIdPrefix } = await searchParams;
+  const idPrefix = uuidParam(requestedIdPrefix ?? "") ?? undefined;
   const grouping: PrepGrouping = isPrepGrouping(group) ? group : "item";
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
@@ -265,8 +275,8 @@ export default async function TripPrepPage({
         />
       ) : (
         <>
-          <section aria-labelledby="tanks-heading">
-            <h2 id="tanks-heading" className={SECTION_TITLE_CLASS}>
+          <section aria-labelledby={scopedId(idPrefix, "tanks-heading")}>
+            <h2 id={scopedId(idPrefix, "tanks-heading")} className={SECTION_TITLE_CLASS}>
               {t("trips.prep.tanksHeading")}
             </h2>
             {/* **Three tiles on a screen; one line on paper.** The tiles are
@@ -305,13 +315,13 @@ export default async function TripPrepPage({
 
           {showNitrox && checklist.nitroxBlockers.length > 0 ? (
             <section
-              aria-labelledby="nitrox-blocked-heading"
+              aria-labelledby={scopedId(idPrefix, "nitrox-blocked-heading")}
               // Warning tone, canonical geometry: this and its two neighbours
               // below are the same card as everything else on the page, and
               // only the border and fill say which of them is a problem.
               className="mt-6 rounded-panel border border-warning/40 bg-warning/10 p-4 sm:p-5"
             >
-              <h2 id="nitrox-blocked-heading" className={SECTION_TITLE_CLASS}>
+              <h2 id={scopedId(idPrefix, "nitrox-blocked-heading")} className={SECTION_TITLE_CLASS}>
                 {t("trips.prep.nitroxBlockedHeading")}
               </h2>
               <p className="mt-1 text-sm">{t("trips.prep.nitroxBlockedDescription")}</p>
@@ -396,10 +406,10 @@ export default async function TripPrepPage({
 
           {checklist.diversNeedingStaffFit.length > 0 ? (
             <section
-              aria-labelledby="staff-fit-heading"
+              aria-labelledby={scopedId(idPrefix, "staff-fit-heading")}
               className="mt-6 rounded-panel border border-warning/40 bg-warning/5 p-4 sm:p-5"
             >
-              <h2 id="staff-fit-heading" className={SECTION_TITLE_CLASS}>
+              <h2 id={scopedId(idPrefix, "staff-fit-heading")} className={SECTION_TITLE_CLASS}>
                 {t("trips.prep.staffFitHeading")}
               </h2>
               <p className="mt-1 text-sm text-muted">{t("trips.prep.staffFitDescription")}</p>
@@ -510,9 +520,12 @@ export default async function TripPrepPage({
           ) : null}
 
           {hotelPickups.length > 0 ? (
-            <section aria-labelledby="hotel-pickups-heading" className="mt-8">
+            <section aria-labelledby={scopedId(idPrefix, "hotel-pickups-heading")} className="mt-8">
               <div className="flex items-center justify-between gap-2">
-                <h2 id="hotel-pickups-heading" className={SECTION_TITLE_CLASS}>
+                <h2
+                  id={scopedId(idPrefix, "hotel-pickups-heading")}
+                  className={SECTION_TITLE_CLASS}
+                >
                   {t("trips.prep.hotelPickupsHeading")}
                 </h2>
                 <span className="text-sm text-muted">
@@ -561,9 +574,9 @@ export default async function TripPrepPage({
             </section>
           ) : null}
 
-          <section aria-labelledby="kit-heading" className="mt-8">
+          <section aria-labelledby={scopedId(idPrefix, "kit-heading")} className="mt-8">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-              <h2 id="kit-heading" className={SECTION_TITLE_CLASS}>
+              <h2 id={scopedId(idPrefix, "kit-heading")} className={SECTION_TITLE_CLASS}>
                 {t("trips.prep.rentalKitHeading")}
               </h2>
               {/* A state toggle, not two buttons: one list, two ways of
@@ -770,13 +783,13 @@ export default async function TripPrepPage({
           ) : null}
           {gearFleetTotal > 0 && assignmentRows.length > 0 ? (
             <section
-              aria-labelledby="assignments-heading"
+              aria-labelledby={scopedId(idPrefix, "assignments-heading")}
               // On paper the section is only its assigned lines: with nothing
               // assigned yet it would print as a heading over bare names, so
               // it drops out of the packet entirely until a unit is on it.
               className={`mt-8${assignmentRows.some((row) => row.assigned.length > 0) ? "" : " print:hidden"}`}
             >
-              <h2 id="assignments-heading" className={SECTION_TITLE_CLASS}>
+              <h2 id={scopedId(idPrefix, "assignments-heading")} className={SECTION_TITLE_CLASS}>
                 {t("gear.prep.heading")}
               </h2>
               {/* The cart, not a caption. What replaced a sentence restating

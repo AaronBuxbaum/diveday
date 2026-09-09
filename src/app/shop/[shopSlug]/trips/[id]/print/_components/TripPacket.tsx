@@ -57,14 +57,31 @@ export async function TripPacket({
   t: StaffTranslator;
 }): Promise<ReactNode> {
   const params = Promise.resolve({ shopSlug, id: tripId });
-  const searchParams = Promise.resolve({});
+  // **The composed pages scope their own element ids to this departure.** Both
+  // carry fixed ids (`roll-call-list`, `tanks-heading`, …) that are correct on
+  // a route showing one boat and silently wrong on a document showing several:
+  // every reference in the second departure resolves to the first departure's
+  // element, and two of those sections are the ones that say whether a boat is
+  // safe to leave. `src/lib/element-id.ts` carries the full reasoning, and the
+  // reason this rides on `searchParams` rather than a prop is that a page
+  // component's props are pinned to Next's `PageProps`.
+  const searchParams = Promise.resolve({ idPrefix: tripId });
   const db = await getDb();
-  const [details, manifest, prep] = await Promise.all([
-    getTripOverview(db, shop, tripId, actorPersonId),
+  // **The overview resolves alone, first.** It is the cheapest of the three
+  // reads and the one that answers "is this departure still there", and the
+  // other two cannot answer it politely: the manifest page's own reply to a
+  // vanished trip is `notFound()`, which throws, and a throw inside a
+  // `Promise.all` beside it is the *caller's* answer rather than this
+  // departure's. Sequencing it costs one round trip on a document nobody
+  // navigates twice, and buys the day's paper a boat that can go missing
+  // without taking the rest of the stack with it.
+  const details = await getTripOverview(db, shop, tripId, actorPersonId);
+  if (!details) return null;
+
+  const [manifest, prep] = await Promise.all([
     TripManifestPage({ params, searchParams }),
     TripPrepPage({ params, searchParams }),
   ]);
-  if (!details) return null;
 
   return (
     <>

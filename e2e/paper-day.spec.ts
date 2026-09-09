@@ -63,6 +63,39 @@ test.describe("the paper day", () => {
     // printer, and a captain holding page seven has no other way to tell.
     await expect(popup.getByText(/\d{4}/).first()).toBeVisible();
 
+    // **Each departure starts a fresh sheet.** The break is CSS
+    // (`globals.css`'s `.print-bundle-page:first-of-type { break-before: auto }`)
+    // and a full-page screenshot structurally cannot see a page boundary, so
+    // this reads the computed value instead: exactly the document's first
+    // section is exempt, and every section after it — including the first of
+    // every later departure — breaks. A per-departure wrapper element made all
+    // of them first children and printed each boat's dive plan on the back of
+    // the previous boat's packing list.
+    await popup.emulateMedia({ media: "print" });
+    const breaks = await popup.evaluate(() =>
+      [...document.querySelectorAll(".print-bundle-page")].map(
+        (element) => getComputedStyle(element).breakBefore,
+      ),
+    );
+    expect(breaks.length).toBe(departures * 3);
+    expect(breaks[0]).toBe("auto");
+    expect(breaks.slice(1)).toEqual(breaks.slice(1).map(() => "page"));
+    await popup.emulateMedia({ media: "screen" });
+
+    // **No element id is emitted twice.** The manifest and prep pages carry
+    // fixed ids, and this document renders both once per departure: a repeat
+    // means every `aria-labelledby` and every `#roll-call-list` jump after the
+    // first departure silently points at the *first* boat's element, on the
+    // two sections that say whether a boat is safe to leave.
+    const duplicateIds = await popup.evaluate(() => {
+      const seen = new Map<string, number>();
+      for (const element of document.querySelectorAll("[id]")) {
+        seen.set(element.id, (seen.get(element.id) ?? 0) + 1);
+      }
+      return [...seen.entries()].filter(([, count]) => count > 1).map(([id]) => id);
+    });
+    expect(duplicateIds, JSON.stringify(duplicateIds)).toEqual([]);
+
     // Not one control on paper, however many departures the day holds — the
     // same claim `e2e/trips.spec.ts` makes of the single-trip packet, made
     // again here because widening it is exactly the change that could put one

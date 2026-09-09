@@ -8,6 +8,7 @@ import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { scopedId } from "@/lib/element-id";
 import { BuddyDragGroups } from "./BuddyDragGroups";
 
 /** One person the builder can offer: the form's flat member token plus a name. */
@@ -22,6 +23,7 @@ export type BuddyMemberOption = { token: string; label: string };
  * manifest; the team itself prints on each member's row.
  */
 export function BuddyTeamsPanel({
+  idPrefix,
   defaultOpen,
   intentLine,
   buddyTeamsList,
@@ -37,6 +39,8 @@ export function BuddyTeamsPanel({
   dissolveBuddyTeamAction,
   t,
 }: {
+  /** Scopes this section's element ids to one departure — see `scopedId`. */
+  idPrefix?: string;
   /**
    * Arrive with the panel open — set by the `?buddies=open` the buddy actions
    * redirect back with, so the panel does not fold shut between the steps of
@@ -91,7 +95,10 @@ export function BuddyTeamsPanel({
   const builderError = buddyErrorForm === "builder" && showBuilder ? buddyErrorText : null;
   const panelError = builderError ? null : buddyErrorText;
   return (
-    <section aria-labelledby="buddy-teams-heading" className="mt-9 print:hidden">
+    <section
+      aria-labelledby={scopedId(idPrefix, "buddy-teams-heading")}
+      className="mt-9 print:hidden"
+    >
       {/* The whole panel sits behind one disclosure line. Grouping people is
           dock/desk prep, done once per departure — but the open panel (team
           rows, per-team pickers, dissolve buttons) stood at permanent height
@@ -112,7 +119,7 @@ export function BuddyTeamsPanel({
         <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 select-none [&::-webkit-details-marker]:hidden">
           <DisclosureCaret className="text-muted group-open/buddypanel:rotate-90" />
           <span className="flex flex-wrap items-baseline gap-x-2">
-            <h2 id="buddy-teams-heading" className={SECTION_TITLE_CLASS}>
+            <h2 id={scopedId(idPrefix, "buddy-teams-heading")} className={SECTION_TITLE_CLASS}>
               {t("manifest.buddyHeading")}
             </h2>
             <span className="text-sm text-muted">
