@@ -1,0 +1,32 @@
+{
+  "eyebrow": "Counter",
+  "title": "Took a call",
+  "callerHeading": "Who called",
+  "outcomeHeading": "What they wanted",
+  "outcome": {
+    "dateRequest": "A day that isn’t on the board",
+    "waitlist": "A seat on a full departure",
+    "booking": "A seat on a departure with room"
+  },
+  "departureLabel": "Which departure",
+  "departureUnchosen": "Choose a departure",
+  "departureOpen": "{title} · {date} · {time} · {seats, plural, one {# seat left} other {# seats left}}",
+  "departureFull": "{title} · {date} · {time} · full",
+  "noDepartures": "There is nothing on the board to put anyone on. Add a departure first, or take this down as a request for a day.",
+  "interestLabel": "What they asked about",
+  "interestPlaceholder": "Two-tank reef in March",
+  "preferredDateLabel": "Day they want",
+  "diversLabel": "How many divers",
+  "noteLabel": "Anything else they said",
+  "submit": "Log the call",
+  "submitting": "Logging…",
+  "notice": {
+    "invalid": "Check the caller’s details and try again.",
+    "name": "Take the caller’s name first.",
+    "reply": "Take an email or a phone number, or nobody can ring them back.",
+    "email": "A wait-list entry needs an email address: that is what a freed seat is offered through.",
+    "departure": "Choose the departure they asked about.",
+    "interest": "Say what they asked about.",
+    "logged": "Call logged."
+  }
+}

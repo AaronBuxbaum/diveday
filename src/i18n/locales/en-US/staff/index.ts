@@ -26,6 +26,7 @@ import blowout from "./blowout.json";
 import boats from "./boats.json";
 import bookings from "./bookings.json";
 import calendar from "./calendar.json";
+import calls from "./calls.json";
 import checkIn from "./checkIn.json";
 import closeout from "./closeout.json";
 import courses from "./courses.json";
@@ -60,6 +61,7 @@ import whatsapp from "./whatsapp.json";
 
 const staff = {
   calendar,
+  calls,
   staffing,
   feed,
   gear,

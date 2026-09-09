@@ -261,6 +261,11 @@
     "e2e": ["add-diver.spec.ts", "trip-admission.spec.ts"],
     "visual": ["booking-new-diver"]
   },
+  "/shop/[shopSlug]/calls": {
+    "e2e": ["took-a-call.spec.ts", "a11y.spec.ts"],
+    "visual": ["took-a-call"],
+    "a11y": ["a11y.spec.ts"]
+  },
   "/shop/[shopSlug]/check-in": {
     "e2e": ["check-in.spec.ts", "tenant-isolation.spec.ts", "trip-admission.spec.ts"],
     "visual": ["check-in", "check-in-checked", "check-in-waiver-refused"],

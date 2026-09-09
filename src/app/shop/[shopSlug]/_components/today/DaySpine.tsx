@@ -18,7 +18,7 @@ import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
 import type { EveningClose } from "@/lib/closeout";
-import type { FormDraftKind } from "@/lib/form-drafts";
+import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
 import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import {
@@ -824,13 +824,7 @@ export function DaySpine({
                   </span>
                 }
               >
-                <p className="py-2 text-sm text-muted">
-                  {t(
-                    draft.form === "add_departure"
-                      ? "today.unfinished.addDeparture"
-                      : "today.unfinished.newDiver",
-                  )}
-                </p>
+                <p className="py-2 text-sm text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</p>
               </LedgerRow>
             ))}
             {showPaymentsRow ? (

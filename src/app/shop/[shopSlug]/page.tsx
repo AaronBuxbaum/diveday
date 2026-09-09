@@ -48,6 +48,7 @@ import { trackEvent } from "@/lib/analytics";
 import { canViewShopReports } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { assembleEveningClose } from "@/lib/closeout";
+import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -320,10 +321,11 @@ async function TodayBody({
     await listFreshFormDrafts(db, shop.id, session.user.personId, now)
   ).map((draft) => ({
     form: draft.form,
-    href:
-      draft.form === "add_departure"
-        ? `/shop/${shopSlug}/schedule/board?add=1`
-        : `/shop/${shopSlug}/divers/new`,
+    // Exhaustive by type rather than a ternary: a fourth draft kind added
+    // without a door here used to resolve, silently, to the diver form — a
+    // "resume" link that opened the wrong page with somebody else's answers in
+    // it.
+    href: `/shop/${shopSlug}${FORM_DRAFT_RESUME_SUFFIX[draft.form]}`,
   }));
   // The lens (20260721-role-aware-landing): a captain or divemaster's Today
   // filters to boat work and badges the boat they crew; an instructor's leads

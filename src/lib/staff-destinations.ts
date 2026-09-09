@@ -92,6 +92,7 @@ export type StaffDestinationId =
   | "today"
   | "checkIn"
   | "walkIn"
+  | "tookACall"
   | "divers"
   | "board"
   | "addBooking"
@@ -148,6 +149,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   today: "shared.shopNavLinks.today",
   checkIn: "shared.shopNavLinks.checkIn",
   walkIn: "shared.shopNavLinks.walkIn",
+  tookACall: "shared.shopNavLinks.tookACall",
   divers: "shared.shopNavLinks.divers",
   board: "shared.shopNavLinks.board",
   addBooking: "shared.shopNavLinks.addBooking",
@@ -260,6 +262,19 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // A way into Check-in rather than a destination of its own, so it stays out
   // of the header and lives where someone types what they want.
   { id: "walkIn", suffix: "/check-in/walk-in", navGroup: null, inPalette: true },
+  // The desk phone's door (N-22): one capture that becomes a date request, a
+  // wait-list entry or a booking. Palette-only for the same reason `addBooking`
+  // and `walkIn` are — it is an *act*, not a place a shop stands in, and the
+  // dock holds five destination tabs with the sixth spent on More (ADR
+  // 20260813-more-is-the-shops-other-door). It is *here* because the registry is
+  // the only place a destination may be declared at all.
+  //
+  // Ungated, deliberately, though the Requests page one of its three outcomes
+  // writes to is behind `reports`: gating this would take the phone away from
+  // the person most likely to answer it. A caller's own details, given on the
+  // line to the staffer typing them, are not the same disclosure as a page
+  // listing every stranger who ever asked.
+  { id: "tookACall", suffix: "/calls", navGroup: null, inPalette: true },
   { id: "staffing", suffix: "/staffing", navGroup: "daily", inPalette: true },
   { id: "courses", suffix: "/courses", navGroup: "daily", inPalette: true },
   { id: "diveSites", suffix: "/dive-sites", navGroup: "daily", inPalette: true },

@@ -275,6 +275,7 @@
     "label": "Unfinished",
     "addDeparture": "A departure you started adding.",
     "newDiver": "A diver you started adding.",
+    "tookACall": "A call you started writing down.",
     "resume": "Resume"
   }
 }
