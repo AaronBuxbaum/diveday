@@ -6357,6 +6357,27 @@ export const calendarFeeds = pgTable(
  * page lists only rows where it is null. Nothing hard-deletes a row except the
  * demo cascade.
  */
+/**
+ * **What a display link opens** — the one thing that separates a screen the
+ * lobby *reads* from a tablet a diver *taps* (N-23, N-24).
+ *
+ * `board` is the departures board at `/board/[token]`: read-only, and its
+ * reader decides by type that no diver is ever named on it. `check_in` is the
+ * self check-in kiosk at `/check-in/[token]`, which **writes** — it records an
+ * arrival against a real booking.
+ *
+ * They share this table, its hashing and its one revocation path deliberately;
+ * what they must never share is a token. A board link is handed to whoever
+ * mounts a TV, and if it also opened a surface that can move a booking's status
+ * then mounting a TV would be granting a write. `verifyDisplayToken` therefore
+ * takes the purpose it expects and refuses a token minted for the other one,
+ * with the same single refusal it gives an unknown token.
+ *
+ * `board` is the default because every row that existed before this column did
+ * was a board link.
+ */
+export const displayTokenPurpose = pgEnum("display_token_purpose", ["board", "check_in"]);
+
 export const displayTokens = pgTable(
   "display_tokens",
   {
@@ -6367,6 +6388,7 @@ export const displayTokens = pgTable(
     tokenHash: text("token_hash").notNull().unique(),
     /** "Lobby TV", "Dock B tablet" — the shop's own word for which screen this is. */
     label: text("label").notNull(),
+    purpose: displayTokenPurpose("purpose").notNull().default("board"),
     showNames: boolean("show_names").notNull().default(false),
     createdByPersonId: uuid("created_by_person_id")
       .notNull()
@@ -8102,9 +8124,29 @@ export const bookingArrivalEvents = pgTable(
     bookingId: uuid("booking_id")
       .notNull()
       .references(() => bookings.id, { onDelete: "cascade" }),
+    /**
+     * Who said so. A staffer at the desk on every path but one: a diver who
+     * checked *themselves* in at a lobby tablet is recorded as their own
+     * recorder, which is the honest reading of the column and is why it stays
+     * `not null`. `displayTokenId` beside it is what tells the two apart.
+     */
     recordedByPersonId: uuid("recorded_by_person_id")
       .notNull()
       .references(() => people.id),
+    /**
+     * The kiosk this arrival was tapped on, or null for a staffer's own tap
+     * (N-24). It is the whole difference between "Dana checked Priya in" and
+     * "Priya checked herself in on the lobby tablet", and a shop reading its
+     * own trail after the fact needs to be able to tell those apart — which
+     * `recorded_by_person_id` alone cannot, since staff dive too.
+     *
+     * Deliberately **not** a new `source` value: `source` is shared with
+     * `roll_call_events`, and widening that enum would make `kiosk` a
+     * representable origin for a *boarding*. Arrival is the desk's question and
+     * boarding is the rail's, and nothing a diver taps in a lobby may ever
+     * reach the second one (ADR 20260907-the-counter-survives-offline).
+     */
+    displayTokenId: uuid("display_token_id").references(() => displayTokens.id),
     status: arrivalStatus("status").notNull(),
     /** Same offline contract as `rollCallEvents.source` — rides the same queue. */
     source: rollCallSource("source").notNull().default("live"),

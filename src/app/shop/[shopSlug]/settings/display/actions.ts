@@ -8,6 +8,7 @@ import { getDb } from "@/db/client";
 import { issueDisplayToken, revokeDisplayToken } from "@/db/display-tokens";
 import { setShopPublicBoatLine, setShopYearOnDiveday } from "@/db/shops";
 import { boardPath } from "@/lib/display-tokens";
+import { kioskCheckInPath } from "@/lib/kiosk-check-in";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import type { DisplayLinkState } from "./display-panel-types";
@@ -89,10 +90,16 @@ export async function displayLinkAction(
     return revoked ? { status: "revoked", id } : { status: "denied", intent: "revoke" };
   }
 
+  // The form's radio, read as a closed set rather than trusted: `purpose`
+  // decides whether the minted link opens a read-only screen or a surface that
+  // records arrivals, so an unrecognised value must never fall through to the
+  // more capable one.
+  const purpose = formData.get("purpose") === "check_in" ? "check_in" : "board";
   const outcome = await issueDisplayToken(db, {
     shopId: session.user.shopId,
     personId: session.user.personId,
     label: formData.get("label"),
+    purpose,
     showNames: formData.get("showNames") === "true",
   });
   if (!outcome.ok) {
@@ -106,7 +113,11 @@ export async function displayLinkAction(
     status: "issued",
     id: outcome.issued.id,
     label: outcome.issued.label,
-    url: `${origin}${boardPath(outcome.issued.token)}`,
+    url: `${origin}${
+      outcome.issued.purpose === "check_in"
+        ? kioskCheckInPath(outcome.issued.token)
+        : boardPath(outcome.issued.token)
+    }`,
   };
 }
 

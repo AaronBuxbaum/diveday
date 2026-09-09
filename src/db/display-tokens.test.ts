@@ -26,7 +26,7 @@ describe("issueDisplayToken", () => {
     const outcome = await issueDisplayToken(db, {
       shopId: shop.id,
       personId,
-      label: "Lobby TV",
+      label: "Lobby TV", purpose: "board",
       showNames: false,
     });
     if (!outcome.ok) throw new Error(outcome.reason);
@@ -52,7 +52,7 @@ describe("issueDisplayToken", () => {
     const byManager = await issueDisplayToken(db, {
       shopId: shop.id,
       personId: manager.person.id,
-      label: "Dock B",
+      label: "Dock B", purpose: "board",
       showNames: true,
     });
     expect(byManager.ok).toBe(true);
@@ -60,7 +60,7 @@ describe("issueDisplayToken", () => {
     const byCrew = await issueDisplayToken(db, {
       shopId: shop.id,
       personId: crew.person.id,
-      label: "Dock B",
+      label: "Dock B", purpose: "board",
       showNames: true,
     });
     expect(byCrew).toEqual({ ok: false, reason: "not_authorized" });
@@ -69,7 +69,7 @@ describe("issueDisplayToken", () => {
   it("refuses a blank label before touching the database", async () => {
     const { db, shop, personId } = await staffWithRole("owner");
     expect(
-      await issueDisplayToken(db, { shopId: shop.id, personId, label: "   ", showNames: false }),
+      await issueDisplayToken(db, { shopId: shop.id, personId, label: "   ", purpose: "board", showNames: false }),
     ).toEqual({ ok: false, reason: "invalid_label" });
     expect(await listDisplayTokens(db, { shopId: shop.id })).toEqual([]);
   });
@@ -81,19 +81,19 @@ describe("verifyDisplayToken", () => {
     const outcome = await issueDisplayToken(db, {
       shopId: shop.id,
       personId,
-      label: "Lobby TV",
+      label: "Lobby TV", purpose: "board",
       showNames: true,
     });
     if (!outcome.ok) throw new Error(outcome.reason);
 
-    const context = await verifyDisplayToken(db, { token: outcome.issued.token });
+    const context = await verifyDisplayToken(db, { token: outcome.issued.token , purpose: "board" });
     expect(context).toEqual({ id: outcome.issued.id, shopId: shop.id, showNames: true });
     expect(Object.keys(context ?? {}).sort()).toEqual(["id", "shopId", "showNames"]);
   });
 
   it("answers an unknown token with null", async () => {
     const { db } = await staffWithRole("owner");
-    expect(await verifyDisplayToken(db, { token: "not-a-real-token" })).toBeNull();
+    expect(await verifyDisplayToken(db, { token: "not-a-real-token" , purpose: "board" })).toBeNull();
   });
 });
 
@@ -103,7 +103,7 @@ describe("revokeDisplayToken", () => {
     const outcome = await issueDisplayToken(db, {
       shopId: shop.id,
       personId,
-      label: "Lobby TV",
+      label: "Lobby TV", purpose: "board",
       showNames: false,
     });
     if (!outcome.ok) throw new Error(outcome.reason);
@@ -111,7 +111,7 @@ describe("revokeDisplayToken", () => {
     expect(await revokeDisplayToken(db, { shopId: shop.id, personId, id: outcome.issued.id })).toBe(
       true,
     );
-    expect(await verifyDisplayToken(db, { token: outcome.issued.token })).toBeNull();
+    expect(await verifyDisplayToken(db, { token: outcome.issued.token , purpose: "board" })).toBeNull();
     expect(await listDisplayTokens(db, { shopId: shop.id })).toEqual([]);
     // Soft: the row is still there, stamped.
     const [row] = await db
@@ -129,7 +129,7 @@ describe("revokeDisplayToken", () => {
     const outcome = await issueDisplayToken(db, {
       shopId: shop.id,
       personId,
-      label: "Lobby TV",
+      label: "Lobby TV", purpose: "board",
       showNames: false,
     });
     if (!outcome.ok) throw new Error(outcome.reason);
@@ -141,7 +141,7 @@ describe("revokeDisplayToken", () => {
         id: outcome.issued.id,
       }),
     ).toBe(false);
-    expect(await verifyDisplayToken(db, { token: outcome.issued.token })).not.toBeNull();
+    expect(await verifyDisplayToken(db, { token: outcome.issued.token , purpose: "board" })).not.toBeNull();
   });
 
   it("refuses a crew member, who could otherwise darken the lobby screen", async () => {
@@ -153,7 +153,7 @@ describe("revokeDisplayToken", () => {
     const outcome = await issueDisplayToken(db, {
       shopId: shop.id,
       personId,
-      label: "Lobby TV",
+      label: "Lobby TV", purpose: "board",
       showNames: false,
     });
     if (!outcome.ok) throw new Error(outcome.reason);
@@ -167,7 +167,7 @@ describe("revokeDisplayToken", () => {
         id: outcome.issued.id,
       }),
     ).toBe(false);
-    expect(await verifyDisplayToken(db, { token: outcome.issued.token })).not.toBeNull();
+    expect(await verifyDisplayToken(db, { token: outcome.issued.token , purpose: "board" })).not.toBeNull();
   });
 });
 
@@ -177,14 +177,14 @@ describe("listDisplayTokens and touchDisplayToken", () => {
     const first = await issueDisplayToken(db, {
       shopId: shop.id,
       personId,
-      label: "Lobby TV",
+      label: "Lobby TV", purpose: "board",
       showNames: false,
       now: new Date("2026-07-20T10:00:00.000Z"),
     });
     const second = await issueDisplayToken(db, {
       shopId: shop.id,
       personId,
-      label: "Dock B tablet",
+      label: "Dock B tablet", purpose: "board",
       showNames: true,
       now: new Date("2026-07-21T10:00:00.000Z"),
     });

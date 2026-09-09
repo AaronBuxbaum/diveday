@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { normalizeDisplayLabel } from "@/lib/display-tokens";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { displayTokens, shops } from "./schema";
+import { displayTokens, displayTokenPurpose, shops } from "./schema";
 
 /**
  * **Display links: the credential behind `/board/[token]`** (issue #1426).
@@ -23,7 +23,21 @@ import { displayTokens, shops } from "./schema";
  * the manager who set it up left the shop. Revocation is the one door.
  */
 
-export type IssuedDisplayToken = { id: string; token: string; label: string; showNames: boolean };
+/**
+ * What a display link opens (N-23, N-24). Every writer and reader below takes
+ * it explicitly rather than defaulting: the two purposes differ by whether the
+ * surface behind the token can *write*, which is not a difference any call site
+ * should be able to inherit by omission.
+ */
+export type DisplayTokenPurpose = (typeof displayTokenPurpose.enumValues)[number];
+
+export type IssuedDisplayToken = {
+  id: string;
+  token: string;
+  label: string;
+  purpose: DisplayTokenPurpose;
+  showNames: boolean;
+};
 
 export type IssueDisplayTokenOutcome =
   | { ok: true; issued: IssuedDisplayToken }
@@ -31,7 +45,14 @@ export type IssueDisplayTokenOutcome =
 
 export async function issueDisplayToken(
   db: AppDb,
-  input: { shopId: string; personId: string; label: unknown; showNames: boolean; now?: Date },
+  input: {
+    shopId: string;
+    personId: string;
+    label: unknown;
+    purpose: DisplayTokenPurpose;
+    showNames: boolean;
+    now?: Date;
+  },
 ): Promise<IssueDisplayTokenOutcome> {
   const label = normalizeDisplayLabel(input.label);
   if (label === null) return { ok: false, reason: "invalid_label" };
@@ -53,13 +74,23 @@ export async function issueDisplayToken(
         shopId: input.shopId,
         tokenHash: hashBearerToken(token),
         label,
+        purpose: input.purpose,
         showNames: input.showNames,
         createdByPersonId: input.personId,
         createdAt: now,
       })
       .returning({ id: displayTokens.id });
     if (!row) return { ok: false, reason: "not_authorized" };
-    return { ok: true, issued: { id: row.id, token, label, showNames: input.showNames } };
+    return {
+      ok: true,
+      issued: {
+        id: row.id,
+        token,
+        label,
+        purpose: input.purpose,
+        showNames: input.showNames,
+      },
+    };
   });
 }
 
@@ -71,13 +102,20 @@ export async function issueDisplayToken(
 export type DisplayTokenContext = { id: string; shopId: string; showNames: boolean };
 
 /**
- * `null` for an unknown token and for a revoked one alike; the board answers
- * both with one refusal card, so a holder cannot tell "never ours" from
- * "revoked this morning".
+ * `null` for an unknown token, for a revoked one, **and for a live token minted
+ * for the other purpose** — all three alike, so a holder cannot tell "never
+ * ours" from "revoked this morning" from "that is the board's link, not the
+ * kiosk's". The surfaces answer every one of them with the same refusal card.
+ *
+ * The purpose is matched in the predicate rather than compared afterwards,
+ * which is what makes forgetting it a **type** error at every call site rather
+ * than a widened credential. A board link opening the kiosk would mean that
+ * handing someone the URL for a TV also handed them a surface that can move a
+ * booking's status; the shop granted a screen, not a write.
  */
 export async function verifyDisplayToken(
   db: DbExecutor,
-  input: { token: string },
+  input: { token: string; purpose: DisplayTokenPurpose },
 ): Promise<DisplayTokenContext | null> {
   const [row] = await db
     .select({
@@ -89,6 +127,7 @@ export async function verifyDisplayToken(
     .where(
       and(
         eq(displayTokens.tokenHash, hashBearerToken(input.token)),
+        eq(displayTokens.purpose, input.purpose),
         isNull(displayTokens.revokedAt),
       ),
     )
@@ -115,6 +154,7 @@ export async function touchDisplayToken(
 export type DisplayTokenSummary = {
   id: string;
   label: string;
+  purpose: DisplayTokenPurpose;
   showNames: boolean;
   createdAt: Date;
   lastShownAt: Date | null;
@@ -129,6 +169,7 @@ export async function listDisplayTokens(
     .select({
       id: displayTokens.id,
       label: displayTokens.label,
+      purpose: displayTokens.purpose,
       showNames: displayTokens.showNames,
       createdAt: displayTokens.createdAt,
       lastShownAt: displayTokens.lastShownAt,

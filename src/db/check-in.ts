@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, gte, ilike, inArray, lte, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, ilike, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { ARRIVAL_RETRACTION_SUPERSEDED } from "@/lib/arrival";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -631,6 +631,143 @@ export async function checkInBooking(
       occurredAt,
     });
     return { ok: true, bookingId: booking.id, personName: booking.personName };
+  });
+}
+
+/**
+ * What the counter tablet gets back. Two outcomes reach the screen and no
+ * more — `ok`, or "see the desk" — because the tablet is operated by whoever
+ * walks up to it, and a refusal that varied with *why* would answer questions
+ * about a stranger's booking to anyone willing to type. The `reason` here is
+ * for the server's own logs and the test suite; the surface collapses every
+ * one of them into one sentence.
+ */
+export type KioskCheckInOutcome =
+  | { ok: true; bookingId: string; personName: string; alreadyArrived: boolean }
+  | { ok: false; reason: "not_found" | "not_bookable" | "not_ready" };
+
+/**
+ * **A diver checks themselves in at the counter tablet** (N-24).
+ *
+ * The second door onto the arrival queue, and deliberately a *separate
+ * function* rather than a flag on `checkInBooking`: that one opens with
+ * `activeStaffRecorderId`, whose whole job is to refuse anybody who is not this
+ * shop's live staff right now, and weakening it for a kiosk would weaken it for
+ * the desk. What the two share is everything that matters — the row lock, the
+ * bookable check, the **live readiness re-read**, the `bookings.status`
+ * projection, the append-only `booking_arrival_events` trail, the activity line
+ * and the crew's desk event.
+ *
+ * **This records an arrival and can never record a boarding.** Arrival is the
+ * desk's question — "are you here?" — and boarding is the rail's, performed by
+ * a crew member with the diver in front of them at roll call. The two
+ * vocabularies are kept apart at the table (`arrival_status` has no `boarded`
+ * value at all) and in the code: nothing here touches `roll_call_events` or
+ * anything the manifest reads, and `kiosk-check-in.test.ts` asserts that a
+ * kiosk arrival leaves the departure's roll call exactly as it found it.
+ *
+ * Readiness is what turns "You're set" into "See the desk". A diver whose
+ * waiver is unsigned, whose card has expired or whose payment has not landed is
+ * refused here exactly as they would be at the desk — and refused *ashore*,
+ * while there is still somebody to talk to, which is the whole reason the
+ * counter exists.
+ *
+ * The arrival is recorded as the diver's own act: `recorded_by_person_id` is
+ * the diver, and `display_token_id` names the tablet. No read mark is written,
+ * because nobody at the desk has seen this yet — which is precisely the state
+ * the crew's catch-up strip exists to show.
+ */
+export async function checkInAtKiosk(
+  db: AppDb,
+  input: { shopId: string; displayTokenId: string; bookingId: string; now?: Date },
+): Promise<KioskCheckInOutcome> {
+  const now = input.now ?? nowDate();
+  return db.transaction(async (tx) => {
+    const [booking] = await tx
+      .select({
+        id: bookings.id,
+        status: bookings.status,
+        tripId: trips.id,
+        tripStatus: trips.status,
+        personId: people.id,
+        personName: people.fullName,
+      })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          isNull(people.deletedAt),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (!booking) return { ok: false, reason: "not_found" };
+
+    // Already through: say so warmly rather than refusing. A diver who taps
+    // twice, or who was checked in at the desk a minute ago, is asking the
+    // same question they asked the first time and deserves the same answer.
+    if (booking.status === "checked_in") {
+      return {
+        ok: true,
+        bookingId: booking.id,
+        personName: booking.personName,
+        alreadyArrived: true,
+      };
+    }
+    if (booking.status !== "booked" || booking.tripStatus !== "scheduled") {
+      return { ok: false, reason: "not_bookable" };
+    }
+
+    const readiness = await getBookingReadiness(tx as DbExecutor, input.shopId, booking.id);
+    if (readiness?.status !== "ready") return { ok: false, reason: "not_ready" };
+
+    const [updated] = await tx
+      .update(bookings)
+      .set({ status: "checked_in" })
+      .where(and(eq(bookings.id, booking.id), eq(bookings.status, "booked")))
+      .returning({ id: bookings.id });
+    if (!updated) return { ok: false, reason: "not_bookable" };
+
+    await tx.insert(bookingArrivalEvents).values({
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      // The diver's own act, recorded as theirs. `display_token_id` is what
+      // stops this reading as a staffer's tap on a shop where staff also dive.
+      recordedByPersonId: booking.personId,
+      displayTokenId: input.displayTokenId,
+      status: "arrived",
+      source: "live",
+      occurredAt: now,
+    });
+    await tx.insert(activityEvents).values({
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      actorPersonId: booking.personId,
+      message: `${booking.personName} checked in at the counter tablet`,
+      occurredAt: now,
+    });
+    // The crew's catch-up strip, with **no actor** — so no read mark is moved
+    // forward and the line stays unread. Nobody behind the desk has seen this;
+    // that is the fact the strip is for.
+    await recordDeskEvent(tx, {
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      kind: "arrival",
+      bookingId: booking.id,
+      subjectPersonId: booking.personId,
+      occurredAt: now,
+    });
+    return {
+      ok: true,
+      bookingId: booking.id,
+      personName: booking.personName,
+      alreadyArrived: false,
+    };
   });
 }
 
