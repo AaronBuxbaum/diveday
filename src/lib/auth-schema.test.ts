@@ -15,6 +15,12 @@ import { createAuth } from "@/lib/auth";
  * `notNull()` added to `user_accounts` or a column better-auth starts writing
  * after an upgrade fails here rather than in a browser sitting on /sign-in
  * with no error on screen.
+ *
+ * What it does *not* prove: the check introspects the Drizzle table objects,
+ * not the database, so it pins `src/db/schema.ts` against better-auth's models
+ * and says nothing about whether the matching migration was generated.
+ * `createTestDb()` applies the committed migration chain, so a missing one
+ * fails this suite by another route — just not through this assertion.
  */
 describe("the better-auth schema contract (in-memory PGlite)", () => {
   it("serves a request instead of refusing on a schema mismatch", async () => {
