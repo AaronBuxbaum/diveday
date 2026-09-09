@@ -1418,6 +1418,16 @@ export const diveSites = pgTable(
     /** The last template pull's prior managed fields, for a one-time undo. */
     templateUpdateUndo: jsonb("template_update_undo").$type<DiveSiteTemplateUndo>(),
     name: text("name").notNull(),
+    /**
+     * The site's public URL segment — `/s/<shop>/sites/molasses-reef` (N-48).
+     *
+     * Derived from the name once, on create, and never rewritten: correcting
+     * "Molasses reef" to "Molasses Reef" must not 404 the link a diver shared
+     * yesterday or the result a search engine already indexed. Same contract,
+     * and the same grammar, as `trip_lenses.slug`
+     * (`src/lib/dive-site-slug.ts`).
+     */
+    slug: text("slug").notNull(),
     description: text("description"),
     locationName: text("location_name"),
     /** Offshore coordinate selected by staff for the automated marine forecast. */
@@ -1614,6 +1624,13 @@ export const diveSites = pgTable(
   },
   (table) => [
     uniqueIndex("dive_sites_shop_name_unique").on(table.shopId, table.name),
+    // Over the **live** rows only, unlike the name index above it: a deleted
+    // site keeps its slug so nothing rewrites history, and a shop that deletes
+    // "Molasses Reef" and writes it again should get the URL back rather than
+    // `molasses-reef-2` forever (ADR 20260820-every-delete-is-soft).
+    uniqueIndex("dive_sites_shop_slug_key")
+      .on(table.shopId, table.slug)
+      .where(sql`${table.deletedAt} is null`),
     // All three or none: a note nobody is recorded as having written, or a
     // stamp with no words under it, is a row no surface can render honestly.
     check(

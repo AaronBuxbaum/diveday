@@ -21,6 +21,7 @@ import {
 } from "@/lib/dive-site-difficulty";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
+import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
 import {
   type DiveSiteTemplateUndo,
   type DiveSiteTemplateUpdateMode,
@@ -376,11 +377,32 @@ async function refusingNameClash<T>(write: () => Promise<T>): Promise<DiveSiteWr
   }
 }
 
+/**
+ * The site's public URL segment, unique among this shop's live sites.
+ *
+ * Read-then-mint rather than a retry on the index: two sites racing for one
+ * segment needs two *different* names that fold to the same slug, which the
+ * `(shop_id, name)` unique index above already makes vanishingly rare — and
+ * unlike a name clash there is nothing for a staffer to do about it, so it is
+ * resolved here rather than reported (`src/lib/dive-site-slug.ts`).
+ */
+async function availableSiteSlug(db: DbExecutor, shopId: string, name: string): Promise<string> {
+  const rows = await db
+    .select({ slug: diveSites.slug })
+    .from(diveSites)
+    .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)));
+  return diveSiteSlugFrom(
+    name,
+    rows.map((row) => row.slug),
+  );
+}
+
 export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
   const [site] = await db
     .insert(diveSites)
     .values({
       ...input,
+      slug: await availableSiteSlug(db, input.shopId, input.name),
       description: input.description || null,
       locationName: input.locationName || null,
       forecastLatitude: input.forecastLatitude ?? null,
@@ -1239,13 +1261,18 @@ export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, te
   // free text there, so it is narrowed rather than ignored — every value any
   // template ever carried is one of the three codes.
   const { creatureSlugs, difficulty, difficultyLevel, ...columns } = briefing;
+  // Resolved once: the slug is minted from the *deconflicted* name, so an
+  // imported "Molasses Reef 2" is `molasses-reef-2` rather than colliding with
+  // the site the shop already holds under that URL.
+  const name = await availableSiteName(db, shopId, briefing.name);
   const [site] = await db
     .insert(diveSites)
     .values({
       shopId,
       ...columns,
       difficultyLevel: difficultyLevel ?? parseDiveSiteDifficulty(difficulty),
-      name: await availableSiteName(db, shopId, briefing.name),
+      name,
+      slug: await availableSiteSlug(db, shopId, name),
       sourceTemplateId: row.template.id,
       sourceTemplateVersion: row.version.version,
       imageUrls: briefing.imageUrls ?? [],
