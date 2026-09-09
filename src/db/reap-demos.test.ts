@@ -7,6 +7,8 @@ import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import {
   accountTokens,
   activityEvents,
+  authProviderAccounts,
+  authVerifications,
   bookings,
   buddyTeamEvents,
   globalDiveSites,
@@ -422,6 +424,61 @@ describe("deleteDemoShopCascade", () => {
           .select()
           .from(accountTokens)
           .where(eq(accountTokens.userAccountId, ownerAccount.id))
+      ).length,
+    ).toBe(0);
+  });
+
+  /**
+   * The same finding one table over, written before it can bite. A provider
+   * login references `user_accounts` and carries no `ON DELETE CASCADE`, so a
+   * demo owner who had ever signed in with a provider would strand their shop
+   * past the reaper's TTL on a 23503 (issue #1594). Nothing writes the table
+   * today — no provider is configured — so the row here is inserted by hand,
+   * which is the only way to exercise the ordering before the feature that
+   * fills it exists.
+   */
+  it("deletes an owner's provider login instead of FK-violating (issue #1594)", async () => {
+    const db = await seededTestDb();
+    const { slug, ownerEmail } = await createDemoShop(db);
+    const shop = await requireShop(db, slug);
+    const [ownerAccount] = await db
+      .select()
+      .from(userAccounts)
+      .where(eq(userAccounts.email, ownerEmail))
+      .limit(1);
+    if (!ownerAccount) throw new Error("test setup: demo owner account missing");
+    await db.insert(authProviderAccounts).values({
+      userAccountId: ownerAccount.id,
+      providerId: "google",
+      accountId: "google-subject-demo",
+      refreshToken: "live-refresh-token",
+    });
+    // No foreign key reaches this one — it names its person as text — so the
+    // reap sweeps it by `identifier` or not at all, and a row left behind
+    // holds the demo owner's address and a live token.
+    await db.insert(authVerifications).values({
+      identifier: ownerEmail,
+      value: "a-live-reset-token",
+      expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+    });
+
+    await deleteDemoShopCascade(db, shop.id);
+
+    expect(await findShop(db, slug)).toBeUndefined();
+    expect(
+      (
+        await db
+          .select()
+          .from(authProviderAccounts)
+          .where(eq(authProviderAccounts.userAccountId, ownerAccount.id))
+      ).length,
+    ).toBe(0);
+    expect(
+      (
+        await db
+          .select()
+          .from(authVerifications)
+          .where(eq(authVerifications.identifier, ownerEmail))
       ).length,
     ).toBe(0);
   });

@@ -69,6 +69,8 @@ import {
   accountSessions,
   accountTokens,
   activityEvents,
+  authProviderAccounts,
+  authVerifications,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -732,13 +734,37 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
 
   // --- the diver's own login, if they ever had one -------------------------
   const [account] = await tx
-    .select({ id: userAccounts.id })
+    .select({ id: userAccounts.id, email: userAccounts.email })
     .from(userAccounts)
     .where(eq(userAccounts.personId, personId))
     .limit(1);
   if (account) {
     await tx.delete(accountTokens).where(eq(accountTokens.userAccountId, account.id));
     await tx.delete(accountSecurity).where(eq(accountSecurity.userAccountId, account.id));
+    // A provider login for this account, if one ever existed. Nothing writes
+    // this table today — no OAuth provider is configured and no route mounts
+    // better-auth's handler — so this deletes nothing, which is exactly why it
+    // belongs here now rather than in the change that enables a provider: the
+    // row it will one day remove carries `password`, `access_token`,
+    // `refresh_token` and `id_token` (issue #1588's columns), the credential
+    // material ADR 20260802-diver-data-erasure promises is destroyed, and the
+    // person adding a provider will be thinking about sign-in rather than
+    // erasure (issue #1594).
+    await tx.delete(authProviderAccounts).where(eq(authProviderAccounts.userAccountId, account.id));
+    // And better-auth's `verification` model, which is the same gap one step
+    // further out: a pending row holds the address in `identifier` and a live
+    // bearer token in `value`, and it reaches a person through neither a
+    // `shop_id` nor a foreign key — so no structural guard can ever find it,
+    // and it is deleted here by the two handles better-auth would have written
+    // it under. Read before the redaction below replaces that address, which
+    // is the only ordering this block has.
+    await tx
+      .delete(authVerifications)
+      .where(
+        inArray(authVerifications.identifier, [
+          ...new Set([account.id, account.email, ctx.email].filter((value) => value !== null)),
+        ]),
+      );
     // Revoke any session issued before this instant — status alone
     // (`disabled` below) is not read by the session lookup itself, so a
     // live sign-in would otherwise keep working until it naturally expires.

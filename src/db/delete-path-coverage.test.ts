@@ -1,4 +1,5 @@
-import { eq, getTableColumns, getTableName } from "drizzle-orm";
+import { eq, getTableName } from "drizzle-orm";
+import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { seededTestDb } from "@/test/db";
 import type { AppDb, DbExecutor } from "./client";
@@ -32,41 +33,116 @@ import { createDemoShop, deleteDemoShopCascade, resetDemoSchedule } from "./seed
  * `db.delete(table)`. A delete moved into a helper still counts; a delete
  * inside a branch that never runs does not, which is the honest answer.
  *
- * Two limits, stated rather than papered over:
+ * **Scope is the foreign-key graph, not the `shop_id` column.** It used to be
+ * the column, and that left the tables reached through a parent's id list —
+ * `user_accounts`, `account_tokens`, `person_roles`, `trip_assignments` —
+ * invisible to the guard whose whole job is finding tables nobody deletes.
+ * `auth_provider_accounts` is what made the cost visible: it reaches a shop
+ * only as `user_account_id` -> `person_id` -> `shop_id`, so it sat with no
+ * delete path in either ordering from the day it was added, and neither guard
+ * could say so (issue #1594). The sweep now starts at the `shop_id` carriers
+ * and follows foreign keys outward, which catches that table and any sibling
+ * added the same way.
  *
- * - Tables with **no** `shop_id` (`trip_assignments`, `person_roles`,
- *   `user_accounts`, `account_tokens`, `course_path_steps`) are out of scope
- *   here. They are reached through a parent's id list, and there is no shop
- *   column to enumerate them by. `reap-demos.test.ts` keeps its hand-written
- *   cases for those.
- * - This proves a table is *named*, not that it is named in the right *order*.
- *   Ordering is what the FK violations in `reap-demos.test.ts` prove, and both
- *   guards are needed: this one says "you did not forget", that one says "you
- *   did not put it in the wrong place".
+ * **What the closure cannot reach is written down rather than left silent.**
+ * It follows declared foreign keys, so a table that names a tenant as *text* —
+ * a denormalized slug, a polymorphic subject id, an email — is outside it no
+ * matter how many hops it runs. `UNSCOPED_REASONS` below is the complement,
+ * asserted exactly: every table the closure does not reach must carry a
+ * written reason, so the next table of that shape is a failure here rather
+ * than a silence. `auth_verifications` is the live example — better-auth's
+ * `verification` model has no foreign key at all, and both paths sweep it by
+ * `identifier` instead.
+ *
+ * One limit, stated rather than papered over: this proves a table is *named*,
+ * not that it is named in the right *order*. Ordering is what the FK violations
+ * in `reap-demos.test.ts` prove, and both guards are needed: this one says "you
+ * did not forget", that one says "you did not put it in the wrong place".
  */
 
-/** Every table in the schema that carries a `shop_id` column. */
+/**
+ * Every table that belongs to a shop: the ones carrying a `shop_id` column,
+ * plus every table that reaches one of those through a foreign key, however
+ * many hops it takes. `auth_provider_accounts` -> `user_accounts` -> `people`
+ * is three tables and one shop.
+ *
+ * The closure is run to a fixed point rather than one hop deep, because the
+ * chain length is an accident of how a table was modelled and a guard that
+ * stopped at one hop would be a guard with a boundary nobody can remember. It
+ * adds nine tables to the eleven-dozen the column alone finds, and leaves
+ * standing only what genuinely belongs to nobody: better-auth's
+ * `auth_verifications`, the two `global_dive_site*` catalogue tables, and the
+ * two provider ledgers (`notification_rate_limit_state`,
+ * `stripe_webhook_events`) that `RESET_KEEPS` already names in prose.
+ */
 function shopScopedTableNames(): string[] {
+  const tables = new Map<string, { hasShopId: boolean; references: string[] }>();
+  for (const value of Object.values(schema)) {
+    // `getTableConfig` throws on everything in the schema that is not a table —
+    // the enums and the views — which is how they are skipped.
+    let config: ReturnType<typeof getTableConfig>;
+    try {
+      config = getTableConfig(value as Parameters<typeof getTableConfig>[0]);
+    } catch {
+      continue;
+    }
+    tables.set(getTableName(value as Parameters<typeof getTableName>[0]), {
+      hasShopId: config.columns.some((column) => column.name === "shop_id"),
+      references: config.foreignKeys.map((key) => getTableName(key.reference().foreignTable)),
+    });
+  }
+  // `shops` is a root beside the `shop_id` carriers: it has no such column of
+  // its own, and leaving it out made both paths' answers about the shop row
+  // unassertable — `RESET_KEEPS`'s "the shop itself survives" entry was inert
+  // prose rather than a claim this file checks.
+  const scoped = new Set(
+    [...tables]
+      .filter(([name, table]) => table.hasShopId || name === "shops")
+      .map(([name]) => name),
+  );
+
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const [name, table] of tables) {
+      if (scoped.has(name)) continue;
+      if (!table.references.some((target) => scoped.has(target))) continue;
+      scoped.add(name);
+      grew = true;
+    }
+  }
+  return [...scoped];
+}
+
+/** Every table in the schema, by name. */
+function allTableNames(): string[] {
   const names: string[] = [];
   for (const value of Object.values(schema)) {
-    let name: string;
     try {
-      name = getTableName(value as Parameters<typeof getTableName>[0]);
+      getTableConfig(value as Parameters<typeof getTableConfig>[0]);
     } catch {
       continue;
     }
-    // `getTableName` also succeeds on enums and views, which have no columns.
-    let columns: Record<string, { name: string }>;
-    try {
-      columns = getTableColumns(value as Parameters<typeof getTableColumns>[0]);
-    } catch {
-      continue;
-    }
-    if (!columns) continue;
-    if (Object.values(columns).some((column) => column.name === "shop_id")) names.push(name);
+    names.push(getTableName(value as Parameters<typeof getTableName>[0]));
   }
   return names;
 }
+
+/**
+ * The complement of the closure: every table no foreign key connects to a
+ * shop, and why that is the right answer for it. Adding a table that belongs
+ * to a person or a shop but names them as *text* fails here, which is the only
+ * place it can fail — see the note above.
+ */
+const UNSCOPED_REASONS: Record<string, string> = {
+  auth_verifications:
+    "better-auth's `verification` model: no foreign key, names its person as text in `identifier`. Both paths sweep it by that column, and so does the erasure (src/db/anonymize.ts) — a pending row holds an address and a live token",
+  global_dive_sites: "DiveDay's own catalogue of sites, shared by every shop and owned by none",
+  global_dive_site_versions: "the catalogue's own history, beside the table above",
+  notification_rate_limit_state:
+    "provider coordination keyed by ceiling and period, holding no person",
+  stripe_webhook_events:
+    "the platform's delivery ledger, pruned by retention; it carries no payload",
+};
 
 /**
  * Run `work` with a db that records every table it deletes from, and otherwise
@@ -142,6 +218,7 @@ const RESET_KEEPS: Record<string, string> = {
   push_subscriptions: "ON DELETE CASCADE from trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
+  trip_schedule_days: "ON DELETE CASCADE from trips clears it",
 };
 
 /**
@@ -175,11 +252,21 @@ const CASCADE_KEEPS: Record<string, string> = {
   integration_sync_records: "ON DELETE CASCADE from shops clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
+  trip_schedule_days: "ON DELETE CASCADE from trips clears it",
 };
 
 describe("shop-scoped delete-path coverage", () => {
   it("enumerates enough tables to be worth asserting on", () => {
     expect(shopScopedTableNames().length).toBeGreaterThan(30);
+  });
+
+  it("has a written reason for every table the foreign-key closure cannot reach", () => {
+    const scoped = new Set(shopScopedTableNames());
+    expect(
+      allTableNames()
+        .filter((name) => !scoped.has(name))
+        .sort(),
+    ).toEqual(Object.keys(UNSCOPED_REASONS).sort());
   });
 
   it("deletes or deliberately keeps every shop-scoped table in resetDemoSchedule", async () => {

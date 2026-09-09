@@ -8,6 +8,8 @@ import {
   accountStepUps,
   accountTokens,
   activityEvents,
+  authProviderAccounts,
+  authVerifications,
   boats,
   bookingArrivalEvents,
   bookingCapabilities,
@@ -354,14 +356,42 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     // a reset link leaves one behind, and it must go before user_accounts or
     // this FK-violates and strands the shop past the reaper's TTL (security
     // review finding on 20260725-account-lifecycle-emails).
-    const demoAccountIds = (
-      await db
-        .select({ id: userAccounts.id })
-        .from(userAccounts)
-        .where(inArray(userAccounts.personId, personIds))
-    ).map((row) => row.id);
+    const demoAccounts = await db
+      .select({ id: userAccounts.id, email: userAccounts.email })
+      .from(userAccounts)
+      .where(inArray(userAccounts.personId, personIds));
+    const demoAccountIds = demoAccounts.map((row) => row.id);
     if (demoAccountIds.length > 0) {
       await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, demoAccountIds));
+      // A provider login references the account row and carries no cascade, so
+      // it must go before user_accounts for the same reason the tokens above
+      // do. Nothing writes this table yet — no OAuth provider is configured —
+      // so today this deletes nothing and costs one statement; the day a
+      // provider is enabled it is the difference between this path working and
+      // FK-violating mid-run (issue #1594).
+      await db
+        .delete(authProviderAccounts)
+        .where(inArray(authProviderAccounts.userAccountId, demoAccountIds));
+      // The same text-keyed sweep the reset does, for the same reason: a
+      // verification row names its person as a string and no join reaches it.
+      await db
+        .delete(authVerifications)
+        .where(
+          inArray(authVerifications.identifier, [
+            ...new Set(demoAccounts.flatMap((row) => [row.id, row.email])),
+          ]),
+        );
+      // **Sessions again, by account this time.** The sweep at the top of this
+      // function deletes them by `account_sessions.shop_id`, which is a
+      // snapshot taken at sign-in rather than a derived fact — a row whose
+      // snapshot disagreed with the person's shop would survive it and then
+      // FK-violate against `user_accounts` below, stranding the shop past the
+      // reaper's TTL. Keyed on the account, that cannot happen (issue #1594's
+      // security review). The shop-keyed sweep stays: it is the one that
+      // reaches a session belonging to a person this block does not name.
+      await db
+        .delete(accountSessions)
+        .where(inArray(accountSessions.userAccountId, demoAccountIds));
       await db.delete(accountStepUps).where(inArray(accountStepUps.userAccountId, demoAccountIds));
       await db
         .delete(accountSecurity)
