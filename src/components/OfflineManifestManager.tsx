@@ -10,6 +10,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { GroupLabel } from "@/components/ui/ledger";
 import { fill, pluralForm } from "@/i18n/fill";
 import { requestBackgroundFlush } from "@/lib/background-flush";
+import { scopedId } from "@/lib/element-id";
 import { formatDateTimeTz } from "@/lib/format";
 import {
   loadOfflineManifest,
@@ -72,9 +73,12 @@ export function OfflineManifestManager({
   payload,
   locale,
   copy,
+  idPrefix,
   children,
 }: {
   payload: OfflineManifestPayload;
+  /** Set when a document repeats this block per departure — see `scopedId`. */
+  idPrefix?: string;
   /** Negotiated request locale (see requestLocale) — never hard-coded, per AGENTS.md. */
   locale: string;
   copy: OfflineManifestManagerCopy;
@@ -494,7 +498,7 @@ export function OfflineManifestManager({
           /offline-manifest is what a captain opens. */}
       <section
         className={sectionCardClass({ padding: "none", className: "mt-8 print:hidden" })}
-        aria-labelledby="offline-heading"
+        aria-labelledby={scopedId(idPrefix, "offline-heading")}
       >
         <details className="group/phone">
           <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-lg px-4 py-3 select-none transition-colors hover:bg-surface-sunken/70 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
@@ -502,7 +506,11 @@ export function OfflineManifestManager({
             {/* A deliberate eyebrow rather than a section heading, which is a
                 scale `SectionCard`'s own `title` does not render. */}
             <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
-              <GroupLabel as="h2" id="offline-heading" className="group-hover/summary:underline">
+              <GroupLabel
+                as="h2"
+                id={scopedId(idPrefix, "offline-heading")}
+                className="group-hover/summary:underline"
+              >
                 {copy.groupHeading}
               </GroupLabel>
               <span className="flex min-w-0 flex-wrap items-center gap-2">
