@@ -5,7 +5,7 @@
   "engines": {
     "node": "^24.15.0"
   },
-  "packageManager": "pnpm@11.25.0",
+  "packageManager": "pnpm@12.3.4",
   "scripts": {
     "dev": "pnpm build:sw && node scripts/dev-server.mjs",
     "build": "pnpm build:sw && next build",
@@ -84,18 +84,18 @@
     "persona:bots": "node scripts/persona-bots.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-cloudwatch-logs": "^3.1126.0",
-    "@aws-sdk/client-geo-places": "^3.1126.0",
-    "@aws-sdk/client-s3": "^3.1126.0",
-    "@aws-sdk/client-sesv2": "^3.1126.0",
-    "@aws-sdk/client-sns": "^3.1126.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.1128.0",
+    "@aws-sdk/client-geo-places": "^3.1128.0",
+    "@aws-sdk/client-s3": "^3.1128.0",
+    "@aws-sdk/client-sesv2": "^3.1128.0",
+    "@aws-sdk/client-sns": "^3.1128.0",
     "@electric-sql/pglite": "^0.5.8",
     "@sentry/nextjs": "^10.73.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "aws-rum-web": "^3.2.1",
     "bcryptjs": "^3.0.3",
-    "better-auth": "^1.7.2",
+    "better-auth": "^1.7.3",
     "drizzle-orm": "rc",
     "fflate": "^0.8.3",
     "next": "^16.3.4",
@@ -112,7 +112,7 @@
     "@axe-core/playwright": "^4.13.0",
     "@biomejs/biome": "^2.5.12",
     "@playwright/mcp": "^0.0.80",
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
@@ -134,7 +134,7 @@
     "jsdom": "^30.0.1",
     "msw": "^2.15.0",
     "next-devtools-mcp": "^0.4.0",
-    "playwright-core": "^1.62.1",
+    "playwright-core": "^1.63.0",
     "reg-notify-github-plugin": "^0.14.5",
     "reg-publish-s3-plugin": "^0.14.4",
     "reg-simple-keygen-plugin": "^0.14.2",
@@ -142,7 +142,7 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
-    "vercel": "^59.11.7",
+    "vercel": "^59.12.0",
     "vitest": "^5.0.0"
   }
 }
