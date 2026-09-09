@@ -25,10 +25,16 @@ test.describe("the paper day", () => {
     // The day's own stations, by the heading each one wears. Read before the
     // packet so the assertion below compares two independent renders of the
     // same day rather than the packet against itself.
-    const stationTitles = await page
+    const stationHeadings = page
       .getByRole("heading", { level: 3 })
-      .filter({ has: page.locator('a[href*="/trips/"]') })
-      .allInnerTexts();
+      .filter({ has: page.locator('a[href*="/trips/"]') });
+    // The spine streams its stations in behind the route's own `loading.tsx`,
+    // so wait for the first one the page actually renders. `allInnerTexts`
+    // resolves against whatever is in the DOM at the moment it is called and
+    // never retries, so reading it straight after `goto` raced the stream and
+    // returned an empty list — the page was still fetching when it answered.
+    await expect(stationHeadings.first()).toBeVisible();
+    const stationTitles = await stationHeadings.allInnerTexts();
     expect(stationTitles.length).toBeGreaterThan(0);
 
     const popupPromise = page.waitForEvent("popup");
@@ -42,6 +48,13 @@ test.describe("the paper day", () => {
     // prints: the dive plan rendered as words, the manifest (which carries the
     // roster's waiver state and the shop's emergency card), and the morning
     // packing list.
+    // Wait for the document's own completion marker before counting anything.
+    // `PacketReady` renders after the last sheet and is what `AutoPrint` waits
+    // on before opening the dialog, so it is the app's own answer to "the
+    // document is whole" rather than a timing guess. Counting before it lands
+    // would read a partial number, and the `toHaveCount(departures)` lines
+    // below would then auto-wait to that wrong number and pass.
+    await expect(popup.locator("[data-packet-ready]")).toBeAttached();
     const divePlans = popup.getByRole("heading", { name: "Dive plan", exact: true });
     const departures = await divePlans.count();
     expect(departures).toBeGreaterThan(0);
