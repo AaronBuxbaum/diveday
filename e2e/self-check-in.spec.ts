@@ -3,10 +3,19 @@ import { manifestRow, openTripFromBoard, openTripTab } from "./helpers";
 
 const DISPLAY_SETTINGS = "/shop/blue-mantis/settings/display";
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
-/** The demo's one diver who is cleared to board today — the same seat `check-in.spec.ts` taps. */
-const READY_DIVER = "Diego Alvarez";
+/**
+ * A diver on today's boat the tablet will answer for: cleared to board, of age,
+ * and with no stated support needs. Deliberately **not** Diego Alvarez, who
+ * `check-in.spec.ts` taps at the desk — he states support needs in the seed and
+ * the tablet routes him to a person on purpose (see the refusal test below).
+ */
+const READY_DIVER = "Ines Costa";
 /** The demo's blocked diver: on today's boat, and readiness will not clear her. */
 const BLOCKED_DIVER = "Priya Sharma";
+/** On today's boat, `ready`, and sent to the desk anyway: she states support needs. */
+const SUPPORT_NEEDS_DIVER = "Diego Alvarez";
+/** On today's boat, `ready` on a guardian's co-signature, and a minor. */
+const MINOR_DIVER = "Lena Fischer";
 
 /**
  * **Self check-in at the counter** (N-24): the tablet a diver types their own
@@ -53,9 +62,9 @@ test.describe("self check-in at the counter", () => {
       ).toBeVisible();
 
       // A surname is all it asks for, and all it takes.
-      await kiosk.getByLabel("Last name").fill("Alvarez");
+      await kiosk.getByLabel("Last name").fill("Costa");
       await kiosk.getByRole("button", { name: "Check in" }).click();
-      await expect(kiosk.getByText("You’re set, Diego.")).toBeVisible();
+      await expect(kiosk.getByText("You’re set, Ines.")).toBeVisible();
 
       /**
        * Everything the card says, read **once**. The panel names a diver and
@@ -171,6 +180,26 @@ test.describe("self check-in at the counter", () => {
       await expect(
         page.getByRole("button", { name: `Undo check-in for ${BLOCKED_DIVER}` }),
       ).toHaveCount(0);
+
+      /**
+       * **Two divers readiness *does* clear, and the tablet still will not
+       * answer for.** Neither is a gate — support needs never gate boarding,
+       * and a minor with a guardian's co-signature is `ready` — they are a
+       * routing rule about which door answers. The whole value of a stated
+       * support need is the conversation it starts at arrival, and a shop whose
+       * practice is to see the guardian at the counter should not have a tablet
+       * answer instead. It discloses nothing to send them: the sentence is the
+       * same one an unknown name gets (`dive-domain-expert` review).
+       */
+      for (const surname of ["Alvarez", "Fischer"]) {
+        await kiosk.reload();
+        await kiosk.getByLabel("Last name").fill(surname);
+        await kiosk.getByRole("button", { name: "Check in" }).click();
+        await expect(kiosk.getByText("See the desk")).toBeVisible();
+        const sent = await kiosk.locator("main").innerText();
+        expect(sent).not.toContain(SUPPORT_NEEDS_DIVER);
+        expect(sent).not.toContain(MINOR_DIVER);
+      }
     } finally {
       await visitor.close();
     }

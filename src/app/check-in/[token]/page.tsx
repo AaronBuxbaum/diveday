@@ -35,8 +35,16 @@ export const metadata: Metadata = {
  * rail's, performed by a crew member with the diver in front of them at roll
  * call. The two are kept apart at the table (`arrival_status` carries no
  * `boarded` value) and in the writer this page reaches, `checkInAtKiosk`, which
- * touches nothing the manifest reads. A diver tapping a lobby screen must never
- * be able to move a name onto a boat.
+ * touches no roll-call row. A diver tapping a lobby screen must never be able
+ * to move a name onto a boat.
+ *
+ * It **does** move `bookings.status`, which the counter and the roll-call
+ * screen both read — an earlier draft here claimed otherwise, which was the one
+ * claim that had to be true. So the tablet's arrivals are told apart from a
+ * staffer's everywhere a person reads them
+ * (`listSelfReportedArrivalBookingIds`), and the tablet answers only for a
+ * departure inside its own short window and never for a diver whose arrival a
+ * person should be present for — stated support needs, or a minor.
  *
  * The link is the same `display_tokens` credential the departures board uses
  * (N-23), minted with `purpose: "check_in"` and revoked from the same settings

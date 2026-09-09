@@ -181,8 +181,15 @@ about the device at the ledger row's own weight, so the home's budget is untouch
 - **A shared counter PIN instead of a session lock** for the hand-over. Rejected: a PIN is a second
   credential that lives on a sticky note; the lock reuses the door the account already has and the
   step-up's session-binding.
-- **A kiosk mode where the diver checks themselves in.** Rejected: the counter works by name and a
-  person taps, and the last loop said why a scan-to-check-in is a flow nobody asked for.
+- **A kiosk mode where the diver checks themselves in.** Rejected here, and **reversed two days
+  later**: the owner asked for it on 2026-09-09 (`docs/product/assessments/improvement-ideas-20260907.md`,
+  N-24) and it shipped as the self check-in tablet. The reason this bullet gave — "the counter works
+  by name and a person taps" — turned out to be the real risk rather than a reason not to build,
+  and it is answered in the shipped design rather than waved away: a tablet tap is recorded as the
+  diver's own act, stamped with the tablet (`booking_arrival_events.display_token_id`), and read
+  back as *"Says they're here"* wherever a staffer's tap reads *"Checked in"*. It can never record a
+  boarding, and it never ends the counter's chasing on its own. See the **Self check-in** glossary
+  entry for what it does and does not move.
 - **Reading the card in the browser** (the Shape Detection API). Rejected: Safari does not implement
   it, and the counter is an iPad.
 - **A cloud vision service outside AWS.** Rejected: the photo is already on DiveDay's storage in one

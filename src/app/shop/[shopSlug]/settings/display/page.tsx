@@ -82,6 +82,7 @@ export default async function LobbyDisplayPage({
     copied: t("display.newLink.copied"),
     copyFailed: t("display.newLink.copyFailed"),
     shared: t("display.newLink.shared"),
+    sharedCheckIn: t("display.newLink.sharedCheckIn"),
     listHeading: t("display.list.heading"),
     listEmpty: t("display.list.empty"),
     namesOn: t("display.list.namesOn"),

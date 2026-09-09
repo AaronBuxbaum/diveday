@@ -5,11 +5,19 @@ import { nowDate } from "@/lib/clock";
 import { readKioskInput, surnameOf } from "@/lib/kiosk-check-in";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
+import { listSelfReportedArrivalBookingIds } from "./arrival-provenance";
 import { checkInAtKiosk } from "./check-in";
 import { issueDisplayToken, revokeDisplayToken, verifyDisplayToken } from "./display-tokens";
 import { findKioskSeats } from "./kiosk-check-in";
 import { listDepartureBoardedBookingIds } from "./manifests";
-import { bookingArrivalEvents, bookings, people, rollCallEvents, trips } from "./schema";
+import {
+  bookingArrivalEvents,
+  bookings,
+  diveSupportNeeds,
+  people,
+  rollCallEvents,
+  trips,
+} from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -52,6 +60,16 @@ async function counter() {
     booking: seat.booking,
     person: seat.person,
     surname: surnameOf(seat.person.fullName),
+    /**
+     * Ten minutes before the reef boat leaves — a diver walking into the lobby
+     * for the boat they are booked on. Every lookup below states it, because
+     * the kiosk's window is two hours wide (`kioskArrivalsWindow`) and the
+     * seeded day is not: the tablet answering for a departure the diver is
+     * *arriving for* is the whole subject, and leaning on wherever the frozen
+     * clock happens to sit relative to the seed would make these tests a
+     * tripwire on the demo's schedule instead.
+     */
+    atTheDoor: new Date(reef.startsAt.getTime() - 10 * 60 * 1000),
   };
 }
 
@@ -79,10 +97,11 @@ describe("findKioskSeats", () => {
    * that fails this test first.
    */
   it("answers with a narrow row carrying no contact detail, readiness or money", async () => {
-    const { db, shop, surname, booking } = await counter();
+    const { db, shop, surname, booking, atTheDoor } = await counter();
     const seats = await findKioskSeats(db, {
       shopId: shop.id,
       lookup: readKioskInput(surname),
+      now: atTheDoor,
     });
     const found = seats.find((row) => row.bookingId === booking.id);
     expect(found).toBeDefined();
@@ -99,10 +118,11 @@ describe("findKioskSeats", () => {
   });
 
   it("finds the seat by its booking reference", async () => {
-    const { db, shop, booking } = await counter();
+    const { db, shop, booking, atTheDoor } = await counter();
     const seats = await findKioskSeats(db, {
       shopId: shop.id,
       lookup: readKioskInput(booking.id),
+      now: atTheDoor,
     });
     expect(seats.map((row) => row.bookingId)).toEqual([booking.id]);
   });
@@ -127,10 +147,11 @@ describe("findKioskSeats", () => {
   });
 
   it("case-folds the typed answer and the stored name alike", async () => {
-    const { db, shop, surname, booking } = await counter();
+    const { db, shop, surname, booking, atTheDoor } = await counter();
     const shouted = await findKioskSeats(db, {
       shopId: shop.id,
       lookup: readKioskInput(surname.toUpperCase()),
+      now: atTheDoor,
     });
     expect(shouted.map((row) => row.bookingId)).toContain(booking.id);
   });
@@ -174,7 +195,7 @@ describe("findKioskSeats", () => {
    * unreachable.
    */
   it("reports more than one match when a surname is shared", async () => {
-    const { db, shop, surname, booking } = await counter();
+    const { db, shop, surname, booking, atTheDoor } = await counter();
     const roster = await getTripRoster(db, shop.id, booking.tripId);
     const other = roster.find((row) => row.booking.id !== booking.id);
     if (!other) throw new Error("seeded reef boat has only one seat");
@@ -186,8 +207,191 @@ describe("findKioskSeats", () => {
     const seats = await findKioskSeats(db, {
       shopId: shop.id,
       lookup: readKioskInput(surname),
+      now: atTheDoor,
     });
     expect(seats.length).toBeGreaterThan(1);
+  });
+
+  /**
+   * **The tablet must not answer for a boat that has been and gone.** The
+   * staffed counter looks six hours back on purpose — a diver who overslept
+   * still walks up to the desk, and a human reads that row and says "they've
+   * gone, let's sort you out". The tablet has no human, so it inherited a
+   * window whose entire justification was the one thing it lacks, and told a
+   * diver at 12:30 "You're set … 8:00 AM. Meet at …" for a boat tied up since
+   * one (`dive-domain-expert` review, 2026-09-09).
+   */
+  it("goes quiet for a departure that has already sailed", async () => {
+    const { db, shop, booking, reef } = await counter();
+    const afterwards = new Date(reef.startsAt.getTime() + 4 * 60 * 60 * 1000);
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(booking.id),
+        now: afterwards,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * **And not for tomorrow's boat either.** Thirty-six hours forward made every
+   * multi-day package holder — the resort shop's whole business — two matches
+   * and therefore "See the desk" every single morning, and let a diver
+   * wandering past the tablet in the afternoon write an arrival on a departure
+   * they would not attend until the next day.
+   */
+  it("goes quiet for a departure that is still a day away", async () => {
+    const { db, shop, booking, reef } = await counter();
+    const theDayBefore = new Date(reef.startsAt.getTime() - 20 * 60 * 60 * 1000);
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(booking.id),
+        now: theDayBefore,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * **One diver's own two departures are a sequence, not an ambiguity.** Two
+   * seats behind one surname belonging to two *people* stays "See the desk" —
+   * the test above — because a tablet must never guess which stranger is in
+   * front of it. The same diver booked on this morning's boat and tonight's
+   * night dive is a different question, and a lobby at 07:40 wants the 08:00
+   * one.
+   */
+  it("answers with the nearer departure when both seats are the same diver's", async () => {
+    const { db, shop, surname, booking, person, reef, atTheDoor } = await counter();
+    const later = new Date(reef.startsAt.getTime() + 4 * 60 * 60 * 1000);
+    const [nightDive] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Night dive — Molasses",
+        startsAt: later,
+        endsAt: new Date(later.getTime() + 2 * 60 * 60 * 1000),
+        capacity: 8,
+        status: "scheduled",
+      })
+      .returning({ id: trips.id });
+    if (!nightDive) throw new Error("could not seed the night dive");
+    await db.insert(bookings).values({
+      shopId: shop.id,
+      tripId: nightDive.id,
+      personId: person.id,
+      status: "booked",
+    });
+
+    const seats = await findKioskSeats(db, {
+      shopId: shop.id,
+      lookup: readKioskInput(surname),
+      now: atTheDoor,
+    });
+    expect(seats.map((row) => row.bookingId)).toEqual([booking.id]);
+  });
+
+  /**
+   * **A diver who told the shop they need a hand meets a person.** Not a gate —
+   * support needs never gate boarding and must never start — but a routing
+   * rule: the whole value of a stated need is the conversation it starts at
+   * arrival, and a tablet saying "You're set" is how the crew first hears about
+   * it on the boat instead.
+   */
+  it("sends a diver with stated support needs to the desk", async () => {
+    const { db, shop, booking, person, atTheDoor } = await counter();
+    await db.insert(diveSupportNeeds).values({
+      shopId: shop.id,
+      personId: person.id,
+      supportDiversNeeded: 1,
+      supportDiversProvidedBy: "shop",
+    });
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(booking.id),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * **And so does a minor.** A valid guardian co-signature makes a fourteen-
+   * year-old `ready`, so readiness alone would have the tablet tell them they
+   * are set — at a shop whose practice is to see the guardian at the counter.
+   */
+  it("sends a minor to the desk even when readiness clears them", async () => {
+    const { db, shop, booking, person, reef, atTheDoor } = await counter();
+    const fourteen = new Date(reef.startsAt.getTime());
+    fourteen.setUTCFullYear(fourteen.getUTCFullYear() - 14);
+    await db
+      .update(people)
+      .set({ dateOfBirth: fourteen.toISOString().slice(0, 10) })
+      .where(eq(people.id, person.id));
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(booking.id),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
+});
+
+/**
+ * **The provenance the shipped draft wrote and never read.**
+ * `booking_arrival_events.display_token_id` existed from the first commit and
+ * had no reader outside the CSV export's exclusion list, while three surfaces
+ * went on reading `bookings.status = 'checked_in'` as evidence a person is in
+ * the building. Both reviews landed on this as the change's central defect.
+ */
+describe("listSelfReportedArrivalBookingIds", () => {
+  it("marks a tablet's arrival and leaves a staffer's alone", async () => {
+    const { db, shop, link, booking, person, atTheDoor } = await counter();
+    await clearForBoarding(db, shop.id, booking.id, person.fullName);
+    const outcome = await checkInAtKiosk(db, {
+      shopId: shop.id,
+      displayTokenId: link.id,
+      bookingId: booking.id,
+      now: atTheDoor,
+    });
+    expect(outcome.ok).toBe(true);
+
+    expect([...(await listSelfReportedArrivalBookingIds(db, shop.id, [booking.id]))]).toEqual([
+      booking.id,
+    ]);
+    // Another shop's question about the same booking id answers nothing.
+    expect(
+      [...(await listSelfReportedArrivalBookingIds(db, OTHER_SHOP, [booking.id]))].length,
+    ).toBe(0);
+  });
+
+  /**
+   * **A staffer's later tap ends it.** Once a human has looked at the diver,
+   * the arrival is a sighting again and the pill should say so — which is why
+   * the latest event wins rather than "any tablet row, ever".
+   */
+  it("stops calling it self-reported once the desk confirms it", async () => {
+    const { db, shop, link, booking, person, atTheDoor } = await counter();
+    await clearForBoarding(db, shop.id, booking.id, person.fullName);
+    await checkInAtKiosk(db, {
+      shopId: shop.id,
+      displayTokenId: link.id,
+      bookingId: booking.id,
+      now: atTheDoor,
+    });
+    // The desk's own row, written a minute later with no tablet on it.
+    await db.insert(bookingArrivalEvents).values({
+      shopId: shop.id,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: person.id,
+      status: "arrived",
+      source: "live",
+      occurredAt: new Date(atTheDoor.getTime() + 60 * 1000),
+    });
+    expect([...(await listSelfReportedArrivalBookingIds(db, shop.id, [booking.id]))].length).toBe(
+      0,
+    );
   });
 });
 
@@ -298,6 +502,57 @@ describe("checkInAtKiosk", () => {
         .from(bookingArrivalEvents)
         .where(eq(bookingArrivalEvents.bookingId, booking.id)),
     ).toEqual([]);
+  });
+
+  /**
+   * **The door restates the reader's rules rather than trusting them.** The
+   * lookup and the write are two calls, and only the first one filtered: a
+   * booking id that reached this door by any other route — a second caller, a
+   * replayed form post — inherited none of the tablet's window or its
+   * desk-routing rules. Every one of these is a `not_found`, which the page
+   * turns into the same "See the desk" every other refusal gets.
+   */
+  it("refuses on its own for a sailed boat, a stated support need, and a minor", async () => {
+    const { db, shop, link, booking, person, reef, atTheDoor } = await counter();
+    await clearForBoarding(db, shop.id, booking.id, person.fullName);
+    const tap = (now: Date) =>
+      checkInAtKiosk(db, {
+        shopId: shop.id,
+        displayTokenId: link.id,
+        bookingId: booking.id,
+        now,
+      });
+
+    // Four hours after it left, and a day before it leaves.
+    expect(await tap(new Date(reef.startsAt.getTime() + 4 * 60 * 60 * 1000))).toMatchObject({
+      ok: false,
+      reason: "not_found",
+    });
+    expect(await tap(new Date(reef.startsAt.getTime() - 20 * 60 * 60 * 1000))).toMatchObject({
+      ok: false,
+      reason: "not_found",
+    });
+
+    const fourteen = new Date(reef.startsAt.getTime());
+    fourteen.setUTCFullYear(fourteen.getUTCFullYear() - 14);
+    await db
+      .update(people)
+      .set({ dateOfBirth: fourteen.toISOString().slice(0, 10) })
+      .where(eq(people.id, person.id));
+    expect(await tap(atTheDoor)).toMatchObject({ ok: false, reason: "not_found" });
+    await db.update(people).set({ dateOfBirth: null }).where(eq(people.id, person.id));
+
+    await db.insert(diveSupportNeeds).values({
+      shopId: shop.id,
+      personId: person.id,
+      supportDiversNeeded: 1,
+      supportDiversProvidedBy: "shop",
+    });
+    expect(await tap(atTheDoor)).toMatchObject({ ok: false, reason: "not_found" });
+
+    // And the seat is untouched by any of the four.
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("booked");
   });
 
   it("refuses a booking belonging to another shop", async () => {

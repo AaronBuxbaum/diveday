@@ -113,6 +113,7 @@ export async function displayLinkAction(
     status: "issued",
     id: outcome.issued.id,
     label: outcome.issued.label,
+    purpose: outcome.issued.purpose,
     url: `${origin}${
       outcome.issued.purpose === "check_in"
         ? kioskCheckInPath(outcome.issued.token)

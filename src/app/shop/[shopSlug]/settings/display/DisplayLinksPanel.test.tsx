@@ -40,6 +40,7 @@ const copy: DisplayLinkCopy = {
   copied: "Copied",
   copyFailed: "Copy failed",
   shared: "Anyone in the room reads them.",
+  sharedCheckIn: "Anyone with this link can mark a diver as arrived without signing in.",
   listHeading: "Screens",
   listEmpty: "No screens yet.",
   namesOn: "Names on",

@@ -21,7 +21,8 @@
     "copy": "Copiar",
     "copied": "Copiado",
     "copyFailed": "No se pudo copiar, selecciónalo a mano",
-    "shared": "Cualquiera con este enlace ve las salidas de hoy sin iniciar sesión. Trátalo como una llave del centro."
+    "shared": "Cualquiera con este enlace ve las salidas de hoy sin iniciar sesión. Trátalo como una llave del centro.",
+    "sharedCheckIn": "Cualquiera con este enlace puede marcar la llegada de un buceador sin iniciar sesión. Trátalo como una llave del centro."
   },
   "list": {
     "heading": "Pantallas",

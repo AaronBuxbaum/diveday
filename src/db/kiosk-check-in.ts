@@ -1,18 +1,23 @@
-import { and, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
+import { isMinorOnDate } from "@/lib/age";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { KioskInput } from "@/lib/kiosk-check-in";
-import { arrivalsWindow } from "@/lib/operational-window";
+import { kioskArrivalsWindow } from "@/lib/operational-window";
 import type { AppDb } from "./client";
-import { bookings, people, trips } from "./schema";
+import { bookings, diveSupportNeeds, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
  * **What the counter tablet is allowed to look up** (N-24).
  *
- * One reader, over the same arrivals window the staff counter uses
- * (`arrivalsWindow`, src/lib/operational-window.ts), so "today's departures"
- * means the same thing on the tablet in the lobby and the phone behind the
- * desk. It detects nothing of its own and answers nothing about readiness: the
+ * One reader, over the tablet's **own** window (`kioskArrivalsWindow`,
+ * src/lib/operational-window.ts) — strictly narrower at both ends than the
+ * staffed counter's, for the reasons written up there: a six-hour lookback told
+ * an oversleeping diver "You're set" for a boat that had already sailed and
+ * returned, and a thirty-six-hour reach made every multi-day package holder
+ * ambiguous every morning. It detects nothing of its own and answers nothing
+ * about readiness: the
  * *decision* to let a diver through belongs to `checkInAtKiosk`, which re-reads
  * live readiness the way every other arrival door does.
  *
@@ -62,7 +67,7 @@ export async function findKioskSeats(
 ): Promise<KioskSeat[]> {
   if (!input.lookup) return [];
   const now = input.now ?? nowDate();
-  const arrivals = arrivalsWindow(now);
+  const arrivals = kioskArrivalsWindow(now);
   const match =
     input.lookup.kind === "booking"
       ? eq(bookings.id, input.lookup.bookingId)
@@ -71,10 +76,12 @@ export async function findKioskSeats(
         // lower-cased. Anchored and whole-word, never `like '%…%'`.
         sql`lower(regexp_replace(btrim(${people.fullName}), '^.*\\s', '')) = ${input.lookup.surname}`;
 
-  return db
+  const rows = await db
     .select({
       bookingId: bookings.id,
+      personId: people.id,
       personName: people.fullName,
+      dateOfBirth: people.dateOfBirth,
       tripId: trips.id,
       tripTitle: trips.title,
       startsAt: trips.startsAt,
@@ -85,6 +92,17 @@ export async function findKioskSeats(
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    // **A diver who has told the shop they need a hand goes to the desk.**
+    // Support needs never gate boarding and must never start doing so — this
+    // is not a gate, it is a routing rule about which door answers. The whole
+    // point of a stated need is that a person meets a person: a diver who
+    // needs help aboard or a lift into the water starts that conversation at
+    // arrival, and a tablet saying "You're set" is how the crew first hears
+    // about it on the boat instead (`dive-domain-expert` review, 2026-09-09).
+    .leftJoin(
+      diveSupportNeeds,
+      and(eq(diveSupportNeeds.personId, people.id), eq(diveSupportNeeds.shopId, input.shopId)),
+    )
     .where(
       and(
         eq(bookings.shopId, input.shopId),
@@ -93,10 +111,39 @@ export async function findKioskSeats(
         eq(trips.status, "scheduled"),
         inArray(bookings.status, ["booked", "checked_in"]),
         isNull(people.deletedAt),
+        isNull(diveSupportNeeds.id),
         gte(trips.startsAt, arrivals.from),
         lte(trips.startsAt, arrivals.to),
         match,
       ),
     )
+    // Earliest departure first, so the tie-break below can take the first row
+    // rather than sorting a second time.
+    .orderBy(asc(trips.startsAt))
     .limit(MATCH_LIMIT);
+
+  // **A minor goes to the desk too**, for the same reason and not as a gate: a
+  // valid guardian co-signature makes a fourteen-year-old `ready`, and a shop
+  // whose practice is to see the guardian at the counter should not have the
+  // tablet answer instead. Filtered here rather than in SQL because majority is
+  // calendar arithmetic on the departure's own date, and it discloses nothing
+  // to drop the row — every refusal is the same sentence.
+  const eligible = rows.filter(({ dateOfBirth, startsAt }) => {
+    if (!dateOfBirth) return true;
+    return !isMinorOnDate(dateOfBirth, calendarDateInTimezone(startsAt, "UTC"));
+  });
+
+  // **One diver's own two departures are not an ambiguity — they are a
+  // sequence.** Two seats behind one surname belonging to two *people* is
+  // dangerous and stays "See the desk": a tablet must never guess which
+  // stranger is standing in front of it. The same diver booked on this
+  // morning's boat and tonight's night dive is a different question, and the
+  // answer a lobby wants is the nearer one — somebody at 07:40 is arriving for
+  // the 08:00 boat. Rows are already earliest-first.
+  const seats =
+    eligible.length > 1 && eligible.every((row) => row.personId === eligible[0].personId)
+      ? eligible.slice(0, 1)
+      : eligible;
+
+  return seats.map(({ dateOfBirth: _dateOfBirth, personId: _personId, ...seat }) => seat);
 }

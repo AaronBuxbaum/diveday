@@ -112,6 +112,11 @@ export const TOKEN_ROUTE_PREFIXES = [
   // page that renders the shop's logo and brand font the same way the shelf
   // does.
   "gift",
+  // The self check-in kiosk's display link (N-24): a tablet on the counter,
+  // left on all day, whose URL is the only thing standing between a passer-by
+  // and the shop's arrivals list. `CAPABILITY_ROUTE_PREFIXES` named it from the
+  // first commit; this list is the half the filesystem test above catches.
+  "check-in",
 ];
 
 export function securityHeaderRules(): ConfigHeaderRule[] {

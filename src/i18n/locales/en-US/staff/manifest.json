@@ -94,6 +94,7 @@
   "manageCrewOnTrip": "Manage this trip's crew",
   "checkpointRollCallHeading": "{checkpoint} roll call",
   "checkedInPill": "Checked in",
+  "selfCheckedInPill": "Says they're here",
   "diverNotesHeading": "Diver notes",
   "noteAppliesAcrossDepartures": "Applies across departures",
   "age": "Age {age}",

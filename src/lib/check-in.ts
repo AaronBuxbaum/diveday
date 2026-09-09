@@ -15,7 +15,16 @@
  * counter, and whether readiness still clears them. Structural rather than
  * `CheckInQueueRow`, so this module stays free of `src/db`.
  */
-export type CounterSeat = { bookingStatus: string; readiness: { status: string } };
+export type CounterSeat = {
+  bookingStatus: string;
+  readiness: { status: string };
+  /**
+   * The arrival was typed at the lobby tablet rather than seen by a staffer
+   * (N-24). Optional so every caller that predates the kiosk keeps its
+   * meaning: absent is "a person tapped this", which is what it always was.
+   */
+  selfReported?: boolean;
+};
 
 /**
  * **A seat the counter is finished with**: checked in *and* still cleared to
@@ -48,9 +57,23 @@ export function isBlockedAtCounter(seat: CounterSeat): boolean {
  * "Everybody checked in" alone is not the condition. A boat with every diver
  * through the counter and one of them blocked still has work on it, and the
  * accent is this app's signal to stop chasing.
+ *
+ * **Nor is "everybody typed their name into the tablet".** Since N-24 a seat
+ * can settle without any staffer having laid eyes on the diver, and proxy
+ * check-in is the ordinary use of a self-serve kiosk rather than an abuse of
+ * one — one half of a couple parks the car while the other types both
+ * surnames. "Everybody is here" is a claim only a human can make, so a single
+ * self-reported arrival holds the accent back and the queue stays a list of
+ * work. The seat still counts as `here`; what it does not do is end the
+ * chasing (`dive-domain-expert` review, 2026-09-09).
  */
 export function counterIsClear(seats: readonly CounterSeat[]): boolean {
-  return seats.length > 0 && seats.every(isSettledAtCounter);
+  return seats.length > 0 && seats.every(isSettledAtCounter) && !seats.some(isSelfReported);
+}
+
+/** This seat's arrival is hearsay: typed at the tablet, unseen by a staffer. */
+export function isSelfReported(seat: CounterSeat): boolean {
+  return seat.selfReported === true && seat.bookingStatus === "checked_in";
 }
 
 /**

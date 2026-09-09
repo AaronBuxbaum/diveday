@@ -144,7 +144,9 @@ export function DisplayLinksPanel({
                 failedLabel={copy.copyFailed}
               />
             </div>
-            <p className="mt-3 text-xs text-muted">{copy.shared}</p>
+            <p className="mt-3 text-xs text-muted">
+              {issued.purpose === "check_in" ? copy.sharedCheckIn : copy.shared}
+            </p>
           </div>
         ) : null}
       </SectionCard>

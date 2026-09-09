@@ -62,6 +62,51 @@ export const ARRIVALS_LOOKBACK_HOURS = 6;
 export const ARRIVALS_AHEAD_HOURS = 36;
 
 /**
+ * **The kiosk's own lens, and deliberately not the counter's** (N-24).
+ *
+ * The self check-in tablet inherited {@link arrivalsWindow} and inherited with
+ * it a window whose entire justification is the presence of a human. Both ends
+ * were wrong for an unattended screen:
+ *
+ * - **Backwards.** Six hours reaches a boat that sailed at 08:00, dived twice
+ *   and tied up at 13:00 — `trip_status` is only `scheduled | cancelled`, so
+ *   nothing in the row says it has been and gone. A diver who overslept typed
+ *   their name at 12:30 and was told *"You're set … 8:00 AM. Meet at …"*, then
+ *   walked to an empty dock. At the desk that same row is valuable precisely
+ *   because a staffer reads it and says "they've gone, let's sort you out".
+ * - **Forwards.** Thirty-six hours is more than a day, so a diver on a
+ *   multi-day package — the resort shop's whole business, and exactly the shop
+ *   that buys a counter tablet — matched two seats every single morning and
+ *   got "See the desk" every single morning. Worse, a diver with only
+ *   *tomorrow's* seat in reach could wander past the tablet in the afternoon
+ *   and write an arrival on a departure they would not attend until the next
+ *   day.
+ *
+ * So: forward only, plus {@link KIOSK_GRACE_MINUTES} of grace for the diver
+ * jogging in at 08:02 for a boat still tied to the dock. Anything outside it is
+ * "See the desk", which is the true answer and costs the diver nothing — the
+ * desk is where a missed boat or a package question gets fixed either way.
+ *
+ * **Six hours, not two.** Two would be the tightest honest answer to both
+ * defects, and it is too tight: a shop's morning boat is commonly five hours
+ * from the moment the lobby opens, so a two-hour tablet is dark for most of the
+ * day it exists to serve. Six is a morning, comfortably short of the
+ * twenty-four that made a multi-day package holder ambiguous, and a diver's own
+ * two departures inside it resolve to the nearer one rather than to the desk
+ * (`findKioskSeats`) — a diver standing in the lobby at 07:40 is arriving for
+ * the 08:00 boat, not the 18:00 one.
+ */
+export const KIOSK_AHEAD_HOURS = 6;
+
+/**
+ * The one concession to a boat that boards for twenty minutes: a departure that
+ * started within the last half hour is still one a diver can be arriving for.
+ * Short enough that it can never reach a boat that has sailed *and returned*,
+ * which is the failure {@link KIOSK_AHEAD_HOURS} exists to end.
+ */
+export const KIOSK_GRACE_MINUTES = 30;
+
+/**
  * How far the shop-day scan reaches either side of now (see
  * {@link shopDayWindow}).
  *
@@ -100,6 +145,18 @@ export type OperationalWindow = {
  */
 export function operationalWindow(now: Date): OperationalWindow {
   return { from: now, to: new Date(now.getTime() + OPERATIONAL_HORIZON_MS) };
+}
+
+/**
+ * **The unattended tablet's lens** — see {@link KIOSK_AHEAD_HOURS} for why it
+ * is not {@link arrivalsWindow}. Strictly narrower than the counter's at both
+ * ends, so a seat the kiosk will act on is always one the desk can also see.
+ */
+export function kioskArrivalsWindow(now: Date): OperationalWindow {
+  return {
+    from: new Date(now.getTime() - KIOSK_GRACE_MINUTES * 60_000),
+    to: new Date(now.getTime() + KIOSK_AHEAD_HOURS * HOUR_MS),
+  };
 }
 
 /**

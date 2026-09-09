@@ -94,6 +94,7 @@
   "manageCrewOnTrip": "Gestionar la tripulación de esta salida",
   "checkpointRollCallHeading": "Pase de lista · {checkpoint}",
   "checkedInPill": "Registrado",
+  "selfCheckedInPill": "Dice que ya llegó",
   "diverNotesHeading": "Notas del buceador",
   "noteAppliesAcrossDepartures": "Se aplica a todas las salidas",
   "age": "{age} años",

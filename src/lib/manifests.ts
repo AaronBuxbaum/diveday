@@ -192,14 +192,36 @@ export type ManifestDiverInput = {
    */
   buddyTeam?: ManifestBuddyTeam | null;
   /**
-   * The diver was confirmed at the counter (`bookings.status === "checked_in"`).
+   * The diver came through the counter (`bookings.status === "checked_in"`).
    * Counter check-in and boat roll call are two different questions — arrived
    * vs. aboard — and `checked_in` used to have exactly one reader in the app
    * (the check-in page itself). Carrying it onto the manifest lets crew see
    * who already showed up even before boarding them (task 149, UX persona
    * lens 17).
+   *
+   * It used to say "confirmed", which stopped being true with N-24: a lobby
+   * tablet writes this column too. {@link checkedInSelfReported} is what keeps
+   * the word honest at the rail.
    */
   checkedIn: boolean;
+  /**
+   * …and nobody at the shop saw them do it — the arrival was typed at the self
+   * check-in tablet (N-24, `booking_arrival_events.display_token_id`).
+   *
+   * A crew member at the rail reads a **Checked in** pill as "the desk has seen
+   * this person". For a kiosk arrival that is not what happened: somebody typed
+   * a surname, quite possibly on this diver's behalf, which is the ordinary way
+   * a self-serve kiosk gets used. The pill wears different words for the two
+   * rather than flattening a sighting and a claim into one badge
+   * (`dive-domain-expert` and `security-reviewer` reviews, 2026-09-09).
+   *
+   * Never a gate, and never anything roll call reads: boarding is still a crew
+   * tap with the diver in front of them.
+   *
+   * Optional, and absent means false: every arrival that predates N-24 was a
+   * staffer's tap, which is exactly what the plain pill has always said.
+   */
+  checkedInSelfReported?: boolean;
 };
 
 export type ManifestCrewMember = {

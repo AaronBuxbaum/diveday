@@ -571,9 +571,12 @@ new domain concept, define it here in the same PR.
   diver still walks up to the desk for a boat that already sailed); forwards it never outruns the
   horizon, so a departure can never reach **check-in** without also appearing in both of Today's
   views.
-- **Check-in** — a staff-recorded arrival state for a booked diver. It confirms the live readiness
+- **Check-in** — a recorded arrival state for a booked diver. It confirms the live readiness
   result and changes the booking to `checked_in`; it is not boarding, which remains a separate
-  departure-time manifest decision. Readiness is confirmed **wherever the tap is applied**, which
+  departure-time manifest decision. **Two doors write it**: a staffer's tap at the counter, which
+  is a sighting, and a diver's own tap at a **self check-in** tablet, which is a claim. The two are
+  told apart by `booking_arrival_events.display_token_id` and wear different words wherever a
+  person reads them. Readiness is confirmed **wherever the tap is applied**, which
   since the counter went offline-capable is at the desk for a live tap and at reconciliation —
   minutes or hours later, against readiness as it stands *then* — for a queued one.
 - **Arrival event** — one append-only row in `booking_arrival_events` recording a single tap at the
@@ -1747,14 +1750,22 @@ new domain concept, define it here in the same PR.
   takes all three with it when it goes back off; a private charter, a cancelled departure and a day
   that has closed are each a 404 rather than an empty state (ADR
   [20260908-one-hand](../architecture/decisions/20260908-one-hand.md), decision 6, lever U).
-- **Self check-in** — a diver typing their own last name, or scanning their arrival card, on a
-  counter tablet behind a check-in display link, and reading "You're set" or "See the desk". What
-  it records is an **arrival**, never a boarding: the tablet writes the same
-  `booking_arrival_events` row the desk does, stamped with the tablet it was tapped on
-  (`display_token_id`) and recorded as the diver's own act, and it touches nothing the manifest
-  reads. Boarding stays a roll-call act a crew member performs at the rail with the diver in front
-  of them. Readiness is re-read at the tap, so a diver with an unsigned waiver is turned toward the
+- **Self check-in** — a diver typing their own last name on a counter tablet behind a check-in
+  display link, and reading "You're set" or "See the desk". What it records is an **arrival**,
+  never a boarding: the tablet writes the same `booking_arrival_events` row the desk does, stamped
+  with the tablet it was tapped on (`display_token_id`) and recorded as the diver's own act.
+  Boarding stays a roll-call act a crew member performs at the rail with the diver in front of
+  them. Readiness is re-read at the tap, so a diver with an unsigned waiver is turned toward the
   desk while there is still somebody to talk to (N-24).
+  It **does** move `bookings.status`, which the counter's "here" count and the roll-call screen's
+  arrival pill both read — so those surfaces distinguish it: a kiosk arrival reads *"Says they're
+  here"*, and one alone holds back the counter's stop-chasing accent, because "everybody is here"
+  is a claim only a human can make. Proxy check-in is the ordinary use of a self-serve kiosk, not
+  an abuse of one. The tablet answers only for a departure within the next six hours (or half an
+  hour past its start) — never one that has sailed and returned, and never tomorrow's — and never
+  for a diver with stated support needs or a minor, who meet a person, which is the whole point of
+  stating either. A diver's own two departures inside that window resolve to the nearer one; two
+  different people sharing a surname still go to the desk.
 - **Recovery code** — one of ten single-use strings issued at two-factor enrolment, shown once and
   stored only as a salted HMAC under the deployment's own sealing key. It is a second factor, not
   a password reset: presenting one satisfies the same check a TOTP code does.
