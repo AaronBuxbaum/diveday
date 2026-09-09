@@ -63,6 +63,20 @@
     "hold": "On a conditions hold",
     "returned": "{boarded, plural, one {# diver} other {# divers}} went out"
   },
+  "kiosk": {
+    "title": "Check in",
+    "prompt": "Last name",
+    "submit": "Check in",
+    "submitting": "Checking…",
+    "ready": "You’re set, {name}.",
+    "readyAgain": "Already checked in, {name}.",
+    "departure": "{title} · {time}",
+    "meetAt": "Meet at {place}",
+    "deskHeading": "See the desk",
+    "deskBody": "Someone at the counter will take it from here.",
+    "unavailableHeading": "This tablet isn’t set up",
+    "unavailableBody": "Ask the shop to make a new link in Settings, under Lobby display."
+  },
   "conservation": {
     "shopClaimsDisclaimer": "Stated by the shop, not verified by DiveDay.",
     "commitments": {

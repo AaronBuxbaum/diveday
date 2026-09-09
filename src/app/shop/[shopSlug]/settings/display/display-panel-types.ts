@@ -25,6 +25,11 @@ export type DisplayLinkCopy = {
   createHeading: string;
   labelField: string;
   labelPlaceholder: string;
+  /** The two things a link can open, and the legend above the choice. */
+  purposeLegend: string;
+  purposeBoard: string;
+  purposeCheckIn: string;
+  purposeCheckInDescription: string;
   showNames: string;
   showNamesDescription: string;
   submit: string;
@@ -54,7 +59,10 @@ export type DisplayLinkCopy = {
 export type DisplayLinkView = {
   id: string;
   label: string;
-  showNames: boolean;
+  /** "Departures board" / "Self check-in" — resolved on the server. */
+  purposeLabel: string;
+  /** Only a board link says anything about names; a kiosk names one diver, to that diver. */
+  showNamesLabel: string | null;
   createdLabel: string;
   /** Localized on the server; null when no screen has opened it yet. */
   lastShownLabel: string | null;

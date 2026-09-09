@@ -63,6 +63,20 @@
     "hold": "En espera por condiciones",
     "returned": "{boarded, plural, one {salió # buceador} other {salieron # buceadores}}"
   },
+  "kiosk": {
+    "title": "Registro de llegada",
+    "prompt": "Apellido",
+    "submit": "Registrar llegada",
+    "submitting": "Comprobando…",
+    "ready": "Todo listo, {name}.",
+    "readyAgain": "Ya estás registrado, {name}.",
+    "departure": "{title} · {time}",
+    "meetAt": "Punto de encuentro: {place}",
+    "deskHeading": "Pasa por el mostrador",
+    "deskBody": "Alguien del mostrador se encarga desde aquí.",
+    "unavailableHeading": "Esta tableta no está configurada",
+    "unavailableBody": "Pide al centro que cree un enlace nuevo en Ajustes, en Pantalla del vestíbulo."
+  },
   "conservation": {
     "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",
     "commitments": {

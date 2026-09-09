@@ -78,6 +78,35 @@ export function DisplayLinksPanel({
               className={controlClass}
             />
           </Field>
+          {/* **Which surface this link opens** — a screen the lobby reads, or a
+              tablet a diver taps. It is a choice with no default in the markup
+              because the two grant different things: the kiosk *writes*, and a
+              shop mounting a TV should have to say so before it gets one. The
+              action reads it as a closed set, so an unrecognised value can
+              never fall through to the more capable surface.
+
+              `Field`'s required marker by hand, because a fieldset is not a
+              `Field` — the same shape `MedicalClearanceControl` uses. */}
+          <fieldset>
+            <legend className="text-sm font-medium">
+              {copy.purposeLegend}
+              <span aria-hidden="true" className="text-danger">
+                {" "}
+                *
+              </span>
+            </legend>
+            <div className="mt-2 flex flex-wrap gap-3">
+              <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
+                <input type="radio" name="purpose" value="board" required />
+                {copy.purposeBoard}
+              </label>
+              <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
+                <input type="radio" name="purpose" value="check_in" required />
+                {copy.purposeCheckIn}
+              </label>
+            </div>
+            <p className="mt-2 text-sm text-muted">{copy.purposeCheckInDescription}</p>
+          </fieldset>
           <div className="flex items-start gap-3">
             <input
               id={namesId}
@@ -145,8 +174,14 @@ export function DisplayLinksPanel({
                 <div className="min-w-0">
                   <p className="font-medium">{screen.label}</p>
                   <p className="text-sm text-muted">
-                    {screen.createdLabel} · {screen.lastShownLabel ?? copy.neverShown} ·{" "}
-                    {screen.showNames ? copy.namesOn : copy.namesOff}
+                    {[
+                      screen.purposeLabel,
+                      screen.createdLabel,
+                      screen.lastShownLabel ?? copy.neverShown,
+                      screen.showNamesLabel,
+                    ]
+                      .filter((part): part is string => Boolean(part))
+                      .join(" · ")}
                   </p>
                 </div>
                 <form action={formAction}>
