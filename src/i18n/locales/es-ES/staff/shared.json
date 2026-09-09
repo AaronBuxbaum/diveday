@@ -117,10 +117,15 @@
   },
   "printPacket": {
     "title": "Paquete de salida",
+    "divesHeading": "Plan de inmersiones",
     "diveNumber": "Inmersión {number}",
     "travelMinutes": "{minutes} min de trayecto",
     "meetingPoint": "Punto de encuentro: {label}",
-    "conditionsHeading": "Condiciones"
+    "conditionsHeading": "Condiciones",
+    "dayTitle": "Paquete del día",
+    "daySubtitle": "{count, plural, one {# salida} other {# salidas}} · {date}",
+    "dayEmpty": "Hoy no hay salidas.",
+    "dayDoor": "Imprimir el día"
   },
   "commandPalette": {
     "search": "Buscar",

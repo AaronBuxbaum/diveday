@@ -2,19 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
-import { getDb } from "@/db/client";
-import { getTripOverview } from "@/db/trips-overview";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { AutoPrint } from "../_components/AutoPrint";
-import { TripPageHeader } from "../_components/TripPageHeader";
-import TripManifestPage from "../manifest/page";
-import TripPrepPage from "../prep/page";
-import { PacketDives } from "./_components/PacketDives";
+import { PACKET_READY_SELECTOR, PacketReady, TripPacket } from "./_components/TripPacket";
 
 export const metadata: Metadata = {
   title: "Trip packet — DiveDay",
@@ -59,6 +52,10 @@ export const instant = true;
  * only safe *because* of the above: with the two form-bearing tabs gone,
  * nothing value-bearing is left inside a control, so hiding one loses nothing.
  * `e2e/trips.spec.ts` asserts the count is zero under print emulation.
+ *
+ * The three sections themselves live in {@link TripPacket}, because the day's
+ * paper (N-54) prints the same block once per departure and a second assembly
+ * of the same facts is exactly what would drift.
  */
 export default async function TripPrintPage({
   params,
@@ -73,67 +70,31 @@ export default async function TripPrintPage({
   const { shop, session } = await requireShopSurface(resolvedParams.shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const safeParams = Promise.resolve({ ...resolvedParams, id: tripId });
-  const searchParams = Promise.resolve({});
-  const manifestSearchParams = Promise.resolve({});
-  const db = await getDb();
-  const [details, manifest, prep] = await Promise.all([
-    getTripOverview(db, shop, tripId, session.user.personId),
-    TripManifestPage({ params: safeParams, searchParams: manifestSearchParams }),
-    TripPrepPage({ params: safeParams, searchParams }),
-  ]);
+  const packet = await TripPacket({
+    shopSlug: resolvedParams.shopSlug,
+    shop,
+    tripId,
+    actorPersonId: session.user.personId,
+    locale,
+    t,
+  });
   // The same answer the Overview page gives a trip that is gone or another
   // shop's — the reader is scoped by the shop this surface already resolved.
-  if (!details) notFound();
+  if (!packet) notFound();
 
   return (
     <div className="trip-print-bundle">
-      <AutoPrint readySelector="[data-trip-guests-ready]" />
+      {/* The marker the packet itself renders. It used to wait on the Guests
+          tab's `data-trip-guests-ready`, which this document has not composed
+          since #814 — so every print sat out `AutoPrint`'s five-second
+          fallback before the dialog opened. */}
+      <AutoPrint readySelector={PACKET_READY_SELECTOR} />
       <header className="mb-10 border-b border-border pb-6 print:mb-6">
         <p className={EYEBROW_CLASS}>DiveDay</p>
         <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>{t("shared.printPacket.title")}</h1>
       </header>
-
-      <section aria-labelledby="print-dives" className="print-bundle-page">
-        <h2 id="print-dives" className="sr-only">
-          Dives
-        </h2>
-        {/* Each section breaks onto its own page, so page one has to say which
-            departure it is — through the same header the four tabs wear, not a
-            hand-rolled title line that would drift from them. */}
-        <TripPageHeader
-          trip={details.trip}
-          boardHref={shopPath(resolvedParams.shopSlug, "schedule", "board")}
-          backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
-          locale={locale}
-          timeZone={shop.timezone}
-        />
-        <PacketDives
-          dives={details.tripDiveList.map(({ dive, diveSite }) => ({
-            diveNumber: dive.diveNumber,
-            heading: diveSite?.name ?? dive.title,
-            travelMinutes: dive.travelMinutes,
-            description: dive.description,
-          }))}
-          description={details.trip.description}
-          meetingPointLabel={details.trip.meetingPointLabel}
-          meetingPointAddress={details.trip.meetingPointAddress}
-          conditions={details.trip.conditionsSummary}
-          t={t}
-        />
-      </section>
-      <section aria-labelledby="print-manifest" className="print-bundle-page">
-        <h2 id="print-manifest" className="sr-only">
-          Manifest
-        </h2>
-        {manifest}
-      </section>
-      <section aria-labelledby="print-prep" className="print-bundle-page">
-        <h2 id="print-prep" className="sr-only">
-          Prep
-        </h2>
-        {prep}
-      </section>
+      {packet}
+      <PacketReady />
     </div>
   );
 }

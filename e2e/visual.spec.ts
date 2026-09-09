@@ -46,8 +46,9 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * "correct the prose" instruction above ended up chasing a number that was
  * never right.
  *
- * Four more come from the `print` block at the bottom: the manifest, prep,
- * trip-packet, and departure-log pages as they render for the printer. Print
+ * Five more come from the `print` block at the bottom: the manifest, prep,
+ * trip-packet, day-packet, and departure-log pages as they render for the
+ * printer. Print
  * is its own concern, not a light/dark one — the `@media print` token override
  * collapses both schemes to one black-and-white palette — so each is captured
  * once, at a US-Letter width, via `capturePrint()`.
@@ -55,7 +56,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
  * and `TABLET_SURFACES` adds 10: five staff surfaces get a third, portrait
  * tablet width, at one screenshot per scheme rather than the usual two. That
- * brings the run to 842 screenshots — the tablet width is a 1.2% addition, not
+ * brings the run to 843 screenshots — the tablet width is a 1.2% addition, not
  * the 50% a third viewport applied to every surface would have cost.
  *
  * ## One surface, one `test()`
@@ -6441,6 +6442,17 @@ test.describe("print", () => {
     for (const nav of await packetNavs.all()) await expect(nav).not.toBeVisible();
     await page.emulateMedia({ media: "screen" });
     await capturePrint(page, "trip-packet");
+  });
+
+  // **The whole day on paper** (N-54). The same three sections the trip packet
+  // prints, once per departure of the shop's own calendar day, so a dead tablet
+  // at 5 am costs a printer rather than the day. Captured because a document
+  // built by repeating a block is exactly where the rhythm between blocks goes
+  // wrong, and no assertion can see that.
+  test("the day packet prints every departure of today", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/print");
+    await page.getByRole("heading", { level: 1, name: "Day packet" }).waitFor();
+    await capturePrint(page, "day-packet");
   });
 
   // The departure log exists to be printed and handed over, so the print

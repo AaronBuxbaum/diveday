@@ -731,6 +731,27 @@ export function DaySpine({
         </section>
       ) : null}
 
+      {/* **The paper day, at the morning end of the spine** (N-54). One
+          document holding every departure of today — manifest, emergency card,
+          waiver state, packing list — so a dead tablet costs a printer rather
+          than the day. It sits here because the evening's ritual already lives
+          at the bottom of this column and printing the morning is the same kind
+          of act at the other end of it; a page in the "More" menu is not
+          somewhere anyone goes at 5 am. It appears only on a day that has boats
+          on it, and never on paper. */}
+      {entries.length > 0 ? (
+        <div className="-mb-4 flex justify-end print:hidden">
+          <Link
+            href={`/shop/${shopSlug}/print`}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonClass({ variant: "ghost", size: "sm" })}
+          >
+            {t("shared.printPacket.dayDoor")}
+          </Link>
+        </div>
+      ) : null}
+
       {entries.length > 0 ? (
         // Panels, not a rail: each station is a `SectionCard` on the bed and
         // the column spaces them (ADR 20260904-reef-all-the-way-down, 16a).

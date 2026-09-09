@@ -24,7 +24,7 @@ import {
   type TripDiveSiteSummary,
 } from "@/lib/trip-dives";
 import { shiftWeek, weekDates } from "@/lib/week-board";
-import { wallTimeToUtc } from "@/lib/zoned";
+import { shopDayBounds, wallTimeToUtc } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
 import { decodeCursor, encodeCursor } from "./cursor";
 import { offsetPage } from "./paging";
@@ -148,6 +148,49 @@ export async function listTripIdsInOfflineManifestWindow(
     )
     .orderBy(asc(trips.startsAt));
   return rows.map((row) => row.id);
+}
+
+/** One departure of the shop's own calendar day, as the paper day names it. */
+export type ShopDayDeparture = {
+  id: string;
+  title: string;
+  startsAt: Date;
+};
+
+/**
+ * Every departure inside the shop's **own** calendar day containing `now`,
+ * in clock order.
+ *
+ * The day is bracketed by `shopDayBounds`, so a shop in Key West gets the day
+ * a captain there would name, not the UTC one a server happens to be in: at
+ * 05:00 in Florida the UTC date has already rolled over, and a naive
+ * instant-based window would print tomorrow's board on this morning's paper.
+ *
+ * Cancelled departures are excluded for the reason `todaysTrips` excludes them
+ * in `src/db/closeout.ts` — a boat that will not sail has nothing to hand a
+ * captain — and `liveTrip()` keeps a deleted departure off the sheet the same
+ * way it keeps it off every other read of `trips`.
+ */
+export async function listShopDayDepartures(
+  db: DbExecutor,
+  shopId: string,
+  timeZone: string,
+  now: Date = nowDate(),
+): Promise<ShopDayDeparture[]> {
+  const { from, to } = shopDayBounds(now, timeZone);
+  return db
+    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, from),
+        lt(trips.startsAt, to),
+      ),
+    )
+    .orderBy(asc(trips.startsAt), asc(trips.id));
 }
 
 /**

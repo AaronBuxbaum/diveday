@@ -372,6 +372,10 @@
     "visual": ["orders-new"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/shop/[shopSlug]/print": {
+    "e2e": ["paper-day.spec.ts", "tenant-isolation.spec.ts"],
+    "visual": ["day-packet"]
+  },
   "/shop/[shopSlug]/promos": {
     "e2e": ["promo-codes.spec.ts", "settings-findability.spec.ts"],
     "visual": ["staff-promos"],
