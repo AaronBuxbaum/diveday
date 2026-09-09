@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #0c2a35; background: #fbf7ef; -webkit-font-smoothing: antialiased; }
+    a { color: #1d7a5f; text-decoration: none; } a:hover { color: #145a46; text-decoration: underline; }
+    .eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #1d7a5f; }
+    .group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d; }
+    .note { font-size: 14px; line-height: 22px; color: #54676d; }
+    .row { display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid #e6dcc8; border-bottom: 1px solid #e6dcc8; padding: 0 4px; }
+    .row + .row { border-top: 0; }
+    .kind { flex: 0 0 92px; font-size: 14px; font-weight: 500; color: #54676d; }
+    .kind.warn { color: #b45309; }
+    .kind.ok { color: #15803d; }
+    .sentence { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: #54676d; }
+    .sentence b { font-weight: 600; color: #0c2a35; }
+    .door { font-size: 14px; font-weight: 500; color: #1d7a5f; white-space: nowrap; }
+    .mark { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid #8a8065; box-sizing: border-box; }
+    .mark.warn { border-color: #b45309; }
+    .mark.ok { border-color: #15803d; background: #e6f0e8; }
+    .panel { background: #fffdf8; border: 1px solid #e6dcc8; border-radius: 28px; box-shadow: 0 2px 10px rgba(88,66,30,0.06); overflow: hidden; }
+    .photo { position: relative; height: 150px; display: flex; align-items: flex-end; padding: 20px 24px; color: #fffdf8; }
+    .photo .ph { position: absolute; inset: 0; }
+    .photo .cap { position: absolute; right: 16px; top: 12px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: rgba(255,253,248,0.85); }
+    .photo .t { position: relative; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+    .photo .n { position: relative; font-size: 14px; color: rgba(255,253,248,0.9); text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+    .btn { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e6dcc8; background: #fffdf8; font-size: 14px; font-weight: 500; }
+    .who { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 3px; border-radius: 999px; background: #e4f1ea; color: #145a46; font-size: 12px; font-weight: 500; white-space: nowrap; }
+    .who i { width: 20px; height: 20px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; font-style: normal; }
+    .k { background: #1d7a5f; } .s { background: #0e7490; } .d { background: #a83a2c; }
+    .av { width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; border: 2px solid #fffdf8; }
+    .tide { position: relative; height: 64px; padding: 0 102px; background: linear-gradient(180deg, #e4f1ea 0%, #fbf7ef 100%); border-bottom: 1px solid #e6dcc8; }
+    .tide .inner { position: relative; width: 976px; margin: 0 auto; height: 64px; }
+    .tide .track { position: absolute; left: 0; top: 0; width: 740px; height: 64px; }
+    .tide .axis { position: absolute; left: 0; right: 0; top: 40px; height: 2px; background: #cfe3d8; }
+    .tide .hour { position: absolute; top: 46px; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 10px; color: #8a8065; transform: translateX(-50%); }
+    .tide .boat { position: absolute; top: 14px; height: 24px; border-radius: 6px; background: #f3ecdd; border: 1px solid #cfe3d8; overflow: hidden; box-sizing: border-box; }
+    .tide .boat i { position: absolute; left: 0; top: 0; bottom: 0; background: #9fd3bd; }
+    .tide .boat span { position: absolute; left: 8px; top: 3px; font-size: 12px; font-weight: 600; color: #0c2a35; white-space: nowrap; }
+    .tide .boat.next { border-color: #1d7a5f; box-shadow: 0 0 0 2px rgba(29,122,95,0.18); }
+    .tide .now { position: absolute; top: 6px; width: 2px; height: 40px; background: #0c2a35; transform: translateX(-1px); }
+    .tide .now::after { content: attr(data-t); position: absolute; top: -2px; left: 6px; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 10px; font-weight: 500; color: #0c2a35; white-space: nowrap; }
+    .tide .until { position: absolute; right: 0; top: 10px; font-size: 13px; color: #0c2a35; text-align: right; }
+    .tide .until b { font-weight: 700; font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; box-sizing: border-box; background: #fbf7ef; padding-bottom: 48px;">
+
+  <div style="display: flex; flex-direction: column; gap: 12px; padding: 40px 48px 24px 48px; border-bottom: 1px solid #e6dcc8; background: #fffdf8;">
+    <div style="display: flex; align-items: baseline; gap: 16px;"><span class="eyebrow" style="color: #0e7490;">The recommendation, composed</span><span class="note">A + F the tide line + H their sea + K together · the home at 6:31 AM, desktop</span></div>
+    <h1 style="margin: 0; font-size: 36px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">What A with the three levers looks like on one screen</h1>
+    <p class="note" style="margin: 0; max-width: 900px; font-size: 15px; line-height: 23px;">Reef's tokens with Blue Mantis's green in the lagoon's place; the tide line under the chrome; a site photograph on each departure's head; who is here and who is on what. Everything else is A: one width, the eyebrow as the area, the one row, the one add, the three pills. The Prep row has already settled under Keiko's hand, which is what K looks like when it is working.</p>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 102px; background: #fffdf8; border-bottom: 1px solid #e6dcc8;">
+    <div style="display: flex; align-items: center; gap: 10px;"><div style="width: 36px; height: 36px; border-radius: 10px; background: #1d7a5f; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div><span style="font-size: 16px; font-weight: 600;">Blue Mantis Divers</span></div>
+    <div style="display: flex; gap: 4px;"><span style="padding: 10px 14px; border-radius: 10px; background: #e4f1ea; color: #1d7a5f; font-size: 15px; font-weight: 500;">Today</span><span style="padding: 10px 14px; font-size: 15px; color: #54676d;">Check-in</span><span style="padding: 10px 14px; font-size: 15px; color: #54676d;">Divers</span><span style="padding: 10px 14px; font-size: 15px; color: #54676d;">Board</span><span style="padding: 10px 14px; font-size: 15px; color: #54676d;">More</span></div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;"><span class="note" style="font-size: 13px;">Here now</span><span class="av d">DR</span><span class="av k" style="margin-left: -10px;">KT</span><span class="av s" style="margin-left: -10px;">SM</span></div>
+    <span style="font-size: 14px; color: #54676d;">Search ⌘K</span>
+  </div>
+  <div class="tide">
+    <div class="inner">
+      <div class="track">
+      <div class="axis"></div>
+      <div class="hour" style="left: 0;">5:00</div><div class="hour" style="left: 16.6%;">8:00</div><div class="hour" style="left: 33.3%;">11:00</div><div class="hour" style="left: 50%;">2:00</div><div class="hour" style="left: 66.6%;">5:00</div><div class="hour" style="left: 83.3%;">8:00</div><div class="hour" style="left: 100%;">11:00</div>
+      <div class="boat next" style="left: 11.1%; width: 19.4%;"><i style="width: 83%;"></i><span>7:00 Two-Tank Reef</span></div>
+      <div class="boat" style="left: 44.4%; width: 22.2%;"><i style="width: 100%; opacity: 0.55;"></i><span>1:00 Spiegel Grove · full</span></div>
+      <div class="boat" style="left: 80.5%; width: 19.4%;"><i style="width: 37%;"></i><span>7:30 Night · 3 of 8</span></div>
+      <div class="now" data-t="now · 6:31" style="left: 8.4%;"></div>
+      </div>
+      <div class="until">Mantis II leaves in <b>29 min</b><br><span class="note" style="font-size: 12px;">7 of 10 aboard</span></div>
+    </div>
+  </div>
+
+  <div style="width: 976px; margin: 0 auto; padding-top: 36px;">
+    <header style="margin-bottom: 20px;">
+      <p class="eyebrow" style="margin: 0;">Front desk</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Good morning, Dana</h2>
+      <p style="margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: #54676d;">Thursday, August 27 · 3 departures. 3 things still need you before the first one.</p>
+    </header>
+    <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+      <span class="who"><i class="d">DR</i>Dana · at the desk · you</span>
+      <span class="who"><i class="k">KT</i>Keiko · on Mantis II · checking gear</span>
+      <span class="who"><i class="s">SM</i>Sal · at the counter · checking in</span>
+    </div>
+
+    <section class="panel" style="margin-bottom: 24px;">
+      <div class="photo">
+        <div class="ph" style="background: radial-gradient(120% 90% at 30% 20%, #6fb9b0 0%, #2a7f8a 45%, #123f52 100%);"></div>
+        <div class="ph" style="background: repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0 6px, transparent 6px 22px);"></div>
+        <span class="cap">Molasses Reef · the shop's photo</span>
+        <div style="position: relative; display: flex; align-items: flex-end; justify-content: space-between; width: 100%;">
+          <div><div class="t">7:00 AM · Two-Tank Reef — Molasses &amp; French</div><div class="n">Mantis II · Keiko Tanaka, Sal Moretti · $95 · until 10:30</div></div>
+          <div style="text-align: right;"><div class="t" style="font-variant-numeric: tabular-nums;">7 <span style="font-size: 14px; font-weight: 500;">of 10 aboard</span></div><div class="n">boarding since 6:23</div></div>
+        </div>
+      </div>
+      <div style="padding: 8px 24px 20px 24px;">
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="sentence"><b>Grace Mensah</b> · Advanced Open Water awaits verification.</span><span class="who"><i class="k">KT</i>Keiko has it</span><span class="door">Open diver ›</span></div>
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Waiver</span><span class="sentence"><b>Priya Sharma</b> · not sent.</span><span class="door" style="color: #54676d;">Hand to Sal</span><span class="btn">Send waiver</span></div>
+        <div class="row"><span class="mark ok"></span><span class="kind ok">Prep</span><span class="sentence">Rental sizes done · <b style="color: #54676d; font-weight: 500;">Keiko, 6:12</b></span><span class="door" style="color: #8a8065;">›</span></div>
+        <div class="row"><span class="mark"></span><span class="kind">Contact</span><span class="sentence"><b>Nadia Petrov</b> · no emergency contact on file.</span><span class="who"><i class="s">SM</i>Sal is with her</span><span class="door">Open diver ›</span></div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-bottom: 24px;">
+      <div class="photo">
+        <div class="ph" style="background: radial-gradient(110% 100% at 70% 30%, #4d7d8c 0%, #1f4657 50%, #0b2230 100%);"></div>
+        <div class="ph" style="background: repeating-linear-gradient(100deg, rgba(255,255,255,0.04) 0 8px, transparent 8px 26px);"></div>
+        <span class="cap">Spiegel Grove · from the catalogue</span>
+        <div style="position: relative; display: flex; align-items: flex-end; justify-content: space-between; width: 100%;">
+          <div><div class="t">1:00 PM · Wreck Trip — Spiegel Grove</div><div class="n">Mantis II · no crew yet · $145 · until 5:00</div></div>
+          <div style="text-align: right;"><div class="t" style="font-variant-numeric: tabular-nums;">10 <span style="font-size: 14px; font-weight: 500;">of 10</span></div><div class="n">full</div></div>
+        </div>
+      </div>
+      <div style="padding: 8px 24px 20px 24px;">
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Crew</span><span class="sentence">10 divers booked and nobody in the water to supervise them.</span><span class="door" style="color: #54676d;">Ask Marcus</span><span class="door">Open crew ›</span></div>
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="sentence"><b>Tomás Ferreira</b> · no certification on file for a deep wreck.</span><span class="door">Open diver ›</span></div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-bottom: 40px;">
+      <div class="photo" style="height: 110px;">
+        <div class="ph" style="background: linear-gradient(180deg, #0c2a35 0%, #071720 100%);"></div>
+        <span class="cap">City of Washington · no photo yet — the hand's mark</span>
+        <svg style="position: absolute; right: 24px; top: 22px;" width="56" height="40" viewBox="0 0 56 40" fill="none" stroke="#9fd3bd" stroke-width="1.5" stroke-linecap="round"><circle cx="28" cy="20" r="9"/><circle cx="10" cy="10" r="1.5"/><circle cx="46" cy="30" r="1.5"/><circle cx="44" cy="8" r="1"/></svg>
+        <div style="position: relative; display: flex; align-items: flex-end; justify-content: space-between; width: 100%;">
+          <div><div class="t">7:30 PM · Night Dive — City of Washington</div><div class="n">Skiff · $120 · until 11:00</div></div>
+          <div style="text-align: right;"><div class="t" style="font-variant-numeric: tabular-nums;">3 <span style="font-size: 14px; font-weight: 500;">of 8</span></div><div class="n">5 seats open</div></div>
+        </div>
+      </div>
+      <div style="padding: 8px 24px 20px 24px;">
+        <div class="row"><span class="mark"></span><span class="kind">Fill seats</span><span class="sentence">5 seats open with no last-minute deal sent.</span><span class="door">Open last-minute deal ›</span></div>
+      </div>
+    </section>
+
+    <section style="margin-bottom: 40px;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 8px;"><span class="group">At the desk</span><span class="note" style="font-size: 12px;">3</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Messages</span><span class="sentence"><b>3 divers wrote back</b> · answer from their record.</span><span class="door">Open inbox ›</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Reviews</span><span class="sentence"><b>1 review is waiting</b> · publish it or hide it.</span><span class="door">Open reviews ›</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Gear</span><span class="sentence"><b>Tom Okafor</b> · BCD #5 is due back today.</span><span class="door">Open gear ›</span></div>
+    </section>
+
+    <section>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 8px;"><span class="group">Later</span></div>
+      <div class="row"><span class="sentence"><b>Tomorrow</b> · Fri, Aug 28</span><span class="note" style="font-variant-numeric: tabular-nums;">2 departures · 7 jobs</span><span class="door">›</span></div>
+      <div class="row"><span class="sentence"><b>This week</b></span><span class="note" style="font-variant-numeric: tabular-nums;">25 jobs</span><span class="door">›</span></div>
+    </section>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

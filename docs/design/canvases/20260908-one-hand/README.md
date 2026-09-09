@@ -56,8 +56,9 @@ already limits).
 | `LeverH.dc.html` | **Their sea** — Harbor comes inside: the staff app takes the shop's colour through Harbor's derivation, and each departure's header carries a site photograph (the shop's own, the catalogue's, or the hand's mark when there is none); where the sea stops |
 | `LeverI.dc.html` | **The one page** — no tabs: Now, Later, the desk, the shop as one scroll with a rail; a register opens as a sheet over the page |
 | `LeverK.dc.html` | **Together** — who is in the shop and where, a chip on the row a colleague is acting on, a one-tap hand-off on a Need, and the counter updating live on the desk's screen |
+| `Composite.dc.html` · `CompositePhone.dc.html` | **The recommendation, composed** — A with F, H and K on one home at 6:31 AM, at desktop and phone width; on the phone the tide line folds to a 36px strip with the next boat only |
 
-`canvas.json` lays the twelve boards out on two pages and pins four notes. The audit's counts come from three read-only
+`canvas.json` lays the fourteen boards out on two pages and pins five notes. The audit's counts come from three read-only
 sweeps of the tree on 2026-09-08 (styling drift, component duplication, voice), and the screenshots
 from `node scripts/screenshot.mjs` against the seeded shop at 1280 and 390.
 
@@ -110,6 +111,6 @@ are the floor and move on the ADR alone; 20f waits on H-71 c and 20g on H-71 a.
 ## Working on it
 
 The sources here are the working files. To change a board, edit its `.dc.html`, re-seed a fresh
-copy with the design skill's helper (all twelve artboards, `canvas.json`, the title "One hand"), check
+copy with the design skill's helper (all fourteen artboards, `canvas.json`, the title "One hand"), check
 it, and republish to the URL above. The seeded output is build output and is never committed
 ([design-artifacts.md](../../design-artifacts.md)).

@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #0c2a35; background: #fbf7ef; -webkit-font-smoothing: antialiased; }
+    a { color: #1d7a5f; text-decoration: none; } a:hover { color: #145a46; text-decoration: underline; }
+    .eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #1d7a5f; }
+    .group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d; }
+    .note { font-size: 14px; line-height: 22px; color: #54676d; }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 52px; padding: 8px 0; border-top: 1px solid #e6dcc8; border-bottom: 1px solid #e6dcc8; }
+    .row + .row { border-top: 0; }
+    .kind { font-size: 14px; font-weight: 500; color: #54676d; }
+    .kind.warn { color: #b45309; }
+    .kind.ok { color: #15803d; }
+    .sentence { flex-basis: 100%; font-size: 16px; line-height: 24px; color: #54676d; }
+    .sentence b { font-weight: 600; color: #0c2a35; }
+    .door { margin-left: auto; font-size: 14px; font-weight: 500; color: #1d7a5f; white-space: nowrap; }
+    .mark { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid #8a8065; box-sizing: border-box; }
+    .mark.warn { border-color: #b45309; }
+    .mark.ok { border-color: #15803d; background: #e6f0e8; }
+    .panel { background: #fffdf8; border: 1px solid #e6dcc8; border-radius: 28px; box-shadow: 0 2px 10px rgba(88,66,30,0.06); overflow: hidden; }
+    .photo { position: relative; height: 120px; display: flex; align-items: flex-end; padding: 16px; color: #fffdf8; }
+    .photo .ph { position: absolute; inset: 0; }
+    .photo .t { position: relative; font-size: 20px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+    .photo .n { position: relative; font-size: 13px; color: rgba(255,253,248,0.9); text-shadow: 0 1px 2px rgba(0,0,0,0.25); margin-top: 2px; }
+    .btn { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 1px solid #e6dcc8; background: #fffdf8; font-size: 15px; font-weight: 500; }
+    .who { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 3px; border-radius: 999px; background: #e4f1ea; color: #145a46; font-size: 12px; font-weight: 500; white-space: nowrap; }
+    .who i { width: 20px; height: 20px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; font-style: normal; }
+    .k { background: #1d7a5f; } .s { background: #0e7490; } .d { background: #a83a2c; }
+    .av { width: 26px; height: 26px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; border: 2px solid #fffdf8; }
+    .dock { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: #fffdf8; border-top: 1px solid #e6dcc8; }
+    .dock span { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; color: #54676d; }
+    .dock span.on { color: #1d7a5f; font-weight: 600; }
+    .dock i { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid currentColor; opacity: 0.8; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 1180px; position: relative; box-sizing: border-box; background: #fbf7ef; overflow: hidden;">
+  <!-- chrome -->
+  <div style="display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px; background: #fffdf8; border-bottom: 1px solid #e6dcc8;">
+    <div style="width: 30px; height: 30px; border-radius: 8px; background: #1d7a5f; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">BM</div>
+    <span style="font-size: 15px; font-weight: 600;">Blue Mantis Divers</span>
+    <div style="margin-left: auto; display: flex; align-items: center;"><span class="av d">DR</span><span class="av k" style="margin-left: -8px;">KT</span><span class="av s" style="margin-left: -8px;">SM</span></div>
+  </div>
+  <!-- the tide line, folded to 36px on a phone -->
+  <div style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px; background: linear-gradient(180deg, #e4f1ea 0%, #fbf7ef 100%); border-bottom: 1px solid #e6dcc8;">
+    <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; color: #0c2a35;">6:31</span>
+    <div style="position: relative; flex: 1; height: 8px; border-radius: 4px; background: #f3ecdd; overflow: hidden;"><div style="position: absolute; left: 11%; width: 19%; height: 8px; background: #9fd3bd; border-radius: 4px;"></div><div style="position: absolute; left: 44%; width: 22%; height: 8px; background: #cfe3d8; border-radius: 4px;"></div><div style="position: absolute; left: 80%; width: 19%; height: 8px; background: #cfe3d8; border-radius: 4px;"></div><div style="position: absolute; left: 8.4%; top: 0; width: 2px; height: 8px; background: #0c2a35;"></div></div>
+    <span style="font-size: 12px; font-weight: 600; white-space: nowrap;">leaves in 29 min</span>
+  </div>
+
+  <div style="padding: 20px 16px 0 16px;">
+    <p class="eyebrow" style="margin: 0;">Front desk</p>
+    <h2 style="margin: 6px 0 0 0; font-size: 32px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Good morning, Dana</h2>
+    <p class="note" style="margin: 6px 0 0 0; font-size: 15px;">3 departures. 3 things still need you before the first one.</p>
+    <div style="display: flex; gap: 8px; margin: 14px 0 16px 0; flex-wrap: wrap;">
+      <span class="who"><i class="k">KT</i>Keiko · Mantis II</span>
+      <span class="who"><i class="s">SM</i>Sal · counter</span>
+    </div>
+
+    <section class="panel">
+      <div class="photo">
+        <div class="ph" style="background: radial-gradient(120% 90% at 30% 20%, #6fb9b0 0%, #2a7f8a 45%, #123f52 100%);"></div>
+        <div style="position: relative; display: flex; align-items: flex-end; justify-content: space-between; width: 100%;">
+          <div><div class="t">7:00 · Two-Tank Reef</div><div class="n">Molasses &amp; French · Mantis II</div></div>
+          <div style="text-align: right;"><div class="t" style="font-variant-numeric: tabular-nums;">7<span style="font-size: 13px; font-weight: 500;"> of 10</span></div><div class="n">aboard</div></div>
+        </div>
+      </div>
+      <div style="padding: 4px 16px 12px 16px;">
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="who" style="margin-left: auto;"><i class="k">KT</i>Keiko</span><span class="sentence"><b>Grace Mensah</b> · AOW awaits verification.</span></div>
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Waiver</span><span class="btn" style="margin-left: auto;">Send waiver</span><span class="sentence"><b>Priya Sharma</b> · not sent.</span></div>
+        <div class="row"><span class="mark ok"></span><span class="kind ok">Prep</span><span class="sentence">Rental sizes done · Keiko, 6:12</span></div>
+        <div class="row"><span class="mark"></span><span class="kind">Contact</span><span class="who" style="margin-left: auto;"><i class="s">SM</i>Sal</span><span class="sentence"><b>Nadia Petrov</b> · no emergency contact on file.</span></div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top: 16px;">
+      <div class="photo" style="height: 96px;">
+        <div class="ph" style="background: radial-gradient(110% 100% at 70% 30%, #4d7d8c 0%, #1f4657 50%, #0b2230 100%);"></div>
+        <div style="position: relative; display: flex; align-items: flex-end; justify-content: space-between; width: 100%;">
+          <div><div class="t">1:00 · Spiegel Grove</div><div class="n">Wreck Trip · no crew yet</div></div>
+          <div style="text-align: right;"><div class="t">full</div></div>
+        </div>
+      </div>
+      <div style="padding: 4px 16px 12px 16px;">
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Crew</span><span class="door">Assign ›</span><span class="sentence">10 divers and nobody in the water.</span></div>
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="door">Open diver ›</span><span class="sentence"><b>Tomás Ferreira</b> · none on file for a deep wreck.</span></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="dock">
+    <span class="on"><i></i>Today</span><span><i></i>Check-in</span><span><i></i>Divers</span><span><i></i>Board</span><span><i></i>More</span>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
