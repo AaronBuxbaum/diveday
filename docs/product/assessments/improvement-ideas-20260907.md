@@ -54,6 +54,11 @@ head or a NOAA tab.
   join in `trip-lenses.ts`. *Effort:* M. *Needs:* i18n for the band's frame only; the words are
   the shop's.
 
+- **N-03 Moon and light on night departures.** Sunset, civil twilight and moon phase computed
+  locally (a small pure solar/lunar module, no dependency) for any departure that starts after the
+  shop's dusk. Renders on the briefing, the thread's prep step and the night-before brief.
+  *Build:* `src/lib/sky.ts` + a line in `TripDayPlan` and `night-before-brief.ts`. *Effort:* S.
+
 ## 2. The diver's body
 
 Lens: readiness ends when the boat leaves. The physiology of the day continues after it.
@@ -420,74 +425,90 @@ Lens: divers already log what they saw. Science wants exactly that record.
 
 One row per idea. **Recommendation** is this report's, not a decision: *Now* means it improves the
 first pilot boat day or protects it, *After pilot* means it is real but should wait for the
-2026-09-02 re-triage, *Owner question* means a human call comes before any build. The owner filled
-the **Verdict** column on 2026-09-07 from the decision sheet: fifteen *Build now*, eight *After pilot*,
-three *No* (N-05, N-27, N-34, kept as rows so the register stays complete), and the rest undecided.
-Each *Build now* is a `ready-for-agent` issue with a prompt and a stacked pull request.
+2026-09-02 re-triage, *Owner question* means a human call comes before any build.
+
+The **Verdict** column is the owner's, and every one of the sixty-two now carries one. The first
+twenty-five were decided on 2026-09-07; the remaining thirty-seven on 2026-09-09. The tally:
+
+- **22 Build now.** The fifteen marked *shipped* merged to `main` between 2026-09-07 and
+  2026-09-08. The seven decided on 2026-09-09 — N-21, N-22, N-24, N-43, N-45, N-48, N-54 — are in
+  build as four stacked chains.
+- **35 After pilot.** Deferred, not dropped. Each one is carried forward with its full shape in
+  [../features/roadmap.md](../features/roadmap.md)'s "Deferred from the 2026-09-07 idea review"
+  section, so it is actionable by a session that never read this report. They are **not** filed as
+  `needs-triage` issues: that label is the human's triage inbox, and an idea the owner has already
+  triaged into "later" would only rot there.
+- **5 No.** N-05, N-27, N-28, N-34, N-58, kept as rows so the register stays complete and a later
+  session does not re-propose them.
+
+N-03 was decided and built on 2026-09-07 but lost both its register row and its prose entry in a
+merge; both were restored on 2026-09-09 from the decision sheet, which is why the earlier header
+said fifteen *Build now* over fourteen rows.
 
 | Id | Idea | Effort | Reviews | Recommendation | Verdict |
 | --- | --- | --- | --- | --- | --- |
-| N-01 | Tide and current window | M | ADR | Now | **Build now** (2026-09-07) |
-| N-02 | The reef's calendar | M | | After pilot | **Build now** (2026-09-07) |
-| N-04 | Fly-safe and surface-interval line | S | domain | Now | **Build now** (2026-09-07) |
+| N-01 | Tide and current window | M | ADR | Now | **Build now** (2026-09-07) · shipped |
+| N-02 | The reef's calendar | M |  | After pilot | **Build now** (2026-09-07) · shipped |
+| N-03 | Moon and light on night departures | S |  | Now | **Build now** (2026-09-07) · shipped |
+| N-04 | Fly-safe and surface-interval line | S | domain | Now | **Build now** (2026-09-07) · shipped |
 | N-05 | After-dive check-in inside the recap | S | domain, security | After pilot | **No** (2026-09-07) |
-| N-06 | The day's profile before booking | S | domain | Now | **Build now** (2026-09-07) |
+| N-06 | The day's profile before booking | S | domain | Now | **Build now** (2026-09-07) · shipped |
 | N-07 | Missing-diver mode | L | domain, security, ADR | After pilot | **After pilot** (2026-09-07) |
 | N-08 | Safety kit as register units | M | domain | Now | **After pilot** (2026-09-07) |
-| N-09 | Drill log | S | | Now | **After pilot** (2026-09-07) |
-| N-10 | Boat clocks | M | | After pilot | **After pilot** (2026-09-07) |
-| N-11 | Break-even on the board | M | | Owner question | **After pilot** (2026-09-07) |
-| N-12 | Float plan filed on Underway | M | domain, security | Now |  |
-| N-13 | Captain's hours | S | domain | Now |  |
-| N-14 | Manifest retention as a declared window | S | | Owner question (H-02) |  |
-| N-15 | Chargeback evidence pack | M | security | Now |  |
+| N-09 | Drill log | S |  | Now | **After pilot** (2026-09-07) |
+| N-10 | Boat clocks | M |  | After pilot | **After pilot** (2026-09-07) |
+| N-11 | Break-even on the board | M |  | Owner question | **After pilot** (2026-09-07) |
+| N-12 | Float plan filed on Underway | M | domain, security | Now | **After pilot** (2026-09-09) |
+| N-13 | Captain's hours | S | domain | Now | **After pilot** (2026-09-09) |
+| N-14 | Manifest retention as a declared window | S |  | Owner question (H-02) | **After pilot** (2026-09-09) |
+| N-15 | Chargeback evidence pack | M | security | Now | **After pilot** (2026-09-09) |
 | N-16 | Seat transfer | M | domain, security | After pilot | **After pilot** (2026-09-07) |
-| N-17 | Damage deposit hold | M | | Owner question (H-07) | **After pilot** (2026-09-07) |
-| N-18 | Cash and tip reconciliation | S | | After pilot |  |
-| N-19 | Pay your own share | M | | Owner question (H-07, H-61) |  |
-| N-20 | Two-way inbox | L | ADR, security | After pilot | **Build now** (2026-09-07) |
-| N-21 | Reply keywords | S | | After N-20 |  |
-| N-22 | "Took a call" | S | | After pilot |  |
-| N-23 | Departures board display mode | M | security | Now | **Build now** (2026-09-07) |
-| N-24 | Self check-in at the counter | M | domain, security | After pilot |  |
-| N-25 | Lost and found | S | | After pilot | **After pilot** (2026-09-07) |
-| N-26 | A rationed sound layer | S | design | Now |  |
-| N-27 | Read it aloud | S | | Now | **No** (2026-09-07) |
-| N-28 | Voice to conditions | M | ADR | After pilot |  |
-| N-29 | Scan then discard for cards | M | ADR, domain | After pilot |  |
-| N-30 | Skills ledger | M | domain | After pilot |  |
-| N-31 | Referral handoff | M | domain | Owner question (H-08) |  |
-| N-32 | The organizer's ledger | M | security | Owner question (H-61) |  |
-| N-33 | The club's Thursday | S | | After N-32 |  |
+| N-17 | Damage deposit hold | M |  | Owner question (H-07) | **After pilot** (2026-09-07) |
+| N-18 | Cash and tip reconciliation | S |  | After pilot | **After pilot** (2026-09-09) |
+| N-19 | Pay your own share | M |  | Owner question (H-07, H-61) | **After pilot** (2026-09-09) |
+| N-20 | Two-way inbox | L | ADR, security | After pilot | **Build now** (2026-09-07) · shipped |
+| N-21 | Reply keywords | S |  | After N-20 | **Build now** (2026-09-09) |
+| N-22 | "Took a call" | S |  | After pilot | **Build now** (2026-09-09) |
+| N-23 | Departures board display mode | M | security | Now | **Build now** (2026-09-07) · shipped |
+| N-24 | Self check-in at the counter | M | domain, security | After pilot | **Build now** (2026-09-09) |
+| N-25 | Lost and found | S |  | After pilot | **After pilot** (2026-09-07) |
+| N-26 | A rationed sound layer | S | design | Now | **After pilot** (2026-09-09) |
+| N-27 | Read it aloud | S |  | Now | **No** (2026-09-07) |
+| N-28 | Voice to conditions | M | ADR | After pilot | **No** (2026-09-09) |
+| N-29 | Scan then discard for cards | M | ADR, domain | After pilot | **After pilot** (2026-09-09) |
+| N-30 | Skills ledger | M | domain | After pilot | **After pilot** (2026-09-09) |
+| N-31 | Referral handoff | M | domain | Owner question (H-08) | **After pilot** (2026-09-09) |
+| N-32 | The organizer's ledger | M | security | Owner question (H-61) | **After pilot** (2026-09-09) |
+| N-33 | The club's Thursday | S |  | After N-32 | **After pilot** (2026-09-09) |
 | N-34 | Neighbour-shop handoff | M | security | Owner question | **No** (2026-09-07) |
-| N-35 | The diver's passport | L | ADR, security | Owner question (H-26) |  |
-| N-36 | pt-BR diver locale | M | | Owner question |  |
-| N-37 | Briefing in the reader's language | M | ADR | Owner question |  |
-| N-38 | Guardian co-signature | M | security, domain | Owner question (H-01, H-21) | **Build now** (2026-09-07) |
-| N-39 | Junior ceilings at booking | S | domain | Now |  |
-| N-40 | Adaptive-diving readiness | M | domain | Owner question |  |
-| N-41 | Crew skills matrix | S | | Now |  |
-| N-42 | First shift | M | copy | After pilot |  |
-| N-43 | Crew sheet for the accountant | S | | After pilot |  |
-| N-44 | The season letter | M | | After pilot |  |
-| N-45 | The off-season as a designed state | S | | Now |  |
-| N-46 | Insurer renewal pack | M | security | Now |  |
-| N-47 | The public safety record | S | | Owner question |  |
-| N-48 | Public dive-site pages | M | | Now |  |
-| N-49 | Regional pages across shops | M | | Owner question | **Build now** (2026-09-07) |
-| N-50 | Agent-ready storefront | S | | Now | **Build now** (2026-09-07) |
-| N-51 | A shop's MCP server | M | ADR, security | Now |  |
-| N-52 | Xero beside QuickBooks | M | | Owner question | **Build now** (2026-09-07) |
-| N-53 | Offline counter | L | domain, security, ADR | After pilot | **Build now** (2026-09-07) |
-| N-54 | The paper day | S | | Now |  |
-| N-55 | Status page and uptime monitor | S | | Owner question (H-45) | **Build now** (2026-09-07) |
-| N-56 | The north star from real data | M | security | Now |  |
-| N-57 | What's new | S | | Now |  |
-| N-58 | Ask with context | S | | Now |  |
-| N-59 | Self-serve billing | M | | Owner question (H-12) |  |
-| N-60 | The one-day simulator | M | | Now | **Build now** (2026-09-07) |
-| N-61 | Persona bots | M | | Owner question | **Build now** (2026-09-07) |
-| N-62 | Sightings to science | S–M | | Now |  |
+| N-35 | The diver's passport | L | ADR, security | Owner question (H-26) | **After pilot** (2026-09-09) |
+| N-36 | pt-BR diver locale | M |  | Owner question | **After pilot** (2026-09-09) |
+| N-37 | Briefing in the reader's language | M | ADR | Owner question | **After pilot** (2026-09-09) |
+| N-38 | Guardian co-signature | M | security, domain | Owner question (H-01, H-21) | **Build now** (2026-09-07) · shipped |
+| N-39 | Junior ceilings at booking | S | domain | Now | **After pilot** (2026-09-09) |
+| N-40 | Adaptive-diving readiness | M | domain | Owner question | **After pilot** (2026-09-09) |
+| N-41 | Crew skills matrix | S |  | Now | **After pilot** (2026-09-09) |
+| N-42 | First shift | M | copy | After pilot | **After pilot** (2026-09-09) |
+| N-43 | Crew sheet for the accountant | S |  | After pilot | **Build now** (2026-09-09) |
+| N-44 | The season letter | M |  | After pilot | **After pilot** (2026-09-09) |
+| N-45 | The off-season as a designed state | S |  | Now | **Build now** (2026-09-09) |
+| N-46 | Insurer renewal pack | M | security | Now | **After pilot** (2026-09-09) |
+| N-47 | The public safety record | S |  | Owner question | **After pilot** (2026-09-09) |
+| N-48 | Public dive-site pages | M |  | Now | **Build now** (2026-09-09) |
+| N-49 | Regional pages across shops | M |  | Owner question | **Build now** (2026-09-07) · shipped |
+| N-50 | Agent-ready storefront | S |  | Now | **Build now** (2026-09-07) · shipped |
+| N-51 | A shop's MCP server | M | ADR, security | Now | **After pilot** (2026-09-09) |
+| N-52 | Xero beside QuickBooks | M |  | Owner question | **Build now** (2026-09-07) · shipped |
+| N-53 | Offline counter | L | domain, security, ADR | After pilot | **Build now** (2026-09-07) · shipped |
+| N-54 | The paper day | S |  | Now | **Build now** (2026-09-09) |
+| N-55 | Status page and uptime monitor | S |  | Owner question (H-45) | **Build now** (2026-09-07) · shipped |
+| N-56 | The north star from real data | M | security | Now | **After pilot** (2026-09-09) |
+| N-57 | What's new | S |  | Now | **After pilot** (2026-09-09) |
+| N-58 | Ask with context | S |  | Now | **No** (2026-09-09) |
+| N-59 | Self-serve billing | M |  | Owner question (H-12) | **After pilot** (2026-09-09) |
+| N-60 | The one-day simulator | M |  | Now | **Build now** (2026-09-07) · shipped |
+| N-61 | Persona bots | M |  | Owner question | **Build now** (2026-09-07) · shipped |
+| N-62 | Sightings to science | S–M |  | Now | **After pilot** (2026-09-09) |
 
 ## If every "Now" is taken: five batches for parallel agents
 
