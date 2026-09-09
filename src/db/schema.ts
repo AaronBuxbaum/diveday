@@ -5394,7 +5394,19 @@ export const userAccounts = pgTable(
       .notNull()
       .references(() => people.id),
     email: text("email").notNull(),
-    hashedPassword: text("hashed_password").notNull(),
+    /**
+     * Ours, not better-auth's: `verifyCredentials` (src/lib/credentials.ts)
+     * compares against this column directly and better-auth's own `user` model
+     * has never heard of it. Nullable for exactly that reason — 1.7.3's adapter
+     * refuses to serve any request whose schema holds a required column it
+     * never writes, because a row *it* created would have no password at all
+     * (issue #1588). Every writer here sets one — a random unusable hash at
+     * invite (`inviteStaffMember`), the real one on activation or reset
+     * (`activateStaffAccount`, `setAccountPassword`) — and the single reader
+     * falls back to the decoy hash, so a null can never match a submitted
+     * password.
+     */
+    hashedPassword: text("hashed_password"),
     status: accountStatus("status").notNull().default("active"),
     /**
      * Null until the account confirms it owns its own address via
@@ -5592,6 +5604,24 @@ export const authProviderAccounts = pgTable("auth_provider_accounts", {
     .references(() => userAccounts.id),
   providerId: text("provider_id").notNull(),
   accountId: text("account_id").notNull(),
+  /**
+   * The seven columns better-auth's `account` model writes when an OAuth
+   * provider or its own credentials flow is configured. Nothing here writes
+   * them today and nothing reads them, but they are not optional: 1.7.3's
+   * adapter compares this table against the model on the first request and
+   * refuses to serve any request while a column it writes is missing
+   * (issue #1588). `password` in particular is better-auth's own place for a
+   * credentials hash and stays empty — ours lives on
+   * `user_accounts.hashed_password`, which is the column
+   * `verifyCredentials` reads.
+   */
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  idToken: text("id_token"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
+  scope: text("scope"),
+  password: text("password"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

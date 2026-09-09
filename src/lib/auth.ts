@@ -6,7 +6,7 @@ import { nextCookies } from "better-auth/next-js";
 import { headers as nextHeaders } from "next/headers";
 import { z } from "zod";
 import { getAccountSecurity, verifyAccountSecondFactor } from "@/db/account-security";
-import { getDb } from "@/db/client";
+import { type AppDb, getDb } from "@/db/client";
 import {
   accountSessions,
   authProviderAccounts,
@@ -139,15 +139,17 @@ function diveDayCredentialsPlugin() {
           }
 
           await setSessionCookie(ctx, { session, user });
-          // Never spread the adapter's raw row into the response — it's a
-          // bare SELECT * over user_accounts (findUserById), so `user` here
-          // carries `hashedPassword` verbatim. Nothing reads this response
-          // body today (no route mounts the better-auth handler, and no
-          // call site inspects the return value of
-          // signInDiveDayCredentials()), but the day one does — the
-          // standard better-auth quickstart, a client SDK, OAuth — this
-          // would otherwise ship every signed-in staff member's bcrypt hash
-          // in a login response body (security review finding).
+          // Never spread the adapter's row into the response. `findUserById`
+          // selects the whole `user_accounts` row and the adapter rebuilds it
+          // from better-auth's own `user` model, which drops columns that
+          // model has never heard of — `hashed_password` among them — but that
+          // is the adapter's behaviour, not a promise this endpoint can make.
+          // Nothing reads this response body today (no route mounts the
+          // better-auth handler, and no call site inspects the return value of
+          // signInDiveDayCredentials()), but the day one does — the standard
+          // better-auth quickstart, a client SDK, OAuth — an explicit three
+          // fields is what keeps a staff member's bcrypt hash out of a login
+          // response (security review finding).
           return ctx.json({ user: { id: user.id, email: user.email, name: verified.name } });
         },
       ),
@@ -155,82 +157,87 @@ function diveDayCredentialsPlugin() {
   } satisfies BetterAuthPlugin;
 }
 
-function buildAuth() {
-  return getDb().then((db) =>
-    betterAuth({
-      secret: authSecret,
-      // Keep callbacks and redirects on DiveDay's server-owned origin. The
-      // fallback is the compiled-in production origin; APP_HOST still lets
-      // local, preview, and self-hosted deployments opt into their own host.
-      baseURL: publicAppUrl() ?? APP_ORIGIN,
-      database: drizzleAdapter(db, {
-        provider: "pg",
-        schema: {
-          user: userAccounts,
-          session: accountSessions,
-          account: authProviderAccounts,
-          verification: authVerifications,
-        },
-      }),
-      user: {
-        additionalFields: {
-          personId: { type: "string", required: true, input: false },
-          status: { type: "string", required: true, input: false },
-          orientationDismissedAt: { type: "date", required: false, input: false },
-        },
+/**
+ * The whole better-auth instance for one database handle. Exported so the
+ * schema test can build the real thing over a test database: since 1.7.3 the
+ * adapter compares this configuration against the Drizzle tables on the first
+ * request and refuses to serve *any* request while the two disagree (issue
+ * #1588), so a guard that re-declares the options would guard nothing.
+ */
+export function createAuth(db: AppDb) {
+  return betterAuth({
+    secret: authSecret,
+    // Keep callbacks and redirects on DiveDay's server-owned origin. The
+    // fallback is the compiled-in production origin; APP_HOST still lets
+    // local, preview, and self-hosted deployments opt into their own host.
+    baseURL: publicAppUrl() ?? APP_ORIGIN,
+    database: drizzleAdapter(db, {
+      provider: "pg",
+      schema: {
+        user: userAccounts,
+        session: accountSessions,
+        account: authProviderAccounts,
+        verification: authVerifications,
       },
-      session: {
-        fields: { userId: "userAccountId" },
-        additionalFields: {
-          personId: { type: "string", required: true, input: false },
-          shopId: { type: "string", required: true, input: false },
-          shopSlug: { type: "string", required: true, input: false },
-          roles: { type: "string[]", required: true, input: false },
-          name: { type: "string", required: true, input: false },
-        },
-        cookieCache: {
-          enabled: true,
-          // Matches next-auth's old JWT decode cost profile at the edge —
-          // the whole point of the cache is letting src/proxy.ts read
-          // personId/shopId/shopSlug/roles without a DB round trip. 5
-          // minutes (the default) is already tighter than the "next sign-in"
-          // staleness window ADR-0006 accepted for JWTs, so this is a strict
-          // improvement, not a regression.
-          strategy: "jwe",
-        },
-      },
-      // account/verification are required adapter scaffolding, functionally
-      // unused: no OAuth provider is configured, and email verification /
-      // password reset / staff invites all run through the pre-existing,
-      // unrelated src/db/account-tokens.ts system instead of better-auth's
-      // own.
-      // Unused (no OAuth provider is configured), but still needs the same
-      // userId -> userAccountId field mapping session has above, or an
-      // internal better-auth code path that touches this model (e.g.
-      // building a provider logout URL) logs a schema-mismatch warning.
-      account: { fields: { userId: "userAccountId" } },
-      // Every other table in this schema uses a native uuid primary key
-      // (defaultRandom()); better-auth's own default id generator produces a
-      // non-UUID base62 string, which Postgres refuses to store in a uuid
-      // column. Keeps this schema's house style instead of special-casing
-      // three tables to text ids.
-      advanced: {
-        database: { generateId: "uuid" },
-        // The browser suite runs production builds over loopback HTTP. A
-        // Secure cookie is valid for the browser's page requests on this
-        // host, but Playwright's APIRequestContext deliberately omits it,
-        // which makes direct authenticated API assertions look signed out.
-        // Keep real deployments secure while giving the HTTP test fleet the
-        // same cookie visibility as the browser.
-        useSecureCookies: process.env.DIVEDAY_E2E !== "1",
-      },
-      emailAndPassword: { enabled: false },
-      plugins: [diveDayCredentialsPlugin(), nextCookies()],
     }),
-  );
+    user: {
+      additionalFields: {
+        personId: { type: "string", required: true, input: false },
+        status: { type: "string", required: true, input: false },
+        orientationDismissedAt: { type: "date", required: false, input: false },
+      },
+    },
+    session: {
+      fields: { userId: "userAccountId" },
+      additionalFields: {
+        personId: { type: "string", required: true, input: false },
+        shopId: { type: "string", required: true, input: false },
+        shopSlug: { type: "string", required: true, input: false },
+        roles: { type: "string[]", required: true, input: false },
+        name: { type: "string", required: true, input: false },
+      },
+      cookieCache: {
+        enabled: true,
+        // Matches next-auth's old JWT decode cost profile at the edge —
+        // the whole point of the cache is letting src/proxy.ts read
+        // personId/shopId/shopSlug/roles without a DB round trip. 5
+        // minutes (the default) is already tighter than the "next sign-in"
+        // staleness window ADR-0006 accepted for JWTs, so this is a strict
+        // improvement, not a regression.
+        strategy: "jwe",
+      },
+    },
+    // account/verification are required adapter scaffolding, functionally
+    // unused: no OAuth provider is configured, and email verification /
+    // password reset / staff invites all run through the pre-existing,
+    // unrelated src/db/account-tokens.ts system instead of better-auth's
+    // own. "Unused" does not mean "free", though — since 1.7.3 the adapter
+    // compares both tables against these models before serving anything, so
+    // `auth_provider_accounts` carries every column the account model writes
+    // and this mapping has to match the one session uses above. Get either
+    // wrong and every request throws, sign-in included (issue #1588).
+    account: { fields: { userId: "userAccountId" } },
+    // Every other table in this schema uses a native uuid primary key
+    // (defaultRandom()); better-auth's own default id generator produces a
+    // non-UUID base62 string, which Postgres refuses to store in a uuid
+    // column. Keeps this schema's house style instead of special-casing
+    // three tables to text ids.
+    advanced: {
+      database: { generateId: "uuid" },
+      // The browser suite runs production builds over loopback HTTP. A
+      // Secure cookie is valid for the browser's page requests on this
+      // host, but Playwright's APIRequestContext deliberately omits it,
+      // which makes direct authenticated API assertions look signed out.
+      // Keep real deployments secure while giving the HTTP test fleet the
+      // same cookie visibility as the browser.
+      useSecureCookies: process.env.DIVEDAY_E2E !== "1",
+    },
+    emailAndPassword: { enabled: false },
+    plugins: [diveDayCredentialsPlugin(), nextCookies()],
+  });
 }
 
-type DiveDayAuth = Awaited<ReturnType<typeof buildAuth>>;
+type DiveDayAuth = ReturnType<typeof createAuth>;
 
 // Lazy and memoized, like `getDb()` itself: constructing the adapter needs a
 // resolved database handle, and this must never run as an import-time side
@@ -239,7 +246,7 @@ type DiveDayAuth = Awaited<ReturnType<typeof buildAuth>>;
 let authInstancePromise: Promise<DiveDayAuth> | undefined;
 
 export function getAuth(): Promise<DiveDayAuth> {
-  authInstancePromise ??= buildAuth();
+  authInstancePromise ??= getDb().then(createAuth);
   return authInstancePromise;
 }
 
