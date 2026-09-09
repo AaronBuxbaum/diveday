@@ -14,8 +14,11 @@ const SHA_3 = "cccccccccccccccccccccccccccccccccccccccc";
 
 const NOW = Date.UTC(2026, 7, 26, 4, 0, 0);
 const DAY = 24 * 60 * 60 * 1000;
+const HOUR = 60 * 60 * 1000;
 const OLD = new Date(NOW - 30 * DAY);
-const RECENT = new Date(NOW - 2 * DAY);
+const RECENT = new Date(NOW - 2 * HOUR);
+/** Older than the one-day floor, younger than anything anyone would call stale. */
+const TWO_DAYS_OLD = new Date(NOW - 2 * DAY);
 
 describe("visual-bucket-pruner-handler", () => {
   describe("fetchCommits", () => {
@@ -181,6 +184,22 @@ describe("visual-bucket-pruner-handler", () => {
       expect(result.keptRecentCount).toBe(1);
       expect(result.deletedPrefixesCount).toBe(0);
       expect(deletedKeys(sent)).toEqual([]);
+    });
+
+    /**
+     * The floor is a day, not a week: a branch that published two days ago and
+     * is not a main baseline is captures nobody is comparing against any more.
+     */
+    it("deletes a prefix published two days ago", async () => {
+      const { client, sent } = fakeBucket({
+        [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, LastModified: OLD }],
+        [`${SHA_2}/`]: [{ Key: `${SHA_2}/out.json`, LastModified: TWO_DAYS_OLD }],
+      });
+
+      const result = await pruneBucket(client, "test-bucket", [SHA_1], { now: NOW });
+      expect(result.keptRecentCount).toBe(0);
+      expect(result.deletedPrefixesCount).toBe(1);
+      expect(deletedKeys(sent)).toEqual([`${SHA_2}/out.json`]);
     });
 
     it("keeps a prefix whose objects carry no timestamp", async () => {

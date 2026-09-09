@@ -692,8 +692,8 @@ An EventBridge Scheduler schedule (`diveday-visual-bucket-pruner`) invokes the L
 `diveday-visual-bucket-pruner` daily at 04:00 UTC:
 1. Queries the GitHub API for recent commits on `main`.
 2. Identifies the newest commit that has a published snapshot report (`out.json`) in S3.
-3. Preserves that active main baseline.
-4. Deletes all objects in stale snapshot prefixes in 1000-object batches.
+3. Preserves that active main baseline, and the nine next-newest `main` commits that also have one (`KEEP_MAIN_BASELINES = 10`).
+4. Deletes all objects in stale snapshot prefixes in 1000-object batches — stale meaning "not one of those baselines, and published more than a day ago" (`MIN_PRUNE_AGE_MS`, one day since 2026-09-08; the floor exists for a stacked pull request's lower layer, which is on no branch the walk can enumerate).
 5. Emits structured JSON summary metrics to CloudWatch Logs (`/aws/lambda/diveday-visual-bucket-pruner`).
 
 ### Manual Invocation

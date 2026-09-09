@@ -18,8 +18,13 @@ const KEEP_MAIN_BASELINES = 10;
  * A stacked pull request's baseline is the layer below's head commit, which is
  * on no branch this walk can enumerate; age is the only thing that knows about
  * it.
+ *
+ * One day, not seven: the floor covers only a baseline the walk cannot name,
+ * and a stack's lower layer republishes well inside a day of the layer above
+ * running. KEEP_MAIN_BASELINES carries the main history; this carries the
+ * in-flight work, and nothing else has to be paid for by the week.
  */
-const MIN_PRUNE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const MIN_PRUNE_AGE_MS = 24 * 60 * 60 * 1000;
 
 export interface PrunerEvent {
   keep?: string;
