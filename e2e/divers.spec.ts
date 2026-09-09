@@ -268,6 +268,18 @@ test("a Guests card shows an emergency contact only when it is missing", async (
  * going *back* one page — is the test below.
  */
 test("the roster pages forward, and page two is not page one", async ({ page }) => {
+  // **Three blocking server navigations, sized rather than hoped for.** A page
+  // turn here is a server round trip — `?page=` is search-param data no App
+  // Shell carries — and this test does the roster, page two, and page three
+  // back to back on top of its own `/api/test/reset`. Measured on an idle
+  // machine at one worker: 4.8-5.6s across three runs, so the default 15s
+  // leaves 3x, where playwright.config.ts sizes that budget for 4x the slowest
+  // real flow. Under four Playwright shards it ran out — `waitForURL(/page=2/)`
+  // timed out on shard 2/4 of #1592 with the same three navigations passing
+  // locally. This is the aggregate-cost case `e2e/dive-sites.spec.ts` and
+  // `visual.spec.ts` already name: no step is stuck, there are simply several
+  // of them (issue #1595).
+  test.setTimeout(30_000);
   await page.goto("/shop/blue-mantis/divers");
   const pager = page.getByRole("navigation", { name: "Pages" });
   // Not "skip when there's nothing to page": the demo roster is well past one

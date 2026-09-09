@@ -157,6 +157,16 @@ export default defineConfig({
   // that had not run a line yet. e2e/global-setup.ts pays that cold start up
   // front; see ADR 20260730-pinned-browser-visual-determinism before widening
   // this number in response to a setup timeout.
+  //
+  // **Both numbers were re-asked after the Playwright 1.63 upgrade** (`9f48fc1`,
+  // a new Chromium) and both stay (issue #1595). Measured at one worker on an
+  // idle machine, the ordinary test still lands at 2-3s and the slowest whole
+  // spec file averages ~4s, so 15s remains the 4-5x this comment claims. The
+  // two tests that ran out of it on a loaded four-shard runner were outliers on
+  // their own terms — three blocking server navigations in one test, and an
+  // assertion whose clock covers an uncached script fetch — and they are sized
+  // at their own sites, which is what keeps a real hang failing in seconds for
+  // the other eight hundred.
   expect: { timeout: 8_000 },
   timeout: 15_000,
   forbidOnly: !!process.env.CI,

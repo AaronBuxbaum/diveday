@@ -146,7 +146,15 @@ test.describe("the loader on a host page", () => {
       <a href="${baseURL}/s/blue-mantis" data-diveday="lightbox" data-shop="blue-mantis" data-look="light" data-lang="auto">Book a dive</a>
       </body></html>`);
     const link = page.getByRole("link", { name: "Book a dive" });
-    await expect(link).toHaveCSS("display", "inline-block");
+    // **This assertion is the wait for `embed.js`, not a check on a settled
+    // page.** `setContent` above hands the browser an `async` script tag; the
+    // style asserted here is the first thing the loader does once that script
+    // has been fetched and run, so the clock covers a network fetch, not a
+    // render. The 8s default (playwright.config.ts) is sized for "a warm
+    // assertion settles well under a second", which this one is not, and it ran
+    // out on shard 1/4 of #1592 while the same test passed locally in 2.6-2.8s
+    // (issue #1595). Sized to the fetch, on the one assertion that waits for it.
+    await expect(link).toHaveCSS("display", "inline-block", { timeout: 15_000 });
     await link.click();
     const sheet = page.locator("[data-diveday-lightbox]");
     await expect(sheet.locator("iframe")).toHaveAttribute("src", /\/s\/blue-mantis\?embed=1/);
