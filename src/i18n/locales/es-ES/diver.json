@@ -3512,6 +3512,17 @@
       "nitroxMissing": "Envía a tu centro los datos de tu certificación de nitrox",
       "paymentDue": "Salda tu saldo pendiente"
     },
+    "replyKeyword": {
+      "offer": "Responde C para cancelar tu plaza o M para pedir un cambio de fecha.",
+      "confirmCancel": "{tripTitle}, {date} a las {time}. Responde {code} en la próxima media hora para dejar tu plaza. Todavía no ha cambiado nada.",
+      "cancelled": "Tu plaza en {tripTitle}, {date}, queda cancelada.",
+      "refundOnItsWay": "Tu reembolso ya va en camino.",
+      "cancelRefused": "No se pudo liberar esa plaza. {shopName} se ocupa de esto.",
+      "codeMismatch": "Ese código no coincide, así que no ha cambiado nada. {shopName} se ocupa de esto.",
+      "nothingToCancel": "No encontramos ninguna plaza que cancelar. {shopName} se ocupa de esto.",
+      "ambiguous": "Tienes más de una salida reservada. {shopName} se ocupa de esto para dar de baja la correcta.",
+      "moveHandoff": "{shopName} te escribe sobre el cambio de tu plaza."
+    },
     "common": {
       "greeting": "Hola, {firstName}:",
       "greetingGeneric": "Hola:",

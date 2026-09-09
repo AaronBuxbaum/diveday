@@ -44,6 +44,18 @@ export type CourtesyMessage = {
   to: string;
   /** Plain-text body; keep it short — one SMS segment where possible. */
   body: string;
+  /**
+   * The body to send **if this goes over WhatsApp**, when the two differ.
+   *
+   * They differ for exactly one reason today: WhatsApp has an inbound path and
+   * SMS does not (ADR 20260907-two-way-inbox decision 7), so the reply line a
+   * trip reminder offers is true on one channel and a lie on the other (ADR
+   * 20260909-reply-keywords). The choice cannot be made at the call site,
+   * because which channel this goes on is decided *here* and may still fall
+   * back to SMS after a WhatsApp send fails. Absent means the two are the same
+   * message, which is the ordinary case.
+   */
+  whatsAppBody?: string;
   /** The shop the message is from; WhatsApp templates name it, SMS bodies already embed it. */
   shopName: string;
 };
@@ -96,7 +108,9 @@ export async function sendCourtesyMessage(
   providers: CourtesyProviders,
 ): Promise<CourtesyResult> {
   const whatsAppDelivery = providers.whatsapp
-    ? await providers.whatsapp.send(message)
+    ? await providers.whatsapp.send(
+        message.whatsAppBody ? { ...message, body: message.whatsAppBody } : message,
+      )
     : { status: "not_configured" as const };
   if (whatsAppDelivery.status === "sent") {
     return { channel: "whatsapp", delivery: whatsAppDelivery };

@@ -8,6 +8,11 @@ vi.mock("@/db/inbound-messages", () => ({
   recordInboundMessage: vi.fn(),
   shopIdForInboundEmailToken: vi.fn(),
 }));
+// The keyword path is one call this route makes and a module with its own
+// tests (`src/db/reply-keywords.test.ts`), so it is stubbed here rather than
+// run: what this file owes is that the handoff happens for a message the route
+// actually filed, and not for one it did not (ADR 20260909-reply-keywords).
+vi.mock("@/db/reply-keywords", () => ({ handleInboundReplyKeyword: vi.fn() }));
 vi.mock("@/lib/notifications/inbound-mail-store", () => ({
   inboundMailStoreFromEnvironment: vi.fn(),
 }));
@@ -18,6 +23,7 @@ vi.mock("@/lib/notifications/sns", async (importOriginal) => {
 
 const { getDb } = await import("@/db/client");
 const { recordInboundMessage, shopIdForInboundEmailToken } = await import("@/db/inbound-messages");
+const { handleInboundReplyKeyword } = await import("@/db/reply-keywords");
 const { inboundMailStoreFromEnvironment } = await import("@/lib/notifications/inbound-mail-store");
 const sns = await import("@/lib/notifications/sns");
 const { verifySnsMessage, confirmSnsSubscription } = sns;
@@ -96,6 +102,7 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ status: "recorded", id: "im1", personId: "p1" });
   vi.mocked(shopIdForInboundEmailToken).mockReset().mockResolvedValue(SHOP_ID);
+  vi.mocked(handleInboundReplyKeyword).mockReset().mockResolvedValue("not_a_keyword");
   read.mockReset().mockResolvedValue({ status: "ok", message: RAW_MESSAGE });
   vi.mocked(inboundMailStoreFromEnvironment)
     .mockReset()
@@ -177,6 +184,25 @@ describe("email-inbound webhook — filing a reply", () => {
       inReplyToProviderMessageId: "0100019abc-1234",
       senderAuthenticated: true,
     });
+    // And hands the filed row to the keyword path (ADR 20260909-reply-keywords).
+    expect(handleInboundReplyKeyword).toHaveBeenCalledWith(FAKE_DB, {
+      shopId: SHOP_ID,
+      inboundMessageId: "im1",
+    });
+  });
+
+  /**
+   * **A redelivery must not act twice.** SNS retries every non-2xx and
+   * occasionally delivers twice on a 200; `recordInboundMessage` answers
+   * `duplicate` for the second, and a keyword read off that would be a second
+   * cancellation of a seat already released (ADR 20260909-reply-keywords).
+   */
+  it("does not run the keyword path for a message it did not file", async () => {
+    vi.mocked(recordInboundMessage).mockResolvedValue({ status: "duplicate" });
+    vi.mocked(verifySnsMessage).mockResolvedValue(verifiedNotification(receivedMessage()));
+    expect((await POST(webhookRequest("{}"))).status).toBe(200);
+    expect(recordInboundMessage).toHaveBeenCalled();
+    expect(handleInboundReplyKeyword).not.toHaveBeenCalled();
   });
 
   /**

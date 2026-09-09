@@ -12,6 +12,11 @@
     "sms": "Text"
   },
   "unknownSender": "Unknown sender",
+  "keyword": {
+    "cancel": "Asked to cancel",
+    "move": "Asked to move",
+    "confirm": "Confirmed the cancellation"
+  },
   "attachments": "{count, plural, one {# attachment, still with the sender} other {# attachments, still with the sender}}",
   "openRecord": "Open the record for {name}",
   "pagination": {
@@ -22,6 +27,7 @@
     "summary": "{count, plural, one {# message} other {# messages}}",
     "received": "{name} · {date}",
     "sent": "{name} replied · {date}",
+    "sentAutomatically": "Sent automatically · {date}",
     "sendFailed": "This one did not reach them.",
     "unknownStaff": "A staff member"
   },

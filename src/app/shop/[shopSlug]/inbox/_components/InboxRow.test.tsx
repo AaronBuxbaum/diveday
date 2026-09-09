@@ -23,6 +23,7 @@ const MESSAGE: InboxMessageRow["message"] = {
   providerMessageId: "ses-1",
   emailMessageId: null,
   inReplyToDeliveryId: null,
+  keywordIntent: null,
   deletedAt: null,
   createdAt: new Date("2026-07-21T13:30:00.000Z"),
 };

@@ -165,6 +165,14 @@ type TripReminderEmailInput = {
   readinessUrl?: string;
   /** Present on the night-before (day) lead only; enriches it into a full brief. */
   brief?: NightBeforeBriefInput;
+  /**
+   * Whether this message can be replied to with a keyword (ADR
+   * 20260909-reply-keywords). Decided by the sender, because it is a fact
+   * about the *channel* rather than the booking: inbound mail only reaches
+   * DiveDay on a deployment that configured a receiving domain, and a line
+   * offering a reply nobody reads is worse than no line.
+   */
+  replyKeywords?: boolean;
 };
 
 export type TripConditionsHoldEmailInput = {
@@ -704,6 +712,14 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
   // a waiver or medical that would keep them off the boat (dive-domain review).
   const todo = outstandingLines(t, input.outstanding, input.medicalReview);
   const dock = dockCallPhrase(t, input.dockCallMinutes);
+  // Last, under everything else and under the readiness button: it is the
+  // smallest thing on the page and the one a diver only looks for when their
+  // plans have changed.
+  const keywordOffer = input.replyKeywords ? t("notifications.replyKeyword.offer") : null;
+  const keywordText = keywordOffer ? `\n${keywordOffer}\n` : "";
+  const keywordHtml = keywordOffer
+    ? `<p style="font-size: 13px; opacity: 0.8;">${escapeHtml(keywordOffer)}</p>`
+    : "";
 
   // The 7-day reminder stays a light nudge. The night-before (day) lead becomes
   // the full brief: conditions, what to bring, a concrete arrival time, and who
@@ -733,8 +749,8 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
         });
     return {
       subject: t("notifications.tripReminder.daySubject", { tripTitle: input.tripTitle }),
-      text: `${t("notifications.common.greeting", { firstName })}\n\n${opener}\n\n${date}\n${time}${brief.text}${todo.text}${readyText}`,
-      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${openerHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${brief.html}${todo.html}${readyHtml}`,
+      text: `${t("notifications.common.greeting", { firstName })}\n\n${opener}\n\n${date}\n${time}${brief.text}${todo.text}${readyText}${keywordText}`,
+      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${openerHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${brief.html}${todo.html}${readyHtml}${keywordHtml}`,
     };
   }
 
@@ -750,8 +766,8 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
 
   return {
     subject: t("notifications.tripReminder.weekSubject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${weekBody}\n\n${date}\n${time}\n\n${dockNote}${todo.text}${readyText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${weekBodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${dockNote}</p>${todo.html}${readyHtml}`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${weekBody}\n\n${date}\n${time}\n\n${dockNote}${todo.text}${readyText}${keywordText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${weekBodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${dockNote}</p>${todo.html}${readyHtml}${keywordHtml}`,
   };
 }
 

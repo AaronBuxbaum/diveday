@@ -12,6 +12,11 @@
     "sms": "SMS"
   },
   "unknownSender": "Remitente desconocido",
+  "keyword": {
+    "cancel": "Pidió cancelar",
+    "move": "Pidió cambiar de fecha",
+    "confirm": "Confirmó la cancelación"
+  },
   "attachments": "{count, plural, one {# archivo adjunto, sigue con quien lo envió} other {# archivos adjuntos, siguen con quien los envió}}",
   "openRecord": "Abrir la ficha de {name}",
   "pagination": {
@@ -22,6 +27,7 @@
     "summary": "{count, plural, one {# mensaje} other {# mensajes}}",
     "received": "{name} · {date}",
     "sent": "{name} respondió · {date}",
+    "sentAutomatically": "Enviado automáticamente · {date}",
     "sendFailed": "Este no les llegó.",
     "unknownStaff": "Alguien del equipo"
   },

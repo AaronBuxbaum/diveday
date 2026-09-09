@@ -262,6 +262,13 @@ const tripReminderFields = {
   outstanding: z.array(reminderActionCodeSchema).max(8).optional(),
   medicalReview: z.boolean().optional(),
   readinessUrl: z.url().max(2_000).optional(),
+  /**
+   * Whether this reminder may end with the reply line (ADR
+   * 20260909-reply-keywords). A fact about the channel — inbound mail needs a
+   * receiving domain configured — so the sender decides it and the renderer
+   * only obeys.
+   */
+  replyKeywords: z.boolean().optional(),
 };
 
 // The night-before brief's extra sections, carried only on the 24h cadence

@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The auth gate on the ten `seed-*` test routes, one table for all of them
- * (`reset` has its own colocated route.test.ts, which also covers its success
- * path). Every case here is a *refusal*: the shared guard
+ * The auth gate on every `/api/test/*` route but `reset` and `clock`, one
+ * table for all of them (`reset` has its own colocated route.test.ts, which
+ * also covers its success path). Every case here is a *refusal*: the shared
+ * guard
  * (`src/lib/e2e-test-routes.ts`) must close these routes before they touch the
  * database, so none of these tests needs a hydrated PGlite — a stubbed `getDb`
  * that is asserted never to have been called is the assertion.
@@ -35,6 +36,7 @@ const seedDiveTimes = await import("./seed-dive-times/route");
 const seedReturningDiver = await import("./seed-returning-diver/route");
 const seedBookingHandoff = await import("./seed-booking-handoff/route");
 const seedDisplayToken = await import("./seed-display-token/route");
+const inboundMessage = await import("./inbound-message/route");
 
 const secret = "e2e-test-secret";
 
@@ -53,6 +55,14 @@ async function expectInvalidBody(response: Response) {
 }
 
 const routes: SeedRoute[] = [
+  {
+    // Not a `seed-*` name, and gated by exactly the same guard: it delivers an
+    // inbound message on a shop's behalf, which on a misconfigured deployment
+    // would let anyone cancel a diver's seat (ADR 20260909-reply-keywords).
+    slug: "inbound-message",
+    POST: inboundMessage.POST,
+    expectPastTheGuard: expectInvalidBody,
+  },
   {
     slug: "seed-account-token",
     POST: seedAccountToken.POST,

@@ -1,6 +1,7 @@
 import { getDb } from "@/db/client";
 import { recordInboundMessage } from "@/db/inbound-messages";
 import { applyProviderEmailEvent } from "@/db/notifications";
+import { handleInboundReplyKeyword } from "@/db/reply-keywords";
 import { shopIdForWhatsAppWaba } from "@/db/whatsapp-accounts";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -97,6 +98,19 @@ export async function POST(request: Request) {
       status: result.status,
       matched: result.status === "recorded" ? result.personId !== null : undefined,
     });
+    // Only a message that was actually filed. A redelivery comes back
+    // `duplicate` and never reaches this, which is the replay guard: Meta
+    // retries on any non-2xx and occasionally delivers twice on a 200, and a
+    // keyword acted on twice is a cancellation acted on twice.
+    if (result.status === "recorded") {
+      const outcome = await handleInboundReplyKeyword(db, {
+        shopId,
+        inboundMessageId: result.id,
+      });
+      if (outcome !== "not_a_keyword") {
+        log("whatsapp_webhook.reply_keyword", "info", { shopId, outcome });
+      }
+    }
   }
 
   for (const event of events) {

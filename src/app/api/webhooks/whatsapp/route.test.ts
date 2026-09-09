@@ -7,11 +7,16 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/db/notifications", () => ({ applyProviderEmailEvent: vi.fn() }));
 vi.mock("@/db/inbound-messages", () => ({ recordInboundMessage: vi.fn() }));
+// Stubbed rather than run, for the reason the email route's spec gives: the
+// keyword path has its own tests, and what this file owes is the handoff (ADR
+// 20260909-reply-keywords).
+vi.mock("@/db/reply-keywords", () => ({ handleInboundReplyKeyword: vi.fn() }));
 vi.mock("@/db/whatsapp-accounts", () => ({ shopIdForWhatsAppWaba: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
 const { recordInboundMessage } = await import("@/db/inbound-messages");
+const { handleInboundReplyKeyword } = await import("@/db/reply-keywords");
 const { shopIdForWhatsAppWaba } = await import("@/db/whatsapp-accounts");
 const { POST } = await import("./route");
 
@@ -46,6 +51,7 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ status: "recorded", id: "m1", personId: "p1" });
   vi.mocked(shopIdForWhatsAppWaba).mockReset().mockResolvedValue(SHOP_ID);
+  vi.mocked(handleInboundReplyKeyword).mockReset().mockResolvedValue("not_a_keyword");
 });
 
 describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbox)", () => {
@@ -94,6 +100,28 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
     expect((await POST(webhookRequest(payload, ""))).status).toBe(400);
     expect(getDb).not.toHaveBeenCalled();
     expect(recordInboundMessage).not.toHaveBeenCalled();
+  });
+
+  /**
+   * **Meta retries on any non-2xx and sometimes delivers twice on a 200**, so
+   * the keyword path runs only for a row the route actually filed — a `C` read
+   * off a redelivery would cancel a seat a second time (ADR
+   * 20260909-reply-keywords).
+   */
+  it("hands a filed message to the keyword path, and a duplicate to nothing", async () => {
+    const payload = payloadFor({
+      messages: [{ from: "13055551234", id: "wamid.in5", type: "text", text: { body: "C" } }],
+    });
+    expect((await POST(webhookRequest(payload))).status).toBe(200);
+    expect(handleInboundReplyKeyword).toHaveBeenCalledWith(FAKE_DB, {
+      shopId: SHOP_ID,
+      inboundMessageId: "m1",
+    });
+
+    vi.mocked(handleInboundReplyKeyword).mockClear();
+    vi.mocked(recordInboundMessage).mockResolvedValue({ status: "duplicate" });
+    expect((await POST(webhookRequest(payload))).status).toBe(200);
+    expect(handleInboundReplyKeyword).not.toHaveBeenCalled();
   });
 
   it("is unavailable rather than open when no app secret is configured", async () => {

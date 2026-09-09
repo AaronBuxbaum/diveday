@@ -4150,6 +4150,15 @@ export const notificationRateLimitState = pgTable("notification_rate_limit_state
 export const inboundChannel = pgEnum("inbound_channel", ["email", "sms", "whatsapp"]);
 
 /**
+ * What a one-word reply turned out to be asking for (ADR
+ * 20260909-reply-keywords). Written by the inbound path when it recognises a
+ * keyword, and read by the shop inbox so a row whose whole body is "M" says
+ * what it meant. Null — the overwhelming majority — is a message a person
+ * wrote in sentences, and nothing about it was interpreted.
+ */
+export const inboundKeywordIntent = pgEnum("inbound_keyword_intent", ["cancel", "move", "confirm"]);
+
+/**
  * A message a diver sent *to* the shop — a reply to a booking confirmation, a
  * WhatsApp "running late", a question from an address nobody has on file (ADR
  * 20260907-two-way-inbox). Every DiveDay message used to be one-way; divers
@@ -4208,6 +4217,12 @@ export const inboundMessages = pgTable(
       () => notificationDeliveries.id,
       { onDelete: "set null" },
     ),
+    /**
+     * The keyword this message turned out to be, if it was one at all (ADR
+     * 20260909-reply-keywords). Null on every message somebody wrote in
+     * sentences, which is nearly all of them.
+     */
+    keywordIntent: inboundKeywordIntent("keyword_intent"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -4265,9 +4280,15 @@ export const staffReplies = pgTable(
     toAddress: text("to_address").notNull(),
     body: text("body").notNull(),
     locale: text("locale").notNull(),
-    sentByPersonId: uuid("sent_by_person_id")
-      .notNull()
-      .references(() => people.id),
+    /**
+     * The staffer who typed it — **null when DiveDay answered on the shop's
+     * behalf**, which is what a keyword confirmation is (ADR
+     * 20260909-reply-keywords). Nullable rather than pointed at a synthetic
+     * account, because there is no person here and inventing one would put a
+     * name on a sentence nobody wrote; the record says "sent automatically"
+     * instead.
+     */
+    sentByPersonId: uuid("sent_by_person_id").references(() => people.id),
     status: notificationDeliveryStatus("status").notNull(),
     providerMessageId: text("provider_message_id"),
     sendErrorCode: text("send_error_code"),

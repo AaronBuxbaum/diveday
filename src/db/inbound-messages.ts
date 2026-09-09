@@ -378,7 +378,19 @@ export type RecordStaffReplyInput = {
   toAddress: string;
   body: string;
   locale: string;
-  sentByPersonId: string;
+  /**
+   * The staffer who typed it, or **null when DiveDay answered on the shop's
+   * behalf** — a reply-keyword confirmation (ADR 20260909-reply-keywords).
+   */
+  sentByPersonId: string | null;
+  /**
+   * Whether a sent reply also answers the message it was written to. True for
+   * everything a staffer sends, and for an automatic reply that leaves the
+   * shop nothing to do. **False for one that hands work over** — a diver
+   * asking to be moved is still waiting on a person, and stamping that
+   * message answered would take it off the worklist that exists to reach it.
+   */
+  marksAnswered?: boolean;
   delivery:
     | { status: "sent"; providerMessageId: string }
     | { status: "not_configured" }
@@ -412,7 +424,7 @@ export async function recordStaffReply(db: DbExecutor, input: RecordStaffReplyIn
       sentAt,
     })
     .returning();
-  if (input.delivery.status === "sent" && input.inboundMessageId) {
+  if (input.delivery.status === "sent" && input.inboundMessageId && input.marksAnswered !== false) {
     await markInboundAnswered(db, input.shopId, input.inboundMessageId, sentAt);
   }
   return reply;
