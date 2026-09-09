@@ -713,6 +713,14 @@ export async function checkInAtKiosk(
         and(
           eq(bookings.id, input.bookingId),
           eq(bookings.shopId, input.shopId),
+          // The departure's own tenancy and liveness, restated rather than
+          // inherited. `checkInBooking` above can lean on `bookings.shop_id`
+          // alone because `activeStaffRecorderId` has already refused anyone
+          // who is not this shop's live staff; **this door has no staffer
+          // behind it**, so every predicate it depends on is written here
+          // rather than assumed of the caller that supplied the booking id.
+          eq(trips.shopId, input.shopId),
+          liveTrip(),
           isNull(people.deletedAt),
         ),
       )

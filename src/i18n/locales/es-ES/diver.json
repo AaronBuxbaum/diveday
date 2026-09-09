@@ -75,7 +75,7 @@
     "deskHeading": "Pasa por el mostrador",
     "deskBody": "Alguien del mostrador se encarga desde aquí.",
     "unavailableHeading": "Esta tableta no está configurada",
-    "unavailableBody": "Pide al centro que cree un enlace nuevo en Ajustes, en Pantalla del vestíbulo."
+    "unavailableBody": "Crea uno nuevo en Configuración, en Pantalla del lobby."
   },
   "conservation": {
     "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",

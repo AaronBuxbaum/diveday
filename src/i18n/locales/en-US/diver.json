@@ -75,7 +75,7 @@
     "deskHeading": "See the desk",
     "deskBody": "Someone at the counter will take it from here.",
     "unavailableHeading": "This tablet isn’t set up",
-    "unavailableBody": "Ask the shop to make a new link in Settings, under Lobby display."
+    "unavailableBody": "Make a new one in Settings, under Lobby display."
   },
   "conservation": {
     "shopClaimsDisclaimer": "Stated by the shop, not verified by DiveDay.",

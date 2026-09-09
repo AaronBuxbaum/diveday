@@ -87,15 +87,24 @@ export default async function KioskCheckInPage({ params }: { params: Promise<{ t
           {formatShortDate(now, locale, shop.timezone)}
         </p>
       </header>
-      <p className="mt-6 text-[1.75rem] leading-tight font-bold text-balance">{t("kiosk.title")}</p>
-      <KioskConsole
-        token={token}
-        copy={{
-          prompt: t("kiosk.prompt"),
-          submit: t("kiosk.submit"),
-          submitting: t("kiosk.submitting"),
-        }}
-      />
+      {/* **The box sits where a standing person's hands are**, not at the top
+          of the glass. This screen is a tablet on a counter and nothing else
+          competes for the space, so the console takes the room the header
+          leaves and centres in it — pinned to the top it read as a page still
+          loading, with two thirds of the device blank underneath. The header
+          stays put, because a diver crossing the lobby is reading the shop's
+          name and the date from further away than the prompt. */}
+      <div className="flex flex-1 flex-col justify-center py-6">
+        <p className="text-[1.75rem] leading-tight font-bold text-balance">{t("kiosk.title")}</p>
+        <KioskConsole
+          token={token}
+          copy={{
+            prompt: t("kiosk.prompt"),
+            submit: t("kiosk.submit"),
+            submitting: t("kiosk.submitting"),
+          }}
+        />
+      </div>
     </main>
   );
 }

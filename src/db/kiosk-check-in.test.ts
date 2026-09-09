@@ -9,7 +9,7 @@ import { checkInAtKiosk } from "./check-in";
 import { issueDisplayToken, revokeDisplayToken, verifyDisplayToken } from "./display-tokens";
 import { findKioskSeats } from "./kiosk-check-in";
 import { listDepartureBoardedBookingIds } from "./manifests";
-import { bookingArrivalEvents, bookings, people, rollCallEvents } from "./schema";
+import { bookingArrivalEvents, bookings, people, rollCallEvents, trips } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -305,6 +305,27 @@ describe("checkInAtKiosk", () => {
     expect(
       await checkInAtKiosk(db, {
         shopId: OTHER_SHOP,
+        displayTokenId: link.id,
+        bookingId: booking.id,
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+  });
+
+  /**
+   * **The writer restates every predicate rather than inheriting one.** The
+   * reader already excludes a departure the shop took off the board, so
+   * nothing reaches here with a deleted trip's booking id by the normal
+   * route — which is exactly why this is worth a test: this door has no
+   * staffer behind it, and a second caller trusting the id it was handed is
+   * how that stops being true.
+   */
+  it("refuses a booking on a departure the shop deleted", async () => {
+    const { db, shop, link, booking, person, reef } = await counter();
+    await clearForBoarding(db, shop.id, booking.id, person.fullName);
+    await db.update(trips).set({ deletedAt: nowDate() }).where(eq(trips.id, reef.id));
+    expect(
+      await checkInAtKiosk(db, {
+        shopId: shop.id,
         displayTokenId: link.id,
         bookingId: booking.id,
       }),
