@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #0c2a35; background: #fbf7ef; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; } a:hover { color: #0a4d61; }
+    .verb { color: #0e7490; font-weight: 500; text-decoration: underline; text-decoration-color: #7fd0d6; text-decoration-thickness: 2px; text-underline-offset: 4px; white-space: nowrap; }
+    .s { font-size: 20px; line-height: 32px; color: #0c2a35; margin: 0; }
+    .s b { font-weight: 600; }
+    .s .m { color: #54676d; }
+    .say { font-size: 17px; line-height: 28px; color: #0c2a35; margin: 0; padding: 12px 0; border-top: 1px solid #e6dcc8; display: flex; gap: 12px; align-items: flex-start; }
+    .say:last-child { border-bottom: 1px solid #e6dcc8; }
+    .say .m { color: #54676d; }
+    .glyph { flex: 0 0 24px; width: 24px; height: 24px; margin-top: 2px; }
+    .lead { font-size: 26px; line-height: 36px; font-weight: 500; letter-spacing: -0.01em; margin: 0; }
+    .group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d; }
+    .note { font-size: 14px; line-height: 22px; color: #54676d; }
+    .swatch { width: 44px; height: 44px; border-radius: 10px; border: 1px solid rgba(12,42,53,0.12); }
+    .shape { padding: 10px 14px; border-radius: 10px; background: #fffdf8; border: 1px solid #e6dcc8; font-size: 15px; line-height: 24px; }
+    .shape .k { display: block; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: #0e7490; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; box-sizing: border-box; background: #fbf7ef; padding: 0 0 48px 0;">
+
+  <div style="display: flex; flex-direction: column; gap: 16px; padding: 40px 48px 32px 48px; border-bottom: 1px solid #e6dcc8; background: #fffdf8;">
+    <div style="display: flex; align-items: baseline; gap: 16px;">
+      <span class="group" style="color: #0e7490;">Direction D · the voice is the system</span>
+      <span class="note">Cost: 4–6 sessions, most of it copy · Wow: highest for owners · Risk: density on desktop, and every sentence must be written well twice</span>
+    </div>
+    <h1 style="margin: 0; font-size: 44px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">The briefing</h1>
+    <p style="margin: 0; max-width: 880px; font-size: 20px; line-height: 30px;">Principle 4 already says the words should sound like a good dive briefing. This direction makes that the whole design system: every surface opens by <em>telling</em> you the state, in five sentence shapes, and the controls live inside the sentences as verbs. The kind column goes, the chevron goes, the right-hand action goes — the sentence carries all three. Lists remain for registers, but a list is a stack of sentences too. When the voice is the grammar, a guard can read consistency, which no guard can do for pixels.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 8px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="group">Why it coheres</span>
+        <p class="note" style="margin: 0;">Five shapes and nothing else — State, Need, Fact, Offer, Done — each with a fixed order of who · what · one verb. Today's twenty-two action kinds are all Needs. Settings' rows are Facts. An empty state is a State. A sentence that fits none of the five is deleted, which is the copy-restraint rule with teeth. One exception is drawn: a register's filter line is a list of verbs, and stays one.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="group">What it deletes</span>
+        <p class="note" style="margin: 0;">The kind word and its 92px column, the chevron, the trailing action, every capsule, every panel, the stat tiles, the horizon pills, and every hint that restates its heading. The eyebrow stays, as the floor says. Reef's palette and the hand stay; the glyph is the one mark before a sentence.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="group">The honest tradeoff</span>
+        <p class="note" style="margin: 0;">Prose is slower to scan than columns: a register of 140 divers is a stack of Facts, which is fine, but Orders loses its money column to the end of a sentence, and Reports becomes a paragraph with four figures in it. And the Spanish bundle must be written as sentences, not translated as fragments.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 32px; padding: 32px 48px; border-bottom: 1px solid #e6dcc8;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="group">The five shapes</span>
+      <div class="shape"><span class="k">State</span><b>Three departures today.</b> Four things need you before Mantis II leaves at 7:00.</div>
+      <div class="shape"><span class="k">Need</span><b>Grace Mensah</b>'s Advanced Open Water awaits verification. <span class="verb">Check it</span></div>
+      <div class="shape"><span class="k">Fact</span><b>BCD #2</b> · Cressi Start, S · reserved for Priya Sharma from Sep 13.</div>
+      <div class="shape"><span class="k">Offer</span>5 seats are open tonight with no deal sent. <span class="verb">Send one</span></div>
+      <div class="shape"><span class="k">Done</span><b>All home.</b> 8 of 8 back by 8:30, head count closed by Sal Moretti.</div>
+      <p class="note" style="margin: 4px 0 0 0;">Who first, one verb last, one sentence. A Need always ends in a verb; a Fact never does; a Done never has one. That is the whole component library for text.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="group">Faces &amp; ramp</span>
+      <div style="font-size: 44px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Title 44</div>
+      <div class="lead">Lead 26</div>
+      <div class="s">Sentence 20</div>
+      <div style="font-size: 17px; line-height: 28px;">Row sentence 17</div>
+      <div class="group">Group 12</div>
+      <p class="note" style="margin: 4px 0 0 0;">Geist, kept. Body type steps up to 17 and 20 because the words are the interface now, and a 976px column narrows to 720 for reading. The verb is underlined in shallows, the one decoration.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="group">Palette (Reef, quieter)</span>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <div class="swatch" style="background: #fbf7ef;"></div>
+        <div class="swatch" style="background: #fffdf8;"></div>
+        <div class="swatch" style="background: #e6dcc8;"></div>
+        <div class="swatch" style="background: #0c2a35;"></div>
+        <div class="swatch" style="background: #54676d;"></div>
+        <div class="swatch" style="background: #0e7490;"></div>
+        <div class="swatch" style="background: #7fd0d6;"></div>
+        <div class="swatch" style="background: #ff6f61;"></div>
+      </div>
+      <p class="note" style="margin: 4px 0 0 0;">No tints or washes at all on staff pages: a state is said, so it needs no colour behind it. Warning and danger survive only as the glyph before a Need. Coral keeps its three moments and gains none.</p>
+      <div style="display: flex; gap: 16px; align-items: center; padding-top: 8px;">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#8a8065" stroke-width="1.75"><circle cx="12" cy="12" r="8.5"/></svg>
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+        <span class="note">Need · Fact or Offer · Done — the three glyphs, before a sentence, never beside a colour.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- home -->
+  <div style="padding: 0 48px;">
+    <div style="padding: 24px 0 8px 0;"><span class="group" style="color: #8a8065;">The shop home · Thursday, August 27, 2026 · 1180 desktop</span></div>
+
+    <div style="display: flex; align-items: center; gap: 24px; height: 56px; margin: 0 -48px; padding: 0 230px; background: #fffdf8; border-bottom: 1px solid #e6dcc8;">
+      <span style="font-size: 16px; font-weight: 600;">Blue Mantis Divers</span>
+      <div style="display: flex; gap: 20px; font-size: 15px; color: #54676d;"><span style="color: #0e7490; font-weight: 500;">Today</span><span>Check-in</span><span>Divers</span><span>Board</span><span>More</span></div>
+      <span style="margin-left: auto; font-size: 14px; color: #54676d;">Search ⌘K</span>
+    </div>
+
+    <div style="width: 720px; margin: 0 auto; padding-top: 44px;">
+      <p class="group" style="margin: 0; color: #0e7490; font-size: 11px; letter-spacing: 0.16em; font-weight: 700;">Front desk</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 44px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Good morning, Dana</h2>
+      <p class="lead" style="margin-top: 16px;">Three departures today. Four things need you before Mantis II leaves at 7:00.</p>
+
+      <p class="s" style="margin-top: 32px;"><b>7:00 · Two-Tank Reef, Molasses &amp; French.</b> <span class="m">Mantis II, Keiko and Sal, 10 of 12 booked, boarding from 6:23.</span> <span class="verb">Open the trip</span></p>
+      <div style="margin-top: 12px;">
+        <p class="say"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg><span><b>Grace Mensah</b>'s Advanced Open Water awaits verification. <span class="verb">Check it</span></span></p>
+        <p class="say"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg><span><b>Priya Sharma</b> has not been sent her waiver. <span class="verb">Send it</span></span></p>
+        <p class="say"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#8a8065" stroke-width="1.75"><circle cx="12" cy="12" r="8.5"/></svg><span>Three divers still need rental sizes before prep is complete. <span class="verb">Open the prep list</span></span></p>
+        <p class="say"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#8a8065" stroke-width="1.75"><circle cx="12" cy="12" r="8.5"/></svg><span><b>Nadia Petrov</b> has no emergency contact on file; it prints on the manifest. <span class="verb">Ask at the counter</span></span></p>
+        <p class="say"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#8a8065" stroke-width="1.75"><circle cx="12" cy="12" r="8.5"/></svg><span class="m">The recap goes out at 12:30.</span></p>
+      </div>
+
+      <p class="s" style="margin-top: 40px;"><b>1:00 · Wreck Trip, Spiegel Grove.</b> <span class="m">Mantis II, full at 10 of 10.</span> <span class="verb">Open the trip</span></p>
+      <div style="margin-top: 12px;">
+        <p class="say"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg><span>Nobody is assigned to the water for ten divers. <span class="verb">Assign crew</span></span></p>
+        <p class="say"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg><span><b>Tomás Ferreira</b> has no certification on file for a deep wreck. <span class="verb">Check it</span></span></p>
+      </div>
+
+      <p class="s" style="margin-top: 40px;"><b>7:30 · Night Dive, City of Washington.</b> <span class="m">Skiff, 3 of 8.</span> <span class="verb">Open the trip</span></p>
+      <div style="margin-top: 12px;">
+        <p class="say"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#8a8065" stroke-width="1.75"><circle cx="12" cy="12" r="8.5"/></svg><span>Five seats are open with no deal sent. <span class="verb">Send one</span></span></p>
+      </div>
+
+      <p class="s" style="margin-top: 48px;"><b>At the desk.</b></p>
+      <div style="margin-top: 12px;">
+        <p class="say"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#8a8065" stroke-width="1.75"><circle cx="12" cy="12" r="8.5"/></svg><span>Three divers wrote back, in the channel they used. <span class="verb">Answer them</span></span></p>
+        <p class="say"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#8a8065" stroke-width="1.75"><circle cx="12" cy="12" r="8.5"/></svg><span>One review is waiting; publish it or hide it. <span class="verb">Read it</span></span></p>
+        <p class="say"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#8a8065" stroke-width="1.75"><circle cx="12" cy="12" r="8.5"/></svg><span><b>Tom Okafor</b>'s BCD is due back today. <span class="verb">Open gear</span></span></p>
+      </div>
+
+      <p class="s" style="margin-top: 48px;"><span class="m">Tomorrow has two departures and seven jobs.</span> <span class="verb">Look ahead</span></p>
+
+      <!-- Gear -->
+      <div style="padding: 56px 0 8px 0; border-top: 1px dashed #e6dcc8; margin-top: 48px;"><span class="group" style="color: #8a8065;">Gear · the same five shapes</span></div>
+      <p class="group" style="margin: 12px 0 0 0; color: #0e7490; font-size: 11px; letter-spacing: 0.16em; font-weight: 700;">Run the shop</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 44px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Gear</h2>
+      <p class="lead" style="margin-top: 16px;">Thirty-seven units; thirty-six on the wall, and BCD #5 is out with Tom Okafor. Two are due for service.</p>
+      <p class="s" style="margin-top: 16px;"><span class="m">Show</span> <span class="verb">all</span> <span class="m">·</span> <span class="verb">BCDs</span> <span class="m">·</span> <span class="verb">regulators</span> <span class="m">·</span> <span class="verb">wetsuits</span> <span class="m">·</span> <span class="verb">tanks</span> <span class="m">·</span> <span class="verb">service due</span></p>
+      <div style="margin-top: 24px;">
+        <p class="say"><span><b>BCD #1</b> <span class="m">· Cressi Start, XS.</span></span></p>
+        <p class="say"><span><b>BCD #2</b> <span class="m">· Cressi Start, S · reserved for Priya Sharma from Sep 13.</span></span></p>
+        <p class="say"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg><span><b>Reg #4</b> <span class="m">· ScubaPro MK11/C370 ·</span> needs service. <span class="verb">Book it</span></span></p>
+        <p class="say"><span><b>AL80-03</b> <span class="m">· visual inspection due Sep 29.</span></span></p>
+        <p class="say"><span>Something new on the wall? <span class="verb">Add it</span></span></p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

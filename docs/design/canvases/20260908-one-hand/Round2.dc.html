@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #0c2a35; background: #fbf7ef; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; } a:hover { color: #0a4d61; text-decoration: underline; }
+    h2 { margin: 0; font-size: 18px; font-weight: 600; }
+    p { margin: 0; }
+    .sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid #e6dcc8; }
+    .body { font-size: 15px; line-height: 23px; max-width: 980px; }
+    .body b { font-weight: 600; }
+    .eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490; }
+    .k { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: #54676d; }
+    .card { display: flex; flex-direction: column; gap: 10px; padding: 20px; background: #fffdf8; border: 1px solid #e6dcc8; border-radius: 18px; }
+    .card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+    .card p { font-size: 14px; line-height: 21px; }
+    .card .m { color: #54676d; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 20px; }
+    th { text-align: left; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: #54676d; padding: 0 12px 8px 0; border-bottom: 1px solid #0c2a35; }
+    td { padding: 10px 12px 10px 0; border-bottom: 1px solid #e6dcc8; vertical-align: top; }
+    td:first-child { font-weight: 600; white-space: nowrap; }
+    .yes { color: #15803d; font-weight: 600; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; box-sizing: border-box; background: #fbf7ef; padding-bottom: 48px;">
+
+  <div style="padding: 44px 48px 32px 48px; background: #fffdf8; border-bottom: 1px solid #e6dcc8; display: flex; flex-direction: column; gap: 14px;">
+    <span class="eyebrow">Round 2 · 2026-09-09 · read me first on this page</span>
+    <h1 style="margin: 0; font-size: 44px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; max-width: 900px;">Five levers on top of A — each one thing the app has never tried</h1>
+    <p class="body" style="font-size: 17px; line-height: 27px;">The owner's read of round 1: A is the best of the four but wants more "wow"; the instrument is hard to move around in and not warm enough; the logbook is not efficient and not what a dive shop wants to deal with; the briefing feels like too many existing apps; and all four felt too close to ideas already tried. Read against the twelve earlier canvases, that is fair — the instrument was Deck on 09-01, the paper page was Tide, and the voice, the motion, the prefill and the device were each a canvas of their own. So this page keeps A as the base (the floor and its deletions stand) and adds <b>five levers, one per board, none of which any canvas has drawn</b>: a place, an instrument that travels, the shop's own sea, a single page, and other people.</p>
+  </div>
+
+  <div class="sec">
+    <h2>What "wow" has to mean here, given what the owner just said</h2>
+    <p class="body">Warm rather than cold. Efficient — fewer taps than today, never more. Recognisably not another SaaS list. And it has to land on the surface a shop lives in (the home, the counter, the manifest), not on a page a diver sees once. Every lever below is scored against those four, and each board redraws the same home for Blue Mantis on the same Thursday so they compare with A.</p>
+  </div>
+
+  <div class="sec">
+    <h2>The five levers</h2>
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px;">
+      <div class="card">
+        <span class="k">E · a place</span>
+        <h3>Rooms</h3>
+        <p>The shop drawn as its own places: Today is <b>the board</b> behind the counter (a column per boat, name cards, crew magnets), Gear is <b>the wall</b> (tags on hooks by kind), Check-in is <b>the counter</b>, Divers <b>the drawer</b>. One card component at three sizes; one token set; every room a layout the shop already knows.</p>
+        <p class="m"><b>Wow:</b> the shop recognises itself. <b>Risk:</b> a board on a phone is columns you swipe; skeuomorphism if it grows textures.</p>
+      </div>
+      <div class="card">
+        <span class="k">F · an instrument that travels</span>
+        <h3>The tide line</h3>
+        <p>One strip under the chrome on <b>every</b> staff page: the day from first light to the last boat, departures as blocks that fill as divers board, a "now" mark that moves, the next boat lit. Nothing else changes; the page beneath is A.</p>
+        <p class="m"><b>Wow:</b> every page tells you how long until the lines come off. <b>Risk:</b> 64px of chrome on a phone; a shop with one boat a day gets a mostly empty line.</p>
+      </div>
+      <div class="card">
+        <span class="k">H · the shop's own sea</span>
+        <h3>Their sea</h3>
+        <p>Harbor comes inside: the staff app takes the shop's brand colour for its lagoon, and each departure's header carries a photograph of the site — the shop's own, or the catalogue's. The hand stays for the shop that has no photos.</p>
+        <p class="m"><b>Wow:</b> it is <em>their</em> app, and Molasses Reef looks like Molasses Reef. <b>Risk:</b> photos never reach a manifest; a bad brand colour needs the derivation rules Harbor already has.</p>
+      </div>
+      <div class="card">
+        <span class="k">I · a single page</span>
+        <h3>The one page</h3>
+        <p>No tabs. The staff app is one scroll — Now, Later, the Desk, the Shop — with a rail that says where you are and search as the door to any record. A register opens as a sheet over the page and closes back to where you were.</p>
+        <p class="m"><b>Wow:</b> the whole shop in one thumb-scroll on a phone. <b>Risk:</b> the deep registers (140 divers, 156 orders) live in sheets; the URL scheme changes; power users lose tabs.</p>
+      </div>
+      <div class="card">
+        <span class="k">K · other people</span>
+        <h3>Together</h3>
+        <p>The app knows who else is in it: Keiko on Mantis II, Sal at the counter, Dana at the desk — in the header, and on the row a colleague is acting on ("Sal is checking Diego in"). A Need can be handed to someone with one tap.</p>
+        <p class="m"><b>Wow:</b> a two-person shop sees each other; the board is alive. <b>Risk:</b> a live layer the app does not have yet; "who is looking" is a privacy line to draw.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>How they score, and how they combine</h2>
+    <table>
+      <tr><th>Lever</th><th>Warm</th><th>Efficient</th><th>Not another list app</th><th>Lands on the home</th><th>Cost on top of A</th><th>Combines with</th></tr>
+      <tr><td>E · Rooms</td><td class="yes">yes</td><td>same taps, faster to read</td><td class="yes">yes — a board, not a list</td><td class="yes">yes</td><td>5–7 sessions</td><td>F, H, K; not I (a board is not a scroll)</td></tr>
+      <tr><td>F · The tide line</td><td>neutral</td><td class="yes">fewer — the next boat is on every page</td><td class="yes">yes</td><td class="yes">every page</td><td>1–2 sessions</td><td>everything</td></tr>
+      <tr><td>H · Their sea</td><td class="yes">warmest</td><td>same</td><td class="yes">yes</td><td class="yes">yes</td><td>2–3 sessions (Harbor's tokens exist)</td><td>everything</td></tr>
+      <tr><td>I · The one page</td><td>neutral</td><td class="yes">fewest taps on a phone</td><td class="yes">yes</td><td class="yes">it is the home</td><td>6–8 sessions</td><td>F, H, K; not E</td></tr>
+      <tr><td>K · Together</td><td class="yes">yes — people</td><td class="yes">hand-offs stop being texts</td><td class="yes">yes</td><td class="yes">yes</td><td>5–7 sessions + a live layer</td><td>everything</td></tr>
+    </table>
+    <p class="body">The recommendation, stated so it can be disagreed with: <b>A, then F and H together, then K.</b> F and H are cheap, compose with anything, and between them answer both halves of the brief — the tide line is the efficiency and the "not another list" in one strip, and the shop's sea is the warmth. K is the biggest wow and the biggest build. E is the most striking single board and the one to look at for the lobby display and the day-at-a-glance, but it is a second grammar beside the ledger, which is exactly what round 1 set out to delete; if E wins, it wins as the whole staff app, not as one page of it. I is the honest alternative for a phone-first shop and the one that changes the most.</p>
+  </div>
+
+  <div class="sec">
+    <h2>What every board keeps from A</h2>
+    <p class="body">Reef's tokens, the one page width, the eyebrow as the area, titles as nouns, the one row (mark · kind · sentence · one door), the one add, the three pills, the coral bans, the voice sheet. A lever adds one thing; it never adds a second spelling of anything the floor holds at one.</p>
+  </div>
+
+  <div class="sec">
+    <h2>The owner's call — H-71, round 2</h2>
+    <p class="body"><b>(a)</b> Which levers ride on A: any set of E, F, H, I, K, in an order. <b>(b)</b> For H: whether the shop's brand colour may recolour the staff chrome and primary action (yes recommended), and whether site photographs may appear on the staff home and trip page (yes recommended; never the manifest, roll call, waiver, payment or the counter). <b>(c)</b> For K: whether staff presence is shown by name to the whole shop (recommended: yes, role-wide, no history kept). <b>(d)</b> For E: whether the board replaces the ledger on Today or joins the lobby display only.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

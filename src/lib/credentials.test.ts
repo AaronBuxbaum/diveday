@@ -1,4 +1,4 @@
-import { compare } from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
@@ -57,6 +57,31 @@ describe("verifyCredentials (in-memory PGlite)", () => {
     const { email, password } = DEV_STAFF_LOGINS.instructor;
     await db.update(userAccounts).set({ status: "disabled" }).where(eq(userAccounts.email, email));
     expect(await verifyCredentials(db, email, password)).toBeNull();
+  });
+
+  it("refuses an account whose hash is null, where the same account with a hash signs in", async () => {
+    // `hashed_password` is nullable (issue #1588: better-auth 1.7.3 refuses to
+    // serve any request while a column it never writes is required). Nothing
+    // writes a null today, and the insert type no longer requires the column,
+    // so this is what keeps `verifyCredentials`' decoy fallback honest if one
+    // ever does.
+    const db = await seededTestDb();
+    const { email } = DEV_STAFF_LOGINS.instructor;
+    const { shops } = await import("@/db/schema");
+    // The seeded shop is a demo shop and every dev login's password *is* the
+    // bypass token, which admits without ever reading a hash. Shut that door
+    // first, or a null hash looks refused for the wrong reason.
+    await db.update(shops).set({ isDemo: false });
+
+    const setHash = (value: string | null) =>
+      db.update(userAccounts).set({ hashedPassword: value }).where(eq(userAccounts.email, email));
+
+    await setHash(await hash("correct horse battery", 4));
+    expect(await verifyCredentials(db, email, "correct horse battery")).not.toBeNull();
+
+    await setHash(null);
+    expect(await verifyCredentials(db, email, "correct horse battery")).toBeNull();
+    expect(await verifyCredentials(db, email, "")).toBeNull();
   });
 
   it("admits the bypass token if the shop is a demo shop", async () => {

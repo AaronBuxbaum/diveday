@@ -1,0 +1,232 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Round 1 — the audit and four directions"
+    },
+    {
+      "id": "page-2",
+      "name": "Round 2 — five levers on A"
+    },
+    {
+      "id": "page-3",
+      "name": "Round 3 — every surface, one hand"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "One hand — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 4000,
+      "page": "page-1"
+    },
+    {
+      "file": "Audit.dc.html",
+      "title": "The audit — the same job, drawn too many ways",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 6200,
+      "page": "page-1"
+    },
+    {
+      "file": "DirectionA.dc.html",
+      "title": "Direction A — Finish the sentence",
+      "x": 0,
+      "y": 6400,
+      "w": 1180,
+      "h": 3150,
+      "page": "page-1"
+    },
+    {
+      "file": "DirectionB.dc.html",
+      "title": "Direction B — The logbook",
+      "x": 1300,
+      "y": 6400,
+      "w": 1180,
+      "h": 2900,
+      "page": "page-1"
+    },
+    {
+      "file": "DirectionC.dc.html",
+      "title": "Direction C — The instrument",
+      "x": 0,
+      "y": 9700,
+      "w": 1180,
+      "h": 2800,
+      "page": "page-1"
+    },
+    {
+      "file": "DirectionD.dc.html",
+      "title": "Direction D — The briefing",
+      "x": 1300,
+      "y": 9700,
+      "w": 1180,
+      "h": 3700,
+      "page": "page-1"
+    },
+    {
+      "file": "Round2.dc.html",
+      "title": "Round 2 — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 2700,
+      "page": "page-2"
+    },
+    {
+      "file": "LeverE.dc.html",
+      "title": "Lever E — Rooms",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 2750,
+      "page": "page-2"
+    },
+    {
+      "file": "LeverF.dc.html",
+      "title": "Lever F — The tide line",
+      "x": 0,
+      "y": 3000,
+      "w": 1180,
+      "h": 2650,
+      "page": "page-2"
+    },
+    {
+      "file": "LeverH.dc.html",
+      "title": "Lever H — Their sea",
+      "x": 1300,
+      "y": 3000,
+      "w": 1180,
+      "h": 2650,
+      "page": "page-2"
+    },
+    {
+      "file": "LeverI.dc.html",
+      "title": "Lever I — The one page",
+      "x": 0,
+      "y": 5900,
+      "w": 1180,
+      "h": 3300,
+      "page": "page-2"
+    },
+    {
+      "file": "LeverK.dc.html",
+      "title": "Lever K — Together",
+      "x": 1300,
+      "y": 5900,
+      "w": 1180,
+      "h": 2500,
+      "page": "page-2"
+    },
+    {
+      "file": "Composite.dc.html",
+      "title": "The recommendation, composed — A + F + H + K, desktop",
+      "x": 0,
+      "y": 9400,
+      "w": 1180,
+      "h": 2500,
+      "page": "page-2"
+    },
+    {
+      "file": "CompositePhone.dc.html",
+      "title": "The recommendation, composed — phone",
+      "x": 1300,
+      "y": 9400,
+      "w": 390,
+      "h": 1180,
+      "page": "page-2"
+    },
+    {
+      "file": "Round3.dc.html",
+      "title": "Round 3 — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 6850,
+      "page": "page-3"
+    },
+    {
+      "file": "Kit.dc.html",
+      "title": "The kit — one hand, on every surface",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 6650,
+      "page": "page-3"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "how-to-read",
+      "x": 0,
+      "y": -260,
+      "w": 560,
+      "page": "page-1",
+      "text": "Round 1, 2026-09-08. Read Main first (the diagnosis and the four directions), then the Audit (the evidence, drawn), then the four directions below. The owner's read on 09-09: A is the base; B, C and D are out. The new ideas are on the Round 2 page."
+    },
+    {
+      "id": "pick",
+      "x": 1300,
+      "y": -260,
+      "w": 520,
+      "page": "page-1",
+      "text": "The pick is the owner's (H-71). Nothing here is normative until the ADR moves to Accepted. Direction A is the floor every other direction also has to clear."
+    },
+    {
+      "id": "round2-read",
+      "x": 0,
+      "y": -260,
+      "w": 560,
+      "page": "page-2",
+      "text": "Round 2, 2026-09-09. Five levers, each one thing on top of A that no earlier canvas drew: a place (E), an instrument that travels (F), the shop's own sea (H), a single page (I), other people (K). Each board redraws the same home for the same morning. Round2 has the scoring, the combinations and the recommendation."
+    },
+    {
+      "id": "round2-letters",
+      "x": 1300,
+      "y": -260,
+      "w": 520,
+      "page": "page-2",
+      "text": "Letters continue from round 1 (A–D) and skip G and J, which were considered and dropped before drawing: G was Deck's figure-first ramp again, J was gestures the dock test already limits."
+    },
+    {
+      "id": "composite-note",
+      "x": 1760,
+      "y": 9400,
+      "w": 520,
+      "page": "page-2",
+      "text": "The composite is the recommendation drawn once: A underneath, the tide line under the chrome, the shop's green and site photographs (H), and presence (K). On a phone the tide line folds to one 36px strip with the next boat only, and the rows stack the way A already does at 390."
+    },
+    {
+      "id": "round3-read",
+      "x": 0,
+      "y": -260,
+      "w": 560,
+      "page": "page-3",
+      "text": "Round 3, 2026-09-09. The owner liked round 2 and asked for more, on every surface. Read Round3 first (the eight levers, every surface and its board, the order to build, the calls), then the Kit (the whole vocabulary), then the boards in the order of a day down the two columns. Every board is drawn from the Kit and holds one fiction."
+    },
+    {
+      "id": "round3-kit",
+      "x": 1300,
+      "y": -260,
+      "w": 520,
+      "page": "page-3",
+      "text": "The Kit is A + F + H + K composed: one width, the eyebrow as the group, one row, one add, three pills, the tide line under the chrome, the shop's colour and site photographs, presence. The round-3 additions (the line, the pass, the postcard, the log, the rooms) are specimens on it and drawn in place on the surface boards."
+    },
+    {
+      "id": "round3-honest",
+      "x": 2560,
+      "y": 0,
+      "w": 520,
+      "page": "page-3",
+      "text": "What is honest about the pictures: photographs are gradients standing in for the shop's own; the fonts are the real faces; the numbers agree across boards. A frame is one moment, and each board's aside says which. Nothing here is normative until the ADR moves to Accepted (H-71 a)."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-3"
+  }
+}

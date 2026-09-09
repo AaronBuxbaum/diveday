@@ -502,6 +502,70 @@ diffs are explained. All four remaining slices may start.
   staffer whose role reaches the manifest, the platform's install prompt or its own menu item with the
   share glyph, a device-kept dismissal, a test that it renders nothing when installed or on a desktop.
 
+### 20. One hand (design complete; H-71 pending)
+
+The 2026-09-08 loop over why the app feels like four products, argued on
+[the canvas](../../design/canvases/20260908-one-hand/README.md) and proposed in ADR
+[20260908-one-hand](../../architecture/decisions/20260908-one-hand.md). Read from the running app with
+the whole tree counted, the design system is good and mostly adopted, and the seams are in the six
+things no checker sees — a page's width, what the eyebrow says, how a group carries its count, what a
+row is, how a thing is added, how a state is drawn — each with between five and twenty-seven spellings
+after five design passes in twelve days that added vocabularies without deleting the last; the voice
+has the same shape of problem across 7,390 strings. The ADR states a floor (six jobs, one spelling
+each, held by guards; a voice sheet) that every direction shares, and draws four directions on the same
+two surfaces: A finishes Reef by subtraction, B is a paper logbook, C a dive computer, D the voice as
+the system. The pick is the owner's (H-71). Each slice runs the `design-implementation` skill: the
+component names the ADR, a test pins the rule, the canvas README's slice table moves, and the visual
+diffs are explained. 20a–20e may start on the ADR alone.
+
+- **20a** — one width, one header: the `<main>` width guard over `src/app/shop/**`; `ShopPageHeader`
+  takes the destination group from `src/lib/staff-destinations.ts` instead of an eyebrow string; the
+  title as the tab's word (the title half waits on H-71 b).
+- **20b** — one row: `LedgerRow` on the five densest hand-rolled lists (`WaitlistSection`,
+  `CrewSection`, `PersonBuddyList`, `CrewRollCall`, `TripInvitationSection`), `person/rows.tsx`
+  rendering it, the group's count as right-aligned meta, the add row as the last row of every list,
+  and a guard on `divide-y` outside `src/components/ui/`.
+- **20c** — one state: `Badge` loses its neutral tone, Gear's all-clear becomes the check-and-sentence
+  line, the counter's meter turns lagoon and `ProgressBar` is the one bar, one row joins Reef's coral
+  table (never a wash behind reading text, never a meter), and the two bugs — `bg-card` on the
+  dive-sites empty state, the rental-fit glow's hard-coded rgba.
+- **20d** — one link, one skeleton, one disclosure: `button.test.ts` refuses the raw link string and
+  the 104 sites move to the link variant; `src/components/ui/skeleton.tsx` and the twenty
+  shell-less `loading.tsx`; the 27-spelling `<summary>` sweep onto `ui/disclosure.tsx`;
+  `ActionResultNotice` folds into `FormStatus`.
+- **20e** — the voice sheet written into brand.md, `check:voice` grown to its mechanical half, and the
+  bundle sweep in both locales: one actor, one spelling, one separator, one word for fine and one for
+  not, one sentence per event, descriptions under 120 characters or deleted, no arrows, exclamation
+  marks or emoji.
+- **20f** — the earned moment inside `EntryDone`, once, for the twelve shared terminal outcomes.
+  Waits on H-71 c.
+- **20g** — the levers on A: F (the tide line), H (their sea) and K (together) as composed on the
+  canvas's second page and drawn on every surface on its third; E is answered by 20l and I stays on
+  the canvas as the phone-first alternative. B, C and D were declined on 2026-09-09. Waits on H-71 a.
+
+Round 3 (2026-09-09, after the owner's read of round 2 — "keep pushing these concepts farther,
+keep cleaning up, design every surface") adds the kit that composes A with F, H and K, redraws all
+eighty-one page routes on it across fifteen boards that each name their deletions, and eight more
+levers, L–S. The ADR's decision 5 records it; the owner's calls are H-71 (a) and (e)–(h).
+
+- **20h** — L, the trip's own line: drawn once and shown on the staff trip page, the diver's trip
+  page and thread, the lobby board and the reminder email; moves on the crew's stage taps, says
+  "as of" when stale. Waits on 20g's F and H-71 h.
+- **20i** — M, the pass: booking confirmed becomes a pass in the shop's colour with the site's
+  photo, the boat, the slip, the time, what to bring and a code carrying the booking id only; the
+  counter scans it with the device's camera; the diver's screen says "You're aboard" as the desk's
+  row settles. Composes 18f. Waits on H-71 e and f.
+- **20j** — O, the log: the close-out writes the day's entry from a sentence DiveDay proposes;
+  Reports keeps its title and becomes the log with the season as a strip of days and the month's
+  figures from the entries. Waits on H-71 g.
+- **20k** — N, the postcard: the recap printed from the crew's log, front and back, the review as
+  one line, "next time" with a reason; the recap email carries the front. Waits on 20h.
+- **20l** — P the six room drawings in the empty states and on the lobby board; R the shop's card as
+  the settings index's pane with the live brand preview; S first light on a new shop's first Today;
+  Q's two new answers (a unit, a day's line) in the palette.
+- **20m** — the surface sweep: each round-3 board's "Deleted here" list applied to its family of
+  pages, one family per session, with the visual diffs explained in the PR. Waits on 20a–20e.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)

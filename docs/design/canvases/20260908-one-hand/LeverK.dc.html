@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #0c2a35; background: #fbf7ef; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; } a:hover { color: #0a4d61; text-decoration: underline; }
+    .eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490; }
+    .group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d; }
+    .note { font-size: 14px; line-height: 22px; color: #54676d; }
+    .row { display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid #e6dcc8; border-bottom: 1px solid #e6dcc8; padding: 0 4px; }
+    .row + .row { border-top: 0; }
+    .kind { flex: 0 0 92px; font-size: 14px; font-weight: 500; color: #54676d; }
+    .kind.warn { color: #b45309; }
+    .sentence { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: #54676d; }
+    .sentence b { font-weight: 600; color: #0c2a35; }
+    .door { font-size: 14px; font-weight: 500; color: #0e7490; white-space: nowrap; }
+    .mark { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid #8a8065; box-sizing: border-box; }
+    .mark.warn { border-color: #b45309; }
+    .mark.ok { border-color: #15803d; background: #e6f0e8; }
+    .panel { background: #fffdf8; border: 1px solid #e6dcc8; border-radius: 28px; box-shadow: 0 2px 10px rgba(88,66,30,0.06); padding: 24px; }
+    .btn { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e6dcc8; background: #fffdf8; font-size: 14px; font-weight: 500; }
+    .who { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 3px; border-radius: 999px; background: #e6f3f5; color: #0a4d61; font-size: 12px; font-weight: 500; white-space: nowrap; }
+    .who i { width: 20px; height: 20px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; font-style: normal; }
+    .k { background: #0e7490; } .s { background: #1d7a5f; } .d { background: #a83a2c; } .m { background: #8a8065; }
+    .here { display: flex; align-items: center; gap: 8px; }
+    .av { width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; border: 2px solid #fffdf8; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; box-sizing: border-box; background: #fbf7ef; padding-bottom: 48px;">
+
+  <div style="display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid #e6dcc8; background: #fffdf8;">
+    <div style="display: flex; align-items: baseline; gap: 16px;"><span class="eyebrow">Lever K · other people</span><span class="note">On top of A · Cost 5–7 sessions plus a live layer · Combines with everything</span></div>
+    <h1 style="margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Together — the app knows who else is in it</h1>
+    <p style="margin: 0; max-width: 900px; font-size: 17px; line-height: 27px;">A dive shop is three to five people who spend the morning texting each other: "did Priya sign?", "who has the Spiegel Grove crew?", "I've got Diego". DiveDay holds every one of those facts and shows none of the people. This lever adds them: who is in the shop right now and where (Dana at the desk, Keiko on Mantis II, Sal at the counter), a small chip on the row a colleague is acting on, a one-tap hand-off on any Need, and the row that settles under your eyes when someone else settles it. Nothing else on the page changes. It is the lever that makes the app feel like a crew rather than a form.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+      <div><span class="group">Why it coheres</span><p class="note" style="margin: 6px 0 0 0;">One chip — a person's initial and a verb — in three places: the header (who is here), a row's trailing slot (who is on it), and a settled row's sentence (who did it). The chip is the only new component, and it carries a person and a place, never a row's state; the row's mark still does.</p></div>
+      <div><span class="group">What it changes in A</span><p class="note" style="margin: 6px 0 0 0;">The header gains a "here now" strip. A Need's door gains "hand to …" as a second, quieter action. The counter's rows update live as a colleague checks people in, and the swell already built for a finished station now fires for everyone looking at it, not just the person who cleared it.</p></div>
+      <div><span class="group">The honest tradeoff</span><p class="note" style="margin: 6px 0 0 0;">A live layer the app does not have: presence and row-level events over a connection, with the offline manifest's discipline (a lost connection shows "as of 6:31", never a stale "here"). Who-is-looking is a privacy line: presence shows place and act, never a screen, and keeps no history. Safety rows never move under a finger — the roll call stays commit-then-render.</p></div>
+    </div>
+  </div>
+
+  <div style="padding: 24px 48px 8px 48px;"><span class="group" style="color: #8a8065;">Today, together · Thursday, August 27, 2026, 6:31 AM · 1180 desktop</span></div>
+  <div style="display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 102px; background: #fffdf8; border-bottom: 1px solid #e6dcc8;">
+    <span style="font-size: 16px; font-weight: 600;">Blue Mantis Divers</span>
+    <div style="display: flex; gap: 20px; font-size: 15px; color: #54676d;"><span style="color: #0e7490; font-weight: 500;">Today</span><span>Check-in</span><span>Divers</span><span>Board</span><span>More</span></div>
+    <div class="here" style="margin-left: auto;">
+      <span class="note" style="font-size: 13px;">Here now</span>
+      <span class="av d">DR</span><span class="av k" style="margin-left: -10px;">KT</span><span class="av s" style="margin-left: -10px;">SM</span>
+    </div>
+    <span style="font-size: 14px; color: #54676d;">Search ⌘K</span>
+  </div>
+
+  <div style="width: 976px; margin: 0 auto; padding-top: 40px;">
+    <header style="margin-bottom: 24px;">
+      <p class="eyebrow" style="margin: 0;">Front desk</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Good morning, Dana</h2>
+      <p style="margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: #54676d;">Thursday, August 27 · 3 departures. 3 things still need you before Mantis II leaves at 7:00.</p>
+    </header>
+
+    <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+      <span class="who"><i class="d">DR</i>Dana · at the desk · you</span>
+      <span class="who"><i class="k">KT</i>Keiko · on Mantis II · checking gear</span>
+      <span class="who"><i class="s">SM</i>Sal · at the counter · checking in</span>
+      <span class="who" style="background: #f3ecdd; color: #54676d;"><i class="m">MW</i>Marcus · not in yet</span>
+    </div>
+
+    <section class="panel" style="margin-bottom: 24px;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 12px;">
+        <span style="font-size: 24px; font-weight: 600;">7:00 AM</span><span style="font-size: 18px; font-weight: 600;">Two-Tank Reef — Molasses &amp; French</span><span class="note" style="margin-left: auto;">Mantis II · Keiko, Sal · 7 of 10 aboard</span>
+      </div>
+      <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="sentence"><b>Grace Mensah</b> · Advanced Open Water awaits verification.</span><span class="who"><i class="k">KT</i>Keiko has it</span><span class="door">Open diver ›</span></div>
+      <div class="row"><span class="mark warn"></span><span class="kind warn">Waiver</span><span class="sentence"><b>Priya Sharma</b> · not sent.</span><span class="door" style="color: #54676d;">Hand to Sal</span><span class="btn">Send waiver</span></div>
+      <div class="row"><span class="mark ok"></span><span class="kind" style="color: #15803d;">Prep</span><span class="sentence" style="color: #54676d;">Rental sizes done · <b style="color: #54676d; font-weight: 500;">Keiko, 6:12</b></span><span class="door" style="color: #8a8065;">›</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Contact</span><span class="sentence"><b>Nadia Petrov</b> · no emergency contact on file.</span><span class="who"><i class="s">SM</i>Sal is with her</span><span class="door">Open diver ›</span></div>
+    </section>
+
+    <section class="panel" style="margin-bottom: 24px;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 12px;">
+        <span style="font-size: 24px; font-weight: 600;">1:00 PM</span><span style="font-size: 18px; font-weight: 600;">Wreck Trip — Spiegel Grove</span><span class="note" style="margin-left: auto;">Mantis II · no crew yet · full</span>
+      </div>
+      <div class="row"><span class="mark warn"></span><span class="kind warn">Crew</span><span class="sentence">10 divers booked and nobody in the water to supervise them.</span><span class="door" style="color: #54676d;">Ask Marcus</span><span class="door">Open crew ›</span></div>
+      <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="sentence"><b>Tomás Ferreira</b> · no certification on file for a deep wreck.</span><span class="door">Open diver ›</span></div>
+    </section>
+
+    <section class="panel" style="margin-bottom: 40px;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 12px;">
+        <span style="font-size: 24px; font-weight: 600;">7:30 PM</span><span style="font-size: 18px; font-weight: 600;">Night Dive — City of Washington</span><span class="note" style="margin-left: auto;">Skiff · 3 of 8</span>
+      </div>
+      <div class="row"><span class="mark"></span><span class="kind">Fill seats</span><span class="sentence">5 seats open with no last-minute deal sent.</span><span class="door">Open last-minute deal ›</span></div>
+    </section>
+
+    <section style="margin-bottom: 40px;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 8px;"><span class="group">At the desk</span><span class="note" style="font-size: 12px;">3</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Messages</span><span class="sentence"><b>3 divers wrote back</b> · answer from their record.</span><span class="door">Open inbox ›</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Reviews</span><span class="sentence"><b>1 review is waiting</b> · publish it or hide it.</span><span class="door">Open reviews ›</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Gear</span><span class="sentence"><b>Tom Okafor</b> · BCD #5 is due back today.</span><span class="door">Open gear ›</span></div>
+    </section>
+
+    <!-- the counter, live -->
+    <div style="padding: 24px 0 8px 0; border-top: 1px dashed #e6dcc8;"><span class="group" style="color: #8a8065;">The counter on Dana's screen while Sal checks people in on his</span></div>
+    <header style="margin: 12px 0 20px 0;">
+      <p class="eyebrow" style="margin: 0;">Front desk</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Check-in</h2>
+      <p style="margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: #54676d;">7:00 Two-Tank Reef · 7 of 10 here · <span class="who" style="vertical-align: middle;"><i class="s">SM</i>Sal is at the counter</span></p>
+    </header>
+    <div class="row"><span class="mark ok"></span><span class="sentence"><b style="color: #54676d;">Diego Alvarez</b> · <span style="font-size: 14px;">checked in by Sal · just now</span></span></div>
+    <div class="row"><span class="mark ok"></span><span class="sentence"><b style="color: #54676d;">Ines Costa</b> · <span style="font-size: 14px;">checked in by Sal · 6:29</span></span></div>
+    <div class="row"><span class="mark"></span><span class="sentence"><b>June Park</b></span><span class="who"><i class="s">SM</i>Sal is with her</span><span class="door">Check in</span></div>
+    <div class="row"><span class="mark"></span><span class="sentence"><b>Lena Fischer</b></span><span class="door">Check in</span></div>
+    <div class="row"><span class="mark warn"></span><span class="sentence"><b>Priya Sharma</b> · waiver not sent</span><span class="btn">Send waiver</span></div>
+    <div class="row"><span class="mark"></span><span class="sentence"><b>Sam Whitfield</b></span><span class="door">Check in</span></div>
+    <p class="note" style="margin: 8px 0 0 4px;">… and four more, below the fold.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

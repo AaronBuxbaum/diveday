@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #0c2a35; background: #fbf7ef; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; } a:hover { color: #0a4d61; text-decoration: underline; }
+    .eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490; }
+    .group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d; }
+    .note { font-size: 14px; line-height: 22px; color: #54676d; }
+    .row { display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid #e6dcc8; border-bottom: 1px solid #e6dcc8; padding: 0 4px; }
+    .row + .row { border-top: 0; }
+    .kind { flex: 0 0 92px; font-size: 14px; font-weight: 500; color: #54676d; }
+    .kind.warn { color: #b45309; }
+    .sentence { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: #54676d; }
+    .sentence b { font-weight: 600; color: #0c2a35; }
+    .door { font-size: 14px; font-weight: 500; color: #0e7490; white-space: nowrap; }
+    .mark { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid #8a8065; box-sizing: border-box; }
+    .mark.warn { border-color: #b45309; }
+    .panel { background: #fffdf8; border: 1px solid #e6dcc8; border-radius: 28px; box-shadow: 0 2px 10px rgba(88,66,30,0.06); padding: 20px 24px; }
+    .btn { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e6dcc8; background: #fffdf8; font-size: 14px; font-weight: 500; }
+    .rail { position: sticky; top: 0; display: flex; flex-direction: column; gap: 4px; width: 160px; flex: 0 0 160px; padding-top: 40px; }
+    .rail a { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 10px; font-size: 15px; color: #54676d; }
+    .rail a.on { background: #e6f3f5; color: #0e7490; font-weight: 500; }
+    .rail a small { font-size: 12px; color: #54676d; font-variant-numeric: tabular-nums; }
+    .h { display: flex; align-items: baseline; justify-content: space-between; padding: 44px 0 12px 0; }
+    .h h2 { margin: 0; font-size: 28px; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; }
+    .fig { font-size: 15px; color: #54676d; font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; box-sizing: border-box; background: #fbf7ef; padding-bottom: 48px;">
+
+  <div style="display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid #e6dcc8; background: #fffdf8;">
+    <div style="display: flex; align-items: baseline; gap: 16px;"><span class="eyebrow">Lever I · a single page</span><span class="note">On top of A · Cost 6–8 sessions · Combines with F, H, K; not E</span></div>
+    <h1 style="margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">The one page — no tabs, one scroll from now to the shop</h1>
+    <p style="margin: 0; max-width: 900px; font-size: 17px; line-height: 27px;">The staff app has twenty-three destinations behind four tabs and a More menu. This lever deletes the navigation: the shop is <b>one page</b> that runs from what is happening now, to later, to the desk, to the shop's own things, with a rail on desktop that says where you are and a thumb-scroll on a phone that goes the whole way. A register — the 140 divers, the 156 orders — opens as a sheet over the page and closes back to where you were; search is the door to any one record. It is the most efficient shape on a phone and the one a shop owner would not have seen elsewhere.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+      <div><span class="group">Why it coheres</span><p class="note" style="margin: 6px 0 0 0;">There is one surface, so there is one width, one header, one rhythm, one row. The sections are the old tabs in order of how soon they matter. The rail and the eyebrow become the same thing: the section you are in.</p></div>
+      <div><span class="group">What it changes in A</span><p class="note" style="margin: 6px 0 0 0;">The chrome loses its tabs and keeps the shop, the search and the rail. The greeting stays at the top of Now. Every staff page that was a list becomes a section with its first rows and a door to the sheet; every page that was a form (a diver, a trip, settings) becomes a sheet.</p></div>
+      <div><span class="group">The honest tradeoff</span><p class="note" style="margin: 6px 0 0 0;">Sheets over a page are a phone idiom; on a desktop with two monitors, tabs were better. Deep links change (a diver's URL still works, but opens the sheet). A staffer who lives in one register all day scrolls past Now to reach it — the rail is for them, and it must be one tap. The lobby display is unaffected.</p></div>
+    </div>
+  </div>
+
+  <div style="padding: 24px 48px 8px 48px;"><span class="group" style="color: #8a8065;">The whole shop, one page · Thursday, August 27, 2026 · 1180 desktop</span></div>
+  <div style="display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 102px; background: #fffdf8; border-bottom: 1px solid #e6dcc8;">
+    <div style="display: flex; align-items: center; gap: 10px;"><div style="width: 36px; height: 36px; border-radius: 10px; background: #0e7490; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div><span style="font-size: 16px; font-weight: 600;">Blue Mantis Divers</span></div>
+    <span style="margin-left: auto; font-size: 14px; color: #54676d; border: 1px solid #e6dcc8; border-radius: 10px; padding: 8px 12px; background: #fffdf8; min-width: 320px;">Search a diver, a boat, a unit, an order … ⌘K</span>
+  </div>
+
+  <div style="width: 976px; margin: 0 auto; display: flex; gap: 32px; align-items: flex-start;">
+    <nav class="rail">
+      <a class="on" href="#now">Now <small>4</small></a>
+      <a href="#later">Later <small>25</small></a>
+      <a href="#desk">The desk <small>3</small></a>
+      <a href="#shop">The shop</a>
+      <a href="#settings" style="margin-top: 16px; color: #8a8065; font-size: 13px;">Settings</a>
+    </nav>
+
+    <div style="flex: 1 1 auto; min-width: 0;">
+      <div class="h" style="padding-top: 40px;"><h2 style="font-size: 40px;">Good morning, Dana</h2></div>
+      <p class="note" style="margin: -4px 0 20px 0; font-size: 16px;">Thursday, August 27 · 3 departures. 4 things need you before Mantis II leaves at 7:00.</p>
+
+      <section class="panel" style="margin-bottom: 16px;">
+        <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 8px;"><span style="font-size: 22px; font-weight: 600;">7:00</span><span style="font-size: 17px; font-weight: 600;">Two-Tank Reef — Molasses &amp; French</span><span class="fig" style="margin-left: auto;">Mantis II · 10 of 12</span></div>
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="sentence"><b>Grace Mensah</b> · Advanced Open Water awaits verification.</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Waiver</span><span class="sentence"><b>Priya Sharma</b> · not sent.</span><span class="btn">Send waiver</span></div>
+        <div class="row"><span class="mark"></span><span class="kind">Prep</span><span class="sentence">3 divers still need rental sizes.</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark"></span><span class="kind">Contact</span><span class="sentence"><b>Nadia Petrov</b> · no emergency contact on file.</span><span class="door">Open ›</span></div>
+      </section>
+      <section class="panel" style="margin-bottom: 16px;">
+        <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 8px;"><span style="font-size: 22px; font-weight: 600;">1:00</span><span style="font-size: 17px; font-weight: 600;">Wreck Trip — Spiegel Grove</span><span class="fig" style="margin-left: auto;">Mantis II · full</span></div>
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Crew</span><span class="sentence">10 divers booked and nobody in the water.</span><span class="door">Assign ›</span></div>
+        <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="sentence"><b>Tomás Ferreira</b> · none on file for a deep wreck.</span><span class="door">Open ›</span></div>
+      </section>
+      <section class="panel">
+        <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 8px;"><span style="font-size: 22px; font-weight: 600;">7:30</span><span style="font-size: 17px; font-weight: 600;">Night Dive — City of Washington</span><span class="fig" style="margin-left: auto;">Skiff · 3 of 8</span></div>
+        <div class="row"><span class="mark"></span><span class="kind">Fill seats</span><span class="sentence">5 seats open with no last-minute deal sent.</span><span class="door">Send ›</span></div>
+      </section>
+
+      <div class="h"><h2>Later</h2><span class="fig">25 jobs this week</span></div>
+      <div class="row"><span class="sentence"><b>Tomorrow</b> · Fri, Aug 28 · Morning Two-Tank, Deep Wreck Charter</span><span class="fig">7 jobs</span><span class="door">›</span></div>
+      <div class="row"><span class="sentence"><b>Saturday</b> · Tortugas Run, Scuba Refresher, Discover Scuba</span><span class="fig">14 jobs</span><span class="door">›</span></div>
+      <div class="row"><span class="sentence"><b>Sunday</b> · Wreck Trip — Spiegel Grove</span><span class="fig">4 jobs</span><span class="door">›</span></div>
+      <div class="row"><span class="sentence" style="color: #0e7490; font-weight: 500;">The whole week on the board</span><span class="door">›</span></div>
+
+      <div class="h"><h2>The desk</h2><span class="fig">3 waiting</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Messages</span><span class="sentence"><b>3 divers wrote back</b> · answer from their record.</span><span class="door">Open inbox ›</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Reviews</span><span class="sentence"><b>1 review is waiting</b> · publish it or hide it.</span><span class="door">Open reviews ›</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Gear</span><span class="sentence"><b>Tom Okafor</b> · BCD #5 is due back today.</span><span class="door">Open gear ›</span></div>
+
+      <div class="h"><h2>The shop</h2></div>
+      <div class="row"><span class="sentence"><b>Divers</b> · 140 · 2 blocked</span><span class="door">Open ›</span></div>
+      <div class="row"><span class="sentence"><b>Gear</b> · 37 units · 36 on the wall · 2 due for service</span><span class="door">Open ›</span></div>
+      <div class="row"><span class="sentence"><b>Orders</b> · 156 · $4,812 this month</span><span class="door">Open ›</span></div>
+      <div class="row"><span class="sentence"><b>Courses</b> · 6 on the board</span><span class="door">Open ›</span></div>
+      <div class="row"><span class="sentence"><b>Staffing</b> · this week: Sat 12 needs an instructor</span><span class="door">Open ›</span></div>
+      <div class="row"><span class="sentence"><b>Dive sites</b> · 9</span><span class="door">Open ›</span></div>
+      <div class="row"><span class="sentence"><b>Reports</b> · September so far</span><span class="door">Open ›</span></div>
+
+      <!-- the sheet -->
+      <div style="padding: 44px 0 8px 0; border-top: 1px dashed #e6dcc8; margin-top: 40px;"><span class="group" style="color: #8a8065;">A register opens as a sheet over the page · Gear</span></div>
+      <div style="position: relative; height: 420px; margin-top: 12px; border-radius: 18px; overflow: hidden; background: rgba(12,42,53,0.35);">
+        <div style="position: absolute; left: 40px; right: 40px; top: 28px; bottom: 0; background: #fffdf8; border-radius: 28px 28px 0 0; box-shadow: 0 -8px 30px rgba(12,42,53,0.2); padding: 20px 28px;">
+          <div style="width: 48px; height: 5px; border-radius: 3px; background: #e6dcc8; margin: 0 auto 16px auto;"></div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px;"><div><p class="eyebrow" style="margin: 0;">Run the shop</p><h3 style="margin: 6px 0 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em;">Gear</h3></div><span class="note">37 units · 36 on the wall</span></div>
+          <div class="row"><span style="flex: 0 0 92px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; font-weight: 500;">BCD #1</span><span class="sentence">Cressi Start · XS</span><span class="door">›</span></div>
+          <div class="row"><span style="flex: 0 0 92px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; font-weight: 500;">BCD #2</span><span class="sentence">Cressi Start · S · <b>Priya Sharma</b> from Sep 13</span><span class="door">›</span></div>
+          <div class="row"><span style="flex: 0 0 92px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; font-weight: 500;">BCD #5</span><span class="sentence">Cressi Start · L · out with <b>Tom Okafor</b>, due today</span><span class="door">›</span></div>
+          <div class="row"><span style="flex: 0 0 92px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; font-weight: 500;">Reg #4</span><span class="sentence">ScubaPro MK11/C370 · <span style="color: #b45309; font-weight: 500;">needs service</span></span><span class="door">›</span></div>
+          <div class="row"><span style="flex: 0 0 92px; color: #0e7490; font-size: 20px; line-height: 20px;">+</span><span class="sentence" style="color: #0e7490; font-weight: 500;">Add a unit</span><span class="door">›</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
