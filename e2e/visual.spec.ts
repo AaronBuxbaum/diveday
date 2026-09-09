@@ -5123,6 +5123,8 @@ for (const scheme of ["light", "dark"] as const) {
         // The history rows, not just the heading — the table is half the
         // surface, and a capture taken on the heading alone banks an empty one.
         await page.getByRole("cell", { name: "Failed" }).waitFor();
+        // The crew sheet (N-43) is the third thing that leaves this page.
+        await page.getByRole("heading", { name: "Crew sheet" }).waitFor();
         await capture(page, "settings-export", scheme);
       });
 

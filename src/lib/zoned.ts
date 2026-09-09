@@ -5,6 +5,7 @@
  * unit-tested on purpose — schedule math is operationally critical.
  */
 
+import type { MonthRef } from "./calendar";
 import { cachedFormatter } from "./intl-cache";
 
 export type WallTime = {
@@ -129,6 +130,31 @@ export function shopDayBounds(now: Date, timeZone: string): { from: Date; to: Da
   return {
     from: wallTimeToUtc(midnight, timeZone),
     to: wallTimeToUtc(addCalendarDays(midnight, 1), timeZone),
+  };
+}
+
+/**
+ * The exact UTC instants that bracket the shop's own calendar *month* —
+ * `from` inclusive, `to` exclusive. The monthly sibling of
+ * {@link shopDayBounds}, on the same wall-clock conversion.
+ *
+ * A month is a wall-clock date range in the shop's zone, never a UTC instant
+ * range, and this is the classic silent bug in a monthly export. In Key Largo
+ * (UTC-4 in summer) July opens at 04:00Z on 1 July and closes at 04:00Z on
+ * 1 August: bracket it in UTC instead and the 1st's dawn charter falls into
+ * June while the 31st's night dive falls out of July altogether. Both sheets
+ * still add up, so nobody ever notices.
+ *
+ * `wallTimeToUtc` carries the DST handling, so a month whose first midnight
+ * is skipped or repeated by a clock change resolves the same way every other
+ * boundary in this file does.
+ */
+export function shopMonthBounds(month: MonthRef, timeZone: string): { from: Date; to: Date } {
+  const next =
+    month.month === 12 ? { year: month.year + 1, month: 1 } : { ...month, month: month.month + 1 };
+  return {
+    from: wallTimeToUtc({ ...month, day: 1, hour: 0, minute: 0 }, timeZone),
+    to: wallTimeToUtc({ ...next, day: 1, hour: 0, minute: 0 }, timeZone),
   };
 }
 

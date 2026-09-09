@@ -1,13 +1,13 @@
 import { getDb } from "@/db/client";
 import { canPersonViewShopReports, crewCountsByTrip, getMonthlyReport } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
-import { addMonths, type MonthRef, monthKey, parseMonthKey } from "@/lib/calendar";
+import { type MonthRef, monthKey, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { buildCsv, exportDateStamp } from "@/lib/export";
 import { toShopCurrency } from "@/lib/money";
 import { formatPercent, formatReportMoney, summarizeMonth, tripFillRate } from "@/lib/reporting";
 import { requireStaffSession } from "@/lib/session";
-import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 
 /**
  * A CSV of one month's report — "just this month's numbers" for an owner's
@@ -38,15 +38,7 @@ export async function GET(request: Request) {
   const todayWall = utcToWallTime(now, shop.timezone);
   const requested = parseMonthKey(new URL(request.url).searchParams.get("month"));
   const current: MonthRef = requested ?? { year: todayWall.year, month: todayWall.month };
-  const next = addMonths(current, 1);
-  const monthStart = wallTimeToUtc(
-    { year: current.year, month: current.month, day: 1, hour: 0, minute: 0 },
-    shop.timezone,
-  );
-  const monthEnd = wallTimeToUtc(
-    { year: next.year, month: next.month, day: 1, hour: 0, minute: 0 },
-    shop.timezone,
-  );
+  const { from: monthStart, to: monthEnd } = shopMonthBounds(current, shop.timezone);
 
   const input = await getMonthlyReport(db, shop.id, monthStart, monthEnd, {
     currency,

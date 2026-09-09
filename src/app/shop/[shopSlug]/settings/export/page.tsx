@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportShopData, loadShopExportCounts } from "@/db/export";
 import { PAGE_SIZE } from "@/db/paging";
 import { getShopBackupDestination, listBackupDeliveries } from "@/features/backup-export";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { addMonths, type MonthRef, monthKey, monthLabel } from "@/lib/calendar";
+import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
+import { utcToWallTime } from "@/lib/zoned";
 import { BackupsSection, deliveryErrorText } from "./_components/BackupsSection";
 import { DownloadExportButton } from "./DownloadExportButton";
 
@@ -124,6 +129,14 @@ export default async function DataOutSettingsPage({
 
   const basePath = `/shop/${session.user.shopSlug}/settings/export`;
 
+  // The twelve months back from the shop's own current one — a bookkeeper
+  // closes last month, and nobody reconciles a year and a half ago from here.
+  // Read through `utcToWallTime` so a shop in Key Largo on the 1st at 01:00
+  // sees the month it is actually in rather than the UTC one.
+  const nowWall = utcToWallTime(nowDate(), shop.timezone);
+  const thisMonth: MonthRef = { year: nowWall.year, month: nowWall.month };
+  const crewSheetMonths = Array.from({ length: 12 }, (_, back) => addMonths(thisMonth, -back));
+
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
@@ -219,6 +232,41 @@ export default async function DataOutSettingsPage({
               })}
             </p>
           </div>
+        </SectionCard>
+
+        {/* **The crew sheet** (N-43): the month a bookkeeper asks for, as one
+            CSV. It lives here rather than on Reports because it is data
+            leaving the shop — crew names and money — and so belongs behind the
+            same owner/manager gate as the bundle above it, on the one "your
+            data leaves with you" surface (ADR 20260806-one-data-out-surface).
+            A plain GET form: the month is a path the browser navigates to, so
+            the download needs no client component and no popup. */}
+        <SectionCard>
+          <h2 className={SECTION_TITLE_CLASS}>{t("settings.crewSheet.heading")}</h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted">{t("settings.crewSheet.description")}</p>
+          {/* The one sentence that earns its place here: hours and a tips
+              column beside a person's name read as a pay run, and this is a
+              record of the month rather than a statement of what anyone is
+              owed. */}
+          <p className="mt-1 max-w-2xl text-sm text-muted">{t("settings.crewSheet.note")}</p>
+          <form
+            action={`${basePath}/crew-sheet`}
+            method="get"
+            className="mt-4 flex flex-wrap items-end gap-3"
+          >
+            <Field label={t("settings.crewSheet.monthLabel")} className="w-56">
+              <select name="month" defaultValue={monthKey(thisMonth)} className={controlClass}>
+                {crewSheetMonths.map((month) => (
+                  <option key={monthKey(month)} value={monthKey(month)}>
+                    {monthLabel(month, locale)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <button type="submit" className={buttonClass({ variant: "secondary" })}>
+              {t("settings.crewSheet.download")}
+            </button>
+          </form>
         </SectionCard>
 
         <BackupsSection

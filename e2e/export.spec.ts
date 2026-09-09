@@ -96,6 +96,92 @@ test.describe("full-shop data export", () => {
 });
 
 /**
+ * **The crew sheet a bookkeeper reads** (N-43): one month, one CSV, per crew
+ * member the departures they worked, the jobs they did, the hours, and their
+ * share of the month's tips.
+ *
+ * READ_ONLY for the same reason the bundle above it is: generating the sheet
+ * is a pure read of the month and writes no ledger row.
+ */
+test.describe("the crew sheet", () => {
+  signedInAsOwner();
+
+  test("downloads one month of crew as a CSV a spreadsheet opens", { tag: READ_ONLY }, async ({
+    page,
+    request,
+  }) => {
+    await page.goto("/shop/blue-mantis/settings/export");
+    await expect(page.getByRole("heading", { name: "Crew sheet" })).toBeVisible();
+    // The one sentence that keeps this from reading as a pay run.
+    await expect(
+      page.getByText("what anyone is owed is your bookkeeper's call", { exact: false }),
+    ).toBeVisible();
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download crew sheet" }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^crew-sheet-blue-mantis-\d{4}-\d{2}\.csv$/);
+
+    // The bytes themselves. The seeded shop rosters its instructor onto this
+    // month's course sessions, so the sheet is not just a header row.
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    const response = await request.get(
+      `/shop/blue-mantis/settings/export/crew-sheet?month=${thisMonth}`,
+    );
+    expect(response.status()).toBe(200);
+    // `charset=utf-8` is what keeps an accented crew name out of mojibake.
+    expect(response.headers()["content-type"]).toBe("text/csv; charset=utf-8");
+    const csv = await response.text();
+    const lines = csv.trim().split("\r\n");
+    expect(lines[0]).toBe("Crew member,Role,Departures,Hours,Tips,Currency");
+    expect(lines.length).toBeGreaterThan(1);
+    expect(csv).toContain("Marcus Webb");
+    // Hours and money are plain decimals a spreadsheet sums, and the currency
+    // is its own column rather than a symbol glued to the amount.
+    for (const line of lines.slice(1)) {
+      // Only the first two fields can be quoted, so the last four split cleanly.
+      const [departures, hours, tips, currency] = line.split(",").slice(-4);
+      expect(departures).toMatch(/^\d+$/);
+      expect(hours).toMatch(/^\d+(\.\d{1,2})?$/);
+      expect(tips).toMatch(/^\d+(\.\d{1,2})?$/);
+      expect(currency).toBe("USD");
+    }
+  });
+
+  test("refuses a month it cannot parse rather than serving another one", {
+    tag: READ_ONLY,
+  }, async ({ request }) => {
+    for (const month of ["nope", "2026-13", "2026", "../../etc"]) {
+      const response = await request.get(
+        `/shop/blue-mantis/settings/export/crew-sheet?month=${encodeURIComponent(month)}`,
+      );
+      expect(response.status()).toBe(400);
+    }
+  });
+
+  test("returns a header and nothing else for a month nobody worked", { tag: READ_ONLY }, async ({
+    request,
+  }) => {
+    const response = await request.get(
+      "/shop/blue-mantis/settings/export/crew-sheet?month=2001-01",
+    );
+    expect(response.status()).toBe(200);
+    expect(await response.text()).toBe("Crew member,Role,Departures,Hours,Tips,Currency\r\n");
+  });
+});
+
+test("the crew sheet never leaves without a staff session", { tag: READ_ONLY }, async ({
+  request,
+}) => {
+  const response = await request.get("/shop/blue-mantis/settings/export/crew-sheet", {
+    maxRedirects: 0,
+  });
+  expect(response.status()).toBeGreaterThanOrEqual(300);
+  expect(response.status()).toBeLessThan(400);
+  expect(response.headers().location).toContain("/sign-in");
+});
+
+/**
  * The per-diver record export (issue #726, ADR 20260824-diver-record-export):
  * a subject-access answer scoped to one diver's own rows, reached from their
  * own record page. Not READ_ONLY — a successful download writes one line to
@@ -188,11 +274,18 @@ test.describe("as captain", () => {
     await expect(page.getByRole("link", { name: "Download export" })).toHaveCount(0);
 
     const cookies = await page.context().cookies();
+    const cookie = cookies.map((entry) => `${entry.name}=${entry.value}`).join("; ");
     const response = await request.get("/shop/blue-mantis/settings/export/download", {
-      headers: {
-        cookie: cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; "),
-      },
+      headers: { cookie },
     });
     expect(response.status()).toBe(403);
+
+    // The crew sheet carries the roster's names and the month's money, so it
+    // sits behind the same owner/manager gate as the bundle — re-read from the
+    // database rather than the session's JWT.
+    const crewSheet = await request.get("/shop/blue-mantis/settings/export/crew-sheet", {
+      headers: { cookie },
+    });
+    expect(crewSheet.status()).toBe(403);
   });
 });

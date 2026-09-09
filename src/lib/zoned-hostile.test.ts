@@ -35,6 +35,7 @@ import {
   shiftInstantByCalendarDays,
   shiftInstantByWallTimeDelta,
   shopDayBounds,
+  shopMonthBounds,
   utcToWallTime,
   type WallTime,
   wallTimeDeltaMs,
@@ -170,6 +171,79 @@ describe("shopDayBounds across the clock change", () => {
         expect(bounds[i - 1].to.getTime()).toBe(bounds[i].from.getTime());
       }
     }
+  });
+});
+
+describe("shopMonthBounds: the month a bookkeeper means", () => {
+  it("opens and closes the month at the shop's own midnights, not UTC's", () => {
+    // Los Angeles is UTC-7 in July: July opens at 07:00Z on the 1st and closes
+    // at 07:00Z on 1 August.
+    const july = shopMonthBounds({ year: 2026, month: 7 }, "America/Los_Angeles");
+    expect(july.from.toISOString()).toBe("2026-07-01T07:00:00.000Z");
+    expect(july.to.toISOString()).toBe("2026-08-01T07:00:00.000Z");
+  });
+
+  it("keeps the last night of the month on that month's sheet", () => {
+    // 23:00 on 31 July in Los Angeles is already 1 August in UTC. A
+    // UTC-bracketed month drops this departure out of July entirely — and the
+    // sheet still adds up, which is why nobody notices.
+    const lastNight = wallTimeToUtc(wall(2026, 7, 31, 23, 0), "America/Los_Angeles");
+    expect(lastNight.toISOString()).toBe("2026-08-01T06:00:00.000Z");
+    const july = shopMonthBounds({ year: 2026, month: 7 }, "America/Los_Angeles");
+    expect(lastNight.getTime()).toBeGreaterThanOrEqual(july.from.getTime());
+    expect(lastNight.getTime()).toBeLessThan(july.to.getTime());
+    const august = shopMonthBounds({ year: 2026, month: 8 }, "America/Los_Angeles");
+    expect(lastNight.getTime()).toBeLessThan(august.from.getTime());
+  });
+
+  it("keeps the first morning of the month off the previous one, east of UTC", () => {
+    // The mirror case: Tokyo, 1 July 08:00 local is 30 June in UTC.
+    const firstBoat = wallTimeToUtc(wall(2026, 7, 1, 8, 0), "Asia/Tokyo");
+    expect(firstBoat.toISOString()).toBe("2026-06-30T23:00:00.000Z");
+    const june = shopMonthBounds({ year: 2026, month: 6 }, "Asia/Tokyo");
+    const july = shopMonthBounds({ year: 2026, month: 7 }, "Asia/Tokyo");
+    expect(firstBoat.getTime()).toBeGreaterThanOrEqual(july.from.getTime());
+    expect(firstBoat.getTime()).toBeLessThan(july.to.getTime());
+    expect(firstBoat.getTime()).toBeGreaterThanOrEqual(june.to.getTime());
+  });
+
+  it("rolls December into the next year", () => {
+    const december = shopMonthBounds({ year: 2026, month: 12 }, "America/Los_Angeles");
+    expect(december.from.toISOString()).toBe("2026-12-01T08:00:00.000Z");
+    expect(december.to.toISOString()).toBe("2027-01-01T08:00:00.000Z");
+  });
+
+  it("consecutive months tile exactly, across a DST change and a leap February", () => {
+    for (const [zone, months] of [
+      // New York's March holds the spring-forward night; November the fall-back.
+      ["America/New_York", [2, 3, 4, 11, 12]],
+      // Santiago's September springs forward at midnight, and its month
+      // boundary is a real midnight either side of it.
+      ["America/Santiago", [8, 9, 10]],
+      ["Australia/Lord_Howe", [3, 4, 10]],
+    ] as const) {
+      for (const month of months) {
+        const current = shopMonthBounds({ year: 2026, month }, zone);
+        const next = shopMonthBounds(
+          month === 12 ? { year: 2027, month: 1 } : { year: 2026, month: month + 1 },
+          zone,
+        );
+        expect(current.to.getTime()).toBe(next.from.getTime());
+      }
+    }
+    // 2028 is a leap year: February ends on the 29th, and the boundary is the
+    // 1st of March either way round.
+    const feb = shopMonthBounds({ year: 2028, month: 2 }, "America/New_York");
+    const mar = shopMonthBounds({ year: 2028, month: 3 }, "America/New_York");
+    expect(feb.to.getTime()).toBe(mar.from.getTime());
+    expect((feb.to.getTime() - feb.from.getTime()) / 86_400_000).toBe(29);
+  });
+
+  it("a month spanning the clock change is not a whole number of 24-hour days", () => {
+    const march = shopMonthBounds({ year: 2026, month: 3 }, "America/New_York");
+    expect((march.to.getTime() - march.from.getTime()) / 3_600_000).toBe(31 * 24 - 1);
+    const november = shopMonthBounds({ year: 2026, month: 11 }, "America/New_York");
+    expect((november.to.getTime() - november.from.getTime()) / 3_600_000).toBe(30 * 24 + 1);
   });
 });
 

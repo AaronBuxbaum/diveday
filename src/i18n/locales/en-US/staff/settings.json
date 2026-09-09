@@ -630,6 +630,22 @@
       "text": "offline manifest copies, notification retry queues, Stripe account linkage, the close-out and buddy-team trails, weather-cancellation state, DiveDay's own reconciliation ledgers, and unstored pasted image URLs. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions and course leads <mono>do</mono> export. Photos and safely stored imported receipts export as real files in <mono>photos/</mono>. Credentials, calendar links, and your WhatsApp account never export. See the README."
     }
   },
+  "crewSheet": {
+    "heading": "Crew sheet",
+    "description": "Departures worked, hours, and each crew member's share of the month's tips, as one CSV.",
+    "note": "It records the month as it happened; what anyone is owed is your bookkeeper's call.",
+    "monthLabel": "Month",
+    "download": "Download crew sheet",
+    "column": {
+      "person": "Crew member",
+      "roles": "Role",
+      "departures": "Departures",
+      "hours": "Hours",
+      "tips": "Tips",
+      "currency": "Currency"
+    },
+    "unassigned": "No crew recorded"
+  },
   "import": {
     "eyebrow": "Settings",
     "title": "Import contacts",
