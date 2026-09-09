@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #0c2a35; background: #fbf7ef; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; } a:hover { color: #0a4d61; text-decoration: underline; }
+    .eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #0e7490; }
+    .group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #54676d; }
+    .note { font-size: 14px; line-height: 22px; color: #54676d; }
+    .row { display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid #e6dcc8; border-bottom: 1px solid #e6dcc8; padding: 0 4px; }
+    .row + .row { border-top: 0; }
+    .kind { flex: 0 0 92px; font-size: 14px; font-weight: 500; color: #54676d; }
+    .kind.warn { color: #b45309; }
+    .sentence { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: #54676d; }
+    .sentence b { font-weight: 600; color: #0c2a35; }
+    .door { font-size: 14px; font-weight: 500; color: #0e7490; white-space: nowrap; }
+    .mark { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid #8a8065; box-sizing: border-box; }
+    .mark.warn { border-color: #b45309; }
+    .panel { background: #fffdf8; border: 1px solid #e6dcc8; border-radius: 28px; box-shadow: 0 2px 10px rgba(88,66,30,0.06); padding: 24px; }
+    .btn { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e6dcc8; background: #fffdf8; font-size: 14px; font-weight: 500; }
+    .tag { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 14px; font-weight: 500; flex: 0 0 92px; }
+    /* the tide line */
+    .tide { position: relative; height: 64px; margin: 0; padding: 0 102px; background: linear-gradient(180deg, #e6f3f5 0%, #fbf7ef 100%); border-bottom: 1px solid #e6dcc8; }
+    .tide .inner { position: relative; width: 976px; margin: 0 auto; height: 64px; }
+    .tide .track { position: absolute; left: 0; top: 0; width: 740px; height: 64px; }
+    .tide .axis { position: absolute; left: 0; right: 0; top: 40px; height: 2px; background: #cfe6ea; }
+    .tide .hour { position: absolute; top: 46px; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 10px; color: #8a8065; transform: translateX(-50%); }
+    .tide .boat { position: absolute; top: 14px; height: 24px; border-radius: 6px; background: #f3ecdd; border: 1px solid #cfe6ea; overflow: hidden; box-sizing: border-box; }
+    .tide .boat i { position: absolute; left: 0; top: 0; bottom: 0; background: #7fd0d6; }
+    .tide .boat span { position: absolute; left: 8px; top: 3px; font-size: 12px; font-weight: 600; color: #0c2a35; white-space: nowrap; }
+    .tide .boat.next { border-color: #0e7490; box-shadow: 0 0 0 2px rgba(14,116,144,0.18); }
+    .tide .now { position: absolute; top: 6px; width: 2px; height: 40px; background: #0c2a35; transform: translateX(-1px); }
+    .tide .now::after { content: attr(data-t); position: absolute; top: -2px; left: 6px; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 10px; font-weight: 500; color: #0c2a35; white-space: nowrap; }
+    .tide .until { position: absolute; right: 0; top: 10px; font-size: 13px; color: #0c2a35; text-align: right; }
+    .tide .until b { font-weight: 700; font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; box-sizing: border-box; background: #fbf7ef; padding-bottom: 48px;">
+
+  <div style="display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid #e6dcc8; background: #fffdf8;">
+    <div style="display: flex; align-items: baseline; gap: 16px;"><span class="eyebrow">Lever F · an instrument that travels</span><span class="note">On top of A · Cost 1–2 sessions · Combines with everything</span></div>
+    <h1 style="margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">The tide line — the day on every page</h1>
+    <p style="margin: 0; max-width: 900px; font-size: 17px; line-height: 27px;">One 64px strip under the chrome, on every staff page: the day from first light to the last boat as a line, each departure a block filled to its bookings, the next one lit, the boat that has sailed settled green (after 10:30 here — both drawings are before the first boat leaves), and a mark that moves with the clock. The page beneath is A; the strip takes over three things A said in words. It is the one thing a shop looks at forty times a day — how long until the lines come off — and today they open Today to find it. Here it is wherever they are, and it is what makes the app look like nobody else's from across the room.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+      <div><span class="group">Why it coheres</span><p class="note" style="margin: 6px 0 0 0;">One instrument, shared. The eyebrow says which area you are in; the tide line says what time it is in the shop. Together they are the whole of a page's orientation, and neither is drawn twice.</p></div>
+      <div><span class="group">What it changes in A</span><p class="note" style="margin: 6px 0 0 0;">The greeting's lede loses its "before 7:00" clause — the line carries it. The counter's departure switcher becomes a tap on the line's blocks. Reef's water band by the hour becomes the line's wash, so the band stops being decoration and starts being the axis.</p></div>
+      <div><span class="group">The honest tradeoff</span><p class="note" style="margin: 6px 0 0 0;">64px on a phone is a real cost; the line folds to 32px with the "now" mark and the next boat only. A shop that runs one boat a day gets a mostly empty line, so the strip renders nothing on a day with no departures rather than an axis with nothing on it.</p></div>
+    </div>
+  </div>
+
+  <div style="padding: 24px 48px 8px 48px;"><span class="group" style="color: #8a8065;">Today with the tide line · Thursday, August 27, 2026, 5:48 AM · 1180 desktop</span></div>
+  <div style="display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 102px; background: #fffdf8; border-bottom: 1px solid #e6dcc8;">
+    <span style="font-size: 16px; font-weight: 600;">Blue Mantis Divers</span>
+    <div style="display: flex; gap: 20px; font-size: 15px; color: #54676d;"><span style="color: #0e7490; font-weight: 500;">Today</span><span>Check-in</span><span>Divers</span><span>Board</span><span>More</span></div>
+    <span style="margin-left: auto; font-size: 14px; color: #54676d;">Search ⌘K</span>
+  </div>
+  <div class="tide">
+    <div class="inner">
+      <div class="track">
+      <div class="axis"></div>
+      <div class="hour" style="left: 0;">5:00</div><div class="hour" style="left: 16.6%;">8:00</div><div class="hour" style="left: 33.3%;">11:00</div><div class="hour" style="left: 50%;">2:00</div><div class="hour" style="left: 66.6%;">5:00</div><div class="hour" style="left: 83.3%;">8:00</div><div class="hour" style="left: 100%;">11:00</div>
+      <div class="boat next" style="left: 11.1%; width: 19.4%;"><i style="width: 83%;"></i><span>7:00 Two-Tank Reef · 10 of 12</span></div>
+      <div class="boat" style="left: 44.4%; width: 22.2%;"><i style="width: 100%; opacity: 0.55;"></i><span>1:00 Spiegel Grove · full</span></div>
+      <div class="boat" style="left: 80.5%; width: 19.4%;"><i style="width: 37%;"></i><span>7:30 Night · 3 of 8</span></div>
+      <div class="now" data-t="now · 5:48" style="left: 4.4%;"></div>
+      </div>
+      <div class="until">Mantis II leaves in <b>1 h 12</b><br><span class="note" style="font-size: 12px;">boarding from 6:23</span></div>
+    </div>
+  </div>
+
+  <div style="width: 976px; margin: 0 auto; padding-top: 36px;">
+    <header style="margin-bottom: 32px;">
+      <p class="eyebrow" style="margin: 0;">Front desk</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Good morning, Dana</h2>
+      <p style="margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: #54676d;">Thursday, August 27 · 3 departures. 4 things need you before the first one.</p>
+    </header>
+
+    <section class="panel" style="margin-bottom: 24px;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 12px;">
+        <span style="font-size: 24px; font-weight: 600;">7:00 AM</span><span style="font-size: 18px; font-weight: 600;">Two-Tank Reef — Molasses &amp; French</span><span class="note" style="margin-left: auto;">Mantis II · Keiko, Sal · 10 of 12</span>
+      </div>
+      <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="sentence"><b>Grace Mensah</b> · Advanced Open Water awaits verification.</span><span class="door">Open diver ›</span></div>
+      <div class="row"><span class="mark warn"></span><span class="kind warn">Waiver</span><span class="sentence"><b>Priya Sharma</b> · not sent.</span><span class="btn">Send waiver</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Prep</span><span class="sentence">3 divers still need rental sizes.</span><span class="door">Open prep list ›</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Contact</span><span class="sentence"><b>Nadia Petrov</b> · no emergency contact on file.</span><span class="door">Open diver ›</span></div>
+    </section>
+    <section class="panel" style="margin-bottom: 24px;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 12px;">
+        <span style="font-size: 24px; font-weight: 600;">1:00 PM</span><span style="font-size: 18px; font-weight: 600;">Wreck Trip — Spiegel Grove</span><span class="note" style="margin-left: auto;">Mantis II · no crew yet · full</span>
+      </div>
+      <div class="row"><span class="mark warn"></span><span class="kind warn">Crew</span><span class="sentence">10 divers booked and nobody in the water to supervise them.</span><span class="door">Open crew ›</span></div>
+      <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="sentence"><b>Tomás Ferreira</b> · no certification on file for a deep wreck.</span><span class="door">Open diver ›</span></div>
+    </section>
+    <section class="panel" style="margin-bottom: 40px;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 12px;">
+        <span style="font-size: 24px; font-weight: 600;">7:30 PM</span><span style="font-size: 18px; font-weight: 600;">Night Dive — City of Washington</span><span class="note" style="margin-left: auto;">Skiff · 3 of 8</span>
+      </div>
+      <div class="row"><span class="mark"></span><span class="kind">Fill seats</span><span class="sentence">5 seats open with no last-minute deal sent.</span><span class="door">Open last-minute deal ›</span></div>
+    </section>
+
+    <section style="margin-bottom: 40px;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 8px;"><span class="group">At the desk</span><span class="note" style="font-size: 12px;">3</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Messages</span><span class="sentence"><b>3 divers wrote back</b> · answer from their record.</span><span class="door">Open inbox ›</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Reviews</span><span class="sentence"><b>1 review is waiting</b> · publish it or hide it.</span><span class="door">Open reviews ›</span></div>
+      <div class="row"><span class="mark"></span><span class="kind">Gear</span><span class="sentence"><b>Tom Okafor</b> · BCD #5 is due back today.</span><span class="door">Open gear ›</span></div>
+    </section>
+
+    <!-- Gear with the line -->
+    <div style="padding: 24px 0 8px 0; border-top: 1px dashed #e6dcc8;"><span class="group" style="color: #8a8065;">Gear, later the same morning · the line is still there, and now it says 6:31</span></div>
+  </div>
+  <div style="display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 102px; background: #fffdf8; border-top: 1px solid #e6dcc8; border-bottom: 1px solid #e6dcc8;">
+    <span style="font-size: 16px; font-weight: 600;">Blue Mantis Divers</span>
+    <div style="display: flex; gap: 20px; font-size: 15px; color: #54676d;"><span>Today</span><span>Check-in</span><span>Divers</span><span>Board</span><span style="color: #0e7490; font-weight: 500;">More</span></div>
+    <span style="margin-left: auto; font-size: 14px; color: #54676d;">Search ⌘K</span>
+  </div>
+  <div class="tide">
+    <div class="inner">
+      <div class="track">
+      <div class="axis"></div>
+      <div class="hour" style="left: 0;">5:00</div><div class="hour" style="left: 16.6%;">8:00</div><div class="hour" style="left: 33.3%;">11:00</div><div class="hour" style="left: 50%;">2:00</div><div class="hour" style="left: 66.6%;">5:00</div><div class="hour" style="left: 83.3%;">8:00</div><div class="hour" style="left: 100%;">11:00</div>
+      <div class="boat next" style="left: 11.1%; width: 19.4%;"><i style="width: 83%;"></i><span>7:00 Two-Tank Reef</span></div>
+      <div class="boat" style="left: 44.4%; width: 22.2%;"><i style="width: 100%; opacity: 0.55;"></i><span>1:00 Spiegel Grove · full</span></div>
+      <div class="boat" style="left: 80.5%; width: 19.4%;"><i style="width: 37%;"></i><span>7:30 Night · 3 of 8</span></div>
+      <div class="now" data-t="now · 6:31" style="left: 8.4%;"></div>
+      </div>
+      <div class="until">Mantis II leaves in <b>29 min</b><br><span class="note" style="font-size: 12px;">7 of 10 aboard</span></div>
+    </div>
+  </div>
+  <div style="width: 976px; margin: 0 auto; padding-top: 36px;">
+    <header style="margin-bottom: 24px;">
+      <p class="eyebrow" style="margin: 0;">Run the shop</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em;">Gear</h2>
+      <p style="margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: #54676d;">37 units · 36 on the wall; BCD #5 is out with Tom Okafor.</p>
+    </header>
+    <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 8px;"><span class="group">On the wall</span><span class="note" style="font-size: 12px;">36</span></div>
+    <div class="row"><span class="tag">BCD #1</span><span class="sentence">Cressi Start · XS</span><span class="door">›</span></div>
+    <div class="row"><span class="tag">BCD #2</span><span class="sentence">Cressi Start · S · <b>Priya Sharma</b> from Sep 13</span><span class="door">›</span></div>
+    <div class="row"><span class="tag">Reg #4</span><span class="sentence">ScubaPro MK11/C370 · <span style="color: #b45309; font-weight: 500;">needs service</span></span><span class="door">›</span></div>
+    <div class="row"><span style="flex: 0 0 92px; color: #0e7490; font-size: 20px; line-height: 20px;">+</span><span class="sentence" style="color: #0e7490; font-weight: 500;">Add a unit</span><span class="door">›</span></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

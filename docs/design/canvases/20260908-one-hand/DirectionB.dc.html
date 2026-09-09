@@ -1,0 +1,191 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, "Helvetica Neue", Arial, system-ui, sans-serif; color: #1b2228; background: #f6f1e6; -webkit-font-smoothing: antialiased; }
+    a { color: #0b3d5b; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; } a:hover { color: #062a40; }
+    .serif { font-family: Newsreader, "Iowan Old Style", Palatino, Georgia, serif; }
+    .mono { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+    .line { display: grid; grid-template-columns: 112px minmax(0, 1fr) 200px; gap: 16px; align-items: baseline; min-height: 48px; padding: 12px 0; border-bottom: 1px solid #d9d2c2; }
+    .margin { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 13px; color: #6b6a63; font-variant-numeric: tabular-nums; }
+    .entry { font-size: 16px; line-height: 24px; color: #4a5560; }
+    .entry b { font-family: Newsreader, "Iowan Old Style", Palatino, Georgia, serif; font-weight: 600; font-size: 19px; color: #1b2228; }
+    .right { text-align: right; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; color: #0b3d5b; }
+    .right .fig { font-family: "Geist Mono", ui-monospace, Menlo, monospace; letter-spacing: 0; text-transform: none; font-size: 15px; color: #1b2228; }
+    .subhead { font-family: Newsreader, "Iowan Old Style", Palatino, Georgia, serif; font-size: 15px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: #6b6a63; }
+    .stamp { display: inline-block; padding: 1px 6px; border: 1.5px solid currentColor; border-radius: 3px; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; transform: rotate(-3deg); }
+    .stamp.red { color: #c8452f; }
+    .stamp.blue { color: #0b3d5b; }
+    .stamp.green { color: #2f6b3a; }
+    .note { font-size: 14px; line-height: 22px; color: #4a5560; }
+    .swatch { width: 44px; height: 44px; border-radius: 3px; border: 1px solid rgba(27,34,40,0.15); }
+    .verb { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; color: #0b3d5b; text-decoration: underline; text-underline-offset: 3px; }
+    .heavy { border-top: 2px solid #1b2228; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; box-sizing: border-box; background: #f6f1e6; padding: 0 0 48px 0;">
+
+  <div style="display: flex; flex-direction: column; gap: 16px; padding: 40px 48px 32px 48px; border-bottom: 2px solid #1b2228;">
+    <div style="display: flex; align-items: baseline; gap: 16px;">
+      <span class="subhead">Direction B · a new surface</span>
+      <span class="note">Cost: 5–7 sessions · Wow: high in the category · Risk: quaintness, and the serif on a wet deck</span>
+    </div>
+    <h1 class="serif" style="margin: 0; font-size: 52px; line-height: 1.05; font-weight: 500; letter-spacing: -0.01em;">The logbook</h1>
+    <p class="serif" style="margin: 0; max-width: 880px; font-size: 22px; line-height: 32px; color: #1b2228;">Every diver already owns the object DiveDay should feel like: a ruled page with a date at the top, entries down the margin, a figure in the right column, and a stamp when something is cleared. So every surface becomes a page of the shop's one book. No panels, no shadows, no pills, no chevrons — margins, rules, type, and ink.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 8px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="subhead">Why it coheres</span>
+        <p class="note" style="margin: 0;">One page grid does all the work: a 112px margin column (time, tag, or nothing), the entry, and a 200px right column (a figure or one verb). Today, gear, orders, divers, the manifest and the printed log are the same page, because the manifest was always going to be printed anyway.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="subhead">What it deletes</span>
+        <p class="note" style="margin: 0;">Every rounded panel and its bed shadow, the 28/18/10 radius ladder, every capsule, the chevron, the coloured eyebrow, the filter chips (they become a running index line), the stat tiles, and the drawn creatures on staff pages — the hand moves to the diver's postcard, which is where it was earning its keep.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="subhead">The honest tradeoff</span>
+        <p class="note" style="margin: 0;">Paper is a light-mode idea; the night page is slate, and it will be the second-best version. A serif at 19px in glare is a real question, so boat mode stays sans and stamps-only. And it is a fifth look in three weeks — this one has to be the last.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; padding: 32px 48px; border-bottom: 1px solid #d9d2c2;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="subhead">Faces &amp; ramp</span>
+      <div class="serif" style="font-size: 44px; line-height: 1.05; font-weight: 500;">Title 44</div>
+      <div class="serif" style="font-size: 19px; font-weight: 600;">Entry name 19 · 16 inside a fact</div>
+      <div style="font-size: 16px; line-height: 24px; color: #4a5560;">Entry sentence 16, Geist</div>
+      <div class="mono" style="font-size: 13px; color: #6b6a63;">MARGIN 13 · 7:00 · BCD #2</div>
+      <div class="subhead">Running subhead 15</div>
+      <p class="note" style="margin: 4px 0 0 0;">Newsreader for anything that is a name or a title; Geist for sentences; Geist Mono for anything in a margin. The serif never labels a control — boat mode is all Geist.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="subhead">Palette</span>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <div class="swatch" style="background: #f6f1e6;"></div>
+        <div class="swatch" style="background: #d9d2c2;"></div>
+        <div class="swatch" style="background: #1b2228;"></div>
+        <div class="swatch" style="background: #4a5560;"></div>
+        <div class="swatch" style="background: #0b3d5b;"></div>
+        <div class="swatch" style="background: #c8452f;"></div>
+        <div class="swatch" style="background: #2f6b3a;"></div>
+        <div class="swatch" style="background: #12171c;"></div>
+      </div>
+      <p class="note" style="margin: 4px 0 0 0;">Paper, rule, ink, pencil, one blue ink for every verb, stamp red, stamp green, and slate for the night page. No tints, no washes: a state is a stamp with a word in it, and a stamp is never colour alone.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="subhead">The one line</span>
+      <div>
+        <div class="line heavy"><span class="margin">7:00</span><span class="entry"><b>Grace Mensah</b> · Advanced Open Water awaits verification.</span><span class="right"><span class="verb">Open diver</span></span></div>
+        <div class="line"><span class="margin">BCD #2</span><span class="entry">Cressi Start · S · <b style="font-size: 16px;">Priya Sharma</b> from Sep 13</span><span class="right"><span class="stamp blue">Reserved</span></span></div>
+      </div>
+      <p class="note" style="margin: 4px 0 0 0;">Margin · entry · right column. The right column holds a figure, a verb, or a stamp — and on a departure's own entry, its figure and its stamp together. A heavy top rule opens an entry group; a hairline separates lines.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="subhead">Add · the stamps</span>
+      <div class="line" style="border-bottom: 1px dashed #b9b09a;"><span class="margin" style="color: #b9b09a;">—</span><span class="entry" style="color: #8a8a80; font-style: italic;">Add a unit on this line</span><span></span></div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; padding-top: 8px;">
+        <span class="stamp red">Blocked</span>
+        <span class="stamp blue">Boarding 6:23</span>
+        <span class="stamp green">All home</span>
+      </div>
+      <p class="note" style="margin: 4px 0 0 0;">The next empty ruled line is where you add. Three stamps, and a stamp lands with a 120ms press — the one motion the page has, spent on the moment a thing is settled.</p>
+    </div>
+  </div>
+
+  <!-- The home as a page of the book -->
+  <div style="padding: 0 48px;">
+    <div style="padding: 24px 0 8px 0;"><span class="subhead" style="color: #8a8a80;">The shop home · Thursday, August 27, 2026 · 1180 desktop</span></div>
+
+    <!-- running head -->
+    <div style="display: flex; align-items: baseline; justify-content: space-between; margin: 0 -48px; padding: 18px 102px; border-bottom: 1px solid #1b2228; background: #f6f1e6;">
+      <span class="serif" style="font-size: 18px; font-weight: 600;">Blue Mantis Divers</span>
+      <div class="subhead" style="display: flex; gap: 28px; color: #1b2228;"><span style="border-bottom: 2px solid #1b2228;">Today</span><span style="color: #6b6a63;">Check-in</span><span style="color: #6b6a63;">Divers</span><span style="color: #6b6a63;">Board</span><span style="color: #6b6a63;">More</span></div>
+      <span class="mono" style="font-size: 13px; color: #6b6a63;">⌘K</span>
+    </div>
+
+    <div style="width: 976px; margin: 0 auto; padding-top: 44px;">
+      <header style="display: grid; grid-template-columns: 112px minmax(0, 1fr) 200px; gap: 16px; align-items: baseline; margin-bottom: 36px;">
+        <span class="margin">Thu 27 Aug</span>
+        <div>
+          <h2 class="serif" style="margin: 0; font-size: 44px; line-height: 1.05; font-weight: 500; letter-spacing: -0.01em;">Good morning, Dana</h2>
+          <p style="margin: 10px 0 0 0; font-size: 17px; line-height: 26px; color: #4a5560;">Three departures. Four things need you before Mantis II leaves at seven.</p>
+        </div>
+        <span class="right"><span class="fig" style="font-size: 28px;">3</span> departures</span>
+      </header>
+
+      <!-- Entry: a departure -->
+      <div class="line heavy" style="padding-top: 18px; align-items: baseline;">
+        <span class="margin" style="font-size: 15px; color: #1b2228;">7:00</span>
+        <div>
+          <div class="serif" style="font-size: 26px; font-weight: 500; line-height: 1.15;">Two-Tank Reef — Molasses &amp; French</div>
+          <div style="margin-top: 4px; font-size: 15px; color: #4a5560;">Molasses Reef · Mantis II · Keiko Tanaka, Sal Moretti · $95 · until 10:30</div>
+        </div>
+        <span class="right"><span class="fig" style="font-size: 28px;">10</span> <span style="color: #6b6a63;">of 12</span> &nbsp;<span class="stamp blue">Boarding 6:23</span></span>
+      </div>
+      <div class="line"><span class="margin">Cert</span><span class="entry"><b>Grace Mensah</b> · Advanced Open Water awaits verification.</span><span class="right"><span class="verb">Open diver</span></span></div>
+      <div class="line"><span class="margin">Waiver</span><span class="entry"><b>Priya Sharma</b> · not sent.</span><span class="right"><span class="verb">Send waiver</span></span></div>
+      <div class="line"><span class="margin">Prep</span><span class="entry">3 divers still need rental sizes.</span><span class="right"><span class="verb">Open prep list</span></span></div>
+      <div class="line"><span class="margin">Contact</span><span class="entry"><b>Nadia Petrov</b> · no emergency contact on file.</span><span class="right"><span class="verb">Open diver</span></span></div>
+      <div class="line" style="border-bottom: 0;"><span class="margin">Recap</span><span class="entry" style="font-style: italic; color: #6b6a63;">Goes out at 12:30 PM.</span><span></span></div>
+
+      <div class="line heavy" style="padding-top: 18px; margin-top: 24px; align-items: baseline;">
+        <span class="margin" style="font-size: 15px; color: #1b2228;">1:00</span>
+        <div>
+          <div class="serif" style="font-size: 26px; font-weight: 500; line-height: 1.15;">Wreck Trip — Spiegel Grove</div>
+          <div style="margin-top: 4px; font-size: 15px; color: #4a5560;">Spiegel Grove · Mantis II · no crew yet · $145 · until 5:00</div>
+        </div>
+        <span class="right"><span class="fig" style="font-size: 28px;">10</span> <span style="color: #6b6a63;">of 10</span> &nbsp;<span class="stamp blue">Full</span></span>
+      </div>
+      <div class="line"><span class="margin">Crew</span><span class="entry">10 divers booked and nobody in the water to supervise them.</span><span class="right"><span class="verb">Open crew</span></span></div>
+      <div class="line"><span class="margin">Cert</span><span class="entry"><b>Tomás Ferreira</b> · no certification on file for a deep wreck.</span><span class="right"><span class="verb">Open diver</span></span></div>
+
+      <div class="line heavy" style="padding-top: 18px; margin-top: 24px; align-items: baseline;">
+        <span class="margin" style="font-size: 15px; color: #1b2228;">7:30</span>
+        <div>
+          <div class="serif" style="font-size: 26px; font-weight: 500; line-height: 1.15;">Night Dive — City of Washington</div>
+          <div style="margin-top: 4px; font-size: 15px; color: #4a5560;">Skiff · $120 · until 11:00</div>
+        </div>
+        <span class="right"><span class="fig" style="font-size: 28px;">3</span> <span style="color: #6b6a63;">of 8</span></span>
+      </div>
+      <div class="line"><span class="margin">Seats</span><span class="entry">5 open with no last-minute deal sent.</span><span class="right"><span class="verb">Send a deal</span></span></div>
+
+      <!-- the desk -->
+      <div style="margin-top: 44px; padding-bottom: 6px;" class="subhead">At the desk</div>
+      <div class="line heavy"><span class="margin">Messages</span><span class="entry"><b style="font-size: 16px;">3 divers wrote back</b> · answer from their record, in the channel they used.</span><span class="right"><span class="verb">Open inbox</span></span></div>
+      <div class="line"><span class="margin">Reviews</span><span class="entry"><b style="font-size: 16px;">1 review is waiting</b> · publish it or hide it.</span><span class="right"><span class="verb">Open reviews</span></span></div>
+      <div class="line"><span class="margin">Gear</span><span class="entry"><b style="font-size: 16px;">Tom Okafor</b> · BCD #5 is due back today.</span><span class="right"><span class="verb">Open gear</span></span></div>
+
+      <div style="margin-top: 44px; padding-bottom: 6px;" class="subhead">Later</div>
+      <div class="line heavy"><span class="margin">Fri 28</span><span class="entry"><b>Tomorrow</b></span><span class="right"><span class="fig">2</span> departures · <span class="fig">7</span> jobs</span></div>
+      <div class="line"><span class="margin">Wk 35</span><span class="entry"><b>This week</b></span><span class="right"><span class="fig">25</span> jobs</span></div>
+
+      <!-- Gear -->
+      <div style="padding: 44px 0 8px 0;"><span class="subhead" style="color: #8a8a80;">Gear · the same page</span></div>
+      <header style="display: grid; grid-template-columns: 112px minmax(0, 1fr) 200px; gap: 16px; align-items: baseline; margin-bottom: 28px;">
+        <span class="margin">Run the shop</span>
+        <div>
+          <h2 class="serif" style="margin: 0; font-size: 44px; line-height: 1.05; font-weight: 500;">Gear</h2>
+          <p style="margin: 10px 0 0 0; font-size: 17px; line-height: 26px; color: #4a5560;">36 of 37 on the wall; BCD #5 is out with Tom Okafor.</p>
+          <p style="margin: 14px 0 0 0; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: #6b6a63;"><span style="color: #1b2228; border-bottom: 2px solid #1b2228;">All 37</span> &nbsp;·&nbsp; BCD 6 &nbsp;·&nbsp; Regulator 5 &nbsp;·&nbsp; Wetsuit 6 &nbsp;·&nbsp; Tank 8 &nbsp;·&nbsp; Service due 2</p>
+        </div>
+        <span class="right"><span class="fig" style="font-size: 28px;">37</span> units</span>
+      </header>
+      <div class="line heavy"><span class="margin">BCD #1</span><span class="entry">Cressi Start · XS</span><span></span></div>
+      <div class="line"><span class="margin">BCD #2</span><span class="entry">Cressi Start · S · <b style="font-size: 16px;">Priya Sharma</b> from Sep 13</span><span class="right"><span class="stamp blue">Reserved</span></span></div>
+      <div class="line"><span class="margin">Reg #4</span><span class="entry">ScubaPro MK11/C370</span><span class="right"><span class="stamp red">Needs service</span></span></div>
+      <div class="line"><span class="margin">AL80-03</span><span class="entry">AL80 · visual inspection due Sep 29</span><span></span></div>
+      <div class="line" style="border-bottom: 1px dashed #b9b09a;"><span class="margin" style="color: #b9b09a;">—</span><span class="entry" style="color: #8a8a80; font-style: italic;">Add a unit on this line</span><span></span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
