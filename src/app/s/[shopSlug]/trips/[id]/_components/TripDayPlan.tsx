@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Fragment } from "react";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
 import { StoredPhoto } from "@/components/StoredPhoto";
@@ -15,13 +16,14 @@ import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { type DiveMode, type DockDayRhythm, siteFit } from "@/lib/diver-planning";
 import { formatShortDate } from "@/lib/format";
+import { publicDiveSitePath } from "@/lib/public-routes";
 import type { SiteSightings } from "@/lib/sightings";
 import { nightSkyFor } from "@/lib/sky";
 import { sunMoonFor } from "@/lib/sun-moon";
 import { type DayCeilingOption, DayCeilingPicker } from "./DayCeilingPicker";
 import { DaySkyLine } from "./DaySkyLine";
 import { NightSkyLine } from "./NightSkyLine";
-import type { DiveBriefing, Shop } from "./types";
+import type { DiveBriefing, Shop, SiteBriefing } from "./types";
 
 /**
  * What the departure's own row and the shop's rhythm say about the shape of
@@ -175,8 +177,11 @@ export function TripDayPlan({
   sightings,
 }: {
   briefings: DiveBriefing[];
-  /** The shop, for the coordinates and zone the sky line is computed from. */
-  shop: Pick<Shop, "timezone" | "latitude" | "longitude">;
+  /**
+   * The shop, for the coordinates and zone the sky line is computed from —
+   * and for its own slug, which is half of every site page's URL.
+   */
+  shop: Pick<Shop, "slug" | "timezone" | "latitude" | "longitude">;
   /** When this departure leaves. */
   startsAt: Date;
   /** When it comes home — a departure still out at sunset dives in the dark. */
@@ -311,6 +316,17 @@ export function TripDayPlan({
             (profile && diveSite?.maxDepthMeters
               ? depthText(t, diveSite.maxDepthMeters, profile.depthUnit)
               : null);
+          // **The site's name is the door to its own page** (N-48). The whole
+          // of what the shop wrote about a place — the prose, the drawn route,
+          // the field guide, the diver photos, and every other departure going
+          // there — lives at `/s/<shop>/sites/<site>`, and this run of rows is
+          // the one beat on this page that names every site the day dives. A
+          // page reachable only from a sitemap is a page divers never find.
+          const siteHref = diveSite ? publicDiveSitePath(shop.slug, diveSite.slug) : null;
+          const lead = dive.title ?? diveSite?.name ?? t("trip.siteToBeConfirmed");
+          // Linked once per row, on whichever line carries the site's name: a
+          // dive the shop named after its site has one line, not two.
+          const leadNamesSite = Boolean(diveSite && lead === diveSite.name);
           return (
             <Fragment key={dive.id}>
               <LedgerRow
@@ -320,14 +336,28 @@ export function TripDayPlan({
                 }
               >
                 <span className="block text-sm font-medium">
-                  {dive.title ?? diveSite?.name ?? t("trip.siteToBeConfirmed")}
+                  {siteHref && leadNamesSite ? (
+                    <Link href={siteHref} className="text-primary hover:underline">
+                      {lead}
+                    </Link>
+                  ) : (
+                    lead
+                  )}
                 </span>
                 {/* The site under the dive's own name, when the shop gave the dive
                     a name of its own that is not simply the site's. A departure
                     whose second tank has no site yet says so here rather than
                     reading as a one-site day. */}
                 {dive.title && diveSite?.name && dive.title !== diveSite.name ? (
-                  <span className="block text-sm text-muted">{diveSite.name}</span>
+                  <span className="block text-sm">
+                    {siteHref ? (
+                      <Link href={siteHref} className="text-primary hover:underline">
+                        {diveSite.name}
+                      </Link>
+                    ) : (
+                      <span className="text-muted">{diveSite.name}</span>
+                    )}
+                  </span>
                 ) : null}
                 {dive.title && !diveSite ? (
                   <span className="block text-sm text-muted">{t("trip.siteToBeConfirmed")}</span>
@@ -411,7 +441,7 @@ export function TripDayPlan({
  * list in the same order — a preview that disagreed with what the door opens
  * would be the worst of both.
  */
-export function fieldGuideCardsFor(briefings: readonly DiveBriefing[]) {
+export function fieldGuideCardsFor(briefings: readonly SiteBriefing[]) {
   const seen = new Set<string>();
   return briefings.flatMap(({ creatures }) =>
     creatures.filter((creature) => {
@@ -423,7 +453,7 @@ export function fieldGuideCardsFor(briefings: readonly DiveBriefing[]) {
   );
 }
 
-export function TripLookFor({ briefings, locale }: { briefings: DiveBriefing[]; locale: string }) {
+export function TripLookFor({ briefings, locale }: { briefings: SiteBriefing[]; locale: string }) {
   const t = diverTranslator(locale);
   const cards = fieldGuideCardsFor(briefings);
   if (cards.length === 0) return null;
@@ -472,7 +502,7 @@ export function TripLookFor({ briefings, locale }: { briefings: DiveBriefing[]; 
  * published moment with a photo, which is most shops.
  */
 /** The day's published diver photos, one strip, deduplicated by site and capped at four. */
-export function dayMomentsFor(briefings: readonly DiveBriefing[]) {
+export function dayMomentsFor(briefings: readonly SiteBriefing[]) {
   const seen = new Set<string>();
   const moments: { id: string; caption: string; imageUrl: string }[] = [];
   for (const { diveSite, moments: siteMoments } of briefings) {
@@ -487,7 +517,7 @@ export function dayMomentsFor(briefings: readonly DiveBriefing[]) {
   return moments.slice(0, 4);
 }
 
-export function TripMoments({ briefings, locale }: { briefings: DiveBriefing[]; locale: string }) {
+export function TripMoments({ briefings, locale }: { briefings: SiteBriefing[]; locale: string }) {
   const t = diverTranslator(locale);
   const shown = dayMomentsFor(briefings);
   if (shown.length === 0) return null;
@@ -541,7 +571,7 @@ export function TripMoments({ briefings, locale }: { briefings: DiveBriefing[]; 
  * would be the page apologising for a feature the shop declined to use.
  */
 /** The day's sites the shop actually drew a route for, once each. */
-export function routeSitesFor(briefings: readonly DiveBriefing[]) {
+export function routeSitesFor(briefings: readonly SiteBriefing[]) {
   const seen = new Set<string>();
   const sites = [];
   for (const { diveSite } of briefings) {
@@ -552,7 +582,7 @@ export function routeSitesFor(briefings: readonly DiveBriefing[]) {
   return sites;
 }
 
-export function TripRoutes({ briefings, locale }: { briefings: DiveBriefing[]; locale: string }) {
+export function TripRoutes({ briefings, locale }: { briefings: SiteBriefing[]; locale: string }) {
   const t = diverTranslator(locale);
   const sites = routeSitesFor(briefings);
   if (sites.length === 0) return null;
@@ -606,7 +636,7 @@ function SitePassage({ children }: { children: React.ReactNode }) {
  * against the picked species. An empty list is a day the shop wrote nothing
  * about, and the beat renders nothing at all.
  */
-export function siteNotePassagesFor(briefings: readonly DiveBriefing[]) {
+export function siteNotePassagesFor(briefings: readonly SiteBriefing[]) {
   const seen = new Set<string>();
   const sites = [];
   for (const { diveSite, creatures } of briefings) {
@@ -665,7 +695,7 @@ export function TripSiteNotes({
   briefings,
   locale,
 }: {
-  briefings: DiveBriefing[];
+  briefings: SiteBriefing[];
   locale: string;
 }) {
   const t = diverTranslator(locale);

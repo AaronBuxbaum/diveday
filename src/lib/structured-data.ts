@@ -1,5 +1,10 @@
 import { currencyFractionDigits, minorToMajor } from "./money";
-import { publicCoursePath, publicSchedulePath, publicTripPath } from "./public-routes";
+import {
+  publicCoursePath,
+  publicDiveSitePath,
+  publicSchedulePath,
+  publicTripPath,
+} from "./public-routes";
 import type { ReviewAggregate } from "./reviews";
 import { MAX_REVIEW_RATING, MIN_REVIEW_RATING, ratingIsRepresentative } from "./reviews";
 
@@ -408,6 +413,56 @@ export function coursePageJsonLd(
             url,
           },
     timeRequired: course.durationText,
+  };
+}
+
+export type DiveSiteForStructuredData = {
+  slug: string;
+  name: string;
+  description: string | null;
+  locationName: string | null;
+  forecastLatitude: number | null;
+  forecastLongitude: number | null;
+  imageUrls: string[];
+};
+
+/**
+ * A dive site as a `TouristAttraction` — a `Place` a diver travels to look at,
+ * which is what a reef or a wreck is to a search engine (N-48).
+ *
+ * `geo` is the site's own offshore coordinate, and it is honest here in a way
+ * it is not on `tripJsonLd`: that graph describes an **Event**, whose location
+ * is the dock a diver turns up at, while this one describes the place itself,
+ * which really is two miles out. `containedInPlace` carries the water the shop
+ * named it in ("Key Largo National Marine Sanctuary") when the shop wrote one.
+ *
+ * The departures going there are deliberately **not** modelled as `event`
+ * nodes. Every one of them already publishes its own `Event` on its own
+ * booking page, with the seat count and the offer this page does not carry,
+ * and a second copy under a different URL is the duplication the module header
+ * says structured data exists to prevent.
+ */
+export function diveSitePageJsonLd(
+  shop: ShopForStructuredData,
+  site: DiveSiteForStructuredData,
+  origin: string | null,
+): JsonLdObject {
+  const hasCoordinates = site.forecastLatitude !== null && site.forecastLongitude !== null;
+  return {
+    "@context": SCHEMA_CONTEXT,
+    "@type": "TouristAttraction",
+    name: site.name,
+    description: site.description,
+    url: absoluteUrl(origin, publicDiveSitePath(shop.slug, site.slug)),
+    image: site.imageUrls[0],
+    geo: hasCoordinates
+      ? {
+          "@type": "GeoCoordinates",
+          latitude: site.forecastLatitude,
+          longitude: site.forecastLongitude,
+        }
+      : undefined,
+    containedInPlace: site.locationName ? { "@type": "Place", name: site.locationName } : undefined,
   };
 }
 

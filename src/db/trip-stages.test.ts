@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
 import { seededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import {
@@ -80,7 +81,11 @@ async function aDeparture(
     const [site] = await db
       .insert(diveSites)
       // Unique per departure: a shop may not name two sites the same.
-      .values({ shopId, name: opts.siteName ?? `Molasses Reef ${trip.id.slice(0, 8)}` })
+      .values(
+        ((name) => ({ shopId, name, slug: diveSiteSlugFrom(name) }))(
+          opts.siteName ?? `Molasses Reef ${trip.id.slice(0, 8)}`,
+        ),
+      )
       .returning();
     if (!site) throw new Error("test site insert failed");
     // `createTrip` already lays out one `trip_dives` row per planned dive, so
@@ -155,7 +160,7 @@ describe("recordTripStage", () => {
 
     const [elsewhere] = await db
       .insert(diveSites)
-      .values({ shopId, name: "French Reef" })
+      .values({ shopId, name: "French Reef", slug: "french-reef" })
       .returning();
     if (!elsewhere) throw new Error("second site insert failed");
     await db
@@ -298,7 +303,11 @@ describe("liveShopStage", () => {
     if (!otherShop) throw new Error("expected a second shop");
     const [foreignSite] = await db
       .insert(diveSites)
-      .values({ shopId: otherShop.id, name: "Another Shop's Secret Ledge" })
+      .values({
+        shopId: otherShop.id,
+        name: "Another Shop's Secret Ledge",
+        slug: "another-shops-secret-ledge",
+      })
       .returning({ id: diveSites.id });
     if (!foreignSite) throw new Error("expected a site for the other shop");
     const trip = await aDeparture(db, shopId);

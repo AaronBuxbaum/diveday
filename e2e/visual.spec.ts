@@ -2249,6 +2249,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "course-page", scheme);
       });
 
+      /**
+       * **The place page** (N-48): the shop's own briefing for one dive site,
+       * addressed by the site rather than by a departure.
+       *
+       * Molasses Reef is the seeded library's fullest row — prose, landmarks,
+       * a conservation note, a field guide and a drawn route — so this
+       * baseline covers every beat the page can render at once. "Next
+       * departures here" is the last section, so waiting on it is what says
+       * the whole document has landed rather than its header alone.
+       */
+      test(`the public dive-site page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis/sites/molasses-reef");
+        await page.getByRole("heading", { name: "Next departures here" }).waitFor();
+        await capture(page, "dive-site-page", scheme);
+      });
+
       // The diver's catalog index. It used to be the signed-out half of a
       // staff page inside /shop and so had no baseline of its own; it is a
       // standalone public surface now (ADR 20260803-public-shop-namespace).

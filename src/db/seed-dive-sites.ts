@@ -26,9 +26,14 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
     .values([
       {
         shopId,
+        // The slugs are written out rather than derived: these are the URLs the
+        // e2e and visual suites navigate to, and a fixture whose address is
+        // computed moves the day the grammar does
+        // (`src/lib/dive-site-slug.ts`).
         sourceTemplateId: molassesTemplateId,
         sourceTemplateVersion: molassesTemplateId ? 1 : null,
         name: "Molasses Reef",
+        slug: "molasses-reef",
         locationName: "Key Largo National Marine Sanctuary",
         forecastLatitude: 25.0117,
         forecastLongitude: -80.3764,
@@ -89,6 +94,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
       {
         shopId,
         name: "Spiegel Grove",
+        slug: "spiegel-grove",
         locationName: "Key Largo, Florida",
         // The glossary's canonical gate: a deep wreck dived externally needs
         // AOW + Deep. (Wreck specialty is for penetration, not the whole site.)
@@ -139,6 +145,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
       {
         shopId,
         name: "Christ of the Abyss",
+        slug: "christ-of-the-abyss",
         locationName: "John Pennekamp Coral Reef State Park",
         forecastLatitude: 25.1292,
         forecastLongitude: -80.4011,
@@ -185,6 +192,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
       {
         shopId,
         name: "Benwood Wreck",
+        slug: "benwood-wreck",
         locationName: "Key Largo, Florida",
         forecastLatitude: 25.0561,
         forecastLongitude: -80.3222,
@@ -218,6 +226,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
       {
         shopId,
         name: "French Reef",
+        slug: "french-reef",
         locationName: "Key Largo National Marine Sanctuary",
         forecastLatitude: 25.0333,
         forecastLongitude: -80.3494,
@@ -257,6 +266,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
       {
         shopId,
         name: "USCGC Duane",
+        slug: "uscgc-duane",
         locationName: "Key Largo, Florida",
         // A second deep advanced wreck, gated the same way Spiegel Grove is.
         minimumCertificationLevel: "advanced_open_water" as const,
@@ -300,6 +310,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
       {
         shopId,
         name: "Pickles Reef",
+        slug: "pickles-reef",
         locationName: "Key Largo National Marine Sanctuary",
         forecastLatitude: 24.9928,
         forecastLongitude: -80.4092,

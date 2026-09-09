@@ -11,12 +11,15 @@ import {
   currentGlobalDiveSiteVersions,
   deleteDiveSite,
   diveSiteLibrarySize,
+  getDiveSiteBySlug,
   getDiveSiteTemplateUpdate,
   groupSiteLibrary,
   importGlobalDiveSiteTemplate,
   listDiveSites,
+  listDiveSitesForSitemap,
   listDiveSitesPage,
   listGlobalDiveSiteTemplates,
+  listUpcomingDeparturesForSite,
   pullDiveSiteTemplateUpdates,
   SITE_EDIT_CONFLICT,
   SITE_NAME_TAKEN,
@@ -897,5 +900,99 @@ describe("the published catalog's size", () => {
     // to the catalog's own inner join, and so invisible to the door as well.
     await db.insert(globalDiveSites).values({ slug: "unpublished-reef", currentVersion: 1 });
     expect(await countGlobalDiveSiteTemplates(db)).toBe(before);
+  });
+});
+
+/**
+ * **The site's public URL segment** (N-48) — minted once on create, never
+ * rewritten, and the key `/s/<shop>/sites/<segment>` looks a site up by.
+ */
+describe("a dive site's public slug", () => {
+  it("is minted from the name, and survives the shop correcting the name", async () => {
+    const { db, shop } = await seededShopContext();
+    const site = await createDiveSite(db, { shopId: shop.id, name: "Carysfort Wall" });
+    expect(site.slug).toBe("carysfort-wall");
+
+    // The whole reason the column exists rather than being derived per render:
+    // a spelling fix must not 404 the link a diver shared yesterday.
+    await updateDiveSite(db, shop.id, site.id, { shopId: shop.id, name: "Carysfort wall" });
+    expect((await getDiveSiteBySlug(db, shop.id, "carysfort-wall"))?.id).toBe(site.id);
+    expect(await getDiveSiteBySlug(db, shop.id, "carysfort-wall-2")).toBeNull();
+  });
+
+  it("suffixes two different names that fold to one segment", async () => {
+    const { db, shop } = await seededShopContext();
+    const first = await createDiveSite(db, { shopId: shop.id, name: "Pillar Patch" });
+    // A different name — the `(shop_id, name)` index would refuse a repeat —
+    // that the slug grammar folds onto the same segment.
+    const second = await createDiveSite(db, { shopId: shop.id, name: "Pillar  Patch!" });
+    expect(first.slug).toBe("pillar-patch");
+    expect(second.slug).toBe("pillar-patch-2");
+  });
+
+  it("is scoped to the shop, and a deleted site's page is gone while its segment stays", async () => {
+    const { db, shop } = await seededShopContext();
+    const site = await createDiveSite(db, { shopId: shop.id, name: "Sombrero Ledge" });
+    expect(await getDiveSiteBySlug(db, randomUUID(), "sombrero-ledge")).toBeNull();
+
+    await deleteDiveSite(db, shop.id, site.id);
+    expect(await getDiveSiteBySlug(db, shop.id, "sombrero-ledge")).toBeNull();
+    // Nothing rewrote history: the row still holds the segment it was minted
+    // with, which is what keeps the partial unique index over live rows honest.
+    const [row] = await db.select().from(diveSites).where(eq(diveSites.id, site.id));
+    expect(row?.slug).toBe("sombrero-ledge");
+  });
+
+  it("gives an imported template the segment of its deconflicted name", async () => {
+    const { db, shop } = await seededShopContext();
+    const catalogEntry = (await listGlobalDiveSiteTemplates(db)).templates.find(
+      (row) => row.version.briefing.name === "Molasses Reef",
+    );
+    if (!catalogEntry) throw new Error("seed: no published Molasses Reef template");
+    const imported = await importGlobalDiveSiteTemplate(db, shop.id, catalogEntry.template.id);
+    expect(imported?.name).toBe("Molasses Reef 2");
+    expect(imported?.slug).toBe("molasses-reef-2");
+  });
+});
+
+/**
+ * The public site page's two readers. Both are read by a stranger, so both
+ * are narrower than their staff-facing twins.
+ */
+describe("what a dive site's public page reads", () => {
+  it("lists live, scheduled, public departures going to the site, once each", async () => {
+    const { db, shop } = await seededShopContext();
+    const molasses = (await listDiveSites(db, shop.id)).find(
+      (site) => site.name === "Molasses Reef",
+    );
+    if (!molasses) throw new Error("seed: no Molasses Reef");
+
+    const departures = await listUpcomingDeparturesForSite(db, shop.id, molasses.id);
+    expect(departures.length).toBeGreaterThan(0);
+    // A two-tank day on one mooring names the site twice; the seat count must
+    // not double with it, and the departure must not appear twice.
+    expect(new Set(departures.map((row) => row.id)).size).toBe(departures.length);
+    for (const departure of departures) {
+      expect(departure.booked).toBeLessThanOrEqual(departure.capacity);
+    }
+  });
+
+  it("never shows a stranger another shop's site, or a private charter", async () => {
+    const { db, shop } = await seededShopContext();
+    const site = await createDiveSite(db, { shopId: shop.id, name: "Quiet Mooring" });
+    expect(await listUpcomingDeparturesForSite(db, randomUUID(), site.id)).toEqual([]);
+    // Nothing is scheduled here at all yet, which is the ordinary state of a
+    // site a shop has only just written down.
+    expect(await listUpcomingDeparturesForSite(db, shop.id, site.id)).toEqual([]);
+  });
+
+  it("puts a listed shop's sites in the sitemap and leaves the demo's out", async () => {
+    const { db, shop } = await seededShopContext();
+    const rows = await listDiveSitesForSitemap(db);
+    // The demo shop is a fixture, not a business — the same scope its schedule
+    // and course pages keep (ADR 20260813-search-listing-is-a-choice).
+    expect(rows.some((row) => row.shopSlug === shop.slug)).toBe(false);
+    // …and the seeded Key Largo neighbours are real shops, so their places are.
+    expect(rows).toContainEqual({ shopSlug: "reef-line-divers", siteSlug: "french-reef" });
   });
 });

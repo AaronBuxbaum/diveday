@@ -212,6 +212,10 @@
     "e2e": ["reviews.spec.ts"],
     "visual": ["public-reviews"]
   },
+  "/s/[shopSlug]/sites/[siteSlug]": {
+    "e2e": ["dive-site-pages.spec.ts"],
+    "visual": ["dive-site-page"]
+  },
   "/s/[shopSlug]/trips/[id]": {
     "e2e": [
       "a11y.spec.ts",

@@ -298,7 +298,7 @@ describe("searchShop", () => {
     if (!otherShop) throw new Error("insert failed");
     const [otherSite] = await db
       .insert(diveSites)
-      .values({ shopId: otherShop.id, name: "Priya's Point" })
+      .values({ shopId: otherShop.id, name: "Priya's Point", slug: "priyas-point" })
       .returning();
     if (!otherSite) throw new Error("insert failed");
 

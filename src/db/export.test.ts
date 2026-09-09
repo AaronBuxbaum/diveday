@@ -1376,13 +1376,18 @@ describe("photoUrls (ADR 20260724-export-bundled-photos)", () => {
     // proved — dedup across rows, sorting, and that an unreferenced URL never
     // appears — is unchanged.
     await db.insert(diveSites).values([
-      { shopId: shop.id, name: "Photo Reef One", satelliteImageUrl: managedA },
+      {
+        shopId: shop.id,
+        name: "Photo Reef One",
+        slug: "photo-reef-one",
+        satelliteImageUrl: managedA,
+      },
       // The same URL again, on another row and another column — must be
       // deduped, not fetched or counted twice.
-      { shopId: shop.id, name: "Photo Reef Two", routeImageUrl: managedA },
+      { shopId: shop.id, name: "Photo Reef Two", slug: "photo-reef-two", routeImageUrl: managedA },
       // A site with no imagery at all contributes nothing (not null, not
       // undefined, not an empty string).
-      { shopId: shop.id, name: "Photo Reef Three" },
+      { shopId: shop.id, name: "Photo Reef Three", slug: "photo-reef-three" },
     ]);
 
     const input = await loadShopExportBundleInput(db, shop.id);

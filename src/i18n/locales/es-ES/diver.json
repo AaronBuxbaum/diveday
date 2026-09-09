@@ -1268,6 +1268,10 @@
     "bigGroupContactGeneric": "¿Sois más de {count}? Contacta con el centro."
   },
   "site": {
+    "page": {
+      "departuresHeading": "Próximas salidas aquí",
+      "noDepartures": "No hay salidas a este sitio en el calendario por ahora"
+    },
     "terrainMapTitle": "Mapa del terreno de {site}",
     "openMap": "Abrir mapa ↗",
     "landmarkKinds": {

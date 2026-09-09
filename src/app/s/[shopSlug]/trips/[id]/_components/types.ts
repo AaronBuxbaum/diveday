@@ -32,6 +32,18 @@ export type DiveBriefing = TripDive & {
 };
 
 /**
+ * What the four briefing beats actually read: the place, its field guide and
+ * its published moments — everything about *where* the day dives and nothing
+ * about the tank it is dived on.
+ *
+ * The beats take this rather than a whole {@link DiveBriefing} so the public
+ * dive-site page (N-48) can render the shop's own briefing for one site
+ * without inventing a `trip_dives` row it has no trip for. A `DiveBriefing`
+ * satisfies it, so the departure page passes its own list unchanged.
+ */
+export type SiteBriefing = Pick<DiveBriefing, "diveSite" | "creatures" | "moments">;
+
+/**
  * Every refusal this page's booking/waitlist/rental-fit/payment actions can
  * report back, as a stable code — never rendered text (the code is what
  * crosses the `?error=` query param and the `bookSpot` action-state boundary,

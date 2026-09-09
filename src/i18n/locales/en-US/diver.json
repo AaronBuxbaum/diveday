@@ -1268,6 +1268,10 @@
     "bigGroupContactGeneric": "Bringing more than {count}? Contact the shop."
   },
   "site": {
+    "page": {
+      "departuresHeading": "Next departures here",
+      "noDepartures": "No departures to this site on the board right now"
+    },
     "terrainMapTitle": "Terrain map of {site}",
     "openMap": "Open map ↗",
     "landmarkKinds": {

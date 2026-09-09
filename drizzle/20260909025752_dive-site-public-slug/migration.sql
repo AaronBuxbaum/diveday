@@ -31,5 +31,10 @@ UPDATE "dive_sites" d
     HAVING count(*) > 1
   ) dup
  WHERE d."shop_id" = dup."shop_id" AND d."slug" = dup."slug" AND d."deleted_at" IS NULL;--> statement-breakpoint
+-- diveday:allow-destructive set-not-null dive_sites.slug: the backfill two statements
+-- above leaves no NULL behind, and the only writer that could add one during the
+-- build is the staff dive-site form of a shop in production -- of which there are
+-- none: DiveDay is pre-pilot (H-49), every environment reseeds, and the new code
+-- that supplies a slug on every insert ships in the same release as this file.
 ALTER TABLE "dive_sites" ALTER COLUMN "slug" SET NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "dive_sites_shop_slug_key" ON "dive_sites" ("shop_id","slug") WHERE "deleted_at" is null;

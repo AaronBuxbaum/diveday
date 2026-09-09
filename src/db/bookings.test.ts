@@ -1947,6 +1947,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
       .values({
         shopId: shop.id,
         name: "Adventure Dive Wall",
+        slug: "adventure-dive-wall",
         minimumCertificationLevel: "advanced_open_water",
         requiredSpecialties: ["deep"],
       })
