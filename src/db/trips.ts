@@ -53,12 +53,14 @@ export {
 } from "./trips-minimum";
 export {
   countShopTrips,
+  listShopDayDepartures,
   listTripIdsInOfflineManifestWindow,
   listUpcomingSessionsForCourse,
   nextSessionStartByCourse,
   offsetUpcomingTripsWithCounts,
   pagedUpcomingTripsWithCounts,
   SCHEDULE_PAGE_SIZE,
+  type ShopDayDeparture,
   type StaffScheduleDay,
   type StaffScheduleTrip,
   type TripWithBookedCount,

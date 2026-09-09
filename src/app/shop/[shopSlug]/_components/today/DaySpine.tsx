@@ -21,6 +21,7 @@ import type { EveningClose } from "@/lib/closeout";
 import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
 import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
+import { shopPath } from "@/lib/staff-notices";
 import {
   ACTION_KIND_META,
   type DaySpine as DaySpineData,
@@ -729,6 +730,36 @@ export function DaySpine({
             {firstThing.actionLabel}
           </Link>
         </section>
+      ) : null}
+
+      {/* **The paper day, at the morning end of the spine** (N-54). One
+          document holding every departure of today — manifest, emergency card,
+          waiver state, packing list — so a dead tablet costs a printer rather
+          than the day. It sits here because the evening's ritual already lives
+          at the bottom of this column and printing the morning is the same kind
+          of act at the other end of it; a page in the "More" menu is not
+          somewhere anyone goes at 5 am. It appears only on a day that has boats
+          on it, and never on paper. */}
+      {entries.length > 0 ? (
+        <div className="-mb-4 flex justify-end print:hidden">
+          <Link
+            // `shopPath`, not a template literal: it escapes each segment, so
+            // nobody reading this line has to re-derive that `shopSlug` was
+            // already narrowed by `requireShopSurface` upstream.
+            href={shopPath(shopSlug, "print")}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonClass({ variant: "ghost", size: "sm" })}
+          >
+            {/* A link rather than `PrintTripBundleButton`'s form: that one
+                exists to record the click server-side and so has to
+                `window.open`, which a popup blocker can refuse silently — the
+                reason it carries a "your browser blocked it" line. A tap on a
+                real link is a navigation no blocker touches, so there is no
+                refusal here to explain. */}
+            {t("shared.printPacket.dayDoor")}
+          </Link>
+        </div>
       ) : null}
 
       {entries.length > 0 ? (

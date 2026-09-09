@@ -23,6 +23,7 @@ import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { supportNeedsLines } from "@/i18n/support-needs-labels";
 import { welcomeCueText } from "@/i18n/welcome-cue-labels";
+import { scopedId } from "@/lib/element-id";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -281,6 +282,7 @@ export type ManifestNote = {
 
 /** The diver half of the head count — every active booking, one row each. */
 export function DiverRollCall({
+  idPrefix,
   divers,
   crewNames,
   crew,
@@ -298,6 +300,8 @@ export function DiverRollCall({
   buddyTeamLabel,
   t,
 }: {
+  /** Scopes this section's element ids to one departure — see `scopedId`. */
+  idPrefix?: string;
   divers: TripManifest["divers"];
   /**
    * The crew rostered on this departure, by name. Read only to answer whether
@@ -359,7 +363,7 @@ export function DiverRollCall({
     divers.find((diver) => rollCallRowState(checkpoint, diver.rollCall).notBackAboard)?.bookingId ??
     divers[0]?.bookingId;
   return (
-    <section id="roll-call-list" tabIndex={-1} className="mt-8 outline-none">
+    <section id={scopedId(idPrefix, "roll-call-list")} tabIndex={-1} className="mt-8 outline-none">
       {/* No "Shop time: Eastern Daylight Time" beside the heading. Every time
           on this page is already the shop's own — that is the app's rule
           everywhere (`shops.timezone`, `pnpm check:timezone`), not a property

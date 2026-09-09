@@ -8,6 +8,7 @@ import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ExecutedDive } from "@/db/schema";
 import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
+import { scopedId } from "@/lib/element-id";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import {
   PLAN_CHANGE_NOTE_MAX,
@@ -74,6 +75,7 @@ export type ExecutedDiveLabels = {
  * a property of the component rather than a hope about the framework.
  */
 export function ExecutedDiveLog({
+  idPrefix,
   planned,
   liveDiveSites,
   catalogSpecies,
@@ -85,6 +87,8 @@ export function ExecutedDiveLog({
   depthUnit,
   checkpoint,
 }: {
+  /** Scopes this section's element ids to one departure — see `scopedId`. */
+  idPrefix?: string;
   /**
    * `diveLabel` and `plannedSiteLabel` arrive already composed. Both interpolate
    * a runtime value, and a Server Component cannot hand a Client Component a
@@ -139,8 +143,8 @@ export function ExecutedDiveLog({
   const byNumber = new Map(executed.map((row) => [row.executed.diveNumber, row]));
   const activeDiveNumber = Number(/^after_dive_(\d+)$/.exec(checkpoint)?.[1] ?? 0);
   return (
-    <section className="mt-8" aria-labelledby="executed-dive-heading">
-      <h2 id="executed-dive-heading" className={SECTION_TITLE_CLASS}>
+    <section className="mt-8" aria-labelledby={scopedId(idPrefix, "executed-dive-heading")}>
+      <h2 id={scopedId(idPrefix, "executed-dive-heading")} className={SECTION_TITLE_CLASS}>
         {labels.heading}
       </h2>
       {/* No standing description. "Record the actual site, times, depth and

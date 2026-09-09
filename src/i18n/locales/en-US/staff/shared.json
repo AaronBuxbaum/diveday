@@ -117,10 +117,15 @@
   },
   "printPacket": {
     "title": "Trip packet",
+    "divesHeading": "Dive plan",
     "diveNumber": "Dive {number}",
     "travelMinutes": "{minutes} min out",
     "meetingPoint": "Meeting point: {label}",
-    "conditionsHeading": "Conditions"
+    "conditionsHeading": "Conditions",
+    "dayTitle": "Day packet",
+    "daySubtitle": "{count, plural, one {# departure} other {# departures}} · {date}",
+    "dayEmpty": "No departures today.",
+    "dayDoor": "Print the day"
   },
   "commandPalette": {
     "search": "Search",

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { scopedId } from "@/lib/element-id";
 
 /**
  * **The plan, and the door to saying it changed** (issue #1184, delight report
@@ -24,12 +25,15 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
  * door beside it is a link to a screen nobody can tap on paper.
  */
 export function TripPlanSection({
+  idPrefix,
   heading,
   dives,
   doorLabel,
   doorNote,
   doorHref,
 }: {
+  /** Scopes this section's element ids to one departure — see `scopedId`. */
+  idPrefix?: string;
   heading: string;
   /** One line per planned dive, already worded — "Dive 1 · Molasses Reef". */
   dives: readonly { diveNumber: number; line: string }[];
@@ -40,8 +44,11 @@ export function TripPlanSection({
 }) {
   if (dives.length === 0) return null;
   return (
-    <section className="mt-8 print:hidden" aria-labelledby="trip-plan-heading">
-      <h2 id="trip-plan-heading" className={SECTION_TITLE_CLASS}>
+    <section
+      className="mt-8 print:hidden"
+      aria-labelledby={scopedId(idPrefix, "trip-plan-heading")}
+    >
+      <h2 id={scopedId(idPrefix, "trip-plan-heading")} className={SECTION_TITLE_CLASS}>
         {heading}
       </h2>
       <ul className="mt-3 divide-y divide-border border-y border-border">

@@ -50,6 +50,9 @@ const STAFF_PATHS = [
   "/promos",
   "/staffing",
   "/dive-sites",
+  // The paper day: one document holding every diver's emergency contact for
+  // today, so a cross-tenant read of it is the whole roster at once.
+  "/print",
 ];
 
 test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async ({ page }) => {

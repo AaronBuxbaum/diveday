@@ -1,4 +1,5 @@
 import { buttonClass } from "@/components/ui/button";
+import { scopedId } from "@/lib/element-id";
 
 /**
  * **The shift catch-up strip** — what the desk did while this crew member was
@@ -33,11 +34,14 @@ import { buttonClass } from "@/components/ui/button";
  * locale, which the page does once.
  */
 export function CatchUpStrip({
+  idPrefix,
   label,
   sentences,
   dismissLabel,
   dismissAction,
 }: {
+  /** Scopes this section's element ids to one departure — see `scopedId`. */
+  idPrefix?: string;
   /** "Since you looked at 6:10 · from the desk" — composed with the shop's zone. */
   label: string;
   /** One per kind that has something to say, already worded and ordered. */
@@ -48,11 +52,11 @@ export function CatchUpStrip({
   if (sentences.length === 0) return null;
   return (
     <section
-      aria-labelledby="catch-up-label"
+      aria-labelledby={scopedId(idPrefix, "catch-up-label")}
       className="mt-4 rounded-inset bg-primary-tint p-4 print:hidden"
     >
       <div className="flex flex-wrap items-center gap-3">
-        <h2 id="catch-up-label" className="flex-1 text-base font-semibold">
+        <h2 id={scopedId(idPrefix, "catch-up-label")} className="flex-1 text-base font-semibold">
           {label}
         </h2>
         <form action={dismissAction}>

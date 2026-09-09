@@ -9,6 +9,7 @@ import { createTripLens } from "./trip-lenses";
 import {
   countShopTrips,
   createTrip,
+  listShopDayDepartures,
   offsetUpcomingTripsWithCounts,
   pagedUpcomingTripsWithCounts,
   SCHEDULE_PAGE_SIZE,
@@ -879,5 +880,103 @@ describe("the week board", () => {
       .flat()
       .find((entry) => entry.tripId === seeded.tripId);
     expect(outside?.status).toBe("sailed");
+  });
+});
+
+/**
+ * The paper day's list of boats (N-54).
+ *
+ * The bug this is written against is the one every monthly or daily export has
+ * had at least once: bracketing "today" with a UTC instant. The shop that most
+ * needs this page prints it at 5 am, which in Florida is 09:00 UTC — the UTC
+ * date is still the same one, but at 8 pm it is already tomorrow's, and a naive
+ * window hands a captain the wrong board in one direction or the other.
+ */
+describe("listShopDayDepartures", () => {
+  const ctx2 = fileScopedShopContext();
+  const TZ = "America/New_York";
+
+  it("holds the shop's own calendar day, in clock order, and nothing either side of it", async () => {
+    const { db, shop } = ctx2;
+    // 05:00 in Key Largo on 21 July 2026 — the hour this page exists for, and
+    // one where the UTC clock already reads 09:00 on the same date.
+    const dawn = new Date("2026-07-21T09:00:00.000Z");
+
+    const early = await createTrip(db, {
+      shopId: shop.id,
+      title: "Paper day — dawn charter",
+      startsAt: new Date("2026-07-21T12:00:00.000Z"), // 08:00 local
+      endsAt: new Date("2026-07-21T16:00:00.000Z"),
+      capacity: 6,
+    });
+    const late = await createTrip(db, {
+      shopId: shop.id,
+      title: "Paper day — night dive",
+      startsAt: new Date("2026-07-22T01:00:00.000Z"), // 21:00 local, same day
+      endsAt: new Date("2026-07-22T03:00:00.000Z"),
+      capacity: 6,
+    });
+    // 20:00 local on the 20th: the previous shop day, and the one a UTC-day
+    // window would wrongly keep (it is 2026-07-21 in UTC).
+    const yesterday = await createTrip(db, {
+      shopId: shop.id,
+      title: "Paper day — yesterday evening",
+      startsAt: new Date("2026-07-21T00:00:00.000Z"),
+      endsAt: new Date("2026-07-21T02:00:00.000Z"),
+      capacity: 6,
+    });
+    if (!early || !late || !yesterday) throw new Error("trip not created");
+
+    const day = await listShopDayDepartures(db, shop.id, TZ, dawn);
+    const ids = day.map((row) => row.id);
+    expect(ids).toContain(early.id);
+    expect(ids).toContain(late.id);
+    expect(ids).not.toContain(yesterday.id);
+    // The night dive is 13 hours after the dawn charter, and paper reads down.
+    expect(ids.indexOf(early.id)).toBeLessThan(ids.indexOf(late.id));
+    const starts = day.map((row) => row.startsAt.getTime());
+    expect(starts).toEqual([...starts].sort((a, b) => a - b));
+  });
+
+  it("leaves out a cancelled departure, a deleted one, and another shop's", async () => {
+    const { db, shop } = ctx2;
+    const dawn = new Date("2026-07-21T09:00:00.000Z");
+
+    const sailing = await createTrip(db, {
+      shopId: shop.id,
+      title: "Paper day — still sailing",
+      startsAt: new Date("2026-07-21T12:00:00.000Z"),
+      endsAt: new Date("2026-07-21T16:00:00.000Z"),
+      capacity: 6,
+    });
+    const called = await createTrip(db, {
+      shopId: shop.id,
+      title: "Paper day — called off",
+      startsAt: new Date("2026-07-21T13:00:00.000Z"),
+      endsAt: new Date("2026-07-21T17:00:00.000Z"),
+      capacity: 6,
+    });
+    const removed = await createTrip(db, {
+      shopId: shop.id,
+      title: "Paper day — taken off the board",
+      startsAt: new Date("2026-07-21T14:00:00.000Z"),
+      endsAt: new Date("2026-07-21T18:00:00.000Z"),
+      capacity: 6,
+    });
+    if (!sailing || !called || !removed) throw new Error("trip not created");
+    await setTripStatus(db, shop.id, called.id, "cancelled");
+    // The soft delete every entity carries (ADR 20260820-every-delete-is-soft);
+    // `liveTrip()` is what keeps it off the sheet.
+    await db.update(trips).set({ deletedAt: dawn }).where(eq(trips.id, removed.id));
+
+    const ids = (await listShopDayDepartures(db, shop.id, TZ, dawn)).map((row) => row.id);
+    expect(ids).toContain(sailing.id);
+    expect(ids).not.toContain(called.id);
+    expect(ids).not.toContain(removed.id);
+
+    // A different tenant asking for the same instant gets none of it. The
+    // packet this feeds carries every diver's emergency contact for the day.
+    const otherShopId = "00000000-0000-4000-8000-0000000000ff";
+    expect(await listShopDayDepartures(db, otherShopId, TZ, dawn)).toEqual([]);
   });
 });

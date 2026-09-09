@@ -820,6 +820,37 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
 });
 
 /**
+ * **The paper day** — the one staff surface that renders another surface more
+ * than once.
+ *
+ * `/shop/<slug>/print` (N-54) composes the trip manifest and the prep list once
+ * per departure of today. Every fixed element id inside those two pages is
+ * therefore emitted N times, and a duplicate id does not fail loudly: each
+ * `aria-labelledby` and each `#roll-call-list` jump in departures 2..N silently
+ * resolves to **departure 1's** element, so a screen-reader user running roll
+ * call on the third boat is read the first boat's heading over the third boat's
+ * divers. Nothing else in this suite can see that — which is exactly why the
+ * duplicate-id check inside `expectNoA11yViolations` is the assertion this
+ * route is here for. `src/lib/element-id.ts` is the fix it guards.
+ */
+test.describe("automated accessibility scans of the paper day", () => {
+  test("the day packet scans clean and repeats no element id across departures", async ({
+    page,
+  }) => {
+    // The slowest staff render in the app: the manifest and prep readers run
+    // once per departure of today. Sized like the other composed scans rather
+    // than the 15s default.
+    test.setTimeout(120_000);
+    await page.goto("/shop/blue-mantis/print", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Day packet" }),
+      "/shop/blue-mantis/print never rendered its <h1>",
+    ).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
+});
+
+/**
  * The diver's own bearer-token surfaces.
  *
  * `/waivers/<token>` is scanned at the top of this file and was, until now, the

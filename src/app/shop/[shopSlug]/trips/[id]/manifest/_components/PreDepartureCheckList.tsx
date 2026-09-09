@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { StatusMark } from "@/components/ui/StatusMark";
+import { scopedId } from "@/lib/element-id";
 import type { PreDepartureCheckResult } from "../actions";
 
 export type PreDepartureCheckAction = (
@@ -102,10 +103,13 @@ function PreDepartureCheckRow({
  * still lists every item and who checked it, unconditionally.
  */
 export function PreDepartureCheckList({
+  idPrefix,
   action,
   items,
   copy,
 }: {
+  /** Scopes this section's element ids to one departure — see `scopedId`. */
+  idPrefix?: string;
   action: PreDepartureCheckAction;
   items: readonly PreDepartureCheckListItem[];
   copy: PreDepartureCheckListCopy;
@@ -113,14 +117,14 @@ export function PreDepartureCheckList({
   if (items.length === 0) return null;
   return (
     <section
-      aria-labelledby="pre-departure-check-heading"
+      aria-labelledby={scopedId(idPrefix, "pre-departure-check-heading")}
       className={sectionCardClass({ padding: "none", className: "mt-5" })}
     >
       <details className="group/check print:hidden">
         <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-2 px-4 py-3 select-none [&::-webkit-details-marker]:hidden">
           <DisclosureCaret className="group-open/check:rotate-90" />
           <h2
-            id="pre-departure-check-heading"
+            id={scopedId(idPrefix, "pre-departure-check-heading")}
             className="text-base font-semibold group-hover/summary:underline"
           >
             {copy.summary}

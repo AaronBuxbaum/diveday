@@ -290,9 +290,9 @@ test.describe("trip print packet", () => {
     // trip's edit form and roster, while its actions — send a waiver, remove a
     // booking — none of which can happen on paper. Their facts are not lost:
     // the dive plan that only ever lived inside Overview's form is rendered as
-    // words in "Dives", and the roster's operational facts are already present
-    // in the manifest's read-only document.
-    await expect(popup.getByRole("heading", { name: "Dives", exact: true })).toHaveCount(1);
+    // words under "Dive plan", and the roster's operational facts are already
+    // present in the manifest's read-only document.
+    await expect(popup.getByRole("heading", { name: "Dive plan", exact: true })).toHaveCount(1);
     await expect(popup.getByRole("heading", { name: "Manifest", exact: true })).toHaveCount(1);
     await expect(popup.getByRole("heading", { name: "Prep", exact: true })).toHaveCount(1);
     await expect(popup.getByRole("heading", { name: "Overview", exact: true })).toHaveCount(0);

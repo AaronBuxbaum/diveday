@@ -35,6 +35,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import { groupCatchUp } from "@/lib/desk-events";
+import { scopedHash, scopedId } from "@/lib/element-id";
 import { formatDateTimeTz, formatTime, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -264,6 +265,20 @@ export default async function TripManifestPage({
     checkpoint?: string;
     buddyError?: string;
     buddies?: string;
+    /**
+     * **Not part of this route's URL contract.** The paper day
+     * (`/shop/[shopSlug]/print`) composes this page once per departure of
+     * today, and duplicate element ids there silently point every
+     * `aria-labelledby` and `#roll-call-list` jump at the *first* departure's
+     * section (`src/lib/element-id.ts`). A page component's props are pinned
+     * to Next's `PageProps`, so an extra prop is a build error and this is the
+     * one channel a composing surface has.
+     *
+     * Narrowed by `uuidParam` below rather than trusted: anything that is not
+     * a departure id is dropped, so a hand-typed `?idPrefix=` on this route
+     * changes nothing.
+     */
+    idPrefix?: string;
   }>;
 }) {
   const { shopSlug, id: tripId } = await params;
@@ -271,7 +286,13 @@ export default async function TripManifestPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { checkpoint: requestedCheckpoint, buddyError, buddies } = await searchParams;
+  const {
+    checkpoint: requestedCheckpoint,
+    buddyError,
+    buddies,
+    idPrefix: requestedIdPrefix,
+  } = await searchParams;
+  const idPrefix = uuidParam(requestedIdPrefix ?? "") ?? undefined;
   const { db, shop, session } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
@@ -577,7 +598,10 @@ export default async function TripManifestPage({
   return (
     <div className="boat-mode">
       <AmbientGlareDetector />
-      <SkipLink href="#roll-call-list" label={t("manifest.skipToRollCall")} />
+      <SkipLink
+        href={scopedHash(idPrefix, "roll-call-list")}
+        label={t("manifest.skipToRollCall")}
+      />
       {/* The same header the other three tabs wear (`TripPageHeader`). This
           page used to hand-roll its own — a smaller `<h1>`, a rule underneath,
           the date line at a different offset — so switching to the Manifest
@@ -640,6 +664,7 @@ export default async function TripManifestPage({
           openings of most manifests this line costs the page no pixels. */}
       {catchUp.mark ? (
         <CatchUpStrip
+          idPrefix={idPrefix}
           label={t("manifest.catchUp.label", {
             time: formatTime(catchUp.mark.at, locale, shop.timezone),
           })}
@@ -657,6 +682,7 @@ export default async function TripManifestPage({
           at the rail was a list of phone numbers for a call that has never been
           placed from this app. */}
       <SummaryPanel
+        idPrefix={idPrefix}
         checkpoint={checkpoint}
         isDeparture={isDeparture}
         rollCallComplete={rollCallComplete}
@@ -737,6 +763,7 @@ export default async function TripManifestPage({
           fully expanded *above* the checkpoint switch, five full-width buttons
           between the masthead and the head count at every checkpoint. */}
       <PreDepartureCheckList
+        idPrefix={idPrefix}
         action={boundPreDepartureCheckAction}
         items={checklistListItems}
         copy={{
@@ -756,6 +783,7 @@ export default async function TripManifestPage({
           whole buddy-team builder — so a captain on a phone scrolled past six
           screens of context to reach the first name at roll call. */}
       <DiverRollCall
+        idPrefix={idPrefix}
         divers={manifest.divers}
         crew={manifest.crew}
         crewNames={manifest.crew.map((member) => member.fullName)}
@@ -780,6 +808,7 @@ export default async function TripManifestPage({
           subject. */}
       <CrewRollCall
         crew={manifest.crew}
+        idPrefix={idPrefix}
         divers={manifest.divers}
         checkpoint={checkpoint}
         isDeparture={isDeparture}
@@ -800,6 +829,7 @@ export default async function TripManifestPage({
           same question. */}
       {isDeparture ? (
         <TripPlanSection
+          idPrefix={idPrefix}
           heading={t("manifest.planChange.heading")}
           dives={plannedDives.map(({ dive, diveSite }) => ({
             diveNumber: dive.diveNumber,
@@ -818,6 +848,7 @@ export default async function TripManifestPage({
 
       {!isDeparture ? (
         <ExecutedDiveLog
+          idPrefix={idPrefix}
           planned={plannedDives.map(({ dive, diveSite }) => ({
             diveNumber: dive.diveNumber,
             diveSite: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
@@ -854,7 +885,7 @@ export default async function TripManifestPage({
       <div className="hidden print:block">
         <EmergencyReferenceCard
           className="mt-6"
-          headingId="emergency-reference-print-heading"
+          headingId={scopedId(idPrefix, "emergency-reference-print-heading")}
           reference={shop.emergencyReference}
           copy={emergencyCopy}
         />
@@ -864,6 +895,7 @@ export default async function TripManifestPage({
           worked at the rail. Below the lists, still expanded — the teams
           themselves ride on each member's row where roll call can see them. */}
       <BuddyTeamsPanel
+        idPrefix={idPrefix}
         defaultOpen={buddies === "open"}
         intentLine={staffDiveIntentLine(t, diveIntents, locale)}
         buddyTeamsList={buddyTeamsList}
@@ -895,6 +927,7 @@ export default async function TripManifestPage({
           only thing that can render it. The rest of the group rides in as its
           children. */}
       <OfflineManifestManager
+        idPrefix={idPrefix}
         locale={locale}
         payload={serializeManifests(
           completeManifests,
