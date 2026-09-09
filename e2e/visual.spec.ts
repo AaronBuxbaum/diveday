@@ -3174,7 +3174,13 @@ for (const scheme of ["light", "dark"] as const) {
         // contact email (issue #710). Free to take here — the shop already
         // exists and this is one navigation.
         await page.goto(`/s/${unique}`);
-        await page.getByRole("heading", { name: "No trips on the books yet" }).waitFor();
+        // A shop this new has nothing on the board, so it lands in the quiet
+        // state N-45 designed rather than the empty list it used to show. The
+        // heading it waits for is the one that replaced "No trips on the books
+        // yet" — a sentence that read as a shop which had stopped rather than
+        // one which had not started, which is exactly the wrong thing to say
+        // on the page a shop is told to paste on its own website.
+        await page.getByRole("heading", { name: "Nothing on the water for a while" }).waitFor();
         // **Day zero is a shape, not a failure state** (ADR
         // 20260827-clearwater-surface-language, decision 8). The hero is the
         // shop's name and nothing else — no tagline it has not written, no
@@ -3185,9 +3191,11 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByRole("region", { name: "Next boat with space" })).toHaveCount(0);
         await expect(page.getByRole("link", { name: "Book this boat" })).toHaveCount(0);
         await capture(page, "public-schedule-new-shop", scheme);
-        // After the shot, so the composer's disclosure is closed in the
-        // baseline: with no boat to book, the page's one primary is this.
-        await page.locator("#request-a-date summary").click();
+        // In the quiet state the composer is the page's one primary and comes
+        // up already open, so there is no disclosure left to click — the shot
+        // above now carries the form rather than a collapsed row. Assert it is
+        // reachable without one, which is the promotion N-45 makes.
+        await expect(page.locator("#request-a-date summary")).toHaveCount(0);
         await expect(page.getByRole("button", { name: "Send", exact: true })).toBeVisible();
 
         // **The board before anything is on it.** The `schedule-builder`
