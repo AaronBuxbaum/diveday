@@ -36,7 +36,18 @@ export type SendStaffReplyInput = {
   messageId: string;
   /** The staffer's own words, as typed. */
   body: string;
-  sentByPersonId: string;
+  /**
+   * Who is answering. **Null means DiveDay is**, on the shop's behalf — the
+   * confirmation and outcome messages a reply keyword produces (ADR
+   * 20260909-reply-keywords). Required rather than optional so a caller has to
+   * say which of the two this is.
+   */
+  sentByPersonId: string | null;
+  /**
+   * Whether sending this also answers the message. Defaults true; the move
+   * handoff passes false, because that message is still waiting on a person.
+   */
+  marksAnswered?: boolean;
   now?: Date;
   /** Tests inject a fake; production resolves SES from the environment. */
   provider?: NotificationProvider;
@@ -102,10 +113,11 @@ function replySubject(
 }
 
 /**
- * Send one staff reply, and record what happened to it.
+ * Send one reply from the shop, and record what happened to it.
  *
- * The caller has already decided *who may* (`canPersonAnswerShopInbox`); this
- * decides whether the message can be answered at all, and on what.
+ * The caller has already decided *who may* (`canPersonAnswerShopInbox`, or —
+ * for an automatic reply — the evidence rules in `src/db/reply-keywords.ts`);
+ * this decides whether the message can be answered at all, and on what.
  */
 export async function sendStaffReply(
   db: AppDb,
@@ -153,6 +165,7 @@ export async function sendStaffReply(
     body,
     locale,
     sentByPersonId: input.sentByPersonId,
+    ...(input.marksAnswered === false ? { marksAnswered: false } : {}),
     sentAt: now,
     id: replyId,
   };

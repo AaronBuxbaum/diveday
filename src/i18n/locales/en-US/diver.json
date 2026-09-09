@@ -3512,6 +3512,17 @@
       "nitroxMissing": "Send your shop your nitrox certification details",
       "paymentDue": "Settle your balance"
     },
+    "replyKeyword": {
+      "offer": "Reply C to cancel your seat, or M to ask about moving it.",
+      "confirmCancel": "{tripTitle}, {date} at {time}. Reply {code} in the next half hour to give up your seat. Nothing has changed yet.",
+      "cancelled": "Your seat on {tripTitle}, {date}, is cancelled.",
+      "refundOnItsWay": "Your refund is on its way.",
+      "cancelRefused": "That seat could not be released. {shopName} will pick this up.",
+      "codeMismatch": "That code did not match, so nothing has changed. {shopName} will pick this up.",
+      "nothingToCancel": "We could not find a seat to cancel. {shopName} will pick this up.",
+      "ambiguous": "You have more than one departure booked. {shopName} will pick this up so the right seat comes off.",
+      "moveHandoff": "{shopName} will get back to you about moving your seat."
+    },
     "common": {
       "greeting": "Hi {firstName},",
       "greetingGeneric": "Hi,",

@@ -1,5 +1,6 @@
 import { getDb } from "@/db/client";
 import { recordInboundMessage, shopIdForInboundEmailToken } from "@/db/inbound-messages";
+import { handleInboundReplyKeyword } from "@/db/reply-keywords";
 import { nowDate } from "@/lib/clock";
 import { parseInboundEmail } from "@/lib/inbound-email";
 import { normalizeEmailAddress, parseInboundReplyToken, sesMessageIdFromHeader } from "@/lib/inbox";
@@ -141,6 +142,18 @@ export async function POST(request: Request) {
     inReplyToProviderMessageId: sesMessageIdFromHeader(parsed.inReplyTo),
     senderAuthenticated,
   });
+  // Only a message that was actually filed; a redelivery is `duplicate` and
+  // never reaches this. SNS retries every non-2xx, so a keyword read off a
+  // replay would be a second cancellation of the same seat.
+  if (result.status === "recorded") {
+    const outcome = await handleInboundReplyKeyword(db, {
+      shopId,
+      inboundMessageId: result.id,
+    });
+    if (outcome !== "not_a_keyword") {
+      log("email_inbound.reply_keyword", "info", { shopId, outcome });
+    }
+  }
   // Ids and outcomes only — never the sender, the subject or the words.
   log("email_inbound.recorded", "info", {
     shopId,

@@ -1328,6 +1328,16 @@ new domain concept, define it here in the same PR.
   ([20260802-sms-delivery-receipts](../architecture/decisions/20260802-sms-delivery-receipts.md)).
   A receipt matching no row is routine, not a fault: only a **tracked channel** has one, so a courtesy
   text sent alongside an email has nothing to update.
+- **Reply keyword** — the one letter a trip reminder invites back: **C** to cancel a seat, **M** to
+  ask about moving it. It is a token in a protocol rather than a word, so it is the same letter in
+  every language (the whole words are accepted too, in English and Spanish), and it is only ever read
+  out of a *short* reply from an address the channel vouched for — a diver writing a sentence still
+  reaches the shop inbox untouched. **C alone cancels nothing.** The reply names the departure in
+  full and carries a six-character **confirmation code**, signed rather than stored and good for
+  half an hour, and only a reply carrying that code releases the seat — through the same
+  `selfCancelBooking` the diver's own `/ready` link uses. **M is a handoff, not a reschedule**:
+  moving a seat is the shop's, so the message is marked and left on the inbox worklist for a person.
+  See [20260909-reply-keywords](../architecture/decisions/20260909-reply-keywords.md).
 - **WhatsApp sender** — a shop's *own* WhatsApp Business number, connected in Settings → WhatsApp
   through **Meta Embedded Signup**: the shop presses one button and completes Meta's own hosted
   popup, and DiveDay registers the number, subscribes to its delivery events, and submits the

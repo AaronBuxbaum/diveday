@@ -13,6 +13,7 @@ import {
   recipientLocale,
 } from "@/lib/notifications";
 import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
+import { inboundEmailDomain } from "@/lib/notifications/inbound-address";
 import {
   type SmsProvider,
   smsProviderFromEnvironment,
@@ -136,6 +137,8 @@ function reminderSmsBody(
     medicalReview: boolean;
     forecast?: string | null;
     whoToText?: string | null;
+    /** Whether this body may end with the reply line (ADR 20260909-reply-keywords). */
+    replyKeywords?: boolean;
   },
 ): string {
   const when =
@@ -164,7 +167,9 @@ function reminderSmsBody(
     time,
     minutes: input.dockCallMinutes,
   });
-  return `${body}${conditions}${todoText}${contact}`;
+  // Last, and only on a channel that can hear the answer.
+  const keywords = input.replyKeywords ? ` ${t("notifications.replyKeyword.offer")}` : "";
+  return `${body}${conditions}${todoText}${contact}${keywords}`;
 }
 
 /**
@@ -200,6 +205,12 @@ export async function sendDueReminders(
   const emailProvider = notificationProviderForDb(options.emailProvider);
   const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
+  // Whether a diver replying to this mail reaches DiveDay at all. The
+  // `Reply-To` is a routable per-shop address only when a receiving domain is
+  // configured (ADR 20260907-two-way-inbox decision 3); without one, replies
+  // go to the shop's front desk and a line offering `C` would be a promise the
+  // app cannot keep.
+  const inboundEmailOn = Boolean(inboundEmailDomain());
   const horizon = new Date(now.getTime() + MAX_REMINDER_LEAD_HOURS * HOUR_MS);
 
   const rows = await db
@@ -267,6 +278,7 @@ export async function sendDueReminders(
     kind: ReminderKind;
     phone: string | null;
     smsBody: string;
+    whatsAppBody: string;
     notification: Notification;
   }> = [];
   const smsWork: Array<{
@@ -276,6 +288,7 @@ export async function sendDueReminders(
     kind: ReminderKind;
     phone: string;
     smsBody: string;
+    whatsAppBody: string;
   }> = [];
 
   // Which cadence, if any, each booking is due for — decided up front so the
@@ -439,19 +452,28 @@ export async function sendDueReminders(
         }
       : undefined;
 
-    const smsBody = reminderSmsBody(t, locale, {
-      shopName: shop.name,
-      tripTitle: trip.title,
-      startsAt: trip.startsAt,
-      endsAt: trip.endsAt,
-      timezone: shop.timezone,
-      lead,
-      dockCallMinutes: shop.dockCallMinutes,
-      outstanding,
-      medicalReview,
-      forecast,
-      whoToText,
-    });
+    const reminderText = (replyKeywords: boolean) =>
+      reminderSmsBody(t, locale, {
+        shopName: shop.name,
+        tripTitle: trip.title,
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        timezone: shop.timezone,
+        lead,
+        dockCallMinutes: shop.dockCallMinutes,
+        outstanding,
+        medicalReview,
+        forecast,
+        whoToText,
+        replyKeywords,
+      });
+    const smsBody = reminderText(false);
+    // The same reminder, plus the reply line, for the one text channel that
+    // can hear an answer. Which of the two actually goes out is
+    // `sendCourtesyMessage`'s call, and it may still fall back to SMS after a
+    // failed WhatsApp send — which is exactly why both bodies travel together
+    // rather than one being chosen here (ADR 20260909-reply-keywords).
+    const whatsAppBody = reminderText(true);
 
     if (person.email) {
       emailWork.push({
@@ -461,6 +483,7 @@ export async function sendDueReminders(
         kind: cadence.kind,
         phone,
         smsBody,
+        whatsAppBody,
         notification: {
           kind: cadence.kind,
           bookingId: booking.id,
@@ -479,6 +502,7 @@ export async function sendDueReminders(
           outstanding,
           medicalReview,
           readinessUrl,
+          ...(inboundEmailOn ? { replyKeywords: true } : {}),
           ...(brief ? { brief } : {}),
         },
       });
@@ -490,6 +514,7 @@ export async function sendDueReminders(
         kind: cadence.kind,
         phone,
         smsBody,
+        whatsAppBody,
       });
     } else {
       // No reachable channel — record it so staff can see the gap.
@@ -517,7 +542,12 @@ export async function sendDueReminders(
     // and a courtesy text that failed must not overwrite a delivered email.
     if (delivery.status === "sent" && work.phone) {
       await sendCourtesyMessage(
-        { to: work.phone, body: work.smsBody, shopName: work.shopName },
+        {
+          to: work.phone,
+          body: work.smsBody,
+          whatsAppBody: work.whatsAppBody,
+          shopName: work.shopName,
+        },
         { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
       );
     }
@@ -536,7 +566,12 @@ export async function sendDueReminders(
     // WhatsApp or SMS carried it. CourtesyDelivery is the same shape as
     // NotificationDelivery, so it records through the same seam.
     const { delivery } = await sendCourtesyMessage(
-      { to: work.phone, body: work.smsBody, shopName: work.shopName },
+      {
+        to: work.phone,
+        body: work.smsBody,
+        whatsAppBody: work.whatsAppBody,
+        shopName: work.shopName,
+      },
       { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
     );
     await recordNotificationDelivery(db, {

@@ -16,6 +16,19 @@ const CHANNEL_KEYS: Record<InboundChannel, StaffMessageKey> = {
 };
 
 /**
+ * What a one-word reply was asking for (ADR 20260909-reply-keywords). A row
+ * whose whole body is "M" says nothing to the staffer who has to act on it,
+ * and this is the sentence that fixes that — carried only on the handful of
+ * messages the inbound path recognised, and absent from every message a person
+ * wrote in their own words.
+ */
+const KEYWORD_KEYS: Record<"cancel" | "move" | "confirm", StaffMessageKey> = {
+  cancel: "inbox.keyword.cancel",
+  move: "inbox.keyword.move",
+  confirm: "inbox.keyword.confirm",
+};
+
+/**
  * The first line of what a diver wrote, for a list that is scanned rather than
  * read. The whole message is on their record one tap away, and a row carrying
  * three paragraphs would bury the twelve rows under it.
@@ -69,6 +82,7 @@ export function InboxRow({
     // The address is on the stranger's row only: for a diver on file the name
     // above already says who this is, and their address is on their record.
     message.personId ? null : message.fromAddress,
+    message.keywordIntent ? t(KEYWORD_KEYS[message.keywordIntent]) : null,
     message.mediaCount > 0 ? t("inbox.attachments", { count: message.mediaCount }) : null,
   ].filter((fact): fact is string => Boolean(fact));
 

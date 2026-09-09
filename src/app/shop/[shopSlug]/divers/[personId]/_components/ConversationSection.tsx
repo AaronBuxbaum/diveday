@@ -104,10 +104,19 @@ export function ConversationSection({
                   name: diverName,
                   date: formatDateTimeTz(entry.message.receivedAt, locale, timezone),
                 })
-              : t("inbox.thread.sent", {
-                  name: entry.sentByName ?? t("inbox.thread.unknownStaff"),
-                  date: formatDateTimeTz(entry.reply.sentAt, locale, timezone),
-                });
+              : // A reply with no staffer behind it is one DiveDay sent on the
+                // shop's behalf — a reply-keyword confirmation (ADR
+                // 20260909-reply-keywords). Named as that rather than as
+                // "a staff member", which would put a colleague's shape on a
+                // sentence nobody typed.
+                entry.reply.sentByPersonId === null
+                ? t("inbox.thread.sentAutomatically", {
+                    date: formatDateTimeTz(entry.reply.sentAt, locale, timezone),
+                  })
+                : t("inbox.thread.sent", {
+                    name: entry.sentByName ?? t("inbox.thread.unknownStaff"),
+                    date: formatDateTimeTz(entry.reply.sentAt, locale, timezone),
+                  });
           const body = entry.direction === "inbound" ? entry.message.body : entry.reply.body;
           return (
             <div key={key} className="px-5 py-4 sm:px-6">
