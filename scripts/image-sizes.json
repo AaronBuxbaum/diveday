@@ -18,6 +18,10 @@
       "1920": 355
     }
   },
+  "src/app/s/[shopSlug]/sites/[siteSlug]/page.tsx :: (min-width: 896px) 56rem, 100vw": {
+    "measured": "2026-09-09, /s/blue-mantis/sites/molasses-reef. The public dive-site page's cover band, edge to edge of the same max-w-4xl column the course page's hero fills, so the numbers match that entry to within a scrollbar.",
+    "rendered": { "390": 358, "768": 720, "1280": 848, "1920": 848 }
+  },
   "src/app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx :: (min-width: 896px) 896px, 100vw": {
     "measured": "2026-09-04, /s/blue-mantis/courses/advanced-open-water-diver",
     "rendered": {

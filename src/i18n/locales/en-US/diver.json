@@ -1270,6 +1270,7 @@
   "site": {
     "page": {
       "departuresHeading": "Next departures here",
+      "jumpToDepartures": "See the dates",
       "noDepartures": "No departures to this site on the board right now"
     },
     "terrainMapTitle": "Terrain map of {site}",

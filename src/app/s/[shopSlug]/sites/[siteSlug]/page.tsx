@@ -146,6 +146,21 @@ export default async function DiveSitePage({
         meta={
           facts.length > 0 ? <p className="text-sm text-muted">{facts.join(" · ")}</p> : undefined
         }
+        // The page's one act, above the fold. Everything between here and the
+        // departures is the shop's own briefing — a route, a field guide, the
+        // photographs divers brought back — and on a phone that is three
+        // screens of reading before the dates. A reader who already knows they
+        // want this reef should not have to scroll past the argument for it.
+        // One control, not a second copy of the list: it lands on the same
+        // rows, which stay where the pitch-then-ask grammar puts them (ADR
+        // 20260827-the-divers-thread, decision 2).
+        actions={
+          departures.length > 0 ? (
+            <Link href="#departures" className={buttonClass({ variant: "primary" })}>
+              {t("site.page.jumpToDepartures")}
+            </Link>
+          ) : undefined
+        }
       />
       {/* The shop's own photograph of the place, where it uploaded one. `alt`
           is empty on purpose: the `<h1>` two lines above says which reef this
@@ -168,7 +183,7 @@ export default async function DiveSitePage({
       {/* The page's one act. Everything above answers "would I like this
           reef?"; this answers "when can I go?", and each row is the door to
           the departure that already owns capacity, readiness and payment. */}
-      <section className="mt-8">
+      <section id="departures" className="mt-8 scroll-mt-8">
         <GroupLabel as="h2">{t("site.page.departuresHeading")}</GroupLabel>
         {departures.length === 0 ? (
           <EmptyState

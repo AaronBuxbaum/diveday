@@ -1270,6 +1270,7 @@
   "site": {
     "page": {
       "departuresHeading": "Próximas salidas aquí",
+      "jumpToDepartures": "Ver las fechas",
       "noDepartures": "No hay salidas a este sitio en el calendario por ahora"
     },
     "terrainMapTitle": "Mapa del terreno de {site}",
