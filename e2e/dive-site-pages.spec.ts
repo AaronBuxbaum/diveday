@@ -49,20 +49,41 @@ test("a departure's site name opens that site's own page, which leads back to a 
   await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}$/);
 });
 
-test("a segment no shop could have minted is a 404, and a site belongs to one shop", {
+/**
+ * **What "not found" looks like here, and why it is asserted as a body rather
+ * than a status code.**
+ *
+ * A segment that names nothing renders this namespace's own `not-found.tsx` —
+ * and in the production build it renders it under a **200**. The route has a
+ * static shell (`instant = true` plus a `loading.tsx`), the shell is on the
+ * wire before the page's `notFound()` is reached, and a status cannot be
+ * changed after that. Measured across the built app on 2026-09-09: an unknown
+ * site, an unknown course and an unknown shop all answer 200, and only
+ * `/s/<shop>/embed/<widget>` — whose metadata is static and whose refusal is a
+ * pure function of the segment — answers 404.
+ *
+ * That is a property of the whole `/s/**` namespace rather than of this page,
+ * and turning it into a real 404 is one change across every route in it. So
+ * this asserts what is actually this page's contract: a segment no shop could
+ * have minted never reaches a query, and one shop's segment is not another
+ * shop's site.
+ */
+test("a segment no shop could have minted lands on not-found, and a site belongs to one shop", {
   tag: READ_ONLY,
 }, async ({ page }) => {
+  const notFound = page.getByRole("heading", { name: "That page isn’t here any more" });
   // Malformed: refused by the parser before it can reach a query.
-  const malformed = await page.request.get(`/s/${DEMO_SHOP_SLUG}/sites/Molasses%20Reef`);
-  expect(malformed.status()).toBe(404);
-  // Well-formed and unknown: the shop has no site under this segment.
-  const unknown = await page.request.get(`/s/${DEMO_SHOP_SLUG}/sites/somebody-elses-ledge`);
-  expect(unknown.status()).toBe(404);
-  // Real, but the neighbour's — the same segment under the demo's shop is
-  // not the demo's site, because a site page is scoped to the shop in its
-  // own URL.
-  expect((await page.request.get("/s/reef-line-divers/sites/french-reef")).ok()).toBe(true);
-  expect((await page.request.get(`/s/${DEMO_SHOP_SLUG}/sites/uscgc-duane`)).ok()).toBe(true);
+  await page.goto(`/s/${DEMO_SHOP_SLUG}/sites/Molasses%20Reef`);
+  await expect(notFound).toBeVisible();
+  // Well-formed and unknown: this shop has no site under this segment.
+  await page.goto(`/s/${DEMO_SHOP_SLUG}/sites/somebody-elses-ledge`);
+  await expect(notFound).toBeVisible();
+  // Real — but the demo's own, so it is a page here and nothing at the
+  // neighbouring shop, whose whole library is one site and it is not this one.
+  await page.goto(`/s/${DEMO_SHOP_SLUG}/sites/benwood-wreck`);
+  await expect(page.getByRole("heading", { level: 1, name: "Benwood Wreck" })).toBeVisible();
+  await page.goto("/s/reef-line-divers/sites/benwood-wreck");
+  await expect(notFound).toBeVisible();
 });
 
 test("a listed shop's site pages are in the sitemap, and the demo's are not", {
