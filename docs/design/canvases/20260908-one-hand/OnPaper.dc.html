@@ -1,0 +1,464 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&family=Bricolage+Grotesque:wght@500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+/* kit:start — the round-3 kit. Pasted verbatim into every round-3 board; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --brand:#1d7a5f; --brand-deep:#145a46; --brand-tint:#e4f1ea; --brand-ink:#ffffff; --shallows:#7fd0d6; --shallows-tint:#d7f0f2; --coral:#ff6f61; --coral-deep:#a83a2c; --coral-tint:#ffeee9; --ok:#15803d; --ok-tint:#e6f0e8; --warn:#b45309; --warn-tint:#f8eee2; --danger:#b91c1c; --danger-tint:#f8e8e6; --water:#e4f1ea; --shadow:0 2px 10px rgba(88,66,30,.06); --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.diveday { --brand:#0e7490; --brand-deep:#0a4d61; --brand-tint:#e6f3f5; --water:#e6f3f5; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+.night { --bg:#071720; --surface:#0d222d; --sunken:#051118; --border:#1c3a47; --border-strong:#4f7285; --ink:#e9f3f4; --muted:#8fa8b0; --brand:#5fd3b0; --brand-deep:#8fe3c8; --brand-tint:#0f3a30; --brand-ink:#04241b; --shallows:#1f6f78; --shallows-tint:#0b3540; --coral:#ff8a7e; --coral-deep:#ffb3aa; --coral-tint:#3f1d19; --ok:#4ade80; --ok-tint:#0f3324; --warn:#fbbf24; --warn-tint:#3a2a0e; --danger:#f87171; --danger-tint:#3d1717; --water:#143a3c; --shadow:0 2px 10px rgba(0,0,0,.35); }
+.night.diveday, .night .diveday { --brand:#22d3ee; --brand-deep:#67e8f9; --brand-tint:#0b3540; --brand-ink:#072a33; --water:#0b3540; }
+.boat { --bg:#ffffff; --surface:#ffffff; --sunken:#eef3f5; --border:#4f7285; --border-strong:#0c2a35; --ink:#04141b; --muted:#2f4650; --brand:#0a4d61; --brand-deep:#062f3b; --brand-tint:#dceff3; --brand-ink:#ffffff; --water:#ffffff; --shadow:none; }
+.boat.night { --bg:#000a0f; --surface:#071720; --sunken:#000a0f; --border:#6f95a8; --border-strong:#cfe3ea; --ink:#f4fbfc; --muted:#b9cdd4; --brand:#7ee8fa; --brand-deep:#b5f1fb; --brand-tint:#0b3540; --brand-ink:#04141b; --water:#000a0f; }
+.night, .boat { color: var(--ink); background: var(--bg); }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 940px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; }
+.frame-cap { padding: 28px 48px 8px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 940px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 160px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; }
+.stat b { display: block; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--border); }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 500; }
+
+/* — type — */
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand); }
+.group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.harbor .title, .harbor .h { font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--brand); font-weight: 500; }
+
+/* — chrome — */
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 102px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.harbor .chrome .shop { font-family: var(--display); font-size: 18px; }
+.chrome .mark { width: 36px; height: 36px; border-radius: 10px; background: var(--brand); color: var(--brand-ink); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .tabs { display: flex; gap: 4px; }
+.chrome .tabs span { padding: 10px 14px; border-radius: 10px; font-size: 15px; color: var(--muted); }
+.chrome .tabs span.on { background: var(--brand-tint); color: var(--brand); font-weight: 500; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.here { display: flex; align-items: center; gap: 8px; }
+.av { width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; border: 2px solid var(--surface); }
+.av + .av { margin-left: -10px; }
+.p-d { background: #a83a2c; } .p-k { background: #1d7a5f; } .p-s { background: #0e7490; } .p-m { background: #8a8065; }
+.who { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 3px; border-radius: 999px; background: var(--brand-tint); color: var(--brand-deep); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.who i { width: 20px; height: 20px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; font-style: normal; }
+.who.away { background: var(--sunken); color: var(--muted); }
+
+/* — the tide line (F) — */
+.tide { position: relative; height: 64px; padding: 0 102px; background: linear-gradient(180deg, var(--water) 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); }
+.tide .inner { position: relative; width: 976px; margin: 0 auto; height: 64px; }
+.tide .track { position: absolute; left: 0; top: 0; width: 740px; height: 64px; }
+.tide .axis { position: absolute; left: 0; right: 0; top: 40px; height: 2px; background: var(--border); }
+.tide .hour { position: absolute; top: 46px; font-family: var(--mono); font-size: 10px; color: var(--border-strong); transform: translateX(-50%); }
+.tide .boat { position: absolute; top: 14px; height: 24px; border-radius: 6px; background: var(--sunken); border: 1px solid var(--border); overflow: hidden; }
+.tide .boat i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--shallows); opacity: .75; }
+.tide .boat span { position: absolute; left: 8px; top: 3px; font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.tide .boat.next { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-tint); }
+.tide .boat.gone { opacity: .55; }
+.tide .now { position: absolute; top: 6px; width: 2px; height: 40px; background: var(--ink); transform: translateX(-1px); }
+.tide .now::after { content: attr(data-t); position: absolute; top: -2px; left: 6px; font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--ink); white-space: nowrap; }
+.tide .until { position: absolute; right: 0; top: 10px; font-size: 13px; color: var(--ink); text-align: right; line-height: 20px; }
+.tide .until b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tide .until .note { font-size: 12px; line-height: 18px; }
+.tide.empty .inner { display: flex; align-items: center; justify-content: center; }
+.tide.empty .inner span { font-size: 13px; color: var(--muted); }
+/* the phone fold: one 36px strip */
+.tide-fold { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px; background: linear-gradient(180deg, var(--water) 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); }
+.tide-fold .t { font-family: var(--mono); font-size: 11px; color: var(--ink); }
+.tide-fold .bar { position: relative; flex: 1; height: 8px; border-radius: 4px; background: var(--sunken); overflow: hidden; }
+.tide-fold .bar i { position: absolute; top: 0; height: 8px; border-radius: 4px; background: var(--border); }
+.tide-fold .bar i.next { background: var(--shallows); }
+.tide-fold .bar b { position: absolute; top: 0; width: 2px; height: 8px; background: var(--ink); }
+.tide-fold .u { font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+/* — the trip's own line (L): one departure's day, the same on both sides — */
+.line { position: relative; display: flex; align-items: flex-start; padding: 12px 0 0 0; }
+.line .seg { position: relative; flex: 1 1 0; padding-top: 18px; }
+.line .seg::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--border); }
+.line .seg.done::before { background: var(--brand); }
+.line .seg.now::before { background: linear-gradient(90deg, var(--brand) 0 50%, var(--border) 50% 100%); }
+.line .seg i { position: absolute; left: 0; top: 0; width: 14px; height: 14px; border-radius: 999px; background: var(--surface); border: 2px solid var(--border); transform: translateY(0); }
+.line .seg.done i, .line .seg.now i { border-color: var(--brand); background: var(--brand); }
+.line .seg.now i { box-shadow: 0 0 0 4px var(--brand-tint); }
+.line .seg b { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.line .seg span { display: block; font-size: 13px; font-weight: 500; color: var(--ink); line-height: 18px; }
+.line .seg.todo span { color: var(--muted); font-weight: 400; }
+
+/* — the page — */
+.page { width: 976px; margin: 0 auto; padding-top: 36px; }
+.page.read { width: 720px; }
+.ph { margin-bottom: 20px; }
+.ph .eyebrow { margin: 0; }
+.ph .title { margin: 8px 0 0 0; }
+.ph .lede { margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.ph .acts { display: flex; gap: 8px; margin-top: 14px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; padding: 0 0 8px 0; }
+.group-h .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+section + section, .stack > * + * { margin-top: 32px; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 4px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.row + .row { border-top: 0; }
+.row .mark { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid var(--border-strong); }
+.row .mark.warn { border-color: var(--warn); }
+.row .mark.danger { border-color: var(--danger); background: var(--danger-tint); }
+.row .mark.ok { border-color: var(--ok); background: var(--ok-tint); }
+.row .mark.live { border-color: var(--brand); background: var(--brand); }
+.row .kind { flex: 0 0 92px; font-size: 14px; font-weight: 500; color: var(--muted); }
+.row .kind.warn { color: var(--warn); } .row .kind.ok { color: var(--ok); } .row .kind.danger { color: var(--danger); }
+.row .sentence { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .sentence b { font-weight: 600; color: var(--ink); }
+.row .meta { font-size: 13px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.row .door { font-size: 14px; font-weight: 500; color: var(--brand); white-space: nowrap; }
+.row .door.quiet { color: var(--muted); }
+.row.add { color: var(--brand); font-weight: 500; font-size: 15px; }
+.row.add .mark { border-style: dashed; border-color: var(--brand); }
+.row.settled .sentence { color: var(--muted); }
+.row.settled .sentence b { color: var(--muted); font-weight: 500; }
+.row .avatar { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 999px; background: var(--sunken); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--muted); }
+.row .tap { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 999px; border: 2px solid var(--border-strong); }
+.row .tap.in { background: var(--shallows); border-color: var(--brand); }
+.rows-p .row { flex-wrap: wrap; gap: 8px 12px; padding: 8px 0; }
+.rows-p .row .sentence { flex-basis: 100%; }
+.rows-p .row .door, .rows-p .row .btn, .rows-p .row .who { margin-left: auto; }
+.rows-p .row .kind { flex: 0 0 auto; }
+
+/* — pills, checks, notices — */
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pill.danger { background: var(--danger-tint); color: var(--danger); }
+.pill.warn { background: var(--warn-tint); color: var(--warn); }
+.pill.live { background: var(--brand-tint); color: var(--brand-deep); }
+.pill.live::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: var(--brand); }
+.check { display: flex; align-items: center; gap: 10px; font-size: 16px; line-height: 24px; color: var(--ok); }
+.check::before { content: "✓"; font-weight: 700; }
+.notice { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border-radius: 18px; background: var(--brand-tint); color: var(--brand-deep); font-size: 15px; }
+.notice .undo { margin-left: auto; font-weight: 600; }
+.notice.warn { background: var(--warn-tint); color: var(--warn); }
+.notice.danger { background: var(--danger-tint); color: var(--danger); }
+.summary { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 4px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 16px; color: var(--ink); }
+.summary::after { content: "›"; margin-left: auto; color: var(--border-strong); transform: rotate(90deg); }
+.summary .meta { font-size: 13px; color: var(--muted); }
+
+/* — panels, photo bands — */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 28px; box-shadow: var(--shadow); overflow: hidden; }
+.panel .in { padding: 8px 24px 20px 24px; }
+.inset { background: var(--sunken); border-radius: 18px; padding: 16px 20px; }
+.photo { position: relative; height: 150px; display: flex; align-items: flex-end; padding: 20px 24px; color: #fffdf8; }
+.photo.s { height: 110px; } .photo.xs { height: 96px; padding: 16px; }
+.photo .ph-img { position: absolute; inset: 0; }
+.photo .cap { position: absolute; right: 16px; top: 12px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: rgba(255,253,248,0.85); }
+.photo .over { position: relative; display: flex; align-items: flex-end; justify-content: space-between; width: 100%; }
+.photo .t { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.photo.s .t, .photo.xs .t { font-size: 20px; }
+.harbor .photo .t { font-family: var(--display); }
+.photo .n { font-size: 14px; color: rgba(255,253,248,0.9); text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.sea-molasses { background: radial-gradient(120% 90% at 30% 20%, #6fb9b0 0%, #2a7f8a 45%, #123f52 100%); }
+.sea-french { background: radial-gradient(120% 90% at 60% 25%, #7ac3b6 0%, #2d8a8a 45%, #14454f 100%); }
+.sea-spiegel { background: radial-gradient(110% 100% at 70% 30%, #4d7d8c 0%, #1f4657 50%, #0b2230 100%); }
+.sea-night { background: linear-gradient(180deg, #0c2a35 0%, #071720 100%); }
+.sea-abyss { background: radial-gradient(100% 100% at 50% 100%, #3f9aa3 0%, #1b5f6e 50%, #0e3644 100%); }
+.sea-benwood { background: radial-gradient(120% 90% at 40% 30%, #88c7bd 0%, #3a8f92 50%, #1a4d5a 100%); }
+.sea-grain { background: repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0 6px, transparent 6px 22px); }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font-size: 15px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--brand); }
+.btn.danger { color: var(--danger); }
+.btn.block { width: 100%; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; font-weight: 500; color: var(--ink); }
+.field .hint { font-size: 12px; color: var(--muted); }
+.control { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface); font-size: 16px; color: var(--ink); }
+.control.ph { color: var(--border-strong); }
+.control.area { min-height: 96px; align-items: flex-start; padding-top: 10px; }
+.fields { display: grid; gap: 16px; }
+.fields.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.choice { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; }
+.choice i { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border-strong); }
+.choice i.on { background: var(--brand); border-color: var(--brand); }
+.choice i.radio { border-radius: 999px; }
+.seg-ctl { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.seg-ctl span { padding: 10px 14px; font-size: 14px; color: var(--muted); }
+.seg-ctl span.on { background: var(--brand-tint); color: var(--brand-deep); font-weight: 500; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 14px; color: var(--ink); background: var(--surface); }
+.chip.on { background: var(--brand-tint); border-color: var(--brand); color: var(--brand-deep); }
+
+/* — meters — */
+.dial { position: relative; width: 96px; height: 96px; border-radius: 999px; border: 2px solid var(--border); overflow: hidden; background: var(--surface); display: inline-flex; align-items: center; justify-content: center; }
+.dial i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--shallows); opacity: .8; }
+.dial b { position: relative; font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dial small { position: relative; font-size: 11px; color: var(--muted); }
+.bar { position: relative; height: 4px; border-radius: 2px; background: var(--sunken); overflow: hidden; }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); border-radius: 2px; }
+
+/* — skeleton, empty, room — */
+.skel { display: block; height: 14px; border-radius: 7px; background: linear-gradient(90deg, var(--sunken) 0%, var(--border) 50%, var(--sunken) 100%); }
+.skel.t { height: 28px; border-radius: 10px; width: 40%; }
+.skel.r { height: 52px; border-radius: 10px; }
+.empty { padding: 40px 24px; text-align: center; }
+.empty .room { height: 140px; margin: 0 auto 20px auto; display: flex; align-items: flex-end; justify-content: center; gap: 12px; }
+.empty p { margin: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.empty .room svg { stroke: var(--border-strong); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* — the pass (M), the postcard (N), the log (O) — */
+.pass { width: 360px; border-radius: 18px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.pass .top { position: relative; height: 150px; padding: 16px; color: #fffdf8; display: flex; flex-direction: column; justify-content: space-between; }
+.pass .top .shop { font-family: var(--display); font-size: 14px; font-weight: 700; letter-spacing: .02em; }
+.pass .top .t { font-size: 24px; font-weight: 700; line-height: 1.1; font-family: var(--display); text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.pass .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px; border-bottom: 1px dashed var(--border); }
+.pass .facts b { display: block; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pass .facts span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.pass .foot { margin: 0; padding: 14px 16px; display: flex; align-items: center; gap: 12px; border: 0; }
+.qr { width: 56px; height: 56px; border-radius: 6px; background: repeating-conic-gradient(var(--ink) 0 25%, var(--surface) 0 50%) 0 0 / 8px 8px; flex: 0 0 56px; border: 4px solid var(--surface); outline: 1px solid var(--border); }
+.card { width: 480px; aspect-ratio: 3 / 2; border-radius: 12px; overflow: hidden; position: relative; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.card .front { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px; color: #fffdf8; }
+.card .stamp { position: absolute; right: 16px; top: 16px; width: 64px; height: 64px; border-radius: 999px; border: 2px solid rgba(255,253,248,.7); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; text-align: center; line-height: 12px; color: rgba(255,253,248,.9); transform: rotate(-8deg); }
+.card .back { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1px 1fr; gap: 16px; padding: 20px; background: var(--surface); }
+.card .back .rule { background: var(--border); }
+.logday { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.logday .d { flex: 0 0 96px; font-family: var(--mono); font-size: 12px; color: var(--muted); padding-top: 3px; }
+.logday .e { flex: 1; font-size: 16px; line-height: 24px; color: var(--ink); }
+.logday .e small { display: block; font-size: 13px; color: var(--muted); }
+.days { display: grid; grid-template-columns: repeat(53, 1fr); gap: 3px; }
+.days i { display: block; aspect-ratio: 1; border-radius: 2px; background: var(--sunken); }
+.days i.l1 { background: var(--shallows-tint); } .days i.l2 { background: var(--shallows); } .days i.l3 { background: var(--brand); } .days i.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* — frames (a drawn screen inside the board) — */
+.frame { position: relative; width: 1180px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--bg); overflow: hidden; }
+.frame.phone { width: 390px; height: 844px; border: 1px solid var(--border); border-radius: 18px; }
+.frame.tv { width: 1180px; }
+.phones { display: flex; gap: 36px; padding: 0 48px; }
+.phone-chrome { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.phone-chrome .mark { width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: var(--brand-ink); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+.phone-chrome .shop { font-size: 15px; font-weight: 600; }
+.harbor .phone-chrome .shop { font-family: var(--display); }
+.phone-chrome .right { margin-left: auto; display: flex; align-items: center; }
+.phone-chrome .av { width: 26px; height: 26px; font-size: 10px; }
+.phone-chrome .av + .av { margin-left: -8px; }
+.phone-page { padding: 20px 16px 0 16px; }
+.phone-page .title { font-size: 32px; }
+.phone-page .ph .lede { font-size: 15px; }
+.dock { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--surface); border-top: 1px solid var(--border); }
+.dock span { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; color: var(--muted); }
+.dock span.on { color: var(--brand); font-weight: 600; }
+.dock i { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid currentColor; opacity: .8; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 28px 28px 0 0; border-top: 1px solid var(--border); box-shadow: 0 -8px 30px rgba(0,0,0,.12); padding: 12px 16px 24px 16px; }
+.sheet::before { content: ""; display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 0 auto 12px auto; opacity: .6; }
+.scrim { position: absolute; inset: 0; background: rgba(12,42,53,.35); }
+.rail { display: grid; grid-template-columns: 220px 1fr; gap: 40px; }
+.rail nav { display: flex; flex-direction: column; gap: 2px; }
+.rail nav span { padding: 8px 12px; border-radius: 10px; font-size: 15px; color: var(--muted); }
+.rail nav span.on { background: var(--brand-tint); color: var(--brand-deep); font-weight: 500; }
+.rail nav .group { padding: 16px 12px 6px 12px; }
+.mail { width: 600px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+.mail .hd { padding: 20px 28px; border-bottom: 1px solid var(--border); }
+.mail .bd { padding: 24px 28px; font-size: 16px; line-height: 24px; }
+.mail .bd p { margin: 0 0 16px 0; }
+.mail .ft { padding: 16px 28px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.sms { width: 320px; padding: 12px 16px; border-radius: 18px 18px 18px 4px; background: var(--sunken); font-size: 15px; line-height: 22px; }
+/* kit:end */
+/* board-local */
+.sec { padding: 8px 48px 0 48px; }
+.row .door, .row .meta { flex: 0 0 auto; }
+.paper { background: #ffffff; color: #0c2a35; box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 12px 32px rgba(88,66,30,.14); position: relative; overflow: hidden; font-family: var(--display); }
+.paper .fold { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 20px; font-family: var(--mono); font-size: 9px; color: #54676d; display: flex; justify-content: space-between; border-top: 1px solid #e6dcc8; }
+.paper .band { background: var(--brand); color: #fff; padding: 18px 24px; display: flex; align-items: center; gap: 12px; }
+.paper .band .mark { width: 32px; height: 32px; border-radius: 8px; background: #fff; color: var(--brand); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; }
+.paper .band b { font-size: 15px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.paper .big { font-size: 40px; line-height: 1.05; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+.paper .mid { font-size: 20px; line-height: 1.2; font-weight: 700; margin: 0; }
+.paper .sm { font-family: var(--sans); font-size: 13px; line-height: 19px; color: #54676d; margin: 0; }
+.paper .qrb { width: 120px; height: 120px; border-radius: 8px; background: repeating-conic-gradient(#0c2a35 0 25%, #fff 0 50%) 0 0 / 12px 12px; border: 6px solid #fff; outline: 1px solid #e6dcc8; }
+.paper.night { background: #000a0f; color: #f4fbfc; }
+.paper.night .sm { color: #b9cdd4; } .paper.night .fold { color: #b9cdd4; border-color: #1c3a47; }
+.papers { display: flex; gap: 40px; align-items: flex-start; padding: 0 48px; flex-wrap: wrap; }
+.sticker { width: 220px; height: 220px; border-radius: 999px; background: #fff; border: 8px solid var(--brand); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; padding: 20px; box-shadow: 0 8px 24px rgba(88,66,30,.16); font-family: var(--display); }
+.sticker b { font-size: 17px; line-height: 1.15; font-weight: 800; color: var(--brand); }
+.sticker .qrb { width: 72px; height: 72px; background-size: 8px 8px; }
+.mk { width: 1180px; background: #fbf7ef; }
+.mk .band2 { padding: 40px 102px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  </style>
+</helmet>
+<div class="board harbor">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow" style="color:#0e7490">Round 4 · X · The shop on paper</span><span class="note">5 frames · desktop 1180 · five sheets at half scale · the dock's wow</span></div>
+    <h1>X · The shop on paper</h1>
+    <p class="lede">The manifest prints, the arrival card prints, and the lobby board is a screen. Everything else the shop's world reads — the sign at the slip, the card taped to the console, the sticker on the door, the sheet a diver without a phone is handed — is a laminated Word document in somebody else's font. This board gives Settings a Print register: six sheets, each the kit at print size in the shop's colour and face, each carrying a code that opens the right door and the day it was printed. The dock sign, the boat card by day and by night, the window sticker, the paper pass, the site briefing card, and the year poster, which is T's card at A2.</p>
+    <div class="three">
+      <div><span class="group">The one idea</span><p class="note">A shop that prints its own face is a shop that has switched. Paper is where the shop's brand meets a diver's eye first, at the dock, before any screen; the kit should reach it.</p></div>
+      <div><span class="group">Composes</span><p class="note">The trip's print packet, the pass (M), the follow link (U), the year card (T), H's colour and face, the site briefing from the site editor. One new specimen for the kit, the print sheet, drawn here with its rules. Nothing stored: every sheet reads what its page reads.</p></div>
+      <div><span class="group">What it never does</span><p class="note">Pretend to be live: every sheet carries the date it was printed, and the boat card says "the app is the record". Carry a medical fact, beyond what the printed manifest carries today. Carry a name on the dock sign or the sticker, ever.</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>1 · Settings › Print</b> · the register · desktop 1180 · reading column</div>
+  <div class="frame">
+    <div class="page read" style="padding-top:24px;padding-bottom:28px">
+      <header class="ph"><p class="eyebrow">Set up</p><h1 class="title">Print</h1><p class="lede">Six sheets in your colour and face. Each carries the day it was printed.</p></header>
+      <div class="group-h"><span class="group">At the dock and the door</span></div>
+      <div class="row"><span class="mark"></span><span class="sentence"><b>The dock sign</b> · A3 · your boats, check in with your pass, follow the boat</span><span class="meta">printed Aug 12</span><span class="door">Print ›</span></div>
+      <div class="row"><span class="mark"></span><span class="sentence"><b>The window sticker</b> · 100 mm · book a seat with your phone</span><span class="meta">printed Jun 2</span><span class="door">Print ›</span></div>
+      <div class="group-h" style="margin-top:32px"><span class="group">On the boat</span></div>
+      <div class="row"><span class="mark"></span><span class="sentence"><b>The boat card</b> · A5, laminated · Mantis II, by day and by night</span><span class="meta">printed Aug 12</span><span class="door">Print ›</span></div>
+      <div class="row"><span class="mark"></span><span class="sentence"><b>The boat card</b> · A5, laminated · Skiff</span><span class="meta">printed Aug 12</span><span class="door">Print ›</span></div>
+      <div class="row"><span class="mark"></span><span class="sentence"><b>Site briefing cards</b> · A5 · one per site, 48</span><span class="meta">printed Mar 3</span><span class="door">Print ›</span></div>
+      <div class="group-h" style="margin-top:32px"><span class="group">For a diver</span></div>
+      <div class="row"><span class="mark"></span><span class="sentence"><b>The paper pass</b> · A6 · from any booking, for a diver without a phone</span><span class="meta">from the counter</span><span class="door quiet">On the counter ›</span></div>
+      <div class="group-h" style="margin-top:32px"><span class="group">On the wall</span></div>
+      <div class="row"><span class="mark"></span><span class="sentence"><b>The year poster</b> · A2 · your year card, so far</span><span class="meta">never printed</span><span class="door">Print ›</span></div>
+    </div>
+  </div>
+  <p class="aside">One pane in Settings, next to Display, with the rows in the groups of where the paper goes. Each door opens a PDF drawn from the same rows the page reads; the paper pass has no row of its own because it prints from a booking on the counter. The date on the right is the date on the sheet.</p>
+
+  <div class="frame-cap"><b>2 · The dock sign and the window sticker</b> · A3 at 0.42 · 100 mm at 0.55</div>
+  <div class="papers">
+    <div class="paper" style="width:497px;height:702px">
+      <div class="band"><span class="mark">BM</span><b>Blue Mantis Divers · Slip 14, Marina Del Mar</b></div>
+      <div style="padding:32px 32px 0 32px">
+        <p class="big">Our boats leave from here.</p>
+        <p class="mid" style="margin-top:24px">Mantis II <span class="sm" style="display:inline;font-size:16px">· 12 divers · two-tank reef and wreck trips</span></p>
+        <p class="mid" style="margin-top:10px">Skiff <span class="sm" style="display:inline;font-size:16px">· 8 divers · night dives and courses</span></p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:40px">
+          <div><div class="qrb"></div><p class="mid" style="margin-top:12px;font-size:17px">Check in with your pass</p><p class="sm">Or by name at the counter. Boarding opens 45 minutes before the boat leaves.</p></div>
+          <div><div class="qrb"></div><p class="mid" style="margin-top:12px;font-size:17px">Follow the boat</p><p class="sm">Where each boat is in its day, as the crew marks it. For whoever is waiting.</p></div>
+        </div>
+        <p class="sm" style="margin-top:32px">Counter: (305) 555-0142 · open 6:00 to 6:00 · Key Largo time</p>
+      </div>
+      <div class="fold"><span>Printed Aug 12, 2026</span><span>bluemantis.diveday.app</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:32px;align-items:center">
+      <div class="sticker"><span class="chrome-mark" style="width:36px;height:36px;border-radius:10px;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800">BM</span><b>Book a seat with your phone</b><div class="qrb"></div><span class="sm" style="font-size:11px">Blue Mantis Divers</span></div>
+      <div style="width:320px">
+        <p class="body" style="margin:0"><b style="font-weight:600">The dock sign</b> is the shop's face at the slip: the boats, two codes, two sentences. The first code opens the counter's check-in for the pass; the second opens U's follow page for the shop's boats, which is the only thing on this sheet that is live.</p>
+        <p class="note" style="margin:12px 0 0 0"><b style="font-weight:600;color:var(--ink)">The sticker</b> goes on the door and the boat's console: one sentence and the storefront's code. No name on either, ever.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>3 · The boat card</b> · A5 landscape at 0.65, laminated · Mantis II · day and night</div>
+  <div class="papers">
+    <div class="paper" style="width:546px;height:386px">
+      <div class="band"><span class="mark">BM</span><b>Mantis II · Blue Mantis Divers</b><span style="margin-left:auto;font-family:var(--mono);font-size:11px;opacity:.9">12 divers · slip 14</span></div>
+      <div style="padding:20px 24px 0 24px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <p class="mid">Before the boat moves</p>
+          <p class="sm" style="margin-top:6px">Count heads aloud. The roll call in the app is the record; if the phone is dead, count on this card, by name, on the printed manifest.</p>
+          <p class="mid" style="margin-top:18px">If someone is missing</p>
+          <p class="sm" style="margin-top:6px">Stop the boat. Recount. Call the shop. Coast Guard on VHF 16.</p>
+        </div>
+        <div>
+          <p class="mid">Numbers</p>
+          <p class="sm" style="margin-top:6px">Shop (305) 555-0142<br>Dana Reyes (305) 555-0118<br>Coast Guard Islamorada VHF 16 · (305) 555-0100<br>Mariners Hospital (305) 555-0155</p>
+          <p class="mid" style="margin-top:18px">Oxygen and first aid</p>
+          <p class="sm" style="margin-top:6px">Starboard locker, under the bench. Checked Aug 12 by Sal.</p>
+        </div>
+      </div>
+      <div class="fold"><span>Printed Aug 12, 2026 · the app is the record; this card is the fallback</span><span>Skipper's copy</span></div>
+    </div>
+    <div class="paper night" style="width:546px;height:386px;--brand:#7ee8fa">
+      <div class="band" style="background:#071720;color:#f4fbfc;border-bottom:1px solid #1c3a47"><span class="mark" style="background:#7ee8fa;color:#04141b">BM</span><b>Mantis II · Blue Mantis Divers</b><span style="margin-left:auto;font-family:var(--mono);font-size:11px;opacity:.9">12 divers · slip 14</span></div>
+      <div style="padding:20px 24px 0 24px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <p class="mid">Before the boat moves</p>
+          <p class="sm" style="margin-top:6px">Count heads aloud. The roll call in the app is the record; if the phone is dead, count on this card, by name, on the printed manifest.</p>
+          <p class="mid" style="margin-top:18px">If someone is missing</p>
+          <p class="sm" style="margin-top:6px">Stop the boat. Recount. Call the shop. Coast Guard on VHF 16.</p>
+        </div>
+        <div>
+          <p class="mid">Numbers</p>
+          <p class="sm" style="margin-top:6px">Shop (305) 555-0142<br>Dana Reyes (305) 555-0118<br>Coast Guard Islamorada VHF 16 · (305) 555-0100<br>Mariners Hospital (305) 555-0155</p>
+          <p class="mid" style="margin-top:18px">Oxygen and first aid</p>
+          <p class="sm" style="margin-top:6px">Starboard locker, under the bench. Checked Aug 12 by Sal.</p>
+        </div>
+      </div>
+      <div class="fold"><span>Printed Aug 12, 2026 · the app is the record; this card is the fallback</span><span>Night side</span></div>
+    </div>
+  </div>
+  <p class="aside">Two sides of one laminated card: the day side on white, the night side on the boat's night ground so a red torch reads it. The card is the safety checklist Settings already holds, the numbers from the shop's card (R), and the one rule the roll call keeps. No shop colour on a boat, so the band is the boat action colour; the night side's mark is the boat night's. The dive-domain review reads this sheet before it prints.</p>
+
+  <div class="frame-cap"><b>4 · The paper pass, and the site briefing card</b> · A6 at 0.7 · A5 at 0.55</div>
+  <div class="papers">
+    <div class="paper" style="width:294px;height:415px">
+      <div class="band" style="padding:14px 18px"><span class="mark">BM</span><b style="font-size:12px">Blue Mantis Divers</b></div>
+      <div style="padding:20px 18px 0 18px">
+        <p class="sm" style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700">Your pass</p>
+        <p class="big" style="font-size:26px;margin-top:6px">Two-Tank Reef<br>Thu Aug 27 · 7:00</p>
+        <p class="sm" style="margin-top:14px"><b style="color:#0c2a35">Diego Alvarez</b><br>Mantis II · slip 14, Marina Del Mar<br>Check in from 6:15 · bring your certification card</p>
+        <div style="display:flex;gap:14px;align-items:center;margin-top:20px"><div class="qrb" style="width:88px;height:88px;background-size:9px 9px"></div><p class="sm">Show this at the counter, or say your name. The code is your booking and nothing else.</p></div>
+      </div>
+      <div class="fold"><span>Printed 6:41 · walk-in</span><span>BM-4F2K</span></div>
+    </div>
+    <div class="paper" style="width:407px;height:288px">
+      <div class="band" style="padding:14px 20px"><span class="mark">BM</span><b style="font-size:12px">Molasses Reef</b><span style="margin-left:auto;font-family:var(--mono);font-size:10px;opacity:.9">20 to 65 ft · Open Water</span></div>
+      <div style="padding:16px 20px 0 20px">
+        <p class="mid" style="font-size:16px">The briefing</p>
+        <p class="sm" style="margin-top:6px;font-size:12px;line-height:17px">Spur-and-groove coral from the mooring line south. Stay on the boat's side of the reef crest; the current runs east to west and the boat picks up at the ball. Max 65 ft at the winch. Hands off the coral; the turtles will come to you if you stay still.</p>
+        <p class="mid" style="font-size:16px;margin-top:12px">Seen here</p>
+        <p class="sm" style="margin-top:4px;font-size:12px;line-height:17px">Green turtle, spotted eagle ray, nurse shark, goliath grouper, barracuda, parrotfish.</p>
+      </div>
+      <div class="fold"><span>Printed Mar 3, 2026 · from the site editor</span><span>1 of 48</span></div>
+    </div>
+    <div style="width:280px">
+      <p class="body" style="margin:0"><b style="font-weight:600">The paper pass</b> is M for a diver without a phone: Diego, the walk-in, printed at the counter at 6:41 with the same code the phone would carry. The counter scans paper as it scans glass.</p>
+      <p class="note" style="margin:12px 0 0 0"><b style="font-weight:600;color:var(--ink)">The briefing card</b> is the site editor's text on the crew's clipboard, one per site, so the words a diver hears on the boat are the words on the storefront.</p>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>5 · DiveDay's about page</b> · the shop's face in the world · desktop 1180</div>
+  <div class="frame mk diveday">
+    <div class="band2">
+      <div style="display:flex;gap:24px;align-items:flex-end">
+        <div class="paper" style="width:200px;height:283px;--brand:#1d7a5f;transform:rotate(-2deg)"><div class="band" style="padding:10px 12px"><span class="mark" style="width:20px;height:20px;font-size:8px">BM</span><b style="font-size:8px">Blue Mantis Divers</b></div><div style="padding:14px 12px 0 12px"><p class="big" style="font-size:17px">Our boats leave from here.</p><p class="sm" style="font-size:8px;line-height:12px;margin-top:8px">Mantis II · 12 divers<br>Skiff · 8 divers</p><div style="display:flex;gap:10px;margin-top:14px"><div class="qrb" style="width:48px;height:48px;background-size:6px 6px;border-width:3px"></div><div class="qrb" style="width:48px;height:48px;background-size:6px 6px;border-width:3px"></div></div></div><div class="fold" style="font-size:6px;padding:6px 12px"><span>Printed Aug 12, 2026</span></div></div>
+        <div class="sticker" style="width:150px;height:150px;--brand:#1d7a5f;padding:12px;gap:4px;transform:rotate(3deg)"><b style="font-size:12px">Book a seat with your phone</b><div class="qrb" style="width:48px;height:48px;background-size:6px 6px;border-width:3px"></div></div>
+      </div>
+      <div>
+        <p class="eyebrow" style="margin:0">On paper too</p>
+        <h2 style="margin:10px 0 0 0;font-size:32px;line-height:1.1;font-weight:700;letter-spacing:-0.02em">The sign at the slip, the card on the console, the sticker on the door: your shop, in your colour.</h2>
+        <p class="note" style="margin:12px 0 0 0;font-size:16px;line-height:24px">Six sheets from Settings, each with the day it was printed on it. The app is the record; paper is where your name meets a diver first.</p>
+      </div>
+    </div>
+  </div>
+  <p class="aside">The about page shows frames 2's two sheets as objects, not screenshots: paper photographed on a desk once the first shop prints it, the drawings until then, and the caption says which. The thread's rule holds because the sheets exist.</p>
+
+  <div class="foot">
+    <div><span class="group">What does not change</span><p>The printed manifest and its numbers; the arrival card; the safety checklist's contents; the coral, photo and shop-colour bans on anything that rides a boat (the boat card wears the boat's colours, not the shop's).</p></div>
+    <div><span class="group">The print sheet, for the kit</span><p>White ground, ink and muted from Reef, the shop's face for headings, the band in the shop's colour (the boat's on a boat), a code with a 6px quiet zone, the fold line with the print date and the storefront's address, no hairline lighter than rope at 300 dpi. A sheet is fixed pagination; the year poster is T's card at A2 and needs no second drawing.</p></div>
+    <div><span class="group">What it costs</span><p>Two sessions after M: the Print pane, six templates on the postcard's renderer at print sizes, the print date on each, the dive-domain review of the boat card, and the specimen in the kit. The call is (o).</p></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

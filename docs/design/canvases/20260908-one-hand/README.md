@@ -1,6 +1,6 @@
 # One hand — why DiveDay feels like four products, and four ways to make it one
 
-- **Status:** Live (its ADR is Proposed, pending H-71; rounds 2 and 3 drawn 2026-09-09 on the owner's two reads; no slice has started)
+- **Status:** Live (its ADR is Proposed, pending H-71; rounds 2 and 3 drawn 2026-09-09 and round 4 on 2026-09-10, each on the owner's read of the last; no slice has started)
 - **Date:** 2026-09-08
 - **ADR:** [20260908-one-hand](../../../architecture/decisions/20260908-one-hand.md)
 - **Published:** https://claude.ai/code/artifact/cfd0c597-1a70-4990-a171-4548ebae401f
@@ -24,11 +24,13 @@ pick is the owner's (H-71), and code obeys the ADR.
 
 ## Artboards
 
-Three pages. The first is round 1 (2026-09-08): the argument on top, the four directions beneath.
+Four pages. The first is round 1 (2026-09-08): the argument on top, the four directions beneath.
 The second is round 2 (2026-09-09): five levers on top of A, drawn after the owner's read of the
 first page. The third is round 3 (the same day, after the owner's read of the second): the kit that
 composes A with the three levers the owner liked, every surface of the app redrawn on it, and
-eight more levers.
+eight more levers. The fourth is round 4 (2026-09-10, after the owner's read of the third): the app
+read from twelve angles rather than by surface, and seven possibilities, T to Z, each drawn on the
+kit with a marketing frame beside the in-app one.
 
 | File | What it shows |
 | --- | --- |
@@ -93,7 +95,30 @@ screenshots taken the same day.
 | `Moments.dc.html` | **The earned moments** — twelve finishes in the order of a day, each with when it fires and when it is silent; where coral, a photo and motion may go |
 | `Phones.dc.html` | **Six phones** — Today, the counter, the trip, the roll call, the storefront and the thread at 390, the fold of everything |
 
-`canvas.json` lays the thirty-three boards out on three pages and pins eight notes. The audit's counts come from three read-only
+### Round 4 — twelve angles, seven possibilities
+
+The owner's read of round 3, 2026-09-10: "Let's continue to creatively evaluate the entire app for
+opportunities for improvement. Think about the app from many different angles and show me a few
+interesting possibilities we can do. Remember we want this to be elegant and make potential
+customers go 'wow' when they see it, both in marketing and in-app." So the fourth page reads the app
+by angle — time, the people around the diver, the sea and the sky, money given, the physical world,
+the first minute, the diver's memory, trust, the crew, silence, DiveDay's own pages — names where
+each stops short, and draws seven of the gaps as possibilities, T to Z, on round 3's kit and in
+round 3's fiction. Every possibility keeps one rule: marketing shows the product, never a claim
+about it, so each board's marketing frame is a screenshot of an in-app frame on the same board.
+
+| File | What it shows |
+| --- | --- |
+| `Round4.dc.html` | The page's cover: the owner's read, the twelve angles (today, where it stops, the possibility or the lever that already answers it), the seven possibilities with their case, risk and cost, the marketing thread, the order to build, the owner's round-4 calls (i)–(o) |
+| `Year.dc.html` | **T · The shop's year** — Reports' year page over the log (the strip of days, the four figures, the sites by times dived, the entries), the year card in the shop's face, the homepage's proof band with the shop's yes, a phone |
+| `FollowTheBoat.dc.html` | **U · Follow the boat** — the pass's share line and the public page it opens (a stage word and a time, the trip's line, two doors), the storefront's Right now with a line per boat, the Settings switch, the product page with a live boat |
+| `LivingReef.dc.html` | **V · The living reef** — the crew's log with Seen and the shop's species list, the site page with "Seen here this month" dated and the year in the shop's words, sun and moon ticks on the tide line, the storefront's site cards, the regions page |
+| `GiveADive.dc.html` | **W · Give a dive** — booking for someone else, the gift pass and its claim, the giver's thread and the blow-out refund, the buddy seat on the postcard's back (the counted referral), what the till and the year show, the pricing page |
+| `OnPaper.dc.html` | **X · The shop on paper** — Settings › Print, the dock sign and the window sticker, the boat card by day and by night, the paper pass and the site briefing card, the about page; the print sheet as a kit specimen |
+| `TryItWithYourBoats.dc.html` | **Y · Try it with your boats** — the homepage before and after three fields (the visitor's shop as their first Today in a colour picked from their name), their storefront in miniature and the four pictures, the onboard door already filled, the phone hero |
+| `DiversShelf.dc.html` | **Z · The diver's shelf** — one page at the shop (the next seat, the postcards on a rail, the file with its verification, sizes, buddy, "Forget this phone"), the storefront when the phone knows the shelf, the diver record's row, the product page |
+
+`canvas.json` lays the forty-one boards out on four pages and pins eleven notes. The audit's counts come from three read-only
 sweeps of the tree on 2026-09-08 (styling drift, component duplication, voice), and the screenshots
 from `node scripts/screenshot.mjs` against the seeded shop at 1280 and 390.
 
@@ -116,7 +141,13 @@ Fischer (nitrox), and Diego Alvarez walking in at 6:40; the trip's line runs che
 6:45 · leaves 7:00 · Molasses 7:40 · surface 8:50 · French 9:20 · back 10:30; Jonas Berg is on the
 night dive for his first dive since 2019; the 1,000th diver of the season boards tonight; yesterday
 was 23 divers, 2 boats and 1 walk-in with nothing left open; the month is $41,180 with two open
-orders and one unconfirmed Stripe call (Priya's $95 at 6:02).
+orders and one unconfirmed Stripe call (Priya's $95 at 6:02). Round 4 adds what its possibilities
+needed: the year so far is 2,907 divers, 262 boats out (Mantis II 201 days, Skiff 118) and 48 sites,
+the busiest day Saturday, July 4 (44 divers, 3 boats), the quietest month February (187); the crew
+logged green turtles on 14 of August's 16 dives at Molasses Reef; sunrise is 6:58, sunset 7:44 and
+moonrise 8:04 with the moon full tomorrow; Hannah Liu gives Ben Carter a seat on Saturday's 7:00;
+Amira Khan books with Ravi's buddy link; Diego's walk-in pass is printed at 6:41; the visitor on
+DiveDay's homepage types Coral Cove Dive Co., a boat named Reef Runner and 7:30.
 
 ## What the directions share, and where they differ
 
@@ -141,7 +172,7 @@ they are Direction A in full and the first slice of the other three.
 
 The ADR's slice table is the sequence; this table is the record of what has landed. Slices 20a–20e
 are the floor and move on the ADR alone; 20f waits on H-71 c, 20g on H-71 a, and 20h–20m (round 3)
-on the calls named beside each.
+and 20n–20t (round 4) on the calls named beside each.
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
@@ -158,13 +189,20 @@ on the calls named beside each.
 | 20k — N, the postcard from the crew's log; the recap email and the thread's after-state | open | — | — |
 | 20l — P the six rooms in the empty states and on the lobby board, R the shop's card, S first light, Q's two new answers | open | — | — |
 | 20m — the surface sweep: every board's "Deleted here" applied to its pages, one family per session | open | — | — |
+| 20n — U, follow the boat: the public route, the pass's share line, the storefront's line, the Settings switch (H-71 j) | open | — | — |
+| 20o — Y, try it with your boats: the hero's three fields, the filled onboard door, the storefront preview, the four pictures | open | — | — |
+| 20p — T, the shop's year: the year page over the log, the card, the homepage proof with a yes (H-71 k) | open | — | — |
+| 20q — W, give a dive: book for someone else, the gift pass, the claim, the giver's thread, the buddy seat on the postcard (H-71 l) | open | — | — |
+| 20r — V, the living reef: sightings on the crew's log, the site page's month, the sun and moon on the tide line (H-71 n) | open | — | — |
+| 20s — X, the shop on paper: the print register, six sheets, the print specimen in the kit (H-71 o) | open | — | — |
+| 20t — Z, the diver's shelf: the token scope, the shelf, the storefront's welcome, "Forget this phone" (H-71 m) | open | — | — |
 
 ## Working on it
 
 The sources here are the working files. To change a board, edit its `.dc.html`, re-seed a fresh
-copy with the design skill's helper (all thirty-three artboards, `canvas.json`, the title "One hand"),
+copy with the design skill's helper (all forty-one artboards, `canvas.json`, the title "One hand"),
 check it, and republish to the URL above. The seeded output is build output and is never committed
-([design-artifacts.md](../../design-artifacts.md)). Round 3's boards share one stylesheet, pasted
-verbatim into each between `/* kit:start */` and `/* kit:end */`: change it in one board and copy
-the block into the other eighteen with a scripted replace, never by hand and never as a divergent
+([design-artifacts.md](../../design-artifacts.md)). Round 3's and round 4's boards share one
+stylesheet, pasted verbatim into each between `/* kit:start */` and `/* kit:end */`: change it in
+one board and copy the block into the other twenty-six with a scripted replace, never by hand and never as a divergent
 copy — a board that needs a rule the kit lacks names it under "New here" first.
