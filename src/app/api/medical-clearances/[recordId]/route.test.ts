@@ -202,7 +202,7 @@ describe("GET /api/medical-clearances/[recordId]", () => {
         shopId: SHOP.id,
         personId: "diver-1",
         actorPersonId: "person-1",
-        action: "opened the physician's evaluation for",
+        code: "medical_clearance_opened",
       },
     );
   });
