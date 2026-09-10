@@ -30,6 +30,17 @@ export function MarketingFooterView({
           <Link href="/about" className="hover:text-foreground hover:underline">
             {t("nav.about")}
           </Link>
+          {/* The only route to either legal page from anywhere on the site.
+              Both have existed since 2026-08-14 and nothing linked them, so
+              they were reachable by typed URL alone -- and the SES
+              production-access case names both by URL, which is a claim a
+              reviewer checks by looking for the link. */}
+          <Link href="/privacy" className="hover:text-foreground hover:underline">
+            {t("nav.privacy")}
+          </Link>
+          <Link href="/terms" className="hover:text-foreground hover:underline">
+            {t("nav.terms")}
+          </Link>
           <Link
             href={shopSlug ? staffShopRoot(shopSlug) : "/sign-in"}
             className="hover:text-foreground hover:underline"
