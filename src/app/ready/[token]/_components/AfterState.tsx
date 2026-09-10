@@ -248,6 +248,7 @@ export type AfterStateProps = {
    * (`src/app/actions/shelf-door.ts`).
    */
   shelfDoor?: ReactNode;
+  /**
    * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): this
    * diver's own link to the shop, carrying a non-secret referral id, for them
    * to hand to a friend.
@@ -260,7 +261,7 @@ export type AfterStateProps = {
    */
   buddyLinkUrl?: string | null;
   /** The four recap actions, already bound to a signed recap token. */
-  {
+  actions: {
     submitReview: (formData: FormData) => void | Promise<void>;
     uploadPhoto: (formData: FormData) => void | Promise<void>;
     startTip: (formData: FormData) => void | Promise<void>;

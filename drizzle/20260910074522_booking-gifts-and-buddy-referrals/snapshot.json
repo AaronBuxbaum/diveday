@@ -1,10 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "90249c29-5595-4d97-b9f9-684815cceab0",
+  "id": "693c0b9f-d069-460c-b1ea-bc513b5a25bf",
   "prevIds": [
-    "9596ea10-c9c5-4590-9091-7e5cbd6d9bc2",
-    "a622474f-462a-49ef-bcf7-c68a108860a2"
+    "f7acc09a-3d73-4c3e-a248-d7155302d9b7"
   ],
   "ddl": [
     {
@@ -610,6 +609,18 @@
         "cleared"
       ],
       "name": "pre_departure_check_status",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "dock_sign",
+        "window_sticker",
+        "boat_card",
+        "site_briefing",
+        "paper_pass"
+      ],
+      "name": "print_sheet",
       "entityType": "enums",
       "schema": "public"
     },
@@ -1289,6 +1300,12 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "person_shelf_tokens",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "pre_departure_check_events",
       "entityType": "tables",
       "schema": "public"
@@ -1386,6 +1403,12 @@
     {
       "isRlsEnabled": false,
       "name": "shop_integrations",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "shop_print_runs",
       "entityType": "tables",
       "schema": "public"
     },
@@ -1560,6 +1583,12 @@
     {
       "isRlsEnabled": false,
       "name": "trip_series_skips",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "trip_sightings",
       "entityType": "tables",
       "schema": "public"
     },
@@ -11138,6 +11167,136 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "token_hash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "issued_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "last_opened_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "opens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "revoked_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
       "table": "pre_departure_check_events"
     },
     {
@@ -13712,6 +13871,71 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
+      "table": "shop_print_runs"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_print_runs"
+    },
+    {
+      "type": "print_sheet",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "sheet",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_print_runs"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "''",
+      "generated": null,
+      "identity": null,
+      "name": "subject_key",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_print_runs"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "printed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_print_runs"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
       "table": "shop_promo_codes"
     },
     {
@@ -14820,6 +15044,19 @@
       "table": "shops"
     },
     {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "public_boat_line",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
       "type": "text",
       "typeSchema": null,
       "notNull": false,
@@ -15023,6 +15260,19 @@
       "generated": null,
       "identity": null,
       "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "show_year_on_diveday",
       "entityType": "columns",
       "schema": "public",
       "table": "shops"
@@ -17912,6 +18162,162 @@
       "entityType": "columns",
       "schema": "public",
       "table": "trip_series_skips"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "trip_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dive_site_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dive_site_name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "species_slug",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "1",
+      "generated": null,
+      "identity": null,
+      "name": "count",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "recorded_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "recorded_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "deleted_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_sightings"
     },
     {
       "type": "uuid",
@@ -23417,6 +23823,62 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "token_hash",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "person_shelf_tokens_token_hash_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "revoked_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "person_shelf_tokens_shop_person_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "shop_id",
           "isExpression": false,
           "asc": true,
@@ -24399,6 +24861,41 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "shop_integrations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "sheet",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "subject_key",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "shop_print_runs_sheet_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "shop_print_runs"
     },
     {
       "nameExplicit": true,
@@ -25897,6 +26394,97 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "trip_series_skips"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "trip_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "dive_site_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "species_slug",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"deleted_at\" is null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "trip_sightings_trip_site_species_live_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "trip_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "trip_sightings_shop_trip_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "dive_site_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "recorded_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "trip_sightings_site_recorded_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "trip_sightings"
     },
     {
       "nameExplicit": true,
@@ -29200,6 +29788,40 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
+      "name": "person_shelf_tokens_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "person_shelf_tokens_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
       "name": "pre_departure_check_events_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -29969,6 +30591,23 @@
       "entityType": "fks",
       "schema": "public",
       "table": "shop_integrations"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "shop_print_runs_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "shop_print_runs"
     },
     {
       "nameExplicit": false,
@@ -31308,6 +31947,91 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
+      "name": "trip_sightings_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "trip_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "trips",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "trip_sightings_trip_id_trips_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "dive_site_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "dive_sites",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "trip_sightings_dive_site_id_dive_sites_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "recorded_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "trip_sightings_recorded_by_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "deleted_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "trip_sightings_deleted_by_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "trip_sightings"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
       "name": "trip_stage_events_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -32429,6 +33153,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "person_shelf_tokens_pkey",
+      "schema": "public",
+      "table": "person_shelf_tokens",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "pre_departure_check_events_pkey",
       "schema": "public",
       "table": "pre_departure_check_events",
@@ -32592,6 +33326,16 @@
       "name": "shop_integrations_pkey",
       "schema": "public",
       "table": "shop_integrations",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "shop_print_runs_pkey",
+      "schema": "public",
+      "table": "shop_print_runs",
       "entityType": "pks"
     },
     {
@@ -32879,6 +33623,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "trip_sightings_pkey",
+      "schema": "public",
+      "table": "trip_sightings",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "trip_stage_events_pkey",
       "schema": "public",
       "table": "trip_stage_events",
@@ -33073,6 +33827,17 @@
       "name": "person_courtesy_email_unsubscribe_tokens_token_hash_key",
       "schema": "public",
       "table": "person_courtesy_email_unsubscribe_tokens",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "token_hash"
+      ],
+      "nullsNotDistinct": false,
+      "name": "person_shelf_tokens_token_hash_key",
+      "schema": "public",
+      "table": "person_shelf_tokens",
       "entityType": "uniques"
     },
     {
@@ -33758,6 +34523,13 @@
       "entityType": "checks",
       "schema": "public",
       "table": "trip_schedule_days"
+    },
+    {
+      "value": "\"count\" >= 1",
+      "name": "trip_sightings_count_positive",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "trip_sightings"
     },
     {
       "value": "\"capacity\" between 1 and 60",
