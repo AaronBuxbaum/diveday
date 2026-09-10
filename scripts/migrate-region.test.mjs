@@ -22,18 +22,41 @@ const directories = [];
  * the inventory comes back empty and `--execute` needs no interactive
  * confirmation. `exit 1` is how the real CLI reports a missing stack, bucket,
  * user or secret, and it is what `awsMaybe` reads as "already gone".
+ *
+ * `delete-stack` makes the following `describe-stacks` fail, which is what
+ * CloudFormation itself does and what lets the deletion poll terminate. A fake
+ * that kept answering would hang the test for the poll's full 45-minute
+ * deadline rather than failing it.
  */
-function fixture({ resourcesExist = false } = {}) {
+function fixture({ resourcesExist = false, bucketPages = [] } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "diveday-migrate-"));
   directories.push(directory);
   const bin = join(directory, "bin");
   mkdirSync(bin, { recursive: true });
+  // Each list-object-versions call answers the next page and then empties, so
+  // the sweep terminates the way a real bucket makes it terminate.
+  for (const [index, page] of bucketPages.entries()) {
+    writeFileSync(join(directory, `page-${index}.json`), JSON.stringify(page));
+  }
   writeFileSync(
     join(bin, "aws"),
     `#!/bin/sh
 printf '%s\\n' "$AWS_PROFILE:$*" >> "$DIVEDAY_AWS_LOG"
 if [ "$1" = "sts" ]; then
   printf '%s' '{"Account":"123456789012","Arn":"arn:aws:iam::123456789012:role/admin"}'
+  exit 0
+fi
+if [ "$2" = "delete-stack" ]; then
+  : > "$DIVEDAY_DIR/stack-deleted"
+  exit 0
+fi
+if [ "$2" = "describe-stacks" ] && [ -f "$DIVEDAY_DIR/stack-deleted" ]; then
+  exit 1
+fi
+if [ "$2" = "list-object-versions" ]; then
+  n=$(cat "$DIVEDAY_PAGE_COUNTER" 2>/dev/null || echo 0)
+  printf '%s' "$((n + 1))" > "$DIVEDAY_PAGE_COUNTER"
+  if [ -f "$DIVEDAY_DIR/page-$n.json" ]; then cat "$DIVEDAY_DIR/page-$n.json"; else printf '%s' '{}'; fi
   exit 0
 fi
 ${resourcesExist ? "exit 0" : "exit 1"}
@@ -60,6 +83,8 @@ function run(directory, ...arguments_) {
         ...process.env,
         CI: "1",
         DIVEDAY_AWS_LOG: join(directory, "aws.log"),
+        DIVEDAY_DIR: directory,
+        DIVEDAY_PAGE_COUNTER: join(directory, "page-counter"),
         DIVEDAY_PNPM_LOG: join(directory, "pnpm.log"),
         PATH: `${join(directory, "bin")}:${process.env.PATH}`,
       },
@@ -165,6 +190,53 @@ describe("infra:migrate-region", () => {
     expect(deploys[0]).toContain("infra:bootstrap --confirm-account 123456789012");
     expect(deploys[1]).toContain("infra:deploy DiveDay");
     expect(deploys[2]).toBe("infra:deploy --require-approval never");
+  });
+
+  it("sweeps versions and delete markers, not just the current objects", () => {
+    // The exact shape `aws s3api list-object-versions` answers with. The first
+    // version of the sweep asked the CLI for `{Objects: [].{...}}`, which is a
+    // flatten over an array applied to this hash -- it matched nothing, every
+    // round read zero objects, and the sweep reported success having deleted
+    // nothing. The bucket then failed delete-bucket with BucketNotEmpty.
+    const directory = fixture({
+      resourcesExist: true,
+      bucketPages: [
+        {
+          Versions: [
+            { Key: "exports/2026-09-01/blue-mantis.zip", VersionId: "v1", Size: 12 },
+            { Key: "exports/2026-09-01/blue-mantis.zip", VersionId: "v0", Size: 11 },
+          ],
+          DeleteMarkers: [{ Key: "exports/2026-08-25/gone.zip", VersionId: "dm1" }],
+        },
+      ],
+    });
+    const result = run(
+      directory,
+      "--from",
+      "us-east-1",
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+    );
+
+    const log = awsLog(directory);
+    const call = log.split("\n").find((line) => line.includes("delete-objects"));
+    expect(call).toBeDefined();
+    // Both non-current versions by id, and the delete marker with them. A
+    // bucket whose only remaining objects are delete markers is still not empty.
+    expect(call).toContain('"VersionId":"v1"');
+    expect(call).toContain('"VersionId":"v0"');
+    expect(call).toContain('"VersionId":"dm1"');
+    expect(call).toContain("exports/2026-08-25/gone.zip");
+    // Nothing but Key and VersionId: delete-objects rejects a payload carrying
+    // the Size and LastModified the listing also returns.
+    expect(call).not.toContain('"Size"');
+
+    // This fixture reports every bucket as still present however many times it
+    // is asked, so the run ends on the guard that refuses to hand a half-freed
+    // set of global names to the next step. That refusal is the point.
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Still taken");
   });
 
   it("hands back the manual steps a script cannot do", () => {
