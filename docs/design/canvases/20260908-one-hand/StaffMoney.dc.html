@@ -1,0 +1,494 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&family=Bricolage+Grotesque:wght@500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+/* kit:start — the round-3 kit. Pasted verbatim into every round-3 board; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --brand:#1d7a5f; --brand-deep:#145a46; --brand-tint:#e4f1ea; --brand-ink:#ffffff; --shallows:#7fd0d6; --shallows-tint:#d7f0f2; --coral:#ff6f61; --coral-deep:#a83a2c; --coral-tint:#ffeee9; --ok:#15803d; --ok-tint:#e6f0e8; --warn:#b45309; --warn-tint:#f8eee2; --danger:#b91c1c; --danger-tint:#f8e8e6; --water:#e4f1ea; --shadow:0 2px 10px rgba(88,66,30,.06); --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.diveday { --brand:#0e7490; --brand-deep:#0a4d61; --brand-tint:#e6f3f5; --water:#e6f3f5; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+.night { --bg:#071720; --surface:#0d222d; --sunken:#051118; --border:#1c3a47; --border-strong:#4f7285; --ink:#e9f3f4; --muted:#8fa8b0; --brand:#5fd3b0; --brand-deep:#8fe3c8; --brand-tint:#0f3a30; --brand-ink:#04241b; --shallows:#1f6f78; --shallows-tint:#0b3540; --coral:#ff8a7e; --coral-deep:#ffb3aa; --coral-tint:#3f1d19; --ok:#4ade80; --ok-tint:#0f3324; --warn:#fbbf24; --warn-tint:#3a2a0e; --danger:#f87171; --danger-tint:#3d1717; --water:#143a3c; --shadow:0 2px 10px rgba(0,0,0,.35); }
+.night.diveday, .night .diveday { --brand:#22d3ee; --brand-deep:#67e8f9; --brand-tint:#0b3540; --brand-ink:#072a33; --water:#0b3540; }
+.boat { --bg:#ffffff; --surface:#ffffff; --sunken:#eef3f5; --border:#4f7285; --border-strong:#0c2a35; --ink:#04141b; --muted:#2f4650; --brand:#0a4d61; --brand-deep:#062f3b; --brand-tint:#dceff3; --brand-ink:#ffffff; --water:#ffffff; --shadow:none; }
+.boat.night { --bg:#000a0f; --surface:#071720; --sunken:#000a0f; --border:#6f95a8; --border-strong:#cfe3ea; --ink:#f4fbfc; --muted:#b9cdd4; --brand:#7ee8fa; --brand-deep:#b5f1fb; --brand-tint:#0b3540; --brand-ink:#04141b; --water:#000a0f; }
+.night, .boat { color: var(--ink); background: var(--bg); }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 940px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; }
+.frame-cap { padding: 28px 48px 8px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 940px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 160px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; }
+.stat b { display: block; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--border); }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 500; }
+
+/* — type — */
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand); }
+.group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.harbor .title, .harbor .h { font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--brand); font-weight: 500; }
+
+/* — chrome — */
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 102px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.harbor .chrome .shop { font-family: var(--display); font-size: 18px; }
+.chrome .mark { width: 36px; height: 36px; border-radius: 10px; background: var(--brand); color: var(--brand-ink); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .tabs { display: flex; gap: 4px; }
+.chrome .tabs span { padding: 10px 14px; border-radius: 10px; font-size: 15px; color: var(--muted); }
+.chrome .tabs span.on { background: var(--brand-tint); color: var(--brand); font-weight: 500; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.here { display: flex; align-items: center; gap: 8px; }
+.av { width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; border: 2px solid var(--surface); }
+.av + .av { margin-left: -10px; }
+.p-d { background: #a83a2c; } .p-k { background: #1d7a5f; } .p-s { background: #0e7490; } .p-m { background: #8a8065; }
+.who { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 3px; border-radius: 999px; background: var(--brand-tint); color: var(--brand-deep); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.who i { width: 20px; height: 20px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; font-style: normal; }
+.who.away { background: var(--sunken); color: var(--muted); }
+
+/* — the tide line (F) — */
+.tide { position: relative; height: 64px; padding: 0 102px; background: linear-gradient(180deg, var(--water) 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); }
+.tide .inner { position: relative; width: 976px; margin: 0 auto; height: 64px; }
+.tide .track { position: absolute; left: 0; top: 0; width: 740px; height: 64px; }
+.tide .axis { position: absolute; left: 0; right: 0; top: 40px; height: 2px; background: var(--border); }
+.tide .hour { position: absolute; top: 46px; font-family: var(--mono); font-size: 10px; color: var(--border-strong); transform: translateX(-50%); }
+.tide .boat { position: absolute; top: 14px; height: 24px; border-radius: 6px; background: var(--sunken); border: 1px solid var(--border); overflow: hidden; }
+.tide .boat i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--shallows); opacity: .75; }
+.tide .boat span { position: absolute; left: 8px; top: 3px; font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.tide .boat.next { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-tint); }
+.tide .boat.gone { opacity: .55; }
+.tide .now { position: absolute; top: 6px; width: 2px; height: 40px; background: var(--ink); transform: translateX(-1px); }
+.tide .now::after { content: attr(data-t); position: absolute; top: -2px; left: 6px; font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--ink); white-space: nowrap; }
+.tide .until { position: absolute; right: 0; top: 10px; font-size: 13px; color: var(--ink); text-align: right; line-height: 20px; }
+.tide .until b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tide .until .note { font-size: 12px; line-height: 18px; }
+.tide.empty .inner { display: flex; align-items: center; justify-content: center; }
+.tide.empty .inner span { font-size: 13px; color: var(--muted); }
+/* the phone fold: one 36px strip */
+.tide-fold { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px; background: linear-gradient(180deg, var(--water) 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); }
+.tide-fold .t { font-family: var(--mono); font-size: 11px; color: var(--ink); }
+.tide-fold .bar { position: relative; flex: 1; height: 8px; border-radius: 4px; background: var(--sunken); overflow: hidden; }
+.tide-fold .bar i { position: absolute; top: 0; height: 8px; border-radius: 4px; background: var(--border); }
+.tide-fold .bar i.next { background: var(--shallows); }
+.tide-fold .bar b { position: absolute; top: 0; width: 2px; height: 8px; background: var(--ink); }
+.tide-fold .u { font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+/* — the trip's own line (L): one departure's day, the same on both sides — */
+.line { position: relative; display: flex; align-items: flex-start; padding: 12px 0 0 0; }
+.line .seg { position: relative; flex: 1 1 0; padding-top: 18px; }
+.line .seg::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--border); }
+.line .seg.done::before { background: var(--brand); }
+.line .seg.now::before { background: linear-gradient(90deg, var(--brand) 0 50%, var(--border) 50% 100%); }
+.line .seg i { position: absolute; left: 0; top: 0; width: 14px; height: 14px; border-radius: 999px; background: var(--surface); border: 2px solid var(--border); transform: translateY(0); }
+.line .seg.done i, .line .seg.now i { border-color: var(--brand); background: var(--brand); }
+.line .seg.now i { box-shadow: 0 0 0 4px var(--brand-tint); }
+.line .seg b { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.line .seg span { display: block; font-size: 13px; font-weight: 500; color: var(--ink); line-height: 18px; }
+.line .seg.todo span { color: var(--muted); font-weight: 400; }
+
+/* — the page — */
+.page { width: 976px; margin: 0 auto; padding-top: 36px; }
+.page.read { width: 720px; }
+.ph { margin-bottom: 20px; }
+.ph .eyebrow { margin: 0; }
+.ph .title { margin: 8px 0 0 0; }
+.ph .lede { margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.ph .acts { display: flex; gap: 8px; margin-top: 14px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; padding: 0 0 8px 0; }
+.group-h .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+section + section, .stack > * + * { margin-top: 32px; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 4px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.row + .row { border-top: 0; }
+.row .mark { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid var(--border-strong); }
+.row .mark.warn { border-color: var(--warn); }
+.row .mark.danger { border-color: var(--danger); background: var(--danger-tint); }
+.row .mark.ok { border-color: var(--ok); background: var(--ok-tint); }
+.row .mark.live { border-color: var(--brand); background: var(--brand); }
+.row .kind { flex: 0 0 92px; font-size: 14px; font-weight: 500; color: var(--muted); }
+.row .kind.warn { color: var(--warn); } .row .kind.ok { color: var(--ok); } .row .kind.danger { color: var(--danger); }
+.row .sentence { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .sentence b { font-weight: 600; color: var(--ink); }
+.row .meta { font-size: 13px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.row .door { font-size: 14px; font-weight: 500; color: var(--brand); white-space: nowrap; }
+.row .door.quiet { color: var(--muted); }
+.row.add { color: var(--brand); font-weight: 500; font-size: 15px; }
+.row.add .mark { border-style: dashed; border-color: var(--brand); }
+.row.settled .sentence { color: var(--muted); }
+.row.settled .sentence b { color: var(--muted); font-weight: 500; }
+.row .avatar { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 999px; background: var(--sunken); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--muted); }
+.row .tap { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 999px; border: 2px solid var(--border-strong); }
+.row .tap.in { background: var(--shallows); border-color: var(--brand); }
+.rows-p .row { flex-wrap: wrap; gap: 8px 12px; padding: 8px 0; }
+.rows-p .row .sentence { flex-basis: 100%; }
+.rows-p .row .door, .rows-p .row .btn, .rows-p .row .who { margin-left: auto; }
+.rows-p .row .kind { flex: 0 0 auto; }
+
+/* — pills, checks, notices — */
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pill.danger { background: var(--danger-tint); color: var(--danger); }
+.pill.warn { background: var(--warn-tint); color: var(--warn); }
+.pill.live { background: var(--brand-tint); color: var(--brand-deep); }
+.pill.live::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: var(--brand); }
+.check { display: flex; align-items: center; gap: 10px; font-size: 16px; line-height: 24px; color: var(--ok); }
+.check::before { content: "✓"; font-weight: 700; }
+.notice { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border-radius: 18px; background: var(--brand-tint); color: var(--brand-deep); font-size: 15px; }
+.notice .undo { margin-left: auto; font-weight: 600; }
+.notice.warn { background: var(--warn-tint); color: var(--warn); }
+.notice.danger { background: var(--danger-tint); color: var(--danger); }
+.summary { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 4px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 16px; color: var(--ink); }
+.summary::after { content: "›"; margin-left: auto; color: var(--border-strong); transform: rotate(90deg); }
+.summary .meta { font-size: 13px; color: var(--muted); }
+
+/* — panels, photo bands — */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 28px; box-shadow: var(--shadow); overflow: hidden; }
+.panel .in { padding: 8px 24px 20px 24px; }
+.inset { background: var(--sunken); border-radius: 18px; padding: 16px 20px; }
+.photo { position: relative; height: 150px; display: flex; align-items: flex-end; padding: 20px 24px; color: #fffdf8; }
+.photo.s { height: 110px; } .photo.xs { height: 96px; padding: 16px; }
+.photo .ph-img { position: absolute; inset: 0; }
+.photo .cap { position: absolute; right: 16px; top: 12px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: rgba(255,253,248,0.85); }
+.photo .over { position: relative; display: flex; align-items: flex-end; justify-content: space-between; width: 100%; }
+.photo .t { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.photo.s .t, .photo.xs .t { font-size: 20px; }
+.harbor .photo .t { font-family: var(--display); }
+.photo .n { font-size: 14px; color: rgba(255,253,248,0.9); text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.sea-molasses { background: radial-gradient(120% 90% at 30% 20%, #6fb9b0 0%, #2a7f8a 45%, #123f52 100%); }
+.sea-french { background: radial-gradient(120% 90% at 60% 25%, #7ac3b6 0%, #2d8a8a 45%, #14454f 100%); }
+.sea-spiegel { background: radial-gradient(110% 100% at 70% 30%, #4d7d8c 0%, #1f4657 50%, #0b2230 100%); }
+.sea-night { background: linear-gradient(180deg, #0c2a35 0%, #071720 100%); }
+.sea-abyss { background: radial-gradient(100% 100% at 50% 100%, #3f9aa3 0%, #1b5f6e 50%, #0e3644 100%); }
+.sea-benwood { background: radial-gradient(120% 90% at 40% 30%, #88c7bd 0%, #3a8f92 50%, #1a4d5a 100%); }
+.sea-grain { background: repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0 6px, transparent 6px 22px); }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font-size: 15px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--brand); }
+.btn.danger { color: var(--danger); }
+.btn.block { width: 100%; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; font-weight: 500; color: var(--ink); }
+.field .hint { font-size: 12px; color: var(--muted); }
+.control { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface); font-size: 16px; color: var(--ink); }
+.control.ph { color: var(--border-strong); }
+.control.area { min-height: 96px; align-items: flex-start; padding-top: 10px; }
+.fields { display: grid; gap: 16px; }
+.fields.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.choice { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; }
+.choice i { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border-strong); }
+.choice i.on { background: var(--brand); border-color: var(--brand); }
+.choice i.radio { border-radius: 999px; }
+.seg-ctl { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.seg-ctl span { padding: 10px 14px; font-size: 14px; color: var(--muted); }
+.seg-ctl span.on { background: var(--brand-tint); color: var(--brand-deep); font-weight: 500; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 14px; color: var(--ink); background: var(--surface); }
+.chip.on { background: var(--brand-tint); border-color: var(--brand); color: var(--brand-deep); }
+
+/* — meters — */
+.dial { position: relative; width: 96px; height: 96px; border-radius: 999px; border: 2px solid var(--border); overflow: hidden; background: var(--surface); display: inline-flex; align-items: center; justify-content: center; }
+.dial i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--shallows); opacity: .8; }
+.dial b { position: relative; font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dial small { position: relative; font-size: 11px; color: var(--muted); }
+.bar { position: relative; height: 4px; border-radius: 2px; background: var(--sunken); overflow: hidden; }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); border-radius: 2px; }
+
+/* — skeleton, empty, room — */
+.skel { display: block; height: 14px; border-radius: 7px; background: linear-gradient(90deg, var(--sunken) 0%, var(--border) 50%, var(--sunken) 100%); }
+.skel.t { height: 28px; border-radius: 10px; width: 40%; }
+.skel.r { height: 52px; border-radius: 10px; }
+.empty { padding: 40px 24px; text-align: center; }
+.empty .room { height: 140px; margin: 0 auto 20px auto; display: flex; align-items: flex-end; justify-content: center; gap: 12px; }
+.empty p { margin: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.empty .room svg { stroke: var(--border-strong); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* — the pass (M), the postcard (N), the log (O) — */
+.pass { width: 360px; border-radius: 18px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.pass .top { position: relative; height: 150px; padding: 16px; color: #fffdf8; display: flex; flex-direction: column; justify-content: space-between; }
+.pass .top .shop { font-family: var(--display); font-size: 14px; font-weight: 700; letter-spacing: .02em; }
+.pass .top .t { font-size: 24px; font-weight: 700; line-height: 1.1; font-family: var(--display); text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.pass .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px; border-bottom: 1px dashed var(--border); }
+.pass .facts b { display: block; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pass .facts span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.pass .foot { margin: 0; padding: 14px 16px; display: flex; align-items: center; gap: 12px; border: 0; }
+.qr { width: 56px; height: 56px; border-radius: 6px; background: repeating-conic-gradient(var(--ink) 0 25%, var(--surface) 0 50%) 0 0 / 8px 8px; flex: 0 0 56px; border: 4px solid var(--surface); outline: 1px solid var(--border); }
+.card { width: 480px; aspect-ratio: 3 / 2; border-radius: 12px; overflow: hidden; position: relative; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.card .front { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px; color: #fffdf8; }
+.card .stamp { position: absolute; right: 16px; top: 16px; width: 64px; height: 64px; border-radius: 999px; border: 2px solid rgba(255,253,248,.7); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; text-align: center; line-height: 12px; color: rgba(255,253,248,.9); transform: rotate(-8deg); }
+.card .back { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1px 1fr; gap: 16px; padding: 20px; background: var(--surface); }
+.card .back .rule { background: var(--border); }
+.logday { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.logday .d { flex: 0 0 96px; font-family: var(--mono); font-size: 12px; color: var(--muted); padding-top: 3px; }
+.logday .e { flex: 1; font-size: 16px; line-height: 24px; color: var(--ink); }
+.logday .e small { display: block; font-size: 13px; color: var(--muted); }
+.days { display: grid; grid-template-columns: repeat(53, 1fr); gap: 3px; }
+.days i { display: block; aspect-ratio: 1; border-radius: 2px; background: var(--sunken); }
+.days i.l1 { background: var(--shallows-tint); } .days i.l2 { background: var(--shallows); } .days i.l3 { background: var(--brand); } .days i.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* — frames (a drawn screen inside the board) — */
+.frame { position: relative; width: 1180px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--bg); overflow: hidden; }
+.frame.phone { width: 390px; height: 844px; border: 1px solid var(--border); border-radius: 18px; }
+.frame.tv { width: 1180px; }
+.phones { display: flex; gap: 36px; padding: 0 48px; }
+.phone-chrome { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.phone-chrome .mark { width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: var(--brand-ink); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+.phone-chrome .shop { font-size: 15px; font-weight: 600; }
+.harbor .phone-chrome .shop { font-family: var(--display); }
+.phone-chrome .right { margin-left: auto; display: flex; align-items: center; }
+.phone-chrome .av { width: 26px; height: 26px; font-size: 10px; }
+.phone-chrome .av + .av { margin-left: -8px; }
+.phone-page { padding: 20px 16px 0 16px; }
+.phone-page .title { font-size: 32px; }
+.phone-page .ph .lede { font-size: 15px; }
+.dock { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--surface); border-top: 1px solid var(--border); }
+.dock span { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; color: var(--muted); }
+.dock span.on { color: var(--brand); font-weight: 600; }
+.dock i { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid currentColor; opacity: .8; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 28px 28px 0 0; border-top: 1px solid var(--border); box-shadow: 0 -8px 30px rgba(0,0,0,.12); padding: 12px 16px 24px 16px; }
+.sheet::before { content: ""; display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 0 auto 12px auto; opacity: .6; }
+.scrim { position: absolute; inset: 0; background: rgba(12,42,53,.35); }
+.rail { display: grid; grid-template-columns: 220px 1fr; gap: 40px; }
+.rail nav { display: flex; flex-direction: column; gap: 2px; }
+.rail nav span { padding: 8px 12px; border-radius: 10px; font-size: 15px; color: var(--muted); }
+.rail nav span.on { background: var(--brand-tint); color: var(--brand-deep); font-weight: 500; }
+.rail nav .group { padding: 16px 12px 6px 12px; }
+.mail { width: 600px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+.mail .hd { padding: 20px 28px; border-bottom: 1px solid var(--border); }
+.mail .bd { padding: 24px 28px; font-size: 16px; line-height: 24px; }
+.mail .bd p { margin: 0 0 16px 0; }
+.mail .ft { padding: 16px 28px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.sms { width: 320px; padding: 12px 16px; border-radius: 18px 18px 18px 4px; background: var(--sunken); font-size: 15px; line-height: 22px; }
+/* kit:end */
+/* board-local */
+.rowside { display: flex; gap: 36px; padding: 0 48px; align-items: flex-start; }
+.figrow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px; }
+.figrow > div { padding-top: 12px; border-top: 1px solid var(--border); }
+.figrow .group { display: block; margin-bottom: 8px; }
+.figrow .note { display: block; margin-top: 6px; }
+.fig2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+.fig2 > div { padding-top: 8px; border-top: 1px solid var(--border); }
+.fig2 .group { display: block; margin-bottom: 4px; }
+.amt { min-width: 84px; text-align: right; }
+  </style>
+</helmet>
+<div class="board">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow" style="color:#0e7490">Round 3 · Staff · The till and the log</span><span class="note">6 frames · desktop 1180 · reading · phone 390 · what is deleted here, what is new here</span></div>
+    <h1>The till and the log</h1>
+    <p class="lede">Orders is the till: the month's money day by day, with the two back-office queues as notices at the top rather than tables. An order is one page with the line items, the payment and the two money acts; a new order is one form. Promo codes are the discounts a diver can type, and the last-minute deal is a row in the same family. Reports becomes the shop's log (O): the close-out writes each day's entry, the season is a strip of days, and the month's figures come from the entries — the strip and the five figures are the chart, so there is no chart.</p>
+    <div class="three">
+      <div><span class="group">The one idea</span><p class="note">Money is a column, so the ledger is the one place a table is allowed, and even there each line is the row with the amount as meta. What went wrong with Stripe is a notice on the till, not a panel. The log is written by the close-out, not by a report.</p></div>
+      <div><span class="group">Deleted here</span><p class="note">The six bordered tiles and the bar charts on Reports, the month picker as three controls (the lede names the month), the "How's your month" title (Reports is the tab's word), the second imported-history table, the five-control filter card, the date column, the CSV as a button, the Refund on the diver record, "Monthly report" and "Connect payments" in the Orders header, the promo form as a standing card, the Paid pill (Paid is the absence of a pill).</p></div>
+      <div><span class="group">New here</span><p class="note">O, the log: six entries newest first, each a sentence and a small line, the 1,000th diver said once. The two Stripe queues as the one notice shape with the act on the right. The deal as a row in the promo family. The phone log with the figures two per line.</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>1 · Orders</b> · August · 6:31 · desktop 1180</div>
+  <div class="frame">
+    <div class="chrome"><div class="shop"><span class="mark">BM</span>Blue Mantis Divers</div><div class="tabs"><span>Today</span><span>Check-in</span><span>Divers</span><span>Board</span><span class="on">More</span></div><div class="right"><div class="here"><span class="note" style="font-size:13px">Here now</span><span class="av p-d">DR</span><span class="av p-k">KT</span><span class="av p-s">SM</span></div><span>Search ⌘K</span></div></div>
+    <div class="tide"><div class="inner"><div class="track"><div class="axis"></div><div class="hour" style="left:0">5:00</div><div class="hour" style="left:16.6%">8:00</div><div class="hour" style="left:33.3%">11:00</div><div class="hour" style="left:50%">2:00</div><div class="hour" style="left:66.6%">5:00</div><div class="hour" style="left:83.3%">8:00</div><div class="hour" style="left:100%">11:00</div><div class="boat next" style="left:11.1%;width:19.4%"><i style="width:83%"></i><span>7:00 Two-Tank Reef</span></div><div class="boat" style="left:44.4%;width:22.2%"><i style="width:100%;opacity:.55"></i><span>1:00 Spiegel Grove · full</span></div><div class="boat" style="left:80.5%;width:19.4%"><i style="width:37%"></i><span>7:30 Night · 3 of 8</span></div><div class="now" data-t="now · 6:31" style="left:8.4%"></div></div><div class="until">Mantis II leaves in <b>29 min</b><br><span class="note">7 of 10 aboard · EDT</span></div></div></div>
+    <div class="page" style="padding-bottom:28px">
+      <header class="ph"><p class="eyebrow">Run the shop</p><h1 class="title">Orders</h1><p class="lede">August · $41,180 · 2 open · EDT</p></header>
+      <div class="notice warn">Stripe has not confirmed Priya Sharma's $95 from 6:02 yet. DiveDay will keep asking.<span class="undo">Open ›</span></div>
+      <div class="notice warn" style="margin-top:8px">Owed: $120 to Ravi Nair for the Aug 20 night dive.<span class="undo">Refund ›</span></div>
+      <div class="chips" style="margin:20px 0 28px 0"><span class="chip on">This month</span><span class="chip">Open</span><span class="chip">Refunded</span><span class="chip">Cash</span></div>
+      <section>
+        <div class="group-h"><span class="group">Thu Aug 27</span><span class="meta">9 orders · $1,235</span></div>
+        <div class="row"><span class="mark warn"></span><span class="sentence"><b>Priya Sharma</b> · 7:00 Two-Tank Reef · card</span><span class="pill warn">Open</span><span class="meta mono amt">$95.00</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark warn"></span><span class="sentence"><b>Tomás Ferreira</b> · 1:00 Wreck Trip · pays at the counter</span><span class="pill warn">Open</span><span class="meta mono amt">$145.00</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark"></span><span class="sentence"><b>The Ortiz party</b> · 7:00 Two-Tank Reef · 3 seats · card</span><span class="meta mono amt">$285.00</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark"></span><span class="sentence"><b>Hannah Liu</b> · 7:00 Two-Tank Reef · 2 seats, with Ben Carter · card</span><span class="meta mono amt">$190.00</span><span class="door">Open ›</span></div>
+        <div class="summary">5 more<span class="meta mono">$520.00</span></div>
+      </section>
+      <section>
+        <div class="group-h"><span class="group">Wed Aug 26</span><span class="meta">21 orders · $2,410</span></div>
+        <div class="row"><span class="mark"></span><span class="sentence"><b>Yara Haddad</b> · 7:00 Two-Tank Reef · card</span><span class="meta mono amt">$95.00</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark"></span><span class="sentence"><b>Jonas Berg</b> · Scuba Refresher · deposit · cash</span><span class="meta mono amt">$60.00</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark"></span><span class="sentence"><b>Emma Fischer</b> · Nitrox · card</span><span class="meta mono amt">$150.00</span><span class="door">Open ›</span></div>
+        <div class="summary">18 more<span class="meta mono">$2,105.00</span></div>
+      </section>
+      <section>
+        <div class="group-h"><span class="group">Tue Aug 25</span><span class="meta">11 orders · $1,860</span></div>
+        <div class="row"><span class="mark"></span><span class="sentence"><b>Kai Nakamura</b> · Open Water · card</span><span class="meta mono amt">$709.00</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark"></span><span class="sentence"><b>Ben Carter</b> · 7:30 Night Dive · card</span><span class="meta mono amt">$120.00</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark"></span><span class="sentence"><b>Yara Haddad</b> · 1:00 Wreck Trip · card</span><span class="meta mono amt">$145.00</span><span class="door">Open ›</span></div>
+        <div class="summary">8 more<span class="meta mono">$886.00</span></div>
+      </section>
+      <section>
+        <div class="summary">Before DiveDay<span class="meta">1,204 orders imported · Aug 2024–Jul 2026 · unverified</span></div>
+        <div class="row add"><span class="mark"></span><span>Record a payment ›</span></div>
+      </section>
+    </div>
+  </div>
+  <p class="aside">The two back-office queues are the one notice shape with the act on the right: the unconfirmed Stripe call, and a refund owed only when one is. The ledger is grouped by day with the day's take as the group's meta; each line is the row with the amount as meta in mono, and Open is the only pill (Paid is its absence). The imported history is one summary at the foot, still marked unverified; recording a cash payment is the add row.</p>
+
+  <div class="frame-cap"><b>2 · An order, and a new order</b> · Priya Sharma · 6:31 · reading width</div>
+  <div class="rowside">
+    <div class="frame" style="width:524px">
+      <div class="page" style="width:476px;padding-bottom:28px">
+        <header class="ph"><p class="eyebrow">Run the shop</p><h1 class="title" style="font-size:32px">Priya Sharma · $95.00</h1><p class="lede">7:00 Two-Tank Reef · Thu Aug 27 · card · Stripe</p></header>
+        <section>
+          <div class="group-h"><span class="group">Lines</span><span class="meta">2</span></div>
+          <div class="row"><span class="mark"></span><span class="sentence">1 seat · <b>7:00 Two-Tank Reef</b></span><span class="meta mono amt">$95.00</span></div>
+          <div class="row"><span class="mark"></span><span class="sentence">Tax</span><span class="meta mono amt">$0.00</span></div>
+        </section>
+        <section>
+          <div class="group-h"><span class="group">Payment</span><span class="meta">6:02 AM</span></div>
+          <div class="row"><span class="mark warn"></span><span class="sentence">Card · <span class="mono" style="font-size:14px">pi_3Nq8kZ</span></span><span class="pill warn">Unconfirmed · asked again 6:29</span><span class="meta mono amt">$95.00</span></div>
+        </section>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:28px"><span class="btn primary">Refund</span><span class="btn quiet">Resend the receipt</span></div>
+      </div>
+    </div>
+    <div class="frame" style="width:524px">
+      <div class="page" style="width:476px;padding-bottom:28px">
+        <header class="ph"><p class="eyebrow">Run the shop</p><h1 class="title" style="font-size:32px">New order</h1></header>
+        <div class="fields">
+          <div class="field"><label>Who</label><div class="control">Diego Alvarez</div></div>
+          <div class="field"><label>What</label>
+            <div class="choice"><i class="radio on"></i>7:00 Two-Tank Reef · today · $95</div>
+            <div class="choice"><i class="radio"></i>1:00 Wreck Trip · full</div>
+            <div class="choice"><i class="radio"></i>7:30 Night Dive · tonight · $120</div>
+            <div class="choice"><i class="radio"></i>Open Water · Sat Aug 29 · $709</div>
+          </div>
+          <div class="fields two"><div class="field"><label>Discount code</label><div class="control ph">Code</div></div><div class="field"><label>Amount</label><div class="control mono" style="font-size:16px">$95.00</div></div></div>
+          <div class="field"><label>Paid</label><div><div class="seg-ctl"><span class="on">In cash</span><span>Send a payment link</span></div></div></div>
+          <div style="display:flex;gap:10px;align-items:center"><span class="btn primary">Record $95</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="aside">An order is the lines, the payment and two acts. Refund is the one primary — money out is a primary-weight act with a second confirm, never danger-toned and never one tap — and it lives here, never on the diver record. The unconfirmed call is a warn pill on the payment row, the same fact the till's notice carries. The new order is one form: who, what as a pick of the day's departures and the open courses, a code, the amount, cash or a link, one primary that names the sum.</p>
+
+  <div class="frame-cap"><b>3 · Promo codes</b> · 6:31 · desktop 1180</div>
+  <div class="frame">
+    <div class="chrome"><div class="shop"><span class="mark">BM</span>Blue Mantis Divers</div><div class="tabs"><span>Today</span><span>Check-in</span><span>Divers</span><span>Board</span><span class="on">More</span></div><div class="right"><div class="here"><span class="note" style="font-size:13px">Here now</span><span class="av p-d">DR</span><span class="av p-k">KT</span><span class="av p-s">SM</span></div><span>Search ⌘K</span></div></div>
+    <div class="tide"><div class="inner"><div class="track"><div class="axis"></div><div class="hour" style="left:0">5:00</div><div class="hour" style="left:16.6%">8:00</div><div class="hour" style="left:33.3%">11:00</div><div class="hour" style="left:50%">2:00</div><div class="hour" style="left:66.6%">5:00</div><div class="hour" style="left:83.3%">8:00</div><div class="hour" style="left:100%">11:00</div><div class="boat next" style="left:11.1%;width:19.4%"><i style="width:83%"></i><span>7:00 Two-Tank Reef</span></div><div class="boat" style="left:44.4%;width:22.2%"><i style="width:100%;opacity:.55"></i><span>1:00 Spiegel Grove · full</span></div><div class="boat" style="left:80.5%;width:19.4%"><i style="width:37%"></i><span>7:30 Night · 3 of 8</span></div><div class="now" data-t="now · 6:31" style="left:8.4%"></div></div><div class="until">Mantis II leaves in <b>29 min</b><br><span class="note">7 of 10 aboard · EDT</span></div></div></div>
+    <div class="page" style="padding-bottom:28px">
+      <header class="ph"><p class="eyebrow">Run the shop</p><h1 class="title">Promo codes</h1><p class="lede">3 live · 1 ended</p></header>
+      <section>
+        <div class="group-h"><span class="group">Live</span><span class="meta">3</span></div>
+        <div class="row"><span class="mark live"></span><span class="kind mono">SUMMER10</span><span class="sentence">10% off any departure · used 41 times · ends Sep 30.</span><span class="pill live">Live</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark live"></span><span class="kind mono">REEF10</span><span class="sentence">10% off for a returning diver · used 12 times · no end.</span><span class="pill live">Live</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark live"></span><span class="kind mono">LOCALS15</span><span class="sentence">$15 off any departure · used 8 times · ends Dec 31.</span><span class="pill live">Live</span><span class="door">Open ›</span></div>
+      </section>
+      <section>
+        <div class="group-h"><span class="group">Ended</span><span class="meta">1</span></div>
+        <div class="row settled"><span class="mark"></span><span class="kind mono">OPENWATER25</span><span class="sentence">25% off Open Water · used 0 of 20 · ended Aug 15.</span><span class="door quiet">›</span></div>
+        <div class="row add"><span class="mark"></span><span>Add a code ›</span></div>
+      </section>
+      <section>
+        <div class="group-h"><span class="group">Deals</span><span class="meta">one departure each</span></div>
+        <div class="row"><span class="mark"></span><span class="kind">Fill seats</span><span class="sentence"><b>7:30 Night Dive</b> · tonight · 3 of 8 · no deal sent.</span><span class="door">Send a deal ›</span></div>
+        <div class="row settled"><span class="mark ok"></span><span class="kind mono">Aug 22</span><span class="sentence"><b>Two-Tank Reef</b> · $80 instead of $95 · sent to 12 · 1 booked · ended.</span><span class="door quiet">›</span></div>
+      </section>
+    </div>
+  </div>
+  <p class="aside">A code is a row: the code in mono, what it gives as the sentence, Live as the one pill, nothing on an ended one. The new-code form is the add row's sheet. The last-minute deal is a row in the same family, one departure each: tonight's Night Dive has had no deal sent (the fiction's fact, so the row is the ask, not a sent deal), and the settled row is the last one that went out. "Discounts a diver can type" goes; Promo codes is the tab's word.</p>
+
+  <div class="frame-cap"><b>4 · Reports, as the log (O)</b> · August · 6:31 · desktop 1180</div>
+  <div class="frame">
+    <div class="chrome"><div class="shop"><span class="mark">BM</span>Blue Mantis Divers</div><div class="tabs"><span>Today</span><span>Check-in</span><span>Divers</span><span>Board</span><span class="on">More</span></div><div class="right"><div class="here"><span class="note" style="font-size:13px">Here now</span><span class="av p-d">DR</span><span class="av p-k">KT</span><span class="av p-s">SM</span></div><span>Search ⌘K</span></div></div>
+    <div class="tide"><div class="inner"><div class="track"><div class="axis"></div><div class="hour" style="left:0">5:00</div><div class="hour" style="left:16.6%">8:00</div><div class="hour" style="left:33.3%">11:00</div><div class="hour" style="left:50%">2:00</div><div class="hour" style="left:66.6%">5:00</div><div class="hour" style="left:83.3%">8:00</div><div class="hour" style="left:100%">11:00</div><div class="boat next" style="left:11.1%;width:19.4%"><i style="width:83%"></i><span>7:00 Two-Tank Reef</span></div><div class="boat" style="left:44.4%;width:22.2%"><i style="width:100%;opacity:.55"></i><span>1:00 Spiegel Grove · full</span></div><div class="boat" style="left:80.5%;width:19.4%"><i style="width:37%"></i><span>7:30 Night · 3 of 8</span></div><div class="now" data-t="now · 6:31" style="left:8.4%"></div></div><div class="until">Mantis II leaves in <b>29 min</b><br><span class="note">7 of 10 aboard · EDT</span></div></div></div>
+    <div class="page" style="padding-bottom:28px">
+      <header class="ph"><p class="eyebrow">Run the shop</p><h1 class="title">Reports</h1><p class="lede">August · 27 days · 412 divers · EDT</p></header>
+      <div class="figrow">
+        <div><span class="group">Divers</span><span class="fig">412</span><span class="note">23 today</span></div>
+        <div><span class="group">Boats</span><span class="fig">46</span><span class="note">3 today</span></div>
+        <div><span class="group">Revenue</span><span class="fig">$41,180</span><span class="note">2 open</span></div>
+        <div><span class="group">Waivers signed</span><span class="fig">98%</span><span class="note">3 outstanding today</span></div>
+        <div><span class="group">Reviews</span><span class="fig">4.9</span><span class="note">from 212</span></div>
+      </div>
+      <section>
+        <div class="group-h"><span class="group">The season</span><span class="meta">1,000 divers so far · the 1,000th boards tonight</span></div>
+        <div class="days"><i class="l1"></i><i class="l2"></i><i class="l2"></i><i></i><i class="l3"></i><i class="l3"></i><i class="l2"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l3"></i><i class="l2"></i><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l3"></i><i class="l3"></i><i class="l2"></i><i class="l1"></i><i class="l2"></i><i class="l2"></i><i class="l3"></i><i class="l3"></i><i class="l3"></i><i class="l2"></i><i></i><i class="l2"></i><i class="l3"></i><i class="l3"></i><i class="l3"></i><i class="l3"></i><i class="l2"></i><i class="l1"></i><i class="l3 today"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <p class="note" style="margin:8px 0 0 0;font-size:12px">A week per column · how full the boats were · today outlined · tap a week to move the month</p>
+      </section>
+      <section>
+        <div class="group-h"><span class="group">The log</span><span class="meta">27 entries · newest first</span></div>
+        <div class="logday"><div class="d">Thu Aug 27</div><div class="e">21 divers, 2 boats, 1 walk-in. Nothing left open.<small>Closed by Dana 6:10 PM · the 1,000th diver of the season</small></div></div>
+        <div class="logday"><div class="d">Wed Aug 26</div><div class="e">23 divers, 2 boats, 1 walk-in.<small>Closed by Sal 5:52 PM</small></div></div>
+        <div class="logday"><div class="d">Tue Aug 25</div><div class="e">18 divers, 2 boats. Reg #4 pulled for service.<small>Closed by Dana 5:40 PM</small></div></div>
+        <div class="logday"><div class="d">Mon Aug 24</div><div class="e">12 divers, 1 boat. Blown out in the afternoon: wind.<small>Closed by Keiko 2:15 PM</small></div></div>
+        <div class="logday"><div class="d">Sun Aug 23</div><div class="e">24 divers, 2 boats.<small>Closed by Sal 5:48 PM</small></div></div>
+        <div class="logday"><div class="d">Sat Aug 22</div><div class="e">31 divers, 3 boats, 2 walk-ins. Open Water pool session.<small>Closed by Dana 6:02 PM</small></div></div>
+      </section>
+      <section>
+        <div class="group-h"><span class="group">The boats behind the figures</span><span class="meta">46 in August</span></div>
+        <div class="row"><span class="mark live"></span><span class="kind mono">Aug 27</span><span class="sentence"><b>7:00 Two-Tank Reef</b> · Mantis II · Keiko, Sal</span><span class="meta">10 of 12</span><span class="meta mono amt">$950</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark"></span><span class="kind mono">Aug 27</span><span class="sentence"><b>1:00 Wreck Trip</b> · Spiegel Grove · Mantis II</span><span class="meta">10 of 10</span><span class="meta mono amt">$1,450</span><span class="door">Open ›</span></div>
+        <div class="row"><span class="mark"></span><span class="kind mono">Aug 27</span><span class="sentence"><b>7:30 Night Dive</b> · City of Washington · Skiff</span><span class="meta">3 of 8</span><span class="meta mono amt">$360</span><span class="door">Open ›</span></div>
+        <div class="row settled"><span class="mark ok"></span><span class="kind mono">Aug 26</span><span class="sentence"><b>7:00 Two-Tank Reef</b> · Mantis II</span><span class="meta">12 of 12</span><span class="meta mono amt">$1,140</span><span class="door quiet">›</span></div>
+        <div class="row settled"><span class="mark ok"></span><span class="kind mono">Aug 26</span><span class="sentence"><b>1:00 Two-Tank Reef</b> · Benwood and French · Mantis II</span><span class="meta">11 of 12</span><span class="meta mono amt">$1,045</span><span class="door quiet">›</span></div>
+        <div class="summary">41 more<span class="meta">the month, oldest last</span></div>
+      </section>
+      <div class="notice warn" style="margin-top:32px">3 waivers outstanding for today.<span class="undo">Waivers ›</span></div>
+      <p class="note" style="margin:20px 0 0 0"><span class="link">Download the month as CSV</span> · with tax</p>
+    </div>
+  </div>
+  <p class="aside">The tab's word stays Reports; the page is the shop's log. Five figures over hairlines, no boxes; the season as a strip of days, which is also the month control; the log, one entry a day written by the close-out, newest first, the fact of scale said once as a count; the boats behind the figures as rows with the count and the take as meta; the amber remainder as the one notice; the CSV as one quiet line. There is no chart because the strip and the figures are the chart.</p>
+
+  <div class="frame-cap"><b>5 · The log on a phone</b> · 390</div>
+  <div class="rowside" style="align-items:center">
+    <div class="frame phone">
+      <div class="phone-chrome"><span class="mark">BM</span><span class="shop">Blue Mantis Divers</span><div class="right"><span class="av p-d">DR</span><span class="av p-k">KT</span><span class="av p-s">SM</span></div></div>
+      <div class="tide-fold"><span class="t">6:31</span><div class="bar"><i class="next" style="left:11%;width:19%"></i><i style="left:44%;width:22%"></i><i style="left:80%;width:19%"></i><b style="left:8.4%"></b></div><span class="u">leaves in 29 min</span></div>
+      <div class="phone-page">
+        <header class="ph" style="margin-bottom:16px"><p class="eyebrow">Run the shop</p><h1 class="title">Reports</h1><p class="lede">August · 27 days · EDT</p></header>
+        <div class="fig2">
+          <div><span class="group">Divers</span><span class="fig" style="font-size:32px">412</span></div>
+          <div><span class="group">Boats</span><span class="fig" style="font-size:32px">46</span></div>
+          <div><span class="group">Revenue</span><span class="fig" style="font-size:32px">$41,180</span></div>
+          <div><span class="group">Waivers</span><span class="fig" style="font-size:32px">98%</span></div>
+          <div><span class="group">Reviews</span><span class="fig" style="font-size:32px">4.9</span></div>
+        </div>
+        <div class="days" style="margin-top:18px"><i class="l1"></i><i class="l2"></i><i class="l2"></i><i></i><i class="l3"></i><i class="l3"></i><i class="l2"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l3"></i><i class="l2"></i><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l3"></i><i class="l3"></i><i class="l2"></i><i class="l1"></i><i class="l2"></i><i class="l2"></i><i class="l3"></i><i class="l3"></i><i class="l3"></i><i class="l2"></i><i></i><i class="l2"></i><i class="l3"></i><i class="l3"></i><i class="l3"></i><i class="l3"></i><i class="l2"></i><i class="l1"></i><i class="l3 today"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="group-h" style="margin-top:18px"><span class="group">The log</span><span class="meta">27</span></div>
+        <div class="logday"><div class="d" style="flex-basis:72px">Aug 27</div><div class="e" style="font-size:15px;line-height:22px">21 divers, 2 boats, 1 walk-in. Nothing left open.<small>Dana, 6:10 PM · the 1,000th diver</small></div></div>
+        <div class="logday"><div class="d" style="flex-basis:72px">Aug 26</div><div class="e" style="font-size:15px;line-height:22px">23 divers, 2 boats, 1 walk-in.<small>Sal, 5:52 PM</small></div></div>
+        <div class="logday"><div class="d" style="flex-basis:72px">Aug 25</div><div class="e" style="font-size:15px;line-height:22px">18 divers, 2 boats. Reg #4 pulled for service.<small>Dana, 5:40 PM</small></div></div>
+      </div>
+      <div class="dock"><span><i></i>Today</span><span><i></i>Check-in</span><span><i></i>Divers</span><span><i></i>Board</span><span class="on"><i></i>More</span></div>
+    </div>
+    <p class="note" style="margin:0;max-width:600px">The figures two per line at 32, the strip at full width (a week is 5px, still a tap target as a row), then the log with the date column narrowed. The boats and the CSV are below the fold. Orders folds to the day groups with the amount on the first line and the two notices stacked; an order and a new order are already one column; Promo codes wrap the code above the sentence.</p>
+  </div>
+
+  <div class="foot">
+    <div><span class="group">What does not change</span><p>Coral never appears on a payment surface. A refund is a second confirm, never one tap, and lives on the order. The fact of scale is a count (the 1,000th diver), never money. The imported history stays marked unverified and is never reconciled. Reports, Requests and Promo codes stay owner and manager work. The CSV keeps its tax column.</p></div>
+    <div><span class="group">Phone</span><p>Drawn above for the log. Orders: the day groups with the amount on the first line, the two notices stacked, the chips scrolling. The order and the new order are one column already. Promo codes: the code above the sentence, Live on the first line.</p></div>
+    <div><span class="group">Cost and risk</span><p>Sessions: Orders and the order (one: notices replace the queue tables; Refund moves here from the record), the new-order form (one: cash and link paths on one form), Promo codes (one: the form becomes the add row's sheet; the deal joins the family), Reports as the log (two: the close-out writes the entry, and the figures are read from entries). Risk: the log depends on the close-out being done every day; a day never closed is an entry with no sentence, which is honest and a little ugly.</p></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
