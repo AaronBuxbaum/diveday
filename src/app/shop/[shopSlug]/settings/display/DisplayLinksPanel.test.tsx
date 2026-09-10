@@ -182,3 +182,28 @@ describe("the purpose choice", () => {
     ).toBeInTheDocument();
   });
 });
+
+/**
+ * **A control that changes nothing must not be offered.** Nothing reads
+ * `showNames` for a check-in link — the Screens list below already renders no
+ * names label for one — so a manager ticking it on the kiosk form was told they
+ * had made a choice they had not made (issue #1611).
+ */
+describe("the crew-names checkbox", () => {
+  it("appears for a board link and not for a check-in link", async () => {
+    render(panel());
+
+    // Unanswered: no purpose, so nothing to configure for it yet.
+    expect(screen.queryByLabelText(copy.showNames)).toBeNull();
+
+    await userEvent.click(screen.getByRole("radio", { name: copy.purposeBoard }));
+    expect(screen.getByLabelText(copy.showNames)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("radio", { name: copy.purposeCheckIn }));
+    expect(screen.queryByLabelText(copy.showNames)).toBeNull();
+
+    // And back, because a manager changing their mind twice is ordinary.
+    await userEvent.click(screen.getByRole("radio", { name: copy.purposeBoard }));
+    expect(screen.getByLabelText(copy.showNames)).toBeInTheDocument();
+  });
+});

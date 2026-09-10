@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useId, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Copyable } from "@/components/Copyable";
 import { ShopNotice } from "@/components/ShopPageHeader";
@@ -53,6 +53,20 @@ export function DisplayLinksPanel({
     IDLE_DISPLAY_LINK_STATE,
   );
   const namesId = useId();
+  /**
+   * **Which surface the form is currently describing.** The names checkbox
+   * belongs to a board link and to nothing else: no kiosk read has ever looked
+   * at `showNames`, and the Screens list below already renders no names label
+   * for a check-in link. Ticking it on a check-in link told a manager they had
+   * made a choice they had not made (issue #1611).
+   *
+   * Null until the radio is answered, so the form still opens with no default:
+   * the two grant different things, and a shop mounting a TV should have to say
+   * which before it gets one. The radios are controlled from here, so a manager
+   * minting a second link keeps the answer they gave rather than an answer
+   * nobody chose.
+   */
+  const [purpose, setPurpose] = useState<"board" | "check_in" | null>(null);
   const issued = state.status === "issued" ? state : null;
   const invalidLabel = state.status === "invalid_label";
   // Split, because the panel has two forms. A refused revoke printed under the
@@ -97,34 +111,50 @@ export function DisplayLinksPanel({
             </legend>
             <div className="mt-2 flex flex-wrap gap-3">
               <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
-                <input type="radio" name="purpose" value="board" required />
+                <input
+                  type="radio"
+                  name="purpose"
+                  value="board"
+                  required
+                  checked={purpose === "board"}
+                  onChange={() => setPurpose("board")}
+                />
                 {copy.purposeBoard}
               </label>
               <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
-                <input type="radio" name="purpose" value="check_in" required />
+                <input
+                  type="radio"
+                  name="purpose"
+                  value="check_in"
+                  required
+                  checked={purpose === "check_in"}
+                  onChange={() => setPurpose("check_in")}
+                />
                 {copy.purposeCheckIn}
               </label>
             </div>
             <p className="mt-2 text-sm text-muted">{copy.purposeCheckInDescription}</p>
           </fieldset>
-          <div className="flex items-start gap-3">
-            <input
-              id={namesId}
-              type="checkbox"
-              name="showNames"
-              value="true"
-              className="mt-1 size-5"
-              aria-describedby={`${namesId}-description`}
-            />
-            <div>
-              <label htmlFor={namesId} className="font-medium">
-                {copy.showNames}
-              </label>
-              <p id={`${namesId}-description`} className="text-sm text-muted">
-                {copy.showNamesDescription}
-              </p>
+          {purpose === "board" ? (
+            <div className="flex items-start gap-3">
+              <input
+                id={namesId}
+                type="checkbox"
+                name="showNames"
+                value="true"
+                className="mt-1 size-5"
+                aria-describedby={`${namesId}-description`}
+              />
+              <div>
+                <label htmlFor={namesId} className="font-medium">
+                  {copy.showNames}
+                </label>
+                <p id={`${namesId}-description`} className="text-sm text-muted">
+                  {copy.showNamesDescription}
+                </p>
+              </div>
             </div>
-          </div>
+          ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <SubmitButton label={copy.submit} pendingLabel={copy.submitting} />
             <FormStatus>{deniedIssue ? copy.denied : null}</FormStatus>

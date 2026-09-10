@@ -1765,7 +1765,17 @@ new domain concept, define it here in the same PR.
   hour past its start) — never one that has sailed and returned, and never tomorrow's — and never
   for a diver with stated support needs or a minor, who meet a person, which is the whole point of
   stating either. A diver's own two departures inside that window resolve to the nearer one; two
-  different people sharing a surname still go to the desk.
+  different people sharing a surname still go to the desk. Both apellidos of a two-apellido name
+  work, and so does a tussenvoegsel: the lookup matches any word of the stored name but the given
+  ones, whole and exactly, because a prompt reading "Apellido" that accepted only the maternal one
+  refused every Hispanic diver (issue #1610).
+  **A second tap is answered warmly, and that is an accepted disclosure.** A diver already arrived
+  reads *"Already checked in, Diego."* rather than the generic "See the desk", so a link holder can
+  learn that somebody by that surname has turned up today. It stands because the alternative
+  discloses more, not less: typing a name that has *not* arrived answers "You're set" and records
+  an arrival, so presence is readable from the success path either way, and folding the second tap
+  into the refusal would only send a diver who is already through into a queue for nothing (issue
+  #1611).
 - **Recovery code** — one of ten single-use strings issued at two-factor enrolment, shown once and
   stored only as a salted HMAC under the deployment's own sealing key. It is a second factor, not
   a password reset: presenting one satisfies the same check a TOTP code does.
