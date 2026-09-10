@@ -44,8 +44,8 @@ each of which a receiving mailbox or a regulator also expects of a legitimate se
   AWS's own review thresholds (5%, 0.1%), on the existing observability topic. Alarms only: AWS
   publishes the metric.
 - The production-access request is re-made with a case text that names every one of these
-  mechanisms by file and behaviour (`docs/engineering/ses-email-runbook.md`, "Production access: the
-  second request"), and the manual-action registry says so.
+  mechanisms by file and behaviour (`docs/engineering/ses-email-runbook.md`, "Production access:
+  the request"), and the manual-action registry says so.
 
 ## Alternatives considered
 
