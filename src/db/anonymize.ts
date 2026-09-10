@@ -104,6 +104,7 @@ import {
   specialtyCertifications,
   staffCredentials,
   staffReplies,
+  tripLastMinutePromoRecipients,
   tripReviews,
   tripWaitlistEntries,
   userAccounts,
@@ -694,6 +695,30 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   await tx
     .delete(personCourtesyEmailUnsubscribeTokens)
     .where(eq(personCourtesyEmailUnsubscribeTokens.personId, personId));
+
+  // **The last-minute deal's recipient log keeps its row and loses its
+  // address.** `trip_last_minute_promo_recipients` records who was sent which
+  // deal, and it stores the address it went *to* — the diver's own email, as a
+  // NOT NULL column, keyed by `person_id`. Nothing here touched it, so an
+  // erased diver's address survived every deal they were ever offered, and
+  // `src/db/export.ts` carries that table out of the shop in the portable
+  // bundle (found by the sweep issue #1607 asks for).
+  //
+  // Redacted rather than deleted, the shape `user_accounts.email` above takes
+  // and for the same reason: the shop's record that a deal went to N people on
+  // a departure is its own, and it is not a fact about this person once the
+  // address is gone. `person_id` stays for the reason `course_inquiries` keeps
+  // its own — it points at a row that has itself been erased, and keeping it is
+  // what makes a replayed erasure reach the same rows.
+  await tx
+    .update(tripLastMinutePromoRecipients)
+    .set({ email: `${redactedUniqueValue("erased")}@invalid` })
+    .where(
+      and(
+        eq(tripLastMinutePromoRecipients.shopId, shopId),
+        eq(tripLastMinutePromoRecipients.personId, personId),
+      ),
+    );
 
   // Staff prose about a person is personal data end to end, and the body column
   // carries a non-blank check, so there is nothing to redact it *to*.
