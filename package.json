@@ -28,6 +28,7 @@
     "visual:prune": "dotenv -c -- node scripts/prune-visual-bucket.mjs",
     "infra:bootstrap": "dotenv -c -- node scripts/infra-bootstrap.mjs",
     "infra:deploy": "dotenv -c -- node scripts/infra-deploy.mjs",
+    "infra:migrate-region": "dotenv -c -- node scripts/migrate-region.mjs",
     "infra:synth": "dotenv -c -- node scripts/infra-cdk.mjs synth",
     "infra:diff": "dotenv -c -- node scripts/infra-cdk.mjs diff",
     "check:architecture": "node scripts/check-architecture.mjs",
