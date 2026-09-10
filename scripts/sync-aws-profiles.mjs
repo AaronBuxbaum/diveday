@@ -2,6 +2,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { PRIMARY_REGION } from "../config/aws-regions.mjs";
 import { parseDotenv } from "./dotenv.mjs";
 
 const repairConfigOnly = process.argv.includes("--repair-config");
@@ -107,9 +108,20 @@ function updateIni(path, replacements) {
   chmodSync(path, 0o600);
 }
 
+// PRIMARY_REGION, never a literal. These lines are written into ~/.aws/config
+// and become the region every `aws` call on a generated profile uses when the
+// shell exports none -- including the post-deploy wizard's own read of the
+// diveday/env secret. A stale literal here after a region move is the quietest
+// failure in the handoff: the credentials secret is RemovalPolicy.DESTROY, so
+// the old estate's document survives its recovery window in the old region,
+// and the read succeeds and returns dead keys rather than erroring
+// (docs/engineering/region-migration.md).
 const configReplacements = new Map([
-  ["profile diveday-admin", { region: "us-east-1" }],
-  ...[...managedProfiles.keys()].map((profile) => [`profile ${profile}`, { region: "us-east-1" }]),
+  ["profile diveday-admin", { region: PRIMARY_REGION }],
+  ...[...managedProfiles.keys()].map((profile) => [
+    `profile ${profile}`,
+    { region: PRIMARY_REGION },
+  ]),
 ]);
 
 if (checkOnly) {

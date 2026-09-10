@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { PRIMARY_REGION } from "../config/aws-regions.mjs";
 import { ensureAwsDeploymentLogin } from "./aws-login.mjs";
 import { selectDeployProfile } from "./aws-profile.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
@@ -13,7 +14,7 @@ if (!operation || !["synth", "diff"].includes(operation)) {
 
 const environment = { ...process.env };
 selectDeployProfile(environment);
-environment.AWS_DEFAULT_REGION ||= "us-east-1";
+environment.AWS_DEFAULT_REGION ||= PRIMARY_REGION;
 // `synth` never calls AWS -- this stack does no context lookups (no
 // Vpc.fromLookup, no StringParameter.valueFromLookup) -- so it's the one
 // operation here that must work with no login at all, credentials

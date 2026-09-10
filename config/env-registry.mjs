@@ -115,7 +115,10 @@ export const ENV_GROUPS = [
       "values server-only -- none may use a NEXT_PUBLIC_ prefix. Credentials belong to",
       "the diveday-ses-sender IAM user, never the cdk-deployer or reg-suit-bot ones.",
       "Also requires the AWS-side production-access request and DKIM DNS verification",
-      "for ses.dive.day -- see docs/engineering/infrastructure-runbook.md.",
+      "for ses.dive.day -- see docs/engineering/infrastructure-runbook.md. SES_AWS_REGION",
+      "is its own value rather than the estate's region: the sandbox is per region, so",
+      "mail keeps its own stack and its own constant even while the two agree (ADR",
+      "20260910-one-region-in-us-east-2).",
     ],
     keys: [
       {

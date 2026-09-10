@@ -15,7 +15,28 @@ All infrastructure is defined as code under the [infra/](../../infra/) directory
 
 ## Overview
 
-We use AWS CDK to model, deploy, and update our cloud resources. Currently, the infrastructure consists of the `DiveDay` stack, which provisions:
+We use AWS CDK to model, deploy, and update our cloud resources. The infrastructure is **three
+stacks**, and one `pnpm infra:deploy` does all of them:
+
+| Stack | Region | Holds |
+| --- | --- | --- |
+| `DiveDay` (`diveday-infra`) | `us-east-2` (`PRIMARY_REGION`) | everything below |
+| `DiveDayEmail` (`diveday-email`) | `us-east-2` (`SES_REGION`) | the SES identity, configuration set, event topic, the two reputation alarms, and the inbound receipt rule set with its bucket and topic — see [§7](#7-ses-email-provider-infra) |
+| `DiveDayGlobal` (`diveday-global`) | `us-east-1` (`ROUTE53_METRICS_REGION`) | the external uptime monitor: Route 53 health checks and the alarms on their metric |
+
+Every region and every stack name is one constant in [config/aws-regions.mjs](../../config/aws-regions.mjs).
+
+Neither split is tidiness. Mail is its own stack because SES's production-access sandbox is per
+region and AWS refused the us-east-1 request, so the region mail is sent from is a decision AWS gets
+a vote in and should stay a one-line change. The uptime monitor is its own stack because Route 53
+publishes `HealthCheckStatus` to CloudWatch in us-east-1 and nowhere else, so those alarms cannot
+follow `PRIMARY_REGION` anywhere (ADR
+[20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)).
+
+Moving the estate is one line here and a runbook everywhere else:
+[region-migration.md](region-migration.md).
+
+`DiveDay` provisions:
 - An S3 bucket for storing visual regression testing (VRT) baselines and HTML reports.
 - A `reg-suit-bot` IAM user with specific S3 read/write permissions.
 - A dedicated `cdk-deployer` IAM user that holds **no direct AWS permissions of its own** — only
@@ -27,7 +48,7 @@ We use AWS CDK to model, deploy, and update our cloud resources. Currently, the 
   [who can read it](#who-can-read-it). The stack comments at
   [infra/lib/infra-stack.ts](../../infra/lib/infra-stack.ts) §5 carry the full reasoning.
 - Cost guardrails: an `AWS::Budgets::Budget` and AWS Cost Anomaly Detection — see [§6](#6-cost-guardrails) below.
-- SES/SNS infra for the app's sole email provider — see [§7](#7-ses-email-provider-infra) below. The code path is live; the AWS-side production access and DKIM/MAIL FROM DNS records are still manual steps.
+- The `diveday-ses-sender` IAM user and its key, for the app's sole email provider — see [§7](#7-ses-email-provider-infra) below. The identity it sends through is in the other stack; the AWS-side production access and DKIM/MAIL FROM DNS records are still manual steps.
 - A versioned, private, retained S3 bucket as the destination for scheduled database export bundles — see [§8](#8-backup-bucket) below.
 - HTTPS subscriptions wiring both SNS topics to the app's webhook routes — see [§9](#9-webhook-subscriptions) below. Created on every deploy, no flag required.
 - An access key for every one of its eight IAM users, delivered through one Secrets Manager secret
@@ -80,7 +101,7 @@ limited deployer identity.
 
 ## 2. Bootstrapping the Environment
 
-AWS CDK requires one-time bootstrapping of an AWS environment (combination of account and region) before you can deploy any stacks. This process provisions resources CDK needs to operate (like an S3 bucket for staging assets).
+AWS CDK requires one-time bootstrapping of an AWS environment (combination of account and region) before you can deploy any stacks. This process provisions resources CDK needs to operate (like an S3 bucket for staging assets). There is one environment per region the stacks name — two today, `us-east-2` and `us-east-1` — and the wrapper does every one in a single run, reading `DEPLOY_REGIONS` rather than counting them itself.
 
 Bootstrap the intended administrator profile:
 ```bash
@@ -118,6 +139,24 @@ To deploy the stack to AWS:
 ```bash
 pnpm infra:deploy
 ```
+
+That deploys both stacks. Name one to deploy it alone (`pnpm infra:deploy DiveDay`), which is also
+how a `--parameters` value reaches the stack that declares it — unqualified, CloudFormation applies
+it to every stack in the deploy and rejects it on the one whose template has no such parameter, so
+the wrapper refuses that shape rather than half-doing it.
+
+**The first deploy into a new region is two commands**, because the deployer's own per-region
+grants come from the stack it is deploying — until `DiveDay` has landed once there, neither it nor
+the CI roles can see `diveday-email` or `diveday-global`, and both the deploy and the PR's
+`cdk diff` answer `AccessDenied` on `cloudformation:DescribeStacks`:
+
+```bash
+pnpm infra:bootstrap        # admin profile; bootstraps every region in DEPLOY_REGIONS
+pnpm infra:deploy DiveDay   # widens the grants
+pnpm infra:deploy           # all three stacks; the other two for the first time
+```
+
+Every deploy after that is one command again.
 
 After CloudFormation succeeds, the command writes `.env.local`, `.env.vercel`, and `.env.github`,
 then checks each optional handoff before asking whether it needs an update: generated AWS CLI
@@ -312,6 +351,12 @@ AWS-side infra below is still a manual multi-step cutover before real sending wo
 the "how to actually use it" reference. See [docs/engineering/ses-email-runbook.md](ses-email-runbook.md)
 for the day-to-day operational guide.
 
+**Where:** `us-east-2`, in the `diveday-email` stack
+([infra/lib/email-stack.ts](../../infra/lib/email-stack.ts)) — everything in the first four bullets
+below. The sender identity and its key are in `diveday-infra` with the rest of IAM. Every `aws ses*`
+command against this setup needs `--region us-east-2`; a call to the wrong region reports that the
+identity does not exist rather than that the region is wrong.
+
 **What's provisioned now (AWS side):**
 - An `ses.EmailIdentity` for `sesEmailDomain` (context value, default `ses.dive.day`).
 - Easy DKIM signing (SES's default) — the `SesDkimRecords` output has the three CNAME records to add
@@ -324,8 +369,9 @@ for the day-to-day operational guide.
 - An `ses.ConfigurationSet` (with `optimizedSharedDelivery` enabled, `engagementMetrics` deliberately
   left off — see the no-opens/no-clicks privacy stance in the runbook) wired to a new SNS topic
   (`SesEventNotificationsTopicArn` output) for bounce/complaint/delivery events.
-- A `diveday-ses-sender` IAM user, scoped to `ses:SendEmail`/`ses:SendRawEmail` on just this identity
-  and its configuration set. Its access key is minted by the deploy and delivered in the credentials
+- A `diveday-ses-sender` IAM user (in `diveday-infra` — IAM is global), scoped to
+  `ses:SendEmail`/`ses:SendRawEmail` on just this identity and its configuration set, by ARNs that
+  name `us-east-2`. Its access key is minted by the deploy and delivered in the credentials
   secret ([§10](#10-the-credentials-secret)) as `SES_AWS_ACCESS_KEY_ID` /
   `SES_AWS_SECRET_ACCESS_KEY` — never store it in the repo.
 
@@ -339,7 +385,7 @@ below are done — until then, missing/invalid credentials mean every send resol
 
 | Variable | Purpose |
 | --- | --- |
-| `SES_AWS_REGION` / `SES_AWS_ACCESS_KEY_ID` / `SES_AWS_SECRET_ACCESS_KEY` | The `diveday-ses-sender` IAM user's own credentials — never the `cdk-deployer` or `reg-suit-bot` ones. |
+| `SES_AWS_REGION` / `SES_AWS_ACCESS_KEY_ID` / `SES_AWS_SECRET_ACCESS_KEY` | The `diveday-ses-sender` IAM user's own credentials — never the `cdk-deployer` or `reg-suit-bot` ones. The region is filled in from `SES_REGION`, not from wherever the stack was deployed. |
 | `SES_FROM_EMAIL` | The sender address on `sesEmailDomain`. |
 | `SES_SNS_TOPIC_ARN` | `SesEventNotificationsTopicArn`'s value — `/api/webhooks/ses` answers 503 without it, and rejects a correctly-signed message from any other topic. |
 

@@ -33,7 +33,7 @@ fi
   writeFileSync(
     join(cdkDirectory, "cdk"),
     `#!/bin/sh
-printf '%s\\n' "$*" > "$DIVEDAY_CDK_LOG"
+printf '%s\\n' "$*" >> "$DIVEDAY_CDK_LOG"
 `,
   );
   chmodSync(join(bin, "aws"), 0o755);
@@ -75,8 +75,15 @@ describe("infra:bootstrap", () => {
     expect(readFileSync(join(directory, "aws.log"), "utf8")).toContain(
       "diveday-admin:s3control put-public-access-block --account-id 123456789012",
     );
+    // Every region a stack names, in one run, in registry order. The email
+    // stack and the main stack share us-east-2 and the uptime stack is pinned
+    // to us-east-1 because Route 53 publishes its metric nowhere else (ADR
+    // 20260910-one-region-in-us-east-2). Bootstrap is per region, so a run that did
+    // only the first leaves a deploy failing on an AssumeRole whose role name
+    // ends in a region nobody bootstrapped.
     expect(readFileSync(join(directory, "cdk.log"), "utf8")).toBe(
-      "bootstrap aws://123456789012/us-east-1 --qualifier dive\n",
+      "bootstrap aws://123456789012/us-east-2 --qualifier dive\n" +
+        "bootstrap aws://123456789012/us-east-1 --qualifier dive\n",
     );
   });
 

@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { PRIMARY_REGION } from "../config/aws-regions.mjs";
 
 const directories = [];
 
@@ -65,7 +66,12 @@ describe("sync-aws-profiles", () => {
     expect(config.match(/^\[profile diveday-admin\]$/gm)).toHaveLength(1);
     expect(config).toContain("login_session = arn:aws:iam::123456789012:root");
     expect(config).toMatch(/\[default\][\s\S]*region = us-west-2/);
-    expect(config).toMatch(/\[profile diveday-admin\][\s\S]*region = us-east-1/);
-    expect(config).toContain("[profile diveday-deployer]\nregion = us-east-1");
+    // The estate's region, read from the registry rather than spelled here:
+    // a literal in this assertion is what would let the generated profiles keep
+    // pointing at a torn-down region after a move and still pass.
+    expect(config).toMatch(
+      new RegExp(`\\[profile diveday-admin\\][\\s\\S]*region = ${PRIMARY_REGION}`),
+    );
+    expect(config).toContain(`[profile diveday-deployer]\nregion = ${PRIMARY_REGION}`);
   });
 });
