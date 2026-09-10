@@ -2,7 +2,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { matchableNameTokens, readKioskInput, surnameOf } from "@/lib/kiosk-check-in";
+import { foldNameWord, matchableNameTokens, readKioskInput, surnameOf } from "@/lib/kiosk-check-in";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { listSelfReportedArrivalBookingIds } from "./arrival-provenance";
@@ -221,6 +221,29 @@ describe("findKioskSeats", () => {
   });
 
   /**
+   * **An unaccented spelling is the ordinary one at a counter.** Case was
+   * folded on both sides and nothing else was, so a diver recorded with the
+   * accent was refused the spelling their tablet's keyboard reaches for, in the
+   * same "See the desk" a stranger gets (issue #1656).
+   */
+  it("finds an accented name by its unaccented spelling, and the other way round", async () => {
+    const { db, shop, booking, person, atTheDoor } = await counter();
+    await db.update(people).set({ fullName: "Ana García Márquez" }).where(eq(people.id, person.id));
+
+    for (const typed of ["garcia", "GARCIA", "Márquez", "marquez", "Garcia Marquez"]) {
+      const seats = await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(typed),
+        now: atTheDoor,
+      });
+      expect(
+        seats.map((row) => row.bookingId),
+        typed,
+      ).toContain(booking.id);
+    }
+  });
+
+  /**
    * The SQL is `matchableNameTokens` written a second time, in another
    * language, over a column instead of a string — so the two agreeing is the
    * invariant rather than a coincidence. A name whose shape only one of them
@@ -234,11 +257,22 @@ describe("findKioskSeats", () => {
       "Jan van der Berg",
       "Adaeze Nwosu",
       "Prince",
+      // Folding is the other half of the pairing (issue #1656), and this name
+      // is here so a fold that only landed on one side shows up as a diver one
+      // door finds and the other does not.
+      "Ingrid Nyström",
+      "Łukasz Wiśniewski",
     ];
 
     for (const fullName of names) {
       await db.update(people).set({ fullName }).where(eq(people.id, person.id));
-      const words = fullName.toLowerCase().split(/\s+/);
+      // Every word the name is written with, and every word it could be typed
+      // as: the folded spelling is the one a tablet keyboard reaches for.
+      const words = [
+        ...new Set(
+          fullName.split(/\s+/).flatMap((word) => [word.toLowerCase(), foldNameWord(word)]),
+        ),
+      ];
       const matchable = matchableNameTokens(fullName);
 
       for (const word of words) {
@@ -248,7 +282,9 @@ describe("findKioskSeats", () => {
           now: atTheDoor,
         });
         const found = seats.some((row) => row.bookingId === booking.id);
-        expect(found, `${fullName} by ${word}`).toBe(matchable.includes(word));
+        // The rule holds the folded form, so an accented spelling matches when
+        // its fold does — which is the whole point of folding both sides.
+        expect(found, `${fullName} by ${word}`).toBe(matchable.includes(foldNameWord(word)));
       }
     }
   });

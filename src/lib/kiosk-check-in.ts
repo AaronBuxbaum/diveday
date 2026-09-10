@@ -20,6 +20,70 @@ export function kioskCheckInPath(token: string): string {
 }
 
 /**
+ * **Accents are folded on both sides, exactly and only these.**
+ *
+ * Case was already folded and nothing else was, so "Ana García Márquez" was
+ * found by `garcía` and refused `garcia` — in the same market the two-apellido
+ * fix was for, with the same "See the desk" a stranger gets (issue #1656). A
+ * diver typing at a counter on whatever keyboard the shop's tablet is set to
+ * skips a diacritic they would never skip on paper.
+ *
+ * A table rather than a normalization pass, because the same folding has to be
+ * written a second time in SQL and the two must not drift: `FOLD_FROM` and
+ * `FOLD_TO` are built from this one list and handed to Postgres `translate()`,
+ * which folds character for character. `unaccent` would read better and is
+ * available in PGlite, but it is `STABLE` rather than `IMMUTABLE`, so it can
+ * never back an index, and on Neon it is an extension to install and a
+ * permission to hold — a dependency this list does not need.
+ *
+ * `lower()` runs first on both sides, so only lower-case forms appear here.
+ *
+ * **What it deliberately does not fold**: anything whose unaccented form is
+ * more than one character — the German ß, the ligatures æ and œ. `translate()`
+ * maps one character to one character, and a diver who types `ss` for ß is a
+ * different question from one who drops an acute.
+ */
+const FOLDINGS: readonly (readonly [string, string])[] = [
+  ["áàâäãåāăą", "a"],
+  ["çćčĉċ", "c"],
+  ["ďđ", "d"],
+  ["éèêëēĕėęě", "e"],
+  ["ĝğġģ", "g"],
+  ["ĥħ", "h"],
+  ["íìîïĩīĭįı", "i"],
+  ["ĵ", "j"],
+  ["ķ", "k"],
+  ["ĺļľł", "l"],
+  ["ñńņň", "n"],
+  ["óòôöõōŏőø", "o"],
+  ["ŕŗř", "r"],
+  ["śŝşšș", "s"],
+  ["ţťțŧ", "t"],
+  ["úùûüũūŭůűų", "u"],
+  ["ŵ", "w"],
+  ["ýÿŷ", "y"],
+  ["źżž", "z"],
+];
+
+/** The two `translate()` arguments, and the reason they are exported: `src/db/kiosk-check-in.ts` folds with them. */
+export const FOLD_FROM = FOLDINGS.map(([from]) => from).join("");
+export const FOLD_TO = FOLDINGS.map(([from, to]) => to.repeat(from.length)).join("");
+
+const FOLDED = new Map(
+  FOLDINGS.flatMap(([from, to]) => [...from].map((character) => [character, to] as const)),
+);
+
+/**
+ * One word, lower-cased and folded — the form both sides of the lookup compare.
+ *
+ * `lower()` before the fold on the Postgres side too, so an accented capital
+ * (`Á`) becomes `á` and then `a` by the same two steps in both languages.
+ */
+export function foldNameWord(word: string): string {
+  return [...word.toLowerCase()].map((character) => FOLDED.get(character) ?? character).join("");
+}
+
+/**
  * The **word a diver answers with**: the last whitespace-separated word of what
  * they typed.
  *
@@ -31,7 +95,7 @@ export function kioskCheckInPath(token: string): string {
  */
 export function surnameOf(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
-  return (parts.at(-1) ?? "").toLowerCase();
+  return foldNameWord(parts.at(-1) ?? "");
 }
 
 /**
@@ -66,7 +130,7 @@ export function matchableNameTokens(fullName: string): readonly string[] {
     .trim()
     .split(/\s+/)
     .filter((part) => part.length > 0)
-    .map((part) => part.toLowerCase());
+    .map(foldNameWord);
   if (parts.length <= 1) return parts;
   return parts.slice(parts.length >= 4 ? 2 : 1);
 }

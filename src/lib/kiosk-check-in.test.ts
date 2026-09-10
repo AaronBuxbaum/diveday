@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  FOLD_FROM,
+  FOLD_TO,
+  foldNameWord,
   KIOSK_INPUT_MAX,
   KIOSK_RESPONSE_FLOOR_MS,
   kioskCheckInPath,
@@ -20,10 +23,12 @@ describe("kioskCheckInPath", () => {
 });
 
 describe("surnameOf", () => {
-  it("takes the last whitespace-separated word, lower-cased", () => {
+  it("takes the last whitespace-separated word, lower-cased and folded", () => {
     expect(surnameOf("Adaeze Nwosu")).toBe("nwosu");
     expect(surnameOf("  priya   SHARMA  ")).toBe("sharma");
-    expect(surnameOf("Ana María Ruiz Gómez")).toBe("gómez");
+    // Folded, because the stored side is folded too: a diver who types the
+    // accent and one who does not reach the same row (issue #1656).
+    expect(surnameOf("Ana María Ruiz Gómez")).toBe("gomez");
   });
 
   it("treats a one-word name as its own surname", () => {
@@ -35,6 +40,45 @@ describe("surnameOf", () => {
   });
 });
 
+describe("foldNameWord", () => {
+  /**
+   * The defect: case was folded on both sides and nothing else was, so a diver
+   * recorded as "Ana García Márquez" was found by `garcía` and refused
+   * `garcia` — a diacritic a counter tablet's keyboard may not even offer
+   * (issue #1656).
+   */
+  it("folds an accent and the case in one step", () => {
+    expect(foldNameWord("García")).toBe("garcia");
+    expect(foldNameWord("MÁRQUEZ")).toBe("marquez");
+    expect(foldNameWord("Nyström")).toBe("nystrom");
+    expect(foldNameWord("Łukasz")).toBe("lukasz");
+    expect(foldNameWord("Çelik")).toBe("celik");
+  });
+
+  it("leaves a word that carries none alone", () => {
+    expect(foldNameWord("Nwosu")).toBe("nwosu");
+    expect(foldNameWord("")).toBe("");
+  });
+
+  /**
+   * `translate()` drops a character outright when its `to` string is shorter,
+   * so a mismatched pair would silently delete letters from every stored name
+   * rather than fail — the two arguments are built from one table for that
+   * reason, and this is the assertion that the build stayed honest.
+   */
+  it("hands Postgres two arguments of equal length", () => {
+    expect(FOLD_TO).toHaveLength(FOLD_FROM.length);
+    expect(new Set(FOLD_FROM).size).toBe(FOLD_FROM.length);
+  });
+
+  it("does not fold what one character cannot carry", () => {
+    // ß, æ and œ unaccent to two letters, which `translate()` cannot express.
+    // Left alone in both languages rather than folded in one of them.
+    expect(foldNameWord("Straß")).toBe("straß");
+    expect(foldNameWord("Æsa")).toBe("æsa");
+  });
+});
+
 describe("matchableNameTokens", () => {
   /**
    * The defect this rule exists for. Asked for *su apellido*, a diver recorded
@@ -43,19 +87,24 @@ describe("matchableNameTokens", () => {
    * (issue #1610).
    */
   it("finds a two-apellido diver by either apellido", () => {
-    expect(matchableNameTokens("Ana García Márquez")).toEqual(["garcía", "márquez"]);
+    expect(matchableNameTokens("Ana García Márquez")).toEqual(["garcia", "marquez"]);
   });
 
   it("keeps a compound given name out of it", () => {
     // Four words or more means the first two are given names. Without this
     // clause "José" would find her, and compound given names are as ordinary
     // in this market as compound surnames.
-    expect(matchableNameTokens("María José García Márquez")).toEqual(["garcía", "márquez"]);
+    expect(matchableNameTokens("María José García Márquez")).toEqual(["garcia", "marquez"]);
   });
 
   it("drops the given name of an ordinary two-word name", () => {
     expect(matchableNameTokens("Adaeze Nwosu")).toEqual(["nwosu"]);
     expect(matchableNameTokens("  priya   SHARMA  ")).toEqual(["sharma"]);
+  });
+
+  it("hands back folded words, so both sides compare the same form", () => {
+    expect(matchableNameTokens("Ana García Márquez")).toEqual(["garcia", "marquez"]);
+    expect(matchableNameTokens("Ana Garcia Marquez")).toEqual(["garcia", "marquez"]);
   });
 
   it("carries a tussenvoegsel and a compound surname", () => {
@@ -74,6 +123,7 @@ describe("matchableNameTokens", () => {
    */
   it("meets surnameOf on whatever the diver types", () => {
     const stored = matchableNameTokens("Ana García Márquez");
+    expect(stored).toContain(surnameOf("Garcia"));
     expect(stored).toContain(surnameOf("García"));
     expect(stored).toContain(surnameOf("García Márquez"));
     expect(stored).toContain(surnameOf("Ana García Márquez"));

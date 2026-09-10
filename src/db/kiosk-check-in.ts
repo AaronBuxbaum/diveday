@@ -2,7 +2,7 @@ import { and, asc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { isMinorOnDate } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import type { KioskInput } from "@/lib/kiosk-check-in";
+import { FOLD_FROM, FOLD_TO, type KioskInput } from "@/lib/kiosk-check-in";
 import { kioskArrivalsWindow } from "@/lib/operational-window";
 import type { AppDb } from "./client";
 import { bookings, diveSupportNeeds, people, trips } from "./schema";
@@ -79,9 +79,14 @@ export async function findKioskSeats(
         // typed word matched against what is left, whole and exactly. Never
         // `like '%…%'`: one letter must not sweep a lobby's roster. The last
         // word alone left every two-apellido diver unreachable by the apellido
-        // they answer with (issue #1610).
+        // they answer with (issue #1610), and case folding alone left them
+        // unreachable by an unaccented spelling of it (#1656) -- `translate`
+        // is `foldNameWord` written in Postgres, off the same two strings.
         sql`${input.lookup.surname} = ANY(
-          (regexp_split_to_array(lower(btrim(${people.fullName})), '\\s+'))[
+          (regexp_split_to_array(
+            translate(lower(btrim(${people.fullName})), ${FOLD_FROM}, ${FOLD_TO}),
+            '\\s+'
+          ))[
             (case
               when array_length(regexp_split_to_array(btrim(${people.fullName}), '\\s+'), 1) >= 4 then 3
               when array_length(regexp_split_to_array(btrim(${people.fullName}), '\\s+'), 1) >= 2 then 2
