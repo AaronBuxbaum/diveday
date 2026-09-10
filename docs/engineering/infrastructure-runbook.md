@@ -865,7 +865,9 @@ deploy costs a window in which every photo 404s, because the deploy is what flip
   attacker-controlled can be stored under the public prefixes — every object goes through
   `processImage`, which refuses anything outside the image content types and re-encodes to JPEG — but
   script executing on `media.dive.day` could set cookies on `.dive.day`, where script on
-  `cloudfront.net` could not. Both headers are inert for an `<img>`.
+  `cloudfront.net` could not. Both headers are inert for an `<img>`. Both are set through the
+  response headers policy's *security headers* config, never its custom headers: CloudFront rejects
+  a security header set as a custom one, and the stack fails to create with `InvalidRequest`.
 
 `Referrer-Policy: strict-origin-when-cross-origin` is defined in terms of *origin*, not site, so the
 media host receives `https://dive.day` and nothing more either way; the capability routes that carry

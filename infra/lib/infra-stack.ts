@@ -3770,14 +3770,12 @@ exports.handler = async () => {
       },
       securityHeadersBehavior: {
         contentTypeOptions: { override: true },
-      },
-      customHeadersBehavior: {
-        customHeaders: [
-          // Not `securityHeadersBehavior.contentSecurityPolicy`, which CDK
-          // requires a full policy string for; `sandbox` alone is the whole
-          // directive here.
-          { header: "Content-Security-Policy", value: "sandbox", override: true },
-        ],
+        // CloudFront refuses `Content-Security-Policy` as a custom header --
+        // it is one of the headers only `securityHeadersBehavior` may set, and
+        // the stack fails to deploy with `InvalidRequest` otherwise. A policy
+        // string is a directive list, and a list of one is a policy: `sandbox`
+        // alone is the whole directive here.
+        contentSecurityPolicy: { contentSecurityPolicy: "sandbox", override: true },
       },
     });
     const publicMediaBehavior: cloudfront.BehaviorOptions = {
