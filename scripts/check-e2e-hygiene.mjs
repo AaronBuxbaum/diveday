@@ -92,7 +92,7 @@ export const rules = [
     pattern: /\.(?:goto|reload)\s*\(/,
     predicate: submitFollowedByNavigation,
     message:
-      "navigating away in the statement straight after submitting a server action races it: the click returns when the request is *sent*, not when the write has landed, so the goto/reload can tear the page down mid-flight and the destination then renders the state from before the save. Wait for what the destination itself shows — `page.waitForURL()` on the action's own `?notice=`/`?created=` redirect, or, for a `useActionState` form that re-renders in place and never redirects, an `expect(locator)` on what the row shows once it has landed. Never a timeout, a retry, or networkidle. Both instances that reached CI pointed nowhere near the cause: one closed the destination's stream early and read as a server error, and the other spent the visual shard's whole 210-second budget before failing on an assertion forty lines below, which is exactly how this gets misread as slow CI.",
+      "navigating away in the statement straight after submitting a server action races it: the click returns when the request is *sent*, not when the write has landed, so the goto/reload can tear the page down mid-flight and the destination then renders the state from before the save. Wait for what the destination itself shows — `page.waitForURL()` on the action's own `?notice=`/`?created=` redirect, or, for a `useActionState` form that re-renders in place and never redirects, an `expect(locator)` on what the row shows once it has landed. Never a timeout, a retry, or networkidle — and never the field you just filled: an `expect(field).toHaveValue(<what this test typed>)` passes on its first poll whether or not the write landed, so it does not count as the wait here. Both instances that reached CI pointed nowhere near the cause: one closed the destination's stream early and read as a server error, and the other spent the visual shard's whole 210-second budget before failing on an assertion forty lines below, which is exactly how this gets misread as slow CI.",
   },
 ];
 
@@ -146,19 +146,96 @@ const isProse = (line) => {
  * line or a comment. The hard cap only exists so a malformed file cannot walk
  * the scanner to the top.
  */
-function statementAbove(lines, at) {
+function statementStart(lines, at) {
   let from = at;
   while (from > 0 && at - from < 12) {
     const previous = lines[from - 1];
     if (isProse(previous) || previous.trimEnd().endsWith(";")) break;
     from -= 1;
   }
-  return lines.slice(from, at + 1).join("\n");
+  return from;
+}
+
+function statementAbove(lines, at) {
+  return lines.slice(statementStart(lines, at), at + 1).join("\n");
+}
+
+/**
+ * The subjects whose value the test itself put there: a form control.
+ *
+ * Anything else an assertion can name — a row, a heading, a toast — is rendered
+ * by the destination rather than typed by the test, so asserting on it is a
+ * real wait and stays one.
+ */
+const FORM_CONTROL_SUBJECT =
+  /getByLabel\s*\(|getByPlaceholder\s*\(|getByRole\s*\(\s*["'`](?:textbox|combobox|checkbox|radio|spinbutton|switch)["'`]|\[name=/;
+
+/** Where the enclosing test body starts, so "earlier" cannot reach a sibling test. */
+function testBodyFrom(lines, at) {
+  for (let from = at; from >= 0; from -= 1) {
+    if (/\b(?:test|it)\s*(?:\.\w+)*\s*\(/.test(lines[from])) return from;
+  }
+  return 0;
+}
+
+const escapeForRegExp = (source) => source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * An assertion that reads a form control back for what this same test typed
+ * into it, which passes on its first poll whether or not the write ever landed.
+ *
+ * It is syntactically a wait and semantically nothing, and that is the whole
+ * defect: `action-race` asks only whether *some* statement stands between the
+ * submit and the navigation, so this shape satisfied the rule while leaving the
+ * race exactly as it was. One stood in `e2e/visual.spec.ts` from 2026-09-05
+ * until it cost a visual shard its whole 210-second budget on PR #1618, with
+ * the trace showing the action's POST at status -1 and the destination
+ * rendering pre-save state (issue #1644).
+ *
+ * Deliberately the narrow, decidable case rather than an attempt to prove in
+ * general that an assertion depends on the action: the awaited expression has
+ * to be the *same source text* the test passed to `fill` earlier in the same
+ * body, or, for a checkbox, the same quoted name it called `check` on. A test
+ * that means to assert a round-tripped value still can — it just has to say
+ * what it waited for first, which is what its siblings in
+ * `e2e/depth-and-age-surfaces.spec.ts` and `e2e/courses.spec.ts` already do.
+ */
+function echoesAnEarlierEdit(lines, at) {
+  const from = statementStart(lines, at);
+  const statement = lines.slice(from, at + 1).join("\n");
+  if (!/\bexpect\s*\(/.test(statement) || !FORM_CONTROL_SUBJECT.test(statement)) return false;
+  const earlier = lines.slice(testBodyFrom(lines, from), from).join("\n");
+
+  const awaited = statement.match(/toHaveValue\s*\(([^)]*)\)/);
+  if (awaited) {
+    const argument = awaited[1].trim();
+    if (!argument) return false;
+    return new RegExp(`\\.fill\\(\\s*${escapeForRegExp(argument)}\\s*\\)`).test(earlier);
+  }
+
+  if (/toBeChecked\s*\(/.test(statement)) {
+    // The locator's own name, matched to the statement that ticked it. Bounded
+    // to the chain it opens rather than to the rest of the test: a name and a
+    // `.check()` far apart are two different locators.
+    const name = statement.match(/["'`]([^"'`]+)["'`]/);
+    if (!name) return false;
+    return new RegExp(
+      `["'\`]${escapeForRegExp(name[1])}["'\`][^;]{0,200}?\\.(?:check|uncheck|setChecked)\\s*\\(`,
+    ).test(earlier);
+  }
+
+  return false;
 }
 
 function submitFollowedByNavigation(lines, index) {
   let at = index - 1;
   while (at >= 0 && isProse(lines[at])) at -= 1;
+  // A round-trip assertion is transparent: step over it and keep looking for
+  // the submit, exactly as if it were a comment.
+  while (at >= 0 && echoesAnEarlierEdit(lines, at)) {
+    at = statementStart(lines, at) - 1;
+    while (at >= 0 && isProse(lines[at])) at -= 1;
+  }
   if (at < 0 || !/\.click\s*\(/.test(lines[at])) return false;
   return SUBMIT_LABEL.test(statementAbove(lines, at));
 }

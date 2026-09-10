@@ -298,6 +298,126 @@ describe("action races", () => {
     ).toEqual([]);
   });
 
+  it("does not accept a field read back for what the test just typed", () => {
+    // Verbatim from e2e/visual.spec.ts as it stood from 2026-09-05, where it
+    // satisfied this rule for five days while waiting for nothing: the field
+    // already holds NOTE when the assertion runs, so it passes on the first
+    // poll whether or not the write landed (issue #1644).
+    expect(
+      ruleIds(
+        [
+          'test("a dive site\'s planning note renders true to the design", async ({ page }) => {',
+          '  await page.getByLabel("What to remember about running this site").fill(NOTE);',
+          '  await page.getByRole("button", { name: "Save dive site" }).click();',
+          '  await expect(page.getByLabel("What to remember about running this site")).toHaveValue(NOTE);',
+          "  await page.goto(`/shop/${privateShop.slug}/dive-sites`);",
+          "});",
+        ].join("\n"),
+      ),
+    ).toEqual(["action-race"]);
+  });
+
+  it("reads the whole assertion, however the formatter broke it", () => {
+    expect(
+      ruleIds(
+        [
+          'test("x", async ({ page }) => {',
+          '  await page.getByLabel("Note").fill("The entry silted up");',
+          '  await page.getByRole("button", { name: "Save dive site" }).click();',
+          "  await expect(",
+          '    page.getByLabel("Note"),',
+          '  ).toHaveValue("The entry silted up");',
+          '  await page.goto("/shop/blue-mantis/dive-sites");',
+          "});",
+        ].join("\n"),
+      ),
+    ).toEqual(["action-race"]);
+  });
+
+  it("keeps the round-trip assertion legal once a real wait stands in front of it", () => {
+    // The fix shipped on #1618, and the shape this rule must not push people
+    // away from: assert the saved value all you like, after waiting on the
+    // action's own redirect.
+    expect(
+      ruleIds(
+        [
+          'test("x", async ({ page }) => {',
+          '  await page.getByLabel("Note").fill(NOTE);',
+          '  await page.getByRole("button", { name: "Save dive site" }).click();',
+          "  await page.waitForURL(/[?&]notice=saved/);",
+          '  await expect(page.getByLabel("Note")).toHaveValue(NOTE);',
+          '  await page.goto("/shop/blue-mantis/dive-sites");',
+          "});",
+        ].join("\n"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("only steps over an assertion whose value this test typed", () => {
+    // A value the destination produced, not the test — an id the save minted,
+    // a total the server computed — is a real wait and keeps counting.
+    expect(
+      ruleIds(
+        [
+          'test("x", async ({ page }) => {',
+          '  await page.getByLabel("Note").fill("typed");',
+          '  await page.getByRole("button", { name: "Save dive site" }).click();',
+          '  await expect(page.getByLabel("Reference")).toHaveValue(mintedReference);',
+          '  await page.goto("/shop/blue-mantis/dive-sites");',
+          "});",
+        ].join("\n"),
+      ),
+    ).toEqual([]);
+    // And a subject that is not a form control is rendered by the page rather
+    // than typed into it, whatever the matcher.
+    expect(
+      ruleIds(
+        [
+          'test("x", async ({ page }) => {',
+          '  await page.getByLabel("Note").fill(NOTE);',
+          '  await page.getByRole("button", { name: "Save dive site" }).click();',
+          "  await expect(page.getByRole(\"row\", { name: 'Molasses Reef' })).toContainText(NOTE);",
+          '  await page.goto("/shop/blue-mantis/dive-sites");',
+          "});",
+        ].join("\n"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("reads a ticked box back the same way", () => {
+    expect(
+      ruleIds(
+        [
+          'test("x", async ({ page }) => {',
+          '  await page.getByLabel("Nitrox available").check();',
+          '  await page.getByRole("button", { name: "Save dive site" }).click();',
+          '  await expect(page.getByLabel("Nitrox available")).toBeChecked();',
+          '  await page.goto("/shop/blue-mantis/dive-sites");',
+          "});",
+        ].join("\n"),
+      ),
+    ).toEqual(["action-race"]);
+  });
+
+  it("cannot borrow a fill from a sibling test", () => {
+    // "Earlier in the same body" is bounded by the enclosing test, so the
+    // assertion below is asserting a value this test never typed.
+    expect(
+      ruleIds(
+        [
+          'test("one", async ({ page }) => {',
+          '  await page.getByLabel("Note").fill(NOTE);',
+          "});",
+          'test("two", async ({ page }) => {',
+          '  await page.getByRole("button", { name: "Save dive site" }).click();',
+          '  await expect(page.getByLabel("Note")).toHaveValue(NOTE);',
+          '  await page.goto("/shop/blue-mantis/dive-sites");',
+          "});",
+        ].join("\n"),
+      ),
+    ).toEqual([]);
+  });
+
   it("leaves a click whose label is not a submit alone", () => {
     // Both live instances of this shape — `waiverLinkFromToast` opens by
     // awaiting the toast, so the navigation cannot outrun anything. Dropping

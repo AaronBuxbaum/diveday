@@ -31,7 +31,10 @@ Loaded when a spec, fixture or the coverage ledger is read. The **e2e-and-visual
   navigation can tear the page down mid-flight and the destination renders the state from before
   the save. Put the wait between them — `page.waitForURL()` on the action's own `?notice=`
   redirect, or an `expect(locator)` on what the row shows for a `useActionState` form that
-  re-renders in place. Both instances that reached CI failed dozens of lines away from the cause
+  re-renders in place. **Reading the field back is not a wait**: an `expect(field).toHaveValue(…)`
+  or `.toBeChecked()` naming what this same test typed passes on its first poll whether or not the
+  write landed, so the rule steps straight over it — assert the round trip after a real wait, never
+  as one. Both instances that reached CI failed dozens of lines away from the cause
   ([docs/agents/repo-checks.md](../../docs/agents/repo-checks.md)).
 - **A failing or flaky test is part of the work, even when unrelated to your change.** Never skip
   it, widen a timeout, or leave it red. Search open PRs first for a fix already in flight on the same
