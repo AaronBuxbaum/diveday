@@ -269,8 +269,6 @@ const ERASURE_KEEPS: Record<string, string> = {
     "kept deliberately by ADR 20260803-processor-erasure-obligations: it names the erased person and whoever discharged the obligation, which is how an unfinished erasure stays visible",
   account_step_ups:
     "cleared by ON DELETE CASCADE from `user_accounts` and `account_sessions`, both of which the erasure deletes",
-  form_drafts:
-    "`person_id` is the *author*, so a `new_diver` draft holds a third party's details under a staffer's id and no person sweep can reach it. Bounded instead: `NEVER_DRAFTED` excludes medical and payment fields, the reader drops anything over 24h, and retention prunes at one day",
   push_subscriptions:
     "`person_id` is the staff member who opted a device in, and the erasure refuses anyone holding a staff role. This becomes a gap the day a diver-facing push subscription ships",
   trip_assignments: "which crew member works which departure — a staff roster row",

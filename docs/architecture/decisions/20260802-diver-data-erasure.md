@@ -148,6 +148,7 @@ deleted; rows that are evidence are kept and their personal fields scrubbed.**
 | `booking_checkouts` | `customer_email` → null. Two asymmetric sweeps — see "The checkout's copy of the address" below. |
 | `trip_last_minute_promo_recipients` | `email` → a unique unusable address. The row stays and, with the address gone, holds nothing but a `person_id` pointing at a row that has itself been erased. `person_id` stays for the reason `course_inquiries`' does — it points at a row that has itself been erased, and keeping it is what makes a replayed erasure reach the same rows. Found by the person-reachable sweep issue #1607 asks for; the table is in the portable export bundle, so the address was leaving the shop with every deal the diver had ever been offered. |
 | `notification_send_queue` | rows deleted, matched on `payload->>'to'` (case-insensitive) and `payload->>'bookingId'`. The one un-normalized PII blob; a work queue, not evidence. |
+| `form_drafts` | rows **deleted**, matched on the erased address appearing as any value in the `fields` blob (issue #1620). `person_id` is the *author*, so no person-scoped sweep reaches the subject — a `new_diver` draft holds a third party's name, address, phone and emergency contact under a staffer's id. The bound the table was trusted for is weaker than it reads: `NEVER_DRAFTED` excludes card, medical and token fields but not those four, and the retention prune runs **weekly** against its one-day cutoff, so a draft could outlive an erasure by five more days. Deleted rather than redacted for the send queue's reason — a work queue is not evidence, and a half-typed form with the identity removed helps nobody. Matched on the address only: a name would reach a namesake's draft and a phone is shared across a household. |
 | `course_inquiries` | `name`, `email`, `phone`, `timing`, `message` → null, matched on `person_id` (snapshotted at capture) first, then on the diver's email or phone — see residuals. `person_id` is left in place: it points at an already-erased row, and keeping it is what makes a replayed erasure reach the same leads. |
 | `processor_erasure_obligations` | *written, not scrubbed* — one row per `orders.stripe_customer_id` (deleted at Stripe after this transaction commits) and one per `orders.stripe_invoice_id` (no API reaches it; the shop files a Stripe data-deletion request) ([20260803-processor-erasure-obligations](20260803-processor-erasure-obligations.md)) |
 
@@ -221,6 +222,7 @@ the exact sweep it sits beside so the count is the over-reach in isolation.
 | `course_inquiry_phone` | a partner's or child's lead on a shared household number |
 | `send_queue_recipient` | a live person's queued mail, when a soft-deleted duplicate shares their address — `people_shop_email_unique` is partial on *live* rows, so the duplicate is legitimate |
 | `booking_checkout_sole_occupant` | the address of someone who booked a seat purely on the erased diver's behalf |
+| `form_draft_address` | a staff member's unfinished form about a *different* person who shares the address — the same soft-deleted-duplicate case as the send queue, and the draft is lost rather than redacted |
 
 `course_inquiry_phone` is deliberately **not** tightened to "…and the inquiry carries no email":
 that would drop the real case it exists for, a diver who used a different address on the public lead
@@ -311,13 +313,6 @@ survive a green run:
   match"); the booking- and actor-scoped sweeps still run, so only an event with a null `booking_id`
   written about them by someone else — a private note — retains a one- or two-character name. That
   is a far smaller leak than what the unbounded match cost.
-- **A half-typed form draft outlives the erasure by up to a week.** `form_drafts.person_id` is the
-  *author*, not the subject, so a `new_diver` draft holds a third party's name, address and phone
-  under a staffer's id and no person-scoped sweep can reach it. `NEVER_DRAFTED` excludes card,
-  medical and token fields but not those three, the reader drops anything over 24 hours, and the
-  retention prune runs **weekly** against a one-day cutoff — so the row can sit for five more days
-  after an erasure reported success. Tracked as [#1620](https://github.com/AaronBuxbaum/diveday/issues/1620);
-  the send-queue sweep is the shape that closes it.
 - **A diver whose only Stripe footprint is a tip gets no obligation row.** The processor ledger
   reads `orders`, and a tip mints its own Checkout session and Customer without one. Nothing local
   leaks — the hosted URL is nulled above — but the promise that an unfinished processor erasure

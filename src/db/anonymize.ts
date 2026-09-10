@@ -85,6 +85,7 @@ import {
   courseInquiries,
   dayCloseouts,
   diveSupportNeeds,
+  formDrafts,
   gearReservations,
   importedPaymentHistory,
   inboundMessages,
@@ -1695,6 +1696,46 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
           inArray(notificationSendQueue.bookingId, bookingIds),
         ),
       );
+  }
+
+  // --- unfinished forms ----------------------------------------------------
+  // `form_drafts.fields` is whatever a staffer had typed into a form and not
+  // yet submitted, and on a `new_diver` draft that is a person's name, address,
+  // phone and emergency contact. `person_id` on the row is the **author**, so
+  // no person-scoped sweep reaches the subject: a draft about this diver sits
+  // under a staff member's id.
+  //
+  // The bound the table was trusted to have is smaller than it looked. Its
+  // reader drops anything over 24h and `NEVER_DRAFTED` keeps card, medical and
+  // token fields out — but not a name, an address or a phone, and the retention
+  // prune runs **weekly** against that one-day cutoff (`30 3 * * 0`). So a draft
+  // could outlive an erasure by five more days (issue #1620).
+  //
+  // Deleted rather than redacted, which is the send queue's answer to the same
+  // question two blocks up: a work queue is not evidence, and a half-typed form
+  // with the identity taken out of it helps nobody — the staffer's draft was
+  // *about* this person.
+  //
+  // Matched on the address only. A name would need the word-boundary anchoring
+  // and minimum length `buddyMemberNameMatch` applies and would still reach a
+  // namesake's draft, and a phone is shared across a household — the reasoning
+  // `course_inquiries` records below. Counted through `logFuzzyMatch` because,
+  // like every other address predicate here, a soft-deleted duplicate person
+  // can legitimately share it.
+  if (ctx.email) {
+    const droppedDrafts = await tx
+      .delete(formDrafts)
+      .where(
+        and(
+          eq(formDrafts.shopId, shopId),
+          sql`exists (
+            select 1 from jsonb_each_text(${formDrafts.fields}) as field(name, value)
+            where lower(field.value) = ${ctx.email.toLowerCase()}
+          )`,
+        ),
+      )
+      .returning({ id: formDrafts.id });
+    logFuzzyMatch(ctx, "form_draft_address", droppedDrafts.length);
   }
 
   // --- course inquiries ----------------------------------------------------

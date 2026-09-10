@@ -16,6 +16,7 @@ import {
   bookingPayments,
   bookings,
   dayCloseouts,
+  formDrafts,
   gearItems,
   gearReservations,
   importedPaymentHistory,
@@ -962,5 +963,70 @@ describe("anonymizeDiver — a wait-listed diver who was also invited (issue #16
     expect(
       await db.select().from(tripWaitlistEntries).where(eq(tripWaitlistEntries.personId, diver.id)),
     ).toEqual([]);
+  });
+});
+
+/**
+ * **A draft is a work queue, and it was outliving the erasure by up to a week**
+ * (issue #1620).
+ *
+ * `form_drafts.person_id` is the staffer who typed, not the person typed about,
+ * so nothing person-scoped reaches a `new_diver` draft holding this diver's
+ * name, address, phone and emergency contact. The bound the table was trusted
+ * for is weaker than it reads: `NEVER_DRAFTED` keeps card, medical and token
+ * fields out but not those four, and the retention prune runs weekly against a
+ * one-day cutoff.
+ *
+ * Two halves, because a sweep that took the whole table would be worse than the
+ * gap: the erased diver's draft goes, and a colleague's draft about somebody
+ * else stays.
+ */
+describe("anonymizeDiver — an unfinished form about the erased diver (issue #1620)", () => {
+  it("drops the draft that names them and leaves the one that does not", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Tomás Herrera", email: "tomas@example.com" })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
+
+    // Both drafts are authored by the owner — which is the whole difficulty.
+    // One is *about* the diver being erased; the other is about a stranger.
+    await db.insert(formDrafts).values([
+      {
+        shopId: shop.id,
+        personId: owner.id,
+        form: "new_diver",
+        fields: {
+          fullName: "Tomás Herrera",
+          email: "tomas@example.com",
+          phone: "+34 600 555 019",
+          emergencyContactName: "Pilar Herrera",
+        },
+      },
+      {
+        shopId: shop.id,
+        personId: owner.id,
+        form: "took_a_call",
+        fields: { fullName: "Someone Else", email: "someone.else@example.com" },
+      },
+    ]);
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: owner.id,
+    });
+    expect(erased.ok).toBe(true);
+
+    const left = await db.select().from(formDrafts).where(eq(formDrafts.shopId, shop.id));
+    expect(left).toHaveLength(1);
+    expect(left[0]?.form).toBe("took_a_call");
+    // Nothing of the erased diver survives in what is left, including the
+    // emergency contact — a third party's details that only this draft held.
+    expect(JSON.stringify(left)).not.toContain("Tomás Herrera");
+    expect(JSON.stringify(left)).not.toContain("tomas@example.com");
+    expect(JSON.stringify(left)).not.toContain("Pilar Herrera");
   });
 });
