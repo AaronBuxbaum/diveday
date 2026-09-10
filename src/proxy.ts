@@ -397,6 +397,12 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
     // `<bucket>.s3.<region>.amazonaws.com`, and a CSP source may wildcard only
     // its leftmost label (issue #1263).
     mediaRegion: process.env.MEDIA_AWS_REGION?.trim() || null,
+    // The origin media URLs are actually written against. Read rather than
+    // pattern-matched, because it stops being an AWS hostname the moment the
+    // distribution answers on a domain DiveDay owns (`mediaDomainName` in
+    // cdk.json) -- at which point `https://*.cloudfront.net` covers nothing
+    // this app serves and every photo is blocked.
+    mediaPublicUrlBase: process.env.MEDIA_PUBLIC_URL_BASE?.trim() || null,
     // The WhatsApp settings page loads Meta's SDK, and it is the only page in
     // the product that loads a third-party script at all. Granting those hosts
     // here rather than app-wide keeps them off every page a diver ever sees.

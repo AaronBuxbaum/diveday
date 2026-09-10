@@ -2,6 +2,7 @@ import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
 import * as budgets from "aws-cdk-lib/aws-budgets";
 import * as ce from "aws-cdk-lib/aws-ce";
+import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
@@ -559,30 +560,58 @@ export class InfraStack extends cdk.Stack {
     // somewhere else. Kept as a context override so a fork or a second account
     // can point it elsewhere without editing the stack (OPS-4).
     const alertEmail = alertEmailFrom(this);
-    // Raised from 5 to 30 on 2026-08-12 (amendment to ADR
-    // 20260802-aws-cost-guardrails). At 5 the fixed floor -- the credentials
-    // secret, two metrics past CloudWatch's always-free ten -- was already a
-    // fifth of the cap, so the 50% and 80% notifications were on course to fire
-    // every month on cost that never changes, which is precisely the "guardrail
-    // becomes noise" failure that ADR set out to avoid. 30 puts the fixed floor
-    // back under 5% and leaves the thresholds meaning what they say: something
-    // is growing that was not growing before.
-    const monthlyBudgetLimit = Number(this.node.tryGetContext("monthlyBudgetLimit") ?? 30);
+    // Raised from 30 to 90 on 2026-09-10 (second amendment to ADR
+    // 20260802-aws-cost-guardrails), in the same change that turned the
+    // thresholds below from percentages into dollars. Both moves come from one
+    // fact: this account now carries a Business Support+ subscription at about
+    // $25/month, and a fixed floor that size cannot be made small relative to
+    // any cap a pre-pilot app would be willing to set. The floor, read off the
+    // August and early-September bills rather than estimated --
+    //
+    //   Business Support+                                  25.00
+    //   S3, four buckets, visual regression the bulk of it  12.00
+    //   Route 53 health check (30s, string match)            2.75
+    //   CloudWatch metrics and alarms past the free ten      2.50
+    //   Secrets Manager, three secrets                       1.20
+    //   Tax                                                  0.10
+    //                                                      ------
+    //                                                       43.55
+    //
+    // -- is 145% of the old $30 cap, so every one of the five notifications
+    // would have fired on the first day of every month forever, on cost that
+    // never changes. 90 leaves roughly twice the floor in headroom for the
+    // things that are about to start costing money (the media distribution now
+    // that the account is verified, SES and SNS once shops send, RUM), which is
+    // what the cap is for. The S3 line is the one to be suspicious of rather
+    // than to budget around: nothing has attributed it to a bucket, and issue
+    // #1651 is where that gets done.
+    const monthlyBudgetLimit = Number(this.node.tryGetContext("monthlyBudgetLimit") ?? 90);
 
     const emailSubscriber = (address: string): budgets.CfnBudget.SubscriberProperty => ({
       subscriptionType: "EMAIL",
       address,
     });
 
+    // **Dollars, not percentages.** `thresholdType` read `PERCENTAGE` until
+    // 2026-09-10, and a percentage threshold is a statement about the cap where
+    // the thing anyone wants to be told about is the bill. While the fixed
+    // floor was $1.40 the two were interchangeable and the percentage read more
+    // naturally; at $43.55 they are not, because 50% of any cap low enough to
+    // be an early warning is *below* the cost of doing nothing. The deeper
+    // problem is that a percentage silently re-prices every threshold whenever
+    // fixed cost is added -- which is exactly what a support subscription did
+    // here, with nothing in the stack changing. An absolute figure is chosen
+    // against the floor, says what it means in the notification email, and
+    // stays put when the cap moves.
     const budgetNotification = (
       notificationType: "ACTUAL" | "FORECASTED",
-      threshold: number,
+      thresholdUsd: number,
     ): budgets.CfnBudget.NotificationWithSubscribersProperty => ({
       notification: {
         notificationType,
         comparisonOperator: "GREATER_THAN",
-        threshold,
-        thresholdType: "PERCENTAGE",
+        threshold: thresholdUsd,
+        thresholdType: "ABSOLUTE_VALUE",
       },
       subscribers: [emailSubscriber(alertEmail)],
     });
@@ -601,12 +630,17 @@ export class InfraStack extends cdk.Stack {
         },
       },
       notificationsWithSubscribers: [
-        budgetNotification("ACTUAL", 50),
-        budgetNotification("ACTUAL", 80),
-        budgetNotification("FORECASTED", 100),
-        budgetNotification("ACTUAL", 100),
+        // About $11 above the floor: the first month in which something is
+        // running that was not running before. This is the notification the
+        // whole guardrail exists for, and the one the old 50% had stopped
+        // being able to be.
+        budgetNotification("ACTUAL", 55),
+        budgetNotification("ACTUAL", 70),
+        // Trending to exceed the cap before the month is over.
+        budgetNotification("FORECASTED", monthlyBudgetLimit),
+        budgetNotification("ACTUAL", monthlyBudgetLimit),
         // Outside-normal-bands siren: still just an email, nothing stops running.
-        budgetNotification("ACTUAL", 200),
+        budgetNotification("ACTUAL", monthlyBudgetLimit * 2),
       ],
     });
 
@@ -1307,8 +1341,9 @@ exports.handler = async (event) => {
     // the repo says which state the account is in and a deploy from the
     // workflow and a deploy from a laptop agree.
     const cloudfrontVerified = String(this.node.tryGetContext("cloudfrontVerified")) === "true";
+    const mediaDomain = this.mediaDomainFromContext();
     const mediaDistribution = cloudfrontVerified
-      ? this.buildMediaDistribution(mediaBucket)
+      ? this.buildMediaDistribution(mediaBucket, mediaDomain)
       : undefined;
 
     const mediaUploaderKey = mintAccessKey("MediaUploaderUserAccessKey", mediaUploaderUser);
@@ -1321,8 +1356,20 @@ exports.handler = async (event) => {
     // from this value, so a CDN domain needs no further change there. Before
     // verification the endpoint is the only URL there is, and the 403 is the
     // documented, pre-existing state (issue #1013).
+    //
+    // **A domain we own, when one is configured** (S11b's `mediaDomainName`).
+    // `d111111abcdef8.cloudfront.net` is not a name DiveDay controls: it is an
+    // identifier for one distribution, and a stack recreated, moved between
+    // accounts or migrated between regions gets a different one. Every media URL
+    // this app writes is stored *absolute* in the database, so that day is the
+    // day every course photo, dive-site image, shop logo and recap picture ever
+    // written breaks at once -- and worse than breaks, because
+    // `managedStorageOrigins` only trusts the currently configured base, so the
+    // rows also stop being recognised as our own storage, which is what gates
+    // deletion and the ingest allowlist. A CNAME is the one thing that makes
+    // the stored URL survive the distribution.
     envValues.MEDIA_PUBLIC_URL_BASE = mediaDistribution
-      ? `https://${mediaDistribution.distributionDomainName}`
+      ? `https://${mediaDomain ?? mediaDistribution.distributionDomainName}`
       : `https://${mediaBucket.bucketName}.s3.${this.region}.amazonaws.com`;
 
     // 12. Address lookup for the settings address card - see ADR
@@ -1936,11 +1983,12 @@ exports.handler = async (event) => {
     //
     // One secret, not eight. Secrets Manager bills $0.40 per secret per month
     // and has no free tier at all, so eight would be $3.20 of fixed monthly
-    // cost. Be honest that this argument got weaker on 2026-08-12: against the
+    // cost. Be honest that this argument got weaker twice: against the
     // $5 budget this was written for, $3.20 was most of the cap and would have
     // fired the 50% and 80% notifications every month on cost that never
-    // changes; against today's $30 it is ~11%, which is affordable rather than
-    // disqualifying. One secret is still the right call, but now on the
+    // changes; against today's $90 cap and $43.55 floor it is under 4% of one
+    // and 7% of the other, which is affordable rather than disqualifying. One
+    // secret is still the right call, but now on the
     // simpler ground that eight hand-off documents for one operator to read is
     // worse ergonomics, not because the money forbids it. The cost is granularity:
     // whoever can read this reads all of it, and there is no per-credential read
@@ -2366,6 +2414,32 @@ exports.handler = async (event) => {
         store:
           "Vercel -> dive.day -> DNS, on the inbound subdomain (the SesInboundMxRecord output spells it out for the deployed region).",
         verify: ["dig +short MX inbound.ses.dive.day  # 10 inbound-smtp.<region>.amazonses.com."],
+      },
+      {
+        id: "media-domain-name",
+        title: "Serve media from a domain DiveDay owns",
+        category: "DNS",
+        when: "once, and again only if the media domain itself changes. Optional: the distribution works without it",
+        why: "Two halves the stack cannot do. A CloudFront alias needs an ACM certificate covering it, and a certificate for CloudFront must be in us-east-1 whatever region the stack is in -- PRIMARY_REGION is us-east-2, so this stack cannot create one. And validating it means a DNS record in a zone at Vercel, which no stack here can write; a CDK-created certificate would leave CloudFormation sitting on the deploy for hours waiting for a human to paste it. The CNAME pointing the name at the distribution is the same Vercel-zone problem as the SES records above.",
+        run: [
+          "aws acm request-certificate --region us-east-1 --domain-name media.dive.day --validation-method DNS --query CertificateArn  # the region is not a typo and is not PRIMARY_REGION",
+          "aws acm describe-certificate --region us-east-1 --certificate-arn <arn> --query 'Certificate.DomainValidationOptions[0].ResourceRecord'",
+          "pnpm exec vercel dns add dive.day <the _acme name, without .dive.day> CNAME <the value>",
+          "pnpm exec vercel dns add dive.day media CNAME <MediaDistributionDomain from the stack outputs>",
+          "Set mediaDomainName and mediaCertificateArn in cdk.json, in a pull request, then pnpm infra:deploy.",
+        ],
+        produces:
+          "MEDIA_PUBLIC_URL_BASE becomes https://media.dive.day instead of the d111111abcdef8.cloudfront.net domain, so every media URL written from then on survives the distribution being replaced -- which the ones written before it will not, because they are stored absolute.",
+        store:
+          "cdk.json, both values, committed. Same reasoning as cloudfrontVerified: a --context flag on one person's command line makes a workflow deploy and a laptop deploy disagree about what is deployed.",
+        verify: [
+          "aws acm describe-certificate --region us-east-1 --certificate-arn <arn> --query Certificate.Status  # ISSUED, before deploying",
+          "dig +short media.dive.day  # the distribution domain, then A records",
+          "curl -sI https://media.dive.day/shop-logos/  # a TLS handshake that completes; the 403 or 404 underneath it is fine",
+        ],
+        onFailure:
+          "CloudFormation refusing the alias with InvalidViewerCertificate means the certificate is not ISSUED, is not in us-east-1, or does not cover the name -- check all three before re-deploying. A CNAMEAlreadyExists means the name is claimed by another distribution in any AWS account, including one of yours.",
+        note: "Do the DNS CNAME *before* the deploy, not after. The deploy is what flips MEDIA_PUBLIC_URL_BASE to the new name, and a name that does not resolve yet means every photo 404s in the window between. Pre-pilot, the reverse ordering costs a redeploy rather than an incident, but there is no reason to take it. Rows written before this ran keep their cloudfront.net URLs and keep working, but stop being recognised as our own storage by src/lib/storage/blob-host.ts, which gates deletion and the ingest allowlist -- which is fine on a pre-pilot database and is exactly the breakage this action exists to stop happening again later.",
       },
       {
         id: "ses-inbound-rule-set-active",
@@ -3569,17 +3643,128 @@ exports.handler = async () => {
   }
 
   /**
+   * The alternate domain name the media distribution answers on, or `undefined`
+   * for the `d111111abcdef8.cloudfront.net` one AWS assigns.
+   *
+   * **Two context values, and neither is useful without the other.** CloudFront
+   * will not accept an alias without a certificate covering it, and a
+   * certificate for CloudFront must live in **us-east-1** whatever region the
+   * rest of this stack is in, so it cannot be created here: `PRIMARY_REGION` is
+   * us-east-2 (ADR 20260910-one-region-in-us-east-2). It is imported by ARN
+   * rather than built in `GlobalStack`, which *is* in us-east-1, because
+   * `stack-config.ts` joins the three stacks by nothing at synth on purpose,
+   * and because a CDK-created certificate would not help anyway: authoritative
+   * DNS for `dive.day` is Vercel (S17, `ses-dkim-dns` says why), so validation is
+   * a record a human pastes there, and CloudFormation would sit on the deploy
+   * for hours waiting for it.
+   *
+   * So both values are facts a human establishes once and records in cdk.json,
+   * the same shape as `cloudfrontVerified` and for the same reason: the
+   * committed value is what keeps a workflow deploy and a laptop deploy in the
+   * same state. `media-domain-name` in S17 is the procedure.
+   *
+   * Half-configured is a synth-time failure rather than a silent fallback. The
+   * quiet version of this -- ignore the alias when the certificate is missing --
+   * deploys a distribution nobody asked for on a domain that resolves to it and
+   * answers every request with a TLS error, and does it *looking* successful.
+   */
+  private mediaDomainFromContext(): string | undefined {
+    const domainName = String(this.node.tryGetContext("mediaDomainName") ?? "").trim();
+    const certificateArn = String(this.node.tryGetContext("mediaCertificateArn") ?? "").trim();
+    if (!domainName && !certificateArn) return undefined;
+    if (!domainName || !certificateArn) {
+      throw new Error(
+        "mediaDomainName and mediaCertificateArn go together: a CloudFront alias needs a " +
+          "certificate covering it, and a certificate with no alias is billed for nothing. " +
+          "Set both in cdk.json, or neither. See manual action media-domain-name.",
+      );
+    }
+    // The trailing `[a-z]{2,}` is not decoration: without it every label of
+    // `169.254.169.254` matches, and that value would reach next.config.ts's
+    // `remotePatterns` as `{ hostname: "169.254.169.254", pathname: "/**" }` --
+    // making the link-local metadata address allowlisted by *our* layer, with
+    // only Next's own private-IP guard left between it and
+    // `/_next/image?url=...`. Nobody can reach that state without an ACM
+    // certificate (which cannot be issued for an IP) and a committed cdk.json
+    // edit, so this refuses a misconfiguration rather than an attack. It is
+    // still ours to refuse rather than somebody else's to catch.
+    if (
+      !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/.test(
+        domainName,
+      )
+    ) {
+      throw new Error(
+        `mediaDomainName ${JSON.stringify(domainName)} is not a hostname. It is interpolated ` +
+          "into MEDIA_PUBLIC_URL_BASE, which src/lib/storage/blob-host.ts turns into an origin " +
+          "allowlist, next.config.ts turns into an image-optimizer allowlist, and " +
+          "src/lib/content-security-policy.ts turns into an img-src source.",
+      );
+    }
+    return domainName;
+  }
+
+  /**
    * The media read path (S11b), built only on an account CloudFront has
    * verified -- see the `cloudfrontVerified` note at the call site.
    */
-  private buildMediaDistribution(mediaBucket: s3.IBucket): cloudfront.Distribution {
+  private buildMediaDistribution(
+    mediaBucket: s3.IBucket,
+    domainName: string | undefined,
+  ): cloudfront.Distribution {
     const mediaOrigin = origins.S3BucketOrigin.withOriginAccessControl(mediaBucket);
+    // **The app's own security headers do not reach here.**
+    // `src/lib/security-headers.ts` is a Next `headers()` rule, so it applies to
+    // responses Next serves and to nothing CloudFront serves. This was the
+    // AWS-managed `CORS_ALLOW_ALL_ORIGINS` policy alone, which adds
+    // `Access-Control-Allow-Origin: *` and no `nosniff` at all.
+    //
+    // Not exploitable today, and the reason is worth stating so nobody relaxes
+    // it by accident: every object under the six public prefixes goes through
+    // `storeImage` -> `processImage` (src/lib/storage/index.ts), which refuses
+    // anything outside `ALLOWED_IMAGE_CONTENT_TYPES`, re-encodes to JPEG and
+    // forces a `.jpg` name, so no attacker-controlled HTML or SVG can be stored
+    // where the CDN can serve it. A PDF only ever lands under `import-*` or
+    // `medical-clearances/`, which have no behaviour here.
+    //
+    // What changes is the *consequence* of that ever slipping. On the
+    // AWS-assigned `*.cloudfront.net` domain the media host is a different
+    // **site** -- cloudfront.net is on the Public Suffix List -- so script
+    // executing there could touch nothing of DiveDay's. On `media.dive.day` it
+    // is the same registrable domain: it could set cookies on `.dive.day`, and
+    // it is same-site for any `SameSite=Lax` or `Sec-Fetch-Site` reasoning
+    // anywhere in the app. `nosniff` keeps a mislabelled object from being
+    // rendered as a document, and the `sandbox` policy keeps a document that
+    // does get rendered from running anything. Both are inert for an `<img>`,
+    // which is the only way these objects are meant to be read.
+    const publicMediaHeaders = new cloudfront.ResponseHeadersPolicy(this, "MediaResponseHeaders", {
+      comment: "DiveDay media -- allow-all CORS, plus the headers Next cannot reach",
+      corsBehavior: {
+        // The managed policy this replaces, spelled out: media is read from
+        // pages and canvases that are not this origin.
+        accessControlAllowOrigins: ["*"],
+        accessControlAllowHeaders: ["*"],
+        accessControlAllowMethods: ["GET", "HEAD", "OPTIONS"],
+        accessControlAllowCredentials: false,
+        originOverride: true,
+      },
+      securityHeadersBehavior: {
+        contentTypeOptions: { override: true },
+      },
+      customHeadersBehavior: {
+        customHeaders: [
+          // Not `securityHeadersBehavior.contentSecurityPolicy`, which CDK
+          // requires a full policy string for; `sandbox` alone is the whole
+          // directive here.
+          { header: "Content-Security-Policy", value: "sandbox", override: true },
+        ],
+      },
+    });
     const publicMediaBehavior: cloudfront.BehaviorOptions = {
       origin: mediaOrigin,
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
       cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-      responseHeadersPolicy: cloudfront.ResponseHeadersPolicy.CORS_ALLOW_ALL_ORIGINS,
+      responseHeadersPolicy: publicMediaHeaders,
       compress: true,
     };
     const mediaDistribution = new cloudfront.Distribution(this, "MediaDistribution", {
@@ -3605,12 +3790,32 @@ exports.handler = async () => {
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
       enableLogging: false,
+      // Absent, this is the AWS-assigned `*.cloudfront.net` domain and nothing
+      // below applies. An alias costs nothing -- CloudFront does not bill for
+      // alternate domain names and an ACM certificate used by CloudFront is
+      // free -- so what it buys is the only question, and the answer is at the
+      // MEDIA_PUBLIC_URL_BASE assignment in S11: a URL that outlives this
+      // distribution. See `mediaDomainFromContext`.
+      ...(domainName
+        ? {
+            domainNames: [domainName],
+            certificate: acm.Certificate.fromCertificateArn(
+              this,
+              "MediaCertificate",
+              String(this.node.tryGetContext("mediaCertificateArn")).trim(),
+            ),
+            // Explicit rather than inherited: CDK's default moves between
+            // versions, and this is a viewer-facing TLS floor rather than an
+            // implementation detail. 2021 drops TLS 1.0 and 1.1 entirely.
+            minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
+          }
+        : {}),
     });
 
     new cdk.CfnOutput(this, "MediaDistributionDomain", {
       value: mediaDistribution.distributionDomainName,
       description:
-        "CloudFront domain serving the six public media prefixes (arrival, courses, dive-sites, recap, shop-heroes, shop-logos). Any other path reaches no origin, so import-* and medical-clearances are never served -- see AWS-8 in docs/architecture/aws-migration-dossier.md.",
+        "CloudFront domain serving the six public media prefixes (arrival, courses, dive-sites, recap, shop-heroes, shop-logos). Any other path reaches no origin, so import-* and medical-clearances are never served -- see AWS-8 in docs/architecture/aws-migration-dossier.md. This is also the CNAME target when mediaDomainName is set: the alias answers, this value is what it points at.",
     });
     return mediaDistribution;
   }

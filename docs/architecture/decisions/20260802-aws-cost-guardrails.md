@@ -1,7 +1,9 @@
 # 20260802-aws-cost-guardrails — Alert-only AWS Budgets + Cost Anomaly Detection on the infra stack
 
 - **Status:** Accepted, **amended 2026-08-12** (budget default $5 → $30 — see
-  [Amendment](#amendment-2026-08-12--the-budget-default-moves-to-30))
+  [Amendment](#amendment-2026-08-12--the-budget-default-moves-to-30)) and **amended 2026-09-10**
+  (default $30 → $90, and the thresholds become dollars rather than percentages — see
+  [Amendment](#amendment-2026-09-10--the-thresholds-become-dollars-and-the-default-moves-to-90))
 - **Date:** 2026-08-02
 
 ## Context
@@ -96,3 +98,61 @@ costs when idle" line is where that floor is tracked.
 defaults to every session. A larger cap is more room for that to run, not a reason to stop watching
 it — see the cost table in
 [cloudwatch-observability-runbook.md](../../engineering/cloudwatch-observability-runbook.md).
+
+## Amendment 2026-09-10 — the thresholds become dollars, and the default moves to $90
+
+`monthlyBudgetLimit` now defaults to `90`, and the five notifications are `ABSOLUTE_VALUE` dollar
+figures rather than `PERCENTAGE` fractions of the cap. The mechanisms and the alert-only posture are
+unchanged; Cost Anomaly Detection is untouched.
+
+**Why.** The account acquired a Business Support+ subscription at about $25/month, first billed on
+2026-09-02. Read together with what the August bill actually said — rather than what this repository
+had been estimating — the fixed monthly floor is now about $43.55:
+
+| Line | $/month |
+| --- | ---: |
+| Business Support+ | 25.00 |
+| S3, four buckets, visual-regression baselines the bulk of it | 12.00 |
+| Route 53 health check (30s interval, string match, non-AWS endpoint) | 2.75 |
+| CloudWatch metrics and alarms past the always-free ten | 2.50 |
+| Secrets Manager, three secrets | 1.20 |
+| Tax | 0.10 |
+| **Floor** | **43.55** |
+
+That floor is 145% of the $30 cap this ADR set in August. Every one of the five notifications would
+have fired on the first day of every month, forever, on cost that never changes — the "guardrail
+becomes noise" failure this decision was written to prevent, arriving for the third time and for the
+same reason each time.
+
+**Why dollars rather than simply a larger percentage cap.** Raising the cap alone does not fix it. A
+percentage threshold is a statement about the cap, and the thing an operator wants to be told about
+is the bill; the two are interchangeable only while the floor is small. At a $43.55 floor, 50% of any
+cap low enough to be an early warning is *below* the cost of doing nothing, so no cap makes both the
+50% notification meaningful and the 100% one reachable. Worse, a percentage re-prices every threshold
+at once whenever fixed cost is added — which is precisely what happened here, with nothing in the
+stack changing. An absolute figure is chosen against the floor, says what it means in the
+notification email, and stays put when the cap moves.
+
+| Notification | What it means |
+| --- | --- |
+| `ACTUAL` > $55 | About $11 above the floor: something is running that was not running before. The one the guardrail exists for |
+| `ACTUAL` > $70 | Growth that did not stop |
+| `FORECASTED` > $90 | Trending past the cap before the month ends |
+| `ACTUAL` > $90 | At the cap |
+| `ACTUAL` > $180 | Outside normal bands. Still just an email; nothing stops running |
+
+**Why $90 for the cap.** Roughly twice the floor, which is the headroom the things about to start
+costing money need: the media distribution, now that the account cleared CloudFront's verification
+gate on 2026-09-03 and is serving photos for the first time; SES and SNS once shops send mail and
+texts; CloudWatch RUM, which samples every session.
+
+**What this does not change.** Still alert-only, and still a figure a human picked rather than one
+AWS published. The two early figures are dollars against *this* floor: an account with a different
+floor — a fork, or this one after the S3 line is understood — should edit them rather than scale
+them. When fixed cost moves, move them with it, and update the table above.
+
+**What it does not license.** The $12/month S3 line is the one number here to treat as a finding
+rather than a baseline. This repository had been documenting the entire AWS floor as $1.60–$3.40 and
+the reg-suit bucket as "<$1"; the bill says otherwise, and raising a cap explains nothing about where
+it goes. That is tracked separately in issue #1651 — see
+[cost-guardrails-runbook.md](../../engineering/cost-guardrails-runbook.md).

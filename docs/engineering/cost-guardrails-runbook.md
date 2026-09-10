@@ -41,19 +41,35 @@ the finding predates that ADR.
 
 ## Where the money actually goes
 
-Read before proposing to "move a service to save money". Measured and read off the stack on
-2026-09-01, pre-pilot, with essentially no traffic.
+Read before proposing to "move a service to save money". **Read off the actual AWS bill for August
+and the first nine days of September 2026**, not estimated from the stack — the estimate that used
+to sit here was wrong by an order of magnitude on two lines, which is the reason this table now
+cites an invoice.
 
 | Line | $/month | What it buys |
 | --- | ---: | --- |
-| Vercel Pro, one seat | 20 | Hosting, previews, crons, Analytics, Speed Insights. The only fixed cost of any size |
-| AWS floor | 2–3 | Three Secrets Manager secrets ($1.20), the custom metrics past the ten free ($0.30 each), one alarm past the ten free, cents of S3 and CodeBuild. `infra/lib/infra-stack.ts` §16, §13 |
+| AWS Business Support+ | 25 | A support plan with a case path and response times. Fixed, and now the single largest line on the whole bill |
+| Vercel Pro, one seat | 20 | Hosting, previews, crons, Analytics, Speed Insights |
+| AWS S3, four buckets | 12 | Visual-regression baselines, database dumps, backups, media. **See the warning below — this is not yet attributed** |
+| AWS Route 53 health check | 2.75 | The one check that runs outside the thing it checks (`infra/lib/global-stack.ts`); 30-second interval with string matching, against a non-AWS endpoint |
+| AWS CloudWatch | 2.50 | Seven metrics and four alarms past the always-free ten (`infra/lib/observability.ts`) |
+| AWS Secrets Manager | 1.20 | Three secrets at $0.40; `infra/lib/infra-stack.ts` §16 |
 | Neon | 0 | Free tier; **suspends** past 300 CU-hours, which is the one ceiling that is an outage rather than an invoice |
 | Sentry, Meta, Stripe | 0 | Free tiers and per-transaction |
 | GitHub Actions | 0 | The repository is public, so runner minutes are free. They cost **wall-clock**: the workflow's nineteen jobs sit one under the twenty-concurrent-job cap, and a run that starts while another is in flight queues behind it — a green main run on 2026-08-31 waited ten minutes for a runner before its first job started |
-| reg-suit S3 bucket | <1 | ~700 PNGs per run, every run; bounded by a 30-day lifecycle rule and the nightly pruner |
 
-So the bill is **$22–24 a month**, and $20 of it is Vercel. What moving would and would not do:
+So the bill is about **$64 a month**, of which $45 is AWS and $25 of that is a support plan. It was
+described here as $22–24 until 2026-09-10.
+
+> **The $12 of S3 is a finding, not a baseline.** This table used to carry the reg-suit bucket at
+> "<1" and the entire AWS floor at "2–3". The August bill says S3 alone was $11.998, on an account
+> with no production traffic, with daily spikes to $2 on 23, 24, 27 and 28 August. Nothing here
+> attributes that to a bucket, and there are four candidates: the visual-regression bucket (~700
+> PNGs per run, every run), the daily `pg_dump` objects, the backup bucket, and media. Requests, not
+> storage, are the likely shape of it. Until someone runs Cost Explorer grouped by usage type, treat
+> this line as unexplained rather than as the cost of doing business. Tracked as issue #1651.
+
+What moving would and would not do:
 
 - **Vercel → AWS (Lambda + CloudFront via OpenNext, or Amplify).** Saves the $20 and costs a
   deploy pipeline this repo does not have: previews, the eleven `vercel.json` crons, Analytics and
@@ -65,6 +81,12 @@ So the bill is **$22–24 a month**, and $20 of it is Vercel. What moving would 
   and buys durability the free tier lacks. The right move is the one `pnpm cost:report` already
   names: Neon Launch at $19/month before the first pilot shop, because the free tier's ceiling
   suspends the endpoint rather than billing.
+- **AWS Business Support+ → Basic.** Saves the largest single AWS line, and costs the case path.
+  Worth a deliberate decision rather than a drift: the one thing on the checklist that *required* a
+  support case, `cloudfront-account-verification` in
+  [manual-actions.md](manual-actions.md), is an account-and-billing case, which Basic Support can
+  raise for free. Keep the plan for the response times if a pilot is imminent; drop it if the case
+  path is not being used.
 - **AWS trimming.** Real but small, and each remaining item is filed rather than done here: three
   implicit Lambda log groups never expire; two IAM users exist for an MCP consumer that no longer
   does; the visual bucket's 30-day lifecycle rule can delete a main baseline the pruner is

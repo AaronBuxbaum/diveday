@@ -41,16 +41,20 @@ export const PROVIDER_INVENTORY = [
   },
   {
     provider: "AWS",
-    tier: "CDK Stack (22 subsystems)",
-    // Three Secrets Manager secrets ($0.40 each), the custom CloudWatch metrics
-    // past the ten free ($0.30 each) and one alarm past the ten free. Read off
-    // infra/lib/infra-stack.ts on 2026-09-01; the runbook's "Where the money
-    // actually goes" section is the reasoning.
-    monthlyBaseUsd: 2.4,
+    tier: "CDK Stack (22 subsystems) + Business Support+",
+    // Read off the August and early-September 2026 bills rather than estimated
+    // from the stack, which is why this number moved from 2.40 to 43.55 on
+    // 2026-09-10 without any resource being added: Business Support+ ($25.00),
+    // S3 across the four buckets ($12.00), the Route 53 health check ($2.75),
+    // CloudWatch metrics and alarms past the free ten ($2.50), three Secrets
+    // Manager secrets ($1.20) and tax ($0.10). The S3 line is unattributed and
+    // is a finding, not a baseline -- the runbook's "Where the money actually
+    // goes" section carries the warning and the reasoning.
+    monthlyBaseUsd: 43.55,
     variableElements:
-      "SES ($0.10/k), SNS SMS ($0.0075/ea), CloudWatch Logs/RUM, S3 (backups & media), CodeBuild",
+      "SES ($0.10/k), SNS SMS ($0.0075/ea), CloudWatch Logs/RUM, CloudFront media egress, S3 requests, CodeBuild",
     overflowBehavior: "alert_only",
-    guardrail: "AWS::Budgets::Budget ($30.00/mo) + Cost Anomaly Detection",
+    guardrail: "AWS::Budgets::Budget ($90.00/mo, dollar thresholds) + Cost Anomaly Detection",
   },
   {
     provider: "Sentry",
@@ -159,13 +163,19 @@ export function generateCostReport(env = getEnvironment()) {
     timestamp: new Date().toISOString(),
     baselineMonthlySpend: {
       minimumFixedUsd: minBaseTotal,
-      estimatedRangeUsd: "$21.50 – $40.00 / month",
+      // Derived, not typed. The literal here read "$21.50 - $40.00 / month" and
+      // was still saying so on 2026-09-10, by which point the fixed lines above
+      // summed to more than its upper bound -- a second source of truth for a
+      // number the array already knows. The upper bound is the fixed floor plus
+      // $20 of per-use headroom (SES, SNS, CloudFront egress, S3 requests,
+      // CodeBuild, RUM).
+      estimatedRangeUsd: `$${minBaseTotal.toFixed(2)} – $${(minBaseTotal + 20).toFixed(2)} / month`,
     },
     providers: PROVIDER_INVENTORY,
     probeConfiguration: {
       vercelBillingApi: probeStatus.vercel ? "configured" : "not_configured (token unset)",
       neonConsumptionApi: probeStatus.neon ? "configured" : "not_configured (token unset)",
-      awsBudgets: "deployed (AWS::Budgets::Budget $30/mo)",
+      awsBudgets: "deployed (AWS::Budgets::Budget $90/mo, ABSOLUTE_VALUE thresholds)",
       sentryStats: "console_only",
       metaWhatsApp: "console_only",
     },

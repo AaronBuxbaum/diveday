@@ -12,6 +12,7 @@ const base = { denyFraming: true } as const;
 const everyOption = {
   rumRegion: "us-east-1",
   mediaRegion: "us-east-1",
+  mediaPublicUrlBase: "https://media.dive.day",
   metaSignup: true,
   development: true,
 } as const;
@@ -272,6 +273,80 @@ describe("every source is a legal source expression", () => {
       " us-east-1",
     ]) {
       expect(reportOnlyPolicy({ ...base, mediaRegion: region })).toEqual(reportOnlyPolicy(base));
+    }
+  });
+
+  /**
+   * The media origin stops being an AWS hostname the moment the distribution
+   * answers on a domain DiveDay owns (`mediaDomainName`, infra-stack.ts S11b).
+   * `https://*.cloudfront.net` then covers nothing this app serves, and every
+   * course photo, dive-site image, shop logo and recap picture is blocked --
+   * reported first, then blocked outright the day the full policy is enforced.
+   * It would read in the console as a broken CDN rather than as a policy that
+   * was never told where the media went.
+   */
+  it("admits the media origin the stack actually configured", () => {
+    const sources =
+      directives(reportOnlyPolicy({ ...base, mediaPublicUrlBase: "https://media.dive.day" })).get(
+        "img-src",
+      ) ?? [];
+    expect(sources).toContain("https://media.dive.day");
+  });
+
+  it("does not repeat an origin a wildcard above already covers", () => {
+    for (const value of [
+      "https://d111111abcdef8.cloudfront.net",
+      "https://diveday-media.s3.amazonaws.com",
+    ]) {
+      expect(reportOnlyPolicy({ ...base, mediaPublicUrlBase: value })).toEqual(
+        reportOnlyPolicy(base),
+      );
+    }
+  });
+
+  /**
+   * The regional bucket endpoint is the pre-verification fallback
+   * (`infra/lib/infra-stack.ts` S11, when `cloudfrontVerified` is false), and it
+   * is **not** covered by `https://*.s3.amazonaws.com` -- a CSP source wildcards
+   * exactly one leftmost label, which is issue #1263's whole lesson. The only
+   * other thing that admits it is `mediaRegionalImageHosts`, gated on a
+   * *different* variable. Deduplicating it away here, as this function did when
+   * it was first written, deletes the one source that admits it whenever
+   * `MEDIA_AWS_REGION` is missing or malformed: a broken-images bug the day
+   * `img-src` moves into the enforced half, and a stream of false violation
+   * reports before that.
+   */
+  it("keeps the regional bucket endpoint, which no wildcard covers", () => {
+    const sources =
+      directives(
+        reportOnlyPolicy({
+          ...base,
+          mediaRegion: null,
+          mediaPublicUrlBase: "https://diveday-media.s3.us-east-2.amazonaws.com",
+        }),
+      ).get("img-src") ?? [];
+    expect(sources).toContain("https://diveday-media.s3.us-east-2.amazonaws.com");
+  });
+
+  it("refuses a media base that is not a plain https origin", () => {
+    // Same discipline as the region above, and the same reason: this value is
+    // interpolated into a header, so anything that could introduce a second
+    // source or a second directive must contribute nothing at all. `http:` is
+    // in the list because an origin admitted over plaintext is a downgrade the
+    // policy would be granting on the app's behalf.
+    for (const value of [
+      "http://media.dive.day",
+      "media.dive.day",
+      "https://media.dive.day https://evil.example",
+      "https://media.dive.day; script-src *",
+      "*",
+      "",
+      "   ",
+      "not a url",
+    ]) {
+      expect(reportOnlyPolicy({ ...base, mediaPublicUrlBase: value })).toEqual(
+        reportOnlyPolicy(base),
+      );
     }
   });
 });
