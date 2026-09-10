@@ -383,6 +383,36 @@ function isBucketNameStillSettling(stackName, region) {
  * retry that skipped this would fail on that instead of on whatever it was
  * actually retrying, which reads as a different bug.
  */
+/**
+ * Statuses that mean a real, deployed stack. This is an update, and its log
+ * groups are its own.
+ */
+const DEPLOYED_STACK_STATUSES = new Set([
+  "CREATE_COMPLETE",
+  "UPDATE_COMPLETE",
+  "UPDATE_ROLLBACK_COMPLETE",
+  "IMPORT_COMPLETE",
+  "IMPORT_ROLLBACK_COMPLETE",
+]);
+
+/**
+ * Statuses that mean a create that never landed. The stack holds no resources
+ * and CloudFormation will not update it; delete is the only legal operation.
+ *
+ * `REVIEW_IN_PROGRESS` is the one that cost three runs. CloudFormation creates
+ * the stack in that state the moment `cdk deploy` makes a change set for a
+ * brand-new stack, and leaves it there when the change set fails validation --
+ * which is exactly what "log group already exists" is. So every attempt left a
+ * stack behind, the next attempt read a status that was neither of the two
+ * failure states this knew about, concluded the stack was healthy, and returned
+ * without sweeping. The sweep was correct by then; it was never called.
+ */
+const UNLANDED_STACK_STATUSES = new Set([
+  "ROLLBACK_COMPLETE",
+  "CREATE_FAILED",
+  "REVIEW_IN_PROGRESS",
+]);
+
 async function prepareForCreate(stackName, region) {
   const status = awsMaybe([
     "cloudformation",
@@ -398,25 +428,31 @@ async function prepareForCreate(stackName, region) {
   ]);
   const trimmed = status === null ? null : status.trim();
 
-  if (trimmed === "ROLLBACK_COMPLETE" || trimmed === "CREATE_FAILED") {
-    log(`  ${stackName} is ${trimmed}; a stack in that state can only be deleted. Deleting it.`);
+  if (trimmed !== null && DEPLOYED_STACK_STATUSES.has(trimmed)) return;
+
+  if (trimmed !== null && UNLANDED_STACK_STATUSES.has(trimmed)) {
+    log(
+      `  ${stackName} is ${trimmed}, which holds no resources and cannot be updated. Deleting it.`,
+    );
     aws(["cloudformation", "delete-stack", "--stack-name", stackName, "--region", region]);
     await waitForStackDeletion(stackName, region);
   } else if (trimmed !== null) {
-    // The stack is there and healthy, so this is an update. Its log groups are
-    // its own and deleting them would be vandalism.
-    return;
+    // Every remaining status is either an operation in flight or one this does
+    // not know about, and both are things to stop on rather than guess at. The
+    // guess is what this function used to do -- anything unrecognized was read
+    // as "healthy", which is how REVIEW_IN_PROGRESS skipped the cleanup three
+    // times running.
+    throw new Error(
+      `${stackName} in ${region} is ${trimmed}, which this script does not know how to prepare. ` +
+        "Wait for any operation in flight to finish, or delete the stack by hand, then re-run.",
+    );
   }
 
-  // Reached whenever the stack does not exist -- either it never did, this
-  // just deleted it, or somebody deleted it by hand between runs. That last
-  // case is why the sweep hangs off "no stack" rather than off "rolled back",
-  // which is where it was and which is why it did not run: a hand-deleted
-  // stack answered `null` here and returned three lines above the cleanup.
-  //
-  // The condition is also the argument for it being safe. If no stack owns
-  // these names, nothing does, so anything holding one is debris from a create
-  // that did not finish.
+  // Reached whenever no stack stands in the way: it never existed, this just
+  // deleted it, or somebody deleted it by hand between runs. The condition is
+  // also the argument for the sweep being safe -- if no stack owns these names,
+  // nothing does, so anything holding one is debris from a create that did not
+  // finish.
   deleteOrphanedLogGroups(region);
 }
 
@@ -444,7 +480,12 @@ async function prepareForCreate(stackName, region) {
  * ours exists yet.
  */
 function deleteOrphanedLogGroups(region) {
-  const templatePath = join(repoRoot, "cdk.out", templateFileNameFor(MAIN_STACK_ID));
+  // The cloud assembly is written relative to the repository, not to the
+  // working directory, so the override exists for the tests: a fixture in a
+  // temp directory cannot otherwise reach the file this reads, and that gap is
+  // exactly why a wrong filename survived a green test run.
+  const assemblyDirectory = process.env.DIVEDAY_CDK_OUT || join(repoRoot, "cdk.out");
+  const templatePath = join(assemblyDirectory, templateFileNameFor(MAIN_STACK_ID));
   let template;
   try {
     runBounded("pnpm", ["infra:synth", MAIN_STACK_ID, "--quiet"], {
@@ -470,22 +511,62 @@ function deleteOrphanedLogGroups(region) {
     log("  If the deploy fails saying that group already exists, delete it and re-run.");
   }
 
-  let deleted = 0;
+  const deleted = [];
+  const absent = [];
+  const failed = [];
   for (const name of names) {
-    // `awsMaybe`, because "there is no such log group" is the expected answer
-    // for most of them and is not a problem.
-    if (
-      awsMaybe(["logs", "delete-log-group", "--log-group-name", name, "--region", region]) !== null
-    ) {
-      deleted += 1;
-      log(`  Deleted leftover log group ${name}.`);
+    // Asked before it is deleted, so that "nothing happened" can be told apart
+    // from "the delete was refused". Until this, both came back as `null` from
+    // `awsMaybe` and both printed as "no leftover log groups" -- so a sweep
+    // that deleted nothing because it was not allowed to reported exactly what
+    // a sweep with nothing to do reports. Three runs failed on that.
+    const listed = awsMaybe([
+      "logs",
+      "describe-log-groups",
+      "--log-group-name-prefix",
+      name,
+      "--region",
+      region,
+      "--query",
+      "logGroups[].logGroupName",
+      "--output",
+      "text",
+    ]);
+    // `--log-group-name-prefix` is a prefix match, so an exact comparison is
+    // what decides. A null listing means the question could not be asked, and
+    // that is not an answer -- fall through and try the delete, which reports
+    // its own reason.
+    if (listed !== null && !listed.split(/\s+/).includes(name)) {
+      absent.push(name);
+      continue;
+    }
+    try {
+      aws(["logs", "delete-log-group", "--log-group-name", name, "--region", region]);
+      deleted.push(name);
+      log(`  Deleted leftover log group ${name}`);
+    } catch (error) {
+      const reason = String(error?.stderr ?? "") + String(error?.message ?? error);
+      if (reason.includes("ResourceNotFoundException")) {
+        absent.push(name);
+        continue;
+      }
+      failed.push({ name, reason: reason.trim().split("\n").at(-1) ?? "no reason given" });
     }
   }
+
   log(
-    deleted === 0
-      ? `  No leftover log groups among the ${names.length} this stack declares.`
-      : `  Deleted ${deleted} log group(s) the rolled-back create left behind.`,
+    `  Log groups: ${deleted.length} deleted, ${absent.length} already gone, ${failed.length} refused, of ${names.length} this stack declares.`,
   );
+
+  if (failed.length > 0) {
+    // Thrown, not warned. Every one of these is a name the deploy is about to
+    // try to create, so continuing means failing again in a minute with a
+    // worse message than the one AWS just gave us.
+    throw new Error(
+      `Could not delete ${failed.length} leftover log group(s), and the deploy will fail on them:\n` +
+        failed.map(({ name, reason }) => `  ${name}: ${reason}`).join("\n"),
+    );
+  }
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
