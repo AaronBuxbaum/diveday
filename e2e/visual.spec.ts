@@ -902,6 +902,41 @@ async function screenshotOrGiveUp(page: Page, path: string) {
  * Bounded like every other wait here. A finite animation that never finishes
  * (paused, or on an element the renderer has stopped ticking) degrades to a
  * shot taken anyway with a warning, never a hang that costs the run.
+ *
+ * **Finished is not the same as gone, and the difference is the flake.** An
+ * entrance here is written `both`, so the animation object outlives its own
+ * duration: `animation.finished` resolves, `getAnimations()` still lists it,
+ * and Chromium keeps the element on the compositing layer it promoted for the
+ * transform. A layer composites its own antialiased edges and its `shadow-bed`
+ * blend, so those pixels round twice — once into the layer, once onto the page
+ * — where an unpromoted element rounds once. Demotion happens some later
+ * frame, and the shutter races it.
+ *
+ * That is issue #1597, and it is measured rather than argued: six runs of the
+ * product page from one build produced exactly **two** byte-exact variants,
+ * flipping two runs in six, 6,527 pixels differing by **one unit** on the card
+ * edges and bed shadows of the `readiness` chapter with a **zero** height
+ * delta. It is the same band, the same page and the same one-to-three units as
+ * #1380, which `waitForEntranceAnimations` was written for — waiting the
+ * animation out closed the mid-flight half and left this one open, which is
+ * why the captures kept reporting changed on pull requests that cannot reach
+ * the product page.
+ *
+ * So each finite animation is **committed and cancelled** rather than merely
+ * awaited: `commitStyles()` writes its computed end values as inline styles
+ * and `cancel()` then removes the animation, and with it the layer. Nothing
+ * moves — the committed style *is* the end state — and the shutter no longer
+ * has a promotion to race. `commitStyles()` is what makes this safe where the
+ * docblock below rules out `animation: none`: `.marketing-reveal-pending`
+ * holds `opacity: 0` in its base style and relies on the animation's fill to
+ * become visible, and committing first is exactly what carries that fill onto
+ * the element before the animation goes.
+ *
+ * Per-animation `try`/`catch`, because `commitStyles()` throws for a target
+ * that is not rendered or is a pseudo-element, and one such throw must not
+ * cost the capture. Infinite animations are left alone: an `animate-pulse`
+ * skeleton has no end state to commit, and Playwright's `animations:
+ * "disabled"` already resets it to its first frame at shutter time.
  */
 async function waitForEntranceAnimations(page: Page) {
   await withRendererBound(
@@ -924,6 +959,35 @@ async function waitForEntranceAnimations(page: Page) {
         ]),
       ANIMATION_WAIT_MS,
     ),
+    true,
+  );
+
+  await withRendererBound(
+    page,
+    "the entrance-animation commit",
+    ANIMATION_STALL_MS,
+    page.evaluate((frameMs) => {
+      for (const animation of document.getAnimations()) {
+        if (animation.effect?.getComputedTiming().iterations === Number.POSITIVE_INFINITY) continue;
+        try {
+          animation.commitStyles();
+          animation.cancel();
+        } catch {
+          // A target that is not rendered, or a pseudo-element: nothing to
+          // commit and nothing promoted to demote.
+        }
+      }
+      // Two frames for the demotion the cancel above asked for, so the shutter
+      // lands after it rather than during it — raced against a timeout like
+      // every other frame wait here, because `requestAnimationFrame` is not a
+      // promise the page owes you.
+      return Promise.race([
+        new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)));
+        }),
+        new Promise((resolve) => setTimeout(() => resolve(true), frameMs)),
+      ]);
+    }, FRAME_WAIT_MS),
     true,
   );
 }
