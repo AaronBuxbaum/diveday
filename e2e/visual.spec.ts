@@ -7092,6 +7092,7 @@ for (const scheme of ["light", "dark"] as const) {
  */
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode — the print register`, () => {
+    signedInAsOwner();
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
 
     test(`the print register lists the shop's sheets (${scheme})`, async ({ page }) => {

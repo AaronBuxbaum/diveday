@@ -143,7 +143,6 @@ export default async function SettingsPrintPage({
             name={t("print.settings.yearPoster.name")}
             paper={t("print.settings.yearPoster.paper")}
             line={t("print.settings.yearPoster.line")}
-            meta={t("print.settings.reportsDoor")}
             door={
               <Link
                 href={shopPath(shopSlug, "reports")}
@@ -170,7 +169,12 @@ function SheetRow({
   name: string;
   paper: string;
   line: string;
-  meta: string;
+  /**
+   * The day this sheet was last printed. Omitted on the one row that has no
+   * print run of its own — the year poster opens Reports, and saying so twice
+   * on one row is a sentence that earns nothing.
+   */
+  meta?: string;
   door: React.ReactNode;
 }) {
   return (
@@ -178,9 +182,7 @@ function SheetRow({
       <span className="block truncate font-medium">
         {name} <span className="font-normal text-muted">· {paper}</span>
       </span>
-      <span className="mt-0.5 block text-sm text-muted">
-        {line} · {meta}
-      </span>
+      <span className="mt-0.5 block text-sm text-muted">{meta ? `${line} · ${meta}` : line}</span>
     </LedgerRow>
   );
 }
