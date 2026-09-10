@@ -156,7 +156,7 @@ function schemaTables(): Map<string, TableFacts> {
  *
  * Scope is the person, not the shop — an erasure follows one diver out of a
  * shop that carries on — so this starts at `people` rather than at the
- * `shop_id` carriers `delete-path-coverage.test.ts` starts from. It reaches 92
+ * `shop_id` carriers `delete-path-coverage.test.ts` starts from. It reaches 96
  * of the schema's tables.
  */
 function personScopedTableNames(tables: Map<string, TableFacts>): string[] {
@@ -259,6 +259,12 @@ const ERASURE_KEEPS: Record<string, string> = {
   trip_invitations:
     "that an invitation was sent for a seat, by id. Its risk is not disclosure but #1616, where the foreign key aborts the erasure transaction outright",
   trip_read_marks: "how far a staff member has read a trip's desk feed",
+  booking_referrals:
+    "that one seat arrived from another seat's recap link — two booking ids and a timestamp, and nothing else. Both bookings carry their own erasure, so the diver either side of the link is erased where they are stored",
+  trip_sightings:
+    "what a crew tapped at a site: a species slug from DiveDay's own catalogue, a count, and the site's name as it stood. Its two person columns are the crew member who tapped and the one who undid it, pointers joined at read the way `trip_desk_events` is",
+  person_shelf_tokens:
+    "revoked rather than rewritten, and through `revokeShelfTokens` (./person-shelf-tokens) rather than here, so the static sweep above cannot see the write — `WRITTEN_VIA_HELPER` below is where that indirection is declared",
   trip_desk_events:
     "`subject_person_id` is a pointer by design and the name is joined at read, which resolves to the anonymized one after this runs",
   trip_help_requests:
@@ -336,7 +342,7 @@ const ERASURE_KEEPS: Record<string, string> = {
  * what a `sourcery-ai` review pointed out against the issue's own wording:
  * scope is every table, not the ones a regex thought to ask about.
  *
- * So: 116 tables, 92 in the closure, and each of the other 24 named here with
+ * So: 121 tables, 96 in the closure, and each of the other 25 named here with
  * why an erasure is right to leave it. Almost all of them are the shop's own
  * settings or a provider's plumbing, which is exactly why this list is cheap to
  * keep and worth having — a new table lands here the day it is added, and the
@@ -363,6 +369,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   shop_backup_destinations: "where the shop sends its own backups, and the sealed key to get there",
   shop_backup_deliveries:
     "whether one of those bundles arrived; a period key, a byte count and a status",
+  shop_print_runs:
+    "when the shop last printed each of its own sheets — a sheet name, the boat a boat card is for, and a timestamp. The paper pass records under the empty subject key precisely so which diver it printed for is not kept",
   boats: "the shop's vessels",
   courses: "the shop's course catalogue, copied from a template and then its own",
   waiver_templates:
@@ -400,6 +408,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
 const WRITTEN_VIA_HELPER: Record<string, string> = {
   media_deletion_attempts:
     "`queueMediaDeletion` (./media-deletions) — every blob the erasure retires goes through the existing durable ledger rather than a second mechanism invented here (ADR 20260723-media-validation-and-deletion)",
+  person_shelf_tokens:
+    '`revokeShelfTokens` (./person-shelf-tokens) — the shelf link is closed the way every other holder of it is closed, by the module that mints and verifies it, so one definition of "revoked" serves the erasure and the diver\'s own "Forget this phone"',
   processor_erasure_obligations:
     "`recordProcessorErasureObligations` (./processor-erasure) — what Stripe still holds, written inside the transaction so a crash a millisecond later cannot lose it (ADR 20260803-processor-erasure-obligations)",
 };

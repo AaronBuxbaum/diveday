@@ -1294,26 +1294,9 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   }
 
   // --- last-minute deals ---------------------------------------------------
-  // `trip_last_minute_promo_recipients` logs who was offered which deal and
-  // stores the address it went to — the diver's own email, NOT NULL, keyed by
-  // `person_id` — and `src/db/export.ts` carries the table out of the shop in
-  // the portable bundle. The address goes and the row stays, the shape
-  // `user_accounts.email` takes: that a deal reached N people on a departure is
-  // the shop's own record, and with the address gone it is not a fact about a
-  // person. `person_id` stays for the reason `course_inquiries`' does — it
-  // points at a row that has itself been erased, and keeping it is what makes a
-  // replayed erasure reach the same rows.
-  await tx
-    .update(tripLastMinutePromoRecipients)
-    .set({ email: redactedUniqueValue("redacted") })
-    .where(
-      and(
-        eq(tripLastMinutePromoRecipients.shopId, shopId),
-        eq(tripLastMinutePromoRecipients.personId, personId),
-      ),
-    );
-
-  // The address sweep beside the key sweep, which every other durable address
+  // The key sweep of `trip_last_minute_promo_recipients` is above, with the
+  // rest of this diver's addresses. This is its other half: the address sweep
+  // beside the key sweep, which every other durable address
   // column here already has (issue #1622). `people_shop_email_unique` is
   // partial on *live* rows, so a soft-deleted duplicate person legitimately
   // shares this diver's address — and a duplicate that was never merged keeps
@@ -1337,7 +1320,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     for (const row of byAddress) {
       await tx
         .update(tripLastMinutePromoRecipients)
-        .set({ email: redactedUniqueValue("redacted") })
+        .set({ email: `${redactedUniqueValue("erased")}@invalid` })
         .where(eq(tripLastMinutePromoRecipients.id, row.id));
     }
     logFuzzyMatch(ctx, "last_minute_recipient_address", byAddress.length);
