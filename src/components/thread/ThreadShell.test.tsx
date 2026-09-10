@@ -31,8 +31,9 @@ function read(relativePath: string) {
 
 /**
  * The four bearer pages the thread is made of (ADR 20260827-the-divers-thread,
- * decision 1), and the shelf — the standing door onto the same file (ADR
- * 20260908-one-hand, decision 6, lever Z), which wears the same shell.
+ * decision 1), and the two round-4 doors that wear the same shell: the shelf,
+ * the standing door onto the same file (ADR 20260908-one-hand, decision 6,
+ * lever Z), and the giver's page for a gift seat (lever W).
  */
 const THREAD_PAGES = [
   "app/ready/[token]/page.tsx",
@@ -40,6 +41,7 @@ const THREAD_PAGES = [
   "app/recap/[token]/page.tsx",
   "app/claim/[token]/page.tsx",
   "app/shelf/[token]/page.tsx",
+  "app/gift/[token]/page.tsx",
 ] as const;
 
 const THREAD_LOADING = THREAD_PAGES.map((page) => page.replace("page.tsx", "loading.tsx"));

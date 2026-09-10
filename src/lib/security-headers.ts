@@ -107,6 +107,11 @@ export const TOKEN_ROUTE_PREFIXES = [
   // subresource request that would carry the token in a `Referer` under the
   // baseline policy.
   "shelf",
+  // The giver's page for a gift seat (slice 20q). A season-long signed token
+  // over one booking that nothing revokes — the recap link's exposure — on a
+  // page that renders the shop's logo and brand font the same way the shelf
+  // does.
+  "gift",
 ];
 
 export function securityHeaderRules(): ConfigHeaderRule[] {
