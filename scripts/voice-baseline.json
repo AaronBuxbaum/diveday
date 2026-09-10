@@ -1,3 +1,3 @@
 {
-  "//": "Voice tells still in a message bundle, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs."
+  "//": "Voice tells — a machine-written mannerism, or a straight apostrophe where the house ’ belongs — still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs."
 }

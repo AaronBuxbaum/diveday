@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { findTells, metadataStrings, proseDashes, RULES } from "./check-voice.mjs";
+import {
+  findTells,
+  metadataStrings,
+  proseDashes,
+  RULES,
+  straightApostrophes,
+} from "./check-voice.mjs";
 
 const rules = (value, locale = "en-US") => findTells(value, locale).map((hit) => hit.rule);
 
@@ -64,8 +70,25 @@ describe("the word rules", () => {
     expect(rules("Rest assured, nothing is lost.")).toContain("leadIn");
   });
 
-  it("does not catch a price locked in today's number", () => {
-    expect(rules("Founding shops lock in today's price for two years.")).toEqual([]);
+  it("does not catch a price locked in today’s number", () => {
+    expect(rules("Founding shops lock in today’s price for two years.")).toEqual([]);
+  });
+
+  it("reads a contraction spelled either way, so the sweep did not retire a rule", () => {
+    // The bundles are all `’` now. A pattern that named only `'` would keep
+    // passing its own fixtures and never fire on a real string again.
+    for (const value of [
+      "Here's how to get your file out of EVE.",
+      "Here’s how to get your file out of EVE.",
+    ]) {
+      expect(rules(value)).toContain("leadIn");
+    }
+    for (const value of [
+      "DiveDay isn't just a booking tool.",
+      "DiveDay isn’t just a booking tool.",
+    ]) {
+      expect(rules(value)).toContain("notJust");
+    }
   });
 
   it("catches the not-just contrast", () => {
@@ -94,6 +117,53 @@ describe("the word rules", () => {
         "No agency lets software verify a certification automatically. Nothing on this page pretends otherwise.",
       ),
     ).toEqual([]);
+  });
+});
+
+/**
+ * The house apostrophe is `’` (U+2019). This rule is typography rather than a
+ * word list, and it is here because Playwright's `getByRole(name)` matches `'`
+ * and `’` as different strings while every e2e spec hard-codes the English a
+ * user sees — issue #1367, after PR #1365 spent a full CI round on one
+ * character.
+ */
+describe("the house apostrophe", () => {
+  it("catches a straight apostrophe in prose", () => {
+    expect(rules("That doesn't save.")).toContain("apostrophe");
+    expect(rules("Nothing of this diver's is waiting on medical review here.")).toContain(
+      "apostrophe",
+    );
+  });
+
+  it("leaves the curly one alone", () => {
+    expect(rules("That didn’t save.")).toEqual([]);
+    expect(rules("Record the physician’s answer")).toEqual([]);
+  });
+
+  it("leaves an ICU-quoted marker straight, and still reads the prose around it", () => {
+    // `'{depth18}'` is a literal a shop types, not a contraction: curly quotes
+    // would print and `{depth18}` would then be parsed as a missing argument.
+    expect(rules("<marker>'{depth18}'</marker> prints in the diver’s unit")).toEqual([]);
+    expect(rules("<marker>'{depth18}'</marker> prints in the diver's unit")).toContain(
+      "apostrophe",
+    );
+  });
+
+  it("leaves the WhatsApp template's escaped placeholders alone", () => {
+    expect(rules("Hi! An update from '{{1}}': '{{2}}'")).toEqual([]);
+  });
+
+  it("holds every locale to it, including one with no word of its own", () => {
+    // Beside `proseDashes` rather than inside `RULES`, so a third language
+    // inherits the typography without naming it.
+    expect(rules("Premio Readers' Choice", "es-ES")).toContain("apostrophe");
+  });
+
+  it("reports one hit per apostrophe, with the words around it", () => {
+    expect(straightApostrophes("A diver's card and a shop's day.")).toEqual([
+      { rule: "apostrophe", text: "A diver's card" },
+      { rule: "apostrophe", text: "a shop's day." },
+    ]);
   });
 });
 
@@ -208,5 +278,16 @@ describe("route metadata", () => {
     expect(
       rules("Bookings, waivers and manifests — everything the day needs, in one place."),
     ).toContain("em-dash");
+  });
+
+  it("catches a straight apostrophe in a description, escaped or not", () => {
+    // A route's literals never reach a bundle, so the same typography rule has
+    // to find them here or `/privacy` and `/product` drift back on the next
+    // edit. Both spellings of the escape measure the same.
+    for (const value of found(
+      `export const metadata = { title: "A shop\\'s day", description: "What DiveDay stores on a shop's behalf." };`,
+    )) {
+      expect(rules(value)).toContain("apostrophe");
+    }
   });
 });

@@ -136,6 +136,29 @@ believed cannot afford that. A regex cannot see an aphorism heading or a rhetori
 those stay in the brand doc and the [brand-voice](../../.claude/skills/brand-voice/SKILL.md)
 checklist; what it *can* see it refuses outright.
 
+It also holds the **house apostrophe**: `’` (U+2019) everywhere a person reads it, and a straight
+`'` is a hit. This one is typography rather than a mannerism, and it lives here because both
+spellings had been landing since the bundles existed — 613 strings carrying 726 straight apostrophes
+against 216 strings spelling it `’`, colliding inside single objects (`shared.json`'s
+`medicalClearance` group held `"Date of the physician's evaluation"` a few keys from `"Nothing of
+this diver’s is waiting…"`). Nothing on screen distinguishes them. Playwright's `getByRole(name)`
+and `getByText` do, and every e2e spec here deliberately hard-codes the English a user sees, so a
+spec author had to guess which spelling a bundle used and found out from a shard ten minutes later:
+PR #1365 (`24f18a2`) cost a full CI round on one character (issue #1367). The rule sits beside
+`proseDashes` rather than in `RULES`, so a third locale inherits it without naming a word list.
+
+Six values keep a straight apostrophe, all of them ICU MessageFormat quoting rather than prose: in
+DOUBLE_OPTIONAL mode `'` opens a literal span only when the next character is `{`, `}` or `#`, which
+is what shows a shop the literal `'{depth18}'` marker to type and what escapes WhatsApp's `'{{1}}'`
+past ICU. A curly quote there would print *and* leave `{depth18}` to be read as a missing argument.
+The guard strips exactly `'[{}#][^']*'` first — the same shape as `namesAnArgument` in
+`src/i18n/raw-messages.test.ts`, and deliberately not a blanket `'[^']*'`, which would swallow
+everything between two prose apostrophes. The keys are `courses.edit.depthMarkersHint` and
+`courses.edit.errorDepthPlaceholder` in both locales, and `notifications.whatsappTemplate.body` in
+both. Note that the sweep also forced the `leadIn` and `notJust` patterns to spell contractions
+`['’]`: a pattern naming only `'` would have kept passing its own fixtures and never fired on a real
+string again.
+
 A short label separator is deliberately not a hit: "Boarded — tap again to undo" and "Checked in —
 2" are not sentences, and the tell is the dash that replaced a full stop or a comma in running
 prose. Ratcheted per file in `scripts/voice-baseline.json` exactly like `check:copy` (`--write`

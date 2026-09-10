@@ -35,6 +35,12 @@ import { pathToFileURL } from "node:url";
  *   X, it's about Y".
  * - **The staccato run.** Two consecutive sentences of a few words each that
  *   both begin "No" — "No setup fee. No per-seat math."
+ * - **A straight apostrophe.** The house apostrophe is `’` (U+2019), never `'`
+ *   (U+0027) — a typography rule that earns its place here because Playwright
+ *   matches the two as different strings and every e2e spec hard-codes its
+ *   English (issue #1367). The one exception is an ICU-quoted span
+ *   (`'{depth18}'`), which must stay straight or the marker stops being a
+ *   literal.
  *
  * Every locale states its own word list, and a locale with none is a failure
  * rather than a pass: a third language must name what it refuses.
@@ -73,17 +79,38 @@ const DASH_PATTERN = /\s(?:—|--)\s/g;
 const CLAUSE_WORDS = 3;
 
 /**
+ * A span ICU MessageFormat treats as quoted, and the only place a straight
+ * apostrophe survives this guard.
+ *
+ * In DOUBLE_OPTIONAL mode a `'` opens a literal section only when the next
+ * character is `{`, `}` or `#` — which is what lets
+ * `courses.edit.errorDepthPlaceholder` show a shop the literal `'{depth18}'`
+ * marker to type, and what escapes WhatsApp's `'{{1}}'` placeholders past ICU.
+ * Deliberately *not* a blanket `'[^']*'`: that would also swallow everything
+ * between two prose apostrophes, so `"You're on {shopName}'s list"` would go
+ * unmeasured. Same shape, same reasoning, as `namesAnArgument` in
+ * `src/i18n/raw-messages.test.ts`.
+ */
+const ICU_QUOTED = /'[{}#][^']*'/g;
+
+/**
  * Per-locale word rules. Each is a regex over the whole value; a locale that
  * appears in `src/i18n/locales/` and not here fails the check.
+ *
+ * Every contraction is written `['’]`, because the bundles now spell the
+ * apostrophe `’` and a pattern that named only `'` would have stopped matching
+ * anything the day the sweep landed (issue #1367) — the rule would still be
+ * listed, still be tested against its own straight-apostrophe fixtures, and
+ * never fire on a real string again.
  */
 export const RULES = {
   "en-US": {
     filler:
       /\b(?:actually|genuinely|simply|quietly|truly|literally|seamless(?:ly)?|effortless(?:ly)?|elevates?d?|empower(?:s|ed|ing)?|streamlines?d?|leverages?d?|robust|delve|supercharge[sd]?|frictionless|hassle-free|world-class|cutting-edge|best-in-class|next-level|game-changer|revolutioni[sz]e\w*|transformative)\b/gi,
     leadIn:
-      /\b(?:here's (?:how|what|the|why|where)|here is (?:how|what|why)|the best part|let's be honest|rest assured|look no further|say goodbye to|whether you're|in today's (?:world|market|landscape|economy|fast-paced)|at its core|it's worth noting|the whole point|the thing is)\b/gi,
+      /\b(?:here['’]s (?:how|what|the|why|where)|here is (?:how|what|why)|the best part|let['’]s be honest|rest assured|look no further|say goodbye to|whether you['’]re|in today['’]s (?:world|market|landscape|economy|fast-paced)|at its core|it['’]s worth noting|the whole point|the thing is)\b/gi,
     notJust:
-      /\b(?:isn't just|is not just|aren't just|not just\b|more than just|isn't about|is not about|it's not (?:a|an|about) [^.]{0,40}, it's)\b/gi,
+      /\b(?:isn['’]t just|is not just|aren['’]t just|not just\b|more than just|isn['’]t about|is not about|it['’]s not (?:a|an|about) [^.]{0,40}, it['’]s)\b/gi,
     staccato: /\b(?:No|Nothing|Never) [^.!?]{1,24}[.!?] (?:No|Nothing|Never)\b/g,
   },
   "es-ES": {
@@ -118,11 +145,44 @@ export function proseDashes(value) {
   return found;
 }
 
+/**
+ * A straight apostrophe in prose a person reads.
+ *
+ * The house apostrophe is `’` (U+2019). Both spellings landed for as long as
+ * the bundles existed, and the mismatch is invisible on screen — it renders
+ * fine either way and no reader notices. It is not invisible to Playwright:
+ * `getByRole(name)` and `getByText` match the two characters as different
+ * strings, and every e2e spec here hard-codes the English a user sees. On
+ * PR #1365 (`24f18a2`) a bundle string with `'` and two specs asserting `’`
+ * cost a full CI round, and the fix was one character (issue #1367).
+ *
+ * Beside `proseDashes` rather than inside `RULES` on purpose: this is
+ * typography, not a per-language word list, so a third locale inherits it
+ * without naming it. A `RULES` entry would silently not apply.
+ */
+export function straightApostrophes(value) {
+  const found = [];
+  const prose = value.replace(ICU_QUOTED, (span) => " ".repeat(span.length));
+  for (let index = prose.indexOf("'"); index !== -1; index = prose.indexOf("'", index + 1)) {
+    // The apostrophe's own word plus one either side, so `--report` output is
+    // greppable back to the string it came from.
+    const before = prose.slice(0, index).split(/\s+/).filter(Boolean).slice(-2);
+    const after = prose
+      .slice(index + 1)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2);
+    const excerpt = `${before.join(" ")}'${after.join(" ")}`.trim();
+    found.push({ rule: "apostrophe", text: excerpt });
+  }
+  return found;
+}
+
 /** Every tell in one bundle value, for one locale. */
 export function findTells(value, locale) {
   const rules = RULES[locale];
   if (!rules) throw new Error(`no voice rules for locale ${locale}`);
-  const found = proseDashes(value);
+  const found = [...proseDashes(value), ...straightApostrophes(value)];
   for (const [rule, pattern] of Object.entries(rules)) {
     pattern.lastIndex = 0;
     for (const match of value.matchAll(pattern)) found.push({ rule, text: match[0] });
@@ -351,7 +411,7 @@ async function main() {
       for (const file of added) console.warn(`- ${file}: new file with ${counts.get(file)}`);
     }
     const next = {
-      "//": "Voice tells still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs.",
+      "//": "Voice tells — a machine-written mannerism, or a straight apostrophe where the house ’ belongs — still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs.",
       ...Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b))),
     };
     await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
@@ -401,7 +461,7 @@ async function main() {
   if (violations.length > 0) {
     console.error(`Voice violations:\n${violations.map((v) => `- ${v}`).join("\n")}`);
     console.error(
-      "A prose em-dash becomes a full stop, a comma or a colon; an intensifier is deleted; a lead-in is deleted; a 'not just X' contrast states the thing. The full list and the reasoning: docs/design/brand.md, \"What gives us away\". `node scripts/check-voice.mjs --report <file>` lists every hit.",
+      "A prose em-dash becomes a full stop, a comma or a colon; an intensifier is deleted; a lead-in is deleted; a 'not just X' contrast states the thing; an apostrophe is ’ (U+2019), never ' — the ICU-quoted `'{depth18}'` markers are the only exception. The full list and the reasoning: docs/design/brand.md, \"What gives us away\". `node scripts/check-voice.mjs --report <file>` lists every hit.",
     );
     process.exit(1);
   }

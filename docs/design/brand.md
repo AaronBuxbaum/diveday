@@ -147,6 +147,13 @@ Color rules:
 > moments are Geist at weight and size. A shop's storefront may carry the shop's own display face for
 > headings only — never for a fact.
 
+> **Settled 2026-09-10 (#1367):** the apostrophe is `’` (U+2019) everywhere a person reads it — every
+> message bundle, every locale, every route's `metadata` literals. The straight `'` survives only
+> inside an ICU-quoted span (`'{depth18}'`, `'{{1}}'`), where it is what makes the span a literal
+> rather than punctuation. Both spellings had been landing since the bundles existed and neither
+> looks wrong on screen; `pnpm check:voice` now refuses the straight one, because Playwright matches
+> the two as different strings and every e2e spec hard-codes its English.
+
 
 The current product type system is:
 
