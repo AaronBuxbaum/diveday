@@ -2,7 +2,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { readKioskInput, surnameOf } from "@/lib/kiosk-check-in";
+import { matchableNameTokens, readKioskInput, surnameOf } from "@/lib/kiosk-check-in";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { listSelfReportedArrivalBookingIds } from "./arrival-provenance";
@@ -186,6 +186,71 @@ describe("findKioskSeats", () => {
         now: longAgo,
       }),
     ).toEqual([]);
+  });
+
+  /**
+   * **The rule the Spanish prompt asks for.** "Apellido" gets *García* from
+   * essentially every Hispanic diver, and the lookup matched only the last
+   * word, so a diver recorded with both apellidos was unreachable by the one
+   * they answer with — refused in a sentence deliberately identical to "we do
+   * not know you" (issue #1610).
+   */
+  it("finds a two-apellido diver by either apellido, and not by a given name", async () => {
+    const { db, shop, booking, person, atTheDoor } = await counter();
+    await db.update(people).set({ fullName: "Ana García Márquez" }).where(eq(people.id, person.id));
+
+    for (const typed of ["García", "márquez", "García Márquez", "Ana García Márquez"]) {
+      const seats = await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(typed),
+        now: atTheDoor,
+      });
+      expect(
+        seats.map((row) => row.bookingId),
+        typed,
+      ).toContain(booking.id);
+    }
+
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput("Ana"),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * The SQL is `matchableNameTokens` written a second time, in another
+   * language, over a column instead of a string — so the two agreeing is the
+   * invariant rather than a coincidence. A name whose shape only one of them
+   * understands is a diver one door finds and the other does not.
+   */
+  it("matches exactly the words the rule in src/lib names, and no others", async () => {
+    const { db, shop, booking, person, atTheDoor } = await counter();
+    const names = [
+      "Ana García Márquez",
+      "María José García Márquez",
+      "Jan van der Berg",
+      "Adaeze Nwosu",
+      "Prince",
+    ];
+
+    for (const fullName of names) {
+      await db.update(people).set({ fullName }).where(eq(people.id, person.id));
+      const words = fullName.toLowerCase().split(/\s+/);
+      const matchable = matchableNameTokens(fullName);
+
+      for (const word of words) {
+        const seats = await findKioskSeats(db, {
+          shopId: shop.id,
+          lookup: readKioskInput(word),
+          now: atTheDoor,
+        });
+        const found = seats.some((row) => row.bookingId === booking.id);
+        expect(found, `${fullName} by ${word}`).toBe(matchable.includes(word));
+      }
+    }
   });
 
   /**

@@ -20,19 +20,55 @@ export function kioskCheckInPath(token: string): string {
 }
 
 /**
- * The **surname** in a full name: the last whitespace-separated word.
+ * The **word a diver answers with**: the last whitespace-separated word of what
+ * they typed.
  *
- * Deliberately crude, and deliberately not a parser. What it is for is the one
- * question a person standing at a tablet answers — "last name?" — and the
- * lookup it feeds is exact and case-insensitive against this same derivation on
- * the stored name, so a diver recorded as "Adaeze Nwosu" is found by "nwosu"
- * and nothing else. A shop that records a name the other way round finds the
- * diver by their booking reference instead, which is what the scanned code
- * carries.
+ * Deliberately crude, and deliberately not a parser. A person standing at a
+ * tablet answers one question — "last name?" — and whether they answer
+ * "Marquez", "Garcia Marquez" or their whole name, the word that identifies
+ * them is the last one. It is matched exactly and case-insensitively against
+ * the stored name's own {@link matchableNameTokens}, never as a substring.
  */
 export function surnameOf(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
   return (parts.at(-1) ?? "").toLowerCase();
+}
+
+/**
+ * The words of a **stored** name a diver may be found by.
+ *
+ * The last word alone was wrong in the market the Spanish bundle exists for.
+ * A diver recorded as "Ana Garcia Marquez" was reachable only by *Marquez*, the
+ * maternal apellido, while anyone asked for *su apellido* answers *Garcia* — so
+ * under the "Apellido" prompt the tablet refused every Hispanic diver, with a
+ * refusal deliberately indistinguishable from "we do not know you" (issue
+ * #1610). Both apellidos have to work, and the same widening carries a Dutch
+ * tussenvoegsel ("Jan van der Berg", found by *Berg*) and a compound English
+ * surname.
+ *
+ * So: every word except the given names, where "the given names" is the first
+ * word, or the first **two** when the name runs to four or more. That second
+ * clause is what keeps "Maria Jose Garcia Marquez" from being found by *Jose* —
+ * compound given names are as ordinary in Spanish as compound surnames, and a
+ * rule of "anything but the first word" would have made a given name matchable
+ * for a large part of the market.
+ *
+ * A single-word name is its own surname, as it always was.
+ *
+ * **What stops this being a roster browser is no longer that given names are
+ * excluded.** It is the exact whole-word match — never `like '%…%'`, so one
+ * letter sweeps nothing — and the collapse of zero and many into the same
+ * "see the desk", which is what a stranger typing a common name meets.
+ * `src/db/kiosk-check-in.ts` writes this same rule in SQL.
+ */
+export function matchableNameTokens(fullName: string): readonly string[] {
+  const parts = fullName
+    .trim()
+    .split(/\s+/)
+    .filter((part) => part.length > 0)
+    .map((part) => part.toLowerCase());
+  if (parts.length <= 1) return parts;
+  return parts.slice(parts.length >= 4 ? 2 : 1);
 }
 
 export type KioskInput =

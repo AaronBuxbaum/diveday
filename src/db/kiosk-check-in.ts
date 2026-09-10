@@ -52,10 +52,12 @@ const MATCH_LIMIT = 2;
  * Seats on today's departures that this typed (or scanned) answer could name.
  *
  * A **booking reference** matches that booking and nothing else. A **surname**
- * matches on the last whitespace-separated word of the stored name, exactly and
- * case-insensitively — never a substring, so typing one letter cannot sweep the
- * day's roster, and never on the email address, which nobody says out loud at a
- * counter.
+ * matches any of the stored name's own `matchableNameTokens` — every word but
+ * the given names — exactly and case-insensitively, never a substring, so
+ * typing one letter cannot sweep the day's roster, and never on the email
+ * address, which nobody says out loud at a counter. Both apellidos of "Ana
+ * García Márquez" therefore work, which under an "Apellido" prompt is the
+ * difference between a feature and a box that says no (issue #1610).
  *
  * Cancelled seats are excluded, deleted people are excluded, and the departure
  * has to be live and scheduled. Anything else is not a seat somebody is
@@ -71,10 +73,22 @@ export async function findKioskSeats(
   const match =
     input.lookup.kind === "booking"
       ? eq(bookings.id, input.lookup.bookingId)
-      : // The same derivation `surnameOf` applies to what was typed, applied to
-        // the stored name in Postgres: the last whitespace-separated word,
-        // lower-cased. Anchored and whole-word, never `like '%…%'`.
-        sql`lower(regexp_replace(btrim(${people.fullName}), '^.*\\s', '')) = ${input.lookup.surname}`;
+      : // `matchableNameTokens` written in SQL: the stored name split on
+        // whitespace, lower-cased, with the given names dropped — the first
+        // word, or the first two when the name runs to four or more — and the
+        // typed word matched against what is left, whole and exactly. Never
+        // `like '%…%'`: one letter must not sweep a lobby's roster. The last
+        // word alone left every two-apellido diver unreachable by the apellido
+        // they answer with (issue #1610).
+        sql`${input.lookup.surname} = ANY(
+          (regexp_split_to_array(lower(btrim(${people.fullName})), '\\s+'))[
+            (case
+              when array_length(regexp_split_to_array(btrim(${people.fullName}), '\\s+'), 1) >= 4 then 3
+              when array_length(regexp_split_to_array(btrim(${people.fullName}), '\\s+'), 1) >= 2 then 2
+              else 1
+            end):
+          ]
+        )`;
 
   const rows = await db
     .select({
