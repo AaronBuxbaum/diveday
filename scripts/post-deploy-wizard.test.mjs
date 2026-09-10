@@ -630,6 +630,108 @@ describe("post-deploy wizard", () => {
     ]);
   });
 
+  /**
+   * **DMARC is the one SES record no provider hands you**, so it is the one the
+   * wizard was never built to publish: SES issues the DKIM tokens and the MAIL
+   * FROM pair, and the record that decides how every message is *judged* was
+   * left to a manual action nobody is prompted by (issue #1654).
+   */
+  it("publishes the sending subdomain's DMARC record when it has somewhere to send the reports", async () => {
+    const commands = [];
+    await wizard({
+      ask: async (question) => (/SES DNS/.test(question) ? "yes" : "no"),
+      cdkArguments: [
+        "--context",
+        "sesEmailDomain=ses.example.com",
+        "--context",
+        "dmarcReportEmail=dmarc@example.com",
+      ],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2", VERCEL_DNS_ZONE: "example.com" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws") return JSON.stringify(["first"]);
+        return "";
+      },
+      log: () => {},
+    });
+
+    const dmarcAdd = commands.find(
+      ({ arguments_ }) => arguments_[3] === "add" && arguments_[5] === "_dmarc.ses",
+    );
+    expect(dmarcAdd?.arguments_).toEqual(
+      expect.arrayContaining(["TXT", "v=DMARC1; p=none; rua=mailto:dmarc@example.com"]),
+    );
+  });
+
+  /**
+   * **Two `v=DMARC1` records at one name is worse than none** — a receiver that
+   * finds more than one treats the domain as having no policy at all, so an add
+   * beside an existing record switches DMARC off in silence. `vercel dns add`
+   * has no upsert, and this wizard never deletes.
+   */
+  it("leaves a DMARC record that is already published alone, whatever its value", async () => {
+    const commands = [];
+    const messages = [];
+    await wizard({
+      ask: async (question) => (/SES DNS/.test(question) ? "yes" : "no"),
+      cdkArguments: [
+        "--context",
+        "sesEmailDomain=ses.example.com",
+        "--context",
+        "dmarcReportEmail=dmarc@example.com",
+      ],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2", VERCEL_DNS_ZONE: "example.com" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws") return JSON.stringify(["first"]);
+        if (arguments_[3] === "ls") {
+          // A different `rua` from the one configured here: somebody's
+          // deliberate choice, not a rival to clear away.
+          return "_dmarc.ses TXT v=DMARC1; p=none; rua=mailto:someone@example.com\n";
+        }
+        return "";
+      },
+      log: (message) => messages.push(message),
+    });
+
+    expect(
+      commands.some(({ arguments_ }) => arguments_[3] === "add" && arguments_[5] === "_dmarc.ses"),
+    ).toBe(false);
+    expect(messages.some((message) => /DMARC: already published/.test(message))).toBe(true);
+  });
+
+  /**
+   * The `rua` address is a choice rather than a derivation. Reports sent to a
+   * mailbox nobody reads are the same as no reports, and worse, they read as
+   * done — so an unconfigured address prints the record for a person instead of
+   * inventing one.
+   */
+  it("prints the record rather than inventing an address to send reports to", async () => {
+    const commands = [];
+    const messages = [];
+    await wizard({
+      ask: async (question) => (/SES DNS/.test(question) ? "yes" : "no"),
+      cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2", VERCEL_DNS_ZONE: "example.com" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws") return JSON.stringify(["first"]);
+        return "";
+      },
+      log: (message) => messages.push(message),
+    });
+
+    expect(
+      commands.some(({ arguments_ }) => arguments_[3] === "add" && arguments_[5] === "_dmarc.ses"),
+    ).toBe(false);
+    const printed = messages.find((message) => message.includes("_dmarc.ses"));
+    expect(printed).toMatch(/judged with no policy of its own/);
+    expect(printed).toMatch(/dmarcReportEmail/);
+  });
+
   // A listing failure is unknown state, not empty state. `vercel dns add` has no
   // upsert, so inferring "empty" from "unreadable" is what would put a second
   // "v=spf1" TXT on the live zone and break SPF for every outbound mail -- the
