@@ -308,6 +308,28 @@ for (const name of [...TABLET_SURFACES, ...TV_SURFACES]) {
  * partly-but-not-fully diagnosed from would be the same class of confident,
  * incomplete-justification mistake the debug skill's honesty rule warns
  * about — so this correction stays rather than getting quietly folded in.
+ *
+ * **Second correction, 2026-09-10: `unoptimized` took sharp out and left the
+ * browser's own decoder in.** `site-briefing` and `booking-pitch-open` kept
+ * reporting changed after all of the above was in place -- five issues' worth
+ * (#1585, #1567, #1432, #1405, #1623), always the same one marine-life
+ * photograph, never anything else on a 6,000px page, max channel delta 6 to 10.
+ * #1597 measured it: twelve runs of one build on one machine, two byte-exact
+ * variants, flipping about one run in three, and the only thing that moved the
+ * outcome was what else had already run in the browser process.
+ *
+ * That is a decode-cache signature, not a timing one, and the wait loop above
+ * cannot reach it. With `unoptimized` there is no srcset, so the browser is
+ * handed the repository's own 640px file and picks its own decode scale; a JPEG
+ * decoder can decode at N/8 of the stored size, so a source two or more times
+ * the rendered box has more than one legal decode and the cache's state chooses
+ * between them. `src/lib/marine-life-tiles.ts` closes it by serving every
+ * marine-life tile a committed variant whose width sits strictly inside
+ * `(box/2, 2*box)` -- one legal decode, one fixed resample -- and only under
+ * `DIVEDAY_E2E`, so production still renders the full-size source through the
+ * optimizer. The captures below that render a species therefore photograph a
+ * box-sized file rather than a 640px one, which is closer to what a browser is
+ * served in production, not further.
  */
 /**
  * Every wait below is bounded, because `requestAnimationFrame` is not a promise

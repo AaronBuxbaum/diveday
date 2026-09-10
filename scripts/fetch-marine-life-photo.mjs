@@ -15,6 +15,7 @@
  *   node scripts/fetch-marine-life-photo.mjs <slug> --search "<Latin name>"
  *   node scripts/fetch-marine-life-photo.mjs <slug> --file "File:Some photo.jpg"
  *   node scripts/fetch-marine-life-photo.mjs --list species.tsv      (slug<TAB>search)
+ *   node scripts/fetch-marine-life-photo.mjs --tiles-only            (re-derive `tiles/`)
  *
  * `--search` takes the first result whose licence is one this repo can ship,
  * which in practice is what a human would pick too; `--file` names an exact
@@ -30,7 +31,7 @@
  */
 
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import sharp from "sharp";
@@ -66,9 +67,56 @@ const API = "https://commons.wikimedia.org/w/api.php";
  * worst 35.7. Twenty-two of these files were **already** narrower than 640 —
  * `boulder-star-coral.jpg` is 337px — so this band was shipping and accepted
  * long before it was chosen.
+ *
+ * **Settled 2026-09-10: this number does not move again** (issue #1337, the
+ * owner's call). The ticket asked whether 800 was needed and offered shrinking
+ * the catalog preview instead; both halves of it are already answered by the
+ * tree, and the ticket's own figures are stale, so read these rather than it.
+ * The bound is **640**, not 800, since 2026-09-04. The preview's `25vw` that
+ * the question was protecting is gone, corrected to `180px` by PR #1347 for a
+ * cell that measures 171-173px. And the folder is **6.81 MB across 148 files**,
+ * not the 9.9 MB the ticket weighed. Nothing here is worth another round of
+ * re-encoding a licensed derivative.
+ *
+ * The consequence for `TILE_WIDTHS` below, which arrived in the same change: it
+ * may not resize, re-encode or replace any file directly under
+ * `public/marine-life/`. The capture variants live one directory down and are
+ * derived from these; these are what production renders.
  */
 const MAX_EDGE = 640;
 const JPEG = { quality: 78, mozjpeg: true };
+
+/**
+ * The capture-only variants, written beside every source into
+ * `public/marine-life/tiles/<width>/<slug>.jpg`.
+ *
+ * These exist for one measured defect: the e2e build sets `images.unoptimized`,
+ * so a capture is handed the repository's own 640px file with no srcset, and
+ * Chromium then chooses how to decode it. A JPEG decoder can decode at N/8 of
+ * its stored size, so whenever the source is two or more times the rendered
+ * box, more than one scaled decode satisfies the draw and the choice depends on
+ * what else has run in the browser process. #1597's investigation isolated
+ * exactly that: twelve runs of one build on one machine, two byte-exact
+ * variants, flipping about one run in three, always inside the same 171px
+ * tile. That flip arrived on unrelated pull requests as a "changed" surface
+ * (#1585, #1567, #1432, #1405, #1623).
+ *
+ * The invariant these widths establish is in `src/lib/marine-life-tiles.ts`:
+ * the served file's width must lie strictly inside `(box/2, 2*box)`. Above that
+ * band the decoder has a legal half-scale and therefore a choice; below it the
+ * tile is upscaled past what a photograph survives. The three widths cover the
+ * four boxes the app renders these at -- 48 (the diver's field guide and the
+ * recap), 80 (the species picker), and 171 (the trip pitch's three faces and
+ * the published-catalog preview, which also covers the pitch's 109px phone
+ * cell at 1.57x).
+ *
+ * `MAX_EDGE` above is untouched by this and stays where it is (issue #1337):
+ * production still renders from the full-size source through the optimizer, and
+ * nothing here resizes, re-encodes or replaces a file directly under
+ * `public/marine-life/`.
+ */
+const TILE_WIDTHS = [48, 96, 171];
+const TILE_DIR = path.join(PHOTO_DIR, "tiles");
 
 /**
  * Licences this repo may bundle a derivative of on a commercial page.
@@ -211,6 +259,37 @@ async function writePhoto(slug, url) {
     .resize({ width: MAX_EDGE, height: MAX_EDGE, fit: "inside", withoutEnlargement: true })
     .jpeg(JPEG)
     .toFile(path.join(PHOTO_DIR, `${slug}.jpg`));
+  await writeTiles(slug);
+}
+
+/**
+ * The capture-only variants for one slug, derived from the file on disk rather
+ * than from the download.
+ *
+ * Deriving them from the committed source is the point: the source is what
+ * production renders and what the licences were recorded against, so a variant
+ * is always a downscale of the exact bytes this repository ships, never a
+ * second independent encode of a Commons original. That also makes
+ * `--tiles-only` able to sweep a catalog fetched long before these existed.
+ *
+ * `withoutEnlargement` is deliberately absent. Twenty-two sources are already
+ * narrower than 640 and one is 186px, so a strict "never enlarge" would write a
+ * 186px file into the 171 slot for one species and a 96px slot would silently
+ * hold something narrower for another -- which is the band this exists to
+ * enforce, broken quietly. Height is unconstrained: every consumer is an
+ * `object-cover` box, so the width is what the decoder is choosing a scale
+ * against.
+ */
+async function writeTiles(slug) {
+  const source = path.join(PHOTO_DIR, `${slug}.jpg`);
+  for (const width of TILE_WIDTHS) {
+    const dir = path.join(TILE_DIR, String(width));
+    await mkdir(dir, { recursive: true });
+    await sharp(source)
+      .resize({ width })
+      .jpeg(JPEG)
+      .toFile(path.join(dir, `${slug}.jpg`));
+  }
 }
 
 /**
@@ -279,7 +358,26 @@ const force = argv.includes("--force");
 const listAt = argv.indexOf("--list");
 
 let failures = 0;
-if (listAt !== -1) {
+// `--tiles-only` re-derives the capture variants for every source already on
+// disk and fetches nothing. It is how the 148 photos that predate `TILE_WIDTHS`
+// got theirs, and it is the one command to run after changing a width or the
+// encoder settings -- Commons is not touched, so no licence decision is being
+// re-made and no credit line moves.
+if (argv.includes("--tiles-only")) {
+  const slugs = (await readdir(PHOTO_DIR))
+    .filter((entry) => entry.endsWith(".jpg"))
+    .map((entry) => entry.slice(0, -".jpg".length))
+    .sort();
+  for (const slug of slugs) {
+    try {
+      await writeTiles(slug);
+    } catch (error) {
+      console.error(`${slug}: ${error.message}`);
+      failures += 1;
+    }
+  }
+  console.log(`${slugs.length} species x ${TILE_WIDTHS.join("/")}px written under ${TILE_DIR}`);
+} else if (listAt !== -1) {
   const rows = (await readFile(argv[listAt + 1], "utf8"))
     .split("\n")
     .map((line) => line.trim())

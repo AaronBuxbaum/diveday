@@ -4,6 +4,7 @@ import { LedgerGroup } from "@/components/ui/ledger";
 import type { PublicCrewMember } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { siteFit } from "@/lib/diver-planning";
+import { capturePhoto } from "@/lib/marine-life-tiles";
 import { TripCrewLine } from "./TripCrewLine";
 import {
   dayMomentsFor,
@@ -97,7 +98,11 @@ export function TripPitch({
           {tiles.map((card) => (
             <li key={card.slug ?? card.name} data-pitch-tile className="min-w-0">
               <StoredPhoto
-                src={card.imageUrl}
+                // 171 is the desktop cell; the phone's 109 is served from the
+                // same file at 1.57x, inside the band. Capture-only — see
+                // `src/lib/marine-life-tiles.ts` for the decode flip this one
+                // tile spent five issues on (#1585, #1567, #1432, #1405, #1623).
+                src={capturePhoto(card.imageUrl, 171)}
                 alt=""
                 className="aspect-[4/3] w-full rounded-inset"
                 // Three cells across the measure: a third of `max-w-xl`

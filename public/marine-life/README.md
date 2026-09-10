@@ -16,6 +16,30 @@ preview, the largest — a slot measuring 171px, and the widest candidate any of
 every viewport at DPR 3 is 640. A wider source is bytes the optimizer throws away, and the
 originals run to several megabytes apiece.
 
+**640 is where it stays.** Asked again on 2026-09-10 (issue #1337), the answer was to leave the
+sources alone: the surface that once justified a wider bound — the published-catalog preview — was
+corrected by PR #1347 from `25vw` to the slot's real 171px, so nothing renders these large any
+more, and the folder is 6.81 MB rather than the 9.9 MB the question was asked about. Do not
+"restore" 800; that number belongs to a page that no longer exists.
+
+## `tiles/` — capture-only variants, never rendered to a person
+
+`tiles/48/`, `tiles/96/` and `tiles/171/` hold one downscale of each source per rendered box size,
+1.19 MB in total. They exist for a test defect, not for a diver: the e2e build turns the image
+optimizer off, so a capture is handed the 640px source with no srcset and Chromium chooses its own
+decode scale — and whenever the source is two or more times the rendered box, more than one scaled
+decode is legal and the choice depends on what else has run in the browser process. That flip
+arrived on five separate pull requests as one marine-life photograph reporting "changed" on pages
+nothing had touched (#1585, #1567, #1432, #1405, #1623).
+
+Nothing in a real deployment ever requests one: `src/lib/marine-life-tiles.ts` rewrites a photo URL
+only under `DIVEDAY_E2E`, and it is what defines the widths and the band they have to sit in.
+`scripts/fetch-marine-life-photo.mjs` owns the files — a new species gets its variants in the same
+run as its source, and `node scripts/fetch-marine-life-photo.mjs --tiles-only` re-derives the whole
+set from the sources on disk without touching Commons. `src/db/marine-life-catalog.test.ts` fails if
+a species is missing one. They carry no separate credit line: each is a downscale of the exact file
+credited below it, under that file's licence and the same "changes indicated" note.
+
 - `arrow-crab.jpg` — [Cangrejo araña (Stenorhynchus seticornis), franja marina Teno-Rasca, Tenerife, España, 2022-01-05, DD 94.jpg](https://commons.wikimedia.org/wiki/File:Cangrejo_ara%C3%B1a_(Stenorhynchus_seticornis),_franja_marina_Teno-Rasca,_Tenerife,_Espa%C3%B1a,_2022-01-05,_DD_94.jpg) · CC BY-SA 4.0 · Diego Delso
 - `atlantic-spadefish.jpg` — [Atlantic Spadefish PLW edit.jpg](https://commons.wikimedia.org/wiki/File:Atlantic_Spadefish_PLW_edit.jpg) · CC BY-SA 2.0 · Matthew Hoelscher (original photograph), Kaldari (crop), Papa Lima Whiskey (white balance adjustments)
 - `azure-vase-sponge.jpg` — [Callyspongia plicifera - azure vase sponge - Bay of Pigs - Cuba.jpg](https://commons.wikimedia.org/wiki/File:Callyspongia_plicifera_-_azure_vase_sponge_-_Bay_of_Pigs_-_Cuba.jpg) · CC BY 4.0 · Tisquesusa
