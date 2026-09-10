@@ -21,6 +21,10 @@
     "e2e": ["departures-board.spec.ts"],
     "visual": ["departures-board"]
   },
+  "/check-in/[token]": {
+    "e2e": ["self-check-in.spec.ts"],
+    "visual": ["self-check-in"]
+  },
   "/claim/[token]": {
     "e2e": ["a11y.spec.ts", "gift.spec.ts", "seat-claim.spec.ts"],
     "visual": ["seat-claim", "gift-claim"],
@@ -156,6 +160,7 @@
       "last-minute-fill.spec.ts",
       "next-departure.spec.ts",
       "nitrox.spec.ts",
+      "off-season.spec.ts",
       "partner-referral.spec.ts",
       "readiness.spec.ts",
       "refunds.spec.ts",
@@ -179,6 +184,7 @@
       "schedule-above-level",
       "schedule-embed",
       "schedule-lens",
+      "schedule-off-season",
       "shopfront-known-diver"
     ],
     "a11y": ["a11y.spec.ts"]
@@ -209,6 +215,10 @@
   "/s/[shopSlug]/reviews": {
     "e2e": ["reviews.spec.ts"],
     "visual": ["public-reviews"]
+  },
+  "/s/[shopSlug]/sites/[siteSlug]": {
+    "e2e": ["dive-site-pages.spec.ts"],
+    "visual": ["dive-site-page"]
   },
   "/s/[shopSlug]/trips/[id]": {
     "e2e": [

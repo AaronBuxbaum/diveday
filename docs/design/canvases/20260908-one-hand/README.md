@@ -1,6 +1,6 @@
 # One hand — why DiveDay feels like four products, and four ways to make it one
 
-- **Status:** Live (its ADR is Proposed, pending H-71; rounds 2 and 3 drawn 2026-09-09 and round 4 on 2026-09-10, each on the owner's read of the last; round 4's seven slices, 20n–20t, are in progress as one stack of pull requests since 2026-09-10 — the rows below name them)
+- **Status:** Live (its ADR is Proposed, pending H-71; rounds 2 and 3 drawn 2026-09-09 and round 4 on 2026-09-10, each on the owner's read of the last; round 4's seven slices, 20n–20t, shipped 2026-09-10 as one stack of seven pull requests — the rows below name what each landed in)
 - **Date:** 2026-09-08
 - **ADR:** [20260908-one-hand](../../../architecture/decisions/20260908-one-hand.md)
 - **Published:** https://claude.ai/code/artifact/cfd0c597-1a70-4990-a171-4548ebae401f
@@ -189,13 +189,13 @@ and 20n–20t (round 4) on the calls named beside each.
 | 20k — N, the postcard from the crew's log; the recap email and the thread's after-state | open | — | — |
 | 20l — P the six rooms in the empty states and on the lobby board, R the shop's card, S first light, Q's two new answers | open | — | — |
 | 20m — the surface sweep: every board's "Deleted here" applied to its pages, one family per session | open | — | — |
-| 20n — U, follow the boat: the public route, the pass's share line, the storefront's line, the Settings switch (H-71 j) | in progress | [#1626](https://github.com/AaronBuxbaum/diveday/pull/1626) (stack 1/7) | `e2e/follow-the-boat.spec.ts`, `src/lib/boat-line.test.ts`, `src/db/boat-line.test.ts` |
-| 20o — Y, try it with your boats: the hero's three fields, the filled onboard door, the storefront preview, the four pictures | in progress | [#1627](https://github.com/AaronBuxbaum/diveday/pull/1627) (stack 2/7) | `e2e/try-it.spec.ts`, `src/lib/try-it.test.ts`, `src/db/first-day.test.ts` |
-| 20p — T, the shop's year: the year page over the log, the card, the homepage proof with a yes (H-71 k) | in progress | [#1629](https://github.com/AaronBuxbaum/diveday/pull/1629) (stack 3/7) | `e2e/shop-year.spec.ts`, `src/lib/shop-year.test.ts` |
-| 20q — W, give a dive: book for someone else, the gift pass, the claim, the giver's thread, the buddy seat on the postcard (H-71 l) | in progress | [#1634](https://github.com/AaronBuxbaum/diveday/pull/1634) (stack 7/7) | `e2e/gift.spec.ts`, `src/db/gifts.test.ts`, `src/db/buddy-referrals.test.ts`, `src/lib/gift-links.test.ts` |
-| 20r — V, the living reef: sightings on the crew's log, the site page's month, the sun and moon on the tide line (H-71 n) | in progress | [#1633](https://github.com/AaronBuxbaum/diveday/pull/1633) (stack 6/7) | `e2e/sightings.spec.ts`, `src/db/trip-sightings.test.ts`, `src/lib/sightings.test.ts`, `src/lib/sun-moon.test.ts` |
-| 20s — X, the shop on paper: the print register, six sheets, the print specimen in the kit (H-71 o) | in progress | [#1631](https://github.com/AaronBuxbaum/diveday/pull/1631) (stack 5/7) | `e2e/shop-on-paper.spec.ts`, `src/lib/print-sheets.test.ts`, `src/db/print-runs.test.ts` |
-| 20t — Z, the diver's shelf: the token scope, the shelf, the storefront's welcome, "Forget this phone" (H-71 m) | in progress | [#1630](https://github.com/AaronBuxbaum/diveday/pull/1630) (stack 4/7) | `e2e/shelf.spec.ts`, `src/db/shelf.test.ts`, `src/db/person-shelf-tokens.test.ts` |
+| 20n — U, follow the boat: the public route, the pass's share line, the storefront's line, the Settings switch (H-71 j) | shipped | `src/app/s/[shopSlug]/boats/[tripId]/page.tsx` | `e2e/follow-the-boat.spec.ts`, `src/lib/boat-line.test.ts`, `src/db/boat-line.test.ts` — landed in [#1626](https://github.com/AaronBuxbaum/diveday/pull/1626) |
+| 20o — Y, try it with your boats: the hero's three fields, the filled onboard door, the storefront preview, the four pictures | shipped | `src/app/_components/TryItHero.tsx` | `e2e/try-it.spec.ts`, `src/lib/try-it.test.ts`, `src/db/first-day.test.ts` — landed in [#1627](https://github.com/AaronBuxbaum/diveday/pull/1627) |
+| 20p — T, the shop's year: the year page over the log, the card, the homepage proof with a yes (H-71 k) | shipped | `src/lib/shop-year.ts` | `e2e/shop-year.spec.ts`, `src/lib/shop-year.test.ts` — landed in [#1629](https://github.com/AaronBuxbaum/diveday/pull/1629) |
+| 20q — W, give a dive: book for someone else, the gift pass, the claim, the giver's thread, the buddy seat on the postcard (H-71 l) | shipped | `src/db/gifts.ts` | `e2e/gift.spec.ts`, `src/db/gifts.test.ts`, `src/db/buddy-referrals.test.ts`, `src/lib/gift-links.test.ts` — landed in [#1634](https://github.com/AaronBuxbaum/diveday/pull/1634) |
+| 20r — V, the living reef: sightings on the crew's log, the site page's month, the sun and moon on the tide line (H-71 n) | shipped | `src/db/trip-sightings.ts` | `e2e/sightings.spec.ts`, `src/db/trip-sightings.test.ts`, `src/lib/sightings.test.ts`, `src/lib/sun-moon.test.ts` — landed in [#1633](https://github.com/AaronBuxbaum/diveday/pull/1633) |
+| 20s — X, the shop on paper: the print register, six sheets, the print specimen in the kit (H-71 o) | shipped | `src/lib/print-sheets.ts` | `e2e/shop-on-paper.spec.ts`, `src/lib/print-sheets.test.ts`, `src/db/print-runs.test.ts` — landed in [#1631](https://github.com/AaronBuxbaum/diveday/pull/1631) |
+| 20t — Z, the diver's shelf: the token scope, the shelf, the storefront's welcome, "Forget this phone" (H-71 m) | shipped | `src/db/shelf.ts` | `e2e/shelf.spec.ts`, `src/db/shelf.test.ts`, `src/db/person-shelf-tokens.test.ts` — landed in [#1630](https://github.com/AaronBuxbaum/diveday/pull/1630) |
 
 ## Working on it
 

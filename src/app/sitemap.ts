@@ -4,17 +4,19 @@ import type { MetadataRoute } from "next";
 import { cacheLife } from "next/cache";
 import { getDb } from "@/db/client";
 import { listActiveCoursesForSitemap } from "@/db/courses";
+import { listDiveSitesForSitemap } from "@/db/dive-sites";
 import { listRegions } from "@/db/regions";
 import { listShopsForSitemap } from "@/db/shops";
 import { MIGRATION_GUIDE_SLUGS } from "@/lib/migration-guides";
 import { publicAppUrl } from "@/lib/notifications";
-import { publicCoursePath, publicSchedulePath } from "@/lib/public-routes";
+import { publicCoursePath, publicDiveSitePath, publicSchedulePath } from "@/lib/public-routes";
 import { REGIONS_PATH, regionPath } from "@/lib/region";
 
 /**
  * The public marketing surface (the pages in docs/product/marketing.md plus
- * one entry per live switching guide), plus every shop's public schedule and
- * active course pages — both carry canonicals and JSON-LD (docs ADR
+ * one entry per live switching guide), plus every shop's public schedule,
+ * active course pages and dive-site pages — all of which carry canonicals and
+ * JSON-LD (docs ADR
  * 20260729-booking-page-structured-data) and are indexable by design. Demo
  * shops (including the `blue-mantis` e2e/visual fixture) are excluded at the
  * query layer (`listShopsForSitemap`, `listActiveCoursesForSitemap`) — a demo
@@ -52,9 +54,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const db = await getDb();
-  const [shopRows, courseRows, regionRows] = await Promise.all([
+  const [shopRows, courseRows, siteRows, regionRows] = await Promise.all([
     listShopsForSitemap(db),
     listActiveCoursesForSitemap(db),
+    listDiveSitesForSitemap(db),
     listRegions(db),
   ]);
   for (const region of regionRows) {
@@ -67,6 +70,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entries.push({
       path: publicCoursePath(course.shopSlug, course.courseSlug),
       priority: 0.6,
+    });
+  }
+  // The place pages (N-48). Below a course, which is something the shop sells,
+  // and above nothing: a reef page is the entry a diver searching for the reef
+  // rather than the shop arrives on.
+  for (const site of siteRows) {
+    entries.push({
+      path: publicDiveSitePath(site.shopSlug, site.siteSlug),
+      priority: 0.5,
     });
   }
 

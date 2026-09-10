@@ -130,13 +130,25 @@ deleted; rows that are evidence are kept and their personal fields scrubbed.**
 | `calendar_feeds` | revoked (a live feed URL is a standing read credential) |
 | `user_accounts` (if any) | `email` → a unique unusable address (NOT NULL + globally unique), `hashed_password` → a value nothing verifies against, `email_verified_at` → null, `status` → disabled; `account_tokens`, `account_security`, `account_sessions` and `auth_provider_accounts` deleted. The last of those is better-auth's `account` model — nothing writes it while no provider is configured, and the delete is there ahead of the row so that enabling a provider does not quietly make an erasure incomplete (issue #1594). `account_step_ups` needs no delete of its own: it cascades from the sessions above it. Better-auth's `auth_verifications` goes too, swept by `identifier` (the account id or the address) because it carries no foreign key to find it by — a pending row holds the address in clear and a live bearer token in `value`. |
 | `prior_visits` | `title`, `status_label`, `amount_label`, `source_label`, `source_reference` → null; `dedupe_key` → a unique redacted value; `visited_on` stays (the shop's own history) |
+| `imported_payment_history` | `title`, `status_label`, `amount_label`, `payment_reference`, `receipt_reference`, `source_label`, `source_reference`, `stripe_reference`, `receipt_document_url` → null (+ the receipt blob queued under the new `payment_receipt` kind); `dedupe_key` → a unique redacted value. `amount_cents` and `currency` **stay**: they are the only two columns a shop reads as its own money rather than as a sentence about a person, and the unverified-import slice of the financial aggregates is built from them. The table is in both export bundles, so an unerased row left the building with the next export (issue #1607). |
+| `prior_gear_assignments` | `status_label`, `source_reference`, `note` → null; `dedupe_key` → a unique redacted value. The window and the unit stay — which unit was out and when is the register's own record. |
+| `gear_reservations` | `return_note` → null, on both holder shapes (a bookingless counter rental carries `person_id`, a rental against a seat carries `booking_id`). Staff prose about how a unit came home; the reservation, its window and its outcome stay. |
+| `booking_payment_events` | `note` → null. `setBookingPayment` copies the note onto every transition it appends, so scrubbing `booking_payments` and leaving the trail left the same sentence legible in full history. |
+| `trip_last_minute_promo_recipients` | `email` → a unique redacted value, swept **twice** — by `person_id`, and by the address itself, because an unmerged duplicate person keeps this diver's address on its own recipient rows where the key cannot reach it (issue #1622). The row stays. That a deal reached N people on a departure is the shop's own record, and with the address gone it is not a fact about a person. `person_id` stays for the reason `course_inquiries`' does. |
+| `waiver_deliveries` | `detail` → null, and `waiver_records.delivery_error` beside it. Both hold the provider's own words for a bounce, which quote the address they failed to reach — the same reason `notification_deliveries.provider_detail` is cleared. |
+| `orders.description`, `order_line_items.description` | → null / `[redacted]` (the second is NOT NULL). Staff-typed free text on the invoice form, which `src/db/export.ts` already excludes from **both** bundles as third-party-naming — `diver-export.test.ts` pins that header with a seeded "Split with ⟨name⟩'s buddy this trip". Excluded from an export and left on the row after an erasure was not a consistent answer. |
+| `tips.checkout_url`, `booking_checkouts.checkout_url` | → null. Stripe's hosted Checkout page, minted with `customer_email` taken straight off `people.email`, so it renders the address the diver was erased for — the same argument that already nulls `orders.hosted_invoice_url`. Bounded by session expiry; the column is not. |
+| `day_closeouts.outstanding` | each `leftovers[]` element whose `subject` or `detail` matches the stored name has both fields replaced with `[redacted]`; **the element stays**, because how many things were open when the shop closed is a fact about the day. The snapshot copies a `subject` string rather than an id, and eight producers in `src/db/today.ts` put the diver's own name there. Its own docblock calls the text "trail text, like `activity_events.message`" — which is right, and is why leaving it standing was wrong: that column is redacted by this same word-boundary match. The table carries no retention arm, so the name was permanent. |
+| `gear_reservations.return_note` (amended) | → `[redacted]` where `return_outcome` is `service_concern`, → null otherwise. A blanket null left a unit flagged for service with a silently empty note, which reads as "nobody said" — the reading the column's own docblock warns against. |
 | `trip_reviews` | `comment` → null, **unpublished** (`is_published` false, `published_at` null) |
 | `orders` | `hosted_invoice_url`, `invoice_pdf_url` → null — publicly reachable Stripe pages rendering the customer's name and email |
 | `recap_photos` | rows deleted + blob queued (photographs of the diver) |
 | `notification_deliveries` | `provider_detail`, `send_error` → null (bounce text quotes the address) |
 | `notification_delivery_attempts` | `send_error` → null. The append-only twin of the row above, written from the same `delivery.detail` in the same call, so it quotes the same address; scrubbing only the denormalized latest state would leave the address in the history behind it. `send_error_code` is a provider code, not prose, and stays. |
 | `booking_checkouts` | `customer_email` → null. Two asymmetric sweeps — see "The checkout's copy of the address" below. |
+| `trip_last_minute_promo_recipients` | `email` → a unique unusable address. The row stays and, with the address gone, holds nothing but a `person_id` pointing at a row that has itself been erased. `person_id` stays for the reason `course_inquiries`' does — it points at a row that has itself been erased, and keeping it is what makes a replayed erasure reach the same rows. Found by the person-reachable sweep issue #1607 asks for; the table is in the portable export bundle, so the address was leaving the shop with every deal the diver had ever been offered. |
 | `notification_send_queue` | rows deleted, matched on `payload->>'to'` (case-insensitive) and `payload->>'bookingId'`. The one un-normalized PII blob; a work queue, not evidence. |
+| `form_drafts` | rows **deleted**, matched on the erased address appearing as any value in the `fields` blob (issue #1620). `person_id` is the *author*, so no person-scoped sweep reaches the subject — a `new_diver` draft holds a third party's name, address, phone and emergency contact under a staffer's id. The bound the table was trusted for is weaker than it reads: `NEVER_DRAFTED` excludes card, medical and token fields but not those four, and the retention prune runs **weekly** against its one-day cutoff, so a draft could outlive an erasure by five more days. Deleted rather than redacted for the send queue's reason — a work queue is not evidence, and a half-typed form with the identity removed helps nobody. Matched on the address only: a name would reach a namesake's draft and a phone is shared across a household. |
 | `course_inquiries` | `name`, `email`, `phone`, `timing`, `message` → null, matched on `person_id` (snapshotted at capture) first, then on the diver's email or phone — see residuals. `person_id` is left in place: it points at an already-erased row, and keeping it is what makes a replayed erasure reach the same leads. |
 | `processor_erasure_obligations` | *written, not scrubbed* — one row per `orders.stripe_customer_id` (deleted at Stripe after this transaction commits) and one per `orders.stripe_invoice_id` (no API reaches it; the shop files a Stripe data-deletion request) ([20260803-processor-erasure-obligations](20260803-processor-erasure-obligations.md)) |
 
@@ -198,7 +210,7 @@ name someone asked to have forgotten — but it is a line, not the log.
 
 ### Fuzzy predicates are logged
 
-Four sweeps match on something other than a foreign key and can therefore reach a third party's row
+Several sweeps match on something other than a foreign key and can therefore reach a third party's row
 in the same shop. None is cross-tenant and all are owner-gated, so this is a visibility problem, not
 a containment one: each logs `anonymize.fuzzy_match` with its predicate name and the number of rows
 it reached (ids and counts only — never the matched name, address or number), and each runs *after*
@@ -210,6 +222,10 @@ the exact sweep it sits beside so the count is the over-reach in isolation.
 | `course_inquiry_phone` | a partner's or child's lead on a shared household number |
 | `send_queue_recipient` | a live person's queued mail, when a soft-deleted duplicate shares their address — `people_shop_email_unique` is partial on *live* rows, so the duplicate is legitimate |
 | `booking_checkout_sole_occupant` | the address of someone who booked a seat purely on the erased diver's behalf |
+| `form_draft_address` | a staff member's unfinished form about a *different* person who shares the address — the same soft-deleted-duplicate case as the send queue, and the draft is lost rather than redacted |
+| `form_draft_phone` | the same, on a household number — the over-reach `course_inquiry_phone` already accepts. Reached for because `people.email` is nullable and a phone-only walk-in's draft would otherwise survive |
+| `form_draft_name` | the same, on a namesake. Anchored on word boundaries and refused below three word characters, like every other name match here. It is what makes the draft sweep unconditional, since `people.full_name` is NOT NULL |
+| `last_minute_recipient_address` | an unmerged duplicate person's record of a deal sent to the shared address; the row survives, only the address is replaced |
 
 `course_inquiry_phone` is deliberately **not** tightened to "…and the inquiry carries no email":
 that would drop the real case it exists for, a diver who used a different address on the public lead
@@ -224,6 +240,45 @@ call sits inside the erasure transaction.
 
 The whole scrub is one transaction. A half-erasure — identity gone from `people`, medical answers
 still in `waiver_records` — is the worst outcome available.
+
+### Amendment, 2026-09-10 — the table above is enforced, not merely written down
+
+Six of the rows above were added on one day by running a sweep rather than by anyone reading the
+code, and that is the point of this amendment. Until then the only thing checking this promise was
+`src/db/anonymize.test.ts`: per-table cases somebody thought to write, so a new table holding a
+diver's details was invisible until a person thought of that table. Two had already been found that
+way and only by a `security-reviewer` pass on unrelated work (`auth_provider_accounts`, then
+`auth_verifications`); a third, `trip_last_minute_promo_recipients`, was live rather than latent.
+The asymmetry was the wrong way round: an incomplete demo reap strands a shop behind a foreign-key
+violation, while an incomplete erasure reports success.
+
+`src/db/erasure-coverage.test.ts` closes the class. Every table a foreign key connects to `people`,
+run to a fixed point — 92 of the schema's 116 — must be **either** written by `anonymizeDiver`
+**or** carry a written reason in that file's keep-list. Adding a table without deciding fails, and
+the failure names the table.
+
+Three limits it states rather than papers over, because each is a way a diver's details could still
+survive a green run:
+
+1. **It proves a table was *considered*, not that the statement is right.** The write set is read
+   from the source of `anonymize.ts`, deliberately reversing the delete-path guard's instrument:
+   running the real path through a recording Proxy sees only about 30 of the tables it writes,
+   because the erasure's conditional branches never all fire for one fixture, and every table a
+   fixture cannot reach would have to be keep-listed — which is exactly where a deleted statement
+   hides. A last test runs a real erasure through a recorder and fails on any table the static read
+   cannot see, which is the other half.
+2. **"Written" is table-level.** A table the sweep counts as handled may still have a column nobody
+   scrubbed. That is what the per-table cases in `anonymize.test.ts` are for; the sweep guarantees
+   only that no table was *forgotten*.
+3. **It cannot *find* a table reached by text — so it asks about all of them.** The closure follows
+   declared foreign keys, so a table naming its person as an address or a polymorphic subject id is
+   outside it, which is how `auth_verifications` hid. No pattern over column names fixes that: the
+   first draft of this guard tried one and missed both a bare `person_id` with no foreign key and
+   anything holding a person under a column named something else. The complement is therefore the
+   **whole** outside: all 24 tables the closure does not reach carry a written reason too, so a new
+   table lands in one list or the other on the day it is added. What remains outside is judgement
+   rather than coverage — the guard makes someone answer for every table, and a `security-reviewer`
+   pass is what checks the answer.
 
 ### Residuals — what this cannot erase
 
@@ -261,6 +316,28 @@ still in `waiver_records` — is the worst outcome available.
   match"); the booking- and actor-scoped sweeps still run, so only an event with a null `booking_id`
   written about them by someone else — a private note — retains a one- or two-character name. That
   is a far smaller leak than what the unbounded match cost.
+- **A diver whose only Stripe footprint is a tip gets no obligation row.** The processor ledger
+  reads `orders`, and a tip mints its own Checkout session and Customer without one. Nothing local
+  leaks — the hosted URL is nulled above — but the promise that an unfinished processor erasure
+  *says so out loud* is not kept for that diver. Tracked as
+  [#1621](https://github.com/AaronBuxbaum/diveday/issues/1621).
+- **A crew photograph of the day can show an erased diver, and no code can know it does.**
+  `trip_recap_photos` is keyed to the departure and to the staff member who uploaded it, and is
+  shared with everyone on that trip's recap. The erasure deletes `recap_photos` — the ones attached
+  to a *diver* — and cannot reason about what is inside an image attached to a trip. This is a keep
+  with a residual, not a table holding nothing about a diver.
+- **Re-importing the same file after an erasure resurrects the labels it destroyed.** The scrub
+  rotates `dedupe_key` on `prior_visits`, `imported_payment_history` and `prior_gear_assignments` to
+  a unique redacted value, which is what keeps those NOT NULL columns inside their unique indexes.
+  A second run of the same export therefore no longer dedupes, and since `people.email` is now null
+  the importer creates a fresh person and re-inserts every label. Inherent to holding an import at
+  all — the source system still has the data — but it is a way an erasure can be undone by accident
+  and the owner running the import should be the one who knows it.
+- **What survives on `imported_payment_history` is pseudonymised, not anonymous.** `amount_cents`,
+  `currency`, `occurred_on` and `person_id` stay, so the row is still a per-person spending timeline
+  hanging off an erased record. That is the same call every other "the shop's own record of its own
+  business" row here makes, and it is worth naming rather than leaving as an implication of the
+  redaction list.
 - **Backups and log aggregation** are outside the database and outside this ADR
   ([20260802-backup-and-restore-posture](20260802-backup-and-restore-posture.md) owns retention
   there). A restore from a pre-erasure backup reinstates the erased data.

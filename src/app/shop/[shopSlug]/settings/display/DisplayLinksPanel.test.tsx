@@ -26,6 +26,10 @@ const copy: DisplayLinkCopy = {
   createHeading: "Add a screen",
   labelField: "Which screen",
   labelPlaceholder: "Lobby TV",
+  purposeLegend: "What this link opens",
+  purposeBoard: "Departures board",
+  purposeCheckIn: "Self check-in",
+  purposeCheckInDescription: "A check-in tablet records that a diver has arrived.",
   showNames: "Show the crew's names",
   showNamesDescription: "Only the crew who agreed to be named appear.",
   submit: "Create link",
@@ -36,6 +40,7 @@ const copy: DisplayLinkCopy = {
   copied: "Copied",
   copyFailed: "Copy failed",
   shared: "Anyone in the room reads them.",
+  sharedCheckIn: "Anyone with this link can mark a diver as arrived without signing in.",
   listHeading: "Screens",
   listEmpty: "No screens yet.",
   namesOn: "Names on",
@@ -55,7 +60,8 @@ function screenRow(id: string, label: string): DisplayLinkView {
   return {
     id,
     label,
-    showNames: false,
+    purposeLabel: copy.purposeBoard,
+    showNamesLabel: copy.namesOff,
     createdLabel: `Created ${label}`,
     lastShownLabel: null,
     // Built on the server beside the other per-screen strings; see page.tsx.
@@ -132,6 +138,7 @@ describe("where a refusal lands", () => {
     render(panel());
 
     await userEvent.type(screen.getByLabelText(copy.labelField), "Lobby TV");
+    await userEvent.click(screen.getByRole("radio", { name: copy.purposeBoard }));
     await userEvent.click(screen.getByRole("button", { name: copy.submit }));
 
     expect(await screen.findByText(copy.denied)).toBeInTheDocument();
@@ -144,5 +151,34 @@ describe("where a refusal lands", () => {
       within(screen.getByRole("region", { name: copy.createHeading })).getByText(copy.denied),
     ).toBeInTheDocument();
     expect(screen.getAllByText(copy.denied)).toHaveLength(1);
+  });
+});
+
+/**
+ * **Which surface a link opens is a choice, and it has no default.** The two
+ * grant different things — the board is read-only, the kiosk records an
+ * arrival — so a staffer who never looked at this control must not walk away
+ * holding the one that writes. Neither radio starts checked, and the browser's
+ * own `required` is what stops an unanswered form.
+ */
+describe("the purpose choice", () => {
+  it("offers both surfaces, pre-selects neither, and requires an answer", () => {
+    render(panel());
+
+    const board = screen.getByRole("radio", { name: copy.purposeBoard });
+    const kiosk = screen.getByRole("radio", { name: copy.purposeCheckIn });
+    expect(board).not.toBeChecked();
+    expect(kiosk).not.toBeChecked();
+    expect(board).toBeRequired();
+    expect(kiosk).toBeRequired();
+    // One control, so answering it once answers it.
+    expect(board).toHaveAttribute("name", kiosk.getAttribute("name"));
+    // And the tablet's consequence is spelled out beside the choice, not left
+    // for a staffer to infer from the words "Self check-in".
+    expect(
+      within(screen.getByRole("region", { name: copy.createHeading })).getByText(
+        copy.purposeCheckInDescription,
+      ),
+    ).toBeInTheDocument();
   });
 });

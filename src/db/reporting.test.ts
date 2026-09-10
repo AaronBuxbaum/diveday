@@ -1,6 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
+import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
 import { summarizeMonth } from "@/lib/reporting";
 import { summarizeShopYear } from "@/lib/shop-year";
 import { seededShopContext, unseededTestDb } from "@/test/db";
@@ -1270,11 +1271,16 @@ describe("getShopYear", () => {
     const shopId = await yearShop(db, "year-sites");
     const [molasses] = await db
       .insert(diveSites)
-      .values({ shopId, name: "Molasses Reef" })
+      .values({ shopId, name: "Molasses Reef", slug: diveSiteSlugFrom("Molasses Reef") })
       .returning();
     const [benwood] = await db
       .insert(diveSites)
-      .values({ shopId, name: "Benwood", deletedAt: new Date("2026-08-01T00:00:00Z") })
+      .values({
+        shopId,
+        name: "Benwood",
+        slug: diveSiteSlugFrom("Benwood"),
+        deletedAt: new Date("2026-08-01T00:00:00Z"),
+      })
       .returning();
     if (!molasses || !benwood) throw new Error("site insert failed");
     const first = await sailedTrip(db, shopId, "2026-05-01", 10, 4);

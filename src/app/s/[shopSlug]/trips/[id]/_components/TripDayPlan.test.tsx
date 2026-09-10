@@ -16,9 +16,19 @@ import type { DiveBriefing } from "./types";
 afterEach(cleanup);
 
 /** Key Largo, the demo shop's own coordinates, in its own zone. */
-const SHOP = { timezone: "America/New_York", latitude: 25.0865, longitude: -80.4473 };
+const SHOP = {
+  slug: "blue-mantis",
+  timezone: "America/New_York",
+  latitude: 25.0865,
+  longitude: -80.4473,
+};
 /** A shop that never finished its address, so the sky line has nothing to stand on. */
-const NO_ADDRESS = { timezone: "America/New_York", latitude: null, longitude: null };
+const NO_ADDRESS = {
+  slug: "blue-mantis",
+  timezone: "America/New_York",
+  latitude: null,
+  longitude: null,
+};
 /** 9:00 AM to 12:30 PM Eastern: the two-tank reef trip, home well before dark. */
 const MORNING = new Date("2026-01-02T14:00:00Z");
 const MIDDAY = new Date("2026-01-02T17:30:00Z");

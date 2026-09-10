@@ -200,6 +200,9 @@ const SAME_BOAT_WINDOW = 40;
  *
  * Returns null for a person the shop no longer has — the same answer an unknown
  * token gets, so the page has one dead-end rather than two.
+ *
+ * The shelf is lever Z of ADR 20260908-one-hand, decision 6 (slice 20t); what
+ * it may show is decided here and nowhere downstream.
  */
 export async function getShelfPageData(
   db: AppDb,

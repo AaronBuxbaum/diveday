@@ -63,6 +63,20 @@
     "hold": "On a conditions hold",
     "returned": "{boarded, plural, one {# diver} other {# divers}} went out"
   },
+  "kiosk": {
+    "title": "Check in",
+    "prompt": "Last name",
+    "submit": "Check in",
+    "submitting": "Checking…",
+    "ready": "You’re set, {name}.",
+    "readyAgain": "Already checked in, {name}.",
+    "departure": "{title} · {time}",
+    "meetAt": "Meet at {place}",
+    "deskHeading": "See the desk",
+    "deskBody": "Someone at the counter will take it from here.",
+    "unavailableHeading": "This tablet isn’t set up",
+    "unavailableBody": "Make a new one in Settings, under Lobby display."
+  },
   "conservation": {
     "shopClaimsDisclaimer": "Stated by the shop, not verified by DiveDay.",
     "commitments": {
@@ -162,6 +176,12 @@
     "noTripsPublic": "Check back soon. Tell us below what you’d like to dive, or reach us at the foot of the page.",
     "noTripsPublicNoPhone": "Check back soon, or tell us below what you’d like to dive.",
     "noTripsMonth": "No trips this month. Try another month.",
+    "offSeason": {
+      "heading": "Nothing on the water for a while",
+      "back": "We’re back out {date}.",
+      "nextSeason": "{name} opens {date}.",
+      "requestHeading": "Ask us for a day"
+    },
     "filters": {
       "tripType": "Trip type",
       "allTrips": "All trips",
@@ -1262,6 +1282,11 @@
     "bigGroupContactGeneric": "Bringing more than {count}? Contact the shop."
   },
   "site": {
+    "page": {
+      "departuresHeading": "Next departures here",
+      "jumpToDepartures": "See the dates",
+      "noDepartures": "No departures to this site on the board right now"
+    },
     "terrainMapTitle": "Terrain map of {site}",
     "openMap": "Open map ↗",
     "landmarkKinds": {

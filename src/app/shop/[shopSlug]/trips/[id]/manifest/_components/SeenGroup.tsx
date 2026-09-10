@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ConnectivityStatus, type ConnectivityStatusCopy } from "@/components/ConnectivityStatus";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { scopedId } from "@/lib/element-id";
@@ -17,6 +18,9 @@ export type SeenGroupCopy = {
   consequence: string;
   delete: string;
   refusal: string;
+  /** Said before the tap, while the device reports no connection. */
+  offlineLabel: string;
+  connectivity: ConnectivityStatusCopy;
 };
 
 /** One tappable face, and one already-tallied one. */
@@ -159,6 +163,27 @@ export function SeenGroup({
       <h2 id={headingId} className={SECTION_TITLE_CLASS}>
         {copy.heading}
       </h2>
+      {/* **Said before the tap, not only after it** (issue #1625). The surface
+          interval between two tanks is when a crew taps these chips and it is
+          also when a boat has no bars, so the refusal below was arriving at the
+          only moment the group is ever used. This warns first.
+
+          It does not replace the refusal, and that is the point rather than an
+          oversight: `navigator.onLine` is the browser's flag, not reachability
+          — a boat with one bar reports itself online and the write still fails.
+          One of these two lines is a prediction and the other is a fact, and
+          the crew needs both.
+
+          The chips stay tappable underneath it. A dead chip on a wet deck reads
+          as a broken app rather than as a missing bar, and the tap that goes
+          through the moment a bar comes back is worth more than the one the
+          disabled state would have swallowed. */}
+      <ConnectivityStatus
+        offlineLabel={copy.offlineLabel}
+        onlyWhenOffline
+        className="mt-2"
+        copy={copy.connectivity}
+      />
       <div className="mt-4 flex flex-wrap gap-2">
         {chips.map((chip) => (
           <SeenTap

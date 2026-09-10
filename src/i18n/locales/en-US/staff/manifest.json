@@ -86,6 +86,7 @@
   "seen": {
     "heading": "Seen",
     "consequence": "At {site}. Divers read this on the trip page.",
+    "offlineLabel": "Offline — a tap will not save until the boat has bars",
     "delete": "Delete",
     "deleteNamed": "Delete {species}",
     "refusal": "No signal. Tap it again when the boat has bars."
@@ -94,6 +95,7 @@
   "manageCrewOnTrip": "Manage this trip's crew",
   "checkpointRollCallHeading": "{checkpoint} roll call",
   "checkedInPill": "Checked in",
+  "selfCheckedInPill": "Says they're here",
   "diverNotesHeading": "Diver notes",
   "noteAppliesAcrossDepartures": "Applies across departures",
   "age": "Age {age}",

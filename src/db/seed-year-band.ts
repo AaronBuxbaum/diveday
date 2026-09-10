@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
 import type { DbExecutor } from "./client";
 import { bookings, diveSites, people, shops, tripDives, trips } from "./schema";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
@@ -66,8 +67,8 @@ export async function seedYearBandShop(
   const [molasses, benwood] = await db
     .insert(diveSites)
     .values([
-      { shopId: shop.id, name: "Molasses Reef" },
-      { shopId: shop.id, name: "Benwood" },
+      { shopId: shop.id, name: "Molasses Reef", slug: diveSiteSlugFrom("Molasses Reef") },
+      { shopId: shop.id, name: "Benwood", slug: diveSiteSlugFrom("Benwood") },
     ])
     .returning({ id: diveSites.id });
   if (!molasses || !benwood) throw new Error("seedYearBandShop: dive sites did not insert");

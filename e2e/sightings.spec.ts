@@ -73,6 +73,26 @@ test("the crew taps what they saw and the tally counts it", async ({ page }) => 
   // A mis-tap is taken back, and the word on the control is Delete.
   await seen.getByRole("button", { name: "Delete Southern stingray" }).click();
   await expect(seen.getByRole("listitem")).toHaveCount(0);
+
+  // **Offline is said before the tap** (issue #1625). The surface interval
+  // between two tanks is the only moment a crew taps these chips and it is also
+  // when a boat has no bars, so the refusal was arriving at the one moment the
+  // group is ever used. Here rather than in its own test because the warning
+  // costs no navigation and this manifest is already open — a second test would
+  // spend four round trips to reach the same section.
+  await page.context().setOffline(true);
+  await expect(seen.getByRole("status")).toContainText(
+    "Offline — a tap will not save until the boat has bars",
+  );
+  // The chips stay tappable under it: the browser's flag is not reachability,
+  // and a dead chip on a wet deck reads as a broken app rather than a missing
+  // bar.
+  await expect(chip).toBeEnabled();
+
+  // And the warning goes when the bars come back — no permanently green badge
+  // on a surface where connectivity is not the subject.
+  await page.context().setOffline(false);
+  await expect(seen.getByRole("status")).toHaveCount(0);
 });
 
 test("a diver reads the crew's month under the site on the trip page", async ({ page }) => {

@@ -706,9 +706,21 @@ export function DiverRollCall({
                         be with?" is a question asked at the rail and the answer
                         has to be on the screen as well as on paper. */}
                       <ul className="mt-3 flex flex-wrap gap-2">
+                        {/* **A sighting and a claim wear different words.**
+                          A staffer's tap means the desk has seen this person;
+                          a lobby-tablet tap means somebody typed a surname,
+                          quite possibly on their behalf, which is the ordinary
+                          way a self-serve kiosk gets used. Flattening the two
+                          into one badge is how a crew member at the rail stops
+                          looking for a diver who never arrived (N-24,
+                          `dive-domain-expert` review). */}
                         {diver.checkedIn ? (
                           <li>
-                            <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge>
+                            <Badge tone="neutral">
+                              {diver.checkedInSelfReported
+                                ? t("manifest.selfCheckedInPill")
+                                : t("manifest.checkedInPill")}
+                            </Badge>
                           </li>
                         ) : null}
                         {/* The age, and — when something louder took the row's
@@ -832,7 +844,11 @@ export function DiverRollCall({
                       </Badge>
                     )}
                     {diver.checkedIn ? (
-                      <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge>
+                      <Badge tone="neutral">
+                        {diver.checkedInSelfReported
+                          ? t("manifest.selfCheckedInPill")
+                          : t("manifest.checkedInPill")}
+                      </Badge>
                     ) : null}
                     {diver.hotelPickupLocation ? (
                       <Badge tone="neutral">

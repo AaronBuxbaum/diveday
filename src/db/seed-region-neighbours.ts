@@ -74,6 +74,7 @@ export async function seedRegionNeighbours(db: DbExecutor): Promise<void> {
       {
         shopId: reefLine.id,
         name: "French Reef",
+        slug: "french-reef",
         locationName: "Key Largo National Marine Sanctuary",
         forecastLatitude: 25.0347,
         forecastLongitude: -80.3495,
@@ -81,6 +82,7 @@ export async function seedRegionNeighbours(db: DbExecutor): Promise<void> {
       {
         shopId: keysCurrent.id,
         name: "Spiegel Grove",
+        slug: "spiegel-grove",
         locationName: "Key Largo National Marine Sanctuary",
         forecastLatitude: 25.0672,
         forecastLongitude: -80.3055,

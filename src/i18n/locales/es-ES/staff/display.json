@@ -6,6 +6,10 @@
     "heading": "Nueva pantalla",
     "labelField": "Qué pantalla",
     "labelPlaceholder": "TV del lobby",
+    "purposeLegend": "Qué abre este enlace",
+    "purposeBoard": "Panel de salidas",
+    "purposeCheckIn": "Registro de llegada",
+    "purposeCheckInDescription": "Una tableta de registro anota que un buceador ha llegado. Nunca sube a nadie al barco: la tripulación sigue pasando lista en el muelle.",
     "showNames": "Mostrar los nombres de la tripulación",
     "showNamesDescription": "Cualquiera en la sala los lee. Solo aparece quien aceptó que se le nombre, y los buceadores nunca.",
     "submit": "Crear enlace",
@@ -17,7 +21,8 @@
     "copy": "Copiar",
     "copied": "Copiado",
     "copyFailed": "No se pudo copiar, selecciónalo a mano",
-    "shared": "Cualquiera con este enlace ve las salidas de hoy sin iniciar sesión. Trátalo como una llave del centro."
+    "shared": "Cualquiera con este enlace ve las salidas de hoy sin iniciar sesión. Trátalo como una llave del centro.",
+    "sharedCheckIn": "Cualquiera con este enlace puede marcar la llegada de un buceador sin iniciar sesión. Trátalo como una llave del centro."
   },
   "list": {
     "heading": "Pantallas",

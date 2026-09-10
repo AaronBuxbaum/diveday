@@ -1418,6 +1418,16 @@ export const diveSites = pgTable(
     /** The last template pull's prior managed fields, for a one-time undo. */
     templateUpdateUndo: jsonb("template_update_undo").$type<DiveSiteTemplateUndo>(),
     name: text("name").notNull(),
+    /**
+     * The site's public URL segment — `/s/<shop>/sites/molasses-reef` (N-48).
+     *
+     * Derived from the name once, on create, and never rewritten: correcting
+     * "Molasses reef" to "Molasses Reef" must not 404 the link a diver shared
+     * yesterday or the result a search engine already indexed. Same contract,
+     * and the same grammar, as `trip_lenses.slug`
+     * (`src/lib/dive-site-slug.ts`).
+     */
+    slug: text("slug").notNull(),
     description: text("description"),
     locationName: text("location_name"),
     /** Offshore coordinate selected by staff for the automated marine forecast. */
@@ -1614,6 +1624,13 @@ export const diveSites = pgTable(
   },
   (table) => [
     uniqueIndex("dive_sites_shop_name_unique").on(table.shopId, table.name),
+    // Over the **live** rows only, unlike the name index above it: a deleted
+    // site keeps its slug so nothing rewrites history, and a shop that deletes
+    // "Molasses Reef" and writes it again should get the URL back rather than
+    // `molasses-reef-2` forever (ADR 20260820-every-delete-is-soft).
+    uniqueIndex("dive_sites_shop_slug_key")
+      .on(table.shopId, table.slug)
+      .where(sql`${table.deletedAt} is null`),
     // All three or none: a note nobody is recorded as having written, or a
     // stamp with no words under it, is a row no surface can render honestly.
     check(
@@ -3231,15 +3248,24 @@ export const tripWaitlistEntries = pgTable(
  * A staff-selected invitation to a departure. This is deliberately not a
  * booking and not a wait-list position: it reserves no capacity, never enters
  * the manifest, and can be created for the same request on more than one trip.
- * The source discriminator leaves room for invitations chosen from the wait
- * list or an existing diver record without forcing those concepts to share a
- * table's meaning (ADR 20260816-trip-invitations).
+ * The source discriminator separates a request-origin invitation from a direct
+ * one without forcing those concepts to share a table's meaning (ADR
+ * 20260816-trip-invitations).
+ *
+ * **`waitlist` was here and is gone** (issue #1616). The ADR left room for it
+ * and nothing ever filled that room: no writer set the source, so no row ever
+ * carried the `waitlist_entry_id` the branch required. What the dead column
+ * *did* carry was a foreign key into `trip_waitlist_entries` with no
+ * `onDelete`, and the erasure hard-deletes a diver's wait-list rows — so a
+ * single populated row would have raised 23503 inside the erasure transaction
+ * and rolled back every other redaction with it. `anonymizeDiver` catches
+ * nothing and `eraseDiverAction` has no handler, so what an owner would have
+ * met is a server-action error and an erasure that never happened — total and
+ * opaque rather than silent. H-49 is the rule that applies: a column nothing
+ * writes is dropped rather than defended, and dropping it removes the hazard
+ * instead of sequencing around it.
  */
-export const tripInvitationSource = pgEnum("trip_invitation_source", [
-  "date_request",
-  "waitlist",
-  "direct",
-]);
+export const tripInvitationSource = pgEnum("trip_invitation_source", ["date_request", "direct"]);
 
 export const tripInvitations = pgTable(
   "trip_invitations",
@@ -3254,8 +3280,6 @@ export const tripInvitations = pgTable(
     source: tripInvitationSource("source").notNull(),
     /** Set for a request-origin invitation; the request carries its contact snapshot. */
     courseInquiryId: uuid("course_inquiry_id").references(() => courseInquiries.id),
-    /** Set for a wait-list-origin invitation; the wait-list row remains separate. */
-    waitlistEntryId: uuid("waitlist_entry_id").references(() => tripWaitlistEntries.id),
     /** Set only for a direct existing-diver invitation. */
     personId: uuid("person_id").references(() => people.id),
     createdByPersonId: uuid("created_by_person_id")
@@ -3270,18 +3294,14 @@ export const tripInvitations = pgTable(
     uniqueIndex("trip_invitations_trip_request_unique")
       .on(table.tripId, table.courseInquiryId)
       .where(sql`${table.courseInquiryId} is not null`),
-    uniqueIndex("trip_invitations_trip_waitlist_unique")
-      .on(table.tripId, table.waitlistEntryId)
-      .where(sql`${table.waitlistEntryId} is not null`),
     uniqueIndex("trip_invitations_trip_person_unique")
       .on(table.tripId, table.personId)
       .where(sql`${table.personId} is not null`),
     check(
       "trip_invitations_source_reference_check",
       sql`(
-        (${table.source} = 'date_request' and ${table.courseInquiryId} is not null and ${table.waitlistEntryId} is null and ${table.personId} is null)
-        or (${table.source} = 'waitlist' and ${table.courseInquiryId} is null and ${table.waitlistEntryId} is not null and ${table.personId} is null)
-        or (${table.source} = 'direct' and ${table.courseInquiryId} is null and ${table.waitlistEntryId} is null and ${table.personId} is not null)
+        (${table.source} = 'date_request' and ${table.courseInquiryId} is not null and ${table.personId} is null)
+        or (${table.source} = 'direct' and ${table.courseInquiryId} is null and ${table.personId} is not null)
       )`,
     ),
   ],
@@ -6340,6 +6360,27 @@ export const calendarFeeds = pgTable(
  * page lists only rows where it is null. Nothing hard-deletes a row except the
  * demo cascade.
  */
+/**
+ * **What a display link opens** — the one thing that separates a screen the
+ * lobby *reads* from a tablet a diver *taps* (N-23, N-24).
+ *
+ * `board` is the departures board at `/board/[token]`: read-only, and its
+ * reader decides by type that no diver is ever named on it. `check_in` is the
+ * self check-in kiosk at `/check-in/[token]`, which **writes** — it records an
+ * arrival against a real booking.
+ *
+ * They share this table, its hashing and its one revocation path deliberately;
+ * what they must never share is a token. A board link is handed to whoever
+ * mounts a TV, and if it also opened a surface that can move a booking's status
+ * then mounting a TV would be granting a write. `verifyDisplayToken` therefore
+ * takes the purpose it expects and refuses a token minted for the other one,
+ * with the same single refusal it gives an unknown token.
+ *
+ * `board` is the default because every row that existed before this column did
+ * was a board link.
+ */
+export const displayTokenPurpose = pgEnum("display_token_purpose", ["board", "check_in"]);
+
 export const displayTokens = pgTable(
   "display_tokens",
   {
@@ -6350,6 +6391,7 @@ export const displayTokens = pgTable(
     tokenHash: text("token_hash").notNull().unique(),
     /** "Lobby TV", "Dock B tablet" — the shop's own word for which screen this is. */
     label: text("label").notNull(),
+    purpose: displayTokenPurpose("purpose").notNull().default("board"),
     showNames: boolean("show_names").notNull().default(false),
     createdByPersonId: uuid("created_by_person_id")
       .notNull()
@@ -8085,9 +8127,29 @@ export const bookingArrivalEvents = pgTable(
     bookingId: uuid("booking_id")
       .notNull()
       .references(() => bookings.id, { onDelete: "cascade" }),
+    /**
+     * Who said so. A staffer at the desk on every path but one: a diver who
+     * checked *themselves* in at a lobby tablet is recorded as their own
+     * recorder, which is the honest reading of the column and is why it stays
+     * `not null`. `displayTokenId` beside it is what tells the two apart.
+     */
     recordedByPersonId: uuid("recorded_by_person_id")
       .notNull()
       .references(() => people.id),
+    /**
+     * The kiosk this arrival was tapped on, or null for a staffer's own tap
+     * (N-24). It is the whole difference between "Dana checked Priya in" and
+     * "Priya checked herself in on the lobby tablet", and a shop reading its
+     * own trail after the fact needs to be able to tell those apart — which
+     * `recorded_by_person_id` alone cannot, since staff dive too.
+     *
+     * Deliberately **not** a new `source` value: `source` is shared with
+     * `roll_call_events`, and widening that enum would make `kiosk` a
+     * representable origin for a *boarding*. Arrival is the desk's question and
+     * boarding is the rail's, and nothing a diver taps in a lobby may ever
+     * reach the second one (ADR 20260907-the-counter-survives-offline).
+     */
+    displayTokenId: uuid("display_token_id").references(() => displayTokens.id),
     status: arrivalStatus("status").notNull(),
     /** Same offline contract as `rollCallEvents.source` — rides the same queue. */
     source: rollCallSource("source").notNull().default("live"),
@@ -8549,6 +8611,14 @@ export const mediaDeletionKind = pgEnum("media_deletion_kind", [
   "shop_logo",
   "arrival_photo",
   "shop_hero",
+  /**
+   * A receipt document re-stored from a prior system's export
+   * (`imported_payment_history.receipt_document_url`). Queued only by diver
+   * erasure: a receipt almost always renders the buyer's name, so an erased
+   * diver whose receipt blob stays hosted is erased in the database and not in
+   * the bucket (issue #1607).
+   */
+  "payment_receipt",
 ]);
 
 export const mediaDeletionStatus = pgEnum("media_deletion_status", [

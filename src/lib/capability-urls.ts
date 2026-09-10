@@ -79,6 +79,12 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   // departure, which is the narrowest payload here, and the giver is exactly
   // the kind of reader who opens it from a phone and leaves the tab.
   "gift",
+  // The self check-in kiosk's display link (N-24): `/check-in/[token]` is a
+  // counter tablet's credential, non-expiring like the board's and revoked from
+  // the same settings row — but unlike the board it **writes**, recording an
+  // arrival against a real booking. A tablet's browser is exactly the kind of
+  // client that would report a page URL to telemetry forever.
+  "check-in",
 ] as const;
 
 /**

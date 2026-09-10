@@ -51,6 +51,8 @@ import {
   rollCallEvents,
   shops,
   specialtyCertifications,
+  tripLastMinutePromoRecipients,
+  tripLastMinutePromos,
   tripReviews,
   trips,
   tripWaitlistEntries,
@@ -834,6 +836,30 @@ describe("diver erasure", () => {
       .set({ diveIntent: "easing_back", reEntryAsk: "deck_word" })
       .where(eq(bookings.id, bookingId));
 
+    // A last-minute deal that went out to her, and the recipient log's copy of
+    // the address it was sent to (issue #1607). Inserted by hand because
+    // `sendLastMinutePromo` would send real messages; the row is what matters.
+    const [promo] = await db
+      .insert(tripLastMinutePromos)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        status: "sent",
+        discountPercent: 20,
+        code: `ERASURE${nowMs()}`,
+        expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+        recipientCount: 1,
+        createdByPersonId: ownerId,
+      })
+      .returning({ id: tripLastMinutePromos.id });
+    if (!promo) throw new Error("promo insert failed");
+    await db.insert(tripLastMinutePromoRecipients).values({
+      shopId: shop.id,
+      tripPromoId: promo.id,
+      personId: diver.id,
+      email: "elena@example.com",
+    });
+
     const issued = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId,
@@ -1252,6 +1278,16 @@ describe("diver erasure", () => {
         .where(eq(lastMinuteListEntries.personId, diver.id)),
     ).toHaveLength(0);
     expect(await db.select().from(lastMinuteListUnsubscribeTokens)).toHaveLength(0);
+    // The recipient log keeps its row and loses the address it was sent to
+    // (issue #1607): the shop's record of a deal it sent is its own, and
+    // `person_id` stays pointing at a row that has itself been erased.
+    const promoRecipients = await db
+      .select({ email: tripLastMinutePromoRecipients.email })
+      .from(tripLastMinutePromoRecipients)
+      .where(eq(tripLastMinutePromoRecipients.personId, diver.id));
+    expect(promoRecipients).toHaveLength(1);
+    expect(promoRecipients[0]?.email).not.toContain("elena@example.com");
+    expect(promoRecipients[0]?.email).toContain("@invalid");
     expect(
       await db
         .select()

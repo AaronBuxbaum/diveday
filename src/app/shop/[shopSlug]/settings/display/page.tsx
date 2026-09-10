@@ -68,6 +68,10 @@ export default async function LobbyDisplayPage({
     createHeading: t("display.create.heading"),
     labelField: t("display.create.labelField"),
     labelPlaceholder: t("display.create.labelPlaceholder"),
+    purposeLegend: t("display.create.purposeLegend"),
+    purposeBoard: t("display.create.purposeBoard"),
+    purposeCheckIn: t("display.create.purposeCheckIn"),
+    purposeCheckInDescription: t("display.create.purposeCheckInDescription"),
     showNames: t("display.create.showNames"),
     showNamesDescription: t("display.create.showNamesDescription"),
     submit: t("display.create.submit"),
@@ -78,6 +82,7 @@ export default async function LobbyDisplayPage({
     copied: t("display.newLink.copied"),
     copyFailed: t("display.newLink.copyFailed"),
     shared: t("display.newLink.shared"),
+    sharedCheckIn: t("display.newLink.sharedCheckIn"),
     listHeading: t("display.list.heading"),
     listEmpty: t("display.list.empty"),
     namesOn: t("display.list.namesOn"),
@@ -96,7 +101,18 @@ export default async function LobbyDisplayPage({
   const screens: DisplayLinkView[] = links.map((link) => ({
     id: link.id,
     label: link.label,
-    showNames: link.showNames,
+    purposeLabel: t(
+      link.purpose === "check_in" ? "display.create.purposeCheckIn" : "display.create.purposeBoard",
+    ),
+    // Only a board link has a names setting to report. A kiosk names exactly
+    // one diver, to that diver, and saying "Nobody named" beside it would
+    // describe a switch it does not have.
+    showNamesLabel:
+      link.purpose === "check_in"
+        ? null
+        : link.showNames
+          ? t("display.list.namesOn")
+          : t("display.list.namesOff"),
     createdLabel: t("display.list.created", {
       when: formatDateTimeTz(link.createdAt, locale, shop.timezone),
     }),

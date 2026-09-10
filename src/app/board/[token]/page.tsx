@@ -68,7 +68,7 @@ export default async function DeparturesBoardPage({
   // rather than by throwing: DiveDay's app-wide 404 ends in a button to a
   // software sales page, which is the wrong answer for whoever is standing in
   // front of this screen (`src/app/capability-refusals.test.ts`, issue #914).
-  const display = await verifyDisplayToken(db, { token });
+  const display = await verifyDisplayToken(db, { token, purpose: "board" });
   const shop = display ? await getShopById(db, display.shopId) : null;
   if (!display || !shop) {
     // No shop resolved, so no shop locale to prefer — the reader's own header

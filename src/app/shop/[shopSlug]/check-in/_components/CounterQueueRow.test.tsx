@@ -21,6 +21,7 @@ function row(overrides: Partial<CheckInQueueRow> = {}): CheckInQueueRow {
   return {
     bookingId: "booking-1",
     personId: "person-1",
+    selfReported: false,
     personName: "Nadia Petrov",
     email: "nadia@example.com",
     dateOfBirth: null,

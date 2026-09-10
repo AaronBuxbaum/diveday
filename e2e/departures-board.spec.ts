@@ -26,6 +26,10 @@ test.describe("the departures board", () => {
 
     await page.goto(DISPLAY_SETTINGS);
     await page.getByLabel("Which screen").fill("Lobby TV");
+    // The purpose radio has no default, by design: a board link and a check-in
+    // link grant different things, so a manager says which before one is minted
+    // (N-24). That makes picking it part of every mint, this spec's included.
+    await page.getByRole("radio", { name: "Departures board" }).check();
     await page.getByRole("button", { name: "Create link" }).click();
     await expect(page.getByRole("heading", { name: "Open this on the screen" })).toBeVisible();
     const url = (await page.locator("p.font-mono").first().innerText()).trim();

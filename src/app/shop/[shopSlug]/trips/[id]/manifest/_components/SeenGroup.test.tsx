@@ -13,7 +13,27 @@ const copy: SeenGroupCopy = {
   consequence: "At Molasses Reef. Divers read this on the trip page.",
   delete: "Delete",
   refusal: "That did not save. Tap it again.",
+  offlineLabel: "Offline — a tap will not save until the boat has bars",
+  connectivity: {
+    online: "Online",
+    onlineTitle: "This device is online.",
+    offlineTitle: "This device has no connection right now.",
+  },
 };
+
+/**
+ * `navigator.onLine` is read in an effect, so it has to be set **before**
+ * render — the pattern `ConnectivityStatus.test.tsx` documents. jsdom does not
+ * define it as a configurable accessor, so this defines one rather than spying
+ * on a property that is not there.
+ */
+function setOnline(value: boolean) {
+  Object.defineProperty(navigator, "onLine", { value, configurable: true });
+}
+
+// Every other case in this file is about a connected boat, and a stale `false`
+// left by the offline cases below would silently put the warning on all of them.
+afterEach(() => setOnline(true));
 
 const chips = [
   { slug: "green-sea-turtle", name: "Green sea turtle" },
@@ -131,5 +151,41 @@ describe("SeenGroup", () => {
         "touch-manipulation",
       );
     }
+  });
+
+  /**
+   * **Offline, said before the tap** (issue #1625).
+   *
+   * The surface interval between two tanks is the only moment a crew will ever
+   * tap these chips, and it is also the moment a boat has no bars. The refusal
+   * is honest and it arrives too late to be useful, so the group warns first.
+   */
+  it("says a tap will not save, before anyone taps", () => {
+    setOnline(false);
+    render(
+      <SeenGroup chips={chips} tallies={[]} copy={copy} recordAction={noop} deleteAction={noop} />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Offline — a tap will not save until the boat has bars",
+    );
+    // The chips stay tappable under it. A dead chip on a wet deck reads as a
+    // broken app rather than as a missing bar, and the browser's flag is not
+    // reachability: a boat with one bar reports itself online, and one with
+    // none may have a bar back by the time the thumb lands.
+    for (const chip of chips) {
+      expect(screen.getByRole("button", { name: chip.name })).toBeEnabled();
+    }
+    // The warning is a prediction, not a refusal. Nothing has been refused yet.
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("says nothing about the connection while there is one", () => {
+    setOnline(true);
+    render(
+      <SeenGroup chips={chips} tallies={[]} copy={copy} recordAction={noop} deleteAction={noop} />,
+    );
+    // No permanently green badge on a surface where connectivity is not the
+    // subject — the absence of the warning is what reads as "fine".
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });

@@ -4,6 +4,8 @@ import {
   absoluteUrl,
   type CourseForStructuredData,
   coursePageJsonLd,
+  type DiveSiteForStructuredData,
+  diveSitePageJsonLd,
   type JsonLdObject,
   pruneJsonLd,
   type ReviewForStructuredData,
@@ -560,5 +562,55 @@ describe("regionJsonLd", () => {
 
   it("emits nothing for a region with no shops, which the route 404s anyway", () => {
     expect(regionJsonLd("Dive shops in Atlantis", [], "https://dive.day")).toBeNull();
+  });
+});
+
+describe("diveSitePageJsonLd", () => {
+  const site: DiveSiteForStructuredData = {
+    slug: "molasses-reef",
+    name: "Molasses Reef",
+    description: "A bright outer-reef classic with a relaxed profile.",
+    locationName: "Key Largo National Marine Sanctuary",
+    forecastLatitude: 25.0117,
+    forecastLongitude: -80.3764,
+    imageUrls: ["https://cdn.example/molasses.jpg", "https://cdn.example/second.jpg"],
+  };
+
+  it("publishes the place, with its own coordinate and the water it sits in", () => {
+    const graph = diveSitePageJsonLd(shop, site, ORIGIN);
+    expect(graph).toMatchObject({
+      "@type": "TouristAttraction",
+      name: "Molasses Reef",
+      url: `${ORIGIN}/s/blue-mantis/sites/molasses-reef`,
+      image: "https://cdn.example/molasses.jpg",
+    });
+    // The site's own offshore coordinate is honest here in a way it is not on
+    // a departure's Event, whose location is the dock a diver turns up at.
+    expect(at(graph, "geo.@type")).toBe("GeoCoordinates");
+    expect(at(graph, "geo.latitude")).toBe(25.0117);
+    expect(at(graph, "containedInPlace.name")).toBe("Key Largo National Marine Sanctuary");
+  });
+
+  it("claims nothing about a site the shop has only named", () => {
+    const graph = pruneJsonLd(
+      diveSitePageJsonLd(
+        shop,
+        {
+          slug: "quiet-mooring",
+          name: "Quiet Mooring",
+          description: null,
+          locationName: null,
+          forecastLatitude: null,
+          forecastLongitude: null,
+          imageUrls: [],
+        },
+        ORIGIN,
+      ),
+    ) as JsonLdObject;
+    expect(Object.keys(graph).sort()).toEqual(["@context", "@type", "name", "url"]);
+  });
+
+  it("has no url at all without a canonical origin, rather than a relative one", () => {
+    expect(diveSitePageJsonLd(shop, site, null).url).toBeNull();
   });
 });

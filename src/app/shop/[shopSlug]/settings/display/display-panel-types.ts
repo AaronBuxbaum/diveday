@@ -7,7 +7,12 @@
 
 export type DisplayLinkState =
   | { status: "idle" }
-  | { status: "issued"; id: string; label: string; url: string }
+  // `purpose` rides along because the warning under the freshly-minted URL is
+  // not the same sentence for the two kinds. A board link is read-only; a
+  // check-in link **writes an arrival against a named diver**, and telling a
+  // manager it "sees today's departures" at the exact moment they decide how
+  // carefully to handle it is the wrong sentence (`security-reviewer` review).
+  | { status: "issued"; id: string; label: string; url: string; purpose: "board" | "check_in" }
   | { status: "revoked"; id: string }
   | { status: "invalid_label" }
   // Which act was refused, because the panel has two forms and a refusal shown
@@ -25,6 +30,11 @@ export type DisplayLinkCopy = {
   createHeading: string;
   labelField: string;
   labelPlaceholder: string;
+  /** The two things a link can open, and the legend above the choice. */
+  purposeLegend: string;
+  purposeBoard: string;
+  purposeCheckIn: string;
+  purposeCheckInDescription: string;
   showNames: string;
   showNamesDescription: string;
   submit: string;
@@ -35,6 +45,8 @@ export type DisplayLinkCopy = {
   copied: string;
   copyFailed: string;
   shared: string;
+  /** The same warning for a link that records arrivals rather than showing a board. */
+  sharedCheckIn: string;
   listHeading: string;
   listEmpty: string;
   namesOn: string;
@@ -54,7 +66,10 @@ export type DisplayLinkCopy = {
 export type DisplayLinkView = {
   id: string;
   label: string;
-  showNames: boolean;
+  /** "Departures board" / "Self check-in" — resolved on the server. */
+  purposeLabel: string;
+  /** Only a board link says anything about names; a kiosk names one diver, to that diver. */
+  showNamesLabel: string | null;
   createdLabel: string;
   /** Localized on the server; null when no screen has opened it yet. */
   lastShownLabel: string | null;

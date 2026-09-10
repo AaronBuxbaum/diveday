@@ -63,6 +63,20 @@
     "hold": "En espera por condiciones",
     "returned": "{boarded, plural, one {salió # buceador} other {salieron # buceadores}}"
   },
+  "kiosk": {
+    "title": "Registro de llegada",
+    "prompt": "Apellido",
+    "submit": "Registrar llegada",
+    "submitting": "Verificando…",
+    "ready": "Todo listo, {name}.",
+    "readyAgain": "Ya estás registrado, {name}.",
+    "departure": "{title} · {time}",
+    "meetAt": "Punto de encuentro: {place}",
+    "deskHeading": "Pasa por el mostrador",
+    "deskBody": "Alguien del mostrador se encarga desde aquí.",
+    "unavailableHeading": "Esta tableta no está configurada",
+    "unavailableBody": "Crea uno nuevo en Configuración, en Pantalla del lobby."
+  },
   "conservation": {
     "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",
     "commitments": {
@@ -162,6 +176,12 @@
     "noTripsPublic": "Vuelve pronto. Cuéntanos abajo qué te gustaría bucear, o contáctanos con los datos del pie de página.",
     "noTripsPublicNoPhone": "Vuelve pronto, o cuéntanos abajo qué te gustaría bucear.",
     "noTripsMonth": "No hay salidas este mes. Prueba otro mes.",
+    "offSeason": {
+      "heading": "No hay salidas durante un tiempo",
+      "back": "Volvemos al agua el {date}.",
+      "nextSeason": "{name} comienza el {date}.",
+      "requestHeading": "Pídenos un día"
+    },
     "filters": {
       "tripType": "Tipo de salida",
       "allTrips": "Todas las salidas",
@@ -1262,6 +1282,11 @@
     "bigGroupContactGeneric": "¿Sois más de {count}? Contacta con el centro."
   },
   "site": {
+    "page": {
+      "departuresHeading": "Próximas salidas aquí",
+      "jumpToDepartures": "Ver las fechas",
+      "noDepartures": "No hay salidas a este sitio en el calendario por ahora"
+    },
     "terrainMapTitle": "Mapa del terreno de {site}",
     "openMap": "Abrir mapa ↗",
     "landmarkKinds": {

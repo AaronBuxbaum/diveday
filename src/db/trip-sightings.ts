@@ -65,6 +65,9 @@ export type RecordTripSightingResult =
  * chip is that something turned up. Bounding a sighting to the guide would
  * admit the blue tang and refuse the eagle ray, which is exactly backwards
  * (the same correction `upsertExecutedDive` carries).
+ *
+ * The crew's sightings are lever V of ADR 20260908-one-hand, decision 6
+ * (slice 20r): a record with a date, never a promise.
  */
 export async function recordTripSighting(
   db: AppDb,

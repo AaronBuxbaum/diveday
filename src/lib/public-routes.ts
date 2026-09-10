@@ -110,6 +110,18 @@ export function publicCoursePath(shopSlug: string, courseSlug: string): string {
 }
 
 /**
+ * One dive site's public page — the shop's own briefing for a place, at a URL
+ * a diver can share and a search engine can index (N-48).
+ *
+ * The segment is `dive_sites.slug`, minted once from the name and never
+ * rewritten (`src/lib/dive-site-slug.ts`), so a shop correcting its own
+ * spelling does not 404 the link somebody posted last week.
+ */
+export function publicDiveSitePath(shopSlug: string, siteSlug: string): string {
+  return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/sites/${siteSlug}`;
+}
+
+/**
  * A shop slug as the routes spell it: lowercase, digits, inner hyphens. Kept
  * in step with the embed matchers in src/lib/auth.config.ts.
  */

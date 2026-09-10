@@ -48,7 +48,7 @@
  * outcome available, so it either all lands or none of it does.
  */
 
-import { and, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -76,13 +76,18 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingGifts,
+  bookingPaymentEvents,
   bookingPayments,
   bookings,
   buddyTeamEvents,
   calendarFeeds,
   certifications,
   courseInquiries,
+  dayCloseouts,
   diveSupportNeeds,
+  formDrafts,
+  gearReservations,
+  importedPaymentHistory,
   inboundMessages,
   internalNotes,
   lastMinuteListEntries,
@@ -91,10 +96,12 @@ import {
   notificationDeliveries,
   notificationDeliveryAttempts,
   notificationSendQueue,
+  orderLineItems,
   orders,
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
+  priorGearAssignments,
   priorVisits,
   recapPhotos,
   recapPulses,
@@ -104,9 +111,12 @@ import {
   specialtyCertifications,
   staffCredentials,
   staffReplies,
+  tips,
+  tripLastMinutePromoRecipients,
   tripReviews,
   tripWaitlistEntries,
   userAccounts,
+  waiverDeliveries,
   waiverRecords,
 } from "./schema";
 
@@ -255,11 +265,13 @@ function buddyMemberNameMatch(fullName: string): string | undefined {
 /**
  * Record that a predicate which cannot be tied to a `person_id` matched rows.
  *
- * Four of the sweeps below are matched on something other than a foreign key —
- * the name match above, a shared household phone number on a course inquiry, an
- * address in the send queue that a soft-deleted duplicate person can
- * legitimately share with a live one, and the address on a checkout that covers
- * only this diver's seats but may have been submitted by whoever booked them.
+ * Several sweeps below are matched on something other than a foreign key — a
+ * name, a shared household phone number, or an address a soft-deleted duplicate
+ * person can legitimately share with a live one. The count is deliberately not
+ * written here: it read "four" while the file had twelve of them, because every
+ * change that added one updated its own block and not this paragraph. The call
+ * sites are the register; this docblock is the reason they exist.
+ *
  * Each can therefore reach a third party's row in the same shop. None of them is
  * cross-tenant and all of them are owner-gated, so this is about visibility,
  * not containment: an owner who erases a diver and later finds a bystander's
@@ -453,7 +465,10 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   const owned = bookingIds.length > 0;
 
   let queued = 0;
-  const retire = async (kind: "recap_photo" | "waiver_document", url: string | null) => {
+  const retire = async (
+    kind: "recap_photo" | "waiver_document" | "payment_receipt",
+    url: string | null,
+  ) => {
     if (!url) return;
     if (await queueMediaDeletion(tx, { shopId, kind, url })) queued += 1;
   };
@@ -556,6 +571,11 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         // the v2 seal covers (ADR 20260907-guardian-co-signature).
         guardianName: null,
         guardianEmail: null,
+        // The provider's own words for a bounce quote the address they failed
+        // to reach, which is the reason `notification_deliveries.provider_detail`
+        // is cleared further down. This column is the same text on the waiver's
+        // own row, and the per-channel table below carries a copy of it.
+        deliveryError: null,
         importedFromLabel: null,
         importSourceDocumentUrl: null,
         importSourceMedicalDocumentUrl: null,
@@ -591,6 +611,25 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         })
         .where(eq(waiverRecords.id, stripped.id));
     }
+  }
+
+  // The per-channel mechanics behind the column above (ADR
+  // 20260820-waiver-delivery-is-per-channel): one current row per channel, each
+  // carrying the provider's own bounce text. Swept by waiver record rather than
+  // by booking — a release is attached to a person, and a diver with no seat
+  // still has one.
+  const waiverRecordIds = waiverRows.map((record) => record.id);
+  if (waiverRecordIds.length > 0) {
+    await tx
+      .update(waiverDeliveries)
+      .set({ detail: null })
+      .where(
+        and(
+          eq(waiverDeliveries.shopId, shopId),
+          inArray(waiverDeliveries.waiverRecordId, waiverRecordIds),
+          isNotNull(waiverDeliveries.detail),
+        ),
+      );
   }
 
   // --- certification evidence ---------------------------------------------
@@ -694,6 +733,35 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   await tx
     .delete(personCourtesyEmailUnsubscribeTokens)
     .where(eq(personCourtesyEmailUnsubscribeTokens.personId, personId));
+
+  // **The last-minute deal's recipient log keeps its row and loses its
+  // address.** `trip_last_minute_promo_recipients` records who was sent which
+  // deal, and it stores the address it went *to* — the diver's own email, as a
+  // NOT NULL column, keyed by `person_id`. Nothing here touched it, so an
+  // erased diver's address survived every deal they were ever offered, and
+  // `src/db/export.ts` carries that table out of the shop in the portable
+  // bundle (found by the sweep issue #1607 asks for).
+  //
+  // Redacted rather than deleted, the shape `user_accounts.email` above takes.
+  // What is left afterwards is a `person_id` pointing at a row that has itself
+  // been erased and nothing else, which is exactly what `course_inquiries`
+  // keeps and for the same reason: it is what makes a replayed erasure reach
+  // the same rows.
+  //
+  // Not "the count of who was mailed would move": it would not. The number a
+  // shop reads is `trip_last_minute_promos.recipient_count`, denormalized at
+  // send time from the messages that actually went out, while these rows are
+  // written for every *attempted* recipient — the two already disagree, and
+  // deleting these would not change either (security review, 2026-09-10).
+  await tx
+    .update(tripLastMinutePromoRecipients)
+    .set({ email: `${redactedUniqueValue("erased")}@invalid` })
+    .where(
+      and(
+        eq(tripLastMinutePromoRecipients.shopId, shopId),
+        eq(tripLastMinutePromoRecipients.personId, personId),
+      ),
+    );
 
   // Staff prose about a person is personal data end to end, and the body column
   // carries a non-blank check, so there is nothing to redact it *to*.
@@ -931,6 +999,23 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         and(eq(bookingPayments.shopId, shopId), inArray(bookingPayments.bookingId, bookingIds)),
       );
 
+    // The same sentence, one table over. `setBookingPayment` copies `note` onto
+    // every transition it appends (`src/db/payments.ts`), so scrubbing the
+    // current row and leaving the trail left the staffer's words about this
+    // diver's money legible in full history. Found by the sweep below rather
+    // than by anyone reading the line above it (issue #1607) — which is the
+    // whole argument for having a sweep.
+    await tx
+      .update(bookingPaymentEvents)
+      .set({ note: null })
+      .where(
+        and(
+          eq(bookingPaymentEvents.shopId, shopId),
+          inArray(bookingPaymentEvents.bookingId, bookingIds),
+          isNotNull(bookingPaymentEvents.note),
+        ),
+      );
+
     // Provider bounce text quotes the address it failed to reach.
     await tx
       .update(notificationDeliveries)
@@ -1143,6 +1228,223 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       .where(eq(priorVisits.id, visit.id));
   }
 
+  // The payment trail beside those visits, and the larger of the two. Every
+  // label on it is the prior system's words about this diver's money, the
+  // references are that system's own handles on them, and
+  // `receipt_document_url` points at a re-stored receipt document that will
+  // usually render the buyer's name. `imported_payment_history` is also carried
+  // out of the shop by `src/db/export.ts` in both bundles, so an unerased row
+  // here leaves the building with the next export — the same failure the
+  // last-minute deal log had (issue #1607).
+  //
+  // `amount_cents` and `currency` stay. They are the only two columns on this
+  // table the shop reads as its own money rather than as a sentence about a
+  // person: the unverified-import slice of the financial aggregates is built
+  // from them, and a total is not a fact about who paid it. The verbatim
+  // `amount_label` beside them goes, for the reason it goes on `prior_visits`.
+  const importedPayments = await tx
+    .select({
+      id: importedPaymentHistory.id,
+      receiptDocumentUrl: importedPaymentHistory.receiptDocumentUrl,
+    })
+    .from(importedPaymentHistory)
+    .where(
+      and(eq(importedPaymentHistory.shopId, shopId), eq(importedPaymentHistory.personId, personId)),
+    );
+  for (const payment of importedPayments) {
+    await retire("payment_receipt", payment.receiptDocumentUrl);
+    await tx
+      .update(importedPaymentHistory)
+      .set({
+        title: null,
+        statusLabel: null,
+        amountLabel: null,
+        paymentReference: null,
+        receiptReference: null,
+        receiptDocumentUrl: null,
+        sourceLabel: null,
+        sourceReference: null,
+        stripeReference: null,
+        dedupeKey: redactedUniqueValue("redacted"),
+      })
+      .where(eq(importedPaymentHistory.id, payment.id));
+  }
+
+  // The imported rental history, the same shape one table over: `note`,
+  // `status_label` and `source_reference` are the prior system's free text
+  // about this diver's rentals, and `dedupe_key` can embed its reference. The
+  // assignment window and the unit stay — which unit was out and when is the
+  // register's own record, and it names nobody once the words are gone.
+  const priorAssignments = await tx
+    .select({ id: priorGearAssignments.id })
+    .from(priorGearAssignments)
+    .where(
+      and(eq(priorGearAssignments.shopId, shopId), eq(priorGearAssignments.personId, personId)),
+    );
+  for (const assignment of priorAssignments) {
+    await tx
+      .update(priorGearAssignments)
+      .set({
+        statusLabel: null,
+        sourceReference: null,
+        note: null,
+        dedupeKey: redactedUniqueValue("redacted"),
+      })
+      .where(eq(priorGearAssignments.id, assignment.id));
+  }
+
+  // --- last-minute deals ---------------------------------------------------
+  // The key sweep of `trip_last_minute_promo_recipients` is above, with the
+  // rest of this diver's addresses. This is its other half: the address sweep
+  // beside the key sweep, which every other durable address
+  // column here already has (issue #1622). `people_shop_email_unique` is
+  // partial on *live* rows, so a soft-deleted duplicate person legitimately
+  // shares this diver's address — and a duplicate that was never merged keeps
+  // their address on its own recipient rows, where `person_id` cannot reach it.
+  // The same case the send queue and `booking_checkouts` are swept for.
+  //
+  // Each row takes its own redacted value rather than one shared value: nothing
+  // here is unique-indexed today, but a shared sentinel across rows is what
+  // makes two erased people look like one, and `redactedUniqueValue` costs
+  // nothing to call per row.
+  if (ctx.email) {
+    const byAddress = await tx
+      .select({ id: tripLastMinutePromoRecipients.id })
+      .from(tripLastMinutePromoRecipients)
+      .where(
+        and(
+          eq(tripLastMinutePromoRecipients.shopId, shopId),
+          sql`lower(${tripLastMinutePromoRecipients.email}) = ${ctx.email.toLowerCase()}`,
+        ),
+      );
+    for (const row of byAddress) {
+      await tx
+        .update(tripLastMinutePromoRecipients)
+        .set({ email: `${redactedUniqueValue("erased")}@invalid` })
+        .where(eq(tripLastMinutePromoRecipients.id, row.id));
+    }
+    logFuzzyMatch(ctx, "last_minute_recipient_address", byAddress.length);
+  }
+
+  // --- hosted processor pages ----------------------------------------------
+  // A Stripe-hosted page is a publicly reachable URL that renders the customer
+  // it was minted for, which is why `orders.hosted_invoice_url` and
+  // `invoice_pdf_url` are already nulled above. Two more of them sit one table
+  // over and were missed: a tip's Checkout page is minted with
+  // `customer_email` straight off `people.email` (`src/db/tips.ts`), and a
+  // booking checkout's is the same object beside the address this file already
+  // clears. Both are bounded by session expiry and both columns are durable,
+  // so the row outlives the window it is safe in (issue #1607).
+  if (owned) {
+    await tx
+      .update(tips)
+      .set({ checkoutUrl: null })
+      .where(
+        and(
+          eq(tips.shopId, shopId),
+          inArray(tips.bookingId, bookingIds),
+          isNotNull(tips.checkoutUrl),
+        ),
+      );
+  }
+
+  // --- the day's close-out ------------------------------------------------
+  // `outstanding` is the snapshot of what was still open when a day was closed,
+  // and its leftovers carry a **copied** `subject` and `detail` rather than an
+  // id — `src/lib/closeout.ts` says so, and eight producers in `src/db/today.ts`
+  // put the diver's own name in that subject. The snapshot's own docblock calls
+  // the text "trail text, like `activity_events.message`", which is exactly
+  // right and is why leaving it standing was wrong: that column is redacted by
+  // this same name match a few statements down, and this one was not. The table
+  // carries no retention arm, so the name was permanent and legible from the
+  // close-out trail (issue #1607).
+  //
+  // The **element is replaced, never removed**, like the buddy sweep above: how
+  // many things were left open when the shop closed is a fact about the day.
+  const closeoutNameMatch = buddyMemberNameMatch(ctx.fullName);
+  if (closeoutNameMatch) {
+    const closed = await tx
+      .update(dayCloseouts)
+      .set({
+        outstanding: sql`jsonb_set(
+          ${dayCloseouts.outstanding},
+          '{leftovers}',
+          (
+            select coalesce(jsonb_agg(
+              case
+                when (item->>'subject') ~* ${closeoutNameMatch}
+                  or (item->>'detail') ~* ${closeoutNameMatch}
+                then item || jsonb_build_object(
+                  'subject', to_jsonb(${REDACTED_TEXT}::text),
+                  'detail', to_jsonb(${REDACTED_TEXT}::text)
+                )
+                else item
+              end
+              order by ord
+            ), '[]'::jsonb)
+            from jsonb_array_elements(${dayCloseouts.outstanding}->'leftovers')
+              with ordinality as t(item, ord)
+          )
+        )`,
+      })
+      .where(
+        and(
+          eq(dayCloseouts.shopId, shopId),
+          sql`exists (
+            select 1 from jsonb_array_elements(${dayCloseouts.outstanding}->'leftovers') as t(item)
+            where (t.item->>'subject') ~* ${closeoutNameMatch}
+               or (t.item->>'detail') ~* ${closeoutNameMatch}
+          )`,
+        ),
+      )
+      .returning({ id: dayCloseouts.id });
+    logFuzzyMatch(ctx, "day_closeout_leftover_name", closed.length);
+  }
+
+  // --- gear register -------------------------------------------------------
+  // Staff prose typed about how a unit came home ("torn strap, needs look"),
+  // which is free text about a rental this diver had out. The reservation, its
+  // window and its outcome stay: what a unit did and when it came back is the
+  // register's own service record, and the sentence is the only part of it
+  // written about a person. The asymmetry is what made this a gap rather than a
+  // judgement call — the erasure already blanks `roll_call_events.note` and
+  // `booking_payments.note` for exactly this reason.
+  //
+  // Both holder shapes, because `gear_reservations_one_holder` allows only one
+  // at a time: a bookingless counter rental carries `person_id`, and a rental
+  // against a seat carries `booking_id`.
+  // Redacted rather than cleared where the note is the evidence behind a
+  // `service_concern`: the writer requires words for that outcome, no database
+  // check enforces the pairing, and a unit left flagged for service with a
+  // silently empty note reads as "nobody said" — which is the reading the
+  // column's own docblock warns against. `[redacted]` tells a technician to
+  // ask. A plain return keeps a null.
+  const clearedReturnNote = sql`case when ${gearReservations.returnOutcome} = 'service_concern' then ${REDACTED_TEXT} else null end`;
+  await tx
+    .update(gearReservations)
+    .set({ returnNote: clearedReturnNote })
+    .where(
+      and(
+        eq(gearReservations.shopId, shopId),
+        eq(gearReservations.personId, personId),
+        isNotNull(gearReservations.returnNote),
+        ne(gearReservations.returnNote, REDACTED_TEXT),
+      ),
+    );
+  if (owned) {
+    await tx
+      .update(gearReservations)
+      .set({ returnNote: clearedReturnNote })
+      .where(
+        and(
+          eq(gearReservations.shopId, shopId),
+          inArray(gearReservations.bookingId, bookingIds),
+          isNotNull(gearReservations.returnNote),
+          ne(gearReservations.returnNote, REDACTED_TEXT),
+        ),
+      );
+  }
+
   // --- orders --------------------------------------------------------------
   // `stripe_customer_id` and `stripe_invoice_id` are NOT NULL pointers into the
   // shop's own Stripe account and stay on the row — the local record of which
@@ -1153,6 +1455,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // diver's details one click away from an "erased" record.
   const orderRows = await tx
     .select({
+      id: orders.id,
       stripeAccountId: orders.stripeAccountId,
       stripeCustomerId: orders.stripeCustomerId,
       stripeInvoiceId: orders.stripeInvoiceId,
@@ -1161,8 +1464,33 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
   await tx
     .update(orders)
-    .set({ hostedInvoiceUrl: null, invoicePdfUrl: null })
+    // `description` goes with them. It is staff-typed free text on the invoice
+    // form, and this repository already treats it as third-party-naming
+    // elsewhere: `src/db/export.ts` excludes it from both bundles' order files
+    // with that reason written at the exclusion, and `diver-export.test.ts`
+    // pins the header with a seeded "Split with <name>'s buddy this trip".
+    // Excluded from an export and left on the row after an erasure is not a
+    // consistent answer (issue #1607, found by a `security-reviewer` pass).
+    .set({ hostedInvoiceUrl: null, invoicePdfUrl: null, description: null })
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
+
+  // The per-line half of the same text, on the same form, carried out of the
+  // shop under the same exclusion.
+  const orderIds = orderRows.map((row) => row.id);
+  if (orderIds.length > 0) {
+    // NOT NULL, so redacted rather than cleared — the same shape
+    // `activity_events.message` takes for the same reason.
+    await tx
+      .update(orderLineItems)
+      .set({ description: REDACTED_TEXT })
+      .where(
+        and(
+          eq(orderLineItems.shopId, shopId),
+          inArray(orderLineItems.orderId, orderIds),
+          ne(orderLineItems.description, REDACTED_TEXT),
+        ),
+      );
+  }
 
   // Everything those orders point at *at Stripe* becomes a row in the erasure
   // ledger (ADR 20260803-processor-erasure-obligations): the customer objects,
@@ -1284,7 +1612,10 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       if (soleOccupant.length > 0) {
         const byBooking = await tx
           .update(bookingCheckouts)
-          .set({ customerEmail: null })
+          // The hosted page goes with the address: it is the same Stripe object
+          // rendering the same customer, on the same reasoning that nulls
+          // `orders.hosted_invoice_url` (issue #1607).
+          .set({ customerEmail: null, checkoutUrl: null })
           .where(
             and(
               eq(bookingCheckouts.shopId, shopId),
@@ -1380,6 +1711,82 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
           inArray(notificationSendQueue.bookingId, bookingIds),
         ),
       );
+  }
+
+  // --- unfinished forms ----------------------------------------------------
+  // `form_drafts.fields` is whatever a staffer had typed into a form and not
+  // yet submitted, and on a `new_diver` draft that is a person's name, address,
+  // phone and emergency contact. `person_id` on the row is the **author**, so
+  // no person-scoped sweep reaches the subject: a draft about this diver sits
+  // under a staff member's id.
+  //
+  // The bound the table was trusted to have is smaller than it looked. Its
+  // reader drops anything over 24h and `NEVER_DRAFTED` keeps card, medical and
+  // token fields out — but not a name, an address or a phone, and the retention
+  // prune runs **weekly** against that one-day cutoff (`30 3 * * 0`). So a draft
+  // could outlive an erasure by five more days (issue #1620).
+  //
+  // Deleted rather than redacted. A draft is one person's unfinished work about
+  // one subject: clearing the field that matched would leave the other three
+  // standing, because only the address field ever equals the address. The row
+  // is the unit that is about somebody, so the row is the unit that goes.
+  //
+  // **All three handles, not just the address.** The first cut of this ran only
+  // when `ctx.email` was non-null, and `people.email` is nullable — so a
+  // phone-only walk-in's draft survived the erasure entirely while the coverage
+  // guard read green, because that guard sees the `delete` statement and not the
+  // `if` above it. A `security-reviewer` pass caught it. The name handle is what
+  // makes the sweep unconditional: `people.full_name` is NOT NULL.
+  //
+  // Each handle costs the over-reach it always costs here, and each is counted
+  // separately so an owner can see which one fired: a household shares a phone
+  // (the reasoning `course_inquiries` records below), and a name reaches a
+  // namesake — which is why it goes through `buddyMemberNameMatch`, anchored on
+  // word boundaries and refused below three word characters.
+  const draftHandles: { predicate: string; match: SQL }[] = [];
+  if (ctx.email) {
+    draftHandles.push({
+      predicate: "form_draft_address",
+      match: sql`lower(field.value) = ${ctx.email.toLowerCase()}`,
+    });
+  }
+  if (ctx.phone) {
+    draftHandles.push({
+      predicate: "form_draft_phone",
+      match: sql`field.value = ${ctx.phone}`,
+    });
+  }
+  const draftNameMatch = buddyMemberNameMatch(ctx.fullName);
+  if (draftNameMatch) {
+    draftHandles.push({
+      predicate: "form_draft_name",
+      match: sql`field.value ~* ${draftNameMatch}`,
+    });
+  }
+  for (const handle of draftHandles) {
+    const dropped = await tx
+      .delete(formDrafts)
+      .where(
+        and(
+          eq(formDrafts.shopId, shopId),
+          // `jsonb_typeof` is inside the function argument rather than beside
+          // it: Postgres does not promise to evaluate `and` left to right, so a
+          // sibling guard would not stop `jsonb_each_text` being handed a
+          // non-object — and that raises inside the one transaction the whole
+          // erasure runs in, which would refuse every erasure this shop ever
+          // asks for. Unreachable today (`draftableFields` only ever builds a
+          // string record) and cheap to make unreachable by construction.
+          sql`exists (
+            select 1 from jsonb_each_text(
+              case when jsonb_typeof(${formDrafts.fields}) = 'object'
+                then ${formDrafts.fields} else '{}'::jsonb end
+            ) as field(name, value)
+            where ${handle.match}
+          )`,
+        ),
+      )
+      .returning({ id: formDrafts.id });
+    logFuzzyMatch(ctx, handle.predicate, dropped.length);
   }
 
   // --- course inquiries ----------------------------------------------------

@@ -8,6 +8,8 @@
  * them comes from `src/i18n`.
  */
 
+import { slugFrom } from "./slug";
+
 /** The shape `trip_lenses.slug` holds: lowercase words joined by single hyphens. */
 export const LENS_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -31,25 +33,7 @@ export const LENS_NAME_MAX = 40;
  * URLs will guess.
  */
 export function lensSlugFrom(name: string, taken: Iterable<string> = []): string {
-  const base =
-    name
-      .normalize("NFD")
-      .replace(/\p{M}/gu, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, LENS_NAME_MAX)
-      .replace(/-+$/g, "") || "lens";
-  const used = new Set(taken);
-  if (!used.has(base)) return base;
-  // The suffix has to fit inside the cap too, or two long names collide again
-  // at the truncation and the search never terminates.
-  for (let n = 2; ; n += 1) {
-    const suffix = `-${n}`;
-    const stem = base.slice(0, LENS_NAME_MAX - suffix.length).replace(/-+$/g, "");
-    const candidate = `${stem}${suffix}`;
-    if (!used.has(candidate)) return candidate;
-  }
+  return slugFrom(name, { max: LENS_NAME_MAX, fallback: "lens", taken });
 }
 
 /**

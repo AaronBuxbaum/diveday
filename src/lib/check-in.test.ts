@@ -60,6 +60,25 @@ describe("counterIsClear", () => {
   it("is false when everyone is here but one of them cannot board", () => {
     expect(counterIsClear([seat("checked_in"), seat("checked_in", "blocked")])).toBe(false);
   });
+
+  /**
+   * **"Everybody is here" is a claim only a human can make.** Since N-24 a seat
+   * can settle without a staffer laying eyes on the diver, and proxy check-in
+   * is the ordinary use of a self-serve kiosk rather than an abuse of one — one
+   * half of a couple parks the car while the other types both surnames. If the
+   * accent fired on that, the shop would stop phoning a diver still at their
+   * hotel, which is the twenty minutes before the boat leaves.
+   */
+  it("is false when a settled seat only says it is here", () => {
+    expect(
+      counterIsClear([seat("checked_in"), { ...seat("checked_in"), selfReported: true }]),
+    ).toBe(false);
+  });
+
+  it("still counts a self-reported seat as here, and only holds the accent back", () => {
+    const seats = [seat("checked_in"), { ...seat("checked_in"), selfReported: true }];
+    expect(counterTally(seats)).toEqual({ expected: 2, here: 2, cantBoard: 0, toCome: 0 });
+  });
 });
 
 describe("firstVisitMarksAnException", () => {

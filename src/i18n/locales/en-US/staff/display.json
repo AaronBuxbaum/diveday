@@ -6,6 +6,10 @@
     "heading": "New screen",
     "labelField": "Which screen",
     "labelPlaceholder": "Lobby TV",
+    "purposeLegend": "What this link opens",
+    "purposeBoard": "Departures board",
+    "purposeCheckIn": "Self check-in",
+    "purposeCheckInDescription": "A check-in tablet records that a diver has arrived. It never puts anyone on a boat: the crew still does roll call at the rail.",
     "showNames": "Show the crew's names",
     "showNamesDescription": "Anyone in the room reads them. Only the crew who agreed to be named appear, and divers never do.",
     "submit": "Create link",
@@ -17,7 +21,8 @@
     "copy": "Copy",
     "copied": "Copied",
     "copyFailed": "Couldn't copy, select it manually",
-    "shared": "Anyone with this link sees today's departures without signing in. Treat it like a key to the shop."
+    "shared": "Anyone with this link sees today's departures without signing in. Treat it like a key to the shop.",
+    "sharedCheckIn": "Anyone with this link can mark a diver as arrived without signing in. Treat it like a key to the shop."
   },
   "list": {
     "heading": "Screens",

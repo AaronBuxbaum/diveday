@@ -32,8 +32,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Two hundred and six key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 824 screenshots per run (see
+ * Visual regression coverage. Two hundred and nine key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 836 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -56,7 +56,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
  * and `TABLET_SURFACES` adds 10: five staff surfaces get a third, portrait
  * tablet width, at one screenshot per scheme rather than the usual two. That
- * brings the run to 843 screenshots — the tablet width is a 1.2% addition, not
+ * brings the run to 854 screenshots — the tablet width is a 1.2% addition, not
  * the 50% a third viewport applied to every surface would have cost.
  *
  * ## One surface, one `test()`
@@ -205,6 +205,9 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
   // The dock tablet is one of the two devices the departures board is for
   // (issue #1426); the other is the TV below.
   "departures-board",
+  // A counter tablet is what the self check-in kiosk *is* (N-24), so its
+  // tablet width is the width it ships at rather than a third variant.
+  "self-check-in",
 ]);
 
 /**
@@ -899,6 +902,41 @@ async function screenshotOrGiveUp(page: Page, path: string) {
  * Bounded like every other wait here. A finite animation that never finishes
  * (paused, or on an element the renderer has stopped ticking) degrades to a
  * shot taken anyway with a warning, never a hang that costs the run.
+ *
+ * **Finished is not the same as gone, and the difference is the flake.** An
+ * entrance here is written `both`, so the animation object outlives its own
+ * duration: `animation.finished` resolves, `getAnimations()` still lists it,
+ * and Chromium keeps the element on the compositing layer it promoted for the
+ * transform. A layer composites its own antialiased edges and its `shadow-bed`
+ * blend, so those pixels round twice — once into the layer, once onto the page
+ * — where an unpromoted element rounds once. Demotion happens some later
+ * frame, and the shutter races it.
+ *
+ * That is issue #1597, and it is measured rather than argued: six runs of the
+ * product page from one build produced exactly **two** byte-exact variants,
+ * flipping two runs in six, 6,527 pixels differing by **one unit** on the card
+ * edges and bed shadows of the `readiness` chapter with a **zero** height
+ * delta. It is the same band, the same page and the same one-to-three units as
+ * #1380, which `waitForEntranceAnimations` was written for — waiting the
+ * animation out closed the mid-flight half and left this one open, which is
+ * why the captures kept reporting changed on pull requests that cannot reach
+ * the product page.
+ *
+ * So each finite animation is **committed and cancelled** rather than merely
+ * awaited: `commitStyles()` writes its computed end values as inline styles
+ * and `cancel()` then removes the animation, and with it the layer. Nothing
+ * moves — the committed style *is* the end state — and the shutter no longer
+ * has a promotion to race. `commitStyles()` is what makes this safe where the
+ * docblock below rules out `animation: none`: `.marketing-reveal-pending`
+ * holds `opacity: 0` in its base style and relies on the animation's fill to
+ * become visible, and committing first is exactly what carries that fill onto
+ * the element before the animation goes.
+ *
+ * Per-animation `try`/`catch`, because `commitStyles()` throws for a target
+ * that is not rendered or is a pseudo-element, and one such throw must not
+ * cost the capture. Infinite animations are left alone: an `animate-pulse`
+ * skeleton has no end state to commit, and Playwright's `animations:
+ * "disabled"` already resets it to its first frame at shutter time.
  */
 async function waitForEntranceAnimations(page: Page) {
   await withRendererBound(
@@ -921,6 +959,48 @@ async function waitForEntranceAnimations(page: Page) {
         ]),
       ANIMATION_WAIT_MS,
     ),
+    true,
+  );
+
+  await withRendererBound(
+    page,
+    "the entrance-animation commit",
+    ANIMATION_STALL_MS,
+    page.evaluate((frameMs) => {
+      for (const animation of document.getAnimations()) {
+        if (animation.effect?.getComputedTiming().iterations === Number.POSITIVE_INFINITY) continue;
+        // **A scroll-driven animation is not finished, it is *positioned*.**
+        // `animation-timeline: scroll(root block)` drives the staff bar's fold
+        // from the scroll offset rather than from a clock (globals.css), and
+        // such an animation reports finite iterations like any other — so
+        // cancelling it here froze the label at whatever scroll 0 had written,
+        // and `captureFolded` then waited forever for an opacity that could no
+        // longer change. That is the failure `captureFolded`'s own docblock
+        // predicts for `animations: "disabled"`, arriving by a different door.
+        //
+        // Compared against `document.timeline` rather than sniffing a class
+        // name: the document's monotonic timeline is the only one whose end
+        // state is a *time* the shutter can be after.
+        if (animation.timeline !== document.timeline) continue;
+        try {
+          animation.commitStyles();
+          animation.cancel();
+        } catch {
+          // A target that is not rendered, or a pseudo-element: nothing to
+          // commit and nothing promoted to demote.
+        }
+      }
+      // Two frames for the demotion the cancel above asked for, so the shutter
+      // lands after it rather than during it — raced against a timeout like
+      // every other frame wait here, because `requestAnimationFrame` is not a
+      // promise the page owes you.
+      return Promise.race([
+        new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)));
+        }),
+        new Promise((resolve) => setTimeout(() => resolve(true), frameMs)),
+      ]);
+    }, FRAME_WAIT_MS),
     true,
   );
 }
@@ -1665,6 +1745,35 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **Self check-in at the counter** (N-24): the other thing a display link
+       * can open, and the one surface in DiveDay a stranger operates unaided.
+       * Minted through the test seed route, like the board above — the token is
+       * hashed at rest and shown once.
+       *
+       * **The idle prompt, and deliberately not the answer card.** The answer
+       * names a diver and stands in a lobby, so it wipes itself after twelve
+       * seconds (`CLEAR_AFTER_MS`) — which is shorter than a multi-viewport
+       * `capture()` takes, and a baseline that sometimes photographs a blank
+       * panel is worse than no baseline at all. What the card says is pinned by
+       * `e2e/self-check-in.spec.ts`, which reads it in one pass and is done.
+       */
+      test(`the counter kiosk renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-display-token", {
+          data: { label: "Counter tablet", purpose: "check_in" },
+        });
+        expect(seeded.ok()).toBe(true);
+        const { path } = (await seeded.json()) as { path: string };
+        await page.goto(path);
+        await page.getByRole("heading", { level: 1, name: "Blue Mantis Divers" }).waitFor();
+        await page.getByLabel("Last name").waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "self-check-in", scheme);
+      });
+
+      /**
        * **The regional pages** (issue #1436, N-49), the two anonymous surfaces
        * a diver meets before a shop's own storefront. The demo shop is a demo
        * and is excluded from both, so what is in the picture is the pair of
@@ -1839,6 +1948,36 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/s/blue-mantis");
         await publicReefCard(page).getByRole("link").waitFor();
         await capture(page, "schedule", scheme);
+      });
+
+      /**
+       * **The off-season** (N-45) — the storefront a shop between seasons shows
+       * a stranger, which no existing capture can be: `blue-mantis` exists to
+       * have a full board, so this one empties it first.
+       *
+       * Its own baseline because the whole change is what the page becomes
+       * when there is nothing to list: the card where the next boat would be,
+       * no schedule heading standing over nothing, and the date-request
+       * composer open as the page's one primary rather than collapsed into a
+       * row three sections down. A diff on this one is a diff on the shape of
+       * an empty page, which is exactly the thing a passing e2e assertion
+       * cannot see.
+       *
+       * The line under the heading is the demo shop's own "Lobster mini-season"
+       * eighteen days out — the fallback for a shop with nothing scheduled at
+       * all (`src/db/seed-season-events.ts`).
+       */
+      test(`the off-season storefront renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-off-season");
+        await page.goto("/s/blue-mantis");
+        // The card itself, not a timing guess: it is server-rendered, so its
+        // heading being on the page is the page having rendered as a quiet
+        // shop rather than as its own skeleton.
+        await page.getByRole("heading", { name: "Nothing on the water for a while" }).waitFor();
+        await capture(page, "schedule-off-season", scheme);
       });
 
       /**
@@ -2217,6 +2356,22 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/s/blue-mantis/courses/open-water-diver");
         await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
         await capture(page, "course-page", scheme);
+      });
+
+      /**
+       * **The place page** (N-48): the shop's own briefing for one dive site,
+       * addressed by the site rather than by a departure.
+       *
+       * Molasses Reef is the seeded library's fullest row — prose, landmarks,
+       * a conservation note, a field guide and a drawn route — so this
+       * baseline covers every beat the page can render at once. "Next
+       * departures here" is the last section, so waiting on it is what says
+       * the whole document has landed rather than its header alone.
+       */
+      test(`the public dive-site page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis/sites/molasses-reef");
+        await page.getByRole("heading", { name: "Next departures here" }).waitFor();
+        await capture(page, "dive-site-page", scheme);
       });
 
       // The diver's catalog index. It used to be the signed-out half of a
@@ -3144,7 +3299,13 @@ for (const scheme of ["light", "dark"] as const) {
         // contact email (issue #710). Free to take here — the shop already
         // exists and this is one navigation.
         await page.goto(`/s/${unique}`);
-        await page.getByRole("heading", { name: "No trips on the books yet" }).waitFor();
+        // A shop this new has nothing on the board, so it lands in the quiet
+        // state N-45 designed rather than the empty list it used to show. The
+        // heading it waits for is the one that replaced "No trips on the books
+        // yet" — a sentence that read as a shop which had stopped rather than
+        // one which had not started, which is exactly the wrong thing to say
+        // on the page a shop is told to paste on its own website.
+        await page.getByRole("heading", { name: "Nothing on the water for a while" }).waitFor();
         // **Day zero is a shape, not a failure state** (ADR
         // 20260827-clearwater-surface-language, decision 8). The hero is the
         // shop's name and nothing else — no tagline it has not written, no
@@ -3155,9 +3316,11 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByRole("region", { name: "Next boat with space" })).toHaveCount(0);
         await expect(page.getByRole("link", { name: "Book this boat" })).toHaveCount(0);
         await capture(page, "public-schedule-new-shop", scheme);
-        // After the shot, so the composer's disclosure is closed in the
-        // baseline: with no boat to book, the page's one primary is this.
-        await page.locator("#request-a-date summary").click();
+        // In the quiet state the composer is the page's one primary and comes
+        // up already open, so there is no disclosure left to click — the shot
+        // above now carries the form rather than a collapsed row. Assert it is
+        // reachable without one, which is the promotion N-45 makes.
+        await expect(page.locator("#request-a-date summary")).toHaveCount(0);
         await expect(page.getByRole("button", { name: "Send", exact: true })).toBeVisible();
 
         // **The board before anything is on it.** The `schedule-builder`
@@ -7027,11 +7190,19 @@ for (const scheme of ["light", "dark"] as const) {
         .getByLabel("What to remember about running this site")
         .fill("The entry silted up after the storm. Brief the swim-through before you go in.");
       await page.getByRole("button", { name: "Save dive site" }).click();
-      // The form settles in place; the frame worth keeping is one navigation
-      // on from it — the note in the list a shop plans against.
-      await expect(page.getByLabel("What to remember about running this site")).toHaveValue(
-        "The entry silted up after the storm. Brief the swim-through before you go in.",
-      );
+      // **Wait for the save's own redirect, not for the text we just typed.**
+      // The frame worth keeping is one navigation on from the form — the note
+      // in the list a shop plans against — and the assertion that used to
+      // stand here read the field back for the value it had been filled with a
+      // line earlier. It therefore passed instantly, whether or not the write
+      // had landed, and the `goto` below tore the page down with the action
+      // still in flight: the trace shows the POST to the site page ending at
+      // status -1, and the library rendering the row without a note. This is
+      // the `action-race` shape `.claude/rules/e2e.md` names, wearing an
+      // `expect` that satisfies `check:e2e-hygiene` while waiting for nothing.
+      // `?notice=saved` is written by `revalidateAndRedirect` only once the row
+      // is durably saved.
+      await page.waitForURL(/[?&]notice=saved/);
       await page.goto(`/shop/${privateShop.slug}/dive-sites`);
       await page.getByText("The entry silted up after the storm").waitFor();
       await capture(page, "dive-site-planning-note", scheme);

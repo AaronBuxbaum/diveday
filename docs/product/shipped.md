@@ -136,6 +136,23 @@ which of the day's sites goes deeper than that card covers (`statedLevelDepthLim
 no `people` row, nothing that travels with the booking — and it **gates nothing**: the site's
 maximum is not the dive plan (H-08).
 
+## Self check-in at the counter (delivered 2026-09-09)
+
+N-24 from the improvement-ideas decision sheet. A shop mints a second kind of **display link** at
+Settings → Lobby display — the choice of what a link opens is now explicit and has no default — and
+stands a tablet on the counter: `/check-in/[token]` asks for a last name, or takes the booking
+reference an arrival card's QR carries, and answers "You're set, {name}" with the departure and the
+meeting point, or "See the desk". **What it records is an arrival, never a boarding.** The writer
+(`checkInAtKiosk`, `src/db/check-in.ts`) re-reads live readiness, projects `bookings.status`, and
+appends the same `booking_arrival_events` row the desk does — stamped with `display_token_id` and
+recorded as the diver's own act — while touching nothing `roll_call_events` or the manifest reads;
+boarding stays a roll-call act the crew performs at the rail. Every refusal is one sentence: a miss,
+an ambiguous surname, a sailed departure and an unmet blocker are indistinguishable from the glass,
+so the tablet cannot be walked to enumerate a roster. Surnames match exactly and whole-word, never
+as a substring and never on an email; lookups are rate-limited per link. `display_tokens` grew a
+`purpose`, matched inside `verifyDisplayToken`'s predicate, so a board link handed to whoever mounts
+a TV can never open the one surface that writes.
+
 ## The departures board (delivered 2026-09-07)
 
 N-23 from the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1426). A shop mints

@@ -274,6 +274,7 @@ describe("diver copy has a provider above it", () => {
     // 20260803-error-boundary-copy-bridge rather than covered here.
     expect(withCopy.sort()).toEqual([
       "board/[token]/error.tsx",
+      "check-in/[token]/error.tsx",
       "claim/[token]/error.tsx",
       "confirm-contact/[token]/error.tsx",
       "gift/[token]/error.tsx",

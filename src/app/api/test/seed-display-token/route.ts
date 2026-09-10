@@ -8,6 +8,7 @@ import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { boardPath } from "@/lib/display-tokens";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { kioskCheckInPath } from "@/lib/kiosk-check-in";
 
 /**
  * Mints a real display link for a demo shop and hands back the raw token — the
@@ -22,6 +23,8 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 const bodySchema = z.object({
   slug: z.string().trim().min(1).optional(),
   label: z.string().trim().min(1).optional(),
+  /** Which surface the minted link opens — the board, or the check-in kiosk (N-24). */
+  purpose: z.enum(["board", "check_in"]).optional(),
   showNames: z.boolean().optional(),
 });
 
@@ -46,12 +49,20 @@ export async function POST(request: Request) {
     .limit(1);
   if (!owner) return NextResponse.json({ error: "owner_not_found" }, { status: 404 });
 
+  const purpose = parsed.data.purpose ?? "board";
   const outcome = await issueDisplayToken(db, {
     shopId: shop.id,
     personId: owner.id,
     label: parsed.data.label ?? "Lobby TV",
+    purpose,
     showNames: parsed.data.showNames ?? false,
   });
   if (!outcome.ok) return NextResponse.json({ error: outcome.reason }, { status: 400 });
-  return NextResponse.json({ token: outcome.issued.token, path: boardPath(outcome.issued.token) });
+  return NextResponse.json({
+    token: outcome.issued.token,
+    path:
+      purpose === "check_in"
+        ? kioskCheckInPath(outcome.issued.token)
+        : boardPath(outcome.issued.token),
+  });
 }

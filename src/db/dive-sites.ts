@@ -3,6 +3,7 @@ import {
   asc,
   count,
   eq,
+  exists,
   gte,
   ilike,
   inArray,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/dive-site-difficulty";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
+import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
 import {
   type DiveSiteTemplateUndo,
   type DiveSiteTemplateUpdateMode,
@@ -36,6 +38,7 @@ import { type AppDb, type DbExecutor, violatesUniqueIndex } from "./client";
 import { isMarineLifeSlug, type MarineLifeSlug } from "./marine-life-catalog";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import {
+  bookings,
   type DiveSiteFitTone,
   type DiveSpecialty,
   diveSiteCreatures,
@@ -43,6 +46,7 @@ import {
   diveSites,
   globalDiveSites,
   globalDiveSiteVersions,
+  shops,
   tripDives,
   trips,
 } from "./schema";
@@ -330,6 +334,23 @@ export async function diveSiteLibrarySize(db: AppDb, shopId: string) {
   return row?.total ?? 0;
 }
 
+/**
+ * The site a public `/s/<shop>/sites/<segment>` URL names, or null (N-48).
+ *
+ * Scoped to the shop and to live rows, like {@link getDiveSite} beside it: a
+ * deleted site keeps its slug so nothing rewrites history, but its page is
+ * gone, and a segment that belongs to another shop's site is not this shop's
+ * to render.
+ */
+export async function getDiveSiteBySlug(db: AppDb, shopId: string, slug: string) {
+  const [site] = await db
+    .select()
+    .from(diveSites)
+    .where(and(eq(diveSites.slug, slug), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
+    .limit(1);
+  return site ?? null;
+}
+
 export async function getDiveSite(db: AppDb, shopId: string, siteId: string) {
   const [site] = await db
     .select()
@@ -376,11 +397,32 @@ async function refusingNameClash<T>(write: () => Promise<T>): Promise<DiveSiteWr
   }
 }
 
+/**
+ * The site's public URL segment, unique among this shop's live sites.
+ *
+ * Read-then-mint rather than a retry on the index: two sites racing for one
+ * segment needs two *different* names that fold to the same slug, which the
+ * `(shop_id, name)` unique index above already makes vanishingly rare — and
+ * unlike a name clash there is nothing for a staffer to do about it, so it is
+ * resolved here rather than reported (`src/lib/dive-site-slug.ts`).
+ */
+async function availableSiteSlug(db: DbExecutor, shopId: string, name: string): Promise<string> {
+  const rows = await db
+    .select({ slug: diveSites.slug })
+    .from(diveSites)
+    .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)));
+  return diveSiteSlugFrom(
+    name,
+    rows.map((row) => row.slug),
+  );
+}
+
 export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
   const [site] = await db
     .insert(diveSites)
     .values({
       ...input,
+      slug: await availableSiteSlug(db, input.shopId, input.name),
       description: input.description || null,
       locationName: input.locationName || null,
       forecastLatitude: input.forecastLatitude ?? null,
@@ -1216,6 +1258,95 @@ export async function listUpcomingTripsForSite(
   return rows;
 }
 
+/**
+ * A departure a diver can still buy a seat on, as the public site page lists it.
+ *
+ * The staff twin above ({@link listUpcomingTripsForSite}) answers "what is on
+ * the books here" and is right to include a private charter; this one is read
+ * by a stranger, so it wears the same scope the storefront's own schedule
+ * does — live, scheduled, **not private**, inside the hour's late-arrival
+ * buffer — and counts live bookings so the page can say how much room is left.
+ *
+ * The site match is an `exists` over `trip_dives` rather than a join, because a
+ * two-tank day on one mooring names the site twice and a join would both
+ * duplicate the row and multiply the seat count by two.
+ */
+export type UpcomingSiteDeparture = {
+  id: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  capacity: number;
+  booked: number;
+};
+
+export async function listUpcomingDeparturesForSite(
+  db: AppDb,
+  shopId: string,
+  diveSiteId: string,
+  now: Date = nowDate(),
+): Promise<UpcomingSiteDeparture[]> {
+  const rows = await db
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      capacity: trips.capacity,
+      booked: count(bookings.id),
+    })
+    .from(trips)
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        eq(trips.isPrivate, false),
+        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(tripDives)
+            .where(and(eq(tripDives.tripId, trips.id), eq(tripDives.diveSiteId, diveSiteId))),
+        ),
+      ),
+    )
+    .groupBy(trips.id)
+    .orderBy(asc(trips.startsAt));
+  return rows;
+}
+
+/**
+ * Every public dive-site page the sitemap may name — the shop's slug and the
+ * site's, for a listed, non-demo shop.
+ *
+ * The same opt-out `listActiveCoursesForSitemap` honours (ADR
+ * 20260813-search-listing-is-a-choice): a shop that asked not to be listed
+ * keeps its pages — a shared link still works — but they leave the sitemap.
+ *
+ * There is no "published" flag to filter on and none is invented here: a row
+ * in a shop's library is a real place that shop takes divers, which is what
+ * the page is about. A site nobody has written a word about still carries its
+ * name, its depth and the departures going there, which is more than the shop
+ * publishes about it anywhere else.
+ */
+export async function listDiveSitesForSitemap(
+  db: AppDb,
+): Promise<{ shopSlug: string; siteSlug: string }[]> {
+  return db
+    .select({ shopSlug: shops.slug, siteSlug: diveSites.slug })
+    .from(diveSites)
+    .innerJoin(shops, eq(shops.id, diveSites.shopId))
+    .where(
+      and(
+        isNull(diveSites.deletedAt),
+        eq(shops.isDemo, false),
+        isNull(shops.searchListingOptOutAt),
+      ),
+    );
+}
+
 export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, templateId: string) {
   const [row] = await db
     .select({ template: globalDiveSites, version: globalDiveSiteVersions })
@@ -1239,13 +1370,18 @@ export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, te
   // free text there, so it is narrowed rather than ignored — every value any
   // template ever carried is one of the three codes.
   const { creatureSlugs, difficulty, difficultyLevel, ...columns } = briefing;
+  // Resolved once: the slug is minted from the *deconflicted* name, so an
+  // imported "Molasses Reef 2" is `molasses-reef-2` rather than colliding with
+  // the site the shop already holds under that URL.
+  const name = await availableSiteName(db, shopId, briefing.name);
   const [site] = await db
     .insert(diveSites)
     .values({
       shopId,
       ...columns,
       difficultyLevel: difficultyLevel ?? parseDiveSiteDifficulty(difficulty),
-      name: await availableSiteName(db, shopId, briefing.name),
+      name,
+      slug: await availableSiteSlug(db, shopId, name),
       sourceTemplateId: row.template.id,
       sourceTemplateVersion: row.version.version,
       imageUrls: briefing.imageUrls ?? [],

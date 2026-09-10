@@ -570,10 +570,10 @@ Round 4 (2026-09-10, after the owner's read of round 3 — "evaluate the entire 
 different angles; show me a few interesting possibilities; elegant; wow in marketing and in-app")
 reads the app by twelve angles instead of by surface and draws seven possibilities, T–Z, on the
 kit, each with a marketing frame that is a screenshot of its in-app frame. The ADR's decision 6
-records it; the owner's calls are H-71 (i)–(o). **Building since 2026-09-10** on the owner's read
-of round 4 (all seven at once): one stack of seven pull requests, bottom first — 20n #1626, 20o
-#1627, 20p #1629, 20t #1630, 20s #1631, 20r #1633, 20q #1634 — each built on the recommendation
-recorded beside its call, which the owner's review of the pull request confirms or overturns.
+records it; the owner's calls are H-71 (i)–(o). **Shipped 2026-09-10** on the owner's read of
+round 4 (all seven at once) as one stack of seven pull requests, merged bottom first the same day —
+20n #1626, 20o #1627, 20p #1629, 20t #1630, 20s #1631, 20r #1633, 20q #1634 — each built on the
+recommendation recorded beside its call. What each landed in is the canvas README's slice table.
 
 - **20n** — U, follow the boat: the pass's "Share with whoever is waiting for you", a public route
   per boat per day carrying the trip's line with the crew's stage word and its time only, the

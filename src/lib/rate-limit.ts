@@ -381,6 +381,19 @@ export const RATE_LIMITS = {
    * (ADR 20260724-per-visitor-demo-shops).
    */
   demoCreate: perHour(10),
+  /**
+   * Lookups at a self check-in kiosk, per display link (N-24).
+   *
+   * The tablet stands unattended in a lobby, so what this bounds is somebody
+   * standing in front of it typing surnames to see which ones come back with a
+   * first name. Generous enough that a real morning never meets it — a
+   * twelve-diver boat is twelve taps, and a mistyped name is a thirteenth —
+   * and low enough that working through a name list is not a thing anybody can
+   * do in an afternoon. Keyed on the token rather than the IP: every tap comes
+   * from the same tablet on the same network, so an IP key would bound the
+   * whole lobby as one caller.
+   */
+  kioskLookup: perHour(120),
   /** Credentials sign-in attempts, per IP — the wider net. */
   signInByIp: per15Min(20),
   /** Credentials sign-in attempts, per attempted email — the narrow net. */

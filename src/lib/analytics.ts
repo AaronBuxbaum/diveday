@@ -186,6 +186,21 @@ export type AnalyticsEvent =
       /** Staff opened the complete trip packet from the Overview tab. */
       name: "trip_print_pdf_clicked";
       surface: "trip_overview";
+    }
+  | {
+      /**
+       * Staff opened the paper day — every departure of today as one document
+       * (issue #1599). Counted where the per-trip packet is counted, because
+       * the broader of the two was the one nothing measured.
+       *
+       * `departures` is how many sheets the document actually held. It is a
+       * size, not an identity: no trip id, no diver, nothing that says which
+       * boats they were. What it answers is the question the ceiling on that
+       * page was set from — how big a day a shop really prints.
+       */
+      name: "day_print_opened";
+      surface: "day_spine";
+      departures: number;
     };
 
 type EventProps = Record<string, string | number | boolean | null>;

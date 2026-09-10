@@ -27,6 +27,7 @@ describe("issueDisplayToken", () => {
       shopId: shop.id,
       personId,
       label: "Lobby TV",
+      purpose: "board",
       showNames: false,
     });
     if (!outcome.ok) throw new Error(outcome.reason);
@@ -53,6 +54,7 @@ describe("issueDisplayToken", () => {
       shopId: shop.id,
       personId: manager.person.id,
       label: "Dock B",
+      purpose: "board",
       showNames: true,
     });
     expect(byManager.ok).toBe(true);
@@ -61,6 +63,7 @@ describe("issueDisplayToken", () => {
       shopId: shop.id,
       personId: crew.person.id,
       label: "Dock B",
+      purpose: "board",
       showNames: true,
     });
     expect(byCrew).toEqual({ ok: false, reason: "not_authorized" });
@@ -69,7 +72,13 @@ describe("issueDisplayToken", () => {
   it("refuses a blank label before touching the database", async () => {
     const { db, shop, personId } = await staffWithRole("owner");
     expect(
-      await issueDisplayToken(db, { shopId: shop.id, personId, label: "   ", showNames: false }),
+      await issueDisplayToken(db, {
+        shopId: shop.id,
+        personId,
+        label: "   ",
+        purpose: "board",
+        showNames: false,
+      }),
     ).toEqual({ ok: false, reason: "invalid_label" });
     expect(await listDisplayTokens(db, { shopId: shop.id })).toEqual([]);
   });
@@ -82,18 +91,70 @@ describe("verifyDisplayToken", () => {
       shopId: shop.id,
       personId,
       label: "Lobby TV",
+      purpose: "board",
       showNames: true,
     });
     if (!outcome.ok) throw new Error(outcome.reason);
 
-    const context = await verifyDisplayToken(db, { token: outcome.issued.token });
+    const context = await verifyDisplayToken(db, { token: outcome.issued.token, purpose: "board" });
     expect(context).toEqual({ id: outcome.issued.id, shopId: shop.id, showNames: true });
     expect(Object.keys(context ?? {}).sort()).toEqual(["id", "shopId", "showNames"]);
   });
 
   it("answers an unknown token with null", async () => {
     const { db } = await staffWithRole("owner");
-    expect(await verifyDisplayToken(db, { token: "not-a-real-token" })).toBeNull();
+    expect(
+      await verifyDisplayToken(db, { token: "not-a-real-token", purpose: "board" }),
+    ).toBeNull();
+  });
+
+  /**
+   * **A board link is not a kiosk link, and the refusal is the same one an
+   * unknown token gets** (N-24).
+   *
+   * This is the whole reason `purpose` is a column rather than a convention. A
+   * shop hands the board's URL to whoever mounts a TV; the kiosk's URL opens a
+   * surface that *writes*, recording an arrival against a real booking. If one
+   * opened the other, mounting a TV would be granting a write.
+   *
+   * Matched inside the predicate, so `null` comes back for a live token of the
+   * wrong purpose exactly as it does for a token that was never ours — a holder
+   * cannot use the difference to learn that their link is real.
+   */
+  it("refuses a live token minted for the other purpose, in both directions", async () => {
+    const { db, shop, personId } = await staffWithRole("owner");
+    const board = await issueDisplayToken(db, {
+      shopId: shop.id,
+      personId,
+      label: "Lobby TV",
+      purpose: "board",
+      showNames: false,
+    });
+    const kiosk = await issueDisplayToken(db, {
+      shopId: shop.id,
+      personId,
+      label: "Counter tablet",
+      purpose: "check_in",
+      showNames: false,
+    });
+    if (!board.ok || !kiosk.ok) throw new Error("seeding the two links failed");
+
+    expect(
+      await verifyDisplayToken(db, { token: board.issued.token, purpose: "check_in" }),
+    ).toBeNull();
+    expect(
+      await verifyDisplayToken(db, { token: kiosk.issued.token, purpose: "board" }),
+    ).toBeNull();
+    // Both are live; it is only the crossing that is refused.
+    expect(
+      await verifyDisplayToken(db, { token: board.issued.token, purpose: "board" }),
+    ).not.toBeNull();
+    expect(
+      await verifyDisplayToken(db, { token: kiosk.issued.token, purpose: "check_in" }),
+    ).not.toBeNull();
+    // And the list reports which is which, so the settings page can say so.
+    const listed = await listDisplayTokens(db, { shopId: shop.id });
+    expect(listed.map((row) => row.purpose).sort()).toEqual(["board", "check_in"]);
   });
 });
 
@@ -104,6 +165,7 @@ describe("revokeDisplayToken", () => {
       shopId: shop.id,
       personId,
       label: "Lobby TV",
+      purpose: "board",
       showNames: false,
     });
     if (!outcome.ok) throw new Error(outcome.reason);
@@ -111,7 +173,9 @@ describe("revokeDisplayToken", () => {
     expect(await revokeDisplayToken(db, { shopId: shop.id, personId, id: outcome.issued.id })).toBe(
       true,
     );
-    expect(await verifyDisplayToken(db, { token: outcome.issued.token })).toBeNull();
+    expect(
+      await verifyDisplayToken(db, { token: outcome.issued.token, purpose: "board" }),
+    ).toBeNull();
     expect(await listDisplayTokens(db, { shopId: shop.id })).toEqual([]);
     // Soft: the row is still there, stamped.
     const [row] = await db
@@ -130,6 +194,7 @@ describe("revokeDisplayToken", () => {
       shopId: shop.id,
       personId,
       label: "Lobby TV",
+      purpose: "board",
       showNames: false,
     });
     if (!outcome.ok) throw new Error(outcome.reason);
@@ -141,7 +206,9 @@ describe("revokeDisplayToken", () => {
         id: outcome.issued.id,
       }),
     ).toBe(false);
-    expect(await verifyDisplayToken(db, { token: outcome.issued.token })).not.toBeNull();
+    expect(
+      await verifyDisplayToken(db, { token: outcome.issued.token, purpose: "board" }),
+    ).not.toBeNull();
   });
 
   it("refuses a crew member, who could otherwise darken the lobby screen", async () => {
@@ -154,6 +221,7 @@ describe("revokeDisplayToken", () => {
       shopId: shop.id,
       personId,
       label: "Lobby TV",
+      purpose: "board",
       showNames: false,
     });
     if (!outcome.ok) throw new Error(outcome.reason);
@@ -167,7 +235,9 @@ describe("revokeDisplayToken", () => {
         id: outcome.issued.id,
       }),
     ).toBe(false);
-    expect(await verifyDisplayToken(db, { token: outcome.issued.token })).not.toBeNull();
+    expect(
+      await verifyDisplayToken(db, { token: outcome.issued.token, purpose: "board" }),
+    ).not.toBeNull();
   });
 });
 
@@ -178,6 +248,7 @@ describe("listDisplayTokens and touchDisplayToken", () => {
       shopId: shop.id,
       personId,
       label: "Lobby TV",
+      purpose: "board",
       showNames: false,
       now: new Date("2026-07-20T10:00:00.000Z"),
     });
@@ -185,6 +256,7 @@ describe("listDisplayTokens and touchDisplayToken", () => {
       shopId: shop.id,
       personId,
       label: "Dock B tablet",
+      purpose: "board",
       showNames: true,
       now: new Date("2026-07-21T10:00:00.000Z"),
     });

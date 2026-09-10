@@ -440,7 +440,8 @@
         "waiver_document": "Waiver document",
         "dive_site_photo": "Dive-site photo",
         "shop_logo": "Shop logo",
-        "shop_hero": "Shop cover photo"
+        "shop_hero": "Shop cover photo",
+        "payment_receipt": "Imported receipt"
       },
       "mediaDeletions": {
         "sectionLabel": "Photos that didn't finish deleting",
