@@ -92,8 +92,11 @@ test("a diver opens their shelf, is greeted on the storefront, and forgets the p
   await expect(yours).toBeVisible();
   await expect(yours.getByRole("button", { name: "Your shelf" })).toBeVisible();
 
-  // **Forget this phone** clears the greeting and nothing else.
-  await page.goto(shelfHref);
+  // **Forget this phone** clears the greeting and nothing else. This visit
+  // remembers the phone again on mount, so wait for that to land before
+  // forgetting: on a loaded shard the forget can finish first, and the
+  // remember then puts the cookie straight back.
+  await visitShelf(page, shelfHref);
   await page.getByRole("button", { name: "Forget this phone" }).click();
   await page.waitForURL(/forgot=1/);
   await expect(page.getByText("Forgotten.")).toBeVisible();

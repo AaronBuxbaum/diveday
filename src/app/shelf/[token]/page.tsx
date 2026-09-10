@@ -113,7 +113,14 @@ export default async function DiverShelfPage({
   return (
     <>
       <BrandStyle brandColor={data.shop.brandColor} brandDisplayFont={data.shop.brandDisplayFont} />
-      <RememberShelf remember={rememberShelfAction.bind(null, token)} />
+      {/* Only a plain open remembers the phone. The saves and the forget
+          come back to this page through a redirect carrying a one-shot param,
+          and that render mounts this component afresh — so without the gate a
+          saved size counted as a second open, and "Forget this phone" was
+          undone by the very render that said "Forgotten." */}
+      {saved || error || forgot ? null : (
+        <RememberShelf remember={rememberShelfAction.bind(null, token)} />
+      )}
       <ThreadShell shopName={data.shop.name} title={t("shelf.title")}>
         <div className="space-y-10">
           <ReasonsToComeBack data={data} t={t} locale={locale} now={now} token={token} />
