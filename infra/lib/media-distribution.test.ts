@@ -282,13 +282,23 @@ describe("media distribution", () => {
       | undefined;
     expect(media, "no response headers policy for the media behaviours").toBeDefined();
     const config = media?.Properties.ResponseHeadersPolicyConfig as {
-      SecurityHeadersConfig?: { ContentTypeOptions?: { Override: boolean } };
+      SecurityHeadersConfig?: {
+        ContentTypeOptions?: { Override: boolean };
+        ContentSecurityPolicy?: { ContentSecurityPolicy: string; Override: boolean };
+      };
       CustomHeadersConfig?: { Items: Array<{ Header: string; Value: string }> };
       CorsConfig?: { AccessControlAllowOrigins: { Items: string[] } };
     };
     expect(config.SecurityHeadersConfig?.ContentTypeOptions?.Override).toBe(true);
-    expect(config.CustomHeadersConfig?.Items).toContainEqual(
-      expect.objectContaining({ Header: "Content-Security-Policy", Value: "sandbox" }),
+    // In `SecurityHeadersConfig`, never `CustomHeadersConfig`: CloudFront
+    // rejects the whole policy if a security header is set as a custom one,
+    // and the deploy fails with `InvalidRequest`.
+    expect(config.SecurityHeadersConfig?.ContentSecurityPolicy).toEqual({
+      ContentSecurityPolicy: "sandbox",
+      Override: true,
+    });
+    expect(config.CustomHeadersConfig?.Items?.map((item) => item.Header) ?? []).not.toContain(
+      "Content-Security-Policy",
     );
     // And the allow-all CORS the managed policy provided is still provided:
     // media is read from pages and canvases that are not this origin.
