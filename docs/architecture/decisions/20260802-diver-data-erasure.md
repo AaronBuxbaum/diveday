@@ -210,7 +210,7 @@ name someone asked to have forgotten — but it is a line, not the log.
 
 ### Fuzzy predicates are logged
 
-Four sweeps match on something other than a foreign key and can therefore reach a third party's row
+Several sweeps match on something other than a foreign key and can therefore reach a third party's row
 in the same shop. None is cross-tenant and all are owner-gated, so this is a visibility problem, not
 a containment one: each logs `anonymize.fuzzy_match` with its predicate name and the number of rows
 it reached (ids and counts only — never the matched name, address or number), and each runs *after*
@@ -223,6 +223,8 @@ the exact sweep it sits beside so the count is the over-reach in isolation.
 | `send_queue_recipient` | a live person's queued mail, when a soft-deleted duplicate shares their address — `people_shop_email_unique` is partial on *live* rows, so the duplicate is legitimate |
 | `booking_checkout_sole_occupant` | the address of someone who booked a seat purely on the erased diver's behalf |
 | `form_draft_address` | a staff member's unfinished form about a *different* person who shares the address — the same soft-deleted-duplicate case as the send queue, and the draft is lost rather than redacted |
+| `form_draft_phone` | the same, on a household number — the over-reach `course_inquiry_phone` already accepts. Reached for because `people.email` is nullable and a phone-only walk-in's draft would otherwise survive |
+| `form_draft_name` | the same, on a namesake. Anchored on word boundaries and refused below three word characters, like every other name match here. It is what makes the draft sweep unconditional, since `people.full_name` is NOT NULL |
 | `last_minute_recipient_address` | an unmerged duplicate person's record of a deal sent to the shared address; the row survives, only the address is replaced |
 
 `course_inquiry_phone` is deliberately **not** tightened to "…and the inquiry carries no email":

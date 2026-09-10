@@ -29,6 +29,7 @@ import {
   priorGearAssignments,
   recapPulses,
   rollCallEvents,
+  shops,
   tips,
   tripInvitations,
   tripLastMinutePromoRecipients,
@@ -1107,5 +1108,109 @@ describe("anonymizeDiver — a deal sent to an unmerged duplicate (issue #1622)"
     expect(rows.map((row) => row.email)).not.toContain(shared);
     // Redacted per row, so two erased people never collapse into one value.
     expect(new Set(rows.map((row) => row.email)).size).toBe(2);
+  });
+});
+
+/**
+ * **The draft sweep must not depend on the diver having an address.**
+ *
+ * `people.email` is nullable — a phone-only walk-in is an ordinary record — and
+ * the first cut of this sweep ran only under `if (ctx.email)`. Their draft
+ * survived the erasure while `erasure-coverage.test.ts` read green, because the
+ * static sweep sees the `delete` statement and not the `if` above it. A
+ * `security-reviewer` pass caught it; this is the case that would have.
+ */
+describe("anonymizeDiver — a draft about a diver with no address (issue #1620)", () => {
+  it("reaches it by phone, and by name when there is no phone either", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    const [byPhone] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Ingrid Solberg", phone: "+47 900 55 019" })
+      .returning({ id: people.id });
+    const [byName] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Kwabena Osei-Bonsu" })
+      .returning({ id: people.id });
+    if (!byPhone || !byName) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values([
+      { personId: byPhone.id, role: "diver" },
+      { personId: byName.id, role: "diver" },
+    ]);
+    expect((await db.select().from(people).where(eq(people.id, byPhone.id)))[0]?.email).toBeNull();
+
+    await db.insert(formDrafts).values([
+      {
+        shopId: shop.id,
+        personId: owner.id,
+        form: "new_diver",
+        fields: { fullName: "Ingrid Solberg", phone: "+47 900 55 019" },
+      },
+      {
+        shopId: shop.id,
+        personId: owner.id,
+        form: "took_a_call",
+        fields: { fullName: "Kwabena Osei-Bonsu", reply: "call back after the weekend" },
+      },
+    ]);
+
+    for (const person of [byPhone, byName]) {
+      const erased = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: person.id,
+        actorPersonId: owner.id,
+      });
+      expect(erased.ok).toBe(true);
+    }
+
+    expect(await db.select().from(formDrafts).where(eq(formDrafts.shopId, shop.id))).toEqual([]);
+  });
+});
+
+/**
+ * **Neither address sweep may cross a tenant**, and an address is exactly the
+ * value that legitimately exists in two shops at once — the same diver on the
+ * same coast. Both statements carry `shop_id` today; nothing pinned it, so
+ * deleting either clause left every test in this file green while one owner's
+ * erasure reached into another shop's rows. A `security-reviewer` pass named
+ * that as the highest-consequence one-line regression these sweeps make
+ * available.
+ */
+describe("anonymizeDiver — the address sweeps stop at the shop boundary", () => {
+  it("leaves another shop's draft and recipient row alone", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    const shared = "nadia@example.com";
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-boundary", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!other) throw new Error("fixture insert failed");
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Nadia Haddad", email: shared })
+      .returning({ id: people.id });
+    const [elsewhere] = await db
+      .insert(people)
+      .values({ shopId: other.id, fullName: "Nadia Haddad", email: shared })
+      .returning({ id: people.id });
+    if (!diver || !elsewhere) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
+
+    await db.insert(formDrafts).values({
+      shopId: other.id,
+      personId: elsewhere.id,
+      form: "new_diver",
+      fields: { fullName: "Nadia Haddad", email: shared },
+    });
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: owner.id,
+    });
+    expect(erased.ok).toBe(true);
+
+    const theirs = await db.select().from(formDrafts).where(eq(formDrafts.shopId, other.id));
+    expect(theirs).toHaveLength(1);
+    expect(theirs[0]?.fields.email).toBe(shared);
   });
 });

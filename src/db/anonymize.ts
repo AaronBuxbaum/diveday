@@ -48,7 +48,7 @@
  * outcome available, so it either all lands or none of it does.
  */
 
-import { and, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -265,11 +265,13 @@ function buddyMemberNameMatch(fullName: string): string | undefined {
 /**
  * Record that a predicate which cannot be tied to a `person_id` matched rows.
  *
- * Four of the sweeps below are matched on something other than a foreign key —
- * the name match above, a shared household phone number on a course inquiry, an
- * address in the send queue that a soft-deleted duplicate person can
- * legitimately share with a live one, and the address on a checkout that covers
- * only this diver's seats but may have been submitted by whoever booked them.
+ * Several sweeps below are matched on something other than a foreign key — a
+ * name, a shared household phone number, or an address a soft-deleted duplicate
+ * person can legitimately share with a live one. The count is deliberately not
+ * written here: it read "four" while the file had twelve of them, because every
+ * change that added one updated its own block and not this paragraph. The call
+ * sites are the register; this docblock is the reason they exist.
+ *
  * Each can therefore reach a third party's row in the same shop. None of them is
  * cross-tenant and all of them are owner-gated, so this is about visibility,
  * not containment: an owner who erases a diver and later finds a bystander's
@@ -1741,31 +1743,67 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // prune runs **weekly** against that one-day cutoff (`30 3 * * 0`). So a draft
   // could outlive an erasure by five more days (issue #1620).
   //
-  // Deleted rather than redacted, which is the send queue's answer to the same
-  // question two blocks up: a work queue is not evidence, and a half-typed form
-  // with the identity taken out of it helps nobody — the staffer's draft was
-  // *about* this person.
+  // Deleted rather than redacted. A draft is one person's unfinished work about
+  // one subject: clearing the field that matched would leave the other three
+  // standing, because only the address field ever equals the address. The row
+  // is the unit that is about somebody, so the row is the unit that goes.
   //
-  // Matched on the address only. A name would need the word-boundary anchoring
-  // and minimum length `buddyMemberNameMatch` applies and would still reach a
-  // namesake's draft, and a phone is shared across a household — the reasoning
-  // `course_inquiries` records below. Counted through `logFuzzyMatch` because,
-  // like every other address predicate here, a soft-deleted duplicate person
-  // can legitimately share it.
+  // **All three handles, not just the address.** The first cut of this ran only
+  // when `ctx.email` was non-null, and `people.email` is nullable — so a
+  // phone-only walk-in's draft survived the erasure entirely while the coverage
+  // guard read green, because that guard sees the `delete` statement and not the
+  // `if` above it. A `security-reviewer` pass caught it. The name handle is what
+  // makes the sweep unconditional: `people.full_name` is NOT NULL.
+  //
+  // Each handle costs the over-reach it always costs here, and each is counted
+  // separately so an owner can see which one fired: a household shares a phone
+  // (the reasoning `course_inquiries` records below), and a name reaches a
+  // namesake — which is why it goes through `buddyMemberNameMatch`, anchored on
+  // word boundaries and refused below three word characters.
+  const draftHandles: { predicate: string; match: SQL }[] = [];
   if (ctx.email) {
-    const droppedDrafts = await tx
+    draftHandles.push({
+      predicate: "form_draft_address",
+      match: sql`lower(field.value) = ${ctx.email.toLowerCase()}`,
+    });
+  }
+  if (ctx.phone) {
+    draftHandles.push({
+      predicate: "form_draft_phone",
+      match: sql`field.value = ${ctx.phone}`,
+    });
+  }
+  const draftNameMatch = buddyMemberNameMatch(ctx.fullName);
+  if (draftNameMatch) {
+    draftHandles.push({
+      predicate: "form_draft_name",
+      match: sql`field.value ~* ${draftNameMatch}`,
+    });
+  }
+  for (const handle of draftHandles) {
+    const dropped = await tx
       .delete(formDrafts)
       .where(
         and(
           eq(formDrafts.shopId, shopId),
+          // `jsonb_typeof` is inside the function argument rather than beside
+          // it: Postgres does not promise to evaluate `and` left to right, so a
+          // sibling guard would not stop `jsonb_each_text` being handed a
+          // non-object — and that raises inside the one transaction the whole
+          // erasure runs in, which would refuse every erasure this shop ever
+          // asks for. Unreachable today (`draftableFields` only ever builds a
+          // string record) and cheap to make unreachable by construction.
           sql`exists (
-            select 1 from jsonb_each_text(${formDrafts.fields}) as field(name, value)
-            where lower(field.value) = ${ctx.email.toLowerCase()}
+            select 1 from jsonb_each_text(
+              case when jsonb_typeof(${formDrafts.fields}) = 'object'
+                then ${formDrafts.fields} else '{}'::jsonb end
+            ) as field(name, value)
+            where ${handle.match}
           )`,
         ),
       )
       .returning({ id: formDrafts.id });
-    logFuzzyMatch(ctx, "form_draft_address", droppedDrafts.length);
+    logFuzzyMatch(ctx, handle.predicate, dropped.length);
   }
 
   // --- course inquiries ----------------------------------------------------
