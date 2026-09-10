@@ -44,3 +44,33 @@ export function nightSkyLine(
     ? t("trip.sky.nightLineNoDusk", values)
     : t("trip.sky.nightLine", { ...values, dusk: times.dusk });
 }
+
+/**
+ * **The one line a daylight departure carries about the sky**: when the light
+ * arrives and when it goes.
+ *
+ * The daytime twin of `nightSkyLine`, and the reason the night line does not
+ * simply grow a sunrise: a diver reading a 7:00 AM two-tank wants the two ends
+ * of the day, and one reading a 7:30 PM night charter wants the dark and the
+ * moon. Neither wants the other's half.
+ *
+ * The caller supplies the two already-formatted clock times, because a rendered
+ * time names the zone and locale it is rendered in and only the surface knows
+ * both. A day at a latitude and season with no sunrise or no sunset has no line
+ * at all — the caller passes nothing rather than a blank.
+ */
+export function daySkyLine(t: DiverTranslator, times: { sunrise: string; sunset: string }): string {
+  return t("trip.sky.dayLine", times);
+}
+
+/**
+ * When the moon comes up, as a sentence of its own.
+ *
+ * Separate from `nightSkyLine` rather than folded into it, because the moon
+ * rises on its own schedule: roughly one local day a month has no moonrise at
+ * all, and a message with an optional half is a message every locale has to
+ * punctuate around. Two sentences, and the second one is simply absent.
+ */
+export function moonriseLine(t: DiverTranslator, moonrise: string): string {
+  return t("trip.sky.moonrise", { moonrise });
+}

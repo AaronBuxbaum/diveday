@@ -1,16 +1,25 @@
-import { utcToWallTime, wallTimeToUtc } from "./zoned";
+import {
+  CIVIL_TWILIGHT_ALTITUDE,
+  type MoonPhase,
+  moonAppearance,
+  type SkyPlace,
+  SUN_HORIZON_ALTITUDE,
+  solarDayNumber,
+  solarEventsOn,
+} from "./sun-moon";
 
 /**
  * **How dark it will be, and what light the moon leaves.**
  *
  * A night departure is the one kind of dive where the sky is an operational
  * fact: a diver deciding whether to bring a backup torch, a shop deciding how
- * long the surface interval can run in usable light. Every number here is
- * computed from the shop's own coordinates and a calendar date, with no network
- * call and no dependency — the standard low-precision solar and lunar series,
- * which land sunset and civil dusk inside a minute and the moon's illuminated
- * fraction inside a percentage point or two. A dive briefing needs far less
- * than that.
+ * long the surface interval can run in usable light.
+ *
+ * The arithmetic is not here. `src/lib/sun-moon.ts` is the almanac — the solar
+ * and lunar series, computed from coordinates and a date with no network call
+ * and no dependency — and this file is the one composition that asks it only
+ * about a departure that dives after dark. The two used to carry the same
+ * series twice.
  *
  * **It informs and gates nothing.** Nothing in `src/lib/trip-admission.ts` or
  * `src/lib/readiness.ts` reads this file; a departure whose shop has never set
@@ -21,124 +30,9 @@ import { utcToWallTime, wallTimeToUtc } from "./zoned";
  * eight codes and becomes a word in `src/i18n/sky-labels.ts`.
  */
 
-/**
- * The eight phases, new moon first and running forwards through the month —
- * the order the moon actually walks them, so a reader scanning the list sees
- * the cycle rather than an alphabet.
- */
-export const MOON_PHASES = [
-  "new",
-  "waxingCrescent",
-  "firstQuarter",
-  "waxingGibbous",
-  "full",
-  "waningGibbous",
-  "lastQuarter",
-  "waningCrescent",
-] as const;
+export { MOON_PHASES, type MoonPhase, moonAppearance, type SkyPlace } from "./sun-moon";
 
-export type MoonPhase = (typeof MOON_PHASES)[number];
-
-/** Where the shop is, in signed degrees. */
-export type SkyPlace = { latitude: number; longitude: number };
-
-const DEG = Math.PI / 180;
 const MS_PER_DAY = 86_400_000;
-/** Julian day of 2000-01-01 12:00 UT — the epoch every series below counts from. */
-const J2000 = 2_451_545.0;
-/** Julian day at the Unix epoch, so an instant converts with one multiply. */
-const UNIX_EPOCH_JD = 2_440_587.5;
-/** Earth's obliquity, degrees. */
-const OBLIQUITY = 23.4397;
-/**
- * The sun's altitude at the moment it "sets": half a degree of solar disc plus
- * about 34 arcminutes of atmospheric refraction, which is the convention every
- * published sunset table uses.
- */
-const SUNSET_ALTITUDE = -0.833;
-/** Civil twilight ends when the sun's centre reaches six degrees below the horizon. */
-const CIVIL_DUSK_ALTITUDE = -6;
-
-function julianDay(instant: Date): number {
-  return instant.getTime() / MS_PER_DAY + UNIX_EPOCH_JD;
-}
-
-function instantFromJulianDay(jd: number): Date {
-  return new Date(Math.round((jd - UNIX_EPOCH_JD) * MS_PER_DAY));
-}
-
-/** Degrees folded into [0, 360). */
-function normalizeDegrees(value: number): number {
-  return ((value % 360) + 360) % 360;
-}
-
-/**
- * When the sun sinks past `altitude` on the evening side of one solar day, for
- * one place, or null when it never reaches it — a polar summer where it never
- * sets, a polar winter where it never rises, or a white night where it sets but
- * never falls six degrees under. Null is a real answer: the caller renders
- * nothing rather than a fabricated time.
- *
- * The series is the standard one (the "sunrise equation" in its usual form):
- * mean solar time corrected for longitude, the sun's mean anomaly, the equation
- * of the centre, then the hour angle at the wanted altitude. `dayNumber` counts
- * whole days from J2000 and fixes which solar day is being asked about.
- */
-function solarEventAt(dayNumber: number, place: SkyPlace, altitude: number): Date | null {
-  // Mean solar time at this longitude, in days from J2000.
-  const meanSolarTime = dayNumber - place.longitude / 360;
-  const meanAnomaly = normalizeDegrees(357.5291 + 0.98560028 * meanSolarTime);
-  const center =
-    1.9148 * Math.sin(meanAnomaly * DEG) +
-    0.02 * Math.sin(2 * meanAnomaly * DEG) +
-    0.0003 * Math.sin(3 * meanAnomaly * DEG);
-  // Argument of perihelion (102.9372) plus the half-turn that puts the sun
-  // opposite the earth's own ecliptic longitude.
-  const eclipticLongitude = normalizeDegrees(meanAnomaly + center + 180 + 102.9372);
-  const transit =
-    J2000 +
-    meanSolarTime +
-    0.0053 * Math.sin(meanAnomaly * DEG) -
-    0.0069 * Math.sin(2 * eclipticLongitude * DEG);
-  const declination = Math.asin(Math.sin(eclipticLongitude * DEG) * Math.sin(OBLIQUITY * DEG));
-  const cosHourAngle =
-    (Math.sin(altitude * DEG) - Math.sin(place.latitude * DEG) * Math.sin(declination)) /
-    (Math.cos(place.latitude * DEG) * Math.cos(declination));
-  // Outside [-1, 1] the sun never crosses this altitude on this day.
-  if (cosHourAngle < -1 || cosHourAngle > 1) return null;
-  const hourAngle = Math.acos(cosHourAngle) / DEG;
-  return instantFromJulianDay(transit + hourAngle / 360);
-}
-
-/**
- * The moon's phase and illuminated fraction at an instant.
- *
- * Mean elongation names the phase (it walks 0° at new moon to 180° at full and
- * back), and Meeus' low-precision phase-angle series gives the illuminated
- * fraction — the correction terms are what stop a moon three days past full
- * from being reported as half lit.
- */
-export function moonAppearance(at: Date): { phase: MoonPhase; illuminatedFraction: number } {
-  const centuries = (julianDay(at) - J2000) / 36_525;
-  const elongation = normalizeDegrees(297.8501921 + 445_267.1114034 * centuries);
-  const sunAnomaly = normalizeDegrees(357.5291092 + 35_999.0502909 * centuries);
-  const moonAnomaly = normalizeDegrees(134.9633964 + 477_198.8675055 * centuries);
-  const phaseAngle =
-    180 -
-    elongation -
-    6.289 * Math.sin(moonAnomaly * DEG) +
-    2.1 * Math.sin(sunAnomaly * DEG) -
-    1.274 * Math.sin((2 * elongation - moonAnomaly) * DEG) -
-    0.658 * Math.sin(2 * elongation * DEG) -
-    0.214 * Math.sin(2 * moonAnomaly * DEG) -
-    0.11 * Math.sin(elongation * DEG);
-  const illuminatedFraction = (1 + Math.cos(phaseAngle * DEG)) / 2;
-  // Each named phase owns the eighth of the cycle centred on it, so "full moon"
-  // covers the night either side of the exact moment rather than one instant
-  // nobody dives.
-  const eighth = Math.round((elongation / 360) * 8) % 8;
-  return { phase: MOON_PHASES[eighth] as MoonPhase, illuminatedFraction };
-}
 
 /** The sky over one departure, once it is dark enough for any of it to matter. */
 export type NightSky = {
@@ -188,16 +82,10 @@ export function nightSkyFor(input: {
   const { latitude, longitude } = input;
   if (latitude === null || longitude === null) return null;
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-  const place = { latitude, longitude };
+  const place: SkyPlace = { latitude, longitude };
+  const dayNumber = solarDayNumber(input.startsAt, input.timeZone);
 
-  // Local noon of the departure's own day, which is the unambiguous anchor for
-  // "which solar day": a 7:30 PM Florida departure is already tomorrow in UTC,
-  // so anchoring on the instant itself would answer for the wrong day.
-  const wall = utcToWallTime(input.startsAt, input.timeZone);
-  const localNoon = wallTimeToUtc({ ...wall, hour: 12, minute: 0 }, input.timeZone);
-  const dayNumber = Math.round(julianDay(localNoon) - J2000 + 0.0008);
-
-  const sunsetAt = solarEventAt(dayNumber, place, SUNSET_ALTITUDE);
+  const sunsetAt = solarEventsOn(dayNumber, place, SUN_HORIZON_ALTITUDE).setAt;
   if (!sunsetAt) return null;
   const endsAt = input.endsAt ?? null;
   const sameDayEnd =
@@ -208,7 +96,7 @@ export function nightSkyFor(input: {
   const { phase, illuminatedFraction } = moonAppearance(input.startsAt);
   return {
     sunsetAt,
-    civilDuskAt: solarEventAt(dayNumber, place, CIVIL_DUSK_ALTITUDE),
+    civilDuskAt: solarEventsOn(dayNumber, place, CIVIL_TWILIGHT_ALTITUDE).setAt,
     phase,
     illuminatedPercent: Math.round(illuminatedFraction * 100),
   };

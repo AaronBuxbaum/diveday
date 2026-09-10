@@ -296,6 +296,8 @@
     "sky": {
       "nightLine": "Sunset {sunset}, dark by {dusk}. {moon}, {percent}% lit.",
       "nightLineNoDusk": "Sunset {sunset}. {moon}, {percent}% lit.",
+      "dayLine": "Sunrise {sunrise}, sunset {sunset}.",
+      "moonrise": "Moon up at {moonrise}.",
       "moon": {
         "new": "New moon",
         "waxingCrescent": "Waxing crescent",
@@ -306,6 +308,12 @@
         "lastQuarter": "Last quarter",
         "waningCrescent": "Waning crescent"
       }
+    },
+    "seen": {
+      "heading": "Seen here this month",
+      "line": "{species} on {seen} of the last {dives, plural, one {# dive} other {# dives}} here",
+      "lastSeen": "Last seen {date}",
+      "honest": "What the crew logged, and when. It says what was seen, not what you will see."
     },
     "dayProfile": {
       "bottomTime": "Usually {minutes, plural, one {# minute} other {# minutes}} in the water",

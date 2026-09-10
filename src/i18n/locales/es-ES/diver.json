@@ -296,6 +296,8 @@
     "sky": {
       "nightLine": "Puesta de sol a las {sunset}, oscuridad total a las {dusk}. {moon}, con un {percent} % de luz.",
       "nightLineNoDusk": "Puesta de sol a las {sunset}. {moon}, con un {percent} % de luz.",
+      "dayLine": "Amanecer a las {sunrise}, puesta de sol a las {sunset}.",
+      "moonrise": "La luna sale a las {moonrise}.",
       "moon": {
         "new": "Luna nueva",
         "waxingCrescent": "Luna creciente",
@@ -306,6 +308,12 @@
         "lastQuarter": "Cuarto menguante",
         "waningCrescent": "Luna menguante"
       }
+    },
+    "seen": {
+      "heading": "Visto aquí este mes",
+      "line": "{species} en {seen} de las últimas {dives, plural, one {# inmersión} other {# inmersiones}} aquí",
+      "lastSeen": "Visto por última vez el {date}",
+      "honest": "Lo que registró la tripulación, y cuándo. Dice lo que se vio, no lo que verás."
     },
     "dayProfile": {
       "bottomTime": "{minutes, plural, one {Alrededor de # minuto en el agua} other {Alrededor de # minutos en el agua}}",

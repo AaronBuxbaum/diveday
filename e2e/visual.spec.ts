@@ -5829,6 +5829,88 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The Seen group, with something in it** (slice 20r, the living reef).
+       *
+       * The chips themselves ride every after-dive capture above, because they
+       * render at rest. What no existing baseline can reach is the *tally* —
+       * the list under the chips that says the count, which exists only once a
+       * crew has tapped, and which the per-test reset clears again. That list
+       * is the only feedback a tap gets, so it is the half of this surface most
+       * worth pinning.
+       *
+       * Its own test so the write is contained (e2e/fixtures.ts puts it back),
+       * and one tap twice rather than two taps once: the second tap on one chip
+       * is the behaviour a crew relies on and the one a regression would break
+       * silently, by writing a second row that reads as a second turtle.
+       */
+      test(`the manifest's Seen tally renders true to the design (${scheme})`, async ({ page }) => {
+        // Board → trip → Manifest, a checkpoint switch, and two taps.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await offlineCopySaved(page);
+        await page
+          .getByRole("link", { name: "After dive 1" })
+          .evaluate((link: HTMLElement) => link.click());
+        await page.waitForURL(/checkpoint=after_dive_1/);
+        const seen = page.getByRole("region", { name: "Seen" });
+        const chip = seen.getByRole("button", { name: "Southern stingray", exact: true });
+        await chip.evaluate((button) => button.scrollIntoView({ block: "center" }));
+        await chip.click();
+        // Waits on what the write renders, never on the click: the click
+        // resolves when the request leaves, not when the row lands.
+        const tally = seen.getByRole("listitem").filter({ hasText: "Southern stingray" });
+        await expect(tally).toContainText("1");
+        await chip.click();
+        await expect(tally).toContainText("2");
+        await seen.getByRole("button", { name: "Goliath grouper", exact: true }).click();
+        await expect(seen.getByRole("listitem")).toHaveCount(2);
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-seen", scheme);
+      });
+
+      /**
+       * **The same group with the contrast turned up.**
+       *
+       * These are 56px targets a crew taps with one wet hand on a moving deck,
+       * and boat mode is the state they are actually tapped in. A chip row that
+       * reads at desk contrast and disappears in glare is a regression nothing
+       * else here would catch — the thread's own high-contrast capture proves
+       * the same thing for the diver's side (issue #1214).
+       */
+      test(`the Seen group in boat mode renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await offlineCopySaved(page);
+        await page
+          .getByRole("link", { name: "After dive 1" })
+          .evaluate((link: HTMLElement) => link.click());
+        await page.waitForURL(/checkpoint=after_dive_1/);
+        // Every per-device preference rests behind "On this phone" (ADR
+        // 20260827-the-departure-is-two-working-surfaces, decision 2).
+        await openOnThisPhone(page);
+        // The option's own label, which is what a thumb lands on. Not the bare
+        // text — the fieldset's legend reads "Boat mode" too, so that resolves
+        // to two nodes — and not the radio, which is `sr-only` and therefore
+        // never actionable. The thread's high-contrast capture clicks the same
+        // control the same way; only the collision with the legend is new.
+        const boatMode = page.getByRole("group", { name: "Boat mode" });
+        await boatMode.locator("label").filter({ hasText: "Boat mode" }).click();
+        const seen = page.getByRole("region", { name: "Seen" });
+        const chip = seen.getByRole("button", { name: "Southern stingray", exact: true });
+        await chip.evaluate((button) => button.scrollIntoView({ block: "center" }));
+        await chip.click();
+        await expect(
+          seen.getByRole("listitem").filter({ hasText: "Southern stingray" }),
+        ).toContainText("1");
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-seen-boat-mode", scheme);
+      });
+
+      /**
       /**
        * **What one diver arranged, on the surface a crew reads it from.**
        *

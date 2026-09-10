@@ -93,6 +93,7 @@ import {
   tripScheduleDays,
   tripSeries,
   tripSeriesSkips,
+  tripSightings,
   tripStageEvents,
   trips,
   tripWaitlistEntries,
@@ -511,6 +512,19 @@ export async function loadShopExportBundleInput(
         .from(executedDives)
         .where(eq(executedDives.shopId, shopId))
         .orderBy(asc(executedDives.tripId), asc(executedDives.diveNumber));
+
+      // The crew's own tally beside the dive log it sits under. Ordered by
+      // departure then site then species, so a reader walking the file stays
+      // inside one day and one reef.
+      const sightingRows = await tx
+        .select()
+        .from(tripSightings)
+        .where(eq(tripSightings.shopId, shopId))
+        .orderBy(
+          asc(tripSightings.tripId),
+          asc(tripSightings.diveSiteName),
+          asc(tripSightings.speciesSlug),
+        );
 
       // Which seats each of those attempts was paying for. Ordered by checkout
       // then booking so a reader walking the file stays inside one attempt.
@@ -2222,6 +2236,41 @@ export async function loadShopExportBundleInput(
             row.updatedAt,
           ]),
           note: EXPORT_FILE_NOTES["executed_dives.csv"],
+        },
+        {
+          file: "trip_sightings.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "dive_site_id",
+            // The site's name as the crew saw it, snapshotted at the tap: a
+            // shop that renames or deletes a reef still has a legible log.
+            "dive_site_name",
+            // A catalog slug rather than a name, for the reason
+            // executed_dives.csv carries one: the words are DiveDay's copy in
+            // the reader's language and a CSV has no reader to resolve them for.
+            "species_slug",
+            "count",
+            "recorded_by_person_id",
+            "recorded_at",
+            "deleted_at",
+            "updated_at",
+          ],
+          rows: sightingRows.map((row) => [
+            row.id,
+            row.tripId,
+            tripTitle.get(row.tripId),
+            row.diveSiteId,
+            row.diveSiteName,
+            row.speciesSlug,
+            row.count,
+            row.recordedByPersonId,
+            row.recordedAt,
+            row.deletedAt,
+            row.updatedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_sightings.csv"],
         },
         {
           file: "booking_arrival_events.csv",
@@ -4979,6 +5028,9 @@ export async function loadShopExportCounts(
     ),
     "executed_dives.csv": await countOf(
       db.select({ n: count() }).from(executedDives).where(eq(executedDives.shopId, shopId)),
+    ),
+    "trip_sightings.csv": await countOf(
+      db.select({ n: count() }).from(tripSightings).where(eq(tripSightings.shopId, shopId)),
     ),
     "internal_notes.csv": await countOf(
       db.select({ n: count() }).from(internalNotes).where(eq(internalNotes.shopId, shopId)),

@@ -20,6 +20,7 @@ import { getShopReviewAggregate } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripChangeEvents } from "@/db/trip-change-events";
+import { siteSightings } from "@/db/trip-sightings";
 import {
   getTripWithBooked,
   getWaitlistEntryForTrip,
@@ -372,11 +373,14 @@ export default async function TripDetailPage({
     waitlistId ? getWaitlistEntryForTrip(db, shop.id, tripId, waitlistId) : null,
   ]);
   // Two queries for the whole day's briefings, not two per dive.
-  const briefingExtras = await listDiveSiteBriefingExtras(
-    db,
-    shop.id,
-    tripDives.map(({ diveSite }) => diveSite?.id).filter((id): id is string => Boolean(id)),
-  );
+  const siteIds = tripDives
+    .map(({ diveSite }) => diveSite?.id)
+    .filter((id): id is string => Boolean(id));
+  const briefingExtras = await listDiveSiteBriefingExtras(db, shop.id, siteIds);
+  // What the crew has actually logged at those sites this month. Batched over
+  // the whole day for the same reason the briefings are: this is a public page,
+  // and a query per site per departure is how one becomes slow.
+  const seenBySite = await siteSightings(db, shop.id, siteIds);
   const diveBriefings = tripDives.map(({ dive, diveSite }) => ({
     dive,
     diveSite,
@@ -714,6 +718,7 @@ export default async function TripDetailPage({
             stays time-neutral, since durations promise no clock. */}
         <TripDayPlan
           briefings={diveBriefings}
+          sightings={seenBySite}
           shop={shop}
           startsAt={trip.startsAt}
           endsAt={trip.endsAt}

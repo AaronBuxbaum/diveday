@@ -52,6 +52,7 @@ import {
 } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
+import { listTripSightings } from "./trip-sightings";
 import { getTripWithBooked, listTripDives } from "./trips";
 import { tripCrewByTrip } from "./trips-crew";
 import { liveTrip } from "./trips-live";
@@ -566,12 +567,24 @@ export async function getRecapPageData(
 
   // In dive order, first mention wins. A day where both tanks turned up the
   // same turtle says "turtle" once: this is a keepsake line, not a tally.
+  //
+  // **Two places a crew writes a sighting, one line a diver reads.** The dive
+  // log's own species field is one thing a divemaster wrote up beside the depth
+  // and the times; the Seen chips are what the crew tapped at the rail
+  // (`trip_sightings`). They are the same claim made on two surfaces, and a
+  // diver who was in the water for it should not have their day depend on which
+  // one the crew reached for. The log leads because it is per dive and
+  // therefore ordered; the taps follow, most-seen first, and a species already
+  // named is not repeated.
   const observedSpecies: string[] = [];
   for (const { executed } of [...livedDives].sort(
     (a, b) => a.executed.diveNumber - b.executed.diveNumber,
   )) {
     const slug = executed.observedSpeciesSlug;
     if (slug && !observedSpecies.includes(slug)) observedSpecies.push(slug);
+  }
+  for (const tapped of await listTripSightings(db, row.shopId, row.tripId)) {
+    if (!observedSpecies.includes(tapped.speciesSlug)) observedSpecies.push(tapped.speciesSlug);
   }
 
   const diveRecord = compareDiveRecord(

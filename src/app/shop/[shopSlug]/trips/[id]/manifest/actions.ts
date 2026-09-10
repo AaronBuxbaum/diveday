@@ -25,6 +25,7 @@ import {
   savePushSubscription,
 } from "@/db/push-subscriptions";
 import { getShopById } from "@/db/shops";
+import { deleteTripSighting, recordTripSighting } from "@/db/trip-sightings";
 import { recordTripStage } from "@/db/trip-stages";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
@@ -229,6 +230,77 @@ export async function saveExecutedDiveAction(
     recordedByPersonId: staff.user.personId,
   });
   if (!saved.ok) return { status: "error", reason: saved.reason };
+  revalidatePath(manifestPath(ctx));
+  return { status: "ok" };
+}
+
+/**
+ * A species chip, tapped or taken back — the Seen group's two acts.
+ *
+ * The slug is bounded here and **believed nowhere**: `recordTripSighting`
+ * checks it against `MARINE_LIFE_CATALOG` and refuses one the catalog does not
+ * carry, because the slug is the whole record and one with no words to render
+ * would reach a public trip page as punctuation.
+ */
+const sightingSchema = z.object({ speciesSlug: z.string().trim().min(1).max(80) });
+
+/**
+ * What a tap is told when it does not land.
+ *
+ * One error, not a taxonomy. Every refusal `recordTripSighting` can return —
+ * an unknown species, a departure or site that is not this shop's, a recorder
+ * the shop does not have — is either impossible from this surface or a bug, and
+ * none of them is a thing a crew member on a moving deck can act on
+ * differently. What they need to know is that the tap did not count.
+ */
+export type SightingResult = { status: "ok" } | { status: "error" };
+
+/**
+ * The site the taps attach to rides in the bound context rather than in the
+ * form: the crew is looking at one dive's site, and a site id posted from the
+ * client would be a second thing to re-prove on every tap. It is re-proved
+ * against the signed-in shop inside the write regardless.
+ */
+export type SightingActionContext = ManifestActionContext & { diveSiteId: string };
+
+/** One tap on a chip: the first writes the row, every later one adds to it. */
+export async function recordSightingAction(
+  ctx: SightingActionContext,
+  _previous: SightingResult | undefined,
+  formData: FormData,
+): Promise<SightingResult> {
+  const staff = await requireStaffSession();
+  const parsed = sightingSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { status: "error" };
+  const saved = await recordTripSighting(await getDb(), {
+    shopId: staff.user.shopId,
+    tripId: ctx.tripId,
+    diveSiteId: ctx.diveSiteId,
+    speciesSlug: parsed.data.speciesSlug,
+    recordedByPersonId: staff.user.personId,
+  });
+  if (!saved.ok) return { status: "error" };
+  revalidatePath(manifestPath(ctx));
+  return { status: "ok" };
+}
+
+/** A mis-tap, taken back. Soft, so the shop keeps the history. */
+export async function deleteSightingAction(
+  ctx: SightingActionContext,
+  _previous: SightingResult | undefined,
+  formData: FormData,
+): Promise<SightingResult> {
+  const staff = await requireStaffSession();
+  const parsed = sightingSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { status: "error" };
+  const removed = await deleteTripSighting(await getDb(), {
+    shopId: staff.user.shopId,
+    tripId: ctx.tripId,
+    diveSiteId: ctx.diveSiteId,
+    speciesSlug: parsed.data.speciesSlug,
+    deletedByPersonId: staff.user.personId,
+  });
+  if (!removed) return { status: "error" };
   revalidatePath(manifestPath(ctx));
   return { status: "ok" };
 }

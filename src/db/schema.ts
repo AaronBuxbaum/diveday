@@ -9102,3 +9102,80 @@ export const shopPrintRuns = pgTable(
 
 export type ShopPrintRun = typeof shopPrintRuns.$inferSelect;
 export type PrintSheetValue = (typeof printSheet.enumValues)[number];
+
+/**
+ * **What a crew actually saw at a site, tallied** — the living reef.
+ *
+ * `dive_site_creatures` is the shop's standing claim about a reef, and
+ * `executed_dives.observed_species_slug` is one species one crew member wrote
+ * on one dive's record. This is the third thing and the one a diver deciding on
+ * a Saturday can read: the running tally the crew builds by tapping a chip at
+ * the rail, per departure and per site, which adds up over a month into "eagle
+ * ray on 3 of the last 11 dives here".
+ *
+ * **A row is a count, not an event.** One live row per (trip, site, species):
+ * the first tap inserts it at 1, every later tap on the same chip increments
+ * it. Two turtles on one dive is a fact about that dive; a hundred rows saying
+ * "turtle" would be a fact about a thumb. That also makes the write idempotent
+ * enough to survive a double-tap on a wet screen without inventing a school.
+ *
+ * **The site is required and its name is snapshotted.** The public read is per
+ * site — "seen here this month" — so a sighting with no site has no reader, and
+ * the crew's group only appears once the dive has one. The name is copied at
+ * record time so a shop that renames or deletes a site later still has a legible
+ * log; the id is what the monthly read groups by.
+ *
+ * **It informs and gates nothing.** Nothing in `src/lib/readiness.ts` or
+ * `src/lib/trip-admission.ts` reads this table, it sits nowhere near the roll
+ * call's commit path or the manifest's head count, and a shop that never taps a
+ * chip has a product that looks exactly as it did.
+ */
+export const tripSightings = pgTable(
+  "trip_sightings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    diveSiteId: uuid("dive_site_id")
+      .notNull()
+      .references(() => diveSites.id),
+    /** The site's name as it stood when the crew tapped, so a rename never rewrites the log. */
+    diveSiteName: text("dive_site_name").notNull(),
+    /**
+     * A `MARINE_LIFE_CATALOG` slug, refused by `recordTripSighting` when the
+     * catalog does not carry it. Never free text: what a diver reads is
+     * DiveDay's copy in their own language (ADR
+     * 20260813-marine-life-is-diveday-copy), and a slug with no words would
+     * reach a public page as punctuation.
+     */
+    speciesSlug: text("species_slug").notNull(),
+    /** How many the crew tapped for. At least one — a row at zero is a delete. */
+    count: integer("count").notNull().default(1),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    /** When the first tap landed; `updated_at` moves with every later one. */
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // The tally's identity: one live row per species per site per departure, so
+    // a second tap lands on the first one's row rather than beside it.
+    uniqueIndex("trip_sightings_trip_site_species_live_unique")
+      .on(table.tripId, table.diveSiteId, table.speciesSlug)
+      .where(sql`${table.deletedAt} is null`),
+    // The crew's own read: this departure's tally, at a checkpoint.
+    index("trip_sightings_shop_trip_idx").on(table.shopId, table.tripId),
+    // The public read: one site's last month, newest first.
+    index("trip_sightings_site_recorded_idx").on(table.diveSiteId, table.recordedAt),
+    check("trip_sightings_count_positive", sql`${table.count} >= 1`),
+  ],
+);
+
+export type TripSighting = typeof tripSightings.$inferSelect;

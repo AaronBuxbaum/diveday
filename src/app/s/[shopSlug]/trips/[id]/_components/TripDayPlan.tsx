@@ -2,6 +2,8 @@ import { Fragment } from "react";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { isMarineLifeSlug } from "@/db/marine-life-catalog";
+import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
 import { depthText } from "@/i18n/unit-labels";
@@ -12,8 +14,12 @@ import type { DepthUnit } from "@/lib/depth-units";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { type DiveMode, type DockDayRhythm, siteFit } from "@/lib/diver-planning";
+import { formatShortDate } from "@/lib/format";
+import type { SiteSightings } from "@/lib/sightings";
 import { nightSkyFor } from "@/lib/sky";
+import { sunMoonFor } from "@/lib/sun-moon";
 import { type DayCeilingOption, DayCeilingPicker } from "./DayCeilingPicker";
+import { DaySkyLine } from "./DaySkyLine";
 import { NightSkyLine } from "./NightSkyLine";
 import type { DiveBriefing, Shop } from "./types";
 
@@ -74,6 +80,74 @@ function ceilingOptions(
 }
 
 /**
+ * **"Seen here this month"** — the crew's own log, under the site it is about.
+ *
+ * The shop's field guide one beat below says what a reef *may* show a diver and
+ * is the shop's standing claim about a place. This is the other half of that
+ * sentence and the half no dive shop's website has ever carried: how often the
+ * thing has actually turned up lately, with a date on the last one.
+ *
+ * **It is a record, and it says so.** "Seen" is past tense on purpose, every
+ * line is a frequency rather than an expectation, and the closing sentence
+ * states the boundary outright — because a page that prints "turtles on 14 of
+ * the last 16 dives" without it is one glance away from being read as a
+ * promise, and the crew who wrote those rows would be the ones asked about it
+ * on the boat.
+ *
+ * A site whose crew logged nothing this month renders nothing at all. Most
+ * sites, most months, on most shops.
+ */
+function SiteSeen({
+  seen,
+  t,
+  locale,
+  timeZone,
+  className,
+}: {
+  seen: SiteSightings;
+  t: DiverTranslator;
+  locale: string;
+  /** The shop's own zone: "last seen" is a date, and a date names its zone. */
+  timeZone: string;
+  className?: string;
+}) {
+  // A slug the catalog has since retired has no words, and a line of raw slug
+  // is worse than one line fewer — the same rule `fieldGuideCards` follows.
+  const lines = seen.species.flatMap((tally) => {
+    if (!isMarineLifeSlug(tally.speciesSlug)) return [];
+    const card = marineLifeCard(tally.speciesSlug, t);
+    return [
+      {
+        slug: tally.speciesSlug,
+        line: t("trip.seen.line", {
+          species: card.name,
+          seen: tally.dives,
+          dives: seen.dives,
+        }),
+        lastSeen: t("trip.seen.lastSeen", {
+          date: formatShortDate(tally.lastSeenAt, locale, timeZone),
+        }),
+      },
+    ];
+  });
+  if (lines.length === 0) return null;
+  return (
+    <div className={className}>
+      <p className="text-sm font-medium">{t("trip.seen.heading")}</p>
+      <ul className="mt-1 space-y-1">
+        {lines.map((line) => (
+          <li key={line.slug} className="text-sm leading-relaxed">
+            <span className="block">{line.line}</span>
+            <span className="block text-muted">{line.lastSeen}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1 text-sm leading-relaxed text-muted">{t("trip.seen.honest")}</p>
+    </div>
+  );
+}
+
+/**
  * **"The day" and "Look for" — the pitch, in two ledger beats.**
  *
  * ADR 20260827-the-divers-thread, decision 2: the content that answers "is this
@@ -98,6 +172,7 @@ export function TripDayPlan({
   endsAt,
   locale,
   profile,
+  sightings,
 }: {
   briefings: DiveBriefing[];
   /** The shop, for the coordinates and zone the sky line is computed from. */
@@ -113,22 +188,59 @@ export function TripDayPlan({
    * is the run of dives it always was.
    */
   profile?: DayProfileFacts;
+  /**
+   * What each of the day's sites has shown lately, keyed by site id
+   * (`siteSightings`). Absent, or missing a site, renders no beat for it —
+   * which is every shop whose crews have not tapped a chip.
+   */
+  sightings?: ReadonlyMap<string, SiteSightings>;
 }) {
   const t = diverTranslator(locale);
   // The sky belongs to the day, so it rides in this beat rather than opening a
   // section of its own — and a departure with no dive plan at all still gets
   // it, because "sunset is at 7:35" is a fact about the departure, not about
   // the sites nobody has picked yet.
+  //
+  // **The site's own coordinates, falling back to the shop's.** A shop with a
+  // dock in Key Largo runs departures to the Dry Tortugas, and sunset there is
+  // eighteen minutes later — small, and exactly the kind of small that reads as
+  // the product being approximately right rather than right. The first site of
+  // the day that carries a position speaks for the day; a shop that has set
+  // neither its address nor a site's position carries no line at all, which is
+  // the ordinary case for a shop that has done the least setup.
+  const sitePlace = briefings
+    .map(({ diveSite }) => diveSite)
+    .find((site) => site?.forecastLatitude != null && site?.forecastLongitude != null);
+  const latitude = sitePlace?.forecastLatitude ?? shop.latitude;
+  const longitude = sitePlace?.forecastLongitude ?? shop.longitude;
   const nightSky = nightSkyFor({
     startsAt,
     endsAt,
     timeZone: shop.timezone,
-    latitude: shop.latitude,
-    longitude: shop.longitude,
+    latitude,
+    longitude,
   });
-  const sky = <NightSkyLine sky={nightSky} timeZone={shop.timezone} locale={locale} />;
+  const sunMoon = sunMoonFor({ at: startsAt, timeZone: shop.timezone, latitude, longitude });
+  // Two ends of one fact, and a departure is only ever one of them: a day trip
+  // wants the light it has, a night charter wants the dark and the moon it will
+  // dive under. Neither wants the other's half.
+  const sky = nightSky ? (
+    <NightSkyLine
+      sky={nightSky}
+      moonriseAt={sunMoon?.moonriseAt ?? null}
+      timeZone={shop.timezone}
+      locale={locale}
+    />
+  ) : (
+    <DaySkyLine
+      sunriseAt={sunMoon?.sunriseAt ?? null}
+      sunsetAt={sunMoon?.sunsetAt ?? null}
+      timeZone={shop.timezone}
+      locale={locale}
+    />
+  );
   if (briefings.length === 0) {
-    return nightSky ? (
+    return nightSky || sunMoon?.sunriseAt ? (
       <section className="mt-8">
         <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
         {sky}
@@ -161,6 +273,10 @@ export function TripDayPlan({
     ),
   );
   const options = profile ? ceilingOptions(t, rows, profile.depthUnit) : [];
+  // One beat per *site*, not per tank: a two-tank day on one mooring would
+  // otherwise print the same month twice, the way the route and the site prose
+  // used to before they were deduplicated.
+  const seenShown = new Set<string>();
   // A day where nothing is decided yet says so once. Two rows both reading
   // "Site to be confirmed" opened the sparse course session's pitch with the
   // one thing the shop has not decided, stated twice (principle 9; 2026-08-28
@@ -189,6 +305,12 @@ export function TripDayPlan({
           // maximum where it did not. Without the fallback a day could name a
           // depth in the ceiling sentence below that appears nowhere in the
           // list the sentence is about.
+          // The crew's month for this site, once. `seenShown` is mutated during
+          // the render of a list this component builds itself, in order, on the
+          // server — the same shape `fieldGuideCardsFor` and `routeSitesFor`
+          // use one beat below.
+          const seen = diveSite && !seenShown.has(diveSite.id) ? sightings?.get(diveSite.id) : null;
+          if (seen && diveSite) seenShown.add(diveSite.id);
           const depth =
             diveSite?.depthRange ??
             (profile && diveSite?.maxDepthMeters
@@ -221,6 +343,24 @@ export function TripDayPlan({
                   </span>
                 ) : null}
               </LedgerRow>
+              {/* **Its own row, past the kind word**, not inside the dive's
+                  children column. At 390px that column is what is left after
+                  the kind gutter and the trailing depth — about a third of the
+                  screen — and three sentences of reading set in it wrapped
+                  every line twice. The surface interval below already has this
+                  shape for the same reason. */}
+              {seen ? (
+                <li className="flex gap-3 border-t border-border py-2">
+                  <span className="min-w-23 shrink-0" />
+                  <SiteSeen
+                    seen={seen}
+                    t={t}
+                    locale={locale}
+                    timeZone={shop.timezone}
+                    className="min-w-0 flex-1"
+                  />
+                </li>
+              ) : null}
               {/* The gap, on the hairline between the two dives it belongs to.
                   Indented past the kind word so it reads as part of the run
                   rather than as a third dive. */}

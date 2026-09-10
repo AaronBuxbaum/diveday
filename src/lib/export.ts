@@ -90,6 +90,8 @@ export const EXPORT_FILE_NOTES = {
     "Which seats each checkout was paying for, one row per seat, with the rental gear charged on that seat. A checkout covers a whole party, so a single attempt in booking_checkouts.csv can carry several rows here — and the per-seat gear figure lives nowhere else, since the checkout total has it already folded in.",
   "executed_dives.csv":
     "What each dive actually recorded after the boat left: site, times, depth, observed conditions, and fields explicitly not recorded.",
+  "trip_sightings.csv":
+    "What the crew tapped after each dive: one row per species per site per departure, with how many they counted, who recorded it and when. Read it as a record of a moment, never as a claim about a place — dive_site_creatures.csv is the shop's standing field guide for a site, and this is people saying they saw a thing on one day. It is what the shop's own trip pages summarise as \"seen here this month\"; a deleted_at row was a mis-tap the crew took back and should not be counted.",
   "booking_arrival_events.csv":
     "The counter's own ledger: every time a diver was checked in at the desk, and every time that was taken back. Read it append-only, the newest row per booking wins, and a 'cleared' row means the seat went back on the arrival queue. Arriving is not boarding — who was on the boat is roll_call_events.csv, and nothing in this file says anybody was. A row whose source is 'offline' was recorded on a device with no signal and applied when it reached DiveDay; its occurred_at is when somebody tapped it, which can be hours before the row was written.",
   "roll_call_events.csv":

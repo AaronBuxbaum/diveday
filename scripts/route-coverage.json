@@ -224,6 +224,7 @@
       "returning-diver.spec.ts",
       "schedule-embed.spec.ts",
       "seat-claim.spec.ts",
+      "sightings.spec.ts",
       "tide-window.spec.ts",
       "trip-admission.spec.ts",
       "trips.spec.ts"
@@ -665,6 +666,7 @@
       "depth-and-age-surfaces.spec.ts",
       "divers.spec.ts",
       "manifest.spec.ts",
+      "sightings.spec.ts",
       "support-needs.spec.ts"
     ],
     "visual": [
@@ -674,7 +676,9 @@
       "manifest-dive-support",
       "manifest-not-back-aboard",
       "manifest-person-panel",
-      "manifest-plan-change"
+      "manifest-plan-change",
+      "manifest-seen",
+      "manifest-seen-boat-mode"
     ],
     "a11y": ["a11y.spec.ts"]
   },

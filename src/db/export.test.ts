@@ -58,6 +58,7 @@ const EXPECTED_FILES = [
   "booking_checkouts.csv",
   "booking_checkout_bookings.csv",
   "executed_dives.csv",
+  "trip_sightings.csv",
   "booking_arrival_events.csv",
   "roll_call_events.csv",
   "roll_call_crew_events.csv",
@@ -128,6 +129,7 @@ const EXPORTED_TABLES = [
   "booking_checkouts",
   "booking_checkout_bookings",
   "executed_dives",
+  "trip_sightings",
   "internal_notes",
   "activity_events",
   "notification_deliveries",
@@ -360,6 +362,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   staff_shifts: ["shop_id"],
   staff_credentials: ["shop_id"],
   executed_dives: ["shop_id"],
+  trip_sightings: ["shop_id"],
   review_moderation_events: ["shop_id"],
   people: [
     "shop_id",

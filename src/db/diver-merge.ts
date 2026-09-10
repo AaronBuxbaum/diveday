@@ -204,6 +204,8 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "trip_invitations.created_by_person_id": "who sent the invitation",
   "trip_last_minute_promos.created_by_person_id": "who wrote the deal",
   "trip_recap_photos.uploaded_by_person_id": "who uploaded the photo",
+  "trip_sightings.deleted_by_person_id": "who took the mis-tapped sighting back",
+  "trip_sightings.recorded_by_person_id": "which crew member tapped the chip",
   "trip_stage_events.recorded_by_person_id": "who said where the boat was",
   "waiver_materiality_decisions.actor_person_id": "who judged the answer material",
   "waiver_records.anonymized_by_person_id": "provenance for an erasure on a signed release",

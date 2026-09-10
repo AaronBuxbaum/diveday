@@ -1,5 +1,5 @@
 import { diverTranslator } from "@/i18n/messages";
-import { nightSkyLine } from "@/i18n/sky-labels";
+import { moonriseLine, nightSkyLine } from "@/i18n/sky-labels";
 import { formatTime } from "@/lib/format";
 import type { NightSky } from "@/lib/sky";
 
@@ -20,12 +20,25 @@ import type { NightSky } from "@/lib/sky";
  */
 export function NightSkyLine({
   sky,
+  moonriseAt,
   timeZone,
   locale,
   className,
 }: {
   /** `nightSkyFor`'s answer; null for a daylight departure. */
   sky: NightSky | null;
+  /**
+   * When the moon actually comes up (`sunMoonFor`), for the surfaces that have
+   * asked the almanac for it.
+   *
+   * A second sentence rather than a clause inside the first, because roughly
+   * one local day a month has no moonrise at all — the moon comes up about
+   * fifty minutes later each day and eventually the crossing falls off the end
+   * of the day. A sentence can simply be absent; an optional clause is
+   * punctuation every locale has to work around. Omitted or null renders the
+   * line the thread has always shown.
+   */
+  moonriseAt?: Date | null;
   /** The shop's own zone — a rendered clock time names the zone it is in. */
   timeZone: string;
   /** The negotiated request locale, not the shop's stored default. */
@@ -40,6 +53,7 @@ export function NightSkyLine({
         sunset: formatTime(sky.sunsetAt, locale, timeZone),
         dusk: sky.civilDuskAt ? formatTime(sky.civilDuskAt, locale, timeZone) : null,
       })}
+      {moonriseAt ? ` ${moonriseLine(t, formatTime(moonriseAt, locale, timeZone))}` : null}
     </p>
   );
 }

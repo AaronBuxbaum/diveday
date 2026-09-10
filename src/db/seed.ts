@@ -99,6 +99,7 @@ import {
   tripReviews,
   tripSeries,
   tripSeriesSkips,
+  tripSightings,
   tripStageEvents,
   trips,
   tripWaitlistEntries,
@@ -146,6 +147,7 @@ import { seedRegionNeighbours } from "./seed-region-neighbours";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedSeasonEvents } from "./seed-season-events";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
+import { seedSightings } from "./seed-sightings";
 import { seedSupportNeeds } from "./seed-support-needs";
 import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
@@ -189,6 +191,7 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
  * | `./seed-desk-trail.ts` | the notes and activity behind today's reef boat, so its Guests tab has a history |
  * | `./seed-desk-handoff.ts` | the morning's desk acts on that same boat, the owner's read mark behind them, and the two divers who said the crew may know it is their first trip |
+ * | `./seed-sightings.ts` | a month of the crew's sighting log on Molasses and French, so "Seen here this month" is a real beat on the demo's trip pages |
  * | `./seed-diver-trail.ts` | the same table read the other way round — what the desk has done about eight of the cast, so a diver's record opens on a history rather than an empty Activity panel |
  * | `./seed-dive-site-catalog.ts` | DiveDay's published dive-site templates — shared by every shop, never this one's |
  * | `./seed-self-declared.ts` | the two list joiners who said what they can dive, so the marks a staffer reads before a blast are ever rendered |
@@ -1002,6 +1005,13 @@ export async function seedDemoSchedule(
   // Which partner's link sent a seat — beside the recency answers, and written
   // the same way: a column on bookings that already exist (issue #1285).
   await seedPartnerReferrals(db, shopId);
+  // Adds-only and late, like the group above: a month of the crew's own
+  // sighting log on the two reefs the demo sells, so the trip page's "Seen
+  // here this month" beat has something to say. It writes `trip_sightings`
+  // and nothing else — a table read by that beat, the manifest's Seen group
+  // and the recap's keepsake line, never by readiness, the roll call or a
+  // head count — so nothing seeded before it moves.
+  await seedSightings(db, shopId);
 
   // Adds-only and late, like the four above: the desk's trail **per diver**,
   // so the Activity section on a diver's record opens on a real history rather
@@ -1085,6 +1095,10 @@ export async function resetDemoSchedule(
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(executedDives).where(eq(executedDives.shopId, shopId));
+  // The crew's own tally of what the day saw, beside the dive log it sits under
+  // on the manifest — per-departure history keyed on trips that are about to
+  // go, so a spec that tapped a chip does not leave it standing for the next.
+  await db.delete(tripSightings).where(eq(tripSightings.shopId, shopId));
   // These records can contain order/customer payloads and point at schedule
   // data that is about to be replaced, so they must not survive a demo reset.
   // Keep the provider connections themselves: they are shop settings, not
