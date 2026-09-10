@@ -153,6 +153,25 @@ jobs:
         uses: corymhall/cdk-diff-action@v2
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
+          # **One resource type, and it is here because the type has no
+          # non-destructive edit at all.** `Budget` -- the nested object holding
+          # the limit and the notifications -- is a Replacement-only property of
+          # `AWS::Budgets::Budget`, so *every* change to the cost guardrail's cap
+          # or thresholds is a WILL_REPLACE, and this action fails the job on any
+          # destructive change by default. Without this line, adjusting the
+          # figure the whole guardrail is built around reds the check every time,
+          # forever, on a replacement that destroys nothing: CloudFormation
+          # creates the new budget before deleting the old one, and a budget
+          # holds no data -- only the cap and the five email notifications, which
+          # the replacement carries over verbatim. The stack deliberately sets no
+          # `budgetName` so the two never collide during that overlap
+          # (docs/engineering/infrastructure-runbook.md S6's troubleshooting
+          # note; ADR 20260802-aws-cost-guardrails).
+          #
+          # Scoped to that one type on purpose. A replacement of a bucket, a
+          # secret, an IAM user or a distribution still fails this job, which is
+          # the whole reason the check is here.
+          allowedDestroyTypes: AWS::Budgets::Budget
       - name: cdk diff
         if: github.event_name == 'workflow_dispatch'
         # The wrapper, not a raw `cdk diff`: matches the command a workstation

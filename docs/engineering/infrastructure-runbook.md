@@ -330,6 +330,13 @@ pnpm infra:deploy --context alertEmail=you@example.com --context monthlyBudgetLi
 > 2. Confirm it isn't one you want to keep, then `aws budgets delete-budget --account-id
 >    <ACCOUNT_ID> --budget-name <NAME>`.
 > 3. Retry `pnpm infra:deploy`.
+>
+> **The same mechanism reds `cdk synth + diff` on the pull request**, because the replacement is a
+> `WILL_REPLACE` and `.github/workflows/infra.yml` fails the job on any destructive change. That
+> workflow therefore allows exactly one resource type, `AWS::Budgets::Budget`, and nothing else: a
+> budget holds no data — only the cap and the five notifications, which the replacement carries over
+> verbatim — and there is no non-destructive way to change either. A replacement of a bucket, a
+> secret, an IAM user or the distribution still fails the check.
 
 The Budgets half needs no account-level setup — unlike a CloudWatch billing alarm on
 `EstimatedCharges`, it doesn't need the "Receive Billing Alerts" console toggle enabled first. **Cost
