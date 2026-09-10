@@ -895,13 +895,25 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
  *
  * The column was dead — both insert sites in `src/db/trip-invitations.ts` write
  * `date_request` or `direct` — so it is dropped rather than sequenced around
- * (H-49). This test is what stops the hazard coming back under a different
- * name: a diver holding **both** a wait-list entry and an invitation on the
- * same departure must come out the other side erased.
+ * (H-49).
  *
- * It has to assert on a *later* redaction rather than on the delete itself. A
- * rollback leaves every table untouched, so the wait-list rows being gone is
- * ambiguous — `people.anonymized_at` being stamped is not.
+ * **This test does not stop the hazard coming back, and an earlier draft of
+ * this docblock claimed it did.** A `security-reviewer` pass made the point:
+ * once the column is gone, no arrangement of rows can construct the failure, so
+ * this would have passed against the *pre-fix* schema too. What it is, honestly,
+ * is a state assertion — a diver holding both a wait-list entry and an
+ * invitation on one departure comes out the other side erased. Worth keeping,
+ * worth not overselling.
+ *
+ * The thing that closes the class is in `erasure-coverage.test.ts`: an
+ * assertion over the schema that no foreign key points at a table the scrub
+ * hard-deletes from unless it cascades or its own rows go first. That one fails
+ * with the column restored, and names it.
+ *
+ * It still asserts on a *later* redaction rather than on the delete itself,
+ * which is right for a different reason: a rollback leaves every table
+ * untouched, so the wait-list rows being gone is ambiguous evidence and
+ * `people.anonymized_at` being stamped is not.
  */
 describe("anonymizeDiver — a wait-listed diver who was also invited (issue #1616)", () => {
   it("erases through, rather than rolling the whole transaction back", async () => {

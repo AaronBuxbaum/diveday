@@ -11,13 +11,16 @@
 -- foreign key into `trip_waitlist_entries` with no `onDelete`, and
 -- `anonymizeDiver` hard-deletes a diver's wait-list rows. One populated row
 -- would have raised 23503 inside the erasure transaction and rolled back every
--- other redaction with it — an owner pressing Erase, seeing no error, and
--- nothing changed.
+-- other redaction with it. `anonymizeDiver` wraps its work in a transaction
+-- with no try/catch and `eraseDiverAction` has no handler either, so the owner
+-- would have seen a server-action error rather than a false success — the
+-- failure is total and opaque rather than silent, which is bad in a different
+-- way and worth stating accurately.
 --
 -- diveday:allow-destructive drop-constraint trip_invitations_ARj7Ut08RxVu_fkey: the foreign key is on waitlist_entry_id, a column no row has ever populated, so no cascade or upsert in either release depends on it
--- diveday:allow-destructive alter-column-type trip_invitations.source: the enum loses a value no row carries, so the USING cast rewrites every existing row to the value it already had
+-- diveday:allow-destructive alter-column-type trip_invitations.source: covers both ALTER COLUMN steps. The first drops to text with no USING, which is a legal enum-to-text I/O conversion that cannot lose a value; the second casts back, and the enum it casts into lost only a value no row carries, so every row lands on the value it already had. A row that did carry it would fail the cast loudly rather than silently
 -- diveday:allow-destructive drop-type trip_invitation_source: recreated one statement later in the same migration, and the previous release writes only the two values that survive the recreation
--- diveday:allow-destructive drop-column trip_invitations.waitlist_entry_id: the previous release never selects or writes it — no reader exists outside the export projection dropped in this same change
+-- diveday:allow-destructive drop-column trip_invitations.waitlist_entry_id: pre-pilot, no users, H-49 — the previous release DOES name this column in SQL, so this would break its reads if anyone were served by it
 -- diveday:allow-destructive drop-constraint trip_invitations_source_reference_check: re-added at the end of this same migration as the identical check minus the branch whose column no longer exists, and it gates inserts only — the previous release writes date_request and direct, both of which the new check accepts
 
 -- Statement order is hand-set, and that is worth flagging: `.claude/rules/db.md`

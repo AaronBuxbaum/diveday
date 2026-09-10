@@ -63,7 +63,8 @@ import { bookings, people, personRoles } from "./schema";
  * table, and a `security-reviewer` pass is what checks the answer.
  */
 
-type TableFacts = { references: string[]; columns: string[] };
+type ForeignKeyFacts = { target: string; columns: string[]; onDelete: string };
+type TableFacts = { references: string[]; columns: string[]; foreignKeys: ForeignKeyFacts[] };
 
 /**
  * Blank out line comments, block comments and string/template literals, keeping
@@ -139,6 +140,11 @@ function schemaTables(): Map<string, TableFacts> {
     tables.set(getTableName(value as Parameters<typeof getTableName>[0]), {
       references: config.foreignKeys.map((key) => getTableName(key.reference().foreignTable)),
       columns: config.columns.map((column) => column.name),
+      foreignKeys: config.foreignKeys.map((key) => ({
+        target: getTableName(key.reference().foreignTable),
+        columns: key.reference().columns.map((column) => column.name),
+        onDelete: (key as unknown as { onDelete?: string }).onDelete ?? "no action",
+      })),
     });
   }
   return tables;
@@ -196,6 +202,26 @@ function erasureWriteSites(): { written: Set<string>; unresolved: string[] } {
     }
   }
   return { written, unresolved };
+}
+
+/**
+ * The tables `anonymizeDiver` **hard-deletes** from, in the order its source
+ * deletes them. Order matters here and nowhere else in this file: a foreign key
+ * into a deleted table is harmless if the referencing rows go first.
+ */
+function erasureHardDeleteOrder(): string[] {
+  const source = stripCommentsAndStrings(readFileSync("src/db/anonymize.ts", "utf8"));
+  const order: string[] = [];
+  for (const match of source.matchAll(/\.delete\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
+    const value = (schema as Record<string, unknown>)[match[1] as string];
+    try {
+      const name = getTableName(value as Parameters<typeof getTableName>[0]);
+      if (!order.includes(name)) order.push(name);
+    } catch {
+      // Resolved and reported by `erasureWriteSites`; not this function's job.
+    }
+  }
+  return order;
 }
 
 /**
@@ -509,6 +535,57 @@ describe("erasure coverage", () => {
       .filter((name) => !written.has(name) && !(name in WRITTEN_VIA_HELPER))
       .sort();
     expect(unaccounted).toEqual([]);
+  });
+
+  /**
+   * **A foreign key pointing *at* a table the erasure deletes from can abort the
+   * whole erasure**, and nothing guarded that until issue #1616.
+   *
+   * The scrub is one transaction. A referencing row makes a `delete` raise
+   * 23503, and the rollback takes every other redaction with it — so the
+   * failure is not a partial erasure, it is none, and neither `anonymizeDiver`
+   * nor `eraseDiverAction` catches it. That is what
+   * `trip_invitations.waitlist_entry_id` would have done: it referenced
+   * `trip_waitlist_entries` with no `onDelete`, and only the fact that no row
+   * ever populated it kept the erasure working.
+   *
+   * Dropping that column fixed the instance. This closes the class, which is
+   * the half the row-level test below cannot reach: after the column is gone,
+   * no arrangement of rows can construct the hazard, so only the schema can be
+   * asked about it. A `security-reviewer` pass made exactly that point.
+   *
+   * A key is safe three ways, and the third is the interesting one:
+   *
+   *   1. it declares `onDelete: "cascade"` or `"set null"`, so Postgres clears
+   *      the referencing rows itself;
+   *   2. its target is not a table the erasure hard-deletes from at all;
+   *   3. **its own table is hard-deleted earlier in the same scrub.** That is
+   *      how `last_minute_list_unsubscribe_tokens` survives — the tokens go two
+   *      statements before the entries they point at, an invariant that lived
+   *      nowhere but the adjacency of those two lines until this assertion.
+   *
+   * The limit, stated rather than left implied: source order is not execution
+   * order for a delete inside a conditional branch. This proves the statements
+   * are written in a safe sequence, and `anonymize.test.ts` running the real
+   * path against a real database is what proves they execute in one.
+   */
+  it("has no foreign key that could abort the erasure transaction", () => {
+    const order = erasureHardDeleteOrder();
+    expect(order.length).toBeGreaterThan(10);
+    const deletedAt = new Map(order.map((name, index) => [name, index]));
+
+    const hazards: string[] = [];
+    for (const [name, facts] of tables) {
+      for (const key of facts.foreignKeys) {
+        const targetDeletedAt = deletedAt.get(key.target);
+        if (targetDeletedAt === undefined) continue;
+        if (key.onDelete === "cascade" || key.onDelete === "set null") continue;
+        const ownDeletedAt = deletedAt.get(name);
+        if (ownDeletedAt !== undefined && ownDeletedAt < targetDeletedAt) continue;
+        hazards.push(`${name}.${key.columns.join(",")} -> ${key.target} (${key.onDelete})`);
+      }
+    }
+    expect(hazards.sort()).toEqual([]);
   });
 
   it("decides every table outside the closure, not only the ones a pattern asks about", () => {

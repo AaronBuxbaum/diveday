@@ -46,7 +46,8 @@ not a booking, and not a readiness signal.
   matched. What the empty column did carry was a foreign key into `trip_waitlist_entries` with no
   `onDelete` — and `anonymizeDiver` hard-deletes a diver's wait-list rows, so one populated row
   would have raised 23503 inside the erasure transaction and rolled back **every other redaction
-  with it**. An owner would have pressed Erase, seen no error, and found nothing changed.
+  with it**. Neither `anonymizeDiver` nor `eraseDiverAction` catches, so the owner would have met a
+  server-action error over an erasure that never happened: total and opaque rather than silent.
 
   H-49 is the rule that decides it: a column nothing writes is dropped rather than defended, and
   dropping it removes the hazard instead of sequencing a delete around it. The bridge is still a

@@ -3258,10 +3258,12 @@ export const tripWaitlistEntries = pgTable(
  * *did* carry was a foreign key into `trip_waitlist_entries` with no
  * `onDelete`, and the erasure hard-deletes a diver's wait-list rows — so a
  * single populated row would have raised 23503 inside the erasure transaction
- * and rolled back every other redaction with it. An owner would have pressed
- * Erase and seen nothing change. H-49 is the rule that applies: a column
- * nothing writes is dropped rather than defended, and dropping it removes the
- * hazard instead of sequencing around it.
+ * and rolled back every other redaction with it. `anonymizeDiver` catches
+ * nothing and `eraseDiverAction` has no handler, so what an owner would have
+ * met is a server-action error and an erasure that never happened — total and
+ * opaque rather than silent. H-49 is the rule that applies: a column nothing
+ * writes is dropped rather than defended, and dropping it removes the hazard
+ * instead of sequencing around it.
  */
 export const tripInvitationSource = pgEnum("trip_invitation_source", ["date_request", "direct"]);
 

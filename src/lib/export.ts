@@ -75,7 +75,7 @@ export const EXPORT_FILE_NOTES = {
   "waitlist_entries.csv":
     "Divers in line for full trips. A wait-list entry never consumed a seat and never appears on a manifest.",
   "trip_invitations.csv":
-    "Staff outreach attached to a departure without claiming a seat: the source request or wait-list entry, the contact snapshot, and whether staff recorded an invitation attempt. Invitations never become bookings, capacity, readiness or manifest state by themselves.",
+    "Staff outreach attached to a departure without claiming a seat: the source request or diver, the contact snapshot, and whether staff recorded an invitation attempt. Invitations never become bookings, capacity, readiness or manifest state by themselves.",
   "last_minute_list.csv":
     "Divers who opted in, shop-wide, to hear about last-minute deals, with the date range they said they're around. Distinct from waitlist_entries.csv: this is a general availability signal, not interest in one specific full trip.",
   "trip_last_minute_promos.csv":
