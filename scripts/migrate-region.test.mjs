@@ -33,6 +33,8 @@ function fixture({
   bucketPages = [],
   stackEventReasons = [],
   deployFailures = 0,
+  stackStatus = null,
+  template = null,
 } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "diveday-migrate-"));
   directories.push(directory);
@@ -44,6 +46,16 @@ function fixture({
     writeFileSync(join(directory, `page-${index}.json`), JSON.stringify(page));
   }
   writeFileSync(join(directory, "stack-events.json"), JSON.stringify(stackEventReasons));
+  writeFileSync(join(directory, "stack-status"), stackStatus ?? "");
+  // A real synthesized template when the test supplies one, written where the
+  // cloud assembly puts it. `pnpm infra:synth` is faked, so the fixture stands
+  // in for what it would have produced -- but the *filename* is the fixture's
+  // own, and reading the wrong one is how the first version of the sweep
+  // skipped itself while reporting that it had run.
+  if (template) {
+    mkdirSync(join(directory, "cdk.out"), { recursive: true });
+    writeFileSync(join(directory, "cdk.out", "DiveDay.template.json"), JSON.stringify(template));
+  }
   writeFileSync(
     join(bin, "aws"),
     `#!/bin/sh
@@ -62,6 +74,10 @@ if [ "$2" = "delete-stack" ]; then
 fi
 if [ "$2" = "describe-stacks" ] && [ -f "$DIVEDAY_DIR/stack-deleted" ]; then
   exit 1
+fi
+if [ "$2" = "describe-stacks" ] && [ -s "$DIVEDAY_DIR/stack-status" ]; then
+  cat "$DIVEDAY_DIR/stack-status"
+  exit 0
 fi
 if [ "$2" = "list-object-versions" ]; then
   n=$(cat "$DIVEDAY_PAGE_COUNTER" 2>/dev/null || echo 0)
@@ -251,10 +267,17 @@ describe("infra:migrate-region", () => {
     // The main stack alone before the other two, because its own per-region
     // deploy grants come from it -- deploying all three first fails on an
     // AccessDenied that reads as a broken trust policy.
-    const deploys = pnpmLog(directory).trim().split("\n");
-    expect(deploys[0]).toContain("infra:bootstrap --confirm-account 123456789012");
-    expect(deploys[1]).toContain("infra:deploy DiveDay");
-    expect(deploys[2]).toBe("infra:deploy --require-approval never");
+    //
+    // Filtered rather than indexed: the orphaned-log-group sweep also shells
+    // out to pnpm, and an assertion that counts lines breaks every time
+    // something else legitimately runs.
+    const commands = pnpmLog(directory)
+      .trim()
+      .split("\n")
+      .filter((line) => line.startsWith("infra:bootstrap") || line.startsWith("infra:deploy"));
+    expect(commands[0]).toContain("infra:bootstrap --confirm-account 123456789012");
+    expect(commands[1]).toContain("infra:deploy DiveDay");
+    expect(commands[2]).toBe("infra:deploy --require-approval never");
   });
 
   it("sweeps versions and delete markers, not just the current objects", () => {
