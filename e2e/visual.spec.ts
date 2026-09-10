@@ -1671,6 +1671,36 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "landing", scheme);
       });
 
+      /**
+       * **The hero drawn as the visitor's own first day** (ADR
+       * 20260908-one-hand, decision 6, possibility Y): their name in the
+       * chrome, a colour hashed off that name through Harbor's derivation,
+       * their boat on the day line, and the door already filled. It is the same
+       * route as the capture above and a different surface — the drawn state
+       * replaces both columns of the hero — so it earns its own baseline at
+       * both widths.
+       *
+       * The words typed here are the canvas's own, and the clock and zone are
+       * the fleet's frozen pair, so the greeting band, the rendered 11:00 AM
+       * and the countdown are identical on every run.
+       */
+      test(`the landing hero drawn as the visitor's shop renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/");
+        await page.getByLabel("Your shop").fill("Coral Cove Dive Co.");
+        await page.getByLabel("A boat").fill("Reef Runner");
+        await page.getByLabel("First departure").fill("11:00");
+        await page.getByRole("button", { name: "Draw my day" }).click();
+        // The greeting is the drawn hero's own <h1>; the hero it replaced has
+        // a different one, so this is the readiness proof for the capture.
+        await page
+          .getByRole("heading", { level: 1, name: "Good morning, Coral Cove Dive Co" })
+          .waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "landing-drawn", scheme);
+      });
+
       // The other two buyer-facing sales surfaces: the product narrative
       // (readiness, dock, diver arc, honest-no scope) and the pricing page
       // with its objection FAQ. Copy changes here are product changes.

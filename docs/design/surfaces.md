@@ -452,3 +452,22 @@ section 12). The 2026-08-13 composition stands; the findings move copy, not band
 - **Composition:** a day told in order — hero, shared-day statement, moments (which the review
   extends to the evening), breadth as four numbered assertions, the mirrored records diptych,
   one merged close.
+
+**The hero became the visitor's, 2026-09-10** — ADR
+[20260908-one-hand](../architecture/decisions/20260908-one-hand.md) decision 6, possibility Y,
+drawn on that canvas's `TryItWithYourBoats.dc.html`.
+
+- **One idea:** the demo is you — a page that draws the visitor's own shop, in the visitor's own
+  colour, from three words.
+- **The question it arrives with:** "yes, but what does it look like with *my* boats?" — the one
+  question a screenshot of somebody else's shop cannot answer, and the one a shop owner asks first.
+- **What it never does:** look anything up. No website, no listing, no logo, no stored keystroke.
+  The hero says both halves on its face — "Drawn from what you typed" over the drawing, "Nothing is
+  saved until you open it" under the door — and that is what keeps a page arguing from a visitor's
+  own name inside the claims policy.
+- **Controls that dissolved:** none, and that is the constraint the composition was built inside.
+  The three fields sit under the two doors, "Draw my day" is inert until there is something to
+  draw, and the demo still leads at first paint.
+- **Composition, drawn:** their chrome, the day as a line with their boat on it, the app's own
+  greeting, one sentence naming the time and its zone, a live countdown, three rows that are one
+  door, the primary that opens it.

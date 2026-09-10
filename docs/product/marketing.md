@@ -396,6 +396,22 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   destination: the roles moved into the in-demo switcher, the diver preview into the daily-moments
   row it illustrates, and both are still reachable and still tagged. `e2e/marketing.spec.ts` counts
   the hero's enabled controls so the budget can't quietly grow back.
+  **The three fields are inside that budget, not beside it** (2026-09-10, ADR
+  20260908-one-hand decision 6, possibility Y). The hero now takes a shop's name, one boat and a first
+  departure, and redraws itself as that visitor's first day. Three boxes and a "Draw my day" button
+  look like the budget growing by four, and the rule the budget encodes is about *decisions*, not
+  elements: a text box is not a destination, and "Draw my day" is **disabled until there is something
+  to draw**, so the count of things a visitor can act on at first paint is still one primary and one
+  secondary. `e2e/marketing.spec.ts` counts it exactly as before and did not move for this change,
+  which is the check that this claim is true rather than merely argued.
+  **The drawn hero is a different screen and gets its own budget.** Once a visitor has typed their
+  own shop into the page, the demo is no longer the leading ask — they are looking at their own
+  morning — so the drawn state offers one primary ("Open {shop}"), the three rows above it that go to
+  the same door under the same funnel tag (`home-drawn`), and a quiet way back to the fields. The nav
+  still carries the demo, which is what "the demo leads, everywhere" is for. Nothing about the drawn
+  hero is stored, fetched or looked up: DiveDay never reads a visitor's website, listing or logo, and
+  the hero says so on its face ("Drawn from what you typed", "Nothing is saved until you open it"),
+  which is what keeps it inside the claims policy rather than a demo of data we do not have.
   **The budget binds controls, not facts.** The 2026-08-27 conversion review's second diagnosis is
   that the terms never stand at the doors, and the flat price reached the homepage hero on
   2026-08-28 as a consequence — as a muted *sentence* under the demo note ("One flat price — {price}
@@ -751,6 +767,7 @@ structure* live; none of them may contain an English sentence:
 | Shared link-preview card fields every page's `openGraph` needs | `src/lib/marketing.ts` (`sharedLinkCard`) | none — URLs and dimensions, no words |
 | Capability index on `/product` | `src/lib/marketing.ts` (`productCapabilityIndex`) | `marketing.capabilities.*` in the bundles |
 | Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) | `marketing.home/product/pricing.*` in the bundles |
+| The hero a visitor draws with their own shop, boat and departure | `src/app/_components/TryItHero.tsx` (words as props; `src/lib/try-it.ts` holds the colour, the handoff and the day-line arithmetic) | `marketing.home.tryIt.*` in the bundles |
 | Sign-up reassurance (no card, the exit, the founder line) | `src/app/onboard/page.tsx` | `account.onboard.*` in the bundles |
 | Who builds DiveDay, and what it concedes | `src/app/about/page.tsx` | `marketing.about.*` in the bundles |
 | Mockup copy | `src/components/MarketingScreenFallbacks.tsx` | `fallback.*` in the bundles |
