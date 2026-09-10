@@ -260,7 +260,7 @@ export type AfterStateProps = {
    */
   buddyLinkUrl?: string | null;
   /** The four recap actions, already bound to a signed recap token. */
-  actions: {
+  {
     submitReview: (formData: FormData) => void | Promise<void>;
     uploadPhoto: (formData: FormData) => void | Promise<void>;
     startTip: (formData: FormData) => void | Promise<void>;

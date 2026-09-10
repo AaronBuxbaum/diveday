@@ -25,8 +25,8 @@ import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
 import type { ShopYearDay, ShopYearEntry, ShopYearInput } from "@/lib/shop-year";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { wallTimeToUtc } from "@/lib/zoned";
-import { type DbExecutor, queryAll } from "./client";
 import { buddyReferredSeatsForWindow } from "./buddy-referrals";
+import { type DbExecutor, queryAll } from "./client";
 import { giftCountsForWindow } from "./gifts";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import {
