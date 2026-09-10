@@ -22,6 +22,9 @@ import { WorldPanel } from "./WorldPanel";
  * What the year switch says back. Resolved through `noticeFromParam` and never
  * a bare index: the parameter is attacker-supplied.
  */
+/** Names the year section and the form inside it — see the render for why. */
+const YEAR_SECTION_ID = "year-on-diveday";
+
 const YEAR_NOTICES: Record<string, { tone: NoticeTone; text: StaffMessageKey }> = {
   "year-on-diveday": { tone: "success", text: "display.year.noticeOn" },
   "year-off-diveday": { tone: "success", text: "display.year.noticeOff" },
@@ -141,15 +144,29 @@ export default async function LobbyDisplayPage({
         homepage carries a real shop's card only with that shop's yes, which is
         the whole of H-71 (k).
       */}
+      {/*
+        **The form carries its own name**, from the heading above it, because
+        this page holds more than one form with a Save button on it: an
+        unqualified "Save" is ambiguous to a screen reader reading the page's
+        controls, and to anything else addressing them one at a time.
+      */}
       <SectionCard as="section" className="mt-10 p-5 sm:p-6">
-        <h2 className={SECTION_TITLE_CLASS}>{t("display.year.heading")}</h2>
+        <h2 id={YEAR_SECTION_ID} className={SECTION_TITLE_CLASS}>
+          {t("display.year.heading")}
+        </h2>
         <p className="mt-1 text-sm text-muted">{t("display.year.description")}</p>
         {yearNotice ? (
           <ShopNotice tone={yearNotice.tone} className="mt-4">
             {t(yearNotice.text)}
           </ShopNotice>
         ) : null}
-        <FieldGrid as="form" action={saveYearOnDivedayAction} columns={1} className="mt-4">
+        <FieldGrid
+          as="form"
+          action={saveYearOnDivedayAction}
+          columns={1}
+          className="mt-4"
+          aria-labelledby={YEAR_SECTION_ID}
+        >
           <label className="flex min-h-11 items-center gap-3 text-sm">
             <input
               name="showYearOnDiveday"

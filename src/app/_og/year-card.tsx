@@ -1,4 +1,4 @@
-import type { ShopYearSummary } from "@/lib/shop-year";
+import type { ShopYearCard } from "@/lib/shop-year";
 import {
   YEAR_CARD_SIZE,
   type YearCardPalette,
@@ -23,6 +23,10 @@ import {
  * words arrive already translated — satori rasterizes to a bitmap and cannot
  * reach a message bundle.
  *
+ * It takes a `ShopYearCard`, never the whole summary: the close-outs carry the
+ * name of the staff member who wrote each one, and a type without them is what
+ * stops a later edit reaching one field further (security review, finding 2).
+ *
  * Hex and `rgba` values, deliberately: there is no stylesheet behind a satori
  * render, so a custom property has nothing to resolve against. They all come
  * from `src/lib/year-card.ts`, which is where the shop's colour becomes a sea.
@@ -45,7 +49,7 @@ export function YearCard({
   copy,
   brandColor,
 }: {
-  year: ShopYearSummary;
+  year: ShopYearCard;
   copy: YearCardCopy;
   /** The shop's `#rrggbb`, or null for DiveDay's own lagoon. */
   brandColor: string | null;
@@ -125,8 +129,8 @@ export function YearCard({
  * explicit columns because satori implements a subset of flexbox and no CSS
  * grid at all.
  */
-function YearCardStrip({ year, palette }: { year: ShopYearSummary; palette: YearCardPalette }) {
-  const columns: ShopYearSummary["strip"][] = [];
+function YearCardStrip({ year, palette }: { year: ShopYearCard; palette: YearCardPalette }) {
+  const columns: ShopYearCard["strip"][] = [];
   for (let index = 0; index < year.strip.length; index += 7) {
     columns.push(year.strip.slice(index, index + 7));
   }

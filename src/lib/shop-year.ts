@@ -121,6 +121,28 @@ export type ShopYearSummary = {
   hasActivity: boolean;
 };
 
+/**
+ * **What the card is allowed to know** (security review, finding 2).
+ *
+ * The card leaves the shop — printed, mailed, and on DiveDay's homepage for a
+ * shop that said yes — so it renders from a narrower thing than the page does.
+ * `entries` is the difference: a close-out carries the name of the staff member
+ * who wrote it, which belongs on the shop's own year page and nowhere a
+ * stranger reads. Dropping it from the *type* means no future edit to the card
+ * can print it by reaching one field further, and {@link shopYearCard} drops it
+ * from the value as well, so it is not in the render input at runtime either.
+ *
+ * Everything that remains is a count, a date, or a name the shop publishes
+ * anyway — its own, its boats', its sites'.
+ */
+export type ShopYearCard = Omit<ShopYearSummary, "entries">;
+
+/** The year with the close-outs taken off, for the card's two routes. */
+export function shopYearCard(year: ShopYearSummary): ShopYearCard {
+  const { entries: _entries, ...card } = year;
+  return card;
+}
+
 function fillFor(day: ShopYearDay): ShopYearFill {
   if (day.boats === 0) return 0;
   if (day.seats <= 0) return 1;

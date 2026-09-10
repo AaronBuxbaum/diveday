@@ -36,6 +36,7 @@ const seedDiveTimes = await import("./seed-dive-times/route");
 const seedReturningDiver = await import("./seed-returning-diver/route");
 const seedBookingHandoff = await import("./seed-booking-handoff/route");
 const seedDisplayToken = await import("./seed-display-token/route");
+const seedYearBandShop = await import("./seed-year-band-shop/route");
 const inboundMessage = await import("./inbound-message/route");
 
 const secret = "e2e-test-secret";
@@ -191,6 +192,19 @@ const routes: SeedRoute[] = [
     // 20260815-per-test-private-shops), so a route that answered on a
     // misconfigured deployment would be handing anyone a shop and the
     // credentials to it.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-year-band-shop",
+    POST: async (request) =>
+      seedYearBandShop.POST(request).catch(() => new Response(null, { status: 500 })),
+    // No body, so reaching the database is what proves the guard let it
+    // through. This one writes a shop with `show_year_on_diveday` on, which is
+    // the row DiveDay's homepage band reads (ADR 20260908-one-hand, decision 6,
+    // lever T): a route that answered on a misconfigured deployment would put a
+    // shop nobody owns under the hero of dive.day.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },

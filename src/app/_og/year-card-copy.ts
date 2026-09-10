@@ -1,7 +1,6 @@
 import type { DiverTranslator } from "@/i18n/messages";
-import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatMonthDay, monthNames } from "@/lib/format";
-import type { ShopYearSummary } from "@/lib/shop-year";
+import type { ShopYearCard } from "@/lib/shop-year";
 import type { YearCardCopy } from "./year-card";
 
 /**
@@ -18,6 +17,10 @@ import type { YearCardCopy } from "./year-card";
  * work there. Its words belong with the other copy DiveDay writes for people
  * who are not staff.
  *
+ * It takes a `ShopYearCard` rather than the whole summary, so the close-outs —
+ * and the staff name on each — are not reachable from here either (security
+ * review, finding 2).
+ *
  * Each fact has a fallback that always exists, because a real shop's year does
  * not always have all three: a shop that names no hull on its departures still
  * went to sea, and a shop that plans no site still took divers out. A card with
@@ -30,7 +33,7 @@ export function yearCardCopy({
   locale,
 }: {
   shopName: string;
-  year: ShopYearSummary;
+  year: ShopYearCard;
   t: DiverTranslator;
   locale: string;
 }): YearCardCopy {
@@ -43,7 +46,12 @@ export function yearCardCopy({
     : stillRunning
       ? t("shopYear.card.rangeToDate", {
           year: String(year.year),
-          date: formatCalendarDate(year.lastDay, locale),
+          // The day without its year: the line already opens with it.
+          date: formatMonthDay(
+            Number(year.lastDay.slice(5, 7)),
+            Number(year.lastDay.slice(8, 10)),
+            locale,
+          ),
         })
       : t("shopYear.card.range", { year: String(year.year) });
 

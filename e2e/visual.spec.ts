@@ -6905,34 +6905,26 @@ for (const scheme of ["light", "dark"] as const) {
  * decision 6, lever T): a real shop's year card, the one sentence a number on
  * the card can prove, and the line that says why it is there.
  *
- * A shop of the test's own, with a pinned identity, for two reasons at once.
- * The switch is shop-wide configuration, which `/api/test/reset` deliberately
- * leaves standing, so writing it on blue-mantis would put a band on every
- * later homepage capture in the worker. And the shop's *name* is half of what
- * this photographs — on the card, in the claim beside it, and in the storefront
- * door — so a random mint would report as changed on the very next pull
- * request.
+ * **A real shop, seeded for this**, not the `privateShop` mint: the band and the
+ * public card both refuse an `isDemo` tenant, because a demo's shop, boat and
+ * site names are typed by whichever visitor minted it (security review, finding
+ * 1) — so a demo cannot reach this band at all. `/api/test/seed-year-band-shop`
+ * mints the real one (`src/db/seed-year-band.ts`): fixed name, fixed
+ * departures, out of search, dropped here and again by every `/api/test/reset`.
+ *
+ * Fixed rather than random because the shop's *name* is half of what this
+ * photographs — on the card, in the claim beside it, and in the storefront door
+ * — so a random identity would report as changed on the very next pull request.
  */
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode — a shop's year on DiveDay's homepage`, () => {
-    test.use({
-      colorScheme: scheme,
-      viewport: { width: 1280, height: 800 },
-      privateShopSlug: "tern-rock-dive-club",
-    });
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
 
-    test(`the homepage carries a real shop's year card (${scheme})`, async ({
-      page,
-      privateShop,
-    }) => {
-      // The mint and the live sign-in the fixture pays for, then one settings
-      // round-trip before the capture.
+    test(`the homepage carries a real shop's year card (${scheme})`, async ({ page, request }) => {
+      // The seed and the card render come out of this test's own budget.
       test.setTimeout(FLOW_TIMEOUT_MS);
-      await page.goto(`/shop/${privateShop.slug}/settings/display`);
-      await page.getByLabel("Show our year on DiveDay's pages").check();
-      await page.getByRole("button", { name: "Save" }).click();
-      // The destination's own render, not a timing guess.
-      await page.getByText("Your year is on DiveDay's pages.").waitFor();
+      const seeded = await request.post("/api/test/seed-year-band-shop");
+      expect(seeded.ok()).toBe(true);
 
       await page.goto("/");
       await page.getByText("Shown here because the shop turned it on.").waitFor();
@@ -6950,6 +6942,9 @@ for (const scheme of ["light", "dark"] as const) {
               }),
         );
       await capture(page, "landing-year-band", scheme);
+      // Dropped here rather than left for the next test's reset, so the
+      // cascade is charged to the test that asked for the shop.
+      await request.delete("/api/test/seed-year-band-shop");
     });
   });
 }

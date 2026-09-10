@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { purgeMintedDemoShops, resetDemoSchedule } from "@/db/seed";
+import { dropYearBandShop } from "@/db/seed-year-band";
 import { getShopBySlug } from "@/db/shops";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 
@@ -33,6 +34,12 @@ export async function POST(request: Request) {
   // Clear any disposable demo shops earlier tests minted via "Try the live
   // demo", so they don't accumulate and bloat the shared test database.
   await purgeMintedDemoShops(db);
+  // And the one real shop `/api/test/seed-year-band-shop` mints, which its own
+  // spec drops on the way out. This is the net for the run that dies before
+  // that: the fixture has `show_year_on_diveday` on, so a leaked one would put
+  // a band on the homepage of every later spec in this worker, including the
+  // `landing` capture (ADR 20260908-one-hand, decision 6, lever T).
+  await dropYearBandShop(db);
   await reclaimDeadTuples(db);
   return NextResponse.json({ ok: true });
 }

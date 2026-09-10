@@ -8,7 +8,7 @@ import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
 import { allowSvgRasterization } from "@/lib/og-rasterizer";
 import { requireShopSurface } from "@/lib/session";
-import { summarizeShopYear } from "@/lib/shop-year";
+import { shopYearCard, summarizeShopYear } from "@/lib/shop-year";
 
 /**
  * **Print the card** (ADR 20260908-one-hand, decision 6, lever T) — the shop's
@@ -33,7 +33,12 @@ export async function GET(
     refusal: { notice: "reports-not-authorized" },
   });
   const now = nowDate();
-  const year = summarizeShopYear(await getShopYear(db, shop.id, { timeZone: shop.timezone, now }));
+  const summary = summarizeShopYear(
+    await getShopYear(db, shop.id, { timeZone: shop.timezone, now }),
+  );
+  // The close-outs, and the staff name on each, are dropped here rather than
+  // ignored downstream (security review, finding 2).
+  const year = shopYearCard(summary);
   if (!year.hasActivity) {
     return new NextResponse(null, { status: 404, headers: { "Cache-Control": "no-store" } });
   }

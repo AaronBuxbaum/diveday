@@ -643,19 +643,24 @@ export async function setShopYearOnDiveday(db: AppDb, shopId: string, show: bool
 }
 
 /**
- * The shops whose year DiveDay's homepage may draw — the ones that said yes,
- * and nothing else. The switch **is** the gate: a shop that has not turned it
- * on is not here, and no other condition may quietly add or remove a shop from
- * a band whose entire claim is "shown here because the shop turned it on".
+ * The shops whose year DiveDay's homepage may draw: a real shop that said yes.
  *
- * A **real shop outranks a fixture**, which is what `is_demo` is doing in the
- * order rather than in the `where`: the band should carry a working shop's year
- * whenever one exists, but a demo tenant that turned the switch on has still
- * turned it on, and filtering demos out would leave the band with no way to be
- * exercised at all. Slug breaks the remaining tie, so the homepage shows the
- * same shop on every render rather than whichever row Postgres handed back.
+ * **Two conditions, and the second is not a tidiness rule.** "Try the live
+ * demo" mints a throwaway `isDemo` tenant per visitor and signs that visitor in
+ * as its owner, so a demo shop's boat names, site names and shop name are
+ * *attacker-supplied text* — and this band prints them on dive.day's own
+ * homepage, under a sentence vouching for them. An earlier draft of this query
+ * only **ordered** by `is_demo`, which meant a visitor who minted a demo, typed
+ * whatever they liked into a boat and turned the switch on could put it there
+ * whenever no real shop had said yes (security review, finding 1). It is a
+ * `where` now. `/s/<slug>/year-card` carries the same exclusion, because the
+ * card is a dive.day URL whether or not the homepage links it.
  *
- * Bounded; the caller takes the first with a year worth drawing.
+ * The switch is still the gate for every real shop: nothing else may add or
+ * remove one from a band whose entire claim is "shown here because the shop
+ * turned it on". Ordered by slug so the homepage shows the same shop on every
+ * render rather than whichever row Postgres handed back; bounded, and the
+ * caller takes the first with a year worth drawing.
  */
 export async function listShopsShowingYearOnDiveday(db: AppDb, limit = 3) {
   return db
@@ -671,7 +676,7 @@ export async function listShopsShowingYearOnDiveday(db: AppDb, limit = 3) {
       brandHeroImageAlt: shops.brandHeroImageAlt,
     })
     .from(shops)
-    .where(eq(shops.showYearOnDiveday, true))
-    .orderBy(asc(shops.isDemo), asc(shops.slug))
+    .where(and(eq(shops.showYearOnDiveday, true), eq(shops.isDemo, false)))
+    .orderBy(asc(shops.slug))
     .limit(limit);
 }
