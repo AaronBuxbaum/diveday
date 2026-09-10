@@ -24,8 +24,16 @@ export function activityLine(t: StaffTranslator, row: { code: string; params: un
   if (!isActivityCode(row.code)) return t("activity.unknown");
   const key = `activity.line.${row.code}` as StaffMessageKey;
   // The ICU placeholders are the parameter names in `ActivityParamShapes`, and
-  // `check:locale` holds both bundles to the same set. A name missing from the
-  // payload renders as an empty span in the sentence rather than throwing: a
-  // gap in one line of history, bounded to that line.
+  // `check:locale` holds both bundles to the same set. `ActivityEntry` is a
+  // discriminated union, so a writer that omits a name is a compile error at
+  // the call site — which is where this is stopped, not here.
+  //
+  // If one reaches this anyway, `translatorOnError` decides what happens and
+  // this module does not second-guess it: outside production it **throws**, so
+  // a dev server, a unit test and an e2e run all fail on the row rather than
+  // rendering something that merely looks fine; in production it renders the
+  // fallback — the English pattern, placeholder and all — and counts the
+  // failure. Catching here would buy a tidier line at the price of the loud
+  // half, which is the trade `src/i18n/on-error.ts` was written to refuse.
   return t(key, activityParams(row.params));
 }

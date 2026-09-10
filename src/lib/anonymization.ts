@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
  * (ADR 20260802-diver-data-erasure).
  *
  * These are **data values, not copy**: they land in `people.full_name`,
- * `activity_events.message`, and the certification identifier columns, all of
+ * the names an `activity_events` row carries, and the certification identifier columns, all of
  * which are `NOT NULL` (two of them additionally carry a non-blank check), so
  * "erase it" has to mean "overwrite it with something that says nothing". They
  * are deliberately bracketed and lowercase so no surface can mistake one for a

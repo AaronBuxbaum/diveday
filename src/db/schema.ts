@@ -8895,7 +8895,8 @@ export const tripBlowoutDivers = pgTable(
  * `outstanding` is the `CloseoutSnapshot` (src/lib/closeout.ts) recomputed
  * server-side at the moment of closing: the departures not yet settled and
  * every leftover with the carry/dismiss choice made about it. Snapshot text
- * (trip titles, row subjects) is trail text like `activity_events.message`,
+ * (trip titles, row subjects) is trail text like the names an `activity_events`
+ * row carries,
  * not localized UI copy. Growth is bounded by the ritual itself — a row per
  * close, normally one per shop per day — so it carries no retention arm;
  * adding one is HD-11's call (src/lib/retention.ts).

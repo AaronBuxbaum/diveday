@@ -2003,6 +2003,70 @@ describe("diver erasure", () => {
       expect(after.some((row) => row.code === ACTIVITY_REDACTED.code)).toBe(false);
     });
 
+    /**
+     * **The payload's own keys are not names.** `params::text` renders as
+     * `{"actor": "…", "diver": "…"}` — keys included — and every key is a
+     * fixed word of three or more characters sitting between non-word
+     * characters, which is exactly what `\y` anchors onto. A diver who types
+     * their name as `Diver` on a public booking form and then asks to be
+     * forgotten would have taken the shop's entire trail with them: every
+     * seating, check-in and note carries a `diver` key (`security-reviewer`,
+     * 2026-09-10).
+     */
+    it.each(["Diver", "Actor", "Crew", "Self"])(
+      "does not let a name matching a payload key (%s) redact the shop's history",
+      async (name) => {
+        // One row per key the payload shapes use, so each name under test has a
+        // key of its own spelling somewhere in the shop's history.
+        const history: Record<string, string>[] = [
+          { actor: "Dana Reyes", diver: "Marisol Vega" },
+          { crew: "Sal Moretti" },
+          { actor: "Dana Reyes", diver: "Priya Sharma", self: "no" },
+        ];
+        const { db, shop, diver, ownerId } = await shopWithHistory(name, history);
+
+        const result = await anonymizeDiver(db, {
+          shopId: shop.id,
+          personId: diver.id,
+          actorPersonId: ownerId,
+        });
+        if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+        const after = await linesIn(db, shop.id);
+        for (const params of history) expect(after).toContainEqual({ code: "note_added", params });
+        expect(after.some((row) => row.code === ACTIVITY_REDACTED.code)).toBe(false);
+      },
+    );
+
+    /**
+     * **A name is compared to a value, not to its JSON rendering.** The pattern
+     * is built from the stored name; `params::text` escapes a quote as `\"`
+     * and a backslash as `\\`, so a name carrying either would slip past a
+     * match against the serialized object. That matters because the fuzzy pass
+     * is the *only* handle on a `recordTripActivity` row: those carry no
+     * booking and no subject, so a seated diver's name would have stood in the
+     * trail after their own erasure (`security-reviewer`, 2026-09-10).
+     */
+    it.each(['Bea "Bee" Ochoa', "Ana\\Sofia Ruiz"])(
+      "reaches a name whose spelling JSON has to escape (%s)",
+      async (name) => {
+        const { db, shop, diver, ownerId } = await shopWithHistory(name, [
+          { actor: "Sal Moretti", diver: name },
+        ]);
+
+        const result = await anonymizeDiver(db, {
+          shopId: shop.id,
+          personId: diver.id,
+          actorPersonId: ownerId,
+        });
+        if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+        const after = await linesIn(db, shop.id);
+        expect(after.some((row) => Object.values(row.params).includes(name))).toBe(false);
+        expect(after.some((row) => row.code === ACTIVITY_REDACTED.code)).toBe(true);
+      },
+    );
+
     it("matches a name at whole-word boundaries only", async () => {
       const untouched = { actor: "Dana Reyes", diver: "Marisol Vega" };
       const { db, shop, diver, ownerId } = await shopWithHistory("Ana", [

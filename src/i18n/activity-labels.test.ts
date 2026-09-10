@@ -62,6 +62,20 @@ describe("activity lines", () => {
     expect(line.trim()).not.toBe("");
   });
 
+  /**
+   * A writer that omits a name is a compile error, so this is about the row
+   * that reaches the renderer anyway. `translatorOnError` makes that loud
+   * outside production on purpose — the alternative is a sentence with a gap in
+   * it that no test and no dev server ever reports.
+   */
+  it("is loud rather than quiet about a payload missing a name", () => {
+    const t = staffTranslator("en-US");
+
+    expect(() =>
+      activityLine(t, { code: "note_added", params: { actor: "Dana Reyes" } }),
+    ).toThrow();
+  });
+
   it("reads only string names out of a stored payload", () => {
     // Postgres hands back whatever was written, so the renderer reads through
     // `activityParams` rather than trusting the column's type.

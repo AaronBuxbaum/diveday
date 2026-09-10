@@ -477,7 +477,7 @@ export type CloseoutSnapshotAdminTask = Pick<
  * What the recorded act remembers: the not-yet-settled departures and every
  * leftover with the choice made about it. Subjects and details are stored as
  * the record of what was on screen when the day closed — trail text, like
- * `activity_events.message`, not localized UI copy.
+ * the `activity_events` trail, not localized UI copy.
  */
 export type CloseoutSnapshot = {
   departures: CloseoutSnapshotDeparture[];
