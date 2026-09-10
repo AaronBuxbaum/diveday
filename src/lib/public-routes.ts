@@ -64,6 +64,20 @@ export function publicTripArrivalCardPath(shopSlug: string, tripId: string): str
   return `${publicTripPath(shopSlug, tripId)}/arrival-card`;
 }
 
+/**
+ * **Follow one departure's day** — ADR 20260908-one-hand, decision 6, lever U.
+ *
+ * One page per boat per day, for the person on the dock a diver shared it
+ * with. The trip id sits in the URL unhashed because it is not a secret: the
+ * page carries a stage word the crew tapped and the time they tapped it, and
+ * nothing a stranger should not read. A capability path (`/ready/<token>`)
+ * would be the wrong shape here — two divers on the same boat share one page,
+ * and nothing on it is theirs to revoke.
+ */
+export function publicBoatPath(shopSlug: string, tripId: string): string {
+  return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/boats/${tripId}`;
+}
+
 /** The diver-facing course catalog (the staff roster is /shop/<slug>/courses). */
 export function publicCoursesPath(shopSlug: string): string {
   return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/courses`;

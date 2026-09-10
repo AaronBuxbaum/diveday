@@ -10,6 +10,38 @@
     "liveEyebrow": "Right now",
     "liveBack": "Back around {back}."
   },
+  "boatLine": {
+    "stage": {
+      "boarding": "Boarding at the dock.",
+      "underway": "Out on {site}.",
+      "underwayNoSite": "Out on the water.",
+      "surface": "On the surface between dives.",
+      "headingIn": "Heading in.",
+      "home": "Back at the dock."
+    },
+    "atTheDock": "At the dock.",
+    "leavesAt": "Leaves at {time}.",
+    "said": "The crew said so at {when}.",
+    "asOf": "As of {when}.",
+    "whenAndTrip": "{date} · {trip}",
+    "dayHeading": "The day",
+    "checkIn": "Check-in",
+    "leaves": "Leaves",
+    "back": "Back",
+    "diveNumber": "Dive {number}",
+    "note": "This page says where the boat is in its day, as the crew marks it. It does not say who is aboard or where the boat is on the water.",
+    "directions": "Directions",
+    "callShop": "Call the shop",
+    "follow": "Follow",
+    "share": {
+      "heading": "Share with whoever is waiting for you",
+      "detail": "A link to where the boat is, no names on it.",
+      "action": "Share",
+      "copied": "Link copied",
+      "copyFailed": "Couldn't copy, select it manually",
+      "text": "{boat}'s day, from {shop}"
+    }
+  },
   "board": {
     "empty": "No departures today.",
     "aboard": "{boarded} of {booked, plural, one {# diver} other {# divers}} aboard",

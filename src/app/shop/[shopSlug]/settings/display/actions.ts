@@ -2,14 +2,43 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { issueDisplayToken, revokeDisplayToken } from "@/db/display-tokens";
+import { setShopPublicBoatLine } from "@/db/shops";
 import { boardPath } from "@/lib/display-tokens";
 import { requireStaffSession } from "@/lib/session";
-import { shopPath } from "@/lib/staff-notices";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import type { DisplayLinkState } from "./display-panel-types";
 
 const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * **Whether this shop's boats say where they are to somebody who is not
+ * aboard** — ADR 20260908-one-hand, decision 6, lever U.
+ *
+ * Owner/manager work like every other row on this page, re-derived here from
+ * live roles rather than trusted from the render that drew the checkbox: what
+ * this switch turns on is a public page, and a staffer who reached this action
+ * through a stale tab is refused at the write.
+ */
+export async function savePublicBoatLineAction(formData: FormData): Promise<void> {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  const path = shopPath(session.user.shopSlug, "settings", "display");
+  const allowed = await canPersonManageShopSettings(db, session.user.shopId, session.user.personId);
+  // The same refusal the page itself makes, and it throws rather than returns:
+  // there is no path here that decides against the caller and carries on.
+  if (!allowed) {
+    redirect(noticeUrl(shopPath(session.user.shopSlug, "settings"), "settings-not-authorized"));
+  }
+  await setShopPublicBoatLine(db, session.user.shopId, formData.get("publicBoatLine") === "on");
+  // The storefront and every boat's own page read this column, so the switch
+  // has to reach past this pane.
+  revalidatePath("/", "layout");
+  revalidatePath(path);
+}
 
 /**
  * The origin this app is served from, for the URL a staffer pastes into a

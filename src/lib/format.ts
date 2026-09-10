@@ -272,6 +272,25 @@ export function formatTimeRangeTz(
 }
 
 /**
+ * "8:52 AM EDT" — a bare time that names its zone, for a page whose reader may
+ * not be standing in it.
+ *
+ * The public schedule leaves its times bare on purpose: local time is the
+ * honest default for somebody in the shop's own town. The follow-the-boat page
+ * is the case that argues the other way — it is a link a diver pastes into a
+ * group chat, and whoever opens it may be three zones away, deciding when to
+ * leave for the dock.
+ */
+export function formatTimeTz(date: Date, locale = "en-US", timeZone: string): string {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+    timeZone,
+  }).format(date);
+}
+
+/**
  * The pieces of a calendar-agenda date block — weekday cap, day numeral, month
  * cap — for surfaces that lay the date out as a block rather than a sentence
  * (the public schedule's day headers). Same options object as

@@ -38,5 +38,17 @@
     "denied": "Only an owner or manager can change lobby screens.",
     "invalidLabel": "Give the screen a name of up to {max, plural, one {# character} other {# characters}}.",
     "revoked": "Link revoked."
+  },
+  "world": {
+    "heading": "What the world can see",
+    "boatLine": {
+      "heading": "Where each boat is in its day",
+      "detail": "On the storefront, and on the link a diver shares. A stage word and a time, never who is aboard.",
+      "label": "Say where each boat is in its day",
+      "valueOn": "On",
+      "valueOff": "Off",
+      "submit": "Save",
+      "submitting": "Saving…"
+    }
   }
 }

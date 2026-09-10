@@ -1833,6 +1833,30 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-lens", scheme);
       });
 
+      /**
+       * **Follow the boat** — ADR 20260908-one-hand, decision 6, lever U.
+       *
+       * The page a diver hands to whoever is waiting on the dock: the stage
+       * word the crew tapped in the shop's own face, what they said and when,
+       * the departure's own line with its dots, and two doors. The picture is
+       * the only thing that can tell a marked line from an unmarked one — the
+       * done/now/todo dot is the entire state vocabulary and carries no word.
+       *
+       * The trip id is read off the storefront's own Follow door rather than
+       * hard-coded, since a seeded departure's id differs on every run.
+       */
+      test(`the boat's public page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        const follow = page.getByRole("link", { name: "Follow", exact: true });
+        await follow.waitFor();
+        await follow.click();
+        // The line's own last row, not the `<h1>`: the header resolves before
+        // the day beneath it, and a shot fired between the two photographs a
+        // page with a title and no line.
+        await page.getByText("Back", { exact: true }).waitFor();
+        await capture(page, "follow-the-boat", scheme);
+      });
+
       // A departure that no longer exists, which is what a link on a flyer or
       // in last season's Instagram post resolves to. It is a *shop* surface
       // now rather than DiveDay's app-wide 404 (issue #765), so the thing to

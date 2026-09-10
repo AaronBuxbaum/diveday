@@ -88,6 +88,17 @@ describe("the live boat panel's place", () => {
     // `?embed=1` is a window onto the schedule (issue #805); a live panel
     // would spend a third of a widget on a fact the host page did not ask for.
     expect(positionOf("<LiveBoatPanel")).toBeGreaterThan(positionOf("{isEmbed ? null : ("));
-    expect(SOURCE).toContain("isEmbed ? null : liveShopStage(");
+    expect(SOURCE).toContain("isEmbed || !shop.publicBoatLine");
+  });
+
+  it("is never read for a shop that has not said the world may see its boats", () => {
+    // ADR 20260908-one-hand, decision 6, lever U, owner call (j): one switch
+    // covers the storefront's line, its Follow door and the boat's own page,
+    // and it is off until a shop turns it on. Pinned at the *read* rather than
+    // at the render, so no later edit can leave the query running and hide its
+    // answer — which is how an operational fact reaches a page that is meant
+    // not to have it.
+    expect(SOURCE).toContain("!shop.publicBoatLine\n        ? null\n        : liveShopStage(");
+    expect(countOf("liveShopStage(")).toBe(1);
   });
 });

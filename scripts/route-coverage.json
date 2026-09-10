@@ -164,6 +164,11 @@
     "visual": ["schedule", "schedule-above-level", "schedule-embed", "schedule-lens"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/s/[shopSlug]/boats/[tripId]": {
+    "e2e": ["follow-the-boat.spec.ts", "a11y.spec.ts"],
+    "visual": ["follow-the-boat"],
+    "a11y": ["a11y.spec.ts"]
+  },
   "/s/[shopSlug]/courses": {
     "e2e": ["courses.spec.ts"],
     "visual": ["public-courses"],

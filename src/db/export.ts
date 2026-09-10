@@ -890,6 +890,7 @@ export async function loadShopExportBundleInput(
             // restored from one must not come back published.
             "search_listing_opt_out_at",
             "tide_window_public",
+            "public_boat_line",
             "conservation_commitments",
             "tagline",
             "description",
@@ -951,6 +952,7 @@ export async function loadShopExportBundleInput(
               shop.seasonStartDay,
               shop.searchListingOptOutAt,
               shop.tideWindowPublic,
+              shop.publicBoatLine,
               JSON.stringify(shop.conservationCommitments),
               shop.tagline,
               shop.description,

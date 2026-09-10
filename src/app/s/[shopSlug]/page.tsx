@@ -56,6 +56,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import {
   publicAvailabilityPath,
+  publicBoatPath,
   publicCoursePath,
   publicCoursesPath,
   publicSchedulePath,
@@ -365,7 +366,13 @@ export default async function SchedulePage({
       // The boat a crew said is out (ADR 20260904-reef-all-the-way-down,
       // Budget rule 4). Bounded to today's own window so a stage nobody
       // cleared cannot speak for a week, and never read inside the frame.
-      isEmbed ? null : liveShopStage(db, shop.id, now, shopDayBounds(now, shop.timezone).from),
+      // A shop that has not said the world may read its boats publishes none
+      // of this (ADR 20260908-one-hand, decision 6, lever U, owner call j):
+      // the panel, its Follow door and the boat's own page go together, and
+      // the switch is off until a shop turns it on.
+      isEmbed || !shop.publicBoatLine
+        ? null
+        : liveShopStage(db, shop.id, now, shopDayBounds(now, shop.timezone).from),
     ]);
   // The sentences, composed here because word order and the site's place in
   // them are a locale's choice rather than a component's. The boat is the
@@ -721,6 +728,13 @@ export default async function SchedulePage({
                 eyebrow={t("tripStage.liveEyebrow")}
                 sentence={liveStageSentence}
                 meta={liveStageMeta}
+                // The door to that boat's own day (ADR 20260908-one-hand,
+                // decision 6, lever U). Reached only when the switch is on,
+                // because `liveStage` is null without it.
+                follow={{
+                  href: publicBoatPath(shopSlug, liveStage.tripId),
+                  label: t("boatLine.follow"),
+                }}
               />
             ) : null}
             {nextBoat ? (

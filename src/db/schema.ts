@@ -357,6 +357,23 @@ export const shops = pgTable(
      */
     tideWindowPublic: boolean("tide_window_public").notNull().default(false),
     /**
+     * Whether this shop's boats say where they are in their day to somebody
+     * who is not a diver on board — the storefront's live line, the follow
+     * link a diver shares, the dock sign (ADR 20260908-one-hand, decision 6,
+     * lever U).
+     *
+     * Off by default, and the default is the point: what leaves the shop is a
+     * stage word a crew member tapped and the time they tapped it. Never a
+     * name, never a count of people, never a position. A shop that has not
+     * said yes publishes none of it, and every public reader treats the switch
+     * as a `notFound()` rather than as an empty state.
+     *
+     * A boolean rather than a timestamp, unlike `search_listing_opt_out_at`
+     * beside it: that column answers "when did this shop opt out of something
+     * it had by default?", and this one has no default to opt out of.
+     */
+    publicBoatLine: boolean("public_boat_line").notNull().default(false),
+    /**
      * The shop's locality as a path segment — `key-largo` for a shop whose
      * `address_locality` says "Key Largo" — written by `setShopAddress` from
      * `regionSlugFromLocality` (src/lib/region.ts) every time the address

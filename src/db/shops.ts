@@ -611,3 +611,17 @@ export async function setShopTideWindowPublic(db: AppDb, shopId: string, on: boo
     .returning();
   return shop ?? null;
 }
+
+/**
+ * Whether this shop's boats say where they are in their day to somebody who
+ * is not aboard (ADR 20260908-one-hand, decision 6, lever U). Off by default;
+ * off, every public reader of a boat's line is a `notFound()`.
+ */
+export async function setShopPublicBoatLine(db: AppDb, shopId: string, on: boolean) {
+  const [shop] = await db
+    .update(shops)
+    .set({ publicBoatLine: on })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}

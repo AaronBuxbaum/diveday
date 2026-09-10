@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BoatDrift } from "@/components/illustration/BoatDrift";
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { SectionCard } from "@/components/ui/card";
@@ -24,6 +25,7 @@ export function LiveBoatPanel({
   sentence,
   eyebrow,
   meta,
+  follow,
 }: {
   stage: TripStage;
   /** "Mantis II is out on Molasses Reef." — composed server-side. */
@@ -31,6 +33,13 @@ export function LiveBoatPanel({
   eyebrow: string;
   /** "The crew said so at 7:04 AM. Back around 11:30." */
   meta: string;
+  /**
+   * The door to this boat's own page (ADR 20260908-one-hand, decision 6,
+   * lever U). Absent unless the shop turned the line on — the panel above it
+   * is older than the switch and keeps speaking without one, because a stage
+   * on the shop's own storefront is the shop's own page saying it.
+   */
+  follow?: { href: string; label: string };
 }) {
   return (
     <SectionCard className="mt-6 max-w-md">
@@ -42,6 +51,17 @@ export function LiveBoatPanel({
           <p className={groupLabelClass()}>{eyebrow}</p>
           <p className={`mt-1 ${SECTION_TITLE_CLASS}`}>{sentence}</p>
           <p className="mt-1 text-sm text-muted tabular-nums">{meta}</p>
+          {follow ? (
+            // One quiet door, at link weight. A panel about a boat that is
+            // already out is not a place for a button competing with the
+            // page's one primary, which is the seat on the next departure.
+            <Link
+              href={follow.href}
+              className="mt-2 inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+            >
+              {follow.label}
+            </Link>
+          ) : null}
         </div>
       </div>
     </SectionCard>

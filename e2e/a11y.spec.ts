@@ -1067,6 +1067,17 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
     await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
     await expectNoA11yViolations(page);
 
+    // **The boat's own page** (ADR 20260908-one-hand, decision 6, lever U).
+    // Reached through the storefront's Follow door rather than by path, since
+    // a seeded departure's id differs on every run — and because that is how
+    // the one reader this page has arrives at it: from a link, with no shop
+    // chrome they have learned and nothing on screen but a word, a time and a
+    // line of rows. Waits on the line's own last row, not the `<h1>`, for the
+    // same streaming reason the schedule above documents.
+    await page.getByRole("link", { name: "Follow", exact: true }).click();
+    await expect(page.getByText("Back", { exact: true })).toBeVisible();
+    await expectNoA11yViolations(page);
+
     await scanStaticRoutes(page, [
       { path: "/s/blue-mantis/courses", heading: "Courses" },
       // One course page in full, not just the catalog index. It is the second

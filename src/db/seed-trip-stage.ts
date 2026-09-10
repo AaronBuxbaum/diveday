@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, lte } from "drizzle-orm";
 import { MINUTE_MS, nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { tripDives, tripStageEvents, trips } from "./schema";
+import { shops, tripDives, tripStageEvents, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -83,6 +83,13 @@ export async function seedTripStage(
     .where(eq(tripDives.tripId, today.id))
     .orderBy(asc(tripDives.diveNumber))
     .limit(1);
+
+  // ...and the demo shop has said the world may read it (ADR
+  // 20260908-one-hand, decision 6, lever U). Every shop starts with this off,
+  // which is the right default and the wrong demo: with it off the storefront's
+  // panel, the Follow door and the boat's own page are all invisible on the one
+  // shop every capture is of.
+  await db.update(shops).set({ publicBoatLine: true }).where(eq(shops.id, shopId));
 
   await db.insert(tripStageEvents).values({
     shopId,

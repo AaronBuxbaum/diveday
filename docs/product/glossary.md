@@ -1674,6 +1674,16 @@ new domain concept, define it here in the same PR.
   an "n of capacity" count, the meeting point and the outlook, with no sign-in on that screen. Hashed
   at rest, non-expiring like a calendar feed, revoked from Settings → Lobby display. It never names
   a diver; its one switch, *show names*, adds the crew line (issue #1426).
+- **Follow link** — the public page for one departure's day (`/s/<shopSlug>/boats/<tripId>`), which
+  a diver hands to whoever is waiting for them on the dock. Deliberately **not** a bearer credential
+  and deliberately not revocable: the trip id is in the URL unhashed because the page holds no
+  secret — the stage word a crew member tapped, the time they tapped it, and the departure's own
+  line of times. Never a name, never a count of people, never a position. Two divers on the same
+  boat share one page. A shop publishes it, its storefront's live line and its Follow door together
+  through one switch, `shops.public_boat_line`, which is **off** until the shop turns it on and
+  takes all three with it when it goes back off; a private charter, a cancelled departure and a day
+  that has closed are each a 404 rather than an empty state (ADR
+  [20260908-one-hand](../architecture/decisions/20260908-one-hand.md), decision 6, lever U).
 - **Recovery code** — one of ten single-use strings issued at two-factor enrolment, shown once and
   stored only as a salted HMAC under the deployment's own sealing key. It is a second factor, not
   a password reset: presenting one satisfies the same check a TOTP code does.

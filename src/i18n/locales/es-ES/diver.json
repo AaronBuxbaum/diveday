@@ -10,6 +10,38 @@
     "liveEyebrow": "Ahora mismo",
     "liveBack": "De vuelta hacia las {back}."
   },
+  "boatLine": {
+    "stage": {
+      "boarding": "Embarcando en el muelle.",
+      "underway": "En {site}.",
+      "underwayNoSite": "En el agua.",
+      "surface": "En superficie entre inmersiones.",
+      "headingIn": "De regreso.",
+      "home": "De vuelta en el muelle."
+    },
+    "atTheDock": "En el muelle.",
+    "leavesAt": "Sale a las {time}.",
+    "said": "La tripulación lo dijo a las {when}.",
+    "asOf": "Según las {when}.",
+    "whenAndTrip": "{date} · {trip}",
+    "dayHeading": "El día",
+    "checkIn": "Registro",
+    "leaves": "Salida",
+    "back": "Regreso",
+    "diveNumber": "Inmersión {number}",
+    "note": "Esta página dice en qué punto de su día va el barco, según lo marca la tripulación. No dice quién va a bordo ni dónde está el barco en el agua.",
+    "directions": "Cómo llegar",
+    "callShop": "Llamar al centro",
+    "follow": "Seguir",
+    "share": {
+      "heading": "Compártelo con quien te espera",
+      "detail": "Un enlace a dónde va el barco, sin nombres.",
+      "action": "Compartir",
+      "copied": "Enlace copiado",
+      "copyFailed": "No se pudo copiar, selecciónalo a mano",
+      "text": "El día de {boat}, con {shop}"
+    }
+  },
   "board": {
     "empty": "Hoy no hay salidas.",
     "aboard": "{boarded} de {booked, plural, one {# buceador} other {# buceadores}} a bordo",

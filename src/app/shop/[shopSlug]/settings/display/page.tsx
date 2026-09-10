@@ -7,8 +7,10 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { DISPLAY_LABEL_MAX_LENGTH } from "@/lib/display-tokens";
 import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
+import { savePublicBoatLineAction } from "./actions";
 import { DisplayLinksPanel } from "./DisplayLinksPanel";
 import type { DisplayLinkCopy, DisplayLinkView } from "./display-panel-types";
+import { WorldPanel } from "./WorldPanel";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately from another `/shop` page, where the staff shell is already
@@ -92,6 +94,24 @@ export default async function LobbyDisplayPage({
         description={t("display.description")}
       />
       <DisplayLinksPanel copy={copy} screens={screens} maxLabelLength={DISPLAY_LABEL_MAX_LENGTH} />
+      {/* **What the world can see** (ADR 20260908-one-hand, decision 6, lever
+          U). Below the screens rather than above them: the page's own subject
+          is the links a shop puts on its own walls, and this is the one row
+          about what leaves the building. */}
+      <WorldPanel
+        action={savePublicBoatLineAction}
+        on={shop.publicBoatLine}
+        copy={{
+          heading: t("display.world.heading"),
+          rowHeading: t("display.world.boatLine.heading"),
+          detail: t("display.world.boatLine.detail"),
+          label: t("display.world.boatLine.label"),
+          valueOn: t("display.world.boatLine.valueOn"),
+          valueOff: t("display.world.boatLine.valueOff"),
+          submit: t("display.world.boatLine.submit"),
+          submitting: t("display.world.boatLine.submitting"),
+        }}
+      />
     </main>
   );
 }
