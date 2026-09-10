@@ -52,11 +52,32 @@ import {
   ROUTE53_METRICS_REGION,
   SES_CONFIGURATION_SET_NAME,
   SES_EVENT_TOPIC_NAME,
+  SES_INBOUND_OBJECT_PREFIX,
   SES_INBOUND_TOPIC_NAME,
   SES_REGION,
   sesEmailDomainFrom,
   webhookHostFrom,
 } from "./stack-config";
+
+/**
+ * The three CloudFormation stacks this app deploys, each in the region it
+ * actually lives in.
+ *
+ * A function rather than a constant because it needs the stack's partition and
+ * account, and one function rather than two lists because both the deployer
+ * user (S5) and the two CI roles (S18) have to name exactly these and nothing
+ * else. An unscoped `stack/*` would let any of the three reach every
+ * CloudFormation stack in the account -- including stacks this repository does
+ * not own, whose outputs nobody here audits, and S4's incident is the record of
+ * what a stack output can turn out to contain.
+ */
+function cdkStackArnsFor(partition: string, account: string): string[] {
+  return [
+    `arn:${partition}:cloudformation:${PRIMARY_REGION}:${account}:stack/${MAIN_STACK_NAME}/*`,
+    `arn:${partition}:cloudformation:${SES_REGION}:${account}:stack/${EMAIL_STACK_NAME}/*`,
+    `arn:${partition}:cloudformation:${ROUTE53_METRICS_REGION}:${account}:stack/${GLOBAL_STACK_NAME}/*`,
+  ];
+}
 
 /** The credential hand-off document. Slash-separated for the `diveday/*` secret namespace. */
 const CREDENTIALS_SECRET_NAME = "diveday/env";
@@ -467,14 +488,19 @@ export class InfraStack extends cdk.Stack {
       }),
     );
 
+    // The three stacks by name, not `stack/*/*` in each region. `cdk deploy`
+    // only ever describes the stack it is deploying, so the wildcard bought
+    // nothing and cost the difference between "this app's stacks" and "every
+    // CloudFormation stack in the account" -- whose outputs nobody here audits,
+    // and S4 above is the record of what a stack output can turn out to hold.
+    // This key is workstation-distributed, and the same three names the two CI
+    // roles are scoped to (S18), from the one helper.
     deployerUser.addToPolicy(
       new iam.PolicyStatement({
         sid: "ReadStackStatusAndBootstrapVersion",
         actions: ["cloudformation:DescribeStacks", "ssm:GetParameter"],
         resources: [
-          ...deploymentRegions.map(
-            (region) => `arn:${this.partition}:cloudformation:${region}:${this.account}:stack/*/*`,
-          ),
+          ...cdkStackArnsFor(this.partition, this.account),
           ...bootstrapVersionParameterArns,
         ],
       }),
@@ -712,10 +738,15 @@ export class InfraStack extends cdk.Stack {
       account: "",
       resource: inboundMailBucketNameFrom(this),
     });
+    // `/mail/*`, not `/*`: the receipt rule writes under one prefix
+    // (objectKeyPrefix in the email stack), and this credential is the one
+    // shipped to Vercel as SES_AWS_ACCESS_KEY_ID. Scoping to the prefix costs
+    // nothing and means a leaked app credential cannot read whatever a future
+    // writer puts elsewhere in a bucket full of divers' own words.
     sesSenderUser.addToPrincipalPolicy(
       new iam.PolicyStatement({
         actions: ["s3:GetObject"],
-        resources: [`${inboundMailBucketArn}/*`],
+        resources: [`${inboundMailBucketArn}/${SES_INBOUND_OBJECT_PREFIX}*`],
       }),
     );
     sesSenderUser.addToPrincipalPolicy(
@@ -2573,15 +2604,10 @@ exports.handler = async (event) => {
         "sts:AssumeRoleWithWebIdentity",
       );
 
-    // Both stacks, each scoped to the region it actually lives in rather than
-    // to a wildcard over the pair -- an unscoped `stack/*/*` would let either
-    // CI role reach every CloudFormation stack in the account, and the whole
-    // point of these two roles is that they cannot.
-    const cdkStackArns = [
-      `arn:${this.partition}:cloudformation:${PRIMARY_REGION}:${this.account}:stack/${MAIN_STACK_NAME}/*`,
-      `arn:${this.partition}:cloudformation:${SES_REGION}:${this.account}:stack/${EMAIL_STACK_NAME}/*`,
-      `arn:${this.partition}:cloudformation:${ROUTE53_METRICS_REGION}:${this.account}:stack/${GLOBAL_STACK_NAME}/*`,
-    ];
+    // Each scoped to the region it actually lives in rather than to a wildcard
+    // over the set -- the same three the deployer user reads in S5, from the one
+    // helper, so neither list can gain a stack the other does not have.
+    const cdkStackArns = cdkStackArnsFor(this.partition, this.account);
     const denyReadingAnySecret = () =>
       new iam.PolicyStatement({
         sid: "NeverReadAnySecretValue",

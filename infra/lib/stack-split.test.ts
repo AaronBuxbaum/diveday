@@ -13,6 +13,7 @@ import {
   ROUTE53_METRICS_REGION,
   SES_CONFIGURATION_SET_NAME,
   SES_EVENT_TOPIC_NAME,
+  SES_INBOUND_OBJECT_PREFIX,
   SES_INBOUND_TOPIC_NAME,
   SES_REGION,
 } from "./stack-config";
@@ -141,6 +142,23 @@ describe("the stack split", () => {
     expect(resources).not.toContain(":ses:us-east-1:");
   });
 
+  it("lets the sender read the received mail, and only under the prefix SES writes it", () => {
+    const { main } = stacks();
+    const resources = policyResources(main);
+    const bucket = `:s3:::diveday-inbound-mail`;
+    // The bucket is in the other stack, so this grant is an ARN assembled from
+    // a constant rather than a `grantRead` on a construct. An S3 ARN carries no
+    // region, which is what makes that a whole joint rather than half of one --
+    // but it also means a stray `*` reaches further than anything else in this
+    // file, so both halves are pinned.
+    expect(resources).toContain(`${bucket}/${SES_INBOUND_OBJECT_PREFIX}*`);
+    expect(resources).toContain(`${bucket}"`);
+    // Never the whole bucket, and never every bucket. This credential is
+    // shipped to Vercel, and the objects are divers' own words.
+    expect(resources).not.toContain(`${bucket}/*`);
+    expect(resources).not.toContain(":s3:::*");
+  });
+
   it("hands the app the SES region and the topic ARN that go with it", () => {
     const { main } = stacks();
     const document = JSON.stringify(main.findResources("AWS::SecretsManager::Secret"));
@@ -189,9 +207,17 @@ describe("the stack split", () => {
     )
       .flatMap((policy) => policy.Properties?.PolicyDocument?.Statement ?? [])
       .filter((statement) =>
-        ["DeployTheStack", "DiffAgainstDeployedStack"].includes(statement.Sid ?? ""),
+        // The deployer user's own stack read is in this list too: it holds the
+        // same three names for the same reason, and leaving it out is how it
+        // spent a while at `stack/*/*` in every deployment region while the two
+        // CI roles were correctly scoped.
+        [
+          "DeployTheStack",
+          "DiffAgainstDeployedStack",
+          "ReadStackStatusAndBootstrapVersion",
+        ].includes(statement.Sid ?? ""),
       );
-    expect(ciStatements).toHaveLength(2);
+    expect(ciStatements).toHaveLength(3);
     for (const statement of ciStatements) {
       const scoped = JSON.stringify(statement.Resource);
       expect(scoped).toContain(`stack/${MAIN_STACK_NAME}/*`);

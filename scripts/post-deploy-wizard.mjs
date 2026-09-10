@@ -1,6 +1,6 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { SES_REGION } from "../config/aws-regions.mjs";
+import { PRIMARY_REGION, SES_REGION } from "../config/aws-regions.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -90,7 +90,7 @@ export async function runPostDeployWizard({
     ) &&
     yes(
       await ask(
-        "Update generated AWS CLI profiles (and set diveday-admin's us-east-1 region)? [y/N] ",
+        `Update generated AWS CLI profiles (and set diveday-admin's ${PRIMARY_REGION} region)? [y/N] `,
       ),
     )
   ) {

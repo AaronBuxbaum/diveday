@@ -146,7 +146,15 @@ if (!isCiDeploy) {
 // configured administrator profile must not make the handoff fail with AWS
 // CLI's unhelpful NoRegion error, and it must not read a secret out of the
 // region the estate used to be in.
-syncEnvironment.AWS_DEFAULT_REGION ||= PRIMARY_REGION;
+//
+// Assigned, not `||=`, and that is the whole protection. A workstation that
+// deployed the previous estate has the previous region exported, and the
+// credentials secret is RemovalPolicy.DESTROY -- so for its recovery window
+// after the old stack is deleted, a read against the old region *succeeds* and
+// hands back the old estate's document, which this script then distributes to
+// Vercel and GitHub. Every key in it is dead. `||=` would have let the shell
+// win that argument.
+syncEnvironment.AWS_DEFAULT_REGION = PRIMARY_REGION;
 
 // A legacy deployer key may have completed the CDK deploy above, but it is
 // deliberately stripped from this administrator-only handoff on a workstation.

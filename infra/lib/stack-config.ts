@@ -60,6 +60,14 @@ export const SES_EVENT_TOPIC_NAME = "diveday-ses-email-events";
  * rather than from the constructs, for the same reason the identity ARNs are.
  */
 export const SES_INBOUND_TOPIC_NAME = "diveday-ses-inbound-mail";
+
+/**
+ * The one prefix SES writes received mail under, and the one the sender
+ * credential may read. Shared because the two halves are in different stacks
+ * and a disagreement fails closed but silently: mail arrives, the app's read
+ * 403s, and the webhook answers 500 until somebody reads the log.
+ */
+export const SES_INBOUND_OBJECT_PREFIX = "mail/";
 export const SES_INBOUND_RULE_SET_NAME = "diveday-inbound";
 
 /**

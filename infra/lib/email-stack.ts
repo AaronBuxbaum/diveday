@@ -15,6 +15,7 @@ import {
   SES_ALARM_TOPIC_NAME,
   SES_CONFIGURATION_SET_NAME,
   SES_EVENT_TOPIC_NAME,
+  SES_INBOUND_OBJECT_PREFIX,
   SES_INBOUND_RULE_SET_NAME,
   SES_INBOUND_TOPIC_NAME,
   sesEmailDomainFrom,
@@ -227,7 +228,7 @@ export class EmailStack extends cdk.Stack {
           actions: [
             new sesActions.S3({
               bucket: inboundMailBucket,
-              objectKeyPrefix: "mail/",
+              objectKeyPrefix: SES_INBOUND_OBJECT_PREFIX,
               topic: sesInboundNotifications,
             }),
           ],
