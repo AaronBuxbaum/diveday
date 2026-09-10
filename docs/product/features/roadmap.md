@@ -566,6 +566,34 @@ levers, L–S. The ADR's decision 5 records it; the owner's calls are H-71 (a) a
 - **20m** — the surface sweep: each round-3 board's "Deleted here" list applied to its family of
   pages, one family per session, with the visual diffs explained in the PR. Waits on 20a–20e.
 
+Round 4 (2026-09-10, after the owner's read of round 3 — "evaluate the entire app from many
+different angles; show me a few interesting possibilities; elegant; wow in marketing and in-app")
+reads the app by twelve angles instead of by surface and draws seven possibilities, T–Z, on the
+kit, each with a marketing frame that is a screenshot of its in-app frame. The ADR's decision 6
+records it; the owner's calls are H-71 (i)–(o).
+
+- **20n** — U, follow the boat: the pass's "Share with whoever is waiting for you", a public route
+  per boat per day carrying the trip's line with the crew's stage word and its time only, the
+  storefront's Right now with a line per boat, a Settings switch off by default. Waits on 20h and
+  H-71 j.
+- **20o** — Y, try it with your boats: the homepage's hero takes the shop, a boat and a departure
+  and redraws as the visitor's first Today in a colour derived from their name; the onboard door
+  already filled; the storefront in miniature and the four pictures beneath. Waits on 20l's S.
+- **20p** — T, the shop's year: the year page over the log, the year card in the shop's face (no
+  money), the homepage's proof band for shops that said yes. Waits on 20j and H-71 k.
+- **20q** — W, give a dive: "Book for someone else" on the trip page, the gift pass with the giver's
+  line and a claim link, the giver's read-only thread, the blow-out refund to the giver, the counted
+  buddy seat on the postcard's back. Waits on 20i, 20k and H-71 l.
+- **20r** — V, the living reef: Seen on the crew's dive log from the shop's species list, the site
+  page's "Seen here this month" dated, the storefront's site-card sentence, sunrise, sunset and the
+  moon as ticks on the tide line. Waits on 20k and H-71 n.
+- **20s** — X, the shop on paper: Settings › Print with the dock sign, the boat card by day and by
+  night, the window sticker, the paper pass, the site briefing card and the year poster; the print
+  sheet as a kit specimen. Waits on 20i and H-71 o.
+- **20t** — Z, the diver's shelf: a diver-at-shop token scope, the shelf page, the storefront's
+  greeting for a known phone, the sizes write, "Forget this phone", the row on the diver record.
+  Waits on 20i, 20k and H-71 m.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)

@@ -11,6 +11,10 @@
     {
       "id": "page-3",
       "name": "Round 3 — every surface, one hand"
+    },
+    {
+      "id": "page-4",
+      "name": "Round 4 — twelve angles, seven possibilities"
     }
   ],
   "artboards": [
@@ -310,6 +314,78 @@
       "w": 1180,
       "h": 7250,
       "page": "page-3"
+    },
+    {
+      "file": "Round4.dc.html",
+      "title": "Round 4 — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 5750,
+      "page": "page-4"
+    },
+    {
+      "file": "Year.dc.html",
+      "title": "T · The shop's year",
+      "x": 0,
+      "y": 6050,
+      "w": 1180,
+      "h": 4400,
+      "page": "page-4"
+    },
+    {
+      "file": "FollowTheBoat.dc.html",
+      "title": "U · Follow the boat",
+      "x": 0,
+      "y": 10750,
+      "w": 1180,
+      "h": 3400,
+      "page": "page-4"
+    },
+    {
+      "file": "LivingReef.dc.html",
+      "title": "V · The living reef",
+      "x": 0,
+      "y": 14450,
+      "w": 1180,
+      "h": 4150,
+      "page": "page-4"
+    },
+    {
+      "file": "GiveADive.dc.html",
+      "title": "W · Give a dive",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 4050,
+      "page": "page-4"
+    },
+    {
+      "file": "OnPaper.dc.html",
+      "title": "X · The shop on paper",
+      "x": 1300,
+      "y": 4350,
+      "w": 1180,
+      "h": 4350,
+      "page": "page-4"
+    },
+    {
+      "file": "TryItWithYourBoats.dc.html",
+      "title": "Y · Try it with your boats",
+      "x": 1300,
+      "y": 9000,
+      "w": 1180,
+      "h": 4300,
+      "page": "page-4"
+    },
+    {
+      "file": "DiversShelf.dc.html",
+      "title": "Z · The diver's shelf",
+      "x": 1300,
+      "y": 13600,
+      "w": 1180,
+      "h": 4000,
+      "page": "page-4"
     }
   ],
   "annotations": [
@@ -376,10 +452,34 @@
       "w": 520,
       "page": "page-3",
       "text": "What is honest about the pictures: photographs are gradients standing in for the shop's own; the fonts are the real faces; the numbers agree across boards. A frame is one moment, and each board's aside says which. Nothing here is normative until the ADR moves to Accepted (H-71 a)."
+    },
+    {
+      "id": "round4-read",
+      "x": 0,
+      "y": -260,
+      "w": 560,
+      "page": "page-4",
+      "text": "Round 4, 2026-09-10. The owner asked for the whole app read from many angles and a few possibilities that make a customer say wow, in marketing and in the app. Read Round4 first (the twelve angles, the seven possibilities T–Z, the marketing thread, the calls), then the seven boards down the two columns. Every board is drawn on round 3's kit and holds round 3's fiction."
+    },
+    {
+      "id": "round4-marketing",
+      "x": 1300,
+      "y": -260,
+      "w": 520,
+      "page": "page-4",
+      "text": "Every possibility here puts one true picture on DiveDay's own pages: a real shop's year card, a boat you can follow, a reef page that is alive, a seat given to a friend, the shop on paper, the homepage that becomes your shop, a diver's shelf. The marketing is the product photographed, never a claim about it."
+    },
+    {
+      "id": "round4-honest",
+      "x": 2560,
+      "y": 0,
+      "w": 520,
+      "page": "page-4",
+      "text": "What is honest about the pictures: photographs are gradients standing in for the shop's own; the fonts are the real faces; the numbers agree with round 3. Nothing here is normative until the ADR moves to Accepted (H-71 a), and every possibility waits on its own call, (i) to (o)."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-3"
+    "page": "page-4"
   }
 }
