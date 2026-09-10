@@ -969,6 +969,19 @@ async function waitForEntranceAnimations(page: Page) {
     page.evaluate((frameMs) => {
       for (const animation of document.getAnimations()) {
         if (animation.effect?.getComputedTiming().iterations === Number.POSITIVE_INFINITY) continue;
+        // **A scroll-driven animation is not finished, it is *positioned*.**
+        // `animation-timeline: scroll(root block)` drives the staff bar's fold
+        // from the scroll offset rather than from a clock (globals.css), and
+        // such an animation reports finite iterations like any other — so
+        // cancelling it here froze the label at whatever scroll 0 had written,
+        // and `captureFolded` then waited forever for an opacity that could no
+        // longer change. That is the failure `captureFolded`'s own docblock
+        // predicts for `animations: "disabled"`, arriving by a different door.
+        //
+        // Compared against `document.timeline` rather than sniffing a class
+        // name: the document's monotonic timeline is the only one whose end
+        // state is a *time* the shutter can be after.
+        if (animation.timeline !== document.timeline) continue;
         try {
           animation.commitStyles();
           animation.cancel();
