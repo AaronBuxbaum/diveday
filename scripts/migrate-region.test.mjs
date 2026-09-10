@@ -37,6 +37,7 @@ function fixture({
   template = null,
   logGroupsPresent = null,
   logGroupDeleteError = null,
+  secretPresent = null,
 } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "diveday-migrate-"));
   directories.push(directory);
@@ -53,6 +54,7 @@ function fixture({
     writeFileSync(join(directory, "log-groups-present"), logGroupsPresent.join("\t"));
   }
   writeFileSync(join(directory, "log-group-delete-error"), logGroupDeleteError ?? "");
+  writeFileSync(join(directory, "secret-present"), secretPresent ?? "");
   // A real synthesized template when the test supplies one, written where the
   // cloud assembly puts it. `pnpm infra:synth` is faked, so the fixture stands
   // in for what it would have produced -- but the *filename* is the fixture's
@@ -84,6 +86,13 @@ fi
 if [ "$2" = "describe-stacks" ] && [ -s "$DIVEDAY_DIR/stack-status" ]; then
   cat "$DIVEDAY_DIR/stack-status"
   exit 0
+fi
+if [ "$2" = "delete-secret" ]; then
+  exit 0
+fi
+if [ "$2" = "describe-secret" ]; then
+  if [ -s "$DIVEDAY_DIR/secret-present" ]; then cat "$DIVEDAY_DIR/secret-present"; exit 0; fi
+  exit 1
 fi
 if [ "$2" = "describe-log-groups" ]; then
   if [ -f "$DIVEDAY_DIR/log-groups-present" ]; then cat "$DIVEDAY_DIR/log-groups-present"; fi
@@ -430,7 +439,7 @@ describe("infra:migrate-region", () => {
     );
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("Could not delete 1 leftover log group");
+    expect(result.stderr).toContain("Could not remove 1 thing(s) the last create left behind");
     expect(result.stderr).toContain("/aws/lambda/diveday-access-key-pruner-provider");
     // The reason AWS gave, not a reason this script invented.
     expect(result.stderr).toContain("logs:DeleteLogGroup");
@@ -465,7 +474,7 @@ describe("infra:migrate-region", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(
-      "Deleted leftover log group /aws/lambda/diveday-access-key-pruner-provider",
+      "Deleted log group /aws/lambda/diveday-access-key-pruner-provider",
     );
     expect(result.stdout).toContain("1 deleted, 1 already gone, 0 refused, of 2");
   });
@@ -510,7 +519,7 @@ describe("infra:migrate-region", () => {
     expect(awsLog(directory)).toContain("delete-stack --stack-name diveday-infra");
     // And having cleared it, the sweep actually runs.
     expect(result.stdout).toContain(
-      "Deleted leftover log group /aws/lambda/diveday-sns-sms-delivery-status-attributes",
+      "Deleted log group /aws/lambda/diveday-sns-sms-delivery-status-attributes",
     );
   });
 
@@ -570,6 +579,44 @@ describe("infra:migrate-region", () => {
     expect(result.stderr).toContain("is UPDATE_IN_PROGRESS");
     expect(result.stderr).toContain("does not know how to prepare");
     expect(awsLog(directory)).not.toContain("delete-stack --stack-name diveday-infra");
+  });
+
+  it("purges a retained secret the rolled-back create kept, rather than scheduling it", () => {
+    // The failure after the log groups were fixed. DatabaseDumpConnection is
+    // RemovalPolicy.RETAIN, so CloudFormation keeps the secret when a create
+    // rolls back, and the next create answers AlreadyExists on its name. A
+    // delete with a recovery window would not help either: a secret pending
+    // deletion still holds its name for the whole window.
+    const directory = fixture({
+      template: {
+        Resources: {
+          S: {
+            Type: "AWS::SecretsManager::Secret",
+            DeletionPolicy: "Retain",
+            Properties: { Name: "diveday/database-url-unpooled" },
+          },
+        },
+      },
+      secretPresent: "diveday/database-url-unpooled",
+    });
+    const result = run(
+      directory,
+      "--from",
+      "us-east-1",
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+      "--confirm-teardown",
+      "us-east-1",
+      "--from-step",
+      "3",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Deleted secret diveday/database-url-unpooled");
+    const log = awsLog(directory);
+    expect(log).toContain("delete-secret --secret-id diveday/database-url-unpooled");
+    expect(log).toContain("--force-delete-without-recovery");
   });
 
   it("hands back the manual steps a script cannot do", () => {
