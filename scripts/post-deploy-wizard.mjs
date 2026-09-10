@@ -402,6 +402,22 @@ export async function runPostDeployWizard({
         );
     }
 
+    // **The one SES record no provider hands you.** SES issues the DKIM tokens
+    // and the MAIL FROM pair, so those are the records this wizard was built
+    // from; DMARC is the record that decides how every message is *judged* and
+    // nobody hands it over (issue #1654). A receiver reads the From domain's
+    // own policy and only walks up to the organizational domain when there is
+    // none, so `_dmarc.ses` is what SES mail is judged by -- and `_dmarc` on
+    // the apex is a CNAME to the mail provider's shared record, which is not
+    // ours to touch (manual action `dmarc-dns`).
+    //
+    // The address is a choice rather than a derivation, so it comes from
+    // context and is never guessed: reports sent to a mailbox nobody reads are
+    // the same as no reports, and worse, they read as done.
+    const dmarcName = recordName(`_dmarc.${emailDomain}`, dnsZone);
+    const dmarcReportEmail = contextValue(cdkArguments, "dmarcReportEmail", "");
+    const dmarcValue = `v=DMARC1; p=none; rua=mailto:${dmarcReportEmail}`;
+
     const desiredRecords = [
       ...tokens.map((token) => ({
         name: recordName(`${token}._domainkey.${emailDomain}`, dnsZone),
@@ -438,6 +454,18 @@ export async function runPostDeployWizard({
     // envelope. So a rival is found and named rather than added around; the
     // wizard never deletes a DNS record, because the one that would make that
     // safe to automate is the one it cannot verify it read correctly.
+    // **Two `v=DMARC1` records at one name is worse than none**: a receiver that
+    // finds more than one treats the domain as having no policy at all, so an
+    // add beside an existing record switches DMARC off silently. Unlike the
+    // MAIL FROM MX below, *any* TXT already at this name holds the add back,
+    // whatever its value -- a published policy with a different `rua` is
+    // somebody's deliberate choice, not a rival to name and clear away. The
+    // wizard never deletes a DNS record.
+    const existingDmarc = existingRecords
+      .split("\n")
+      .filter((line) => containsField(line, dmarcName) && containsField(line, "TXT"))
+      .map((line) => line.trim());
+
     const mailFromMxName = recordName(mailFromDomain, dnsZone);
     const desiredMailFromMx = `feedback-smtp.${SES_REGION}.amazonses.com`;
     const conflictingMailFromMx = existingRecords
@@ -450,6 +478,10 @@ export async function runPostDeployWizard({
       )
       .map((line) => line.trim());
 
+    if (existingDmarc.length === 0 && dmarcReportEmail) {
+      desiredRecords.push({ name: dmarcName, type: "TXT", value: dmarcValue, extraArguments: [] });
+    }
+
     const missingRecords = desiredRecords.filter(
       ({ name, type, value }) => !dnsRecordExists(name, type, value),
     );
@@ -459,6 +491,17 @@ export async function runPostDeployWizard({
       unreadable: Boolean(unreadableReason),
       unreadableReason,
       conflictingMailFromMx,
+      existingDmarc,
+      // What to publish by hand when there is nowhere to send the reports. The
+      // record is printed rather than added: a `rua` this wizard invented would
+      // be a mailbox nobody reads, which looks like reporting and is not.
+      dmarcToPublish:
+        existingDmarc.length === 0 && !dmarcReportEmail
+          ? {
+              name: dmarcName,
+              value: `v=DMARC1; p=none; rua=mailto:<a ${dnsZone} mailbox someone reads>`,
+            }
+          : undefined,
       // An unreadable zone has no missing records because it has no known
       // records at all. That emptiness must never read as "already present":
       // `unreadable` is what the caller checks first, both to keep the question
@@ -492,6 +535,22 @@ export async function runPostDeployWizard({
     }
   }
 
+  // **DMARC is said out loud whichever way the question goes.** A published
+  // record is left alone and named, and a missing one with nowhere to send its
+  // reports is printed for a person -- because the wizard skipping its question
+  // is exactly when nobody would otherwise learn that the record SES mail is
+  // judged by does not exist (issue #1654).
+  const logDmarcState = (plan) => {
+    for (const line of plan.existingDmarc) {
+      log(`DMARC: already published on the sending subdomain; left alone. The record: ${line}`);
+    }
+    if (plan.dmarcToPublish) {
+      log(
+        `DMARC: nothing is published at ${plan.dmarcToPublish.name}, so SES mail is judged with no policy of its own and reports nothing. Set \`dmarcReportEmail\` in cdk.json and rerun, or publish it by hand: pnpm exec vercel dns add ${plan.dnsZone} ${plan.dmarcToPublish.name} TXT '${plan.dmarcToPublish.value}'`,
+      );
+    }
+  };
+
   if (sesDnsNeedsUpdate && yes(await ask("Add the SES DNS records through Vercel DNS? [y/N] "))) {
     sesDnsPlan ??= readSesDnsPlan();
     if (sesDnsPlan.unreadable) {
@@ -502,6 +561,7 @@ export async function runPostDeployWizard({
         `Adding no SES DNS records to Vercel zone ${sesDnsPlan.dnsZone}: its existing records could not be listed (${sesDnsPlan.unreadableReason}), and adding a record that is already there duplicates it. Add them by hand, or re-run once the listing works.`,
       );
     } else {
+      logDmarcState(sesDnsPlan);
       for (const line of sesDnsPlan.conflictingMailFromMx) {
         log(
           `SES MAIL FROM: not adding the ${SES_REGION} MX -- ${sesDnsPlan.dnsZone} already carries a different one, and SES refuses the setup outright when the subdomain has several. Remove it first (\`pnpm exec vercel dns rm <record-id>\`), then rerun this wizard. The record: ${line}`,
@@ -534,6 +594,7 @@ export async function runPostDeployWizard({
       );
     }
   } else if (!sesDnsNeedsUpdate && sesDnsPlan) {
+    logDmarcState(sesDnsPlan);
     log(
       `SES DNS records already present in Vercel zone ${sesDnsPlan.dnsZone}; skipping its question.`,
     );

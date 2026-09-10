@@ -52,6 +52,17 @@ export const metadata: Metadata = {
  * link — which a shop hands to whoever mounts a TV — cannot open a surface that
  * writes.
  *
+ * **One refusal, in words and in wall-clock time.** A miss, an ambiguous
+ * surname, a sailed departure, a cancelled seat and a diver readiness will not
+ * clear are one identical sentence, so a lobby screen cannot be used to work
+ * out which of two people has a medical hold. The words alone did not carry
+ * that: reaching the sentence from a miss is one query, and reaching it from a
+ * blocked diver is a transaction with a row lock and a readiness read, so
+ * latency told them apart (issue #1608). Every answer is now held to
+ * `KIOSK_RESPONSE_FLOOR_MS`, the success path included. What the floor does not
+ * cover, said plainly: a database slow enough to push the readiness read past
+ * the floor leaks the difference again.
+ *
  * Display type, and deliberately almost nothing on it: a shop's name, today's
  * date, one box. Everything else this page could know about the day belongs to
  * the board, which is a different link on a different screen.

@@ -388,7 +388,7 @@
     "nextStepLabel": "What this student does next",
     "nextStepDescription": "The student reads this on their recap.",
     "nextStepSave": "Save next step",
-    "nextStepSaving": "Saving\u2026",
+    "nextStepSaving": "Saving…",
     "certifyConfirm": "Confirm certification",
     "certifyDiver": "Certify",
     "certifyLevel": "Level",
@@ -590,7 +590,8 @@
     "activityHeading": "Activity",
     "noActivity": "No staff activity recorded yet.",
     "promoteHeading": "Promote this trip",
-    "promoteSentCount": "{count, plural, one {# deal sent} other {# deals sent}}"
+    "promoteSentCount": "{count, plural, one {# deal sent} other {# deals sent}}",
+    "demandBody": "{count, plural, one {# diver is still waiting after this trip filled} other {# divers are still waiting after this trip filled}}. Consider adding another boat or a second departure."
   },
   "publicPreview": {
     "banner": "You’re looking at the diver’s view of this departure.",

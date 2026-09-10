@@ -2403,6 +2403,25 @@ exports.handler = async (event) => {
         note: "The MX names the SES region. One naming a region the identity no longer lives in does not fail loudly: mail keeps sending on the shared amazonses.com envelope, with SPF aligned to Amazon rather than to us, and only DMARC reporting says so. The post-deploy wizard will not do the delete for you -- it finds a rival MX, names it, and skips its own add rather than leaving the subdomain with two.",
       },
       {
+        id: "dmarc-dns",
+        title: "Publish DMARC for the sending subdomain",
+        category: "DNS",
+        when: "once, alongside the DKIM and MAIL FROM records, and re-read whenever a second sender starts using ses.dive.day",
+        why: "No provider hands you this one, which is why it is the SES record most likely to be missing. It is also the record that counts: DMARC reads the From domain's own policy and only walks up to the organizational domain when there isn't one, so ses.dive.day's record -- not dive.day's -- is what every booking confirmation is judged by. dive.day's _dmarc is a CNAME to the mail provider's shared record (p=reject, with the provider's own ruf) and is not ours to edit.",
+        run: [
+          "Set dmarcReportEmail in cdk.json to the mailbox that will read the reports, then run pnpm infra:deploy -- the post-deploy wizard publishes this record and leaves an existing one alone.",
+          "By hand instead: pnpm exec vercel dns add dive.day _dmarc.ses TXT 'v=DMARC1; p=none; rua=mailto:aaron@dive.day'",
+        ],
+        store:
+          "Vercel -> dive.day -> DNS, on the _dmarc.ses subname. Any dive.day mailbox a person actually reads will do as the rua address; a reporting address in the same organizational domain as the reported domain needs no authorization record at the destination, which an external one would.",
+        verify: [
+          "dig +short TXT _dmarc.ses.dive.day  # v=DMARC1; p=none; rua=mailto:<the address you published>",
+        ],
+        onFailure:
+          "No answer, or an answer with no rua=, means SES mail is being judged at p=none and reporting nothing, so the path off p=none is closed: nobody can tell whether the two senders are aligned. Publish or repair the record before reading anything into a delivery problem on this identity.",
+        note: "The wizard adds it only when nothing is published at that name, whatever the published value says: two v=DMARC1 records at one name make receivers treat the domain as having no policy at all, so an add beside an existing record switches DMARC off in silence. It stays at p=none deliberately. That is what stops SES mail inheriting dive.day's p=reject before alignment is proven, so the record is doing real work even while permissive. Move it to quarantine and then reject only once aggregate reports show both senders aligned -- docs/engineering/ses-email-runbook.md, 'SPF, DKIM, DMARC'. ruf is not a substitute: failure reports carry message content and most receivers suppress them entirely.",
+      },
+      {
         id: "ses-inbound-mx-dns",
         title: "Add the inbound mail MX record",
         category: "DNS",
@@ -2447,11 +2466,13 @@ exports.handler = async (event) => {
         category: "AWS account",
         when: "once per region, after the first deploy that created it",
         why: "SES allows one active receipt rule set per region and activation is a region-wide switch with no CloudFormation resource behind it. A stack that flipped it on every deploy would silently deactivate whatever else the account receives mail with, so the stack creates the diveday-inbound set and leaves the switch to a person.",
-        run: ["aws ses set-active-receipt-rule-set --rule-set-name diveday-inbound"],
+        run: [
+          `aws ses set-active-receipt-rule-set --region ${SES_REGION} --rule-set-name diveday-inbound`,
+        ],
         produces:
           "Mail to reply+<token>@inbound.ses.dive.day stored in the inbound bucket and announced on the SesInboundMailTopicArn topic, which is subscribed to /api/webhooks/email-inbound.",
         verify: [
-          "aws ses describe-active-receipt-rule-set --query Metadata.Name  # diveday-inbound",
+          `aws ses describe-active-receipt-rule-set --region ${SES_REGION} --query Metadata.Name  # diveday-inbound`,
           "Reply to any DiveDay email from a diver's address and open that diver's record: the reply is on it within a minute.",
         ],
         onFailure:

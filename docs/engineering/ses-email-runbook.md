@@ -245,8 +245,11 @@ aws sesv2 get-account --region us-east-2 \
 # want: production false until the case below is granted. SuppressionAttributes is the
 # *account default*, which the configuration set overrides and this stack never sets --
 # so read it for information, never as proof that DiveDay's mail is suppressing.
-dig +short TXT _dmarc.dive.day
-# want: v=DMARC1; p=none (at least); the rua= address must exist
+dig +short TXT _dmarc.ses.dive.day
+# want: v=DMARC1; p=none (at least), carrying a rua= address that someone reads. This is the
+# record that governs SES mail: DMARC reads the From domain's own record and only walks up to
+# dive.day when there isn't one. _dmarc.dive.day is a CNAME to the mail provider's shared record
+# and is not ours to edit -- read it for information, never as this identity's policy.
 ```
 
 Then send to the mailbox simulator from the deployed app — book a seat with
@@ -338,7 +341,7 @@ Volume
 Launch: [N] shops, roughly 20-60 messages a day, peaks of about 200 on a busy weekend morning, well under 1 message per second. We are requesting a 1,000/day quota and 5/second; we will ask again with real numbers before we need more.
 
 Sending identity and authentication
-We send from the verified domain identity ses.dive.day (Easy DKIM, all three CNAMEs resolving), with a custom MAIL FROM domain mail.ses.dive.day (MX and SPF published, status SUCCESS) so the envelope aligns with our From domain under DMARC. dive.day publishes DMARC with a reporting address, and abuse@dive.day and postmaster@dive.day are monitored mailboxes. Automated mail is deliberately on a subdomain so it never shares reputation with our human correspondence. Every message has both text/plain and text/html parts and an Auto-Submitted: auto-generated header.
+We send from the verified domain identity ses.dive.day (Easy DKIM, all three CNAMEs resolving), with a custom MAIL FROM domain mail.ses.dive.day (MX and SPF published, status SUCCESS) so the envelope aligns with our From domain under DMARC. That sending domain publishes its own DMARC record at p=none with an aggregate reporting address we read, while dive.day itself publishes p=reject for our human mail; we will tighten the sending domain once the aggregate reports show both senders aligned. abuse@dive.day and postmaster@dive.day are monitored mailboxes. Automated mail is deliberately on a subdomain so it never shares reputation with our human correspondence. Every message has both text/plain and text/html parts and an Auto-Submitted: auto-generated header.
 
 Bounce and complaint handling (tested)
 Our SES configuration set publishes BOUNCE, COMPLAINT, DELIVERY, DELIVERY_DELAY, REJECT and RENDERING_FAILURE events to an SNS topic subscribed to our HTTPS endpoint, which verifies the SNS signature and topic ARN before acting; email feedback forwarding on the identity is off, so the event stream is the one record. Each outcome is recorded against the message that produced it and shown to the shop as an email issue on their dashboard. The configuration set enables account-level suppression for BOUNCE and COMPLAINT, so a hard-bounced or complained-about address is never sent to again. A complaint additionally opts that address out of every courtesy message in our own records, and off any list it joined, so the opt-out survives a later change of address. We have exercised this end to end against the SES mailbox simulator (bounce@ and complaint@) from the deployed application. We have CloudWatch alarms on the account's Reputation.BounceRate and Reputation.ComplaintRate at AWS's review thresholds (5% and 0.1%), notifying our operations mailbox. We do not enable open or click tracking.
@@ -436,16 +439,18 @@ it lands on the diver's record and in the shop's inbox at `/shop/<slug>/inbox`
 (ADR [20260907-two-way-inbox](../architecture/decisions/20260907-two-way-inbox.md)). The path is
 SES receipt rule → S3 → SNS → `POST {APP_HOST}/api/webhooks/email-inbound`.
 
-**What the stack creates** (`infra/lib/infra-stack.ts` S8b): the private inbound bucket
+**What the stack creates** (`infra/lib/email-stack.ts`): the private inbound bucket
 (`diveday-inbound-mail`, objects expire after 30 days), the `diveday-ses-inbound-mail` topic with
 the webhook subscribed, and the `diveday-inbound` receipt rule set with one rule — recipients
 `inbound.ses.dive.day`, spam and virus scan on, action *store to S3 and notify the topic*. The
 receiving domain is a child of the verified `ses.dive.day` identity, so it needs no verification
 of its own. The SES sender user gets `s3:GetObject` on the bucket and nothing else new.
 
-**What is yours**, both in [manual-actions.md](manual-actions.md): the MX record for
+**What is yours**, both in the manual-action registry at §17 of `infra/lib/infra-stack.ts`
+(`ses-inbound-mx-dns` and `ses-inbound-rule-set-active`; neither is on the short account-approval
+list that renders to [manual-actions.md](manual-actions.md)): the MX record for
 `inbound.ses.dive.day` (Vercel DNS, the `SesInboundMxRecord` output spells it out), and
-activating the rule set — `aws ses set-active-receipt-rule-set --rule-set-name diveday-inbound`.
+activating the rule set — `aws ses set-active-receipt-rule-set --region us-east-2 --rule-set-name diveday-inbound`.
 SES allows one active set per region and the switch has no CloudFormation resource, so the stack
 never flips it. Then set `EMAIL_INBOUND_SNS_TOPIC_ARN` and `EMAIL_INBOUND_S3_BUCKET` from the
 outputs (`pnpm infra:deploy` writes both) and redeploy the app; until they are set the route
@@ -494,9 +499,14 @@ individual's address attached to a support promise (see the product-owner decisi
 founder-direct support in docs/product/human-decisions.md). Attachments, threading, search,
 replying, and mobile all come from the mail provider rather than from us.
 
-**MX records name one mail host.** `dive.day`'s MX must point at the mail provider. Do not also
-configure inbound receiving on `ses.dive.day` — mail delivery and the transactional-sending identity
-are separate concerns, and the app doesn't handle inbound mail events in any case.
+**Three subdomains, three different MX answers.** `dive.day`'s MX names the mail provider and
+nothing else — human mail is the provider's job, and a second host there would split it. The
+sending identity `ses.dive.day` carries no MX at all; its custom MAIL FROM subdomain
+`mail.ses.dive.day` carries exactly one, `feedback-smtp.<region>.amazonses.com`, and SES fails the
+setup outright if that subdomain has more than one. Inbound receiving for machine-parsed diver
+replies lives on a third subdomain of its own, `inbound.ses.dive.day`, so it collides with neither
+the human mailboxes nor the sending identity — see [Mail divers send back](#mail-divers-send-back)
+for what reads that mail.
 
 Setup, once:
 
@@ -536,11 +546,18 @@ send from.
 2. SPF on `dive.day` covers the mail provider. SES's SPF goes on `mail.ses.dive.day`, alongside
    that subdomain's single MX record — see [the custom MAIL FROM domain](#the-custom-mail-from-domain)
    above. Watch the 10-lookup limit if you add more senders later.
-3. Publish DMARC at `_dmarc.dive.day` starting permissive, with a reporting address:
-   `v=DMARC1; p=none; rua=mailto:dmarc@dive.day`
-4. **Read the reports for a couple of weeks.** Move to `p=quarantine` only once both senders show
-   aligned in them, then to `p=reject`. Jumping straight to `reject` is how you discover a
-   misaligned sender by having your mail disappear.
+3. Publish DMARC at `_dmarc.ses.dive.day` starting permissive, with an aggregate reporting address:
+   `v=DMARC1; p=none; rua=mailto:<a dive.day mailbox someone reads>` (manual action `dmarc-dns`,
+   in the registry at §17 of `infra/lib/infra-stack.ts`). That record is the one SES mail is judged by —
+   a receiver reads the From domain's record and only walks up to `dive.day` when there isn't one.
+4. **Leave `_dmarc.dive.day` alone.** It is a CNAME to the mail provider's shared record
+   (`p=reject`, with the provider's own `ruf`), so it is the provider's policy for human mail and
+   not ours to edit; taking it over would mean replacing the CNAME with our own TXT.
+5. **Read the aggregate reports for a couple of weeks.** Move the *sending subdomain* to
+   `p=quarantine` only once both senders show aligned in them, then to `p=reject`. Jumping straight
+   to `reject` is how you discover a misaligned sender by having your mail disappear. `rua` is what
+   receivers actually send; `ruf` failure reports carry message content and most receivers suppress
+   them, so a record with only `ruf` reports nothing you can act on.
 
 Both alignment paths are relaxed by default, so `mail.ses.dive.day` (envelope) and `ses.dive.day`
 (From) both roll up to the `dive.day` organizational domain and count as aligned. Only a

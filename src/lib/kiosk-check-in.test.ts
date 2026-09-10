@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  FOLD_FROM,
+  FOLD_TO,
+  foldNameWord,
   KIOSK_INPUT_MAX,
+  KIOSK_RESPONSE_FLOOR_MS,
   kioskCheckInPath,
+  kioskResponseWaitMs,
   kioskSelection,
+  matchableNameTokens,
   readKioskInput,
   surnameOf,
 } from "./kiosk-check-in";
@@ -17,10 +23,12 @@ describe("kioskCheckInPath", () => {
 });
 
 describe("surnameOf", () => {
-  it("takes the last whitespace-separated word, lower-cased", () => {
+  it("takes the last whitespace-separated word, lower-cased and folded", () => {
     expect(surnameOf("Adaeze Nwosu")).toBe("nwosu");
     expect(surnameOf("  priya   SHARMA  ")).toBe("sharma");
-    expect(surnameOf("Ana María Ruiz Gómez")).toBe("gómez");
+    // Folded, because the stored side is folded too: a diver who types the
+    // accent and one who does not reach the same row (issue #1656).
+    expect(surnameOf("Ana María Ruiz Gómez")).toBe("gomez");
   });
 
   it("treats a one-word name as its own surname", () => {
@@ -29,6 +37,123 @@ describe("surnameOf", () => {
 
   it("answers an empty string for an empty name rather than throwing", () => {
     expect(surnameOf("   ")).toBe("");
+  });
+});
+
+describe("foldNameWord", () => {
+  /**
+   * The defect: case was folded on both sides and nothing else was, so a diver
+   * recorded as "Ana García Márquez" was found by `garcía` and refused
+   * `garcia` — a diacritic a counter tablet's keyboard may not even offer
+   * (issue #1656).
+   */
+  it("folds an accent and the case in one step", () => {
+    expect(foldNameWord("García")).toBe("garcia");
+    expect(foldNameWord("MÁRQUEZ")).toBe("marquez");
+    expect(foldNameWord("Nyström")).toBe("nystrom");
+    expect(foldNameWord("Łukasz")).toBe("lukasz");
+    expect(foldNameWord("Çelik")).toBe("celik");
+  });
+
+  it("leaves a word that carries none alone", () => {
+    expect(foldNameWord("Nwosu")).toBe("nwosu");
+    expect(foldNameWord("")).toBe("");
+  });
+
+  /**
+   * `translate()` drops a character outright when its `to` string is shorter,
+   * so a mismatched pair would silently delete letters from every stored name
+   * rather than fail — the two arguments are built from one table for that
+   * reason, and this is the assertion that the build stayed honest.
+   */
+  it("hands Postgres two arguments of equal length", () => {
+    expect(FOLD_TO).toHaveLength(FOLD_FROM.length);
+    expect(new Set(FOLD_FROM).size).toBe(FOLD_FROM.length);
+  });
+
+  it("does not fold what one character cannot carry", () => {
+    // ß, æ and œ unaccent to two letters, which `translate()` cannot express.
+    // Left alone in both languages rather than folded in one of them.
+    expect(foldNameWord("Straß")).toBe("straß");
+    expect(foldNameWord("Æsa")).toBe("æsa");
+  });
+});
+
+describe("matchableNameTokens", () => {
+  /**
+   * The defect this rule exists for. Asked for *su apellido*, a diver recorded
+   * as "Ana García Márquez" answers *García* — the paternal one — and the
+   * tablet used to match only *Márquez*, so in es-ES the box always said no
+   * (issue #1610).
+   */
+  it("finds a two-apellido diver by either apellido", () => {
+    expect(matchableNameTokens("Ana García Márquez")).toEqual(["garcia", "marquez"]);
+  });
+
+  it("keeps a compound given name out of it", () => {
+    // Four words or more means the first two are given names. Without this
+    // clause "José" would find her, and compound given names are as ordinary
+    // in this market as compound surnames.
+    expect(matchableNameTokens("María José García Márquez")).toEqual(["garcia", "marquez"]);
+  });
+
+  it("drops the given name of an ordinary two-word name", () => {
+    expect(matchableNameTokens("Adaeze Nwosu")).toEqual(["nwosu"]);
+    expect(matchableNameTokens("  priya   SHARMA  ")).toEqual(["sharma"]);
+  });
+
+  it("hands back folded words, so both sides compare the same form", () => {
+    expect(matchableNameTokens("Ana García Márquez")).toEqual(["garcia", "marquez"]);
+    expect(matchableNameTokens("Ana Garcia Marquez")).toEqual(["garcia", "marquez"]);
+  });
+
+  it("carries a compound surname, and a tussenvoegsel by its own last word", () => {
+    expect(matchableNameTokens("Sara Bell Whitmore")).toEqual(["bell", "whitmore"]);
+    // *Berg*, and no longer *der*: a particle is nobody's key, and one that is
+    // was sixty tries from enumerating a morning's board (`security-reviewer`,
+    // 2026-09-10).
+    expect(matchableNameTokens("Jan van der Berg")).toEqual(["berg"]);
+    expect(matchableNameTokens("Luis de la Cruz")).toEqual(["cruz"]);
+  });
+
+  /**
+   * **A middle word has to earn being a key; the last word never has to.** The
+   * widening made a stored initial a single-character answer and a particle a
+   * three-character one, which is a dictionary rather than a guess. Filtering by
+   * length alone would have taken "Wei Li" with it — a two-letter surname is
+   * ordinary, and it was reachable before the widening.
+   */
+  it("drops an initial and a particle from the middle, and keeps a short surname", () => {
+    expect(matchableNameTokens("Ana M Garcia")).toEqual(["garcia"]);
+    expect(matchableNameTokens("Wei Li")).toEqual(["li"]);
+    expect(matchableNameTokens("Jan von Braun")).toEqual(["braun"]);
+  });
+
+  /**
+   * Stated because it is the limit of the rule rather than an oversight: no
+   * positional boundary can tell a second given name from a first apellido in a
+   * three-word name.
+   */
+  it("still answers to a middle given name in a three-word name", () => {
+    expect(matchableNameTokens("Ana María Gómez")).toEqual(["maria", "gomez"]);
+  });
+
+  it("treats a one-word name as its own surname, and an empty one as nothing", () => {
+    expect(matchableNameTokens("Prince")).toEqual(["prince"]);
+    expect(matchableNameTokens("   ")).toEqual([]);
+  });
+
+  /**
+   * The pair that makes the lookup work: what a diver types reduces to its last
+   * word, and that word is matched against the whole of this list.
+   */
+  it("meets surnameOf on whatever the diver types", () => {
+    const stored = matchableNameTokens("Ana García Márquez");
+    expect(stored).toContain(surnameOf("Garcia"));
+    expect(stored).toContain(surnameOf("García"));
+    expect(stored).toContain(surnameOf("García Márquez"));
+    expect(stored).toContain(surnameOf("Ana García Márquez"));
+    expect(stored).not.toContain(surnameOf("Ana"));
   });
 });
 
@@ -73,6 +198,32 @@ describe("readKioskInput", () => {
  * sharing a surname is exactly the case a staffer resolves by looking at a
  * person, and a tablet guessing would put an arrival on the wrong record.
  */
+describe("kioskResponseWaitMs", () => {
+  /**
+   * The signal this closes: a miss is one query and a blocked diver is a
+   * transaction with a row lock and a readiness read, so the two identical
+   * refusals were told apart by the clock (issue #1608).
+   */
+  it("holds a fast answer up to the floor and lets a slow one straight out", () => {
+    expect(kioskResponseWaitMs(5)).toBe(KIOSK_RESPONSE_FLOOR_MS - 5);
+    expect(kioskResponseWaitMs(24)).toBe(KIOSK_RESPONSE_FLOOR_MS - 24);
+    expect(kioskResponseWaitMs(KIOSK_RESPONSE_FLOOR_MS)).toBe(0);
+    // Past the floor there is nothing left to hide, and holding longer would
+    // only make the slow path slower.
+    expect(kioskResponseWaitMs(KIOSK_RESPONSE_FLOOR_MS + 400)).toBe(0);
+  });
+
+  it("never returns a negative wait, whatever the reading", () => {
+    expect(kioskResponseWaitMs(-50)).toBe(KIOSK_RESPONSE_FLOOR_MS);
+    expect(kioskResponseWaitMs(Number.NaN)).toBe(KIOSK_RESPONSE_FLOOR_MS);
+    expect(kioskResponseWaitMs(Number.POSITIVE_INFINITY)).toBe(KIOSK_RESPONSE_FLOOR_MS);
+  });
+
+  it("takes a floor of its own, so a caller can measure against one", () => {
+    expect(kioskResponseWaitMs(100, 400)).toBe(300);
+  });
+});
+
 describe("kioskSelection", () => {
   it("answers with the one match", () => {
     expect(kioskSelection(["only"])).toBe("only");

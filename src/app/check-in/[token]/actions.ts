@@ -9,7 +9,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
 import { formatTime } from "@/lib/format";
-import { kioskSelection, readKioskInput } from "@/lib/kiosk-check-in";
+import { kioskResponseWaitMs, kioskSelection, readKioskInput } from "@/lib/kiosk-check-in";
 import { firstNameOf } from "@/lib/person-name";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import type { KioskResult } from "./kiosk-types";
@@ -38,6 +38,26 @@ export async function kioskCheckInAction(
   _previous: KioskResult,
   formData: FormData,
 ): Promise<KioskResult> {
+  // **The refusals are identical in words, and now in wall-clock time too.**
+  // Reaching "see the desk" from a name nobody holds is one query; reaching the
+  // same sentence from the one diver readiness refuses is a transaction, a row
+  // lock and a readiness read — so response time distinguished "nobody by that
+  // name is diving today" from "somebody is, and something is wrong with their
+  // booking", which is the one thing this surface says nothing about (issue
+  // #1608). Every path is held to the same floor, the success path included:
+  // a floor on refusals alone would make *speed* the tell instead.
+  //
+  // `performance.now()` rather than the injectable clock: this measures elapsed
+  // real time, and the e2e fleet freezes the clock at one instant, which would
+  // make every answer look instantaneous and hold every one for the full floor.
+  const startedAt = performance.now();
+  const answer = await answerKioskSubmission(token, formData);
+  const wait = kioskResponseWaitMs(performance.now() - startedAt);
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+  return answer;
+}
+
+async function answerKioskSubmission(token: string, formData: FormData): Promise<KioskResult> {
   const db = await getDb();
   const display = await verifyDisplayToken(db, { token, purpose: "check_in" });
   const shop = display ? await getShopById(db, display.shopId) : null;

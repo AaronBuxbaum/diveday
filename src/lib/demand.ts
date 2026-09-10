@@ -1,7 +1,6 @@
 export type DemandRecommendation = {
   waitlistThreshold: number;
   unmetSeats: number;
-  message: string;
 };
 
 /**
@@ -16,9 +15,9 @@ export function demandRecommendation(input: {
 }): DemandRecommendation | null {
   const waitlistThreshold = Math.max(2, Math.ceil(input.capacity * 0.25));
   if (input.booked < input.capacity || input.waitlisted < waitlistThreshold) return null;
-  return {
-    waitlistThreshold,
-    unmetSeats: input.waitlisted,
-    message: `${input.waitlisted} divers are still waiting after this trip filled. Consider adding another boat or a second departure.`,
-  };
+  // Numbers, and no sentence: the Guests tab words this from the staff bundle
+  // (`trips.guests.demandBody`). It read as English to a Spanish-speaking shop
+  // for as long as it lived here, and the guard that forbids exactly this could
+  // not see it because the count is interpolated (issue #1655).
+  return { waitlistThreshold, unmetSeats: input.waitlisted };
 }

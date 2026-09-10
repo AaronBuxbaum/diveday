@@ -1,3 +1,7 @@
 {
-  "//": "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs."
+  "//": "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs.",
+  "src/db/check-in.ts": 3,
+  "src/db/operations.ts": 4,
+  "src/db/seed-desk-trail.ts": 1,
+  "src/db/support-needs.ts": 1
 }

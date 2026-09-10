@@ -1,14 +1,20 @@
 // @vitest-environment node
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { readKioskInput, surnameOf } from "@/lib/kiosk-check-in";
+import {
+  foldNameWord,
+  kioskSelection,
+  matchableNameTokens,
+  readKioskInput,
+  surnameOf,
+} from "@/lib/kiosk-check-in";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { listSelfReportedArrivalBookingIds } from "./arrival-provenance";
 import { checkInAtKiosk } from "./check-in";
 import { issueDisplayToken, revokeDisplayToken, verifyDisplayToken } from "./display-tokens";
-import { findKioskSeats } from "./kiosk-check-in";
+import { findKioskSeats, kioskNameMatch } from "./kiosk-check-in";
 import { listDepartureBoardedBookingIds } from "./manifests";
 import {
   bookingArrivalEvents,
@@ -189,6 +195,148 @@ describe("findKioskSeats", () => {
   });
 
   /**
+   * **The rule the Spanish prompt asks for.** "Apellido" gets *García* from
+   * essentially every Hispanic diver, and the lookup matched only the last
+   * word, so a diver recorded with both apellidos was unreachable by the one
+   * they answer with — refused in a sentence deliberately identical to "we do
+   * not know you" (issue #1610).
+   */
+  it("finds a two-apellido diver by either apellido, and not by a given name", async () => {
+    const { db, shop, booking, person, atTheDoor } = await counter();
+    await db.update(people).set({ fullName: "Ana García Márquez" }).where(eq(people.id, person.id));
+
+    for (const typed of ["García", "márquez", "García Márquez", "Ana García Márquez"]) {
+      const seats = await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(typed),
+        now: atTheDoor,
+      });
+      expect(
+        seats.map((row) => row.bookingId),
+        typed,
+      ).toContain(booking.id);
+    }
+
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput("Ana"),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * **An unaccented spelling is the ordinary one at a counter.** Case was
+   * folded on both sides and nothing else was, so a diver recorded with the
+   * accent was refused the spelling their tablet's keyboard reaches for, in the
+   * same "See the desk" a stranger gets (issue #1656).
+   */
+  it("finds an accented name by its unaccented spelling, and the other way round", async () => {
+    const { db, shop, booking, person, atTheDoor } = await counter();
+    await db.update(people).set({ fullName: "Ana García Márquez" }).where(eq(people.id, person.id));
+
+    for (const typed of ["garcia", "GARCIA", "Márquez", "marquez", "Garcia Marquez"]) {
+      const seats = await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(typed),
+        now: atTheDoor,
+      });
+      expect(
+        seats.map((row) => row.bookingId),
+        typed,
+      ).toContain(booking.id);
+    }
+  });
+
+  /**
+   * The SQL is `matchableNameTokens` written a second time, in another
+   * language, over a column instead of a string — so the two agreeing is the
+   * invariant rather than a coincidence. A name whose shape only one of them
+   * understands is a diver one door finds and the other does not.
+   *
+   * Asked of `kioskNameMatch` over a literal rather than of `findKioskSeats`
+   * over the seeded board, because the question is which *words* the two rules
+   * agree on and the join answers nothing about that. Walked end to end it was
+   * one full lookup per word of every name here, and it timed out at sixty
+   * seconds on a CI shard the moment the list of names grew; the anchor below
+   * keeps it honest that this is the predicate the reader actually runs.
+   */
+  it("matches exactly the words the rule in src/lib names, and no others", async () => {
+    const { db, shop, booking, person, atTheDoor } = await counter();
+    const names = [
+      "Ana García Márquez",
+      "María José García Márquez",
+      "Jan van der Berg",
+      "Adaeze Nwosu",
+      "Prince",
+      // Folding is the other half of the pairing (issue #1656), and this name
+      // is here so a fold that only landed on one side shows up as a diver one
+      // door finds and the other does not.
+      "Ingrid Nyström",
+      "Łukasz Wiśniewski",
+      // Non-space whitespace, because `btrim` with one argument strips spaces
+      // only: a leading tab used to shift the SQL's array by one and make the
+      // given name matchable on that side alone (`security-reviewer`).
+      "\tAdaeze Nwosu",
+      "\nAna María García Márquez",
+      "Sara  Bell   Whitmore",
+    ];
+
+    for (const fullName of names) {
+      // Every word the name is written with, and every word it could be typed
+      // as: the folded spelling is the one a tablet keyboard reaches for.
+      const words = [
+        ...new Set(
+          fullName.split(/\s+/).flatMap((word) => [word.toLowerCase(), foldNameWord(word)]),
+        ),
+      ].filter((word) => word.length > 0);
+      const matchable = matchableNameTokens(fullName);
+
+      const asked = words.map((word, index) => {
+        const lookup = readKioskInput(word);
+        if (lookup?.kind !== "surname") throw new Error(`${word} is not a surname lookup`);
+        return {
+          word,
+          column: `w${index}`,
+          match: kioskNameMatch(sql`${fullName}::text`, lookup.surname),
+        };
+      });
+      const answer = await db.execute(
+        sql`select ${sql.join(
+          asked.map(({ column, match }) => sql`${match} as ${sql.raw(column)}`),
+          sql`, `,
+        )}`,
+      );
+      const row = answer.rows[0] as Record<string, boolean | null>;
+
+      for (const { word, column } of asked) {
+        // The rule holds the folded form, so an accented spelling matches when
+        // its fold does — which is the whole point of folding both sides.
+        expect(row[column], `${fullName} by ${word}`).toBe(matchable.includes(foldNameWord(word)));
+      }
+    }
+
+    // The anchor: the predicate above is the one the reader runs, over the
+    // column it runs it over. Without this the parity could hold against a
+    // literal while `findKioskSeats` asked something else entirely.
+    await db.update(people).set({ fullName: "Jan van der Berg" }).where(eq(people.id, person.id));
+    const seats = await findKioskSeats(db, {
+      shopId: shop.id,
+      lookup: readKioskInput("berg"),
+      now: atTheDoor,
+    });
+    expect(seats.map((row) => row.bookingId)).toContain(booking.id);
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput("der"),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
    * Two seats behind one surname is not an ambiguity the tablet resolves — but
    * it is one the reader has to be able to *report*, or `kioskSelection` never
    * sees a second row and the whole "several is the same as none" rule is
@@ -210,6 +358,84 @@ describe("findKioskSeats", () => {
       now: atTheDoor,
     });
     expect(seats.length).toBeGreaterThan(1);
+  });
+
+  /**
+   * **Two seats of one diver must not hide a third seat of another.** The
+   * `LIMIT` runs in Postgres and the same-person collapse runs here, so a limit
+   * of two read one diver's two seats, collapsed them to one, and checked that
+   * diver in while a stranger by the same name also matched and nobody was sent
+   * to the desk (`security-reviewer`, 2026-09-10). Multi-day package holders
+   * are exactly that shape.
+   */
+  it("still answers several when one diver's two seats come before another's", async () => {
+    const { db, shop, surname, person, reef, atTheDoor } = await counter();
+    const roster = await getTripRoster(db, shop.id, reef.id);
+    const other = roster.find((row) => row.person.id !== person.id);
+    if (!other) throw new Error("seeded reef boat has only one diver");
+    await db
+      .update(people)
+      .set({ fullName: `Someone ${surname}` })
+      .where(eq(people.id, other.person.id));
+
+    // The same diver's second seat, an hour after the first, so the two rows
+    // Postgres reads first both belong to them.
+    const later = new Date(reef.startsAt.getTime() + 60 * 60 * 1000);
+    const [second] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Afternoon single tank",
+        startsAt: later,
+        endsAt: new Date(later.getTime() + 2 * 60 * 60 * 1000),
+        capacity: 8,
+        status: "scheduled",
+      })
+      .returning({ id: trips.id });
+    if (!second) throw new Error("could not seed the second departure");
+    await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: second.id, personId: person.id, status: "booked" });
+
+    const seats = await findKioskSeats(db, {
+      shopId: shop.id,
+      lookup: readKioskInput(surname),
+      now: atTheDoor,
+    });
+    // Two people answer to this word, so the tablet has nothing to say.
+    expect(kioskSelection(seats)).toBeNull();
+  });
+
+  /**
+   * **A particle and an initial are nobody's key.** The widening made *der* a
+   * whole-word answer and a stored middle initial a single-character one, which
+   * is a dictionary rather than a guess against a link that does not expire.
+   */
+  it("refuses a particle and an initial, and still answers the last word", async () => {
+    const { db, shop, booking, person, atTheDoor } = await counter();
+    await db.update(people).set({ fullName: "Jan van der Berg" }).where(eq(people.id, person.id));
+
+    for (const typed of ["van", "der", "jan"]) {
+      expect(
+        await findKioskSeats(db, {
+          shopId: shop.id,
+          lookup: readKioskInput(typed),
+          now: atTheDoor,
+        }),
+        typed,
+      ).toEqual([]);
+    }
+    const found = await findKioskSeats(db, {
+      shopId: shop.id,
+      lookup: readKioskInput("berg"),
+      now: atTheDoor,
+    });
+    expect(found.map((row) => row.bookingId)).toContain(booking.id);
+
+    await db.update(people).set({ fullName: "Ana M Garcia" }).where(eq(people.id, person.id));
+    expect(
+      await findKioskSeats(db, { shopId: shop.id, lookup: readKioskInput("m"), now: atTheDoor }),
+    ).toEqual([]);
   });
 
   /**

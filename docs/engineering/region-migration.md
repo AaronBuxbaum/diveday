@@ -111,6 +111,25 @@ Four of the five steps have a trap that a careful person executing a list still 
 7. **Redeploy the app.**
    `RUM_APP_MONITOR_ID`, `MEDIA_PUBLIC_URL_BASE` and every AWS credential in the environment changed.
    The post-deploy wizard pushes the credentials; the redeploy is what makes the app use them.
+8. **Re-paste the database connection string** (manual action `database-dump-connection`).
+   The secret lives in the same account and region as the stack, so a move creates a fresh one holding the literal `unset`, and the weekly dump refuses to run rather than writing a zero-byte object.
+   That refusal is the correct behaviour and it is also silent: the first Monday after a move produces no backup and no complaint.
+   It is the only backup layer that can restore a login — the per-shop export bundles exclude `user_accounts`, `account_tokens` and `calendar_feeds` — so losing it quietly costs more than losing the bundles quietly.
+
+   ```
+   aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<DATABASE_URL_UNPOOLED from Neon, the direct endpoint>'
+   aws codebuild start-build --project-name diveday-database-dump
+   ```
+9. **Re-confirm both webhook subscriptions** (manual action `verify-webhook-subscriptions`), *after* the redeploy above and not with the other verifications.
+   A move replaces both topics, so both subscriptions are recreated pointing at an app that does not yet know the new ARNs, and each route answers 503 until its ARN is in the running app's environment.
+   SNS deletes an unconfirmed subscription after roughly three days, so a check run before the redeploy passes nothing and buys nothing.
+
+   ```
+   aws sns list-subscriptions-by-topic --region <new region> --topic-arn <SesEventNotificationsTopicArn>
+   aws sns list-subscriptions-by-topic --region <new region> --topic-arn <SmsDeliveryReceiptsTopicArn>
+   ```
+
+   Both must answer a real `SubscriptionArn` rather than `PendingConfirmation`.
 
 ## Afterwards
 
