@@ -36,6 +36,25 @@ describe("gift links", () => {
     expect(verifyGiftToken(token.replace(/.$/, (last) => (last === "a" ? "b" : "a")))).toBeNull();
   });
 
+  /**
+   * **A signature that is not base64url is refused, never thrown at**
+   * (security review of this slice, finding 3). `timingSafeEqual` compares
+   * bytes and throws on unequal lengths, so a 43-*character* signature
+   * carrying a multibyte character used to reach it and raise `RangeError` —
+   * which on a bearer page is a 500 where "this link isn't available" belongs.
+   */
+  it("refuses a signature of the right length in the wrong alphabet", () => {
+    const token = signGiftToken(BOOKING);
+    const [payload] = token.split(".");
+    // 43 characters, one of them multibyte: the old length check passed.
+    const multibyte = `${"a".repeat(42)}é`;
+    expect(multibyte).toHaveLength(43);
+    expect(() => verifyGiftToken(`${payload}.${multibyte}`)).not.toThrow();
+    expect(verifyGiftToken(`${payload}.${multibyte}`)).toBeNull();
+    // And a padded/─ shaped one, for the same reason.
+    expect(verifyGiftToken(`${payload}.${"=".repeat(43)}`)).toBeNull();
+  });
+
   it("refuses junk, an empty string and a token with no separator", () => {
     expect(verifyGiftToken("")).toBeNull();
     expect(verifyGiftToken("not-a-token")).toBeNull();

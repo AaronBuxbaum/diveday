@@ -1,8 +1,25 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { claimLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
+import { signGiftToken } from "@/lib/gift-links";
+import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import type { NotificationProvider } from "@/lib/notifications/provider";
+import { giftLinkPath } from "@/lib/public-routes";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { listDepartureBoardedByTrip } from "./manifests";
-import { bookingGifts, bookingPayments, bookings, shops, trips, waiverRecords } from "./schema";
+import { sendAndRecordNotification } from "./notifications";
+import {
+  bookingCheckoutBookings,
+  bookingGifts,
+  bookingPayments,
+  bookings,
+  notificationDeliveries,
+  shops,
+  trips,
+  waiverRecords,
+} from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -161,6 +178,14 @@ export async function giverGiftView(
   // so they can only disagree if something else went wrong — and a giver must
   // never be answered off a seat that is not the one they bought.
   if (row.booking.shopId !== row.gift.shopId) return null;
+  // **A seat that is no longer on the boat is not a gift to read** (security
+  // review of this slice, finding 4). The token lives a season, so without
+  // this a cancelled seat kept rendering "not claimed yet · not aboard yet"
+  // for six months as though it were still coming — and once the receiver was
+  // erased, the redaction that correctly blanks the giver's own words showed
+  // through as `erased-…` on a page nobody could explain. The dead-link answer
+  // is the honest one, and it is the same answer a junk token gets.
+  if (row.booking.status === "cancelled") return null;
 
   const [waiver] = await db
     .select({ signedAt: waiverRecords.signedAt })
@@ -227,6 +252,171 @@ export async function giverGiftView(
         }
       : null,
   };
+}
+
+/**
+ * **The pass goes out when the seat is actually bought** (security review of
+ * this slice, finding 1).
+ *
+ * One send path, called from two places, and the split is the whole point:
+ *
+ * - On a **priced** departure the Stripe webhook calls this after
+ *   `markCheckoutPaidBySessionId` settles the session. Before that split, the
+ *   booking action sent the mail the moment the form was submitted — so an
+ *   anonymous caller could put DiveDay's own branded mail, carrying a shop's
+ *   name and their own text, into any inbox they could type, and the mail said
+ *   the seat "is paid for" while the giver was still looking at Stripe's page.
+ * - On a departure with **no checkout to run** (unpriced, or a shop that cannot
+ *   take money yet) the booking action calls it directly, because there is no
+ *   later moment: the seat is booked and settled at the counter.
+ *
+ * **At most one pass per seat, ever.** `notification_deliveries` carries a
+ * unique `(booking_id, kind)`, so an existing row is the honest answer to "has
+ * this already gone out" — a replayed webhook, a resumed cascade and a
+ * double-tapped return all converge on the one send.
+ *
+ * **Bounded per recipient**, on `selfRegisterEmailByRecipient`'s shape and for
+ * its reason: neither the booking limiter nor money is keyed on the address
+ * being written *to*, and an empty bucket drops the *send*, never the seat.
+ * The giver still holds their own page, and the counter can seat the friend by
+ * name.
+ *
+ * Never throws: every failure is logged and dropped, because the seat is
+ * already committed and paid for by the time this runs.
+ */
+export async function sendPendingGiftPasses(
+  db: AppDb,
+  input: { shopId: string; bookingIds: string[]; locale?: string | null },
+  provider?: NotificationProvider,
+): Promise<void> {
+  if (input.bookingIds.length === 0) return;
+  const origin = publicAppUrl();
+  if (!origin) return;
+
+  const rows = await db
+    .select({ gift: bookingGifts, booking: bookings, trip: trips, shop: shops })
+    .from(bookingGifts)
+    .innerJoin(bookings, eq(bookings.id, bookingGifts.bookingId))
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), liveTrip()))
+    .innerJoin(shops, eq(shops.id, bookingGifts.shopId))
+    .where(
+      and(
+        eq(bookingGifts.shopId, input.shopId),
+        inArray(bookingGifts.bookingId, input.bookingIds),
+        // A seat that is no longer on the boat has no pass to hand over.
+        ne(bookings.status, "cancelled"),
+        eq(trips.status, "scheduled"),
+      ),
+    );
+
+  for (const row of rows) {
+    try {
+      // Already sent, on this booking, for this kind. The unique index is the
+      // dedup; this read is what keeps a replay from spending the recipient's
+      // budget to discover that.
+      const [sent] = await db
+        .select({ id: notificationDeliveries.id })
+        .from(notificationDeliveries)
+        .where(
+          and(
+            eq(notificationDeliveries.bookingId, row.booking.id),
+            eq(notificationDeliveries.kind, "gift_pass"),
+          ),
+        )
+        .limit(1);
+      if (sent) continue;
+
+      const recipient = row.gift.giverEmail.trim().toLowerCase();
+      const budget = await checkRateLimit(
+        rateLimitKey("gift-pass-to", recipient),
+        RATE_LIMITS.giftPassByRecipient,
+      );
+      if (!budget.allowed) {
+        console.error("Gift pass not sent: recipient budget spent", {
+          bookingId: row.booking.id,
+        });
+        continue;
+      }
+
+      const claim = await issueBookingCapability(db, {
+        shopId: input.shopId,
+        bookingId: row.booking.id,
+        purpose: "claim",
+      });
+      if (!claim) continue;
+
+      const delivery = await sendAndRecordNotification(
+        db,
+        {
+          kind: "gift_pass",
+          bookingId: row.booking.id,
+          shopId: input.shopId,
+          to: row.gift.giverEmail,
+          locale: recipientLocale(input.locale, row.shop.defaultLocale),
+          giverName: row.gift.giverName,
+          receiverName: row.gift.receiverName,
+          shopName: row.shop.name,
+          tripTitle: row.trip.title,
+          startsAt: row.trip.startsAt,
+          endsAt: row.trip.endsAt,
+          timezone: row.shop.timezone,
+          claimUrl: new URL(claimLinkPath(claim.token), `${origin}/`).toString(),
+          giftUrl: new URL(giftLinkPath(signGiftToken(row.booking.id)), `${origin}/`).toString(),
+        },
+        { provider },
+      );
+      if (delivery.status === "failed") {
+        console.error("Gift pass notification failed", { bookingId: row.booking.id });
+      }
+    } catch {
+      // A gift pass must never turn a completed, paid booking into an error.
+      console.error("Gift pass notification could not be prepared", {
+        bookingId: row.booking.id,
+      });
+    }
+  }
+}
+
+/**
+ * Every gift seat this checkout covered, passed on to `sendPendingGiftPasses`.
+ *
+ * The webhook's own door: it holds a settled `booking_checkouts` row and
+ * nothing else, and one checkout can cover several seats (a party, or a gift
+ * bought alongside the giver's own seat). Best-effort and idempotent, like the
+ * send it wraps.
+ */
+export async function sendGiftPassesForCheckout(
+  db: AppDb,
+  checkout: { id: string; shopId: string },
+  provider?: NotificationProvider,
+): Promise<void> {
+  try {
+    const covered = await db
+      .select({ bookingId: bookingCheckoutBookings.bookingId })
+      .from(bookingCheckoutBookings)
+      .where(
+        and(
+          eq(bookingCheckoutBookings.checkoutId, checkout.id),
+          eq(bookingCheckoutBookings.shopId, checkout.shopId),
+        ),
+      );
+    await sendPendingGiftPasses(
+      db,
+      {
+        shopId: checkout.shopId,
+        bookingIds: covered.map((row) => row.bookingId),
+        // No request to read a language off: the webhook is Stripe's call
+        // rather than the giver's, so the shop's own default is the honest
+        // fallback.
+        locale: null,
+      },
+      provider,
+    );
+  } catch {
+    console.error("Gift passes for a settled checkout could not be sent", {
+      checkoutId: checkout.id,
+    });
+  }
 }
 
 /** Gifts given this month, and how many of them have been claimed. */

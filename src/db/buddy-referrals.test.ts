@@ -97,6 +97,40 @@ describe("resolveBuddyReferral", () => {
     ).toBeNull();
   });
 
+  /**
+   * **A diver's own link is not a buddy seat** (security review of this slice,
+   * finding 6). A diver reads their own recap, taps their own "bring a buddy"
+   * link because it is the fastest way back to the schedule, and books their
+   * next seat — and the shop was told a friend arrived. The people are
+   * compared, not just the bookings.
+   */
+  it("ignores a diver arriving on their own link, on a different seat", async () => {
+    const { db, shop, open } = await context();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const other = trips.find((trip) => trip.id !== open.id && trip.booked < trip.capacity);
+    if (!other) throw new Error("expected a second open trip");
+
+    const first = await book(db, shop.id, open.id, "Ravi Nair");
+    // The same diver — resolved by the same email — on the next departure.
+    const second = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: other.id,
+      fullName: "Ravi Nair",
+      email: "ravi.nair@example.com",
+    });
+    if (!second.ok) throw new Error(`second booking failed: ${second.reason}`);
+    expect(second.personId).toBe(first.personId);
+
+    expect(
+      await resolveBuddyReferral(db, {
+        shopId: shop.id,
+        referralId: buddyReferralId(first.bookingId),
+        bookingId: second.bookingId,
+      }),
+    ).toBeNull();
+  });
+
   it("ignores a seat crediting itself", async () => {
     const { db, shop, open } = await context();
     const amira = await book(db, shop.id, open.id, "Amira Khan");

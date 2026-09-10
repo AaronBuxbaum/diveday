@@ -19,6 +19,15 @@ import { isBuddyReferralIdShape } from "./buddy-links";
  * seat to a booking nobody linked from. Stateless because the alternative is a
  * table whose only job is to map a short string to a row it already knows.
  *
+ * **The booking id is packed into it beside the tag, and that is a deliberate
+ * trade** (security review of this slice, finding 6). A forwarded recap link
+ * therefore makes one booking id public. Nothing public accepts a bare booking
+ * id — every capability page takes a token that has to verify, and no read
+ * anywhere is keyed on an id a caller supplies — so what a reader learns is
+ * that some booking exists, which the link in their hand already told them. The
+ * alternative is a stored short-code table whose only job is to map a string
+ * back to the row the id already names.
+ *
  * Same construction and the same purpose separation as `recap-links.ts` and
  * `gift-links.ts`; unlike both it carries **no issued-at and never expires** —
  * "the diver who brought them" is a fact about a seat rather than a credential

@@ -232,8 +232,14 @@ const tripInvitationSchema = z.object({
  * the giver's receipt and the pass in one message: `claimUrl` is the link they
  * forward, `giftUrl` is their own page.
  *
- * `receiverName` and `message` are both words the giver themselves typed into
- * the booking form, read back to that same person.
+ * **The giver's own line is deliberately not here** (security review of this
+ * slice, finding 1b). It is 280 characters of free text from an unauthenticated
+ * form, and an outbound message is the one place it could be read by somebody
+ * who never opened the pass — a spam filter's quarantine digest, a shared
+ * inbox, a forwarded thread. The line belongs on the claim page, where the
+ * person it was written for reads it. `receiverName` stays because the mail is
+ * useless without saying whose seat it is, and it is a name this same reader
+ * typed.
  */
 const giftPassSchema = z.object({
   kind: z.literal("gift_pass"),
@@ -250,8 +256,6 @@ const giftPassSchema = z.object({
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
-  /** The one line the giver wrote for the pass. */
-  message: z.string().trim().min(1).max(280).optional(),
   /** The receiver's claim link, for the giver to forward. */
   claimUrl: z.url().max(2_000),
   /** The giver's own read-only page. */

@@ -656,6 +656,11 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
  * says nothing about the receiver that the giver did not type, and it offers
  * no readiness of any kind — the waiver and the certification are the diver's
  * own, asked for on their own page after they claim.
+ *
+ * **The giver's own line is not in it** (security review, finding 1b): free
+ * text from an unauthenticated form does not travel in outbound mail, where a
+ * quarantine digest or a shared inbox reads it. It renders on the claim page,
+ * for the person it was written for.
  */
 export function giftPassEmail(input: GiftPassEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
@@ -681,21 +686,19 @@ export function giftPassEmail(input: GiftPassEmailInput): NotificationEmail {
   const follow = t("notifications.giftPass.follow");
   const greeting = t("notifications.common.greeting", { firstName });
   const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
-  const line = input.message?.trim();
   return {
     subject: t("notifications.giftPass.subject", { tripTitle: input.tripTitle }),
     text: [
       greeting,
       body,
       `${date} · ${time}`,
-      ...(line ? [`“${line}”`] : []),
       forward,
       `${claimLink}:`,
       input.claimUrl,
       `${follow}:`,
       input.giftUrl,
     ].join("\n\n"),
-    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${line ? `<p><em>“${escapeHtml(line)}”</em></p>` : ""}<p>${forwardHtml}</p>${emailButton(input.claimUrl, claimLink)}<p><a href="${escapeHtml(input.giftUrl)}">${escapeHtml(follow)}</a></p>`,
+    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${forwardHtml}</p>${emailButton(input.claimUrl, claimLink)}<p><a href="${escapeHtml(input.giftUrl)}">${escapeHtml(follow)}</a></p>`,
   };
 }
 

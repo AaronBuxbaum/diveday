@@ -11,6 +11,7 @@ import { createBookingParty, createGiftBooking, getBookingForTrip } from "@/db/b
 import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { sendPendingGiftPasses } from "@/db/gifts";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
@@ -27,7 +28,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
-import { claimLinkPath, readinessLinkPath } from "@/lib/booking-capabilities";
+import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { BUDDY_COOKIE, buddyReferralFromCookie } from "@/lib/buddy-links";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
@@ -78,12 +79,6 @@ const NO_CERT_REQUIREMENT: CertRequirementSource = {
  * the redirect uses, so a missing origin costs the email its link, never the
  * landing.
  */
-/** Any app path as an absolute URL, or undefined when no canonical origin is configured. */
-function absoluteUrl(path: string): string | undefined {
-  const origin = publicAppUrl();
-  return origin ? new URL(path, `${origin}/`).toString() : undefined;
-}
-
 function readinessEmailUrl(token: string): string | undefined {
   const origin = publicAppUrl();
   return origin ? new URL(readinessLinkPath(token), `${origin}/`).toString() : undefined;
@@ -133,11 +128,41 @@ const bookSchema = z.object({
  */
 const GIFT_MESSAGE_MAX = 280;
 
+/**
+ * **No control characters, and no invisible ones** (security review of this
+ * slice, finding 2).
+ *
+ * Every value here is free text an anonymous caller typed, and all three end up
+ * somewhere a line break or a bidi override changes what a reader sees: the
+ * giver's line on the claim page, both names in a staff row on Orders and at
+ * the counter, and the names in the plaintext part of an outbound mail, where a
+ * newline forges a line of its own. `\p{Cc}` is the C0/C1 controls (the
+ * newline, the tab, the escape), `\p{Cf}` the format characters (the bidi
+ * overrides, the zero-width joiners, the soft hyphen), and the two literals are
+ * the non-breaking and zero-width spaces that read as nothing at all.
+ *
+ * Refused rather than stripped: a name DiveDay silently rewrote is a name the
+ * shop cannot match against the card in the diver's hand.
+ */
+const CONTROL_OR_INVISIBLE = /[\p{Cc}\p{Cf}\u00a0\u200b]/u;
+
+const plainText = <T extends z.ZodType<string>>(schema: T) =>
+  schema.refine((value) => !CONTROL_OR_INVISIBLE.test(value));
+
+/**
+ * The runs of whitespace a person leaves behind become one space each, so what
+ * is stored is what a reader sees. Applied after the refusal above, so this is
+ * only ever collapsing ordinary spaces.
+ */
+function collapseSpaces(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
+
 const giftSchema = z.object({
-  receiverName: diverNameSchema,
-  giverName: diverNameSchema,
+  receiverName: plainText(diverNameSchema),
+  giverName: plainText(diverNameSchema),
   giverEmail: diverEmailSchema,
-  message: z.string().trim().max(GIFT_MESSAGE_MAX).optional(),
+  message: plainText(z.string().trim().max(GIFT_MESSAGE_MAX)).optional(),
 });
 
 const emailField = diverEmailSchema;
@@ -773,6 +798,15 @@ async function giftSeat(
     shopSlug,
   );
 
+  // Collapsed once, here, so the row, the pass and the till all read the same
+  // string — never the raw submission with its runs of spaces in it.
+  const gift = {
+    giverName: collapseSpaces(parsed.data.giverName),
+    giverEmail: parsed.data.giverEmail,
+    receiverName: collapseSpaces(parsed.data.receiverName),
+    message: parsed.data.message ? collapseSpaces(parsed.data.message) : undefined,
+  };
+
   const outcome = await createGiftBooking(
     dbi,
     {
@@ -783,15 +817,10 @@ async function giftSeat(
       // asks for the giver's, because the giver is the one who knows how to
       // reach their friend. A placeholder person with no email is exactly the
       // walk-in shape `createBookingRecord` already books.
-      fullName: parsed.data.receiverName,
+      fullName: gift.receiverName,
       referralSource,
     },
-    {
-      giverName: parsed.data.giverName,
-      giverEmail: parsed.data.giverEmail,
-      receiverName: parsed.data.receiverName,
-      message: parsed.data.message,
-    },
+    gift,
   );
   if (!outcome.ok) {
     await trackEvent({ name: "booking_blocked", source: "diver", reason: outcome.reason });
@@ -819,56 +848,14 @@ async function giftSeat(
   const bookingId = outcome.bookingId;
   await creditBuddyReferral(dbi, { shopId: shopNow.id, shopSlug, bookingId });
 
-  const tripNow = await getTripWithBooked(dbi, shopNow.id, tripId);
-  // The receiver's link — a stored, revocable capability, because claiming is
-  // a write and claiming once kills it. The giver's is a signed token that
-  // deliberately survives the claim (`src/lib/gift-links.ts`).
-  const claim = await issueBookingCapability(dbi, {
-    shopId: shopNow.id,
-    bookingId,
-    purpose: "claim",
-  });
-  const giftPath = giftLinkPath(signGiftToken(bookingId));
-  const claimUrl = claim ? absoluteUrl(claimLinkPath(claim.token)) : undefined;
-  const giftUrl = absoluteUrl(giftPath);
-  if (tripNow && claimUrl && giftUrl) {
-    try {
-      const delivery = await sendAndRecordNotification(dbi, {
-        kind: "gift_pass",
-        bookingId,
-        shopId: shopNow.id,
-        to: parsed.data.giverEmail,
-        // The giver reads this, and the only language DiveDay has evidence for
-        // is the one they are filling this form in.
-        locale: recipientLocale(await requestFirstHandLocale(), shopNow.defaultLocale),
-        giverName: parsed.data.giverName,
-        receiverName: parsed.data.receiverName,
-        shopName: shopNow.name,
-        tripTitle: tripNow.title,
-        startsAt: tripNow.startsAt,
-        endsAt: tripNow.endsAt,
-        timezone: shopNow.timezone,
-        message: parsed.data.message || undefined,
-        claimUrl,
-        giftUrl,
-      });
-      if (delivery.status === "failed") {
-        console.error("Gift pass notification failed", { bookingId });
-      }
-    } catch {
-      // Email must never turn a completed, capacity-safe booking into an error
-      // page — the giver's own page carries the same claim link.
-      console.error("Gift pass notification could not be prepared", { bookingId });
-    }
-  }
-
   const base = publicTripPath(shopSlug, tripId);
   // Where a gift finishes: the giver's page. Never `/ready` — that is the
   // receiver's, and handing it to the giver would hand them the receiver's
   // checklist. Inside the embed the frame stays put, so a gift lands back on
   // the trip page with no token at all rather than on a page the CSP refuses
   // to frame.
-  const landing = embed ? `${base}?embed=1` : `${giftPath}?booked=1`;
+  const giftPath = giftLinkPath(signGiftToken(bookingId));
+  const landing = embed ? `${base}?embed=1` : giftPath;
   const checkoutUrl = await startCheckoutUrl(dbi, {
     shopId: shopNow.id,
     tripId,
@@ -877,7 +864,7 @@ async function giftSeat(
     // **The giver's address, so the giver's card is the one charged** — which
     // is what makes the blow-out's refund go back where the money came from
     // (`refundBookingOnShopCancellation` reverses the original capture).
-    customerEmail: parsed.data.giverEmail,
+    customerEmail: gift.giverEmail,
     promotionCode:
       tripPromo?.stripePromotionCodeId ?? shopPromo?.stripePromotionCodeId ?? undefined,
     tripPromo: tripPromo
@@ -887,11 +874,28 @@ async function giftSeat(
       ? { id: shopPromo.id, code: shopPromo.code, discountPercent: shopPromo.discountPercent }
       : undefined,
   });
+
   if (checkoutUrl) {
+    // **The pass waits for the money** (security review of this slice, finding
+    // 1). Sending it here would put branded mail carrying a stranger's text
+    // into any inbox an anonymous caller can type, and would say the seat "is
+    // paid for" while the giver is still looking at Stripe's page. The webhook
+    // sends it when the session settles (`sendPendingGiftPasses`).
     revalidatePath(base);
     if (embed) redirect(`${landing}&pay=due`);
     redirect(checkoutUrl);
   }
+
+  // No checkout to run — an unpriced departure, or a shop that cannot take
+  // money yet. There is no later moment, so the pass goes now: the seat is
+  // booked and the money is settled at the counter.
+  await sendPendingGiftPasses(dbi, {
+    shopId: shopNow.id,
+    bookingIds: [bookingId],
+    // The giver is filling this form in right now, so their own request is the
+    // only first-hand evidence of the language they read.
+    locale: await requestFirstHandLocale(),
+  });
   revalidateAndRedirect(base, landing);
 }
 

@@ -25,8 +25,15 @@ import { liveTrip } from "./trips-live";
  * (`bookingIdFromBuddyReferral`), so a stranger cannot credit a booking they
  * guessed. It must be this shop's — one cookie covers the whole `/s/`
  * namespace, so a diver carrying shop A's link who books at shop B must not
- * hand shop B a number about shop A. And it must not be the new booking itself,
- * which is the one self-reference the shape allows.
+ * hand shop B a number about shop A.
+ *
+ * And it must not be **this diver's own link**, which is the condition that
+ * costs a line and buys the number its meaning (security review of this slice,
+ * finding 6). Excluding the same *booking* was never enough: a diver reads
+ * their own recap, taps their own "bring a buddy" link because it is the
+ * fastest way back to the schedule, and books their next seat — and the shop is
+ * told a friend arrived. The people are compared, so a returning regular books
+ * an ordinary seat and the count keeps saying what it says.
  */
 export async function resolveBuddyReferral(
   tx: DbExecutor,
@@ -35,12 +42,22 @@ export async function resolveBuddyReferral(
   const referredByBookingId = bookingIdFromBuddyReferral(input.referralId);
   if (!referredByBookingId || referredByBookingId === input.bookingId) return null;
   const [row] = await tx
-    .select({ id: bookings.id })
+    .select({ id: bookings.id, personId: bookings.personId })
     .from(bookings)
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), liveTrip()))
     .where(and(eq(bookings.id, referredByBookingId), eq(bookings.shopId, input.shopId)))
     .limit(1);
-  return row?.id ?? null;
+  if (!row) return null;
+  // The same person, not merely the same seat — see the docblock. One extra
+  // read, on the new booking, because the caller hands over an id rather than
+  // a diver.
+  const [self] = await tx
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (self && self.personId === row.personId) return null;
+  return row.id;
 }
 
 /**

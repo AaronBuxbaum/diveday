@@ -9254,6 +9254,12 @@ export const bookingGifts = pgTable(
  * told how many seats its divers brought, which is the whole of what the lever
  * promises. `bookings.referral_source` is the *partner* fact (a hotel's link)
  * and stays what it is; this is divers, and the two are never summed.
+ *
+ * **No personal data, and therefore no retention window of its own** (security
+ * review of this slice, finding 5): a row is two booking ids and a timestamp.
+ * Both bookings carry their own erasure and their own pruning, so there is
+ * nothing here to age out that the seats either side of it do not already age
+ * out.
  */
 export const bookingReferrals = pgTable(
   "booking_referrals",

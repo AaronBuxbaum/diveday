@@ -46,6 +46,24 @@ function giftSecret(): string {
   return Buffer.from(derived).toString("base64url");
 }
 
+/**
+ * **A base64url signature, held to its charset before it is compared**
+ * (security review of the gift slice, finding 3).
+ *
+ * `timingSafeEqual` compares *bytes* and throws `RangeError` on buffers of
+ * unequal length, while the guard beside it counted *characters* — so a
+ * 43-character signature carrying one multibyte character (`é`, an emoji, a
+ * CJK glyph) passed the length check and then threw from inside the compare.
+ * A verifier's whole contract is to answer null for anything that is not a
+ * token; throwing hands the caller an error boundary instead, which on a
+ * bearer page is a 500 where "this link isn't available" belongs.
+ *
+ * A real signature is 43 base64url characters — SHA-256's 32 bytes, unpadded —
+ * and every one of them is a single byte, so this makes the length check below
+ * true of bytes as well as characters.
+ */
+const BASE64URL_SIGNATURE = /^[A-Za-z0-9_-]{43}$/;
+
 function sign(payload: string): string {
   return createHmac("sha256", giftSecret()).update(payload).digest("base64url");
 }
@@ -69,6 +87,10 @@ export function verifyGiftToken(token: string): string | null {
   if (dot <= 0) return null;
   const payload = token.slice(0, dot);
   const signature = token.slice(dot + 1);
+  // Charset first: `timingSafeEqual` throws on buffers of unequal *byte*
+  // length, and a multibyte character makes a 43-character string longer than
+  // 43 bytes (see `BASE64URL_SIGNATURE`).
+  if (!BASE64URL_SIGNATURE.test(signature)) return null;
   const expected = sign(payload);
   // Length-guard before timingSafeEqual, which throws on unequal buffers.
   if (signature.length !== expected.length) return null;

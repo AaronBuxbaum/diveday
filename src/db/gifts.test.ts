@@ -4,11 +4,19 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
+import { fakeEmail } from "@/test/fakes";
 import { issueBookingCapability } from "./booking-capabilities";
-import { createBooking, createGiftBooking } from "./bookings";
+import { cancelBooking, createBooking, createGiftBooking } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import type { AppDb } from "./client";
-import { giftCountsForWindow, giftForBooking, giftGiversByBooking, giverGiftView } from "./gifts";
+import {
+  giftCountsForWindow,
+  giftForBooking,
+  giftGiversByBooking,
+  giverGiftView,
+  sendGiftPassesForCheckout,
+  sendPendingGiftPasses,
+} from "./gifts";
 import { getBookingPayment } from "./payments";
 import { refundBookingOnShopCancellation } from "./refunds";
 import { bookingGifts, bookings } from "./schema";
@@ -55,6 +63,37 @@ async function giveASeat(db: AppDb, shopId: string, tripId: string) {
   );
   if (!outcome.ok) throw new Error(`gift booking failed: ${outcome.reason}`);
   return outcome;
+}
+
+/**
+ * A Stripe stand-in for the two tests that need a session to exist. Records
+ * nothing: what those tests assert is which *seat* the session settled, not
+ * what Stripe was asked.
+ */
+function giftCheckout(): CheckoutProvider {
+  return {
+    async createCheckoutSession(request) {
+      return {
+        status: "created",
+        stripeSessionId: `cs_gift_${Math.random().toString(36).slice(2, 10)}`,
+        stripeStatus: "open",
+        paymentStatus: "unpaid",
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_gift",
+        amountTotalCents: request.lineItems.reduce(
+          (sum, line) => sum + line.unitAmountCents * line.quantity,
+          0,
+        ),
+        taxAmountCents: null,
+        expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
+      };
+    },
+    async retrieveCheckoutSession() {
+      return { status: "failed" };
+    },
+    async refundCheckoutSession() {
+      return { status: "refunded", refundId: "re_gift" };
+    },
+  };
 }
 
 describe("createGiftBooking", () => {
@@ -274,6 +313,21 @@ describe("giverGiftView", () => {
     expect(JSON.stringify(view)).not.toContain("ben@example.com");
   });
 
+  /**
+   * **A seat that is no longer on the boat is not a gift to read** (security
+   * review of this slice, finding 4). The token lives a season, so without this
+   * a cancelled seat kept rendering "not claimed yet · not aboard yet" for six
+   * months — and after the receiver's erasure the redaction showed through as
+   * `erased-…` on a page nobody could explain.
+   */
+  it("answers nothing once the seat is cancelled", async () => {
+    const { db, shop, open } = await context();
+    const gift = await giveASeat(db, shop.id, open.id);
+    expect(await giverGiftView(db, gift.bookingId)).toBeTruthy();
+    await cancelBooking(db, shop.id, gift.bookingId);
+    expect(await giverGiftView(db, gift.bookingId)).toBeNull();
+  });
+
   it("answers nothing for a booking that is not a gift", async () => {
     const { db, shop, open } = await context();
     const plain = await createBooking(db, {
@@ -380,6 +434,139 @@ describe("a blown-out gift", () => {
     // The session the giver paid on, and no other.
     expect(refundCalls).toEqual([{ sessionId: start.checkout.stripeSessionId }]);
     expect((await getBookingPayment(db, shop.id, gift.bookingId))?.status).toBe("refunded");
+  });
+});
+
+/**
+ * **The pass is sent once, to the giver, and never before it should be**
+ * (security review of this slice, finding 1).
+ *
+ * The action's own half of this — that a priced departure's pass waits for the
+ * checkout and an unpriced one goes immediately — is pinned in
+ * `src/app/s/[shopSlug]/trips/[id]/actions.test.ts`. What is pinned here is the
+ * sender: who it writes to, what it refuses to carry, and that a replayed
+ * webhook cannot make it send twice.
+ */
+describe("sendPendingGiftPasses", () => {
+  it("sends one pass per seat and never a second, however often it is called", async () => {
+    const { db, shop, open } = await context();
+    const gift = await giveASeat(db, shop.id, open.id);
+
+    const first = fakeEmail();
+    await sendPendingGiftPasses(
+      db,
+      { shopId: shop.id, bookingIds: [gift.bookingId] },
+      first.provider,
+    );
+    expect(first.sent).toHaveLength(1);
+    expect(first.sent[0]).toMatchObject({ kind: "gift_pass", to: GIVER.giverEmail });
+
+    // **The giver's own line is not in the mail** (finding 1b): free text from
+    // an unauthenticated form does not travel where a quarantine digest or a
+    // shared inbox reads it. It renders on the claim page instead.
+    expect(JSON.stringify(first.sent[0])).not.toContain("birthday");
+
+    // A replayed webhook, a resumed cascade, a double-tapped return: the
+    // delivery row is the dedup, so all three converge on the one send.
+    const replay = fakeEmail();
+    await sendPendingGiftPasses(
+      db,
+      { shopId: shop.id, bookingIds: [gift.bookingId] },
+      replay.provider,
+    );
+    expect(replay.sent).toHaveLength(0);
+  });
+
+  it("sends nothing for a cancelled seat", async () => {
+    const { db, shop, open } = await context();
+    const gift = await giveASeat(db, shop.id, open.id);
+    await cancelBooking(db, shop.id, gift.bookingId);
+    const mail = fakeEmail();
+    await sendPendingGiftPasses(
+      db,
+      { shopId: shop.id, bookingIds: [gift.bookingId] },
+      mail.provider,
+    );
+    expect(mail.sent).toHaveLength(0);
+  });
+
+  it("sends nothing for another shop's booking", async () => {
+    const { db, shop, open } = await context();
+    const gift = await giveASeat(db, shop.id, open.id);
+    const mail = fakeEmail();
+    await sendPendingGiftPasses(
+      db,
+      { shopId: "00000000-0000-4000-8000-000000000000", bookingIds: [gift.bookingId] },
+      mail.provider,
+    );
+    expect(mail.sent).toHaveLength(0);
+  });
+
+  it("sends nothing for a booking that is not a gift", async () => {
+    const { db, shop, open } = await context();
+    const plain = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Nora Quinn",
+      email: "nora@example.com",
+    });
+    if (!plain.ok) throw new Error("setup booking failed");
+    const mail = fakeEmail();
+    await sendPendingGiftPasses(
+      db,
+      { shopId: shop.id, bookingIds: [plain.bookingId] },
+      mail.provider,
+    );
+    expect(mail.sent).toHaveLength(0);
+  });
+  /**
+   * The webhook's own door: it holds a settled checkout and nothing else, and
+   * one checkout can cover several seats. This is the half that proves a paid
+   * session finds its gift.
+   */
+  it("finds the gift seats a settled checkout covered", async () => {
+    const { db, shop, open } = await context();
+    await updateTrip(db, shop.id, open.id, {
+      title: open.title,
+      startsAt: open.startsAt,
+      endsAt: open.endsAt,
+      capacity: open.capacity,
+      plannedDives: open.plannedDives,
+      priceCents: 9_500,
+    });
+    await upsertShopStripeAccount(db, shop.id, "acct_gift_pass");
+    await setShopStripeAccountStatus(db, "acct_gift_pass", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const gift = await giveASeat(db, shop.id, open.id);
+
+    const started = await startBookingCheckout(
+      db,
+      {
+        shopId: shop.id,
+        tripId: open.id,
+        bookingIds: [gift.bookingId],
+        customerEmail: GIVER.giverEmail,
+        successUrl: "https://diveday.example/gift",
+        cancelUrl: "https://diveday.example/gift?pay=cancelled",
+        describeLine: ({ tripTitle }) => tripTitle,
+      },
+      giftCheckout(),
+    );
+    if (!started.ok) throw new Error(`checkout start failed: ${started.reason}`);
+    await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId);
+
+    const mail = fakeEmail();
+    await sendGiftPassesForCheckout(
+      db,
+      { id: started.checkout.id, shopId: shop.id },
+      mail.provider,
+    );
+    expect(mail.sent).toHaveLength(1);
+    expect(mail.sent[0]).toMatchObject({ kind: "gift_pass", to: GIVER.giverEmail });
   });
 });
 

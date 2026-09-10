@@ -6,6 +6,7 @@ import {
   markCheckoutPaymentFailedBySessionId,
 } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { sendGiftPassesForCheckout } from "@/db/gifts";
 import { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } from "@/db/orders";
 import { disconnectShopStripeAccount, setShopStripeAccountStatus } from "@/db/stripe-accounts";
 import { markTipExpiredBySessionId, markTipPaidBySessionId } from "@/db/tips";
@@ -228,6 +229,15 @@ export async function POST(request: Request) {
             session.data.total_details?.amount_tax,
           );
           if (checkout) {
+            // **A gift's pass goes out when the money settles**, never when the
+            // form was submitted (security review of the gift slice, finding
+            // 1): before this the booking action mailed it immediately, so an
+            // anonymous caller could send branded mail to any address they
+            // typed and it claimed the seat was paid for while they were still
+            // on Stripe's page. Best-effort and idempotent — one pass per seat,
+            // ever — so a replayed event sends nothing twice and a mail failure
+            // never fails the webhook.
+            await sendGiftPassesForCheckout(db, checkout);
             logOutcome("checkout_paid");
           } else {
             const tip = await markTipPaidBySessionId(db, session.data.id, event.account);
@@ -251,6 +261,15 @@ export async function POST(request: Request) {
             session.data.total_details?.amount_tax,
           );
           if (checkout) {
+            // **A gift's pass goes out when the money settles**, never when the
+            // form was submitted (security review of the gift slice, finding
+            // 1): before this the booking action mailed it immediately, so an
+            // anonymous caller could send branded mail to any address they
+            // typed and it claimed the seat was paid for while they were still
+            // on Stripe's page. Best-effort and idempotent — one pass per seat,
+            // ever — so a replayed event sends nothing twice and a mail failure
+            // never fails the webhook.
+            await sendGiftPassesForCheckout(db, checkout);
             logOutcome("checkout_paid");
           } else {
             const tip = await markTipPaidBySessionId(db, session.data.id, event.account);

@@ -434,6 +434,22 @@ export const RATE_LIMITS = {
    */
   selfRegisterEmailByRecipient: perHour(3),
   /**
+   * The gift pass, per **recipient address** (security review of the gift
+   * slice, finding 1c).
+   *
+   * `selfRegisterEmailByRecipient`'s shape and its reason exactly. The public
+   * gift form takes an address nobody has proved anything about and mails it
+   * the shop's own branded pass, and neither the booking limiter (per IP) nor
+   * the checkout (per seat) is keyed on the inbox being written *to*. On a
+   * priced departure money is the real bound — the pass now goes out from the
+   * paid cascade — but an unpriced or pay-at-the-shop departure has no such
+   * bound at all, and that is the one this exists for.
+   *
+   * An empty bucket drops the *send*, never the seat: the giver still holds
+   * their own page and the counter can seat the friend by name.
+   */
+  giftPassByRecipient: perHour(3),
+  /**
    * Contact-email confirmation links (issue #1288), per **shop** and per
    * **recipient address**. The settings form takes any address and the resend
    * control mints a fresh link each tap, and a demo shop's owner login is one

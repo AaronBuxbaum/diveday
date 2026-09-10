@@ -2,11 +2,13 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { RETENTION_DAYS } from "@/lib/retention";
 import { seededShopContext } from "@/test/db";
+import { createGiftBooking } from "./bookings";
 import { setBookingPayment } from "./payments";
 import { pruneExpiredRecords } from "./retention";
 import {
   accountTokens,
   activityEvents,
+  bookingGifts,
   bookingPaymentEvents,
   notificationDeliveries,
   notificationDeliveryAttempts,
@@ -17,7 +19,7 @@ import {
   tripReadMarks,
   userAccounts,
 } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = new Date("2026-08-03T00:00:00.000Z");
@@ -286,6 +288,75 @@ describe("pruneExpiredRecords", () => {
     const summary = await pruneExpiredRecords(db, { now: NOW });
     expect(outcomeFor(summary, "booking_payment_events").deleted).toBe(0);
     expect(await db.select().from(bookingPaymentEvents)).toHaveLength(1);
+  });
+
+  /**
+   * **The giver is retired, the gift is not** (security review of the gift
+   * slice, finding 5). A giver has no `people` row and never signed up for
+   * anything, so their name and address age out on their own window — while
+   * the row stays, because it is what explains the seat and its money on the
+   * till and in an export.
+   */
+  it("redacts a gift's giver ninety days after the boat came home, and keeps the row", async () => {
+    const { db, shop } = await retentionContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const old = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!old) throw new Error("demo reef trip missing");
+    const gift = await createGiftBooking(
+      db,
+      { actor: "public", shopId: shop.id, tripId: old.id, fullName: "Ben Carter" },
+      {
+        giverName: "Hannah Liu",
+        giverEmail: "hannah.liu@example.com",
+        receiverName: "Ben Carter",
+        message: "From Hannah, for your birthday",
+      },
+    );
+    if (!gift.ok) throw new Error(`gift booking failed: ${gift.reason}`);
+
+    // Inside the window: the departure came home yesterday.
+    await updateTrip(db, shop.id, old.id, {
+      title: old.title,
+      startsAt: daysAgo(2),
+      endsAt: daysAgo(1),
+      capacity: old.capacity,
+      plannedDives: old.plannedDives,
+    });
+    await pruneExpiredRecords(db, { now: NOW });
+    const [fresh] = await db
+      .select()
+      .from(bookingGifts)
+      .where(eq(bookingGifts.bookingId, gift.bookingId));
+    expect(fresh?.giverName).toBe("Hannah Liu");
+
+    // Past it.
+    const past = RETENTION_DAYS.booking_gifts + 1;
+    await updateTrip(db, shop.id, old.id, {
+      title: old.title,
+      startsAt: daysAgo(past + 1),
+      endsAt: daysAgo(past),
+      capacity: old.capacity,
+      plannedDives: old.plannedDives,
+    });
+    const summary = await pruneExpiredRecords(db, { now: NOW });
+    expect(outcomeFor(summary, "booking_gifts").deleted).toBe(1);
+
+    const [retired] = await db
+      .select()
+      .from(bookingGifts)
+      .where(eq(bookingGifts.bookingId, gift.bookingId));
+    // The row survives; the identity does not, and the receiver's name — the
+    // giver's own words about somebody who *is* a diver here — is left to the
+    // erasure path that owns it.
+    expect(retired).toBeTruthy();
+    expect(retired?.giverName).not.toBe("Hannah Liu");
+    expect(retired?.giverEmail).toMatch(/@invalid$/);
+    expect(retired?.message).toBeNull();
+
+    // Idempotent: a second pass finds nothing, rather than re-counting a row
+    // it has already retired.
+    const again = await pruneExpiredRecords(db, { now: NOW });
+    expect(outcomeFor(again, "booking_gifts").deleted).toBe(0);
   });
 
   it("is idempotent: a second pass with nothing eligible deletes nothing", async () => {

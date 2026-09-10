@@ -84,7 +84,8 @@ export type RetainedTable =
   | "trip_read_marks"
   | "form_drafts"
   | "inbound_messages"
-  | "staff_replies";
+  | "staff_replies"
+  | "booking_gifts";
 
 /**
  * The one place a human changes how long each trail is kept, in days.
@@ -237,6 +238,25 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * has the record's notes, and erasure clears them on request regardless.
    */
   inbound_messages: 400,
+  /**
+   * 90 days after the departure came home — and the one window here that
+   * **redacts rather than deletes** (security review of the gift slice,
+   * finding 5).
+   *
+   * A `booking_gifts` row carries a third party's name and address: the giver
+   * has no `people` row, is not a diver of this shop, and never agreed to
+   * anything, so the only thing holding their identity is that they once
+   * bought somebody a seat. Once the boat is home and the season's refund and
+   * chargeback windows have run, nobody needs to know who paid — but the
+   * *row* still has work to do, because it is what explains the seat and its
+   * money on the till and in an export. So the giver goes and the gift stays.
+   *
+   * 90 rather than 400: unlike the delivery trails, this is not evidence of
+   * something DiveDay did, and the shorter window is the one a person who
+   * never signed up for anything is owed. Erasure still takes it sooner on
+   * request (`src/db/anonymize.ts`).
+   */
+  booking_gifts: 90,
   /** Measured on `sent_at`; a reply outliving the message it answered says nothing. */
   staff_replies: 400,
 };

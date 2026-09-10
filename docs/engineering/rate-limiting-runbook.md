@@ -35,6 +35,7 @@ cannot see it.
 | Recap pulse: submit, revise or withdraw | same file, `submitRecapPulseAction` | IP **and** booking (IP before the token is verified) | `RATE_LIMITS.recapPulseByIp` (30/hour) + `RATE_LIMITS.recapPulseByToken` (10/hour) |
 | Wait-list join | `src/app/s/[shopSlug]/trips/[id]/actions.ts` `joinWaitlist` | IP, **and** the address any certification claim is *about* | `RATE_LIMITS.waitlistJoin` (10/hour) + `RATE_LIMITS.declarationByPerson` (5/hour) |
 | Booking | same file, `bookSpot` | IP | `RATE_LIMITS.booking` (10/hour) |
+| The gift pass (a seat bought for someone else) | `src/db/gifts.ts` `sendPendingGiftPasses` | recipient address | `RATE_LIMITS.giftPassByRecipient` (3/hour) — drops the send, never the seat. The public gift form takes an address nobody has proved anything about and mails it the shop's branded pass; on a priced departure the pass now waits for the settled checkout, so money is the real bound, and this is what bounds an unpriced or pay-at-the-shop one |
 | Booking-confirmation actions (rental fit, pay, "sign your waiver now") | same file, `confirmContextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Last-minute-list join | `src/app/s/[shopSlug]/actions.ts` | IP, **and** the address any certification claim is *about* | `RATE_LIMITS.lastMinuteListJoin` (10/hour) + `RATE_LIMITS.declarationByPerson` (5/hour) |
 | Course inquiry | `src/app/s/[shopSlug]/courses/[slug]/actions.ts` | IP | `RATE_LIMITS.courseInquiry` (10/hour) |
