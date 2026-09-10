@@ -212,11 +212,21 @@ try {
   writeFileSync(checkpointFile, checkpointDocument);
 
   for (const [key, value] of changed) {
+    // A `NEXT_PUBLIC_` variable is public by definition -- Next.js inlines it
+    // into the client bundle -- and Vercel refuses to store one as a Secret,
+    // which is what `--sensitive` asks for: "NEXT_PUBLIC_ exposes this value to
+    // anyone visiting your site, so it cannot be a Secret." Everything else
+    // here is a credential and stays sensitive.
+    //
+    // Latent until a NEXT_PUBLIC_ value actually changed, because only changed
+    // variables are pushed. The region migration changed the RUM app monitor
+    // id, which is how it surfaced.
+    const sensitivity = key.startsWith("NEXT_PUBLIC_") ? "--no-sensitive" : "--sensitive";
     // Do not put a secret in argv or terminal output. The Vercel CLI reads each
     // value from stdin; --force makes rerunning a rotation deterministic.
     const result = runBounded(
       "pnpm",
-      ["exec", "vercel", "env", "add", key, environment, "--force", "--sensitive"],
+      ["exec", "vercel", "env", "add", key, environment, "--force", sensitivity],
       {
         input: value,
         stdio: ["pipe", "inherit", "inherit"],

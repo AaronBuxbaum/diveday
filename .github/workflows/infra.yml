@@ -142,7 +142,10 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@v6
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         with:
-          aws-region: us-east-1
+          # The session's default region, not where anything deploys -- every
+          # stack names its own (config/aws-regions.mjs). It follows the estate
+          # so an ad-hoc `aws` call in this job reaches the right place.
+          aws-region: us-east-2
           role-to-assume: ${{ vars.AWS_CDK_DIFF_ROLE_ARN }}
           role-session-name: gha-cdk-diff
       - name: Post the diff to the pull request
@@ -258,7 +261,7 @@ jobs:
           fi
       - uses: aws-actions/configure-aws-credentials@v6
         with:
-          aws-region: us-east-1
+          aws-region: us-east-2
           role-to-assume: ${{ vars.AWS_CDK_DEPLOY_ROLE_ARN }}
           role-session-name: gha-cdk-deploy
       # `pnpm infra:deploy`, not a bare `cdk deploy`: once the required-reviewer

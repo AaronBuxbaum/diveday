@@ -105,7 +105,10 @@ Four of the five steps have a trap that a careful person executing a list still 
    The 10DLC vetting is measured in weeks, so start it the day the move is decided rather than the day a shop needs a text message to arrive.
 5. **Confirm three alarm subscriptions** (manual action `confirm-observability-alarms`).
    One mail per alarm topic, and the links expire after three days.
-6. **Redeploy the app.**
+6. **Check the address card still works.**
+   Amazon Location's Places API is not served in every region, and the SDK builds `geo-places.<region>.amazonaws.com` with no ruleset check behind it — so an unserved region fails in DNS on every keystroke, with no HTTP status and no exception name to read.
+   `aws geo-places search-text --query-text test --region <new region>` answers that in one call.
+7. **Redeploy the app.**
    `RUM_APP_MONITOR_ID`, `MEDIA_PUBLIC_URL_BASE` and every AWS credential in the environment changed.
    The post-deploy wizard pushes the credentials; the redeploy is what makes the app use them.
 

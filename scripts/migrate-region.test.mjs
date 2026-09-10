@@ -686,6 +686,10 @@ describe("infra:migrate-region", () => {
     expect(result.stdout).toContain("production-access request");
     expect(result.stdout).toContain("10DLC");
     expect(result.stdout).toContain("three alarm subscription emails");
+    // Amazon Location's Places API is not served everywhere, and an unserved
+    // region fails in DNS with nothing to read -- so the migration says to
+    // check it rather than letting the address card go quiet.
+    expect(result.stdout).toContain("geo-places search-text");
     expect(result.stdout).toContain("docs/engineering/region-migration.md");
   });
 });

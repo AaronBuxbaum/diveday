@@ -420,6 +420,11 @@ export class InfraStack extends cdk.Stack {
     // The secret now goes to Secrets Manager (S16) and nowhere else. Outputs
     // carry names, ARNs, and instructions; never key material.
     const regSuitKey = mintAccessKey("RegSuitUserAccessKey", user);
+    // The bucket's own region, not a literal anywhere else. reg-suit's S3
+    // client and scripts/prune-visual-bucket.mjs both need it, and both were
+    // pinned to us-east-1 while the bucket moved with the estate -- a wrong
+    // region reads as "no baseline for this commit", not as an error.
+    envValues.REG_SUIT_AWS_REGION = this.region;
     envValues.REG_SUIT_S3_BUCKET_NAME = bucket.bucketName;
     envValues.REG_SUIT_AWS_ACCESS_KEY_ID = regSuitKey.id;
     envValues.REG_SUIT_AWS_SECRET_ACCESS_KEY = regSuitKey.secret;
@@ -1359,17 +1364,21 @@ exports.handler = async (event) => {
 
     const placesLookupKey = mintAccessKey("PlacesLookupUserAccessKey", placesLookupUser);
     // Named, not inherited. Every other AWS credential here takes `this.region`,
-    // which is whatever region the human who ran `cdk deploy` had configured -
-    // an accident, not a decision. That is harmless for SES, SNS and CloudWatch,
-    // which are served everywhere. Amazon Location's Places API is not: the SDK
-    // builds `geo-places.<region>.amazonaws.com` out of this string and there is
-    // no ruleset check behind it, so a region that does not serve the API fails
-    // in DNS on every keystroke - no HTTP status, no AWS exception name, nothing
-    // to read but "address lookup isn't available right now". The address card
-    // is the one feature whose whole surface a moved stack could silently take
-    // out, so it says which region it calls.
-    const PLACES_LOOKUP_REGION = "us-east-1";
-    envValues.PLACES_AWS_REGION = PLACES_LOOKUP_REGION;
+    // This used to be a `us-east-1` literal, written when the stack was
+    // environment-agnostic and its region was whatever the operator's profile
+    // happened to point at -- an accident, so the address lookup pinned itself
+    // rather than ride one. The region is a reviewed constant now
+    // (config/aws-regions.mjs), so the reason is gone and the literal with it.
+    //
+    // What has not changed is the failure mode, which is why this still says
+    // which region it calls rather than leaving the SDK to a default: the SDK
+    // builds `geo-places.<region>.amazonaws.com` out of this string and there
+    // is no ruleset check behind it, so a region that does not serve the API
+    // fails in DNS on every keystroke -- no HTTP status, no AWS exception name,
+    // nothing to read but "address lookup isn't available right now". If the
+    // address card goes quiet after a region move, that is the first thing to
+    // check: `aws geo-places search-text --query-text test --region <region>`.
+    envValues.PLACES_AWS_REGION = this.region;
     envValues.PLACES_AWS_ACCESS_KEY_ID = placesLookupKey.id;
     envValues.PLACES_AWS_SECRET_ACCESS_KEY = placesLookupKey.secret;
 

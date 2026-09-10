@@ -6,7 +6,7 @@
 //   node scripts/prune-visual-bucket.mjs [--dry-run] [--bucket <name>] [--keep <sha>] [--repo <owner/repo>] [--branch <name>]
 import process from "node:process";
 import { S3Client } from "@aws-sdk/client-s3";
-
+import { PRIMARY_REGION } from "../config/aws-regions.mjs";
 import {
   DEFAULT_BRANCH,
   DEFAULT_BUCKET,
@@ -48,7 +48,11 @@ function parseArgs(argv) {
   return args;
 }
 
-function getS3Client(region = "us-east-1") {
+// The bucket's region comes from the stack (REG_SUIT_AWS_REGION), not from a
+// literal here: this default was us-east-1 while the bucket moved with the
+// estate, and a wrong region reads as an empty bucket rather than an error --
+// so a pruner pointed at the wrong region reports having found nothing to prune.
+function getS3Client(region = process.env.REG_SUIT_AWS_REGION || PRIMARY_REGION) {
   const accessKeyId = process.env.REG_SUIT_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
   const secretAccessKey =
     process.env.REG_SUIT_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;

@@ -14,7 +14,7 @@
       "bucketName": "$REG_SUIT_S3_BUCKET_NAME",
       "enableACL": false,
       "sdkOptions": {
-        "region": "us-east-1",
+        "region": "$REG_SUIT_AWS_REGION",
         "credentials": {
           "accessKeyId": "$REG_SUIT_AWS_ACCESS_KEY_ID",
           "secretAccessKey": "$REG_SUIT_AWS_SECRET_ACCESS_KEY"
