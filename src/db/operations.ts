@@ -56,7 +56,8 @@ export async function addInternalNote(
       tripId: scope.tripId,
       bookingId: input.bookingId,
       actorPersonId: input.actorPersonId,
-      message: `${actor.name} added a private note about ${scope.diverName}`,
+      code: "note_added",
+      params: { actor: actor.name, diver: scope.diverName },
       occurredAt: nowDate(),
     });
     return note ?? null;
@@ -107,12 +108,23 @@ export async function addDiverNote(
       // The seat-shaped handles are both null here, so the subject is the only
       // thing tying this line to the record it was written on.
       subjectPersonId: input.personId,
-      message: `${actor.name} added a private note about ${diver.name}`,
+      code: "note_added",
+      params: { actor: actor.name, diver: diver.name },
       occurredAt: nowDate(),
     });
     return note ?? null;
   });
 }
+
+/**
+ * The record-scoped lines this writer can file.
+ *
+ * Named one by one rather than accepting any {@link ActivityCode}, because the
+ * two names this function looks up — the actor and the diver — are exactly the
+ * parameters these two sentences take. A code needing a third name would
+ * compile here and render with a gap, so it does not compile here.
+ */
+export type DiverActivityCode = "medical_clearance_opened" | "record_exported";
 
 /**
  * One line on the diver-record trail, subject-only — the same shape
@@ -124,10 +136,8 @@ export async function addDiverNote(
  */
 export async function recordDiverActivity(
   db: AppDb,
-  input: { shopId: string; personId: string; actorPersonId: string; action: string },
+  input: { shopId: string; personId: string; actorPersonId: string; code: DiverActivityCode },
 ): Promise<boolean> {
-  const action = input.action.trim();
-  if (!action || action.length > 500) return false;
   const [diver] = await db
     .select({ name: people.fullName })
     .from(people)
@@ -145,7 +155,8 @@ export async function recordDiverActivity(
     bookingId: null,
     actorPersonId: input.actorPersonId,
     subjectPersonId: input.personId,
-    message: `${actor.name} ${action} ${diver.name}`,
+    code: input.code,
+    params: { actor: actor.name, diver: diver.name },
     occurredAt: nowDate(),
   });
   return true;
@@ -206,7 +217,8 @@ export async function deleteInternalNote(
       tripId: note.tripId,
       bookingId: note.bookingId,
       actorPersonId: input.actorPersonId,
-      message: `${actor.name} deleted a private note about ${note.diverName}`,
+      code: "note_deleted",
+      params: { actor: actor.name, diver: note.diverName },
       occurredAt: nowDate(),
     });
     return { deleted: true, bookingId: note.bookingId, body: note.body };
@@ -260,7 +272,8 @@ export async function deleteDiverNote(
       bookingId: null,
       actorPersonId: input.actorPersonId,
       subjectPersonId: input.personId,
-      message: `${actor.name} deleted a private note about ${note.diverName}`,
+      code: "note_deleted",
+      params: { actor: actor.name, diver: note.diverName },
       occurredAt: nowDate(),
     });
     return { deleted: true, body: note.body };
@@ -445,12 +458,28 @@ export async function pagedDiverActivity(
   });
 }
 
+/**
+ * A line on a departure's trail, and the names it needs **beyond the actor**.
+ *
+ * The actor is not in here because the caller does not know it: this function
+ * looks the name up, in the same query that proves the trip is this shop's and
+ * still live. Everything else the sentence needs comes from the call site,
+ * typed per code so a sentence about a crew member cannot be filed with a
+ * diver's name in it.
+ */
+export type TripActivityEntry =
+  | {
+      code: "booking_removed" | "booking_restored" | "seat_added" | "seat_added_walk_in";
+      diver: string;
+    }
+  | { code: "crew_assigned" | "crew_removed"; crew: string }
+  | { code: "blowout_called" | "booking_link_requested" | "seat_claimed" };
+
 export async function recordTripActivity(
   db: AppDb,
-  input: { shopId: string; tripId: string; actorPersonId: string; action: string },
+  input: { shopId: string; tripId: string; actorPersonId: string; entry: TripActivityEntry },
 ) {
-  const action = input.action.trim();
-  if (!action || action.length > 500) return null;
+  const entry = input.entry;
   const [scope] = await db
     .select({ actorName: people.fullName })
     .from(trips)
@@ -465,13 +494,15 @@ export async function recordTripActivity(
     )
     .limit(1);
   if (!scope) return null;
+  const { code: _code, ...names } = entry;
   const [event] = await db
     .insert(activityEvents)
     .values({
       shopId: input.shopId,
       tripId: input.tripId,
       actorPersonId: input.actorPersonId,
-      message: `${scope.actorName} ${action}`,
+      code: entry.code,
+      params: { actor: scope.actorName, ...names },
       occurredAt: nowDate(),
     })
     .returning();

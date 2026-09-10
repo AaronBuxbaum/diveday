@@ -7,6 +7,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripGuests } from "@/db/trips-guests";
+import { activityLine } from "@/i18n/activity-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
@@ -293,7 +294,11 @@ export function TripRosterContent({
           </summary>
           <div className="pb-5">
             <ActivityLog
-              events={activity}
+              events={activity.map((event) => ({
+                id: event.id,
+                message: activityLine(t, event),
+                occurredAt: event.occurredAt,
+              }))}
               locale={locale}
               timeZone={timezone}
               emptyText={t("trips.guests.noActivity")}

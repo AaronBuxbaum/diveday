@@ -502,7 +502,7 @@ export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<
       shopId: outcome.shopId,
       tripId: outcome.tripId,
       actorPersonId: outcome.personId,
-      action: "claimed their seat",
+      entry: { code: "seat_claimed" },
     });
   } catch {
     console.error("Seat-claim activity could not be recorded", { bookingId: outcome.bookingId });

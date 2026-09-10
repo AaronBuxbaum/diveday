@@ -13,6 +13,7 @@ import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManagePaymentSettings, canPersonRefund } from "@/db/authz";
 import { getTripGuests } from "@/db/trips-guests";
+import { activityLine } from "@/i18n/activity-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
@@ -489,7 +490,11 @@ async function TripGuestsBody({
           </summary>
           <div className="pb-5">
             <ActivityLog
-              events={activity}
+              events={activity.map((event) => ({
+                id: event.id,
+                message: activityLine(t, event),
+                occurredAt: event.occurredAt,
+              }))}
               locale={locale}
               timeZone={shop.timezone}
               emptyText={t("trips.guests.noActivity")}

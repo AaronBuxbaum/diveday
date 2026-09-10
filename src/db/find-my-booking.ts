@@ -171,7 +171,7 @@ export async function sendFindMyBookingLinks(
           shopId: input.shopId,
           tripId: row.tripId,
           actorPersonId: row.personId,
-          action: "requested a fresh link to their booking",
+          entry: { code: "booking_link_requested" },
         }).catch(() => null);
       }
     } catch (error) {

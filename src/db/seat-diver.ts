@@ -4,7 +4,7 @@ import { type BookingOutcome, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { publishManifestEvent } from "./manifest-events";
-import { recordTripActivity } from "./operations";
+import { recordTripActivity, type TripActivityEntry } from "./operations";
 import { type IssueAndDeliverWaiverResult, issueWaiverOnJoin } from "./waiver-issue";
 
 /**
@@ -127,14 +127,17 @@ export type SeatDiverResult =
     };
 
 /**
- * The activity-feed phrasing. Stored trail text, composed the same place the
- * feed's own `${actorName} ${action}` sentence is (src/db/operations.ts) —
- * the activity trail is a record of what happened, not localized UI copy.
+ * Which line the trail gets: the same act, told two ways.
+ *
+ * A walk-in and a booked seat are the same insert with different stories behind
+ * them, and the trail is where a shop reads the difference back. The words are
+ * picked where the trail is rendered (issue #1655) — this only says which
+ * sentence, and the one name it needs.
  */
-function activityAction(entry: SeatDiverEntry, personName: string): string {
+function activityEntry(entry: SeatDiverEntry, personName: string): TripActivityEntry {
   return entry === "walk_in"
-    ? `added ${personName} to the trip as a walk-in`
-    : `added ${personName} to the trip`;
+    ? { code: "seat_added_walk_in", diver: personName }
+    : { code: "seat_added", diver: personName };
 }
 
 function collapse(reason: BookingRefusalReason, detail: SeatDiverRefusalDetail): SeatDiverRefusal {
@@ -206,7 +209,7 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     shopId: input.shopId,
     tripId: input.tripId,
     actorPersonId: input.actorPersonId,
-    action: activityAction(input.entry, outcome.personName),
+    entry: activityEntry(input.entry, outcome.personName),
   });
 
   // "Lina Costa took a seat." on the manifest's catch-up strip (issue #1202).

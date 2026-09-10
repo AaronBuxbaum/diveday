@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { isActivityCode } from "@/lib/activity";
 import { seededShopContext } from "@/test/db";
 import { listBookingNotes, listTripActivity } from "./operations";
 import { getBookingReadiness } from "./readiness";
@@ -34,7 +35,10 @@ describe("seeded desk trail", () => {
     // row was seeded or earned.
     const occurred = activity.map((event) => event.occurredAt.getTime());
     expect(occurred).toEqual([...occurred].sort((a, b) => b - a));
-    for (const event of activity) expect(event.message).toMatch(/\w+ \w+ /);
+    for (const event of activity) {
+      expect(isActivityCode(event.code)).toBe(true);
+      expect(event.params.actor).toMatch(/\w+ \w+/);
+    }
 
     const notes = await listBookingNotes(db, shop.id, trip.id);
     expect(notes.length).toBeGreaterThan(0);

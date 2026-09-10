@@ -152,7 +152,8 @@ describe("pruneExpiredRecords", () => {
         tripId: reef.id,
         bookingId: entry.booking.id,
         actorPersonId: entry.person.id,
-        message: "ancient",
+        code: "counter_check_in",
+        params: { diver: "Ancient" },
         occurredAt: daysAgo(activityWindow + 1),
       },
       {
@@ -160,7 +161,8 @@ describe("pruneExpiredRecords", () => {
         tripId: reef.id,
         bookingId: entry.booking.id,
         actorPersonId: entry.person.id,
-        message: "recent",
+        code: "counter_check_in",
+        params: { diver: "Recent" },
         occurredAt: daysAgo(activityWindow - 1),
       },
     ]);

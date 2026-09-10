@@ -21,6 +21,7 @@
 // pnpm check:locale proves the file sets match across locales and that every
 // file is imported here, so a stray or orphaned namespace cannot ship.
 
+import activity from "./activity.json";
 import backup from "./backup.json";
 import blowout from "./blowout.json";
 import boats from "./boats.json";
@@ -89,6 +90,7 @@ const staff = {
   shopHome,
   shared,
   whatsapp,
+  activity,
   backup,
   bookings,
   seatDiver,

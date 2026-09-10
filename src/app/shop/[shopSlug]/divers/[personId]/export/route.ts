@@ -55,7 +55,7 @@ export async function GET(
     shopId: session.user.shopId,
     personId,
     actorPersonId: session.user.personId,
-    action: "downloaded a copy of",
+    code: "record_exported",
   });
 
   return new Response(new Uint8Array(zip), {

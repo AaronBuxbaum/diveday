@@ -68,12 +68,11 @@ async function bookableDiver(db: AppDb, shopId: string, tripId: string) {
   return person;
 }
 
-async function activityMessages(db: AppDb, tripId: string) {
-  const rows = await db
-    .select({ message: activityEvents.message })
+async function activityLines(db: AppDb, tripId: string) {
+  return await db
+    .select({ code: activityEvents.code, params: activityEvents.params })
     .from(activityEvents)
     .where(eq(activityEvents.tripId, tripId));
-  return rows.map((row) => row.message);
 }
 
 async function waiverCount(db: AppDb, bookingId: string) {
@@ -145,9 +144,10 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
       refusals: "specific",
     });
 
-    expect(await activityMessages(db, open.id)).toContainEqual(
-      expect.stringContaining(`added ${diver.fullName} to the trip`),
-    );
+    expect(await activityLines(db, open.id)).toContainEqual({
+      code: "seat_added",
+      params: expect.objectContaining({ diver: diver.fullName }),
+    });
   });
 
   it("says a walk-in was a walk-in on the trail, and takes a diver with no email", async () => {
@@ -167,9 +167,10 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
     // waiver link and no way to have received it. This assertion used to read
     // `waiver: "issued"` and was pinning the bug it was meant to catch.
     expect(result).toMatchObject({ ok: true, personName: "Counter Cass", waiver: "not_delivered" });
-    expect(await activityMessages(db, open.id)).toContainEqual(
-      expect.stringContaining("added Counter Cass to the trip as a walk-in"),
-    );
+    expect(await activityLines(db, open.id)).toContainEqual({
+      code: "seat_added_walk_in",
+      params: expect.objectContaining({ diver: "Counter Cass" }),
+    });
   });
 
   it("names the person on the trail even when the door submitted no name", async () => {
@@ -186,9 +187,10 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
     });
 
     expect(result).toMatchObject({ ok: true, personName: diver.fullName });
-    expect(await activityMessages(db, open.id)).toContainEqual(
-      expect.stringContaining(`added ${diver.fullName} to the trip as a walk-in`),
-    );
+    expect(await activityLines(db, open.id)).toContainEqual({
+      code: "seat_added_walk_in",
+      params: expect.objectContaining({ diver: diver.fullName }),
+    });
   });
 
   it("never stacks a second waiver link on a booking that already has one", async () => {
@@ -221,7 +223,7 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
 
   it("records nothing at all when the booking itself is refused", async () => {
     const { db, shop, fullTrip, actorPersonId } = await context();
-    const before = await activityMessages(db, fullTrip.id);
+    const before = await activityLines(db, fullTrip.id);
 
     await seatDiver(db, {
       shopId: shop.id,
@@ -232,7 +234,7 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
       refusals: "specific",
     });
 
-    expect(await activityMessages(db, fullTrip.id)).toEqual(before);
+    expect(await activityLines(db, fullTrip.id)).toEqual(before);
   });
 });
 
@@ -515,7 +517,7 @@ describe("seatDiver trip admission (the boat's own cert gate reaches every staff
       .from(bookings)
       .where(and(eq(bookings.tripId, open.id), eq(bookings.personId, diver.id)));
     expect(seats).toHaveLength(0);
-    expect(await activityMessages(db, open.id)).toEqual([]);
+    expect(await activityLines(db, open.id)).toEqual([]);
   });
 
   it("collapses the same refusal to the counter's one blunt code", async () => {

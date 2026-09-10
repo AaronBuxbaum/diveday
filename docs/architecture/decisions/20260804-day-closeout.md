@@ -43,7 +43,8 @@ except the leftovers list, which is *deliberately* the queue's own rows (see bel
 - **Closing is an append-only recorded act** — a `day_closeouts` row: who, when, which shop-local
   day (`shop_day`, text `YYYY-MM-DD`), and an `outstanding` jsonb snapshot recomputed server-side
   at close time (never trusted from the form): the unsettled departures plus every leftover with
-  its carry/dismiss decision. Snapshot text is trail text, like `activity_events.message`.
+  its carry/dismiss decision. Snapshot text is trail text, and is erased by the same
+  word-boundary name match the `activity_events` sweep uses.
   Re-opening is not a state transition: nothing locks, and closing again appends another row.
 - **Loud, never blocking** — a departure with an after-dive gap (glossary "unaccounted for" kinds
   1–4) or a boat still out renders danger/warning and adds a required acknowledgement checkbox to

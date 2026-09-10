@@ -48,11 +48,13 @@ diver's name is the exact failure this feature exists to prevent:
   "Never shown to a diver, and never part of any gate" — and its `body` is free text that can name
   a *different* diver (`anonymizeDiver`'s own erasure sweep needs a word-boundary regex over
   exactly this column for exactly this reason).
-- **`activity_events`** is excluded outright for the same reason at larger scale. Its `message` is
-  English prose generated at write time that routinely interpolates a full name, often someone
-  else's, on a shared booking or a roll-call line (`"${actor.name} checked in ${diver.name}"`).
-  Safely redacting it needs the same name-matching sweep the erasure path uses; replicating that
-  correctly here is a follow-up, not something to improvise under a security-sensitive diff.
+- **`activity_events`** is excluded outright for the same reason at larger scale. Its rows carry
+  the names the line is about, and one line routinely names *someone else* — a shared booking, a
+  roll-call line, a note about a second diver. (Written here as a generated English sentence; since
+  20260910-the-trail-is-a-code-and-names the same names live in a `params` payload, which changes
+  where the sweep looks and nothing about the risk.) Safely redacting it needs the same
+  name-matching sweep the erasure path uses; replicating that correctly here is a follow-up, not
+  something to improvise under a security-sensitive diff.
 - **`booking_checkouts`** is excluded outright. One checkout attempt can cover an entire party
   sharing a single Stripe session, so `customer_email` may belong to whoever submitted the payment
   rather than this diver, and the totals are the party's, not theirs.
@@ -61,7 +63,7 @@ diver's name is the exact failure this feature exists to prevent:
 - **Shop-wide configuration** (the trip catalog, the course catalog, dive sites, the gear fleet,
   promo codes) never named this diver and is out of scope by construction.
 - **`orders.description` and `order_line_items.description`** are staff-typed free text on the
-  invoice form, the same shape as `internal_notes.body` and `activity_events.message` — found in
+  invoice form, the same shape as `internal_notes.body` and the names an activity row carries — found in
   security review, not in the first pass. Dropped from `orders.csv`/`order_line_items.csv` for the
   same reason; every other column, including the amounts, ships.
 - **An imported waiver's re-stored source documents** split the same way `medical_answers` does:

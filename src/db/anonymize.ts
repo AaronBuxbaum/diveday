@@ -49,6 +49,7 @@
  */
 
 import { and, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm";
+import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -200,7 +201,8 @@ const ERASED_PERSON_COLUMNS = {
  * against the shop's activity log.
  *
  * `personSchema.fullName` requires only two characters, and the sweep below
- * matches the stored name against every `activity_events.message` in the shop.
+ * matches the stored name against the names on every `activity_events` row in
+ * the shop.
  * At two characters the name is simultaneously the weakest identifier on the
  * record and the most indiscriminate matcher available — erasing a diver named
  * `Al` must not be able to reach into unrelated operational history, and a
@@ -217,9 +219,31 @@ const WORD_CHAR = /[\p{L}\p{N}_]/u;
 const REGEX_METACHARACTERS = /[\\^$.|?*+()[\]{}]/g;
 
 /**
- * A **word-boundary**, case-insensitive match of the stored name against an
- * activity message, or `undefined` when the name is too short to be used as a
- * handle at all (see {@link MIN_NAME_MATCH_CHARS}).
+ * A **word-boundary**, case-insensitive match of the stored name against the
+ * names an activity row carries, or `undefined` when the name is too short to
+ * be used as a handle at all (see {@link MIN_NAME_MATCH_CHARS}).
+ *
+ * **Every value, one at a time — never the payload's own serialization.** Since
+ * issue #1655 a row holds a code and the names its sentence needs, and the two
+ * obvious ways to reach those names are both wrong:
+ *
+ * `params::text` renders the *keys* too — `{"actor": "…", "diver": "…"}` — and
+ * every key is a fixed word of three or more characters sitting between
+ * non-word characters, which is exactly what `\y` anchors onto. A diver who
+ * typed their name as `Diver` on a public booking form and then asked to be
+ * forgotten would have taken the shop's whole trail with them, irreversibly,
+ * inside this transaction: every seating, check-in and note carries that key.
+ * It is `MIN_NAME_MATCH_CHARS`' own hazard reached through a different door.
+ *
+ * The same rendering also *escapes* — a quote becomes `\"`, a backslash `\\` —
+ * while the pattern is built from the name as stored, so `Bea "Bee" Ochoa`
+ * would have slipped past it. That is not a near-miss: a `recordTripActivity`
+ * row carries no booking and no subject, so this pass is the **only** handle on
+ * it, and her name would have stood in the trail after her own erasure.
+ *
+ * `jsonb_each_text` answers both at once. It hands back each value **decoded**,
+ * so keys are out of scope and JSON escaping never enters the comparison
+ * (`security-reviewer`, 2026-09-10).
  *
  * Deliberately not a substring (`ILIKE '%name%'`) match: a substring pattern
  * built from a two-character name — `Al`, `An`, `Ed` — matches inside `Dana`,
@@ -239,7 +263,10 @@ function activityMessageNameMatch(fullName: string) {
   const first = trimmed[0] ?? "";
   const last = trimmed[trimmed.length - 1] ?? "";
   const pattern = `${WORD_CHAR.test(first) ? "\\y" : ""}${escaped}${WORD_CHAR.test(last) ? "\\y" : ""}`;
-  return sql`${activityEvents.message} ~* ${pattern}`;
+  return sql`exists (
+    select 1 from jsonb_each_text(${activityEvents.params}) as named(key, value)
+    where named.value ~* ${pattern}
+  )`;
 }
 
 /**
@@ -780,7 +807,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   //
   // Redacted rather than deleted, unlike the sweep above: this row is another
   // diver's record and the shop is entitled to keep it, so only the prose goes
-  // — the same treatment, for the same reason, that `activity_events.message`
+  // — the same treatment, for the same reason, that the `activity_events` names
   // gets below. Word-boundary matched and refused for a name too short to anchor
   // safely, and counted separately because a name match can over-reach.
   const notePattern = buddyMemberNameMatch(ctx.fullName);
@@ -1063,9 +1090,13 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
 
   // --- activity events -----------------------------------------------------
   // Append-only operational history: the row (who did it, when, on which trip)
-  // is the shop's record of its own work and stays; the human-language message
-  // names people and goes. `message` carries a non-blank check, so it is
-  // redacted rather than cleared.
+  // is the shop's record of its own work and stays; the names it carries go.
+  // Since issue #1655 that is a `code` and a `params` payload rather than a
+  // sentence, and both are replaced at once by `ACTIVITY_REDACTED` — the line
+  // then reads `[redacted]` exactly as it did when the sentence was the column,
+  // and in the reader's own language. Rewriting the payload alone would have
+  // left the verb standing, which is more history than an erasure should leave
+  // behind on a person's own record.
   //
   // Two statements, because the exact handles are not enough on their own. The
   // first sweeps by booking, by actor and by subject: everything attached to a
@@ -1076,11 +1107,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // legible on a record after an erasure had run.
   //
   // The name-scoped statement after it stays, for what none of the three exact
-  // handles can reach: any message that names the diver while hanging off
-  // another person's seat or none at all. It used to be the *only* handle on a
+  // handles can reach: any row naming the diver while hanging off another
+  // person's seat or none at all. It used to be the *only* handle on a
   // record-scoped note, whose subject lived solely inside the message text
   // ("… added a private note about Nora Quinn"); `subject_person_id` now carries
   // that outright, so the fuzzy pass is a backstop rather than the mechanism.
+  //
+  // The name match reads each value in `params` on its own, never the payload's
+  // serialization — see `activityMessageNameMatch` for the two ways that goes
+  // wrong and why one of them is this constant's own hazard wearing a new hat.
   //
   // The name match is bounded to whole words (`activityMessageNameMatch`) and
   // is skipped entirely below MIN_NAME_MATCH_CHARS. A substring match is not
@@ -1094,7 +1129,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // someone asked to have forgotten — but it is a line, not the log.
   await tx
     .update(activityEvents)
-    .set({ message: REDACTED_TEXT })
+    .set(ACTIVITY_REDACTED)
     .where(
       and(
         eq(activityEvents.shopId, shopId),
@@ -1113,12 +1148,12 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   if (nameMatch) {
     const byName = await tx
       .update(activityEvents)
-      .set({ message: REDACTED_TEXT })
+      .set(ACTIVITY_REDACTED)
       .where(
         and(
           eq(activityEvents.shopId, shopId),
           nameMatch,
-          ne(activityEvents.message, REDACTED_TEXT),
+          ne(activityEvents.code, ACTIVITY_REDACTED.code),
         ),
       )
       .returning({ id: activityEvents.id });
@@ -1133,7 +1168,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // (`RETENTION_DAYS`). Both are right, and together they made it the one place
   // an erased diver's full name would otherwise stand indefinitely, still
   // rendering on the incident export's timeline. Exactly the class this file
-  // already handles for `roll_call_events.note` and `activity_events.message`;
+  // already handles for `roll_call_events.note` and the `activity_events` names;
   // it was simply missed when the trail shipped (security review, 2026-08-04).
   //
   // Matched by name and not by id for a reason there is no way around: a
@@ -1353,7 +1388,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // and its leftovers carry a **copied** `subject` and `detail` rather than an
   // id — `src/lib/closeout.ts` says so, and eight producers in `src/db/today.ts`
   // put the diver's own name in that subject. The snapshot's own docblock calls
-  // the text "trail text, like `activity_events.message`", which is exactly
+  // the text "trail text, like `activity_events`'s own", which is exactly
   // right and is why leaving it standing was wrong: that column is redacted by
   // this same name match a few statements down, and this one was not. The table
   // carries no retention arm, so the name was permanent and legible from the
@@ -1479,7 +1514,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   const orderIds = orderRows.map((row) => row.id);
   if (orderIds.length > 0) {
     // NOT NULL, so redacted rather than cleared — the same shape
-    // `activity_events.message` takes for the same reason.
+    // the `activity_events` names take for the same reason.
     await tx
       .update(orderLineItems)
       .set({ description: REDACTED_TEXT })

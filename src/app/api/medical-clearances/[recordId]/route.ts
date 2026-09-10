@@ -121,7 +121,7 @@ export async function GET(
     shopId: shop.id,
     personId: document.personId,
     actorPersonId: session.user.personId,
-    action: "opened the physician's evaluation for",
+    code: "medical_clearance_opened",
   });
 
   return new Response(object.bytes, {

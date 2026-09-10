@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { isActivityCode } from "@/lib/activity";
 import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { DIVER_ACTIVITY_PAGE_SIZE, pagedDiverActivity } from "./operations";
@@ -37,8 +38,9 @@ describe("seeded diver trail", () => {
       // Every line names the staffer who did the work and the diver it was
       // about — the shape `recordTripActivity` writes, so the trail reads the
       // same whether a row was seeded or earned.
-      expect(row.message).toContain("Priya Sharma");
-      expect(row.message).toMatch(/^\w+ \w+ /);
+      expect(isActivityCode(row.code)).toBe(true);
+      expect(row.params.diver).toBe("Priya Sharma");
+      expect(row.params.actor).toMatch(/^\w+ \w+/);
       // Always in the past: "today at 09:00" is in the future for anyone who
       // opens the demo before the boat leaves.
       expect(row.occurredAt.getTime()).toBeLessThan(nowMs());

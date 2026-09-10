@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { REDACTED_TEXT } from "@/lib/anonymization";
+import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
@@ -39,9 +39,10 @@ describe("staff-only operational context", () => {
     ).resolves.toMatchObject({ body: "Prefers the shaded bench during setup." });
 
     expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(1);
-    expect((await listTripActivity(db, shop.id, trip.id))[0]?.message).toBe(
-      `${actor.person.fullName} added a private note about ${rosterEntry.person.fullName}`,
-    );
+    expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
+      code: "note_added",
+      params: { actor: actor.person.fullName, diver: rosterEntry.person.fullName },
+    });
   });
 
   it("reads a same-instant trail newest-first, whatever order the heap returns", async () => {
@@ -77,13 +78,13 @@ describe("staff-only operational context", () => {
     const [newest, next] = trail;
     // Both share an instant, so this passes only because `seq` breaks the tie.
     expect(newest?.occurredAt).toEqual(next?.occurredAt);
-    expect(newest?.message).toContain("deleted a private note");
-    expect(next?.message).toContain("added a private note");
+    expect(newest?.code).toBe("note_deleted");
+    expect(next?.code).toBe("note_added");
 
     // And it survives the rows physically moving, which is the whole point.
     await db.execute(sql`vacuum full activity_events`);
-    expect((await listTripActivity(db, shop.id, trip.id)).map((row) => row.message)).toEqual(
-      trail.map((row) => row.message),
+    expect((await listTripActivity(db, shop.id, trip.id)).map((row) => row.code)).toEqual(
+      trail.map((row) => row.code),
     );
   });
 
@@ -202,7 +203,9 @@ describe("staff-only operational context", () => {
     ).resolves.toEqual({ deleted: true, body: "Remove after the trip." });
     expect(await listDiverNotes(db, shop.id, rosterEntry.person.id)).toHaveLength(0);
     expect(
-      (await listTripActivity(db, shop.id, trip.id)).some((row) => row.message.includes(note.body)),
+      (await listTripActivity(db, shop.id, trip.id)).some((row) =>
+        Object.values(row.params).some((value) => value.includes(note.body)),
+      ),
     ).toBe(false);
   });
 
@@ -236,9 +239,10 @@ describe("staff-only operational context", () => {
       body: "Needs a size-large wetsuit.",
     });
     expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(0);
-    expect((await listTripActivity(db, shop.id, trip.id))[0]?.message).toBe(
-      `${actor.person.fullName} deleted a private note about ${rosterEntry.person.fullName}`,
-    );
+    expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
+      code: "note_deleted",
+      params: { actor: actor.person.fullName, diver: rosterEntry.person.fullName },
+    });
   });
 
   it("returns the deleted note's booking and text so a land-then-undo toast can recreate it", async () => {
@@ -365,7 +369,7 @@ describe("a diver's own activity trail", () => {
     const times = first.rows.map((row) => row.occurredAt.getTime());
     expect(times).toEqual([...times].sort((a, b) => b - a));
     // Every line is about her by name — the seeded desk trail's own shape.
-    for (const row of first.rows) expect(row.message).toContain("Priya Sharma");
+    for (const row of first.rows) expect(Object.values(row.params)).toContain("Priya Sharma");
 
     // Page two is the next slice, not the same one again.
     const second = await pagedDiverActivity(db, shop.id, priya, { page: 2, pageSize: 5 });
@@ -403,8 +407,8 @@ describe("a diver's own activity trail", () => {
     // which is the other half of what this table records.
     const theirs = await pagedDiverActivity(db, shop.id, actor.person.id);
     expect(
-      theirs.rows.some((row) =>
-        row.message.startsWith(`${actor.person.fullName} added a private note`),
+      theirs.rows.some(
+        (row) => row.code === "note_added" && row.params.actor === actor.person.fullName,
       ),
     ).toBe(true);
   });
@@ -451,7 +455,7 @@ describe("a diver's own activity trail", () => {
 
     const after = await pagedDiverActivity(db, shop.id, priya, { pageSize: 50 });
     expect(after.rows.length).toBeGreaterThan(0);
-    for (const row of after.rows) expect(row.message).toBe(REDACTED_TEXT);
+    for (const row of after.rows) expect(row).toMatchObject(ACTIVITY_REDACTED);
   });
 
   /**
@@ -475,13 +479,20 @@ describe("a diver's own activity trail", () => {
     });
     if (!note) throw new Error("expected the diver note to be created");
 
-    const added = `${actor.person.fullName} added a private note about Priya Sharma`;
+    const added = {
+      code: "note_added",
+      params: { actor: actor.person.fullName, diver: "Priya Sharma" },
+    };
     const after = await pagedDiverActivity(db, shop.id, priya, { pageSize: 100 });
     expect(after.total).toBe(before.total + 1);
-    expect(after.rows[0]?.message).toBe(added);
+    expect(after.rows[0]).toMatchObject(added);
     // Still on the writer's own trail too — the actor handle is unchanged.
     const writersTrail = await pagedDiverActivity(db, shop.id, actor.person.id, { pageSize: 100 });
-    expect(writersTrail.rows.some((row) => row.message === added)).toBe(true);
+    expect(
+      writersTrail.rows.some(
+        (row) => row.code === added.code && row.params.diver === added.params.diver,
+      ),
+    ).toBe(true);
 
     // The matching delete line lands on the same record, not only on the writer's.
     await expect(
@@ -493,9 +504,10 @@ describe("a diver's own activity trail", () => {
       }),
     ).resolves.toMatchObject({ deleted: true });
     const afterDelete = await pagedDiverActivity(db, shop.id, priya, { pageSize: 100 });
-    expect(afterDelete.rows[0]?.message).toBe(
-      `${actor.person.fullName} deleted a private note about Priya Sharma`,
-    );
+    expect(afterDelete.rows[0]).toMatchObject({
+      code: "note_deleted",
+      params: { actor: actor.person.fullName, diver: "Priya Sharma" },
+    });
   });
 
   /**
@@ -519,16 +531,19 @@ describe("a diver's own activity trail", () => {
       actorPersonId: actor.person.id,
       body: "Prefers the second wave.",
     });
-    const subjectOnly = "A staffer corrected a rental size on a record";
+    const subjectOnly = {
+      code: "record_exported",
+      params: { actor: "A staffer", diver: "Priya Sharma" },
+    };
     await db.insert(activityEvents).values({
       shopId: shop.id,
       actorPersonId: owner,
       subjectPersonId: priya,
-      message: subjectOnly,
+      ...subjectOnly,
     });
 
     const claimed = await pagedDiverActivity(db, shop.id, priya, { pageSize: 200 });
-    expect(claimed.rows.some((row) => row.message === subjectOnly)).toBe(true);
+    expect(claimed.rows.some((row) => row.code === subjectOnly.code)).toBe(true);
 
     const erased = await anonymizeDiver(db, {
       shopId: shop.id,
@@ -539,6 +554,6 @@ describe("a diver's own activity trail", () => {
 
     const after = await pagedDiverActivity(db, shop.id, priya, { pageSize: 200 });
     expect(after.total).toBe(claimed.total);
-    for (const row of after.rows) expect(row.message).toBe(REDACTED_TEXT);
+    for (const row of after.rows) expect(row).toMatchObject(ACTIVITY_REDACTED);
   });
 });

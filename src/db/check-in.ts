@@ -646,7 +646,8 @@ export async function checkInBooking(
       tripId: booking.tripId,
       bookingId: booking.id,
       actorPersonId: recordedBy,
-      message: `${booking.personName} checked in at the counter`,
+      code: "counter_check_in",
+      params: { diver: booking.personName },
       occurredAt,
     });
     // The crew walking to the boat read this as "Ada Lindqvist has checked in."
@@ -840,7 +841,8 @@ export async function checkInAtKiosk(
       tripId: booking.tripId,
       bookingId: booking.id,
       actorPersonId: booking.personId,
-      message: `${booking.personName} checked in at the counter tablet`,
+      code: "kiosk_check_in",
+      params: { diver: booking.personName },
       occurredAt: now,
     });
     // The crew's catch-up strip, with **no actor** — so no read mark is moved
@@ -1005,7 +1007,8 @@ export async function undoCheckInBooking(
       tripId: booking.tripId,
       bookingId: booking.id,
       actorPersonId: recordedBy,
-      message: `${booking.personName}'s counter check-in was undone`,
+      code: "counter_check_in_undone",
+      params: { diver: booking.personName },
       occurredAt,
     });
     return { ok: true, bookingId: booking.id, personName: booking.personName };

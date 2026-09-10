@@ -1,4 +1,5 @@
 import { inArray } from "drizzle-orm";
+import type { ActivityCode } from "@/lib/activity";
 import type { DbExecutor } from "./client";
 import { activityEvents, type bookings, people } from "./schema";
 import { at } from "./seed-clock";
@@ -26,10 +27,12 @@ import { at } from "./seed-clock";
  * no other seeded fact — the same contract `seed-desk-trail.ts` states and the
  * reason both can be safely last.
  *
- * Wording is the shop talking to itself, exactly as `recordTripActivity` stores
- * it: a name interpolated into a sentence, never a translated string. The UI
- * prints `event.message` verbatim because it is a record of something a person
- * did, not a label the product chose.
+ * Rows are stored exactly as `recordTripActivity` stores them — a code from
+ * `src/lib/activity.ts` and the names its sentence needs — so the demo's trail
+ * renders through the same path a real shop's does, in whichever language the
+ * reader has chosen (issue #1655). These fourteen are desk work DiveDay does
+ * not record for itself, so they carry `demo_` codes and nothing in `src/app`
+ * writes them.
  */
 
 /**
@@ -37,21 +40,21 @@ import { at } from "./seed-clock";
  * these; nobody takes them in a different order, so two divers' trails rhyme
  * the way a real shop's do without reading as copy-paste.
  */
-const DESK_LINES: ((actor: string, diver: string) => string)[] = [
-  (actor, diver) => `${actor} took ${diver}'s deposit at the counter`,
-  (actor, diver) => `${actor} sent ${diver} their release to sign`,
-  (actor, diver) => `${actor} confirmed ${diver}'s release came back signed`,
-  (actor, diver) => `${actor} checked ${diver}'s card number against the agency register`,
-  (actor, diver) => `${actor} put ${diver} down for a 3 mm suit and a reg set`,
-  (actor, diver) => `${actor} rang ${diver} about the earlier check-in time`,
-  (actor, diver) => `${actor} moved ${diver} to the second boat to dive with their buddy`,
-  (actor, diver) => `${actor} walked ${diver} through the site briefing at the shop`,
-  (actor, diver) => `${actor} took the balance off ${diver} in cash`,
-  (actor, diver) => `${actor} noted ${diver} is driving down the morning of`,
-  (actor, diver) => `${actor} swapped ${diver} onto a smaller BCD after the fit check`,
-  (actor, diver) => `${actor} logged ${diver}'s nitrox card off the plastic`,
-  (actor, diver) => `${actor} confirmed ${diver} is bringing their own computer`,
-  (actor, diver) => `${actor} reminded ${diver} to bring the paper card to the dock`,
+const DESK_LINES: ActivityCode[] = [
+  "demo_deposit_taken",
+  "demo_release_sent",
+  "demo_release_returned",
+  "demo_card_checked",
+  "demo_kit_reserved",
+  "demo_called_about_time",
+  "demo_moved_to_second_boat",
+  "demo_briefing_walked",
+  "demo_balance_taken",
+  "demo_driving_noted",
+  "demo_bcd_swapped",
+  "demo_nitrox_logged",
+  "demo_own_computer_confirmed",
+  "demo_paper_card_reminded",
 ];
 
 /**
@@ -111,10 +114,10 @@ export async function seedDiverTrail(
     const seats = ctx.roster.filter((booking) => booking.personId === diver.id);
     if (seats.length === 0) continue;
     for (let line = 0; line < plan.lines; line++) {
-      const template = DESK_LINES[line % DESK_LINES.length];
+      const code = DESK_LINES[line % DESK_LINES.length];
       const seat = seats[line % seats.length];
       const actor = crew[(planIndex + line) % crew.length];
-      if (!template || !seat || !actor) continue;
+      if (!code || !seat || !actor) continue;
       rows.push({
         shopId,
         // The line belongs to the departure the seat is on, so it reads in that
@@ -122,7 +125,8 @@ export async function seedDiverTrail(
         tripId: seat.tripId,
         bookingId: seat.id,
         actorPersonId: actor.id,
-        message: template(actor.fullName, diver.fullName),
+        code,
+        params: { actor: actor.fullName, diver: diver.fullName },
         // Oldest first and always in the past: "today at 09:00" is in the
         // future for anyone opening the demo before the boat leaves. Two days
         // apart, staggered per diver, so no two lines tie and the whole trail
