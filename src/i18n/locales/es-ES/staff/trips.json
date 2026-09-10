@@ -34,8 +34,8 @@
   },
   "notices": {
     "nextStepSaved": "Siguiente paso guardado.",
-    "nextStepTooLong": "Mant\u00e9n el siguiente paso por debajo de 280 caracteres.",
-    "nextStepNotACourse": "Esta salida no es una sesi\u00f3n de curso, as\u00ed que no hay un siguiente paso que registrar.",
+    "nextStepTooLong": "Mantén el siguiente paso por debajo de 280 caracteres.",
+    "nextStepNotACourse": "Esta salida no es una sesión de curso, así que no hay un siguiente paso que registrar.",
     "saved": "Cambios guardados.",
     "cancelled": "Salida cancelada. Ya no aparece en el calendario público.",
     "reinstated": "¡De vuelta! La salida vuelve a estar en el calendario.",
@@ -385,10 +385,10 @@
     "blockersReferenceHeading": "Bloqueos",
     "bookedOfCapacity": "{booked} de {capacity, plural, one {# reservado} other {# reservados}}",
     "nextStepSummary": "Siguiente paso",
-    "nextStepLabel": "Qu\u00e9 hace a continuaci\u00f3n este alumno",
+    "nextStepLabel": "Qué hace a continuación este alumno",
     "nextStepDescription": "El alumno lo lee en su resumen.",
     "nextStepSave": "Guardar siguiente paso",
-    "nextStepSaving": "Guardando\u2026",
+    "nextStepSaving": "Guardando…",
     "certifyConfirm": "Confirmar certificación",
     "certifyDiver": "Certificar",
     "certifyLevel": "Nivel",
@@ -590,7 +590,8 @@
     "activityHeading": "Actividad",
     "noActivity": "Todavía no hay actividad del personal registrada.",
     "promoteHeading": "Promocionar esta salida",
-    "promoteSentCount": "{count, plural, one {# oferta enviada} other {# ofertas enviadas}}"
+    "promoteSentCount": "{count, plural, one {# oferta enviada} other {# ofertas enviadas}}",
+    "demandBody": "{count, plural, one {# buceador sigue esperando después de que esta salida se llenó} other {# buceadores siguen esperando después de que esta salida se llenó}}. Considera añadir otro barco o una segunda salida."
   },
   "publicPreview": {
     "banner": "Estás viendo esta salida como la ve un buceador.",

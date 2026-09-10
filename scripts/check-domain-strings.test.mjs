@@ -124,6 +124,49 @@ describe("findDomainStrings — the property-name scan", () => {
   });
 });
 
+describe("findDomainStrings — prose with a name dropped into it", () => {
+  /**
+   * The shape that hid the largest run of domain-layer prose in the tree.
+   * `looksLikeCopy` refuses anything containing an interpolation, and every
+   * `activity_events` message interpolates a name, so this guard reported zero
+   * over nine sentences and its empty baseline read as "clean" rather than as
+   * "not looking" (issue #1655). The literal below is `src/db/operations.ts:59`
+   * as it stood.
+   */
+  it("catches a sentence a name is interpolated into", () => {
+    expect(
+      findDomainStrings("  message: `${actor.name} added a private note about ${diver.name}`,"),
+    ).toHaveLength(1);
+    expect(
+      findDomainStrings("  message: `${booking.personName} checked in at the counter`,"),
+    ).toHaveLength(1);
+  });
+
+  /**
+   * The other direction, and the reason the exclusion existed: a value being
+   * *built* is not a sentence. What separates them is what stands outside the
+   * placeholders — two runs of letters is prose with names in it, one or none
+   * is a path, an identifier, or a figure with its unit.
+   */
+  it("leaves a built path, an identifier and a figure with its unit alone", () => {
+    expect(findDomainStrings("  text: `${base}/logs`,")).toEqual([]);
+    expect(findDomainStrings("  label: `${shop.slug}-${trip.id}`,")).toEqual([]);
+    expect(findDomainStrings("  summary: `${count} divers`,")).toEqual([]);
+    expect(findDomainStrings("  reason: `${code}`,")).toEqual([]);
+  });
+
+  it("still takes the exemption marker on an interpolated line", () => {
+    expect(
+      findDomainStrings(
+        [
+          "  // i18n-exempt: a deployer's configuration error, never rendered to a user.",
+          '  reason: `APP_HOST must be a valid URL, got "${trimmed}".`,',
+        ].join("\n"),
+      ),
+    ).toEqual([]);
+  });
+});
+
 describe("findDomainStrings — exemptions", () => {
   it("honours a reasoned exemption on the line and on the line above", () => {
     expect(messages('const R = { message: "Ready to dive" }; // i18n-exempt: brand name')).toEqual(

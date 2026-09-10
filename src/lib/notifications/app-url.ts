@@ -59,6 +59,7 @@ export function checkPublicHost(
   try {
     parsed = new URL(trimmed);
   } catch {
+    // i18n-exempt: a deployer's configuration error, read by src/instrumentation.ts at boot and never rendered to anybody using the app.
     return { status: "invalid", reason: `APP_HOST must be a valid URL, got "${trimmed}".` };
   }
 
@@ -76,18 +77,21 @@ export function checkPublicHost(
   if (parsed.username || parsed.password) {
     return {
       status: "invalid",
+      // i18n-exempt: a deployer's configuration error, never rendered to a user.
       reason: `APP_HOST must not include credentials, got "${trimmed}".`,
     };
   }
   if (parsed.pathname !== "/" && parsed.pathname !== "") {
     return {
       status: "invalid",
+      // i18n-exempt: a deployer's configuration error, never rendered to a user.
       reason: `APP_HOST must be a bare origin with no path, got "${trimmed}".`,
     };
   }
   if (parsed.search || parsed.hash) {
     return {
       status: "invalid",
+      // i18n-exempt: a deployer's configuration error, never rendered to a user.
       reason: `APP_HOST must not include a query string or fragment, got "${trimmed}".`,
     };
   }

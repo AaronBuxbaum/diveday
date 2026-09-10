@@ -306,7 +306,9 @@ async function TripGuestsBody({
         <section className="mt-6 rounded-inset border border-warning/40 bg-warning-tint p-5">
           <p className={groupLabelClass("warning")}>{t("trips.guests.demandSignal")}</p>
           <h2 className={`mt-1 ${SECTION_TITLE_CLASS}`}>{t("trips.guests.demandHeading")}</h2>
-          <p className="mt-1 text-sm text-muted">{demand.message}</p>
+          <p className="mt-1 text-sm text-muted">
+            {t("trips.guests.demandBody", { count: demand.unmetSeats })}
+          </p>
           {/* Opens the board's add panel already dated to *this* departure's
               day: the demand signal is "this boat is turning divers away", and
               the answer a shop reaches for is a second boat on the same day,

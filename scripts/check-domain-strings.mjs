@@ -112,6 +112,33 @@ export function looksLikeCopy(raw) {
   return true;
 }
 
+/**
+ * A value with its interpolations taken out, so what is left can be judged as
+ * prose.
+ *
+ * `looksLikeCopy` refuses anything containing `${`, and that exclusion is right
+ * for the shape it was written against — a value being *built* (`${base}/logs`,
+ * `${a}.${b}`) is not a sentence. It also happened to hide the largest run of
+ * domain-layer prose in the tree: every `activity_events` message interpolates
+ * a name, so `${actor} added a private note about ${diver}` was thrown away
+ * before the guard could report it, and the empty baseline read as "clean"
+ * rather than as "not looking" (issue #1655).
+ *
+ * The decidable difference is what stands *outside* the placeholders. Two
+ * separate runs of letters there is a sentence with names dropped into it; one
+ * or none is a path, an identifier, or a value with a unit. Only the
+ * template-literal branch reaches this — a quoted string that happens to
+ * contain `${` is text either way, and reads the same through it.
+ */
+function readableHalfOf(value) {
+  if (!value.includes("${")) return value;
+  const withoutPlaceholders = value.replace(/\$\{[^}]*\}/g, " ");
+  const words = withoutPlaceholders.match(/[A-Za-z]{2,}/g) ?? [];
+  // Two words, not one: `${count} divers` is a figure with its unit, and
+  // `${name} arrived` is a line somebody reads.
+  return words.length >= 2 ? withoutPlaceholders : value;
+}
+
 async function walk(relativeDirectory) {
   let entries;
   try {
@@ -162,7 +189,7 @@ export function findDomainStrings(source) {
   const found = [];
   for (const match of stripped.matchAll(labelMapPropertyPattern)) {
     const value = match[2] ?? match[3] ?? match[4] ?? "";
-    if (!looksLikeCopy(value)) continue;
+    if (!looksLikeCopy(readableHalfOf(value))) continue;
     const line = lineAt(match.index);
     if (exemptAt(line)) continue;
     found.push({ line: line + 1, text: `${match[1]}: "${value.trim().slice(0, 60)}"` });
