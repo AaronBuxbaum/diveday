@@ -68,6 +68,7 @@ pnpm infra:migrate-region --from us-east-1 --execute --from-step 3   # resume
 ```
 
 It uses the `diveday-admin` profile, strips any ambient deployer key, reads the account off `sts:GetCallerIdentity` rather than assuming it, and makes you type the region name before the first delete.
+With no terminal to ask in it refuses outright unless `--confirm-teardown <region>` is passed, which is a flag that names what it destroys and authorizes nothing else.
 Steps 1 to 4 are idempotent: a resource that is already gone is "already done", not an error, so a run that dies half-way can be resumed rather than restarted.
 
 What each step does:
