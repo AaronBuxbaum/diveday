@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { after } from "next/server";
 import { Fragment } from "react";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
@@ -6,6 +7,7 @@ import { getDb } from "@/db/client";
 import { listShopDayDepartures } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
@@ -116,6 +118,19 @@ export default async function ShopDayPrintPage({
   const sheets = keptSheets(
     packets,
     departures.map((departure) => departure.id),
+  );
+
+  // **Counted here, on the document, rather than on the door.** The per-trip
+  // packet records its click from a form because that button has to
+  // `window.open` (issue #1599); the day's door is an ordinary link precisely
+  // so a popup blocker has nothing to refuse, and a link tap that opens a new
+  // tab leaves no server call behind on the page that held it. The page itself
+  // is the honest place: it counts an open however it was reached — the spine's
+  // door, a refresh, a bookmarked URL — and `after()` keeps the measurement off
+  // the render's path, the same shape the shop home uses for
+  // `blockers_surfaced`.
+  after(() =>
+    trackEvent({ name: "day_print_opened", surface: "day_spine", departures: sheets.length }),
   );
 
   return (

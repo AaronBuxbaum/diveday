@@ -206,4 +206,19 @@ describe("trackEvent", () => {
       redaction,
     );
   });
+
+  /**
+   * The paper day, counted the same way its narrower sibling above is (issue
+   * #1599). It carries how many sheets the document held and nothing else — the
+   * question is how big a day a shop prints, never which boats were on it.
+   */
+  it("records the paper day with its size and no identity", async () => {
+    const tracker = vi.fn();
+    await trackEvent({ name: "day_print_opened", surface: "day_spine", departures: 4 }, tracker);
+    expect(tracker).toHaveBeenCalledWith(
+      "day_print_opened",
+      { surface: "day_spine", departures: 4 },
+      redaction,
+    );
+  });
 });
