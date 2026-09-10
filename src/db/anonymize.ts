@@ -1311,6 +1311,36 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       ),
     );
 
+  // The address sweep beside the key sweep, which every other durable address
+  // column here already has (issue #1622). `people_shop_email_unique` is
+  // partial on *live* rows, so a soft-deleted duplicate person legitimately
+  // shares this diver's address — and a duplicate that was never merged keeps
+  // their address on its own recipient rows, where `person_id` cannot reach it.
+  // The same case the send queue and `booking_checkouts` are swept for.
+  //
+  // Each row takes its own redacted value rather than one shared value: nothing
+  // here is unique-indexed today, but a shared sentinel across rows is what
+  // makes two erased people look like one, and `redactedUniqueValue` costs
+  // nothing to call per row.
+  if (ctx.email) {
+    const byAddress = await tx
+      .select({ id: tripLastMinutePromoRecipients.id })
+      .from(tripLastMinutePromoRecipients)
+      .where(
+        and(
+          eq(tripLastMinutePromoRecipients.shopId, shopId),
+          sql`lower(${tripLastMinutePromoRecipients.email}) = ${ctx.email.toLowerCase()}`,
+        ),
+      );
+    for (const row of byAddress) {
+      await tx
+        .update(tripLastMinutePromoRecipients)
+        .set({ email: redactedUniqueValue("redacted") })
+        .where(eq(tripLastMinutePromoRecipients.id, row.id));
+    }
+    logFuzzyMatch(ctx, "last_minute_recipient_address", byAddress.length);
+  }
+
   // --- hosted processor pages ----------------------------------------------
   // A Stripe-hosted page is a publicly reachable URL that renders the customer
   // it was minted for, which is why `orders.hosted_invoice_url` and
