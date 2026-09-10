@@ -15,10 +15,14 @@ function template() {
 }
 
 describe("visual regression bucket pruner", () => {
-  it("runs on EventBridge Scheduler on a daily schedule", () => {
+  // Six-hourly since 2026-09-10 (issue #1651), nightly before that. The cadence
+  // changes nothing about what is kept -- ten main baselines by count and a
+  // 24-hour floor under everything else -- only how long an already-collectable
+  // branch snapshot waits, which falls from up to ~48h to ~30h.
+  it("runs on EventBridge Scheduler every six hours", () => {
     template().hasResourceProperties("AWS::Scheduler::Schedule", {
       Name: "diveday-visual-bucket-pruner",
-      ScheduleExpression: "cron(0 4 * * ? *)",
+      ScheduleExpression: "cron(0 */6 * * ? *)",
       ScheduleExpressionTimezone: "Etc/UTC",
       FlexibleTimeWindow: { Mode: "OFF" },
     });
@@ -60,11 +64,15 @@ describe("visual regression bucket pruner", () => {
     });
   });
 
-  // The pruner keeps ten main baselines by COUNT plus a seven-day floor; the
+  // The pruner keeps ten main baselines by COUNT plus a 24-hour floor; the
   // lifecycle rule counts only days. At 30 the rule deleted the very snapshots
   // the pruner preserved, and a run with no baseline reports `Changed: 0`,
   // which reads exactly like nothing broke. The rule may only ever be a floor
   // beneath the pruner, so this pins it well past anything the pruner keeps.
+  // 60 since 2026-09-10, down from 180 (issue #1651): still sixty chances for
+  // the pruner to act first, and it bounds the pruner-stopped failure rather
+  // than steady state. This case is the guard that stops a future tightening
+  // dropping the floor inside the pruner's own horizon.
   it("expires objects far beyond the pruner's own retention, never inside it", () => {
     template().hasResourceProperties("AWS::S3::Bucket", {
       LifecycleConfiguration: {
@@ -72,7 +80,7 @@ describe("visual regression bucket pruner", () => {
           Match.objectLike({
             Id: "expire-old-visual-snapshots",
             Status: "Enabled",
-            ExpirationInDays: 180,
+            ExpirationInDays: 60,
           }),
         ]),
       },

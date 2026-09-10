@@ -370,21 +370,30 @@ export class InfraStack extends cdk.Stack {
       websiteIndexDocument: "index.html",
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       lifecycleRules: [
-        // The nightly pruner (section 15) is what bounds this bucket, and it is
-        // the only bound that understands what a baseline is: it keeps the ten
-        // most recent `main` snapshots by *count* plus everything under seven
-        // days old, precisely so a quiet month never leaves an open branch with
-        // nothing to compare against. An S3 expiry counts only days, so at 30
-        // it deleted the very snapshots the pruner had preserved -- and a run
-        // with no baseline reports `Changed: 0`, which reads exactly like
-        // nothing broke. 180 days keeps a backstop for the case the pruner
-        // itself stops running, while giving it a hundred nightly chances to
-        // act first. The pruner is authoritative; this rule may only ever be a
+        // The pruner (section 15) is what bounds this bucket, and it is the
+        // only bound that understands what a baseline is: it keeps the ten most
+        // recent `main` snapshots by *count* plus everything under a day old,
+        // precisely so a quiet month never leaves an open branch with nothing
+        // to compare against. An S3 expiry counts only days, so at 30 it
+        // deleted the very snapshots the pruner had preserved -- and a run with
+        // no baseline reports `Changed: 0`, which reads exactly like nothing
+        // broke. The pruner is authoritative; this rule may only ever be a
         // floor beneath it.
+        //
+        // 60 days, lowered from 180 on 2026-09-10 (issue #1651). What this rule
+        // bounds is not steady state -- the pruner reclaims a branch snapshot
+        // within about thirty hours, so in normal running nothing here is ever
+        // sixty days old. What it bounds is the *pruner-stopped* failure: at
+        // roughly 91 CI runs a day and ~213 MB a run (854 PNGs at ~250 KB), a
+        // dead pruner accumulates about 19 GB a day, so the ceiling on a silent
+        // outage falls from ~3.5 TB (~$80/month) to ~1.15 TB (~$27/month). 60
+        // is still sixty chances for the pruner to act first and still far
+        // outside any open branch's life, which is the only thing the floor may
+        // never reach inside of.
         {
           id: "expire-old-visual-snapshots",
           enabled: true,
-          expiration: cdk.Duration.days(180),
+          expiration: cdk.Duration.days(60),
         },
         {
           id: "abort-incomplete-multipart-uploads",
@@ -3627,18 +3636,29 @@ exports.handler = async () => {
 
     const visualBucketPrunerSchedulerRole = new iam.Role(this, "VisualBucketPrunerSchedulerRole", {
       assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com"),
-      description: "Lets EventBridge Scheduler invoke the daily visual bucket pruner.",
+      description: "Lets EventBridge Scheduler invoke the visual bucket pruner.",
     });
     visualBucketPruner.grantInvoke(visualBucketPrunerSchedulerRole);
 
-    // Daily at 04:00 UTC. Prunes stale snapshots from PRs and old commits,
-    // preserving the active main baseline.
+    // Every six hours, on the hour. Prunes stale snapshots from PRs and old
+    // commits, preserving the active main baseline.
+    //
+    // It was nightly at 04:00 UTC until 2026-09-10 (issue #1651). Nothing about
+    // what the pruner keeps changed -- ten main baselines by count, and a
+    // 24-hour floor under everything else. What changed is how long a snapshot
+    // that is already past that floor waits to be collected: with one run a day
+    // a branch snapshot lived up to ~48 hours (24h floor plus up to 24h until
+    // the next run), and at four runs a day it lives ~30. Branch snapshots are
+    // the dominant term in this bucket's size (ADR 20260826-prune-visual-bucket),
+    // so this is the one lever here that touches steady-state storage without
+    // touching a single retention guarantee. It does not touch the request bill,
+    // which is where the money actually is -- see the cost-guardrails runbook.
     new scheduler.CfnSchedule(this, "VisualBucketPrunerSchedule", {
       name: "diveday-visual-bucket-pruner",
       description:
-        "Daily cleanup of stale visual regression testing snapshots in S3, preserving the active main baseline.",
+        "Six-hourly cleanup of stale visual regression testing snapshots in S3, preserving the active main baseline.",
       flexibleTimeWindow: { mode: "OFF" },
-      scheduleExpression: "cron(0 4 * * ? *)",
+      scheduleExpression: "cron(0 */6 * * ? *)",
       scheduleExpressionTimezone: "Etc/UTC",
       target: {
         arn: visualBucketPruner.functionArn,
@@ -3653,7 +3673,7 @@ exports.handler = async () => {
     new cdk.CfnOutput(this, "VisualBucketPrunerName", {
       value: visualBucketPruner.functionName,
       description:
-        "Daily cleaner for stale visual regression snapshots. Preserves the active main baseline. Invoke by hand to test: aws lambda invoke --function-name diveday-visual-bucket-pruner /dev/stdout",
+        "Six-hourly cleaner for stale visual regression snapshots. Preserves the active main baseline. Invoke by hand to test: aws lambda invoke --function-name diveday-visual-bucket-pruner /dev/stdout",
     });
 
     // 22 was the external uptime monitor. It is now a stack of its own,
