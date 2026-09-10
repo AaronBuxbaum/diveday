@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
 import { seededTestDb } from "@/test/db";
 import { publicBoatLine } from "./boat-line";
 import type { AppDb } from "./client";
@@ -48,10 +49,11 @@ async function aDeparture(
   });
   if (!trip) throw new Error("test trip insert failed");
   for (const [index, name] of siteNames.entries()) {
+    const siteName = `${name} ${trip.id.slice(0, 8)}`;
     const [site] = await db
       .insert(diveSites)
       // Unique per shop, so each departure's sites carry the trip's own suffix.
-      .values({ shopId, name: `${name} ${trip.id.slice(0, 8)}` })
+      .values({ shopId, name: siteName, slug: diveSiteSlugFrom(siteName) })
       .returning();
     if (!site) throw new Error("test site insert failed");
     await db
