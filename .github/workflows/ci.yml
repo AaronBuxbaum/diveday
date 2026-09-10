@@ -591,10 +591,34 @@ jobs:
       # the resolver's tripwire fired and publish this run's screenshots under
       # whatever key `visual:compare` re-derived on its own — which is the one
       # thing the tripwire exists to prevent.
+      # `regconfig.json` reads the bucket's region from `$REG_SUIT_AWS_REGION`,
+      # and nothing was passing it. The estate moved to us-east-2 and the
+      # literal `us-east-1` in that file went with it (7a686b2e); the registry
+      # entry and `scripts/prune-visual-bucket.mjs` were updated in the same
+      # commit and this env block was not, so every run since has resolved the
+      # bucket host to `s3.undefined.amazonaws.com` and died in DNS before it
+      # ever reached S3 — on `main` and on every open pull request at once.
+      #
+      # The secret stays authoritative, and `PRIMARY_REGION` is the fallback
+      # rather than a second literal: `config/aws-regions.mjs` is the repository's
+      # one region knob, and duplicating its value in a workflow is exactly the
+      # drift 7a686b2e was removing. `scripts/prune-visual-bucket.mjs` already
+      # falls back the same way.
+      - name: Resolve the baseline bucket's region
+        if: ${{ needs.visual.result == 'success' && steps.keys.outcome == 'success' }}
+        run: |
+          node --input-type=module -e "
+            import { PRIMARY_REGION } from './config/aws-regions.mjs';
+            const region = process.env.REG_SUIT_AWS_REGION || PRIMARY_REGION;
+            console.log('REG_SUIT_AWS_REGION=' + region);
+          " >> "$GITHUB_ENV"
+        env:
+          REG_SUIT_AWS_REGION: ${{ secrets.REG_SUIT_AWS_REGION }}
       - name: Run reg-suit visual regression
         if: ${{ needs.visual.result == 'success' && steps.keys.outcome == 'success' }}
         run: pnpm visual:compare
         env:
+          REG_SUIT_AWS_REGION: ${{ env.REG_SUIT_AWS_REGION }}
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
           REG_SUIT_AWS_ACCESS_KEY_ID: ${{ secrets.REG_SUIT_AWS_ACCESS_KEY_ID }}
           REG_SUIT_AWS_SECRET_ACCESS_KEY: ${{ secrets.REG_SUIT_AWS_SECRET_ACCESS_KEY }}
