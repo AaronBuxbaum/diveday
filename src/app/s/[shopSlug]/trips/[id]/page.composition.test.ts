@@ -186,7 +186,9 @@ describe("the known diver's facts", () => {
 
   it("render as a panel only when the read answered", () => {
     expect(SOURCE).toContain("const knownDiverPanel = knownDiver\n    ? {");
-    expect(SECTIONS).toContain("{knownDiver ? (\n          <KnownDiverPanel");
+    // And never on a gift: the person filling the form is the giver, and the
+    // known-diver facts are the receiver's to confirm on their own claim page.
+    expect(SECTIONS).toContain("{knownDiver && !asGift ? (\n          <KnownDiverPanel");
   });
 
   it("never come from an email typed into the form", () => {

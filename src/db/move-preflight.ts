@@ -98,6 +98,11 @@ const TOLD_THE_DATE_KINDS: readonly DeliveryKind[] = [
   "booking_confirmation",
   "trip_reminder_7d",
   "trip_reminder_24h",
+  // The gift pass prints the same date-and-time line the confirmation does
+  // (`giftPassEmail`), to the giver rather than the diver — and the giver is
+  // the one who will be at the dock to see somebody off, so a move that
+  // nobody tells them about is the same missed morning.
+  "gift_pass",
 ];
 
 /**
