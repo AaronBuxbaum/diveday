@@ -29,6 +29,28 @@ import { DAY_MS } from "./clock";
 export const SIGHTING_WINDOW_DAYS = 30;
 
 /**
+ * **Which site a checkpoint's taps belong to.**
+ *
+ * A recorded dive speaks for itself; a plan speaks only for a dive with no
+ * record at all. The two used to fall through one `??` on the manifest, so a
+ * crew that saved the actual site as *unknown* — the boat moved, or the dive
+ * was called — had their taps attributed to the reef on the plan. That
+ * attribution is not an internal detail: it is what a diver later reads as
+ * "seen here this month" for a reef the boat did not visit.
+ *
+ * A saved null is staff saying they do not know where they were, and the honest
+ * answer to that is no group at all rather than a guess.
+ */
+export function seenSiteFor<Site>(input: {
+  /** The dive's own record, when the crew has saved one. */
+  recorded: { actualSite: Site | null } | undefined;
+  /** The site on the plan, for a dive nobody has recorded yet. */
+  planned: Site | null;
+}): Site | null {
+  return input.recorded ? input.recorded.actualSite : input.planned;
+}
+
+/**
  * How many species a site's summary shows.
  *
  * Three. The point of the beat is "the reef has been busy with X lately", and a
@@ -50,7 +72,14 @@ export type SiteSightingTally = {
   dives: number;
   /** How many the crews tapped for in total. Kept for a shop's own reading; the page does not print it. */
   total: number;
-  /** The most recent tap, which is what "last seen" renders in the shop's zone. */
+  /**
+   * **The most recent departure it was seen on**, not the most recent tap.
+   *
+   * A crew that logs the day at the next morning's close-out would otherwise
+   * have Saturday's turtle dated to Sunday, which is wrong on the one surface
+   * that exists to say *when*. The departure's own start is the honest answer
+   * and the one a diver can check against the board.
+   */
   lastSeenAt: Date;
 };
 
@@ -119,8 +148,13 @@ export const MAX_SEEN_CHIPS = 12;
  * from being empty on the day a shop first takes a boat out, which is the day
  * it is most worth having.
  *
- * Already-logged species lead the row whatever their source, so a second turtle
- * is the same thumb movement as the first.
+ * **The order does not depend on what has been logged.** A first pass floated
+ * tapped species to the front so a second turtle was the same thumb movement as
+ * the first; it also meant the row rearranged itself under a thumb already
+ * moving toward the *next* species, on a moving deck, which is how a crew taps
+ * the wrong animal. The row is a property of the site, the tally below is what
+ * says which of them have been seen, and the two do not have to be the same
+ * list.
  */
 export function seenChipSlugs(input: {
   /** This site's own field guide, in the shop's saved order. */
@@ -129,16 +163,9 @@ export function seenChipSlugs(input: {
   shopPicks: readonly string[];
   /** DiveDay's catalog, in catalog order — the fallback and nothing more. */
   catalog: readonly string[];
-  /** What this departure has already logged here, so it stays in reach. */
-  logged?: readonly string[];
 }): string[] {
   const chips: string[] = [];
-  for (const slug of [
-    ...(input.logged ?? []),
-    ...input.siteGuide,
-    ...input.shopPicks,
-    ...input.catalog,
-  ]) {
+  for (const slug of [...input.siteGuide, ...input.shopPicks, ...input.catalog]) {
     if (chips.length >= MAX_SEEN_CHIPS) break;
     if (!chips.includes(slug)) chips.push(slug);
   }

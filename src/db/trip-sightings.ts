@@ -6,6 +6,7 @@ import {
   type SiteSightingTally,
   sightingWindowStart,
 } from "@/lib/sightings";
+import { hasSailed } from "@/lib/trips";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { isMarineLifeSlug } from "./marine-life-catalog";
 import {
@@ -40,7 +41,8 @@ export type TripSightingRefusal =
   | "unknown_trip"
   | "unknown_site"
   | "unknown_recorder"
-  | "unknown_species";
+  | "unknown_species"
+  | "not_sailed";
 
 export type RecordTripSightingResult =
   | { ok: true; sighting: typeof tripSightings.$inferSelect }
@@ -79,11 +81,19 @@ export async function recordTripSighting(
   const now = input.now ?? nowDate();
   return db.transaction(async (tx): Promise<RecordTripSightingResult> => {
     const [trip] = await tx
-      .select({ id: trips.id })
+      .select({ id: trips.id, startsAt: trips.startsAt })
       .from(trips)
       .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
       .limit(1);
     if (!trip) return { ok: false, reason: "unknown_trip" };
+    // **A boat that has not left has seen nothing.** The surface does not offer
+    // the group before departure, but the surface is not the boundary: a
+    // checkpoint is a query parameter, and a sighting on a departure that is
+    // still alongside would publish "seen here" for a dive nobody has done.
+    // Same buffered hour every other "has it gone?" question uses, so a
+    // departure that slips fifteen minutes for the tide does not change the
+    // answer (`hasSailed`).
+    if (!hasSailed(trip.startsAt, now)) return { ok: false, reason: "not_sailed" };
     // The site is re-proved against this shop rather than believed from the
     // form: it arrives as an id from a page the crew is looking at, and a
     // cross-tenant id would otherwise write one shop's log onto another shop's
@@ -210,6 +220,13 @@ export async function listTripSightings(db: DbExecutor, shopId: string, tripId: 
  * on it, and the one thing this read must never become is a query per site per
  * departure on a public page.
  *
+ * **The window is anchored on the departure, not on the tap.** A crew that logs
+ * the day at the next morning's close-out, or a shop correcting a week later,
+ * would otherwise pull a Saturday dive into a window that should have dropped
+ * it and date it to the day somebody typed. `trips.startsAt` is when the dive
+ * happened, it is what the board says, and it is the only date a diver could
+ * check the claim against.
+ *
  * **The denominator is the wider of two records**, and that is the honest part.
  * The numerator is departures that logged a species here; the denominator is
  * departures that dived here and left *any* record — the crew's dive log, or a
@@ -259,7 +276,7 @@ export async function siteSightings(
             isNull(tripSightings.deletedAt),
             eq(trips.shopId, shopId),
             liveTrip(),
-            gte(tripSightings.recordedAt, since),
+            gte(trips.startsAt, since),
           ),
         ),
     () =>
@@ -269,7 +286,7 @@ export async function siteSightings(
           speciesSlug: tripSightings.speciesSlug,
           dives: sql<number>`count(distinct ${tripSightings.tripId})::int`,
           total: sql<number>`sum(${tripSightings.count})::int`,
-          lastSeenAt: sql<Date>`max(${tripSightings.recordedAt})`,
+          lastSeenAt: sql<Date>`max(${trips.startsAt})`,
         })
         .from(tripSightings)
         .innerJoin(trips, eq(trips.id, tripSightings.tripId))
@@ -280,7 +297,7 @@ export async function siteSightings(
             isNull(tripSightings.deletedAt),
             eq(trips.shopId, shopId),
             liveTrip(),
-            gte(tripSightings.recordedAt, since),
+            gte(trips.startsAt, since),
           ),
         )
         .groupBy(tripSightings.diveSiteId, tripSightings.speciesSlug),

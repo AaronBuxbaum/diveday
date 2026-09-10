@@ -1248,6 +1248,9 @@ async function capturePrint(page: Page, name: string) {
 // only *reach* a surface; every capture site still does its own readiness wait,
 // because what proves a page has rendered is a property of that page.
 
+/** The demo's first-light boat: 5:30–8:30 AM against a 9:30 AM clock, so it is home. */
+const SAILED_TRIP = "Dawn Two-Tank — Molasses Reef";
+
 /** The seeded reef charter's card on the public schedule, once it is real. */
 function publicReefCard(page: Page) {
   return page.locator("li").filter({ hasText: REEF_TRIP });
@@ -1262,6 +1265,22 @@ function publicNightCard(page: Page) {
 async function openReefTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, REEF_TRIP);
+}
+
+/**
+ * The demo's first-light boat — 5:30–8:30 AM against a 9:30 AM clock, so it is
+ * the one departure on today's board that has actually sailed.
+ *
+ * The Seen group does not exist before a boat leaves, and `REEF_TRIP` is five
+ * hours out, so a capture there would photograph an absent section.
+ */
+async function openSailedTrip(page: Page) {
+  // The day's own spine, not the schedule board: the board lists what is still
+  // to come, and this boat is back. The station carries the departure's title
+  // as its door (ADR 20260827-clearwater-surface-language, decision 4).
+  await page.goto("/shop/blue-mantis");
+  await page.getByRole("link", { name: SAILED_TRIP, exact: true }).first().click();
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 }
 
 /**
@@ -5844,9 +5863,12 @@ for (const scheme of ["light", "dark"] as const) {
        * silently, by writing a second row that reads as a second turtle.
        */
       test(`the manifest's Seen tally renders true to the design (${scheme})`, async ({ page }) => {
-        // Board → trip → Manifest, a checkpoint switch, and two taps.
+        // Board → trip → Manifest, a checkpoint switch, and two taps. The
+        // first-light boat rather than today's headline charter, because the
+        // group only exists once a departure has sailed and the reef trip is
+        // still five hours out on the frozen clock.
         test.setTimeout(FLOW_TIMEOUT_MS);
-        await openReefTrip(page);
+        await openSailedTrip(page);
         await openTripTab(page, "Manifest");
         await offlineCopySaved(page);
         await page
@@ -5882,7 +5904,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        await openReefTrip(page);
+        await openSailedTrip(page);
         await openTripTab(page, "Manifest");
         await offlineCopySaved(page);
         await page

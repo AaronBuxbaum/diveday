@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moonTimesOn, SUN_HORIZON_ALTITUDE, solarEventsOn, sunMoonFor } from "./sun-moon";
+import { moonIsUp, moonTimesOn, SUN_HORIZON_ALTITUDE, solarEventsOn, sunMoonFor } from "./sun-moon";
 import { wallTimeToUtc } from "./zoned";
 
 /**
@@ -218,5 +218,29 @@ describe("moonTimesOn", () => {
     const times = moonTimesOn(new Date("2026-06-15T00:00:00Z"), { latitude: 89.9, longitude: 0 });
     expect(times.riseAt).toBeNull();
     expect(times.setAt).toBeNull();
+  });
+});
+
+describe("moonIsUp", () => {
+  it("agrees with the crossings moonTimesOn found", () => {
+    // The two share a horizon on purpose: "has risen" and "is up" cannot be
+    // allowed to disagree, or a line naming a moonrise could sit beside one
+    // saying there is no moon.
+    const dayStart = localClock("2026-06-21", "0:00", EASTERN);
+    const rise = moonTimesOn(dayStart, KEY_LARGO).riseAt as Date;
+    expect(moonIsUp(new Date(rise.getTime() - 15 * 60_000), KEY_LARGO)).toBe(false);
+    expect(moonIsUp(new Date(rise.getTime() + 15 * 60_000), KEY_LARGO)).toBe(true);
+  });
+
+  it("says the moon is down over a last-quarter night charter", () => {
+    // 2026-01-10 is a last quarter: the moon comes up around midnight, so a
+    // 7:30 PM charter home at 11:00 PM never sees it. This is the case that
+    // made the old day-wide phase line a lie.
+    for (const clock of ["19:30", "21:00", "23:00"]) {
+      expect(moonIsUp(localClock("2026-01-10", clock, EASTERN), KEY_LARGO), clock).toBe(false);
+    }
+    // And it is up in the small hours, which is why the day's phase is a true
+    // fact about the sky and a misleading one about the dive.
+    expect(moonIsUp(localClock("2026-01-11", "3:00", EASTERN), KEY_LARGO)).toBe(true);
   });
 });

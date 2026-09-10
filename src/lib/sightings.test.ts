@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { DAY_MS } from "./clock";
 import {
+  MAX_SEEN_CHIPS,
   MAX_SIGHTING_SPECIES,
   rankSiteSightings,
   SIGHTING_WINDOW_DAYS,
+  seenChipSlugs,
+  seenSiteFor,
   sightingWindowStart,
 } from "./sightings";
 
@@ -68,5 +71,60 @@ describe("rankSiteSightings", () => {
     });
     expect(ranked?.dives).toBe(4);
     expect(ranked?.species[0]?.dives).toBe(4);
+  });
+});
+
+describe("seenChipSlugs", () => {
+  const siteGuide = ["southern-stingray", "goliath-grouper"];
+  const shopPicks = ["nurse-shark", "green-moray"];
+  const catalog = ["blue-tang", "queen-angelfish"];
+
+  it("offers the site's own faces first, then the shop's, then the catalog", () => {
+    expect(seenChipSlugs({ siteGuide, shopPicks, catalog })).toEqual([
+      ...siteGuide,
+      ...shopPicks,
+      ...catalog,
+    ]);
+  });
+
+  it("gives a shop that has never picked a species something to tap", () => {
+    // The day a shop first takes a boat out is the day this is most worth
+    // having, and it is exactly the day its field guides are empty.
+    expect(seenChipSlugs({ siteGuide: [], shopPicks: [], catalog })).toEqual(catalog);
+  });
+
+  it("never repeats a species that two rungs both name", () => {
+    expect(
+      seenChipSlugs({ siteGuide: ["nurse-shark"], shopPicks: ["nurse-shark"], catalog: [] }),
+    ).toEqual(["nurse-shark"]);
+  });
+
+  it("bounds the row", () => {
+    const many = Array.from({ length: 40 }, (_, index) => `species-${index}`);
+    expect(seenChipSlugs({ siteGuide: [], shopPicks: [], catalog: many })).toHaveLength(
+      MAX_SEEN_CHIPS,
+    );
+  });
+});
+
+describe("seenSiteFor", () => {
+  const molasses = { id: "molasses", name: "Molasses Reef" };
+  const french = { id: "french", name: "French Reef" };
+
+  it("believes the record over the plan", () => {
+    expect(seenSiteFor({ recorded: { actualSite: french }, planned: molasses })).toBe(french);
+  });
+
+  it("answers nothing when the crew recorded the site as unknown", () => {
+    // The boat went somewhere else, or the dive was called. Attributing those
+    // taps to the reef on the plan would publish "seen here this month" for a
+    // site the boat never reached — which is the one thing this beat must not
+    // do, because a diver cannot tell it apart from a real sighting.
+    expect(seenSiteFor({ recorded: { actualSite: null }, planned: molasses })).toBeNull();
+  });
+
+  it("falls back to the plan only when nothing was recorded at all", () => {
+    expect(seenSiteFor({ recorded: undefined, planned: molasses })).toBe(molasses);
+    expect(seenSiteFor({ recorded: undefined, planned: null })).toBeNull();
   });
 });

@@ -298,6 +298,10 @@
       "nightLineNoDusk": "Puesta de sol a las {sunset}. {moon}, con un {percent} % de luz.",
       "dayLine": "Amanecer a las {sunrise}, puesta de sol a las {sunset}.",
       "moonrise": "La luna sale a las {moonrise}.",
+      "nightLineNoMoon": "Puesta de sol a las {sunset}, oscuridad total a las {dusk}.",
+      "nightLineNoDuskNoMoon": "Puesta de sol a las {sunset}.",
+      "noMoon": "Sin luna durante la inmersión.",
+      "moonset": "La luna se pone a las {moonset}.",
       "moon": {
         "new": "Luna nueva",
         "waxingCrescent": "Luna creciente",
@@ -311,7 +315,7 @@
     },
     "seen": {
       "heading": "Visto aquí este mes",
-      "line": "{species} en {seen} de las últimas {dives, plural, one {# inmersión} other {# inmersiones}} aquí",
+      "line": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}} aquí este mes",
       "lastSeen": "Visto por última vez el {date}",
       "honest": "Lo que registró la tripulación, y cuándo. Dice lo que se vio, no lo que verás."
     },

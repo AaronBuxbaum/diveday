@@ -298,6 +298,10 @@
       "nightLineNoDusk": "Sunset {sunset}. {moon}, {percent}% lit.",
       "dayLine": "Sunrise {sunrise}, sunset {sunset}.",
       "moonrise": "Moon up at {moonrise}.",
+      "nightLineNoMoon": "Sunset {sunset}, dark by {dusk}.",
+      "nightLineNoDuskNoMoon": "Sunset {sunset}.",
+      "noMoon": "No moon during the dive.",
+      "moonset": "Moon sets at {moonset}.",
       "moon": {
         "new": "New moon",
         "waxingCrescent": "Waxing crescent",
@@ -311,7 +315,7 @@
     },
     "seen": {
       "heading": "Seen here this month",
-      "line": "{species} on {seen} of the last {dives, plural, one {# dive} other {# dives}} here",
+      "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}} here this month",
       "lastSeen": "Last seen {date}",
       "honest": "What the crew logged, and when. It says what was seen, not what you will see."
     },

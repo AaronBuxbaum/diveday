@@ -88,7 +88,7 @@
     "consequence": "En {site}. Los buceadores lo leen en la página de la salida.",
     "delete": "Eliminar",
     "deleteNamed": "Eliminar {species}",
-    "refusal": "No se guardó. Toca de nuevo."
+    "refusal": "Sin señal. Toca de nuevo cuando el barco tenga cobertura."
   },
   "addCrewToTrip": "Añadir tripulación a la salida",
   "manageCrewOnTrip": "Gestionar la tripulación de esta salida",

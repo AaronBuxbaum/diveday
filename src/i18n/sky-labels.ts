@@ -19,30 +19,57 @@ const MOON_PHASE_KEYS: Record<MoonPhase, DiverMessageKey> = {
 
 /**
  * **The one line a night departure carries about the sky**: when the light
- * goes, and how much moon there will be to dive under.
+ * goes, and what moon — if any — the boat is actually out under.
  *
- * One message rather than two fragments joined at a call site, so a locale owns
- * its own punctuation and word order. A departure at a latitude and season
+ * One message per shape rather than fragments joined at a call site, so a locale
+ * owns its own punctuation and word order. A departure at a latitude and season
  * where civil twilight never ends drops that half of the sentence rather than
  * printing a blank.
  *
- * The caller supplies the two already-formatted clock times, because a rendered
- * time names the zone and locale it is rendered in and only the surface knows
- * both.
+ * **The phase is suppressed when the moon is down for the whole dive**, and the
+ * line says so instead. It used to print the day's phase unconditionally, which
+ * on a last-quarter night charter — moon up around midnight, boat home at
+ * 11:00 PM — told a diver they had half a moon of light to pack around when
+ * they had none. `moonOverDive` is the fact that fixes it; `phase` alone is a
+ * true statement about the sky and a false one about the dive.
+ *
+ * The caller supplies the already-formatted clock times, because a rendered time
+ * names the zone and locale it is rendered in and only the surface knows both.
  */
 export function nightSkyLine(
   t: DiverTranslator,
   sky: NightSky,
-  times: { sunset: string; dusk: string | null },
+  times: { sunset: string; dusk: string | null; moonrise?: string | null; moonset?: string | null },
 ): string {
-  const values = {
-    sunset: times.sunset,
-    moon: t(MOON_PHASE_KEYS[sky.phase]),
-    percent: sky.illuminatedPercent,
-  };
-  return times.dusk === null
-    ? t("trip.sky.nightLineNoDusk", values)
-    : t("trip.sky.nightLine", { ...values, dusk: times.dusk });
+  const dark = sky.moonOverDive === "down";
+  const first = dark
+    ? times.dusk === null
+      ? t("trip.sky.nightLineNoDuskNoMoon", { sunset: times.sunset })
+      : t("trip.sky.nightLineNoMoon", { sunset: times.sunset, dusk: times.dusk })
+    : times.dusk === null
+      ? t("trip.sky.nightLineNoDusk", {
+          sunset: times.sunset,
+          moon: t(MOON_PHASE_KEYS[sky.phase]),
+          percent: sky.illuminatedPercent,
+        })
+      : t("trip.sky.nightLine", {
+          sunset: times.sunset,
+          dusk: times.dusk,
+          moon: t(MOON_PHASE_KEYS[sky.phase]),
+          percent: sky.illuminatedPercent,
+        });
+  // The second sentence names the one crossing that falls inside the dive, or
+  // says there is no moon to name. A moon up for the whole window has neither —
+  // the phase above has already said everything true about it.
+  const second =
+    sky.moonOverDive === "down"
+      ? t("trip.sky.noMoon")
+      : sky.moonOverDive === "sets" && times.moonset
+        ? t("trip.sky.moonset", { moonset: times.moonset })
+        : sky.moonOverDive === "rises" && times.moonrise
+          ? t("trip.sky.moonrise", { moonrise: times.moonrise })
+          : null;
+  return second ? `${first} ${second}` : first;
 }
 
 /**

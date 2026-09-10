@@ -128,6 +128,51 @@ describe("recordTripSighting", () => {
     ).toEqual({ ok: false, reason: "unknown_recorder" });
   });
 
+  it("refuses a tap on a departure that has not sailed", async () => {
+    const { db, shop, owner, site } = await reefFixture();
+    // Tomorrow's boat. The manifest does not offer the group before departure,
+    // but a checkpoint is a query parameter and the surface is not the
+    // boundary — a sighting here would publish "seen here" for a dive nobody
+    // has done.
+    const tomorrow = await departure(db, shop.id, "Tomorrow's reef", -1);
+    expect(
+      await recordTripSighting(db, {
+        shopId: shop.id,
+        tripId: tomorrow.id,
+        diveSiteId: site.id,
+        speciesSlug: "green-sea-turtle",
+        recordedByPersonId: owner.id,
+        now: NOW,
+      }),
+    ).toEqual({ ok: false, reason: "not_sailed" });
+  });
+
+  it("allows a tap once the buffered hour is past, and not before", async () => {
+    const { db, shop, owner, site } = await reefFixture();
+    // The same buffered hour every "has it gone?" question uses, so a departure
+    // that slips for the tide does not change the answer.
+    const justLeft = await departure(db, shop.id, "Casting off", 0);
+    const tap = {
+      shopId: shop.id,
+      tripId: justLeft.id,
+      diveSiteId: site.id,
+      speciesSlug: "green-sea-turtle",
+      recordedByPersonId: owner.id,
+    };
+    expect(
+      await recordTripSighting(db, {
+        ...tap,
+        now: new Date(justLeft.startsAt.getTime() + 30 * 60_000),
+      }),
+    ).toEqual({ ok: false, reason: "not_sailed" });
+    expect(
+      await recordTripSighting(db, {
+        ...tap,
+        now: new Date(justLeft.startsAt.getTime() + 61 * 60_000),
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
   it("refuses a departure the shop deleted", async () => {
     const { db, shop, owner, site } = await reefFixture();
     const trip = await departure(db, shop.id, "Cancelled and taken off", 1);
@@ -231,7 +276,7 @@ describe("siteSightings", () => {
       dives: 2,
       total: 3,
     });
-    expect(summary?.species[0]?.lastSeenAt.getTime()).toBe(second.startsAt.getTime() + HOUR_MS);
+    expect(summary?.species[0]?.lastSeenAt.getTime()).toBe(second.startsAt.getTime());
   });
 
   it("ranks by how many departures saw a thing and cuts the list to three", async () => {
@@ -265,6 +310,40 @@ describe("siteSightings", () => {
       // is the same on every page load.
       "queen-angelfish",
     ]);
+  });
+
+  it("dates a tally to the dive, not to the morning somebody typed it", async () => {
+    const { db, shop, owner, site } = await reefFixture();
+    const saturday = await departure(db, shop.id, "Saturday", 4);
+    // Logged at the next morning's close-out, which is an ordinary way for a
+    // crew with no signal on the water to work. The date a diver reads has to
+    // be the dive's, or "last seen" is a claim about a keyboard.
+    await recordTripSighting(db, {
+      shopId: shop.id,
+      tripId: saturday.id,
+      diveSiteId: site.id,
+      speciesSlug: "green-sea-turtle",
+      recordedByPersonId: owner.id,
+      now: new Date(saturday.startsAt.getTime() + 20 * HOUR_MS),
+    });
+    const summary = await siteSightingSummary(db, shop.id, site.id, NOW);
+    expect(summary?.species[0]?.lastSeenAt.getTime()).toBe(saturday.startsAt.getTime());
+  });
+
+  it("forgets a departure by when it sailed, not by when it was typed", async () => {
+    const { db, shop, owner, site } = await reefFixture();
+    // A dive outside the window, written up inside it. Anchoring on the tap
+    // would drag last season's turtle into this month's tally.
+    const old = await departure(db, shop.id, "Last season", SIGHTING_WINDOW_DAYS + 5);
+    await recordTripSighting(db, {
+      shopId: shop.id,
+      tripId: old.id,
+      diveSiteId: site.id,
+      speciesSlug: "green-sea-turtle",
+      recordedByPersonId: owner.id,
+      now: new Date(NOW.getTime() - HOUR_MS),
+    });
+    expect(await siteSightingSummary(db, shop.id, site.id, NOW)).toBeNull();
   });
 
   it("forgets a departure that fell out of the window", async () => {

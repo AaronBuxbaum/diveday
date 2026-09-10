@@ -1,44 +1,37 @@
 import { diverTranslator } from "@/i18n/messages";
-import { moonriseLine, nightSkyLine } from "@/i18n/sky-labels";
+import { nightSkyLine } from "@/i18n/sky-labels";
 import { formatTime } from "@/lib/format";
 import type { NightSky } from "@/lib/sky";
 
 /**
  * **What the sky is doing over a night departure** — when the light goes, and
- * how much moon there will be down there.
+ * what moon, if any, the boat is out under.
  *
  * One line, on the two surfaces a diver reads before a night dive: the
  * briefing's "The day" (deciding) and the thread's dock-day rhythm
  * (preparing). It earns its place on both because a night dive is the one kind
- * of departure where the answer changes what a diver packs — a new moon on a
+ * of departure where the answer changes what a diver *packs* — a moonless
  * 9:00 PM second tank is a torch and a backup; a full moon over sand is enough
- * light to read a gauge by.
+ * light to make out the reef beyond the beam.
  *
- * It informs and gates nothing (`src/lib/sky.ts`), and a null sky renders
- * nothing at all — which is every daylight departure, and every shop that has
- * never set its address.
+ * **It is not a planning input.** Nothing here says how long a surface interval
+ * should run or when a boat should turn for home; those are the crew's calls,
+ * made on the water with the light they actually have.
+ *
+ * The moon half is about the *dive*, not the day: `nightSkyLine` drops the
+ * phase and says "No moon during the dive." when the moon is below the horizon
+ * for the whole window (`src/lib/sky.ts`). It informs and gates nothing, and a
+ * null sky renders nothing at all — which is every daylight departure, and
+ * every shop that has never set its address.
  */
 export function NightSkyLine({
   sky,
-  moonriseAt,
   timeZone,
   locale,
   className,
 }: {
   /** `nightSkyFor`'s answer; null for a daylight departure. */
   sky: NightSky | null;
-  /**
-   * When the moon actually comes up (`sunMoonFor`), for the surfaces that have
-   * asked the almanac for it.
-   *
-   * A second sentence rather than a clause inside the first, because roughly
-   * one local day a month has no moonrise at all — the moon comes up about
-   * fifty minutes later each day and eventually the crossing falls off the end
-   * of the day. A sentence can simply be absent; an optional clause is
-   * punctuation every locale has to work around. Omitted or null renders the
-   * line the thread has always shown.
-   */
-  moonriseAt?: Date | null;
   /** The shop's own zone — a rendered clock time names the zone it is in. */
   timeZone: string;
   /** The negotiated request locale, not the shop's stored default. */
@@ -52,8 +45,11 @@ export function NightSkyLine({
       {nightSkyLine(t, sky, {
         sunset: formatTime(sky.sunsetAt, locale, timeZone),
         dusk: sky.civilDuskAt ? formatTime(sky.civilDuskAt, locale, timeZone) : null,
+        // Only the crossings that land inside the dive window carry a time;
+        // `nightSkyFor` already decided which of them exists.
+        moonrise: sky.moonriseAt ? formatTime(sky.moonriseAt, locale, timeZone) : null,
+        moonset: sky.moonsetAt ? formatTime(sky.moonsetAt, locale, timeZone) : null,
       })}
-      {moonriseAt ? ` ${moonriseLine(t, formatTime(moonriseAt, locale, timeZone))}` : null}
     </p>
   );
 }

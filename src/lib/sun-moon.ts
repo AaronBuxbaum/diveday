@@ -172,10 +172,24 @@ export function moonAppearance(at: Date): { phase: MoonPhase; illuminatedFractio
     0.214 * Math.sin(2 * moonAnomaly * DEG) -
     0.11 * Math.sin(elongation * DEG);
   const illuminatedFraction = (1 + Math.cos(phaseAngle * DEG)) / 2;
+  // **The name comes off the same corrected angle the illumination does.**
+  // It used to come off *mean* elongation, and the two then disagreed at a band
+  // edge: the correction terms move the true phase by up to about six degrees,
+  // which is a sixth of an eighth, so a moon the series called 3% lit could be
+  // named "new" while its neighbour at the same illumination was named a waxing
+  // crescent. One quantity, one answer.
+  //
+  // **This series' phase angle is signed**, which is what carries the half of
+  // the month an illumination percentage cannot: it is `180 - D` plus the
+  // corrections, so it reads +90 at first quarter and -90 at last, and the
+  // cosine above is even and does not care. Undoing that one subtraction puts
+  // the moon back on the cycle, counted forwards from new — which is the order
+  // `MOON_PHASES` is written in.
+  const fromNew = normalizeDegrees(180 - phaseAngle);
   // Each named phase owns the eighth of the cycle centred on it, so "full moon"
   // covers the night either side of the exact moment rather than one instant
   // nobody dives.
-  const eighth = Math.round((elongation / 360) * 8) % 8;
+  const eighth = Math.round((fromNew / 360) * 8) % 8;
   return { phase: MOON_PHASES[eighth] as MoonPhase, illuminatedFraction };
 }
 
@@ -215,6 +229,24 @@ function moonAltitude(at: Date, place: SkyPlace): number {
         Math.cos(latitude) * Math.cos(declination) * Math.cos(hourAngle),
     ) / DEG
   );
+}
+
+/**
+ * **Is the moon above the horizon at this instant, over this place?**
+ *
+ * The one question the moon line was answering by implication and getting
+ * wrong. A phase and a rise time are facts about a *day*; a diver wants to know
+ * about the *dive*. A last-quarter moon rises around midnight, so a 7:30 PM
+ * night charter that is back at 11:00 PM dives the whole thing under a moonless
+ * sky — and a line reading "Last quarter, 50% lit" is then telling a diver they
+ * have half a moon of ambient light when they have none at all. That is the
+ * failure this exists to make impossible.
+ *
+ * Same horizon as `moonTimesOn`, so "up" here and "has risen" there are the
+ * same threshold and cannot disagree.
+ */
+export function moonIsUp(at: Date, place: SkyPlace): boolean {
+  return moonAltitude(at, place) > MOON_HORIZON_ALTITUDE;
 }
 
 /**

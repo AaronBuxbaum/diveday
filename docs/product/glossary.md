@@ -196,7 +196,7 @@ new domain concept, define it here in the same PR.
   disabled. Never called a *dive profile*, which to a diver is the depth/time curve of a dive that
   already happened.
 - **Card sighting** — the staffer entering the agency, the card number **and the level off the card
-  in their hand**.
+  in their hand**. (Nothing to do with a **Sighting**, which is an animal a crew saw on a dive.)
   It is now the one thing that turns a **Self-declared certification** into evidence, and it is the
   same act as capturing a card rather than an extra attestation — which is the point: the diver's
   claim stops being what the record rests on. It asks for the **level** as well as the number,
@@ -1640,7 +1640,22 @@ new domain concept, define it here in the same PR.
   diver climbs the ladder talking about. Informs and gates nothing, and it is an ornament rather than
   evidence — an unusable slug is dropped so the dive record still saves. Null means nobody said,
   never "all good".
-- **Sighting** — a species the crew tapped after a dive, tallied per **departure** and per **dive site** (`trip_sightings`, slice 20r). One live row per species per site per departure carrying a count: the first tap writes it at one, a second tap on the same chip counts a second animal. The third of the three things that draw from the marine-life catalog, and the only one a diver deciding on a Saturday can read as a *frequency* — a **field guide** is the shop's standing claim about a place, an **observed species** is one line on one dive's record, and a sighting is what adds up over a month into "seen here this month: green sea turtle on 2 of the last 3 dives here". The species is refused rather than dropped when the catalog does not carry it, which is the opposite call from an observed species and for the opposite reason: the slug *is* the record here, so one with no words would reach a public page as punctuation. Informs and gates nothing — it sits nowhere near the roll call's commit path or the manifest's head count — and it never promises: a site's summary says what was logged and when, never what a diver will see.
+- **Sighting** — a species the crew tapped after a dive, tallied per **departure** and per **dive
+  site** (`trip_sightings`, slice 20r). One live row per species per site per departure carrying a
+  count: the first tap writes it at one, a second tap on the same chip counts a second animal. The
+  third of the three things that draw from the marine-life catalog, and the only one a diver
+  deciding on a Saturday can read as a *frequency* — a **field guide** is the shop's standing claim
+  about a place, an **Observed species** is one line on one dive's record, and a sighting is what
+  adds up over a month into "seen here this month: southern stingray on 2 of 3 logged dives here".
+  Nothing to do with a **Card sighting**, which is a staffer reading a certification card in their
+  own hands; the two share only the English word, and neither is ever evidence for the other. The
+  species is refused rather than dropped when the catalog does not carry it, which is the opposite
+  call from an observed species and for the opposite reason: the slug *is* the record here, so one
+  with no words would reach a public page as punctuation. Refused too on a departure that has not
+  sailed (`hasSailed`) — a boat still alongside has seen nothing. Informs and gates nothing — it
+  sits nowhere near the roll call's commit path or the manifest's head count — and it never
+  promises: a site's summary counts *logged* dives in a trailing month, dates itself to the
+  departure rather than to the tap, and says what was logged and when, never what a diver will see.
 - **Fly-safe from** — the instant a diver reads they may board a plane after the day's diving
   (`src/lib/fly-safe.ts`, issue #1425). The shop's own hours (`shops.fly_safe_hours_single` and
   `_repetitive`, defaults 18 and 24, floored at DAN's published minimums of 12 and 18) counted from

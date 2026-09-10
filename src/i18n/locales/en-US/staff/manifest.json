@@ -88,7 +88,7 @@
     "consequence": "At {site}. Divers read this on the trip page.",
     "delete": "Delete",
     "deleteNamed": "Delete {species}",
-    "refusal": "That did not save. Tap it again."
+    "refusal": "No signal. Tap it again when the boat has bars."
   },
   "addCrewToTrip": "Add crew to trip",
   "manageCrewOnTrip": "Manage this trip's crew",

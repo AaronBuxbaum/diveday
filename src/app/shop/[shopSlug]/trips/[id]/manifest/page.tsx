@@ -34,6 +34,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import { groupCatchUp } from "@/lib/desk-events";
 import { scopedHash, scopedId } from "@/lib/element-id";
@@ -51,11 +52,12 @@ import {
 import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { requireShopSurface } from "@/lib/session";
-import { seenChipSlugs } from "@/lib/sightings";
+import { seenChipSlugs, seenSiteFor } from "@/lib/sightings";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { divesWithMatch } from "@/lib/support-needs";
 import { STAGE_TAP_KEYS, TRIP_STAGES } from "@/lib/trip-stages";
+import { hasSailed } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { TripSurfaceNav } from "../_components/TripSurfaceNav";
@@ -422,16 +424,29 @@ export default async function TripManifestPage({
   // one takes the narrower context that has none.
   const boundAddPrivateNoteAction = addManifestPrivateNoteAction.bind(null, { shopSlug, tripId });
   const boundSaveExecutedDiveAction = saveExecutedDiveAction.bind(null, actionContext);
-  // **Which reef these taps attach to.** The site the crew actually dived at
-  // this checkpoint, falling back to the one that was planned — the same order
-  // the dive log's own site select defaults in. A dive with no site at all
-  // renders no group: "seen here this month" is a claim about a place, and a
-  // sighting with nowhere to belong has no reader.
+  // **Which reef these taps attach to.**
+  //
+  // **A recorded dive speaks for itself, and a plan only speaks for a dive with
+  // no record.** The two used to fall through one `??`, so a crew that recorded
+  // the actual site as *unknown* — the boat went somewhere else, or the dive was
+  // aborted — had their taps quietly attributed to the reef on the plan, and
+  // that attribution is what a diver later reads as "seen here". A saved null is
+  // staff saying they do not know where they were; the honest response is no
+  // group at all, and the dive log one disclosure above is where they say where
+  // they actually went.
+  //
+  // A dive with no site either way renders nothing: "seen here this month" is a
+  // claim about a place, and a sighting with nowhere to belong has no reader.
   const seenDiveNumber = Number(/^after_dive_(\d+)$/.exec(checkpoint)?.[1] ?? 0);
-  const seenSite =
-    executedDives.find((row) => row.executed.diveNumber === seenDiveNumber)?.actualSite ??
-    plannedDives.find(({ dive }) => dive.diveNumber === seenDiveNumber)?.diveSite ??
-    null;
+  const seenSite = seenSiteFor({
+    recorded: executedDives.find((row) => row.executed.diveNumber === seenDiveNumber),
+    planned: plannedDives.find(({ dive }) => dive.diveNumber === seenDiveNumber)?.diveSite ?? null,
+  });
+  // **And a boat that has not left has seen nothing.** A checkpoint is a query
+  // parameter, so the after-dive view is reachable at the dock; the write
+  // refuses a tap there as well, and this is what keeps the crew from meeting
+  // that refusal instead of an absent group.
+  const seenDeparted = hasSailed(departureManifest.trip.startsAt, nowDate());
   // A slug with no card is dropped rather than rendered raw — the same rule
   // `fieldGuideCards` follows for a species DiveDay has since retired.
   const speciesName = new Map<string, string>(
@@ -456,7 +471,6 @@ export default async function TripManifestPage({
         siteGuide: (speciesBySite[seenSite.id] ?? []).map((entry) => entry.slug),
         shopPicks: shopPickedSpecies,
         catalog: catalogSpecies.map((entry) => entry.slug),
-        logged: seenTallies.map((tally) => tally.slug),
       }).flatMap((slug) => {
         const name = speciesName.get(slug);
         return name ? [{ slug, name }] : [];
@@ -941,7 +955,11 @@ export default async function TripManifestPage({
           under the log they are already filling in and nowhere near the roll
           call's commit path or the head count above it. Nothing here gates
           anything; it reaches the shop's own public trip page. */}
-      {!isDeparture && seenSite && boundRecordSightingAction && boundDeleteSightingAction ? (
+      {!isDeparture &&
+      seenDeparted &&
+      seenSite &&
+      boundRecordSightingAction &&
+      boundDeleteSightingAction ? (
         <SeenGroup
           idPrefix={idPrefix}
           chips={seenChips}

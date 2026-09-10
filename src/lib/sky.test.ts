@@ -106,6 +106,61 @@ describe("nightSkyFor", () => {
     ).toBeNull();
   });
 
+  it("says the moon is down over a night charter that never sees it", () => {
+    // A last quarter rises around midnight. The 7:30 PM charter is home at
+    // 11:00 PM, so it dives the whole thing under a moonless sky — and the
+    // day's phase, which is a true fact about 2026-01-10, would tell a diver
+    // they had half a moon of light to pack around.
+    const sky = nightSkyFor({
+      startsAt: wallTimeToUtc({ year: 2026, month: 1, day: 10, hour: 19, minute: 30 }, EASTERN),
+      endsAt: wallTimeToUtc({ year: 2026, month: 1, day: 10, hour: 23, minute: 0 }, EASTERN),
+      timeZone: EASTERN,
+      ...KEY_LARGO,
+    });
+    expect(sky?.moonOverDive).toBe("down");
+    expect(sky?.moonriseAt).toBeNull();
+    expect(sky?.moonsetAt).toBeNull();
+    // The phase is still on the record — it is the *line* that suppresses it —
+    // so a caller that wants the sky over the day can still have it.
+    expect(sky?.phase).toBe("lastQuarter");
+  });
+
+  it("names the crossing when the moon goes down mid-dive", () => {
+    // A thin waxing crescent follows the sun down: up when the boat leaves and
+    // gone well before it is back, so the time worth printing is when it went.
+    const sky = nightSkyFor({
+      startsAt: wallTimeToUtc({ year: 2026, month: 1, day: 21, hour: 18, minute: 0 }, EASTERN),
+      endsAt: wallTimeToUtc({ year: 2026, month: 1, day: 21, hour: 23, minute: 0 }, EASTERN),
+      timeZone: EASTERN,
+      ...KEY_LARGO,
+    });
+    expect(sky?.moonOverDive).toBe("sets");
+    expect(sky?.moonriseAt).toBeNull();
+    const moonsetAt = sky?.moonsetAt;
+    expect(moonsetAt).toBeInstanceOf(Date);
+    const setsAt = (moonsetAt as Date).getTime();
+    // Inside the window it was asked about, which is the whole point.
+    expect(setsAt).toBeGreaterThan(
+      wallTimeToUtc({ year: 2026, month: 1, day: 21, hour: 18, minute: 0 }, EASTERN).getTime(),
+    );
+    expect(setsAt).toBeLessThan(
+      wallTimeToUtc({ year: 2026, month: 1, day: 21, hour: 23, minute: 0 }, EASTERN).getTime(),
+    );
+  });
+
+  it("keeps a full moon that is up for the whole dive, with no crossing to name", () => {
+    const sky = nightSkyFor({
+      startsAt: wallTimeToUtc({ year: 2026, month: 1, day: 3, hour: 19, minute: 30 }, EASTERN),
+      endsAt: wallTimeToUtc({ year: 2026, month: 1, day: 3, hour: 23, minute: 0 }, EASTERN),
+      timeZone: EASTERN,
+      ...KEY_LARGO,
+    });
+    expect(sky?.moonOverDive).toBe("up");
+    expect(sky?.moonriseAt).toBeNull();
+    expect(sky?.moonsetAt).toBeNull();
+    expect(sky?.phase).toBe("full");
+  });
+
   it("says nothing when the shop has never set its coordinates", () => {
     // The address form is optional, and a whole timezone is far too coarse to
     // derive a sunset from — so no coordinates means no line, not a guess.

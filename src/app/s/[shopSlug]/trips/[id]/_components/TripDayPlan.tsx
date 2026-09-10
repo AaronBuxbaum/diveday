@@ -225,12 +225,7 @@ export function TripDayPlan({
   // wants the light it has, a night charter wants the dark and the moon it will
   // dive under. Neither wants the other's half.
   const sky = nightSky ? (
-    <NightSkyLine
-      sky={nightSky}
-      moonriseAt={sunMoon?.moonriseAt ?? null}
-      timeZone={shop.timezone}
-      locale={locale}
-    />
+    <NightSkyLine sky={nightSky} timeZone={shop.timezone} locale={locale} />
   ) : (
     <DaySkyLine
       sunriseAt={sunMoon?.sunriseAt ?? null}

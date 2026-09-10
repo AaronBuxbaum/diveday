@@ -12,10 +12,22 @@ import { openTripTab } from "./helpers";
  */
 signedInAsOwner();
 
-/** Open today's reef charter from the day spine, the way the tour does. */
+/**
+ * Open the departure that has actually **sailed**, and its after-dive view.
+ *
+ * The demo's first-light boat: 5:30–8:30 AM against a 9:30 AM clock, so it is
+ * home. Today's headline reef charter is five hours *out*, and the Seen group
+ * deliberately does not exist before a boat has left — a sighting on a
+ * departure still alongside would publish "seen here" for a dive nobody has
+ * done, and `recordTripSighting` refuses one as well.
+ */
+const SAILED_TRIP = "Dawn Two-Tank — Molasses Reef";
+
 async function openReefManifest(page: import("@playwright/test").Page) {
+  // The day's own spine, not the schedule board: the board lists what is still
+  // to come, and this boat is back.
   await page.goto("/shop/blue-mantis");
-  await page.locator("ol li h3 a").first().click();
+  await page.getByRole("link", { name: SAILED_TRIP, exact: true }).first().click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
   await openTripTab(page, "Manifest");
   // The after-dive checkpoint is where the crew records the day: the Seen
@@ -81,7 +93,9 @@ test("a diver reads the crew's month under the site on the trip page", async ({ 
   await expect(page.getByText("Seen here this month").first()).toBeVisible();
   // A frequency with a denominator, not a species list: the whole point of the
   // beat is that it says how often, out of how many dives.
-  await expect(page.getByText(/Southern stingray on \d+ of the last \d+ dives here/)).toBeVisible();
+  await expect(
+    page.getByText(/Southern stingray on \d+ of \d+ logged dives here this month/),
+  ).toBeVisible();
   await expect(page.getByText(/Last seen /).first()).toBeVisible();
   // And the sentence that stops a log being read as a guarantee.
   await expect(

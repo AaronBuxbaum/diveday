@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { scopedId } from "@/lib/element-id";
@@ -23,6 +23,67 @@ export type SeenGroupCopy = {
 export type SeenChip = { slug: string; name: string };
 export type SeenTally = SeenChip & { count: number; deleteLabel: string };
 
+type SightingAction = (
+  previous: SightingResult | undefined,
+  formData: FormData,
+) => Promise<SightingResult>;
+
+/**
+ * One tap, with its own pending state.
+ *
+ * **Its own, deliberately.** A single `useActionState` shared by the whole row
+ * disabled every chip for the duration of any one round trip, and on a boat
+ * with one bar that is a second or two per tap — long enough that a crew
+ * naming two species in quick succession would have the second tap land on a
+ * disabled control and be swallowed. Each chip owning its own transition means
+ * two taps are two requests, and the tally below settles when they both land.
+ *
+ * The refusal is lifted to the group instead of living here: twelve chips each
+ * able to grow their own error line is a wall of red on the surface with the
+ * least room for one, and what a crew needs to know is that *a* tap did not
+ * count.
+ */
+function SeenTap({
+  name,
+  slug,
+  action,
+  onResult,
+  className,
+  ariaLabel,
+  children,
+}: {
+  name: string;
+  slug: string;
+  action: SightingAction;
+  onResult: (result: SightingResult) => void;
+  className: string;
+  ariaLabel?: string;
+  children: React.ReactNode;
+}) {
+  const [pending, startTransition] = useTransition();
+  return (
+    <form
+      action={(formData: FormData) => {
+        startTransition(async () => {
+          onResult(await action(undefined, formData));
+        });
+      }}
+    >
+      <input type="hidden" name="speciesSlug" value={slug} />
+      <button
+        type="submit"
+        name={name}
+        disabled={pending}
+        aria-busy={pending}
+        aria-label={ariaLabel}
+        className={className}
+      >
+        {children}
+      </button>
+    </form>
+  );
+}
+
 /**
  * **The Seen group — what this crew saw, tapped rather than typed.**
  *
@@ -32,14 +93,26 @@ export type SeenTally = SeenChip & { count: number; deleteLabel: string };
  * a chip that lit up *and* a row that appeared would be one act reported twice
  * on the surface with the least room for it.
  *
+ * **The chip row does not move.** Species keep the order the server sent —
+ * this site's field guide, then the shop's other picks — however many have been
+ * logged. A row that floated tapped species to the front would rearrange itself
+ * under a thumb that is mid-reach for the next one, and the tally below already
+ * says what has been logged.
+ *
  * **Where it sits, and why it is not anywhere else.** The manifest is a safety
  * instrument, and the roll call's commit path and the head-count panel are the
  * two things on it that must never share a screen region with an ornament. This
  * rides at the bottom of the *after-dive* view, directly under the dive log the
  * crew already fills in at the surface interval — the one part of the manifest
  * that is a record of what happened rather than a count of who is aboard. At
- * the dock checkpoint it does not render at all, because there is nothing yet
- * to have seen.
+ * the dock checkpoint, and on a departure that has not sailed, it does not
+ * render at all: there is nothing yet to have seen.
+ *
+ * **`print:hidden`, like every sibling after-dive control** (`TripPlanSection`,
+ * `ExecutedDiveLog`, `CatchUpStrip`, `BuddyTeamsPanel`). The printed packet is
+ * the fallback under the fallback — a sheet a crew carries when the phones are
+ * gone — and a page of species buttons nobody can press is paper spent on an
+ * ornament. The tally is on the trip page and in the shop's own export.
  *
  * **Boat targets and boat contrast.** 44px chips with `touch-manipulation`, and
  * the manifest's own ambient contrast control above them. A crew is doing this
@@ -73,42 +146,36 @@ export function SeenGroup({
   /** What this departure has logged here, most-seen first. */
   tallies: readonly SeenTally[];
   copy: SeenGroupCopy;
-  recordAction: (
-    previous: SightingResult | undefined,
-    formData: FormData,
-  ) => Promise<SightingResult>;
-  deleteAction: (
-    previous: SightingResult | undefined,
-    formData: FormData,
-  ) => Promise<SightingResult>;
+  recordAction: SightingAction;
+  deleteAction: SightingAction;
 }) {
-  const [recorded, record, recording] = useActionState(recordAction, undefined);
-  const [removed, remove, removing] = useActionState(deleteAction, undefined);
+  // One flag for the group, set by whichever tap answered last. A success
+  // clears it, which is the honest reading: the boat has bars again.
+  const [refused, setRefused] = useState(false);
+  const onResult = (result: SightingResult) => setRefused(result.status === "error");
   const headingId = scopedId(idPrefix, "seen-heading");
-  const refused = recorded?.status === "error" || removed?.status === "error";
   return (
-    <section className="mt-8" aria-labelledby={headingId}>
+    <section className="mt-8 print:hidden" aria-labelledby={headingId}>
       <h2 id={headingId} className={SECTION_TITLE_CLASS}>
         {copy.heading}
       </h2>
       <div className="mt-4 flex flex-wrap gap-2">
         {chips.map((chip) => (
-          <form action={record} key={chip.slug}>
-            <input type="hidden" name="speciesSlug" value={chip.slug} />
-            <button
-              type="submit"
-              disabled={recording}
-              aria-busy={recording}
-              className={buttonClass({
-                variant: "secondary",
-                size: "sm",
-                busy: true,
-                className: "touch-manipulation",
-              })}
-            >
-              {chip.name}
-            </button>
-          </form>
+          <SeenTap
+            key={chip.slug}
+            name="record"
+            slug={chip.slug}
+            action={recordAction}
+            onResult={onResult}
+            className={buttonClass({
+              variant: "secondary",
+              size: "sm",
+              busy: true,
+              className: "touch-manipulation",
+            })}
+          >
+            {chip.name}
+          </SeenTap>
         ))}
       </div>
       {/* The tally, which is the tap's whole answer — announced politely so a
@@ -120,18 +187,16 @@ export function SeenGroup({
             <li key={tally.slug} className="flex min-h-14 items-center gap-3 py-2">
               <span className="min-w-0 flex-1 text-base font-medium">{tally.name}</span>
               <span className="text-base font-semibold tabular-nums">{tally.count}</span>
-              <form action={remove}>
-                <input type="hidden" name="speciesSlug" value={tally.slug} />
-                <button
-                  type="submit"
-                  disabled={removing}
-                  aria-busy={removing}
-                  aria-label={tally.deleteLabel}
-                  className={buttonClass({ variant: "danger-ghost", size: "sm", busy: true })}
-                >
-                  {copy.delete}
-                </button>
-              </form>
+              <SeenTap
+                name="delete"
+                slug={tally.slug}
+                action={deleteAction}
+                onResult={onResult}
+                ariaLabel={tally.deleteLabel}
+                className={buttonClass({ variant: "danger-ghost", size: "sm", busy: true })}
+              >
+                {copy.delete}
+              </SeenTap>
             </li>
           ))}
         </ul>
