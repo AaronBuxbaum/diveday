@@ -741,7 +741,10 @@ export async function checkInAtKiosk(
       })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .innerJoin(people, eq(people.id, bookings.personId))
+      // The diver's own tenancy, stated for the same reason as the departure's
+      // below: this door has no staffer behind it, so nothing it depends on is
+      // inherited from the caller that supplied the booking id.
+      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
       .where(
         and(
           eq(bookings.id, input.bookingId),

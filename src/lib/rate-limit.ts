@@ -392,6 +392,17 @@ export const RATE_LIMITS = {
    * do in an afternoon. Keyed on the token rather than the IP: every tap comes
    * from the same tablet on the same network, so an IP key would bound the
    * whole lobby as one caller.
+   *
+   * **This number was sized against surname entropy, and the lookup no longer
+   * has only that.** Issue #1610 widened the match to every word of a stored
+   * name but the given ones, which #1655's `security-reviewer` pass read as
+   * enumerable rather than merely guessable. `matchableNameTokens` answered
+   * that where it could — a particle and an initial are no longer keys — but a
+   * middle given name in a three-word name still is, and no positional rule can
+   * change that. So this budget now covers a wider dictionary than the one it
+   * was chosen for. Whether it comes down, or the tablet asks a second cheap
+   * thing a stranger does not hold, is issue #1657 and a human's call; the
+   * number is left where a person set it until then.
    */
   kioskLookup: perHour(120),
   /** Credentials sign-in attempts, per IP — the wider net. */

@@ -2,7 +2,12 @@ import { and, asc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { isMinorOnDate } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { FOLD_FROM, FOLD_TO, type KioskInput } from "@/lib/kiosk-check-in";
+import {
+  canMatchBeforeTheLastWord,
+  FOLD_FROM,
+  FOLD_TO,
+  type KioskInput,
+} from "@/lib/kiosk-check-in";
 import { kioskArrivalsWindow } from "@/lib/operational-window";
 import type { AppDb } from "./client";
 import { bookings, diveSupportNeeds, people, trips } from "./schema";
@@ -43,10 +48,22 @@ export type KioskSeat = {
 
 /**
  * How many matching seats are worth reading before the answer is "see the desk"
- * anyway. Two is enough to know the answer is not one, and reading a hundred
- * rows to reach the same sentence is work a lobby tablet should not do.
+ * anyway.
+ *
+ * **Two was too few, and the shortfall answered "one" where the truth was
+ * "several".** The `LIMIT` runs in Postgres; the minor filter and the
+ * same-person collapse below run afterwards, in this function. So a token
+ * matching one diver's two seats plus a second diver's read back as two rows
+ * belonging to one person, collapsed to one, and checked that diver in — while
+ * a stranger also matched and nobody was sent to the desk. A minor first in the
+ * order did the same by being dropped. Multi-day package holders are exactly
+ * that shape (`security-reviewer`, 2026-09-10).
+ *
+ * Six is above anything those two filters can drop plus a same-person run, on a
+ * query already bounded to one morning's board, and still nothing like reading
+ * a hundred rows to reach the same sentence.
  */
-const MATCH_LIMIT = 2;
+const MATCH_LIMIT = 6;
 
 /**
  * Seats on today's departures that this typed (or scanned) answer could name.
@@ -73,27 +90,52 @@ export async function findKioskSeats(
   const match =
     input.lookup.kind === "booking"
       ? eq(bookings.id, input.lookup.bookingId)
-      : // `matchableNameTokens` written in SQL: the stored name split on
-        // whitespace, lower-cased, with the given names dropped — the first
-        // word, or the first two when the name runs to four or more — and the
-        // typed word matched against what is left, whole and exactly. Never
-        // `like '%…%'`: one letter must not sweep a lobby's roster. The last
-        // word alone left every two-apellido diver unreachable by the apellido
-        // they answer with (issue #1610), and case folding alone left them
-        // unreachable by an unaccented spelling of it (#1656) -- `translate`
-        // is `foldNameWord` written in Postgres, off the same two strings.
-        sql`${input.lookup.surname} = ANY(
-          (regexp_split_to_array(
-            translate(lower(btrim(${people.fullName})), ${FOLD_FROM}, ${FOLD_TO}),
-            '\\s+'
-          ))[
-            (case
-              when array_length(regexp_split_to_array(btrim(${people.fullName}), '\\s+'), 1) >= 4 then 3
-              when array_length(regexp_split_to_array(btrim(${people.fullName}), '\\s+'), 1) >= 2 then 2
-              else 1
-            end):
-          ]
-        )`;
+      : // **`matchableNameTokens` written in SQL, off one normalization.** The
+        // stored name is lower-cased, its whitespace runs collapsed to single
+        // spaces, trimmed, folded through `translate` (the `foldNameWord` of
+        // #1656, off the same two strings), and split once. Both halves below
+        // read that same array, which is what stops them disagreeing: `btrim`
+        // with one argument strips spaces only, so a name with a leading tab
+        // used to shift the array by one and make a *given name* matchable in
+        // SQL while the TypeScript rule refused it (`security-reviewer`,
+        // 2026-09-10).
+        //
+        // Two ways to match, and the split is the point. The **last** word
+        // always, whatever its length -- "Wei Li" answers to *Li*, as it did
+        // before any of this. Any earlier word only when the typed answer
+        // itself may be a key, which is the same question as filtering the
+        // stored words: an equality match means both sides hold the same
+        // string, so refusing a short or particle answer refuses exactly the
+        // short and particle tokens. Without that, a stored initial was a
+        // one-character key and a tussenvoegsel a three-character one, and
+        // sixty tries enumerated a morning's board.
+        //
+        // Never `like '%…%'`, on either branch.
+        sql`(select
+          ${input.lookup.surname} = w.words[array_length(w.words, 1)]
+          ${
+            canMatchBeforeTheLastWord(input.lookup.surname)
+              ? sql`or ${input.lookup.surname} = ANY(
+                  w.words[
+                    (case
+                      when array_length(w.words, 1) >= 4 then 3
+                      when array_length(w.words, 1) >= 2 then 2
+                      else 1
+                    end):
+                  ]
+                )`
+              : sql``
+          }
+          from (
+            select regexp_split_to_array(
+              translate(
+                btrim(regexp_replace(lower(${people.fullName}), '\\s+', ' ', 'g')),
+                ${FOLD_FROM},
+                ${FOLD_TO}
+              ),
+              ' '
+            ) as words
+          ) w)`;
 
   const rows = await db
     .select({
@@ -109,7 +151,11 @@ export async function findKioskSeats(
       meetingPointAddress: trips.meetingPointAddress,
     })
     .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
+    // `people.shop_id` stated rather than inherited from the booking's own
+    // scoping. This door has no staffer behind it, and `checkInAtKiosk` writes
+    // every predicate it depends on for that reason; the name predicate below
+    // reads a column on this table, so the table's tenant belongs here too.
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     // **A diver who has told the shop they need a hand goes to the desk.**
     // Support needs never gate boarding and must never start doing so — this

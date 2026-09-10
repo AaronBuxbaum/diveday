@@ -107,9 +107,35 @@ describe("matchableNameTokens", () => {
     expect(matchableNameTokens("Ana Garcia Marquez")).toEqual(["garcia", "marquez"]);
   });
 
-  it("carries a tussenvoegsel and a compound surname", () => {
-    expect(matchableNameTokens("Jan van der Berg")).toEqual(["der", "berg"]);
+  it("carries a compound surname, and a tussenvoegsel by its own last word", () => {
     expect(matchableNameTokens("Sara Bell Whitmore")).toEqual(["bell", "whitmore"]);
+    // *Berg*, and no longer *der*: a particle is nobody's key, and one that is
+    // was sixty tries from enumerating a morning's board (`security-reviewer`,
+    // 2026-09-10).
+    expect(matchableNameTokens("Jan van der Berg")).toEqual(["berg"]);
+    expect(matchableNameTokens("Luis de la Cruz")).toEqual(["cruz"]);
+  });
+
+  /**
+   * **A middle word has to earn being a key; the last word never has to.** The
+   * widening made a stored initial a single-character answer and a particle a
+   * three-character one, which is a dictionary rather than a guess. Filtering by
+   * length alone would have taken "Wei Li" with it — a two-letter surname is
+   * ordinary, and it was reachable before the widening.
+   */
+  it("drops an initial and a particle from the middle, and keeps a short surname", () => {
+    expect(matchableNameTokens("Ana M Garcia")).toEqual(["garcia"]);
+    expect(matchableNameTokens("Wei Li")).toEqual(["li"]);
+    expect(matchableNameTokens("Jan von Braun")).toEqual(["braun"]);
+  });
+
+  /**
+   * Stated because it is the limit of the rule rather than an oversight: no
+   * positional boundary can tell a second given name from a first apellido in a
+   * three-word name.
+   */
+  it("still answers to a middle given name in a three-word name", () => {
+    expect(matchableNameTokens("Ana María Gómez")).toEqual(["maria", "gomez"]);
   });
 
   it("treats a one-word name as its own surname, and an empty one as nothing", () => {

@@ -99,6 +99,41 @@ export function surnameOf(fullName: string): string {
 }
 
 /**
+ * Words that are nobody's key.
+ *
+ * A `security-reviewer` pass on the widening below found that it had quietly
+ * turned a surname-entropy lookup into an enumerable one: "Jan van der Berg"
+ * made *der* a valid whole-word answer, "Luis de la Cruz" made *la* one, and a
+ * stored middle initial made a **single letter** one. Roughly sixty tries —
+ * the particles, the suffixes, the alphabet — fit inside one hour of
+ * `RATE_LIMITS.kioskLookup` twice over, and every hit both names a stranger's
+ * departure and writes an arrival on their booking.
+ *
+ * So a word can only be a key *in the middle of a name* when it is at least
+ * three characters and not one of these. The **last** word is always a key
+ * whatever its length, which is what keeps "Wei Li" reachable by *Li* — the
+ * behaviour that predates the widening and the reason a bare minimum length
+ * would have been the wrong instrument.
+ */
+const NOT_A_KEY = new Set([
+  "abu",
+  "bin",
+  "ben",
+  "das",
+  "del",
+  "den",
+  "der",
+  "dos",
+  "ibn",
+  "mac",
+  "ter",
+  "van",
+  "von",
+]);
+
+const canBeKey = (word: string) => word.length >= 3 && !NOT_A_KEY.has(word);
+
+/**
  * The words of a **stored** name a diver may be found by.
  *
  * The last word alone was wrong in the market the Spanish bundle exists for.
@@ -110,20 +145,25 @@ export function surnameOf(fullName: string): string {
  * tussenvoegsel ("Jan van der Berg", found by *Berg*) and a compound English
  * surname.
  *
- * So: every word except the given names, where "the given names" is the first
- * word, or the first **two** when the name runs to four or more. That second
- * clause is what keeps "Maria Jose Garcia Marquez" from being found by *Jose* —
- * compound given names are as ordinary in Spanish as compound surnames, and a
- * rule of "anything but the first word" would have made a given name matchable
- * for a large part of the market.
+ * So: the last word always, plus every word before it that is not a given name
+ * and {@link canBeKey} — where "the given names" is the first word, or the
+ * first **two** when the name runs to four or more. That second clause is what
+ * keeps "Maria Jose Garcia Marquez" from being found by *Jose*.
  *
  * A single-word name is its own surname, as it always was.
  *
- * **What stops this being a roster browser is no longer that given names are
- * excluded.** It is the exact whole-word match — never `like '%…%'`, so one
- * letter sweeps nothing — and the collapse of zero and many into the same
- * "see the desk", which is what a stranger typing a common name meets.
- * `src/db/kiosk-check-in.ts` writes this same rule in SQL.
+ * **What this does not claim.** A middle given name in a three-word name *is* a
+ * key: "Ana Maria Gomez" answers to *Maria*, and no positional rule can tell
+ * that name from "Ana Garcia Marquez" (`security-reviewer`, 2026-09-10). What
+ * bounds the cost is everything around it — the exact whole-word match, the
+ * collapse of zero and many into one "see the desk", the tablet's own two-hour
+ * window, and the per-link rate limit — not the boundary. Read
+ * `src/lib/rate-limit.ts`'s `kioskLookup` note beside this one; the budget was
+ * sized against surname entropy, and this rule spends some of it.
+ *
+ * `src/db/kiosk-check-in.ts` writes this same rule in SQL, and asks the
+ * length-and-particle half of it about the *typed* word — which is the same
+ * question, since a match means both sides are the same string.
  */
 export function matchableNameTokens(fullName: string): readonly string[] {
   const parts = fullName
@@ -132,7 +172,22 @@ export function matchableNameTokens(fullName: string): readonly string[] {
     .filter((part) => part.length > 0)
     .map(foldNameWord);
   if (parts.length <= 1) return parts;
-  return parts.slice(parts.length >= 4 ? 2 : 1);
+  const last = parts.at(-1) ?? "";
+  const middle = parts.slice(parts.length >= 4 ? 2 : 1, -1).filter(canBeKey);
+  return [...new Set([...middle, last])];
+}
+
+/**
+ * Whether a typed answer is allowed to match a word **before** the last one.
+ *
+ * The SQL asks this about the typed word rather than filtering the stored ones,
+ * and the two are the same question: an equality match means both sides hold
+ * the same string, so refusing a short or particle *answer* refuses exactly the
+ * short and particle *tokens* — except the last word, which stays a key on both
+ * sides.
+ */
+export function canMatchBeforeTheLastWord(typed: string): boolean {
+  return canBeKey(typed);
 }
 
 /**

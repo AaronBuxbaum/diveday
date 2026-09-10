@@ -2,7 +2,13 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { foldNameWord, matchableNameTokens, readKioskInput, surnameOf } from "@/lib/kiosk-check-in";
+import {
+  foldNameWord,
+  kioskSelection,
+  matchableNameTokens,
+  readKioskInput,
+  surnameOf,
+} from "@/lib/kiosk-check-in";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { listSelfReportedArrivalBookingIds } from "./arrival-provenance";
@@ -262,6 +268,12 @@ describe("findKioskSeats", () => {
       // door finds and the other does not.
       "Ingrid Nyström",
       "Łukasz Wiśniewski",
+      // Non-space whitespace, because `btrim` with one argument strips spaces
+      // only: a leading tab used to shift the SQL's array by one and make the
+      // given name matchable on that side alone (`security-reviewer`).
+      "\tAdaeze Nwosu",
+      "\nAna María García Márquez",
+      "Sara  Bell   Whitmore",
     ];
 
     for (const fullName of names) {
@@ -311,6 +323,84 @@ describe("findKioskSeats", () => {
       now: atTheDoor,
     });
     expect(seats.length).toBeGreaterThan(1);
+  });
+
+  /**
+   * **Two seats of one diver must not hide a third seat of another.** The
+   * `LIMIT` runs in Postgres and the same-person collapse runs here, so a limit
+   * of two read one diver's two seats, collapsed them to one, and checked that
+   * diver in while a stranger by the same name also matched and nobody was sent
+   * to the desk (`security-reviewer`, 2026-09-10). Multi-day package holders
+   * are exactly that shape.
+   */
+  it("still answers several when one diver's two seats come before another's", async () => {
+    const { db, shop, surname, person, reef, atTheDoor } = await counter();
+    const roster = await getTripRoster(db, shop.id, reef.id);
+    const other = roster.find((row) => row.person.id !== person.id);
+    if (!other) throw new Error("seeded reef boat has only one diver");
+    await db
+      .update(people)
+      .set({ fullName: `Someone ${surname}` })
+      .where(eq(people.id, other.person.id));
+
+    // The same diver's second seat, an hour after the first, so the two rows
+    // Postgres reads first both belong to them.
+    const later = new Date(reef.startsAt.getTime() + 60 * 60 * 1000);
+    const [second] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Afternoon single tank",
+        startsAt: later,
+        endsAt: new Date(later.getTime() + 2 * 60 * 60 * 1000),
+        capacity: 8,
+        status: "scheduled",
+      })
+      .returning({ id: trips.id });
+    if (!second) throw new Error("could not seed the second departure");
+    await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: second.id, personId: person.id, status: "booked" });
+
+    const seats = await findKioskSeats(db, {
+      shopId: shop.id,
+      lookup: readKioskInput(surname),
+      now: atTheDoor,
+    });
+    // Two people answer to this word, so the tablet has nothing to say.
+    expect(kioskSelection(seats)).toBeNull();
+  });
+
+  /**
+   * **A particle and an initial are nobody's key.** The widening made *der* a
+   * whole-word answer and a stored middle initial a single-character one, which
+   * is a dictionary rather than a guess against a link that does not expire.
+   */
+  it("refuses a particle and an initial, and still answers the last word", async () => {
+    const { db, shop, booking, person, atTheDoor } = await counter();
+    await db.update(people).set({ fullName: "Jan van der Berg" }).where(eq(people.id, person.id));
+
+    for (const typed of ["van", "der", "jan"]) {
+      expect(
+        await findKioskSeats(db, {
+          shopId: shop.id,
+          lookup: readKioskInput(typed),
+          now: atTheDoor,
+        }),
+        typed,
+      ).toEqual([]);
+    }
+    const found = await findKioskSeats(db, {
+      shopId: shop.id,
+      lookup: readKioskInput("berg"),
+      now: atTheDoor,
+    });
+    expect(found.map((row) => row.bookingId)).toContain(booking.id);
+
+    await db.update(people).set({ fullName: "Ana M Garcia" }).where(eq(people.id, person.id));
+    expect(
+      await findKioskSeats(db, { shopId: shop.id, lookup: readKioskInput("m"), now: atTheDoor }),
+    ).toEqual([]);
   });
 
   /**
