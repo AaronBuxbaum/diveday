@@ -156,6 +156,48 @@ describe("infra:migrate-region", () => {
     expect(log).not.toContain("delete-bucket");
   });
 
+  it("refuses to delete non-interactively without the teardown flag", () => {
+    const directory = fixture({ resourcesExist: true });
+    // --confirm-account alone is deliberately not enough. It asserts which
+    // account, which is a thing somebody might pass in a wrapper script for
+    // safety; a flag whose name says "check this is the right account" must
+    // never also mean "yes, empty the backup bucket".
+    const result = run(
+      directory,
+      "--from",
+      "us-east-1",
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Refusing to delete anything non-interactively");
+    expect(result.stderr).toContain("--confirm-teardown us-east-1");
+    const log = awsLog(directory);
+    expect(log).not.toContain("delete-stack");
+    expect(log).not.toContain("delete-objects");
+    expect(log).not.toContain("delete-bucket");
+  });
+
+  it("refuses a teardown flag naming a different region than --from", () => {
+    const directory = fixture({ resourcesExist: true });
+    const result = run(
+      directory,
+      "--from",
+      "us-east-1",
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+      "--confirm-teardown",
+      "eu-west-1",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Refusing to delete anything non-interactively");
+    expect(awsLog(directory)).not.toContain("delete-objects");
+  });
+
   it("refuses a --from-step outside the five steps", () => {
     const directory = fixture();
     const result = run(directory, "--from", "us-east-1", "--execute", "--from-step", "9");
@@ -217,6 +259,8 @@ describe("infra:migrate-region", () => {
       "--execute",
       "--confirm-account",
       "123456789012",
+      "--confirm-teardown",
+      "us-east-1",
     );
 
     const log = awsLog(directory);

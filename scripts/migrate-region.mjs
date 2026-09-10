@@ -104,6 +104,12 @@ const flagValue = (flag, fallback) => {
 const oldRegion = flagValue("--from", "us-east-1");
 const fromStep = Number(flagValue("--from-step", "1"));
 const confirmedAccount = flagValue("--confirm-account", undefined);
+// Separate from --confirm-account on purpose. That one asserts *which account*
+// and is a thing somebody might reasonably pass in a wrapper script for safety;
+// letting it also authorize an irreversible mass delete would mean a flag whose
+// name says "check this is the right account" quietly answering "yes, destroy
+// it". This one names the region being torn down and authorizes nothing else.
+const confirmedTeardown = flagValue("--confirm-teardown", undefined);
 
 if (!/^[a-z]{2}-[a-z]+-\d$/.test(oldRegion)) {
   console.error(`--from must be an AWS region name; got "${oldRegion}".`);
@@ -330,20 +336,23 @@ function pnpm(args, timeoutMs) {
 /**
  * Ask before something irreversible.
  *
- * `--confirm-account` is the non-interactive escape hatch, exactly as
- * `scripts/infra-bootstrap.mjs` uses it, and it only applies when there is no
- * terminal to ask in. A run that *has* a terminal always gets the prompt, even
- * with the flag passed: somebody who supplies it to pin the account must not
- * find that doing so quietly removed a confirmation.
+ * `--confirm-teardown <region>` is the non-interactive escape hatch, and it has
+ * to name the region for the same reason the typed prompt does: the flag is the
+ * authorization, so it should be impossible to supply for any other purpose.
+ * It only applies when there is no terminal to ask in -- a run that *has* one
+ * always gets the prompt, even with the flag passed, so nobody scripting this
+ * discovers they removed a confirmation by adding a safety argument.
  *
- * Until this matched, the refusal below named a remedy that did not work --
- * it told the operator to pass `--confirm-account` and then refused anyway.
+ * The first version of this let `--confirm-account` stand in, because that is
+ * what the refusal message happened to say. Wrong direction: the message was
+ * the thing that was wrong, and `--confirm-account` asserts which account, not
+ * that a bucket full of backups may be emptied.
  */
 async function confirm(question, expected) {
   if (!stdin.isTTY || !stdout.isTTY) {
-    if (confirmedAccount !== undefined) return;
+    if (confirmedTeardown === expected) return;
     throw new Error(
-      `Refusing to continue non-interactively. Re-run in a terminal, or pass --confirm-account ${account}.`,
+      `Refusing to delete anything non-interactively. Re-run in a terminal, or pass --confirm-teardown ${expected}.`,
     );
   }
   const terminal = createInterface({ input: stdin, output: stdout });
