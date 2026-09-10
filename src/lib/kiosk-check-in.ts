@@ -71,6 +71,43 @@ export function matchableNameTokens(fullName: string): readonly string[] {
   return parts.slice(parts.length >= 4 ? 2 : 1);
 }
 
+/**
+ * **Every answer this tablet gives takes at least this long.**
+ *
+ * The refusals are word-for-word identical on purpose — a miss, an ambiguous
+ * surname, a sailed departure, a cancelled seat and a diver readiness will not
+ * clear are one sentence, so a lobby screen cannot be used to work out which of
+ * two people has a medical hold. That property was true of the words and false
+ * of the clock: reaching "see the desk" from a miss is one `SELECT`, and
+ * reaching the same sentence from a blocked diver is a transaction, a row lock,
+ * a support-needs query and a full readiness read (issue #1608). Measured on
+ * the seeded shop over PGlite in-process: 5ms against 24ms, and the gap widens
+ * on a networked database, where the slow path pays four more round trips.
+ *
+ * 750ms clears both by an order of magnitude and costs a lobby nothing — the
+ * card the tablet returns stands on the glass for twelve seconds.
+ *
+ * **What it does not cover**, stated rather than implied: a floor hides a
+ * difference only while the slow path stays under it. A database slow enough to
+ * push a readiness read past 750ms leaks the same signal again, and no constant
+ * can fix that — only a slower floor, which a diver waits through.
+ */
+export const KIOSK_RESPONSE_FLOOR_MS = 750;
+
+/**
+ * How much longer an answer that took `elapsedMs` has to be held.
+ *
+ * Pure, so the floor is testable without a test that sleeps: a wall-clock
+ * assertion on a shared runner is exactly the flake this repository refuses.
+ */
+export function kioskResponseWaitMs(
+  elapsedMs: number,
+  floorMs: number = KIOSK_RESPONSE_FLOOR_MS,
+): number {
+  if (!Number.isFinite(elapsedMs)) return floorMs;
+  return Math.max(0, floorMs - Math.max(0, elapsedMs));
+}
+
 export type KioskInput =
   | { kind: "booking"; bookingId: string }
   | { kind: "surname"; surname: string }

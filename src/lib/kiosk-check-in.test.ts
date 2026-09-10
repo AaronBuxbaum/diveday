@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   KIOSK_INPUT_MAX,
+  KIOSK_RESPONSE_FLOOR_MS,
   kioskCheckInPath,
+  kioskResponseWaitMs,
   kioskSelection,
   matchableNameTokens,
   readKioskInput,
@@ -120,6 +122,32 @@ describe("readKioskInput", () => {
  * sharing a surname is exactly the case a staffer resolves by looking at a
  * person, and a tablet guessing would put an arrival on the wrong record.
  */
+describe("kioskResponseWaitMs", () => {
+  /**
+   * The signal this closes: a miss is one query and a blocked diver is a
+   * transaction with a row lock and a readiness read, so the two identical
+   * refusals were told apart by the clock (issue #1608).
+   */
+  it("holds a fast answer up to the floor and lets a slow one straight out", () => {
+    expect(kioskResponseWaitMs(5)).toBe(KIOSK_RESPONSE_FLOOR_MS - 5);
+    expect(kioskResponseWaitMs(24)).toBe(KIOSK_RESPONSE_FLOOR_MS - 24);
+    expect(kioskResponseWaitMs(KIOSK_RESPONSE_FLOOR_MS)).toBe(0);
+    // Past the floor there is nothing left to hide, and holding longer would
+    // only make the slow path slower.
+    expect(kioskResponseWaitMs(KIOSK_RESPONSE_FLOOR_MS + 400)).toBe(0);
+  });
+
+  it("never returns a negative wait, whatever the reading", () => {
+    expect(kioskResponseWaitMs(-50)).toBe(KIOSK_RESPONSE_FLOOR_MS);
+    expect(kioskResponseWaitMs(Number.NaN)).toBe(KIOSK_RESPONSE_FLOOR_MS);
+    expect(kioskResponseWaitMs(Number.POSITIVE_INFINITY)).toBe(KIOSK_RESPONSE_FLOOR_MS);
+  });
+
+  it("takes a floor of its own, so a caller can measure against one", () => {
+    expect(kioskResponseWaitMs(100, 400)).toBe(300);
+  });
+});
+
 describe("kioskSelection", () => {
   it("answers with the one match", () => {
     expect(kioskSelection(["only"])).toBe("only");

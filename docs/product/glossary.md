@@ -1769,6 +1769,10 @@ new domain concept, define it here in the same PR.
   work, and so does a tussenvoegsel: the lookup matches any word of the stored name but the given
   ones, whole and exactly, because a prompt reading "Apellido" that accepted only the maternal one
   refused every Hispanic diver (issue #1610).
+  Every refusal is one identical sentence *and* one length: the lookup path and the blocked-diver
+  path do different amounts of work, so response time used to tell them apart, and every answer is
+  now held to a floor (`KIOSK_RESPONSE_FLOOR_MS`, issue #1608). The floor hides the difference only
+  while the slow path stays under it.
   **A second tap is answered warmly, and that is an accepted disclosure.** A diver already arrived
   reads *"Already checked in, Diego."* rather than the generic "See the desk", so a link holder can
   learn that somebody by that surname has turned up today. It stands because the alternative
