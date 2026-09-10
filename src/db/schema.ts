@@ -9047,3 +9047,58 @@ export type GearReservation = typeof gearReservations.$inferSelect;
 export type PriorGearAssignment = typeof priorGearAssignments.$inferSelect;
 
 export type PersonShelfToken = typeof personShelfTokens.$inferSelect;
+
+/**
+ * Which sheet a print run was for — `src/lib/print-sheets.ts`'s codes, in the
+ * register's own order (ADR 20260908-one-hand, decision 6, lever X).
+ */
+export const printSheet = pgEnum("print_sheet", [
+  "dock_sign",
+  "window_sticker",
+  "boat_card",
+  "site_briefing",
+  "paper_pass",
+]);
+
+/**
+ * **When each sheet was last printed.**
+ *
+ * The whole persistence surface of the shop's paper. Every sheet reads what its
+ * page reads at the moment it is drawn, so the one fact a template cannot
+ * recover for itself is how old the copy taped to the console is — and that is
+ * the fact a shop is actually asking Settings for ("printed Aug 12"), so it is
+ * the only one stored.
+ *
+ * **One row per sheet per subject, replaced in place, rather than a log.** A
+ * print register that answered "when did we last print this" by scanning an
+ * append-only trail would be a table wanting a retention window (H-02) for a
+ * question a single row answers. `subject_key` is the boat's id for the boat
+ * card and the empty string for everything else — empty rather than null,
+ * because Postgres treats nulls as distinct in a unique index and a nullable
+ * column here would quietly allow a second row per sheet.
+ *
+ * The paper pass records under the empty key too: a pass prints from a diver's
+ * booking, and which diver that was is not a fact this register exists to keep.
+ *
+ * No `deleted_at`: nothing points at a row here and asks for it gone (the
+ * machinery exception in `.claude/rules/db.md`).
+ */
+export const shopPrintRuns = pgTable(
+  "shop_print_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    sheet: printSheet("sheet").notNull(),
+    /** The boat for a boat card; the empty string for a sheet with no subject. */
+    subjectKey: text("subject_key").notNull().default(""),
+    printedAt: timestamp("printed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("shop_print_runs_sheet_unique").on(table.shopId, table.sheet, table.subjectKey),
+  ],
+);
+
+export type ShopPrintRun = typeof shopPrintRuns.$inferSelect;
+export type PrintSheetValue = (typeof printSheet.enumValues)[number];

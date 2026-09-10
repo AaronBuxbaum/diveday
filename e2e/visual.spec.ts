@@ -6629,6 +6629,63 @@ test.describe("print", () => {
     await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
     await capturePrint(page, "departure-log");
   });
+
+  /**
+   * **The shop's own paper** (ADR 20260908-one-hand, decision 6, lever X).
+   *
+   * Five sheets that exist only to come out of a printer, so the print
+   * rendering *is* the artifact: a fixed box in millimetres, a band in the
+   * shop's colour, and a fold line carrying the day it was printed. They are
+   * the one family of pages that keeps its ink under `@media print`, which is
+   * exactly the kind of rule no assertion can look at.
+   *
+   * Reached by URL rather than through the register's doors on purpose. A door
+   * is a form that records a print run, and `shop_print_runs` survives the
+   * schedule reset (RESET_KEEPS), so clicking one here would date a row for
+   * whichever spec ran next in this worker. A `GET` of a sheet writes nothing.
+   */
+  test("the dock sign prints A3 in the shop's colour", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/print/dock-sign");
+    await page.getByRole("heading", { level: 1, name: "Our boats leave from here." }).waitFor();
+    await capturePrint(page, "dock-sign");
+  });
+
+  test("the window sticker prints 100mm square", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/print/window-sticker");
+    await page.getByText("Book a seat with your phone").first().waitFor();
+    await capturePrint(page, "window-sticker");
+  });
+
+  // Two pages, one document: the day side on white and the night side on the
+  // ground a red torch reads. The boat id comes off the register's own door,
+  // which is a hidden input rather than a link, so reading it is a page load
+  // and not a submit.
+  test("the boat card prints both its sides in boat colours", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/settings/print");
+    const boatId = await page
+      .locator('form:has(input[value="boat_card"]) input[name="subjectId"]')
+      .first()
+      .inputValue();
+    await page.goto(`/shop/blue-mantis/print/boat-card/${boatId}`);
+    await page.getByRole("heading", { name: "Before the boat moves" }).first().waitFor();
+    await capturePrint(page, "boat-card");
+  });
+
+  test("the site briefing cards print one per site", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/print/site-briefings");
+    await page.getByRole("heading", { name: "The briefing" }).first().waitFor();
+    await capturePrint(page, "site-briefing-cards");
+  });
+
+  // The booking id comes off the counter's own queue row, for the same reason
+  // the boat id comes off the register: it is the id the surface already holds.
+  test("the paper pass prints A6 with the booking's own code", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/check-in");
+    const bookingId = await page.locator('input[name="bookingId"]').first().inputValue();
+    await page.goto(`/shop/blue-mantis/print/pass/${bookingId}`);
+    await page.getByText("Show this at the counter, or say your name.").waitFor();
+    await capturePrint(page, "paper-pass");
+  });
 });
 
 /**
@@ -7021,6 +7078,26 @@ for (const scheme of ["light", "dark"] as const) {
       // Dropped here rather than left for the next test's reset, so the
       // cascade is charged to the test that asked for the shop.
       await request.delete("/api/test/seed-year-band-shop");
+    });
+  });
+}
+
+/**
+ * **The Print register** (ADR 20260908-one-hand, decision 6, lever X) — the
+ * pane in Settings that lists the shop's paper in the groups of where it goes:
+ * at the dock and the door, on the boat, for a diver, on the wall.
+ *
+ * Read-only here. Every row reads "Never printed" on the seeded shop, and the
+ * doors are deliberately not clicked — see the print block above for why.
+ */
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode — the print register`, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`the print register lists the shop's sheets (${scheme})`, async ({ page }) => {
+      await page.goto("/shop/blue-mantis/settings/print");
+      await page.getByRole("heading", { level: 1, name: "Print" }).waitFor();
+      await capture(page, "settings-print", scheme);
     });
   });
 }

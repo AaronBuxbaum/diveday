@@ -409,6 +409,28 @@
     "visual": ["day-packet"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/shop/[shopSlug]/print/boat-card/[boatId]": {
+    "e2e": ["shop-on-paper.spec.ts"],
+    "visual": ["boat-card"]
+  },
+  "/shop/[shopSlug]/print/dock-sign": {
+    "e2e": ["shop-on-paper.spec.ts"],
+    "visual": ["dock-sign"]
+  },
+  "/shop/[shopSlug]/print/pass/[bookingId]": {
+    "e2e": ["shop-on-paper.spec.ts"],
+    "visual": ["paper-pass"]
+  },
+  "/shop/[shopSlug]/print/site-briefings": {
+    "e2e": [],
+    "visual": ["site-briefing-cards"],
+    "exempt": "One sheet per site of the site editor's own words, with no control on it. The register's door that opens it is the same form the dock sign's row is driven through in shop-on-paper.spec.ts, and the print capture is the artifact this route exists to produce."
+  },
+  "/shop/[shopSlug]/print/window-sticker": {
+    "e2e": [],
+    "visual": ["window-sticker"],
+    "exempt": "One sentence and the storefront's code, with no control on it. The register's door that opens it is the same form the dock sign's row is driven through in shop-on-paper.spec.ts, and the print capture is the artifact this route exists to produce."
+  },
   "/shop/[shopSlug]/promos": {
     "e2e": ["promo-codes.spec.ts", "settings-findability.spec.ts"],
     "visual": ["staff-promos"],
@@ -538,6 +560,10 @@
     "e2e": ["manifest.spec.ts"],
     "visual": ["settings-safety-checklist"],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/shop/[shopSlug]/settings/print": {
+    "e2e": ["shop-on-paper.spec.ts"],
+    "visual": ["settings-print"]
   },
   "/shop/[shopSlug]/settings/security": {
     "e2e": ["security-settings.spec.ts"],

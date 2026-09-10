@@ -2892,6 +2892,14 @@ export default async function SettingsPage({
               href={`/shop/${shopSlug}/settings/display`}
               heading={t("settings.main.display.heading")}
             />
+            {/* The shop's own paper (ADR 20260908-one-hand, decision 6, lever
+                X). Beside Display for the reason it reads that way: both panes
+                are "what this shop looks like somewhere that is not this
+                screen". */}
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/print`}
+              heading={t("print.settings.title")}
+            />
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/integrations`}
               heading={t("settings.main.integrations.heading")}

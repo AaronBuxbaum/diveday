@@ -77,6 +77,7 @@ import {
   shopBackupDestinations,
   shopContactEmailConfirmationTokens,
   shopIntegrations,
+  shopPrintRuns,
   shopPromoCodes,
   shopPromoRedemptions,
   shopStripeAccounts,
@@ -197,6 +198,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
   await db.delete(preDepartureChecklistItems).where(eq(preDepartureChecklistItems.shopId, shopId));
+  // The shop's print register — one row per sheet, owned by the shop and by
+  // nothing else.
+  await db.delete(shopPrintRuns).where(eq(shopPrintRuns.shopId, shopId));
   // The close-out trail references people and the shop, so it must clear
   // before both parents below (ADR 20260804-day-closeout).
   await db.delete(closeoutLeftoverDecisions).where(eq(closeoutLeftoverDecisions.shopId, shopId));

@@ -220,6 +220,11 @@ const EXCLUDED_TABLES = [
   // exactly the reason notification_delivery_attempts is.
   "waiver_deliveries",
   "notification_send_queue", // operational retry state, not shop records
+  // When each printed sheet was last printed (ADR 20260908-one-hand, decision
+  // 6, lever X). Not a shop record at all: every sheet reads what its page
+  // reads, and the only thing stored is how old the copy on the console is.
+  // There is nothing here another system could act on.
+  "shop_print_runs",
   // Per-device Web Push credentials (ADR 20260804-manifest-web-push). Excluded
   // for two independent reasons: they are meaningless in another system — an
   // endpoint is issued by a browser vendor to one installed app on one device,

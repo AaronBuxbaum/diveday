@@ -201,6 +201,8 @@ const RESET_KEEPS: Record<string, string> = {
     "the shop's own year (mini-season, a derby, a nesting window) — settings beside the words above it, and a reset rebuilds the board rather than the calendar it hangs on",
   dive_packages: "the shop's own price list of packages — settings, not schedule",
   pre_departure_checklist_items: "the shop's own checklist lines — settings, not schedule",
+  shop_print_runs:
+    "when the shop last printed each of its sheets — settings beside the boats above, and a reset rebuilds the board rather than the paper",
   shop_backup_destinations: "seeded by the stable half (seedBackup); a reset would not restore it",
   shop_backup_deliveries: "delivery history for those bundles, seeded alongside the destination",
   shop_integrations: "provider credentials and linkage, outside the resettable schedule",
