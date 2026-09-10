@@ -108,7 +108,7 @@ joins is exported (as `buddy_pair_members.id`).
   (`person_id`), so a note filed under diver A that named diver B survived B's erasure verbatim.
   Harmless while notes never left the shop, and not harmless once `internal_notes.csv` carries them
   out of it — `anonymize.ts` now also redacts note bodies by word-boundary name match, the same
-  handle and the same accepted over-reach `activity_events.message` already used, logged under
+  handle and the same accepted over-reach the `activity_events` sweep already used, logged under
   `internal_note_name`.
 - **`course_inquiries.csv` was empty on every demo** until this change, because nothing seeded a
   lead. `src/db/seed-course-inquiries.ts` now seeds three, one per `person_id` state — linked,
