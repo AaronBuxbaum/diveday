@@ -101,10 +101,9 @@ not say "wrong region" — it says the identity does not exist.
    reputation, and this keeps a bulk-mail problem from affecting the address people actually write to
    you at.
 2. **Request SES production access** (an AWS Support case — CDK cannot do this), in **us-east-2**.
-   SES starts in sandbox mode, which can only send to pre-verified recipient addresses. The first
-   request was refused, in us-east-1; the second is written out below in
-   [Production access: the second request](#production-access-the-second-request) — paste that text,
-   do not improvise a shorter one.
+   SES starts in sandbox mode, which can only send to pre-verified recipient addresses. The case is
+   written out below in [Production access: the request](#production-access-the-request) — paste
+   that text, do not improvise a shorter one.
 3. **Collect the sender credentials.** The deploy already minted them and writes all three target
    dotenv files; take the `SES_AWS_*` lines from `.env.local`:
    ```bash
@@ -218,16 +217,12 @@ not also mail each bounce to `noreply@ses.dive.day`, a mailbox nobody reads. The
 publishes its own reputation metrics beside the account-level ones the two alarms read, so when the
 account rate moves the graph says whether it was DiveDay's mail.
 
-## Production access: the second request
+## Production access: the request
 
-The first request was refused with AWS's standard wording — no reason given, "this decision is
-final". Read that for what it is: the verdict on one case, by one reviewer, against whatever that
-case said. It is not a mark on the account (`aws sesv2 get-account` reports `ProductionAccessEnabled:
-false` and nothing else), and the sandbox is **per region**, so it is not even a verdict on the
-account in every region. Second requests are reviewed like first ones. What decides them is whether
-the reviewer can tick every row of their checklist from the text in front of them — a one-paragraph
-"we send booking confirmations" is the shape that gets refused, and the case below is the shape that
-does not.
+The sandbox is **per region**, and us-east-2 is its own: this is a first request there, against a
+fresh sandbox, judged on its own text. What decides one is whether the reviewer can tick every row
+of their checklist from what is in front of them — a one-paragraph "we send booking confirmations"
+is the shape that gets refused, and the case below is the shape that does not.
 
 ### Before you file
 
@@ -287,18 +282,17 @@ whose first row is the four `CLOUDWATCH_*` variables, a partial set of which is 
 
 In order. Stop at the first that works.
 
-1. **The same case, or a new one naming it.** In the Support Center, reply on the closed case if it
-   still accepts replies; otherwise open a new case — *Account and billing* → *Service* SES →
-   *Category* Sending limits (or the **Request production access** button on the SES console's
-   *Get set up* page, which opens the same kind of case). Choose **Transactional**, website
-   `https://dive.day`, contacts `aaron@dive.day`. Put the whole text below in the case body, with
-   the previous case id filled in. The console form has no free-text field any more; the case it
-   opens does, and the reviewer's follow-up ("please describe your use case in more detail") is
-   where the text goes if the form gave you nowhere.
+1. **A new case, filed in us-east-2.** In the Support Center: *Account and billing* → *Service*
+   SES → *Category* Sending limits (or the **Request production access** button on the SES
+   console's *Get set up* page, switched to us-east-2, which opens the same kind of case). Choose
+   **Transactional**, website `https://dive.day`, contacts `aaron@dive.day`. Put the whole text
+   below in the case body. The console form has no free-text field any more; the case it opens
+   does, and the reviewer's follow-up ("please describe your use case in more detail") is where the
+   text goes if the form gave you nowhere.
 2. **Answer the follow-up inside 48 hours.** The reviewer's questions are the standard set in the
    table after the case text. A case that goes quiet is closed as refused.
-3. **A second region — already done.** The sandbox is per region, and a refusal in one carries no
-   automatic weight in another. Mail moved to **us-east-2**
+3. **Another region.** The sandbox is per region, and a verdict in one carries no automatic weight
+   in another. Mail lives in **us-east-2**
    (ADR [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)),
    so the case below is filed there and nothing of DiveDay's is left in us-east-1 but the uptime
    alarms. Moving again is `SES_REGION` in `config/aws-regions.mjs`, a deploy, the DKIM CNAMEs and
@@ -308,15 +302,15 @@ In order. Stop at the first that works.
    estate that no longer has one ([region-migration.md](region-migration.md)).
 4. **A support plan.** Developer Support ($29/month, cancel after) gives a named human on the case
    who can tell you which row failed; Business Support adds chat. Neither changes the reviewer, but
-   both change "no reason given". Take this before a third attempt, not after.
+   both change "no reason given". Take this before another attempt, not after.
 
 ### The case text
 
-Fill the three bracketed values. Send it whole — the length is the point; the reviewer is looking
-for the rows, and every paragraph is one of them.
+Fill the bracketed values. Send it whole — the length is the point; the reviewer is looking for the
+rows, and every paragraph is one of them.
 
 ```text
-Subject: SES production access for dive.day in us-east-2 (transactional; previous case [PREVIOUS CASE ID])
+Subject: SES production access for dive.day in us-east-2 (transactional)
 
 Who we are
 DiveDay (https://dive.day) is booking and operations software for scuba dive shops: trip scheduling, seat booking, liability waivers, certification checks, boat manifests. It is built and operated by Aaron Buxbaum (aaron@dive.day), a US sole proprietor. The product is pre-launch with [N] pilot dive shops onboarding in [MONTH YEAR]. Our privacy policy (https://dive.day/privacy) names AWS as the processor for email and how long delivery records are kept; our terms are https://dive.day/terms.
@@ -352,8 +346,8 @@ Our SES configuration set publishes BOUNCE, COMPLAINT, DELIVERY, DELIVERY_DELAY,
 Opting out
 Courtesy messages carry List-Unsubscribe and List-Unsubscribe-Post one-click headers and an in-body link; the link never expires, and one click opts the person out permanently. Transactional messages about a booking that exists (confirmation, waiver, reminders, cancellations) do not carry an unsubscribe because they are the service the person bought; nobody receives them without a booking.
 
-Previous request
-Case [PREVIOUS CASE ID], refused on [DATE] without a stated reason. That case was for us-east-1; this request is for us-east-2, where our sending identity now lives, and we are not asking anyone to revisit the earlier decision. Since then we have added the shop's Reply-To address (confirmed by a link sent to it before we use it) and postal footer to our messages, marked every message Auto-Submitted, made a complaint opt the recipient out in our own records, added the reputation alarms above, and tested the bounce and complaint path against the simulator from production. We are happy to answer any question about the above or provide a full sample of any message type.
+Anything else
+We are happy to answer any question about the above, or to provide a full sample of any message type.
 ```
 
 ### The reviewer's follow-up, answered

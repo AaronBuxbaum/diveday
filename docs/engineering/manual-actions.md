@@ -119,7 +119,7 @@ this file is the checklist, not the argument.
 [11] Request SES production access
     when     once per region -- currently us-east-2, before sending to anyone who has not verified their address
     why      A human-reviewed AWS Support case. There is no API, and the sandbox is per region -- which is why the identity moved regions at all: us-east-1 refused, and a refusal in one region carries no weight in another (ADR 20260910-one-region-in-us-east-2).
-    run      Read docs/engineering/ses-email-runbook.md, 'Production access: the second request', and paste its case text.
+    run      Read docs/engineering/ses-email-runbook.md, 'Production access: the request', and paste its case text.
              SES console, switched to us-east-2 -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.
     produces Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.
     verify   aws sesv2 get-account --region us-east-2 --query ProductionAccessEnabled

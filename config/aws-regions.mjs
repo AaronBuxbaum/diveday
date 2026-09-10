@@ -55,7 +55,7 @@ export const PRIMARY_REGION = "us-east-2";
  * of this estate whose region is decided by AWS rather than by us. SES's
  * production-access sandbox is **per region**, AWS refused the us-east-1
  * request with its standard no-reason wording (docs/engineering/ses-email-runbook.md,
- * "Production access: the second request"), and a refusal in one region carries
+ * "Production access: the request"), and a refusal in one region carries
  * no weight in another. That is why the identity is in us-east-2 at all, and it
  * is exactly why the next verdict should be a one-line change here rather than
  * a resurrection of the pull request that moved it the first time.
