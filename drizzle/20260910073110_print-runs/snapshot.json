@@ -1,10 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "0b29a91f-de89-4f7e-986c-30e3eeb42eda",
+  "id": "ee7f706c-fa69-44df-80a6-2a9db905f874",
   "prevIds": [
-    "9596ea10-c9c5-4590-9091-7e5cbd6d9bc2",
-    "a622474f-462a-49ef-bcf7-c68a108860a2"
+    "b9843ed1-7009-4e27-8c2d-fc4db4386adc"
   ],
   "ddl": [
     {
@@ -1283,6 +1282,12 @@
     {
       "isRlsEnabled": false,
       "name": "person_roles",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "person_shelf_tokens",
       "entityType": "tables",
       "schema": "public"
     },
@@ -10974,6 +10979,136 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "token_hash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "issued_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "last_opened_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "opens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "revoked_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
       "table": "pre_departure_check_events"
     },
     {
@@ -14721,6 +14856,19 @@
       "table": "shops"
     },
     {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "public_boat_line",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
       "type": "text",
       "typeSchema": null,
       "notNull": false,
@@ -14924,6 +15072,19 @@
       "generated": null,
       "identity": null,
       "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "show_year_on_diveday",
       "entityType": "columns",
       "schema": "public",
       "table": "shops"
@@ -23276,6 +23437,62 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "token_hash",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "person_shelf_tokens_token_hash_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "revoked_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "person_shelf_tokens_shop_person_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "shop_id",
           "isExpression": false,
           "asc": true,
@@ -29009,6 +29226,40 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
+      "name": "person_shelf_tokens_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "person_shelf_tokens_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "person_shelf_tokens"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
       "name": "pre_departure_check_events_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -32235,6 +32486,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "person_shelf_tokens_pkey",
+      "schema": "public",
+      "table": "person_shelf_tokens",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "pre_departure_check_events_pkey",
       "schema": "public",
       "table": "pre_departure_check_events",
@@ -32867,6 +33128,17 @@
       "name": "person_courtesy_email_unsubscribe_tokens_token_hash_key",
       "schema": "public",
       "table": "person_courtesy_email_unsubscribe_tokens",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "token_hash"
+      ],
+      "nullsNotDistinct": false,
+      "name": "person_shelf_tokens_token_hash_key",
+      "schema": "public",
+      "table": "person_shelf_tokens",
       "entityType": "uniques"
     },
     {
