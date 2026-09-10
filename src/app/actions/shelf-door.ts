@@ -10,6 +10,7 @@ import { bookings, people } from "@/db/schema";
 import { sendShelfLink } from "@/db/shelf-link-send";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { publicSchedulePath } from "@/lib/public-routes";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { SHELF_COOKIE, shelfLinkPath } from "@/lib/shelf-links";
 
@@ -105,15 +106,33 @@ export async function openShelfFromThreadAction(readinessToken: string): Promise
 /**
  * Mail the shelf link to the address on this recap's booking.
  *
- * One outcome word for every refusal, on purpose: a forwarded recap must not
- * become a way to find out whether a diver has an address on file, so "no
- * email", "no such booking" and "the provider refused" all land on the same
- * `?shelf=failed`. Only a genuine hand-off to the provider says `sent`.
+ * **Bounded, and the same answer either way.** A recap link is handed around,
+ * so an unthrottled door here is a way to fill one person's inbox as fast as a
+ * bearer can tap (`RATE_LIMITS.shelfLinkSendByBooking`, 3/hour, keyed on the
+ * booking whose address receives it). And the answer is `sent` for every
+ * outcome that is not the caller's own fault — a spent bucket, no address on
+ * file, a booking that is gone, a provider that refused — because a door that
+ * distinguished them would answer "does this diver have an email with you?" for
+ * whoever the recap reached. Only a token that never verified says `failed`,
+ * and that one is the caller's own URL rather than a fact about anybody.
+ *
+ * The trade is that a diver whose address really is missing is told mail is on
+ * its way and never gets it. That is the same trade `find-my-booking` already
+ * makes for the same reason, and the shop's own record is where the missing
+ * address is visible and fixable.
  */
 export async function mailShelfFromRecapAction(recapToken: string): Promise<void> {
   const back = `/recap/${recapToken}`;
+  const sent = `${back}?shelf=sent`;
   const bookingId = verifyRecapToken(recapToken);
   if (!bookingId) redirect(`${back}?shelf=failed`);
+
+  const bucket = await checkRateLimit(
+    rateLimitKey("shelf-link-send", bookingId),
+    RATE_LIMITS.shelfLinkSendByBooking,
+  );
+  if (!bucket.allowed) redirect(sent);
+
   const db = await getDb();
   const [seat] = await db
     .select({ shopId: bookings.shopId, personId: bookings.personId })
@@ -128,7 +147,7 @@ export async function mailShelfFromRecapAction(recapToken: string): Promise<void
       ),
     )
     .limit(1);
-  if (!seat) redirect(`${back}?shelf=failed`);
-  const outcome = await sendShelfLink(db, { shopId: seat.shopId, personId: seat.personId });
-  redirect(`${back}?shelf=${outcome === "sent" ? "sent" : "failed"}`);
+  if (!seat) redirect(sent);
+  await sendShelfLink(db, { shopId: seat.shopId, personId: seat.personId });
+  redirect(sent);
 }

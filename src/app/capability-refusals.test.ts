@@ -76,6 +76,7 @@ describe("capability routes refuse in place", () => {
       "ready/[token]",
       "recap/[token]",
       "reset-password/[token]",
+      "shelf/[token]",
       "unsubscribe/[token]",
       "verify/[token]",
       "waivers/[token]",

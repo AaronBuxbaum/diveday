@@ -240,8 +240,9 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shelf/[token]": {
-    "e2e": ["shelf.spec.ts"],
-    "visual": ["diver-shelf"]
+    "e2e": ["a11y.spec.ts", "shelf.spec.ts"],
+    "visual": ["diver-shelf"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]": {
     "e2e": [

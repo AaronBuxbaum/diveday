@@ -101,6 +101,12 @@ export const TOKEN_ROUTE_PREFIXES = [
   // day. `rel="noreferrer"` on that anchor is a per-link promise; this is the
   // header that holds for every subresource the page ever grows.
   "board",
+  // The diver's shelf (slice 20t). A year-long capability over one person's
+  // whole file at one shop, on a page that loads the shop's own brand font from
+  // Google Fonts and renders the shop's logo — every one of those is a
+  // subresource request that would carry the token in a `Referer` under the
+  // baseline policy.
+  "shelf",
 ];
 
 export function securityHeaderRules(): ConfigHeaderRule[] {

@@ -939,6 +939,22 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
     await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
     await expectNoA11yViolations(page);
   });
+
+  test("the diver's shelf has no automated a11y violations", async ({ page, request }) => {
+    test.setTimeout(60_000);
+    // Two labelled text forms inside one card, a definition list of standing
+    // facts, and a horizontally scrolling rail — none of which any other scan
+    // in this file covers. Minted through `/api/test/seed-shelf-token`, the
+    // same door the shelf spec and the visual suite use.
+    const seeded = await request.post("/api/test/seed-shelf-token", {
+      data: { shopSlug: "blue-mantis", email: "priya.sharma@example.com" },
+    });
+    expect(seeded.ok()).toBe(true);
+    const { href } = (await seeded.json()) as { href: string };
+    await page.goto(href);
+    await expect(page.getByRole("heading", { name: "Your shelf" })).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
 });
 
 /**

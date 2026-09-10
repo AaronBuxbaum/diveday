@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -14,6 +14,7 @@ import { bookings, shops, trips } from "@/db/schema";
 import { liveTrip } from "@/db/trips-live";
 import { savePersonEmergencyContact } from "@/db/waivers";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { handoffHref } from "@/lib/booking-handoff";
 import { publicTripPath } from "@/lib/public-routes";
 import {
   SHELF_COOKIE,
@@ -132,12 +133,33 @@ export async function saveShelfSizesAction(token: string, formData: FormData): P
   redirect(`${shelfBase(token)}?saved=sizes`);
 }
 
-const contactSchema = z.object({
-  emergencyContactName: z.string().trim().max(120),
-  emergencyContactPhone: z.string().trim().max(40),
-});
+/**
+ * The same two bounds the staff record's own form holds this field to
+ * (`personSchema`, `src/app/shop/[shopSlug]/divers/[personId]/actions.ts`) —
+ * one column, one shape, whoever is typing into it.
+ *
+ * The refinement is this form's own: a submission with both boxes empty is
+ * refused **here**, at the boundary, rather than reaching a writer that would
+ * decline it anyway. A field a diver can neither fill nor clear is a form that
+ * answers "nothing happened" with a red line, and stating the rule where the
+ * shape is stated is what stops the next reader inferring it from a `return
+ * false` two modules away.
+ */
+const contactSchema = z
+  .object({
+    emergencyContactName: z.string().trim().max(120),
+    emergencyContactPhone: z.string().trim().max(40),
+  })
+  .refine((value) => value.emergencyContactName || value.emergencyContactPhone);
 
-/** The diver's own emergency contact, on their own record. */
+/**
+ * The diver's own emergency contact, on their own record.
+ *
+ * **Both ids come from the verified token**, like every action in this file —
+ * the form carries neither, so a forged body cannot name somebody else's
+ * record — and `savePersonEmergencyContact` filters on the pair again before it
+ * writes, which is what stops a person id from one shop landing on another's.
+ */
 export async function saveShelfEmergencyContactAction(
   token: string,
   formData: FormData,
@@ -243,18 +265,25 @@ export async function openSameBoatAction(token: string, tripId: string): Promise
         ne(bookings.status, "cancelled"),
       ),
     )
-    .orderBy(trips.startsAt)
+    // The **most recent** seat, not the oldest: `readKnownDiver` resolves the
+    // person from the booking and reads their contact fields off `people`, so
+    // any seat would do — but a handoff minted off a diver's first-ever visit
+    // is the wrong row to be minting credentials from three seasons later.
+    .orderBy(desc(trips.startsAt))
     .limit(1);
 
-  const path = `${publicTripPath(shop.slug, trip.id)}#book`;
-  if (!seat) redirect(path);
+  const tripPath = publicTripPath(shop.slug, trip.id);
+  if (!seat) redirect(`${tripPath}#book`);
   const handoff = await issueBookingHandoff(ctx.db, {
     shopId: ctx.shopId,
     bookingId: seat.id,
   });
-  redirect(
-    handoff
-      ? `${publicTripPath(shop.slug, trip.id)}?handoff=${encodeURIComponent(handoff.token)}#book`
-      : path,
-  );
+  // **`handoffHref`, never a hand-built query string.** What travels is a
+  // ten-minute, single-use, opaque capability — never the diver's email or
+  // phone, which the trip page resolves server-side from it (`readKnownDiver`).
+  // Going through the one builder is what keeps that parameter named
+  // `HANDOFF_QUERY_PARAM`, which is the name `src/lib/capability-urls.ts`
+  // redacts from every log and beacon; a second spelling would travel
+  // unredacted.
+  redirect(handoff ? `${handoffHref(tripPath, handoff.token)}#book` : `${tripPath}#book`);
 }

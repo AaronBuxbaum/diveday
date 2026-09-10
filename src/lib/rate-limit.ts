@@ -587,6 +587,26 @@ export const RATE_LIMITS = {
    */
   readinessLinkResendByBooking: perHour(5),
   /**
+   * The shelf link, asked for from the **recap** (slice 20t).
+   *
+   * Tighter than its two siblings above, and the reason is who can reach it. A
+   * recap link is signed for 180 days, cannot be revoked, and is written to be
+   * forwarded — the page it sits on has a "share with a buddy" control. So the
+   * bearer of that link is not reliably the diver, and the door mails the
+   * address on the booking: without a bucket it is a way to send one person as
+   * much mail as an attacker can tap, from a link they were handed rather than
+   * one they had to guess.
+   *
+   * Three an hour is past any honest use (a diver asks once, and once more when
+   * the first went to spam) and far under a flood. **An empty bucket answers
+   * exactly as a successful send does** — see `mailShelfFromRecapAction` — so
+   * the door cannot be read as an oracle for whether an address is on file.
+   *
+   * The thread's own door needs no bucket: it mints and navigates rather than
+   * sending, so there is no inbox to fill.
+   */
+  shelfLinkSendByBooking: perHour(3),
+  /**
    * Core Web Vitals beacons to `/api/vitals`, per IP.
    *
    * Public and unauthenticated by necessity — the report comes from a diver's

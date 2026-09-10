@@ -76,6 +76,7 @@ export type RetainedTable =
   | "notification_delivery_attempts"
   | "activity_events"
   | "account_tokens"
+  | "person_shelf_tokens"
   | "shop_contact_email_confirmation_tokens"
   | "booking_payment_events"
   | "push_subscriptions"
@@ -149,6 +150,27 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * live token is never pruned regardless of age.
    */
   account_tokens: 90,
+  /**
+   * 90 days past the day a shelf link stopped working, matching
+   * `account_tokens` — the same shape of row and the same reasoning.
+   *
+   * A dead shelf token is a hashed bearer credential over a person's own file
+   * plus two counters (`opens`, `last_opened_at`). Those counters are the
+   * shop's answer to "how many phones hold this, and when was it last used",
+   * which is the detection surface for a link that reached somebody it should
+   * not have — so they are worth keeping past the link's death, and worth
+   * keeping only as long as that question is still being asked. Ninety days is
+   * an incident review, not an archive.
+   *
+   * **A live link is never eligible.** The arm measures from the later of
+   * `expires_at` and `revoked_at` (`src/db/retention.ts`), so a link that is
+   * still working keeps its counters however old it is, and a link erasure
+   * revoked today starts its ninety days today rather than having already
+   * served them. Erasure itself is unaffected either way: `anonymizeDiver`
+   * revokes the row, and nothing on it identifies a person once `people` is
+   * scrubbed.
+   */
+  person_shelf_tokens: 90,
   /**
    * The same 90 days past `expires_at` as `account_tokens`, for the same shape
    * of row: a hashed one-time link (issue #1288) that is dead the moment it is

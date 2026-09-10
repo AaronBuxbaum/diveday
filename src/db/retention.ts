@@ -1,4 +1,4 @@
-import { inArray, lt } from "drizzle-orm";
+import { inArray, lt, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -18,6 +18,7 @@ import {
   integrationOauthStates,
   notificationDeliveries,
   notificationDeliveryAttempts,
+  personShelfTokens,
   pushSubscriptions,
   shopContactEmailConfirmationTokens,
   staffReplies,
@@ -228,6 +229,34 @@ export async function pruneExpiredRecords(
           .where(lt(accountTokens.expiresAt, cutoff("account_tokens")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(accountTokens).where(inArray(accountTokens.id, ids)),
+    ),
+  );
+
+  // The diver's shelf link, once it has stopped working (slice 20t).
+  //
+  // **The later of the two deaths**, which is the only correct clock for a row
+  // that can die twice. A link revoked today has an `expires_at` up to a year
+  // out, so measuring from expiry alone would keep a dead credential's counters
+  // for a year past the revocation; measuring from `revoked_at` alone would
+  // prune a link that simply ran out of time and was never revoked at all,
+  // because that column is null. `greatest` with `expires_at` as the floor
+  // answers both, and a live link — unrevoked, unexpired — is never eligible
+  // under either.
+  outcomes.push(
+    await pruneBatch(
+      "person_shelf_tokens",
+      () =>
+        db
+          .select({ id: personShelfTokens.id })
+          .from(personShelfTokens)
+          .where(
+            lt(
+              sql`greatest(${personShelfTokens.expiresAt}, coalesce(${personShelfTokens.revokedAt}, ${personShelfTokens.expiresAt}))`,
+              cutoff("person_shelf_tokens"),
+            ),
+          )
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(personShelfTokens).where(inArray(personShelfTokens.id, ids)),
     ),
   );
 
