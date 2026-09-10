@@ -1078,7 +1078,7 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
       shopId: s.user.shopId,
       tripId,
       actorPersonId: s.user.personId,
-      action: `removed ${removedName} from the trip`,
+      entry: { code: "booking_removed", diver: removedName },
     });
   }
   // Freeing the seat is roster work any staff member does, but moving money is
@@ -1141,7 +1141,7 @@ export async function undoRemoveBookingAction(
         shopId: s.user.shopId,
         tripId,
         actorPersonId: s.user.personId,
-        action: `put ${restoredName} back on the trip`,
+        entry: { code: "booking_restored", diver: restoredName },
       });
     }
   }
@@ -1516,10 +1516,10 @@ export async function updateTripCrewAction(
         shopId: s.user.shopId,
         tripId,
         actorPersonId: s.user.personId,
-        action:
+        entry:
           change.operation === "assign"
-            ? `assigned ${person.fullName} to crew`
-            : `removed ${person.fullName} from crew`,
+            ? { code: "crew_assigned", crew: person.fullName }
+            : { code: "crew_removed", crew: person.fullName },
       });
     }
     revalidatePath(shopPath(shopSlug));

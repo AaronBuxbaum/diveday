@@ -144,7 +144,8 @@ describe("diver record merge", () => {
       bookingId: booking.id,
       actorPersonId: owner.id,
       subjectPersonId: source.id,
-      message: "A note was added.",
+      code: "note_added",
+      params: { actor: "Owner", diver: "Source Diver" },
       occurredAt: new Date("2026-08-25T00:00:00.000Z"),
     });
     // The diver's own private word about the day (D40). It is theirs, not the

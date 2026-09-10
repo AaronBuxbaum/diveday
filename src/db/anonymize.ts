@@ -49,6 +49,7 @@
  */
 
 import { and, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm";
+import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -217,9 +218,15 @@ const WORD_CHAR = /[\p{L}\p{N}_]/u;
 const REGEX_METACHARACTERS = /[\\^$.|?*+()[\]{}]/g;
 
 /**
- * A **word-boundary**, case-insensitive match of the stored name against an
- * activity message, or `undefined` when the name is too short to be used as a
- * handle at all (see {@link MIN_NAME_MATCH_CHARS}).
+ * A **word-boundary**, case-insensitive match of the stored name against the
+ * names an activity row carries, or `undefined` when the name is too short to
+ * be used as a handle at all (see {@link MIN_NAME_MATCH_CHARS}).
+ *
+ * Matched against `params` as text rather than against a sentence: since issue
+ * #1655 a row holds a code and the names its sentence needs, so the names are
+ * the only free text left on the table and this pattern has *less* to
+ * over-reach into than it did. The JSON punctuation around each value is not a
+ * word character, so the `\y` anchors land exactly where they did before.
  *
  * Deliberately not a substring (`ILIKE '%name%'`) match: a substring pattern
  * built from a two-character name — `Al`, `An`, `Ed` — matches inside `Dana`,
@@ -239,7 +246,7 @@ function activityMessageNameMatch(fullName: string) {
   const first = trimmed[0] ?? "";
   const last = trimmed[trimmed.length - 1] ?? "";
   const pattern = `${WORD_CHAR.test(first) ? "\\y" : ""}${escaped}${WORD_CHAR.test(last) ? "\\y" : ""}`;
-  return sql`${activityEvents.message} ~* ${pattern}`;
+  return sql`${activityEvents.params}::text ~* ${pattern}`;
 }
 
 /**
@@ -1063,9 +1070,13 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
 
   // --- activity events -----------------------------------------------------
   // Append-only operational history: the row (who did it, when, on which trip)
-  // is the shop's record of its own work and stays; the human-language message
-  // names people and goes. `message` carries a non-blank check, so it is
-  // redacted rather than cleared.
+  // is the shop's record of its own work and stays; the names it carries go.
+  // Since issue #1655 that is a `code` and a `params` payload rather than a
+  // sentence, and both are replaced at once by `ACTIVITY_REDACTED` — the line
+  // then reads `[redacted]` exactly as it did when the sentence was the column,
+  // and in the reader's own language. Rewriting the payload alone would have
+  // left the verb standing, which is more history than an erasure should leave
+  // behind on a person's own record.
   //
   // Two statements, because the exact handles are not enough on their own. The
   // first sweeps by booking, by actor and by subject: everything attached to a
@@ -1076,11 +1087,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // legible on a record after an erasure had run.
   //
   // The name-scoped statement after it stays, for what none of the three exact
-  // handles can reach: any message that names the diver while hanging off
-  // another person's seat or none at all. It used to be the *only* handle on a
+  // handles can reach: any row naming the diver while hanging off another
+  // person's seat or none at all. It used to be the *only* handle on a
   // record-scoped note, whose subject lived solely inside the message text
   // ("… added a private note about Nora Quinn"); `subject_person_id` now carries
   // that outright, so the fuzzy pass is a backstop rather than the mechanism.
+  //
+  // The name match now reads `params`, which holds only names — so the pattern
+  // has less to over-reach into than it did against a whole sentence, and the
+  // hazard it guards against is unchanged.
   //
   // The name match is bounded to whole words (`activityMessageNameMatch`) and
   // is skipped entirely below MIN_NAME_MATCH_CHARS. A substring match is not
@@ -1094,7 +1109,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // someone asked to have forgotten — but it is a line, not the log.
   await tx
     .update(activityEvents)
-    .set({ message: REDACTED_TEXT })
+    .set(ACTIVITY_REDACTED)
     .where(
       and(
         eq(activityEvents.shopId, shopId),
@@ -1113,12 +1128,12 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   if (nameMatch) {
     const byName = await tx
       .update(activityEvents)
-      .set({ message: REDACTED_TEXT })
+      .set(ACTIVITY_REDACTED)
       .where(
         and(
           eq(activityEvents.shopId, shopId),
           nameMatch,
-          ne(activityEvents.message, REDACTED_TEXT),
+          ne(activityEvents.code, ACTIVITY_REDACTED.code),
         ),
       )
       .returning({ id: activityEvents.id });

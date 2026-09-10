@@ -174,7 +174,6 @@ async function recordSupportNeedsChange(
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1);
   if (!diver) return;
-  const verb = input.emptied ? "cleared" : "updated";
   if (input.actor.kind === "staff") {
     const [actor] = await tx
       .select({ name: people.fullName })
@@ -191,9 +190,8 @@ async function recordSupportNeedsChange(
       bookingId: null,
       actorPersonId: input.actor.personId,
       subjectPersonId: input.personId,
-      // i18n-exempt: an activity-trail line, stored as written like every
-      // other row in this table; it is staff-facing history, not UI copy.
-      message: `${actor.name} ${verb} what to set up for ${diver.name}'s dives`,
+      code: input.emptied ? "support_needs_cleared" : "support_needs_updated",
+      params: { actor: actor.name, diver: diver.name, self: "no" },
       occurredAt: nowDate(),
     });
     return;
@@ -208,8 +206,10 @@ async function recordSupportNeedsChange(
     // written on (`pagedDiverActivity`).
     actorPersonId: input.personId,
     subjectPersonId: input.personId,
-    // i18n-exempt: see above.
-    message: `${diver.name} ${verb} what to set up for their dives`,
+    code: input.emptied ? "support_needs_cleared" : "support_needs_updated",
+    // The diver wrote it on their own page, so the sentence says "their dives"
+    // rather than naming them twice; `self` is what the bundle selects on.
+    params: { actor: diver.name, diver: diver.name, self: "yes" },
     occurredAt: nowDate(),
   });
 }

@@ -1,7 +1,8 @@
-import { ActivityLog, type ActivityLogEntry } from "@/components/ActivityLog";
+import { ActivityLog } from "@/components/ActivityLog";
 import { Pager } from "@/components/Pager";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { OffsetPage } from "@/db/paging";
+import { activityLine } from "@/i18n/activity-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
 
@@ -28,7 +29,7 @@ export function ActivitySection({
   timezone,
   t,
 }: {
-  page: OffsetPage<ActivityLogEntry>;
+  page: OffsetPage<{ id: string; code: string; params: unknown; occurredAt: Date }>;
   shopSlug: string;
   personId: string;
   locale: string;
@@ -51,7 +52,11 @@ export function ActivitySection({
     >
       <div className="mt-3">
         <ActivityLog
-          events={page.rows}
+          events={page.rows.map((event) => ({
+            id: event.id,
+            message: activityLine(t, event),
+            occurredAt: event.occurredAt,
+          }))}
           locale={locale}
           timeZone={timezone}
           emptyText={t("divers.activity.empty")}

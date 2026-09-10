@@ -10,12 +10,13 @@ export type ActivityLogEntry = { id: string; message: string; occurredAt: Date }
 /**
  * The shop's own account of what has been done, rendered the one way.
  *
- * `message` is printed **verbatim and never translated**: it is a record of
- * something a person did, written by `recordTripActivity` and its siblings as a
- * name interpolated into a sentence ("Marisol Vega moved the second dive to
- * French Reef"). A label the product chose would come from a bundle; this is
- * the shop talking to itself, and the only thing this component picks words for
- * is the empty state, which its caller passes in already translated.
+ * `message` arrives **already in the reader's language**. A row holds a code
+ * and the names its sentence needs (`src/lib/activity.ts`), and the Server
+ * Component above this one turns the pair into words through
+ * `src/i18n/activity-labels.ts` — the staff bundle never crosses to the client,
+ * so the resolution cannot happen here. Until issue #1655 the sentence was
+ * built in `src/db` and printed verbatim, which meant a Spanish-speaking shop
+ * read its own history in English all day.
  *
  * An erased diver's lines already read `[redacted]` in the table, rewritten
  * inside the erasure transaction (`src/db/anonymize.ts`) — there is no

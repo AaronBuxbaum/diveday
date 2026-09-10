@@ -1236,8 +1236,8 @@ describe("full-shop export dataset", () => {
       shopId: shop.id,
       tripId: trip.id,
       actorPersonId: owner.id,
-      // i18n-exempt: a seeded activity-trail fixture, stored verbatim
-      message: "Erasable Esme checked in at the desk",
+      code: "counter_check_in",
+      params: { diver: "Erasable Esme" },
     });
     await db.insert(courseInquiries).values({
       shopId: shop.id,

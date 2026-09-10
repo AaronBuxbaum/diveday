@@ -391,7 +391,8 @@ describe("deleteDemoShopCascade", () => {
     await db.insert(activityEvents).values({
       shopId: shop.id,
       actorPersonId: person.id,
-      message: "Seated a walk-in at the counter",
+      code: "seat_added_walk_in",
+      params: { actor: person.fullName, diver: person.fullName },
     });
 
     // No FK violation here is the real assertion.

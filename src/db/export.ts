@@ -3030,7 +3030,8 @@ export async function loadShopExportBundleInput(
             "actor_name",
             "subject_person_id",
             "subject_name",
-            "message",
+            "code",
+            "params",
             "occurred_at",
           ],
           rows: activityRows.map((row) => [
@@ -3043,7 +3044,13 @@ export async function loadShopExportBundleInput(
             personName.get(row.actorPersonId),
             row.subjectPersonId,
             row.subjectPersonId ? personName.get(row.subjectPersonId) : null,
-            row.message,
+            row.code,
+            // The names the line's sentence needs, as JSON. Not a rendered
+            // sentence: picking words is the reader's job and needs a locale
+            // this layer deliberately does not have (`.claude/rules/domain.md`),
+            // and a code plus its names is the more useful thing to hand a
+            // spreadsheet anyway.
+            JSON.stringify(row.params),
             row.occurredAt,
           ]),
           note: EXPORT_FILE_NOTES["activity_events.csv"],

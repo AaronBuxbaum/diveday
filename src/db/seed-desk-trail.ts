@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import type { ActivityCode } from "@/lib/activity";
 import type { DbExecutor } from "./client";
 import { activityEvents, type bookings, internalNotes, people, type trips } from "./schema";
 import { at } from "./seed-clock";
@@ -21,13 +22,16 @@ import { at } from "./seed-clock";
  * readiness counts and head counts are untouched by every row here. The live
  * manifest displays notes as crew context, but never uses them as a gate.
  *
- * The wording is the shop talking to itself in its own language, exactly as
- * `addInternalNote` and `recordTripActivity` store it — a name interpolated
- * into a sentence, never a translated string. That is the same shape the live
- * writers use (`${actor.name} added a private note about ${diver.name}`), and
- * it is why these rows are seeded content rather than copy: the UI renders
- * `event.message` verbatim because it is a record of something a person did,
- * not a label the product chose.
+ * Activity rows are seeded exactly as `addInternalNote` and
+ * `recordTripActivity` store them — a code from `src/lib/activity.ts` and the
+ * names its sentence needs — so the demo's trail is rendered by the same path
+ * a real shop's is, in whichever language the reader has chosen (issue #1655).
+ * Four of these lines are work a dive shop does at a desk and DiveDay does not
+ * record for itself; they carry `demo_` codes, and nothing in `src/app` writes
+ * them.
+ *
+ * Note **bodies** stay free text, because they are: a note is what a staffer
+ * typed, and the product never chose those words.
  */
 
 /**
@@ -63,20 +67,20 @@ const NOTE_PLANS: {
   },
 ];
 
-/** What has been done to the boat. */
-const ACTIVITY_PLANS: { daysAgo: number; hour: number; line: (actor: string) => string }[] = [
-  { daysAgo: 4, hour: 9, line: (actor) => `${actor} confirmed the charter with the captain` },
-  {
-    daysAgo: 2,
-    hour: 14,
-    line: (actor) => `${actor} moved the second dive to French Reef for the swell`,
-  },
-  { daysAgo: 1, hour: 15, line: (actor) => `${actor} checked the tank count against the roster` },
-  {
-    daysAgo: 1,
-    hour: 18,
-    line: (actor) => `${actor} briefed the crew on the two course students aboard`,
-  },
+/**
+ * What has been done to the boat.
+ *
+ * Codes, like every other row on this table since issue #1655 — the demo is the
+ * surface an evaluating shop reads all day, and a Spanish-speaking one should
+ * not have to read its trail in English to decide whether to buy. The sentences
+ * live in the `activity` staff namespace beside the product's own, under
+ * `demo_` names, and nothing in `src/app` writes them.
+ */
+const ACTIVITY_PLANS: { daysAgo: number; hour: number; code: ActivityCode }[] = [
+  { daysAgo: 4, hour: 9, code: "demo_charter_confirmed" },
+  { daysAgo: 2, hour: 14, code: "demo_second_dive_moved" },
+  { daysAgo: 1, hour: 15, code: "demo_tanks_counted" },
+  { daysAgo: 1, hour: 18, code: "demo_crew_briefed" },
 ];
 
 export async function seedDeskTrail(
@@ -130,7 +134,8 @@ export async function seedDeskTrail(
     tripId: ctx.trip.id,
     bookingId: note.bookingId,
     actorPersonId: actor.id,
-    message: `${actor.fullName} added a private note about ${diverName(note.personId)}`,
+    code: "note_added" as const,
+    params: { actor: actor.fullName, diver: diverName(note.personId) ?? "" },
     occurredAt: note.createdAt,
   }));
   const tripEvents = ACTIVITY_PLANS.map((plan, index) => ({
@@ -138,7 +143,8 @@ export async function seedDeskTrail(
     tripId: ctx.trip.id,
     bookingId: null,
     actorPersonId: actor.id,
-    message: plan.line(actor.fullName),
+    code: plan.code,
+    params: { actor: actor.fullName },
     occurredAt: at(-plan.daysAgo, plan.hour, (index * 17) % 60),
   }));
   const events = [...noteEvents, ...tripEvents].sort(

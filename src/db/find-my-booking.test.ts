@@ -273,7 +273,7 @@ describe("sendFindMyBookingLinks", () => {
       .from(activityEvents)
       .where(and(eq(activityEvents.shopId, shop.id), eq(activityEvents.tripId, trip.id)));
     const line = events.find((event) => event.actorPersonId === booking?.personId);
-    expect(line?.message).toContain("requested a fresh link");
+    expect(line?.code).toBe("booking_link_requested");
   });
 
   /**

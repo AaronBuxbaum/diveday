@@ -2880,7 +2880,7 @@ export const internalNotes = pgTable(
   ],
 );
 
-/** Append-only, staff-facing account of operational work in human language. */
+/** Append-only, staff-facing account of operational work, as codes and names. */
 export const activityEvents = pgTable(
   "activity_events",
   {
@@ -2913,7 +2913,33 @@ export const activityEvents = pgTable(
      * functions happening to agree.
      */
     subjectPersonId: uuid("subject_person_id").references(() => people.id),
-    message: text("message").notNull(),
+    /**
+     * **What happened**, as a code from `src/lib/activity.ts` — never a
+     * sentence.
+     *
+     * This column used to be `message`, holding English built in `src/db` and
+     * printed verbatim, so a shop's whole trail read English whatever language
+     * its staff had chosen; the guard that forbids prose in the data layer
+     * could not see it, because every one of those sentences interpolated a
+     * name (issue #1655). The words now live in the `activity` staff namespace
+     * and are picked in `src/i18n/activity-labels.ts`.
+     *
+     * `text` rather than an enum deliberately: the set is closed by a
+     * TypeScript union and a test that holds it against both bundles, and a new
+     * line of history should not cost a migration. `isActivityCode` is what a
+     * reader checks it with.
+     */
+    code: text("code").notNull(),
+    /**
+     * The **names** the code's sentence needs, as recorded at the time.
+     *
+     * Names rather than ids, because the trail is history: a line saying who
+     * did what in March keeps saying it after somebody is renamed. That is also
+     * why erasure reaches in here — `anonymizeDiver` rewrites the whole row to
+     * `ACTIVITY_REDACTED` rather than editing the payload, and its fuzzy name
+     * sweep matches against this column's text.
+     */
+    params: jsonb("params").$type<Record<string, string>>().notNull().default({}),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
     /**
      * The order these were written in, for reading a trail whose timestamps tie.
@@ -2939,7 +2965,7 @@ export const activityEvents = pgTable(
       table.subjectPersonId,
       table.occurredAt,
     ),
-    check("activity_events_message_not_blank", sql`length(trim(${table.message})) > 0`),
+    check("activity_events_code_not_blank", sql`length(trim(${table.code})) > 0`),
   ],
 );
 

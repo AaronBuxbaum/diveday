@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT } from "@/lib/anonymization";
 import { nowDate, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
@@ -957,7 +958,8 @@ describe("diver erasure", () => {
         tripId: trip.id,
         bookingId,
         actorPersonId: captainId,
-        message: "Sal checked Erasure Elena in at the dock",
+        code: "counter_check_in",
+        params: { diver: "Erasure Elena" },
         occurredAt: erasureNow,
       },
       // A note attached to the *diver* rather than a booking writes an event
@@ -968,7 +970,8 @@ describe("diver erasure", () => {
         tripId: trip.id,
         bookingId: null,
         actorPersonId: ownerId,
-        message: "Dana Reyes added a private note about Erasure Elena",
+        code: "note_added",
+        params: { actor: "Dana Reyes", diver: "Erasure Elena" },
         occurredAt: erasureNow,
       },
     ]);
@@ -1305,8 +1308,10 @@ describe("diver erasure", () => {
     // Both the booking-scoped event and the diver-scoped one with a null
     // booking_id — the latter is only reachable by matching the stored name.
     const events = await db.select().from(activityEvents).where(eq(activityEvents.shopId, shop.id));
-    expect(events.filter((row) => row.message === REDACTED_TEXT)).toHaveLength(2);
-    expect(events.filter((row) => row.message.includes("Erasure Elena"))).toEqual([]);
+    expect(events.filter((row) => row.code === ACTIVITY_REDACTED.code)).toHaveLength(2);
+    expect(
+      events.filter((row) => Object.values(row.params).some((v) => v.includes("Erasure Elena"))),
+    ).toEqual([]);
 
     const [rollCall] = await db
       .select()
@@ -1941,40 +1946,47 @@ describe("diver erasure", () => {
   });
 
   describe("the activity-log name match", () => {
-    async function shopWithHistory(fullName: string, messages: string[]) {
+    // Since #1655 the names are the only free text on the table, so the fuzzy
+    // sweep matches `params` rather than a sentence. Each line here is written
+    // as the names it carries; the code is the same for all of them because
+    // what is under test is the *pattern*, not which sentence it lands on.
+    async function shopWithHistory(fullName: string, lines: Record<string, string>[]) {
       const { db, shop } = ctx;
       const ownerId = await personIdByName(db, shop.id, "Dana Reyes");
       const captainId = await personIdByName(db, shop.id, "Sal Moretti");
       const diver = await createDiver(db, { shopId: shop.id, fullName });
       if (!diver) throw new Error("diver insert failed");
       await db.insert(activityEvents).values(
-        messages.map((message) => ({
+        lines.map((params) => ({
           shopId: shop.id,
           bookingId: null,
           // Attributed to staff, never to the erased diver — the actor sweep is
           // exact and would redact these for reasons that have nothing to do
           // with the name match under test.
           actorPersonId: captainId,
-          message,
+          code: "note_added" as const,
+          params,
           occurredAt: erasureNow,
         })),
       );
       return { db, shop, diver, ownerId };
     }
 
-    async function messagesIn(db: AppDb, shopId: string) {
+    async function linesIn(db: AppDb, shopId: string) {
       const rows = await db
-        .select({ message: activityEvents.message })
+        .select({ code: activityEvents.code, params: activityEvents.params })
         .from(activityEvents)
         .where(eq(activityEvents.shopId, shopId));
-      return rows.map((row) => row.message);
+      return rows;
     }
 
     it("does not let a two-character name redact the shop's unrelated history", async () => {
+      // Every one of these names contains `al` as a substring: an unanchored
+      // pattern built from a two-character name would take the lot.
       const history = [
-        "Dana Reyes moved the manifest for the Alligator Reef charter",
-        "Sal Moretti changed the roll call and credited a deposit",
-        "Priya Sharma boarded early",
+        { actor: "Dana Reyes", diver: "Alligator Reef Charter" },
+        { actor: "Sal Moretti", diver: "Calla Nyberg" },
+        { actor: "Priya Sharma", diver: "Marisol Vega" },
       ];
       const { db, shop, diver, ownerId } = await shopWithHistory("Al", history);
 
@@ -1985,16 +1997,17 @@ describe("diver erasure", () => {
       });
       if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
 
-      // Every one of these contains `al` as a substring. Not one is touched.
-      const after = await messagesIn(db, shop.id);
-      for (const message of history) expect(after).toContain(message);
-      expect(after).not.toContain(REDACTED_TEXT);
+      // Not one is touched.
+      const after = await linesIn(db, shop.id);
+      for (const params of history) expect(after).toContainEqual({ code: "note_added", params });
+      expect(after.some((row) => row.code === ACTIVITY_REDACTED.code)).toBe(false);
     });
 
     it("matches a name at whole-word boundaries only", async () => {
+      const untouched = { actor: "Dana Reyes", diver: "Marisol Vega" };
       const { db, shop, diver, ownerId } = await shopWithHistory("Ana", [
-        "Dana Reyes updated the manifest",
-        "Sal Moretti added a private note about Ana",
+        untouched,
+        { actor: "Sal Moretti", diver: "Ana" },
       ]);
 
       const result = await anonymizeDiver(db, {
@@ -2004,12 +2017,12 @@ describe("diver erasure", () => {
       });
       if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
 
-      const after = await messagesIn(db, shop.id);
-      // The diver-scoped note (null booking_id, no person link) is reached…
-      expect(after).toContain(REDACTED_TEXT);
-      expect(after.some((message) => message.includes("about Ana"))).toBe(false);
+      const after = await linesIn(db, shop.id);
+      // The diver-scoped line (null booking_id, no person link) is reached…
+      expect(after.some((row) => row.code === ACTIVITY_REDACTED.code)).toBe(true);
+      expect(after.some((row) => Object.values(row.params).includes("Ana"))).toBe(false);
       // …and `Dana` is not `Ana`.
-      expect(after).toContain("Dana Reyes updated the manifest");
+      expect(after).toContainEqual({ code: "note_added", params: untouched });
     });
   });
 

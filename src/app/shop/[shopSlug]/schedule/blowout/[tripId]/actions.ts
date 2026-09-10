@@ -52,7 +52,7 @@ export async function callBlowoutAction(shopSlug: string, tripId: string) {
       shopId: s.user.shopId,
       tripId,
       actorPersonId: s.user.personId,
-      action: "called a weather blow-out",
+      entry: { code: "blowout_called" },
     });
   }
   refreshBlowoutSurfaces(shopSlug, tripId);

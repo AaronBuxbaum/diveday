@@ -149,7 +149,11 @@ describe("the support-needs record", () => {
     const { db, shopId, personId } = await aDiver();
     const trail = async () =>
       await db
-        .select({ message: activityEvents.message, actor: activityEvents.actorPersonId })
+        .select({
+          code: activityEvents.code,
+          params: activityEvents.params,
+          actor: activityEvents.actorPersonId,
+        })
         .from(activityEvents)
         .where(and(eq(activityEvents.shopId, shopId), eq(activityEvents.subjectPersonId, personId)))
         .orderBy(asc(activityEvents.seq));
@@ -157,7 +161,8 @@ describe("the support-needs record", () => {
     await saveSupportNeeds(db, { shopId, personId, actor: DIVER, ...STATED });
     expect(await trail()).toEqual([
       {
-        message: expect.stringContaining("updated what to set up for their dives"),
+        code: "support_needs_updated",
+        params: expect.objectContaining({ self: "yes" }),
         actor: personId,
       },
     ]);
@@ -168,12 +173,15 @@ describe("the support-needs record", () => {
     await saveSupportNeeds(db, { shopId, personId, actor: DIVER, ...NONE });
     const afterClear = await trail();
     expect(afterClear).toHaveLength(2);
-    expect(afterClear[1]?.message).toContain("cleared what to set up for their dives");
+    expect(afterClear[1]).toMatchObject({
+      code: "support_needs_cleared",
+      params: expect.objectContaining({ self: "yes" }),
+    });
 
     // Emptying an already-empty record is not a clearing: there was nothing to
     // lose, so the line must not claim something went.
     await saveSupportNeeds(db, { shopId, personId, actor: DIVER, ...NONE });
-    expect((await trail())[2]?.message).toContain("updated what to set up for their dives");
+    expect((await trail())[2]?.code).toBe("support_needs_updated");
 
     // Staff taking it over the phone are named as the author, and the diver
     // stays the subject — which is what makes the two distinguishable later.
@@ -192,10 +200,14 @@ describe("the support-needs record", () => {
     const afterStaff = await trail();
     expect(afterStaff).toHaveLength(4);
     expect(afterStaff[3]?.actor).toBe(staff.id);
+    expect(afterStaff[3]?.params).toMatchObject({ self: "no" });
 
-    // And nothing the diver arranged is copied onto the trail.
-    for (const { message } of afterStaff) {
-      expect(message).not.toMatch(/webbed gloves|Marisol|hoist|lift|briefing/i);
+    // And nothing the diver arranged is copied onto the trail. The row carries
+    // names and a code, so this reads every value it does carry.
+    for (const { params } of afterStaff) {
+      for (const value of Object.values(params)) {
+        expect(value).not.toMatch(/webbed gloves|hoist|lift|briefing/i);
+      }
     }
   });
 
