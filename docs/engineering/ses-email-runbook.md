@@ -436,7 +436,7 @@ it lands on the diver's record and in the shop's inbox at `/shop/<slug>/inbox`
 (ADR [20260907-two-way-inbox](../architecture/decisions/20260907-two-way-inbox.md)). The path is
 SES receipt rule → S3 → SNS → `POST {APP_HOST}/api/webhooks/email-inbound`.
 
-**What the stack creates** (`infra/lib/infra-stack.ts` S8b): the private inbound bucket
+**What the stack creates** (`infra/lib/email-stack.ts`): the private inbound bucket
 (`diveday-inbound-mail`, objects expire after 30 days), the `diveday-ses-inbound-mail` topic with
 the webhook subscribed, and the `diveday-inbound` receipt rule set with one rule — recipients
 `inbound.ses.dive.day`, spam and virus scan on, action *store to S3 and notify the topic*. The
@@ -494,9 +494,14 @@ individual's address attached to a support promise (see the product-owner decisi
 founder-direct support in docs/product/human-decisions.md). Attachments, threading, search,
 replying, and mobile all come from the mail provider rather than from us.
 
-**MX records name one mail host.** `dive.day`'s MX must point at the mail provider. Do not also
-configure inbound receiving on `ses.dive.day` — mail delivery and the transactional-sending identity
-are separate concerns, and the app doesn't handle inbound mail events in any case.
+**Three subdomains, three different MX answers.** `dive.day`'s MX names the mail provider and
+nothing else — human mail is the provider's job, and a second host there would split it. The
+sending identity `ses.dive.day` carries no MX at all; its custom MAIL FROM subdomain
+`mail.ses.dive.day` carries exactly one, `feedback-smtp.<region>.amazonses.com`, and SES fails the
+setup outright if that subdomain has more than one. Inbound receiving for machine-parsed diver
+replies lives on a third subdomain of its own, `inbound.ses.dive.day`, so it collides with neither
+the human mailboxes nor the sending identity — see [Mail divers send back](#mail-divers-send-back)
+for what reads that mail.
 
 Setup, once:
 
