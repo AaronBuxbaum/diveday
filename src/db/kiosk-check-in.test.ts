@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import {
@@ -14,7 +14,7 @@ import { seededShopContext } from "@/test/db";
 import { listSelfReportedArrivalBookingIds } from "./arrival-provenance";
 import { checkInAtKiosk } from "./check-in";
 import { issueDisplayToken, revokeDisplayToken, verifyDisplayToken } from "./display-tokens";
-import { findKioskSeats } from "./kiosk-check-in";
+import { findKioskSeats, kioskNameMatch } from "./kiosk-check-in";
 import { listDepartureBoardedBookingIds } from "./manifests";
 import {
   bookingArrivalEvents,
@@ -254,6 +254,13 @@ describe("findKioskSeats", () => {
    * language, over a column instead of a string — so the two agreeing is the
    * invariant rather than a coincidence. A name whose shape only one of them
    * understands is a diver one door finds and the other does not.
+   *
+   * Asked of `kioskNameMatch` over a literal rather than of `findKioskSeats`
+   * over the seeded board, because the question is which *words* the two rules
+   * agree on and the join answers nothing about that. Walked end to end it was
+   * one full lookup per word of every name here, and it timed out at sixty
+   * seconds on a CI shard the moment the list of names grew; the anchor below
+   * keeps it honest that this is the predicate the reader actually runs.
    */
   it("matches exactly the words the rule in src/lib names, and no others", async () => {
     const { db, shop, booking, person, atTheDoor } = await counter();
@@ -277,28 +284,56 @@ describe("findKioskSeats", () => {
     ];
 
     for (const fullName of names) {
-      await db.update(people).set({ fullName }).where(eq(people.id, person.id));
       // Every word the name is written with, and every word it could be typed
       // as: the folded spelling is the one a tablet keyboard reaches for.
       const words = [
         ...new Set(
           fullName.split(/\s+/).flatMap((word) => [word.toLowerCase(), foldNameWord(word)]),
         ),
-      ];
+      ].filter((word) => word.length > 0);
       const matchable = matchableNameTokens(fullName);
 
-      for (const word of words) {
-        const seats = await findKioskSeats(db, {
-          shopId: shop.id,
-          lookup: readKioskInput(word),
-          now: atTheDoor,
-        });
-        const found = seats.some((row) => row.bookingId === booking.id);
+      const asked = words.map((word, index) => {
+        const lookup = readKioskInput(word);
+        if (lookup?.kind !== "surname") throw new Error(`${word} is not a surname lookup`);
+        return {
+          word,
+          column: `w${index}`,
+          match: kioskNameMatch(sql`${fullName}::text`, lookup.surname),
+        };
+      });
+      const answer = await db.execute(
+        sql`select ${sql.join(
+          asked.map(({ column, match }) => sql`${match} as ${sql.raw(column)}`),
+          sql`, `,
+        )}`,
+      );
+      const row = answer.rows[0] as Record<string, boolean | null>;
+
+      for (const { word, column } of asked) {
         // The rule holds the folded form, so an accented spelling matches when
         // its fold does — which is the whole point of folding both sides.
-        expect(found, `${fullName} by ${word}`).toBe(matchable.includes(foldNameWord(word)));
+        expect(row[column], `${fullName} by ${word}`).toBe(matchable.includes(foldNameWord(word)));
       }
     }
+
+    // The anchor: the predicate above is the one the reader runs, over the
+    // column it runs it over. Without this the parity could hold against a
+    // literal while `findKioskSeats` asked something else entirely.
+    await db.update(people).set({ fullName: "Jan van der Berg" }).where(eq(people.id, person.id));
+    const seats = await findKioskSeats(db, {
+      shopId: shop.id,
+      lookup: readKioskInput("berg"),
+      now: atTheDoor,
+    });
+    expect(seats.map((row) => row.bookingId)).toContain(booking.id);
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput("der"),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
   });
 
   /**
