@@ -27,13 +27,13 @@ error tracking; **Meta Cloud API** for shop-connected WhatsApp; and **Stripe Con
 | --- | --- | --- | --- | --- |
 | **Vercel** | Pro ($20/seat/mo) + Build compute + Serverless execution + Blob | ~$20.00 – $35.00 | $60.00/mo (`vercel_spend`) | Base fee + usage overage |
 | **Neon** | Serverless Postgres (Free tier) | $0.00 | 300 CU-hrs (`neon_compute`), 50 GiB-mo (`neon_storage`) | Free tier **suspends** on exhaustion; Paid meters |
-| **AWS** | 21 provisioned CDK subsystems (SES, SNS, S3, CloudWatch, Secrets Manager, CodeBuild, Location) | ~$1.50 – $5.00 | $30.00/mo (`AWS::Budgets::Budget`) + Cost Anomaly Detection | Pay-as-you-go |
+| **AWS** | Business Support+ ($25/mo) plus 22 provisioned CDK subsystems (SES, SNS, S3, CloudFront, CloudWatch, Route 53, Secrets Manager, CodeBuild, Location) | ~$43.55 measured | $90.00/mo (`AWS::Budgets::Budget`, dollar thresholds) + Cost Anomaly Detection | Support subscription + pay-as-you-go |
 | **Sentry** | Developer (Free tier) | $0.00 | 50,000 events/mo (`sentry_errors`) | Free tier **silently drops** over quota |
 | **Meta / WhatsApp** | Cloud API (per-shop sender) | $0.00 (under 1,000 free service convs/mo) | 1,000 convs/mo (`whatsapp_conversations`) | Per-conversation overage |
 | **Stripe** | Connect Standard | Proportional to GMV (2.9% + $0.30) | None (revenue-aligned) | Per-transaction |
 | **GitHub** | Actions CI (Public/Standard runners) | $0.00 | Standard quota | Per-minute overage |
 | **Open-Meteo** | Marine Weather API | $0.00 | 10,000 reqs/day free | Rate limited |
-| **Total Baseline** | | **~$21.50 – $40.00 / month** | | |
+| **Total Baseline** | | **~$63.55 – $83.55 / month** | | |
 
 ---
 
@@ -104,7 +104,8 @@ AWS houses 21 distinct infrastructure subsystems managed via AWS CDK:
    - Daily `pg_dump` container job running on `general1.small` ($0.005/build minute).
    - EventBridge schedulers triggering backup freshness watchdogs and VRT pruner Lambdas.
 9. **Cost Guardrails (§7)**:
-   - `AWS::Budgets::Budget` ($30/mo) and `AWS::CE::AnomalyMonitor` (Service Dimensional Monitor). Free.
+   - `AWS::Budgets::Budget` ($90/mo, `ABSOLUTE_VALUE` thresholds) and `AWS::CE::AnomalyMonitor` (Service Dimensional Monitor). Free.
+   - The budget itself is free; the account's **Business Support+ subscription is $25/month** and is the largest single line on the AWS bill.
 
 ### 4. Sentry
 
@@ -173,7 +174,7 @@ AWS houses 21 distinct infrastructure subsystems managed via AWS CDK:
 | **Neon Free -> Launch/Scale** | Exceeding 0.5 GB storage or ~300 CU-hours | Jump from $0 to **+$19–$69/month + usage** |
 | **Sentry Free -> Team** | Exceeding 50k error events/month | Jump from $0 to **+$26/month** |
 | **Vercel Pro Concurrency** | >1 active build or long-running agent workflows | Jump from $20 to **+$40/month per slot** |
-| **AWS Budgets Threshold** | AWS spend exceeding $30/month limit | Triggers email siren; no automated shutdown |
+| **AWS Budgets Threshold** | AWS spend exceeding the $90/month limit | Triggers email siren; no automated shutdown |
 | **AWS Synthetics Canaries (AWS-1)** | Implementing external uptime and booking canaries | Adds **+$15–$25/month** |
 
 ---
@@ -265,7 +266,7 @@ providers.
 ```
 
 1. **AWS Account Level ([infra/lib/infra-stack.ts](../../infra/lib/infra-stack.ts) §7)**:
-   - `AWS::Budgets::Budget` (`MonthlyCostGuardrail`) evaluates actual and forecasted AWS charges against the $30 limit, emailing `alerts@dive.day` at 50%, 80%, 100% forecasted, 100% actual, and 200% actual.
+   - `AWS::Budgets::Budget` (`MonthlyCostGuardrail`) evaluates actual and forecasted AWS charges against the $90 limit, emailing `alerts@dive.day` at $55 actual, $70 actual, $90 forecasted, $90 actual, and $180 actual. The thresholds are absolute dollars rather than percentages because the account's fixed floor ($43.55, of which $25 is Business Support+) had grown past the old cap — ADR 20260802-aws-cost-guardrails, amended 2026-09-10.
    - `AWS::CE::AnomalyMonitor` monitors service-by-service spending spikes daily with a $1.00 impact threshold.
 2. **Multi-Vendor In-App Monitor (`/api/cron/usage`)**:
    - `fetchVercelSpend` (`src/lib/usage/vercel.ts`): Queries Vercel's Billing API using FOCUS v1.3 format.

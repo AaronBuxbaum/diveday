@@ -244,6 +244,89 @@ describe("media distribution", () => {
    * The read path is simply absent: the same 403 the deployed stack answers
    * today, documented against MEDIA_PUBLIC_URL_BASE in config/env-registry.mjs.
    */
+  /**
+   * The alternate domain name (manual action `media-domain-name`).
+   *
+   * What these assertions are really about is the *stored* URL. Media URLs live
+   * absolute in the rows that own the photo, so the hostname in
+   * MEDIA_PUBLIC_URL_BASE is not a display detail -- it is a durable key. The
+   * AWS-assigned `d111111abcdef8.cloudfront.net` names one distribution, and
+   * every way of getting a new distribution (a recreate, an account move, the
+   * region migration this repo has a runbook for) strands every row written
+   * before it. So the property under test is that the alias, when configured,
+   * reaches the one place that gets written down.
+   */
+  describe("with an alternate domain name", () => {
+    const domained = {
+      cloudfrontVerified: true,
+      mediaDomainName: "media.dive.day",
+      mediaCertificateArn:
+        "arn:aws:acm:us-east-1:123456789012:certificate/00000000-1111-2222-3333-444444444444",
+    };
+
+    function distributionConfig(context: Record<string, unknown>) {
+      const distributions = template(context).findResources("AWS::CloudFront::Distribution");
+      const media = Object.values(distributions).find((resource) =>
+        JSON.stringify(resource).includes("DiveDay media"),
+      );
+      expect(media).toBeDefined();
+      return (media as { Properties: { DistributionConfig: Record<string, unknown> } }).Properties
+        .DistributionConfig;
+    }
+
+    it("serves the alias, on a certificate that must already exist in us-east-1", () => {
+      const config = distributionConfig(domained);
+      expect(config.Aliases).toEqual(["media.dive.day"]);
+      expect(config.ViewerCertificate).toMatchObject({
+        AcmCertificateArn: domained.mediaCertificateArn,
+        MinimumProtocolVersion: "TLSv1.2_2021",
+      });
+    });
+
+    it("writes the alias into MEDIA_PUBLIC_URL_BASE, which is the whole point", () => {
+      const secret = JSON.stringify(
+        template(domained).findResources("AWS::SecretsManager::Secret"),
+      );
+      expect(secret).toContain("MEDIA_PUBLIC_URL_BASE=https://media.dive.day");
+    });
+
+    it("still points at the AWS-assigned domain when no alias is configured", () => {
+      const config = distributionConfig({ cloudfrontVerified: true });
+      expect(config.Aliases).toBeUndefined();
+      const secret = JSON.stringify(
+        template({ cloudfrontVerified: true }).findResources("AWS::SecretsManager::Secret"),
+      );
+      expect(secret).toContain("MEDIA_PUBLIC_URL_BASE=https://");
+      expect(secret).not.toContain("media.dive.day");
+    });
+
+    /**
+     * The quiet failure this refuses: an alias silently dropped for a missing
+     * certificate deploys a distribution that a resolving CNAME points at and
+     * that answers every request with a TLS error -- while the deploy reports
+     * success and the stack output looks right.
+     */
+    it("refuses to synthesize with only one half of the pair", () => {
+      expect(() =>
+        template({ cloudfrontVerified: true, mediaDomainName: "media.dive.day" }),
+      ).toThrow(/go together/);
+      expect(() =>
+        template({ cloudfrontVerified: true, mediaCertificateArn: domained.mediaCertificateArn }),
+      ).toThrow(/go together/);
+    });
+
+    /**
+     * The value is interpolated into MEDIA_PUBLIC_URL_BASE, which three
+     * allowlists parse back out as a host. A value that is not a hostname is a
+     * misconfiguration that should stop at synth, not one that widens a policy.
+     */
+    it("refuses a domain name that is not a hostname", () => {
+      expect(() =>
+        template({ ...domained, mediaDomainName: "media.dive.day/../evil.example" }),
+      ).toThrow(/not a hostname/);
+    });
+  });
+
   describe("before the account is verified", () => {
     it("leaves the distribution out", () => {
       const off = template({ cloudfrontVerified: false });

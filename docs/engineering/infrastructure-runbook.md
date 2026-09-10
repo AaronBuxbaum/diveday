@@ -221,6 +221,14 @@ In our stack:
 - `sesEmailDomain` / `sesMailFromDomain`: SES sending identity and envelope domain — [§7](#7-ses-email-provider-infra).
 - `webhookHost`: the app origin whose webhook routes get subscribed to both SNS topics (default: `https://www.dive.day`) — [§9](#9-webhook-subscriptions).
 - `backupBucketName`: destination for export bundles — [§8](#8-backup-bucket).
+- `cloudfrontVerified`: whether the account may create the media distribution at all —
+  [§12](#12-the-media-domain).
+- `mediaDomainName` / `mediaCertificateArn`: the alternate domain the media distribution answers on
+  — [§12](#12-the-media-domain). Both or neither; half-set fails at synth.
+
+The last three live in `cdk.json` rather than on a command line, deliberately. They describe which
+state the *account* is in, and a `--context` flag on one person's terminal makes a workflow deploy
+and a laptop deploy disagree about what is deployed.
 
 Pass these values during deployment or synthesis using the `--context` flag:
 ```bash
@@ -275,13 +283,16 @@ The stack provisions two **alert-only** mechanisms — see
 [ADR 20260802-aws-cost-guardrails](../architecture/decisions/20260802-aws-cost-guardrails.md) for
 the full reasoning. Neither one ever disables or throttles a resource; both only send email.
 
-- **`AWS::Budgets::Budget`** — a monthly `COST` budget, default $30 (raised from $5 on 2026-08-12,
-  see the ADR's amendment), with five graduated email
-  notifications: 50% and 80% of actual spend, 100% of *forecasted* spend (an early warning before
-  the month even ends), 100% of actual spend, and 200% of actual spend as the "this is outside
-  normal bands" siren. It has no fixed name (see the troubleshooting note below for why); find the
-  AWS-assigned one in the `MonthlyCostGuardrailBudgetName` stack output, or Billing and Cost
-  Management -> Budgets in the console.
+- **`AWS::Budgets::Budget`** — a monthly `COST` budget, default $90 (it was $5, then $30 on
+  2026-08-12, then $90 on 2026-09-10 when Business Support+ arrived; see the ADR's two amendments),
+  with five graduated email notifications. Since 2026-09-10 the thresholds are **dollar amounts,
+  not percentages** — $55 and $70 of actual spend, the cap itself on *forecasted* spend (an early
+  warning before the month even ends), the cap on actual spend, and twice the cap as the "this is
+  outside normal bands" siren. $55 is about $11 above the fixed floor, which is what lets it mean
+  "something is running that was not running before"; a percentage stopped being able to mean that
+  once the floor grew past the cap. The budget has no fixed name (see the troubleshooting note below
+  for why); find the AWS-assigned one in the `MonthlyCostGuardrailBudgetName` stack output, or
+  Billing and Cost Management -> Budgets in the console.
 - **AWS Cost Anomaly Detection** (`diveday-service-cost-anomalies` monitor +
   `diveday-service-cost-anomaly-alerts` subscription) — an AWS-managed, ML-based monitor over
   per-service spend, checked daily, that emails when any single service's cost moves in an
@@ -299,8 +310,10 @@ pnpm infra:deploy --context alertEmail=you@example.com --context monthlyBudgetLi
   other alert path in the product already used; it was a personal Gmail until 2026-08-06). Changing
   the default only takes effect on the next deploy, and the SNS email subscription it creates has to
   be confirmed from the mailbox before AWS will send to it.
-- `monthlyBudgetLimit` — the monthly USD cap the percentage thresholds above are computed against
-  (default `5`).
+- `monthlyBudgetLimit` — the monthly USD cap (default `90`). The forecast, actual and siren
+  notifications are derived from it; the $55 and $70 figures are **not** — those are dollars chosen
+  against this account's fixed floor, so an account with a different floor edits them in
+  `infra/lib/infra-stack.ts` rather than expecting a lower cap to scale them down.
 
 > **Troubleshooting: `cdk deploy` fails on `MonthlyCostGuardrail` with "A budget or resource with
 > the same name but a different internalId already exists."** `Budget` (the nested object holding
@@ -324,19 +337,33 @@ Anomaly Detection does**: it depends on Cost Explorer, which is a one-time conso
 API, and reports nothing until it has accumulated spend history. That is a prerequisite in
 [manual-actions.md](manual-actions.md), not something the stack handles.
 
-**What this account costs when idle:** three Secrets Manager secrets at $1.20/month
-([§10](#10-the-credentials-secret), plus the database dump's URL) plus the CloudWatch custom metrics
-past the always-free ten at $0.30 each and one alarm past the free ten
-([cloudwatch-observability-runbook.md](cloudwatch-observability-runbook.md)) — between **$1.60 and
-$3.40/month** of cost that exists whether or not anyone uses DiveDay, depending on how many of the
-traffic-dependent metrics receive data. Everything else here is per-use or genuinely free at this
-volume. The whole bill, and what moving a service would and would not save, is in
+**What this account costs when idle**, read off the August and early-September bills rather than
+estimated from the stack:
+
+| Line | $/month |
+| --- | ---: |
+| Business Support+ | 25.00 |
+| S3, across the four buckets | 12.00 |
+| Route 53 health check, 30s interval with string matching, on a non-AWS endpoint | 2.75 |
+| CloudWatch metrics and alarms past the always-free ten ([cloudwatch-observability-runbook.md](cloudwatch-observability-runbook.md)) | 2.50 |
+| Secrets Manager, three secrets ([§10](#10-the-credentials-secret), plus the database dump's URL) | 1.20 |
+| Tax | 0.10 |
+| **Floor** | **43.55** |
+
+That is cost which exists whether or not anyone uses DiveDay. Everything else here is per-use. The
+whole bill across every provider, and what moving a service would and would not save, is in
 [cost-guardrails-runbook.md](cost-guardrails-runbook.md)'s "Where the money actually goes".
 
-That $1.40 is the number the `monthlyBudgetLimit` default of `30` is set against. It was `5` until
-2026-08-12, at which point the fixed floor was over a quarter of the cap and the 50% and 80%
-notifications were on course to fire every month on cost that never changes — the exact "guardrail
-becomes noise" failure the ADR was written to prevent. If you add fixed cost, move the limit with it.
+**$43.55 is the number the `monthlyBudgetLimit` default of `90` is set against**, and the $55
+notification is that floor plus about $11. The cap was `5` until 2026-08-12 and `30` until
+2026-09-10; each raise happened because the floor had grown into the thresholds and they had begun
+firing every month on cost that never changes. If you add fixed cost, move the figures with it and
+update this table — that is the whole maintenance contract of this guardrail.
+
+**Treat the S3 line as a finding, not a baseline.** $12/month is four times what this runbook used
+to claim the entire AWS floor was, on an account carrying no production traffic, and no one has yet
+attributed it to a bucket. It is the largest thing here that a one-line change might remove
+(issue #1651).
 
 ---
 
@@ -682,9 +709,10 @@ sharp edge worth knowing before deleting a user.
 
 Secrets Manager bills $0.40 per secret per month and has no free tier. Eight credential secrets plus
 three app-secret secrets would be $4.40 of fixed monthly cost — against the $5 budget this section
-was written for that was permanent noise in the 50% and 80% notifications, and against today's $30
+was written for that was permanent noise in the 50% and 80% notifications, and against today's $90
+cap and $43.55 floor
 ([ADR 20260802-aws-cost-guardrails](../architecture/decisions/20260802-aws-cost-guardrails.md), as
-amended 2026-08-12) it is affordable but still eleven documents to keep straight. Two secrets cost $0.80:
+amended 2026-08-12 and 2026-09-10) it is affordable but still eleven documents to keep straight. Two secrets cost $0.80:
 one hand-off document and one stable root from which HKDF derives three independent app values. What
 that costs is granularity: whoever can read the hand-off document reads all of it, a distinction that
 is theoretical on this single-operator account.
@@ -758,3 +786,63 @@ pnpm visual:prune --dry-run
 pnpm visual:prune
 ```
 
+---
+
+## 12. The media domain
+
+Public media — course photos, dive-site images, shop heroes and logos, recap pictures — is read
+through a CloudFront distribution, not from the bucket, which blocks all public access and answers
+403 to everyone (`infra/lib/infra-stack.ts` S11b, ADR-adjacent reasoning at AWS-8 in
+[../architecture/aws-migration-dossier.md](../architecture/aws-migration-dossier.md)). Two context
+values shape it.
+
+### `cloudfrontVerified`
+
+Whether this AWS account has cleared CloudFront's anti-abuse gate on `CreateDistribution`. `false`
+ships the bucket and the uploader alone and every photo 403s; `true` builds the distribution. This
+account cleared the gate on 2026-09-03 and the committed value is `true`. The manual action is
+`cloudfront-account-verification` in [manual-actions.md](manual-actions.md).
+
+### `mediaDomainName` and `mediaCertificateArn`
+
+Optional. Unset, the distribution answers on the `d111111abcdef8.cloudfront.net` domain AWS assigns
+it, and `MEDIA_PUBLIC_URL_BASE` is that domain. Set, it also answers on a name DiveDay owns —
+`media.dive.day` — and `MEDIA_PUBLIC_URL_BASE` becomes that instead.
+
+**What the alias buys, and it is not branding.** Every media URL this app writes is stored
+*absolute*, in the row that owns the photo. `d111111abcdef8.cloudfront.net` is an identifier for one
+distribution, not a name we control: a stack recreated after a `cdk destroy`, moved to another
+account, or migrated to another region gets a different one, and on that day every course photo,
+dive-site image, shop logo and recap picture ever written breaks at once. Worse than breaks — those
+rows also stop matching `managedStorageOrigins` (`src/lib/storage/blob-host.ts`), which is what gates
+media deletion and the public-page ingest allowlist. A CNAME is the one thing that makes the stored
+URL outlive the distribution behind it. [region-migration.md](region-migration.md) already lists
+`MEDIA_PUBLIC_URL_BASE` among the values a region move changes; this is how it stops being one.
+
+**What it costs.** Nothing. CloudFront does not bill for alternate domain names, and an ACM
+certificate used by CloudFront is free. The cost is the one-time setup below and a name to keep.
+
+**Both or neither.** CloudFront will not accept an alias without a certificate covering it, so a
+half-set pair throws at synth rather than deploying a distribution that answers every request with a
+TLS error while looking successful.
+
+**Why the certificate is imported by ARN rather than created here.** A certificate for CloudFront
+must be in **us-east-1**, whatever region the stack is in, and `PRIMARY_REGION` is us-east-2 (ADR
+20260910-one-region-in-us-east-2) — so this stack cannot create one. `GlobalStack` *is* in us-east-1,
+but `infra/lib/stack-config.ts` joins the three stacks by nothing at synth on purpose, and a
+CDK-created certificate would not help regardless: authoritative DNS for `dive.day` is Vercel, so
+validation is a record a human pastes there, and CloudFormation would sit on the deploy for hours
+waiting for it.
+
+The procedure, including the order to do it in, is the `media-domain-name` entry in the registry at
+the bottom of `infra/lib/infra-stack.ts`. In short: request the certificate in us-east-1, paste its
+validation CNAME into Vercel DNS, point `media` at the `MediaDistributionDomain` output **before**
+deploying, then set both values in `cdk.json` in a pull request and deploy. Doing the CNAME after the
+deploy costs a window in which every photo 404s, because the deploy is what flips
+`MEDIA_PUBLIC_URL_BASE`.
+
+> **The rows written before the switch keep their `cloudfront.net` URLs.** They keep loading — the
+> AWS-assigned domain does not go away — but they stop being recognised as DiveDay's own storage,
+> which gates deletion and the ingest allowlist. On a pre-pilot database that is the correct trade
+> (`.claude/rules/db.md`'s H-49); it is also precisely the breakage this section exists to prevent
+> happening later, when it would not be.

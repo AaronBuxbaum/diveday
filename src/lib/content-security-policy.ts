@@ -107,6 +107,47 @@ const AWS_REGION = /^[a-z]{2}(-gov)?-[a-z]+-\d$/;
 const MEDIA_IMAGE_HOSTS = ["https://*.s3.amazonaws.com", "https://*.cloudfront.net"];
 
 /**
+ * The media origin the stack actually configured, when it is not one of the AWS
+ * shapes above.
+ *
+ * `https://*.cloudfront.net` covers the distribution *only while the
+ * distribution answers on the name AWS assigned it*. Point the distribution at
+ * a domain DiveDay owns -- `mediaDomainName` in cdk.json, S11b of
+ * `infra/lib/infra-stack.ts` -- and `MEDIA_PUBLIC_URL_BASE` becomes
+ * `https://media.dive.day`, which matches nothing in this policy. Every course
+ * photo, dive-site image, shop logo and recap picture would then be blocked by
+ * the report-only policy first and by the enforced one the day it is enforced:
+ * a CSP failure that looks like a broken CDN and reads, in the console, like a
+ * mistake in the alias.
+ *
+ * So the origin is read from the same variable the storage seam reads, rather
+ * than pattern-matched. Same discipline as {@link mediaRegionalImageHosts} and
+ * {@link rumConnectHosts}: a value interpolated into a header must not be able
+ * to introduce a second source or a second directive, so anything that is not a
+ * plain `https://host[:port]` origin contributes nothing at all.
+ */
+function mediaPublicImageHosts(publicUrlBase: string | null | undefined): string[] {
+  const trimmed = publicUrlBase?.trim();
+  if (!trimmed) return [];
+  let origin: string;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "https:") return [];
+    origin = url.origin;
+  } catch {
+    return [];
+  }
+  // `URL.origin` cannot contain whitespace, a semicolon or a quote, so this is
+  // belt to that brace -- and the brace is the thing that could change.
+  if (!/^https:\/\/[a-z0-9.\-:[\]]+$/i.test(origin)) return [];
+  // Already covered by the two wildcards above; listing it again is harmless
+  // but noisy, and the header has a budget.
+  if (/\.cloudfront\.net$/i.test(new URL(origin).hostname)) return [];
+  if (/\.amazonaws\.com$/i.test(new URL(origin).hostname)) return [];
+  return [origin];
+}
+
+/**
  * The regional virtual-hosted bucket form, one host per configured region.
  * Same validation as {@link rumConnectHosts}: anything but a plain AWS region
  * label is a misconfiguration, and a value interpolated into a header must
@@ -213,6 +254,13 @@ export type CspOptions = {
    */
   mediaRegion?: string | null;
   /**
+   * `MEDIA_PUBLIC_URL_BASE`, or null when no media storage is configured. The
+   * origin media URLs are actually written against, which stops being an AWS
+   * hostname the moment the distribution answers on a domain we own. See
+   * {@link mediaPublicImageHosts}.
+   */
+  mediaPublicUrlBase?: string | null;
+  /**
    * True only on the shop's WhatsApp settings route, the one page that loads a
    * third-party script. See {@link META_SIGNUP_SCRIPT_HOST}.
    */
@@ -295,6 +343,7 @@ export function reportOnlyPolicy(options: CspOptions): string {
         "blob:",
         ...MEDIA_IMAGE_HOSTS,
         ...mediaRegionalImageHosts(options.mediaRegion),
+        ...mediaPublicImageHosts(options.mediaPublicUrlBase),
       ],
     ],
     ["font-src", ["'self'", GOOGLE_FONTS_FILE_HOST]],

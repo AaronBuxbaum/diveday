@@ -210,7 +210,7 @@ $0.10 for the alarm.
 **RUM is the exception and the one to watch.** Its 1,000,000 events is a one-time trial, *not* an
 always-free allowance, and past it RUM is $1.00 per 100,000 events with no ceiling.
 `NEXT_PUBLIC_RUM_SAMPLE_RATE` defaults to `1` — every session — so it is the only line here that can
-grow without anything good happening. Against the $30 default in the stack's cost guardrail
+grow without anything good happening. Against the $90 default in the stack's cost guardrail
 ([cost-guardrails-runbook.md](cost-guardrails-runbook.md)) the fixed part is noise and RUM is the
 whole risk. Raising `--context monthlyBudgetLimit=…` is a human's call, deliberately not something
 this stack does for you.

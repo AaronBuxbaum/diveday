@@ -563,6 +563,14 @@ export const ENV_GROUPS = [
         from: "stack",
         targets: LOCAL_AND_VERCEL,
         absent: "falls back to the direct S3 bucket endpoint, which answers 403 to every viewer",
+        // The CloudFront distribution's domain -- the alternate one from
+        // cdk.json's mediaDomainName when set, otherwise the *.cloudfront.net
+        // name AWS assigns. It is not decoration in either case: three
+        // allowlists derive from this single value (the CSP img-src in
+        // src/lib/content-security-policy.ts, the image-optimizer patterns in
+        // next.config.ts, and isManagedStorageUrl in
+        // src/lib/storage/blob-host.ts), and media URLs are stored absolute, so
+        // changing it strands every row written before the change.
       },
     ],
   },

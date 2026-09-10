@@ -12,6 +12,7 @@ const base = { denyFraming: true } as const;
 const everyOption = {
   rumRegion: "us-east-1",
   mediaRegion: "us-east-1",
+  mediaPublicUrlBase: "https://media.dive.day",
   metaSignup: true,
   development: true,
 } as const;
@@ -272,6 +273,56 @@ describe("every source is a legal source expression", () => {
       " us-east-1",
     ]) {
       expect(reportOnlyPolicy({ ...base, mediaRegion: region })).toEqual(reportOnlyPolicy(base));
+    }
+  });
+
+  /**
+   * The media origin stops being an AWS hostname the moment the distribution
+   * answers on a domain DiveDay owns (`mediaDomainName`, infra-stack.ts S11b).
+   * `https://*.cloudfront.net` then covers nothing this app serves, and every
+   * course photo, dive-site image, shop logo and recap picture is blocked --
+   * reported first, then blocked outright the day the full policy is enforced.
+   * It would read in the console as a broken CDN rather than as a policy that
+   * was never told where the media went.
+   */
+  it("admits the media origin the stack actually configured", () => {
+    const sources =
+      directives(reportOnlyPolicy({ ...base, mediaPublicUrlBase: "https://media.dive.day" })).get(
+        "img-src",
+      ) ?? [];
+    expect(sources).toContain("https://media.dive.day");
+  });
+
+  it("does not repeat an origin the AWS wildcards already cover", () => {
+    for (const base_url of [
+      "https://d111111abcdef8.cloudfront.net",
+      "https://diveday-media.s3.us-east-1.amazonaws.com",
+    ]) {
+      expect(reportOnlyPolicy({ ...base, mediaPublicUrlBase: base_url })).toEqual(
+        reportOnlyPolicy(base),
+      );
+    }
+  });
+
+  it("refuses a media base that is not a plain https origin", () => {
+    // Same discipline as the region above, and the same reason: this value is
+    // interpolated into a header, so anything that could introduce a second
+    // source or a second directive must contribute nothing at all. `http:` is
+    // in the list because an origin admitted over plaintext is a downgrade the
+    // policy would be granting on the app's behalf.
+    for (const value of [
+      "http://media.dive.day",
+      "media.dive.day",
+      "https://media.dive.day https://evil.example",
+      "https://media.dive.day; script-src *",
+      "*",
+      "",
+      "   ",
+      "not a url",
+    ]) {
+      expect(reportOnlyPolicy({ ...base, mediaPublicUrlBase: value })).toEqual(
+        reportOnlyPolicy(base),
+      );
     }
   });
 });
