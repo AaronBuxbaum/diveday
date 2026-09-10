@@ -1,6 +1,15 @@
 import { expect, test } from "./fixtures";
 
 /**
+ * Every test here mints a shop of its own and signs in live, and that setup
+ * runs inside the test's own timeout — so the budget has to be set on the
+ * describe rather than in a body that has not started yet (the `privateShop`
+ * docblock in `e2e/fixtures.ts`). The same 45s `check-in.spec.ts` gives its
+ * counter walks.
+ */
+test.describe.configure({ timeout: 60_000 });
+
+/**
  * **The shop on paper** — ADR 20260908-one-hand, decision 6, lever X.
  *
  * Settings gains a Print register, and every row in it opens a sheet drawn from
@@ -20,10 +29,6 @@ test.describe("the shop on paper", () => {
     page,
     privateShop,
   }) => {
-    // The fixture pays for a mint and a live sign-in before the first
-    // navigation; the walk itself is three page loads.
-    test.setTimeout(60_000);
-
     // Settings' own door, rather than a typed URL: the row has to be findable
     // from the hub, which is the half a route test cannot see.
     await page.goto(`/shop/${privateShop.slug}/settings`);
@@ -66,7 +71,6 @@ test.describe("the shop on paper", () => {
     page,
     privateShop,
   }) => {
-    test.setTimeout(60_000);
     await page.goto(`/shop/${privateShop.slug}/settings/print`);
 
     // One row per hull. The seeded fleet is two boats, so the register lists
@@ -94,7 +98,6 @@ test.describe("the shop on paper", () => {
     page,
     privateShop,
   }) => {
-    test.setTimeout(60_000);
     await page.goto(`/shop/${privateShop.slug}/check-in`);
 
     // Check one diver in, so the settled group has a row with a pass door.
@@ -114,9 +117,12 @@ test.describe("the shop on paper", () => {
 
     await page.getByRole("button", { name: "Print a pass" }).first().click();
     await page.waitForURL(new RegExp(`/shop/${privateShop.slug}/print/pass/`));
-    await expect(page.getByText("Show this at the counter, or say your name.")).toBeVisible();
+    // Scoped to the sheet, not the page: the staff chrome around it carries a
+    // nav badge, and what this asserts is what comes out of the printer.
+    const sheet = page.locator(".paper-sheet");
+    await expect(sheet.getByText("Show this at the counter, or say your name.")).toBeVisible();
     // The diver's name, and nothing about their readiness or their waiver.
-    if (diverName) await expect(page.getByText(diverName).first()).toBeVisible();
-    await expect(page.getByText("Blocked")).toHaveCount(0);
+    if (diverName) await expect(sheet.getByText(diverName).first()).toBeVisible();
+    await expect(sheet.getByText("Blocked")).toHaveCount(0);
   });
 });
