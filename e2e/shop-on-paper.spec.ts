@@ -27,15 +27,15 @@ test.describe("the shop on paper", () => {
     // Settings' own door, rather than a typed URL: the row has to be findable
     // from the hub, which is the half a route test cannot see.
     await page.goto(`/shop/${privateShop.slug}/settings`);
-    await page.getByRole("link", { name: "Print", exact: true }).click();
+    // The hub's own door, not the rail's — both name the same page, and the
+    // rail is a desktop convenience rendered beside it.
+    await page.getByRole("main").getByRole("link", { name: "Print", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/shop/${privateShop.slug}/settings/print$`));
     await expect(page.getByRole("heading", { level: 1, name: "Print" })).toBeVisible();
 
     // Nothing has been printed yet, and the register says so rather than
     // showing a date it does not have.
-    const dockSignRow = page.locator("article, li, div").filter({ hasText: "The dock sign" });
     await expect(page.getByText("Never printed").first()).toBeVisible();
-    void dockSignRow;
 
     // The door is a form: it records the run and hands over the sheet.
     await page
@@ -54,9 +54,11 @@ test.describe("the shop on paper", () => {
     await expect(printedOn).toBeVisible();
     const printedText = (await printedOn.innerText()).replace(/^Printed /, "").replace(/\.$/, "");
 
-    // Back to the register: the row is dated now, with the same day.
+    // Back to the register: the row is dated now. The row states the date
+    // inside its own sentence, so the match is not anchored the way the fold
+    // line's own text node is.
     await page.goto(`/shop/${privateShop.slug}/settings/print`);
-    await expect(page.getByText(/^Printed /).first()).toBeVisible();
+    await expect(page.getByText(/Printed /).first()).toBeVisible();
     expect(printedText.length).toBeGreaterThan(0);
   });
 
@@ -101,10 +103,14 @@ test.describe("the shop on paper", () => {
     const diverName = (await checkIn.innerText()).split("\n")[0]?.trim() ?? "";
     await checkIn.click();
     // The settled group's own count is the destination's answer that the write
-    // landed — never a timeout.
-    const settled = page.getByText(/Checked in · \d+/).first();
+    // landed — never a timeout. It is a folded `<details>`, so open it by its
+    // summary rather than by a click on the text inside.
+    const settled = page
+      .locator("details")
+      .filter({ hasText: /Checked in/ })
+      .first();
     await expect(settled).toBeVisible();
-    await settled.click();
+    await settled.locator("> summary").click();
 
     await page.getByRole("button", { name: "Print a pass" }).first().click();
     await page.waitForURL(new RegExp(`/shop/${privateShop.slug}/print/pass/`));
