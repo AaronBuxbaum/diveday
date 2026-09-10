@@ -150,12 +150,165 @@
       "page": "page-3"
     },
     {
+      "file": "StaffToday.dc.html",
+      "title": "Today, through the day",
+      "x": 0,
+      "y": 7150,
+      "w": 1180,
+      "h": 6450,
+      "page": "page-3"
+    },
+    {
+      "file": "StaffChrome.dc.html",
+      "title": "The chrome, the doors, the desk that answers",
+      "x": 0,
+      "y": 13900,
+      "w": 1180,
+      "h": 7150,
+      "page": "page-3"
+    },
+    {
+      "file": "StaffTrip.dc.html",
+      "title": "The departure, both working surfaces",
+      "x": 0,
+      "y": 21350,
+      "w": 1180,
+      "h": 6250,
+      "page": "page-3"
+    },
+    {
+      "file": "StaffDivers.dc.html",
+      "title": "The drawer — divers, one diver, waivers, the inbox, the requests",
+      "x": 0,
+      "y": 27900,
+      "w": 1180,
+      "h": 6800,
+      "page": "page-3"
+    },
+    {
+      "file": "StaffMoney.dc.html",
+      "title": "The till and the log",
+      "x": 0,
+      "y": 35000,
+      "w": 1180,
+      "h": 6950,
+      "page": "page-3"
+    },
+    {
+      "file": "DiverHarbor.dc.html",
+      "title": "The shopfront, in the shop's face",
+      "x": 0,
+      "y": 42250,
+      "w": 1180,
+      "h": 9600,
+      "page": "page-3"
+    },
+    {
+      "file": "DiverDay.dc.html",
+      "title": "The thread — before, during, after",
+      "x": 0,
+      "y": 52150,
+      "w": 1180,
+      "h": 7400,
+      "page": "page-3"
+    },
+    {
+      "file": "Public.dc.html",
+      "title": "DiveDay's own pages, and first light",
+      "x": 0,
+      "y": 59850,
+      "w": 1180,
+      "h": 7600,
+      "page": "page-3"
+    },
+    {
+      "file": "Phones.dc.html",
+      "title": "Six phones — the fold of everything",
+      "x": 0,
+      "y": 67750,
+      "w": 1180,
+      "h": 2500,
+      "page": "page-3"
+    },
+    {
       "file": "Kit.dc.html",
       "title": "The kit — one hand, on every surface",
       "x": 1300,
       "y": 0,
       "w": 1180,
       "h": 6650,
+      "page": "page-3"
+    },
+    {
+      "file": "StaffCounter.dc.html",
+      "title": "The counter, the walk-in, the door",
+      "x": 1300,
+      "y": 6950,
+      "w": 1180,
+      "h": 5600,
+      "page": "page-3"
+    },
+    {
+      "file": "StaffSchedule.dc.html",
+      "title": "The board, the blow-out, the crew",
+      "x": 1300,
+      "y": 12850,
+      "w": 1180,
+      "h": 5150,
+      "page": "page-3"
+    },
+    {
+      "file": "StaffManifest.dc.html",
+      "title": "The manifest, the roll call, the deck, the lobby",
+      "x": 1300,
+      "y": 18300,
+      "w": 1180,
+      "h": 5550,
+      "page": "page-3"
+    },
+    {
+      "file": "StaffShelves.dc.html",
+      "title": "The shelves — gear, sites, courses",
+      "x": 1300,
+      "y": 24150,
+      "w": 1180,
+      "h": 7650,
+      "page": "page-3"
+    },
+    {
+      "file": "StaffSettings.dc.html",
+      "title": "The shop's card, and every switch",
+      "x": 1300,
+      "y": 32100,
+      "w": 1180,
+      "h": 6150,
+      "page": "page-3"
+    },
+    {
+      "file": "DiverBooking.dc.html",
+      "title": "Booking, the pass, the waiver",
+      "x": 1300,
+      "y": 38550,
+      "w": 1180,
+      "h": 5450,
+      "page": "page-3"
+    },
+    {
+      "file": "Messages.dc.html",
+      "title": "Every message, one voice",
+      "x": 1300,
+      "y": 44300,
+      "w": 1180,
+      "h": 7050,
+      "page": "page-3"
+    },
+    {
+      "file": "Moments.dc.html",
+      "title": "The earned moments, and when each is silent",
+      "x": 1300,
+      "y": 51650,
+      "w": 1180,
+      "h": 7250,
       "page": "page-3"
     }
   ],

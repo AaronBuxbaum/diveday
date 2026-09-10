@@ -1,0 +1,554 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&family=Bricolage+Grotesque:wght@500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+/* kit:start — the round-3 kit. Pasted verbatim into every round-3 board; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --brand:#1d7a5f; --brand-deep:#145a46; --brand-tint:#e4f1ea; --brand-ink:#ffffff; --shallows:#7fd0d6; --shallows-tint:#d7f0f2; --coral:#ff6f61; --coral-deep:#a83a2c; --coral-tint:#ffeee9; --ok:#15803d; --ok-tint:#e6f0e8; --warn:#b45309; --warn-tint:#f8eee2; --danger:#b91c1c; --danger-tint:#f8e8e6; --water:#e4f1ea; --shadow:0 2px 10px rgba(88,66,30,.06); --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.diveday { --brand:#0e7490; --brand-deep:#0a4d61; --brand-tint:#e6f3f5; --water:#e6f3f5; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+.night { --bg:#071720; --surface:#0d222d; --sunken:#051118; --border:#1c3a47; --border-strong:#4f7285; --ink:#e9f3f4; --muted:#8fa8b0; --brand:#5fd3b0; --brand-deep:#8fe3c8; --brand-tint:#0f3a30; --brand-ink:#04241b; --shallows:#1f6f78; --shallows-tint:#0b3540; --coral:#ff8a7e; --coral-deep:#ffb3aa; --coral-tint:#3f1d19; --ok:#4ade80; --ok-tint:#0f3324; --warn:#fbbf24; --warn-tint:#3a2a0e; --danger:#f87171; --danger-tint:#3d1717; --water:#143a3c; --shadow:0 2px 10px rgba(0,0,0,.35); }
+.night.diveday, .night .diveday { --brand:#22d3ee; --brand-deep:#67e8f9; --brand-tint:#0b3540; --brand-ink:#072a33; --water:#0b3540; }
+.boat { --bg:#ffffff; --surface:#ffffff; --sunken:#eef3f5; --border:#4f7285; --border-strong:#0c2a35; --ink:#04141b; --muted:#2f4650; --brand:#0a4d61; --brand-deep:#062f3b; --brand-tint:#dceff3; --brand-ink:#ffffff; --water:#ffffff; --shadow:none; }
+.boat.night { --bg:#000a0f; --surface:#071720; --sunken:#000a0f; --border:#6f95a8; --border-strong:#cfe3ea; --ink:#f4fbfc; --muted:#b9cdd4; --brand:#7ee8fa; --brand-deep:#b5f1fb; --brand-tint:#0b3540; --brand-ink:#04141b; --water:#000a0f; }
+.night, .boat { color: var(--ink); background: var(--bg); }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 940px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; }
+.frame-cap { padding: 28px 48px 8px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 940px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 160px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; }
+.stat b { display: block; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--border); }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 500; }
+
+/* — type — */
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand); }
+.group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.harbor .title, .harbor .h { font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--brand); font-weight: 500; }
+
+/* — chrome — */
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 102px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.harbor .chrome .shop { font-family: var(--display); font-size: 18px; }
+.chrome .mark { width: 36px; height: 36px; border-radius: 10px; background: var(--brand); color: var(--brand-ink); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .tabs { display: flex; gap: 4px; }
+.chrome .tabs span { padding: 10px 14px; border-radius: 10px; font-size: 15px; color: var(--muted); }
+.chrome .tabs span.on { background: var(--brand-tint); color: var(--brand); font-weight: 500; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.here { display: flex; align-items: center; gap: 8px; }
+.av { width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; border: 2px solid var(--surface); }
+.av + .av { margin-left: -10px; }
+.p-d { background: #a83a2c; } .p-k { background: #1d7a5f; } .p-s { background: #0e7490; } .p-m { background: #8a8065; }
+.who { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 3px; border-radius: 999px; background: var(--brand-tint); color: var(--brand-deep); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.who i { width: 20px; height: 20px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; font-style: normal; }
+.who.away { background: var(--sunken); color: var(--muted); }
+
+/* — the tide line (F) — */
+.tide { position: relative; height: 64px; padding: 0 102px; background: linear-gradient(180deg, var(--water) 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); }
+.tide .inner { position: relative; width: 976px; margin: 0 auto; height: 64px; }
+.tide .track { position: absolute; left: 0; top: 0; width: 740px; height: 64px; }
+.tide .axis { position: absolute; left: 0; right: 0; top: 40px; height: 2px; background: var(--border); }
+.tide .hour { position: absolute; top: 46px; font-family: var(--mono); font-size: 10px; color: var(--border-strong); transform: translateX(-50%); }
+.tide .boat { position: absolute; top: 14px; height: 24px; border-radius: 6px; background: var(--sunken); border: 1px solid var(--border); overflow: hidden; }
+.tide .boat i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--shallows); opacity: .75; }
+.tide .boat span { position: absolute; left: 8px; top: 3px; font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.tide .boat.next { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-tint); }
+.tide .boat.gone { opacity: .55; }
+.tide .now { position: absolute; top: 6px; width: 2px; height: 40px; background: var(--ink); transform: translateX(-1px); }
+.tide .now::after { content: attr(data-t); position: absolute; top: -2px; left: 6px; font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--ink); white-space: nowrap; }
+.tide .until { position: absolute; right: 0; top: 10px; font-size: 13px; color: var(--ink); text-align: right; line-height: 20px; }
+.tide .until b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tide .until .note { font-size: 12px; line-height: 18px; }
+.tide.empty .inner { display: flex; align-items: center; justify-content: center; }
+.tide.empty .inner span { font-size: 13px; color: var(--muted); }
+/* the phone fold: one 36px strip */
+.tide-fold { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px; background: linear-gradient(180deg, var(--water) 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); }
+.tide-fold .t { font-family: var(--mono); font-size: 11px; color: var(--ink); }
+.tide-fold .bar { position: relative; flex: 1; height: 8px; border-radius: 4px; background: var(--sunken); overflow: hidden; }
+.tide-fold .bar i { position: absolute; top: 0; height: 8px; border-radius: 4px; background: var(--border); }
+.tide-fold .bar i.next { background: var(--shallows); }
+.tide-fold .bar b { position: absolute; top: 0; width: 2px; height: 8px; background: var(--ink); }
+.tide-fold .u { font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+/* — the trip's own line (L): one departure's day, the same on both sides — */
+.line { position: relative; display: flex; align-items: flex-start; padding: 12px 0 0 0; }
+.line .seg { position: relative; flex: 1 1 0; padding-top: 18px; }
+.line .seg::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--border); }
+.line .seg.done::before { background: var(--brand); }
+.line .seg.now::before { background: linear-gradient(90deg, var(--brand) 0 50%, var(--border) 50% 100%); }
+.line .seg i { position: absolute; left: 0; top: 0; width: 14px; height: 14px; border-radius: 999px; background: var(--surface); border: 2px solid var(--border); transform: translateY(0); }
+.line .seg.done i, .line .seg.now i { border-color: var(--brand); background: var(--brand); }
+.line .seg.now i { box-shadow: 0 0 0 4px var(--brand-tint); }
+.line .seg b { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.line .seg span { display: block; font-size: 13px; font-weight: 500; color: var(--ink); line-height: 18px; }
+.line .seg.todo span { color: var(--muted); font-weight: 400; }
+
+/* — the page — */
+.page { width: 976px; margin: 0 auto; padding-top: 36px; }
+.page.read { width: 720px; }
+.ph { margin-bottom: 20px; }
+.ph .eyebrow { margin: 0; }
+.ph .title { margin: 8px 0 0 0; }
+.ph .lede { margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.ph .acts { display: flex; gap: 8px; margin-top: 14px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; padding: 0 0 8px 0; }
+.group-h .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+section + section, .stack > * + * { margin-top: 32px; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 4px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.row + .row { border-top: 0; }
+.row .mark { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid var(--border-strong); }
+.row .mark.warn { border-color: var(--warn); }
+.row .mark.danger { border-color: var(--danger); background: var(--danger-tint); }
+.row .mark.ok { border-color: var(--ok); background: var(--ok-tint); }
+.row .mark.live { border-color: var(--brand); background: var(--brand); }
+.row .kind { flex: 0 0 92px; font-size: 14px; font-weight: 500; color: var(--muted); }
+.row .kind.warn { color: var(--warn); } .row .kind.ok { color: var(--ok); } .row .kind.danger { color: var(--danger); }
+.row .sentence { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .sentence b { font-weight: 600; color: var(--ink); }
+.row .meta { font-size: 13px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.row .door { font-size: 14px; font-weight: 500; color: var(--brand); white-space: nowrap; }
+.row .door.quiet { color: var(--muted); }
+.row.add { color: var(--brand); font-weight: 500; font-size: 15px; }
+.row.add .mark { border-style: dashed; border-color: var(--brand); }
+.row.settled .sentence { color: var(--muted); }
+.row.settled .sentence b { color: var(--muted); font-weight: 500; }
+.row .avatar { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 999px; background: var(--sunken); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--muted); }
+.row .tap { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 999px; border: 2px solid var(--border-strong); }
+.row .tap.in { background: var(--shallows); border-color: var(--brand); }
+.rows-p .row { flex-wrap: wrap; gap: 8px 12px; padding: 8px 0; }
+.rows-p .row .sentence { flex-basis: 100%; }
+.rows-p .row .door, .rows-p .row .btn, .rows-p .row .who { margin-left: auto; }
+.rows-p .row .kind { flex: 0 0 auto; }
+
+/* — pills, checks, notices — */
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pill.danger { background: var(--danger-tint); color: var(--danger); }
+.pill.warn { background: var(--warn-tint); color: var(--warn); }
+.pill.live { background: var(--brand-tint); color: var(--brand-deep); }
+.pill.live::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: var(--brand); }
+.check { display: flex; align-items: center; gap: 10px; font-size: 16px; line-height: 24px; color: var(--ok); }
+.check::before { content: "✓"; font-weight: 700; }
+.notice { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border-radius: 18px; background: var(--brand-tint); color: var(--brand-deep); font-size: 15px; }
+.notice .undo { margin-left: auto; font-weight: 600; }
+.notice.warn { background: var(--warn-tint); color: var(--warn); }
+.notice.danger { background: var(--danger-tint); color: var(--danger); }
+.summary { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 4px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 16px; color: var(--ink); }
+.summary::after { content: "›"; margin-left: auto; color: var(--border-strong); transform: rotate(90deg); }
+.summary .meta { font-size: 13px; color: var(--muted); }
+
+/* — panels, photo bands — */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 28px; box-shadow: var(--shadow); overflow: hidden; }
+.panel .in { padding: 8px 24px 20px 24px; }
+.inset { background: var(--sunken); border-radius: 18px; padding: 16px 20px; }
+.photo { position: relative; height: 150px; display: flex; align-items: flex-end; padding: 20px 24px; color: #fffdf8; }
+.photo.s { height: 110px; } .photo.xs { height: 96px; padding: 16px; }
+.photo .ph-img { position: absolute; inset: 0; }
+.photo .cap { position: absolute; right: 16px; top: 12px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: rgba(255,253,248,0.85); }
+.photo .over { position: relative; display: flex; align-items: flex-end; justify-content: space-between; width: 100%; }
+.photo .t { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.photo.s .t, .photo.xs .t { font-size: 20px; }
+.harbor .photo .t { font-family: var(--display); }
+.photo .n { font-size: 14px; color: rgba(255,253,248,0.9); text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.sea-molasses { background: radial-gradient(120% 90% at 30% 20%, #6fb9b0 0%, #2a7f8a 45%, #123f52 100%); }
+.sea-french { background: radial-gradient(120% 90% at 60% 25%, #7ac3b6 0%, #2d8a8a 45%, #14454f 100%); }
+.sea-spiegel { background: radial-gradient(110% 100% at 70% 30%, #4d7d8c 0%, #1f4657 50%, #0b2230 100%); }
+.sea-night { background: linear-gradient(180deg, #0c2a35 0%, #071720 100%); }
+.sea-abyss { background: radial-gradient(100% 100% at 50% 100%, #3f9aa3 0%, #1b5f6e 50%, #0e3644 100%); }
+.sea-benwood { background: radial-gradient(120% 90% at 40% 30%, #88c7bd 0%, #3a8f92 50%, #1a4d5a 100%); }
+.sea-grain { background: repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0 6px, transparent 6px 22px); }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font-size: 15px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--brand); }
+.btn.danger { color: var(--danger); }
+.btn.block { width: 100%; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; font-weight: 500; color: var(--ink); }
+.field .hint { font-size: 12px; color: var(--muted); }
+.control { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface); font-size: 16px; color: var(--ink); }
+.control.ph { color: var(--border-strong); }
+.control.area { min-height: 96px; align-items: flex-start; padding-top: 10px; }
+.fields { display: grid; gap: 16px; }
+.fields.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.choice { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; }
+.choice i { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border-strong); }
+.choice i.on { background: var(--brand); border-color: var(--brand); }
+.choice i.radio { border-radius: 999px; }
+.seg-ctl { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.seg-ctl span { padding: 10px 14px; font-size: 14px; color: var(--muted); }
+.seg-ctl span.on { background: var(--brand-tint); color: var(--brand-deep); font-weight: 500; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 14px; color: var(--ink); background: var(--surface); }
+.chip.on { background: var(--brand-tint); border-color: var(--brand); color: var(--brand-deep); }
+
+/* — meters — */
+.dial { position: relative; width: 96px; height: 96px; border-radius: 999px; border: 2px solid var(--border); overflow: hidden; background: var(--surface); display: inline-flex; align-items: center; justify-content: center; }
+.dial i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--shallows); opacity: .8; }
+.dial b { position: relative; font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dial small { position: relative; font-size: 11px; color: var(--muted); }
+.bar { position: relative; height: 4px; border-radius: 2px; background: var(--sunken); overflow: hidden; }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); border-radius: 2px; }
+
+/* — skeleton, empty, room — */
+.skel { display: block; height: 14px; border-radius: 7px; background: linear-gradient(90deg, var(--sunken) 0%, var(--border) 50%, var(--sunken) 100%); }
+.skel.t { height: 28px; border-radius: 10px; width: 40%; }
+.skel.r { height: 52px; border-radius: 10px; }
+.empty { padding: 40px 24px; text-align: center; }
+.empty .room { height: 140px; margin: 0 auto 20px auto; display: flex; align-items: flex-end; justify-content: center; gap: 12px; }
+.empty p { margin: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.empty .room svg { stroke: var(--border-strong); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* — the pass (M), the postcard (N), the log (O) — */
+.pass { width: 360px; border-radius: 18px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.pass .top { position: relative; height: 150px; padding: 16px; color: #fffdf8; display: flex; flex-direction: column; justify-content: space-between; }
+.pass .top .shop { font-family: var(--display); font-size: 14px; font-weight: 700; letter-spacing: .02em; }
+.pass .top .t { font-size: 24px; font-weight: 700; line-height: 1.1; font-family: var(--display); text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.pass .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px; border-bottom: 1px dashed var(--border); }
+.pass .facts b { display: block; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pass .facts span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.pass .foot { margin: 0; padding: 14px 16px; display: flex; align-items: center; gap: 12px; border: 0; }
+.qr { width: 56px; height: 56px; border-radius: 6px; background: repeating-conic-gradient(var(--ink) 0 25%, var(--surface) 0 50%) 0 0 / 8px 8px; flex: 0 0 56px; border: 4px solid var(--surface); outline: 1px solid var(--border); }
+.card { width: 480px; aspect-ratio: 3 / 2; border-radius: 12px; overflow: hidden; position: relative; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.card .front { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px; color: #fffdf8; }
+.card .stamp { position: absolute; right: 16px; top: 16px; width: 64px; height: 64px; border-radius: 999px; border: 2px solid rgba(255,253,248,.7); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; text-align: center; line-height: 12px; color: rgba(255,253,248,.9); transform: rotate(-8deg); }
+.card .back { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1px 1fr; gap: 16px; padding: 20px; background: var(--surface); }
+.card .back .rule { background: var(--border); }
+.logday { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.logday .d { flex: 0 0 96px; font-family: var(--mono); font-size: 12px; color: var(--muted); padding-top: 3px; }
+.logday .e { flex: 1; font-size: 16px; line-height: 24px; color: var(--ink); }
+.logday .e small { display: block; font-size: 13px; color: var(--muted); }
+.days { display: grid; grid-template-columns: repeat(53, 1fr); gap: 3px; }
+.days i { display: block; aspect-ratio: 1; border-radius: 2px; background: var(--sunken); }
+.days i.l1 { background: var(--shallows-tint); } .days i.l2 { background: var(--shallows); } .days i.l3 { background: var(--brand); } .days i.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* — frames (a drawn screen inside the board) — */
+.frame { position: relative; width: 1180px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--bg); overflow: hidden; }
+.frame.phone { width: 390px; height: 844px; border: 1px solid var(--border); border-radius: 18px; }
+.frame.tv { width: 1180px; }
+.phones { display: flex; gap: 36px; padding: 0 48px; }
+.phone-chrome { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.phone-chrome .mark { width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: var(--brand-ink); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+.phone-chrome .shop { font-size: 15px; font-weight: 600; }
+.harbor .phone-chrome .shop { font-family: var(--display); }
+.phone-chrome .right { margin-left: auto; display: flex; align-items: center; }
+.phone-chrome .av { width: 26px; height: 26px; font-size: 10px; }
+.phone-chrome .av + .av { margin-left: -8px; }
+.phone-page { padding: 20px 16px 0 16px; }
+.phone-page .title { font-size: 32px; }
+.phone-page .ph .lede { font-size: 15px; }
+.dock { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--surface); border-top: 1px solid var(--border); }
+.dock span { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; color: var(--muted); }
+.dock span.on { color: var(--brand); font-weight: 600; }
+.dock i { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid currentColor; opacity: .8; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 28px 28px 0 0; border-top: 1px solid var(--border); box-shadow: 0 -8px 30px rgba(0,0,0,.12); padding: 12px 16px 24px 16px; }
+.sheet::before { content: ""; display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 0 auto 12px auto; opacity: .6; }
+.scrim { position: absolute; inset: 0; background: rgba(12,42,53,.35); }
+.rail { display: grid; grid-template-columns: 220px 1fr; gap: 40px; }
+.rail nav { display: flex; flex-direction: column; gap: 2px; }
+.rail nav span { padding: 8px 12px; border-radius: 10px; font-size: 15px; color: var(--muted); }
+.rail nav span.on { background: var(--brand-tint); color: var(--brand-deep); font-weight: 500; }
+.rail nav .group { padding: 16px 12px 6px 12px; }
+.mail { width: 600px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+.mail .hd { padding: 20px 28px; border-bottom: 1px solid var(--border); }
+.mail .bd { padding: 24px 28px; font-size: 16px; line-height: 24px; }
+.mail .bd p { margin: 0 0 16px 0; }
+.mail .ft { padding: 16px 28px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.sms { width: 320px; padding: 12px 16px; border-radius: 18px 18px 18px 4px; background: var(--sunken); font-size: 15px; line-height: 22px; }
+/* kit:end */
+/* board-local */
+.mail .from { display: flex; align-items: center; gap: 10px; font-size: 15px; line-height: 20px; }
+.mail .from .mark { width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: var(--brand-ink); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex: 0 0 30px; }
+.mail .from b { font-weight: 600; }
+.harbor.mail .from b { font-family: var(--display); }
+.mail .subj { margin: 14px 0 0 0; }
+.mail .photo { border-radius: 0; }
+.pair { display: flex; gap: 36px; justify-content: center; padding: 32px 48px; align-items: flex-start; }
+.pair > .mail { zoom: .87; margin: 0; flex: 0 0 auto; }
+.push { width: 360px; display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.push .app { width: 36px; height: 36px; border-radius: 10px; flex: 0 0 36px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--brand-ink); background: var(--brand); }
+.push .top { display: flex; justify-content: space-between; font-size: 12px; line-height: 16px; color: var(--muted); }
+.push b { display: block; font-size: 15px; line-height: 20px; font-weight: 600; margin-top: 2px; color: var(--ink); }
+.push p { margin: 2px 0 0 0; font-size: 14px; line-height: 20px; color: var(--ink); }
+.event { width: 360px; display: flex; border-radius: 18px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.event .edge { flex: 0 0 6px; background: var(--brand); }
+.event .in2 { padding: 14px 16px; font-size: 14px; line-height: 20px; color: var(--muted); }
+.event .in2 b { display: block; font-size: 16px; line-height: 22px; font-weight: 600; color: var(--ink); font-family: var(--display); }
+.og { position: relative; width: 600px; height: 315px; border-radius: 18px; overflow: hidden; color: #fffdf8; }
+.sms.me { margin-left: auto; border-radius: 18px 18px 4px 18px; background: var(--brand-tint); color: var(--brand-deep); }
+.stamp-t { display: block; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--muted); margin: 14px 0 10px 0; }
+.bub { display: inline-flex; align-items: flex-end; gap: 2px; }
+.bub i { display: block; border-radius: 999px; background: #0e7490; }
+.bub i:nth-child(1) { width: 10px; height: 10px; }
+.bub i:nth-child(2) { width: 7px; height: 7px; opacity: .75; }
+.bub i:nth-child(3) { width: 4px; height: 4px; background: var(--border-strong); }
+.bub.moment i:nth-child(3) { background: var(--coral); }
+.bub.light i:nth-child(1), .bub.light i:nth-child(2) { background: #fffdf8; }
+.credit { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.sec { padding: 8px 48px 0 48px; }
+  </style>
+</helmet>
+<div class="board">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow" style="color:#0e7490">Round 3 · Diver and staff · Messages</span><span class="note">15 frames · mail at 600, a phone at 390, cards at 360 · every message the app sends, in one voice</span></div>
+    <h1>Every message, one voice</h1>
+    <p class="lede">Twenty-five kinds of message leave the app today, and every one wears the same 560px white card with a teal that belongs to no one, opens "Hi {firstName}," and ends on a mechanism. Round 3 gives each message its sender's face and one sentence: the shop speaks in the shop's mail, text and postcard; DiveDay speaks only when it acts (an invite, a welcome, a password). The confirmation is the pass, the reminder is the line, the recap is the postcard, and the thread link is the one door every message opens. What is new is the pass and the postcard arriving as mail, and the voice sheet at the foot, applied sentence by sentence.</p>
+    <div class="three">
+      <div><span class="group">The one idea</span><p class="note">A message is the shop, in its colour, saying one thing and holding one door. It never explains how the app works; it says where to be, what to bring, what is still open, and it carries the same objects the pages carry: the pass, the line, the arrival card, the postcard.</p></div>
+      <div><span class="group">Deleted here</span><p class="note">The "Hi {firstName}," opener on every kind; every "we" where DiveDay speaks ("before we sail", "Text us at"); the arrows ("Track everything on your readiness page →"); the exclamation marks ("See you on the boat!", "See you in the water!", "thanks for diving {trip}!", the WhatsApp template's "Hi!"); the mechanism words (link, readiness page, track, expires, notification, confirm); the seven clipboard sentences of the reminder list (Sign your waiver · Send your shop your certification details · Check your certification level with the shop · Bring your certification card so the shop can check it · Bring your nitrox card · Send your shop your specialty details · Settle your balance); the two spellings of one act and one page ("Complete your waiver" and "Sign your waiver"; "trip prep" and "readiness"); the teal #008080, which is neither the shop's green nor DiveDay's lagoon; the three-dot mark in the head of the shop's mail; the discount code; "Please".</p></div>
+      <div><span class="group">New here</span><p class="note">M · the pass inside the confirmation mail, 360 wide, the same object as the confirmation page. L · the line as a static strip in the mail and the text. N · the postcard's front inside the recap mail. K reaching the desk as a push ("Priya Sharma is aboard"). Four shapes the kit did not draw because they belong to the phone and the browser, drawn here once: the reply bubble, the push card, the calendar entry, the link-preview card.</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>1 · Booking confirmed</b> · email from Blue Mantis Divers via DiveDay · to Priya Sharma · Tue Aug 25 · 8:41 PM · 600</div>
+  <div class="frame" style="padding:32px 0">
+    <div class="mail harbor">
+      <div class="hd">
+        <div class="from"><span class="mark">BM</span><div><b>Blue Mantis Divers</b> <span class="note">via DiveDay</span><br><span class="note">to Priya Sharma · Tue Aug 25, 8:41 PM</span></div></div>
+        <h2 class="h subj">You're booked: Two-Tank Reef, Thu Aug 27</h2>
+      </div>
+      <div class="photo s"><div class="ph-img sea-molasses"></div><div class="ph-img sea-grain"></div><span class="cap">Molasses Reef · the shop's photo</span><div class="over"><div><div class="t">Two-Tank Reef — Molasses &amp; French</div><div class="n">Thursday, August 27 · 7:00–10:30 AM EDT</div></div></div></div>
+      <div class="bd">
+        <p>Your seat on Mantis II is paid, $95. Sal is at the counter from 6:15.</p>
+        <div class="pass" style="margin:0 auto">
+          <div class="top"><div class="ph-img sea-molasses" style="position:absolute;inset:0"></div><div class="ph-img sea-grain" style="position:absolute;inset:0"></div><div style="position:relative" class="shop">BLUE MANTIS DIVERS</div><div style="position:relative"><div class="t">Two-Tank Reef — Molasses &amp; French</div><div class="n" style="font-size:13px;opacity:.9">Thursday, August 27 · Priya Sharma</div></div></div>
+          <div class="facts"><div><span>Boat</span><b>Mantis II</b></div><div><span>Slip</span><b>14</b></div><div><span>Be there</span><b>6:15 AM</b></div></div>
+          <div class="foot"><div class="qr"></div><p class="note" style="margin:0">Bring your card and a towel. Show this at the counter.</p></div>
+        </div>
+        <div style="margin-top:24px">
+          <div class="row"><span class="kind">Where</span><span class="sentence"><b>Slip 14, Marina Del Mar</b> · the green hull at the end of dock B</span></div>
+          <div class="row"><span class="kind">Parking</span><span class="sentence">The marina lot, free before 7:00.</span></div>
+          <div class="row"><span class="kind">A hand</span><span class="sentence">+1 305 555 0142</span></div>
+        </div>
+        <div class="line" style="margin-top:8px">
+          <div class="seg"><i></i><b>6:15</b><span>Check-in</span></div>
+          <div class="seg"><i></i><b>7:00</b><span>Leaves</span></div>
+          <div class="seg"><i></i><b>10:30</b><span>Back</span></div>
+        </div>
+        <div style="margin-top:24px"><span class="btn primary">Open your day</span></div>
+      </div>
+      <div class="ft"><div style="display:flex;justify-content:space-between;align-items:center;gap:16px"><span>Blue Mantis Divers · Slip 14, Marina Del Mar, Key Largo, FL 33037</span><span class="credit"><span class="bub"><i></i><i></i><i></i></span>Booked through DiveDay · Unsubscribe from deals</span></div></div>
+    </div>
+  </div>
+  <p class="aside">The mail is the confirmation page folded into an envelope: the subject is the sentence, the photograph is the trip's head, the pass is the same 360 object the page shows, the arrival card is three rows, and the line is the day as a strip that does not move yet. One button, and it opens the thread. The shop's mark and face are in the head; DiveDay is the credit at the foot. Today's mail says "Your spot is confirmed", asks the diver to "Track what's left before you sail", and boxes a "Pre-Trip Checklist Reminder:" in a teal border; all of that is one sentence on the pass.</p>
+
+  <div class="frame-cap"><b>2 · The night before, and what the link carries</b> · SMS or WhatsApp from the shop · Priya Sharma · Wed Aug 26 · 7:02 PM · the calendar entry · the link preview</div>
+  <div class="frame" style="padding:32px 48px">
+    <div style="display:flex;gap:36px;align-items:flex-start">
+      <div class="frame phone" style="height:640px;flex:0 0 390px">
+        <div class="phone-chrome"><span class="mark" style="background:var(--sunken);color:var(--muted)">BM</span><span class="shop">+1 305 555 0142</span><div class="right"><span class="note" style="font-size:13px">Messages</span></div></div>
+        <div class="phone-page" style="padding-top:0">
+          <span class="stamp-t">Wed Aug 26 · 7:02 PM</span>
+          <div class="sms">Blue Mantis: tomorrow, 7:00 Two-Tank Reef. Be at slip 14, Marina Del Mar by 6:15. Bring your card and a towel. Your day: diveday.app/r/…</div>
+          <span class="stamp-t">7:03 PM</span>
+          <div class="sms">Your waiver for tomorrow isn't signed yet. Two minutes: diveday.app/w/…</div>
+          <span class="stamp-t">9:48 PM</span>
+          <div style="display:flex"><div class="sms me" style="width:auto;max-width:320px">will sign tonight</div></div>
+          <div style="position:absolute;left:16px;right:16px;bottom:16px"><div class="control ph">Message</div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:24px">
+        <div class="event">
+          <div class="edge"></div>
+          <div class="in2 harbor"><b>Two-Tank Reef — Molasses &amp; French</b>Thu Aug 27 · 6:15–10:30 AM EDT<br>Slip 14, Marina Del Mar<br><span style="display:block;margin-top:8px">Bring your card and a towel.<br>Your day: diveday.app/r/…</span></div>
+        </div>
+        <div class="og harbor">
+          <div class="ph-img sea-molasses" style="position:absolute;inset:0"></div><div class="ph-img sea-grain" style="position:absolute;inset:0"></div>
+          <div style="position:absolute;left:32px;top:28px;font-family:var(--display);font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.25)">Blue Mantis Divers · Key Largo</div>
+          <div style="position:absolute;left:32px;right:32px;bottom:32px"><div style="font-family:var(--display);font-size:34px;font-weight:700;line-height:1.05;letter-spacing:-0.01em;text-shadow:0 1px 2px rgba(0,0,0,.3)">Two-Tank Reef — Molasses &amp; French</div><div style="margin-top:8px;font-size:15px;opacity:.92;text-shadow:0 1px 2px rgba(0,0,0,.25)">Thursday, August 27 · 7:00 AM · Mantis II</div></div>
+          <div style="position:absolute;right:28px;bottom:32px;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;color:rgba(255,253,248,.9)"><span class="bub light"><i></i><i></i><i></i></span>DiveDay</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="aside">Three bubbles, one number. The shop's name leads the first text because a bare number sent it; on WhatsApp the shop's own sender carries the name, and the words are the same. The two links are the thread and the release; the diver's reply lands as the inbox row on the Today board ("Priya · will sign tonight"). Today's text says "sails tomorrow ({date}, {time}). Please be at the dock 30 min early. Questions? Text us at {phone}." and the WhatsApp template wraps it in "Hi! An update from '{shop}':". On the right, what the thread link carries: the calendar entry starts at check-in, not at the departure, and its notes are the pass's one sentence; the link-preview card is the shop's name and the trip on the shop's photograph, nothing else. It never shows the token, a price, a seat count or a medical fact, because a preview is rendered by whoever holds the URL.</p>
+
+  <div class="frame-cap"><b>3 · Before Thursday</b> · two emails from the shop · "Two things before Thursday" · Thu Aug 20, 7:00 AM · "Sign your release for Thursday" · Tue Aug 25, 8:42 PM</div>
+  <div class="frame">
+    <div class="pair">
+      <div class="mail harbor">
+        <div class="hd">
+          <div class="from"><span class="mark">BM</span><div><b>Blue Mantis Divers</b> <span class="note">via DiveDay</span><br><span class="note">to Priya Sharma · Thu Aug 20, 7:00 AM</span></div></div>
+          <h2 class="h subj">Two things before Thursday</h2>
+        </div>
+        <div class="bd">
+          <p>Two-Tank Reef leaves a week from today, 7:00 AM from slip 14.</p>
+          <div class="check">Your sizes · Tue 8:50 PM</div>
+          <div style="margin-top:12px">
+            <div class="row"><span class="mark warn"></span><span class="kind warn">Release</span><span class="sentence"><b>Not signed</b> · two minutes</span></div>
+            <div class="row"><span class="mark warn"></span><span class="kind warn">Contact</span><span class="sentence"><b>No emergency contact</b> · a name and a number</span></div>
+          </div>
+          <div style="margin-top:24px"><span class="btn primary">Finish getting ready</span></div>
+        </div>
+        <div class="ft"><span class="credit"><span class="bub"><i></i><i></i><i></i></span>Booked through DiveDay</span></div>
+      </div>
+      <div class="mail harbor">
+        <div class="hd">
+          <div class="from"><span class="mark">BM</span><div><b>Blue Mantis Divers</b> <span class="note">via DiveDay</span><br><span class="note">to Priya Sharma · Tue Aug 25, 8:42 PM</span></div></div>
+          <h2 class="h subj">Sign your release for Thursday</h2>
+        </div>
+        <div class="bd">
+          <p>Two-Tank Reef leaves Thursday at 7:00. Blue Mantis needs your signed release before you board; it takes two minutes and works on a phone.</p>
+          <div style="margin-top:8px"><span class="btn primary">Sign the release</span></div>
+          <p class="note" style="margin:16px 0 0 0">This works until Sep 3. After that, Sal has a fresh one at the counter.</p>
+        </div>
+        <div class="ft"><span class="credit"><span class="bub"><i></i><i></i><i></i></span>Booked through DiveDay</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="aside">The week-before mail is the thread's rows in an envelope: the settled step as a check, the open ones as rows, one button. Today's version lists up to seven "Still to sort before you board:" sentences under a 168-hour reminder; the thread already knows which two are open, so the mail says two. The release mail is one paragraph and one button. "Complete your waiver" and "Sign your waiver" were two names for it; the word is the release, and the act is signing. The expiry line stays because it is a fact the diver acts on, and it names the fallback in the shop's voice rather than "This private link expires".</p>
+
+  <div class="frame-cap"><b>4 · The postcard and the deal</b> · "Your postcard from Molasses &amp; French" · Ravi Nair · Thu Aug 27, 2:30 PM · "Tonight: 5 seats on the Night Dive" · the deal Dana has not sent, as it would land</div>
+  <div class="frame">
+    <div class="pair">
+      <div class="mail harbor">
+        <div class="hd">
+          <div class="from"><span class="mark">BM</span><div><b>Blue Mantis Divers</b> <span class="note">via DiveDay</span><br><span class="note">to Ravi Nair · Thu Aug 27, 2:30 PM</span></div></div>
+          <h2 class="h subj">Your postcard from Molasses &amp; French</h2>
+        </div>
+        <div class="bd">
+          <div class="card" style="width:100%"><div class="front"><div class="ph-img sea-french" style="position:absolute;inset:0"></div><div class="ph-img sea-grain" style="position:absolute;inset:0"></div><div class="stamp">KEY LARGO<br>AUG 27<br>2026</div><div style="position:relative;font-family:var(--display);font-size:30px;font-weight:700;line-height:1.05;text-shadow:0 1px 2px rgba(0,0,0,.3)">Molasses &amp; French</div><div style="position:relative;font-size:13px;opacity:.9">Two dives with Blue Mantis Divers · your 12th</div></div></div>
+          <p style="margin-top:20px">Two dives with Keiko and Sal. A green turtle at Molasses Reef, a spotted eagle ray at French.</p>
+          <p class="note" style="margin:0 0 16px 0">No flying before Friday 4:30 AM, 18 hours after the day ended.</p>
+          <div><span class="btn primary">See your day</span></div>
+          <p style="margin:20px 0 0 0"><span class="link">A line for the next diver ›</span></p>
+        </div>
+        <div class="ft"><div style="display:flex;justify-content:space-between;align-items:center;gap:16px"><span>Blue Mantis Divers · Slip 14, Marina Del Mar, Key Largo, FL 33037</span><span class="credit"><span class="bub"><i></i><i></i><i></i></span>Booked through DiveDay · Unsubscribe from postcards</span></div></div>
+      </div>
+      <div class="mail harbor">
+        <div class="hd">
+          <div class="from"><span class="mark">BM</span><div><b>Blue Mantis Divers</b> <span class="note">via DiveDay</span><br><span class="note">to Yara Haddad · Thu Aug 27</span></div></div>
+          <h2 class="h subj">Tonight: 5 seats on the Night Dive at $95 instead of $120</h2>
+        </div>
+        <div class="photo s"><div class="ph-img sea-night"></div><span class="cap">City of Washington · no photo yet</span><svg style="position:absolute;right:24px;top:22px" width="56" height="40" viewBox="0 0 56 40" fill="none" stroke="#9fd3bd" stroke-width="1.5" stroke-linecap="round"><circle cx="28" cy="20" r="9"/><circle cx="10" cy="10" r="1.5"/><circle cx="46" cy="30" r="1.5"/><circle cx="44" cy="8" r="1"/></svg><div class="over"><div><div class="t">Night Dive — City of Washington</div><div class="n">Tonight · Skiff leaves 7:30 PM, back 11:00</div></div></div></div>
+        <div class="bd">
+          <p>The wreck after dark, with Keiko, $95 tonight instead of $120. The price is on the seat until the Skiff leaves.</p>
+          <div><span class="btn primary">Take a seat</span></div>
+        </div>
+        <div class="ft"><div style="display:flex;justify-content:space-between;align-items:center;gap:16px"><span>Blue Mantis Divers · Slip 14, Marina Del Mar, Key Largo, FL 33037</span><span class="credit"><span class="bub"><i></i><i></i><i></i></span>Unsubscribe from deals</span></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="aside">The recap is the postcard's front, one line about the day, the fly-safe fact in the boring words, one button, and the review ask as a link at the foot. Today's recap ends "If you loved it, the best thing you can do is bring a buddy next time. See you in the water!"; the ask is one line and no exclamation. The deal is a photograph, a sentence with both prices, one button. Today's deal leads with "{n}% off" and asks the diver to type a code at booking; the price is on the seat the link opens, so there is no code. The night dive has no photograph yet, so the band is the hand's mark, as on the panel.</p>
+
+  <div class="frame-cap"><b>5 · DiveDay speaks</b> · the invite · Marcus Webb · Mon Aug 3 · the welcome · Dana Reyes · the shop's first day · both `diveday`, Geist, lagoon</div>
+  <div class="frame">
+    <div class="pair">
+      <div class="mail diveday">
+        <div class="hd">
+          <div class="from"><span class="bub"><i></i><i></i><i></i></span><div><b>DiveDay</b><br><span class="note">to Marcus Webb · Mon Aug 3, 4:12 PM</span></div></div>
+          <h2 class="h subj">Dana invited you to Blue Mantis Divers on DiveDay</h2>
+        </div>
+        <div class="bd">
+          <p>Dana Reyes added you to Blue Mantis Divers as an instructor.</p>
+          <div><span class="btn primary">Join</span></div>
+          <p class="note" style="margin:16px 0 0 0">This works until Aug 10.</p>
+        </div>
+        <div class="ft">DiveDay · if you were not expecting this, there is nothing to do.</div>
+      </div>
+      <div class="mail diveday">
+        <div class="hd">
+          <div class="from"><span class="bub moment"><i></i><i></i><i></i></span><div><b>DiveDay</b><br><span class="note">to Dana Reyes</span></div></div>
+          <h2 class="h subj">Blue Mantis Divers is live</h2>
+        </div>
+        <div class="bd">
+          <p>Blue Mantis Divers is live on DiveDay. Put your first boat on the line.</p>
+          <div><span class="btn primary">Open Today</span></div>
+        </div>
+        <div class="ft">DiveDay</div>
+      </div>
+    </div>
+  </div>
+  <p class="aside">DiveDay's own mail keeps the bubble mark in the head and the lagoon on the button; it speaks in its own name because it did the thing. The invite is the inviter's sentence and one button called Join, not "Set your password to get started"; the password is the door's business. The welcome is lever S's sentence and nothing more. Today's welcome says "Add your first trip, invite a diver, and the dock is one step closer" and closes "Glad you're here."; both are deleted. The welcome's smallest bubble is coral: the one earned moment on this board.</p>
+
+  <div class="frame-cap"><b>6 · Off, aboard, and what reached whom</b> · the blow-out to Emma Fischer, if the wind comes up · two pushes on the desk's phone at 6:32 · the outcomes on the inbox row as of 6:31</div>
+  <div class="frame">
+    <div class="pair" style="justify-content:flex-start">
+      <div class="mail harbor">
+        <div class="hd">
+          <div class="from"><span class="mark">BM</span><div><b>Blue Mantis Divers</b> <span class="note">via DiveDay</span><br><span class="note">to Emma Fischer · Thu Aug 27, 4:10 PM</span></div></div>
+          <h2 class="h subj">Tonight's night dive is off</h2>
+        </div>
+        <div class="bd">
+          <p>Tonight's night dive is off — the wind is up. Friday's or a refund, your call:</p>
+          <div class="summary">Friday's night dive<span class="meta">7:30 PM · Skiff · 5 seats</span></div>
+          <div class="summary">A refund<span class="meta">$120 back to your card</span></div>
+          <p class="note" style="margin:16px 0 0 0">Your $120 stays with Blue Mantis until you choose.</p>
+        </div>
+        <div class="ft"><span class="credit"><span class="bub"><i></i><i></i><i></i></span>Booked through DiveDay</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px;zoom:1">
+        <div class="push"><span class="app">BM</span><div style="flex:1;min-width:0"><div class="top"><span>DiveDay · Blue Mantis</span><span>6:32</span></div><b>Manifest updated</b><p>Open it to save the list to this phone.</p></div></div>
+        <div class="push"><span class="app">BM</span><div style="flex:1;min-width:0"><div class="top"><span>DiveDay · Blue Mantis</span><span>6:32</span></div><b>Priya Sharma is aboard</b><p>Sal, 6:32 · 8 of 10 aboard</p></div></div>
+        <div class="panel" style="width:440px">
+          <div class="in" style="padding-top:16px">
+            <div class="group-h"><span class="group">What reached whom</span><span class="meta">as of 6:31</span></div>
+            <div class="rows-p">
+              <div class="row"><span class="mark ok"></span><span class="kind ok">Email</span><span class="meta">Delivered · Tue 8:41 PM</span><span class="sentence"><b>Priya Sharma</b> · You're booked.</span></div>
+              <div class="row"><span class="mark danger"></span><span class="kind danger">Email</span><span class="door">Fix the address ›</span><span class="sentence"><b>Tomás Ferreira</b> · Sign your release · Bounced.</span></div>
+              <div class="row"><span class="mark warn"></span><span class="kind warn">Text</span><span class="door">Open diver ›</span><span class="sentence"><b>Nadia Petrov</b> · the night-before text · the number doesn't take texts.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="aside">The blow-out is a sentence and two doors; the money sentence is the one fact the diver needs before choosing. Today's mail is "{shop} has had to cancel {trip} on {date} because of the weather", a five-way money story, and "Want to get back in the water?" with up to three trips. The two pushes are the staff app's only notifications: the manifest one exists today ("Open the manifest to save the current list to this phone"); the second is K reaching the desk's pocket, the check-in as a sentence with who tapped it and the count. The outcomes are SES's and SNS's receipts as they land on the inbox row, in three words a person would say; today they read "Email could not be delivered" and "The text could not be delivered", and the diver's row carries "Failed to deliver". A bounce is a row with a door because the fix is an address.</p>
+
+  <div class="frame-cap"><b>7 · The voice sheet applied</b> · six of today's sentences, and the sentence that replaces each</div>
+  <div class="sec" style="padding-bottom:8px">
+    <table class="tbl">
+      <tr><th style="width:50%">Today</th><th>Round 3</th></tr>
+      <tr><td>Hi Priya, Your spot on Two-Tank Reef — Molasses &amp; French is confirmed.</td><td>You're booked: Two-Tank Reef, Thu Aug 27. The subject is the sentence; the body opens on the pass, not on a greeting.</td></tr>
+      <tr><td>Aim to be at the dock by 6:15, 45 minutes before we sail.</td><td>Be at slip 14, Marina Del Mar by 6:15. The shop speaks and names the place; "we" is nobody.</td></tr>
+      <tr><td>Track everything on your readiness page →</td><td>Open your day. A button, no arrow; "readiness page" is the mechanism, "your day" is the thing.</td></tr>
+      <tr><td>If you loved it, the best thing you can do is bring a buddy next time. See you in the water!</td><td>A line for the next diver. The ask is one link at the foot of the postcard, and no sentence ends in an exclamation mark.</td></tr>
+      <tr><td>Here is a fresh link to what's left before you sail with Blue Mantis Divers on Two-Tank Reef. The one you had has expired.</td><td>Your day: diveday.app/r/… This one works until Sep 3. The link is shown, not described; "expired" and "link" were the mechanism.</td></tr>
+      <tr><td>Pre-Trip Checklist Reminder: (a teal-bordered panel and a list)</td><td>Bring your card and a towel. One sentence on the pass, in the shop's words, and the same sentence on the calendar entry.</td></tr>
+    </table>
+  </div>
+  <p class="aside">The sheet's rule, applied to every kind on the inventory's list: the shop speaks in the shop's mail and text; DiveDay speaks in the invite, the welcome, the verification and the password mails, and in the ops alerts nobody outside sees. A message says one thing, holds one door, and names a place, a time and a thing to bring where those exist. The plain-text twin is the same words with the door as a URL on its own line.</p>
+
+  <div class="foot">
+    <div><span class="group">What does not change</span><p>Every kind on the inventory's list still exists and still fires when it fires today: the cadences, the send window, the held sends with their Undo, the postal address under every commercial message and the unsubscribe it carries, the plain-text twin, the fly-safe sentence with DAN's hours, the verification and reset mails that name no shop, the ops alerts. No message ever carries the token in a preview, a price on a pass, or a medical fact anywhere. The manifest push still opens the manifest.</p></div>
+    <div><span class="group">Phone</span><p>Mail is drawn at 600 and folds to the device's width with the pass at the column's width and the line's three segments still on one row; the arrival rows wrap under their kind as on any phone. The text is a phone by nature. The push and the calendar entry are the OS's own shapes and take its width; the link-preview card is rendered by the receiving app at 1200×630 and drawn here at half.</p></div>
+    <div><span class="group">Cost and risk</span><p>One session for the mail shell (the shop's head, the credit foot, the four tokens from Harbor in place of #008080) and the voice pass over twenty-five bodies; one for the pass and the line as mail-safe HTML, which is the honest cost here because mail clients render neither flex nor a radial gradient the same way twice; one for the check-in push. The risk is a mail client that strips the photograph and leaves the pass as a table: the words still say where, when and what to bring, so the message survives its picture.</p></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

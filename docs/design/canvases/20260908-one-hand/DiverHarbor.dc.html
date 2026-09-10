@@ -1,0 +1,670 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&family=Bricolage+Grotesque:wght@500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+/* kit:start — the round-3 kit. Pasted verbatim into every round-3 board; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --brand:#1d7a5f; --brand-deep:#145a46; --brand-tint:#e4f1ea; --brand-ink:#ffffff; --shallows:#7fd0d6; --shallows-tint:#d7f0f2; --coral:#ff6f61; --coral-deep:#a83a2c; --coral-tint:#ffeee9; --ok:#15803d; --ok-tint:#e6f0e8; --warn:#b45309; --warn-tint:#f8eee2; --danger:#b91c1c; --danger-tint:#f8e8e6; --water:#e4f1ea; --shadow:0 2px 10px rgba(88,66,30,.06); --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.diveday { --brand:#0e7490; --brand-deep:#0a4d61; --brand-tint:#e6f3f5; --water:#e6f3f5; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+.night { --bg:#071720; --surface:#0d222d; --sunken:#051118; --border:#1c3a47; --border-strong:#4f7285; --ink:#e9f3f4; --muted:#8fa8b0; --brand:#5fd3b0; --brand-deep:#8fe3c8; --brand-tint:#0f3a30; --brand-ink:#04241b; --shallows:#1f6f78; --shallows-tint:#0b3540; --coral:#ff8a7e; --coral-deep:#ffb3aa; --coral-tint:#3f1d19; --ok:#4ade80; --ok-tint:#0f3324; --warn:#fbbf24; --warn-tint:#3a2a0e; --danger:#f87171; --danger-tint:#3d1717; --water:#143a3c; --shadow:0 2px 10px rgba(0,0,0,.35); }
+.night.diveday, .night .diveday { --brand:#22d3ee; --brand-deep:#67e8f9; --brand-tint:#0b3540; --brand-ink:#072a33; --water:#0b3540; }
+.boat { --bg:#ffffff; --surface:#ffffff; --sunken:#eef3f5; --border:#4f7285; --border-strong:#0c2a35; --ink:#04141b; --muted:#2f4650; --brand:#0a4d61; --brand-deep:#062f3b; --brand-tint:#dceff3; --brand-ink:#ffffff; --water:#ffffff; --shadow:none; }
+.boat.night { --bg:#000a0f; --surface:#071720; --sunken:#000a0f; --border:#6f95a8; --border-strong:#cfe3ea; --ink:#f4fbfc; --muted:#b9cdd4; --brand:#7ee8fa; --brand-deep:#b5f1fb; --brand-tint:#0b3540; --brand-ink:#04141b; --water:#000a0f; }
+.night, .boat { color: var(--ink); background: var(--bg); }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 940px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; }
+.frame-cap { padding: 28px 48px 8px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 940px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 160px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; }
+.stat b { display: block; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--border); }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 500; }
+
+/* — type — */
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand); }
+.group { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.harbor .title, .harbor .h { font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--brand); font-weight: 500; }
+
+/* — chrome — */
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 102px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.harbor .chrome .shop { font-family: var(--display); font-size: 18px; }
+.chrome .mark { width: 36px; height: 36px; border-radius: 10px; background: var(--brand); color: var(--brand-ink); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .tabs { display: flex; gap: 4px; }
+.chrome .tabs span { padding: 10px 14px; border-radius: 10px; font-size: 15px; color: var(--muted); }
+.chrome .tabs span.on { background: var(--brand-tint); color: var(--brand); font-weight: 500; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.here { display: flex; align-items: center; gap: 8px; }
+.av { width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; border: 2px solid var(--surface); }
+.av + .av { margin-left: -10px; }
+.p-d { background: #a83a2c; } .p-k { background: #1d7a5f; } .p-s { background: #0e7490; } .p-m { background: #8a8065; }
+.who { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 3px; border-radius: 999px; background: var(--brand-tint); color: var(--brand-deep); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.who i { width: 20px; height: 20px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; font-style: normal; }
+.who.away { background: var(--sunken); color: var(--muted); }
+
+/* — the tide line (F) — */
+.tide { position: relative; height: 64px; padding: 0 102px; background: linear-gradient(180deg, var(--water) 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); }
+.tide .inner { position: relative; width: 976px; margin: 0 auto; height: 64px; }
+.tide .track { position: absolute; left: 0; top: 0; width: 740px; height: 64px; }
+.tide .axis { position: absolute; left: 0; right: 0; top: 40px; height: 2px; background: var(--border); }
+.tide .hour { position: absolute; top: 46px; font-family: var(--mono); font-size: 10px; color: var(--border-strong); transform: translateX(-50%); }
+.tide .boat { position: absolute; top: 14px; height: 24px; border-radius: 6px; background: var(--sunken); border: 1px solid var(--border); overflow: hidden; }
+.tide .boat i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--shallows); opacity: .75; }
+.tide .boat span { position: absolute; left: 8px; top: 3px; font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.tide .boat.next { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-tint); }
+.tide .boat.gone { opacity: .55; }
+.tide .now { position: absolute; top: 6px; width: 2px; height: 40px; background: var(--ink); transform: translateX(-1px); }
+.tide .now::after { content: attr(data-t); position: absolute; top: -2px; left: 6px; font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--ink); white-space: nowrap; }
+.tide .until { position: absolute; right: 0; top: 10px; font-size: 13px; color: var(--ink); text-align: right; line-height: 20px; }
+.tide .until b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tide .until .note { font-size: 12px; line-height: 18px; }
+.tide.empty .inner { display: flex; align-items: center; justify-content: center; }
+.tide.empty .inner span { font-size: 13px; color: var(--muted); }
+/* the phone fold: one 36px strip */
+.tide-fold { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px; background: linear-gradient(180deg, var(--water) 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); }
+.tide-fold .t { font-family: var(--mono); font-size: 11px; color: var(--ink); }
+.tide-fold .bar { position: relative; flex: 1; height: 8px; border-radius: 4px; background: var(--sunken); overflow: hidden; }
+.tide-fold .bar i { position: absolute; top: 0; height: 8px; border-radius: 4px; background: var(--border); }
+.tide-fold .bar i.next { background: var(--shallows); }
+.tide-fold .bar b { position: absolute; top: 0; width: 2px; height: 8px; background: var(--ink); }
+.tide-fold .u { font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+/* — the trip's own line (L): one departure's day, the same on both sides — */
+.line { position: relative; display: flex; align-items: flex-start; padding: 12px 0 0 0; }
+.line .seg { position: relative; flex: 1 1 0; padding-top: 18px; }
+.line .seg::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--border); }
+.line .seg.done::before { background: var(--brand); }
+.line .seg.now::before { background: linear-gradient(90deg, var(--brand) 0 50%, var(--border) 50% 100%); }
+.line .seg i { position: absolute; left: 0; top: 0; width: 14px; height: 14px; border-radius: 999px; background: var(--surface); border: 2px solid var(--border); transform: translateY(0); }
+.line .seg.done i, .line .seg.now i { border-color: var(--brand); background: var(--brand); }
+.line .seg.now i { box-shadow: 0 0 0 4px var(--brand-tint); }
+.line .seg b { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.line .seg span { display: block; font-size: 13px; font-weight: 500; color: var(--ink); line-height: 18px; }
+.line .seg.todo span { color: var(--muted); font-weight: 400; }
+
+/* — the page — */
+.page { width: 976px; margin: 0 auto; padding-top: 36px; }
+.page.read { width: 720px; }
+.ph { margin-bottom: 20px; }
+.ph .eyebrow { margin: 0; }
+.ph .title { margin: 8px 0 0 0; }
+.ph .lede { margin: 8px 0 0 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.ph .acts { display: flex; gap: 8px; margin-top: 14px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; padding: 0 0 8px 0; }
+.group-h .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+section + section, .stack > * + * { margin-top: 32px; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 4px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.row + .row { border-top: 0; }
+.row .mark { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid var(--border-strong); }
+.row .mark.warn { border-color: var(--warn); }
+.row .mark.danger { border-color: var(--danger); background: var(--danger-tint); }
+.row .mark.ok { border-color: var(--ok); background: var(--ok-tint); }
+.row .mark.live { border-color: var(--brand); background: var(--brand); }
+.row .kind { flex: 0 0 92px; font-size: 14px; font-weight: 500; color: var(--muted); }
+.row .kind.warn { color: var(--warn); } .row .kind.ok { color: var(--ok); } .row .kind.danger { color: var(--danger); }
+.row .sentence { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .sentence b { font-weight: 600; color: var(--ink); }
+.row .meta { font-size: 13px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.row .door { font-size: 14px; font-weight: 500; color: var(--brand); white-space: nowrap; }
+.row .door.quiet { color: var(--muted); }
+.row.add { color: var(--brand); font-weight: 500; font-size: 15px; }
+.row.add .mark { border-style: dashed; border-color: var(--brand); }
+.row.settled .sentence { color: var(--muted); }
+.row.settled .sentence b { color: var(--muted); font-weight: 500; }
+.row .avatar { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 999px; background: var(--sunken); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--muted); }
+.row .tap { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 999px; border: 2px solid var(--border-strong); }
+.row .tap.in { background: var(--shallows); border-color: var(--brand); }
+.rows-p .row { flex-wrap: wrap; gap: 8px 12px; padding: 8px 0; }
+.rows-p .row .sentence { flex-basis: 100%; }
+.rows-p .row .door, .rows-p .row .btn, .rows-p .row .who { margin-left: auto; }
+.rows-p .row .kind { flex: 0 0 auto; }
+
+/* — pills, checks, notices — */
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pill.danger { background: var(--danger-tint); color: var(--danger); }
+.pill.warn { background: var(--warn-tint); color: var(--warn); }
+.pill.live { background: var(--brand-tint); color: var(--brand-deep); }
+.pill.live::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: var(--brand); }
+.check { display: flex; align-items: center; gap: 10px; font-size: 16px; line-height: 24px; color: var(--ok); }
+.check::before { content: "✓"; font-weight: 700; }
+.notice { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border-radius: 18px; background: var(--brand-tint); color: var(--brand-deep); font-size: 15px; }
+.notice .undo { margin-left: auto; font-weight: 600; }
+.notice.warn { background: var(--warn-tint); color: var(--warn); }
+.notice.danger { background: var(--danger-tint); color: var(--danger); }
+.summary { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 4px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 16px; color: var(--ink); }
+.summary::after { content: "›"; margin-left: auto; color: var(--border-strong); transform: rotate(90deg); }
+.summary .meta { font-size: 13px; color: var(--muted); }
+
+/* — panels, photo bands — */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 28px; box-shadow: var(--shadow); overflow: hidden; }
+.panel .in { padding: 8px 24px 20px 24px; }
+.inset { background: var(--sunken); border-radius: 18px; padding: 16px 20px; }
+.photo { position: relative; height: 150px; display: flex; align-items: flex-end; padding: 20px 24px; color: #fffdf8; }
+.photo.s { height: 110px; } .photo.xs { height: 96px; padding: 16px; }
+.photo .ph-img { position: absolute; inset: 0; }
+.photo .cap { position: absolute; right: 16px; top: 12px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: rgba(255,253,248,0.85); }
+.photo .over { position: relative; display: flex; align-items: flex-end; justify-content: space-between; width: 100%; }
+.photo .t { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.photo.s .t, .photo.xs .t { font-size: 20px; }
+.harbor .photo .t { font-family: var(--display); }
+.photo .n { font-size: 14px; color: rgba(255,253,248,0.9); text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.sea-molasses { background: radial-gradient(120% 90% at 30% 20%, #6fb9b0 0%, #2a7f8a 45%, #123f52 100%); }
+.sea-french { background: radial-gradient(120% 90% at 60% 25%, #7ac3b6 0%, #2d8a8a 45%, #14454f 100%); }
+.sea-spiegel { background: radial-gradient(110% 100% at 70% 30%, #4d7d8c 0%, #1f4657 50%, #0b2230 100%); }
+.sea-night { background: linear-gradient(180deg, #0c2a35 0%, #071720 100%); }
+.sea-abyss { background: radial-gradient(100% 100% at 50% 100%, #3f9aa3 0%, #1b5f6e 50%, #0e3644 100%); }
+.sea-benwood { background: radial-gradient(120% 90% at 40% 30%, #88c7bd 0%, #3a8f92 50%, #1a4d5a 100%); }
+.sea-grain { background: repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0 6px, transparent 6px 22px); }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font-size: 15px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--brand); }
+.btn.danger { color: var(--danger); }
+.btn.block { width: 100%; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; font-weight: 500; color: var(--ink); }
+.field .hint { font-size: 12px; color: var(--muted); }
+.control { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface); font-size: 16px; color: var(--ink); }
+.control.ph { color: var(--border-strong); }
+.control.area { min-height: 96px; align-items: flex-start; padding-top: 10px; }
+.fields { display: grid; gap: 16px; }
+.fields.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.choice { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; }
+.choice i { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border-strong); }
+.choice i.on { background: var(--brand); border-color: var(--brand); }
+.choice i.radio { border-radius: 999px; }
+.seg-ctl { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.seg-ctl span { padding: 10px 14px; font-size: 14px; color: var(--muted); }
+.seg-ctl span.on { background: var(--brand-tint); color: var(--brand-deep); font-weight: 500; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 14px; color: var(--ink); background: var(--surface); }
+.chip.on { background: var(--brand-tint); border-color: var(--brand); color: var(--brand-deep); }
+
+/* — meters — */
+.dial { position: relative; width: 96px; height: 96px; border-radius: 999px; border: 2px solid var(--border); overflow: hidden; background: var(--surface); display: inline-flex; align-items: center; justify-content: center; }
+.dial i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--shallows); opacity: .8; }
+.dial b { position: relative; font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dial small { position: relative; font-size: 11px; color: var(--muted); }
+.bar { position: relative; height: 4px; border-radius: 2px; background: var(--sunken); overflow: hidden; }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); border-radius: 2px; }
+
+/* — skeleton, empty, room — */
+.skel { display: block; height: 14px; border-radius: 7px; background: linear-gradient(90deg, var(--sunken) 0%, var(--border) 50%, var(--sunken) 100%); }
+.skel.t { height: 28px; border-radius: 10px; width: 40%; }
+.skel.r { height: 52px; border-radius: 10px; }
+.empty { padding: 40px 24px; text-align: center; }
+.empty .room { height: 140px; margin: 0 auto 20px auto; display: flex; align-items: flex-end; justify-content: center; gap: 12px; }
+.empty p { margin: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.empty .room svg { stroke: var(--border-strong); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* — the pass (M), the postcard (N), the log (O) — */
+.pass { width: 360px; border-radius: 18px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.pass .top { position: relative; height: 150px; padding: 16px; color: #fffdf8; display: flex; flex-direction: column; justify-content: space-between; }
+.pass .top .shop { font-family: var(--display); font-size: 14px; font-weight: 700; letter-spacing: .02em; }
+.pass .top .t { font-size: 24px; font-weight: 700; line-height: 1.1; font-family: var(--display); text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.pass .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px; border-bottom: 1px dashed var(--border); }
+.pass .facts b { display: block; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pass .facts span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.pass .foot { margin: 0; padding: 14px 16px; display: flex; align-items: center; gap: 12px; border: 0; }
+.qr { width: 56px; height: 56px; border-radius: 6px; background: repeating-conic-gradient(var(--ink) 0 25%, var(--surface) 0 50%) 0 0 / 8px 8px; flex: 0 0 56px; border: 4px solid var(--surface); outline: 1px solid var(--border); }
+.card { width: 480px; aspect-ratio: 3 / 2; border-radius: 12px; overflow: hidden; position: relative; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.card .front { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px; color: #fffdf8; }
+.card .stamp { position: absolute; right: 16px; top: 16px; width: 64px; height: 64px; border-radius: 999px; border: 2px solid rgba(255,253,248,.7); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; text-align: center; line-height: 12px; color: rgba(255,253,248,.9); transform: rotate(-8deg); }
+.card .back { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1px 1fr; gap: 16px; padding: 20px; background: var(--surface); }
+.card .back .rule { background: var(--border); }
+.logday { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.logday .d { flex: 0 0 96px; font-family: var(--mono); font-size: 12px; color: var(--muted); padding-top: 3px; }
+.logday .e { flex: 1; font-size: 16px; line-height: 24px; color: var(--ink); }
+.logday .e small { display: block; font-size: 13px; color: var(--muted); }
+.days { display: grid; grid-template-columns: repeat(53, 1fr); gap: 3px; }
+.days i { display: block; aspect-ratio: 1; border-radius: 2px; background: var(--sunken); }
+.days i.l1 { background: var(--shallows-tint); } .days i.l2 { background: var(--shallows); } .days i.l3 { background: var(--brand); } .days i.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* — frames (a drawn screen inside the board) — */
+.frame { position: relative; width: 1180px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--bg); overflow: hidden; }
+.frame.phone { width: 390px; height: 844px; border: 1px solid var(--border); border-radius: 18px; }
+.frame.tv { width: 1180px; }
+.phones { display: flex; gap: 36px; padding: 0 48px; }
+.phone-chrome { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.phone-chrome .mark { width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: var(--brand-ink); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+.phone-chrome .shop { font-size: 15px; font-weight: 600; }
+.harbor .phone-chrome .shop { font-family: var(--display); }
+.phone-chrome .right { margin-left: auto; display: flex; align-items: center; }
+.phone-chrome .av { width: 26px; height: 26px; font-size: 10px; }
+.phone-chrome .av + .av { margin-left: -8px; }
+.phone-page { padding: 20px 16px 0 16px; }
+.phone-page .title { font-size: 32px; }
+.phone-page .ph .lede { font-size: 15px; }
+.dock { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--surface); border-top: 1px solid var(--border); }
+.dock span { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; color: var(--muted); }
+.dock span.on { color: var(--brand); font-weight: 600; }
+.dock i { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid currentColor; opacity: .8; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 28px 28px 0 0; border-top: 1px solid var(--border); box-shadow: 0 -8px 30px rgba(0,0,0,.12); padding: 12px 16px 24px 16px; }
+.sheet::before { content: ""; display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 0 auto 12px auto; opacity: .6; }
+.scrim { position: absolute; inset: 0; background: rgba(12,42,53,.35); }
+.rail { display: grid; grid-template-columns: 220px 1fr; gap: 40px; }
+.rail nav { display: flex; flex-direction: column; gap: 2px; }
+.rail nav span { padding: 8px 12px; border-radius: 10px; font-size: 15px; color: var(--muted); }
+.rail nav span.on { background: var(--brand-tint); color: var(--brand-deep); font-weight: 500; }
+.rail nav .group { padding: 16px 12px 6px 12px; }
+.mail { width: 600px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+.mail .hd { padding: 20px 28px; border-bottom: 1px solid var(--border); }
+.mail .bd { padding: 24px 28px; font-size: 16px; line-height: 24px; }
+.mail .bd p { margin: 0 0 16px 0; }
+.mail .ft { padding: 16px 28px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.sms { width: 320px; padding: 12px 16px; border-radius: 18px 18px 18px 4px; background: var(--sunken); font-size: 15px; line-height: 22px; }
+/* kit:end */
+/* board-local */
+.sfoot { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-top: 48px; padding: 20px 0 0 0; border-top: 1px solid var(--border); font-size: 13px; line-height: 20px; color: var(--muted); }
+.sfoot .shopname { font-family: var(--display); font-size: 15px; font-weight: 600; color: var(--ink); }
+.credit { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.credit i { width: 14px; height: 14px; border-radius: 999px; border: 1.5px solid #0e7490; display: inline-block; position: relative; }
+.credit i::after { content: ""; position: absolute; left: 3px; top: 3px; width: 5px; height: 5px; border-radius: 999px; background: #0e7490; }
+.species { display: flex; gap: 16px; flex-wrap: wrap; }
+.species div { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--ink); }
+.species i { width: 40px; height: 40px; border-radius: 10px; display: block; position: relative; overflow: hidden; flex: 0 0 40px; }
+.species i::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, rgba(255,255,255,0.08) 0 4px, transparent 4px 12px); }
+.col { display: flex; flex-direction: column; }
+.host { background: #f2f2f0; border: 1px solid #d9d9d4; border-radius: 6px; padding: 20px 24px 24px 24px; font-family: Georgia, "Times New Roman", serif; color: #3a3a36; }
+.host .nav { display: flex; gap: 18px; font-size: 13px; padding-bottom: 12px; border-bottom: 1px solid #d9d9d4; margin-bottom: 18px; }
+.host .nav b { margin-right: auto; font-size: 15px; }
+.host .txt { height: 10px; border-radius: 5px; background: #dcdcd6; margin-bottom: 10px; }
+  </style>
+</helmet>
+<div class="board">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow diveday" style="color:#0e7490">Round 3 · Diver · The shopfront</span><span class="note">5 frames · desktop 1180, two half-pages, three narrow pages, a widget, a phone · what is deleted here, what is new here</span></div>
+    <h1>The shopfront, in the shop's face</h1>
+    <p class="lede">Every page under /s/blue-mantis is Blue Mantis Divers' own: their green, their display face, their photograph, their words on the lenses and the boats, and DiveDay as one credit line at the foot. The kit gives the storefront one column, one row for a departure and one for a course, one primary, and the trip's own line (L) where the shop is out on the water right now. The trip page keeps its pinned order — head, plan, pitch, conditions, what changed, alternates, and the form as the last word — with each piece drawn once and at one size.</p>
+    <div class="three">
+      <div><span class="group">The one idea</span><p class="note">This shop is worth your dive day, and the next boat is right there. The storefront says what is happening now, what is next with space, then the week as a shelf; a trip page is one boat and one way to say yes.</p></div>
+      <div><span class="group">Deleted here</span><p class="note">The conservation disclaimer card (one line in the hero); the month navigator above the hero (below the shelf); the per-row metadata stack (one sentence); the "In season" tinted panel (a row in the shelf); the demo banner; the trip-type and level selects and "Hide what needs more" (the lens chips, and the requirement as a sentence on each row); the star glyphs (a figure); the boxed requirement note; the five-piece money story (one block); the sticky pill's seat count (the pill near the head); the packing section (a row in the arrival card); "Grab a spot" (no title on the form); the promo field (a quiet door); the course page's jump nav and agency tabs (the agency is a word in the row); the sizes fieldset and card number on Register (the thread asks, once there is a boat); "Powered by DiveDay" (the one credit line).</p></div>
+      <div><span class="group">New here</span><p class="note">L, the line, on the diver's side: under "Right now" on the storefront while a boat is out or boarding, and on the trip page at rest, every mark still to come. The species as 40px squares from the shop's guide. The known diver's welcome as an inset above the form, so a returning diver types nothing twice. A shop-namespace 404 in the shop's face that names the way back.</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>1 · The storefront</b> · /s/blue-mantis · Thursday, August 27, 6:31 AM · desktop 1180</div>
+  <div class="frame harbor">
+    <div class="chrome">
+      <div class="shop"><span class="mark">BM</span>Blue Mantis Divers</div>
+      <div class="tabs" style="margin-left:auto"><span class="on">Schedule</span><span>Courses</span><span>Reviews</span></div>
+      <div class="right" style="margin-left:0"><span>English</span></div>
+    </div>
+    <div class="page" style="padding-top:28px;padding-bottom:36px">
+      <div class="panel">
+        <div class="photo" style="height:320px"><div class="ph-img sea-molasses"></div><div class="ph-img sea-grain"></div><span class="cap">Molasses Reef · the shop's photo</span>
+          <div class="over"><div><div class="t" style="font-size:44px;line-height:1.05">Blue Mantis Divers</div><div class="n" style="font-size:17px;margin-top:8px">Small-boat reef and wreck diving out of Key Largo.</div><div class="n" style="font-size:13px;margin-top:12px;opacity:.85">Mooring balls, never anchors · reef-safe sunscreen only · the shop's word, not DiveDay's</div></div></div>
+        </div>
+        <div class="in" style="display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 24px">
+          <div class="chips"><span class="chip">Since 1998</span><span class="chip">PADI 5 Star</span><span class="chip">Blue Star</span><span class="chip">Tripadvisor</span></div>
+          <span class="body" style="white-space:nowrap"><b style="font-weight:700">4.9</b> · 212 reviews <span class="link">›</span></span>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:24px">
+        <div class="in" style="padding-top:20px;padding-bottom:24px">
+          <div class="group-h"><span class="group">Right now</span><span class="pill live">Boarding</span></div>
+          <p class="body" style="margin:0"><b style="font-weight:600">Two-Tank Reef — Molasses &amp; French</b> is boarding · Mantis II leaves at 7:00 · back around 10:30</p>
+          <div class="line">
+            <div class="seg done"><i></i><b>6:15</b><span>Check-in</span></div>
+            <div class="seg now"><i></i><b>6:45</b><span>Boards</span></div>
+            <div class="seg todo"><i></i><b>7:00</b><span>Leaves</span></div>
+            <div class="seg todo"><i></i><b>7:40</b><span>Molasses</span></div>
+            <div class="seg todo"><i></i><b>8:50</b><span>Surface</span></div>
+            <div class="seg todo"><i></i><b>9:20</b><span>French</span></div>
+            <div class="seg todo"><i></i><b>10:30</b><span>Back</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <div class="in" style="padding-top:20px;display:flex;align-items:center;gap:24px">
+          <div style="flex:1 1 auto;min-width:0"><span class="group">Next with space</span><p class="body" style="margin:8px 0 0 0"><b style="font-weight:600">7:30 PM · Night Dive — City of Washington</b> · tonight · 5 spots left · $120 per diver</p></div>
+          <span class="btn primary">Book this boat</span>
+        </div>
+      </div>
+
+      <section style="margin-top:44px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between"><h2 class="h">Schedule</h2><span class="note">Blue Mantis's times · EDT</span></div>
+        <div class="chips" style="margin-top:14px"><span class="chip on">Every departure</span><span class="chip">Easygoing reef</span><span class="chip">Wrecks</span><span class="chip">After dark</span><span class="chip">Small life &amp; cameras</span><span class="chip">First time back in a while</span><span class="chip">Learning</span></div>
+        <div class="row" style="margin-top:20px"><span class="kind">In season</span><span class="sentence"><b>Coral spawning</b> · a few nights after the August full moon · the late boat runs after dark through Sep 10</span><span class="door">After dark ›</span></div>
+        <div class="group-h" style="margin-top:24px"><span class="group">Thursday, August 27</span><span class="meta">3 departures</span></div>
+        <div class="row"><span class="kind mono">7:00 AM</span><span class="sentence"><b>Two-Tank Reef — Molasses &amp; French</b> · Molasses and French Reef · Open Water or higher</span><span class="meta">Boarding · $95</span><span class="door">›</span></div>
+        <div class="row"><span class="kind mono">1:00 PM</span><span class="sentence"><b>Wreck Trip — Spiegel Grove</b> · Advanced Open Water or higher</span><span class="meta">Full · $145</span><span class="door">›</span></div>
+        <div class="row"><span class="kind mono">7:30 PM</span><span class="sentence"><b>Night Dive — City of Washington</b> · Open Water or higher · dark by 8:05</span><span class="meta">5 spots left · $120</span><span class="door">›</span></div>
+        <div class="group-h" style="margin-top:24px"><span class="group">Friday, August 28</span><span class="meta">2 departures</span></div>
+        <div class="row"><span class="kind mono">7:00 AM</span><span class="sentence"><b>Two-Tank Reef — Molasses &amp; French</b> · Molasses and French Reef · Open Water or higher</span><span class="meta">9 spots left · $95</span><span class="door">›</span></div>
+        <div class="row"><span class="kind mono">1:00 PM</span><span class="sentence"><b>Afternoon Two-Tank — French Reef</b> · Open Water or higher</span><span class="meta">5 spots left · $95</span><span class="door">›</span></div>
+        <div class="group-h" style="margin-top:24px"><span class="group">Saturday, August 29</span><span class="meta">3 departures</span></div>
+        <div class="row"><span class="kind mono">6:30 AM</span><span class="sentence"><b>Two-Tank Reef — Benwood &amp; Christ of the Abyss</b> · Open Water or higher</span><span class="meta">8 spots left · $95</span><span class="door">›</span></div>
+        <div class="row"><span class="kind mono">9:00 AM</span><span class="sentence"><b>Open Water Diver — pool day</b> · <span style="color:var(--brand)">Course session</span> · with Marcus Webb · no certification needed</span><span class="meta">2 spots left · $709</span><span class="door">›</span></div>
+        <div class="row"><span class="kind mono">1:00 PM</span><span class="sentence"><b>Scuba Refresher — half day</b> · <span style="color:var(--brand)">Course session</span> · first time back in a while</span><span class="meta">3 spots left · $125</span><span class="door">›</span></div>
+        <div class="group-h" style="margin-top:24px"><span class="group">Sunday, August 30</span><span class="meta">1 departure</span></div>
+        <div class="row"><span class="kind mono">7:00 AM</span><span class="sentence"><b>Two-Tank Reef — Molasses &amp; French</b> · Molasses and French Reef · Open Water or higher</span><span class="meta">12 spots left · $95</span><span class="door">›</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px"><span class="btn quiet">Later departures ›</span><span class="note">August · <span class="link">September ›</span></span></div>
+      </section>
+
+      <section>
+        <div style="display:flex;align-items:baseline;justify-content:space-between"><h2 class="h">Courses</h2><span class="link" style="font-size:14px">All courses ›</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:14px">
+          <div class="panel"><div class="photo s"><div class="ph-img sea-abyss"></div><div class="ph-img sea-grain"></div><span class="cap">the shop's photo</span></div><div class="in" style="padding-top:16px"><h3 class="h">Discover Scuba Diving</h3><p class="note" style="margin:4px 0 10px 0">Your first breath underwater, an instructor at your shoulder.</p><span class="note" style="font-size:13px;color:var(--ink)">Half a day · Next Sat, Sep 12 · $175</span></div></div>
+          <div class="panel"><div class="photo s"><div class="ph-img sea-molasses"></div><div class="ph-img sea-grain"></div><span class="cap">the shop's photo</span></div><div class="in" style="padding-top:16px"><h3 class="h">Open Water Diver</h3><p class="note" style="margin:4px 0 10px 0">The card. A pool day, then four dives on the reef with Marcus.</p><span class="note" style="font-size:13px;color:var(--ink)">3 days · Next Sat, Aug 29 · $709</span></div></div>
+          <div class="panel"><div class="photo s"><div class="ph-img sea-french"></div><div class="ph-img sea-grain"></div><span class="cap">the shop's photo</span></div><div class="in" style="padding-top:16px"><h3 class="h">Nitrox Diver</h3><p class="note" style="margin:4px 0 10px 0">More bottom time on the second dive, and the planning behind it.</p><span class="note" style="font-size:13px;color:var(--ink)">1 day · Next Wed, Sep 16 · $345</span></div></div>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="h">The boats</h2>
+        <div class="row" style="margin-top:14px"><span class="sentence"><b>Mantis II</b> · 12 divers · camera table, freshwater showers, a ladder on each side</span><span class="meta">slip 14, Marina Del Mar</span></div>
+        <div class="row"><span class="sentence"><b>Skiff</b> · 8 divers · the small boat, ten minutes to the reef, and the night dive's</span><span class="meta">slip 14, Marina Del Mar</span></div>
+      </section>
+
+      <section>
+        <div style="display:flex;align-items:baseline;justify-content:space-between"><h2 class="h">What divers say</h2><span class="link" style="font-size:14px">All 212 reviews ›</span></div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:14px">
+          <div class="inset"><p class="body" style="margin:0">Vis was unreal and Keiko found us a turtle on the second tank.</p><p class="note" style="margin:8px 0 0 0">Yara H. · Two-Tank Reef — Molasses &amp; French · Mon, Aug 24</p></div>
+          <div class="inset"><p class="body" style="margin:0">A calm, unhurried briefing. Exactly what I wanted for my first wreck.</p><p class="note" style="margin:8px 0 0 0">Emma F. · Wreck Trip — Spiegel Grove · Sat, Aug 22</p></div>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="h">Other ways we can help</h2>
+        <div style="margin-top:14px">
+          <div class="summary">Nothing on a date that works?<span class="meta">ask for a day</span></div>
+          <div class="summary">Want a deal on a last-minute spot?<span class="meta">a text when a seat opens</span></div>
+          <div class="summary">Can't find your link?<span class="meta">we'll send it again</span></div>
+        </div>
+      </section>
+
+      <div class="sfoot">
+        <div class="col" style="gap:6px"><span class="shopname">Blue Mantis Divers</span><span class="credit"><i></i>Booked through DiveDay</span></div>
+        <div class="col" style="text-align:right;gap:2px"><span>100 Ocean Drive, Key Largo, FL 33037</span><span>+1 305 555 0142 · hello@bluemantisdivers.com</span><span>We speak English and Español</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="aside">The hero is the shop's own photograph with the name at 44 in their face; the badges are chips under it, the review figure is a sentence, and the shop's conservation line is one line in the band. "Right now" appears only while a boat is boarding or out, and carries the trip's own line (L) — at 6:31 boarding is the current mark, the same object the desk sees. "Next with space" holds the storefront's one primary. The shelf is one row per departure with the requirement in the sentence and the count and price as meta; the lenses are the shop's words as chips; "In season" is a row in the shelf; the month is a quiet link under it, not a bar over the hero.</p>
+
+  <div class="frame-cap"><b>2 · The trip page</b> · /s/blue-mantis/trips/[id] · Yara Haddad, from the handoff link · Tuesday, August 25, 8:15 PM · 720 · and <b>the storefront on a phone</b> · 390 · Thursday 6:31 AM</div>
+  <div class="frame harbor">
+    <div class="chrome">
+      <div class="shop"><span class="mark">BM</span>Blue Mantis Divers</div>
+      <div class="tabs" style="margin-left:auto"><span class="on">Schedule</span><span>Courses</span><span>Reviews</span></div>
+      <div class="right" style="margin-left:0"><span>English</span></div>
+    </div>
+    <div style="display:flex;gap:22px;align-items:flex-start;padding:28px 24px 36px 24px">
+      <div class="page read" style="margin:0;padding-top:0;flex:0 0 720px">
+        <p class="eyebrow" style="margin:0 0 12px 0">Schedule</p>
+        <div class="panel">
+          <div class="photo"><div class="ph-img sea-molasses"></div><div class="ph-img sea-grain"></div><span class="cap">Molasses Reef · the shop's photo</span><div class="over"><div><div class="t">Two-Tank Reef — Molasses &amp; French</div><div class="n">Thursday, August 27 · 7:00–10:30 AM EDT · Mantis II · $95 per diver</div></div><span class="pill live" style="margin-bottom:2px">3 spots left</span></div></div>
+          <div class="in" style="padding-bottom:24px">
+            <div class="line">
+              <div class="seg todo"><i></i><b>6:15</b><span>Check-in</span></div>
+              <div class="seg todo"><i></i><b>6:45</b><span>Boards</span></div>
+              <div class="seg todo"><i></i><b>7:00</b><span>Leaves</span></div>
+              <div class="seg todo"><i></i><b>7:40</b><span>Molasses</span></div>
+              <div class="seg todo"><i></i><b>8:50</b><span>Surface</span></div>
+              <div class="seg todo"><i></i><b>9:20</b><span>French</span></div>
+              <div class="seg todo"><i></i><b>10:30</b><span>Back</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px"><span class="btn quiet">Add to calendar</span><span class="btn quiet">Share with a buddy</span></div>
+
+        <p class="body" style="margin:20px 0 0 0">Two shallow reef dives on the mooring balls, forty minutes out. Molasses is the busiest reef in the Keys for a reason; French has the swim-throughs.</p>
+
+        <section style="margin-top:28px">
+          <div class="group-h"><span class="group">Look for</span><span class="meta">the shop's guide</span></div>
+          <div class="species" style="margin-top:6px">
+            <div><i class="sea-molasses"></i>Green turtle</div>
+            <div><i class="sea-french"></i>Spotted eagle ray</div>
+            <div><i class="sea-benwood"></i>Goliath grouper</div>
+            <div><i class="sea-spiegel"></i>Nurse shark</div>
+            <div><i class="sea-abyss"></i>Queen angelfish</div>
+          </div>
+          <div class="summary" style="margin-top:16px">The rest of the briefing<span class="meta">the route · both sites · who you're diving with</span></div>
+        </section>
+
+        <div class="panel" style="margin-top:28px">
+          <div class="in" style="padding-top:20px;padding-bottom:16px">
+            <div class="group-h"><span class="group">Where to go</span><span class="meta">Slip 14, Marina Del Mar</span></div>
+            <div class="row"><span class="kind">Be there</span><span class="sentence"><b>6:15 AM</b> · Mantis II boards at 6:45 and leaves at 7:00</span></div>
+            <div class="row"><span class="kind">Look for</span><span class="sentence">The green hull at the end of dock B. Sal is at the counter.</span></div>
+            <div class="row"><span class="kind">Parking</span><span class="sentence">The marina lot, free before 8. Say you are with Blue Mantis.</span></div>
+            <div class="row"><span class="kind">Bring</span><span class="sentence">Your certification card, a towel, reef-safe sunscreen.</span></div>
+            <div style="margin-top:8px"><span class="btn quiet" style="padding-left:0">Add to calendar</span></div>
+          </div>
+        </div>
+
+        <p class="body" style="margin:24px 0 0 0;color:var(--muted)">East at 8 knots · 2 ft seas · 60 ft of visibility · 84°F water · the crew's reading, Tuesday 5:40 PM. Sal makes the final call at the dock.</p>
+        <div class="summary" style="margin-top:20px">What changed<span class="meta">nothing since it went on the board, Aug 12</span></div>
+        <p class="body" style="margin:20px 0 0 0">Open Water or higher.</p>
+
+        <section style="margin-top:28px">
+          <div class="group-h"><span class="group">Also on the schedule</span><span class="meta">2</span></div>
+          <div class="row"><span class="kind mono">Fri 7:00</span><span class="sentence"><b>Two-Tank Reef — Molasses &amp; French</b> · same reef</span><span class="meta">9 spots left · $95</span><span class="door">›</span></div>
+          <div class="row"><span class="kind mono">Sat 6:30</span><span class="sentence"><b>Two-Tank Reef — Benwood &amp; Christ of the Abyss</b> · also a morning boat</span><span class="meta">8 spots left · $95</span><span class="door">›</span></div>
+        </section>
+
+        <div class="panel" style="margin-top:32px">
+          <div class="in" style="padding-top:24px;padding-bottom:28px">
+            <div class="inset" style="display:flex;align-items:center;justify-content:space-between;gap:16px"><span class="body">Welcome back, <b style="font-weight:600">Yara</b> · your card, waiver and gear are on file</span><span class="link" style="font-size:14px;white-space:nowrap">Not Yara? Start with a blank form</span></div>
+            <div class="stack" style="margin-top:24px">
+              <div class="field"><label>Seats</label><div><div class="seg-ctl"><span>1</span><span class="on">2</span><span>3</span></div></div></div>
+              <div class="fields two" style="margin-top:20px">
+                <div class="field"><label>Your name</label><div class="control">Yara Haddad</div></div>
+                <div class="field"><label>Email</label><div class="control">yara@haddad.example</div></div>
+                <div class="field"><label>Phone</label><div class="control">+1 305 555 0189</div></div>
+                <div class="field"><label>Diver 2</label><div class="control ph">Name</div></div>
+              </div>
+              <div class="fields two" style="margin-top:20px">
+                <div class="field"><label>Agency</label><div class="control">PADI</div></div>
+                <div class="field"><label>Level</label><div class="control">Advanced Open Water · verified Jun 2</div></div>
+              </div>
+              <div class="choice" style="margin-top:8px"><i class="on"></i>I've dived in the last year</div>
+              <div class="row" style="margin-top:12px"><span class="kind">Money</span><span class="sentence"><b>2 seats · $190</b> · pay now, or at the counter on Thursday</span><span class="door">Have a code? ›</span></div>
+              <div style="display:flex;align-items:center;gap:16px;margin-top:20px"><span class="btn primary">Book 2 seats</span><span class="note">Free cancellation until Wednesday, 7:00 PM.</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="note" style="margin:20px 0 0 0">Questions? +1 305 555 0142 · hello@bluemantisdivers.com</p>
+        <div style="margin-top:16px"><span class="credit"><i></i>Booked through DiveDay</span></div>
+      </div>
+
+      <div class="frame phone harbor">
+        <div class="phone-chrome"><span class="mark">BM</span><span class="shop">Blue Mantis Divers</span><div class="right"><span class="note" style="font-size:13px">English</span></div></div>
+        <div class="phone-page" style="padding-top:12px">
+          <div class="panel"><div class="photo" style="height:220px;padding:16px"><div class="ph-img sea-molasses"></div><div class="ph-img sea-grain"></div><div class="over"><div><div class="t" style="font-size:32px;line-height:1.05">Blue Mantis Divers</div><div class="n" style="margin-top:6px">Small-boat reef and wreck diving out of Key Largo.</div><div class="n" style="font-size:12px;margin-top:8px;opacity:.85">Since 1998 · PADI 5 Star · 4.9 from 212 reviews</div></div></div></div></div>
+          <div class="panel" style="margin-top:12px"><div class="in" style="padding:16px 16px 14px 16px">
+            <div class="group-h" style="padding-bottom:6px"><span class="group">Right now</span><span class="pill live">Boarding</span></div>
+            <p class="body" style="margin:0;font-size:15px;line-height:22px"><b style="font-weight:600">Two-Tank Reef — Molasses &amp; French</b> · Mantis II leaves at 7:00 · back 10:30</p>
+            <div style="margin-top:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden"><div class="tide-fold"><span class="t">Boards</span><div class="bar"><i class="next" style="left:0;width:29%"></i><b style="left:29%"></b></div><span class="u">leaves 7:00 · back 10:30</span></div></div>
+          </div></div>
+          <div class="panel" style="margin-top:12px"><div class="in" style="padding:16px 16px 16px 16px">
+            <span class="group">Next with space</span>
+            <p class="body" style="margin:6px 0 12px 0;font-size:15px;line-height:22px"><b style="font-weight:600">7:30 PM · Night Dive — City of Washington</b> · 5 spots left · $120</p>
+            <span class="btn primary block">Book this boat</span>
+          </div></div>
+          <div class="group-h" style="margin-top:16px"><span class="group">Friday, August 28</span><span class="meta">2</span></div>
+          <div class="rows-p">
+            <div class="row"><span class="kind mono">7:00 AM</span><span class="meta">9 spots left · $95</span><span class="sentence"><b>Two-Tank Reef — Molasses &amp; French</b> · Open Water or higher</span></div>
+            <div class="row"><span class="kind mono">1:00 PM</span><span class="meta">5 spots left · $95</span><span class="sentence"><b>Afternoon Two-Tank — French Reef</b> · Open Water or higher</span></div>
+          </div>
+          <div style="margin-top:12px"><span class="credit"><i></i>Booked through DiveDay</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="aside">The trip page keeps the thread's 720 measure and the pinned order. The head is the site's photograph with the count as the one pill; under it the trip's own line at rest, every mark still to come. The pitch is two sentences; "Look for" is the shop's own guide as five squares, and the rest of the briefing is one closed row. The arrival card is a panel of four rows with the calendar as a quiet link; conditions are one sentence with who read them and who decides; what changed is one closed row (for a returning booker its meta reads "Nothing has changed since you booked"); the requirement is one sentence; the alternates carry a reason each. The form is the page's last word: Yara arrived from the handoff link, so the inset says what is on file and the fields are already hers; the money is one row, the code a quiet door, and "Book 2 seats" the only primary. The phone beside it is the storefront at 390: the hero at 220, "Right now" with the line folded to the 36px strip, the next boat with space, then the shelf's rows wrapping under their time. Public pages have no dock.</p>
+
+  <div class="frame-cap"><b>3 · Courses, and a course</b> · /s/blue-mantis/courses · /s/blue-mantis/courses/open-water-diver · two pages at their reading width</div>
+  <div class="frame harbor">
+    <div class="chrome">
+      <div class="shop"><span class="mark">BM</span>Blue Mantis Divers</div>
+      <div class="tabs" style="margin-left:auto"><span>Schedule</span><span class="on">Courses</span><span>Reviews</span></div>
+      <div class="right" style="margin-left:0"><span>English</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:440px 496px;gap:40px;width:976px;margin:0 auto;padding:36px 0 40px 0;align-items:start">
+      <div>
+        <header class="ph"><p class="eyebrow">Courses</p><h1 class="title">Courses</h1><p class="lede">Marcus Webb teaches every one. The ladder runs by what you already hold.</p></header>
+        <div class="group-h" style="margin-top:8px"><span class="group">Start here</span><span class="meta">2</span></div>
+        <div class="row"><span class="sentence"><b>Discover Scuba Diving</b> · PADI · half a day</span><span class="meta">Sat, Sep 12 · $175</span><span class="door">›</span></div>
+        <div class="row"><span class="sentence"><b>Open Water Diver</b> · PADI · 3 days</span><span class="meta">Sat, Aug 29 · $709</span><span class="door">›</span></div>
+        <div class="group-h" style="margin-top:28px"><span class="group">Open Water or higher</span><span class="meta">4</span></div>
+        <div class="row"><span class="sentence"><b>Scuba Refresher</b> · PADI · half a day</span><span class="meta">Sat, Aug 29 · $125</span><span class="door">›</span></div>
+        <div class="row"><span class="sentence"><b>Nitrox Diver</b> · PADI · 1 day</span><span class="meta">Wed, Sep 16 · $345</span><span class="door">›</span></div>
+        <div class="row"><span class="sentence"><b>Advanced Open Water</b> · PADI · 2 days</span><span class="meta">on request · $615</span><span class="door">›</span></div>
+        <div class="row"><span class="sentence"><b>Night Diver</b> · PADI · 2 evenings</span><span class="meta">on request · $440</span><span class="door">›</span></div>
+        <div class="group-h" style="margin-top:28px"><span class="group">Advanced Open Water or higher</span><span class="meta">1</span></div>
+        <div class="row"><span class="sentence"><b>Wreck Diver</b> · PADI · 2 days</span><span class="meta">on request · $620</span><span class="door">›</span></div>
+        <div class="summary" style="margin-top:28px">Nothing on a date that works?<span class="meta">ask for a day</span></div>
+      </div>
+      <div>
+        <p class="eyebrow" style="margin:0 0 12px 0">Courses</p>
+        <div class="panel">
+          <div class="photo"><div class="ph-img sea-molasses"></div><div class="ph-img sea-grain"></div><span class="cap">the shop's photo</span><div class="over"><div><div class="t">Open Water Diver</div><div class="n">PADI · 3 days · groups of 4 · with Marcus Webb</div></div><div style="text-align:right"><div class="t num">$709</div><div class="n">per diver</div></div></div></div>
+          <div class="in" style="padding-top:18px;padding-bottom:24px">
+            <p class="body" style="margin:0">A pool day, then four dives on the reef. You leave with the card. E-learning is done at home before the pool.</p>
+            <p class="body" style="margin:12px 0 0 0;color:var(--muted)">No certification needed · ages 10 and up · a medical form before the pool.</p>
+            <div class="group-h" style="margin-top:24px"><span class="group">Sessions</span><span class="meta">3 days</span></div>
+            <div class="row"><span class="kind mono">Sat, Aug 29</span><span class="sentence"><b>Pool day</b> · 9:00 AM–3:00 PM · the shop's pool</span><span class="meta">2 spots left</span></div>
+            <div class="row"><span class="kind mono">Sun, Aug 30</span><span class="sentence"><b>Dives 1 and 2</b> · 7:00 AM · Molasses Reef · Mantis II</span></div>
+            <div class="row"><span class="kind mono">Sat, Sep 5</span><span class="sentence"><b>Dives 3 and 4</b> · 7:00 AM · French Reef · Mantis II</span></div>
+            <div class="summary" style="margin-top:20px">More dates<span class="meta">Sep 19 · Oct 3</span></div>
+            <div class="summary">What the fee covers<span class="meta">gear, e-learning, the card · not the log book</span></div>
+            <div class="summary">Questions divers ask<span class="meta">4</span></div>
+            <div class="row" style="margin-top:20px"><span class="kind">Money</span><span class="sentence"><b>$709</b> · pay now, or $200 to hold the pool day</span></div>
+            <div style="display:flex;align-items:center;gap:16px;margin-top:20px"><span class="btn primary">Book Sat, Aug 29</span><span class="link" style="font-size:14px">Another date? Ask Blue Mantis</span></div>
+          </div>
+        </div>
+        <div style="margin-top:16px"><span class="credit"><i></i>Booked through DiveDay</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="aside">The catalog is a ladder of rows grouped by what you must already hold; the agency is a word in the sentence rather than a tab, and the next date and the price are meta. A course is sold like a trip: the head with the price in the band, what you will do as three sentences, who may enrol as one, the sessions as rows with the pool day's count, then the closed rows that were sections (more dates, what the fee covers, the questions), the money as one row and one primary for the soonest date. The date request that opened as its own section on the course page is now the same closed row as on the storefront.</p>
+
+  <div class="frame-cap"><b>4 · Reviews · Register · a date request</b> · /s/blue-mantis/reviews · /s/blue-mantis/register (the counter's QR) · DateRequestForm, open · three pages at 340</div>
+  <div class="frame harbor">
+    <div style="display:grid;grid-template-columns:repeat(3,340px);gap:36px;width:1092px;margin:0 auto;padding:32px 0 40px 0;align-items:start">
+      <div>
+        <header class="ph"><p class="eyebrow">Reviews</p><h1 class="title" style="font-size:32px">Reviews</h1><p class="lede"><b style="font-weight:700;color:var(--ink)">4.9</b> from 212 divers, released by the shop as they come.</p></header>
+        <div class="col" style="gap:8px;margin-top:4px">
+          <div style="display:flex;align-items:center;gap:12px"><span class="note" style="flex:0 0 12px;font-size:13px">5</span><div class="bar" style="flex:1"><i style="width:93%"></i></div><span class="note" style="flex:0 0 32px;text-align:right;font-size:13px">198</span></div>
+          <div style="display:flex;align-items:center;gap:12px"><span class="note" style="flex:0 0 12px;font-size:13px">4</span><div class="bar" style="flex:1"><i style="width:6%"></i></div><span class="note" style="flex:0 0 32px;text-align:right;font-size:13px">12</span></div>
+          <div style="display:flex;align-items:center;gap:12px"><span class="note" style="flex:0 0 12px;font-size:13px">3</span><div class="bar" style="flex:1"><i style="width:1%"></i></div><span class="note" style="flex:0 0 32px;text-align:right;font-size:13px">2</span></div>
+          <div style="display:flex;align-items:center;gap:12px"><span class="note" style="flex:0 0 12px;font-size:13px">2</span><div class="bar" style="flex:1"><i style="width:0%"></i></div><span class="note" style="flex:0 0 32px;text-align:right;font-size:13px">0</span></div>
+          <div style="display:flex;align-items:center;gap:12px"><span class="note" style="flex:0 0 12px;font-size:13px">1</span><div class="bar" style="flex:1"><i style="width:0%"></i></div><span class="note" style="flex:0 0 32px;text-align:right;font-size:13px">0</span></div>
+        </div>
+        <div class="col" style="gap:12px;margin-top:24px">
+          <div class="inset"><p class="body" style="margin:0">Vis was unreal and Keiko found us a turtle on the second tank.</p><p class="note" style="margin:8px 0 0 0">Yara H. · Two-Tank Reef · Aug 24</p></div>
+          <div class="inset"><p class="body" style="margin:0">A calm, unhurried briefing. Exactly what I wanted for my first wreck.</p><p class="note" style="margin:8px 0 0 0">Emma F. · Wreck Trip · Aug 22</p></div>
+          <div class="inset"><p class="body" style="margin:0">Choppy ride out, and the reef more than made up for it.</p><p class="note" style="margin:8px 0 0 0">Hannah L. · Two-Tank Reef · Aug 15</p></div>
+          <div class="inset"><p class="body" style="margin:0">Sofía's first boat dive. Keiko had her laughing before we left the slip.</p><p class="note" style="margin:8px 0 0 0">Marta O. · Two-Tank Reef · Aug 8</p></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px"><span class="note">Page 1 of 22</span><span class="btn quiet">Older ›</span></div>
+      </div>
+      <div>
+        <header class="ph"><p class="eyebrow">The counter</p><h1 class="title" style="font-size:32px">Get set up</h1><p class="lede">Once, and Blue Mantis has you on file. Bring your card on the day.</p></header>
+        <div class="fields" style="margin-top:4px">
+          <div class="field"><label>Your name</label><div class="control">Diego Alvarez</div></div>
+          <div class="field"><label>Email</label><div class="control">diego@alvarez.example</div><span class="hint">Email or phone, for the waiver.</span></div>
+          <div class="field"><label>Phone</label><div class="control ph">Phone</div></div>
+          <div class="fields two"><div class="field"><label>Agency</label><div class="control">SSI</div></div><div class="field"><label>Level</label><div class="control">Open Water</div></div></div>
+          <div class="choice"><i class="on"></i>Send me the waiver now</div>
+          <div><span class="btn primary">Send it to the shop</span></div>
+        </div>
+        <p class="note" style="margin:20px 0 0 0">Your word on the card goes on file as your word; the desk checks it against the card on the day.</p>
+      </div>
+      <div>
+        <header class="ph"><p class="eyebrow">Schedule</p><h1 class="title" style="font-size:32px">Nothing on a date that works?</h1><p class="lede">Ask. Nothing is booked or held; Blue Mantis sees who else wants the same days.</p></header>
+        <div class="fields" style="margin-top:4px">
+          <div class="fields two"><div class="field"><label>Date</label><div class="control mono" style="font-size:16px">Sat, Sep 5</div></div><div class="field"><label>Divers</label><div class="control">4</div></div></div>
+          <div class="field"><label>What you want to dive</label><div class="chips" style="min-height:44px;align-items:center"><span class="chip on">Easygoing reef</span><span class="chip">Wrecks</span><span class="chip">After dark</span><span class="chip">Learning</span></div></div>
+          <div class="field"><label>Where you're up to</label><div class="control">Certified, and it has been a while</div></div>
+          <div class="field"><label>Your name</label><div class="control">A. Okonkwo</div></div>
+          <div class="field"><label>Email or phone</label><div class="control">okonkwo@family.example</div></div>
+          <div class="field"><label>Anything else</label><div class="control area ph">Two adults, two teenagers with Junior Open Water.</div></div>
+          <div><span class="btn primary">Ask Blue Mantis</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="aside">Three narrow pages, each one column. Reviews: the figure in the lede, the five bars as the kit's bar, then every review with words as an inset with the first name, the trip and the date; the pager is one quiet door. Register is the counter's QR: five fields and one choice, the sizes and the card number left to the thread once there is a boat, the "your word" sentence kept because it changes what someone types. The date request is the same form on the storefront and the course page: a date, a party, what you want as the shop's lenses, where you are up to, how to reach you, and one primary that says who is being asked. Sent, each ends in one sentence: "You're on file", "We'll be in touch".</p>
+
+  <div class="frame-cap"><b>5 · The widget and the shop's 404</b> · /s/blue-mantis/embed/departure on bluemantisdivers.com · /s/blue-mantis/anything-else · 320 and 540</div>
+  <div class="frame harbor">
+    <div style="display:flex;gap:40px;align-items:flex-start;width:976px;margin:0 auto;padding:32px 0 40px 0">
+      <div class="host" style="flex:0 0 560px">
+        <div class="nav"><b>Blue Mantis Divers</b><span>Dive with us</span><span>Courses</span><span>The boats</span><span>Find us</span></div>
+        <div class="txt" style="width:70%"></div><div class="txt" style="width:88%"></div><div class="txt" style="width:52%;margin-bottom:20px"></div>
+        <div class="panel" style="width:320px;font-family:var(--sans)">
+          <div class="in" style="padding:18px 20px 20px 20px">
+            <span class="group">Next boat with space</span>
+            <p style="margin:8px 0 0 0;font-family:var(--display);font-size:20px;font-weight:700;line-height:1.15;color:var(--ink)">Night Dive — City of Washington</p>
+            <p class="note" style="margin:4px 0 14px 0">Tonight, 7:30 PM · Skiff · 5 spots left · $120</p>
+            <span class="btn primary block">Book</span>
+            <div style="margin-top:14px"><span class="credit"><i></i>Booked through DiveDay</span></div>
+          </div>
+        </div>
+        <div class="txt" style="width:80%;margin-top:20px"></div><div class="txt" style="width:60%"></div>
+      </div>
+      <div style="flex:1 1 auto;border:1px solid var(--border);border-radius:18px;overflow:hidden;background:var(--bg)">
+        <div class="chrome" style="padding:0 24px">
+          <div class="shop"><span class="mark">BM</span>Blue Mantis Divers</div>
+          <div class="tabs" style="margin-left:auto"><span>Schedule</span><span>Courses</span></div>
+        </div>
+        <div style="padding:56px 32px 48px 32px;text-align:center">
+          <h1 class="title" style="font-size:32px">That page isn't here.</h1>
+          <p class="body" style="margin:12px 0 0 0;color:var(--muted)">Blue Mantis Divers is at /s/blue-mantis.</p>
+          <div style="margin-top:24px"><span class="btn primary">See what's coming up</span></div>
+          <div style="margin-top:36px"><span class="credit"><i></i>Booked through DiveDay</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="aside">The widget is a window onto the shop's schedule pasted into their own site: one panel at 320 in the shop's face, the next boat with space as one sentence, one button, and the credit line; the grid and courses widgets are the same panel repeated. The host page may pass its own colour and face, and then the widget wears them. The 404 keeps the shop's chrome and face, names where the shop is, and offers one button back to what is coming up; an error in the namespace is the same page with "That didn't go through" and "Nothing was booked."</p>
+
+  <div class="foot">
+    <div><span class="group">What does not change</span><p>The trip page's pinned order and its composition test; admission stays weaker than readiness, so a row never refuses a diver the desk would clear; the requirement is a sentence, never a gate at booking. The booking transaction, the Stripe redirect, the handoff email's silence (H-68), the language switcher's endonyms, the conservation words as the shop's own claim, the skip link. Payment, waiver and certification never wear the shop's colour.</p></div>
+    <div><span class="group">Phone</span><p>The storefront is drawn at 390 beside the trip page. The trip page folds to one column with the line as the 36px strip under the head, the species three-up, the arrival rows wrapping under their kind, and the form full-bleed inside its panel with the count pill sticky at the foot in place of "Book". The catalog rows wrap the meta under the name; the course page stacks the sessions; the three narrow pages are already their phone shape.</p></div>
+    <div><span class="group">Cost and risk</span><p>Three sessions: the storefront's head and shelf (the hero, the two panels and the line exist as components on the staff side), the trip page's head and form (the arrival card and the money block already render; the known-diver inset is a re-skin of KnownDiverPanel), and the courses pages with the widget. The risk is the line (L) drifting between the staff trip page and this one: it must be one component fed by the departure's schedule and the roll call's events, or the diver sees a boat that has not left.</p></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

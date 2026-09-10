@@ -291,140 +291,200 @@ section + section, .stack > * + * { margin-top: 32px; }
 .sms { width: 320px; padding: 12px 16px; border-radius: 18px 18px 18px 4px; background: var(--sunken); font-size: 15px; line-height: 22px; }
 /* kit:end */
 /* board-local */
-.sec { padding: 8px 48px 0 48px; }
-.lever { display: grid; grid-template-columns: 56px 1fr 1fr 1fr 150px; gap: 20px; padding: 16px 0; border-bottom: 1px solid var(--border); align-items: start; }
-.lever .l { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--brand); line-height: 1; }
-.lever .l small { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-top: 6px; }
-.lever p { margin: 0; font-size: 14px; line-height: 22px; color: var(--muted); }
-.lever p b { color: var(--ink); font-weight: 600; }
-.lever .cost { font-size: 13px; line-height: 20px; color: var(--muted); }
-.lever .cost b { display: block; color: var(--ink); font-size: 16px; }
-.map th:first-child, .map td:first-child { width: 230px; }
-.map td:nth-child(2) { width: 200px; font-family: var(--mono); font-size: 12px; }
-.map td:nth-child(3) { width: 130px; }
-.map td:last-child { width: 80px; color: var(--brand); font-weight: 600; }
-.map tr.fam td { background: var(--surface); color: var(--ink); font-weight: 600; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; padding: 12px 12px 8px 0; }
-.calls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-.call { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; }
-.call b { display: block; font-size: 16px; margin-bottom: 6px; }
-.call p { margin: 0; font-size: 14px; line-height: 22px; color: var(--muted); }
-.call .rec { margin-top: 10px; color: var(--brand-deep); font-weight: 500; }
+.pcell { width: 344px; }
+.pcell .frame-cap { padding: 0 0 8px 0; }
+.pscale { width: 344px; height: 744px; }
+.pscale .frame.phone { transform: scale(.88); transform-origin: top left; }
+.phones.two { margin-top: 36px; }
+.seg-ctl.full { display: flex; }
+.seg-ctl.full span { flex: 1; text-align: center; }
   </style>
 </helmet>
-<div class="board diveday">
+<div class="board">
   <div class="board-head">
-    <div class="strap"><span class="eyebrow">Round 3 · read me first</span><span class="note">2026-09-09 · every surface, one hand · nineteen boards on this page</span></div>
-    <h1>Round 3 — every surface, one hand, and eight more things to say "wow" about</h1>
-    <p class="lede">The owner's read of round 2: "I like everything you've done here and I want to keep pushing these concepts farther. Keep cleaning up, iterating, and forming innovative concepts that will make customers go wow. Make sure we're designing every surface of the app." So this page does three things at once. It <b>composes</b> A with the three levers the owner liked — the tide line (F), the shop's own sea (H), together (K) — into one kit and holds every board to it. It <b>redraws every surface</b> the app has, eighty-one routes on fifteen boards, each board naming what today's page loses and what it gains, so the cleanup is per surface and not a slogan. And it <b>adds eight levers</b>, L to S, each one thing on top of the kit that no earlier canvas drew and that a diver or an owner would tell someone about: the trip's own line seen from both sides, the pass, the postcard, the log, the room in the empty state, the desk that answers, the shop's card, first light.</p>
+    <div class="strap"><span class="eyebrow diveday" style="color:#0e7490">Round 3 · Every surface · Phones</span><span class="note">6 phones · 390 × 844 · the same day, folded</span></div>
+    <h1>Six phones — the fold of everything</h1>
+    <p class="lede">A phone is not a second app. Every surface on the desk folds the same way at 390: the tide line to a 36px strip, the tabs into the dock, the row into two lines with its sentence beneath, the photograph to a 96px head. Six phones from one Thursday — three staff, one on the boat, two the diver holds — drawn so the fold can be read off any one of them and applied to the rest.</p>
     <div class="three">
-      <div><span class="group">How to read this page</span><p class="note">The Kit first (the whole vocabulary on one sheet). Then the surface boards in the order of a day: Today, the counter, the board, the trip, the manifest, the drawer, the shelves, the till, settings, the chrome; then the diver's side: the shopfront, booking, the day, the messages; then DiveDay's own pages, the moments, and six phones. Each board's head says its one idea, what is deleted, what is new; each foot says what does not change, how it folds, and what it costs.</p></div>
-      <div><span class="group">What round 3 does not do</span><p class="note">It does not open a sixth vocabulary: every board is drawn from the Kit and a board that needed something new says so. It does not touch the safety bans (no photo, coral or motion on a manifest, roll call, waiver or payment). It does not decide anything: the ADR's decision 5 records the round and the owner's calls are at the foot of this board.</p></div>
-      <div><span class="group">The audit, closed</span><p class="note">Round 1 counted six jobs with three to twenty-seven spellings. On this page each has one: one width on every board, the eyebrow the group on every board, the count as meta, one row, one add, three pills. The counts are now zero by construction; slice 20a–20e is what makes them zero in the tree.</p></div>
+      <div><span class="group">The one idea</span><p class="note">Everything folds the same way: the tide line to 36px, the tabs to the dock, the row to two lines, the photo band to 96. The column is the reading width; nothing is hidden and nothing is truncated; a row is as tall as its sentence.</p></div>
+      <div><span class="group">Deleted here</span><p class="note">The phone-only layouts. The greeting that folds into the chrome bar stays; the second tab bar goes, the per-page sheets that duplicate the More sheet go, the sticky pill with the seat count goes (the fold carries the count), the chips that collapse to bare times go (the fold is the chip), the 48px round "more" button on the manifest goes (the sheet opens from the name).</p></div>
+      <div><span class="group">New here</span><p class="note">The fold rules, written down: the tide line at 390 shows the next boat lit, the others as grey, one now mark and three words; presence avatars sit in the chrome's right slot and the who chip stays on the row; the trip's line keeps its dots and times and shows only the current word; the pass in a wallet is the top band and the three facts, with the code full-width beneath.</p></div>
     </div>
   </div>
 
-  <div class="frame-cap"><b>1 · The eight levers</b> · each one thing on top of the kit · the case, what it changes, the honest risk, the cost</div>
-  <div class="sec">
-    <div class="lever"><div class="l">L<small>one line, two sides</small></div><p><b>The trip's own line</b> — check-in, boards, leaves, the sites, the surface interval, back — drawn once and shown on the staff trip page, the diver's trip page and thread, the lobby board and the reminder email. On the day, now moves on all of them. The desk's "where is the boat" and the diver's "where are we" are the same drawing.</p><p>Extends the tide line (F) from the day to one departure. The trip page gets it under the photo band; the thread gets it in place of the step spine once the day starts; the board gets it under the current row. The stage word the crew sets is what moves it.</p><p>The line is only as true as the crew's stage taps; a boat that never taps "on the surface" shows a line that is behind. So the line says "as of 9:12" beside the now mark when the last tap is stale, and never guesses.</p><div class="cost"><b>1–2 sessions</b>after F · wow for both sides · Boards: StaffTrip, DiverHarbor, DiverDay, StaffManifest, Messages</div></div>
-    <div class="lever"><div class="l">M<small>the pass</small></div><p><b>Booking confirmed becomes a pass</b> in the shop's colour with the site's photo, the boat, the slip, the time, what to bring and a code. The counter scans it; the diver's screen says "You're aboard" in the same second the desk's row settles. It composes the Wallet slice (18f) instead of standing beside it.</p><p>The confirmation page, the confirmation email and the thread's top all become the pass. The counter gains a scan (the device's camera, no hardware). The row on the counter and the diver's phone are one event, which is K reaching the diver.</p><p>A scan is a convenience, not a gate: a diver with no phone is checked in by name exactly as today, and readiness is never decided by a code. The code carries a booking id and nothing else, never a medical fact or a price.</p><div class="cost"><b>3–4 sessions</b>plus 18f · the diver's wow · Boards: DiverBooking, StaffCounter, DiverDay, Messages, Moments</div></div>
-    <div class="lever"><div class="l">N<small>the postcard</small></div><p><b>The recap is a postcard</b>: front, the site and the date with a stamp; back, the two dives with their times and depths from the crew's log, the crew, what you saw, the crew's one sentence, the review as one line, and "next time" with a reason. An image to keep and to send.</p><p>Extends the 09-04 recap proposal and draws it in the kit. The crew's Log tab is what prints it, so the log gains a place and a reason. The recap email carries the front; the thread's after-state carries both sides.</p><p>A postcard for a bad day is a bad postcard: it never renders for a cancelled trip, a no-show, or a trip whose log the crew did not send, and the review line stays one line.</p><div class="cost"><b>2–3 sessions</b>an image render · the diver's second wow · Boards: DiverDay, StaffTrip, Messages, Moments</div></div>
-    <div class="lever"><div class="l">O<small>the log</small></div><p><b>Reports becomes the shop's log.</b> The close-out writes the day's entry — "Thursday, August 27 · 21 divers, 2 boats, 1 walk-in. Nothing left open." — the season is a strip of days, and the month's figures come from the entries. An owner reads a year of their shop in one scroll.</p><p>Today's close-out gains its last act; Reports keeps its five figures and loses its tiles; the entries table is new. The fact of scale (the 1,000th diver) is written into the entry, so it is found again.</p><p>A log that is written for the owner is read by the owner and nobody else; it must cost the crew one tap. So DiveDay proposes the sentence and the crew only corrects it.</p><div class="cost"><b>2–3 sessions</b>one table · the owner's wow · Boards: StaffMoney, StaffToday, Moments</div></div>
-    <div class="lever"><div class="l">P<small>the room</small></div><p><b>Round 2's rooms live on as drawings</b>: the wall in Gear's empty state, the drawer in Divers', the board in the Schedule's, the counter on the lobby display when there is nothing to show. A new shop meets the shop it will have; never a second grammar for a list.</p><p>Six line drawings on the one `Illustration` register, drawn in the hand's stroke. They render only where the list is empty, which is the discipline the good-news line already keeps, and on `/board/[token]` between boats.</p><p>Lever E's sub-call from round 2 is answered by this: the board does not replace the ledger on Today, and the lobby gets the room. No drawing on any boat surface.</p><div class="cost"><b>1–2 sessions</b>six drawings · warmth for day one · Boards: Kit, StaffDivers, StaffShelves, StaffManifest, Public</div></div>
-    <div class="lever"><div class="l">Q<small>ask the desk</small></div><p><b>⌘K answers in the row grammar.</b> A name gives the row with its state and its fix; a day gives the tide line; a unit gives where it is. The palette is the one place a staffer types a question, and the answer is the same row they would find on the page.</p><p>Shipped in part on 09-06 (the diver, the day, the departure answered with the fact and the fix). Round 3 redraws it in the kit and adds the unit and the day's line as answers.</p><p>A search that answers is a search that can be wrong: it answers only with a row that exists and never composes a sentence of its own.</p><div class="cost"><b>1 session</b>mostly shipped · Boards: StaffChrome</div></div>
-    <div class="lever"><div class="l">R<small>the shop's card</small></div><p><b>Settings opens on the shop's card</b> — the name in its face, the colour, the mark, the boats, the people, the storefront in miniature — and brand edits repaint it live. The forty-two rows become one card and a rail.</p><p>The settings index gains a pane; the brand page's preview (already built for day and night) becomes the card. Every fact on the card is a door into its page.</p><p>A card is one more surface to keep true; it reads the same rows the pages read, so it cannot drift.</p><div class="cost"><b>1–2 sessions</b>one pane · the owner's setup wow · Boards: StaffSettings</div></div>
-    <div class="lever"><div class="l">S<small>first light</small></div><p><b>A new shop's first Today is the empty tide line with one invitation:</b> "Put your first boat on the line." Onboarding is the first day, not a wizard: three quiet rows (your boats, your colour, your first diver) that are doors into the ordinary pages.</p><p>The onboard door stays one form; the wizard that would follow it is deleted before it is built. The welcome email says the same sentence.</p><p>A shop that arrives with a spreadsheet wants the import first; the third row is that door.</p><div class="cost"><b>1 session</b>· the first minute's wow · Boards: Public, Moments</div></div>
-  </div>
-  <p class="aside">Letters continue from round 2 (E, F, H, I, K) and skip nothing this time. G and J stay dropped. E is answered by P; I (the one page) stays on the canvas as the phone-first alternative and is not drawn again.</p>
+  <div class="phones" style="gap:24px;padding:28px 48px 0 48px">
 
-  <div class="frame-cap"><b>2 · Every surface, and where it is drawn</b> · seventy-one routes · the board · what goes · which levers land</div>
-  <div class="sec">
-    <table class="tbl map">
-      <tr><th>Surface</th><th>Route</th><th>Board</th><th>Deleted here</th><th>New</th></tr>
-      <tr class="fam"><td colspan="5">The front desk</td></tr>
-      <tr><td>Today, through the day</td><td>/shop/[slug]</td><td>StaffToday</td><td>the First-thing panel, the orientation card, the stat tiles, the horizon cards, the date in the eyebrow</td><td>F H K O</td></tr>
-      <tr><td>The counter</td><td>/check-in</td><td>StaffCounter</td><td>per-row state text, the other boats in standing view, the checklist card, the coral meter</td><td>F K M</td></tr>
-      <tr><td>Walk-in, two steps</td><td>/check-in/walk-in, /walk-in/[tripId]</td><td>StaffCounter</td><td>walk-in as a destination (it is the add row)</td><td>—</td></tr>
-      <tr><td>Add a booking</td><td>/bookings/new, /new/[tripId]</td><td>StaffCounter</td><td>the two pages (one door, two steps)</td><td>Q</td></tr>
-      <tr><td>The chrome, More, the identity menu</td><td>every /shop/**</td><td>StaffChrome</td><td>the role chip in the demo bar, the ⌘K badge box</td><td>H K</td></tr>
-      <tr><td>Ask the desk</td><td>⌘K · /api/search</td><td>StaffChrome</td><td>—</td><td>Q</td></tr>
-      <tr><td>Notices, loading, error, not-found</td><td>every /shop/**</td><td>StaffChrome</td><td>seven notice components, five dialogs, twenty shell-less loading.tsx</td><td>—</td></tr>
-      <tr><td>Sign-in, the staff invite</td><td>/sign-in, /invite/[token]</td><td>StaffChrome</td><td>—</td><td>—</td></tr>
-      <tr class="fam"><td colspan="5">The boats</td></tr>
-      <tr><td>The board</td><td>/schedule/board</td><td>StaffSchedule</td><td>the standing crew line, per-day add buttons, the ⋯ menu</td><td>F</td></tr>
-      <tr><td>The blow-out</td><td>/schedule/blowout/[tripId]</td><td>StaffSchedule</td><td>—</td><td>—</td></tr>
-      <tr><td>Staffing</td><td>/staffing</td><td>StaffSchedule</td><td>the two standing add-forms, the badge stack</td><td>K</td></tr>
-      <tr><td>The trip</td><td>/trips/[id]</td><td>StaffTrip</td><td>the Overview tab, the filter chips, the Details caret, the Activity and Promote rows, the Guests route</td><td>H L</td></tr>
-      <tr><td>Prep, the rental ticket, the log, print</td><td>/trips/[id]/prep, /prep/ticket/[id], /log, /print</td><td>StaffTrip</td><td>—</td><td>N</td></tr>
-      <tr><td>The manifest, the roll call, boat mode</td><td>/trips/[id]/manifest</td><td>StaffManifest</td><td>the two-button cluster, the per-row disclosures, the checklist card, the housekeeping card</td><td>—</td></tr>
-      <tr><td>The offline viewer</td><td>/offline-manifest</td><td>StaffManifest</td><td>—</td><td>—</td></tr>
-      <tr><td>The lobby board</td><td>/board/[token]</td><td>StaffManifest</td><td>—</td><td>L P</td></tr>
-      <tr class="fam"><td colspan="5">The drawer, the shelves, the till</td></tr>
-      <tr><td>Divers, a diver, add a diver</td><td>/divers, /divers/[id], /divers/new</td><td>StaffDivers</td><td>the jump nav, the tiles, the twin cert sections, three booking lists, the refund button, the Connect CTA</td><td>K P</td></tr>
-      <tr><td>Waivers, Inbox, Requests</td><td>/waivers, /inbox, /requests</td><td>StaffDivers</td><td>the inbox's second door, the requests' filter bar</td><td>—</td></tr>
-      <tr><td>Gear, a unit</td><td>/gear, /gear/[id]</td><td>StaffShelves</td><td>the three tiles, the Returns panel, the service sentence on healthy units</td><td>P</td></tr>
-      <tr><td>Dive sites, a site, add a site</td><td>/dive-sites, /[id], /new, ?view=catalog</td><td>StaffShelves</td><td>the catalogue as a second page</td><td>H</td></tr>
-      <tr><td>Courses, the course editor</td><td>/courses, /courses/[slug]/edit</td><td>StaffShelves</td><td>the editor's rail</td><td>—</td></tr>
-      <tr><td>Orders, an order, new order, promo codes</td><td>/orders, /[id], /new, /promos</td><td>StaffMoney</td><td>the five-control filter card, the date column, the second history table</td><td>—</td></tr>
-      <tr><td>Reports, the log</td><td>/reports</td><td>StaffMoney</td><td>six bordered tiles, the bar charts, the CSV button, "How's your month"</td><td>O</td></tr>
-      <tr class="fam"><td colspan="5">Set up</td></tr>
-      <tr><td>Settings, the shop's card</td><td>/settings</td><td>StaffSettings</td><td>the caption under every row, the 42-row scroll</td><td>R</td></tr>
-      <tr><td>Brand and display, team, security</td><td>/settings/display, /team, /security</td><td>StaffSettings</td><td>the explanatory paragraphs</td><td>H R</td></tr>
-      <tr><td>Money, calendar, integrations, WhatsApp, the lobby link, embed</td><td>/settings/connect, /calendar, /integrations, /whatsapp, /display, /embed</td><td>StaffSettings</td><td>each as a destination in More (they are panes)</td><td>—</td></tr>
-      <tr><td>Export, backups, import, gear import, the safety checklist</td><td>/settings/export, /import, /gear-import, /safety-checklist</td><td>StaffSettings</td><td>the two queue tables (two notice rows)</td><td>—</td></tr>
-      <tr class="fam"><td colspan="5">The diver's side, in the shop's face</td></tr>
-      <tr><td>The storefront</td><td>/s/[slug]</td><td>DiverHarbor</td><td>the disclaimer card, the month navigator above the hero, the metadata stack, the In-season box</td><td>L</td></tr>
-      <tr><td>The trip page and the form</td><td>/s/[slug]/trips/[id]</td><td>DiverHarbor</td><td>the boxed requirement, the money story, the sticky pill's count, the packing section</td><td>L</td></tr>
-      <tr><td>Courses, a course, reviews, register, the date request, the embeds, the shop 404</td><td>/s/[slug]/courses, /[course], /reviews, /register, /embed/[widget]</td><td>DiverHarbor</td><td>—</td><td>—</td></tr>
-      <tr><td>Booking, paying, confirmed</td><td>/s/[slug]/trips/[id]#book · Stripe</td><td>DiverBooking</td><td>the receipt panel, the emails line, the gear fieldsets</td><td>M</td></tr>
-      <tr><td>The waiver</td><td>/waivers/[token]</td><td>DiverBooking</td><td>the second submit's chrome, three banners</td><td>—</td></tr>
-      <tr><td>Claim a seat, verify, the arrival card</td><td>/claim/[token], /verify/[token], /trips/[id]/arrival-card</td><td>DiverBooking</td><td>—</td><td>—</td></tr>
-      <tr><td>The thread, before, during, after</td><td>/ready/[token]</td><td>DiverDay</td><td>the four inline forms at rest, the Done chips, help as an inbox</td><td>L M N</td></tr>
-      <tr><td>The recap</td><td>/recap/[token]</td><td>DiverDay</td><td>the recap as a second page</td><td>N</td></tr>
-      <tr><td>Confirm contact, reset password, unsubscribe, the dead ends</td><td>/confirm-contact, /reset-password, /unsubscribe/[token]</td><td>DiverDay</td><td>—</td><td>—</td></tr>
-      <tr><td>Twenty-five notification kinds, SMS, WhatsApp, push, the calendar entry, the link card</td><td>src/lib/notifications</td><td>Messages</td><td>"we", the arrows, the exclamation marks, the mechanism words, seven clipboard sentences</td><td>L M N</td></tr>
-      <tr class="fam"><td colspan="5">DiveDay's own</td></tr>
-      <tr><td>The homepage, product, pricing, about</td><td>/, /product, /pricing, /about</td><td>Public</td><td>the mid-page demo door, the abstraction sentence</td><td>F</td></tr>
-      <tr><td>Switching, the guides, the regions, demo stories</td><td>/switching, /[competitor], /spreadsheet, /dive, /dive/[region], /demo/[story]</td><td>Public</td><td>the stacked switching links</td><td>—</td></tr>
-      <tr><td>Open a shop, first light, forgot password</td><td>/onboard, /forgot-password</td><td>Public</td><td>the h2 rules, three reassurance sentences</td><td>S</td></tr>
-      <tr><td>Status, privacy, terms, the root 404, the link cards</td><td>/status, /privacy, /terms, not-found, opengraph-image</td><td>Public</td><td>—</td><td>—</td></tr>
-      <tr class="fam"><td colspan="5">Across every surface</td></tr>
-      <tr><td>The kit</td><td>src/components/ui, globals.css</td><td>Kit</td><td>the twelve deletions</td><td>all</td></tr>
-      <tr><td>The earned moments</td><td>twelve finishes</td><td>Moments</td><td>the standing good-news line, the coral meter, the emoji</td><td>M N O S</td></tr>
-      <tr><td>Six phones</td><td>the fold</td><td>Phones</td><td>the second tab bar, the duplicate sheets</td><td>—</td></tr>
-    </table>
-  </div>
-  <p class="aside">Machine surfaces (availability.json, the calendar feeds, robots, llms.txt, the icons, the cron and webhook routes, the test seeds) have no picture and are not on the page. The Guests route is a redirect and is drawn as the trip. Every route under src/app with a page.tsx is in the table above.</p>
+    <div class="pcell">
+      <div class="frame-cap"><b>1 · Today</b> · 7:04 AM · Mantis II away</div>
+      <div class="pscale"><div class="frame phone">
+        <div class="phone-chrome"><span class="mark">BM</span><span class="shop">Blue Mantis Divers</span><div class="right"><span class="av p-d">DR</span><span class="av p-k">KT</span><span class="av p-s">SM</span></div></div>
+        <div class="tide-fold"><span class="t">7:04</span><div class="bar"><i style="left:11%;width:19%"></i><i class="next" style="left:44%;width:22%"></i><i style="left:80%;width:19%"></i><b style="left:11.5%"></b></div><span class="u">back by 10:30</span></div>
+        <div class="phone-page">
+          <header class="ph"><p class="eyebrow">Front desk</p><h1 class="title">Good morning, Dana</h1><p class="lede">Thursday, August 27 · Mantis II is out. 2 things need you before 1:00.</p></header>
+          <div class="check">Two-Tank Reef is away. 11 aboard, back by 10:30.</div>
+          <div class="panel" style="margin-top:20px">
+            <div class="photo xs"><div class="ph-img sea-spiegel"></div><div class="ph-img sea-grain"></div><div class="over"><div><div class="t">1:00 · Spiegel Grove</div><div class="n">Wreck Trip · Mantis II · no crew yet</div></div><div style="text-align:right"><div class="t num">10 <span style="font-size:13px;font-weight:500">of 10</span></div><div class="n">full</div></div></div></div>
+            <div class="in rows-p">
+              <div class="row"><span class="mark warn"></span><span class="kind warn">Crew</span><span class="door">Ask Marcus ›</span><span class="sentence">No crew yet.</span></div>
+              <div class="row"><span class="mark danger"></span><span class="kind danger">Blocked</span><span class="door">Open ›</span><span class="sentence"><b>Tomás Ferreira</b> · no certification on file for a deep wreck.</span></div>
+            </div>
+          </div>
+          <div class="group-h" style="margin-top:24px"><span class="group">At the desk</span><span class="meta">2</span></div>
+          <div class="rows-p">
+            <div class="row"><span class="mark"></span><span class="kind">Messages</span><span class="door">Open ›</span><span class="sentence">3 replies waiting · Priya, Tom, Nadia.</span></div>
+            <div class="row"><span class="mark"></span><span class="kind">Reviews</span><span class="door">Open ›</span><span class="sentence"><b>Ravi Nair</b> · one review waiting.</span></div>
+          </div>
+        </div>
+        <div class="dock"><span class="on"><i></i>Today</span><span><i></i>Check-in</span><span><i></i>Divers</span><span><i></i>Board</span><span><i></i>More</span></div>
+      </div></div>
+    </div>
 
-  <div class="frame-cap"><b>3 · The order to build it</b> · the floor, then the kit on every page, then the levers by wow per session</div>
-  <div class="sec">
-    <table class="tbl">
-      <tr><th>Slice</th><th>What</th><th>Waits on</th><th>Sessions</th></tr>
-      <tr><td>20a–20e</td><td>The floor (round 1): one width, one header, one row, one state, one link, one skeleton, one disclosure, the voice sheet</td><td>the ADR alone</td><td>2–3</td></tr>
-      <tr><td>20g</td><td>F the tide line, H their sea, K together — as composed on round 2's Composite and on every board here</td><td>H-71 a (round 2)</td><td>5–7 plus a live layer for K</td></tr>
-      <tr><td>20h</td><td>L the trip's line on the trip page, the thread, the board, the email</td><td>20g's F</td><td>1–2</td></tr>
-      <tr><td>20i</td><td>M the pass: confirmed, the email, the counter's scan, "You're aboard"; composes 18f</td><td>H-71 e, f</td><td>3–4</td></tr>
-      <tr><td>20j</td><td>O the log: the close-out writes, Reports reads, the season strip</td><td>H-71 g</td><td>2–3</td></tr>
-      <tr><td>20k</td><td>N the postcard from the crew's log; the recap email and after-state</td><td>20h</td><td>2–3</td></tr>
-      <tr><td>20l</td><td>P the six rooms in the empty states and on the lobby board; R the shop's card; S first light; Q's two new answers</td><td>the ADR alone</td><td>3–4 together</td></tr>
-      <tr><td>20m</td><td>The surface sweep: every board's "Deleted here" list applied to its pages, one family per session, with the visual diffs explained</td><td>20a–20e</td><td>6–8, one per family</td></tr>
-    </table>
-  </div>
-  <p class="aside">Read as wow per session: L is nearly free after F and lands on both sides; M and O are the two the owner and the diver would each describe to a friend; N follows from the log; P, R and S are a week of warmth between them. Q is mostly shipped.</p>
+    <div class="pcell">
+      <div class="frame-cap"><b>2 · Check-in</b> · 6:32 · Priya's pass scanned</div>
+      <div class="pscale"><div class="frame phone">
+        <div class="phone-chrome"><span class="mark">BM</span><span class="shop">Blue Mantis Divers</span><div class="right"><span class="av p-d">DR</span><span class="av p-k">KT</span><span class="av p-s">SM</span></div></div>
+        <div class="tide-fold"><span class="t">6:32</span><div class="bar"><i class="next" style="left:11%;width:19%"></i><i style="left:44%;width:22%"></i><i style="left:80%;width:19%"></i><b style="left:8.5%"></b></div><span class="u">leaves in 28 min</span></div>
+        <div class="phone-page">
+          <header class="ph" style="margin-bottom:16px"><p class="eyebrow">Front desk</p><h1 class="title">Check-in</h1></header>
+          <div style="display:flex;align-items:center;gap:16px"><div class="dial"><i style="height:80%"></i><b>8</b><small>of 10</small></div><div><p class="fig" style="margin:0">8 <small>of 10 here</small></p><p class="note" style="margin:4px 0 0 0">7:00 Two-Tank Reef · 2 to come · 1 blocked</p></div></div>
+          <div class="notice" style="margin-top:16px">Priya Sharma is aboard · 6:32<span class="undo">Undo</span></div>
+          <div class="group-h" style="margin-top:20px"><span class="group">To come</span><span class="meta">2</span></div>
+          <div class="row"><span class="tap"></span><span class="sentence"><b>Grace Mensah</b> · awaits verification</span><span class="meta">Ready</span></div>
+          <div class="row"><span class="tap"></span><span class="sentence"><b>Nadia Petrov</b></span><span class="meta">Ready</span><span class="btn">Check in</span></div>
+          <div class="group-h" style="margin-top:20px"><span class="group">Aboard</span><span class="meta">8</span></div>
+          <div class="row"><span class="tap in"></span><span class="sentence"><b>Priya Sharma</b></span><span class="meta">aboard 6:32</span></div>
+          <div class="summary">Aboard since 6:23<span class="meta">7 more</span></div>
+          <div class="row add"><span class="mark"></span><span>Add a walk-in ›</span></div>
+        </div>
+        <div class="dock"><span><i></i>Today</span><span class="on"><i></i>Check-in</span><span><i></i>Divers</span><span><i></i>Board</span><span><i></i>More</span></div>
+      </div></div>
+    </div>
 
-  <div class="frame-cap"><b>4 · The owner's calls</b> · H-71, round 3 · nothing here is normative until the ADR moves to Accepted</div>
-  <div class="sec calls">
-    <div class="call"><b>(a) The base, confirmed.</b><p>A with F, H and K composed is the staff surface on every page, as drawn on this page. This is round 2's call (a), now with every surface drawn. The ADR moves to Accepted on it.</p><p class="rec">Recommended: yes.</p></div>
-    <div class="call"><b>(e) Which of L–S, in what order.</b><p>Eight levers, each a slice. The table above orders them by wow per session.</p><p class="rec">Recommended: L, M, O first; then N; then P, R, S together; Q as it ships.</p></div>
-    <div class="call"><b>(f) The pass and the scan.</b><p>Whether the confirmed page and email become a pass carrying a code, and whether the counter may scan it with the device's camera. The code carries a booking id only; a diver with no phone is checked in by name as today.</p><p class="rec">Recommended: yes to both.</p></div>
-    <div class="call"><b>(g) The log.</b><p>Whether the close-out writes an editable entry, whether Reports keeps its title (the tab's word) while the page becomes the log, and whether the season strip may show how full the boats were (a count, never money).</p><p class="rec">Recommended: yes, keep the title, yes.</p></div>
-    <div class="call"><b>(h) The line's truth.</b><p>Whether the trip's line may move on the crew's stage taps alone (and say "as of" when stale), or whether it moves only on the roll call's checkpoints.</p><p class="rec">Recommended: the stage taps, with "as of".</p></div>
-    <div class="call"><b>Still open from round 2.</b><p>(b) titles as the tab's word — every board here draws them so; (c) the shared door's moment — drawn on Moments; H's two sub-calls (the shop's colour on the staff chrome; photographs on the home and the trip page) — every board here assumes yes; K's (presence by name, no history) — assumed yes; E's (the board on Today or the lobby only) — answered by P: the lobby, and the empty states.</p></div>
+    <div class="pcell">
+      <div class="frame-cap"><b>3 · The trip</b> · 6:31 · 7 of 10 aboard</div>
+      <div class="pscale"><div class="frame phone">
+        <div class="phone-chrome"><span class="mark">BM</span><span class="shop">Blue Mantis Divers</span><div class="right"><span class="av p-d">DR</span><span class="av p-k">KT</span><span class="av p-s">SM</span></div></div>
+        <div class="tide-fold"><span class="t">6:31</span><div class="bar"><i class="next" style="left:11%;width:19%"></i><i style="left:44%;width:22%"></i><i style="left:80%;width:19%"></i><b style="left:8.4%"></b></div><span class="u">leaves in 29 min</span></div>
+        <div class="phone-page">
+          <header class="ph" style="margin-bottom:14px"><p class="eyebrow">Boats</p><h1 class="title">Two-Tank Reef</h1><p class="lede">Thursday, August 27 · 7:00 – 10:30 AM · Mantis II · $95</p></header>
+          <div class="seg-ctl full"><span class="on">Trip</span><span>Manifest</span><span>Prep</span></div>
+          <div class="panel" style="margin-top:14px">
+            <div class="photo xs"><div class="ph-img sea-molasses"></div><div class="ph-img sea-grain"></div><div class="over"><div><div class="t">Molasses &amp; French</div><div class="n">Keiko, Sal · slip 14</div></div><div style="text-align:right"><div class="t num">7 <span style="font-size:13px;font-weight:500">of 10</span></div><div class="n">aboard</div></div></div></div>
+            <div class="in" style="padding-bottom:14px">
+              <div class="line" style="padding-top:8px">
+                <div class="seg done"><i></i><b>6:15</b></div>
+                <div class="seg now"><i></i><b>6:45</b><span>Boards</span></div>
+                <div class="seg todo"><i></i><b>7:00</b></div>
+                <div class="seg todo"><i></i><b>7:40</b></div>
+                <div class="seg todo"><i></i><b>8:50</b></div>
+                <div class="seg todo"><i></i><b>9:20</b></div>
+                <div class="seg todo"><i></i><b>10:30</b></div>
+              </div>
+            </div>
+          </div>
+          <div class="group-h" style="margin-top:20px"><span class="group">Needs</span><span class="meta">3</span></div>
+          <div class="rows-p">
+            <div class="row"><span class="mark warn"></span><span class="kind warn">Cert</span><span class="who"><i class="p-k">KT</i>Keiko</span><span class="sentence"><b>Grace Mensah</b> · Advanced Open Water awaits verification.</span></div>
+            <div class="row"><span class="mark warn"></span><span class="kind warn">Waiver</span><span class="btn">Send waiver</span><span class="sentence"><b>Priya Sharma</b> · not sent.</span></div>
+            <div class="row"><span class="mark"></span><span class="kind">Contact</span><span class="who"><i class="p-s">SM</i>Sal</span><span class="sentence"><b>Nadia Petrov</b> · no emergency contact on file.</span></div>
+          </div>
+        </div>
+        <div class="dock"><span><i></i>Today</span><span><i></i>Check-in</span><span><i></i>Divers</span><span class="on"><i></i>Board</span><span><i></i>More</span></div>
+      </div></div>
+    </div>
+
   </div>
+
+  <div class="phones two" style="gap:24px;padding:0 48px">
+
+    <div class="pcell">
+      <div class="frame-cap"><b>4 · The roll call</b> · on the boat · 6:31 · boat mode</div>
+      <div class="pscale"><div class="frame phone boat">
+        <div class="phone-chrome"><span class="mark">BM</span><span class="shop">Mantis II</span><div class="right"><span class="av p-k">KT</span><span class="av p-s">SM</span></div></div>
+        <div class="tide-fold"><span class="t">6:31</span><div class="bar"><i class="next" style="left:11%;width:19%"></i><i style="left:44%;width:22%"></i><i style="left:80%;width:19%"></i><b style="left:8.4%"></b></div><span class="u">leaves in 29 min</span></div>
+        <div class="phone-page">
+          <header class="ph" style="margin-bottom:16px"><p class="eyebrow">Boats</p><h1 class="title">Roll call</h1><p class="lede">Before departure · Two-Tank Reef · Keiko</p></header>
+          <p class="fig" style="margin:0">7 <small>of 10 aboard</small></p>
+          <p class="note" style="margin:14px 0 6px 0">Still to board · 3</p>
+          <div class="chips"><span class="chip">Grace Mensah</span><span class="chip">Nadia Petrov</span><span class="chip">Priya Sharma</span></div>
+          <div style="margin-top:16px">
+            <div class="row"><span class="tap in"></span><span class="sentence" style="color:var(--ink)"><b>Hannah Liu</b> · with Ben Carter</span><span class="meta">aboard 6:28</span></div>
+            <div class="row"><span class="tap in"></span><span class="sentence" style="color:var(--ink)"><b>Ben Carter</b> · with Hannah Liu</span><span class="meta">aboard 6:28</span></div>
+            <div class="row"><span class="tap in"></span><span class="sentence" style="color:var(--ink)"><b>Ravi Nair</b></span><span class="meta">aboard 6:23</span></div>
+            <div class="row"><span class="tap"></span><span class="sentence" style="color:var(--ink)"><b>Grace Mensah</b></span><span class="pill danger">Blocked</span></div>
+          </div>
+          <div class="group-h" style="margin-top:20px"><span class="group">Where the boat is</span><span class="meta">Sal · 6:23</span></div>
+          <div class="chips"><span class="chip on">Boarding</span><span class="chip">Underway</span><span class="chip">Surface</span><span class="chip">Heading in</span><span class="chip">Home</span></div>
+          <div class="notice" style="margin-top:16px">As of 6:31 · saved on this phone.</div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="pcell">
+      <div class="frame-cap"><b>5 · The storefront</b> · 6:31 · a diver's phone</div>
+      <div class="pscale"><div class="frame phone harbor">
+        <div class="phone-chrome"><span class="mark">BM</span><span class="shop">Blue Mantis Divers</span><div class="right"><span class="note" style="font-size:13px">Courses</span></div></div>
+        <div class="tide-fold"><span class="t">6:31</span><div class="bar"><i class="next" style="left:11%;width:19%"></i><i style="left:44%;width:22%"></i><i style="left:80%;width:19%"></i><b style="left:8.4%"></b></div><span class="u">7:00 boarding</span></div>
+        <div class="photo" style="height:200px"><div class="ph-img sea-molasses"></div><div class="ph-img sea-grain"></div><span class="cap">the shop's photo</span><div class="over"><div><div class="t">Blue Mantis Divers</div><div class="n">Key Largo · 4.9 from 212 reviews</div></div></div></div>
+        <div class="phone-page">
+          <div class="group-h"><span class="group">Right now</span><span class="pill live">Boarding</span></div>
+          <p class="body" style="margin:0">Mantis II boards at slip 14.</p>
+          <div class="line" style="padding-top:8px">
+            <div class="seg now"><i></i><b>6:15</b><span>Check-in</span></div>
+            <div class="seg todo"><i></i><b>7:00</b></div>
+            <div class="seg todo"><i></i><b>7:40</b></div>
+            <div class="seg todo"><i></i><b>9:20</b></div>
+            <div class="seg todo"><i></i><b>10:30</b></div>
+          </div>
+          <div class="group-h" style="margin-top:22px"><span class="group">Next boat with space</span><span class="meta">tonight</span></div>
+          <p class="fig" style="margin:0">7:30 <small>PM · Skiff</small></p>
+          <h2 class="h" style="margin-top:8px">Night Dive — City of Washington</h2>
+          <p class="note" style="margin:4px 0 12px 0">5 seats · $120 · Easy, after dark</p>
+          <span class="btn primary block">Book this boat</span>
+          <div style="margin-top:20px">
+            <div class="row"><span class="kind mono" style="font-size:13px">Fri 7:00</span><span class="sentence"><b>Two-Tank Reef — Benwood &amp; Molasses</b> · 8 seats</span><span class="meta">$95</span><span class="door">›</span></div>
+            <div class="row"><span class="kind mono" style="font-size:13px">Sat 7:00</span><span class="sentence"><b>Christ of the Abyss</b> · 4 seats</span><span class="meta">$95</span><span class="door">›</span></div>
+          </div>
+          <p class="note" style="margin:16px 0 0 0;text-align:center;font-size:12px" class="mono">Booked through DiveDay</p>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="pcell">
+      <div class="frame-cap"><b>6 · The thread</b> · 7:04 · Priya's link, from the dock</div>
+      <div class="pscale"><div class="frame phone harbor">
+        <div class="phone-chrome"><span class="mark">BM</span><span class="shop">Blue Mantis Divers</span><div class="right"><span class="note" style="font-size:13px">Schedule</span></div></div>
+        <div class="tide-fold"><span class="t">7:04</span><div class="bar"><i class="next" style="left:11%;width:19%"></i><i style="left:44%;width:22%"></i><i style="left:80%;width:19%"></i><b style="left:11.5%"></b></div><span class="u">back by 10:30</span></div>
+        <div class="phone-page">
+          <header class="ph" style="margin-bottom:14px"><p class="eyebrow">Blue Mantis Divers</p><h1 class="title">Two-Tank Reef — Molasses &amp; French</h1><p class="lede">Thursday, August 27 · 7:00 – 10:30 AM · today</p></header>
+          <div style="display:flex;align-items:center;gap:10px"><span class="pill live">Away</span><span class="body">Mantis II is away.</span><span class="note" style="margin-left:auto">Sal, 7:02</span></div>
+          <div class="line" style="padding-top:8px">
+            <div class="seg done"><i></i><b>6:15</b></div>
+            <div class="seg done"><i></i><b>6:45</b></div>
+            <div class="seg now"><i></i><b>7:00</b><span>Leaves</span></div>
+            <div class="seg todo"><i></i><b>7:40</b></div>
+            <div class="seg todo"><i></i><b>8:50</b></div>
+            <div class="seg todo"><i></i><b>9:20</b></div>
+            <div class="seg todo"><i></i><b>10:30</b></div>
+          </div>
+          <div class="panel" style="margin-top:20px"><div class="in" style="padding-top:16px">
+            <h2 class="h">Where to go</h2>
+            <p class="note" style="margin:4px 0 8px 0">Marina Del Mar, slip 14. Park by the fuel dock; the green flag is ours.</p>
+            <span class="link">Open in maps ›</span>
+          </div></div>
+          <div class="row" style="margin-top:16px"><div class="qr"></div><span class="sentence"><b>Your pass</b> · Mantis II · slip 14</span><span class="meta">aboard 6:32</span></div>
+          <div class="chips" style="margin-top:16px"><span class="chip">Call the shop</span><span class="chip">Text the shop</span><span class="chip">Share with a buddy</span><span class="chip">Add to calendar</span></div>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+  <p class="aside">Phones 1 to 3 wear the staff chrome and the dock; the boat wears neither shop colour nor dock, and its chrome names the hull; the diver's two wear the shop's face with the credit line at the foot. The tide fold is on all six, reading the same day: it is a line, not a status, and it carries no fact a diver may not know.</p>
 
   <div class="foot">
-    <div><span class="group">What the boards are drawn from</span><p>Three inventories of the tree on 2026-09-09 (every route's anatomy, states, copy and phone form), seventy-three screenshots of the seeded shop at 1280 and 390, the Kit, and the brief's one fiction. Nothing on a surface board is invented beyond what its "New here" names.</p></div>
-    <div><span class="group">What is honest about the pictures</span><p>Photographs are gradients standing in for the shop's own; the fonts are the real faces; the numbers agree across boards. A frame is one moment, so a page is shown at the moment that makes its argument, and the aside says which.</p></div>
-    <div><span class="group">Where this goes next</span><p>The ADR's decision 5 records the round; the canvas README's slice table gains 20h–20m; the roadmap's section 20 grows the same rows. When the owner answers (a) and (e), 20a–20e start and the surface sweep follows one family at a time.</p></div>
+    <div><span class="group">The dock test</span><ul><li>Every tap target 44px: the tap circle, the check-in button, the dock's five slots, the chips at 32 inside a 44 hit area.</li><li>Critical text 16px: the sentence, the name, the time, the money, the state word; the kind word and the meta are the only 13s and 14s.</li><li>One hand in glare: the primary within the thumb's reach, boat mode at 6.2:1, nothing that needs a precise gesture; a swipe never commits a count.</li></ul></div>
+    <div><span class="group">What stays desktop-only</span><p>The week grid on the board (a phone gets the day list and the fold); the settings rail (a phone gets the More sheet's groups as pages); the print packet (a phone gets the offline manifest instead). Nothing else has a phone-only layout, and nothing a desk can do is missing from a phone.</p></div>
+    <div><span class="group">Cost and risk</span><p>One layout per surface, folding by rule, is cheaper than two: the phone captures in the visual suite become the same six routes at 390 rather than a second set of components. The risk is the fold hiding a Need under the dock; the page clears the dock by its own height, and the last row of any list is the add row, so the end of a list is always visible.</p></div>
   </div>
 </div>
 </x-dc>
