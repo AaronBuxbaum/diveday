@@ -39,6 +39,7 @@ import {
   PRIMARY_REGION,
 } from "../config/aws-regions.mjs";
 import { ensureAwsLogin } from "./aws-login.mjs";
+import { logGroupNamesFrom, templateFileNameFor } from "./log-group-names.mjs";
 import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -382,7 +383,7 @@ function isBucketNameStillSettling(stackName, region) {
  * retry that skipped this would fail on that instead of on whatever it was
  * actually retrying, which reads as a different bug.
  */
-async function clearRolledBackCreate(stackName, region) {
+async function prepareForCreate(stackName, region) {
   const status = awsMaybe([
     "cloudformation",
     "describe-stacks",
@@ -395,12 +396,27 @@ async function clearRolledBackCreate(stackName, region) {
     "--output",
     "text",
   ]);
-  if (status === null) return;
-  const trimmed = status.trim();
-  if (trimmed !== "ROLLBACK_COMPLETE" && trimmed !== "CREATE_FAILED") return;
-  log(`  ${stackName} is ${trimmed}; a stack in that state can only be deleted. Deleting it.`);
-  aws(["cloudformation", "delete-stack", "--stack-name", stackName, "--region", region]);
-  await waitForStackDeletion(stackName, region);
+  const trimmed = status === null ? null : status.trim();
+
+  if (trimmed === "ROLLBACK_COMPLETE" || trimmed === "CREATE_FAILED") {
+    log(`  ${stackName} is ${trimmed}; a stack in that state can only be deleted. Deleting it.`);
+    aws(["cloudformation", "delete-stack", "--stack-name", stackName, "--region", region]);
+    await waitForStackDeletion(stackName, region);
+  } else if (trimmed !== null) {
+    // The stack is there and healthy, so this is an update. Its log groups are
+    // its own and deleting them would be vandalism.
+    return;
+  }
+
+  // Reached whenever the stack does not exist -- either it never did, this
+  // just deleted it, or somebody deleted it by hand between runs. That last
+  // case is why the sweep hangs off "no stack" rather than off "rolled back",
+  // which is where it was and which is why it did not run: a hand-deleted
+  // stack answered `null` here and returned three lines above the cleanup.
+  //
+  // The condition is also the argument for it being safe. If no stack owns
+  // these names, nothing does, so anything holding one is debris from a create
+  // that did not finish.
   deleteOrphanedLogGroups(region);
 }
 
@@ -428,6 +444,7 @@ async function clearRolledBackCreate(stackName, region) {
  * ours exists yet.
  */
 function deleteOrphanedLogGroups(region) {
+  const templatePath = join(repoRoot, "cdk.out", templateFileNameFor(MAIN_STACK_ID));
   let template;
   try {
     runBounded("pnpm", ["infra:synth", MAIN_STACK_ID, "--quiet"], {
@@ -436,21 +453,22 @@ function deleteOrphanedLogGroups(region) {
       stdio: "ignore",
       timeoutMs: SUBPROCESS_TIMEOUTS.cdkSynth,
     });
-    template = JSON.parse(
-      readFileSync(join(repoRoot, "cdk.out", `${MAIN_STACK_NAME}.template.json`), "utf8"),
-    );
-  } catch {
-    log("  Could not synthesize the template to find leftover log groups; skipping that cleanup.");
-    log(
-      '  If the next deploy fails with "log group already exists", delete the named group and re-run.',
-    );
+    template = JSON.parse(readFileSync(templatePath, "utf8"));
+  } catch (error) {
+    // Names the path. The first version of this reported "could not
+    // synthesize" for what was actually a filename mistake, so the one clue
+    // that would have solved it in a minute was the one thing not printed.
+    log(`  Could not read ${templatePath} to find leftover log groups, so none were deleted.`);
+    log(`  Reason: ${error instanceof Error ? error.message : String(error)}`);
+    log("  If the deploy fails saying a log group already exists, delete that group and re-run.");
     return;
   }
 
-  const names = Object.values(template.Resources ?? {})
-    .filter((resource) => resource?.Type === "AWS::Logs::LogGroup")
-    .map((resource) => resource?.Properties?.LogGroupName)
-    .filter((name) => typeof name === "string");
+  const { names, unresolved } = logGroupNamesFrom(template, { account, region });
+  for (const value of unresolved) {
+    log(`  Could not work out one log group's name from the template: ${JSON.stringify(value)}`);
+    log("  If the deploy fails saying that group already exists, delete it and re-run.");
+  }
 
   let deleted = 0;
   for (const name of names) {
@@ -460,11 +478,12 @@ function deleteOrphanedLogGroups(region) {
       awsMaybe(["logs", "delete-log-group", "--log-group-name", name, "--region", region]) !== null
     ) {
       deleted += 1;
+      log(`  Deleted leftover log group ${name}.`);
     }
   }
   log(
     deleted === 0
-      ? "  No leftover log groups from the rolled-back create."
+      ? `  No leftover log groups among the ${names.length} this stack declares.`
       : `  Deleted ${deleted} log group(s) the rolled-back create left behind.`,
   );
 }
@@ -679,7 +698,7 @@ try {
     const settleMs = Number(process.env.DIVEDAY_BUCKET_SETTLE_MS || 5 * 60_000);
     const attempts = 7;
     for (let attempt = 1; ; attempt += 1) {
-      await clearRolledBackCreate(MAIN_STACK_NAME, PRIMARY_REGION);
+      await prepareForCreate(MAIN_STACK_NAME, PRIMARY_REGION);
       try {
         pnpm(
           ["infra:deploy", MAIN_STACK_ID, "--require-approval", "never"],
