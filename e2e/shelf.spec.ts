@@ -39,9 +39,25 @@ async function openShelf(
   });
   expect(seeded.ok()).toBe(true);
   const { href } = (await seeded.json()) as { href: string };
+  await visitShelf(page, href);
+  return href;
+}
+
+/**
+ * Open the shelf and wait until the phone has been remembered. The open is
+ * counted by a server action fired from a client effect after the page mounts
+ * (`RememberShelf`), not by the GET, so a test that navigates away the moment
+ * the heading paints can leave before the count and the cookie are written.
+ */
+async function visitShelf(page: import("@playwright/test").Page, href: string) {
+  const remembered = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname.startsWith("/shelf/"),
+  );
   await page.goto(href);
   await page.getByRole("heading", { name: "Your shelf" }).waitFor();
-  return href;
+  await remembered;
 }
 
 test("a diver opens their shelf, is greeted on the storefront, and forgets the phone", async ({
@@ -118,8 +134,7 @@ test("the diver record's file gains one row saying how the link is doing", async
   });
   expect(seeded.ok()).toBe(true);
   const { href } = (await seeded.json()) as { href: string };
-  await page.goto(href);
-  await page.getByRole("heading", { name: "Your shelf" }).waitFor();
+  await visitShelf(page, href);
 
   await page.goto("/shop/blue-mantis/divers?q=Priya");
   await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();

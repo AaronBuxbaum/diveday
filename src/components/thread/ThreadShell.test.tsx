@@ -29,18 +29,23 @@ function read(relativePath: string) {
   return readFileSync(join(SRC_DIR, relativePath), "utf8");
 }
 
-/** The four bearer pages the thread is made of (ADR 20260827-the-divers-thread, decision 1). */
+/**
+ * The four bearer pages the thread is made of (ADR 20260827-the-divers-thread,
+ * decision 1), and the shelf — the standing door onto the same file (ADR
+ * 20260908-one-hand, decision 6, lever Z), which wears the same shell.
+ */
 const THREAD_PAGES = [
   "app/ready/[token]/page.tsx",
   "app/waivers/[token]/page.tsx",
   "app/recap/[token]/page.tsx",
   "app/claim/[token]/page.tsx",
+  "app/shelf/[token]/page.tsx",
 ] as const;
 
 const THREAD_LOADING = THREAD_PAGES.map((page) => page.replace("page.tsx", "loading.tsx"));
 
 /**
- * The bearer pages that mount `ThreadShell` **directly** — three of the four.
+ * The bearer pages that mount `ThreadShell` **directly** — all but the recap.
  *
  * `/recap/[token]` is a bearer page and part of the thread, but since slice 7d
  * it is a thin route that renders `AfterState`, and that component owns its own
