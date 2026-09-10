@@ -49,15 +49,18 @@ import { bookings, people, personRoles } from "./schema";
  * in `anonymize.test.ts`, and it is why both files exist. What this one
  * guarantees is that no table was *forgotten*.
  *
- * **3. It cannot see a table reached by text.** The closure follows declared
- * foreign keys, so a table that names its person as an address, an identifier
- * or a polymorphic subject id is outside it however many hops it runs — which
- * is exactly how `auth_verifications` hid from the delete-path guard for as
- * long as it did. `TEXT_ADDRESSED_REASONS` below is the narrow complement:
- * every table outside the closure that carries a contact-shaped column must
- * still be decided. A table outside the closure holding a person's details
- * under some *other* column name is beyond any of this, and is what a
- * `security-reviewer` pass is for.
+ * **3. It cannot *find* a table reached by text — so it asks about all of
+ * them.** The closure follows declared foreign keys, so a table that names its
+ * person as an address, an identifier or a polymorphic subject id is outside it
+ * however many hops it runs, which is exactly how `auth_verifications` hid from
+ * the delete-path guard for as long as it did. No pattern over column names
+ * fixes that: this file tried one, and it missed both a bare `person_id` with
+ * no foreign key and anything holding a person under a column named something
+ * else. So `OUTSIDE_CLOSURE_REASONS` below is the **whole** complement — every
+ * one of the 24 tables outside the closure carries a written reason, and a new
+ * table lands in one list or the other on the day it is added. What is left
+ * outside is judgement, not coverage: this guard makes someone answer for every
+ * table, and a `security-reviewer` pass is what checks the answer.
  */
 
 type TableFacts = { references: string[]; columns: string[] };
@@ -297,27 +300,71 @@ const ERASURE_KEEPS: Record<string, string> = {
  * merely admitted — see limit 3 above.
  */
 /**
- * What "carries a contact-shaped column" means, and it is wider than an address
- * on purpose. `person_id` is the load-bearing half: a new table declaring
- * `personId: uuid("person_id")` **without** `.references(() => people.id)` is
- * outside the foreign-key closure entirely, and before this pattern included it
- * the table fell out of *both* sweeps and both tests stayed green — a hole in
- * the exact class limit 3 above claims to be narrowing (issue #1607, found by a
- * `security-reviewer` pass on the first draft of this file). There is no
- * legitimate bare `person_id` in this schema, which is what makes requiring a
- * decision cheap.
+ * The complement, and it is **every** table outside the closure rather than a
+ * sample of them.
+ *
+ * This started as a heuristic — the tables outside the closure carrying a
+ * column named like an address — and that was too thin twice over. A table
+ * declaring `person_id` **without** `.references(() => people.id)` fell out of
+ * the closure *and* out of the pattern, so both tests stayed green over the
+ * exact class limit 3 claims to narrow. And a table holding personal data under
+ * some other column name entirely was never reachable by any pattern, which is
+ * what a `sourcery-ai` review pointed out against the issue's own wording:
+ * scope is every table, not the ones a regex thought to ask about.
+ *
+ * So: 116 tables, 92 in the closure, and each of the other 24 named here with
+ * why an erasure is right to leave it. Almost all of them are the shop's own
+ * settings or a provider's plumbing, which is exactly why this list is cheap to
+ * keep and worth having — a new table lands here the day it is added, and the
+ * only way past it is to write a sentence a reviewer can disagree with.
  */
-const PERSON_SHAPED_COLUMN = /email|phone|identifier|address|person_id/;
-
-const TEXT_ADDRESSED_REASONS: Record<string, string> = {
+const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
+  // Reached by text rather than by a key, and swept that way. These two are the
+  // worked examples of limit 3: no foreign key ties either to a person, and the
+  // erasure finds them anyway because someone knew to look.
   auth_verifications:
-    "better-auth's `verification` model: no foreign key at all, names its person as text in `identifier`. The erasure sweeps it by that column, because a pending row holds an address and a live token",
+    "better-auth's `verification` model: no foreign key at all, names its person as text in `identifier`. The erasure sweeps it by that column, because a pending row holds an address in clear and a live bearer token in `value`",
   notification_send_queue:
-    "a queued send, matched on the address inside its payload blob rather than by a key. The erasure sweeps it the same way",
-  shops: "the shop's own front-desk address and phone, which belong to the business",
+    "a queued send, matched on the address inside its sealed payload and on `booking_id`. The one un-normalized blob of personal data in the schema; a work queue, not evidence, so the rows are deleted rather than redacted",
+
+  // The shop's own record of itself. A diver is not on any of these.
+  shops:
+    "the business: its name, its front-desk address and phone, its timezone and its own words. Erasing a diver does not touch the shop they dived with",
   shop_contact_email_confirmation_tokens:
     "the front-desk address's own proof of ownership (issue #1288) — the shop's address, not a diver's",
-  shop_whatsapp_accounts: "the shop's own WhatsApp sender number",
+  shop_whatsapp_accounts:
+    "the shop's own WhatsApp sender: a number, a template and sealed credentials",
+  shop_stripe_accounts: "the shop's Connect account and what it is enabled for",
+  shop_integrations: "a provider connection the shop made, and the sealed credentials behind it",
+  shop_backup_destinations: "where the shop sends its own backups, and the sealed key to get there",
+  shop_backup_deliveries:
+    "whether one of those bundles arrived; a period key, a byte count and a status",
+  boats: "the shop's vessels",
+  courses: "the shop's course catalogue, copied from a template and then its own",
+  waiver_templates:
+    "the text a shop asks people to sign, versioned. The *signatures* are `waiver_records`, which the erasure strips and re-seals",
+  trip_lenses: "the shop's own word for a kind of day",
+  season_events: "the shop's own year — a mini-season, a derby, a nesting window",
+  trip_series:
+    "the cadence a repeating departure is generated from. Its instances are ordinary `trips` rows",
+  trip_series_skips:
+    "a date the shop took out of that cadence, so the nightly roll does not put it back",
+
+  // DiveDay's own catalogue, shared by every shop and owned by none.
+  global_dive_sites: "DiveDay's catalogue of sites",
+  global_dive_site_versions: "that catalogue's own history",
+
+  // Plumbing: provider coordination and delivery ledgers, holding no person.
+  notification_rate_limit_state: "provider coordination keyed by ceiling and period",
+  stripe_webhook_events:
+    "the platform's delivery ledger, pruned by retention; it carries no payload",
+  media_deletion_attempts:
+    "the blob-deletion ledger the erasure itself *writes to* — a URL, a kind and a retry count. Redacting it would be erasing the record of the erasure",
+  integration_events:
+    "the outbox a shop's own integrations read. `entity_id` points at a row rather than copying it, and `payload` is built at delivery from the current record — which is the erased one by then",
+  integration_deliveries: "whether one of those events reached the provider, and the error if not",
+  integration_sync_records:
+    "the map from a DiveDay row to the provider's own object, which is what stops a second QuickBooks Customer being created for a diver already synced (issue #1015). Ids on both sides, no copied details",
 };
 
 /**
@@ -464,13 +511,10 @@ describe("erasure coverage", () => {
     expect(unaccounted).toEqual([]);
   });
 
-  it("decides every table outside the closure that carries a contact column", () => {
+  it("decides every table outside the closure, not only the ones a pattern asks about", () => {
     const scoped = new Set(personScopedTableNames(tables));
-    const outsideWithContact = [...tables]
-      .filter(([name]) => !scoped.has(name))
-      .filter(([, facts]) => facts.columns.some((column) => PERSON_SHAPED_COLUMN.test(column)))
-      .map(([name]) => name)
-      .sort();
-    expect(outsideWithContact).toEqual(Object.keys(TEXT_ADDRESSED_REASONS).sort());
+    expect([...tables.keys()].filter((name) => !scoped.has(name)).sort()).toEqual(
+      Object.keys(OUTSIDE_CLOSURE_REASONS).sort(),
+    );
   });
 });

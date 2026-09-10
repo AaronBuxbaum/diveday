@@ -265,12 +265,15 @@ survive a green run:
 2. **"Written" is table-level.** A table the sweep counts as handled may still have a column nobody
    scrubbed. That is what the per-table cases in `anonymize.test.ts` are for; the sweep guarantees
    only that no table was *forgotten*.
-3. **It cannot see a table reached by text.** The closure follows declared foreign keys, so a table
-   naming its person as an address or a polymorphic subject id is outside it — which is how
-   `auth_verifications` hid. The narrow complement is asserted: every table outside the closure
-   carrying a contact-shaped column must still be decided. A table outside it holding personal data
-   under some other column name is beyond any structural sweep, and is what a `security-reviewer`
-   pass exists for.
+3. **It cannot *find* a table reached by text — so it asks about all of them.** The closure follows
+   declared foreign keys, so a table naming its person as an address or a polymorphic subject id is
+   outside it, which is how `auth_verifications` hid. No pattern over column names fixes that: the
+   first draft of this guard tried one and missed both a bare `person_id` with no foreign key and
+   anything holding a person under a column named something else. The complement is therefore the
+   **whole** outside: all 24 tables the closure does not reach carry a written reason too, so a new
+   table lands in one list or the other on the day it is added. What remains outside is judgement
+   rather than coverage — the guard makes someone answer for every table, and a `security-reviewer`
+   pass is what checks the answer.
 
 ### Residuals — what this cannot erase
 
