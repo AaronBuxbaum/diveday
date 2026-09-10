@@ -4,6 +4,13 @@ import { NextResponse } from "next/server";
 import { authSecret } from "@/lib/auth-secret";
 import { isStaff, type Role } from "@/lib/authz";
 import {
+  BUDDY_COOKIE,
+  BUDDY_COOKIE_MAX_AGE,
+  BUDDY_COOKIE_PATH,
+  buddyReferralFromSearchParams,
+  encodeBuddyCookie,
+} from "@/lib/buddy-links";
+import {
   type CspOptions,
   enforcedPolicy,
   reportingEndpointsHeader,
@@ -237,6 +244,40 @@ const WHATSAPP_SETTINGS_PATH = /^\/shop\/[^/]+\/settings\/whatsapp(\/|$)/;
  * HTTP and would otherwise drop it — the same env-based answer `authGateResponse`
  * gives the same question, rather than a second one derived from the URL.
  */
+/**
+ * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): remember
+ * which diver's recap link this visitor arrived on.
+ *
+ * Every guard `rememberPartnerReferral` below applies, applies here, and for
+ * the same reasons: a document navigation only, so an `<img>` on a hostile page
+ * mints nothing; the shop bound into the value, because one cookie covers the
+ * whole `/s/` namespace; `private, no-store` on the response that carries it;
+ * `HttpOnly` and `/s/`-scoped.
+ *
+ * One difference, and it is in the value rather than the mechanism: this id is
+ * signed, so an unverifiable `?via=` sets no cookie at all
+ * (`buddyReferralFromSearchParams`). A partner slug is free text a shop typed;
+ * this one names a booking, and a value that names a booking has to prove it
+ * came from us.
+ */
+function rememberBuddyReferral(req: NextRequest, res: Response): void {
+  if (!(res instanceof NextResponse)) return;
+  const shopSlug = shopSlugFromPublicPath(req.nextUrl.pathname);
+  if (!shopSlug) return;
+  if (req.headers.get("sec-fetch-dest") !== "document") return;
+  if (req.headers.get("sec-fetch-mode") !== "navigate") return;
+  const referralId = buddyReferralFromSearchParams(req.nextUrl.searchParams);
+  if (!referralId) return;
+  res.cookies.set(BUDDY_COOKIE, encodeBuddyCookie(shopSlug, referralId), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.DIVEDAY_E2E !== "1",
+    path: BUDDY_COOKIE_PATH,
+    maxAge: BUDDY_COOKIE_MAX_AGE,
+  });
+  res.headers.set("Cache-Control", "private, no-store");
+}
+
 function rememberPartnerReferral(req: NextRequest, res: Response): void {
   // `.cookies` is a NextResponse affordance; a `Response` from elsewhere has
   // no way to set one.
@@ -309,6 +350,7 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // credential and carries nothing about who the reader is.
   const res = (await authGateResponse(req)) ?? NextResponse.next();
   rememberPartnerReferral(req, res);
+  rememberBuddyReferral(req, res);
   // Forward embed-mode and the request's own pathname to the server-component
   // tree — a layout can't read searchParams or the URL itself (only page.tsx
   // can), so these headers are the one way it learns "this render is going

@@ -222,6 +222,42 @@ const tripInvitationSchema = z.object({
   invitedAt: z.date(),
 });
 
+/**
+ * **The pass for a seat one person bought for another** (ADR 20260908-one-hand,
+ * decision 6, lever W; owner's call (l)).
+ *
+ * Addressed to the **giver**, not to the diver — the form asks for the
+ * receiver's name and the giver's own address, and never for the receiver's,
+ * because the giver is the one who knows how to reach their friend. So this is
+ * the giver's receipt and the pass in one message: `claimUrl` is the link they
+ * forward, `giftUrl` is their own page.
+ *
+ * `receiverName` and `message` are both words the giver themselves typed into
+ * the booking form, read back to that same person.
+ */
+const giftPassSchema = z.object({
+  kind: z.literal("gift_pass"),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  /** The giver, greeted by name — this message is theirs. */
+  giverName: z.string().trim().min(1).max(120),
+  /** Whoever is diving, as the giver named them. */
+  receiverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /** The one line the giver wrote for the pass. */
+  message: z.string().trim().min(1).max(280).optional(),
+  /** The receiver's claim link, for the giver to forward. */
+  claimUrl: z.url().max(2_000),
+  /** The giver's own read-only page. */
+  giftUrl: z.url().max(2_000),
+});
+
 // A staff-triggered last-minute-fill blast (docs ADR
 // 20260727-last-minute-fill-promos): no bookingId — it goes to a
 // last-minute-list entry, not a booking — so like waitlist_invite/
@@ -756,6 +792,7 @@ export const notificationSchema = z
     staffInviteSchema,
     checkoutRecoverySchema,
     lastMinuteDealSchema,
+    giftPassSchema,
     newAccountAlertSchema,
     demoStartedAlertSchema,
     usageCeilingAlertSchema,
@@ -918,6 +955,10 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // the same trip is always its own send.
     case "last_minute_deal":
       return `last-minute-deal/${notification.code}/${notification.to}`;
+    // One pass per gift seat, ever. The booking is minted by the same submit
+    // that sends this, so a double-tapped payment return converges on one send.
+    case "gift_pass":
+      return `gift-pass/${notification.bookingId}`;
     // One alert per account, ever — same key shape as welcome above.
     case "new_account_alert":
       return `new-account-alert/${notification.userAccountId}`;

@@ -32,8 +32,10 @@ import {
   bookingArrivalEvents,
   bookingCheckoutBookings,
   bookingCheckouts,
+  bookingGifts,
   bookingPaymentEvents,
   bookingPayments,
+  bookingReferrals,
   bookings,
   buddyPairMembers,
   certificationLevel,
@@ -484,6 +486,21 @@ export async function loadShopExportBundleInput(
         .from(bookingPayments)
         .where(eq(bookingPayments.shopId, shopId));
       const paymentByBooking = new Map(paymentRows.map((row) => [row.bookingId, row]));
+
+      // The gift on a seat and the diver's link that brought one, both folded
+      // into bookings.csv beside `party_lead_booking_id` (ADR 20260908-one-hand,
+      // decision 6, lever W).
+      const giftByBooking = new Map(
+        (await tx.select().from(bookingGifts).where(eq(bookingGifts.shopId, shopId))).map((row) => [
+          row.bookingId,
+          row,
+        ]),
+      );
+      const buddyReferralByBooking = new Map(
+        (await tx.select().from(bookingReferrals).where(eq(bookingReferrals.shopId, shopId))).map(
+          (row) => [row.bookingId, row.referredByBookingId],
+        ),
+      );
 
       // The history behind those current rows. `booking_payments` folds into
       // bookings.csv as one payment_* column set — the state as it stands —
@@ -1834,6 +1851,19 @@ export async function loadShopExportBundleInput(
             // CSV cell either — `csvCell`'s formula guard covers the one
             // reachable shape, a leading `-`.
             "referral_source",
+            // **A seat one person bought for another** (ADR 20260908-one-hand,
+            // decision 6, lever W), and **which diver's link brought this one**
+            // (the buddy seat). Both are plain facts about the seat, in exactly
+            // the class `party_lead_booking_id` and `referral_source` above are
+            // in, so both travel with it rather than in files of their own: a
+            // shop that exported its bookings and got them back would otherwise
+            // have lost who paid for a third of Saturday's boat, which is the
+            // one thing a refund conversation needs.
+            "gift_giver_name",
+            "gift_giver_email",
+            "gift_receiver_name",
+            "gift_message",
+            "referred_by_booking_id",
             // The diver's own consent to have the crew told this is a first
             // trip, or a return after a long gap (issue #1182). A statement
             // they made about themselves on this seat, the same kind of record
@@ -1863,6 +1893,7 @@ export async function loadShopExportBundleInput(
           ],
           rows: bookingRows.map((row) => {
             const payment = paymentByBooking.get(row.id);
+            const gift = giftByBooking.get(row.id);
             return [
               row.id,
               row.tripId,
@@ -1879,6 +1910,11 @@ export async function loadShopExportBundleInput(
               row.partyLeadBookingId,
               row.claimedAt,
               row.referralSource,
+              gift?.giverName,
+              gift?.giverEmail,
+              gift?.receiverName,
+              gift?.message,
+              buddyReferralByBooking.get(row.id),
               row.welcomeSharedAt,
               row.carriedFactsConfirmedAt,
               row.courseNextStep,

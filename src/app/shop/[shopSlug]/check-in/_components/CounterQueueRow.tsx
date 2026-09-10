@@ -77,6 +77,10 @@ function DiverIdentity({
 }) {
   const meta = [
     showEmail && row.email ? row.email : null,
+    // The one instruction the gift row needs, in the quiet slot the row already
+    // has for a fact rather than as a second control: the diver in front of the
+    // counter is checked in by the name on the seat.
+    row.giftGiverName ? t("checkIn.row.giftDoor") : null,
     // **Quiet text, never a badge.** A badge marks an exceptional state
     // somebody has to act on; a first visit is a fact a staffer can be warmer
     // for, and boxing it would put it at the same volume as "Blocked".
@@ -98,6 +102,17 @@ function DiverIdentity({
             moment in the day when asking costs nothing. */}
         {row.missingEmergencyContact ? (
           <Badge tone="neutral">{t("checkIn.row.missingEmergencyContact")}</Badge>
+        ) : null}
+        {/* **A gift nobody has claimed, on the day** (ADR 20260908-one-hand,
+            decision 6, lever W). A warning rather than a neutral fact, because
+            it is a thing the counter has to act on: the person standing there
+            may never have opened the link, and the seat is under a name the
+            giver typed. Never a boarding blocker — readiness owns that line,
+            and it is already saying its own piece on this row. */}
+        {row.giftGiverName ? (
+          <Badge tone="warning">
+            {t("checkIn.row.giftUnclaimed", { giver: row.giftGiverName })}
+          </Badge>
         ) : null}
       </span>
       {meta.length > 0 ? (

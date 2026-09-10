@@ -75,6 +75,7 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
+  bookingGifts,
   bookingPayments,
   bookings,
   buddyTeamEvents,
@@ -828,6 +829,23 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         pickupTime: null,
       })
       .where(inArray(bookings.id, bookingIds));
+
+    // **The giver of a gift seat is a third party on this diver's booking**
+    // (ADR 20260908-one-hand, decision 6, lever W), held for exactly the reason
+    // a guardian's name is held on a minor's release — because it is on this
+    // person's record and for no other reason. So it goes with the rest of it:
+    // the name, the address the receipt went to, the line that was written for
+    // this diver, and the name the giver typed for them. The row itself stays,
+    // because the seat and its money did.
+    await tx
+      .update(bookingGifts)
+      .set({
+        giverName: redactedUniqueValue("erased"),
+        giverEmail: `${redactedUniqueValue("erased")}@invalid`,
+        receiverName: redactedUniqueValue("erased"),
+        message: null,
+      })
+      .where(inArray(bookingGifts.bookingId, bookingIds));
 
     await tx
       .update(bookingCapabilities)

@@ -131,7 +131,8 @@
       "today": "Today · {date}",
       "continued": "{day}, continued",
       "dayMeta": "{count, plural, one {# order} other {# orders}} · {subtotal}",
-      "rowLabel": "{name} — {amount}"
+      "rowLabel": "{name} — {amount}",
+      "giftFrom": "a gift from {giver}"
     },
     "table": {
       "diver": "Diver",

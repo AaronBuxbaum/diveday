@@ -671,6 +671,29 @@ export default async function ReportsPage({
             </p>
           ) : null}
 
+          {/* **Where the month's seats came from, when they came from a
+              person** (ADR 20260908-one-hand, decision 6, lever W). Two quiet
+              lines on the pattern the partner line above already set: a
+              number does not earn a heading over it, and a month with none of
+              either renders nothing at all.
+
+              A gift says both halves — given and claimed — because the gap is
+              the only actionable thing in the pair: unclaimed seats are people
+              to chase before the boat goes. */}
+          {report.giftSeats.given > 0 ? (
+            <p className="mt-1 text-end text-sm text-muted tabular-nums">
+              {t("reports.giftSeats", {
+                given: report.giftSeats.given,
+                claimed: report.giftSeats.claimed,
+              })}
+            </p>
+          ) : null}
+          {report.buddyReferredSeats > 0 ? (
+            <p className="mt-1 text-end text-sm text-muted tabular-nums">
+              {t("reports.buddySeats", { count: report.buddyReferredSeats })}
+            </p>
+          ) : null}
+
           {report.tripCount > 0 ? (
             <DepartureLedger
               className="mt-10"

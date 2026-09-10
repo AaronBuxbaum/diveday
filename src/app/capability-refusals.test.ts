@@ -72,6 +72,7 @@ describe("capability routes refuse in place", () => {
       "board/[token]",
       "claim/[token]",
       "confirm-contact/[token]",
+      "gift/[token]",
       "invite/[token]",
       "ready/[token]",
       "recap/[token]",

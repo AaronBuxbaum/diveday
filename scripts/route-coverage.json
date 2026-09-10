@@ -22,8 +22,8 @@
     "visual": ["departures-board"]
   },
   "/claim/[token]": {
-    "e2e": ["a11y.spec.ts", "seat-claim.spec.ts"],
-    "visual": ["seat-claim"],
+    "e2e": ["a11y.spec.ts", "gift.spec.ts", "seat-claim.spec.ts"],
+    "visual": ["seat-claim", "gift-claim"],
     "a11y": ["a11y.spec.ts"]
   },
   "/confirm-contact/[token]": {
@@ -48,6 +48,10 @@
     "e2e": ["account-lifecycle.spec.ts"],
     "visual": ["forgot-password"],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/gift/[token]": {
+    "e2e": ["gift.spec.ts"],
+    "visual": ["gift-giver-page"]
   },
   "/invite/[token]": {
     "e2e": ["staff-invite.spec.ts"],

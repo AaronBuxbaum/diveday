@@ -13,7 +13,10 @@ import { getRecapPageData, getRecapPageState, type RecapSite } from "@/db/recap"
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale, requestTranslator } from "@/i18n/request";
+import { BUDDY_PARAM } from "@/lib/buddy-links";
+import { buddyReferralId } from "@/lib/buddy-tokens";
 import { cachedListFormat } from "@/lib/intl-cache";
+import { publicAppUrl } from "@/lib/notifications";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { openGraphSite } from "@/lib/site-metadata";
@@ -228,6 +231,19 @@ export default async function DiveRecapPage({
     },
   });
 
+  // **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W). The
+  // recap's own page and nowhere else: `/ready` renders this same component
+  // before the dive, and "bring a buddy next time" is a thing to say after one.
+  //
+  // Absolute, because the errand is to send it to somebody — a shop with no
+  // canonical origin configured gets no card rather than a path nobody can
+  // follow out of a message. The id is signed and non-secret
+  // (`src/lib/buddy-tokens.ts`); it names this booking and authorizes nothing.
+  const origin = publicAppUrl();
+  const buddyLinkUrl = origin
+    ? `${new URL(publicSchedulePath(data.shop.slug), `${origin}/`).toString()}?${BUDDY_PARAM}=${buddyReferralId(bookingId)}`
+    : null;
+
   return (
     <DiverIntlProvider
       locale={locale}
@@ -236,6 +252,7 @@ export default async function DiveRecapPage({
     >
       <AfterState
         {...props}
+        buddyLinkUrl={buddyLinkUrl}
         // **The recap's door sends; it never opens.** This link is signed for
         // 180 days, cannot be revoked, and the page above it offers "share with
         // a buddy" — so a shelf minted for whoever is holding it would hand a

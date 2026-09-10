@@ -276,6 +276,7 @@ describe("diver copy has a provider above it", () => {
       "board/[token]/error.tsx",
       "claim/[token]/error.tsx",
       "confirm-contact/[token]/error.tsx",
+      "gift/[token]/error.tsx",
       "invite/[token]/error.tsx",
       "ready/[token]/error.tsx",
       "recap/[token]/error.tsx",

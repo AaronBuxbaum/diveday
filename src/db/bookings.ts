@@ -24,6 +24,7 @@ import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
+import { recordGift } from "./gifts";
 import { publishManifestEvent } from "./manifest-events";
 import { setBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
@@ -271,6 +272,53 @@ export async function createBooking(db: AppDb, req: BookingRequest): Promise<Boo
     const pending: PendingDeclaration[] = [];
     const outcome = await createBookingRecord(tx, req, pending);
     if (outcome.ok) await flushDeclarations(tx, pending);
+    return outcome;
+  });
+}
+
+/**
+ * **A seat bought for somebody else** (ADR 20260908-one-hand, decision 6,
+ * lever W; owner's call (l)).
+ *
+ * One booking and one gift row, in one transaction. The booking is an ordinary
+ * booking — the capacity re-check, the trip window, the person dedup and every
+ * refusal are `createBookingRecord`'s, unchanged — and the gift is the fact of
+ * who bought it, written beside it rather than after it.
+ *
+ * **In the transaction because a half of this is worse than neither half.** A
+ * booking with no gift row is a seat holding a placeholder name that nobody can
+ * claim, that the till cannot explain, and whose payer the shop has no record
+ * of; a gift row with no booking is nothing at all. The seat and the giver
+ * arrive together or not at all.
+ *
+ * The diver's own readiness is deliberately untouched here. A gift can put a
+ * name on a boat; the waiver, the certification and every other thing readiness
+ * asks for belong to whoever claims the seat, and they are asked for on the
+ * claim (`src/db/seat-claims.ts`).
+ */
+export async function createGiftBooking(
+  db: AppDb,
+  req: BookingRequest,
+  gift: {
+    giverName: string;
+    giverEmail: string;
+    receiverName: string;
+    message?: string | null;
+  },
+): Promise<BookingOutcome> {
+  return db.transaction(async (tx) => {
+    const pending: PendingDeclaration[] = [];
+    const outcome = await createBookingRecord(tx, req, pending);
+    if (!outcome.ok) return outcome;
+    await flushDeclarations(tx, pending);
+    await recordGift(tx, {
+      shopId: req.shopId,
+      bookingId: outcome.bookingId,
+      giverName: gift.giverName,
+      giverEmail: gift.giverEmail,
+      receiverName: gift.receiverName,
+      message: gift.message,
+    });
     return outcome;
   });
 }

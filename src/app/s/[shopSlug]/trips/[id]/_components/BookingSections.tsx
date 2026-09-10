@@ -19,6 +19,7 @@ import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
 import { capacityLabel } from "@/lib/trips";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
 import { BookingGearFields } from "./BookingGearFields";
+import { GiftFields } from "./GiftFields";
 import { KnownDiverPanel, type KnownDiverPanelProps } from "./KnownDiverPanel";
 import { MoneyBlock } from "./MoneyBlock";
 import type { Trip } from "./types";
@@ -356,6 +357,7 @@ export function BookSpotSection({
   terms,
   knownDiver,
   offerHandoff,
+  giftDefault = false,
 }: {
   trip: Trip;
   tripRef: TripRef;
@@ -420,6 +422,13 @@ export function BookSpotSection({
    * file. Fire-and-forget — the form never hears back.
    */
   offerHandoff?: (email: string) => void;
+  /**
+   * Open on the gift, rather than on "Me" (ADR 20260908-one-hand, decision 6,
+   * lever W). Set by `?gift=1`, which is where the giver's page sends someone
+   * whose departure blew out and who wants to give the same seat on the next
+   * boat — the one door that offer has.
+   */
+  giftDefault?: boolean;
 }) {
   const t = useTranslations("booking");
   const tRoot = useTranslations();
@@ -429,6 +438,10 @@ export function BookSpotSection({
   // back up rather than this section duplicating that state — `MoneyBlock`
   // multiplies the fare by it.
   const [partySize, setPartySize] = useState(1);
+  // **The first choice on the form**: who is diving. A gift is one seat with
+  // three different questions and a different destination, so the whole middle
+  // of this card swaps rather than growing a fourth optional fieldset.
+  const [asGift, setAsGift] = useState(giftDefault);
   // Per-diver gear subtotal, reported up by each `BookingGearFields` slot
   // (docs ADR 20260801-checkout-upsells-rental-gear) — summed into the running
   // total below so "3 divers × $120" becomes accurate once gear is added.
@@ -438,7 +451,10 @@ export function BookSpotSection({
       current[index] === cents ? current : { ...current, [index]: cents },
     );
   }, []);
-  const showGearFields = payAtBooking && hasAnyRentalPricing(rentalPricing);
+  // Never in gift mode: the fit is the receiver's, asked for on `/ready`
+  // after they claim — a giver guessing a stranger's wetsuit size is not a
+  // question this form should ask.
+  const showGearFields = !asGift && payAtBooking && hasAnyRentalPricing(rentalPricing);
   const passThroughTotalCents = (passThroughFee?.amountCents ?? 0) * partySize;
   // Shrinking the party leaves a stale subtotal behind for the dropped slot
   // (BookingGearFields unmounts, but its last report stays in state) — sum
@@ -449,13 +465,17 @@ export function BookSpotSection({
         .filter(([index]) => activeGearIndexes.has(index))
         .reduce((sum, [, cents]) => sum + cents, 0)
     : 0;
-  const bookLabel = payAtBooking
-    ? remaining === 1
-      ? t("bookAndPayLastSpot")
-      : t("bookAndPay")
-    : remaining === 1
-      ? t("bookLastSpot")
-      : t("bookSpots");
+  const bookLabel = asGift
+    ? payAtBooking
+      ? t("giftBookAndPay")
+      : t("giftBook")
+    : payAtBooking
+      ? remaining === 1
+        ? t("bookAndPayLastSpot")
+        : t("bookAndPay")
+      : remaining === 1
+        ? t("bookLastSpot")
+        : t("bookSpots");
   const capacityLabelValue = capacityLabel(trip);
   const capacityText =
     capacityLabelValue.kind === "full"
@@ -481,7 +501,7 @@ export function BookSpotSection({
           heading — the second of the five places this card said the money, on a
           page whose hero had already said it at figure scale. */}
       <form action={formAction} className="flex flex-col gap-4">
-        {knownDiver ? (
+        {knownDiver && !asGift ? (
           <KnownDiverPanel
             name={knownDiver.name}
             lines={knownDiver.lines}
@@ -489,17 +509,50 @@ export function BookSpotSection({
             handoff={knownDiver.handoff}
           />
         ) : null}
-        <BookingPartyFields
-          maxPartySize={remaining}
-          leadPhone
-          fieldErrors={state.fieldErrors}
-          remember={!tripRef.embed}
-          onSizeChange={setPartySize}
-          contactEmail={contactEmail}
-          contactPhone={contactPhone}
-          lead={knownDiver?.lead ?? null}
-          onLeadEmailSettled={knownDiver || tripRef.embed ? undefined : offerHandoff}
-        />
+        {/* **Me, or someone else** — the choice above everything, because it
+            decides what the rest of the card asks for. A radio group rather
+            than a toggle: both answers are ordinary, and neither is a mode the
+            reader is switching *into*. */}
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm font-medium">{t("giftChoiceLabel")}</legend>
+          <label className="flex min-h-11 items-center gap-2 text-base">
+            <input
+              type="radio"
+              name="bookingFor"
+              value="me"
+              checked={!asGift}
+              onChange={() => setAsGift(false)}
+              className="size-4"
+            />
+            {t("giftChoiceMe")}
+          </label>
+          <label className="flex min-h-11 items-center gap-2 text-base">
+            <input
+              type="radio"
+              name="bookingFor"
+              value="gift"
+              checked={asGift}
+              onChange={() => setAsGift(true)}
+              className="size-4"
+            />
+            {t("giftChoiceGift")}
+          </label>
+        </fieldset>
+        {asGift ? (
+          <GiftFields fieldErrors={state.fieldErrors} />
+        ) : (
+          <BookingPartyFields
+            maxPartySize={remaining}
+            leadPhone
+            fieldErrors={state.fieldErrors}
+            remember={!tripRef.embed}
+            onSizeChange={setPartySize}
+            contactEmail={contactEmail}
+            contactPhone={contactPhone}
+            lead={knownDiver?.lead ?? null}
+            onLeadEmailSettled={knownDiver || tripRef.embed ? undefined : offerHandoff}
+          />
+        )}
         {showGearFields
           ? Array.from({ length: partySize }, (_, index) => (
               <BookingGearFields
@@ -528,7 +581,10 @@ export function BookSpotSection({
             does not gate the booking transaction; full enforcement (a birth
             date on file, a hard refusal) is deliberately out of scope, see
             docs/product/human-decisions.md H-08/H-22. */}
-        {trip.course?.minimumAge ? (
+        {/* Not in gift mode: this checkbox is the diver's own statement about
+            their own age, and the diver is not the person filling this form in.
+            Readiness asks whoever claims the seat. */}
+        {trip.course?.minimumAge && !asGift ? (
           <label className="flex min-h-11 items-start gap-2 border-t border-border pt-4 text-sm">
             <input type="checkbox" name="ageAttestation" required className="mt-0.5 size-4" />
             {t("ageAttestation", { age: trip.course.minimumAge })}
@@ -574,7 +630,7 @@ export function BookSpotSection({
           <MoneyBlock
             className="border-t border-border pt-4"
             fareCents={perDiverPriceCents}
-            partySize={partySize}
+            partySize={asGift ? 1 : partySize}
             gearCents={gearTotalCents}
             courseFeeCents={courseFeeCents ?? null}
             eLearningFeeCents={eLearningFeeCents ?? null}
@@ -603,7 +659,9 @@ export function BookSpotSection({
         )}
         <div className="mt-1">
           <SubmitButton
-            pendingLabel={payAtBooking ? t("headingToPayment") : t("booking")}
+            pendingLabel={
+              asGift ? t("giftBooking") : payAtBooking ? t("headingToPayment") : t("booking")
+            }
             className={buttonClass({ className: "px-6 py-3 text-base disabled:opacity-70" })}
           >
             {bookLabel}

@@ -57,6 +57,16 @@ export function publicShopYearCardPath(shopSlug: string): string {
   return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/year-card`;
 }
 
+/**
+ * **The giver's own page for a gift seat** (ADR 20260908-one-hand, decision 6,
+ * lever W). Outside `/s/<shopSlug>` like every other bearer page, because the
+ * URL is the capability rather than the shop: the token names the booking, and
+ * the page reads four facts off it (`src/lib/gift-links.ts`).
+ */
+export function giftLinkPath(token: string): string {
+  return `/gift/${token}`;
+}
+
 /** The site-level overview an agent reads first, at the conventional path. */
 export const LLMS_TXT_PATH = "/llms.txt";
 

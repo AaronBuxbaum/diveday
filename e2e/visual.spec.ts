@@ -7213,3 +7213,66 @@ for (const scheme of ["light", "dark"] as const) {
     });
   });
 }
+
+/**
+ * **Give a dive** (ADR 20260908-one-hand, decision 6, lever W; owner's call
+ * (l)) — the three surfaces the lever adds, on their own describe so a failure
+ * costs one capture rather than re-premising a shard.
+ *
+ * The form's gift state is a click on the public trip page; the claim and the
+ * giver's page both need a real gift seat, minted through
+ * `/api/test/seed-gift` for the reason the trouble states are seeded that way:
+ * a demo shop where a third of every boat is somebody's birthday present is a
+ * worse demo, and the branch worth photographing is the rare one.
+ */
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode — give a dive`, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`the booking form's gift state renders true to the design (${scheme})`, async ({
+      page,
+      request,
+    }) => {
+      const seeded = await request.post("/api/test/seed-gift");
+      expect(seeded.ok(), await seeded.text()).toBe(true);
+      const { tripId } = (await seeded.json()) as { tripId: string };
+      await page.goto(`/s/blue-mantis/trips/${tripId}`);
+      await page.getByRole("radio", { name: "Someone else, as a gift" }).check();
+      // The three gift questions replacing the party's five is the whole
+      // subject of the frame; waiting on the last of them is what proves the
+      // swap fired rather than photographing the ordinary form twice.
+      await page.getByLabel("Your email", { exact: true }).waitFor();
+      await page.mouse.move(0, 0);
+      await capture(page, "booking-gift-form", scheme);
+    });
+
+    test(`the gift's claim page renders true to the design (${scheme})`, async ({
+      page,
+      request,
+    }) => {
+      const seeded = await request.post("/api/test/seed-gift");
+      expect(seeded.ok(), await seeded.text()).toBe(true);
+      const { claimPath } = (await seeded.json()) as { claimPath: string };
+      await page.goto(claimPath);
+      await page.getByText("From Hannah, for your birthday").waitFor();
+      await page.getByRole("button", { name: "Claim this seat" }).waitFor();
+      await capture(page, "gift-claim", scheme);
+    });
+
+    test(`the giver's own page renders true to the design (${scheme})`, async ({
+      page,
+      request,
+    }) => {
+      const seeded = await request.post("/api/test/seed-gift");
+      expect(seeded.ok(), await seeded.text()).toBe(true);
+      const { giftPath } = (await seeded.json()) as { giftPath: string };
+      await page.goto(giftPath);
+      await page.getByRole("heading", { name: "Ben Carter’s seat" }).waitFor();
+      // The four rows are the frame, and the page mints nothing — no token
+      // renders here at all, which is what keeps this baseline stable run to
+      // run as well as keeping the page read-only.
+      await page.getByText("Not aboard yet").waitFor();
+      await capture(page, "gift-giver-page", scheme);
+    });
+  });
+}

@@ -90,5 +90,7 @@
     "shareOff": "Tu año no está en las páginas de DiveDay",
     "shareDoor": "Ajustes de la pantalla del vestíbulo",
     "empty": "Todavía no ha zarpado ninguna salida este año."
-  }
+  },
+  "giftSeats": "{given, plural, one {# plaza regalada} other {# plazas regaladas}} · {claimed} reclamadas",
+  "buddySeats": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde el enlace de un buceador"
 }

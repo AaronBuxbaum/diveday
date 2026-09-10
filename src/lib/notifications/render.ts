@@ -6,6 +6,7 @@ import {
   contactEmailConfirmationEmail,
   courseInquiryEmail,
   demoStartedAlertEmail,
+  giftPassEmail,
   lastMinuteDealEmail,
   type NotificationEmail,
   newAccountAlertEmail,
@@ -105,6 +106,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
   if (notification.kind === "last_minute_deal") return lastMinuteDealEmail(notification);
+  if (notification.kind === "gift_pass") return giftPassEmail(notification);
   if (notification.kind === "new_account_alert") return newAccountAlertEmail(notification);
   if (notification.kind === "demo_started_alert") return demoStartedAlertEmail(notification);
   if (notification.kind === "usage_ceiling_alert") return usageCeilingAlertEmail(notification);

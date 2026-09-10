@@ -86,6 +86,25 @@ type TripInvitationEmailInput = {
   bookingUrl: string;
 };
 
+type GiftPassEmailInput = {
+  locale: DiverLocale;
+  /** The giver — this message is addressed to them. */
+  giverName: string;
+  /** Whoever is diving, as the giver named them on the form. */
+  receiverName: string;
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+  /** The one line the giver wrote for the pass. */
+  message?: string;
+  /** The link the giver forwards; claiming it makes the seat the receiver's. */
+  claimUrl: string;
+  /** The giver's own page: claimed, signed, aboard, the receipt. */
+  giftUrl: string;
+};
+
 type LastMinuteDealEmailInput = {
   locale: DiverLocale;
   diverName: string;
@@ -629,6 +648,57 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
  * Leads with the deal, not the shop's inventory problem — a diver doesn't
  * need to know the trip is under capacity to want a good price on a dive.
  */
+/**
+ * **The gift pass** (ADR 20260908-one-hand, decision 6, lever W).
+ *
+ * Written to the giver, and it does two jobs in the order they matter: here is
+ * the link your friend needs, and here is where you can see how it went. It
+ * says nothing about the receiver that the giver did not type, and it offers
+ * no readiness of any kind — the waiver and the certification are the diver's
+ * own, asked for on their own page after they claim.
+ */
+export function giftPassEmail(input: GiftPassEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.giverName, t("notifications.common.genericName"));
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
+  const title = escapeHtml(input.tripTitle);
+  const body = t("notifications.giftPass.body", {
+    receiverName: input.receiverName,
+    shopName: input.shopName,
+    tripTitle: input.tripTitle,
+  });
+  const bodyHtml = t("notifications.giftPass.body", {
+    receiverName: escapeHtml(input.receiverName),
+    shopName: escapeHtml(input.shopName),
+    tripTitle: `<strong>${title}</strong>`,
+  });
+  const forward = t("notifications.giftPass.forward", { receiverName: input.receiverName });
+  const forwardHtml = t("notifications.giftPass.forward", {
+    receiverName: escapeHtml(input.receiverName),
+  });
+  const claimLink = t("notifications.giftPass.claimLink");
+  const follow = t("notifications.giftPass.follow");
+  const greeting = t("notifications.common.greeting", { firstName });
+  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const line = input.message?.trim();
+  return {
+    subject: t("notifications.giftPass.subject", { tripTitle: input.tripTitle }),
+    text: [
+      greeting,
+      body,
+      `${date} · ${time}`,
+      ...(line ? [`“${line}”`] : []),
+      forward,
+      `${claimLink}:`,
+      input.claimUrl,
+      `${follow}:`,
+      input.giftUrl,
+    ].join("\n\n"),
+    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${line ? `<p><em>“${escapeHtml(line)}”</em></p>` : ""}<p>${forwardHtml}</p>${emailButton(input.claimUrl, claimLink)}<p><a href="${escapeHtml(input.giftUrl)}">${escapeHtml(follow)}</a></p>`,
+  };
+}
+
 export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));

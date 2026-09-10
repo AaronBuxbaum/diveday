@@ -22,7 +22,9 @@
   },
   "row": {
     "firstVisit": "First visit",
-    "missingEmergencyContact": "No emergency contact"
+    "missingEmergencyContact": "No emergency contact",
+    "giftUnclaimed": "A gift from {giver}, not claimed yet",
+    "giftDoor": "Seat the giver’s friend by name"
   },
   "settledGroup": "Checked in — {count}",
   "checkInButton": "Check in",

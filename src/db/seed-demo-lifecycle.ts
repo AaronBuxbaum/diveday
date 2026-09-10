@@ -15,7 +15,9 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
+  bookingGifts,
   bookingPayments,
+  bookingReferrals,
   bookings,
   buddyPairMembers,
   buddyTeamEvents,
@@ -192,6 +194,11 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // Shelf links reference `people` with no cascade, the same 23503 shape as
   // the calendar feeds further down.
   await db.delete(personShelfTokens).where(eq(personShelfTokens.shopId, shopId));
+  // The gift and the buddy referral both reference bookings, so both go before
+  // them (ADR 20260908-one-hand, decision 6, lever W). `booking_referrals`
+  // names two bookings and neither is deleted first, so it goes here too.
+  await db.delete(bookingGifts).where(eq(bookingGifts.shopId, shopId));
+  await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));

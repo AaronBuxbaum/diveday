@@ -176,6 +176,8 @@ const EXPORTED_TABLES = [
 const FOLDED_TABLES = [
   "person_roles", // people.csv / trip_assignments.csv `roles`
   "booking_payments", // bookings.csv payment_* columns
+  "booking_gifts", // bookings.csv gift_* columns — a gift is a fact about the seat
+  "booking_referrals", // bookings.csv `referred_by_booking_id`
 ];
 
 /**

@@ -190,7 +190,9 @@ export default async function SeatClaimPage({
   return (
     <ThreadShell
       shopName={data.shopName}
-      title={t("seatClaim.heading", { trip: data.tripTitle })}
+      title={t(data.gift ? "seatClaim.giftHeading" : "seatClaim.heading", {
+        trip: data.tripTitle,
+      })}
       meta={
         <p className="mt-1 text-base text-muted">
           {t("seatClaim.when", { date: when, time: timeRange })}
@@ -218,12 +220,29 @@ export default async function SeatClaimPage({
           diver works inside, the same panel `/waivers` signs in (ADR
           20260827-the-divers-thread, decision 1). */}
       <SectionCard padding="lg" className="mt-8">
-        <p className="text-base text-muted">
-          {t("seatClaim.body", {
-            shop: data.shopName,
-            seatName: data.seatName,
-          })}
-        </p>
+        {/* **The pass, before it is theirs** (ADR 20260908-one-hand, decision 6,
+            lever W). A gift says who bought it and what they wrote; a party
+            seat says who is holding it. Everything below — the form, the
+            waiver, the certification that follows — is identical, because a
+            gift is a booking and a claim is a claim. */}
+        {data.gift ? (
+          <>
+            {data.gift.message ? <p className="text-lg text-ink">{data.gift.message}</p> : null}
+            <p className={`text-base text-muted${data.gift.message ? " mt-2" : ""}`}>
+              {t("seatClaim.giftBody", {
+                giver: data.gift.giverName,
+                shop: data.shopName,
+              })}
+            </p>
+          </>
+        ) : (
+          <p className="text-base text-muted">
+            {t("seatClaim.body", {
+              shop: data.shopName,
+              seatName: data.seatName,
+            })}
+          </p>
+        )}
         <form action={claimSeatAction.bind(null, token)} className="mt-5 flex flex-col gap-4">
           <Field label={t("seatClaim.nameLabel")}>
             <input
@@ -263,7 +282,9 @@ export default async function SeatClaimPage({
             </SubmitButton>
           </div>
         </form>
-        <p className="mt-4 text-sm text-muted">{t("seatClaim.privacyNote")}</p>
+        <p className="mt-4 text-sm text-muted">
+          {t(data.gift ? "seatClaim.giftNext" : "seatClaim.privacyNote")}
+        </p>
       </SectionCard>
     </ThreadShell>
   );

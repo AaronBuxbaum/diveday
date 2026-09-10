@@ -3938,6 +3938,11 @@ export const notificationKind = pgEnum("notification_kind", [
   // (src/lib/minimum-seats.ts). Tracked per booking like every other trip
   // message, so a shop can see who was told.
   "trip_minimum_not_met",
+  // The pass for a seat one person bought for another, carrying the claim link
+  // the giver forwards (ADR 20260908-one-hand, decision 6, lever W). The one
+  // per-booking message addressed to somebody other than the diver, and
+  // tracked like the rest so a shop can see that the gift went out.
+  "gift_pass",
 ]);
 
 export const notificationDeliveryStatus = pgEnum("notification_delivery_status", [
@@ -9179,3 +9184,100 @@ export const tripSightings = pgTable(
 );
 
 export type TripSighting = typeof tripSightings.$inferSelect;
+
+/**
+ * **A seat one person bought for another** (ADR 20260908-one-hand, decision 6,
+ * lever W; the owner's call (l): yes to the gift, gift cards stay parked).
+ *
+ * A gift is a **booking**, not stored value. The row over there is the seat —
+ * it takes capacity, it carries readiness, it refunds on a blow-out — and this
+ * row is the small amount of extra fact a gift adds to it: who bought it, the
+ * line they wrote, and the name they typed for the person they bought it for.
+ * Nothing here holds a balance, and there is nothing to reconcile when the
+ * departure is over.
+ *
+ * **`claimed_at` is deliberately not a column here.** `bookings.claimed_at` is
+ * already that fact, written inside the claim transaction (`src/db/seat-claims.ts`)
+ * for a party seat and for a gift alike; a second copy on this row would be one
+ * more thing that can disagree with the seat it is about.
+ *
+ * **`receiver_name` is the giver's own words, and it is what the giver's page
+ * renders.** The booking's `people` row starts as a placeholder carrying the
+ * same name and then becomes the claimant's real record the moment they claim —
+ * so a giver's page reading through the booking would start showing the diver's
+ * own chosen name, their own spelling, and (through the same join) whatever
+ * else that record grows. The giver reads back what the giver typed.
+ *
+ * **The giver is a third party's personal data on a diver's seat**, held for
+ * the same reason a guardian's is on a minor's release, so the erasure of the
+ * diver who dives takes it too (`src/db/anonymize.ts`).
+ */
+export const bookingGifts = pgTable(
+  "booking_gifts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** One gift per seat: a booking is bought once, by one person. */
+    bookingId: uuid("booking_id")
+      .notNull()
+      .unique()
+      .references(() => bookings.id),
+    giverName: text("giver_name").notNull(),
+    /** Where the receipt and the claim link go — the giver forwards the pass. */
+    giverEmail: text("giver_email").notNull(),
+    /** The name the giver typed for whoever is diving. Never read back off the booking. */
+    receiverName: text("receiver_name").notNull(),
+    /** The one line the giver wrote. It goes on the pass and nowhere else. */
+    message: text("message"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // The till's read: every gift on this page of orders, and the day's
+    // unclaimed ones at the counter.
+    index("booking_gifts_shop_idx").on(table.shopId),
+  ],
+);
+
+/**
+ * **Which diver's link brought this seat** (ADR 20260908-one-hand, decision 6,
+ * lever W: the buddy seat).
+ *
+ * The recap's "Bring a buddy next time" is a link to the shop carrying a
+ * non-secret id derived from the recapping diver's own booking
+ * (`src/lib/buddy-links.ts`). When a booking arrives behind one and the id
+ * resolves, this row records it; when it does not, the seat books exactly as an
+ * unreferred one does and nothing is written.
+ *
+ * **A count, never a reward.** No discount, no code, no balance — the shop is
+ * told how many seats its divers brought, which is the whole of what the lever
+ * promises. `bookings.referral_source` is the *partner* fact (a hotel's link)
+ * and stays what it is; this is divers, and the two are never summed.
+ */
+export const bookingReferrals = pgTable(
+  "booking_referrals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** The new seat. One row per booking: a seat arrives from one link. */
+    bookingId: uuid("booking_id")
+      .notNull()
+      .unique()
+      .references(() => bookings.id),
+    /** The booking whose recap carried the link. Always this shop's. */
+    referredByBookingId: uuid("referred_by_booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // The month's count on Reports.
+    index("booking_referrals_shop_idx").on(table.shopId),
+  ],
+);
+
+export type BookingGift = typeof bookingGifts.$inferSelect;
+export type BookingReferral = typeof bookingReferrals.$inferSelect;
