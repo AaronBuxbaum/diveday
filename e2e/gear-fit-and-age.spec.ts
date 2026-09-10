@@ -154,8 +154,8 @@ test.describe("deck crew", () => {
     await expect(
       page
         .getByRole("alert")
-        .filter({ hasText: "Changing a diver's stated rental fit is limited to" }),
-    ).toContainText("Changing a diver's stated rental fit is limited to");
+        .filter({ hasText: "Changing a diver’s stated rental fit is limited to" }),
+    ).toContainText("Changing a diver’s stated rental fit is limited to");
     await expect(flaggedHeading).toBeVisible();
   });
 });

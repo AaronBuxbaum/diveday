@@ -179,7 +179,7 @@ describe("tripBlowoutEmail", () => {
       alternatives: [],
       scheduleUrl: "https://diveday.example/s/blue-mantis",
     });
-    expect(email.text).toContain("You haven't been charged");
+    expect(email.text).toContain("You haven’t been charged");
     expect(email.text).toContain("new trips are added all the time");
     expect(email.text).toContain("https://diveday.example/s/blue-mantis");
     expect(email.html).toContain('href="https://diveday.example/s/blue-mantis"');
@@ -257,7 +257,7 @@ describe("tripReminderEmail", () => {
 
   it("adds a medical heads-up when a medical answer needs review", () => {
     const email = tripReminderEmail({ ...base, lead: "day", medicalReview: true });
-    expect(email.text).toContain("doctor's sign-off");
+    expect(email.text).toContain("doctor’s sign-off");
   });
 
   it("stays a warm nudge with no checklist when nothing is outstanding", () => {
@@ -589,7 +589,7 @@ describe("passwordResetEmail", () => {
 
   it("reassures someone who didn't request it that nothing changed", () => {
     const email = passwordResetEmail(base);
-    expect(email.text).toContain("your password hasn't changed");
+    expect(email.text).toContain("your password hasn’t changed");
   });
 });
 

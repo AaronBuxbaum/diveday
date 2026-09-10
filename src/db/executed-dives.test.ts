@@ -252,7 +252,7 @@ describe("upsertExecutedDive — the observed species", () => {
     const offGuide = MARINE_LIFE_CATALOG.map((species) => species.slug).find(
       (slug) => !guide.has(slug),
     );
-    if (!offGuide) throw new Error("this site's guide is the whole catalog");
+    if (!offGuide) throw new Error("this site’s guide is the whole catalog");
 
     const saved = await upsertExecutedDive(db, {
       shopId: shop.id,

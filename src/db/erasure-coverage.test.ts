@@ -251,18 +251,18 @@ const ERASURE_KEEPS: Record<string, string> = {
   booking_arrival_events:
     "the arrival ledger for a seat: a status, a source and the staffer who recorded it, with no diver column and no free text",
   dive_package_entitlements:
-    "ids, a consumption timestamp and an expiry — how many dives of a package are left, which is the shop's own balance",
+    "ids, a consumption timestamp and an expiry — how many dives of a package are left, which is the shop’s own balance",
   shop_promo_redemptions:
     "that a code was redeemed on a checkout, and for how much; the diver is reached only through the checkout, which is redacted",
   trip_blowout_divers:
     "who was offered a re-book when a departure blew out, by id, plus whether the message left. The address it went to lives on the notification rows, which are redacted",
   trip_invitations:
     "that an invitation was sent for a seat, by id. Its risk is not disclosure but #1616, where the foreign key aborts the erasure transaction outright",
-  trip_read_marks: "how far a staff member has read a trip's desk feed",
+  trip_read_marks: "how far a staff member has read a trip’s desk feed",
   booking_referrals:
     "that one seat arrived from another seat's recap link — two booking ids and a timestamp, and nothing else. Both bookings carry their own erasure, so the diver either side of the link is erased where they are stored",
   trip_sightings:
-    "what a crew tapped at a site: a species slug from DiveDay's own catalogue, a count, and the site's name as it stood. Its two person columns are the crew member who tapped and the one who undid it, pointers joined at read the way `trip_desk_events` is",
+    "what a crew tapped at a site: a species slug from DiveDay’s own catalogue, a count, and the site’s name as it stood. Its two person columns are the crew member who tapped and the one who undid it, pointers joined at read the way `trip_desk_events` is",
   person_shelf_tokens:
     "revoked rather than rewritten, and through `revokeShelfTokens` (./person-shelf-tokens) rather than here, so the static sweep above cannot see the write — `WRITTEN_VIA_HELPER` below is where that indirection is declared",
   trip_desk_events:
@@ -287,25 +287,25 @@ const ERASURE_KEEPS: Record<string, string> = {
     "the gates a departure sets — a certification level, specialties, whether a waiver is needed",
   trip_schedule_days: "the day boundaries of a multi-day departure",
   trip_recap_photos:
-    "the shop's photographs of a departure, uploaded by a staff member and attached to the trip rather than to anyone on it. A photo *of* a diver is `recap_photos`, which the erasure deletes and queues for blob deletion",
+    "the shop’s photographs of a departure, uploaded by a staff member and attached to the trip rather than to anyone on it. A photo *of* a diver is `recap_photos`, which the erasure deletes and queues for blob deletion",
   dive_sites: "a place, its briefing and its conditions",
   dive_site_creatures: "which catalogue species a site lists",
-  dive_site_moments: "the shop's own photographs of a site and their captions",
-  dive_packages: "the shop's price list of multi-dive packages",
-  pre_departure_checklist_items: "the shop's own checklist lines",
-  gear_items: "the shop's own units: a serial number, a size, a service note about the unit",
+  dive_site_moments: "the shop’s own photographs of a site and their captions",
+  dive_packages: "the shop’s price list of multi-dive packages",
+  pre_departure_checklist_items: "the shop’s own checklist lines",
+  gear_items: "the shop’s own units: a serial number, a size, a service note about the unit",
   shop_promo_codes: "a discount the shop published, its window and its ceiling",
   trip_last_minute_promos:
     "that a shop offered a deal on a departure and to how many people. The addresses it reached are on the recipient rows, which the erasure redacts",
   display_tokens: "a lobby screen's own capability and label, issued by a staff member",
   waiver_materiality_decisions:
-    "an owner's ruling on whether a template change was material — a decision about the shop's text, not about any signer",
+    "an owner's ruling on whether a template change was material — a decision about the shop’s text, not about any signer",
 
   // --- the staffer who acted is the only person on the row -----------------
   closeout_leftover_decisions: "what a staff member decided to do with a leftover at close-out",
   crew_assignment_requests: "a crew member asking for a departure, and the answer",
-  crew_availability_blocks: "a crew member's own unavailable dates and their note about them",
-  staff_shifts: "a staff member's own hours and the note attached to them",
+  crew_availability_blocks: "a crew member’s own unavailable dates and their note about them",
+  staff_shifts: "a staff member’s own hours and the note attached to them",
   executed_dives:
     "what the crew recorded about a dive that ran — depth, time, conditions, and why the plan changed",
   gear_service_events: "a technician's record of servicing a unit",
@@ -316,7 +316,7 @@ const ERASURE_KEEPS: Record<string, string> = {
   trip_blowouts: "who called a departure off, and when",
   review_moderation_events:
     "a moderator's action on a review and their reason for it. The review's own words are on `trip_reviews`, which the erasure redacts",
-  marine_life_requests: "a staff member's search for a species DiveDay does not carry",
+  marine_life_requests: "a staff member’s search for a species DiveDay does not carry",
   integration_oauth_states:
     "a single-use OAuth handshake bound to the staff member who started it and expiring in minutes",
   held_sends:
@@ -361,29 +361,29 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   shops:
     "the business: its name, its front-desk address and phone, its timezone and its own words. Erasing a diver does not touch the shop they dived with",
   shop_contact_email_confirmation_tokens:
-    "the front-desk address's own proof of ownership (issue #1288) — the shop's address, not a diver's",
+    "the front-desk address's own proof of ownership (issue #1288) — the shop’s address, not a diver’s",
   shop_whatsapp_accounts:
-    "the shop's own WhatsApp sender: a number, a template and sealed credentials",
-  shop_stripe_accounts: "the shop's Connect account and what it is enabled for",
+    "the shop’s own WhatsApp sender: a number, a template and sealed credentials",
+  shop_stripe_accounts: "the shop’s Connect account and what it is enabled for",
   shop_integrations: "a provider connection the shop made, and the sealed credentials behind it",
   shop_backup_destinations: "where the shop sends its own backups, and the sealed key to get there",
   shop_backup_deliveries:
     "whether one of those bundles arrived; a period key, a byte count and a status",
   shop_print_runs:
     "when the shop last printed each of its own sheets — a sheet name, the boat a boat card is for, and a timestamp. The paper pass records under the empty subject key precisely so which diver it printed for is not kept",
-  boats: "the shop's vessels",
-  courses: "the shop's course catalogue, copied from a template and then its own",
+  boats: "the shop’s vessels",
+  courses: "the shop’s course catalogue, copied from a template and then its own",
   waiver_templates:
     "the text a shop asks people to sign, versioned. The *signatures* are `waiver_records`, which the erasure strips and re-seals",
-  trip_lenses: "the shop's own word for a kind of day",
-  season_events: "the shop's own year — a mini-season, a derby, a nesting window",
+  trip_lenses: "the shop’s own word for a kind of day",
+  season_events: "the shop’s own year — a mini-season, a derby, a nesting window",
   trip_series:
     "the cadence a repeating departure is generated from. Its instances are ordinary `trips` rows",
   trip_series_skips:
     "a date the shop took out of that cadence, so the nightly roll does not put it back",
 
   // DiveDay's own catalogue, shared by every shop and owned by none.
-  global_dive_sites: "DiveDay's catalogue of sites",
+  global_dive_sites: "DiveDay’s catalogue of sites",
   global_dive_site_versions: "that catalogue's own history",
 
   // Plumbing: provider coordination and delivery ledgers, holding no person.
@@ -393,10 +393,10 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   media_deletion_attempts:
     "the blob-deletion ledger the erasure itself *writes to* — a URL, a kind and a retry count. Redacting it would be erasing the record of the erasure",
   integration_events:
-    "the outbox a shop's own integrations read. `entity_id` points at a row rather than copying it, and `payload` is built at delivery from the current record — which is the erased one by then",
+    "the outbox a shop’s own integrations read. `entity_id` points at a row rather than copying it, and `payload` is built at delivery from the current record — which is the erased one by then",
   integration_deliveries: "whether one of those events reached the provider, and the error if not",
   integration_sync_records:
-    "the map from a DiveDay row to the provider's own object, which is what stops a second QuickBooks Customer being created for a diver already synced (issue #1015). Ids on both sides, no copied details",
+    "the map from a DiveDay row to the provider’s own object, which is what stops a second QuickBooks Customer being created for a diver already synced (issue #1015). Ids on both sides, no copied details",
 };
 
 /**
@@ -409,7 +409,7 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
   media_deletion_attempts:
     "`queueMediaDeletion` (./media-deletions) — every blob the erasure retires goes through the existing durable ledger rather than a second mechanism invented here (ADR 20260723-media-validation-and-deletion)",
   person_shelf_tokens:
-    '`revokeShelfTokens` (./person-shelf-tokens) — the shelf link is closed the way every other holder of it is closed, by the module that mints and verifies it, so one definition of "revoked" serves the erasure and the diver\'s own "Forget this phone"',
+    '`revokeShelfTokens` (./person-shelf-tokens) — the shelf link is closed the way every other holder of it is closed, by the module that mints and verifies it, so one definition of "revoked" serves the erasure and the diver’s own "Forget this phone"',
   processor_erasure_obligations:
     "`recordProcessorErasureObligations` (./processor-erasure) — what Stripe still holds, written inside the transaction so a crash a millisecond later cannot lose it (ADR 20260803-processor-erasure-obligations)",
 };

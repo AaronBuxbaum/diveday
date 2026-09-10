@@ -142,7 +142,7 @@ describe("TripPitch", () => {
     if (!door) throw new Error("expected the pitch to render a door");
     // The rest of the field guide, the shop's own site prose and the crew.
     // Each one used to be a section of the page in its own right.
-    for (const heading of ["Look for", "The site", "Who you're diving with"]) {
+    for (const heading of ["Look for", "The site", "Who you’re diving with"]) {
       const inTheDoor = within(door).getAllByText(heading);
       expect(inTheDoor).toHaveLength(1);
       // …and nowhere else: a beat promoted back out of the door is exactly the

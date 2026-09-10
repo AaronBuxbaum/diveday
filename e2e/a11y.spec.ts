@@ -499,7 +499,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis/orders/new", heading: "New order" },
       { path: "/shop/blue-mantis/promos", heading: "Discounts a diver can type" },
       { path: "/shop/blue-mantis/reviews", heading: "What divers said" },
-      { path: "/shop/blue-mantis/reports", heading: "How's your month" },
+      { path: "/shop/blue-mantis/reports", heading: "How’s your month" },
       { path: "/shop/blue-mantis/staffing", heading: "Staffing" },
       { path: "/shop/blue-mantis/courses", heading: "Courses" },
       { path: "/shop/blue-mantis/waivers", heading: "The release" },
@@ -894,7 +894,7 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
     await page.getByLabel("Name", { exact: true }).fill("Iris Marlow");
     await page.getByLabel("Email", { exact: true }).fill(`iris-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Tem Okafor");
-    await page.getByLabel("Use the main contact's email for this diver").check();
+    await page.getByLabel("Use the main contact’s email for this diver").check();
     await page.getByRole("button", { name: "Book these spots" }).click();
     await expect(page.getByRole("heading", { name: /You’re on the boat, Iris/ })).toBeVisible();
 

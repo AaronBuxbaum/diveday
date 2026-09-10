@@ -44,7 +44,7 @@ const copy: ReviewRowCopy = {
   reasonRequired: "Choose a reason before hiding a review.",
   noteRequired: "Say what happened.",
   noteTooLong: "That note is too long.",
-  error: "That review couldn't be updated. Try again.",
+  error: "That review couldn’t be updated. Try again.",
 };
 
 const BASE: StaffReview = {

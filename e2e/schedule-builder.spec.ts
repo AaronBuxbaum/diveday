@@ -477,7 +477,7 @@ test.describe("schedule builder", () => {
       }));
       expect(
         clipped.needs,
-        `the shop's name is cut in the bar at ${width}px ("${clipped.text}" needs ${clipped.needs}px, has ${clipped.has}px)`,
+        `the shop’s name is cut in the bar at ${width}px ("${clipped.text}" needs ${clipped.needs}px, has ${clipped.has}px)`,
       ).toBeLessThanOrEqual(clipped.has + 1);
     }
   });

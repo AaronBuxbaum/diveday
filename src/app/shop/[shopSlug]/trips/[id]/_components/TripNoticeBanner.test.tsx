@@ -57,7 +57,7 @@ describe("TripNoticeBanner", () => {
       renderBanner("diver-trip-prerequisite", "~~deep~0");
       const banner = screen.getByRole("alert");
       expect(banner).toHaveTextContent(
-        "That diver's certifications on file don't reach what this trip and its dive sites require",
+        "That diver’s certifications on file don’t reach what this trip and its dive sites require",
       );
       expect(banner).not.toHaveTextContent("Deep certification");
     });
@@ -69,7 +69,7 @@ describe("TripNoticeBanner", () => {
       );
       const banner = screen.getByRole("alert");
       expect(banner).not.toHaveTextContent("Advanced Open Water");
-      expect(banner).toHaveTextContent("don't reach what this trip");
+      expect(banner).toHaveTextContent("don’t reach what this trip");
     });
 
     it("renders rather than throwing on a repeated ?gate=", () => {

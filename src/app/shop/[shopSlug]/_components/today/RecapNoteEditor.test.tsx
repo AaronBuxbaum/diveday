@@ -53,7 +53,7 @@ describe("the settled station's post-trip recap note", () => {
     );
     expect(container.querySelector("details")?.open).toBe(true);
     expect(
-      screen.getByText(/Recap note saved\. It rides along on every diver's recap\./),
+      screen.getByText(/Recap note saved\. It rides along on every diver’s recap\./),
     ).toBeInTheDocument();
   });
 

@@ -21,7 +21,7 @@ describe("CheckInActionForm", () => {
       <CheckInActionForm
         action={vi.fn().mockResolvedValue({ ok: true })}
         bookingId="book-1"
-        sendFailedLabel="That didn't send. Try again."
+        sendFailedLabel="That didn’t send. Try again."
         ariaLabel="Check in Marie Tharp"
         trailing={<span>Check in</span>}
         pendingTrailing={<span>Checking in…</span>}
@@ -40,7 +40,7 @@ describe("CheckInActionForm", () => {
       <CheckInActionForm
         action={failingAction}
         bookingId="book-1"
-        sendFailedLabel="That didn't send. Try again."
+        sendFailedLabel="That didn’t send. Try again."
         ariaLabel="Check in Marie Tharp"
         trailing={<span>Check in</span>}
         pendingTrailing={<span>Checking in…</span>}
@@ -53,7 +53,7 @@ describe("CheckInActionForm", () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent("That didn't send. Try again.");
+      expect(screen.getByRole("alert")).toHaveTextContent("That didn’t send. Try again.");
     });
   });
 });

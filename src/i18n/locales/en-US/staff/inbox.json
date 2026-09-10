@@ -37,8 +37,8 @@
     "placeholder": "Type your answer",
     "send": "Send",
     "sending": "Sending",
-    "windowClosed": "WhatsApp takes a typed reply for 24 hours after a diver's last message. Theirs is older than that.",
-    "diverRemoved": "This diver's record was removed, so replies are switched off."
+    "windowClosed": "WhatsApp takes a typed reply for 24 hours after a diver’s last message. Theirs is older than that.",
+    "diverRemoved": "This diver’s record was removed, so replies are switched off."
   },
   "notices": {
     "failed": "That did not send, so the message is still waiting on an answer.",
@@ -49,7 +49,7 @@
     "channelUnsupported": "DiveDay cannot answer a text message yet.",
     "noReplyAddress": "There is no address to answer on.",
     "cannotBeSent": "This reply cannot be sent as it stands. Nothing went out, and trying again will not change that.",
-    "whatsappWindowClosed": "WhatsApp takes a typed reply for 24 hours after a diver's last message. Theirs is older than that.",
+    "whatsappWindowClosed": "WhatsApp takes a typed reply for 24 hours after a diver’s last message. Theirs is older than that.",
     "whatsappNotConnected": "Answering on WhatsApp needs the sender you connect in Settings.",
     "notAuthorized": "Answering divers is owner and manager work."
   }

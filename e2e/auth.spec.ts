@@ -24,7 +24,7 @@ test("wrong password shows a friendly error and stays signed out", { tag: READ_O
   await page.getByLabel("Password").fill("wrong-password");
   await page.getByRole("button", { name: "Sign in" }).click();
   // Filtered because Next's route announcer is also role="alert".
-  await expect(page.getByRole("alert").filter({ hasText: "don't match" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "don’t match" })).toBeVisible();
   await page.goto("/shop");
   await expect(page).toHaveURL(/\/sign-in/);
 });

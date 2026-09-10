@@ -1,7 +1,7 @@
 {
   "eyebrow": "Settings / integrations",
   "title": "Shop integrations",
-  "description": "Connect the systems that should share your shop's catalog, money records, or automation events.",
+  "description": "Connect the systems that should share your shop’s catalog, money records, or automation events.",
   "notice": {
     "connected": "Integration connected.",
     "saved": "Integration settings saved.",
@@ -13,7 +13,7 @@
     "not-authorized": "Only an owner or manager can change integrations.",
     "failed": "The integration could not complete that request. Try again, or reconnect it.",
     "encryption-key-unset": "This DiveDay instance is not set up to store credentials securely yet, so nothing was saved.",
-    "encryption-key-invalid": "This DiveDay instance's encryption key is misconfigured, so nothing was saved."
+    "encryption-key-invalid": "This DiveDay instance’s encryption key is misconfigured, so nothing was saved."
   },
   "status": {
     "connected": "Connected",
@@ -43,7 +43,7 @@
     "description": "Publish your priced DiveDay rental and package catalog as Shopify products.",
     "domainLabel": "Shopify store domain",
     "domainPlaceholder": "your-shop.myshopify.com",
-    "domainDescription": "Use the store's myshopify.com domain. DiveDay only asks for product write access.",
+    "domainDescription": "Use the store’s myshopify.com domain. DiveDay only asks for product write access.",
     "connect": "Connect Shopify",
     "sync": "Sync catalog",
     "syncing": "Syncing catalog…",

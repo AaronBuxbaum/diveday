@@ -20,7 +20,7 @@ const MONDAY = "2026-08-24";
 const THURSDAY = "2026-08-27";
 
 const WORDS: StaffingWeekWords = {
-  ariaLabel: "Who's working",
+  ariaLabel: "Who’s working",
   previous: "Previous week",
   next: "Next week",
   thisWeek: "This week",

@@ -28,7 +28,7 @@
     "turningOff": "Turning off…",
     "copy": "Copy",
     "copied": "Copied",
-    "copyFailed": "Couldn't copy — select it manually",
+    "copyFailed": "Couldn’t copy — select it manually",
     "confirmRotate": "Replace this link? Any calendar still using the old one stops updating.",
     "confirmRotateButton": "Yes, replace the link",
     "confirmTurnOff": "Turn off this subscription? The link stops working immediately.",

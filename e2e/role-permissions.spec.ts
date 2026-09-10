@@ -157,7 +157,7 @@ test.describe("H-14 role permissions", () => {
       // the captain on a page that looks like they simply mis-clicked.
       await page.goto(`/shop/${SHOP}/reports`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
-      await expect(page.getByText(/Reports read the shop's revenue/i)).toBeVisible();
+      await expect(page.getByText(/Reports read the shop’s revenue/i)).toBeVisible();
 
       // Date requests carry contact details for people who have not booked, and
       // choosing which unscheduled day gets a boat is desk work — the same
@@ -178,7 +178,7 @@ test.describe("H-14 role permissions", () => {
       await page.goto(`/shop/${SHOP}/settings/import`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
       await expect(
-        page.getByText(/Importing writes divers' personal and medical records/i),
+        page.getByText(/Importing writes divers’ personal and medical records/i),
       ).toBeVisible();
     });
   });

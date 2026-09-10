@@ -1570,7 +1570,7 @@ describe("course template updates", () => {
       .update(courses)
       .set({
         summary: baseline.summary,
-        overview: "The shop's own welcome and arrival details.",
+        overview: "The shop’s own welcome and arrival details.",
         sourceTemplateVersion: 1,
         sourceTemplateSnapshot: baseline,
       })
@@ -1589,7 +1589,7 @@ describe("course template updates", () => {
     const [updated] = await db.select().from(courses).where(eq(courses.id, course.id));
     expect(updated).toMatchObject({
       summary: latest.summary,
-      overview: "The shop's own welcome and arrival details.",
+      overview: "The shop’s own welcome and arrival details.",
       sourceTemplateVersion: template.version,
       priceCents: course.priceCents,
       heroImageUrl: course.heroImageUrl,

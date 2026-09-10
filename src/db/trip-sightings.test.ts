@@ -134,7 +134,7 @@ describe("recordTripSighting", () => {
     // but a checkpoint is a query parameter and the surface is not the
     // boundary — a sighting here would publish "seen here" for a dive nobody
     // has done.
-    const tomorrow = await departure(db, shop.id, "Tomorrow's reef", -1);
+    const tomorrow = await departure(db, shop.id, "Tomorrow’s reef", -1);
     expect(
       await recordTripSighting(db, {
         shopId: shop.id,

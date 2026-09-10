@@ -53,7 +53,7 @@ test.describe("seat claim links", () => {
     await page.getByLabel("Name", { exact: true }).fill("Orla Byrne");
     await page.getByLabel("Email", { exact: true }).fill(`orla-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Sam Reyes");
-    await page.getByLabel("Use the main contact's email for this diver").check();
+    await page.getByLabel("Use the main contact’s email for this diver").check();
     await page.getByRole("button", { name: "Book these spots" }).click();
     await expect(page.getByRole("heading", { name: /You’re on the boat, Orla/ })).toBeVisible();
 

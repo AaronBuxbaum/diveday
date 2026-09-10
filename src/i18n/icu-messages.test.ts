@@ -172,7 +172,7 @@ describe("the argument scanner", () => {
     // `'` opens an ICU literal only before `{`, `}` or `#`. Reading every
     // apostrophe as a quote would swallow `{shopName}` here and report the
     // message as naming nothing.
-    expect(args("You're on {shopName}'s list")).toEqual(["shopName"]);
+    expect(args("You’re on {shopName}'s list")).toEqual(["shopName"]);
   });
 
   it("respects a genuinely escaped brace", () => {

@@ -42,9 +42,9 @@ test("a diver can self-serve unsubscribe from courtesy email (wait-list openings
   await expect(page.getByRole("heading", { name: "Stop these emails?" })).toBeVisible();
   await expect(page.getByText("Blue Mantis Divers")).toBeVisible();
   await page.getByRole("button", { name: "Stop these emails" }).click();
-  await expect(page.getByRole("heading", { name: "You're unsubscribed" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re unsubscribed" })).toBeVisible();
 
   // Revisiting the same link is idempotent, not a dead link.
   await page.goto(`/unsubscribe/${token}`);
-  await expect(page.getByRole("heading", { name: "You're unsubscribed" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re unsubscribed" })).toBeVisible();
 });

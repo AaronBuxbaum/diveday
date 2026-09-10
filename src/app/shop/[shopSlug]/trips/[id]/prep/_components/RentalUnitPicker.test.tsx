@@ -19,7 +19,7 @@ const COPY = {
     unit_unavailable: "Somebody got that unit first. Pick another.",
     unit_out_of_service: "That unit is off the wall for service.",
   },
-  refusalFallback: "That pick didn't take. Try another unit.",
+  refusalFallback: "That pick didn’t take. Try another unit.",
 };
 
 const GROUPS = [
@@ -123,7 +123,7 @@ describe("RentalUnitPicker", () => {
     fireEvent.change(select, { target: { value: "unit-2" } });
 
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent("That pick didn't take"),
+      expect(screen.getByRole("alert")).toHaveTextContent("That pick didn’t take"),
     );
   });
 

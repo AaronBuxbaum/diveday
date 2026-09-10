@@ -487,7 +487,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     render(<OfflineManifestView />);
 
     await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1"));
-    expect(await screen.findByText("Everything's sent across these trips.")).toBeInTheDocument();
+    expect(await screen.findByText("Everything’s sent across these trips.")).toBeInTheDocument();
   });
 
   it("never reconciles a foreign shop's pending trip under the current session", async () => {
@@ -838,7 +838,7 @@ describe("OfflineManifestView — never claims what it hasn't read", () => {
 
     render(<OfflineManifestView />);
 
-    expect(screen.getByText("Opening this device's saved copy")).toBeInTheDocument();
+    expect(screen.getByText("Opening this device’s saved copy")).toBeInTheDocument();
     expect(screen.queryByText("Nothing saved on this phone yet")).not.toBeInTheDocument();
 
     await act(async () => {
@@ -859,7 +859,7 @@ describe("OfflineManifestView — never claims what it hasn't read", () => {
 
     render(<OfflineManifestView />);
 
-    expect(screen.getByText("Opening this device's saved copy")).toBeInTheDocument();
+    expect(screen.getByText("Opening this device’s saved copy")).toBeInTheDocument();
     expect(screen.queryByText("Nothing saved on this device yet")).not.toBeInTheDocument();
 
     await act(async () => {
@@ -975,7 +975,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     // manifest" copy — not the generic freshness banner every other stale
     // copy shows.
     expect(
-      screen.getByText(/This saved copy has expired and can't be used to board divers/),
+      screen.getByText(/This saved copy has expired and can’t be used to board divers/),
     ).toBeInTheDocument();
     expect(screen.getByText("Expired — record on the live manifest")).toBeInTheDocument();
     expect(appendOfflineRollCall).not.toHaveBeenCalled();
@@ -1039,7 +1039,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(screen.queryByText(/Not boarded ☑️/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "After dive 1 roll call" })).toBeInTheDocument();
-    expect(screen.queryByText(/everyone's aboard/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/everyone’s aboard/)).not.toBeInTheDocument();
 
     // SubSurfaceRipple mounts the celebration markup one render *after* its
     // `complete` prop flips (its own `useEffect` calls `setActive(true)`,
@@ -2013,7 +2013,7 @@ describe("OfflineManifestView — when a purge deletes the record on screen", ()
 
     expect(await screen.findByText("Nothing saved on this phone yet")).toBeInTheDocument();
     expect(
-      screen.getByText("There's no current saved manifest for this trip on this device."),
+      screen.getByText("There’s no current saved manifest for this trip on this device."),
     ).toBeInTheDocument();
     expect(screen.queryByText("That saved copy has been removed")).not.toBeInTheDocument();
   });

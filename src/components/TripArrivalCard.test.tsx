@@ -68,13 +68,13 @@ describe("arrivalCardFacts", () => {
    * departure's own words always win.
    */
   it("falls back to the shop's standing dock-call sentence, and never over the trip's own", () => {
-    const withStanding = { ...shop, dockCallNote: "  Come to the blue gate, we'll wave.  " };
+    const withStanding = { ...shop, dockCallNote: "  Come to the blue gate, we’ll wave.  " };
     expect(arrivalCardFacts(withStanding, trip)).toMatchObject({
       firstInteraction: "Ask the dock host",
     });
     expect(
       arrivalCardFacts(withStanding, { ...trip, arrivalFirstInteraction: null }),
-    ).toMatchObject({ firstInteraction: "Come to the blue gate, we'll wave." });
+    ).toMatchObject({ firstInteraction: "Come to the blue gate, we’ll wave." });
     expect(
       arrivalCardFacts(shop, { ...trip, arrivalFirstInteraction: null }).firstInteraction,
     ).toBeNull();

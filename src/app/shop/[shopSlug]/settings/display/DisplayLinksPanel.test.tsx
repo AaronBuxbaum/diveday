@@ -30,7 +30,7 @@ const copy: DisplayLinkCopy = {
   purposeBoard: "Departures board",
   purposeCheckIn: "Self check-in",
   purposeCheckInDescription: "A check-in tablet records that a diver has arrived.",
-  showNames: "Show the crew's names",
+  showNames: "Show the crew’s names",
   showNamesDescription: "Only the crew who agreed to be named appear.",
   submit: "Create link",
   submitting: "Creating…",
@@ -48,7 +48,7 @@ const copy: DisplayLinkCopy = {
   neverShown: "Never opened",
   revoke: "Revoke",
   revoking: "Revoking…",
-  confirmRevoke: "Revoke this screen's link?",
+  confirmRevoke: "Revoke this screen’s link?",
   confirmRevokeButton: "Yes, revoke it",
   cancel: "Cancel",
   denied: "That didn’t work.",
@@ -120,7 +120,7 @@ describe("where a refusal lands", () => {
     await userEvent.click(screen.getByRole("button", { name: copy.confirmRevokeButton }));
 
     // Found by its words inside the Screens card, never by `findByRole("alert")`
-    // alone: `InlineConfirm`'s own "Revoke this screen's link?" prompt is also
+    // alone: `InlineConfirm`'s own "Revoke this screen’s link?" prompt is also
     // an alert and is still mounted at this moment, so a bare role lookup
     // resolves to whichever won the race. It did locally and lost on CI.
     const list = screen.getByRole("region", { name: copy.listHeading });

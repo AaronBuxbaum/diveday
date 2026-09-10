@@ -2419,7 +2419,7 @@ describe("diver erasure", () => {
           email: "elena@example.com",
           phone: "+1 305 555 0142",
           experienceLevel: "certified",
-          message: "Same person, other shop's lead",
+          message: "Same person, other shop’s lead",
         })
         .returning();
       if (!foreign) throw new Error("rival inquiry insert failed");
@@ -2429,7 +2429,7 @@ describe("diver erasure", () => {
       expect(await inquiryById(db, foreign.id)).toMatchObject({
         name: "Erasure Elena",
         email: "elena@example.com",
-        message: "Same person, other shop's lead",
+        message: "Same person, other shop’s lead",
       });
     });
   });

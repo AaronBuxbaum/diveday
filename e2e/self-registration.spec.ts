@@ -40,7 +40,7 @@ test("a walk-in registers, and the shop sees them on the roster", async ({ page 
   await page.getByLabel("Wetsuit").fill("M");
   await submit(page, { name: "Wanjiru Kamau", email });
 
-  await expect(page.getByRole("heading", { name: "You're on file" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re on file" })).toBeVisible();
 });
 
 test("a returning diver's submission is indistinguishable from a new one's", async ({ page }) => {
@@ -49,12 +49,12 @@ test("a returning diver's submission is indistinguishable from a new one's", asy
   const email = freshEmail();
   await page.goto(REGISTER);
   await submit(page, { name: "Wanjiru Kamau", email });
-  const first = await page.getByRole("heading", { name: "You're on file" }).textContent();
+  const first = await page.getByRole("heading", { name: "You’re on file" }).textContent();
   const firstBody = await page.getByText("has your details").textContent();
 
   await page.goto(REGISTER);
   await submit(page, { name: "Wanjiru Kamau", email });
-  await expect(page.getByRole("heading", { name: "You're on file" })).toHaveText(first ?? "");
+  await expect(page.getByRole("heading", { name: "You’re on file" })).toHaveText(first ?? "");
   await expect(page.getByText("has your details")).toHaveText(firstBody ?? "");
 });
 
@@ -64,7 +64,7 @@ test("a submission with no way to reach the diver is refused, and says why", asy
   await page.goto(REGISTER);
   await submit(page, { name: "No Contact" });
   await expect(page.getByText("Leave an email or a phone number")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "You're on file" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "You’re on file" })).toHaveCount(0);
 });
 
 test("the page is not offered to search engines", async ({ page }) => {
@@ -97,7 +97,7 @@ test.describe("a diver whose release already stands", () => {
 
     await page.goto(REGISTER);
     await submit(page, { name, email });
-    const heading = await page.getByRole("heading", { name: "You're on file" }).textContent();
+    const heading = await page.getByRole("heading", { name: "You’re on file" }).textContent();
     const body = await page.getByText("has your details").textContent();
 
     // Sign the release the registration issued, through the ordinary staff
@@ -126,7 +126,7 @@ test.describe("a diver whose release already stands", () => {
     // Now the branch: this submission mints nothing and sends nothing.
     await page.goto(REGISTER);
     await submit(page, { name, email });
-    await expect(page.getByRole("heading", { name: "You're on file" })).toHaveText(heading ?? "");
+    await expect(page.getByRole("heading", { name: "You’re on file" })).toHaveText(heading ?? "");
     await expect(page.getByText("has your details")).toHaveText(body ?? "");
 
     // And sign-once held: one release on this diver's record, still signed.

@@ -3092,7 +3092,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Name", { exact: true }).fill("Orla Byrne");
         await page.getByLabel("Email", { exact: true }).fill(`organizer-${scheme}@example.com`);
         await page.getByLabel("Diver 2 name").fill("Sam Reyes");
-        await page.getByLabel("Use the main contact's email for this diver").check();
+        await page.getByLabel("Use the main contact’s email for this diver").check();
         await page.getByRole("button", { name: /^Book/ }).click();
         await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
         await expect(page).toHaveURL(/\/ready\//);
@@ -3445,7 +3445,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/${unique}`);
         // The line's own tour link, which is what the line exists to keep.
         await page
-          .getByRole("link", { name: "Open Board to see this week's departures." })
+          .getByRole("link", { name: "Open Board to see this week’s departures." })
           .waitFor();
         // ...and proof it is the line and not the card: the two forms share
         // that link, so waiting on it alone would pass on either.
@@ -4374,7 +4374,7 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByRole("button", { name: "Mark signed on paper" })).toBeVisible();
         await page.getByRole("button", { name: "Mark signed on paper" }).click();
         await page
-          .getByLabel("I have this diver's signed release on file", { exact: false })
+          .getByLabel("I have this diver’s signed release on file", { exact: false })
           .check();
         await page.getByRole("button", { name: "Record paper signature" }).click();
         // The earned moment is what says the ledger emptied — and it is the
@@ -4401,7 +4401,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/divers?q=Morgan");
         await page.getByRole("link", { name: "Morgan Vale" }).click();
         await page.getByRole("heading", { level: 1, name: "Morgan Vale" }).waitFor();
-        await page.getByRole("button", { name: "Record the physician's answer" }).click();
+        await page.getByRole("button", { name: "Record the physician’s answer" }).click();
         // The submit is what the disclosure reveals, so waiting on it is
         // waiting on the panel being open rather than on a duration.
         await page.getByRole("button", { name: "Record the answer" }).waitFor();
@@ -4664,7 +4664,7 @@ for (const scheme of ["light", "dark"] as const) {
         await dealList.getByLabel("Name").fill("Tess Alvarez");
         await dealList.getByLabel("Email").fill("tess.visual@example.com");
         await dealList.getByLabel("Certification level").selectOption("open_water");
-        await expect(dealList.getByLabel("I'm certified for nitrox (enriched air)")).toHaveCount(0);
+        await expect(dealList.getByLabel("I’m certified for nitrox (enriched air)")).toHaveCount(0);
         await page
           .locator('input[name="availableFrom"]')
           .filter({ visible: true })
@@ -4804,7 +4804,7 @@ for (const scheme of ["light", "dark"] as const) {
         // band's sibling list, so the section is the narrowest honest scope.)
         await page
           .locator("#roster")
-          .getByText("Open Water · below this departure's minimum")
+          .getByText("Open Water · below this departure’s minimum")
           .waitFor();
         await waitForHashLanding(page);
         await capture(page, "trip-guests-waitlist", scheme);
@@ -5506,7 +5506,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await request.post("/api/test/seed-trouble-states");
         await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("region", { name: "Photos that didn't finish deleting" }).waitFor();
+        await page.getByRole("region", { name: "Photos that didn’t finish deleting" }).waitFor();
         await page.getByRole("region", { name: "Erasures not finished at Stripe" }).waitFor();
         await capture(page, "settings-data-unfinished", scheme);
       });
@@ -5702,7 +5702,7 @@ for (const scheme of ["light", "dark"] as const) {
       // table).
       test(`owner reports render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/reports");
-        await page.getByRole("heading", { level: 1, name: "How's your month" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "How’s your month" }).waitFor();
         await capture(page, "reports", scheme);
       });
 
@@ -5746,8 +5746,8 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the shop's year renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/reports?range=year");
-        await page.getByRole("heading", { level: 1, name: "How's your year" }).waitFor();
-        await page.getByRole("region", { name: "The year's numbers" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "How’s your year" }).waitFor();
+        await page.getByRole("region", { name: "The year’s numbers" }).waitFor();
         await capture(page, "reports-year", scheme);
       });
 
@@ -7195,10 +7195,10 @@ for (const scheme of ["light", "dark"] as const) {
       await openSettingsRow(page, "Your own words");
       await page
         .getByLabel("What a first-timer reads before diving with you")
-        .fill("First time with us? Come find whoever is holding the clipboard — that's us.");
+        .fill("First time with us? Come find whoever is holding the clipboard — that’s us.");
       await page
         .getByLabel("What to expect at the dock")
-        .fill("Park by the blue gate. We'll wave you down from the second slip.");
+        .fill("Park by the blue gate. We’ll wave you down from the second slip.");
       await page
         .getByLabel("How you sign off a finished day")
         .fill("Thanks for diving with us. The kettle's always on.");

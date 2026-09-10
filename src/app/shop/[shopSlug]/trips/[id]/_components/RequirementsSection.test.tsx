@@ -104,7 +104,7 @@ describe("RequirementsSection — which site the extra gate is attributed to", (
     expect(screen.getByText(/Molasses Reef/)).toBeTruthy();
     expect(screen.getByText(/Spiegel Grove/)).toBeTruthy();
     // The course wording, plural — never the singular "requires".
-    expect(screen.getByText(/sites’ own rules|sites' own rules/)).toBeTruthy();
+    expect(screen.getByText(/sites’ own rules|sites’ own rules/)).toBeTruthy();
   });
 
   it("says nothing at all when no visited site demands anything", () => {

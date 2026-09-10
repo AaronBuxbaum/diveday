@@ -49,7 +49,7 @@ function outbound(status: "sent" | "failed" = "sent"): ThreadEntry {
       inboundMessageId: "8f000000-1111-4222-8333-444444444444",
       channel: "email",
       toAddress: "priya.sharma@example.com",
-      body: "You're on the 1pm boat now.",
+      body: "You’re on the 1pm boat now.",
       locale: "en-US",
       sentByPersonId: "cf000000-1111-4222-8333-444444444444",
       status,
@@ -91,7 +91,7 @@ describe("a conversation", () => {
   it("shows both directions and who wrote each", () => {
     renderSection([inbound(), outbound()]);
     expect(screen.getByText("Could I switch to the afternoon boat?")).toBeInTheDocument();
-    expect(screen.getByText("You're on the 1pm boat now.")).toBeInTheDocument();
+    expect(screen.getByText("You’re on the 1pm boat now.")).toBeInTheDocument();
     expect(screen.getByText(/Marisol Vega replied/)).toBeInTheDocument();
   });
 
@@ -162,7 +162,7 @@ describe("a removed diver", () => {
   it("says why the box is gone rather than letting it vanish", () => {
     renderSection([inbound()], true, true);
     expect(
-      screen.getByText("This diver's record was removed, so replies are switched off."),
+      screen.getByText("This diver’s record was removed, so replies are switched off."),
     ).toBeInTheDocument();
   });
 
@@ -187,7 +187,7 @@ describe("a removed diver", () => {
       true,
     );
     expect(
-      screen.getByText("This diver's record was removed, so replies are switched off."),
+      screen.getByText("This diver’s record was removed, so replies are switched off."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/WhatsApp takes a typed reply for 24 hours/)).toBeNull();
   });

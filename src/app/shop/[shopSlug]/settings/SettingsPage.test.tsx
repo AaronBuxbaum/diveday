@@ -240,7 +240,7 @@ describe("the units card", () => {
  * rendering condition (non-empty, never an empty table) and the owner-only
  * split on the erasure buttons.
  */
-const MEDIA_PANEL = "Photos that didn't finish deleting";
+const MEDIA_PANEL = "Photos that didn’t finish deleting";
 const ERASURE_PANEL = "Erasures not finished at Stripe";
 
 async function queueStuckDeletion(db: AppDb, session: DiveDaySession) {

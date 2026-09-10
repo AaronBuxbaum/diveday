@@ -97,7 +97,7 @@ describe("the terminal mark is drawn, never typed", () => {
   });
 
   it("keeps the circle decorative and says the words once", () => {
-    render(<EntryDone glyph="done" title="Email confirmed" text="You're all set." />);
+    render(<EntryDone glyph="done" title="Email confirmed" text="You’re all set." />);
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("heading", { name: "Email confirmed" })).toBeTruthy();
   });

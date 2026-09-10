@@ -224,7 +224,7 @@ describe("WaitlistGroup below the departure's bar", () => {
   it("says a carded diver ranks below this departure's minimum", () => {
     renderSection(waiting, summaries(), requirement("advanced_open_water"));
 
-    const line = screen.getByText("Open Water · below this departure's minimum");
+    const line = screen.getByText("Open Water · below this departure’s minimum");
     expect(line).toBeVisible();
     // The tone is untouched: it answers "has anybody seen this card?" and only
     // that. This card the shop holds, so the row stays calm and says the rest
@@ -239,7 +239,7 @@ describe("WaitlistGroup below the departure's bar", () => {
       requirement("advanced_open_water"),
     );
 
-    const line = screen.getByText("Open Water — unverified · below this departure's minimum");
+    const line = screen.getByText("Open Water — unverified · below this departure’s minimum");
     expect(line).toBeVisible();
     // Two facts, two carriers: unchecked tones the row, under the bar is words.
     expect(line).toHaveClass("text-warning-strong");
@@ -254,14 +254,14 @@ describe("WaitlistGroup below the departure's bar", () => {
 
     const line = screen.getByText("Advanced Open Water");
     expect(line).toBeVisible();
-    expect(screen.queryByText(/below this departure's minimum/)).toBeNull();
+    expect(screen.queryByText(/below this departure’s minimum/)).toBeNull();
   });
 
   it("says nothing when the departure asks for no level at all", () => {
     renderSection(waiting, summaries(), null);
 
     expect(screen.getByText("Open Water")).toBeVisible();
-    expect(screen.queryByText(/below this departure's minimum/)).toBeNull();
+    expect(screen.queryByText(/below this departure’s minimum/)).toBeNull();
   });
 
   it("marks a diver who said they have no card as below any departure bar", () => {
@@ -275,7 +275,7 @@ describe("WaitlistGroup below the departure's bar", () => {
     );
 
     expect(
-      screen.getByText(/Not certified yet — unverified · below this departure's minimum/),
+      screen.getByText(/Not certified yet — unverified · below this departure’s minimum/),
     ).toBeVisible();
   });
 

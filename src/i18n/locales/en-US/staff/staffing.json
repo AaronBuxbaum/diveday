@@ -14,7 +14,7 @@
   },
   "away": {
     "from": "From",
-    "heading": "Tell the shop you're away",
+    "heading": "Tell the shop you’re away",
     "note": "Note",
     "notePlaceholder": "Anything the shop should know",
     "person": "Who",
@@ -51,7 +51,7 @@
       "liability_insurance": "Liability insurance",
       "first_aid_cpr": "First aid / CPR",
       "oxygen_provider": "Oxygen provider",
-      "captains_licence": "Captain's licence",
+      "captains_licence": "Captain’s licence",
       "other": "Other"
     }
   },
@@ -64,19 +64,19 @@
     "credentialReviewed": "Credential review updated.",
     "credentialSaved": "Credential added.",
     "invalid": "Check the shift date and times, then try again.",
-    "invalidRange": "The last day can't come before the first.",
-    "notAllowed": "That isn't yours to change.",
+    "invalidRange": "The last day can’t come before the first.",
+    "notAllowed": "That isn’t yours to change.",
     "notAuthorized": "Only owners and managers can change shifts.",
     "overlap": "That person already has an overlapping shift.",
-    "personNotFound": "That person isn't on this shop's roster.",
-    "requestApproved": "Approved, and they're on the crew.",
+    "personNotFound": "That person isn’t on this shop’s roster.",
+    "requestApproved": "Approved, and they’re on the crew.",
     "requestApprovedNotAssigned": "Approved, but the assignment was refused. Crew that departure from its own page to see why.",
     "requestDeclined": "Declined.",
-    "requestNotFound": "That's already gone.",
+    "requestNotFound": "That’s already gone.",
     "requestSent": "Sent. The shop will see it on the week.",
     "shiftDeleted": "Shift removed.",
     "shiftSaved": "Shift saved.",
-    "staffNotFound": "That staff member is no longer on this shop's team.",
+    "staffNotFound": "That staff member is no longer on this shop’s team.",
     "tripNotFound": "That departure is no longer on the board.",
     "crewConsentSaved": "Saved. Divers will see your first name on the departures you crew.",
     "crewConsentWithdrawn": "Saved. Your name comes off the departures you crew."
@@ -84,7 +84,7 @@
   "title": "Staffing",
   "week": {
     "approve": "Approve",
-    "ariaLabel": "Who's working",
+    "ariaLabel": "Who’s working",
     "assign": "Assign",
     "assignAria": "Assign crew to {trip}",
     "away": "Away",
@@ -116,7 +116,7 @@
     "rosterEmptyAction": "Invite your crew"
   },
   "crewConsent": {
-    "label": "Let divers see my first name, role and languages on this shop's public pages.",
+    "label": "Let divers see my first name, role and languages on this shop’s public pages.",
     "nameLabel": "Name divers see",
     "save": "Save",
     "saving": "Saving…"

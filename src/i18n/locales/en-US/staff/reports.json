@@ -1,16 +1,16 @@
 {
-  "title": "How's your month",
+  "title": "How’s your month",
   "soFar": "so far",
   "chooseMonth": "Choose month",
   "previousMonth": "Previous month",
   "nextMonth": "Next month",
-  "currentMonthTitle": "You're viewing the current month",
+  "currentMonthTitle": "You’re viewing the current month",
   "earliestMonthTitle": "This is your first month with departures",
   "monthPicker": {
     "label": "Jump to a month",
     "go": "Go"
   },
-  "numbersLabel": "This month's numbers",
+  "numbersLabel": "This month’s numbers",
   "comparison": {
     "yearAgo": "{trend}vs {baseline} in {month}",
     "previousMonthFallback": "{trend}vs {baseline} in {month} (no year-ago data yet)"
@@ -27,10 +27,10 @@
     "seatFillDetail": "{booked} of {offered} seats · {count, plural, one {# boat} other {# boats}} full",
     "waiversLabel": "Waivers",
     "waiversOutstanding": "{count} still to collect",
-    "waiversAllIn": "Everyone's paperwork is in",
+    "waiversAllIn": "Everyone’s paperwork is in",
     "revenueViewOrders": "View orders",
     "tipsLabel": "Tips",
-    "tipsDetail": "{count, plural, =0 {No tips left on this month's trips} one {# tip left on this month's trips} other {# tips left on this month's trips}} · 100% to the shop"
+    "tipsDetail": "{count, plural, =0 {No tips left on this month’s trips} one {# tip left on this month’s trips} other {# tips left on this month’s trips}} · 100% to the shop"
   },
   "noTripsFuture": "Nothing on the books for this month yet.",
   "noTripsPast": "No trips sailed this month.",
@@ -38,7 +38,7 @@
   "importedHistory": {
     "sectionLabel": "Unverified imported history",
     "heading": "Unverified imported history",
-    "detail": "This month's net revenue includes {payments} in source payments and subtracts {refunds} in source refunds. Review every unverified source row in Orders; this is not a Stripe reconciliation.",
+    "detail": "This month’s net revenue includes {payments} in source payments and subtracts {refunds} in source refunds. Review every unverified source row in Orders; this is not a Stripe reconciliation.",
     "viewOrders": "Review imported history in Orders"
   },
   "tripsThisMonth": "Trips this month",
@@ -52,7 +52,7 @@
   },
   "partnerArrivals": "{count, plural, one {# seat} other {# seats}} arrived on a partner link",
   "year": {
-    "title": "How's your year",
+    "title": "How’s your year",
     "rangeLabel": "Choose a range",
     "thisMonth": "This month",
     "thisYear": "This year",
@@ -62,11 +62,11 @@
     "sentence": "{divers, plural, one {# diver} other {# divers}}, {boats, plural, one {# boat out} other {# boats out}}, {sites, plural, one {# site} other {# sites}}.",
     "busiest": "The busiest day was {day}.",
     "quietest": "The quietest month was {month}.",
-    "stripLabel": "The year's days",
+    "stripLabel": "The year’s days",
     "stripLegend": "Each square is a day; the deeper the water, the fuller the boats. Nothing after today is drawn.",
     "stripDay": "{day} · {divers, number} divers on {boats, number} boats",
     "stripQuietDay": "{day} · no boats",
-    "numbersLabel": "The year's numbers",
+    "numbersLabel": "The year’s numbers",
     "figures": {
       "diversLabel": "Divers",
       "diversDetail": "{count, plural, one {# day at sea} other {# days at sea}}",
@@ -81,13 +81,13 @@
     "sitesCount": "{count, plural, one {# site} other {# sites}}",
     "siteTimes": "{count, plural, one {# time} other {# times}}",
     "sitesRest": "{count, plural, one {# more site} other {# more sites}} · {dives, plural, one {# dive between them} other {# dives between them}}",
-    "entriesLabel": "The year's entries",
+    "entriesLabel": "The year’s entries",
     "entriesCount": "{count, plural, one {# day} other {# days}}",
     "entry": "{divers, plural, one {# diver} other {# divers}} on {boats, plural, one {# boat} other {# boats}}",
     "entryClosedBy": "Closed by {name}",
     "entriesRest": "{count, plural, one {# more day} other {# more days}}",
-    "shareOn": "Your year is on DiveDay's pages",
-    "shareOff": "Your year is not on DiveDay's pages",
+    "shareOn": "Your year is on DiveDay’s pages",
+    "shareOff": "Your year is not on DiveDay’s pages",
     "shareDoor": "Lobby display settings",
     "empty": "No departures have sailed this year yet."
   },

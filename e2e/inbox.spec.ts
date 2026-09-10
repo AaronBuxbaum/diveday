@@ -56,13 +56,13 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   // rather than a substring that would also match the old channel-only text.
   const composer = page.getByLabel("Reply by email to priya.sharma@example.com", { exact: true });
   await expect(composer).toBeVisible();
-  await composer.fill("Yes, you're on the 1pm boat now. See you at the dock.");
+  await composer.fill("Yes, you’re on the 1pm boat now. See you at the dock.");
   await page.getByRole("button", { name: "Send", exact: true }).click();
 
   // The reply is on the record whatever the provider did, and this fleet has
   // no email provider at all — so the shop is told, in as many words, that the
   // diver did not get it.
-  await expect(conversation.getByText(/you're on the 1pm boat now/)).toBeVisible();
+  await expect(conversation.getByText(/you’re on the 1pm boat now/)).toBeVisible();
   await expect(
     page.getByText("Email is not switched on for this DiveDay setup, so nothing went out."),
   ).toBeVisible();

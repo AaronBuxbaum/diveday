@@ -530,7 +530,7 @@ describe("the good-news moments", () => {
         action({ id: "later", kind: "waiver", departure: boat("t9") }),
       ],
     });
-    expect(screen.getByText("Today's boats are all clear 🤙")).toBeInTheDocument();
+    expect(screen.getByText("Today’s boats are all clear 🤙")).toBeInTheDocument();
   });
 
   it("keeps the 🤙 — the product's one word-mark gesture, inside the sentence", () => {
@@ -550,7 +550,7 @@ describe("the good-news moments", () => {
         action({ id: "later", kind: "dive_prep", departure: boat("t9") }),
       ],
     });
-    expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
+    expect(screen.queryByText("Today’s boats are all clear 🤙")).toBeNull();
   });
 
   it("stays quiet while the desk still carries one", () => {
@@ -561,12 +561,12 @@ describe("the good-news moments", () => {
         action({ id: "later", kind: "waiver", departure: boat("t9") }),
       ],
     });
-    expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
+    expect(screen.queryByText("Today’s boats are all clear 🤙")).toBeNull();
   });
 
   it("never doubles up with the whole-week 🤙 state", () => {
     renderSpine({ actions: [] });
-    expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
+    expect(screen.queryByText("Today’s boats are all clear 🤙")).toBeNull();
     expect(screen.getByText("Nothing is waiting on you")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View the schedule" })).toHaveAttribute(
       "href",
@@ -577,7 +577,7 @@ describe("the good-news moments", () => {
   it("renders neither once there is real work anywhere", () => {
     renderSpine({ actions: [action({ id: "blocked", departure: boat("t1") })] });
     expect(screen.queryByText("Nothing is waiting on you")).toBeNull();
-    expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
+    expect(screen.queryByText("Today’s boats are all clear 🤙")).toBeNull();
   });
 
   it("puts the earned line above the first station, where the summary sentence ends", () => {
@@ -681,7 +681,7 @@ describe("the first booking ever", () => {
       ],
     });
     expect(screen.getByText("Your first booking")).toBeInTheDocument();
-    expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
+    expect(screen.queryByText("Today’s boats are all clear 🤙")).toBeNull();
   });
 
   it("yields to the evening: a boat that came home is the later moment", () => {
@@ -1178,7 +1178,7 @@ describe("the evening reading", () => {
             id: "rental-fit:r1",
             kind: "rental_fit_confirm",
             subject: "Hugo Marsh",
-            detail: "Hugo Marsh's BCD went out as L. Keep that as the fit next time?",
+            detail: "Hugo Marsh’s BCD went out as L. Keep that as the fit next time?",
             actionLabel: "Open diver record",
             href: "/shop/blue-mantis/divers/p1",
             rentalFit: {

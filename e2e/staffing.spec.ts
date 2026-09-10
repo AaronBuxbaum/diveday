@@ -37,7 +37,7 @@ const STAFFING = "/shop/blue-mantis/staffing";
 const addShiftForm = (page: Page) => page.locator("#add-shift");
 
 /** The week grid, named by its own region. */
-const weekOf = (page: Page) => page.getByRole("region", { name: "Who's working" });
+const weekOf = (page: Page) => page.getByRole("region", { name: "Who’s working" });
 
 /**
  * The one test here that writes a shift takes a shop of its own (`privateShop`,
@@ -250,7 +250,7 @@ test.describe("staffing, as the daily crew", () => {
     await page.goto(STAFFING);
     await page.getByRole("heading", { level: 1, name: "Staffing" }).waitFor();
 
-    await page.getByText("Tell the shop you're away").click();
+    await page.getByText("Tell the shop you’re away").click();
     const away = page.locator("#add-away");
     await away.getByLabel("From").fill(daysFromNow(2));
     await away.getByLabel("To").fill(daysFromNow(3));

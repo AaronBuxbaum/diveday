@@ -7,8 +7,8 @@
     "tapHeadingIn": "Heading in",
     "tapHome": "Home",
     "recordedLine": "{name} · {time}",
-    "consequence": "Each tap shows on divers' links and on your website.",
-    "errorRefusal": "That didn't save. Check your connection and tap again."
+    "consequence": "Each tap shows on divers’ links and on your website.",
+    "errorRefusal": "That didn’t save. Check your connection and tap again."
   },
   "skipToRollCall": "Skip to roll call",
   "stillToBoardHeading": "Still to board ({count})",
@@ -32,7 +32,7 @@
   "ofTotalAboard": "of {total, plural, one {# diver} other {# divers}} aboard",
   "allAccountedFor": "Everyone’s accounted for, divers and crew. Ready for the next check.",
   "notBackAboardOpen": "{count, plural, one {# diver is not back aboard.} other {# divers are not back aboard.}} This checkpoint stays open until they’re counted.",
-  "crewNoneAssignedYet": "Every diver is counted. Nobody is on this trip's crew yet. Add the people who sailed to close this checkpoint.",
+  "crewNoneAssignedYet": "Every diver is counted. Nobody is on this trip’s crew yet. Add the people who sailed to close this checkpoint.",
   "crewNoneAboard": "Every diver is counted, and every crew member on this trip is marked ashore, so nobody aboard is on the crew list. Add whoever sailed.",
   "crewNotBackAboard": "{count, plural, one {# crew member is not back aboard.} other {# crew members are not back aboard.}} This checkpoint stays open.",
   "crewAwaiting": "{count, plural, one {# crew member still to call.} other {# crew members still to call.}} Every person on the crew list needs a result of their own.",
@@ -48,7 +48,7 @@
   "crewMarkNotBackAboard": "Mark not back aboard",
   "crewNotBackAboardActive": "Not back aboard",
   "crewRollCallRecordedBy": "{label} · {date} · {name}",
-  "noCrew": "Nobody is on this trip's crew yet. Add whoever ran the boat to complete this checkpoint.",
+  "noCrew": "Nobody is on this trip’s crew yet. Add whoever ran the boat to complete this checkpoint.",
   "executedDive": {
     "heading": "What happened underwater",
     "dive": "Dive {number}",
@@ -72,7 +72,7 @@
       "timesTransposed": "The exit time must be after the entry time. Check the two times and save again.",
       "depthOutOfRange": "That depth is outside what this form accepts. Check the figure and save again.",
       "diveNumberOutOfRange": "This departure does not plan a dive with that number.",
-      "unknownSite": "That dive site is not one of this shop's live sites.",
+      "unknownSite": "That dive site is not one of this shop’s live sites.",
       "unknownTrip": "This departure is no longer on the board, so nothing was saved.",
       "unknownRecorder": "Your staff record was not found, so nothing was saved.",
       "invalidTime": "One of the times could not be read. Check both and save again.",
@@ -92,10 +92,10 @@
     "refusal": "No signal. Tap it again when the boat has bars."
   },
   "addCrewToTrip": "Add crew to trip",
-  "manageCrewOnTrip": "Manage this trip's crew",
+  "manageCrewOnTrip": "Manage this trip’s crew",
   "checkpointRollCallHeading": "{checkpoint} roll call",
   "checkedInPill": "Checked in",
-  "selfCheckedInPill": "Says they're here",
+  "selfCheckedInPill": "Says they’re here",
   "diverNotesHeading": "Diver notes",
   "noteAppliesAcrossDepartures": "Applies across departures",
   "age": "Age {age}",
@@ -140,7 +140,7 @@
   "buddyErrorDuplicate": "Pick different people. Nobody is their own buddy.",
   "buddyErrorAlreadyTeamed": "One of those divers is already on a buddy team. Dissolve it first.",
   "buddyErrorTooFew": "A buddy team needs at least two people.",
-  "buddyErrorGeneric": "That didn't save. Try again.",
+  "buddyErrorGeneric": "That didn’t save. Try again.",
   "boardedCheck": "Boarded",
   "boardedCheckAriaLabel": "Boarded — tap again to undo",
   "markBoarded": "Mark boarded",
@@ -214,7 +214,7 @@
       "current": "Current",
       "weather": "Weather",
       "visibility": "Visibility",
-      "crewCall": "The crew's call"
+      "crewCall": "The crew’s call"
     },
     "noteLabel": "Note for the shop",
     "noteHint": "Divers never see this."

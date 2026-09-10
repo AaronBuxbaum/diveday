@@ -3,7 +3,7 @@
     "emptyHeading": "Nothing is waiting on you",
     "emptyBody": "Every diver booked in the next week has their waiver, certifications, and payment in order.",
     "emptyAction": "View the schedule",
-    "boatsClear": "Today's boats are all clear 🤙",
+    "boatsClear": "Today’s boats are all clear 🤙",
     "withheldDeskWork": "{count, plural, one {# job for the front desk} other {# jobs for the front desk}}"
   },
   "resendConfirmation": {
@@ -152,12 +152,12 @@
     "missingDiver": "{uncounted, plural, one {# of {total} divers is} other {# of {total} divers are}} not back aboard after dive {dive}. Find them, then close the count.",
     "missingDiverStale": "{uncounted, plural, one {# of {total} divers was} other {# of {total} divers were}} never accounted for after dive {dive}. Too old to settle on the dock, so reconstruct it from the manifest and write down what happened.",
     "openRollCall": "Boat is back and dive {dive} roll call is unfinished. {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result. Account for everyone before you leave the dock.",
-    "openRollCallUnderway": "Boat is still out and dive {dive} is half-counted. {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result. Reach the crew now, while it's on the site.",
+    "openRollCallUnderway": "Boat is still out and dive {dive} is half-counted. {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result. Reach the crew now, while it’s on the site.",
     "openRollCallStale": "Dive {dive} roll call was never closed. {uncounted, plural, one {# of {total} divers still has} other {# of {total} divers still have}} no result. Too old to settle on the dock, so reconstruct it from the manifest.",
     "missingCrew": "{uncounted, plural, one {# of {total} crew is} other {# of {total} crew are}} not back aboard after dive {dive}. Find them, then close the count.",
     "missingCrewStale": "{uncounted, plural, one {# of {total} crew was} other {# of {total} crew were}} never accounted for after dive {dive}. Too old to settle on the dock, so reconstruct it from the manifest and write down what happened.",
     "openCrewRollCall": "Boat is back and the dive {dive} crew count is unfinished. {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result. Account for everyone before you leave the dock.",
-    "openCrewRollCallUnderway": "Boat is still out and the dive {dive} crew count is half-done. {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result. Reach the boat now, while it's on the site.",
+    "openCrewRollCallUnderway": "Boat is still out and the dive {dive} crew count is half-done. {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result. Reach the boat now, while it’s on the site.",
     "openCrewRollCallStale": "The dive {dive} crew count was never closed. {uncounted, plural, one {# of {total} crew still has} other {# of {total} crew still have}} no result. Too old to settle on the dock, so reconstruct it from the manifest.",
     "departureCountOpen": "The dock count never finished. {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result at departure. This is paperwork, not a diver in the water. Settle it so the next count starts from a real list.",
     "noRollCall": "No roll call was run. {total, plural, one {# diver} other {# divers}} sailed with nothing recorded. Nobody was reported missing; the record is empty.",
@@ -166,7 +166,7 @@
     "highWindAlert": "Forecast calls for {speed} kt wind{hasDirection, select, yes { from {direction}} other {}}{hasGusts, select, yes { (gusts {gusts} kt)} other {}}. Check conditions before sailing.",
     "instructorMissing": "This course session has no instructor assigned and cannot take enrolments.",
     "uncrewedCourse": "{divers, plural, one {# diver is} other {# divers are}} booked with nobody in the water. This session cannot take enrolments until an instructor is assigned.",
-    "overRatio": "{booked} booked, but the assigned crew only covers {capacity} at PADI's published entry-level ratio.",
+    "overRatio": "{booked} booked, but the assigned crew only covers {capacity} at PADI’s published entry-level ratio.",
     "overRatioIntro": "{booked} booked on this intro session, and crew covers {capacity} at {perInstructor} per instructor for the open-water dive. A certified assistant does not raise it; only another instructor adds seats.",
     "uncrewedDeparture": "{divers, plural, one {# diver is} other {# divers are}} booked and no divemaster or instructor is assigned to supervise this departure.",
     "crewBelowTarget": "{divers, plural, one {# diver} other {# divers}} booked with {divemasterCount, plural, one {# supervisor} other {# supervisors}} rostered, short of your {ratio}:1 target.",
@@ -211,10 +211,10 @@
     "night": "Working late, {name}"
   },
   "seasonalBriefing": {
-    "summer": "Enjoy the surface interval. Grab some shade{hasShop, select, true { at {shopName}} other {}}, drink some water, and we'll see you on the next boat.",
-    "autumn": "Enjoy the surface interval. Grab a warm towel{hasShop, select, true { at {shopName}} other {}}, check the breeze, and we'll see you on the next boat.",
-    "winter": "Enjoy the surface interval. Warm up with a dry coat{hasShop, select, true { at {shopName}} other {}}, and we'll see you on the next boat.",
-    "spring": "Enjoy the surface interval. Catch some sun{hasShop, select, true { at {shopName}} other {}}, check your gear, and we'll see you on the next boat."
+    "summer": "Enjoy the surface interval. Grab some shade{hasShop, select, true { at {shopName}} other {}}, drink some water, and we’ll see you on the next boat.",
+    "autumn": "Enjoy the surface interval. Grab a warm towel{hasShop, select, true { at {shopName}} other {}}, check the breeze, and we’ll see you on the next boat.",
+    "winter": "Enjoy the surface interval. Warm up with a dry coat{hasShop, select, true { at {shopName}} other {}}, and we’ll see you on the next boat.",
+    "spring": "Enjoy the surface interval. Catch some sun{hasShop, select, true { at {shopName}} other {}}, check your gear, and we’ll see you on the next boat."
   },
   "opsAlert": {
     "operationKind": {
@@ -236,7 +236,7 @@
       "withoutId": "{kind} stuck since {when}. Check it against the Stripe dashboard."
     },
     "mediaDeletionDetail": "{kind} removed from the app but not yet deleted from storage, queued {when}.",
-    "owedRefundDetail": "{amount} for {tripTitle} on {when}. You cancelled the departure and the money couldn't go back by card. Return it, then mark the seat refunded.",
+    "owedRefundDetail": "{amount} for {tripTitle} on {when}. You cancelled the departure and the money couldn’t go back by card. Return it, then mark the seat refunded.",
     "owedRefundDetailNoAmount": "Owed for {tripTitle} on {when}. You cancelled the departure and no amount was recorded against the payment. Return what they paid, then mark the seat refunded."
   },
   "reviewsPending": {
@@ -252,7 +252,7 @@
   },
   "unitsUnconfirmed": {
     "subject": "Which currency and depth unit does this shop work in?",
-    "detail": "We guessed {currency} from your timezone when you signed up, and nobody has confirmed it. It is what a diver's card gets charged in."
+    "detail": "We guessed {currency} from your timezone when you signed up, and nobody has confirmed it. It is what a diver’s card gets charged in."
   },
   "gear": {
     "overdueDetail": "{unitLabel} was due back {dueOn} and is still out.",
@@ -260,7 +260,7 @@
     "serviceDueDetail": "{clockLabel} is due {dueOn}.",
     "serviceOverdueDetail": "{clockLabel} was due {dueOn}.",
     "neverPickedUpDetail": "{unitLabel} was reserved until {dueOn} and never picked up. Release it.",
-    "fitConfirmDetail": "{name}'s {unitLabel} went out as {size}. Keep that as the fit next time?",
+    "fitConfirmDetail": "{name}’s {unitLabel} went out as {size}. Keep that as the fit next time?",
     "fitConfirmKeep": "Keep it",
     "fitConfirmSaving": "Keeping"
   },

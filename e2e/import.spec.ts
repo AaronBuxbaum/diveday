@@ -258,7 +258,7 @@ test.describe("contact import — prior visits", () => {
     await expect(page.getByText(/See .What comes across. above/)).toBeVisible();
     await page.getByRole("button", { name: /Import 1 contact/ }).click();
     await expect(page.getByText(/Imported\. 1 added/)).toBeVisible();
-    await expect(page.getByText(/3 past visits added to divers' shop history/)).toBeVisible();
+    await expect(page.getByText(/3 past visits added to divers’ shop history/)).toBeVisible();
 
     // On the diver's record the history reads as history: the old system's own
     // words, marked imported, and never a link to a trip that doesn't exist here.
@@ -450,7 +450,7 @@ test.describe("as captain", () => {
     await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
     await expect(
       page.getByText(
-        "Importing writes divers' personal and medical records, so it's limited to owners and managers.",
+        "Importing writes divers’ personal and medical records, so it’s limited to owners and managers.",
       ),
     ).toBeVisible();
     await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveCount(0);

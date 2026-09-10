@@ -19,7 +19,7 @@ import {
  */
 const NOTICES = {
   saved: { tone: "success", text: "Saved." },
-  invalid: { tone: "danger", text: "That didn't work." },
+  invalid: { tone: "danger", text: "That didn’t work." },
 } as const;
 
 describe("noticeFromParam", () => {

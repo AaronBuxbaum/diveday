@@ -375,7 +375,7 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
   await expect(searchIsShowing).toBeVisible();
   await card.getByText("Mark signed on paper").click();
   await card
-    .getByLabel("I have this diver's signed release on file", { exact: false })
+    .getByLabel("I have this diver’s signed release on file", { exact: false })
     .filter({ visible: true })
     .check();
   await card.getByRole("button", { name: "Record paper signature" }).click();

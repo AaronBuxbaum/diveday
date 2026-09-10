@@ -396,8 +396,8 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     }
 
     await undo.click();
-    await expect(page.getByRole("alert").filter({ hasText: "Couldn't undo" })).toContainText(
-      "Couldn't undo. This trip has been cancelled. Reinstate the trip first, then add them back.",
+    await expect(page.getByRole("alert").filter({ hasText: "Couldn’t undo" })).toContainText(
+      "Couldn’t undo. This trip has been cancelled. Reinstate the trip first, then add them back.",
     );
     // Refused, not partially applied: the diver is still off the roster.
     await expect(page.getByRole("link", { name: diver })).toHaveCount(0);

@@ -426,7 +426,7 @@ test.describe("the folding title", () => {
     // clock, so there is no duration to wait out.
     await expect
       .poll(() => opacityOf(page, "[data-chrome-title-slot]"), {
-        message: "the page's title never folded into the bar",
+        message: "the page’s title never folded into the bar",
       })
       .toBe(1);
     expect(await opacityOf(page, "[data-chrome-shop-name]")).toBe(0);
@@ -490,7 +490,7 @@ test.describe("the folding title", () => {
     await page.evaluate(() => window.scrollTo(0, 240));
     await expect
       .poll(() => opacityOf(page, "[data-chrome-shop-name]"), {
-        message: "the shop's name gave way to a label that was never there",
+        message: "the shop’s name gave way to a label that was never there",
       })
       .toBe(1);
   });

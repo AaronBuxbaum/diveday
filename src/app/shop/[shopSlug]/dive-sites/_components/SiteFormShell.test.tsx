@@ -9,12 +9,12 @@ afterEach(cleanup);
 
 /** The sentences the page resolves from the staff bundle before rendering. */
 const MESSAGES: Record<DiveSiteFormError, string> = {
-  invalid: "That didn't save. Check the required name and links, then try again.",
+  invalid: "That didn’t save. Check the required name and links, then try again.",
   coordinatesIncomplete: "Add both forecast coordinates, or leave both blank.",
   tideStationInvalid: "A NOAA tide station id is seven digits.",
   depthTooDeep: "That maximum depth is deeper than any dive site.",
-  images: "One of those image links couldn't be used.",
-  imagesUnconfigured: "Image hosting isn't set up for this shop yet.",
+  images: "One of those image links couldn’t be used.",
+  imagesUnconfigured: "Image hosting isn’t set up for this shop yet.",
   planningNoteTooLong: "Keep the planning note under 280 characters.",
   conflict: "Somebody else changed this briefing while you had it open.",
   nameTaken: "Another dive site here already goes by that name.",

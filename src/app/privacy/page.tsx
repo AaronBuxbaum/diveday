@@ -18,7 +18,7 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "How DiveDay handles data — DiveDay",
   description:
-    "What DiveDay stores on a shop's behalf, where it is processed, who else touches it, how long it is kept, and how a shop takes it back out.",
+    "What DiveDay stores on a shop’s behalf, where it is processed, who else touches it, how long it is kept, and how a shop takes it back out.",
   alternates: { canonical: "/privacy" },
   openGraph: {
     // `openGraphSite` rather than `sharedLinkCard`: this page has no

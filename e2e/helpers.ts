@@ -106,8 +106,8 @@ export async function choosePartySize(page: Page, count: number) {
  */
 export async function saveDiveIntent(page: Page, label: string) {
   const step = await openThreadStep(page, "dayof");
-  const form = step.locator("form").filter({ hasText: "What's this dive for?" });
-  await form.getByLabel("What's this dive for?").selectOption({ label });
+  const form = step.locator("form").filter({ hasText: "What’s this dive for?" });
+  await form.getByLabel("What’s this dive for?").selectOption({ label });
   await form.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "The crew will know what you came for" }),

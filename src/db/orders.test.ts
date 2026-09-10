@@ -1559,7 +1559,7 @@ describe("orders", () => {
         },
         invoicing,
       );
-      if (!elsewhere.ok) throw new Error("expected the other trip's order to be created");
+      if (!elsewhere.ok) throw new Error("expected the other trip’s order to be created");
       expect(await countOpenTripOrders(db, shop.id, reef.id)).toBe(1);
       expect(await countOpenTripOrders(db, shop.id, otherTrip.id)).toBe(1);
     });

@@ -105,14 +105,14 @@ describe("certificationSummaryBelowRequirementText", () => {
     // The finding this exists for: a verified Open Water diver on an Advanced
     // charter is muted, calm, and said nothing about the bar he is under.
     expect(certificationSummaryBelowRequirementText(t, summary(), "en-US")).toBe(
-      "Open Water · below this departure's minimum",
+      "Open Water · below this departure’s minimum",
     );
   });
 
   it("keeps the self-declared mark alongside it rather than replacing it", () => {
     expect(
       certificationSummaryBelowRequirementText(t, summary({ levelSelfDeclared: true }), "en-US"),
-    ).toBe("Open Water — unverified · below this departure's minimum");
+    ).toBe("Open Water — unverified · below this departure’s minimum");
   });
 
   it("says it in Spanish too", () => {

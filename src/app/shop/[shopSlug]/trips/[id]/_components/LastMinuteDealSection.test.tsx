@@ -141,7 +141,7 @@ describe("LastMinuteDealSection recipient review", () => {
     // The recipient list is already filtered to people who can receive this
     // deal, so there is no qualification explanation to repeat here.
     expect(container.textContent).not.toContain("This departure requires");
-    expect(container.textContent).not.toContain("below this departure's requirement");
+    expect(container.textContent).not.toContain("below this departure’s requirement");
   });
 
   it("does not read as an all-clear on a departure gated by cards rather than a level", () => {
@@ -155,7 +155,7 @@ describe("LastMinuteDealSection recipient review", () => {
     });
 
     expect(container.textContent).not.toContain("This departure requires");
-    expect(container.textContent).not.toContain("below this departure's requirement");
+    expect(container.textContent).not.toContain("below this departure’s requirement");
   });
 
   /**
@@ -175,7 +175,7 @@ describe("LastMinuteDealSection recipient review", () => {
     );
 
     expect(container.textContent).not.toContain("Dee Ferrer");
-    expect(container.textContent).not.toContain("below this departure's requirement");
+    expect(container.textContent).not.toContain("below this departure’s requirement");
   });
 
   it("does not show a redundant qualification summary", () => {
@@ -190,7 +190,7 @@ describe("LastMinuteDealSection recipient review", () => {
     );
 
     expect(container.textContent).not.toContain(
-      "Nobody on this list is below this departure's requirement.",
+      "Nobody on this list is below this departure’s requirement.",
     );
     expect(container.textContent).not.toContain("said nothing about their level");
   });
@@ -233,7 +233,7 @@ describe("LastMinuteDealSection recipient review", () => {
     // A departure that asks for no level has no bar for anyone to be under —
     // the answer is still stated on the row, and it is still not a refusal.
     expect(container.textContent).toContain("Not certified yet — unverified");
-    expect(container.textContent).not.toContain("below this departure's minimum");
+    expect(container.textContent).not.toContain("below this departure’s minimum");
   });
 
   it("does not show an all-clear qualification sentence", () => {
@@ -243,7 +243,7 @@ describe("LastMinuteDealSection recipient review", () => {
     );
 
     expect(container.textContent).not.toContain(
-      "Nobody on this list is below this departure's requirement.",
+      "Nobody on this list is below this departure’s requirement.",
     );
     expect(container.textContent).not.toContain("said nothing about their level");
   });
@@ -263,7 +263,7 @@ describe("LastMinuteDealSection recipient review", () => {
   it("marks nothing on the row when the departure asks for no level", () => {
     const { container } = renderSection([recipient("Ravi Menon", "open_water")], requires(null));
 
-    expect(container.textContent).not.toContain("below this departure's minimum");
+    expect(container.textContent).not.toContain("below this departure’s minimum");
   });
 
   it("keeps the warning tone meaning only that nobody has seen the card", () => {

@@ -93,7 +93,7 @@
   "addUnit": {
     "door": "Add gear",
     "title": "Add a unit",
-    "description": "One row per physical thing on the wall, tagged the way you'd say it out loud.",
+    "description": "One row per physical thing on the wall, tagged the way you’d say it out loud.",
     "submit": "Add to the register",
     "pending": "Adding…"
   },
@@ -122,12 +122,12 @@
     "released": "Assignment released.",
     "alreadyReturned": "That reservation was already closed.",
     "alreadyCheckedOut": "That unit is already out the door. Mark it returned instead.",
-    "notFound": "That record isn't here anymore.",
-    "invalid": "That didn't save. Check the form and try again.",
-    "emptyLabel": "Give the unit a tag. It's how you'll find it with wet hands.",
+    "notFound": "That record isn’t here anymore.",
+    "invalid": "That didn’t save. Check the form and try again.",
+    "emptyLabel": "Give the unit a tag. It’s how you’ll find it with wet hands.",
     "duplicateLabel": "Another unit already wears that tag.",
     "restoreDuplicateLabel": "Another unit wears that tag now. Rename it, then restore this one.",
-    "invalidDate": "That date doesn't exist. Check it.",
+    "invalidDate": "That date doesn’t exist. Check it.",
     "dueNotAfterService": "The next due date has to come after the service date.",
     "allHome": "All home. Every unit is back on the wall.",
     "invalidDives": "Dives has to be a whole number above zero.",
@@ -209,7 +209,7 @@
       "title": "Status",
       "pull": "Pull for service",
       "pulling": "Pulling…",
-      "pullNote": "Why it's coming off the wall",
+      "pullNote": "Why it’s coming off the wall",
       "pullNotePlaceholder": "Inflator sticks",
       "pullCancel": "Never mind",
       "reinstate": "Return to service",
@@ -241,7 +241,7 @@
       "unitUnavailable": "Somebody got that unit first. Pick another.",
       "unitOutOfService": "That unit is off the wall for service.",
       "alreadyCheckedOut": "That unit already left the counter. Mark it returned from the register instead.",
-      "assignFailed": "That pick didn't take. Try another unit."
+      "assignFailed": "That pick didn’t take. Try another unit."
     },
     "optionServiceOverdue": "service overdue",
     "optionServiceDueSoon": "service due soon",

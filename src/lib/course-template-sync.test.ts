@@ -35,7 +35,7 @@ function template(overrides: Partial<CourseTemplateSource> = {}): CourseTemplate
 describe("course template synchronization", () => {
   it("identifies shop edits separately from untouched fields", () => {
     const baseline = courseTemplateSnapshot(template());
-    const current = { ...baseline, overview: "The shop's own explanation." };
+    const current = { ...baseline, overview: "The shop’s own explanation." };
     const latest = {
       ...baseline,
       summary: "Learn to dive with confidence",
@@ -52,7 +52,7 @@ describe("course template synchronization", () => {
     const baseline = courseTemplateSnapshot(template());
     const current = {
       ...baseline,
-      overview: "The shop's own explanation.",
+      overview: "The shop’s own explanation.",
       includes: ["Shop gear", "Briefing"],
     };
     const latest = {
@@ -72,7 +72,7 @@ describe("course template synchronization", () => {
 
   it("only replaces template-owned fields in explicit replace mode", () => {
     const baseline = courseTemplateSnapshot(template());
-    const current = { ...baseline, overview: "The shop's own explanation." };
+    const current = { ...baseline, overview: "The shop’s own explanation." };
     const latest = { ...baseline, overview: "The updated source overview." };
 
     expect(

@@ -6,7 +6,7 @@
     "hiddenToast": "Review hidden.",
     "publishedManyOne": "{count} review published to your schedule page.",
     "publishedManyOther": "{count} reviews published to your schedule page.",
-    "error": "That review couldn't be updated. Try again.",
+    "error": "That review couldn’t be updated. Try again.",
     "reasonRequired": "Choose a reason before hiding a review.",
     "noteRequired": "Say what happened, in a few words, when the reason is “Something else”.",
     "noteTooLong": "That note is too long. Keep it to 200 characters.",

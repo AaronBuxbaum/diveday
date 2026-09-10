@@ -10,7 +10,7 @@
       "unitsSaved": "Units saved.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
       "taxSaved": "Tax setting saved.",
-      "taxInvalid": "That tax setting couldn't be saved.",
+      "taxInvalid": "That tax setting couldn’t be saved.",
       "passThroughSaved": "Pass-through fee saved.",
       "passThroughInvalid": "Enter both a fee name and a positive amount, or leave both blank to disable it.",
       "conservationSaved": "Conservation commitments saved.",
@@ -18,23 +18,23 @@
       "rentalPricesSaved": "Rental prices saved.",
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
       "contactSaved": "Contact details saved.",
-      "contactConfirmationSent": "Contact details saved. Open the confirmation email we sent to that address so divers' replies reach it.",
+      "contactConfirmationSent": "Contact details saved. Open the confirmation email we sent to that address so divers’ replies reach it.",
       "contactInvalid": "Use a complete email address, or empty the box to take it off your public pages.",
       "profileSaved": "Shop profile and branding saved.",
       "profileInvalid": "Check your tagline, description, and logo file.",
       "addressSaved": "Shop address saved.",
       "addressRemoved": "Shop address removed.",
-      "addressInvalid": "That address couldn't be saved. Search again and pick your shop from the list.",
+      "addressInvalid": "That address couldn’t be saved. Search again and pick your shop from the list.",
       "reviewUrlSaved": "Review link saved.",
       "reviewUrlInvalid": "Enter a full https:// link, or empty the box to stop asking for reviews.",
       "searchListingOn": "Your public pages are listed in search engines.",
       "searchListingOff": "Your public pages are hidden from search engines. Anything already indexed can take a few weeks to drop out.",
       "tideWindowOn": "Divers now see the tide window on departure pages.",
-      "tideWindowOff": "The tide window is off divers' departure pages.",
+      "tideWindowOff": "The tide window is off divers’ departure pages.",
       "conservationInvalid": "Check your conservation commitments selection.",
       "connected": "Stripe account connected.",
-      "connectFailed": "The Stripe connection didn't complete. Try connecting again.",
-      "notConfigured": "Online payments aren't switched on for this DiveDay setup yet.",
+      "connectFailed": "The Stripe connection didn’t complete. Try connecting again.",
+      "notConfigured": "Online payments aren’t switched on for this DiveDay setup yet.",
       "disconnected": "Stripe account disconnected.",
       "refreshed": "Payment status refreshed from Stripe.",
       "notAuthorized": "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers.",
@@ -44,12 +44,12 @@
       "timezoneInvalid": "That isn’t a timezone we recognize. Pick one from the list.",
       "emergencySaved": "Emergency reference saved.",
       "sendWindowSaved": "Message hours saved.",
-      "sendWindowInvalid": "That didn't save. The first hour has to come before the last, on a 24-hour clock.",
+      "sendWindowInvalid": "That didn’t save. The first hour has to come before the last, on a 24-hour clock.",
       "flySafeSaved": "Fly-safe hours saved.",
-      "flySafeInvalid": "That didn't save. Whole hours, at least DAN’s 12 and 18, at most 72, and the two-dive wait no shorter than the one-dive wait.",
+      "flySafeInvalid": "That didn’t save. Whole hours, at least DAN’s 12 and 18, at most 72, and the two-dive wait no shorter than the one-dive wait.",
       "packageSaved": "Package added.",
       "packageDeleted": "Package deleted.",
-      "packageInvalid": "That didn't save. Check the number of dives, the price, and how long it stays usable."
+      "packageInvalid": "That didn’t save. Check the number of dives, the price, and how long it stays usable."
     },
     "timezone": {
       "heading": "Timezone",
@@ -102,7 +102,7 @@
     "contact": {
       "heading": "Public contact details",
       "description": "The front-desk email and phone printed on your course pages.",
-      "detail": "A diver who can't find a date gets a ready-written email to send you. Use an address the whole team reads. Empty the box to take the form down.",
+      "detail": "A diver who can’t find a date gets a ready-written email to send you. Use an address the whole team reads. Empty the box to take the form down.",
       "emailLabel": "Contact email",
       "phoneLabel": "Contact phone",
       "phoneHint": "(optional)",
@@ -128,10 +128,10 @@
       "submit": "Save profile",
       "brandColor": "Brand colour",
       "brandColorPicker": "Pick a brand colour",
-      "brandColorHint": "Buttons and links on your public pages. Leave it blank to keep DiveDay's teal.",
+      "brandColorHint": "Buttons and links on your public pages. Leave it blank to keep DiveDay’s teal.",
       "brandColorDarkened": "Your colour was too light to read as text, so your storefront uses {hex}.",
       "displayFont": "Headline face",
-      "displayFontDefault": "DiveDay's own",
+      "displayFontDefault": "DiveDay’s own",
       "heroPhoto": "Cover photo",
       "heroHint": "PNG, JPG, or WebP. Landscape, 1600 px wide or more.",
       "heroAlt": "Describe the cover photo",
@@ -149,7 +149,7 @@
         "blue_star": "Blue Star Operator",
         "green_fins": "Green Fins Member",
         "dan_partner": "DAN Business Partner",
-        "readers_choice": "Readers' Choice Award"
+        "readers_choice": "Readers’ Choice Award"
       },
       "brandColorLightenedAtNight": "At night your storefront lightens it to {hex} so it still reads on the dark ground.",
       "brandPreview": "How it reads",
@@ -171,15 +171,15 @@
     },
     "address": {
       "heading": "Shop address",
-      "detail": "Your shop's business address, not a staff member's. Published so search engines can place you as a real venue. Search for your shop by name or address, then pick it. That saves it.",
+      "detail": "Your shop’s business address, not a staff member’s. Published so search engines can place you as a real venue. Search for your shop by name or address, then pick it. That saves it.",
       "searchLabel": "Find your shop",
-      "searchPlaceholder": "Your shop's name or address…",
+      "searchPlaceholder": "Your shop’s name or address…",
       "searching": "Looking…",
       "saving": "Saving…",
-      "noMatches": "No matches. Try your shop's name, or a nearby street address.",
-      "lookupFailed": "Address lookup isn't available right now. Try again in a moment.",
-      "lookupResting": "That's a lot of lookups for one hour, so searching pauses for a bit. Try again later.",
-      "notConfigured": "Address lookup isn't set up on this DiveDay instance, so the address below can't be changed here.",
+      "noMatches": "No matches. Try your shop’s name, or a nearby street address.",
+      "lookupFailed": "Address lookup isn’t available right now. Try again in a moment.",
+      "lookupResting": "That’s a lot of lookups for one hour, so searching pauses for a bit. Try again later.",
+      "notConfigured": "Address lookup isn’t set up on this DiveDay instance, so the address below can’t be changed here.",
       "suggestionsLabel": "Address suggestions",
       "currentLabel": "Saved address",
       "noneSet": "No address saved yet.",
@@ -189,7 +189,7 @@
     "reviewLink": {
       "heading": "Review link",
       "description": "Your Google Business, TripAdvisor, or Facebook review page.",
-      "detail": "When set, a diver's post-trip recap invites them to leave a review. Empty the box to stop asking.",
+      "detail": "When set, a diver’s post-trip recap invites them to leave a review. Empty the box to stop asking.",
       "label": "Review link",
       "hint": "(optional)",
       "submit": "Save review link",
@@ -199,7 +199,7 @@
       "heading": "Search listing",
       "valueListed": "Listed",
       "valueHidden": "Hidden",
-      "detail": "Being listed also puts your shop on DiveDay's page for your town. Untick this and anything already indexed can take a few weeks to disappear, and a page someone has linked to stays reachable by that link.",
+      "detail": "Being listed also puts your shop on DiveDay’s page for your town. Untick this and anything already indexed can take a few weeks to disappear, and a page someone has linked to stays reachable by that link.",
       "label": "List my public pages in search engines",
       "submit": "Save",
       "submitting": "Saving…"
@@ -215,7 +215,7 @@
     },
     "conservation": {
       "heading": "Conservation commitments",
-      "detail": "Select the commitments your operation practices. These are published as your shop's own claim, never DiveDay's verification.",
+      "detail": "Select the commitments your operation practices. These are published as your shop’s own claim, never DiveDay’s verification.",
       "value": "{count, plural, one {# commitment} other {# commitments}}",
       "commitments": {
         "green_fins_member": "Green Fins member",
@@ -267,7 +267,7 @@
       "minutesBefore": "{count} min before",
       "minutesAfter": "{count} min after",
       "atDeparture": "On time",
-      "siteOverrides": "{count, plural, one {# dive site sets its own time in the water, so this rhythm doesn't describe a dive there:} other {# dive sites set their own time in the water, so this rhythm doesn't describe a dive at any of them:}}",
+      "siteOverrides": "{count, plural, one {# dive site sets its own time in the water, so this rhythm doesn’t describe a dive there:} other {# dive sites set their own time in the water, so this rhythm doesn’t describe a dive at any of them:}}",
       "siteOverride": "{name} · {count} min"
     },
     "sendWindow": {
@@ -297,7 +297,7 @@
       "celsius": "Celsius (°C)",
       "fahrenheit": "Fahrenheit (°F)",
       "currencyLabel": "Charge and display in",
-      "currencyMismatch": "You charge in {shopCurrency}, but Stripe settles this account in {accountCurrency} and will refuse a payment it can't settle. Pick {accountCurrency} here, or connect an account that settles in {shopCurrency}.",
+      "currencyMismatch": "You charge in {shopCurrency}, but Stripe settles this account in {accountCurrency} and will refuse a payment it can’t settle. Pick {accountCurrency} here, or connect an account that settles in {shopCurrency}.",
       "submit": "Save units",
       "submitting": "Saving…",
       "currencyRepricingWarning": "Changing this does not convert your prices. A $95 trip becomes 95 of the new currency, and orders already placed keep the currency they were charged in."
@@ -389,14 +389,14 @@
     "trial": {
       "heading": "Your trial",
       "activeDescription": "{count, plural, one {# day} other {# days}} left, through {endDate}.",
-      "expiredDescription": "Your trial ended {endDate}. Everything you've set up keeps working.",
+      "expiredDescription": "Your trial ended {endDate}. Everything you’ve set up keeps working.",
       "upgradeBody": "Ready to move to a paid plan?",
       "emailCta": "Email {email}",
       "value": "{count, plural, one {# day left} other {# days left}}",
       "expiredValue": "Ended {endDate}"
     },
     "support": {
-      "description": "A bad morning at the counter, a feature you're missing, a bug. Write in any time.",
+      "description": "A bad morning at the counter, a feature you’re missing, a bug. Write in any time.",
       "emailCta": "Email {email}"
     },
     "groups": {
@@ -444,9 +444,9 @@
         "payment_receipt": "Imported receipt"
       },
       "mediaDeletions": {
-        "sectionLabel": "Photos that didn't finish deleting",
+        "sectionLabel": "Photos that didn’t finish deleting",
         "heading": "{count, plural, one {# photo} other {# photos}} removed but not yet deleted from storage",
-        "detail": "Retry the delete, or leave it for tonight's automatic retry.",
+        "detail": "Retry the delete, or leave it for tonight’s automatic retry.",
         "queued": "queued {date}",
         "retry": "Retry delete",
         "retrying": "Retrying…"
@@ -458,7 +458,7 @@
       "processorErasures": {
         "sectionLabel": "Erasures not finished at Stripe",
         "heading": "{count, plural, one {# record} other {# records}} from an erased diver still at Stripe",
-        "detail": "Erasing a diver also deletes their Stripe customer. These didn't finish. A customer record retries on its own tonight. An invoice can't: only a data-deletion request to Stripe clears the name and email it copied. File one, then mark it done.",
+        "detail": "Erasing a diver also deletes their Stripe customer. These didn’t finish. A customer record retries on its own tonight. An invoice can’t: only a data-deletion request to Stripe clears the name and email it copied. File one, then mark it done.",
         "raised": "raised {date}",
         "retry": "Retry delete",
         "retrying": "Retrying…",
@@ -511,17 +511,17 @@
       "changesSaved": "Team changes saved.",
       "reactivated": "Account re-enabled.",
       "disabled": "Account disabled. They can no longer sign in.",
-      "removed": "Deleted. They're off your team and can no longer sign in.",
+      "removed": "Deleted. They’re off your team and can no longer sign in.",
       "restored": "Team access restored.",
-      "restoreFailed": "Couldn't restore that person's access. Check their account first.",
+      "restoreFailed": "Couldn’t restore that person’s access. Check their account first.",
       "inviteInvalid": "Enter a name, a valid email, and check at least one role.",
       "rolesInvalid": "Check at least one role before saving.",
       "rolesConflict": "Somebody else changed these roles while you had the row open, so nothing was saved. Reload to see where they stand now.",
       "inviteAlreadyOnTeam": "That person already has an account here.",
       "inviteEmailTaken": "That email isn’t available here. Invite this teammate at a different address.",
-      "inviteEmailReserved": "That email address is reserved and can't receive mail. Invite this teammate at an address they can read.",
-      "lastOwner": "Can't do that, because the shop needs at least one owner. Make someone else an owner first.",
-      "notFound": "That person isn't on this shop's team.",
+      "inviteEmailReserved": "That email address is reserved and can’t receive mail. Invite this teammate at an address they can read.",
+      "lastOwner": "Can’t do that, because the shop needs at least one owner. Make someone else an owner first.",
+      "notFound": "That person isn’t on this shop’s team.",
       "notAuthorized": "Team management is limited to owners and managers.",
       "contactSaved": "Emergency contact saved.",
       "contactHalfFilled": "An emergency contact needs both a name and a number.",
@@ -552,7 +552,7 @@
     "languagesSaving": "Saving…",
     "invite": {
       "heading": "Invite someone",
-      "description": "They'll get an email to set their own password.",
+      "description": "They’ll get an email to set their own password.",
       "fullNameLabel": "Full name",
       "emailLabel": "Email",
       "submit": "Send invite",
@@ -595,7 +595,7 @@
     "listHeading": "Checklist",
     "empty": {
       "title": "Nothing on the list yet",
-      "body": "Add the first line below. The crew sees it on every departure's manifest."
+      "body": "Add the first line below. The crew sees it on every departure’s manifest."
     },
     "addLabel": "New line",
     "addPlaceholder": "Emergency oxygen kit aboard",
@@ -606,10 +606,10 @@
     "notice": {
       "added": "Added to the checklist.",
       "deleted": "Removed from the checklist.",
-      "invalid": "That didn't save. Try it again.",
+      "invalid": "That didn’t save. Try it again.",
       "duplicateLabel": "That line is already on the list.",
-      "notAuthorized": "You don't have permission to change this.",
-      "moveRefused": "That didn't move. Try it again."
+      "notAuthorized": "You don’t have permission to change this.",
+      "moveRefused": "That didn’t move. Try it again."
     }
   },
   "export": {
@@ -621,20 +621,20 @@
       "acknowledged": "On its way, check your downloads"
     },
     "bundle": {
-      "heading": "What's in the bundle",
+      "heading": "What’s in the bundle",
       "fileCount": "{count, plural, one {# file, with a row count for each} other {# files, with a row count for each}}",
       "description": "One ZIP with a README and a CSV per record type. Every date carries its timezone, money is in cents, and deleted records come along too."
     },
     "rowCount": "{count, plural, one {# row} other {# rows}}",
     "notIncluded": {
       "label": "Not included, on purpose:",
-      "text": "offline manifest copies, notification retry queues, Stripe account linkage, the close-out and buddy-team trails, weather-cancellation state, DiveDay's own reconciliation ledgers, and unstored pasted image URLs. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions and course leads <mono>do</mono> export. Photos and safely stored imported receipts export as real files in <mono>photos/</mono>. Credentials, calendar links, and your WhatsApp account never export. See the README."
+      "text": "offline manifest copies, notification retry queues, Stripe account linkage, the close-out and buddy-team trails, weather-cancellation state, DiveDay’s own reconciliation ledgers, and unstored pasted image URLs. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions and course leads <mono>do</mono> export. Photos and safely stored imported receipts export as real files in <mono>photos/</mono>. Credentials, calendar links, and your WhatsApp account never export. See the README."
     }
   },
   "crewSheet": {
     "heading": "Crew sheet",
-    "description": "Departures worked, hours, and each crew member's share of the month's tips, as one CSV.",
-    "note": "It records the month as it happened; what anyone is owed is your bookkeeper's call.",
+    "description": "Departures worked, hours, and each crew member’s share of the month’s tips, as one CSV.",
+    "note": "It records the month as it happened; what anyone is owed is your bookkeeper’s call.",
     "monthLabel": "Month",
     "download": "Download crew sheet",
     "column": {
@@ -650,10 +650,10 @@
   "import": {
     "eyebrow": "Settings",
     "title": "Import contacts",
-    "description": "Bring divers, certification records, rental sizes, and prior waiver acceptance in from a CSV, whether your old system's or DiveDay's own export.",
+    "description": "Bring divers, certification records, rental sizes, and prior waiver acceptance in from a CSV, whether your old system’s or DiveDay’s own export.",
     "comingFrom": "Coming from <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, or <spreadsheet>a spreadsheet</spreadsheet>? See the matching guide, then come back here to bring it in.",
     "notice": {
-      "notAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers."
+      "notAuthorized": "Importing writes divers’ personal and medical records, so it’s limited to owners and managers."
     },
     "comesAcross": {
       "heading": "What comes across"
@@ -665,7 +665,7 @@
     "scopeTable": {
       "contact": {
         "what": "Names, email, phone",
-        "detail": "A row with an email matches an existing diver on re-import; without one, it's always a new record."
+        "detail": "A row with an email matches an existing diver on re-import; without one, it’s always a new record."
       },
       "emergencyContact": {
         "what": "Emergency contact",
@@ -685,7 +685,7 @@
       },
       "specialtyCards": {
         "what": "Specialty certifications (deep, wreck, night, drysuit)",
-        "detail": "Marked imported. Each one's gate stays shut until staff give it a one-tap confirm, whatever your file says."
+        "detail": "Marked imported. Each one’s gate stays shut until staff give it a one-tap confirm, whatever your file says."
       },
       "nitrox": {
         "what": "Nitrox",
@@ -697,7 +697,7 @@
       },
       "waiverDocuments": {
         "what": "Waiver / medical documents",
-        "detail": "Fetched once from your file's URL and kept for audit. Images and PDFs up to 5 MB."
+        "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5 MB."
       },
       "role": {
         "what": "Role",
@@ -721,12 +721,12 @@
       },
       "diverNotes": {
         "what": "Internal & diver notes",
-        "detail": "Customer remarks and staff notes become private notes on the diver's profile."
+        "detail": "Customer remarks and staff notes become private notes on the diver’s profile."
       }
     },
     "wizard": {
       "heading": "Upload a contacts file",
-      "intro": "A CSV from your old system, or DiveDay's own <mono>contacts.csv</mono>. Nothing is written until you confirm the preview.",
+      "intro": "A CSV from your old system, or DiveDay’s own <mono>contacts.csv</mono>. Nothing is written until you confirm the preview.",
       "chooseFile": "Choose CSV file",
       "chooseDifferentFile": "Choose a different file",
       "columnTitle": "Column “{header}”",
@@ -773,12 +773,12 @@
         "visit_reference": "Booking reference",
         "internal_notes": "Internal notes"
       },
-      "ignoredMedicalColumns": "Left behind on purpose: {columns}. These weren't recognized as a waiver column, so their contents never import. A recognized “waiver accepted” column is trusted instead; see below.",
+      "ignoredMedicalColumns": "Left behind on purpose: {columns}. These weren’t recognized as a waiver column, so their contents never import. A recognized “waiver accepted” column is trusted instead; see below.",
       "unmappedColumns": "Not recognized, so ignored: {columns}.",
       "waiverRowsNoticeOne": "{count} row claims a waiver already accepted at a prior shop. DiveDay trusts that, medical clearance included, and marks it “imported”.",
       "waiverRowsNoticeOther": "{count} rows claim a waiver already accepted at a prior shop. DiveDay trusts that, medical clearance included, and marks it “imported”.",
-      "visitRowsNoticeOne": "{count} row records a past visit. See “What comes across” above for what that does and doesn't mean.",
-      "visitRowsNoticeOther": "{count} rows record a past visit. See “What comes across” above for what that does and doesn't mean.",
+      "visitRowsNoticeOne": "{count} row records a past visit. See “What comes across” above for what that does and doesn’t mean.",
+      "visitRowsNoticeOther": "{count} rows record a past visit. See “What comes across” above for what that does and doesn’t mean.",
       "paymentHistoryRowsNoticeOne": "{count} payment, refund, or receipt source row will be imported as unverified history. They never create Stripe orders or charges.",
       "paymentHistoryRowsNoticeOther": "{count} payment, refund, or receipt source rows will be imported as unverified history. They never create Stripe orders or charges.",
       "stats": {
@@ -831,61 +831,61 @@
         "cardsNitroxOne": "{count} nitrox certification",
         "cardsNitroxOther": "{count} nitrox certifications",
         "rowsMergedNote": " {count} row(s) added certifications to a diver an earlier row brought in.",
-        "cardsSkippedNote": " {count} certification(s) already on those divers' records were left untouched.",
+        "cardsSkippedNote": " {count} certification(s) already on those divers’ records were left untouched.",
         "rowsSkippedNote": " {count} row(s) skipped.",
         "cardsHeldByAnother": "{count} certification number(s) in the file are already on a different diver in your shop, so those records were not added to anyone. Check the file for a repeated number, then review and add the certification records in DiveDay.",
-        "specialtyGateNote": "A dive that requires one of those specialties waits on that confirm. Tap it on the diver's record and the gate opens.",
-        "waiversLineOne": "{count} waiver imported as accepted, marked “imported” on the diver's profile.",
-        "waiversLineOther": "{count} waivers imported as accepted, marked “imported” on the diver's profile.",
+        "specialtyGateNote": "A dive that requires one of those specialties waits on that confirm. Tap it on the diver’s record and the gate opens.",
+        "waiversLineOne": "{count} waiver imported as accepted, marked “imported” on the diver’s profile.",
+        "waiversLineOther": "{count} waivers imported as accepted, marked “imported” on the diver’s profile.",
         "waiversSkippedExistingNote": " {count} diver(s) already had a current waiver on file, left untouched.",
         "waiversSkippedNoTemplateNoteOne": " {count} skipped. Set up a waiver template first.",
         "waiversSkippedNoTemplateNoteOther": " {count} skipped. Set up a waiver template first.",
-        "waiverDocumentsFailedNote": " {count} document link(s) didn't fetch and were left off the record.",
-        "visitsLineOne": "{count} past visit added to divers' shop history.",
-        "visitsLineOther": "{count} past visits added to divers' shop history.",
-        "visitsSkippedNote": " {count} were already imported and were left as they are, so re-running the same export doesn't double anyone's history.",
+        "waiverDocumentsFailedNote": " {count} document link(s) didn’t fetch and were left off the record.",
+        "visitsLineOne": "{count} past visit added to divers’ shop history.",
+        "visitsLineOther": "{count} past visits added to divers’ shop history.",
+        "visitsSkippedNote": " {count} were already imported and were left as they are, so re-running the same export doesn’t double anyone’s history.",
         "paymentHistoryLineOne": "{count} unverified payment / receipt source record added to Orders.",
         "paymentHistoryLineOther": "{count} unverified payment / receipt source records added to Orders.",
         "paymentHistorySkippedNote": " {count} payment-history rows were already present and were left as they are.",
         "notesLineOne": "{count} internal note imported to diver profiles.",
         "notesLineOther": "{count} internal notes imported to diver profiles.",
-        "receiptDocumentsFailedNote": " {count} receipt document link(s) didn't fetch and were left off the source record.",
+        "receiptDocumentsFailedNote": " {count} receipt document link(s) didn’t fetch and were left off the source record.",
         "seeRoster": "See the roster"
       }
     },
     "issues": {
-      "emailInvalid": "Email \"{email}\" doesn't look valid, so the diver was imported without one.",
+      "emailInvalid": "Email \"{email}\" doesn’t look valid, so the diver was imported without one.",
       "cardMarkedUnverified": "Your file marks this certification \"{status}\", so it was imported for staff review rather than as verified.",
-      "specialtyNotGated": "Specialty \"{specialty}\" isn't a specialty we gate on (deep, wreck, night, drysuit), so nothing was imported for it.",
+      "specialtyNotGated": "Specialty \"{specialty}\" isn’t a specialty we gate on (deep, wreck, night, drysuit), so nothing was imported for it.",
       "specialtyNoCardNumber": "Specialty \"{specialty}\" has no certification number on the row, so it was not imported.",
-      "specialtyImportedVerifiedOne": "Specialty certification imported as verified from your records. A dive that requires one waits until a staffer confirms they've seen it.",
-      "specialtyImportedVerifiedOther": "{count} specialty certifications imported as verified from your records. A dive that requires one waits until a staffer confirms they've seen it.",
+      "specialtyImportedVerifiedOne": "Specialty certification imported as verified from your records. A dive that requires one waits until a staffer confirms they’ve seen it.",
+      "specialtyImportedVerifiedOther": "{count} specialty certifications imported as verified from your records. A dive that requires one waits until a staffer confirms they’ve seen it.",
       "specialtyImportedPendingOne": "Specialty certification imported for staff review.",
       "specialtyImportedPendingOther": "{count} specialty certifications imported for staff review.",
       "agencyUnrecognized": "Certification agency unrecognized, so it was imported as “other”.",
-      "levelNamesSpecialty": "Certification \"{level}\" names a specialty, not a level, so the specialty column was used and no level was imported. Add that certification record in DiveDay if it's a separate one.",
+      "levelNamesSpecialty": "Certification \"{level}\" names a specialty, not a level, so the specialty column was used and no level was imported. Add that certification record in DiveDay if it’s a separate one.",
       "levelIsTechnical": "Certification \"{level}\" is a technical or overhead rating, not a recreational rung, so it was not imported. Record it by hand if your shop gates on it.",
-      "levelNotGated": "Certification \"{level}\" isn't a level we gate on, so the certification was not imported. Add the record in DiveDay if your shop needs to keep it.",
+      "levelNotGated": "Certification \"{level}\" isn’t a level we gate on, so the certification was not imported. Add the record in DiveDay if your shop needs to keep it.",
       "levelNoCardNumber": "Certification level \"{level}\" has no usable certification number, so the certification was not imported.",
       "certImportedVerified": "Certification imported as verified from your records.",
       "certImportedPending": "Certification imported for staff review.",
       "nitroxImportedVerified": "Nitrox certification imported as verified from your records. Fills give plain air until a staffer taps confirm.",
       "nitroxImportedPending": "Nitrox certification imported for staff review. A nitrox-required departure holds this diver until it is confirmed.",
       "nitroxNoCardNumber": "Nitrox marked on the source with no certification number. Add and verify the nitrox certification in DiveDay.",
-      "waiverDateInvalid": "Waiver accepted date \"{value}\" isn't a real calendar date (expected YYYY-MM-DD), so it was imported dated to today instead.",
+      "waiverDateInvalid": "Waiver accepted date \"{value}\" isn’t a real calendar date (expected YYYY-MM-DD), so it was imported dated to today instead.",
       "waiverImported": "Waiver imported as accepted: trusted from the prior shop, medical clearance included, and marked “imported”.",
-      "dobInvalid": "Date of birth \"{value}\" isn't a plausible calendar date (expected YYYY-MM-DD, 1900 or later, not in the future), so the diver was imported without it.",
-      "visitDateUnreadable": "Visit date \"{value}\" isn't a date we can read, so the diver imports without this visit.",
+      "dobInvalid": "Date of birth \"{value}\" isn’t a plausible calendar date (expected YYYY-MM-DD, 1900 or later, not in the future), so the diver was imported without it.",
+      "visitDateUnreadable": "Visit date \"{value}\" isn’t a date we can read, so the diver imports without this visit.",
       "visitNoReference": "Visit imported without a booking reference. A re-import matches on date, name, and amount, so two identical bookings on one day come in as one visit.",
       "visitNoDate": "This row names a past booking but carries no date, so the diver imports without this visit.",
-      "paymentHistoryDateUnreadable": "Payment history date \"{value}\" isn't a date we can read, so that source record won't import.",
-      "paymentHistoryNoDate": "This payment or receipt source row has no usable date, so it won't import.",
+      "paymentHistoryDateUnreadable": "Payment history date \"{value}\" isn’t a date we can read, so that source record won’t import.",
+      "paymentHistoryNoDate": "This payment or receipt source row has no usable date, so it won’t import.",
       "noName": "This row has no name and was skipped.",
-      "mergedDuplicate": "Same diver as row {row} ({email}), so this row's certifications, waiver, and past visit are added to them, with contact details left as the earlier row has them.",
-      "noEmailNewRecord": "This row has no email and was imported as a new record; a re-import can't match it to update."
+      "mergedDuplicate": "Same diver as row {row} ({email}), so this row’s certifications, waiver, and past visit are added to them, with contact details left as the earlier row has them.",
+      "noEmailNewRecord": "This row has no email and was imported as a new record; a re-import can’t match it to update."
     },
     "errors": {
-      "notOwnerOrManager": "Importing contacts is limited to the shop's owner or manager.",
+      "notOwnerOrManager": "Importing contacts is limited to the shop’s owner or manager.",
       "csvRequired": "Choose a CSV file to import.",
       "noImportableRows": "No rows could be imported. Every row was missing a name or duplicated.",
       "fileTooLarge": "The file is too large. The limit is {limitMb} MB.",

@@ -139,7 +139,7 @@ describe("every handle a notification carries is reachable by the erasure sweep"
       expect(
         surfaced,
         `${kind}.${field} is a way to reach a person and no subject handle returns it, so an ` +
-          "erased diver's queued row keeps it.",
+          "erased diver’s queued row keeps it.",
       ).toContain(value);
     }
   });

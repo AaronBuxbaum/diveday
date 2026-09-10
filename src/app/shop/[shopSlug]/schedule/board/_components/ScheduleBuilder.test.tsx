@@ -128,7 +128,7 @@ const COPY: BuilderCopy = {
   courseCertRequired: "{level} card required at enrollment",
   courseNoCardRequired: "No existing C-card required",
   descriptionLabel: "Description",
-  descriptionPlaceholder: "Sites, conditions, who it's for.",
+  descriptionPlaceholder: "Sites, conditions, who it’s for.",
   isPrivateLabel: "Private charter",
   selfGuidedLabel: "Self-guided dive",
   selfGuidedHint: "Buddy pairs go in without a guide.",
@@ -151,7 +151,7 @@ const COPY: BuilderCopy = {
   hoursBeforeSuffix: "hours before",
   repeatLegend: "Repeat",
   howOftenLabel: "How often",
-  doesntRepeat: "Doesn't repeat",
+  doesntRepeat: "Doesn’t repeat",
   everyWeek: "Every week",
   every2Weeks: "Every 2 weeks",
   every4Weeks: "Every 4 weeks",
@@ -2058,7 +2058,7 @@ describe("ScheduleBuilder week board", () => {
     const streamRow = screen
       .getAllByRole("listitem")
       .find((row) => within(row).queryByRole("button", { name: /^Move, copy, or remove/ }));
-    if (!streamRow) throw new Error("the stream row's actions control is missing");
+    if (!streamRow) throw new Error("the stream row’s actions control is missing");
     await user.click(
       within(streamRow).getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
     );
