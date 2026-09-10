@@ -3,20 +3,23 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
-import { DEFAULT_REGION, SES_REGION } from "../config/aws-regions.mjs";
+import { DEPLOY_REGIONS } from "../config/aws-regions.mjs";
 import { ensureAwsLogin } from "./aws-login.mjs";
 import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
-// Both regions the app deploys into, in one run. The email stack lives in its
-// own one (config/aws-regions.mjs, ADR 20260903-ses-lives-in-its-own-region)
-// and CDK bootstrap is per account *and* region, so bootstrapping only the
-// first leaves `cdk deploy` failing on `sts:AssumeRole` against a role name
-// ending in the region that was never bootstrapped -- which reads as a broken
-// trust policy, not as an unfinished prerequisite. Deduped, so setting
-// SES_REGION back to the main region makes this one bootstrap again.
-const regions = [
-  ...new Set([process.env.AWS_DEFAULT_REGION?.trim() || DEFAULT_REGION, SES_REGION]),
-];
+// Every region the app deploys into, in one run, read off the same registry the
+// stacks pin themselves to rather than off the shell. CDK bootstrap is per
+// account *and* region, so bootstrapping only the first leaves `cdk deploy`
+// failing on `sts:AssumeRole` against a role name ending in the region that was
+// never bootstrapped -- which reads as a broken trust policy, not as an
+// unfinished prerequisite. Deduped by the registry, so the day the uptime stack
+// is the only thing left outside the main region this bootstraps two, and the
+// day nothing is, one.
+//
+// Deliberately not `AWS_DEFAULT_REGION`: every stack now names its own region
+// (infra/bin/infra.ts), so a shell pointing somewhere else would bootstrap a
+// region no stack deploys to and skip one that does.
+const regions = DEPLOY_REGIONS;
 const awsEnvironment = { ...process.env };
 const cdkArguments = process.argv.slice(2);
 const confirmationIndex = cdkArguments.indexOf("--confirm-account");

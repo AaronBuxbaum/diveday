@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_REGION, MAIN_STACK_ID, STACK_IDS } from "../config/aws-regions.mjs";
+import { MAIN_STACK_ID, PRIMARY_REGION, STACK_IDS } from "../config/aws-regions.mjs";
 import { ensureAwsDeploymentLogin, ensureAwsLogin } from "./aws-login.mjs";
 import { selectDeployProfile } from "./aws-profile.mjs";
 import { runPostDeployWizard } from "./post-deploy-wizard.mjs";
@@ -44,8 +44,9 @@ const cdkArguments = process.argv
   .slice(2)
   .filter((argument) => argument !== "--no-wizard" && argument !== "--ci-unattended");
 
-// The app builds two stacks (ADR 20260903-ses-lives-in-its-own-region), and
-// `cdk deploy` with neither a stack id nor `--all` refuses to guess. A bare
+// The app builds three stacks (ADR 20260910-one-region-in-us-east-2, ADR
+// 20260910-one-region-in-us-east-2), and `cdk deploy` with neither a stack id nor
+// `--all` refuses to guess. A bare
 // `pnpm infra:deploy` has always meant "deploy the infrastructure", so it keeps
 // meaning that -- it just has to say so out loud now. The ids come from the
 // registry infra/bin/infra.ts builds the stacks from, so a rename cannot leave
@@ -57,7 +58,7 @@ const selectsStacks = cdkArguments.some(
 // `--parameters KEY=VALUE` with no `STACK:` qualifier is applied to *every*
 // stack being deployed, and CloudFormation rejects a parameter a template does
 // not declare -- so the documented rotation command, unqualified and aimed at
-// both stacks, would update diveday-infra and then fail diveday-email with
+// every stack, would update diveday-infra and then fail diveday-email with
 // "Parameters: [CredentialSerial] do not exist in the template", leaving the
 // operator to work out whether the rotation happened. It did. Refuse instead,
 // and name the fix: CredentialSerial belongs to DiveDay.
@@ -94,7 +95,7 @@ const deployEnvironment = { ...process.env };
 // authenticates that exact profile. Afterwards the wizard-installed deployer
 // profile becomes the default without ever returning to .env.local.
 if (!hasLegacyDeployerCredentials) selectDeployProfile(deployEnvironment);
-deployEnvironment.AWS_DEFAULT_REGION ||= DEFAULT_REGION;
+deployEnvironment.AWS_DEFAULT_REGION ||= PRIMARY_REGION;
 try {
   ensureAwsDeploymentLogin({
     environment: deployEnvironment,
@@ -138,12 +139,14 @@ if (!isCiDeploy) {
   delete syncEnvironment.AWS_SECRET_ACCESS_KEY;
   delete syncEnvironment.AWS_SESSION_TOKEN;
 }
-// The credentials secret's home is us-east-1, with the rest of the main stack
-// -- the email stack in us-east-2 (ADR 20260903-ses-lives-in-its-own-region)
-// holds nothing this read wants. A profile may override this, but a newly
+// The credentials secret's home is PRIMARY_REGION, with the rest of the main
+// stack -- neither the email stack nor the uptime stack holds anything this
+// read wants. Named rather than left to the shell for the same reason the
+// stacks name their own regions: a profile may override this, but a newly
 // configured administrator profile must not make the handoff fail with AWS
-// CLI's unhelpful NoRegion error.
-syncEnvironment.AWS_DEFAULT_REGION ||= DEFAULT_REGION;
+// CLI's unhelpful NoRegion error, and it must not read a secret out of the
+// region the estate used to be in.
+syncEnvironment.AWS_DEFAULT_REGION ||= PRIMARY_REGION;
 
 // A legacy deployer key may have completed the CDK deploy above, but it is
 // deliberately stripped from this administrator-only handoff on a workstation.

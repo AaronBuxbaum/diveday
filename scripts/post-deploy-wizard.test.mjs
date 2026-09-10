@@ -62,7 +62,7 @@ describe("post-deploy wizard", () => {
           "sesv2",
           "get-email-identity",
           // The identity is in the email stack's region, not the session's
-          // default one (ADR 20260903-ses-lives-in-its-own-region). Without
+          // default one (ADR 20260910-one-region-in-us-east-2). Without
           // this the call answers NotFoundException and the whole DNS step
           // reads as "the identity was never created".
           "--region",
@@ -277,7 +277,7 @@ describe("post-deploy wizard", () => {
           "sesv2",
           "get-email-identity",
           // The identity is in the email stack's region, not the session's
-          // default one (ADR 20260903-ses-lives-in-its-own-region). Without
+          // default one (ADR 20260910-one-region-in-us-east-2). Without
           // this the call answers NotFoundException and the whole DNS step
           // reads as "the identity was never created".
           "--region",

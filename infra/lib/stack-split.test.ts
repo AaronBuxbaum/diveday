@@ -3,26 +3,36 @@ import { Template } from "aws-cdk-lib/assertions";
 import { describe, expect, it } from "vitest";
 import { readEnvExample } from "./credentials-document";
 import { EmailStack } from "./email-stack";
+import { GlobalStack } from "./global-stack";
 import { InfraStack } from "./infra-stack";
 import {
   EMAIL_STACK_NAME,
+  GLOBAL_STACK_NAME,
   MAIN_STACK_NAME,
+  PRIMARY_REGION,
+  ROUTE53_METRICS_REGION,
   SES_CONFIGURATION_SET_NAME,
   SES_EVENT_TOPIC_NAME,
+  SES_INBOUND_TOPIC_NAME,
   SES_REGION,
 } from "./stack-config";
 
 /**
- * The app is two stacks in two regions since 2026-09-03 (ADR
- * 20260903-ses-lives-in-its-own-region), and every failure that split can cause
- * is quiet: mail sent through a credential naming a region with no identity, a
- * policy scoped to an ARN in the region the identity *used* to be in, a bounce
- * webhook rejecting events off a topic whose ARN the app was never told. None
- * of them raises anything at synth, at deploy, or in a green test run -- they
- * surface as mail that stops.
+ * The app is three stacks (ADR 20260910-one-region-in-us-east-2): `DiveDay` and
+ * `DiveDayEmail` in `PRIMARY_REGION`, and `DiveDayGlobal` pinned to us-east-1
+ * because Route 53 publishes its health-check metric nowhere else.
  *
- * So the properties pinned here are the joints between the two stacks, not the
- * contents of either. `ses-compliance.test.ts` covers what the identity itself
+ * Every failure a split like this can cause is quiet. Mail sent through a
+ * credential naming a region with no identity. A policy scoped to an ARN in the
+ * region the identity *used* to be in. A receipt rule set in a region where the
+ * recipient domain is not verified, receiving nothing. A bounce webhook
+ * rejecting events off a topic whose ARN the app was never told. An alarm
+ * reading a metric its region does not publish. None of them raises anything at
+ * synth, at deploy, or in a green test run -- they surface as mail that stops
+ * and pages that do not come.
+ *
+ * So the properties pinned here are the joints between the stacks, not the
+ * contents of any one. `ses-compliance.test.ts` covers what the identity itself
  * promises; `observability.test.ts` covers the alarms.
  */
 
@@ -32,13 +42,21 @@ function stacks() {
   const app = new cdk.App();
   const main = new InfraStack(app, "DiveDay", {
     stackName: MAIN_STACK_NAME,
-    env: { account, region: "us-east-1" },
+    env: { account, region: PRIMARY_REGION },
   });
   const email = new EmailStack(app, "DiveDayEmail", {
     stackName: EMAIL_STACK_NAME,
     env: { account, region: SES_REGION },
   });
-  return { main: Template.fromStack(main), email: Template.fromStack(email) };
+  const global = new GlobalStack(app, "DiveDayGlobal", {
+    stackName: GLOBAL_STACK_NAME,
+    env: { account, region: ROUTE53_METRICS_REGION },
+  });
+  return {
+    main: Template.fromStack(main),
+    email: Template.fromStack(email),
+    global: Template.fromStack(global),
+  };
 }
 
 /** Every `Resource` string in every policy statement of a template, flattened. */
@@ -46,7 +64,7 @@ function policyResources(template: Template): string {
   return JSON.stringify(Object.values(template.findResources("AWS::IAM::Policy")));
 }
 
-describe("the SES split", () => {
+describe("the stack split", () => {
   it("keeps every region-bound SES resource out of the main stack", () => {
     const { main } = stacks();
     // Not `toHaveLength(0)` on one type: the point is that *nothing* SES-shaped
@@ -57,6 +75,8 @@ describe("the SES split", () => {
       "AWS::SES::EmailIdentity",
       "AWS::SES::ConfigurationSet",
       "AWS::SES::ConfigurationSetEventDestination",
+      "AWS::SES::ReceiptRuleSet",
+      "AWS::SES::ReceiptRule",
     ]) {
       expect(Object.keys(main.findResources(type))).toEqual([]);
     }
@@ -67,6 +87,34 @@ describe("the SES split", () => {
       >,
     ).map((topic) => topic.Properties?.TopicName);
     expect(topics).not.toContain(SES_EVENT_TOPIC_NAME);
+    expect(topics).not.toContain(SES_INBOUND_TOPIC_NAME);
+  });
+
+  it("receives divers' replies beside the identity that makes receiving legal", () => {
+    const { email } = stacks();
+    // SES receives only for a domain verified in the *receiving* region. The
+    // rule set was in the main stack until the estate moved, which was correct
+    // only while the two regions were the same one; left there it would deploy
+    // cleanly and receive nothing, with no error anywhere -- every diver's
+    // reply bouncing at their own mail server.
+    email.resourceCountIs("AWS::SES::ReceiptRuleSet", 1);
+    email.hasResourceProperties("AWS::SNS::Topic", { TopicName: SES_INBOUND_TOPIC_NAME });
+    email.resourceCountIs("AWS::S3::Bucket", 1);
+  });
+
+  it("keeps the health-check alarms in the region that publishes their metric", () => {
+    const { main, global } = stacks();
+    // Route 53 publishes AWS/Route53 HealthCheckStatus in us-east-1 only, and
+    // the uptime alarms are the one place in this estate that treats missing
+    // data as breaching. In any other region they would not go quiet -- they
+    // would page continuously about an outage that is not happening.
+    expect(ROUTE53_METRICS_REGION).toBe("us-east-1");
+    expect(Object.keys(main.findResources("AWS::Route53::HealthCheck"))).toEqual([]);
+    expect(Object.keys(global.findResources("AWS::Route53::HealthCheck")).length).toBeGreaterThan(
+      0,
+    );
+    const mainAlarms = JSON.stringify(main.findResources("AWS::CloudWatch::Alarm"));
+    expect(mainAlarms).not.toContain("AWS/Route53");
   });
 
   it("creates them in the SES region instead", () => {
@@ -108,7 +156,7 @@ describe("the SES split", () => {
     }
   });
 
-  it("lets the deploy identities reach both regions", () => {
+  it("lets the deploy identities reach every region a stack is in", () => {
     const { main } = stacks();
     const resources = JSON.stringify([
       ...Object.values(main.findResources("AWS::IAM::Policy")),
@@ -120,15 +168,19 @@ describe("the SES split", () => {
     // grant.
     expect(resources).toContain(`cdk-hnb659fds-deploy-role-`);
     expect(resources).toContain(`-${SES_REGION}`);
+    expect(resources).toContain(`-${ROUTE53_METRICS_REGION}`);
     expect(resources).toContain(
       `:cloudformation:${SES_REGION}:${account}:stack/${EMAIL_STACK_NAME}/*`,
     );
+    expect(resources).toContain(
+      `:cloudformation:${ROUTE53_METRICS_REGION}:${account}:stack/${GLOBAL_STACK_NAME}/*`,
+    );
 
-    // The two CI roles reach the second region's stack *by name*. Widening
-    // either to `stack/*/*` while adding the region would hand a role assumable
-    // from any pull request in this repo every CloudFormation stack in the
-    // account, which is the one thing their split exists to prevent -- and it
-    // is exactly the shortcut a second region invites.
+    // The two CI roles reach every stack *by name*. Widening either to
+    // `stack/*/*` while adding a region would hand a role assumable from any
+    // pull request in this repo every CloudFormation stack in the account,
+    // which is the one thing their split exists to prevent -- and it is exactly
+    // the shortcut a third stack invites.
     const ciStatements = Object.values(
       main.findResources("AWS::IAM::Policy") as Record<
         string,
@@ -144,6 +196,7 @@ describe("the SES split", () => {
       const scoped = JSON.stringify(statement.Resource);
       expect(scoped).toContain(`stack/${MAIN_STACK_NAME}/*`);
       expect(scoped).toContain(`stack/${EMAIL_STACK_NAME}/*`);
+      expect(scoped).toContain(`stack/${GLOBAL_STACK_NAME}/*`);
       expect(scoped).not.toContain("stack/*/*");
     }
   });

@@ -62,15 +62,23 @@ made — DiveDay records the issue without spending a send. The demo seed intent
 
 ### Which region
 
-**`us-east-2`.** The sandbox is per region and AWS refused the us-east-1 request, so the identity,
-the configuration set, the event topic and the two reputation alarms live in their own stack,
-`diveday-email`, in their own region
-(ADR [20260903-ses-lives-in-its-own-region](../architecture/decisions/20260903-ses-lives-in-its-own-region.md)).
-Everything else — the `diveday-ses-sender` IAM user, its key, and the credentials document — stays in
-`diveday-infra`. One constant decides it, `SES_REGION` in `config/aws-regions.mjs`, and the intent is
-to come back to us-east-1 once there is distance from the refusal.
+**`us-east-2`**, along with the rest of the estate. The sandbox is per region and AWS refused the
+us-east-1 request, so mail moved; the rest of the estate followed rather than leaving a border down
+the middle of it
+(ADR [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)).
 
-Practically, that means **every `aws ses*` and SES-topic `aws sns` command on this page wants
+Mail still has its own stack, `diveday-email`, holding everything CloudFormation can only create in
+the sending region: the identity, the configuration set, the event topic, the two reputation alarms,
+and the inbound receipt rule set with its bucket and topic. **Receiving is why the rule set is
+there** — SES receives only for an identity verified in the *receiving* region, so a rule set one
+region over deploys cleanly and receives nothing at all.
+
+Everything else — the `diveday-ses-sender` IAM user, its key, and the credentials document — stays in
+`diveday-infra`. One constant decides the region, `SES_REGION` in `config/aws-regions.mjs`, and it
+stays a separate constant from `PRIMARY_REGION` on purpose: mail is the one part of this estate whose
+region AWS gets a vote in, and it has already been refused once.
+
+Practically, **every `aws ses*` and SES-topic `aws sns` command on this page wants
 `--region us-east-2`**, and the SES console has to be switched to it. A call to the wrong region does
 not say "wrong region" — it says the identity does not exist.
 
@@ -290,13 +298,14 @@ In order. Stop at the first that works.
 2. **Answer the follow-up inside 48 hours.** The reviewer's questions are the standard set in the
    table after the case text. A case that goes quiet is closed as refused.
 3. **A second region — already done.** The sandbox is per region, and a refusal in one carries no
-   automatic weight in another. Mail moved to **us-east-2** on 2026-09-03
-   (ADR [20260903-ses-lives-in-its-own-region](../architecture/decisions/20260903-ses-lives-in-its-own-region.md)),
-   so the case below is filed there and the identity in us-east-1 is gone. Moving again — including
-   back to us-east-1, which is the intent once there is some distance from the refusal — is
-   `SES_REGION` in `config/aws-regions.mjs`, a deploy of both stacks, the DKIM CNAMEs and the MAIL
-   FROM MX re-added from the new outputs (the MX is a delete-then-add: SES refuses a subdomain with
-   two), and a fresh request in the new region.
+   automatic weight in another. Mail moved to **us-east-2**
+   (ADR [20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)),
+   so the case below is filed there and nothing of DiveDay's is left in us-east-1 but the uptime
+   alarms. Moving again is `SES_REGION` in `config/aws-regions.mjs`, a deploy, the DKIM CNAMEs and
+   both MX records re-added from the new outputs (each MX is a delete-then-add: SES refuses a
+   subdomain with two), the receipt rule set activated in the new region, and a fresh request there.
+   Going back to us-east-1 is no longer the plan — it would put a region border back through an
+   estate that no longer has one ([region-migration.md](region-migration.md)).
 4. **A support plan.** Developer Support ($29/month, cancel after) gives a named human on the case
    who can tell you which row failed; Business Support adds chat. Neither changes the reviewer, but
    both change "no reason given". Take this before a third attempt, not after.

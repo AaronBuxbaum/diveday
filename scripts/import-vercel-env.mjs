@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PRIMARY_REGION } from "../config/aws-regions.mjs";
 import { ensureAwsLogin } from "./aws-login.mjs";
 import { dotenvMap } from "./dotenv.mjs";
 import { isTimeout, readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
@@ -99,7 +100,7 @@ if (!isCiDeploy) {
   delete adminEnvironment.AWS_SECRET_ACCESS_KEY;
   delete adminEnvironment.AWS_SESSION_TOKEN;
 }
-adminEnvironment.AWS_DEFAULT_REGION ||= "us-east-1";
+adminEnvironment.AWS_DEFAULT_REGION ||= PRIMARY_REGION;
 
 try {
   ensureAwsLogin({ environment: adminEnvironment, interactive: !isCiDeploy });

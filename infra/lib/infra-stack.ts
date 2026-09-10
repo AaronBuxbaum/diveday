@@ -12,13 +12,10 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as destinations from "aws-cdk-lib/aws-logs-destinations";
-import * as route53 from "aws-cdk-lib/aws-route53";
 import * as rum from "aws-cdk-lib/aws-rum";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as scheduler from "aws-cdk-lib/aws-scheduler";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import * as ses from "aws-cdk-lib/aws-ses";
-import * as sesActions from "aws-cdk-lib/aws-ses-actions";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 import * as cr from "aws-cdk-lib/custom-resources";
@@ -40,18 +37,22 @@ import {
   mutationDurationFilterPattern,
   queryConstructIdFor,
   SAVED_LOG_QUERIES,
-  UPTIME_TARGETS,
-  uptimeAlarmNameFor,
   WEB_VITAL_SIGNALS,
   webVitalAlarmNameFor,
   webVitalFilterPatternFor,
 } from "./observability";
 import {
   alertEmailFrom,
+  DEPLOY_REGIONS,
   EMAIL_STACK_NAME,
+  GLOBAL_STACK_NAME,
+  inboundMailBucketNameFrom,
   MAIN_STACK_NAME,
+  PRIMARY_REGION,
+  ROUTE53_METRICS_REGION,
   SES_CONFIGURATION_SET_NAME,
   SES_EVENT_TOPIC_NAME,
+  SES_INBOUND_TOPIC_NAME,
   SES_REGION,
   sesEmailDomainFrom,
   webhookHostFrom,
@@ -93,12 +94,6 @@ const GITHUB_DEPLOY_ENVIRONMENT = "infra-deploy";
 // credentials document. `iam.User.userName` is a token there, not a string, so
 // interpolating it would print `${Token[...]}` where a name belongs.
 const SES_SENDER_USER_NAME = "diveday-ses-sender";
-/**
- * How long SES's copy of a received message stays in the inbound bucket. The
- * app copies what it keeps into `inbound_messages` on receipt; this is the
- * window in which a failed webhook delivery can still be replayed by hand.
- */
-const INBOUND_MAIL_RETENTION_DAYS = 30;
 const BACKUP_UPLOADER_USER_NAME = "diveday-backup-uploader";
 const MEDIA_UPLOADER_USER_NAME = "diveday-media-uploader";
 
@@ -439,15 +434,16 @@ export class InfraStack extends cdk.Stack {
       this.node.tryGetContext("@aws-cdk/core:bootstrapQualifier") ??
       cdk.DefaultStackSynthesizer.DEFAULT_QUALIFIER;
     //
-    // Two regions, because a deploy is now two stacks (S8, ADR
-    // 20260903-ses-lives-in-its-own-region) and a bootstrap role's name ends in
-    // the region it was bootstrapped into. An identity holding only this
-    // region's four cannot deploy the email stack at all, and the failure is
-    // `sts:AssumeRole` on `cdk-<qualifier>-deploy-role-<account>-us-east-2`,
-    // which reads as a bad trust policy rather than as a missing grant. Deduped,
-    // so setting SES_REGION back to this stack's own region leaves these lists
-    // as they were rather than doubling every entry.
-    const deploymentRegions = [...new Set([this.region, SES_REGION])];
+    // Every region a stack deploys into, not just this one, because a bootstrap
+    // role's name ends in the region it was bootstrapped into. An identity
+    // holding only this region's four cannot deploy the uptime stack at all,
+    // and the failure is `sts:AssumeRole` on
+    // `cdk-<qualifier>-deploy-role-<account>-us-east-1`, which reads as a bad
+    // trust policy rather than as a missing grant. Read off the registry the
+    // stacks pin themselves to (config/aws-regions.mjs) and already deduped
+    // there, so the day everything shares one region this list is one entry
+    // rather than the same entry three times.
+    const deploymentRegions = DEPLOY_REGIONS;
     const bootstrapRoleArns = (roleName: string) =>
       deploymentRegions.map(
         (region) =>
@@ -639,8 +635,7 @@ export class InfraStack extends cdk.Stack {
     // 8. The app's SES credential. Everything else about SES -- the verified
     // identity, the configuration set and its event destination, the SNS topic
     // the events arrive on, and the two reputation alarms -- moved to its own
-    // stack in its own region on 2026-09-03 (infra/lib/email-stack.ts, ADR
-    // 20260903-ses-lives-in-its-own-region). The sandbox is per region and AWS
+    // stack in its own region on 2026-09-03 (infra/lib/email-stack.ts, ADR 20260910-one-region-in-us-east-2). The sandbox is per region and AWS
     // refused the us-east-1 production-access request; CloudFormation is
     // regional, so moving the mail means a second stack.
     //
@@ -700,93 +695,41 @@ export class InfraStack extends cdk.Stack {
     envValues.SES_AWS_ACCESS_KEY_ID = sesSenderKey.id;
     envValues.SES_AWS_SECRET_ACCESS_KEY = sesSenderKey.secret;
 
-    // 8b. Mail divers send back (ADR 20260907-two-way-inbox). Every email the
-    // app sends carries `Reply-To: reply+<shop token>@<inbound domain>`; SES
-    // receives for that domain, stores each message in the bucket below, and
-    // publishes a `Received` notification to the topic, which delivers it to
-    // /api/webhooks/email-inbound inside the same signed SNS envelope the
-    // delivery webhook already verifies.
+    // 8b. Mail divers send back (ADR 20260907-two-way-inbox) is the email
+    // stack's, not this one's: SES receives only for an identity verified in
+    // the **receiving** region, so the rule set has to sit beside the identity
+    // (ADR 20260910-one-region-in-us-east-2). What stays here is the half that is
+    // global or belongs in the credentials document.
     //
-    // The receiving domain is a *child of the verified sending identity*, on
-    // purpose: SES receives for a verified domain and every subdomain of it,
-    // so this needs no second identity and no second DKIM set -- one MX record
-    // (S17) and an active rule set, both of which are account state a stack
-    // cannot flip.
-    //
-    // The rule set is created here and **not activated**: SES allows one
-    // active rule set per region, activation is a region-wide switch with no
-    // CloudFormation resource behind it, and a stack that flipped it on every
-    // deploy would silently deactivate whatever else the account was
-    // receiving with. It is a manual action, and the runbook says so.
-    const sesInboundDomain =
-      this.node.tryGetContext("sesInboundDomain") || `inbound.${sesEmailDomain}`;
-    const inboundMailBucketName =
-      this.node.tryGetContext("inboundMailBucketName") || "diveday-inbound-mail";
-    const inboundMailBucket = new s3.Bucket(this, "SesInboundMailBucket", {
-      bucketName: inboundMailBucketName,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      encryption: s3.BucketEncryption.S3_MANAGED,
-      enforceSSL: true,
-      // Unversioned for the reason the dump bucket is: a lifecycle expiry on
-      // a versioned bucket writes a marker and keeps the bytes. Every object
-      // is a diver's own words plus their address; the app copies what it
-      // keeps into `inbound_messages` within seconds of the object landing,
-      // and the retention window there is the one that matters.
-      versioned: false,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-      lifecycleRules: [
-        {
-          id: "expire-inbound-mail",
-          enabled: true,
-          expiration: cdk.Duration.days(INBOUND_MAIL_RETENTION_DAYS),
-        },
-      ],
+    // The sender reads what SES received: one user, one more grant, no fourth
+    // credential to rotate. Read only, this bucket only. Scoped by an ARN built
+    // from the name rather than by `grantRead` on the construct -- the bucket
+    // is in another stack, and an S3 ARN carries no region, so the two
+    // constants are the whole joint.
+    const inboundMailBucketArn = this.formatArn({
+      service: "s3",
+      region: "",
+      account: "",
+      resource: inboundMailBucketNameFrom(this),
     });
-
-    const sesInboundNotifications = new sns.Topic(this, "SesInboundMailNotifications", {
-      topicName: "diveday-ses-inbound-mail",
+    sesSenderUser.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:GetObject"],
+        resources: [`${inboundMailBucketArn}/*`],
+      }),
+    );
+    sesSenderUser.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:ListBucket", "s3:GetBucketLocation"],
+        resources: [inboundMailBucketArn],
+      }),
+    );
+    envValues.EMAIL_INBOUND_SNS_TOPIC_ARN = this.formatArn({
+      service: "sns",
+      region: SES_REGION,
+      resource: SES_INBOUND_TOPIC_NAME,
     });
-    sesInboundNotifications.addSubscription(webhookSubscription("/api/webhooks/email-inbound"));
-
-    new ses.ReceiptRuleSet(this, "SesInboundRuleSet", {
-      receiptRuleSetName: "diveday-inbound",
-      rules: [
-        {
-          receiptRuleName: "diveday-inbound-to-s3",
-          recipients: [sesInboundDomain],
-          // SES's own spam and virus scan, whose verdicts ride in the
-          // notification; the webhook refuses a virus and keeps a spam verdict.
-          scanEnabled: true,
-          tlsPolicy: ses.TlsPolicy.OPTIONAL,
-          actions: [
-            new sesActions.S3({
-              bucket: inboundMailBucket,
-              objectKeyPrefix: "mail/",
-              topic: sesInboundNotifications,
-            }),
-          ],
-        },
-      ],
-    });
-
-    // The SES sender reads what SES received: one user, one more grant, no
-    // fourth credential to rotate. Read only, this bucket only.
-    inboundMailBucket.grantRead(sesSenderUser);
-    envValues.EMAIL_INBOUND_SNS_TOPIC_ARN = sesInboundNotifications.topicArn;
-    envValues.EMAIL_INBOUND_S3_BUCKET = inboundMailBucket.bucketName;
-
-    new cdk.CfnOutput(this, "SesInboundMailTopicArn", {
-      value: sesInboundNotifications.topicArn,
-      description: `SNS topic for mail received at ${sesInboundDomain}. ${webhookHost}/api/webhooks/email-inbound is subscribed by this stack; set this ARN as EMAIL_INBOUND_SNS_TOPIC_ARN in the app.`,
-    });
-    new cdk.CfnOutput(this, "SesInboundMailBucketName", {
-      value: inboundMailBucket.bucketName,
-      description: `Where SES stores received mail (objects expire after ${INBOUND_MAIL_RETENTION_DAYS} days). Set as EMAIL_INBOUND_S3_BUCKET in the app.`,
-    });
-    new cdk.CfnOutput(this, "SesInboundMxRecord", {
-      value: `MX ${sesInboundDomain} -> 10 inbound-smtp.${this.region}.amazonaws.com`,
-      description: `DNS record to add for the inbound domain ${sesInboundDomain}, in Vercel DNS, and then activate the diveday-inbound receipt rule set (S17).`,
-    });
+    envValues.EMAIL_INBOUND_S3_BUCKET = inboundMailBucketNameFrom(this);
 
     // 9. SNS direct-to-phone SMS sending - see ADR 20260802-sns-sms-adapter.
     // This is a distinct SNS use from the email stack's SesEmailEventNotifications
@@ -2090,7 +2033,7 @@ exports.handler = async (event) => {
           "aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version --region us-east-2",
           "aws s3control get-public-access-block --account-id <12-digit-account-id> --query PublicAccessBlockConfiguration",
         ],
-        note: "The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential. The wrapper bootstraps both regions in one run because the email stack lives in us-east-2 (ADR 20260903-ses-lives-in-its-own-region); a region left unbootstrapped surfaces as an sts:AssumeRole failure on a role name ending in it, which reads as a broken trust policy rather than an unfinished prerequisite.",
+        note: "The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential. The wrapper bootstraps both regions in one run because the email stack lives in us-east-2 (ADR 20260910-one-region-in-us-east-2); a region left unbootstrapped surfaces as an sts:AssumeRole failure on a role name ending in it, which reads as a broken trust policy rather than an unfinished prerequisite.",
       },
       {
         id: "cloudfront-account-verification",
@@ -2406,7 +2349,7 @@ exports.handler = async (event) => {
         title: "Request SES production access",
         category: "AWS account",
         when: `once per region -- currently us-east-2, before sending to anyone who has not verified their address`,
-        why: "A human-reviewed AWS Support case. There is no API, and the sandbox is per region -- which is why the identity moved regions at all: us-east-1 refused, and a refusal in one region carries no weight in another (ADR 20260903-ses-lives-in-its-own-region).",
+        why: "A human-reviewed AWS Support case. There is no API, and the sandbox is per region -- which is why the identity moved regions at all: us-east-1 refused, and a refusal in one region carries no weight in another (ADR 20260910-one-region-in-us-east-2).",
         run: [
           "Read docs/engineering/ses-email-runbook.md, 'Production access: the second request', and paste its case text.",
           `SES console, switched to us-east-2 -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.`,
@@ -2422,8 +2365,8 @@ exports.handler = async (event) => {
         id: "sns-sms-account-limits",
         title: "Leave the SMS sandbox, raise the spend limit, register an origination identity",
         category: "AWS account",
-        when: "once, before sending SMS to a diver",
-        why: "All three are account-level SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of them -- it sets delivery-status logging and nothing else.",
+        when: "once per region, before sending SMS to a diver -- start it early, the vetting is measured in weeks",
+        why: "All three are account-and-region SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers that takes weeks, not days. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of them -- it sets delivery-status logging and nothing else. Moving the estate to another region means doing all three again there, which is most of the reason a region move is a decision rather than a chore (docs/engineering/region-migration.md).",
         run: [
           "SNS console -> Text messaging (SMS) -> Exit SMS sandbox (a Support case).",
           "Service Quotas -> Amazon SNS -> Account spend threshold for SMS (default $1/month).",
@@ -2450,6 +2393,25 @@ exports.handler = async (event) => {
         note: "Deleting a bucket to make a deploy go green deletes production backups. That is the trade RETAIN exists to force; do not take it by reflex. The dump bucket is the one that can restore a login, so it is the worse of the two to lose.",
       },
       {
+        id: "region-move-teardown",
+        title: "Empty and delete the old region's global-named resources",
+        category: "AWS account",
+        when: "only when PRIMARY_REGION changes, before the first deploy into the new one",
+        why: "S3 bucket names and IAM user names are global. A stack in the new region asks CloudFormation to create diveday-media, diveday-backups, diveday-database-dumps, diveday-vrt, diveday-inbound-mail and six IAM users that the old region's stack still owns, and every one of them fails -- BucketAlreadyOwnedByYou and EntityAlreadyExists -- part-way through a deploy. Deleting the old stack is not enough on its own: three of those buckets carry RemovalPolicy.RETAIN, so CloudFormation deliberately leaves them behind for a human to decide about.",
+        run: [
+          "Read docs/engineering/region-migration.md first: it is the ordered version of this, and it is the document that says which buckets hold something worth keeping.",
+          "aws cloudformation delete-stack --stack-name diveday-infra --region <old region>, and wait for it.",
+          "For each retained bucket: aws s3 rm s3://<bucket> --recursive --region <old region> && aws s3api delete-bucket --bucket <bucket> --region <old region>.",
+        ],
+        produces:
+          "A new region that can create the estate under the names the app and its documents already use.",
+        verify: [
+          "aws s3api head-bucket --bucket diveday-media -- a 404 means the name is free.",
+          "aws iam get-user --user-name diveday-ses-sender -- NoSuchEntity means the name is free.",
+        ],
+        note: "This is destructive and it is meant to be: it is the step that makes a region move a teardown rather than a cutover. It is cheap only while the estate is pre-pilot (H-49). Once a shop has photos in diveday-media or a bundle in diveday-backups, this step is a data migration and this action is the wrong instruction.",
+      },
+      {
         id: "verify-webhook-subscriptions",
         title: "Confirm both SNS webhook subscriptions",
         category: "Verification",
@@ -2468,17 +2430,18 @@ exports.handler = async (event) => {
         id: "confirm-observability-alarms",
         title: "Confirm the observability alarm subscription email",
         category: "AWS account",
-        when: "twice per alert address -- once per alarm topic -- and again if the address changes",
-        why: "An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13) and both SES reputation alarms (infra/lib/email-stack.ts) transition correctly and notify nobody, which is the failure mode the alarms exist to prevent.",
+        when: "three times per alert address -- once per alarm topic -- and again if the address changes",
+        why: "An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13), both SES reputation alarms (infra/lib/email-stack.ts) and both uptime alarms (infra/lib/global-stack.ts) transition correctly and notify nobody, which is the failure mode the alarms exist to prevent.",
         run: [
-          "Open both 'AWS Notification - Subscription Confirmation' mails sent to the alert address and click Confirm subscription in each.",
+          "Open all three 'AWS Notification - Subscription Confirmation' mails sent to the alert address and click Confirm subscription in each.",
           "aws sns list-subscriptions-by-topic --topic-arn <ObservabilityAlarmTopicArn>",
-          `aws sns list-subscriptions-by-topic --region us-east-2 --topic-arn <SesAlarmTopicArn>`,
+          `aws sns list-subscriptions-by-topic --region ${SES_REGION} --topic-arn <SesAlarmTopicArn>`,
+          `aws sns list-subscriptions-by-topic --region ${ROUTE53_METRICS_REGION} --topic-arn <UptimeAlarmTopicArn>`,
         ],
-        verify: ['Both list a real SubscriptionArn, not "PendingConfirmation".'],
+        verify: ['All three list a real SubscriptionArn, not "PendingConfirmation".'],
         onFailure:
           "The confirmation link expires after three days. Re-issue it with `aws sns subscribe --topic-arn <ObservabilityAlarmTopicArn> --protocol email --notification-endpoint <address>`, which mails a fresh one without touching the stack.",
-        note: `The alert address is alerts@dive.day unless the stack was deployed with --context alertEmail=...; the CostAlertEmail output names the resolved one. Two topics rather than one because the two SES reputation alarms read AWS/SES metrics published in us-east-2 and a CloudWatch alarm cannot notify a topic in another region -- the second mail is the email stack's SesAlarms.`,
+        note: `The alert address is alerts@dive.day unless the stack was deployed with --context alertEmail=...; the CostAlertEmail output names the resolved one. Three topics rather than one because a CloudWatch alarm can only notify an SNS topic in its own region: the SES reputation alarms read AWS/SES metrics published in ${SES_REGION}, and the uptime alarms read AWS/Route53 metrics, which exist in ${ROUTE53_METRICS_REGION} and nowhere else (ADR 20260910-one-region-in-us-east-2).`,
       },
       {
         id: "verify-sms-delivery-status",
@@ -2615,8 +2578,9 @@ exports.handler = async (event) => {
     // CI role reach every CloudFormation stack in the account, and the whole
     // point of these two roles is that they cannot.
     const cdkStackArns = [
-      `arn:${this.partition}:cloudformation:${this.region}:${this.account}:stack/${MAIN_STACK_NAME}/*`,
+      `arn:${this.partition}:cloudformation:${PRIMARY_REGION}:${this.account}:stack/${MAIN_STACK_NAME}/*`,
       `arn:${this.partition}:cloudformation:${SES_REGION}:${this.account}:stack/${EMAIL_STACK_NAME}/*`,
+      `arn:${this.partition}:cloudformation:${ROUTE53_METRICS_REGION}:${this.account}:stack/${GLOBAL_STACK_NAME}/*`,
     ];
     const denyReadingAnySecret = () =>
       new iam.PolicyStatement({
@@ -3562,82 +3526,11 @@ exports.handler = async () => {
         "Daily cleaner for stale visual regression snapshots. Preserves the active main baseline. Invoke by hand to test: aws lambda invoke --function-name diveday-visual-bucket-pruner /dev/stdout",
     });
 
-    // 22. The external uptime monitor -- the one check that runs outside the
-    // thing it checks. See ADR 20260907-external-uptime-monitor and the
-    // `UPTIME_TARGETS` header in infra/lib/observability.ts for what it costs
-    // and why the body is matched as well as the status code.
-    //
-    // Everything in S13 reads a line the app wrote, so all of it goes quiet in
-    // the one failure it would most want to report. Route 53's checker fleet
-    // polls the public URL from several AWS regions that are not this account,
-    // and publishes `HealthCheckStatus` to CloudWatch whether the app is
-    // running or not.
-    //
-    // **The alarm has to live in us-east-1**, and does: Route 53 is a global
-    // service and publishes its health-check metrics only there. This stack is
-    // deployed to us-east-1 (docs/engineering/infrastructure-runbook.md S1), so
-    // the alarm below is an ordinary same-region alarm. A future move of this
-    // stack to another region takes this section with it -- the alarm would
-    // find no metric and would sit in INSUFFICIENT_DATA, which
-    // `treatMissingData` below deliberately renders as breaching rather than as
-    // silence.
-    const uptimeHost = new URL(webhookHost).hostname;
-    for (const target of UPTIME_TARGETS) {
-      const healthCheck = new route53.CfnHealthCheck(this, `${target.constructId}HealthCheck`, {
-        healthCheckConfig: {
-          // `HTTPS_STR_MATCH`, not `HTTPS`: a 200 proves something answered,
-          // not that DiveDay did. The literal is the route's own verdict.
-          type: "HTTPS_STR_MATCH",
-          fullyQualifiedDomainName: uptimeHost,
-          port: 443,
-          resourcePath: target.resourcePath,
-          searchString: target.searchString,
-          requestInterval: target.requestIntervalSeconds,
-          failureThreshold: target.failureThreshold,
-          // The app is served from a shared host behind SNI; without this the
-          // checker's TLS handshake reaches the wrong certificate.
-          enableSni: true,
-          // A second optional feature would be a third dollar a month, and
-          // latency from AWS's checker regions is not how this app learns it is
-          // slow -- CloudWatch RUM and the web-vital signals are.
-          measureLatency: false,
-        },
-        healthCheckTags: [{ key: "Name", value: uptimeAlarmNameFor(target) }],
-      });
-
-      new cloudwatch.Alarm(this, `${target.constructId}UptimeAlarm`, {
-        alarmName: uptimeAlarmNameFor(target),
-        alarmDescription: `${target.title}. ${target.response}`,
-        metric: new cloudwatch.Metric({
-          namespace: "AWS/Route53",
-          metricName: "HealthCheckStatus",
-          dimensionsMap: { HealthCheckId: healthCheck.attrHealthCheckId },
-          // `Minimum`, not `Average`: the metric is 1 or 0 per minute, and an
-          // average would let a recovering minute paper over a dead one.
-          statistic: "Minimum",
-          period: cdk.Duration.minutes(1),
-        }),
-        threshold: 1,
-        comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
-        // Two minutes on top of Route 53's own three consecutive failed rounds:
-        // about four minutes from "the site went away" to an email, which is
-        // faster than a shop noticing and slow enough that a deploy's own
-        // rollover does not page anyone.
-        evaluationPeriods: 2,
-        // **Breaching, and this is the one alarm in the stack where it is.**
-        // Every other alarm treats missing data as healthy because a quiet app
-        // is a healthy app. Here missing data means the *monitor* stopped
-        // reporting, and an external monitor that has gone quiet is
-        // indistinguishable from the outage it exists to catch. A false page
-        // when Route 53 has an off day is the cheaper mistake.
-        treatMissingData: cloudwatch.TreatMissingData.BREACHING,
-      }).addAlarmAction(alarmAction);
-
-      new cdk.CfnOutput(this, `${target.constructId}HealthCheckId`, {
-        value: healthCheck.attrHealthCheckId,
-        description: `Route 53 health check polling https://${uptimeHost}${target.resourcePath} every ${target.requestIntervalSeconds}s from outside this account. Console: Route 53 -> Health checks. Test the alert path once by inverting it (see docs/engineering/incident-response-runbook.md).`,
-      });
-    }
+    // 22 was the external uptime monitor. It is now a stack of its own,
+    // infra/lib/global-stack.ts, pinned to us-east-1 -- Route 53 publishes
+    // HealthCheckStatus there and nowhere else, and this stack's region is a
+    // constant that is meant to be able to move (config/aws-regions.mjs,
+    // docs/engineering/region-migration.md).
   }
 
   /**

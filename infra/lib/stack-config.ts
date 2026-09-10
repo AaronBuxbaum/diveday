@@ -1,21 +1,22 @@
 import type { Construct } from "constructs";
 
 /**
- * The handful of values two stacks have to agree on, resolved the same way in
- * both.
+ * The handful of values the three stacks have to agree on, resolved the same
+ * way in each.
  *
- * `infra/bin/infra.ts` builds two stacks now (ADR 20260903-ses-lives-in-its-own
- * -region): `DiveDay` in whatever region the operator deploys to, and
- * `DiveDayEmail` pinned to {@link SES_REGION}. They are deliberately joined by
+ * `infra/bin/infra.ts` builds three (ADR 20260910-one-region-in-us-east-2,
+ * ADR 20260910-one-region-in-us-east-2): `DiveDay` pinned to
+ * {@link PRIMARY_REGION}, `DiveDayEmail` to {@link SES_REGION}, and
+ * `DiveDayGlobal` to {@link ROUTE53_METRICS_REGION}. They are deliberately joined by
  * *nothing* at synth -- no cross-stack reference, no cross-region SSM shuttle --
  * because the main stack's half of SES is an IAM user whose policy needs the
  * identity and configuration-set ARNs, and CDK's `crossRegionReferences`
  * machinery would have parked those (and, worse, anything read back the other
  * way) in SSM parameters to get them across the border.
  *
- * The price of that is this file: every name either stack builds an ARN from is
- * a constant here, and every context knob is read through one helper, so the
- * two stacks cannot drift into naming different things.
+ * The price of that is this file: every name a stack builds an ARN from is a
+ * constant here, and every context knob is read through one helper, so the
+ * three cannot drift into naming different things.
  */
 
 /**
@@ -26,10 +27,15 @@ import type { Construct } from "constructs";
  * is in us-east-2 and what moving it back involves.
  */
 export {
+  DEPLOY_REGIONS,
   EMAIL_STACK_ID,
   EMAIL_STACK_NAME,
+  GLOBAL_STACK_ID,
+  GLOBAL_STACK_NAME,
   MAIN_STACK_ID,
   MAIN_STACK_NAME,
+  PRIMARY_REGION,
+  ROUTE53_METRICS_REGION,
   SES_REGION,
 } from "../../config/aws-regions.mjs";
 
@@ -45,6 +51,35 @@ export const SES_CONFIGURATION_SET_NAME = "diveday-transactional-email";
 export const SES_EVENT_TOPIC_NAME = "diveday-ses-email-events";
 
 /**
+ * Where SES stores the mail divers send back, and the topic that announces each
+ * object. Both are the email stack's (ADR 20260910-one-region-in-us-east-2): SES
+ * receives only for an identity verified **in the receiving region**, so the
+ * rule set has to sit beside the identity or it receives nothing at all. The
+ * main stack still names them, because the sender credential reads the bucket
+ * and the credentials document carries both values -- from these constants
+ * rather than from the constructs, for the same reason the identity ARNs are.
+ */
+export const SES_INBOUND_TOPIC_NAME = "diveday-ses-inbound-mail";
+export const SES_INBOUND_RULE_SET_NAME = "diveday-inbound";
+
+/**
+ * How long a received message's raw object survives. The app copies what it
+ * keeps into `inbound_messages` within seconds of the object landing, so this
+ * window is a replay buffer, not the record.
+ */
+export const INBOUND_MAIL_RETENTION_DAYS = 30;
+
+/** Resolve `--context inboundMailBucketName=`, identically in both stacks. */
+export function inboundMailBucketNameFrom(scope: Construct): string {
+  return scope.node.tryGetContext("inboundMailBucketName") || "diveday-inbound-mail";
+}
+
+/** Resolve `--context sesInboundDomain=`, identically in both stacks. */
+export function sesInboundDomainFrom(scope: Construct): string {
+  return scope.node.tryGetContext("sesInboundDomain") || `inbound.${sesEmailDomainFrom(scope)}`;
+}
+
+/**
  * The email stack's own alarm topic. A CloudWatch alarm may only notify an SNS
  * topic in its own region, and the two SES reputation alarms read `AWS/SES`
  * metrics, which are published in the sending region -- so the alarms live
@@ -54,6 +89,14 @@ export const SES_EVENT_TOPIC_NAME = "diveday-ses-email-events";
  * that fire into nothing.
  */
 export const SES_ALARM_TOPIC_NAME = "diveday-ses-alarms";
+
+/**
+ * The uptime stack's own alarm topic, and the third one for the same reason
+ * there is a second: a CloudWatch alarm may only notify an SNS topic in its own
+ * region, the Route 53 health-check metric exists only in us-east-1, and the
+ * main stack's topic is wherever `PRIMARY_REGION` points.
+ */
+export const UPTIME_ALARM_TOPIC_NAME = "diveday-uptime-alarms";
 
 /** Resolve `--context sesEmailDomain=`, identically in both stacks. */
 export function sesEmailDomainFrom(scope: Construct): string {

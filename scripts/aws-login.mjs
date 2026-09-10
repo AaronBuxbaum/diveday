@@ -1,3 +1,4 @@
+import { PRIMARY_REGION } from "../config/aws-regions.mjs";
 import { isTimeout, readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 function profileArguments(environment) {
@@ -46,7 +47,7 @@ export function ensureAwsLogin({
     }
   }
 
-  const region = environment.AWS_DEFAULT_REGION?.trim() || "us-east-1";
+  const region = environment.AWS_DEFAULT_REGION?.trim() || PRIMARY_REGION;
   log("AWS profile needs sign-in; opening aws login…");
   const login = spawn("aws", ["login", ...profileArguments(environment), "--region", region], {
     env: environment,

@@ -15,18 +15,26 @@ All infrastructure is defined as code under the [infra/](../../infra/) directory
 
 ## Overview
 
-We use AWS CDK to model, deploy, and update our cloud resources. The infrastructure is **two
-stacks**, and one `pnpm infra:deploy` does both:
+We use AWS CDK to model, deploy, and update our cloud resources. The infrastructure is **three
+stacks**, and one `pnpm infra:deploy` does all of them:
 
 | Stack | Region | Holds |
 | --- | --- | --- |
-| `DiveDay` (`diveday-infra`) | wherever the deploying profile points, in practice `us-east-1` | everything below |
-| `DiveDayEmail` (`diveday-email`) | `us-east-2` (`SES_REGION` in [config/aws-regions.mjs](../../config/aws-regions.mjs)) | the SES identity, configuration set, event topic and the two reputation alarms — see [§7](#7-ses-email-provider-infra) |
+| `DiveDay` (`diveday-infra`) | `us-east-2` (`PRIMARY_REGION`) | everything below |
+| `DiveDayEmail` (`diveday-email`) | `us-east-2` (`SES_REGION`) | the SES identity, configuration set, event topic, the two reputation alarms, and the inbound receipt rule set with its bucket and topic — see [§7](#7-ses-email-provider-infra) |
+| `DiveDayGlobal` (`diveday-global`) | `us-east-1` (`ROUTE53_METRICS_REGION`) | the external uptime monitor: Route 53 health checks and the alarms on their metric |
 
-The split exists because SES's production-access sandbox is per region and AWS refused the us-east-1
-request; CloudFormation is regional, so mail in another region is a second stack (ADR
-[20260903-ses-lives-in-its-own-region](../architecture/decisions/20260903-ses-lives-in-its-own-region.md)).
-It is meant to be temporary: one constant moves it back.
+Every region and every stack name is one constant in [config/aws-regions.mjs](../../config/aws-regions.mjs).
+
+Neither split is tidiness. Mail is its own stack because SES's production-access sandbox is per
+region and AWS refused the us-east-1 request, so the region mail is sent from is a decision AWS gets
+a vote in and should stay a one-line change. The uptime monitor is its own stack because Route 53
+publishes `HealthCheckStatus` to CloudWatch in us-east-1 and nowhere else, so those alarms cannot
+follow `PRIMARY_REGION` anywhere (ADR
+[20260910-one-region-in-us-east-2](../architecture/decisions/20260910-one-region-in-us-east-2.md)).
+
+Moving the estate is one line here and a runbook everywhere else:
+[region-migration.md](region-migration.md).
 
 `DiveDay` provisions:
 - An S3 bucket for storing visual regression testing (VRT) baselines and HTML reports.
@@ -93,7 +101,7 @@ limited deployer identity.
 
 ## 2. Bootstrapping the Environment
 
-AWS CDK requires one-time bootstrapping of an AWS environment (combination of account and region) before you can deploy any stacks. This process provisions resources CDK needs to operate (like an S3 bucket for staging assets). There are **two** environments here — one per stack — and the wrapper does both in one run.
+AWS CDK requires one-time bootstrapping of an AWS environment (combination of account and region) before you can deploy any stacks. This process provisions resources CDK needs to operate (like an S3 bucket for staging assets). There is one environment per region the stacks name — two today, `us-east-2` and `us-east-1` — and the wrapper does every one in a single run, reading `DEPLOY_REGIONS` rather than counting them itself.
 
 Bootstrap the intended administrator profile:
 ```bash
@@ -137,15 +145,15 @@ how a `--parameters` value reaches the stack that declares it — unqualified, C
 it to every stack in the deploy and rejects it on the one whose template has no such parameter, so
 the wrapper refuses that shape rather than half-doing it.
 
-**The first deploy after the SES split is two commands**, because the deployer's own us-east-2
-grants come from the stack it is deploying — until `DiveDay` has landed once, neither it nor the CI
-roles can see `diveday-email`, and both the deploy and the PR's `cdk diff` answer `AccessDenied` on
-`cloudformation:DescribeStacks`:
+**The first deploy into a new region is two commands**, because the deployer's own per-region
+grants come from the stack it is deploying — until `DiveDay` has landed once there, neither it nor
+the CI roles can see `diveday-email` or `diveday-global`, and both the deploy and the PR's
+`cdk diff` answer `AccessDenied` on `cloudformation:DescribeStacks`:
 
 ```bash
-pnpm infra:bootstrap        # admin profile; bootstraps both regions
-pnpm infra:deploy DiveDay   # widens the grants, and deletes the us-east-1 SES resources
-pnpm infra:deploy           # both stacks; the email one for the first time
+pnpm infra:bootstrap        # admin profile; bootstraps every region in DEPLOY_REGIONS
+pnpm infra:deploy DiveDay   # widens the grants
+pnpm infra:deploy           # all three stacks; the other two for the first time
 ```
 
 Every deploy after that is one command again.

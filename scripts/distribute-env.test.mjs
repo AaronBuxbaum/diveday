@@ -11,6 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { PRIMARY_REGION } from "../config/aws-regions.mjs";
 import { ENV_KEYS, isManual, isStackProduced } from "../config/env-registry.mjs";
 
 const temporaryDirectories = [];
@@ -186,8 +187,10 @@ describe("distribute-env", () => {
     expect(vercel).toContain("PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack");
     expect(vercel).not.toContain("stale-local-value");
     expect(github).toContain("REG_SUIT_AWS_ACCESS_KEY_ID=reg-suit-id");
+    // The administrator profile reads the credentials secret out of the region
+    // the main stack is in, not out of whatever the shell was pointing at.
     expect(readFileSync(join(directory, "aws-profile-used"), "utf8")).toBe(
-      "diveday-admin:us-east-1",
+      `diveday-admin:${PRIMARY_REGION}`,
     );
     // The deploy creates the one hand-edited file on its way through.
     expect(existsSync(join(directory, ".env.manual"))).toBe(true);

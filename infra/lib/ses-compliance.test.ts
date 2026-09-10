@@ -7,7 +7,7 @@ import { SES_REGION } from "./stack-config";
 /**
  * The email stack, not the main one: SES's resources live in their own region
  * and their own stack since 2026-09-03 (ADR
- * 20260903-ses-lives-in-its-own-region). Pinned to `SES_REGION` rather than to
+ * 20260910-one-region-in-us-east-2). Pinned to `SES_REGION` rather than to
  * a literal so that the day the constant moves back, this suite follows it
  * instead of failing on a region nobody deploys into any more.
  */

@@ -4,6 +4,7 @@ import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import { describe, expect, it } from "vitest";
 import { EmailStack } from "./email-stack";
+import { GlobalStack } from "./global-stack";
 import { InfraStack } from "./infra-stack";
 import {
   alarmNameFor,
@@ -22,7 +23,7 @@ import {
   webVitalAlarmNameFor,
   webVitalFilterPatternFor,
 } from "./observability";
-import { SES_REGION } from "./stack-config";
+import { ROUTE53_METRICS_REGION, SES_REGION } from "./stack-config";
 
 /**
  * The registry in `observability.ts` is only as good as its weakest claim: a
@@ -40,11 +41,22 @@ function synthesize() {
 }
 
 /**
- * The two SES reputation alarms are the one part of the registry that is not in
- * the main stack: `AWS/SES` publishes those rates in the sending region, and a
- * CloudWatch alarm cannot notify a topic in another one, so both alarms and
- * their topic live in the email stack (ADR 20260903-ses-lives-in-its-own-region).
+ * Two parts of the registry are not in the main stack, and both for the same
+ * reason: the metric they read is published in one region only, and a
+ * CloudWatch alarm cannot notify a topic in another one. `AWS/SES` publishes
+ * bounce and complaint rates in the sending region, so those alarms and their
+ * topic are in the email stack; `AWS/Route53` publishes HealthCheckStatus in
+ * us-east-1 alone, so the uptime alarms and theirs are in the global stack
+ * (ADR 20260910-one-region-in-us-east-2, ADR 20260910-one-region-in-us-east-2).
  */
+function synthesizeGlobal() {
+  const app = new cdk.App();
+  const stack = new GlobalStack(app, "DiveDayObservabilityGlobal", {
+    env: { account: "123456789012", region: ROUTE53_METRICS_REGION },
+  });
+  return Template.fromStack(stack);
+}
+
 function synthesizeEmail() {
   const app = new cdk.App();
   const stack = new EmailStack(app, "DiveDayObservabilityEmail", {
@@ -238,16 +250,13 @@ describe("the synthesized observability stack", () => {
     // Count signals plus web-vital signals; only the three Core Web Vitals
     // among the latter carry an alarm.
     expect(filters).toHaveLength(LOG_SIGNALS.length + WEB_VITAL_SIGNALS.length + 1);
-    // The SES reputation alarms are deliberately absent: they are in the email
-    // stack, and this count is what would notice them silently reappearing here
-    // (where they would read metrics the region does not publish).
+    // The SES reputation alarms and the external uptime alarms are deliberately
+    // absent: they are in the email and global stacks, and this count is what
+    // would notice either silently reappearing here, where each would read a
+    // metric this region does not publish and sit there saying nothing.
     expect(alarms).toHaveLength(
       LOG_SIGNALS.filter((signal) => signal.alarm !== false).length +
-        WEB_VITAL_SIGNALS.filter((signal) => signal.alarm).length +
-        // The external uptime alarms (S22). No metric filter behind them --
-        // Route 53 publishes the metric -- so they add to the alarm count and
-        // not to the filter count above.
-        UPTIME_TARGETS.length,
+        WEB_VITAL_SIGNALS.filter((signal) => signal.alarm).length,
     );
 
     for (const signal of LOG_SIGNALS) {
@@ -344,7 +353,7 @@ describe("the synthesized observability stack", () => {
   });
 
   it("watches the app from outside the account, and matches the body as well as the code", async () => {
-    const template = synthesize();
+    const template = synthesizeGlobal();
     const checks = Object.values(
       template.findResources("AWS::Route53::HealthCheck") as Record<
         string,
@@ -399,7 +408,7 @@ describe("the synthesized observability stack", () => {
   });
 
   it("pages when the external monitor itself goes quiet, unlike every other alarm", () => {
-    const template = synthesize();
+    const template = synthesizeGlobal();
     const alarms = Object.values(
       template.findResources("AWS::CloudWatch::Alarm") as Record<
         string,
