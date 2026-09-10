@@ -3,10 +3,20 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
+import { DEFAULT_REGION, SES_REGION } from "../config/aws-regions.mjs";
 import { ensureAwsLogin } from "./aws-login.mjs";
 import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
-const region = process.env.AWS_DEFAULT_REGION?.trim() || "us-east-1";
+// Both regions the app deploys into, in one run. The email stack lives in its
+// own one (config/aws-regions.mjs, ADR 20260903-ses-lives-in-its-own-region)
+// and CDK bootstrap is per account *and* region, so bootstrapping only the
+// first leaves `cdk deploy` failing on `sts:AssumeRole` against a role name
+// ending in the region that was never bootstrapped -- which reads as a broken
+// trust policy, not as an unfinished prerequisite. Deduped, so setting
+// SES_REGION back to the main region makes this one bootstrap again.
+const regions = [
+  ...new Set([process.env.AWS_DEFAULT_REGION?.trim() || DEFAULT_REGION, SES_REGION]),
+];
 const awsEnvironment = { ...process.env };
 const cdkArguments = process.argv.slice(2);
 const confirmationIndex = cdkArguments.indexOf("--confirm-account");
@@ -104,12 +114,17 @@ readBounded(
 
 const cdk = join(process.cwd(), "node_modules", ".bin", "cdk");
 const command = existsSync(cdk) ? cdk : "cdk";
-const result = runBounded(command, ["bootstrap", `aws://${account}/${region}`, ...cdkArguments], {
-  env: awsEnvironment,
-  stdio: "inherit",
-  // A CloudFormation operation: generous on purpose. Cutting a real bootstrap
-  // off part-way leaves the account's toolkit stack mid-update with nobody
-  // watching, which is worse than noticing a wedge three quarters of an hour late.
-  timeoutMs: SUBPROCESS_TIMEOUTS.cdkDeploy,
-});
-process.exit(result.status ?? 1);
+// One `cdk bootstrap` per region rather than one call listing both: a failure
+// then names the region it happened in, and the regions that already succeeded
+// stay done. Bootstrap is idempotent, so a rerun after a failure is free.
+for (const region of regions) {
+  const result = runBounded(command, ["bootstrap", `aws://${account}/${region}`, ...cdkArguments], {
+    env: awsEnvironment,
+    stdio: "inherit",
+    // A CloudFormation operation: generous on purpose. Cutting a real bootstrap
+    // off part-way leaves the account's toolkit stack mid-update with nobody
+    // watching, which is worse than noticing a wedge three quarters of an hour late.
+    timeoutMs: SUBPROCESS_TIMEOUTS.cdkDeploy,
+  });
+  if (result.status !== 0) process.exit(result.status ?? 1);
+}

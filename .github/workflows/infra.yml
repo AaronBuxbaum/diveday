@@ -277,6 +277,14 @@ jobs:
       # local dev tool could set by convention (ADR 20260811-ci-deploy-full-wizard);
       # only this one `run:` line ever passes it.
       #
+      # Both stacks, named rather than `--all`: the app builds two now (ADR
+      # 20260903-ses-lives-in-its-own-region, `DiveDayEmail` pinned to us-east-2
+      # for SES), and a job that deployed whatever the app happened to contain
+      # would be a different job after the next stack is added. `aws-region`
+      # below is only the session's default -- each stack deploys into its own
+      # env region, through the bootstrap roles that region was bootstrapped
+      # with (manual action `cdk-bootstrap`, which now does both).
+      #
       # All four are `secrets.` on the `infra-deploy` *environment*, named for
       # the variable each one becomes, rather than repository-level secrets and
       # variables under longer INFRA_DEPLOY_-prefixed names. The environment is
@@ -289,7 +297,7 @@ jobs:
       # from logs, so a wrong one reads as an empty string in a failure message
       # rather than as itself — which is why the step above checks all four for
       # emptiness by name before this job touches AWS at all.
-      - run: pnpm infra:deploy DiveDay --require-approval never --ci-unattended
+      - run: pnpm infra:deploy DiveDay DiveDayEmail --require-approval never --ci-unattended
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

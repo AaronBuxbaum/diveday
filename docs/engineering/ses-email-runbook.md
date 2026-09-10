@@ -60,6 +60,20 @@ made — DiveDay records the issue without spending a send. The demo seed intent
 (`success@simulator.amazonses.com`, `bounce@simulator.amazonses.com`,
 `complaint@simulator.amazonses.com`) or a real diver address when testing delivery.
 
+### Which region
+
+**`us-east-2`.** The sandbox is per region and AWS refused the us-east-1 request, so the identity,
+the configuration set, the event topic and the two reputation alarms live in their own stack,
+`diveday-email`, in their own region
+(ADR [20260903-ses-lives-in-its-own-region](../architecture/decisions/20260903-ses-lives-in-its-own-region.md)).
+Everything else — the `diveday-ses-sender` IAM user, its key, and the credentials document — stays in
+`diveday-infra`. One constant decides it, `SES_REGION` in `config/aws-regions.mjs`, and the intent is
+to come back to us-east-1 once there is distance from the refusal.
+
+Practically, that means **every `aws ses*` and SES-topic `aws sns` command on this page wants
+`--region us-east-2`**, and the SES console has to be switched to it. A call to the wrong region does
+not say "wrong region" — it says the identity does not exist.
+
 | Variable | Enables | Without it |
 | --- | --- | --- |
 | `SES_AWS_REGION` / `SES_AWS_ACCESS_KEY_ID` / `SES_AWS_SECRET_ACCESS_KEY` | Sending | Nothing sends |
@@ -68,7 +82,8 @@ made — DiveDay records the issue without spending a send. The demo seed intent
 
 ## Sending to divers
 
-1. **Verify `ses.dive.day`** — deploy the CDK stack (`infra/lib/infra-stack.ts`), then add the three
+1. **Verify `ses.dive.day`** — deploy both stacks (`pnpm infra:deploy`; the identity is in
+   `infra/lib/email-stack.ts`), then add the three
    `SesDkimRecords` CNAME records with the project Vercel CLI and wait for AWS to show the identity verified:
    ```bash
    pnpm exec vercel dns add dive.day <selector>._domainkey.ses CNAME <value-from-SesDkimRecords>
@@ -77,9 +92,9 @@ made — DiveDay records the issue without spending a send. The demo seed intent
    not the org domain: automated mail and human correspondence should not share a sending
    reputation, and this keeps a bulk-mail problem from affecting the address people actually write to
    you at.
-2. **Request SES production access** (an AWS Support case — CDK cannot do this). SES starts in
-   sandbox mode, which can only send to pre-verified recipient addresses. The first request was
-   refused; the second is written out below in
+2. **Request SES production access** (an AWS Support case — CDK cannot do this), in **us-east-2**.
+   SES starts in sandbox mode, which can only send to pre-verified recipient addresses. The first
+   request was refused, in us-east-1; the second is written out below in
    [Production access: the second request](#production-access-the-second-request) — paste that text,
    do not improvise a shorter one.
 3. **Collect the sender credentials.** The deploy already minted them and writes all three target
@@ -136,17 +151,20 @@ Two records, on `mail.ses.dive.day`, both in the `SesMailFromRecords` stack outp
 
 | Type | Value |
 | --- | --- |
-| MX | `10 feedback-smtp.<region>.amazonses.com` — region must match `SES_AWS_REGION` |
+| MX | `10 feedback-smtp.us-east-2.amazonses.com` — the region must match `SES_AWS_REGION`; a move re-points it |
 | TXT | `v=spf1 include:amazonses.com ~all` |
 
 **Exactly one MX record.** SES fails the whole MAIL FROM setup if that subdomain has more than one.
+Moving regions is therefore a delete-then-add, and it is yours to do: the post-deploy wizard finds a
+rival MX, prints it with the `pnpm exec vercel dns rm <record-id>` to remove it, and skips its own
+add rather than leaving two behind.
 
 These are added through Vercel CLI: authoritative DNS for `dive.day` is **Vercel DNS**, not Route53,
 so the CDK stack has no hosted zone to write them into. It configures the AWS side and prints the
 values; add the MAIL FROM pair with:
 
 ```bash
-pnpm exec vercel dns add dive.day mail.ses MX feedback-smtp.<region>.amazonses.com 10
+pnpm exec vercel dns add dive.day mail.ses MX feedback-smtp.us-east-2.amazonses.com 10
 pnpm exec vercel dns add dive.day mail.ses TXT 'v=spf1 include:amazonses.com ~all'
 ```
 
@@ -160,7 +178,7 @@ which point the setup has to be restarted.
 normally is not evidence the envelope domain took:
 
 ```bash
-aws sesv2 get-email-identity --email-identity ses.dive.day \
+aws sesv2 get-email-identity --region us-east-2 --email-identity ses.dive.day \
   --query 'MailFromAttributes' --output json
 ```
 
@@ -209,16 +227,18 @@ Every one of these is something the reviewer may check, and every one is done by
 repository plus the DNS steps above. Confirm, do not assume:
 
 ```bash
-aws sesv2 get-email-identity --email-identity ses.dive.day \
+aws sesv2 get-email-identity --region us-east-2 --email-identity ses.dive.day \
   --query '{dkim:DkimAttributes.Status,mailFrom:MailFromAttributes.MailFromDomainStatus,verified:VerifiedForSendingStatus}'
 # want: dkim SUCCESS, mailFrom SUCCESS, verified true
-aws sns list-subscriptions-by-topic --topic-arn <SesEventNotificationsTopicArn> \
+aws sns list-subscriptions-by-topic --region us-east-2 --topic-arn <SesEventNotificationsTopicArn> \
   --query 'Subscriptions[].SubscriptionArn'
 # want: a real ARN, not PendingConfirmation
-aws sesv2 get-configuration-set --configuration-set-name diveday-transactional-email \
+aws sesv2 get-configuration-set --region us-east-2 \
+  --configuration-set-name diveday-transactional-email \
   --query 'SuppressionOptions.SuppressedReasons'
-# want: BOUNCE and COMPLAINT -- this is where the stack sets them (infra-stack.ts S8)
-aws sesv2 get-account --query '{production:ProductionAccessEnabled,suppression:SuppressionAttributes}'
+# want: BOUNCE and COMPLAINT -- this is where the stack sets them (infra/lib/email-stack.ts)
+aws sesv2 get-account --region us-east-2 \
+  --query '{production:ProductionAccessEnabled,suppression:SuppressionAttributes}'
 # want: production false until the case below is granted. SuppressionAttributes is the
 # *account default*, which the configuration set overrides and this stack never sets --
 # so read it for information, never as proof that DiveDay's mail is suppressing.
@@ -269,11 +289,14 @@ In order. Stop at the first that works.
    where the text goes if the form gave you nowhere.
 2. **Answer the follow-up inside 48 hours.** The reviewer's questions are the standard set in the
    table after the case text. A case that goes quiet is closed as refused.
-3. **A second region.** The sandbox is per region, and a refusal in one carries no automatic weight
-   in another. The stack sends from `this.region`, so this is a real move: deploy the stack in the
-   new region, re-add the DKIM and MAIL FROM records it prints, redeploy the app with the new
-   `SES_AWS_REGION`, then request production access there with the same text. Worth it only if the
-   first region refuses a second time.
+3. **A second region — already done.** The sandbox is per region, and a refusal in one carries no
+   automatic weight in another. Mail moved to **us-east-2** on 2026-09-03
+   (ADR [20260903-ses-lives-in-its-own-region](../architecture/decisions/20260903-ses-lives-in-its-own-region.md)),
+   so the case below is filed there and the identity in us-east-1 is gone. Moving again — including
+   back to us-east-1, which is the intent once there is some distance from the refusal — is
+   `SES_REGION` in `config/aws-regions.mjs`, a deploy of both stacks, the DKIM CNAMEs and the MAIL
+   FROM MX re-added from the new outputs (the MX is a delete-then-add: SES refuses a subdomain with
+   two), and a fresh request in the new region.
 4. **A support plan.** Developer Support ($29/month, cancel after) gives a named human on the case
    who can tell you which row failed; Business Support adds chat. Neither changes the reviewer, but
    both change "no reason given". Take this before a third attempt, not after.
@@ -284,7 +307,7 @@ Fill the three bracketed values. Send it whole — the length is the point; the 
 for the rows, and every paragraph is one of them.
 
 ```text
-Subject: SES production access for dive.day (transactional; previous case [PREVIOUS CASE ID])
+Subject: SES production access for dive.day in us-east-2 (transactional; previous case [PREVIOUS CASE ID])
 
 Who we are
 DiveDay (https://dive.day) is booking and operations software for scuba dive shops: trip scheduling, seat booking, liability waivers, certification checks, boat manifests. It is built and operated by Aaron Buxbaum (aaron@dive.day), a US sole proprietor. The product is pre-launch with [N] pilot dive shops onboarding in [MONTH YEAR]. Our privacy policy (https://dive.day/privacy) names AWS as the processor for email and how long delivery records are kept; our terms are https://dive.day/terms.
@@ -321,7 +344,7 @@ Opting out
 Courtesy messages carry List-Unsubscribe and List-Unsubscribe-Post one-click headers and an in-body link; the link never expires, and one click opts the person out permanently. Transactional messages about a booking that exists (confirmation, waiver, reminders, cancellations) do not carry an unsubscribe because they are the service the person bought; nobody receives them without a booking.
 
 Previous request
-Case [PREVIOUS CASE ID], refused on [DATE] without a stated reason. Since then we have added the shop's Reply-To address (confirmed by a link sent to it before we use it) and postal footer to our messages, marked every message Auto-Submitted, made a complaint opt the recipient out in our own records, added the reputation alarms above, and tested the bounce and complaint path against the simulator from production. We are happy to answer any question about the above or provide a full sample of any message type.
+Case [PREVIOUS CASE ID], refused on [DATE] without a stated reason. That case was for us-east-1; this request is for us-east-2, where our sending identity now lives, and we are not asking anyone to revisit the earlier decision. Since then we have added the shop's Reply-To address (confirmed by a link sent to it before we use it) and postal footer to our messages, marked every message Auto-Submitted, made a complaint opt the recipient out in our own records, added the reputation alarms above, and tested the bounce and complaint path against the simulator from production. We are happy to answer any question about the above or provide a full sample of any message type.
 ```
 
 ### The reviewer's follow-up, answered

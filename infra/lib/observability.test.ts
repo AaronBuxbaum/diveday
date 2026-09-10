@@ -3,6 +3,7 @@ import path from "node:path";
 import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import { describe, expect, it } from "vitest";
+import { EmailStack } from "./email-stack";
 import { InfraStack } from "./infra-stack";
 import {
   alarmNameFor,
@@ -21,6 +22,7 @@ import {
   webVitalAlarmNameFor,
   webVitalFilterPatternFor,
 } from "./observability";
+import { SES_REGION } from "./stack-config";
 
 /**
  * The registry in `observability.ts` is only as good as its weakest claim: a
@@ -33,6 +35,20 @@ function synthesize() {
   const app = new cdk.App();
   const stack = new InfraStack(app, "DiveDayObservability", {
     env: { account: "123456789012", region: "us-east-1" },
+  });
+  return Template.fromStack(stack);
+}
+
+/**
+ * The two SES reputation alarms are the one part of the registry that is not in
+ * the main stack: `AWS/SES` publishes those rates in the sending region, and a
+ * CloudWatch alarm cannot notify a topic in another one, so both alarms and
+ * their topic live in the email stack (ADR 20260903-ses-lives-in-its-own-region).
+ */
+function synthesizeEmail() {
+  const app = new cdk.App();
+  const stack = new EmailStack(app, "DiveDayObservabilityEmail", {
+    env: { account: "123456789012", region: SES_REGION },
   });
   return Template.fromStack(stack);
 }
@@ -222,10 +238,12 @@ describe("the synthesized observability stack", () => {
     // Count signals plus web-vital signals; only the three Core Web Vitals
     // among the latter carry an alarm.
     expect(filters).toHaveLength(LOG_SIGNALS.length + WEB_VITAL_SIGNALS.length + 1);
+    // The SES reputation alarms are deliberately absent: they are in the email
+    // stack, and this count is what would notice them silently reappearing here
+    // (where they would read metrics the region does not publish).
     expect(alarms).toHaveLength(
       LOG_SIGNALS.filter((signal) => signal.alarm !== false).length +
         WEB_VITAL_SIGNALS.filter((signal) => signal.alarm).length +
-        SES_REPUTATION_SIGNALS.length +
         // The external uptime alarms (S22). No metric filter behind them --
         // Route 53 publishes the metric -- so they add to the alarm count and
         // not to the filter count above.
@@ -280,7 +298,7 @@ describe("the synthesized observability stack", () => {
   });
 
   it("alarms on SES's own bounce and complaint rates at AWS's review line", () => {
-    const template = synthesize();
+    const template = synthesizeEmail();
     const alarms = Object.values(
       template.findResources("AWS::CloudWatch::Alarm") as Record<
         string,

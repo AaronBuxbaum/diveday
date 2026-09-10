@@ -1,12 +1,20 @@
 import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import { describe, expect, it } from "vitest";
-import { InfraStack } from "./infra-stack";
+import { EmailStack } from "./email-stack";
+import { SES_REGION } from "./stack-config";
 
+/**
+ * The email stack, not the main one: SES's resources live in their own region
+ * and their own stack since 2026-09-03 (ADR
+ * 20260903-ses-lives-in-its-own-region). Pinned to `SES_REGION` rather than to
+ * a literal so that the day the constant moves back, this suite follows it
+ * instead of failing on a region nobody deploys into any more.
+ */
 function template() {
   const app = new cdk.App();
-  const stack = new InfraStack(app, "DiveDaySesCompliance", {
-    env: { account: "123456789012", region: "us-east-1" },
+  const stack = new EmailStack(app, "DiveDaySesCompliance", {
+    env: { account: "123456789012", region: SES_REGION },
   });
   return Template.fromStack(stack);
 }
