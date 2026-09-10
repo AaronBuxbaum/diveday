@@ -4270,13 +4270,25 @@ for (const scheme of ["light", "dark"] as const) {
         });
         expect(seeded.ok()).toBe(true);
         const { href } = (await seeded.json()) as { href: string };
+        // **Wait for the open to be *counted*, not merely for the shelf to
+        // paint.** `RememberShelf` fires a server action from a client effect,
+        // so the diver record -- server-rendered, once, on the way back -- shows
+        // whichever side of that race this landed on. Both sides also read as
+        // "open" ("Sent, not opened" against "1 open"), so the assertion below
+        // could not tell them apart and the baseline drifted between the two
+        // between pull requests. The action posts to the shelf's own URL.
+        const counted = page.waitForResponse(
+          (response) =>
+            response.request().method() === "POST" && response.url().includes("/shelf/"),
+        );
         await page.goto(href);
         await page.getByRole("heading", { name: "Your shelf" }).waitFor();
-        // The open is counted by the page's own effect, so wait for the row it
-        // produces rather than for a timer.
+        await counted;
         await openDiverProfile(page, "Priya", "Priya Sharma");
         const shelf = page.getByRole("region", { name: "Shelf" });
-        await expect(shelf.getByText(/open/)).toBeVisible();
+        // A count, not the word: the state this capture exists for is the one
+        // with a number in it.
+        await expect(shelf.getByText(/^\d+ opens?$/)).toBeVisible();
         await shelf.getByText("Shelf", { exact: true }).click();
         await expect(shelf.getByRole("button", { name: "Send the link" })).toBeVisible();
         await page.mouse.move(0, 0);
