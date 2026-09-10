@@ -1429,7 +1429,7 @@ test.describe("with Accept-Language: es", () => {
   });
 });
 
-test("the legal pages are published, honest about what is unsettled, and not yet advertised", async ({
+test("the legal pages are published, honest about what is unsettled, and reachable", async ({
   page,
 }) => {
   // Published 2026-08-14 (FU-20260812-no-privacy-or-terms-page). DiveDay stores
@@ -1492,12 +1492,16 @@ test("the legal pages are published, honest about what is unsettled, and not yet
     await expect(page.getByText(/\b(Inc\.|LLC|Ltd\.?|GmbH|S\.L\.)\b/)).toHaveCount(0);
   }
 
-  // The owner's explicit call (2026-08-14): the pages exist and are reachable,
-  // but nothing advertises them until the open rows close and counsel has read
-  // them. This asserts the *absence* on purpose — adding a footer link is a
-  // decision, not a tidy-up, and a drive-by "you forgot the link" fails here.
+  // **The footer is the only route to either page from anywhere on the site**
+  // (#1649, merged 2026-09-10). This assertion used to demand the opposite:
+  // the 2026-08-14 call was that the pages exist but nothing advertises them
+  // until the open rows close, so a drive-by "you forgot the link" failed
+  // here. #1649 reversed that call — the SES production-access case names both
+  // by URL and tells the reviewer our privacy policy states AWS processes our
+  // mail, which is a claim a reviewer checks by looking for the link. So the
+  // link is now the thing this test protects, and removing it fails here.
   await page.goto("/");
   const footer = page.getByRole("contentinfo");
-  await expect(footer.getByRole("link", { name: /privacy/i })).toHaveCount(0);
-  await expect(footer.getByRole("link", { name: /terms/i })).toHaveCount(0);
+  await expect(footer.getByRole("link", { name: /privacy/i })).toHaveAttribute("href", "/privacy");
+  await expect(footer.getByRole("link", { name: /terms/i })).toHaveAttribute("href", "/terms");
 });
