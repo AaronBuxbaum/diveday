@@ -470,6 +470,108 @@ describe("infra:migrate-region", () => {
     expect(result.stdout).toContain("1 deleted, 1 already gone, 0 refused, of 2");
   });
 
+  it("clears a REVIEW_IN_PROGRESS stack and sweeps, rather than reading it as healthy", () => {
+    // The status that cost three runs. CloudFormation puts a brand-new stack in
+    // REVIEW_IN_PROGRESS the moment cdk deploy makes a change set for it, and
+    // leaves it there when the change set fails validation -- which is exactly
+    // what "log group already exists" is. Every attempt left one behind, and
+    // the next attempt read a status it did not recognise, called the stack
+    // healthy, and returned without ever sweeping.
+    const directory = fixture({
+      stackStatus: "REVIEW_IN_PROGRESS",
+      template: {
+        Resources: {
+          L: {
+            Type: "AWS::Logs::LogGroup",
+            Properties: { LogGroupName: "/aws/lambda/diveday-sns-sms-delivery-status-attributes" },
+          },
+        },
+      },
+      logGroupsPresent: ["/aws/lambda/diveday-sns-sms-delivery-status-attributes"],
+    });
+    const result = run(
+      directory,
+      "--from",
+      "us-east-1",
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+      "--confirm-teardown",
+      "us-east-1",
+      // From step 3: step 1 would delete the old region's stack and the
+      // fixture's single stack status would follow it, which is not the state
+      // under test here.
+      "--from-step",
+      "3",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("is REVIEW_IN_PROGRESS, which holds no resources");
+    expect(awsLog(directory)).toContain("delete-stack --stack-name diveday-infra");
+    // And having cleared it, the sweep actually runs.
+    expect(result.stdout).toContain(
+      "Deleted leftover log group /aws/lambda/diveday-sns-sms-delivery-status-attributes",
+    );
+  });
+
+  it("leaves a deployed stack and its log groups alone", () => {
+    const directory = fixture({
+      stackStatus: "CREATE_COMPLETE",
+      template: {
+        Resources: {
+          L: { Type: "AWS::Logs::LogGroup", Properties: { LogGroupName: "/diveday/app" } },
+        },
+      },
+      logGroupsPresent: ["/diveday/app"],
+    });
+    const result = run(
+      directory,
+      "--from",
+      "us-east-1",
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+      "--confirm-teardown",
+      "us-east-1",
+      // From step 3: step 1 would delete the old region's stack and the
+      // fixture's single stack status would follow it, which is not the state
+      // under test here.
+      "--from-step",
+      "3",
+    );
+
+    expect(result.status).toBe(0);
+    // An update, so the log groups belong to the stack. Deleting them would be
+    // vandalism, and deleting the stack would be worse.
+    const log = awsLog(directory);
+    expect(log).not.toContain("delete-log-group");
+    expect(log).not.toContain("delete-stack --stack-name diveday-infra");
+  });
+
+  it("stops on a stack status it does not recognise instead of guessing", () => {
+    const directory = fixture({ stackStatus: "UPDATE_IN_PROGRESS" });
+    const result = run(
+      directory,
+      "--from",
+      "us-east-1",
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+      "--confirm-teardown",
+      "us-east-1",
+      // From step 3: step 1 would delete the old region's stack and the
+      // fixture's single stack status would follow it, which is not the state
+      // under test here.
+      "--from-step",
+      "3",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("is UPDATE_IN_PROGRESS");
+    expect(result.stderr).toContain("does not know how to prepare");
+    expect(awsLog(directory)).not.toContain("delete-stack --stack-name diveday-infra");
+  });
+
   it("hands back the manual steps a script cannot do", () => {
     const directory = fixture({ resourcesExist: false });
     const result = run(
