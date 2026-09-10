@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs";
-import { and, eq, getTableName } from "drizzle-orm";
+import { and, eq, getTableName, isNull } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import * as schema from "./schema";
-import { people, personRoles } from "./schema";
+import { bookings, people, personRoles } from "./schema";
 
 /**
  * The structural guard on the erasure path (`src/db/anonymize.ts`, ADR
@@ -62,6 +62,66 @@ import { people, personRoles } from "./schema";
 
 type TableFacts = { references: string[]; columns: string[] };
 
+/**
+ * Blank out line comments, block comments and string/template literals, keeping
+ * the source's length so nothing else shifts. Crude on purpose: it only has to
+ * stop a `.update(x)` inside prose or a quoted example from counting as a
+ * write, and every real write site in this file is bare code.
+ */
+function stripCommentsAndStrings(source: string): string {
+  let out = "";
+  let mode: "code" | "line" | "block" | '"' | "'" | "`" = "code";
+  for (let i = 0; i < source.length; i += 1) {
+    const char = source[i] as string;
+    const next = source[i + 1];
+    if (mode === "code") {
+      if (char === "/" && next === "/") {
+        mode = "line";
+        out += "  ";
+        i += 1;
+        continue;
+      }
+      if (char === "/" && next === "*") {
+        mode = "block";
+        out += "  ";
+        i += 1;
+        continue;
+      }
+      if (char === '"' || char === "'" || char === "`") {
+        mode = char;
+        out += " ";
+        continue;
+      }
+      out += char;
+      continue;
+    }
+    if (mode === "line") {
+      if (char === "\n") mode = "code";
+      out += char === "\n" ? char : " ";
+      continue;
+    }
+    if (mode === "block") {
+      if (char === "*" && next === "/") {
+        mode = "code";
+        out += "  ";
+        i += 1;
+        continue;
+      }
+      out += char === "\n" ? char : " ";
+      continue;
+    }
+    // Inside a string literal.
+    if (char === "\\") {
+      out += "  ";
+      i += 1;
+      continue;
+    }
+    if (char === mode) mode = "code";
+    out += char === "\n" ? char : " ";
+  }
+  return out;
+}
+
 function schemaTables(): Map<string, TableFacts> {
   const tables = new Map<string, TableFacts>();
   for (const value of Object.values(schema)) {
@@ -114,7 +174,13 @@ function personScopedTableNames(tables: Map<string, TableFacts>): string[] {
  * green over the table it stopped seeing.
  */
 function erasureWriteSites(): { written: Set<string>; unresolved: string[] } {
-  const source = readFileSync("src/db/anonymize.ts", "utf8");
+  // Comments and string literals are stripped first. A write that is *commented
+  // out* rather than deleted would otherwise still match, keeping its table in
+  // this set and its absence out of the keep-list — which is the exact failure
+  // the static instrument is here to prevent, so leaving it would have been a
+  // guard that reads green over the statement it stopped running (issue #1607,
+  // found by a `security-reviewer` pass on the first draft of this file).
+  const source = stripCommentsAndStrings(readFileSync("src/db/anonymize.ts", "utf8"));
   const written = new Set<string>();
   const unresolved: string[] = [];
   for (const match of source.matchAll(/\.(?:update|delete)\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
@@ -157,11 +223,8 @@ const ERASURE_KEEPS: Record<string, string> = {
     "the arrival ledger for a seat: a status, a source and the staffer who recorded it, with no diver column and no free text",
   dive_package_entitlements:
     "ids, a consumption timestamp and an expiry — how many dives of a package are left, which is the shop's own balance",
-  order_line_items:
-    "what the shop sold on an order: its own package name and the money, never the buyer",
   shop_promo_redemptions:
     "that a code was redeemed on a checkout, and for how much; the diver is reached only through the checkout, which is redacted",
-  tips: "a Stripe session and an amount against a seat. The buyer's details live at the processor, and the customer objects the diver's orders point at are deleted through the erasure ledger (`./processor-erasure`)",
   trip_blowout_divers:
     "who was offered a re-book when a departure blew out, by id, plus whether the message left. The address it went to lives on the notification rows, which are redacted",
   trip_invitations:
@@ -206,7 +269,6 @@ const ERASURE_KEEPS: Record<string, string> = {
     "an owner's ruling on whether a template change was material — a decision about the shop's text, not about any signer",
 
   // --- the staffer who acted is the only person on the row -----------------
-  day_closeouts: "who closed a day and what was outstanding when they did",
   closeout_leftover_decisions: "what a staff member decided to do with a leftover at close-out",
   crew_assignment_requests: "a crew member asking for a departure, and the answer",
   crew_availability_blocks: "a crew member's own unavailable dates and their note about them",
@@ -234,6 +296,19 @@ const ERASURE_KEEPS: Record<string, string> = {
  * where the class that hid `auth_verifications` has to be decided rather than
  * merely admitted — see limit 3 above.
  */
+/**
+ * What "carries a contact-shaped column" means, and it is wider than an address
+ * on purpose. `person_id` is the load-bearing half: a new table declaring
+ * `personId: uuid("person_id")` **without** `.references(() => people.id)` is
+ * outside the foreign-key closure entirely, and before this pattern included it
+ * the table fell out of *both* sweeps and both tests stayed green — a hole in
+ * the exact class limit 3 above claims to be narrowing (issue #1607, found by a
+ * `security-reviewer` pass on the first draft of this file). There is no
+ * legitimate bare `person_id` in this schema, which is what makes requiring a
+ * decision cheap.
+ */
+const PERSON_SHAPED_COLUMN = /email|phone|identifier|address|person_id/;
+
 const TEXT_ADDRESSED_REASONS: Record<string, string> = {
   auth_verifications:
     "better-auth's `verification` model: no foreign key at all, names its person as text in `identifier`. The erasure sweeps it by that column, because a pending row holds an address and a live token",
@@ -271,10 +346,16 @@ async function recordWrittenTables(
   const wrap = <T extends object>(target: T): T =>
     new Proxy(target, {
       get(inner, property, receiver) {
-        if (property === "update" || property === "delete") {
+        // `insert` is watched too, and that is not symmetry for its own sake:
+        // both helpers in `WRITTEN_VIA_HELPER` write by insert, so a recorder
+        // watching only updates and deletes could never observe either one and
+        // the claim below would have been vacuous. A future helper that inserts
+        // a row carrying the diver's data would have been invisible to the
+        // static read *and* to this test (issue #1607, `security-reviewer`).
+        if (property === "update" || property === "delete" || property === "insert") {
           return (table: Parameters<AppDb["delete"]>[0]) => {
             written.add(getTableName(table));
-            return (inner as unknown as AppDb)[property as "update" | "delete"](
+            return (inner as unknown as AppDb)[property as "update" | "delete" | "insert"](
               table as never,
             ) as unknown;
           };
@@ -344,16 +425,26 @@ describe("erasure coverage", () => {
       .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
       .limit(1);
     if (!owner) throw new Error("expected the seeded owner");
+    // A seeded diver who actually holds a seat, not a bare `people` row. The
+    // erasure's big conditional (`if (owned)`) covers most of the file, so a
+    // diver with no booking exercises the unconditional statements only and the
+    // recording below would be nearly vacuous.
     const [diver] = await db
-      .insert(people)
-      .values({
-        shopId: shop.id,
-        fullName: "Erasure Sweep Diver",
-        email: "erasure-sweep@example.com",
-      })
-      .returning({ id: people.id });
-    if (!diver) throw new Error("fixture insert failed");
-    await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(bookings, eq(bookings.personId, people.id))
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(
+        and(
+          eq(people.shopId, shop.id),
+          eq(personRoles.role, "diver"),
+          isNull(people.deletedAt),
+          isNull(people.anonymizedAt),
+        ),
+      )
+      .orderBy(people.id)
+      .limit(1);
+    if (!diver) throw new Error("expected a seeded diver holding a booking");
 
     const recorded = await recordWrittenTables(db, (recorder) =>
       anonymizeDiver(recorder, {
@@ -362,7 +453,9 @@ describe("erasure coverage", () => {
         actorPersonId: owner.id,
       }),
     );
-    expect(recorded.size).toBeGreaterThan(10);
+    // The `owned` branch alone is worth more than this; the bound is a floor
+    // that catches the recorder silently seeing nothing, not a target.
+    expect(recorded.size).toBeGreaterThan(25);
 
     const { written } = erasureWriteSites();
     const unaccounted = [...recorded]
@@ -375,7 +468,7 @@ describe("erasure coverage", () => {
     const scoped = new Set(personScopedTableNames(tables));
     const outsideWithContact = [...tables]
       .filter(([name]) => !scoped.has(name))
-      .filter(([, facts]) => facts.columns.some((column) => /email|phone|identifier/.test(column)))
+      .filter(([, facts]) => facts.columns.some((column) => PERSON_SHAPED_COLUMN.test(column)))
       .map(([name]) => name)
       .sort();
     expect(outsideWithContact).toEqual(Object.keys(TEXT_ADDRESSED_REASONS).sort());

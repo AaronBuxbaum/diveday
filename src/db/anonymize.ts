@@ -83,6 +83,7 @@ import {
   calendarFeeds,
   certifications,
   courseInquiries,
+  dayCloseouts,
   diveSupportNeeds,
   gearReservations,
   importedPaymentHistory,
@@ -94,6 +95,7 @@ import {
   notificationDeliveries,
   notificationDeliveryAttempts,
   notificationSendQueue,
+  orderLineItems,
   orders,
   people,
   personCourtesyEmailUnsubscribeTokens,
@@ -108,6 +110,7 @@ import {
   specialtyCertifications,
   staffCredentials,
   staffReplies,
+  tips,
   tripLastMinutePromoRecipients,
   tripReviews,
   tripWaitlistEntries,
@@ -1307,6 +1310,81 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       ),
     );
 
+  // --- hosted processor pages ----------------------------------------------
+  // A Stripe-hosted page is a publicly reachable URL that renders the customer
+  // it was minted for, which is why `orders.hosted_invoice_url` and
+  // `invoice_pdf_url` are already nulled above. Two more of them sit one table
+  // over and were missed: a tip's Checkout page is minted with
+  // `customer_email` straight off `people.email` (`src/db/tips.ts`), and a
+  // booking checkout's is the same object beside the address this file already
+  // clears. Both are bounded by session expiry and both columns are durable,
+  // so the row outlives the window it is safe in (issue #1607).
+  if (owned) {
+    await tx
+      .update(tips)
+      .set({ checkoutUrl: null })
+      .where(
+        and(
+          eq(tips.shopId, shopId),
+          inArray(tips.bookingId, bookingIds),
+          isNotNull(tips.checkoutUrl),
+        ),
+      );
+  }
+
+  // --- the day's close-out ------------------------------------------------
+  // `outstanding` is the snapshot of what was still open when a day was closed,
+  // and its leftovers carry a **copied** `subject` and `detail` rather than an
+  // id — `src/lib/closeout.ts` says so, and eight producers in `src/db/today.ts`
+  // put the diver's own name in that subject. The snapshot's own docblock calls
+  // the text "trail text, like `activity_events.message`", which is exactly
+  // right and is why leaving it standing was wrong: that column is redacted by
+  // this same name match a few statements down, and this one was not. The table
+  // carries no retention arm, so the name was permanent and legible from the
+  // close-out trail (issue #1607).
+  //
+  // The **element is replaced, never removed**, like the buddy sweep above: how
+  // many things were left open when the shop closed is a fact about the day.
+  const closeoutNameMatch = buddyMemberNameMatch(ctx.fullName);
+  if (closeoutNameMatch) {
+    const closed = await tx
+      .update(dayCloseouts)
+      .set({
+        outstanding: sql`jsonb_set(
+          ${dayCloseouts.outstanding},
+          '{leftovers}',
+          (
+            select coalesce(jsonb_agg(
+              case
+                when (item->>'subject') ~* ${closeoutNameMatch}
+                  or (item->>'detail') ~* ${closeoutNameMatch}
+                then item || jsonb_build_object(
+                  'subject', to_jsonb(${REDACTED_TEXT}::text),
+                  'detail', to_jsonb(${REDACTED_TEXT}::text)
+                )
+                else item
+              end
+              order by ord
+            ), '[]'::jsonb)
+            from jsonb_array_elements(${dayCloseouts.outstanding}->'leftovers')
+              with ordinality as t(item, ord)
+          )
+        )`,
+      })
+      .where(
+        and(
+          eq(dayCloseouts.shopId, shopId),
+          sql`exists (
+            select 1 from jsonb_array_elements(${dayCloseouts.outstanding}->'leftovers') as t(item)
+            where (t.item->>'subject') ~* ${closeoutNameMatch}
+               or (t.item->>'detail') ~* ${closeoutNameMatch}
+          )`,
+        ),
+      )
+      .returning({ id: dayCloseouts.id });
+    logFuzzyMatch(ctx, "day_closeout_leftover_name", closed.length);
+  }
+
   // --- gear register -------------------------------------------------------
   // Staff prose typed about how a unit came home ("torn strap, needs look"),
   // which is free text about a rental this diver had out. The reservation, its
@@ -1319,25 +1397,34 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // Both holder shapes, because `gear_reservations_one_holder` allows only one
   // at a time: a bookingless counter rental carries `person_id`, and a rental
   // against a seat carries `booking_id`.
+  // Redacted rather than cleared where the note is the evidence behind a
+  // `service_concern`: the writer requires words for that outcome, no database
+  // check enforces the pairing, and a unit left flagged for service with a
+  // silently empty note reads as "nobody said" — which is the reading the
+  // column's own docblock warns against. `[redacted]` tells a technician to
+  // ask. A plain return keeps a null.
+  const clearedReturnNote = sql`case when ${gearReservations.returnOutcome} = 'service_concern' then ${REDACTED_TEXT} else null end`;
   await tx
     .update(gearReservations)
-    .set({ returnNote: null })
+    .set({ returnNote: clearedReturnNote })
     .where(
       and(
         eq(gearReservations.shopId, shopId),
         eq(gearReservations.personId, personId),
         isNotNull(gearReservations.returnNote),
+        ne(gearReservations.returnNote, REDACTED_TEXT),
       ),
     );
   if (owned) {
     await tx
       .update(gearReservations)
-      .set({ returnNote: null })
+      .set({ returnNote: clearedReturnNote })
       .where(
         and(
           eq(gearReservations.shopId, shopId),
           inArray(gearReservations.bookingId, bookingIds),
           isNotNull(gearReservations.returnNote),
+          ne(gearReservations.returnNote, REDACTED_TEXT),
         ),
       );
   }
@@ -1352,6 +1439,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // diver's details one click away from an "erased" record.
   const orderRows = await tx
     .select({
+      id: orders.id,
       stripeAccountId: orders.stripeAccountId,
       stripeCustomerId: orders.stripeCustomerId,
       stripeInvoiceId: orders.stripeInvoiceId,
@@ -1360,8 +1448,33 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
   await tx
     .update(orders)
-    .set({ hostedInvoiceUrl: null, invoicePdfUrl: null })
+    // `description` goes with them. It is staff-typed free text on the invoice
+    // form, and this repository already treats it as third-party-naming
+    // elsewhere: `src/db/export.ts` excludes it from both bundles' order files
+    // with that reason written at the exclusion, and `diver-export.test.ts`
+    // pins the header with a seeded "Split with <name>'s buddy this trip".
+    // Excluded from an export and left on the row after an erasure is not a
+    // consistent answer (issue #1607, found by a `security-reviewer` pass).
+    .set({ hostedInvoiceUrl: null, invoicePdfUrl: null, description: null })
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
+
+  // The per-line half of the same text, on the same form, carried out of the
+  // shop under the same exclusion.
+  const orderIds = orderRows.map((row) => row.id);
+  if (orderIds.length > 0) {
+    // NOT NULL, so redacted rather than cleared — the same shape
+    // `activity_events.message` takes for the same reason.
+    await tx
+      .update(orderLineItems)
+      .set({ description: REDACTED_TEXT })
+      .where(
+        and(
+          eq(orderLineItems.shopId, shopId),
+          inArray(orderLineItems.orderId, orderIds),
+          ne(orderLineItems.description, REDACTED_TEXT),
+        ),
+      );
+  }
 
   // Everything those orders point at *at Stripe* becomes a row in the erasure
   // ledger (ADR 20260803-processor-erasure-obligations): the customer objects,
@@ -1483,7 +1596,10 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       if (soleOccupant.length > 0) {
         const byBooking = await tx
           .update(bookingCheckouts)
-          .set({ customerEmail: null })
+          // The hosted page goes with the address: it is the same Stripe object
+          // rendering the same customer, on the same reasoning that nulls
+          // `orders.hosted_invoice_url` (issue #1607).
+          .set({ customerEmail: null, checkoutUrl: null })
           .where(
             and(
               eq(bookingCheckouts.shopId, shopId),

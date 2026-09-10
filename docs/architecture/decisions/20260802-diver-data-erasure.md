@@ -136,6 +136,10 @@ deleted; rows that are evidence are kept and their personal fields scrubbed.**
 | `booking_payment_events` | `note` → null. `setBookingPayment` copies the note onto every transition it appends, so scrubbing `booking_payments` and leaving the trail left the same sentence legible in full history. |
 | `trip_last_minute_promo_recipients` | `email` → a unique redacted value; the row stays. That a deal reached N people on a departure is the shop's own record, and with the address gone it is not a fact about a person. `person_id` stays for the reason `course_inquiries`' does. |
 | `waiver_deliveries` | `detail` → null, and `waiver_records.delivery_error` beside it. Both hold the provider's own words for a bounce, which quote the address they failed to reach — the same reason `notification_deliveries.provider_detail` is cleared. |
+| `orders.description`, `order_line_items.description` | → null / `[redacted]` (the second is NOT NULL). Staff-typed free text on the invoice form, which `src/db/export.ts` already excludes from **both** bundles as third-party-naming — `diver-export.test.ts` pins that header with a seeded "Split with ⟨name⟩'s buddy this trip". Excluded from an export and left on the row after an erasure was not a consistent answer. |
+| `tips.checkout_url`, `booking_checkouts.checkout_url` | → null. Stripe's hosted Checkout page, minted with `customer_email` taken straight off `people.email`, so it renders the address the diver was erased for — the same argument that already nulls `orders.hosted_invoice_url`. Bounded by session expiry; the column is not. |
+| `day_closeouts.outstanding` | each `leftovers[]` element whose `subject` or `detail` matches the stored name has both fields replaced with `[redacted]`; **the element stays**, because how many things were open when the shop closed is a fact about the day. The snapshot copies a `subject` string rather than an id, and eight producers in `src/db/today.ts` put the diver's own name there. Its own docblock calls the text "trail text, like `activity_events.message`" — which is right, and is why leaving it standing was wrong: that column is redacted by this same word-boundary match. The table carries no retention arm, so the name was permanent. |
+| `gear_reservations.return_note` (amended) | → `[redacted]` where `return_outcome` is `service_concern`, → null otherwise. A blanket null left a unit flagged for service with a silently empty note, which reads as "nobody said" — the reading the column's own docblock warns against. |
 | `trip_reviews` | `comment` → null, **unpublished** (`is_published` false, `published_at` null) |
 | `orders` | `hosted_invoice_url`, `invoice_pdf_url` → null — publicly reachable Stripe pages rendering the customer's name and email |
 | `recap_photos` | rows deleted + blob queued (photographs of the diver) |
@@ -304,6 +308,35 @@ survive a green run:
   match"); the booking- and actor-scoped sweeps still run, so only an event with a null `booking_id`
   written about them by someone else — a private note — retains a one- or two-character name. That
   is a far smaller leak than what the unbounded match cost.
+- **A half-typed form draft outlives the erasure by up to a week.** `form_drafts.person_id` is the
+  *author*, not the subject, so a `new_diver` draft holds a third party's name, address and phone
+  under a staffer's id and no person-scoped sweep can reach it. `NEVER_DRAFTED` excludes card,
+  medical and token fields but not those three, the reader drops anything over 24 hours, and the
+  retention prune runs **weekly** against a one-day cutoff — so the row can sit for five more days
+  after an erasure reported success. Tracked as [#1620](https://github.com/AaronBuxbaum/diveday/issues/1620);
+  the send-queue sweep is the shape that closes it.
+- **A diver whose only Stripe footprint is a tip gets no obligation row.** The processor ledger
+  reads `orders`, and a tip mints its own Checkout session and Customer without one. Nothing local
+  leaks — the hosted URL is nulled above — but the promise that an unfinished processor erasure
+  *says so out loud* is not kept for that diver. Tracked as
+  [#1621](https://github.com/AaronBuxbaum/diveday/issues/1621).
+- **A crew photograph of the day can show an erased diver, and no code can know it does.**
+  `trip_recap_photos` is keyed to the departure and to the staff member who uploaded it, and is
+  shared with everyone on that trip's recap. The erasure deletes `recap_photos` — the ones attached
+  to a *diver* — and cannot reason about what is inside an image attached to a trip. This is a keep
+  with a residual, not a table holding nothing about a diver.
+- **Re-importing the same file after an erasure resurrects the labels it destroyed.** The scrub
+  rotates `dedupe_key` on `prior_visits`, `imported_payment_history` and `prior_gear_assignments` to
+  a unique redacted value, which is what keeps those NOT NULL columns inside their unique indexes.
+  A second run of the same export therefore no longer dedupes, and since `people.email` is now null
+  the importer creates a fresh person and re-inserts every label. Inherent to holding an import at
+  all — the source system still has the data — but it is a way an erasure can be undone by accident
+  and the owner running the import should be the one who knows it.
+- **What survives on `imported_payment_history` is pseudonymised, not anonymous.** `amount_cents`,
+  `currency`, `occurred_on` and `person_id` stay, so the row is still a per-person spending timeline
+  hanging off an erased record. That is the same call every other "the shop's own record of its own
+  business" row here makes, and it is worth naming rather than leaving as an implication of the
+  redaction list.
 - **Backups and log aggregation** are outside the database and outside this ADR
   ([20260802-backup-and-restore-posture](20260802-backup-and-restore-posture.md) owns retention
   there). A restore from a pre-erasure backup reinstates the erased data.

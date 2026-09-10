@@ -15,16 +15,20 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   bookings,
+  dayCloseouts,
   gearItems,
   gearReservations,
   importedPaymentHistory,
   integrationEvents,
+  mediaDeletionAttempts,
+  orderLineItems,
   orders,
   people,
   personRoles,
   priorGearAssignments,
   recapPulses,
   rollCallEvents,
+  tips,
   tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   trips,
@@ -34,6 +38,12 @@ import {
   waiverTemplates,
 } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
+
+/**
+ * A managed storage origin, the shape `isManagedStorageUrl` accepts. A blob URL
+ * on any other host is refused by `queueMediaDeletion` and queues nothing.
+ */
+const MANAGED_BLOB_HOST = "https://diveday-media.s3.us-east-1.amazonaws.com";
 
 async function erasureFixtures() {
   const { db, shop } = await seededShopContext({ history: true });
@@ -577,7 +587,11 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       currency: "usd",
       paymentReference: "ch_prior_1",
       receiptReference: "RCPT-4471",
-      receiptDocumentUrl: "https://media.invalid/receipts/kwame.pdf",
+      // A **managed** origin, deliberately: `queueMediaDeletion` refuses any
+      // other host and returns null, so a `media.invalid` URL would have made
+      // this fixture assert nothing about the one thing the new
+      // `payment_receipt` kind exists for.
+      receiptDocumentUrl: `${MANAGED_BLOB_HOST}/receipts/kwame.pdf`,
       sourceLabel: "Reef Runner POS",
       sourceReference: "ORD-9912",
       stripeReference: "in_prior_1",
@@ -665,7 +679,69 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       email: "kwame@example.com",
     });
 
-    // 6. The provider's own words for a bounce, on the release and per channel.
+    // 6. A staff-typed invoice line, and the hosted pages Stripe mints.
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId: diver.id,
+        createdByPersonId: owner.id,
+        currency: "usd",
+        totalCents: 18000,
+        stripeAccountId: "acct_test",
+        stripeCustomerId: "cus_test",
+        stripeInvoiceId: "in_test",
+        description: "Split with Kwame Mensah's buddy this trip",
+        hostedInvoiceUrl: "https://invoice.stripe.com/hosted/kwame",
+        invoicePdfUrl: "https://invoice.stripe.com/pdf/kwame",
+      })
+      .returning({ id: orders.id });
+    if (!order) throw new Error("fixture insert failed");
+    await db.insert(orderLineItems).values({
+      shopId: shop.id,
+      orderId: order.id,
+      description: "Two tanks for Kwame Mensah",
+      unitAmountCents: 18000,
+    });
+    await db.insert(tips).values({
+      shopId: shop.id,
+      bookingId: booking.id,
+      stripeAccountId: "acct_test",
+      stripeSessionId: "cs_test",
+      currency: "usd",
+      amountCents: 2000,
+      checkoutUrl: "https://checkout.stripe.com/c/pay/cs_test",
+    });
+
+    // 7. The day's close-out, whose leftovers copy the diver's name rather than
+    // pointing at them.
+    await db.insert(dayCloseouts).values({
+      shopId: shop.id,
+      shopDay: "2026-03-01",
+      actorPersonId: owner.id,
+      outstanding: {
+        departures: [],
+        leftovers: [
+          {
+            id: "waiver:1",
+            kind: "waiver",
+            subject: "Kwame Mensah",
+            detail: "Waiver not signed — Kwame Mensah",
+            decision: "carry",
+          },
+          {
+            id: "waiver:2",
+            kind: "waiver",
+            subject: "Someone Else",
+            detail: "Waiver not signed — Someone Else",
+            decision: "carry",
+          },
+        ],
+        adminTasks: [],
+      },
+    });
+
+    // 8. The provider's own words for a bounce, on the release and per channel.
     const [template] = await db
       .select({ id: waiverTemplates.id })
       .from(waiverTemplates)
@@ -761,5 +837,46 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       .where(eq(waiverDeliveries.waiverRecordId, record.id));
     expect(delivery?.detail).toBeNull();
     expect(delivery?.status).toBe("failed");
+
+    // Staff free text on the invoice form, which the export bundles already
+    // exclude as third-party-naming.
+    const [erasedOrder] = await db.select().from(orders).where(eq(orders.id, order.id));
+    expect(erasedOrder?.description).toBeNull();
+    expect(erasedOrder?.hostedInvoiceUrl).toBeNull();
+    const [line] = await db
+      .select()
+      .from(orderLineItems)
+      .where(eq(orderLineItems.orderId, order.id));
+    expect(line?.description).toBe("[redacted]");
+    expect(line?.unitAmountCents).toBe(18000);
+
+    // The hosted tip page renders the address it was minted with.
+    const [tip] = await db.select().from(tips).where(eq(tips.bookingId, booking.id));
+    expect(tip?.checkoutUrl).toBeNull();
+    expect(tip?.amountCents).toBe(2000);
+
+    // The close-out's leftovers keep their count and lose the name. The
+    // bystander's row is untouched, which is what the word-boundary match buys.
+    const [closeout] = await db.select().from(dayCloseouts).where(eq(dayCloseouts.shopId, shop.id));
+    const leftovers = closeout?.outstanding.leftovers ?? [];
+    expect(leftovers).toHaveLength(2);
+    expect(leftovers[0]?.subject).toBe("[redacted]");
+    expect(leftovers[0]?.detail).toBe("[redacted]");
+    expect(leftovers[0]?.decision).toBe("carry");
+    expect(leftovers[1]?.subject).toBe("Someone Else");
+
+    // The receipt document itself, retired through the same durable ledger
+    // every other blob deletion uses rather than a second mechanism.
+    const queued = await db
+      .select()
+      .from(mediaDeletionAttempts)
+      .where(
+        and(
+          eq(mediaDeletionAttempts.shopId, shop.id),
+          eq(mediaDeletionAttempts.kind, "payment_receipt"),
+        ),
+      );
+    expect(queued.map((row) => row.url)).toEqual([`${MANAGED_BLOB_HOST}/receipts/kwame.pdf`]);
+    expect(queued.every((row) => row.status === "pending")).toBe(true);
   });
 });
