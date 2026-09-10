@@ -841,6 +841,30 @@ deploying, then set both values in `cdk.json` in a pull request and deploy. Doin
 deploy costs a window in which every photo 404s, because the deploy is what flips
 `MEDIA_PUBLIC_URL_BASE`.
 
+### What the alias costs, and what pays for it
+
+`cloudfront.net` is on the Public Suffix List, so `d111111abcdef8.cloudfront.net` is a different
+*site* from `dive.day` and no cookie policy expressible anywhere could bridge the two.
+`media.dive.day` is the same registrable domain. That trades a **structural** isolation for a
+**configuration** one, and two things pay for it in the same change:
+
+- **No cookie this app sets carries a `Domain` attribute**, so the session cookie is host-only and is
+  never attached to an image request. That was previously true by accident; `src/lib/cookie-scope.test.ts`
+  now asserts it, including the better-auth switches that would turn it on. The `__Secure-` prefix
+  does not forbid a `Domain` — only `__Host-` does — so this is a guard rather than a property.
+- **The media behaviours carry `X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox`.**
+  `src/lib/security-headers.ts` is a Next `headers()` rule and reaches nothing CloudFront serves, and
+  the behaviour previously used the AWS-managed CORS policy alone, which sets neither. Nothing
+  attacker-controlled can be stored under the public prefixes — every object goes through
+  `processImage`, which refuses anything outside the image content types and re-encodes to JPEG — but
+  script executing on `media.dive.day` could set cookies on `.dive.day`, where script on
+  `cloudfront.net` could not. Both headers are inert for an `<img>`.
+
+`Referrer-Policy: strict-origin-when-cross-origin` is defined in terms of *origin*, not site, so the
+media host receives `https://dive.day` and nothing more either way; the capability routes that carry
+photo URLs send `no-referrer` and are unaffected. `Strict-Transport-Security` already carries
+`includeSubDomains`, so the alias inherits it.
+
 > **The rows written before the switch keep their `cloudfront.net` URLs.** They keep loading — the
 > AWS-assigned domain does not go away — but they stop being recognised as DiveDay's own storage,
 > which gates deletion and the ingest allowlist. On a pre-pilot database that is the correct trade

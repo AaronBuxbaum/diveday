@@ -293,15 +293,39 @@ describe("every source is a legal source expression", () => {
     expect(sources).toContain("https://media.dive.day");
   });
 
-  it("does not repeat an origin the AWS wildcards already cover", () => {
-    for (const base_url of [
+  it("does not repeat an origin a wildcard above already covers", () => {
+    for (const value of [
       "https://d111111abcdef8.cloudfront.net",
-      "https://diveday-media.s3.us-east-1.amazonaws.com",
+      "https://diveday-media.s3.amazonaws.com",
     ]) {
-      expect(reportOnlyPolicy({ ...base, mediaPublicUrlBase: base_url })).toEqual(
+      expect(reportOnlyPolicy({ ...base, mediaPublicUrlBase: value })).toEqual(
         reportOnlyPolicy(base),
       );
     }
+  });
+
+  /**
+   * The regional bucket endpoint is the pre-verification fallback
+   * (`infra/lib/infra-stack.ts` S11, when `cloudfrontVerified` is false), and it
+   * is **not** covered by `https://*.s3.amazonaws.com` -- a CSP source wildcards
+   * exactly one leftmost label, which is issue #1263's whole lesson. The only
+   * other thing that admits it is `mediaRegionalImageHosts`, gated on a
+   * *different* variable. Deduplicating it away here, as this function did when
+   * it was first written, deletes the one source that admits it whenever
+   * `MEDIA_AWS_REGION` is missing or malformed: a broken-images bug the day
+   * `img-src` moves into the enforced half, and a stream of false violation
+   * reports before that.
+   */
+  it("keeps the regional bucket endpoint, which no wildcard covers", () => {
+    const sources =
+      directives(
+        reportOnlyPolicy({
+          ...base,
+          mediaRegion: null,
+          mediaPublicUrlBase: "https://diveday-media.s3.us-east-2.amazonaws.com",
+        }),
+      ).get("img-src") ?? [];
+    expect(sources).toContain("https://diveday-media.s3.us-east-2.amazonaws.com");
   });
 
   it("refuses a media base that is not a plain https origin", () => {

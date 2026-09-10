@@ -40,8 +40,10 @@ type DistributionConfig = {
   Origins: Array<{ Id: string; S3OriginConfig?: unknown; OriginAccessControlId?: unknown }>;
 };
 
-function mediaDistribution(): DistributionConfig {
-  const distributions = template().findResources("AWS::CloudFront::Distribution");
+function mediaDistribution(context?: Record<string, unknown>): DistributionConfig {
+  const distributions = (context ? template(context) : template()).findResources(
+    "AWS::CloudFront::Distribution",
+  );
   const media = Object.values(distributions).find((resource) =>
     String(
       (resource.Properties as { DistributionConfig: { Comment?: string } }).DistributionConfig
@@ -256,6 +258,43 @@ describe("media distribution", () => {
    * before it. So the property under test is that the alias, when configured,
    * reaches the one place that gets written down.
    */
+  /**
+   * **The app's own security headers stop at Next.** `src/lib/security-headers.ts`
+   * is a `headers()` rule, so nothing it sets reaches a response CloudFront
+   * serves -- and this behaviour used the AWS-managed CORS policy alone, which
+   * adds `Access-Control-Allow-Origin: *` and no `nosniff`.
+   *
+   * Nothing under the public prefixes can be attacker-controlled HTML or SVG
+   * today: every object goes through `processImage`, which refuses anything
+   * outside `ALLOWED_IMAGE_CONTENT_TYPES` and re-encodes to JPEG. What these
+   * two headers buy is the consequence of that ever slipping, and the
+   * consequence got worse the day an alias made the media host a subdomain of
+   * `dive.day` rather than a separate site on the Public Suffix List: script
+   * executing there could set cookies on `.dive.day`. Both headers are inert
+   * for an `<img>`, which is the only way these objects are meant to be read.
+   */
+  it("serves media with nosniff and a sandbox policy, which Next's own headers cannot reach", () => {
+    const policies = Object.values(
+      template().findResources("AWS::CloudFront::ResponseHeadersPolicy"),
+    );
+    const media = policies.find((resource) => JSON.stringify(resource).includes("DiveDay media")) as
+      | { Properties: { ResponseHeadersPolicyConfig: Record<string, unknown> } }
+      | undefined;
+    expect(media, "no response headers policy for the media behaviours").toBeDefined();
+    const config = media?.Properties.ResponseHeadersPolicyConfig as {
+      SecurityHeadersConfig?: { ContentTypeOptions?: { Override: boolean } };
+      CustomHeadersConfig?: { Items: Array<{ Header: string; Value: string }> };
+      CorsConfig?: { AccessControlAllowOrigins: { Items: string[] } };
+    };
+    expect(config.SecurityHeadersConfig?.ContentTypeOptions?.Override).toBe(true);
+    expect(config.CustomHeadersConfig?.Items).toContainEqual(
+      expect.objectContaining({ Header: "Content-Security-Policy", Value: "sandbox" }),
+    );
+    // And the allow-all CORS the managed policy provided is still provided:
+    // media is read from pages and canvases that are not this origin.
+    expect(config.CorsConfig?.AccessControlAllowOrigins.Items).toEqual(["*"]);
+  });
+
   describe("with an alternate domain name", () => {
     const domained = {
       cloudfrontVerified: true,
@@ -301,6 +340,31 @@ describe("media distribution", () => {
     });
 
     /**
+     * **Every routing assertion in this file runs against the un-aliased
+     * template**, because `mediaDistribution()` defaults to it -- so the
+     * property the file exists to protect, that the CDN can serve the six
+     * public prefixes and nothing else, is proven for only one of the two
+     * shapes this construct now has.
+     *
+     * Rather than duplicate four assertions, this states the stronger thing
+     * directly: an alternate domain name is a second *name* the distribution
+     * answers on, never a second *path*, so everything about routing must come
+     * out byte-identical. It is true by construction today -- the alias
+     * properties are spread in after `defaultBehavior` and `additionalBehaviors`
+     * and share no key with either -- and it stops being true the moment
+     * somebody adds anything else to that branch: a `defaultRootObject`, an
+     * extra behaviour, a CloudFront Function. Then this fails, and the four
+     * assertions above stay honest without ever having been run twice.
+     */
+    it("changes what the distribution is called and nothing about what it serves", () => {
+      const withAlias = mediaDistribution(domained);
+      const withoutAlias = mediaDistribution({ cloudfrontVerified: true });
+      expect(withAlias.CacheBehaviors).toEqual(withoutAlias.CacheBehaviors);
+      expect(withAlias.DefaultCacheBehavior).toEqual(withoutAlias.DefaultCacheBehavior);
+      expect(withAlias.Origins).toEqual(withoutAlias.Origins);
+    });
+
+    /**
      * The quiet failure this refuses: an alias silently dropped for a missing
      * certificate deploys a distribution that a resolving CNAME points at and
      * that answers every request with a TLS error -- while the deploy reports
@@ -321,9 +385,26 @@ describe("media distribution", () => {
      * misconfiguration that should stop at synth, not one that widens a policy.
      */
     it("refuses a domain name that is not a hostname", () => {
-      expect(() =>
-        template({ ...domained, mediaDomainName: "media.dive.day/../evil.example" }),
-      ).toThrow(/not a hostname/);
+      for (const domainName of [
+        "media.dive.day/../evil.example",
+        "media.dive.day https://evil.example",
+        "MEDIA.dive.day",
+        "media.dive.day.",
+        "media.dive.day:443",
+        "-media.dive.day",
+        "media",
+        // Every label of an IPv4 literal is otherwise a legal hostname label,
+        // and this one is the link-local metadata address. It cannot hold an
+        // ACM certificate, so nobody reaches this state without already owning
+        // the deploy -- but it would land in next.config.ts's remotePatterns as
+        // an allowlisted image origin, leaving only Next's own private-IP guard
+        // between it and /_next/image. Ours to refuse, not theirs to catch.
+        "169.254.169.254",
+      ]) {
+        expect(() => template({ ...domained, mediaDomainName: domainName }), domainName).toThrow(
+          /not a hostname/,
+        );
+      }
     });
   });
 

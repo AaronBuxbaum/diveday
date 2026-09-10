@@ -137,13 +137,32 @@ function mediaPublicImageHosts(publicUrlBase: string | null | undefined): string
   } catch {
     return [];
   }
-  // `URL.origin` cannot contain whitespace, a semicolon or a quote, so this is
-  // belt to that brace -- and the brace is the thing that could change.
+  // **This line is load-bearing, not a belt to `URL.origin`'s brace.** The
+  // tempting comment to write here is that an origin cannot contain whitespace,
+  // a semicolon or a quote so the check is redundant -- and it is wrong about
+  // the semicolon, which is the one character that would actually end this
+  // source and start a second directive. WHATWG host parsing for a special
+  // scheme runs IDNA with `UseSTD3ASCIIRules=false`, under which `;` is *not* a
+  // forbidden domain code point: `new URL("https://a;b.com").origin` is
+  // `https://a;b.com`, unescaped, and a policy carrying it would read
+  // `img-src ... https://a;b.com`. This class is what refuses it. Do not delete
+  // it as redundant.
   if (!/^https:\/\/[a-z0-9.\-:[\]]+$/i.test(origin)) return [];
-  // Already covered by the two wildcards above; listing it again is harmless
-  // but noisy, and the header has a budget.
-  if (/\.cloudfront\.net$/i.test(new URL(origin).hostname)) return [];
-  if (/\.amazonaws\.com$/i.test(new URL(origin).hostname)) return [];
+  // Already covered by `MEDIA_IMAGE_HOSTS`' wildcard, so listing it again is
+  // noise in a header that has a budget.
+  //
+  // Only the *global* bucket form is skipped alongside it, never the regional
+  // one. `https://*.s3.amazonaws.com` matches exactly one leftmost label, so it
+  // covers `<bucket>.s3.amazonaws.com` and does **not** cover
+  // `<bucket>.s3.<region>.amazonaws.com` -- the lesson this module's own
+  // docblock above records from issue #1263. The regional form is admitted only
+  // by {@link mediaRegionalImageHosts}, which is conditional on a *different*
+  // variable, so skipping it here would remove the one source that admits the
+  // pre-verification bucket endpoint whenever `MEDIA_AWS_REGION` is absent or
+  // malformed.
+  const { hostname } = new URL(origin);
+  if (/\.cloudfront\.net$/i.test(hostname)) return [];
+  if (/^[^.]+\.s3\.amazonaws\.com$/i.test(hostname)) return [];
   return [origin];
 }
 

@@ -3679,11 +3679,25 @@ exports.handler = async () => {
           "Set both in cdk.json, or neither. See manual action media-domain-name.",
       );
     }
-    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(domainName)) {
+    // The trailing `[a-z]{2,}` is not decoration: without it every label of
+    // `169.254.169.254` matches, and that value would reach next.config.ts's
+    // `remotePatterns` as `{ hostname: "169.254.169.254", pathname: "/**" }` --
+    // making the link-local metadata address allowlisted by *our* layer, with
+    // only Next's own private-IP guard left between it and
+    // `/_next/image?url=...`. Nobody can reach that state without an ACM
+    // certificate (which cannot be issued for an IP) and a committed cdk.json
+    // edit, so this refuses a misconfiguration rather than an attack. It is
+    // still ours to refuse rather than somebody else's to catch.
+    if (
+      !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/.test(
+        domainName,
+      )
+    ) {
       throw new Error(
         `mediaDomainName ${JSON.stringify(domainName)} is not a hostname. It is interpolated ` +
           "into MEDIA_PUBLIC_URL_BASE, which src/lib/storage/blob-host.ts turns into an origin " +
-          "allowlist and next.config.ts turns into an image-optimizer allowlist.",
+          "allowlist, next.config.ts turns into an image-optimizer allowlist, and " +
+          "src/lib/content-security-policy.ts turns into an img-src source.",
       );
     }
     return domainName;
@@ -3698,12 +3712,59 @@ exports.handler = async () => {
     domainName: string | undefined,
   ): cloudfront.Distribution {
     const mediaOrigin = origins.S3BucketOrigin.withOriginAccessControl(mediaBucket);
+    // **The app's own security headers do not reach here.**
+    // `src/lib/security-headers.ts` is a Next `headers()` rule, so it applies to
+    // responses Next serves and to nothing CloudFront serves. This was the
+    // AWS-managed `CORS_ALLOW_ALL_ORIGINS` policy alone, which adds
+    // `Access-Control-Allow-Origin: *` and no `nosniff` at all.
+    //
+    // Not exploitable today, and the reason is worth stating so nobody relaxes
+    // it by accident: every object under the six public prefixes goes through
+    // `storeImage` -> `processImage` (src/lib/storage/index.ts), which refuses
+    // anything outside `ALLOWED_IMAGE_CONTENT_TYPES`, re-encodes to JPEG and
+    // forces a `.jpg` name, so no attacker-controlled HTML or SVG can be stored
+    // where the CDN can serve it. A PDF only ever lands under `import-*` or
+    // `medical-clearances/`, which have no behaviour here.
+    //
+    // What changes is the *consequence* of that ever slipping. On the
+    // AWS-assigned `*.cloudfront.net` domain the media host is a different
+    // **site** -- cloudfront.net is on the Public Suffix List -- so script
+    // executing there could touch nothing of DiveDay's. On `media.dive.day` it
+    // is the same registrable domain: it could set cookies on `.dive.day`, and
+    // it is same-site for any `SameSite=Lax` or `Sec-Fetch-Site` reasoning
+    // anywhere in the app. `nosniff` keeps a mislabelled object from being
+    // rendered as a document, and the `sandbox` policy keeps a document that
+    // does get rendered from running anything. Both are inert for an `<img>`,
+    // which is the only way these objects are meant to be read.
+    const publicMediaHeaders = new cloudfront.ResponseHeadersPolicy(this, "MediaResponseHeaders", {
+      comment: "DiveDay media -- allow-all CORS, plus the headers Next cannot reach",
+      corsBehavior: {
+        // The managed policy this replaces, spelled out: media is read from
+        // pages and canvases that are not this origin.
+        accessControlAllowOrigins: ["*"],
+        accessControlAllowHeaders: ["*"],
+        accessControlAllowMethods: ["GET", "HEAD", "OPTIONS"],
+        accessControlAllowCredentials: false,
+        originOverride: true,
+      },
+      securityHeadersBehavior: {
+        contentTypeOptions: { override: true },
+      },
+      customHeadersBehavior: {
+        customHeaders: [
+          // Not `securityHeadersBehavior.contentSecurityPolicy`, which CDK
+          // requires a full policy string for; `sandbox` alone is the whole
+          // directive here.
+          { header: "Content-Security-Policy", value: "sandbox", override: true },
+        ],
+      },
+    });
     const publicMediaBehavior: cloudfront.BehaviorOptions = {
       origin: mediaOrigin,
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
       cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-      responseHeadersPolicy: cloudfront.ResponseHeadersPolicy.CORS_ALLOW_ALL_ORIGINS,
+      responseHeadersPolicy: publicMediaHeaders,
       compress: true,
     };
     const mediaDistribution = new cloudfront.Distribution(this, "MediaDistribution", {
