@@ -12,15 +12,26 @@ import {
   authProviderAccounts,
   authVerifications,
   bookingGifts,
+  bookingPaymentEvents,
+  bookingPayments,
   bookings,
+  gearItems,
+  gearReservations,
+  importedPaymentHistory,
   integrationEvents,
   orders,
   people,
   personRoles,
+  priorGearAssignments,
   recapPulses,
   rollCallEvents,
+  tripLastMinutePromoRecipients,
+  tripLastMinutePromos,
   trips,
   userAccounts,
+  waiverDeliveries,
+  waiverRecords,
+  waiverTemplates,
 } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -517,5 +528,238 @@ describe("anonymizeDiver — the gifts this person bought", () => {
     // Ben is not Hannah: erasing her says nothing about the diver whose seat
     // it is, and his own erasure is his own.
     expect(row?.receiverName).toBe("Ben Carter");
+  });
+});
+
+/**
+ * The six gaps the structural sweep found (issue #1607), each the same shape as
+ * something the erasure was already doing one table over.
+ *
+ * They are written as one fixture because that is how they were found: a single
+ * diver with a seat, a rental, an import and a release reaches all six, and
+ * every one of them was invisible to a per-table case nobody thought to write.
+ * `erasure-coverage.test.ts` is what makes the *next* one visible; these are
+ * what fail if a statement below is deleted.
+ */
+describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () => {
+  it("takes the imported money trail, the rental words, and the bounce text", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Kwame Mensah", email: "kwame@example.com" })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
+
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .orderBy(trips.id)
+      .limit(1);
+    if (!trip) throw new Error("expected a seeded departure");
+    const [booking] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: trip.id, personId: diver.id })
+      .returning({ id: bookings.id });
+    if (!booking) throw new Error("fixture insert failed");
+
+    // 1. The prior system's payment trail, and the receipt document behind it.
+    await db.insert(importedPaymentHistory).values({
+      shopId: shop.id,
+      personId: diver.id,
+      occurredOn: "2026-02-11",
+      direction: "payment",
+      title: "Two-tank Molasses Reef — Kwame Mensah",
+      statusLabel: "PAID",
+      amountLabel: "$180.00",
+      amountCents: 18000,
+      currency: "usd",
+      paymentReference: "ch_prior_1",
+      receiptReference: "RCPT-4471",
+      receiptDocumentUrl: "https://media.invalid/receipts/kwame.pdf",
+      sourceLabel: "Reef Runner POS",
+      sourceReference: "ORD-9912",
+      stripeReference: "in_prior_1",
+      dedupeKey: "ORD-9912",
+      importedAt: new Date("2026-02-12T00:00:00.000Z"),
+    });
+
+    // 2. The imported rental history beside it.
+    const [unit] = await db
+      .insert(gearItems)
+      .values({ shopId: shop.id, kind: "bcd", label: "BCD 07" })
+      .returning({ id: gearItems.id });
+    if (!unit) throw new Error("fixture insert failed");
+    await db.insert(priorGearAssignments).values({
+      shopId: shop.id,
+      personId: diver.id,
+      gearItemId: unit.id,
+      assignedFrom: "2026-02-11",
+      assignedUntil: "2026-02-11",
+      statusLabel: "RETURNED",
+      sourceReference: "RENT-221",
+      note: "Kwame prefers the larger size",
+      dedupeKey: "RENT-221",
+      importedAt: new Date("2026-02-12T00:00:00.000Z"),
+    });
+
+    // 3. Staff prose about how a unit came home, on both holder shapes.
+    await db.insert(gearReservations).values([
+      {
+        shopId: shop.id,
+        gearItemId: unit.id,
+        personId: diver.id,
+        reservedFrom: "2026-03-01",
+        reservedUntil: "2026-03-02",
+        returnedAt: new Date("2026-03-02T18:00:00.000Z"),
+        returnNote: "Kwame said the strap tore on the ladder",
+      },
+      {
+        shopId: shop.id,
+        gearItemId: unit.id,
+        bookingId: booking.id,
+        reservedFrom: "2026-03-05",
+        reservedUntil: "2026-03-06",
+        returnedAt: new Date("2026-03-06T18:00:00.000Z"),
+        returnNote: "returned wet, Kwame apologised",
+      },
+    ]);
+
+    // 4. The payment note, on the row and in the append-only trail behind it.
+    await db.insert(bookingPayments).values({
+      shopId: shop.id,
+      bookingId: booking.id,
+      status: "paid",
+      amountCents: 18000,
+      currency: "usd",
+      note: "Kwame paid cash at the counter",
+    });
+    await db.insert(bookingPaymentEvents).values({
+      shopId: shop.id,
+      bookingId: booking.id,
+      status: "paid",
+      amountCents: 18000,
+      currency: "usd",
+      operation: "manual_mark",
+      note: "Kwame paid cash at the counter",
+      occurredAt: new Date("2026-03-01T12:00:00.000Z"),
+    });
+
+    // 5. The address a last-minute deal was sent to.
+    const [promo] = await db
+      .insert(tripLastMinutePromos)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        discountPercent: 20,
+        code: "LASTCALL20",
+        expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+      })
+      .returning({ id: tripLastMinutePromos.id });
+    if (!promo) throw new Error("fixture insert failed");
+    await db.insert(tripLastMinutePromoRecipients).values({
+      shopId: shop.id,
+      tripPromoId: promo.id,
+      personId: diver.id,
+      email: "kwame@example.com",
+    });
+
+    // 6. The provider's own words for a bounce, on the release and per channel.
+    const [template] = await db
+      .select({ id: waiverTemplates.id })
+      .from(waiverTemplates)
+      .where(eq(waiverTemplates.shopId, shop.id))
+      .orderBy(waiverTemplates.id)
+      .limit(1);
+    if (!template) throw new Error("expected a seeded waiver template");
+    const [record] = await db
+      .insert(waiverRecords)
+      .values({
+        shopId: shop.id,
+        personId: diver.id,
+        templateId: template.id,
+        templateTitle: "Liability release",
+        templateVersion: 1,
+        templateBody: "the text as it stood",
+        tokenHash: "erasure-sweep-token-hash",
+        expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+        deliveryError: "550 5.1.1 <kwame@example.com>: recipient rejected",
+      })
+      .returning({ id: waiverRecords.id });
+    if (!record) throw new Error("fixture insert failed");
+    await db.insert(waiverDeliveries).values({
+      shopId: shop.id,
+      waiverRecordId: record.id,
+      channel: "email",
+      status: "failed",
+      detail: "550 5.1.1 <kwame@example.com>: recipient rejected",
+      attemptedAt: new Date("2026-03-01T12:00:00.000Z"),
+    });
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: owner.id,
+    });
+    expect(erased.ok).toBe(true);
+
+    // The money the shop counts survives; every word about who paid it goes.
+    const [payment] = await db
+      .select()
+      .from(importedPaymentHistory)
+      .where(eq(importedPaymentHistory.personId, diver.id));
+    expect(payment?.amountCents).toBe(18000);
+    expect(payment?.currency).toBe("usd");
+    expect(payment?.title).toBeNull();
+    expect(payment?.statusLabel).toBeNull();
+    expect(payment?.amountLabel).toBeNull();
+    expect(payment?.paymentReference).toBeNull();
+    expect(payment?.receiptReference).toBeNull();
+    expect(payment?.receiptDocumentUrl).toBeNull();
+    expect(payment?.sourceLabel).toBeNull();
+    expect(payment?.sourceReference).toBeNull();
+    expect(payment?.stripeReference).toBeNull();
+    expect(payment?.dedupeKey).not.toBe("ORD-9912");
+
+    const [assignment] = await db
+      .select()
+      .from(priorGearAssignments)
+      .where(eq(priorGearAssignments.personId, diver.id));
+    expect(assignment?.note).toBeNull();
+    expect(assignment?.statusLabel).toBeNull();
+    expect(assignment?.sourceReference).toBeNull();
+    expect(assignment?.dedupeKey).not.toBe("RENT-221");
+
+    // Both holder shapes: the reservation and its window stay, the prose goes.
+    const reservations = await db
+      .select()
+      .from(gearReservations)
+      .where(eq(gearReservations.gearItemId, unit.id));
+    expect(reservations).toHaveLength(2);
+    expect(reservations.map((row) => row.returnNote)).toEqual([null, null]);
+
+    const [event] = await db
+      .select()
+      .from(bookingPaymentEvents)
+      .where(eq(bookingPaymentEvents.bookingId, booking.id));
+    expect(event?.note).toBeNull();
+    expect(event?.amountCents).toBe(18000);
+
+    const [recipient] = await db
+      .select()
+      .from(tripLastMinutePromoRecipients)
+      .where(eq(tripLastMinutePromoRecipients.personId, diver.id));
+    expect(recipient).toBeDefined();
+    expect(recipient?.email).not.toBe("kwame@example.com");
+
+    const [waiver] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
+    expect(waiver?.deliveryError).toBeNull();
+    const [delivery] = await db
+      .select()
+      .from(waiverDeliveries)
+      .where(eq(waiverDeliveries.waiverRecordId, record.id));
+    expect(delivery?.detail).toBeNull();
+    expect(delivery?.status).toBe("failed");
   });
 });

@@ -228,7 +228,8 @@
       "arrivalPhoto": "Foto de llegada",
       "certificationCard": "Evidencia de certificación",
       "waiverDocument": "Documento de exención",
-      "diveSitePhoto": "Foto del sitio de buceo"
+      "diveSitePhoto": "Foto del sitio de buceo",
+      "paymentReceipt": "Recibo importado"
     },
     "stuckDetail": {
       "withId": "{kind} atascado desde {when} (Stripe: {id}). Revísalo en el panel de Stripe.",

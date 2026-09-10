@@ -438,6 +438,7 @@ const MEDIA_DELETION_KIND_KEYS: Record<string, StaffMessageKey> = {
   certification_card: "today.opsAlert.mediaKind.certificationCard",
   waiver_document: "today.opsAlert.mediaKind.waiverDocument",
   dive_site_photo: "today.opsAlert.mediaKind.diveSitePhoto",
+  payment_receipt: "today.opsAlert.mediaKind.paymentReceipt",
 };
 
 /** A stuck operation's kind word, standalone — `src/db/today.ts` uses this for the row's `subject`. */

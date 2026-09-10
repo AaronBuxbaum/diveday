@@ -130,6 +130,12 @@ deleted; rows that are evidence are kept and their personal fields scrubbed.**
 | `calendar_feeds` | revoked (a live feed URL is a standing read credential) |
 | `user_accounts` (if any) | `email` → a unique unusable address (NOT NULL + globally unique), `hashed_password` → a value nothing verifies against, `email_verified_at` → null, `status` → disabled; `account_tokens`, `account_security`, `account_sessions` and `auth_provider_accounts` deleted. The last of those is better-auth's `account` model — nothing writes it while no provider is configured, and the delete is there ahead of the row so that enabling a provider does not quietly make an erasure incomplete (issue #1594). `account_step_ups` needs no delete of its own: it cascades from the sessions above it. Better-auth's `auth_verifications` goes too, swept by `identifier` (the account id or the address) because it carries no foreign key to find it by — a pending row holds the address in clear and a live bearer token in `value`. |
 | `prior_visits` | `title`, `status_label`, `amount_label`, `source_label`, `source_reference` → null; `dedupe_key` → a unique redacted value; `visited_on` stays (the shop's own history) |
+| `imported_payment_history` | `title`, `status_label`, `amount_label`, `payment_reference`, `receipt_reference`, `source_label`, `source_reference`, `stripe_reference`, `receipt_document_url` → null (+ the receipt blob queued under the new `payment_receipt` kind); `dedupe_key` → a unique redacted value. `amount_cents` and `currency` **stay**: they are the only two columns a shop reads as its own money rather than as a sentence about a person, and the unverified-import slice of the financial aggregates is built from them. The table is in both export bundles, so an unerased row left the building with the next export (issue #1607). |
+| `prior_gear_assignments` | `status_label`, `source_reference`, `note` → null; `dedupe_key` → a unique redacted value. The window and the unit stay — which unit was out and when is the register's own record. |
+| `gear_reservations` | `return_note` → null, on both holder shapes (a bookingless counter rental carries `person_id`, a rental against a seat carries `booking_id`). Staff prose about how a unit came home; the reservation, its window and its outcome stay. |
+| `booking_payment_events` | `note` → null. `setBookingPayment` copies the note onto every transition it appends, so scrubbing `booking_payments` and leaving the trail left the same sentence legible in full history. |
+| `trip_last_minute_promo_recipients` | `email` → a unique redacted value; the row stays. That a deal reached N people on a departure is the shop's own record, and with the address gone it is not a fact about a person. `person_id` stays for the reason `course_inquiries`' does. |
+| `waiver_deliveries` | `detail` → null, and `waiver_records.delivery_error` beside it. Both hold the provider's own words for a bounce, which quote the address they failed to reach — the same reason `notification_deliveries.provider_detail` is cleared. |
 | `trip_reviews` | `comment` → null, **unpublished** (`is_published` false, `published_at` null) |
 | `orders` | `hosted_invoice_url`, `invoice_pdf_url` → null — publicly reachable Stripe pages rendering the customer's name and email |
 | `recap_photos` | rows deleted + blob queued (photographs of the diver) |
@@ -225,6 +231,42 @@ call sits inside the erasure transaction.
 
 The whole scrub is one transaction. A half-erasure — identity gone from `people`, medical answers
 still in `waiver_records` — is the worst outcome available.
+
+### Amendment, 2026-09-10 — the table above is enforced, not merely written down
+
+Six of the rows above were added on one day by running a sweep rather than by anyone reading the
+code, and that is the point of this amendment. Until then the only thing checking this promise was
+`src/db/anonymize.test.ts`: per-table cases somebody thought to write, so a new table holding a
+diver's details was invisible until a person thought of that table. Two had already been found that
+way and only by a `security-reviewer` pass on unrelated work (`auth_provider_accounts`, then
+`auth_verifications`); a third, `trip_last_minute_promo_recipients`, was live rather than latent.
+The asymmetry was the wrong way round: an incomplete demo reap strands a shop behind a foreign-key
+violation, while an incomplete erasure reports success.
+
+`src/db/erasure-coverage.test.ts` closes the class. Every table a foreign key connects to `people`,
+run to a fixed point — 92 of the schema's 116 — must be **either** written by `anonymizeDiver`
+**or** carry a written reason in that file's keep-list. Adding a table without deciding fails, and
+the failure names the table.
+
+Three limits it states rather than papers over, because each is a way a diver's details could still
+survive a green run:
+
+1. **It proves a table was *considered*, not that the statement is right.** The write set is read
+   from the source of `anonymize.ts`, deliberately reversing the delete-path guard's instrument:
+   running the real path through a recording Proxy sees only about 30 of the tables it writes,
+   because the erasure's conditional branches never all fire for one fixture, and every table a
+   fixture cannot reach would have to be keep-listed — which is exactly where a deleted statement
+   hides. A last test runs a real erasure through a recorder and fails on any table the static read
+   cannot see, which is the other half.
+2. **"Written" is table-level.** A table the sweep counts as handled may still have a column nobody
+   scrubbed. That is what the per-table cases in `anonymize.test.ts` are for; the sweep guarantees
+   only that no table was *forgotten*.
+3. **It cannot see a table reached by text.** The closure follows declared foreign keys, so a table
+   naming its person as an address or a polymorphic subject id is outside it — which is how
+   `auth_verifications` hid. The narrow complement is asserted: every table outside the closure
+   carrying a contact-shaped column must still be decided. A table outside it holding personal data
+   under some other column name is beyond any structural sweep, and is what a `security-reviewer`
+   pass exists for.
 
 ### Residuals — what this cannot erase
 

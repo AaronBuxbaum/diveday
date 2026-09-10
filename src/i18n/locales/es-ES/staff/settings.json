@@ -440,7 +440,8 @@
         "waiver_document": "Documento de exención",
         "dive_site_photo": "Foto del sitio de buceo",
         "shop_logo": "Logotipo del centro",
-        "shop_hero": "Foto de portada del centro"
+        "shop_hero": "Foto de portada del centro",
+        "payment_receipt": "Recibo importado"
       },
       "mediaDeletions": {
         "sectionLabel": "Fotos que no terminaron de eliminarse",

@@ -228,7 +228,8 @@
       "arrivalPhoto": "Arrival photo",
       "certificationCard": "Certification evidence",
       "waiverDocument": "Waiver document",
-      "diveSitePhoto": "Dive-site photo"
+      "diveSitePhoto": "Dive-site photo",
+      "paymentReceipt": "Imported receipt"
     },
     "stuckDetail": {
       "withId": "{kind} stuck since {when} (Stripe: {id}). Check it against the Stripe dashboard.",

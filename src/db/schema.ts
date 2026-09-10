@@ -8608,6 +8608,14 @@ export const mediaDeletionKind = pgEnum("media_deletion_kind", [
   "shop_logo",
   "arrival_photo",
   "shop_hero",
+  /**
+   * A receipt document re-stored from a prior system's export
+   * (`imported_payment_history.receipt_document_url`). Queued only by diver
+   * erasure: a receipt almost always renders the buyer's name, so an erased
+   * diver whose receipt blob stays hosted is erased in the database and not in
+   * the bucket (issue #1607).
+   */
+  "payment_receipt",
 ]);
 
 export const mediaDeletionStatus = pgEnum("media_deletion_status", [

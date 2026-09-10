@@ -76,6 +76,7 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingGifts,
+  bookingPaymentEvents,
   bookingPayments,
   bookings,
   buddyTeamEvents,
@@ -83,6 +84,8 @@ import {
   certifications,
   courseInquiries,
   diveSupportNeeds,
+  gearReservations,
+  importedPaymentHistory,
   inboundMessages,
   internalNotes,
   lastMinuteListEntries,
@@ -95,6 +98,7 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
+  priorGearAssignments,
   priorVisits,
   recapPhotos,
   recapPulses,
@@ -108,6 +112,7 @@ import {
   tripReviews,
   tripWaitlistEntries,
   userAccounts,
+  waiverDeliveries,
   waiverRecords,
 } from "./schema";
 
@@ -454,7 +459,10 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   const owned = bookingIds.length > 0;
 
   let queued = 0;
-  const retire = async (kind: "recap_photo" | "waiver_document", url: string | null) => {
+  const retire = async (
+    kind: "recap_photo" | "waiver_document" | "payment_receipt",
+    url: string | null,
+  ) => {
     if (!url) return;
     if (await queueMediaDeletion(tx, { shopId, kind, url })) queued += 1;
   };
@@ -557,6 +565,11 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         // the v2 seal covers (ADR 20260907-guardian-co-signature).
         guardianName: null,
         guardianEmail: null,
+        // The provider's own words for a bounce quote the address they failed
+        // to reach, which is the reason `notification_deliveries.provider_detail`
+        // is cleared further down. This column is the same text on the waiver's
+        // own row, and the per-channel table below carries a copy of it.
+        deliveryError: null,
         importedFromLabel: null,
         importSourceDocumentUrl: null,
         importSourceMedicalDocumentUrl: null,
@@ -592,6 +605,25 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         })
         .where(eq(waiverRecords.id, stripped.id));
     }
+  }
+
+  // The per-channel mechanics behind the column above (ADR
+  // 20260820-waiver-delivery-is-per-channel): one current row per channel, each
+  // carrying the provider's own bounce text. Swept by waiver record rather than
+  // by booking — a release is attached to a person, and a diver with no seat
+  // still has one.
+  const waiverRecordIds = waiverRows.map((record) => record.id);
+  if (waiverRecordIds.length > 0) {
+    await tx
+      .update(waiverDeliveries)
+      .set({ detail: null })
+      .where(
+        and(
+          eq(waiverDeliveries.shopId, shopId),
+          inArray(waiverDeliveries.waiverRecordId, waiverRecordIds),
+          isNotNull(waiverDeliveries.detail),
+        ),
+      );
   }
 
   // --- certification evidence ---------------------------------------------
@@ -961,6 +993,23 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         and(eq(bookingPayments.shopId, shopId), inArray(bookingPayments.bookingId, bookingIds)),
       );
 
+    // The same sentence, one table over. `setBookingPayment` copies `note` onto
+    // every transition it appends (`src/db/payments.ts`), so scrubbing the
+    // current row and leaving the trail left the staffer's words about this
+    // diver's money legible in full history. Found by the sweep below rather
+    // than by anyone reading the line above it (issue #1607) — which is the
+    // whole argument for having a sweep.
+    await tx
+      .update(bookingPaymentEvents)
+      .set({ note: null })
+      .where(
+        and(
+          eq(bookingPaymentEvents.shopId, shopId),
+          inArray(bookingPaymentEvents.bookingId, bookingIds),
+          isNotNull(bookingPaymentEvents.note),
+        ),
+      );
+
     // Provider bounce text quotes the address it failed to reach.
     await tx
       .update(notificationDeliveries)
@@ -1171,6 +1220,126 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         dedupeKey: redactedUniqueValue("redacted"),
       })
       .where(eq(priorVisits.id, visit.id));
+  }
+
+  // The payment trail beside those visits, and the larger of the two. Every
+  // label on it is the prior system's words about this diver's money, the
+  // references are that system's own handles on them, and
+  // `receipt_document_url` points at a re-stored receipt document that will
+  // usually render the buyer's name. `imported_payment_history` is also carried
+  // out of the shop by `src/db/export.ts` in both bundles, so an unerased row
+  // here leaves the building with the next export — the same failure the
+  // last-minute deal log had (issue #1607).
+  //
+  // `amount_cents` and `currency` stay. They are the only two columns on this
+  // table the shop reads as its own money rather than as a sentence about a
+  // person: the unverified-import slice of the financial aggregates is built
+  // from them, and a total is not a fact about who paid it. The verbatim
+  // `amount_label` beside them goes, for the reason it goes on `prior_visits`.
+  const importedPayments = await tx
+    .select({
+      id: importedPaymentHistory.id,
+      receiptDocumentUrl: importedPaymentHistory.receiptDocumentUrl,
+    })
+    .from(importedPaymentHistory)
+    .where(
+      and(eq(importedPaymentHistory.shopId, shopId), eq(importedPaymentHistory.personId, personId)),
+    );
+  for (const payment of importedPayments) {
+    await retire("payment_receipt", payment.receiptDocumentUrl);
+    await tx
+      .update(importedPaymentHistory)
+      .set({
+        title: null,
+        statusLabel: null,
+        amountLabel: null,
+        paymentReference: null,
+        receiptReference: null,
+        receiptDocumentUrl: null,
+        sourceLabel: null,
+        sourceReference: null,
+        stripeReference: null,
+        dedupeKey: redactedUniqueValue("redacted"),
+      })
+      .where(eq(importedPaymentHistory.id, payment.id));
+  }
+
+  // The imported rental history, the same shape one table over: `note`,
+  // `status_label` and `source_reference` are the prior system's free text
+  // about this diver's rentals, and `dedupe_key` can embed its reference. The
+  // assignment window and the unit stay — which unit was out and when is the
+  // register's own record, and it names nobody once the words are gone.
+  const priorAssignments = await tx
+    .select({ id: priorGearAssignments.id })
+    .from(priorGearAssignments)
+    .where(
+      and(eq(priorGearAssignments.shopId, shopId), eq(priorGearAssignments.personId, personId)),
+    );
+  for (const assignment of priorAssignments) {
+    await tx
+      .update(priorGearAssignments)
+      .set({
+        statusLabel: null,
+        sourceReference: null,
+        note: null,
+        dedupeKey: redactedUniqueValue("redacted"),
+      })
+      .where(eq(priorGearAssignments.id, assignment.id));
+  }
+
+  // --- last-minute deals ---------------------------------------------------
+  // `trip_last_minute_promo_recipients` logs who was offered which deal and
+  // stores the address it went to — the diver's own email, NOT NULL, keyed by
+  // `person_id` — and `src/db/export.ts` carries the table out of the shop in
+  // the portable bundle. The address goes and the row stays, the shape
+  // `user_accounts.email` takes: that a deal reached N people on a departure is
+  // the shop's own record, and with the address gone it is not a fact about a
+  // person. `person_id` stays for the reason `course_inquiries`' does — it
+  // points at a row that has itself been erased, and keeping it is what makes a
+  // replayed erasure reach the same rows.
+  await tx
+    .update(tripLastMinutePromoRecipients)
+    .set({ email: redactedUniqueValue("redacted") })
+    .where(
+      and(
+        eq(tripLastMinutePromoRecipients.shopId, shopId),
+        eq(tripLastMinutePromoRecipients.personId, personId),
+      ),
+    );
+
+  // --- gear register -------------------------------------------------------
+  // Staff prose typed about how a unit came home ("torn strap, needs look"),
+  // which is free text about a rental this diver had out. The reservation, its
+  // window and its outcome stay: what a unit did and when it came back is the
+  // register's own service record, and the sentence is the only part of it
+  // written about a person. The asymmetry is what made this a gap rather than a
+  // judgement call — the erasure already blanks `roll_call_events.note` and
+  // `booking_payments.note` for exactly this reason.
+  //
+  // Both holder shapes, because `gear_reservations_one_holder` allows only one
+  // at a time: a bookingless counter rental carries `person_id`, and a rental
+  // against a seat carries `booking_id`.
+  await tx
+    .update(gearReservations)
+    .set({ returnNote: null })
+    .where(
+      and(
+        eq(gearReservations.shopId, shopId),
+        eq(gearReservations.personId, personId),
+        isNotNull(gearReservations.returnNote),
+      ),
+    );
+  if (owned) {
+    await tx
+      .update(gearReservations)
+      .set({ returnNote: null })
+      .where(
+        and(
+          eq(gearReservations.shopId, shopId),
+          inArray(gearReservations.bookingId, bookingIds),
+          isNotNull(gearReservations.returnNote),
+        ),
+      );
   }
 
   // --- orders --------------------------------------------------------------
