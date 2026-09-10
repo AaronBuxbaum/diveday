@@ -332,25 +332,33 @@ async function waitForStackDeletion(stackName, region, deadlineMs = 45 * 60_000)
  * error into a half-hour of silent retries.
  */
 function recentFailureReasons(stackName, region) {
-  const events = awsMaybe([
+  // No `--query` and no `--max-items`. Both change the shape of what the CLI
+  // prints -- `--max-items` makes the paginator wrap the result so it can carry
+  // a NextToken -- and the previous version parsed the wrapped shape, threw on
+  // `.filter`, caught it, and returned "no reasons". Which reads as "not a
+  // settling failure", so the retry never fired. `{ StackEvents: [...] }` is
+  // the documented shape and it does not move.
+  const raw = awsMaybe([
     "cloudformation",
     "describe-stack-events",
     "--stack-name",
     stackName,
     "--region",
     region,
-    "--max-items",
-    "60",
-    "--query",
-    "StackEvents[].ResourceStatusReason",
     "--output",
     "json",
   ]);
-  if (events === null) return [];
+  if (raw === null) return null;
   try {
-    return (JSON.parse(events) ?? []).filter((reason) => typeof reason === "string");
+    const parsed = JSON.parse(raw);
+    return (parsed?.StackEvents ?? [])
+      .map((event) => event?.ResourceStatusReason)
+      .filter((reason) => typeof reason === "string");
   } catch {
-    return [];
+    // `null`, not `[]`. "I could not find out" and "there was nothing" are
+    // different answers, and collapsing them is the specific mistake that has
+    // now cost five runs of this migration.
+    return null;
   }
 }
 
@@ -369,7 +377,12 @@ function recentFailureReasons(stackName, region) {
  * and try again.
  */
 function isBucketNameStillSettling(stackName, region) {
-  return recentFailureReasons(stackName, region).some(
+  const reasons = recentFailureReasons(stackName, region);
+  if (reasons === null) {
+    log("  Could not read the stack's events, so could not tell why the deploy failed.");
+    return false;
+  }
+  return reasons.some(
     (reason) =>
       reason.includes("conflicting conditional operation") || reason.includes("OperationAborted"),
   );
@@ -428,7 +441,7 @@ async function prepareForCreate(stackName, region) {
   ]);
   const trimmed = status === null ? null : status.trim();
 
-  if (trimmed !== null && DEPLOYED_STACK_STATUSES.has(trimmed)) return;
+  if (trimmed !== null && DEPLOYED_STACK_STATUSES.has(trimmed)) return { bucketsFreed: 0 };
 
   if (trimmed !== null && UNLANDED_STACK_STATUSES.has(trimmed)) {
     log(
@@ -453,7 +466,7 @@ async function prepareForCreate(stackName, region) {
   // also the argument for the sweep being safe -- if no stack owns these names,
   // nothing does, so anything holding one is debris from a create that did not
   // finish.
-  deleteWhatTheLastCreateLeft(region);
+  return deleteWhatTheLastCreateLeft(region);
 }
 
 /**
@@ -502,7 +515,7 @@ function deleteWhatTheLastCreateLeft(region) {
     log(`  Could not read ${templatePath} to find what the last create left behind.`);
     log(`  Reason: ${error instanceof Error ? error.message : String(error)}`);
     log("  If the deploy fails saying something already exists, delete it and re-run.");
-    return;
+    return { bucketsFreed: 0 };
   }
 
   const { logGroups, buckets, secrets, unresolved, unsupportedRetained } = orphansFrom(template, {
@@ -610,6 +623,7 @@ function deleteWhatTheLastCreateLeft(region) {
   log(
     `  Left by the last create: ${deleted.length} deleted, ${absent.length} already gone, ${failed.length} refused, of ${total} names this stack claims.`,
   );
+  const bucketsFreed = deleted.filter((label) => label.startsWith("bucket ")).length;
 
   if (failed.length > 0) {
     // Thrown, not warned. Every one of these is a name the deploy is about to
@@ -620,6 +634,8 @@ function deleteWhatTheLastCreateLeft(region) {
         failed.map(({ label, reason }) => `  ${label}: ${reason}`).join("\n"),
     );
   }
+
+  return { bucketsFreed };
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -825,14 +841,26 @@ try {
     // stack creates carry the names step 1 just deleted, and S3 frees a bucket
     // name minutes after the delete rather than at it -- so the first attempt
     // here can fail on names that step 1 correctly reported as gone.
-    // Overridable so the tests can drive the retry loop without sleeping
-    // through it. Not a knob for operators: the default is the only value
-    // anybody running a migration should use, and shortening it in anger just
-    // spends the attempts faster.
+    // Overridable so the tests can drive the waits without sleeping through
+    // them. Not a knob for operators: the default is the only value anybody
+    // running a migration should use, and shortening it in anger just spends
+    // the attempts faster.
     const settleMs = Number(process.env.DIVEDAY_BUCKET_SETTLE_MS || 5 * 60_000);
     const attempts = 7;
     for (let attempt = 1; ; attempt += 1) {
-      await prepareForCreate(MAIN_STACK_NAME, PRIMARY_REGION);
+      const { bucketsFreed } = await prepareForCreate(MAIN_STACK_NAME, PRIMARY_REGION);
+      // Wait when the sweep just deleted a bucket. S3 frees a bucket name some
+      // minutes after the delete, and the sweep runs *immediately* before this
+      // deploy -- so without this, the migration reliably races itself and
+      // burns a create, a rollback, and a fresh set of orphans on every run.
+      // The retry below still covers the case where this is not long enough;
+      // this is here so the common path does not need it.
+      if (bucketsFreed > 0) {
+        log(
+          `  Waiting ${Math.round(settleMs / 1000)}s before deploying: S3 frees a deleted bucket name minutes after the delete, and ${bucketsFreed} of them went just now.`,
+        );
+        await sleep(settleMs);
+      }
       try {
         pnpm(
           ["infra:deploy", MAIN_STACK_ID, "--require-approval", "never"],

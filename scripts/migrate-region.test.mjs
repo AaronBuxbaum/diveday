@@ -48,7 +48,15 @@ function fixture({
   for (const [index, page] of bucketPages.entries()) {
     writeFileSync(join(directory, `page-${index}.json`), JSON.stringify(page));
   }
-  writeFileSync(join(directory, "stack-events.json"), JSON.stringify(stackEventReasons));
+  // The documented describe-stack-events shape, not a --query projection: the
+  // detector parsed a projected shape once, threw, caught, and reported "no
+  // reasons", so the retry never fired.
+  writeFileSync(
+    join(directory, "stack-events.json"),
+    JSON.stringify({
+      StackEvents: stackEventReasons.map((reason) => ({ ResourceStatusReason: reason })),
+    }),
+  );
   writeFileSync(join(directory, "stack-status"), stackStatus ?? "");
   if (logGroupsPresent) {
     writeFileSync(join(directory, "log-groups-present"), logGroupsPresent.join("\t"));
@@ -83,9 +91,15 @@ fi
 if [ "$2" = "describe-stacks" ] && [ -f "$DIVEDAY_DIR/stack-deleted" ]; then
   exit 1
 fi
-if [ "$2" = "describe-stacks" ] && [ -s "$DIVEDAY_DIR/stack-status" ]; then
-  cat "$DIVEDAY_DIR/stack-status"
-  exit 0
+if [ "$2" = "describe-stacks" ]; then
+  # Stack presence comes from stackStatus alone, never from resourcesExist.
+  # Falling through to the catch-all made describe-stacks answer with empty
+  # output, which the script correctly reads as a status it does not recognise.
+  if [ -s "$DIVEDAY_DIR/stack-status" ]; then
+    cat "$DIVEDAY_DIR/stack-status"
+    exit 0
+  fi
+  exit 1
 fi
 if [ "$2" = "delete-secret" ]; then
   exit 0
@@ -617,6 +631,43 @@ describe("infra:migrate-region", () => {
     const log = awsLog(directory);
     expect(log).toContain("delete-secret --secret-id diveday/database-url-unpooled");
     expect(log).toContain("--force-delete-without-recovery");
+  });
+
+  it("waits before deploying when the sweep just freed a bucket name", () => {
+    // The sweep deletes the retained buckets and the deploy recreates them
+    // seconds later, so the migration was reliably racing itself: S3 frees a
+    // bucket name minutes after the delete, and every run burned a create, a
+    // rollback and a fresh set of orphans on the way to noticing.
+    const directory = fixture({
+      template: {
+        Resources: {
+          B: {
+            Type: "AWS::S3::Bucket",
+            DeletionPolicy: "Retain",
+            Properties: { BucketName: "diveday-backups" },
+          },
+        },
+      },
+      resourcesExist: true,
+      stackStatus: "",
+    });
+    const result = run(
+      directory,
+      "--from",
+      "us-east-1",
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+      "--confirm-teardown",
+      "us-east-1",
+      "--from-step",
+      "3",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Deleted bucket diveday-backups");
+    expect(result.stdout).toContain("before deploying");
+    expect(result.stdout).toContain("1 of them went just now");
   });
 
   it("hands back the manual steps a script cannot do", () => {
