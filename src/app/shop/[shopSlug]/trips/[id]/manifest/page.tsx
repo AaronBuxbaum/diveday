@@ -969,6 +969,12 @@ export default async function TripManifestPage({
             consequence: t("manifest.seen.consequence", { site: seenSite.name }),
             delete: t("manifest.seen.delete"),
             refusal: t("manifest.seen.refusal"),
+            offlineLabel: t("manifest.seen.offlineLabel"),
+            connectivity: {
+              online: t("shared.connectivity.online"),
+              onlineTitle: t("shared.connectivity.onlineTitle"),
+              offlineTitle: t("shared.connectivity.offlineTitle"),
+            },
           }}
           recordAction={boundRecordSightingAction}
           deleteAction={boundDeleteSightingAction}

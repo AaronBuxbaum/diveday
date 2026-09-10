@@ -86,6 +86,7 @@
   "seen": {
     "heading": "Visto",
     "consequence": "En {site}. Los buceadores lo leen en la página de la salida.",
+    "offlineLabel": "Sin conexión: un toque no se guardará hasta que el barco tenga cobertura",
     "delete": "Eliminar",
     "deleteNamed": "Eliminar {species}",
     "refusal": "Sin señal. Toca de nuevo cuando el barco tenga cobertura."
