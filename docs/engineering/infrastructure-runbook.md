@@ -87,7 +87,7 @@ Even when an older raw deploy key can complete the CDK deploy, the post-deploy e
 that administrator-profile check before it reads `diveday/env`.
 It writes the generated identities as named `~/.aws/credentials` profiles — including
 `diveday-deployer`, `reg-suit-bot`, and the service identities — while preserving
-unrelated profiles. It also writes the `diveday-admin` profile's `us-east-1` region to
+unrelated profiles. It also writes the `diveday-admin` profile's `PRIMARY_REGION` (`us-east-2`) region to
 `~/.aws/config`; the administrator *credential* still predates the stack and must be configured by
 you. Before the generated deployer profile exists, the infrastructure commands select
 `diveday-admin` whether or not its profile block has been written yet; afterwards `pnpm infra:deploy`,
@@ -542,8 +542,8 @@ After every successful `pnpm infra:deploy`, the wrapper reads `diveday/env` and 
 profile, in CI using `GitHubActionsCdkDeployRole`'s own narrow, resource-scoped read on exactly that
 one secret (ADR 20260811-ci-deploy-full-wizard) — the ambient OIDC-assumed credentials already used
 for the deploy, no profile swap. Set `INFRA_ENV_SYNC_PROFILE=<profile-name>` when the administrator
-profile has a different name. The post-deploy read defaults to `us-east-1` if that profile has no
-region configured.
+profile has a different name. The post-deploy read uses `PRIMARY_REGION` if that profile has no
+region configured -- never a literal, so it cannot outlive a region move.
 
 **The resulting document supplies `.env.local` and named AWS CLI profiles.** `dotenv -c` loads the
 app configuration through the usual local cascade; the helper leaves generic deployer credentials
@@ -572,7 +572,7 @@ So:
 | --- | --- |
 | `.env.local` | Generated: app configuration, minted credentials, derived app secrets, and whatever `.env.manual` supplies. Do not edit. |
 | `.env.manual` | The one file you fill in, from 1Password and the provider consoles. Never generated over. |
-| `~/.aws/credentials` | Generated profiles, written only when the wizard prompt is accepted. Existing unrelated profiles stay intact; `diveday-admin` receives only its `us-east-1` config entry because this stack never owns its credential. |
+| `~/.aws/credentials` | Generated profiles, written only when the wizard prompt is accepted. Existing unrelated profiles stay intact; `diveday-admin` receives only its `PRIMARY_REGION` config entry because this stack never owns its credential. |
 | Vercel | `.env.vercel`, then `node scripts/import-vercel-env.mjs .env.vercel production`. Rendered from the secret plus `.env.manual` — never from `.env.local` — so it excludes workstation/CI values and carries the Stripe secrets straight from 1Password. |
 | GitHub Actions secrets | `.env.github`, then `gh secret set --env-file .env.github`. |
 | `~/.aws/credentials`, Claude Code cloud env | The "Not .env values" section at the bottom. |

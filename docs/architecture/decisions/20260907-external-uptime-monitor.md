@@ -83,9 +83,11 @@ header beside the rest.
 What it commits us to: `/api/health`'s two fields and the literal `"status":"ok"` are now an external
 contract — `infra/lib/observability.test.ts` reads the route's source and `e2e/status.spec.ts` reads
 the wire, so a rename fails in two places before it can leave a check green against nothing. The
-alarm also assumes this stack stays in **us-east-1**, where Route 53 publishes its health-check
-metrics; a stack moved to another region takes §22 with it, and would otherwise find no metric —
-which the breaching-on-missing-data setting turns into a page rather than a silence.
+alarm needs **us-east-1**, where Route 53 publishes its health-check
+metrics; that is now why the health checks and their alarms are a stack of their own, `DiveDayGlobal`,
+pinned there while the rest of the estate moved to us-east-2 (ADR 20260910-one-region-in-us-east-2).
+An alarm in any other region finds no metric — which the breaching-on-missing-data setting turns into
+a page rather than a silence.
 
 Revisit when the first pilot shop exists (add the browser check against a real public schedule), if
 the alarm proves noisy enough that four minutes is the wrong latency, or if DiveDay leaves Vercel —
