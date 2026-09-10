@@ -8921,6 +8921,67 @@ export const pushSubscriptions = pgTable(
   ],
 );
 
+/**
+ * **A diver's standing door onto their own file at one shop** — the shelf
+ * (`/shelf/[token]`).
+ *
+ * Every other diver-facing bearer surface is anchored to a *booking*: the
+ * thread, the waiver, the claim and the recap each name one seat on one boat,
+ * and each dies with it. This is the first anchored to the **person**, because
+ * what it answers — when am I next out, what does this shop already hold for
+ * me, what did I see last time — is not a fact about a departure and outlives
+ * every one of them.
+ *
+ * **Stored rather than signed**, which is the difference from
+ * `src/lib/recap-links.ts`. A signed token is unrevocable by construction, and
+ * this one has to be revocable for two separate reasons: erasure
+ * (`anonymizeDiver`, H-02) must leave nothing that still opens a person's file,
+ * and a diver who loses a phone has to be able to ask the shop to kill the link
+ * that was on it. Only the digest is kept (`src/lib/bearer-tokens.ts`), so a
+ * reader of a dump comes away with nothing replayable.
+ *
+ * **One row per link handed out**, never superseded, which is what lets the
+ * diver record answer "how many phones hold this": a row that has been opened
+ * is a device carrying the cookie, and a row that never was is a link that
+ * never landed. `opens` and `last_opened_at` are the two facts shown beside it.
+ *
+ * No `deleted_at`: nobody points at a credential and asks for it gone, they
+ * revoke it — the same call `booking_capabilities` and `calendar_feeds` make
+ * (`.claude/rules/db.md`, "machinery nobody pointed at").
+ */
+export const personShelfTokens = pgTable(
+  "person_shelf_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    /** SHA-256 of the bearer token. Unique: the verify path is a digest lookup. */
+    tokenHash: text("token_hash").notNull().unique(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Bounded, never unlimited. A year is longer than a dive season and shorter
+     * than a phone's life, so a link nobody uses stops working rather than
+     * standing open forever; the shop mints another in one tap from the record.
+     */
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    /** When this link was last opened, and how often — the record's two facts. */
+    lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
+    opens: integer("opens").notNull().default(0),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // The verify path: hash the bearer token, find the row.
+    index("person_shelf_tokens_token_hash_idx").on(table.tokenHash),
+    // The record's count, and the revocation sweep erasure runs.
+    index("person_shelf_tokens_shop_person_idx").on(table.shopId, table.personId, table.revokedAt),
+  ],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -8984,3 +9045,5 @@ export type GearServiceEvent = typeof gearServiceEvents.$inferSelect;
 export type GearServiceKindValue = (typeof gearServiceKind.enumValues)[number];
 export type GearReservation = typeof gearReservations.$inferSelect;
 export type PriorGearAssignment = typeof priorGearAssignments.$inferSelect;
+
+export type PersonShelfToken = typeof personShelfTokens.$inferSelect;

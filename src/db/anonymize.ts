@@ -62,6 +62,7 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
+import { revokeShelfTokens } from "./person-shelf-tokens";
 import { attemptProcessorErasures, recordProcessorErasureObligations } from "./processor-erasure";
 import type { ProcessorErasureObligation } from "./schema";
 import {
@@ -731,6 +732,14 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         isNull(calendarFeeds.revokedAt),
       ),
     );
+
+  // The diver's shelf link, on however many phones it reached. Same reasoning
+  // as the feed above and the same shape — revoked, not deleted, so the record
+  // says the door was closed. `verifyShelfToken` would already refuse an erased
+  // person on the join, and this is the belt beside that brace: a future reader
+  // querying `person_shelf_tokens` without the join must still find nothing
+  // live (ADR 20260802-diver-data-erasure, H-02).
+  await revokeShelfTokens(tx, { shopId, personId, now });
 
   // --- the diver's own login, if they ever had one -------------------------
   const [account] = await tx

@@ -65,6 +65,7 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
+  personShelfTokens,
   preDepartureCheckEvents,
   priorGearAssignments,
   priorVisits,
@@ -1145,6 +1146,11 @@ export async function resetDemoSchedule(
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
+  // Shelf links reference `people`, and the purge below takes every diver, so
+  // they go shop-wide rather than by id: a reset restores the fixture's
+  // schedule, and a credential minted at a diver who is about to be re-seeded
+  // is part of that schedule, not part of the shop's configuration.
+  await db.delete(personShelfTokens).where(eq(personShelfTokens.shopId, shopId));
   // Tips reference bookings, so they must go before them — same FK this
   // cascade's sibling (deleteDemoShopCascade) already fixed (Codex finding:
   // this reset path had its own, separate child-first list and was missed).

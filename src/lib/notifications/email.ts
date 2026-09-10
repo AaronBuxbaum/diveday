@@ -1243,6 +1243,42 @@ export function readinessLinkEmail(input: ReadinessLinkEmailInput): Notification
   };
 }
 
+type ShelfLinkEmailInput = {
+  locale: DiverLocale;
+  diverName: string;
+  shopName: string;
+  shelfUrl: string;
+};
+
+/**
+ * **The shelf link, in three sentences and a button.**
+ *
+ * Nothing about a departure, because this message is not about one: the page it
+ * opens is the diver's own file at this shop and it answers "when am I next
+ * out" itself. No expiry line either — the link stands for a year and lives on
+ * a phone, so a date says "this is running out" about something that is not.
+ *
+ * The one thing the mail states outright is what the page will never show,
+ * because a link to "your file" arriving by email is exactly when a reader
+ * wonders how much of them is behind it.
+ */
+export function shelfLinkEmail(input: ShelfLinkEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const body = t("notifications.shelfLink.body", { shopName: input.shopName });
+  const bodyHtml = t("notifications.shelfLink.body", { shopName: escapeHtml(input.shopName) });
+  const never = t("notifications.shelfLink.never");
+
+  return {
+    subject: t("notifications.shelfLink.subject", { shopName: input.shopName }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${input.shelfUrl}\n\n${never}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(
+      input.shelfUrl,
+      t("notifications.shelfLink.openLink"),
+    )}<p>${escapeHtml(never)}</p>`,
+  };
+}
+
 type BookingHandoffEmailInput = {
   locale: DiverLocale;
   diverName: string;

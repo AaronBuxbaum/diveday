@@ -35,6 +35,7 @@ const seedObservedSpecies = await import("./seed-observed-species/route");
 const seedDiveTimes = await import("./seed-dive-times/route");
 const seedReturningDiver = await import("./seed-returning-diver/route");
 const seedBookingHandoff = await import("./seed-booking-handoff/route");
+const seedShelfToken = await import("./seed-shelf-token/route");
 const seedDisplayToken = await import("./seed-display-token/route");
 const seedYearBandShop = await import("./seed-year-band-shop/route");
 const inboundMessage = await import("./inbound-message/route");
@@ -155,6 +156,15 @@ const routes: SeedRoute[] = [
     // that it mints a working ten-minute credential over a diver's booking. A
     // route answering on a misconfigured deployment would be handing out the
     // door to a real diver's contact details.
+    expectPastTheGuard: expectInvalidBody,
+  },
+  {
+    slug: "seed-shelf-token",
+    POST: seedShelfToken.POST,
+    // A shop slug and an email, refused first — and it must be, because past
+    // that it mints a year-long credential over a diver's whole file at that
+    // shop. A route answering on a misconfigured deployment would be handing
+    // out the door to a real diver's certifications, waiver and sizes.
     expectPastTheGuard: expectInvalidBody,
   },
   {

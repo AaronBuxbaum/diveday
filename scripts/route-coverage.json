@@ -164,12 +164,19 @@
       "schedule-trip.spec.ts",
       "season-events.spec.ts",
       "seo.spec.ts",
+      "shelf.spec.ts",
       "storefront-brand.spec.ts",
       "tenant-isolation.spec.ts",
       "trip-admission.spec.ts",
       "trips.spec.ts"
     ],
-    "visual": ["schedule", "schedule-above-level", "schedule-embed", "schedule-lens"],
+    "visual": [
+      "schedule",
+      "schedule-above-level",
+      "schedule-embed",
+      "schedule-lens",
+      "shopfront-known-diver"
+    ],
     "a11y": ["a11y.spec.ts"]
   },
   "/s/[shopSlug]/boats/[tripId]": {
@@ -232,6 +239,10 @@
     ],
     "a11y": ["a11y.spec.ts"]
   },
+  "/shelf/[token]": {
+    "e2e": ["shelf.spec.ts"],
+    "visual": ["diver-shelf"]
+  },
   "/shop/[shopSlug]": {
     "e2e": [
       "boat-loop.spec.ts",
@@ -275,7 +286,7 @@
     "visual": ["booking-new-diver"]
   },
   "/shop/[shopSlug]/calls": {
-    "e2e": ["took-a-call.spec.ts", "a11y.spec.ts"],
+    "e2e": ["a11y.spec.ts", "took-a-call.spec.ts"],
     "visual": ["took-a-call"],
     "a11y": ["a11y.spec.ts"]
   },
@@ -338,6 +349,7 @@
       "add-diver.spec.ts",
       "certifications.spec.ts",
       "divers.spec.ts",
+      "shelf.spec.ts",
       "gear-fit-and-age.spec.ts",
       "import.spec.ts",
       "inbox.spec.ts",
@@ -349,6 +361,7 @@
       "diver-medical-clearance-form",
       "diver-medical-not-cleared",
       "diver-profile",
+      "diver-record-shelf",
       "diver-profile-deleted",
       "diver-profile-imported",
       "diver-profile-not-certified",
@@ -673,7 +686,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/status": {
-    "e2e": ["status.spec.ts", "a11y.spec.ts"],
+    "e2e": ["a11y.spec.ts", "status.spec.ts"],
     "visual": ["status"],
     "a11y": ["a11y.spec.ts"]
   },

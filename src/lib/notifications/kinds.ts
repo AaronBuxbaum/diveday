@@ -161,6 +161,33 @@ const readinessLinkSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
 });
 
+/**
+ * **The shelf link, sent from a diver's record.** A staffer taps "Send the
+ * link" and this carries it (`/shelf/[token]`).
+ *
+ * Anchored to a **person**, not to a booking, which is the one thing that makes
+ * it unlike every kind above it: there is no `bookingId`, so
+ * `sendAndRecordNotification` writes no `notification_deliveries` row and
+ * `move-preflight`'s classification never has to answer for it. The diver
+ * record reads how the link is doing from `person_shelf_tokens` instead — opens
+ * and phones, which is the better question anyway.
+ *
+ * No expiry in the message. The link stands for a year and is meant to live on
+ * a phone; a date a year out reads as a countdown on something that is not one.
+ */
+const shelfLinkSchema = z.object({
+  kind: z.literal("shelf_link"),
+  personId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  shelfUrl: z.url().max(2_000),
+  /** The row this link was minted as, so two taps a second apart send once. */
+  tokenId: z.uuid(),
+});
+
 const waitlistInviteSchema = z.object({
   kind: z.literal("waitlist_invite"),
   waitlistEntryId: z.uuid(),
@@ -711,6 +738,7 @@ export const notificationSchema = z
     bookingConfirmationSchema,
     waiverRequestSchema,
     readinessLinkSchema,
+    shelfLinkSchema,
     bookingHandoffSchema,
     waitlistInviteSchema,
     tripInvitationSchema,
@@ -829,6 +857,11 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // the correct number for one diver waiting on one link.
     case "readiness_link":
       return `readiness-link/${notification.bookingId}/${notification.expiresAt.toISOString()}`;
+    // One send per minted link. A staffer sending a second copy to a diver's
+    // tablet mints a second row and is its own send; a double-tapped button
+    // mints once and dedups here.
+    case "shelf_link":
+      return `shelf-link/${notification.tokenId}`;
     case "booking_handoff":
       return `booking-handoff/${notification.bookingId}/${notification.expiresAt.toISOString()}`;
     // Keyed by invite timestamp so a genuine re-invite (a seat opens twice) is a

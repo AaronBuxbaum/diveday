@@ -2755,6 +2755,48 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The diver's shelf** (slice 20t of ADR 20260908-one-hand) — the
+       * standing door onto a diver's own file at one shop, in the shop's face.
+       *
+       * Three things this is the only picture of: the top rows that are the
+       * reason to come back, the file as one card of rows with the sizes
+       * editable inside it, and the two quiet lines at the foot — what is never
+       * here, and how to take the greeting off a phone. Captured at both
+       * viewports like everything else, because it is written phone-first and
+       * the rail of past days is the piece that changes shape between them.
+       *
+       * Reached through `/api/test/seed-shelf-token`, which mints the same
+       * `person_shelf_tokens` row the thread's door writes; walking the thread
+       * would mean a departure that has come home.
+       */
+      test(`the diver's shelf renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await bookAVisualRegressionSeat(page, scheme);
+        const seeded = await request.post("/api/test/seed-shelf-token", {
+          data: { shopSlug: "blue-mantis", email: `visual-regression-${scheme}@example.com` },
+        });
+        expect(seeded.ok()).toBe(true);
+        const { href } = (await seeded.json()) as { href: string };
+        await page.goto(href);
+        await page.getByRole("heading", { name: "Your shelf" }).waitFor();
+        await capture(page, "diver-shelf", scheme);
+
+        /**
+         * **The storefront a returning diver opens**, which is the same page
+         * every visitor gets with one group above the week: the greeting, the
+         * seat they hold, and the way back to the shelf. Opening the shelf
+         * above set the cookie this reads; without it the storefront's own
+         * baseline elsewhere in this file is the picture.
+         */
+        await page.goto("/s/blue-mantis");
+        await page.getByRole("region", { name: "Yours" }).waitFor();
+        await capture(page, "shopfront-known-diver", scheme);
+      });
+
+      /**
        * **A demo story's door** (issue #1215, delight report D55) — one stable
        * link per story, the thing somebody pastes into an email to a shop
        * owner. The weather day because it is the one with the most to prove:
@@ -4023,6 +4065,40 @@ for (const scheme of ["light", "dark"] as const) {
         // record.
         await page.getByRole("region", { name: "The story" }).waitFor();
         await capture(page, "diver-profile", scheme);
+      });
+
+      /**
+       * **The shelf, as one row of the diver's file** (slice 20t) — open, so
+       * the two facts a staffer uses and the one act are on screen.
+       *
+       * A link is minted and opened first, because the row's whole job is to
+       * say how the diver's link is doing and the interesting state is the one
+       * with a number in it. The `?opened=` walk is the shipped path: the
+       * shelf's own client effect counts the open, so this photographs what a
+       * shop actually sees rather than a hand-written row.
+       */
+      test(`the diver record's shelf row renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openDiverProfile(page, "Priya", "Priya Sharma");
+        const seeded = await request.post("/api/test/seed-shelf-token", {
+          data: { shopSlug: "blue-mantis", email: "priya.sharma@example.com" },
+        });
+        expect(seeded.ok()).toBe(true);
+        const { href } = (await seeded.json()) as { href: string };
+        await page.goto(href);
+        await page.getByRole("heading", { name: "Your shelf" }).waitFor();
+        // The open is counted by the page's own effect, so wait for the row it
+        // produces rather than for a timer.
+        await openDiverProfile(page, "Priya", "Priya Sharma");
+        const shelf = page.getByRole("region", { name: "Shelf" });
+        await expect(shelf.getByText(/open/)).toBeVisible();
+        await shelf.getByText("Shelf", { exact: true }).click();
+        await expect(shelf.getByRole("button", { name: "Send the link" })).toBeVisible();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-record-shelf", scheme);
       });
 
       /**

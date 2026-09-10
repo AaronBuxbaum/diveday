@@ -233,6 +233,12 @@ export const PERSON_TABLES_DELIBERATELY_UNMOVED: Readonly<Record<string, string>
   // 3), gone within a day. Written by someone at the desk, never about a
   // diver, so it belongs to whoever typed it and moves with nobody.
   form_drafts: "a staffer's own half-typed form, gone in a day",
+  // A shelf link names the record it was minted for, and a merge soft-deletes
+  // that record — so `verifyShelfToken`'s join refuses it from the moment the
+  // merge lands, and the link on the old phone dies on its own. Moving the row
+  // instead would hand the survivor a second live door onto their file that
+  // nobody at the shop knows they issued.
+  person_shelf_tokens: "a shelf link dies with the record it names; the survivor mints their own",
 };
 
 function quotedTable(tableName: string) {

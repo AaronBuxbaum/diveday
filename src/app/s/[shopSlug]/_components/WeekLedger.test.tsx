@@ -26,6 +26,7 @@ function row(overrides: Partial<WeekLedgerRow> = {}): WeekLedgerRow {
     site: "Molasses Reef and French Reef",
     requirements: ["Open Water or higher"],
     aboveLevel: null,
+    clears: null,
     capacityText: "3 spots left",
     capacityTone: "quiet",
     price: "$95.00",

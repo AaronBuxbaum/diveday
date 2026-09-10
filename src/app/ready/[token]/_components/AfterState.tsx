@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { BrandStyle } from "@/components/BrandStyle";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ImageFileInput } from "@/components/ImageFileInput";
@@ -234,6 +235,14 @@ export type AfterStateProps = {
   nextDiveWorded: { when: string; reason: string; levelCovers: string | null } | null;
   /** The pick's booking page carrying this diver's own handoff, or null. */
   nextDiveHref?: string | null;
+  /**
+   * The way to this diver's shelf, already built by whichever page is rendering
+   * (`src/components/ShelfDoor.tsx`). Null on a page that has no shelf to offer
+   * — this component decides nothing about which door it is, because the thread
+   * and the recap are allowed different ones and the reason is a security one
+   * (`src/app/actions/shelf-door.ts`).
+   */
+  shelfDoor?: ReactNode;
   /** The four recap actions, already bound to a signed recap token. */
   actions: {
     submitReview: (formData: FormData) => void | Promise<void>;
@@ -318,6 +327,7 @@ export function AfterState({
   nextDive,
   nextDiveWorded,
   nextDiveHref = null,
+  shelfDoor = null,
   actions,
   siteMark,
 }: AfterStateProps) {
@@ -714,6 +724,9 @@ export function AfterState({
         >
           {t("recap.seeWhatsNext")}
         </Link>
+        {/* ——— The way to this diver's own shelf, beside the way back to the
+            board: the two things a finished day leaves a diver wanting. */}
+        {shelfDoor}
       </footer>
     </main>
   );

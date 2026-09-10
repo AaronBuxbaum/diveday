@@ -316,6 +316,29 @@ one line beside Add to calendar, *Add to Wallet*, on every state after booking; 
   arrival/change reading and the party hand-off; the same spine grammar the staff home speaks makes
   the product one product.
 
+### The shelf — `/shelf/[token]`
+
+**Built 2026-09-10** (slice 20t of [ADR 20260908-one-hand](../architecture/decisions/20260908-one-hand.md)).
+The first bearer surface anchored to a **person** rather than to a booking, so it outlives every
+seat: `person_shelf_tokens`, stored and revocable, and erasure closes it.
+
+- **One idea:** what this shop already holds for me, and the next reason to come back.
+- **The question it arrives with:** "when am I next out, and what do you have for me?" — answered by
+  the seat the diver holds, the same boat next time, and the crew's own "next time" from the day
+  just dived, in that order, before the file.
+- **Controls that dissolved:** none — this surface is new. What it deliberately never grows: a
+  medical answer, another diver's anything, a price. The reader (`src/db/shelf.ts`) cannot return
+  any of the three, and its test walks the whole object rather than the fields somebody remembered.
+- **Remove first:** the file's rows, before the reasons to come back. A shelf with nothing on it is
+  still worth opening for the next departure; a shelf with nothing ahead of it is a filing cabinet.
+- **Composition:** the thread's shell and measure, in the shop's brand — a diver who reached this
+  from their thread should not feel they left the shop. Two quiet lines close it: what is never here,
+  and "Forget this phone", which clears the storefront's greeting cookie and nothing else.
+- **What it leaves elsewhere:** the storefront reads that cookie and greets the diver by first name
+  with which visit the next one is, puts a "Yours" group above the week, and says why a departure
+  demanding a card is open to them instead of the warn pill. Without the cookie the storefront is
+  unchanged.
+
 ### The waiver — `/waivers/[token]`
 
 **Built 2026-08-29** — same ADR and canvas. Legal surface: wording and presentation floor are

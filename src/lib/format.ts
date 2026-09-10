@@ -155,6 +155,22 @@ export function formatWeekdayTime(date: Date, locale = "en-US", timeZone: string
 }
 
 /**
+ * "Saturday" — the weekday alone, in the shop's zone.
+ *
+ * For a sentence whose subject is the *day of the week* rather than a date:
+ * the shelf's "Same boat, next Saturday", where the point is that this
+ * departure repeats on the day the diver already knows. A date beside it would
+ * answer a question the reader is not asking, and the row links to the
+ * departure, which states its own.
+ */
+export function formatWeekday(date: Date, locale = "en-US", timeZone: string): string {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    weekday: "long",
+    timeZone,
+  }).format(date);
+}
+
+/**
  * A timezone as a **name a person says out loud** — "Eastern Daylight Time",
  * not `America/New_York`.
  *

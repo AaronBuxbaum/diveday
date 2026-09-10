@@ -60,6 +60,7 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
+  personShelfTokens,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
   priorGearAssignments,
@@ -186,6 +187,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
+  // Shelf links reference `people` with no cascade, the same 23503 shape as
+  // the calendar feeds further down.
+  await db.delete(personShelfTokens).where(eq(personShelfTokens.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));

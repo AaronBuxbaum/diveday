@@ -266,6 +266,7 @@ const EXCLUDED_TABLES = [
   "display_tokens", // bearer credentials for a lobby screen's departures board, never exported
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "person_shelf_tokens", // bearer credentials over a diver's own file, never exported — same reasoning as booking_capabilities
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   // The shop's own Meta access token (sealed) plus the provider linkage around
   // it. Never exported, for both reasons already on this list: it is a live

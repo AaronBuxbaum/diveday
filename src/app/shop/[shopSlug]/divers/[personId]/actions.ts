@@ -50,6 +50,7 @@ import {
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, people } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
+import { sendShelfLink } from "@/db/shelf-link-send";
 import { sendStaffReply } from "@/db/staff-reply";
 import { getSupportNeeds, saveSupportNeeds } from "@/db/support-needs";
 import {
@@ -191,6 +192,7 @@ const FORM_ANCHORS: Record<string, string> = {
   cards: "#certifications",
   waiver: "#waiver",
   fit: "#gear",
+  shelf: "#shelf",
   support: "#support",
   story: "#the-story",
   notes: "#notes",
@@ -1141,6 +1143,42 @@ export async function setNeedsStaffFitAction(
  * subject is this route's own path segment, never a form field
  * (ADR 20260811-person-scoped-paper-waivers).
  */
+/**
+ * **Send this diver their shelf link** (slice 20t) — the one act the record's
+ * shelf row offers.
+ *
+ * Never to an address typed here: `sendShelfLink` mails the address already on
+ * the record, because the link opens that person's file and the only safe
+ * recipient is the person it is about. Revoking is deliberately not offered
+ * beside it — nothing in the product asks for that yet, and a destructive act
+ * with no caller is a control nobody has thought through.
+ */
+export async function sendShelfLinkAction(shopSlug: string, personId: string) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-details",
+    "shelf",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const outcome = await sendShelfLink(db, { shopId: staff.user.shopId, personId });
+  revalidateAndRedirect(
+    base,
+    backTo(
+      base,
+      outcome === "sent"
+        ? "shelf-sent"
+        : outcome === "no_email"
+          ? "shelf-no-email"
+          : outcome === "unavailable"
+            ? "shelf-unavailable"
+            : "shelf-failed",
+      "shelf",
+    ),
+  );
+}
+
 export async function markWaiverInPersonAction(
   shopSlug: string,
   personId: string,
