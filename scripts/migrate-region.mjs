@@ -212,26 +212,36 @@ function secretExists(id, region) {
 /**
  * Empty a bucket, versions and delete markers included.
  *
- * `aws s3 rm --recursive` is not enough on a versioned bucket: it writes a
- * delete marker per object and every byte survives as a non-current version, so
- * the bucket reads as empty in the console and `delete-bucket` still answers
- * BucketNotEmpty. Only `diveday-backups` is versioned today, but the version
- * sweep runs on all of them -- it is a no-op on an unversioned bucket, and
- * "which of these is versioned" is not a thing to be remembering during a
- * migration.
+ * `aws s3 rm --recursive` is deliberately not used, not even as a fast first
+ * pass. On a versioned bucket it writes a delete marker per object and every
+ * byte survives as a non-current version, so the bucket reads as empty in the
+ * console and `delete-bucket` still answers BucketNotEmpty -- and the markers it
+ * just created are themselves more objects for the sweep below to remove. One
+ * mechanism that is correct on both kinds of bucket beats a fast one that is
+ * correct on one of them.
  */
 function emptyBucket(name) {
-  runBounded("aws", ["s3", "rm", `s3://${name}`, "--recursive", "--only-show-errors"], {
-    env: awsEnvironment,
-    stdio: "inherit",
-    timeoutMs: SUBPROCESS_TIMEOUTS.cdkSynth,
-  });
-
   // One page at a time, deleting as we go: a listing caps at 1000 keys, and
   // paginating by re-listing after each delete is correct precisely because the
   // deletes shrink the set. The loop is bounded by the bucket emptying, and by
   // the round cap below, so it cannot spin forever on a bucket something else
   // is still writing to.
+  //
+  // Deliberately no `--query`: the first version of this asked the CLI for
+  // `{Objects: [].{Key: Key, VersionId: VersionId}}`, and `[]` is a flatten over
+  // an *array*. The response is a hash of `Versions` and `DeleteMarkers`, so the
+  // projection matched nothing, every round read zero objects, and the sweep
+  // returned on its first pass reporting success. The bucket then failed
+  // `delete-bucket` with BucketNotEmpty, which is the loud half of a silent bug.
+  // Doing the extraction here means it is covered by a test rather than by a
+  // JMESPath expression nothing exercises.
+  //
+  // Both lists matter and `DeleteMarkers` is the one that is easy to forget: on
+  // a versioned bucket every plain delete leaves one behind, and a bucket whose
+  // only remaining objects are delete markers is still not empty as far as S3
+  // is concerned. An unversioned bucket answers with `Versions` alone, each
+  // carrying the literal VersionId "null", which `delete-objects` accepts -- so
+  // this one path empties both kinds and there is no flag to get wrong.
   for (let round = 0; round < 1000; round += 1) {
     const listed = aws([
       "s3api",
@@ -240,18 +250,21 @@ function emptyBucket(name) {
       name,
       "--max-items",
       "500",
-      "--query",
-      "{Objects: [].{Key: Key, VersionId: VersionId}}",
       "--output",
       "json",
     ]);
-    const objects = JSON.parse(listed || "{}").Objects ?? [];
+    const page = JSON.parse(listed || "{}");
+    const objects = [...(page.Versions ?? []), ...(page.DeleteMarkers ?? [])].map(
+      ({ Key, VersionId }) => ({ Key, VersionId }),
+    );
     if (objects.length === 0) return;
     aws([
       "s3api",
       "delete-objects",
       "--bucket",
       name,
+      "--region",
+      oldRegion,
       "--delete",
       JSON.stringify({ Objects: objects, Quiet: true }),
     ]);
@@ -314,10 +327,23 @@ function pnpm(args, timeoutMs) {
   if (result.status !== 0) throw new Error(`\`pnpm ${args.join(" ")}\` failed.`);
 }
 
+/**
+ * Ask before something irreversible.
+ *
+ * `--confirm-account` is the non-interactive escape hatch, exactly as
+ * `scripts/infra-bootstrap.mjs` uses it, and it only applies when there is no
+ * terminal to ask in. A run that *has* a terminal always gets the prompt, even
+ * with the flag passed: somebody who supplies it to pin the account must not
+ * find that doing so quietly removed a confirmation.
+ *
+ * Until this matched, the refusal below named a remedy that did not work --
+ * it told the operator to pass `--confirm-account` and then refused anyway.
+ */
 async function confirm(question, expected) {
   if (!stdin.isTTY || !stdout.isTTY) {
+    if (confirmedAccount !== undefined) return;
     throw new Error(
-      `Refusing to continue non-interactively. Re-run in a terminal, or pass --confirm-account ${expected}.`,
+      `Refusing to continue non-interactively. Re-run in a terminal, or pass --confirm-account ${account}.`,
     );
   }
   const terminal = createInterface({ input: stdin, output: stdout });
