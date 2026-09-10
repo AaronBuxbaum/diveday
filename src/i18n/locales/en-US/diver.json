@@ -3786,5 +3786,26 @@
   "embed": {
     "book": "Book",
     "enrol": "Enrol"
+  },
+  "shopYear": {
+    "card": {
+      "range": "{year}",
+      "rangeToDate": "{year} · to {date}",
+      "rangeSince": "{year} · since {month}",
+      "sentence": "{divers, plural, one {# diver} other {# divers}}. {boats, plural, one {# boat out} other {# boats out}}. {sites, plural, one {# reef or wreck} other {# reefs and wrecks}}.",
+      "busiestDay": "Busiest day · {divers, number}",
+      "boatDays": "Days {name} went out",
+      "daysAtSea": "Days at sea",
+      "mostDived": "Most dived · {times, number}",
+      "divers": "Divers"
+    },
+    "band": {
+      "eyebrow": "A real shop's year",
+      "claim": "{shop} has run {boats, plural, one {# boat} other {# boats}} on DiveDay this year.",
+      "source": "Their card, drawn by their log. Every number on it is a day their crew closed out.",
+      "note": "Shown here because the shop turned it on.",
+      "door": "See their storefront",
+      "alt": "{shop}'s year card: {divers, plural, one {# diver} other {# divers}}, {boats, plural, one {# boat out} other {# boats out}}, {sites, plural, one {# site} other {# sites}}."
+    }
   }
 }

@@ -891,6 +891,12 @@ export async function loadShopExportBundleInput(
             "search_listing_opt_out_at",
             "tide_window_public",
             "public_boat_line",
+            // Whether the shop's year card is on DiveDay's own pages (ADR
+            // 20260908-one-hand, decision 6, lever T). The shop's yes is the
+            // shop's to take with it, and a bundle that dropped it would tell
+            // an owner reading their own export nothing about a card a
+            // stranger can see.
+            "show_year_on_diveday",
             "conservation_commitments",
             "tagline",
             "description",
@@ -953,6 +959,7 @@ export async function loadShopExportBundleInput(
               shop.searchListingOptOutAt,
               shop.tideWindowPublic,
               shop.publicBoatLine,
+              shop.showYearOnDiveday,
               JSON.stringify(shop.conservationCommitments),
               shop.tagline,
               shop.description,

@@ -6,9 +6,10 @@
       "manifest.spec.ts",
       "marketing.spec.ts",
       "seo.spec.ts",
+      "shop-year.spec.ts",
       "try-it.spec.ts"
     ],
-    "visual": ["landing", "landing-drawn"],
+    "visual": ["landing", "landing-drawn", "landing-year-band"],
     "a11y": ["a11y.spec.ts"]
   },
   "/about": {
@@ -400,8 +401,8 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/reports": {
-    "e2e": ["currency.spec.ts", "partner-referral.spec.ts", "reports.spec.ts"],
-    "visual": ["reports"],
+    "e2e": ["currency.spec.ts", "partner-referral.spec.ts", "reports.spec.ts", "shop-year.spec.ts"],
+    "visual": ["reports", "reports-year"],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/requests": {

@@ -147,6 +147,18 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md#divedays-own-addresses).
 - **No fabricated proof.** No invented testimonials, user counts, logos, ratings, or "trusted by"
   language — ever. When real customers exist, their words go through the product owner first.
+- **A real shop's year is the one proof the homepage may carry, and only with that shop's yes**
+  (ADR 20260908-one-hand, decision 6, lever T; the owner's call is H-71 (k)). The band under the
+  hero renders a shop's own year card — divers, boats out, sites, its busiest day, the strip of
+  days — beside one sentence a number *on the card* proves, the line "Shown here because the shop
+  turned it on", and one door to that shop's storefront. It is not a testimonial: no words of the
+  shop's are quoted, no rating is implied, and nothing is claimed about DiveDay that the picture
+  does not itself show. Three things bound it, and none of them are a session's to relax: the
+  switch (`shops.show_year_on_diveday`) is off until an owner turns it on and the public card route
+  404s until then; **money never appears** on the card or beside it, and is not read at all
+  (`getShopYear`, src/db/reporting.ts); and no diver's name reaches either. With no shop opted in
+  the band does not render, and the homepage is what it was — never a placeholder, an example
+  shop, or a mocked-up card.
 - **Biography is a claim like any other.** `/about` names a real person and describes real history,
   so shipped-only becomes *true-only*: no employer, credential, certification level, or origin
   anecdote goes on the page unless the product owner has confirmed it. A session may not infer a

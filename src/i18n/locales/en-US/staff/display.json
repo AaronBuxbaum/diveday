@@ -50,5 +50,15 @@
       "submit": "Save",
       "submitting": "Saving…"
     }
+  },
+  "year": {
+    "heading": "Our year on DiveDay's pages",
+    "description": "The year card, no money on it.",
+    "label": "Show our year on DiveDay's pages",
+    "detail": "Divers, boats out, sites, your busiest day and the strip of days. Never money, never a diver's name.",
+    "submit": "Save",
+    "submitting": "Saving…",
+    "noticeOn": "Your year is on DiveDay's pages.",
+    "noticeOff": "Your year is off DiveDay's pages."
   }
 }

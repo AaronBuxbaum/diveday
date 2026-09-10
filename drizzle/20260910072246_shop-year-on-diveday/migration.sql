@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "show_year_on_diveday" boolean DEFAULT false NOT NULL;

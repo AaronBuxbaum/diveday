@@ -5441,6 +5441,25 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The shop's year** (ADR 20260908-one-hand, decision 6, lever T) — the
+       * other reading of the same route, reached by the one new control on
+       * Reports. The sentence, the strip of fifty-odd weeks, the four figures,
+       * the sites by the times they were dived, and the days the shop closed
+       * out.
+       *
+       * Both viewports in one capture, which is the point of photographing it:
+       * the strip is fifty-three columns wide at 390px and at 1280px, and the
+       * whole promise of drawing it in the tree's tokens rather than in the
+       * canvas's CSS is that neither width scrolls sideways.
+       */
+      test(`the shop's year renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/reports?range=year");
+        await page.getByRole("heading", { level: 1, name: "How's your year" }).waitFor();
+        await page.getByRole("region", { name: "The year's numbers" }).waitFor();
+        await capture(page, "reports-year", scheme);
+      });
+
+      /**
        * The waiver surface as one page (ADR 20260827-people-not-lists,
        * decision 4): the release editor, then the signature log as a
        * day-grouped ledger beneath it. The log is paginated
@@ -6877,6 +6896,60 @@ for (const scheme of ["light", "dark"] as const) {
       await openTripTab(page, "Prep");
       await page.getByRole("heading", { name: "Tanks" }).waitFor();
       await capture(page, "prep-no-nitrox", scheme);
+    });
+  });
+}
+
+/**
+ * **The proof band on DiveDay's own homepage** (ADR 20260908-one-hand,
+ * decision 6, lever T): a real shop's year card, the one sentence a number on
+ * the card can prove, and the line that says why it is there.
+ *
+ * A shop of the test's own, with a pinned identity, for two reasons at once.
+ * The switch is shop-wide configuration, which `/api/test/reset` deliberately
+ * leaves standing, so writing it on blue-mantis would put a band on every
+ * later homepage capture in the worker. And the shop's *name* is half of what
+ * this photographs — on the card, in the claim beside it, and in the storefront
+ * door — so a random mint would report as changed on the very next pull
+ * request.
+ */
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode — a shop's year on DiveDay's homepage`, () => {
+    test.use({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+      privateShopSlug: "tern-rock-dive-club",
+    });
+
+    test(`the homepage carries a real shop's year card (${scheme})`, async ({
+      page,
+      privateShop,
+    }) => {
+      // The mint and the live sign-in the fixture pays for, then one settings
+      // round-trip before the capture.
+      test.setTimeout(FLOW_TIMEOUT_MS);
+      await page.goto(`/shop/${privateShop.slug}/settings/display`);
+      await page.getByLabel("Show our year on DiveDay's pages").check();
+      await page.getByRole("button", { name: "Save" }).click();
+      // The destination's own render, not a timing guess.
+      await page.getByText("Your year is on DiveDay's pages.").waitFor();
+
+      await page.goto("/");
+      await page.getByText("Shown here because the shop turned it on.").waitFor();
+      // The card is an image route, so the band is not finished until its bytes
+      // have arrived — a capture fired on the sentence alone photographs an
+      // empty frame where the year is.
+      await page
+        .locator('img[alt*="year card"]')
+        .first()
+        .evaluate((node: HTMLImageElement) =>
+          node.complete
+            ? undefined
+            : new Promise<void>((done) => {
+                node.addEventListener("load", () => done());
+              }),
+        );
+      await capture(page, "landing-year-band", scheme);
     });
   });
 }

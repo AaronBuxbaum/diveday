@@ -13,6 +13,7 @@ import {
   earliestImportedFinancialHistoryDate,
   earliestReportedTripStart,
   getMonthlyReport,
+  getShopYear,
   pagedMonthlyReportTrips,
 } from "@/db/reporting";
 import { requestLocale } from "@/i18n/request";
@@ -28,7 +29,7 @@ import {
   parseMonthKey,
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate } from "@/lib/format";
+import { formatShortDate, formatTimeZoneName, monthNames } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import {
   compareMonthlyReports,
@@ -42,10 +43,14 @@ import {
   tripFillRate,
 } from "@/lib/reporting";
 import { requireShopSurface } from "@/lib/session";
+import { summarizeShopYear } from "@/lib/shop-year";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
+import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
+import { ReportRangeTabs } from "./_components/ReportRangeTabs";
+import { YearReport } from "./_components/YearReport";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -94,10 +99,10 @@ export default async function ReportsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ month?: string; page?: string }>;
+  searchParams: Promise<{ month?: string; page?: string; range?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { month, page } = await searchParams;
+  const { month, page, range } = await searchParams;
   // Checked against the database, not the JWT, so a revoked manager loses
   // revenue access immediately (see canPersonViewShopReports).
   //
@@ -116,13 +121,64 @@ export default async function ReportsPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
+
+  const tz = shop.timezone;
+  const now = nowDate();
+
+  // **The year is the other reading of the same page** (ADR 20260908-one-hand,
+  // decision 6, lever T). One segmented control chooses between them and the
+  // month below is untouched — same route, same gate, same locale, and a
+  // reader who never taps "This year" sees exactly the page they had.
+  //
+  // The branch is here rather than at a route of its own because the two are
+  // one destination: a second `/reports/year` page would need its own entry in
+  // the staff registry, its own `loading.tsx` and its own eyebrow, to say the
+  // same word twice.
+  if (range === "year") {
+    const yearInput = await getShopYear(db, shop.id, { timeZone: tz, now });
+    const year = summarizeShopYear(yearInput);
+    const zone = formatTimeZoneName(locale, tz, now);
+    return (
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+        <ShopPageHeader
+          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.reports)}
+          title={t("reports.year.title")}
+          description={
+            year.sinceMonth
+              ? t("reports.year.rangeSince", {
+                  year: String(year.year),
+                  month: monthNames(locale)[year.sinceMonth - 1] ?? "",
+                  zone,
+                })
+              : t("reports.year.rangeSoFar", { year: String(year.year), zone })
+          }
+          actions={
+            year.hasActivity ? (
+              <a
+                href={shopPath(shopSlug, "reports", "card")}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("reports.year.printCard")}
+              </a>
+            ) : undefined
+          }
+        />
+        <ReportRangeTabs shopSlug={shopSlug} range="year" t={t} className="mb-8" />
+        <YearReport
+          year={year}
+          locale={locale}
+          shopSlug={shopSlug}
+          t={t}
+          showsOnDiveday={shop.showYearOnDiveday}
+        />
+      </main>
+    );
+  }
+
   // Revenue is this shop's own money — a Bali shop's month reads in rupiah
   // (docs ADR 20260731-shop-currency). Note the fill/waiver percentages below
   // are ratios, not money, and stay currency-free.
   const currency = toShopCurrency(shop.currency);
-
-  const tz = shop.timezone;
-  const now = nowDate();
   const todayWall = utcToWallTime(now, tz);
   const thisMonth: MonthRef = { year: todayWall.year, month: todayWall.month };
   // The oldest month this shop could have anything to report on. It is the
@@ -466,6 +522,8 @@ export default async function ReportsPage({
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.reports)}
         title={t("reports.title")}
       />
+
+      <ReportRangeTabs shopSlug={shopSlug} range="month" t={t} className="mb-6" />
 
       {/*
         Month navigator — plain server-rendered links plus one GET form, no

@@ -50,5 +50,45 @@
   "pagination": {
     "total": "{count, plural, one {# trip} other {# trips}}"
   },
-  "partnerArrivals": "{count, plural, one {# seat} other {# seats}} arrived on a partner link"
+  "partnerArrivals": "{count, plural, one {# seat} other {# seats}} arrived on a partner link",
+  "year": {
+    "title": "How's your year",
+    "rangeLabel": "Choose a range",
+    "thisMonth": "This month",
+    "thisYear": "This year",
+    "rangeSoFar": "{year} so far · January 1 to today · {zone}",
+    "rangeSince": "{year} so far · since {month} · {zone}",
+    "printCard": "Print the card",
+    "sentence": "{divers, plural, one {# diver} other {# divers}}, {boats, plural, one {# boat out} other {# boats out}}, {sites, plural, one {# site} other {# sites}}.",
+    "busiest": "The busiest day was {day}.",
+    "quietest": "The quietest month was {month}.",
+    "stripLabel": "The year's days",
+    "stripLegend": "Each square is a day; the deeper the water, the fuller the boats. Nothing after today is drawn.",
+    "stripDay": "{day} · {divers, number} divers on {boats, number} boats",
+    "stripQuietDay": "{day} · no boats",
+    "numbersLabel": "The year's numbers",
+    "figures": {
+      "diversLabel": "Divers",
+      "diversDetail": "{count, plural, one {# day at sea} other {# days at sea}}",
+      "boatsLabel": "Boats out",
+      "boatDays": "{name} {count, plural, one {# day} other {# days}}",
+      "busiestLabel": "Busiest day",
+      "busiestDetail": "{day} · {count, plural, one {# boat} other {# boats}}",
+      "quietestLabel": "Quietest month",
+      "quietestDetail": "{month} · {count, plural, one {# boat out} other {# boats out}}"
+    },
+    "sitesLabel": "Sites, by the times you dived them",
+    "sitesCount": "{count, plural, one {# site} other {# sites}}",
+    "siteTimes": "{count, plural, one {# time} other {# times}}",
+    "sitesRest": "{count, plural, one {# more site} other {# more sites}} · {dives, plural, one {# dive between them} other {# dives between them}}",
+    "entriesLabel": "The year's entries",
+    "entriesCount": "{count, plural, one {# day} other {# days}}",
+    "entry": "{divers, plural, one {# diver} other {# divers}} on {boats, plural, one {# boat} other {# boats}}",
+    "entryClosedBy": "Closed by {name}",
+    "entriesRest": "{count, plural, one {# more day} other {# more days}}",
+    "shareOn": "Your year is on DiveDay's pages",
+    "shareOff": "Your year is not on DiveDay's pages",
+    "shareDoor": "Lobby display settings",
+    "empty": "No departures have sailed this year yet."
+  }
 }

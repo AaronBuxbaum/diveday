@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { issueDisplayToken, revokeDisplayToken } from "@/db/display-tokens";
-import { setShopPublicBoatLine } from "@/db/shops";
+import { setShopPublicBoatLine, setShopYearOnDiveday } from "@/db/shops";
 import { boardPath } from "@/lib/display-tokens";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -108,4 +108,28 @@ export async function displayLinkAction(
     label: outcome.issued.label,
     url: `${origin}${boardPath(outcome.issued.token)}`,
   };
+}
+
+/**
+ * **The shop's yes** for its year on DiveDay's own pages (ADR
+ * 20260908-one-hand, decision 6, lever T). One checkbox, off by default, and
+ * the only thing that makes `/s/<slug>/year-card` exist at all.
+ *
+ * Owner/manager, like the rest of this page — what a shop shows the world is
+ * shop policy — and the gate is re-derived here rather than trusted from the
+ * page that rendered the form, so a staffer who reaches this action through a
+ * stale tab is refused. A plain `<form action>` rather than the panel's
+ * `useActionState`: this is one checkbox that redirects with its own outcome,
+ * and it works before JavaScript.
+ */
+export async function saveYearOnDivedayAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  const path = shopPath(session.user.shopSlug, "settings", "display");
+  const allowed = await canPersonManageShopSettings(db, session.user.shopId, session.user.personId);
+  if (!allowed) redirect(noticeUrl(path, "display-not-authorized"));
+  const on = formData.get("showYearOnDiveday") === "on";
+  await setShopYearOnDiveday(db, session.user.shopId, on);
+  revalidatePath(path);
+  redirect(noticeUrl(path, on ? "year-on-diveday" : "year-off-diveday"));
 }

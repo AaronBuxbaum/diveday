@@ -400,6 +400,22 @@ export function monthNames(locale = "en-US"): string[] {
   );
 }
 
+/**
+ * The twelve months in their short form — the markers above the year's strip
+ * of days (ADR 20260908-one-hand, decision 6, lever T), where the long names
+ * would be wider than the four columns each one labels. Calendar data rather
+ * than copy, for the reason {@link monthNames} states.
+ */
+export function shortMonthNames(locale = "en-US"): string[] {
+  const format = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    month: "short",
+    timeZone: "UTC",
+  });
+  return Array.from({ length: 12 }, (_, month) =>
+    format.format(new Date(Date.UTC(2025, month, 1))),
+  );
+}
+
 export function formatMonthDay(month: number, day: number, locale = "en-US"): string {
   return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     month: "long",

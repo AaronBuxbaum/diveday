@@ -1,4 +1,4 @@
-import { and, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
 import type { BrandBadgeCode, BrandDisplayFontCode } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import type { ConservationCommitmentCode } from "@/lib/conservation-commitments";
@@ -624,4 +624,54 @@ export async function setShopPublicBoatLine(db: AppDb, shopId: string, on: boole
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;
+}
+
+/**
+ * **The shop's yes** for its year on DiveDay's own pages (ADR
+ * 20260908-one-hand, decision 6, lever T; the owner's call is H-71 (k)). Off
+ * by default; the switch is one row on Settings' Lobby display page, and
+ * turning it off takes the homepage band and the public card down on the next
+ * render.
+ */
+export async function setShopYearOnDiveday(db: AppDb, shopId: string, show: boolean) {
+  const [shop] = await db
+    .update(shops)
+    .set({ showYearOnDiveday: show })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * The shops whose year DiveDay's homepage may draw — the ones that said yes,
+ * and nothing else. The switch **is** the gate: a shop that has not turned it
+ * on is not here, and no other condition may quietly add or remove a shop from
+ * a band whose entire claim is "shown here because the shop turned it on".
+ *
+ * A **real shop outranks a fixture**, which is what `is_demo` is doing in the
+ * order rather than in the `where`: the band should carry a working shop's year
+ * whenever one exists, but a demo tenant that turned the switch on has still
+ * turned it on, and filtering demos out would leave the band with no way to be
+ * exercised at all. Slug breaks the remaining tie, so the homepage shows the
+ * same shop on every render rather than whichever row Postgres handed back.
+ *
+ * Bounded; the caller takes the first with a year worth drawing.
+ */
+export async function listShopsShowingYearOnDiveday(db: AppDb, limit = 3) {
+  return db
+    .select({
+      id: shops.id,
+      slug: shops.slug,
+      name: shops.name,
+      timezone: shops.timezone,
+      defaultLocale: shops.defaultLocale,
+      brandColor: shops.brandColor,
+      brandDisplayFont: shops.brandDisplayFont,
+      brandHeroImageUrl: shops.brandHeroImageUrl,
+      brandHeroImageAlt: shops.brandHeroImageAlt,
+    })
+    .from(shops)
+    .where(eq(shops.showYearOnDiveday, true))
+    .orderBy(asc(shops.isDemo), asc(shops.slug))
+    .limit(limit);
 }

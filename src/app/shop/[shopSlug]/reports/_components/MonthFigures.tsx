@@ -88,14 +88,30 @@ function figureCellClass(index: number): string {
   return `py-5 pe-6 ${rule} ${gutter}`.replace(/\s+/g, " ").trim();
 }
 
+/**
+ * One column count per figure row. Two entries because there are two of them
+ * in the tree — the month's five and the year's four (ADR 20260908-one-hand,
+ * decision 6, lever T) — and a second component for the second one would be a
+ * second spelling of one grammar, which is the drift decision 1 exists to end.
+ * The class strings are written out rather than interpolated: Tailwind reads
+ * class names as literals.
+ */
+const FIGURE_COLUMNS = {
+  4: "grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-4",
+  5: "grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5",
+} as const;
+
 export function MonthFigures({
   /** Names the region for a screen reader; the row carries no visible heading. */
   label,
   figures,
+  columns = 5,
 }: {
   label: string;
   /** The month's five figures, in reading order. */
   figures: MonthFigure[];
+  /** How many the row holds at `lg`. The hairline rules read the index alone and need no telling. */
+  columns?: keyof typeof FIGURE_COLUMNS;
 }) {
   // A month with nothing in it renders no figure row at all rather than five
   // zeroes — the page's own empty state says what happened instead.
@@ -103,7 +119,7 @@ export function MonthFigures({
   const lastSpansTheRow = figures.length % 2 === 1;
   return (
     <section aria-label={label}>
-      <dl className="grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5">
+      <dl className={FIGURE_COLUMNS[columns]}>
         {figures.map((figure, index) => (
           <div
             key={figure.key}

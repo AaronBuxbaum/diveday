@@ -50,5 +50,15 @@
       "submit": "Guardar",
       "submitting": "Guardando…"
     }
+  },
+  "year": {
+    "heading": "Nuestro año en las páginas de DiveDay",
+    "description": "La tarjeta del año, sin dinero en ella.",
+    "label": "Mostrar nuestro año en las páginas de DiveDay",
+    "detail": "Buceadores, salidas, sitios, tu día más movido y la franja de días. Nunca dinero, nunca el nombre de un buceador.",
+    "submit": "Guardar",
+    "submitting": "Guardando…",
+    "noticeOn": "Tu año está en las páginas de DiveDay.",
+    "noticeOff": "Tu año ya no está en las páginas de DiveDay."
   }
 }

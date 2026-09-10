@@ -3786,5 +3786,26 @@
   "embed": {
     "book": "Reservar",
     "enrol": "Inscribirme"
+  },
+  "shopYear": {
+    "card": {
+      "range": "{year}",
+      "rangeToDate": "{year} · hasta el {date}",
+      "rangeSince": "{year} · desde {month}",
+      "sentence": "{divers, plural, one {# buceador} other {# buceadores}}. {boats, plural, one {# salida} other {# salidas}}. {sites, plural, one {# arrecife o pecio} other {# arrecifes y pecios}}.",
+      "busiestDay": "Día más movido · {divers, number}",
+      "boatDays": "Días que salió {name}",
+      "daysAtSea": "Días en el mar",
+      "mostDived": "El más buceado · {times, number}",
+      "divers": "Buceadores"
+    },
+    "band": {
+      "eyebrow": "El año de un centro real",
+      "claim": "{shop} ha hecho {boats, plural, one {# salida} other {# salidas}} en DiveDay este año.",
+      "source": "Su tarjeta, dibujada por su registro. Cada número es un día que su equipo cerró.",
+      "note": "Se muestra aquí porque el centro lo activó.",
+      "door": "Ver su escaparate",
+      "alt": "Tarjeta del año de {shop}: {divers, plural, one {# buceador} other {# buceadores}}, {boats, plural, one {# salida} other {# salidas}}, {sites, plural, one {# sitio} other {# sitios}}."
+    }
   }
 }

@@ -431,6 +431,19 @@ export const shops = pgTable(
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * **The shop's yes** for its year card on DiveDay's own pages (ADR
+     * 20260908-one-hand, decision 6, lever T; the owner's call is H-71 (k)).
+     *
+     * Off by default and never inferred: DiveDay's homepage carries a real
+     * shop's card only while this is true, and the public card route
+     * (`/s/<slug>/year-card`) 404s for every shop that has not turned it on.
+     * What leaves the shop is what the card draws — divers, boats out, sites,
+     * the busiest day, the strip of days — and never money and never a diver's
+     * name. Turning it off takes the band down on the next render; nothing is
+     * cached elsewhere.
+     */
+    showYearOnDiveday: boolean("show_year_on_diveday").notNull().default(false),
   },
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),

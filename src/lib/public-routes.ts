@@ -46,6 +46,17 @@ export function publicAvailabilityPath(shopSlug: string): string {
   return `${publicSchedulePath(shopSlug)}/availability.json`;
 }
 
+/**
+ * The shop's year as one 3:2 image (ADR 20260908-one-hand, decision 6, lever
+ * T). It exists **only while the shop says yes**: with
+ * `shops.show_year_on_diveday` off the route 404s, which is what lets
+ * DiveDay's homepage embed it for the shops that turned it on and nobody
+ * else's. Divers, boats out and sites — never money, never a diver's name.
+ */
+export function publicShopYearCardPath(shopSlug: string): string {
+  return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/year-card`;
+}
+
 /** The site-level overview an agent reads first, at the conventional path. */
 export const LLMS_TXT_PATH = "/llms.txt";
 
