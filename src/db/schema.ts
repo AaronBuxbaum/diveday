@@ -3248,15 +3248,22 @@ export const tripWaitlistEntries = pgTable(
  * A staff-selected invitation to a departure. This is deliberately not a
  * booking and not a wait-list position: it reserves no capacity, never enters
  * the manifest, and can be created for the same request on more than one trip.
- * The source discriminator leaves room for invitations chosen from the wait
- * list or an existing diver record without forcing those concepts to share a
- * table's meaning (ADR 20260816-trip-invitations).
+ * The source discriminator separates a request-origin invitation from a direct
+ * one without forcing those concepts to share a table's meaning (ADR
+ * 20260816-trip-invitations).
+ *
+ * **`waitlist` was here and is gone** (issue #1616). The ADR left room for it
+ * and nothing ever filled that room: no writer set the source, so no row ever
+ * carried the `waitlist_entry_id` the branch required. What the dead column
+ * *did* carry was a foreign key into `trip_waitlist_entries` with no
+ * `onDelete`, and the erasure hard-deletes a diver's wait-list rows — so a
+ * single populated row would have raised 23503 inside the erasure transaction
+ * and rolled back every other redaction with it. An owner would have pressed
+ * Erase and seen nothing change. H-49 is the rule that applies: a column
+ * nothing writes is dropped rather than defended, and dropping it removes the
+ * hazard instead of sequencing around it.
  */
-export const tripInvitationSource = pgEnum("trip_invitation_source", [
-  "date_request",
-  "waitlist",
-  "direct",
-]);
+export const tripInvitationSource = pgEnum("trip_invitation_source", ["date_request", "direct"]);
 
 export const tripInvitations = pgTable(
   "trip_invitations",
@@ -3271,8 +3278,6 @@ export const tripInvitations = pgTable(
     source: tripInvitationSource("source").notNull(),
     /** Set for a request-origin invitation; the request carries its contact snapshot. */
     courseInquiryId: uuid("course_inquiry_id").references(() => courseInquiries.id),
-    /** Set for a wait-list-origin invitation; the wait-list row remains separate. */
-    waitlistEntryId: uuid("waitlist_entry_id").references(() => tripWaitlistEntries.id),
     /** Set only for a direct existing-diver invitation. */
     personId: uuid("person_id").references(() => people.id),
     createdByPersonId: uuid("created_by_person_id")
@@ -3287,18 +3292,14 @@ export const tripInvitations = pgTable(
     uniqueIndex("trip_invitations_trip_request_unique")
       .on(table.tripId, table.courseInquiryId)
       .where(sql`${table.courseInquiryId} is not null`),
-    uniqueIndex("trip_invitations_trip_waitlist_unique")
-      .on(table.tripId, table.waitlistEntryId)
-      .where(sql`${table.waitlistEntryId} is not null`),
     uniqueIndex("trip_invitations_trip_person_unique")
       .on(table.tripId, table.personId)
       .where(sql`${table.personId} is not null`),
     check(
       "trip_invitations_source_reference_check",
       sql`(
-        (${table.source} = 'date_request' and ${table.courseInquiryId} is not null and ${table.waitlistEntryId} is null and ${table.personId} is null)
-        or (${table.source} = 'waitlist' and ${table.courseInquiryId} is null and ${table.waitlistEntryId} is not null and ${table.personId} is null)
-        or (${table.source} = 'direct' and ${table.courseInquiryId} is null and ${table.waitlistEntryId} is null and ${table.personId} is not null)
+        (${table.source} = 'date_request' and ${table.courseInquiryId} is not null and ${table.personId} is null)
+        or (${table.source} = 'direct' and ${table.courseInquiryId} is null and ${table.personId} is not null)
       )`,
     ),
   ],

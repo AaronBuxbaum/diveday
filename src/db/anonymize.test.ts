@@ -29,9 +29,11 @@ import {
   recapPulses,
   rollCallEvents,
   tips,
+  tripInvitations,
   tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   trips,
+  tripWaitlistEntries,
   userAccounts,
   waiverDeliveries,
   waiverRecords,
@@ -878,5 +880,75 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       );
     expect(queued.map((row) => row.url)).toEqual([`${MANAGED_BLOB_HOST}/receipts/kwame.pdf`]);
     expect(queued.every((row) => row.status === "pending")).toBe(true);
+  });
+});
+
+/**
+ * **The erasure is one transaction, so a foreign key that refuses is not a
+ * partial erasure — it is no erasure at all** (issue #1616).
+ *
+ * `scrub` hard-deletes the erased diver's `trip_waitlist_entries`, and
+ * `trip_invitations` used to carry a `waitlist_entry_id` referencing that table
+ * with no `onDelete`. One populated row would have raised 23503 and rolled the
+ * whole scrub back: the owner presses Erase, no error they can act on reaches
+ * them, and every redaction is silently undone.
+ *
+ * The column was dead — both insert sites in `src/db/trip-invitations.ts` write
+ * `date_request` or `direct` — so it is dropped rather than sequenced around
+ * (H-49). This test is what stops the hazard coming back under a different
+ * name: a diver holding **both** a wait-list entry and an invitation on the
+ * same departure must come out the other side erased.
+ *
+ * It has to assert on a *later* redaction rather than on the delete itself. A
+ * rollback leaves every table untouched, so the wait-list rows being gone is
+ * ambiguous — `people.anonymized_at` being stamped is not.
+ */
+describe("anonymizeDiver — a wait-listed diver who was also invited (issue #1616)", () => {
+  it("erases through, rather than rolling the whole transaction back", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Lucia Ferreira", email: "lucia@example.com" })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
+
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .orderBy(trips.id)
+      .limit(1);
+    if (!trip) throw new Error("expected a seeded departure");
+
+    await db.insert(tripWaitlistEntries).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: diver.id,
+    });
+    // The invitation that used to point at that entry. `direct` is what a real
+    // writer produces; the point is that an invitation and a wait-list entry
+    // coexist for one diver on one departure at erasure time.
+    await db.insert(tripInvitations).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      source: "direct",
+      personId: diver.id,
+      createdByPersonId: owner.id,
+    });
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: owner.id,
+    });
+    expect(erased.ok).toBe(true);
+
+    const [row] = await db.select().from(people).where(eq(people.id, diver.id));
+    expect(row?.anonymizedAt).not.toBeNull();
+    expect(row?.email).toBeNull();
+    expect(
+      await db.select().from(tripWaitlistEntries).where(eq(tripWaitlistEntries.personId, diver.id)),
+    ).toEqual([]);
   });
 });

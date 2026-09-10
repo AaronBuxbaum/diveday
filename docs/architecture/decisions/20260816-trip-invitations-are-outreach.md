@@ -36,10 +36,22 @@ not a booking, and not a readiness signal.
   prepare an email or copy a message through the existing browser composer, at no provider cost;
   recording that action sets `invited_at`. A future provider-backed sender can replace the composer
   without changing the invitation or booking boundary.
-- The source is explicit (`date_request`, `waitlist`, or `direct`) and the database check requires
-  exactly the matching source reference. Direct existing-diver invitations are available from the
-  Guests tab; the wait-list source remains available for a future one-tap outreach bridge without
-  making either one look like a date request.
+- The source is explicit (`date_request` or `direct`) and the database check requires exactly the
+  matching source reference. Direct existing-diver invitations are available from the Guests tab.
+
+  **Amended 2026-09-10 (issue #1616): the `waitlist` source and its `waitlist_entry_id` column are
+  gone.** This decision left them available for "a future one-tap outreach bridge", and in the three
+  weeks that followed nothing filled that room: both insert sites write `date_request` or `direct`,
+  so no row ever carried the column, and the `waitlist` branch of the check constraint never
+  matched. What the empty column did carry was a foreign key into `trip_waitlist_entries` with no
+  `onDelete` — and `anonymizeDiver` hard-deletes a diver's wait-list rows, so one populated row
+  would have raised 23503 inside the erasure transaction and rolled back **every other redaction
+  with it**. An owner would have pressed Erase, seen no error, and found nothing changed.
+
+  H-49 is the rule that decides it: a column nothing writes is dropped rather than defended, and
+  dropping it removes the hazard instead of sequencing a delete around it. The bridge is still a
+  fine idea; when someone builds it, it arrives with a writer, and re-adding a nullable column and
+  an enum value is a smaller change than the silent-erasure failure this leaves behind.
 - The export carries invitations with trip context and contact names. It carries no credentials,
   card data, or provider delivery state.
 
