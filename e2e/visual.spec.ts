@@ -7190,11 +7190,19 @@ for (const scheme of ["light", "dark"] as const) {
         .getByLabel("What to remember about running this site")
         .fill("The entry silted up after the storm. Brief the swim-through before you go in.");
       await page.getByRole("button", { name: "Save dive site" }).click();
-      // The form settles in place; the frame worth keeping is one navigation
-      // on from it — the note in the list a shop plans against.
-      await expect(page.getByLabel("What to remember about running this site")).toHaveValue(
-        "The entry silted up after the storm. Brief the swim-through before you go in.",
-      );
+      // **Wait for the save's own redirect, not for the text we just typed.**
+      // The frame worth keeping is one navigation on from the form — the note
+      // in the list a shop plans against — and the assertion that used to
+      // stand here read the field back for the value it had been filled with a
+      // line earlier. It therefore passed instantly, whether or not the write
+      // had landed, and the `goto` below tore the page down with the action
+      // still in flight: the trace shows the POST to the site page ending at
+      // status -1, and the library rendering the row without a note. This is
+      // the `action-race` shape `.claude/rules/e2e.md` names, wearing an
+      // `expect` that satisfies `check:e2e-hygiene` while waiting for nothing.
+      // `?notice=saved` is written by `revalidateAndRedirect` only once the row
+      // is durably saved.
+      await page.waitForURL(/[?&]notice=saved/);
       await page.goto(`/shop/${privateShop.slug}/dive-sites`);
       await page.getByText("The entry silted up after the storm").waitFor();
       await capture(page, "dive-site-planning-note", scheme);
