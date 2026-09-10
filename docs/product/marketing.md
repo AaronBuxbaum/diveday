@@ -412,6 +412,15 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   hero is stored, fetched or looked up: DiveDay never reads a visitor's website, listing or logo, and
   the hero says so on its face ("Drawn from what you typed", "Nothing is saved until you open it"),
   which is what keeps it inside the claims policy rather than a demo of data we do not have.
+  **Two defaults the hero guesses, recorded because nobody typed them.** The first boat gets
+  **six seats** — capacity is the ceiling every gate downstream defends, and on a US uninspected
+  vessel six passengers is a legal line, so the only safe direction to guess in is low; a shop
+  raises it in the boat register. The first departure runs **four hours, on tomorrow's date in the
+  shop's own zone** — the same run the schedule builder's own blank form opens with, and tomorrow
+  rather than today because a shop signing up at 9 AM has already missed a 7:30 boat. (These
+  belong in ADR 20260908-one-hand's decision 6, possibility Y; that decision arrives with the
+  round-4 canvas commit and is not in the tree yet, so they are recorded here and move there when
+  it lands.)
   **The budget binds controls, not facts.** The 2026-08-27 conversion review's second diagnosis is
   that the terms never stand at the doors, and the flat price reached the homepage hero on
   2026-08-28 as a consequence — as a muted *sentence* under the demo note ("One flat price — {price}

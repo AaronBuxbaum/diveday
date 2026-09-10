@@ -81,8 +81,13 @@ export async function createFirstDay(
     endsAt: details.patch.endsAt,
     scheduleDays: details.patch.scheduleDays,
     capacity: FIRST_BOAT_CAPACITY,
-    diveMode: "boat",
-    boatId: boat.id,
+    // **The validator's answer, not the one asked for.** `tripDetailsPatch`
+    // narrows the mode against the shop's own offered kinds of diving, so a
+    // shop that does not run boats gets whatever it does run rather than a
+    // departure claiming a hull it does not use. Repeating the literals here
+    // would put a second answer beside the one the schedule board trusts.
+    diveMode: details.patch.diveMode ?? "boat",
+    boatId: details.patch.boatId ?? null,
   });
   if (!trip) return null;
 

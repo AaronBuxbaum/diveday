@@ -82,6 +82,30 @@ describe("createFirstDay", () => {
     expect(trip?.endsAt.toISOString()).toBe("2026-09-03T03:59:00.000Z");
   });
 
+  it("writes neither a departure nor a boat at the very end of the day", async () => {
+    const { db, shop } = await seededShopContext();
+    const before = await listBoats(db, shop.id);
+
+    // 23:59 leaves no room for a departure that ends after it starts, and a
+    // hull carrying a departure that was never created is not a state a new
+    // shop should have to explain to itself.
+    expect(
+      await createFirstDay(db, asFirstDayShop(shop), {
+        boatName: "Midnight Runner",
+        departure: "23:59",
+        now: new Date("2026-09-01T15:00:00Z"),
+      }),
+    ).toBeNull();
+
+    expect(await listBoats(db, shop.id)).toHaveLength(before.length);
+    expect(
+      await db
+        .select()
+        .from(boats)
+        .where(and(eq(boats.shopId, shop.id), eq(boats.name, "Midnight Runner"))),
+    ).toHaveLength(0);
+  });
+
   it("refuses a time it cannot read, and writes no boat for it", async () => {
     const { db, shop } = await seededShopContext();
     const before = await listBoats(db, shop.id);

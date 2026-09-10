@@ -58,6 +58,11 @@ export const FIRST_DEPARTURE_HOURS = 4;
  * that is too high sells seats a shop cannot legally fill; one that is too low
  * costs a shop thirty seconds in the boat register. There is only one safe
  * direction to guess in.
+ *
+ * **Nothing asks the shop to confirm it**, which is issue #1632: the First
+ * morning checklist is where a derived default gets looked at, and it only
+ * renders while the shop has no departure at all — which a shop that came
+ * through the hero never is.
  */
 export const FIRST_BOAT_CAPACITY = 6;
 
@@ -124,11 +129,19 @@ export function firstDepartureDay(now: Date, timeZone: string): CalendarDate {
  * an end before its start and the departure would simply not be created. A late
  * boat gets a short day on the board instead of no boat at all, and the shop
  * moves it in the builder.
+ *
+ * **And at the very end of the day there is no room left to clamp into.** A
+ * 23:59 departure clamps to an end equal to its own start, which
+ * `tripDetailsPatch` refuses as `end_before_start` — so this says no here
+ * instead, and `createFirstDay` writes neither the departure nor the boat. A
+ * shop that types 23:59 into the hero gets a clean sign-up and an empty
+ * register rather than a hull with a departure that never existed.
  */
 export function firstDepartureEndTime(start: string): string | null {
   const minutes = departureMinutes(start);
   if (minutes === null) return null;
   const end = Math.min(minutes + FIRST_DEPARTURE_HOURS * 60, MINUTES_IN_DAY - 1);
+  if (end <= minutes) return null;
   const hour = Math.floor(end / 60);
   return `${String(hour).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}`;
 }
@@ -255,8 +268,19 @@ export function suggestedBrandColor(name: string): string {
  * Two schemes, like `BrandStyle`: an inline `style` attribute cannot carry a
  * `prefers-color-scheme` block, and a single block would dress the hero in its
  * light colour at depth (issue #1265).
+ *
+ * **The input is checked here, not trusted from the caller.** This is the one
+ * function in the slice whose output is rendered as *stylesheet text* rather
+ * than as a React text node, so a caller that ever handed it a string off a
+ * request would be handing it a way out of the block. Today's only caller
+ * passes `suggestedBrandColor`, which cannot return anything but a derived
+ * hex — this makes that a property of the function instead of a property of
+ * the call site. Anything `parseBrandColor` will not take becomes DiveDay's
+ * own lagoon, which is what a shop with no colour wears anyway.
  */
 export function tryItThemeDeclarations(color: string): { light: string; dark: string } {
+  const checked = parseBrandColor(color);
+  const safe = checked.valid && checked.value ? checked.value : DIVEDAY_BRAND_COLOR;
   const declarations = (theme: BrandTheme) =>
     Object.entries({
       ...brandThemeProperties(theme),
@@ -269,8 +293,8 @@ export function tryItThemeDeclarations(color: string): { light: string; dark: st
       )
       .join(";");
   return {
-    light: declarations(deriveBrandTheme(color)),
-    dark: declarations(deriveDarkBrandTheme(color)),
+    light: declarations(deriveBrandTheme(safe)),
+    dark: declarations(deriveDarkBrandTheme(safe)),
   };
 }
 

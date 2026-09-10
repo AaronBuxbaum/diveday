@@ -22,6 +22,7 @@ import {
   parseTryItName,
   suggestedBrandColor,
   tryItOnboardHref,
+  tryItThemeDeclarations,
 } from "./try-it";
 
 /**
@@ -123,7 +124,14 @@ describe("firstDepartureEndTime", () => {
     // `tripDetailsPatch` reads a start and an end against one date, so an end
     // past midnight is a departure that never gets created at all.
     expect(firstDepartureEndTime("22:00")).toBe("23:59");
-    expect(firstDepartureEndTime("23:59")).toBe("23:59");
+    expect(firstDepartureEndTime("23:58")).toBe("23:59");
+  });
+
+  it("has no answer at the very end of the day, where there is nothing to clamp into", () => {
+    // 23:59 clamps to its own start, which `tripDetailsPatch` refuses as
+    // `end_before_start` — so this says no first, and `createFirstDay` writes
+    // neither the departure nor the hull it would have sailed on.
+    expect(firstDepartureEndTime("23:59")).toBeNull();
   });
 
   it("has no answer for a time it cannot read", () => {
@@ -212,6 +220,50 @@ describe("suggestedBrandColor", () => {
   it("falls back to DiveDay's own colour for a name it cannot read", () => {
     expect(suggestedBrandColor("   ")).toBe(DIVEDAY_BRAND_COLOR);
     expect(suggestedBrandColor("a".repeat(MAX_TRY_IT_NAME + 1))).toBe(DIVEDAY_BRAND_COLOR);
+  });
+});
+
+describe("tryItThemeDeclarations", () => {
+  /** Every value in a `name:value` list, whatever the property is called. */
+  const values = (block: string) =>
+    block
+      .split(";")
+      .filter(Boolean)
+      .map((declaration) => declaration.slice(declaration.indexOf(":") + 1));
+
+  it("emits nothing but hex colours, whatever it is handed", () => {
+    // This is the one function in the slice whose output is rendered as
+    // *stylesheet text*, so what it will not take matters more than what it
+    // will: a string that closes the block and opens its own is not a colour.
+    for (const input of [
+      "red;}body{display:none",
+      "#8a3b1f;}[data-try-it-drawn]{--primary:red",
+      "url(https://example.invalid/x)",
+      "",
+      "javascript:alert(1)",
+    ]) {
+      const theme = tryItThemeDeclarations(input);
+      for (const block of [theme.light, theme.dark]) {
+        expect(block).not.toContain("}");
+        expect(block).not.toContain("{");
+        for (const value of values(block)) expect(value).toMatch(/^#[0-9a-f]{6}$/);
+      }
+    }
+  });
+
+  it("falls back to DiveDay's own colour for anything that is not one", () => {
+    expect(tryItThemeDeclarations("red;}body{display:none")).toEqual(
+      tryItThemeDeclarations(DIVEDAY_BRAND_COLOR),
+    );
+  });
+
+  it("dresses a real colour in itself, in both schemes", () => {
+    const color = suggestedBrandColor("Coral Cove Dive Co.");
+    const theme = tryItThemeDeclarations(color);
+    expect(theme.light).toContain(`--color-primary:${color}`);
+    // The dark scheme derives the same hue against the deep ground, so the two
+    // blocks must not be the same block (issue #1265's whole shape).
+    expect(theme.dark).not.toBe(theme.light);
   });
 });
 

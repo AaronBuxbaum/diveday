@@ -54,7 +54,7 @@ test("the hero redraws as the visitor's own first day, and says where it came fr
   await expect(
     page.getByRole("heading", { level: 1, name: `Good morning, ${SHOP}` }),
   ).toBeVisible();
-  await expect(page.getByText(`${BOAT} is on the line at 11:00 AM`)).toBeVisible();
+  await expect(page.getByText(`${BOAT} is on the line tomorrow at 11:00 AM`)).toBeVisible();
   await expect(page.getByText(`${BOAT} leaves in 1 hr 30 min.`)).toBeVisible();
 
   // The line that keeps the drawing honest, and the one that says what has and

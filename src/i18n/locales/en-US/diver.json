@@ -2535,7 +2535,7 @@
         "greetingAfternoon": "Good afternoon, {shop}",
         "greetingEvening": "Good evening, {shop}",
         "greetingNight": "Working late, {shop}",
-        "firstDay": "Your first day. {boat} is on the line at {time} {zone}, and the rest is yours to put there.",
+        "firstDay": "Your first day. {boat} is on the line tomorrow at {time} {zone}, and the rest is yours to put there.",
         "leavesInMinutes": "{boat} leaves in {minutes} min.",
         "leavesInHours": "{boat} leaves in {hours} hr {minutes} min.",
         "boatsRow": "Your boats",

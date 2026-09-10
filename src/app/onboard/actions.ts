@@ -34,19 +34,24 @@ export async function onboardAction(formData: FormData) {
   const source = eventSource(formData.get("source"));
   // Non-secret fields only — never the password — echoed back so a bounce to
   // `?error=` doesn't wipe a form a shop owner just spent a minute filling in.
-  const PRESERVED_FIELDS = [
-    "shopName",
-    "shopSlug",
-    "timezone",
-    "ownerName",
-    "ownerEmail",
-    // What the homepage hero drew (ADR 20260908-one-hand, decision 6). A
-    // refusal on the password must not cost a shop the boat it typed two
-    // screens ago; `OnboardPage` reads these back under the same names.
-    "boat",
-    "departure",
-    "color",
-  ] as const;
+  const PRESERVED_FIELDS = ["shopName", "shopSlug", "timezone", "ownerName", "ownerEmail"] as const;
+  // What the homepage hero drew (ADR 20260908-one-hand, decision 6), judged by
+  // the one module that judges it: bounded lengths, `HH:MM`, a real `#rrggbb`.
+  // Junk in any of the three loses that field and nothing else — none of them
+  // is required to open a shop.
+  //
+  // **Parsed here rather than after the schema, because `backToForm` echoes
+  // it.** A refusal on the password must not cost a shop the boat it typed two
+  // screens ago, so these ride the bounce like every other non-secret field —
+  // but a bounce writes a `Location:` header, and the raw form value is
+  // whatever a crafted POST put in the box. Echoing the *parsed* value means
+  // the header can only ever carry a name inside `MAX_TRY_IT_NAME`, an `HH:MM`
+  // and a six-digit hex; a 50 KB field simply is not echoed.
+  const drawn = parseTryItHandoff({
+    boat: formData.get("boat"),
+    departure: formData.get("departure"),
+    color: formData.get("color"),
+  });
   // Annotated so TypeScript treats the call as never-returning (control-flow
   // analysis only honours that on an explicitly typed const).
   const backToForm: (message: string) => never = (message) => {
@@ -56,6 +61,10 @@ export async function onboardAction(formData: FormData) {
       const value = formData.get(field);
       if (typeof value === "string" && value) params.set(field, value);
     }
+    // `OnboardPage` reads these back under the same names the form posts.
+    if (drawn.boatName) params.set("boat", drawn.boatName);
+    if (drawn.departure) params.set("departure", drawn.departure);
+    if (drawn.brandColor) params.set("color", drawn.brandColor);
     redirect(`/onboard?${params.toString()}`);
   };
 
@@ -79,14 +88,6 @@ export async function onboardAction(formData: FormData) {
   }
 
   const { shopName, shopSlug, timezone, ownerName, ownerEmail, ownerPassword } = parsed.data;
-  // The hero's three, judged by the one module that judges them (bounded
-  // lengths, `HH:MM`, a real `#rrggbb`). Junk in any of them loses that field
-  // and nothing else — none of the three is required to open a shop.
-  const drawn = parseTryItHandoff({
-    boat: formData.get("boat"),
-    departure: formData.get("departure"),
-    color: formData.get("color"),
-  });
 
   // The reserved demo namespace is off limits to a real account, and now says
   // so out loud. ADR 20260803-demo-bypass-containment's third condition — "no
