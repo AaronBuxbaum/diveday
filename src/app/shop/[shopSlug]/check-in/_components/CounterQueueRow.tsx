@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { BlockedDiverRow } from "@/app/shop/[shopSlug]/_components/today/BlockedDiverRow";
+import { printPassAction } from "@/app/shop/[shopSlug]/print/actions";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
+import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
-import { tapTargetLinkClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
@@ -75,6 +77,10 @@ function DiverIdentity({
 }) {
   const meta = [
     showEmail && row.email ? row.email : null,
+    // The one instruction the gift row needs, in the quiet slot the row already
+    // has for a fact rather than as a second control: the diver in front of the
+    // counter is checked in by the name on the seat.
+    row.giftGiverName ? t("checkIn.row.giftDoor") : null,
     // **Quiet text, never a badge.** A badge marks an exceptional state
     // somebody has to act on; a first visit is a fact a staffer can be warmer
     // for, and boxing it would put it at the same volume as "Blocked".
@@ -96,6 +102,17 @@ function DiverIdentity({
             moment in the day when asking costs nothing. */}
         {row.missingEmergencyContact ? (
           <Badge tone="neutral">{t("checkIn.row.missingEmergencyContact")}</Badge>
+        ) : null}
+        {/* **A gift nobody has claimed, on the day** (ADR 20260908-one-hand,
+            decision 6, lever W). A warning rather than a neutral fact, because
+            it is a thing the counter has to act on: the person standing there
+            may never have opened the link, and the seat is under a name the
+            giver typed. Never a boarding blocker — readiness owns that line,
+            and it is already saying its own piece on this row. */}
+        {row.giftGiverName ? (
+          <Badge tone="warning">
+            {t("checkIn.row.giftUnclaimed", { giver: row.giftGiverName })}
+          </Badge>
         ) : null}
       </span>
       {meta.length > 0 ? (
@@ -147,7 +164,15 @@ export function CounterQueueRow({
 
   if (checkedIn && ready) {
     return (
-      <LedgerRow as="article" size="lg">
+      /* **The paper pass, on the settled row and nowhere else** (ADR
+         20260908-one-hand, decision 6, lever X). A pass is for the diver
+         standing at the desk who has no phone, and the moment they need it is
+         the one just after their name is ticked: it says which boat, where it
+         leaves from and when to be there. Here rather than on the waiting row
+         because the waiting row is one tap by design — the whole surface is
+         built so a staffer with wet hands cannot miss it — and a second control
+         beside that tap is the mis-tap this row spent a slice removing. */
+      <LedgerRow as="article" size="lg" trailing={<PassDoor shopSlug={shopSlug} row={row} t={t} />}>
         <CheckInActionForm
           action={undoAction}
           bookingId={row.bookingId}
@@ -344,5 +369,26 @@ export function CounterQueueRow({
         }
       />
     </LedgerRow>
+  );
+}
+
+/**
+ * A form rather than a link, because printing a pass records that the shop
+ * printed one — the Print register's own fact (`shop_print_runs`). It carries
+ * the booking, and the register keeps only the day.
+ */
+function PassDoor({ shopSlug, row, t }: { shopSlug: string; row: QueueRow; t: StaffTranslator }) {
+  return (
+    <form action={printPassAction}>
+      <input type="hidden" name="shopSlug" value={shopSlug} />
+      <input type="hidden" name="bookingId" value={row.bookingId} />
+      <SubmitButton
+        pendingLabel={t("print.counter.passDoor")}
+        ariaLabel={t("print.counter.passDoor")}
+        className={buttonClass({ variant: "ghost", size: "sm" })}
+      >
+        {t("print.counter.passDoor")}
+      </SubmitButton>
+    </form>
   );
 }

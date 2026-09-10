@@ -1,16 +1,32 @@
-import { utcToWallTime, wallTimeToUtc } from "./zoned";
+import {
+  CIVIL_TWILIGHT_ALTITUDE,
+  type MoonPhase,
+  moonAppearance,
+  moonIsUp,
+  type SkyPlace,
+  SUN_HORIZON_ALTITUDE,
+  solarDayNumber,
+  solarEventsOn,
+} from "./sun-moon";
 
 /**
  * **How dark it will be, and what light the moon leaves.**
  *
- * A night departure is the one kind of dive where the sky is an operational
- * fact: a diver deciding whether to bring a backup torch, a shop deciding how
- * long the surface interval can run in usable light. Every number here is
- * computed from the shop's own coordinates and a calendar date, with no network
- * call and no dependency — the standard low-precision solar and lunar series,
- * which land sunset and civil dusk inside a minute and the moon's illuminated
- * fraction inside a percentage point or two. A dive briefing needs far less
- * than that.
+ * A night departure is the one kind of dive where the sky is a fact a diver
+ * packs around: whether to bring a backup torch, and how much they will be able
+ * to see of the reef beyond the beam.
+ *
+ * **Never a planning input.** Nothing here decides how long a surface interval
+ * runs, when a boat turns for home, or whether a gauge can be read — those are
+ * the crew's calls, made on the water with the light they actually have, and a
+ * number computed ashore that looked like an answer to them would be worse than
+ * no number at all.
+ *
+ * The arithmetic is not here. `src/lib/sun-moon.ts` is the almanac — the solar
+ * and lunar series, computed from coordinates and a date with no network call
+ * and no dependency — and this file is the one composition that asks it only
+ * about a departure that dives after dark. The two used to carry the same
+ * series twice.
  *
  * **It informs and gates nothing.** Nothing in `src/lib/trip-admission.ts` or
  * `src/lib/readiness.ts` reads this file; a departure whose shop has never set
@@ -21,124 +37,35 @@ import { utcToWallTime, wallTimeToUtc } from "./zoned";
  * eight codes and becomes a word in `src/i18n/sky-labels.ts`.
  */
 
-/**
- * The eight phases, new moon first and running forwards through the month —
- * the order the moon actually walks them, so a reader scanning the list sees
- * the cycle rather than an alphabet.
- */
-export const MOON_PHASES = [
-  "new",
-  "waxingCrescent",
-  "firstQuarter",
-  "waxingGibbous",
-  "full",
-  "waningGibbous",
-  "lastQuarter",
-  "waningCrescent",
-] as const;
+export { MOON_PHASES, type MoonPhase, moonAppearance, type SkyPlace } from "./sun-moon";
 
-export type MoonPhase = (typeof MOON_PHASES)[number];
-
-/** Where the shop is, in signed degrees. */
-export type SkyPlace = { latitude: number; longitude: number };
-
-const DEG = Math.PI / 180;
 const MS_PER_DAY = 86_400_000;
-/** Julian day of 2000-01-01 12:00 UT — the epoch every series below counts from. */
-const J2000 = 2_451_545.0;
-/** Julian day at the Unix epoch, so an instant converts with one multiply. */
-const UNIX_EPOCH_JD = 2_440_587.5;
-/** Earth's obliquity, degrees. */
-const OBLIQUITY = 23.4397;
 /**
- * The sun's altitude at the moment it "sets": half a degree of solar disc plus
- * about 34 arcminutes of atmospheric refraction, which is the convention every
- * published sunset table uses.
- */
-const SUNSET_ALTITUDE = -0.833;
-/** Civil twilight ends when the sun's centre reaches six degrees below the horizon. */
-const CIVIL_DUSK_ALTITUDE = -6;
-
-function julianDay(instant: Date): number {
-  return instant.getTime() / MS_PER_DAY + UNIX_EPOCH_JD;
-}
-
-function instantFromJulianDay(jd: number): Date {
-  return new Date(Math.round((jd - UNIX_EPOCH_JD) * MS_PER_DAY));
-}
-
-/** Degrees folded into [0, 360). */
-function normalizeDegrees(value: number): number {
-  return ((value % 360) + 360) % 360;
-}
-
-/**
- * When the sun sinks past `altitude` on the evening side of one solar day, for
- * one place, or null when it never reaches it — a polar summer where it never
- * sets, a polar winter where it never rises, or a white night where it sets but
- * never falls six degrees under. Null is a real answer: the caller renders
- * nothing rather than a fabricated time.
+ * How finely the dive window is walked when asking what the moon does over it.
  *
- * The series is the standard one (the "sunrise equation" in its usual form):
- * mean solar time corrected for longitude, the sun's mean anomaly, the equation
- * of the centre, then the hour angle at the wanted altitude. `dayNumber` counts
- * whole days from J2000 and fixes which solar day is being asked about.
+ * Ten minutes: the moon crosses the horizon in about two, so no crossing can
+ * hide between two samples, and a 3½-hour charter costs about twenty evaluations
+ * of a closed-form series.
  */
-function solarEventAt(dayNumber: number, place: SkyPlace, altitude: number): Date | null {
-  // Mean solar time at this longitude, in days from J2000.
-  const meanSolarTime = dayNumber - place.longitude / 360;
-  const meanAnomaly = normalizeDegrees(357.5291 + 0.98560028 * meanSolarTime);
-  const center =
-    1.9148 * Math.sin(meanAnomaly * DEG) +
-    0.02 * Math.sin(2 * meanAnomaly * DEG) +
-    0.0003 * Math.sin(3 * meanAnomaly * DEG);
-  // Argument of perihelion (102.9372) plus the half-turn that puts the sun
-  // opposite the earth's own ecliptic longitude.
-  const eclipticLongitude = normalizeDegrees(meanAnomaly + center + 180 + 102.9372);
-  const transit =
-    J2000 +
-    meanSolarTime +
-    0.0053 * Math.sin(meanAnomaly * DEG) -
-    0.0069 * Math.sin(2 * eclipticLongitude * DEG);
-  const declination = Math.asin(Math.sin(eclipticLongitude * DEG) * Math.sin(OBLIQUITY * DEG));
-  const cosHourAngle =
-    (Math.sin(altitude * DEG) - Math.sin(place.latitude * DEG) * Math.sin(declination)) /
-    (Math.cos(place.latitude * DEG) * Math.cos(declination));
-  // Outside [-1, 1] the sun never crosses this altitude on this day.
-  if (cosHourAngle < -1 || cosHourAngle > 1) return null;
-  const hourAngle = Math.acos(cosHourAngle) / DEG;
-  return instantFromJulianDay(transit + hourAngle / 360);
-}
+const MOON_SAMPLE_MS = 10 * 60_000;
 
 /**
- * The moon's phase and illuminated fraction at an instant.
+ * **What the moon does between leaving the dock and coming home.**
  *
- * Mean elongation names the phase (it walks 0° at new moon to 180° at full and
- * back), and Meeus' low-precision phase-angle series gives the illuminated
- * fraction — the correction terms are what stop a moon three days past full
- * from being reported as half lit.
+ * Not what it does that calendar day, which is the question the line used to
+ * answer by implication and get wrong. A last-quarter moon rises around
+ * midnight: a 7:30 PM charter home by 11:00 PM dives the whole of it under a
+ * moonless sky, and "Last quarter, 50% lit" then tells a diver they have half a
+ * moon of light to pack around when they have none.
+ *
+ * - `down` — never above the horizon while the boat is out. The line drops the
+ *   phase entirely and says so.
+ * - `rises` — comes up partway through; the time is worth printing.
+ * - `sets` — up when they leave and gone before they are back; that time is
+ *   the one worth printing instead.
+ * - `up` — up for the whole window, with no crossing to name.
  */
-export function moonAppearance(at: Date): { phase: MoonPhase; illuminatedFraction: number } {
-  const centuries = (julianDay(at) - J2000) / 36_525;
-  const elongation = normalizeDegrees(297.8501921 + 445_267.1114034 * centuries);
-  const sunAnomaly = normalizeDegrees(357.5291092 + 35_999.0502909 * centuries);
-  const moonAnomaly = normalizeDegrees(134.9633964 + 477_198.8675055 * centuries);
-  const phaseAngle =
-    180 -
-    elongation -
-    6.289 * Math.sin(moonAnomaly * DEG) +
-    2.1 * Math.sin(sunAnomaly * DEG) -
-    1.274 * Math.sin((2 * elongation - moonAnomaly) * DEG) -
-    0.658 * Math.sin(2 * elongation * DEG) -
-    0.214 * Math.sin(2 * moonAnomaly * DEG) -
-    0.11 * Math.sin(elongation * DEG);
-  const illuminatedFraction = (1 + Math.cos(phaseAngle * DEG)) / 2;
-  // Each named phase owns the eighth of the cycle centred on it, so "full moon"
-  // covers the night either side of the exact moment rather than one instant
-  // nobody dives.
-  const eighth = Math.round((elongation / 360) * 8) % 8;
-  return { phase: MOON_PHASES[eighth] as MoonPhase, illuminatedFraction };
-}
+export type MoonOverDive = "down" | "rises" | "sets" | "up";
 
 /** The sky over one departure, once it is dark enough for any of it to matter. */
 export type NightSky = {
@@ -149,10 +76,73 @@ export type NightSky = {
    * latitude and season where it never does (a Norwegian summer).
    */
   civilDuskAt: Date | null;
+  /**
+   * The phase over the departure. Read it **with** `moonOverDive`: on a `down`
+   * window it is a true fact about the sky and a misleading one about the dive,
+   * which is why the line suppresses it there.
+   */
   phase: MoonPhase;
   /** 0-100, rounded — what a diver reads, not what an almanac stores. */
   illuminatedPercent: number;
+  /** What the moon does while the boat is out. */
+  moonOverDive: MoonOverDive;
+  /** When it comes up, when that happens *inside* the dive window. */
+  moonriseAt: Date | null;
+  /** When it goes down, when that happens *inside* the dive window. */
+  moonsetAt: Date | null;
 };
+
+/**
+ * Walk the dive window and say what the moon did over it, with the one crossing
+ * that falls inside it resolved to the minute.
+ *
+ * A scan rather than a closed form for the reason `moonTimesOn` is a scan: the
+ * moon's declination moves several degrees across a day, so there is no hour
+ * angle to solve. The bisection afterwards is what turns a ten-minute bracket
+ * into a printable time.
+ */
+function moonOverWindow(
+  from: Date,
+  to: Date,
+  place: SkyPlace,
+): { moonOverDive: MoonOverDive; moonriseAt: Date | null; moonsetAt: Date | null } {
+  const start = from.getTime();
+  const end = Math.max(to.getTime(), start);
+  const upAt = (at: number) => moonIsUp(new Date(at), place);
+  const upAtStart = upAt(start);
+  let crossing: { before: number; after: number } | null = null;
+  let previous = start;
+  for (let at = start + MOON_SAMPLE_MS; ; at += MOON_SAMPLE_MS) {
+    const now = Math.min(at, end);
+    if (upAt(now) !== upAtStart) {
+      crossing = { before: previous, after: now };
+      break;
+    }
+    previous = now;
+    if (now >= end) break;
+  }
+  if (!crossing) {
+    // No crossing: whatever it was doing at the dock, it did for the whole dive.
+    return {
+      moonOverDive: upAtStart ? "up" : "down",
+      moonriseAt: null,
+      moonsetAt: null,
+    };
+  }
+  // Bisect the bracket to the minute — twenty halvings of ten minutes is far
+  // finer than a printed clock time.
+  let low = crossing.before;
+  let high = crossing.after;
+  while (high - low > 30_000) {
+    const middle = Math.round((low + high) / 2);
+    if (upAt(middle) === upAtStart) low = middle;
+    else high = middle;
+  }
+  const at = new Date(Math.round(high / 60_000) * 60_000);
+  return upAtStart
+    ? { moonOverDive: "sets", moonriseAt: null, moonsetAt: at }
+    : { moonOverDive: "rises", moonriseAt: at, moonsetAt: null };
+}
 
 /**
  * The sky over a departure, or null when there is nothing worth saying.
@@ -188,16 +178,10 @@ export function nightSkyFor(input: {
   const { latitude, longitude } = input;
   if (latitude === null || longitude === null) return null;
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-  const place = { latitude, longitude };
+  const place: SkyPlace = { latitude, longitude };
+  const dayNumber = solarDayNumber(input.startsAt, input.timeZone);
 
-  // Local noon of the departure's own day, which is the unambiguous anchor for
-  // "which solar day": a 7:30 PM Florida departure is already tomorrow in UTC,
-  // so anchoring on the instant itself would answer for the wrong day.
-  const wall = utcToWallTime(input.startsAt, input.timeZone);
-  const localNoon = wallTimeToUtc({ ...wall, hour: 12, minute: 0 }, input.timeZone);
-  const dayNumber = Math.round(julianDay(localNoon) - J2000 + 0.0008);
-
-  const sunsetAt = solarEventAt(dayNumber, place, SUNSET_ALTITUDE);
+  const sunsetAt = solarEventsOn(dayNumber, place, SUN_HORIZON_ALTITUDE).setAt;
   if (!sunsetAt) return null;
   const endsAt = input.endsAt ?? null;
   const sameDayEnd =
@@ -206,10 +190,18 @@ export function nightSkyFor(input: {
   if (stillOut < sunsetAt.getTime()) return null;
 
   const { phase, illuminatedFraction } = moonAppearance(input.startsAt);
+  const civilDuskAt = solarEventsOn(dayNumber, place, CIVIL_TWILIGHT_ALTITUDE).setAt;
+  // **The dive window, not the day.** It ends when the boat is back; a departure
+  // that never said when that is falls back to the moment the sky goes dark,
+  // and then to sunset, because that is the earliest instant the moon could
+  // matter at all. `sameDayEnd` rather than `endsAt`, so a three-day course's
+  // last afternoon never stretches day one's window across seventy hours.
+  const moon = moonOverWindow(input.startsAt, sameDayEnd ?? civilDuskAt ?? sunsetAt, place);
   return {
     sunsetAt,
-    civilDuskAt: solarEventAt(dayNumber, place, CIVIL_DUSK_ALTITUDE),
+    civilDuskAt,
     phase,
     illuminatedPercent: Math.round(illuminatedFraction * 100),
+    ...moon,
   };
 }

@@ -41,6 +41,15 @@ const FIXED_SOURCES = [
   // (docs/product/marketing.md).
   "home-records",
   "home-records-arriving",
+  // The door out of the hero once a visitor has typed their shop, their boat
+  // and a departure into it (ADR 20260908-one-hand, decision 6, possibility Y).
+  // Its own tag rather than `home-hero`'s: a shop that drew its own first day
+  // before opening the door is a different moment from one that read the
+  // headline and clicked, and it is the whole question the hero's three fields
+  // were added to answer. The three rows above the button carry it too — they
+  // are the same door, and splitting them would divide one decision into four
+  // buckets nobody could read.
+  "home-drawn",
   "home-closing",
   "nav",
   "product",

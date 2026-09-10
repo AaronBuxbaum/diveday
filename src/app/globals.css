@@ -682,6 +682,137 @@ textarea {
  *    boat-deck touchscreen at arm's length, which reads oversized on paper held
  *    at reading distance — shrinking the base rescales both at once.
  */
+/*
+ * **The shop on paper** — ADR 20260908-one-hand, decision 6, lever X.
+ *
+ * The five sheets under `/shop/<slug>/print/**` are the one family of pages in
+ * the app whose *output* is paper rather than a screen, and they are the one
+ * place the rules below are deliberately inverted:
+ *
+ * 1. **They print in colour, on purpose.** The `@media print` block repaints
+ *    the whole app black-on-white and strips every fill, which is right for a
+ *    manifest a shop prints on a mono laser and wrong for the sign at the slip:
+ *    the whole point of these sheets is that they carry the shop's own colour
+ *    and face. So each sheet restores its own ground and band under print, at
+ *    class specificity, and asks the UA for the ink with `print-color-adjust`.
+ * 2. **The band's colour is set inline by the sheet, never read from
+ *    `--primary`.** Print redefines that token, so a band drawn from it would
+ *    print grey; the sheet resolves the shop's derived brand (or the boat's own
+ *    action colour) at render and hands it down as `--sheet-band`.
+ * 3. **A sheet is a box in millimetres**, sized to its paper less the `@page`
+ *    margin the route declares - a floor rather than a ceiling, and never a
+ *    clip. A shop's own briefing is prose of whatever length the shop wrote,
+ *    and a card that silently cut it off would be read on a boat as the whole
+ *    briefing. So a sheet that outgrows its paper takes a second page, and no
+ *    sheet ever loses a word.
+ *
+ * On screen the sheet sits in a frame that scrolls sideways rather than
+ * squashing the layout - this is a document, and a document that reflows to a
+ * phone is not the thing that comes out of the printer.
+ */
+.paper-sheet-frame {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  background: var(--surface-sunken);
+  padding: 1.5rem 1rem;
+}
+
+.paper-sheet {
+  --sheet-ground: #ffffff;
+  --sheet-ink: #0c2a35;
+  --sheet-muted: #54676d;
+  --sheet-rule: #d9d2c2;
+  --sheet-band: #0c2a35;
+  --sheet-band-ink: #ffffff;
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  background: var(--sheet-ground);
+  color: var(--sheet-ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* The night side of the boat card: the ground a red torch reads against. */
+.paper-sheet-night {
+  --sheet-ground: #000a0f;
+  --sheet-ink: #f4fbfc;
+  --sheet-muted: #b9cdd4;
+  --sheet-rule: #1c3a47;
+}
+
+.paper-sheet + .paper-sheet {
+  margin-top: 1.5rem;
+}
+
+.paper-sheet-band {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--sheet-band);
+  color: var(--sheet-band-ink);
+}
+
+/*
+ * The one sheet that may not paginate. The boat card is two faces of one
+ * lamination, so a face that grew would be laminated across two cards; content
+ * that overruns is cut at the card's own edge, where the fold line makes the
+ * cut visible. Its caller bounds the one unbounded thing it prints, the shop's
+ * emergency plan (`boatCardPlan`).
+ */
+.paper-sheet-fit {
+  overflow: hidden;
+}
+
+/* The night side's band is its own ground, so it needs the rule to show. */
+.paper-sheet-night .paper-sheet-band {
+  border-bottom: 1px solid var(--sheet-rule);
+}
+
+.paper-sheet-mark {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: var(--sheet-band-ink);
+  color: var(--sheet-band);
+  font-weight: 800;
+}
+
+.paper-sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 1.25rem;
+}
+
+.paper-sheet-muted {
+  color: var(--sheet-muted);
+}
+
+/* The fold line: the print date and the storefront's address, on every sheet. */
+.paper-sheet-fold {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--sheet-rule);
+  padding: 0.5rem 1.25rem;
+  color: var(--sheet-muted);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+/* A ruled blank a skipper fills in by hand - never an invented number. */
+.paper-sheet-blank {
+  display: inline-block;
+  min-width: 8ch;
+  border-bottom: 1px solid var(--sheet-rule);
+}
+
 @page {
   margin: 0.5in;
 }
@@ -822,6 +953,39 @@ textarea {
   .trip-print-bundle section + section,
   .trip-print-bundle section > * + section {
     margin-top: 1.25rem;
+  }
+
+  /*
+   * **The sheets keep their ink.** Everything above repaints the app for a
+   * shop's mono laser; a dock sign in the shop's colour is the one document
+   * that is *for* the colour, so each sheet restores its own ground and band at
+   * class specificity - which beats the `*` rule above without another
+   * `!important` arms race - and the frame around it stops being a frame.
+   */
+  .paper-sheet {
+    /* biome-ignore lint/complexity/noImportantStyles: the sheet's ground is the document, not a screen fill to strip */
+    background: var(--sheet-ground) !important;
+  }
+
+  .paper-sheet-band {
+    /* biome-ignore lint/complexity/noImportantStyles: the band is the shop's colour on paper, which is the point of the sheet */
+    background: var(--sheet-band) !important;
+  }
+
+  .paper-sheet-mark {
+    /* biome-ignore lint/complexity/noImportantStyles: the mark is the band's ink, reversed out of it */
+    background: var(--sheet-band-ink) !important;
+  }
+
+  .paper-sheet-frame {
+    display: block;
+    padding: 0;
+  }
+
+  /* One sheet, one page - the boat card's two sides, every briefing card. */
+  .paper-sheet + .paper-sheet {
+    margin-top: 0;
+    break-before: page;
   }
 }
 

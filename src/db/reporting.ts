@@ -3,6 +3,7 @@ import {
   asc,
   count,
   countDistinct,
+  desc,
   eq,
   exists,
   gt,
@@ -11,6 +12,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  lte,
   ne,
   not,
   sql,
@@ -18,20 +20,30 @@ import {
 } from "drizzle-orm";
 import { canViewShopReports, type Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
-import type { DbExecutor } from "./client";
+import type { ShopYearDay, ShopYearEntry, ShopYearInput } from "@/lib/shop-year";
+import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
+import { wallTimeToUtc } from "@/lib/zoned";
+import { buddyReferredSeatsForWindow } from "./buddy-referrals";
+import { type DbExecutor, queryAll } from "./client";
+import { giftCountsForWindow } from "./gifts";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import {
+  boats,
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingPayments,
   bookings,
+  dayCloseouts,
+  diveSites,
   importedPaymentHistory,
   orders,
   people,
   personRoles,
   tips,
   tripAssignments,
+  tripDives,
   trips,
   userAccounts,
   waiverRecords,
@@ -489,6 +501,14 @@ export async function getMonthlyReport(
       ),
     );
 
+  // **The two rows lever W adds to the month** (ADR 20260908-one-hand,
+  // decision 6): seats given as gifts, and seats a diver's own link brought.
+  // Both counted on this window's live departures, the basis every other
+  // figure on this page uses, and both kept apart from `partnerReferredSeats`
+  // above — a hotel and a friend are not the same fact.
+  const giftSeats = await giftCountsForWindow(db, shopId, startUtc, endUtc);
+  const buddyReferredSeats = await buddyReferredSeatsForWindow(db, shopId, startUtc, endUtc);
+
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
 
   const reportTrips: ReportTrip[] = tripRows.map((row) => ({
@@ -533,6 +553,8 @@ export async function getMonthlyReport(
     tipsCents: Number(tipTotals?.total ?? 0),
     tipCount: Number(tipTotals?.tipCount ?? 0),
     partnerReferredSeats: Number(referredTotals?.seats ?? 0),
+    giftSeats,
+    buddyReferredSeats,
   };
 }
 
@@ -736,4 +758,204 @@ export async function crewCountsByTrip(
     .where(inArray(tripAssignments.tripId, tripIds))
     .groupBy(tripAssignments.tripId);
   return new Map(rows.map((row) => [row.tripId, Number(row.crewCount)]));
+}
+
+/**
+ * **The shop's year** (ADR 20260908-one-hand, decision 6, lever T) — one read
+ * over the departures that sailed and the divers who boarded them, in the
+ * shop's own zone.
+ *
+ * It is the month report's opposite in one respect and its twin in every
+ * other: no money crosses this boundary at all. The year page draws from it,
+ * the printed card draws from it, and with the shop's yes DiveDay's homepage
+ * draws from it — two of the three leave the shop, so the figure a shop would
+ * least like a stranger to read is not carried here rather than carried and
+ * hidden downstream. `getMonthlyReport` above keeps the money and is untouched.
+ *
+ * Separate grouped queries rather than one wide join, for the reason
+ * `getMonthlyReport` states: a bookings count and a seats sum in one grouped
+ * select double-count across the join's fan-out.
+ *
+ * "Sailed" is the same hour of grace every other departure check allows —
+ * `startsAt <= now - DEPARTURE_BUFFER_MS`, applied as the constant rather than
+ * through `hasSailed` because the comparison happens in Postgres, so what
+ * crosses is the offset and not the predicate (the same call
+ * `find-my-booking.ts` makes).
+ */
+export async function getShopYear(
+  db: DbExecutor,
+  shopId: string,
+  options: { timeZone: string; year?: number; now?: Date },
+): Promise<ShopYearInput> {
+  const { timeZone } = options;
+  const now = options.now ?? nowDate();
+  const today = calendarDateInTimezone(now, timeZone);
+  const year = options.year ?? Number(today.slice(0, 4));
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
+  // Nothing after today is ever drawn: the year is what happened, never what
+  // is on the books.
+  const lastDay = today < yearEnd ? today : yearEnd;
+
+  const from = wallTimeToUtc({ year, month: 1, day: 1, hour: 0, minute: 0 }, timeZone);
+  const to = wallTimeToUtc({ year: year + 1, month: 1, day: 1, hour: 0, minute: 0 }, timeZone);
+  const sailedBy = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
+
+  const sailedInYear = and(
+    eq(trips.shopId, shopId),
+    ne(trips.status, "cancelled"),
+    gte(trips.startsAt, from),
+    lt(trips.startsAt, to),
+    lte(trips.startsAt, sailedBy),
+  );
+
+  // `::text` on the bound zone, not decoration: `AT TIME ZONE` has both a
+  // `text` and an `interval` overload, and an untyped parameter leaves
+  // Postgres to pick between them. Grouped **by ordinal** for the reason
+  // `pagedOrdersByDay` writes down: drizzle binds a fresh placeholder on every
+  // embed, so a re-emitted expression is `$3` where the select is `$1` and
+  // Postgres refuses the query naming a column the GROUP BY plainly contains.
+  const localDay = sql<string>`to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD')`;
+
+  const [dayRows, diverRows, boatRows, siteRows, firstSailed, closeoutRows] = await queryAll(db, [
+    () =>
+      db
+        .select({ day: localDay, boats: count(), seats: sum(trips.capacity) })
+        .from(trips)
+        .where(and(sailedInYear, liveTrip()))
+        .groupBy(sql`1`),
+    () =>
+      db
+        .select({ day: localDay, divers: count(bookings.id) })
+        .from(trips)
+        .innerJoin(
+          bookings,
+          and(
+            eq(bookings.tripId, trips.id),
+            eq(bookings.shopId, shopId),
+            inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+          ),
+        )
+        .where(and(sailedInYear, liveTrip()))
+        .groupBy(sql`1`),
+    // Days per hull, not departures per hull: a boat that goes out twice in a
+    // day was at sea once. A departure with no boat on it contributes to the
+    // year's other figures and to no hull's count.
+    () =>
+      db
+        .select({
+          name: boats.name,
+          days: sql<number>`count(distinct to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD'))`,
+        })
+        .from(trips)
+        .innerJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
+        .where(and(sailedInYear, liveTrip()))
+        .groupBy(boats.id, boats.name),
+    // The times a site was dived, from the day's plan. `trip_dives` carries no
+    // `shop_id` of its own (CR-007), so it is reached only through `trips`,
+    // and the site is scoped to the shop as well.
+    () =>
+      db
+        .select({
+          siteId: diveSites.id,
+          name: diveSites.name,
+          deletedAt: diveSites.deletedAt,
+          times: count(),
+        })
+        .from(tripDives)
+        .innerJoin(trips, eq(trips.id, tripDives.tripId))
+        .innerJoin(
+          diveSites,
+          and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)),
+        )
+        .where(and(sailedInYear, liveTrip()))
+        .groupBy(diveSites.id, diveSites.name, diveSites.deletedAt),
+    // The shop's first day at sea, ever — the "since May" rule's only input.
+    () =>
+      db
+        .select({ startsAt: sql<Date | null>`min(${trips.startsAt})` })
+        .from(trips)
+        .where(
+          and(
+            eq(trips.shopId, shopId),
+            ne(trips.status, "cancelled"),
+            lte(trips.startsAt, sailedBy),
+            liveTrip(),
+          ),
+        ),
+    // The days this shop closed out, newest first. One row per day: a day
+    // closed twice has two rows and the later one is the one that stands.
+    () =>
+      db
+        .select({
+          shopDay: dayCloseouts.shopDay,
+          actor: people.fullName,
+          seq: dayCloseouts.seq,
+        })
+        .from(dayCloseouts)
+        .innerJoin(people, eq(people.id, dayCloseouts.actorPersonId))
+        .where(
+          and(
+            eq(dayCloseouts.shopId, shopId),
+            gte(dayCloseouts.shopDay, yearStart),
+            lte(dayCloseouts.shopDay, lastDay),
+          ),
+        )
+        .orderBy(desc(dayCloseouts.shopDay), desc(dayCloseouts.seq)),
+  ]);
+
+  const diversByDay = new Map(diverRows.map((row) => [row.day, Number(row.divers)]));
+  const days: ShopYearDay[] = dayRows
+    .map((row) => ({
+      day: row.day,
+      boats: Number(row.boats),
+      divers: diversByDay.get(row.day) ?? 0,
+      seats: Number(row.seats ?? 0),
+    }))
+    .sort((left, right) => (left.day < right.day ? -1 : left.day > right.day ? 1 : 0));
+  const byDay = new Map(days.map((day) => [day.day, day]));
+
+  const firstSailedAt = firstSailed[0]?.startsAt ?? null;
+  const firstSailedDay = firstSailedAt
+    ? calendarDateInTimezone(new Date(firstSailedAt), timeZone)
+    : null;
+  const openedThisYear =
+    firstSailedDay !== null && firstSailedDay > yearStart && firstSailedDay <= lastDay;
+  const firstDay = openedThisYear && firstSailedDay ? firstSailedDay : yearStart;
+
+  const seenDays = new Set<string>();
+  const entries: ShopYearEntry[] = [];
+  for (const row of closeoutRows) {
+    if (seenDays.has(row.shopDay)) continue;
+    seenDays.add(row.shopDay);
+    if (row.shopDay < firstDay) continue;
+    const day = byDay.get(row.shopDay);
+    entries.push({
+      day: row.shopDay,
+      actor: row.actor,
+      divers: day?.divers ?? 0,
+      boats: day?.boats ?? 0,
+    });
+  }
+
+  return {
+    year,
+    firstDay,
+    lastDay,
+    openedThisYear,
+    today,
+    days: days.filter((day) => day.day >= firstDay),
+    boats: boatRows
+      .map((row) => ({ name: row.name, days: Number(row.days) }))
+      .sort((left, right) => right.days - left.days || left.name.localeCompare(right.name)),
+    sites: siteRows
+      .map((row) => ({
+        siteId: row.siteId,
+        name: row.name,
+        times: Number(row.times),
+        live: row.deletedAt === null,
+      }))
+      .sort((left, right) => right.times - left.times || left.name.localeCompare(right.name)),
+    entries,
+  };
 }

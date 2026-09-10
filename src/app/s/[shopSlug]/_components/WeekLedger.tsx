@@ -66,6 +66,18 @@ export type WeekLedgerRow = {
   requirements: readonly string[];
   /** The two words that give the dimming a name, or null. */
   aboveLevel: string | null;
+  /**
+   * **Why a departure that demands a level is open to *this* reader** — the
+   * sentence a diver whose phone carries their shelf gets instead of a warn
+   * (slice 20t): "Your Advanced card clears this".
+   *
+   * Only ever set from a verified shelf capability, so an anonymous list can
+   * never carry it — the row would otherwise be telling whoever picked up the
+   * phone what card its owner holds. Plain ink, not a pill: it is the reason a
+   * row is *ordinary*, and a coloured capsule would make an absence of trouble
+   * look like a state.
+   */
+  clears: string | null;
   /** Worded seat state ("Full", "Only 2 spots left", "5 spots left"). */
   capacityText: string;
   /** `full` and `low` earn the badge; everything else is a quiet fact (principle 9). */
@@ -164,6 +176,7 @@ function Row({ row }: { row: WeekLedgerRow }) {
       </span>,
     );
   }
+  if (row.clears) meta.push(<span key="clears">{row.clears}</span>);
   // Quiet, never disabled: the row still navigates and every control stays
   // reachable. The quiet is *measured* ink — `text-muted` on the title and
   // time — not a wrapper `opacity-60`, which dimmed every token on the row

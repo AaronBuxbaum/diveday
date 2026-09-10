@@ -38,5 +38,27 @@
     "denied": "Solo un propietario o gerente puede cambiar las pantallas del lobby.",
     "invalidLabel": "Ponle a la pantalla un nombre de hasta {max, plural, one {# carácter} other {# caracteres}}.",
     "revoked": "Enlace revocado."
+  },
+  "world": {
+    "heading": "Lo que puede ver el mundo",
+    "boatLine": {
+      "heading": "En qué punto de su día va cada barco",
+      "detail": "En la página pública y en el enlace que comparte un buceador. Una palabra de estado y una hora, nunca quién va a bordo.",
+      "label": "Decir en qué punto de su día va cada barco",
+      "valueOn": "Activado",
+      "valueOff": "Desactivado",
+      "submit": "Guardar",
+      "submitting": "Guardando…"
+    }
+  },
+  "year": {
+    "heading": "Nuestro año en las páginas de DiveDay",
+    "description": "La tarjeta del año, sin dinero en ella.",
+    "label": "Mostrar nuestro año en las páginas de DiveDay",
+    "detail": "Buceadores, salidas, sitios, tu día más movido y la franja de días. Nunca dinero, nunca el nombre de un buceador.",
+    "submit": "Guardar",
+    "submitting": "Guardando…",
+    "noticeOn": "Tu año está en las páginas de DiveDay.",
+    "noticeOff": "Tu año ya no está en las páginas de DiveDay."
   }
 }

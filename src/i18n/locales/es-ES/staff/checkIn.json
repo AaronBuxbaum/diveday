@@ -22,7 +22,9 @@
   },
   "row": {
     "firstVisit": "Primera visita",
-    "missingEmergencyContact": "Sin contacto de emergencia"
+    "missingEmergencyContact": "Sin contacto de emergencia",
+    "giftUnclaimed": "Un regalo de {giver}, todavía sin reclamar",
+    "giftDoor": "Registra por su nombre a quien recibió el regalo"
   },
   "settledGroup": "Registrados — {count}",
   "checkInButton": "Registrar",

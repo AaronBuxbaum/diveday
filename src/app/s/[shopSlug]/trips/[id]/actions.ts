@@ -7,9 +7,11 @@ import { after } from "next/server";
 import { z } from "zod";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { consumeBookingHandoff, offerBookingHandoffByEmail } from "@/db/booking-handoff";
-import { createBookingParty, getBookingForTrip } from "@/db/bookings";
+import { createBookingParty, createGiftBooking, getBookingForTrip } from "@/db/bookings";
+import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { sendPendingGiftPasses } from "@/db/gifts";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
@@ -27,6 +29,7 @@ import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { BUDDY_COOKIE, buddyReferralFromCookie } from "@/lib/buddy-links";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
   declarationWithinPersonBudget,
@@ -34,6 +37,7 @@ import {
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
+import { signGiftToken } from "@/lib/gift-links";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
@@ -44,7 +48,7 @@ import {
   diverNameSchema,
   diverPhoneSchema,
 } from "@/lib/person-fields";
-import { publicTripPath } from "@/lib/public-routes";
+import { giftLinkPath, publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { type CertRequirementSource, combineCertRequirements } from "@/lib/readiness";
 import { partnerFromReferralCookie, REFERRAL_COOKIE } from "@/lib/referrals";
@@ -113,6 +117,54 @@ const bookSchema = z.object({
   phone: diverPhoneSchema.optional(),
 });
 
+/**
+ * **The gift's own fields** (ADR 20260908-one-hand, decision 6, lever W).
+ *
+ * Who is diving (a name, because the giver is the one who knows how to reach
+ * them), the one line that goes on the pass, and the giver themselves — the
+ * address the receipt and the claim link go to, and the name the till reads
+ * back in "a gift from …". Nothing about anybody's diving: the certification
+ * and the waiver are the receiver's, asked for on their own claim.
+ */
+const GIFT_MESSAGE_MAX = 280;
+
+/**
+ * **No control characters, and no invisible ones** (security review of this
+ * slice, finding 2).
+ *
+ * Every value here is free text an anonymous caller typed, and all three end up
+ * somewhere a line break or a bidi override changes what a reader sees: the
+ * giver's line on the claim page, both names in a staff row on Orders and at
+ * the counter, and the names in the plaintext part of an outbound mail, where a
+ * newline forges a line of its own. `\p{Cc}` is the C0/C1 controls (the
+ * newline, the tab, the escape), `\p{Cf}` the format characters (the bidi
+ * overrides, the zero-width joiners, the soft hyphen), and the two literals are
+ * the non-breaking and zero-width spaces that read as nothing at all.
+ *
+ * Refused rather than stripped: a name DiveDay silently rewrote is a name the
+ * shop cannot match against the card in the diver's hand.
+ */
+const CONTROL_OR_INVISIBLE = /[\p{Cc}\p{Cf}\u00a0\u200b]/u;
+
+const plainText = <T extends z.ZodType<string>>(schema: T) =>
+  schema.refine((value) => !CONTROL_OR_INVISIBLE.test(value));
+
+/**
+ * The runs of whitespace a person leaves behind become one space each, so what
+ * is stored is what a reader sees. Applied after the refusal above, so this is
+ * only ever collapsing ordinary spaces.
+ */
+function collapseSpaces(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+const giftSchema = z.object({
+  receiverName: plainText(diverNameSchema),
+  giverName: plainText(diverNameSchema),
+  giverEmail: diverEmailSchema,
+  message: plainText(z.string().trim().max(GIFT_MESSAGE_MAX)).optional(),
+});
+
 const emailField = diverEmailSchema;
 
 export async function bookSpot(
@@ -128,6 +180,16 @@ export async function bookSpot(
   const locale = await requestLocale();
   const t = diverTranslator(locale);
   const ip = await clientIp();
+
+  // **"Me", or "Someone else, as a gift"** — the first choice on the form (ADR
+  // 20260908-one-hand, decision 6, lever W). A gift asks three different
+  // questions and lands somewhere else, so it is its own path rather than four
+  // conditionals threaded through the party one. Everything the two share —
+  // the trip, the capacity rule, the promo code, the checkout — is shared by
+  // calling the same functions, not by branching inside them.
+  if (formData.get("bookingFor") === "gift") {
+    return giftSeat({ shopSlug, tripId, embed }, formData, t, ip);
+  }
 
   // Bounded, and the bound is measured — see MAX_PUBLIC_PARTY_SIZE for the
   // numbers and for why the lock, not the row count, is what decides it.
@@ -389,6 +451,15 @@ export async function bookSpot(
     return { error: message, fieldErrors: memberFieldErrors };
   }
   await trackEvent({ name: "booking_completed", source: "diver", partySize: validParty.length });
+  // Which diver's link brought this party, if one did. Every seat of it, the
+  // organizer's included, for the reason the partner referral above credits
+  // every seat: one person booking four through a friend's link is four divers
+  // that friend brought.
+  await Promise.all(
+    outcome.bookings.map(({ bookingId }) =>
+      creditBuddyReferral(dbi, { shopId: shopNow.id, shopSlug, bookingId }),
+    ),
+  );
   const primaryBookingId = outcome.bookings[0]?.bookingId;
   if (!primaryBookingId) {
     redirect(`${publicTripPath(shopSlug, tripId)}?error=unavailable${embedParam(embed, "&")}`);
@@ -631,6 +702,240 @@ export async function bookSpot(
     redirect(checkoutUrl);
   }
   revalidateAndRedirect(base, landing);
+}
+
+/**
+ * **Give a dive** (ADR 20260908-one-hand, decision 6, lever W; owner's call
+ * (l): yes to the gift, gift cards stay parked).
+ *
+ * A gift is a booking. It takes a seat the moment it is paid for, it lives on
+ * the same capacity rule as every other seat, and it refunds to the card that
+ * bought it when the boat cannot go. Nothing is stored that is not a seat —
+ * there is no balance, no code and nothing to reconcile after the departure.
+ *
+ * Three things this path does **not** do, each deliberately:
+ *
+ * - **No readiness capability, and no confirmation to the diver.** The seat's
+ *   person row is a placeholder carrying the name the giver typed and no
+ *   address; `/ready` belongs to whoever claims it. The giver lands on their
+ *   own page instead, which reads four facts and nothing else.
+ * - **No waiver on join.** `issueWaiverOnJoin` mails the diver their release,
+ *   and there is no diver yet. The claim issues it, to the claimant, which is
+ *   the one person who can sign it.
+ * - **No declaration, no gear.** Both are the receiver's, asked for after they
+ *   claim. The form renders neither in this mode, so nothing is parsed here.
+ */
+async function giftSeat(
+  { shopSlug, tripId, embed }: TripRef,
+  formData: FormData,
+  t: ReturnType<typeof diverTranslator>,
+  ip: Awaited<ReturnType<typeof clientIp>>,
+): Promise<BookingFormState> {
+  const parsed = giftSchema.safeParse({
+    receiverName: formData.get("giftReceiverName"),
+    giverName: formData.get("giftGiverName"),
+    giverEmail: formData.get("giftGiverEmail"),
+    message: formData.get("giftMessage") || undefined,
+  });
+  if (!parsed.success) {
+    // Per field, so the form can point at the box that is wrong and keep
+    // everything else typed — the same contract the party path holds.
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const field = issue.path[0];
+      if (field === "receiverName") {
+        fieldErrors.giftReceiverName = t("booking.fieldErrors.nameRequired");
+      }
+      if (field === "giverName") fieldErrors.giftGiverName = t("booking.fieldErrors.nameRequired");
+      if (field === "giverEmail") {
+        fieldErrors.giftGiverEmail = t("booking.fieldErrors.emailInvalid");
+      }
+      if (field === "message") fieldErrors.giftMessage = t("booking.fieldErrors.giftLineTooLong");
+    }
+    return { error: t("booking.errors.checkFields"), fieldErrors };
+  }
+
+  const dbi = await getDb();
+  const shopNow = await getShopBySlug(dbi, shopSlug);
+  if (!shopNow) return { error: t(ERROR_MESSAGE_KEYS.unavailable) };
+
+  // The same code box the party form has, resolved before the seat is taken
+  // rather than after (task 20's rule) — a giver typing a dud code must not
+  // find out on Stripe's page having already committed a seat.
+  const promoCodeInput = String(formData.get("promoCode") ?? "").trim();
+  let tripPromo: Awaited<ReturnType<typeof getActiveTripPromoByCode>> = null;
+  let shopPromo: Awaited<ReturnType<typeof getRedeemableShopPromo>> = null;
+  if (promoCodeInput) {
+    const tripForPromo = await getTripWithBooked(dbi, shopNow.id, tripId);
+    tripPromo = await getActiveTripPromoByCode(dbi, {
+      shopId: shopNow.id,
+      tripId,
+      code: promoCodeInput,
+    });
+    shopPromo = tripPromo
+      ? null
+      : await getRedeemableShopPromo(dbi, {
+          shopId: shopNow.id,
+          code: promoCodeInput,
+          kind: tripForPromo?.courseId ? "course" : "trip",
+        });
+    if (!tripPromo && !shopPromo) {
+      return {
+        error: t("booking.errors.checkFields"),
+        fieldErrors: { promoCode: t("booking.fieldErrors.promoInvalid") },
+      };
+    }
+  }
+
+  // One POST is one seat, on the booking budget every other seat is bought
+  // from — a gift is not a cheaper way to spend it.
+  if (!(await checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking)).allowed) {
+    return { error: t(ERROR_MESSAGE_KEYS.rate_limited) };
+  }
+
+  const referralSource = partnerFromReferralCookie(
+    (await cookies()).get(REFERRAL_COOKIE)?.value,
+    shopSlug,
+  );
+
+  // Collapsed once, here, so the row, the pass and the till all read the same
+  // string — never the raw submission with its runs of spaces in it.
+  const gift = {
+    giverName: collapseSpaces(parsed.data.giverName),
+    giverEmail: parsed.data.giverEmail,
+    receiverName: collapseSpaces(parsed.data.receiverName),
+    message: parsed.data.message ? collapseSpaces(parsed.data.message) : undefined,
+  };
+
+  const outcome = await createGiftBooking(
+    dbi,
+    {
+      shopId: shopNow.id,
+      tripId,
+      actor: "public" as const,
+      // The receiver, as the giver named them, and **no address**: the form
+      // asks for the giver's, because the giver is the one who knows how to
+      // reach their friend. A placeholder person with no email is exactly the
+      // walk-in shape `createBookingRecord` already books.
+      fullName: gift.receiverName,
+      referralSource,
+    },
+    gift,
+  );
+  if (!outcome.ok) {
+    await trackEvent({ name: "booking_blocked", source: "diver", reason: outcome.reason });
+    // The same narrow refusals the party path renders, and for the same reason
+    // — this form is anonymous, so a refusal describes the departure and never
+    // the person behind an address (H-22).
+    const code: ErrorCode =
+      outcome.reason === "trip_full"
+        ? "full"
+        : outcome.reason === "already_booked"
+          ? "already"
+          : outcome.reason === "course_unstaffed"
+            ? "course-unavailable"
+            : outcome.reason === "course_ratio_full"
+              ? "course-ratio-full"
+              : "unavailable";
+    const message =
+      code === "unavailable" && shopNow.contactEmail
+        ? t("booking.errors.unavailableWithContact", { contact: shopNow.contactEmail })
+        : t(ERROR_MESSAGE_KEYS[code]);
+    return { error: message };
+  }
+  await trackEvent({ name: "booking_completed", source: "diver", partySize: 1 });
+
+  const bookingId = outcome.bookingId;
+  await creditBuddyReferral(dbi, { shopId: shopNow.id, shopSlug, bookingId });
+
+  const base = publicTripPath(shopSlug, tripId);
+  // Where a gift finishes: the giver's page. Never `/ready` — that is the
+  // receiver's, and handing it to the giver would hand them the receiver's
+  // checklist. Inside the embed the frame stays put, so a gift lands back on
+  // the trip page with no token at all rather than on a page the CSP refuses
+  // to frame.
+  const giftPath = giftLinkPath(signGiftToken(bookingId));
+  const landing = embed ? `${base}?embed=1` : giftPath;
+  const checkoutUrl = await startCheckoutUrl(dbi, {
+    shopId: shopNow.id,
+    tripId,
+    bookingIds: [bookingId],
+    landing,
+    // **The giver's address, so the giver's card is the one charged** — which
+    // is what makes the blow-out's refund go back where the money came from
+    // (`refundBookingOnShopCancellation` reverses the original capture).
+    customerEmail: gift.giverEmail,
+    promotionCode:
+      tripPromo?.stripePromotionCodeId ?? shopPromo?.stripePromotionCodeId ?? undefined,
+    tripPromo: tripPromo
+      ? { id: tripPromo.id, code: tripPromo.code, discountPercent: tripPromo.discountPercent }
+      : undefined,
+    shopPromo: shopPromo
+      ? { id: shopPromo.id, code: shopPromo.code, discountPercent: shopPromo.discountPercent }
+      : undefined,
+  });
+
+  if (checkoutUrl) {
+    // **The pass waits for the money** (security review of this slice, finding
+    // 1). Sending it here would put branded mail carrying a stranger's text
+    // into any inbox an anonymous caller can type, and would say the seat "is
+    // paid for" while the giver is still looking at Stripe's page. The webhook
+    // sends it when the session settles (`sendPendingGiftPasses`).
+    revalidatePath(base);
+    if (embed) redirect(`${landing}&pay=due`);
+    redirect(checkoutUrl);
+  }
+
+  // No checkout to run — an unpriced departure, or a shop that cannot take
+  // money yet. There is no later moment, so the pass goes now: the seat is
+  // booked and the money is settled at the counter.
+  await sendPendingGiftPasses(dbi, {
+    shopId: shopNow.id,
+    bookingIds: [bookingId],
+    // The giver is filling this form in right now, so their own request is the
+    // only first-hand evidence of the language they read.
+    locale: await requestFirstHandLocale(),
+  });
+  revalidateAndRedirect(base, landing);
+}
+
+/**
+ * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): record which
+ * diver's recap link brought this one, when one did.
+ *
+ * Read from the cookie the edge set, never from a hidden field — the same
+ * argument the partner referral makes one function up: a form value is
+ * something the page can set, and this is a fact about how the visitor arrived.
+ * Matched against this shop before it is resolved, so a diver carrying another
+ * shop's link books exactly as an unreferred one does.
+ *
+ * Never throws. A seat is a seat whether or not the shop gets to count where it
+ * came from.
+ */
+async function creditBuddyReferral(
+  dbi: Awaited<ReturnType<typeof getDb>>,
+  input: { shopId: string; shopSlug: string; bookingId: string },
+): Promise<void> {
+  try {
+    const referralId = buddyReferralFromCookie(
+      (await cookies()).get(BUDDY_COOKIE)?.value,
+      input.shopSlug,
+    );
+    if (!referralId) return;
+    const referredByBookingId = await resolveBuddyReferral(dbi, {
+      shopId: input.shopId,
+      referralId,
+      bookingId: input.bookingId,
+    });
+    if (!referredByBookingId) return;
+    await recordBuddyReferral(dbi, {
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+      referredByBookingId,
+    });
+  } catch {
+    console.error("Buddy referral could not be recorded", { bookingId: input.bookingId });
+  }
 }
 
 /** The hosted payment page for these fresh bookings, or null when pay-at-booking can't run. */

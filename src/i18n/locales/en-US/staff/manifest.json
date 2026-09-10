@@ -83,6 +83,13 @@
     },
     "observedSpeciesHint": "Divers read this on their recap."
   },
+  "seen": {
+    "heading": "Seen",
+    "consequence": "At {site}. Divers read this on the trip page.",
+    "delete": "Delete",
+    "deleteNamed": "Delete {species}",
+    "refusal": "No signal. Tap it again when the boat has bars."
+  },
   "addCrewToTrip": "Add crew to trip",
   "manageCrewOnTrip": "Manage this trip's crew",
   "checkpointRollCallHeading": "{checkpoint} roll call",

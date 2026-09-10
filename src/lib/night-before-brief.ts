@@ -115,7 +115,9 @@ export function firstTimerReassuranceText(
 
 /**
  * The sky over a night departure, for the night-before brief: when the light
- * goes, and how much moon there will be (`src/lib/sky.ts`).
+ * goes, and what moon the boat will be out under (`src/lib/sky.ts`) — which is
+ * a question about the dive window, not about the calendar day, and answers
+ * "No moon during the dive." when there is none.
  *
  * Null for every daylight departure and every shop with no coordinates, which
  * is the ordinary case — the brief then reads exactly as it did before. It
@@ -132,5 +134,7 @@ export function nightSkyText(
   return nightSkyLine(t, sky, {
     sunset: formatTime(sky.sunsetAt, locale, timeZone),
     dusk: sky.civilDuskAt ? formatTime(sky.civilDuskAt, locale, timeZone) : null,
+    moonrise: sky.moonriseAt ? formatTime(sky.moonriseAt, locale, timeZone) : null,
+    moonset: sky.moonsetAt ? formatTime(sky.moonsetAt, locale, timeZone) : null,
   });
 }

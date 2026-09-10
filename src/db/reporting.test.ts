@@ -1,8 +1,9 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
 import { summarizeMonth } from "@/lib/reporting";
-import { seededShopContext } from "@/test/db";
+import { summarizeShopYear } from "@/lib/shop-year";
+import { seededShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import {
   canPersonViewShopReports,
@@ -10,19 +11,24 @@ import {
   earliestImportedFinancialHistoryDate,
   earliestReportedTripStart,
   getMonthlyReport,
+  getShopYear,
   pagedMonthlyReportTrips,
 } from "./reporting";
 import {
+  boats,
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingPayments,
   bookings,
+  dayCloseouts,
+  diveSites,
   importedPaymentHistory,
   type PaymentStatus,
   people,
   personRoles,
   shops,
   tips,
+  tripDives,
   trips,
   userAccounts,
   waiverRecords,
@@ -1115,5 +1121,233 @@ describe("crewCountsByTrip (issue #700 — crew load, never a cost)", () => {
     await setTripCrew(db, shop.id, trip, [first.person.id]);
 
     expect(await crewCountsByTrip(db, otherShop.id, [trip])).toEqual(new Map());
+  });
+});
+
+/**
+ * **The shop's year** (ADR 20260908-one-hand, decision 6, lever T). Built on a
+ * shop of its own rather than the demo fixture: the year is a read over
+ * *every* departure a shop ever ran, so a seeded back-fill would make "the
+ * quietest month" and "since May" answers about the fixture rather than about
+ * the rule.
+ */
+describe("getShopYear", () => {
+  const TZ = "America/New_York";
+  /** Noon in New York on 2026-08-27, the day the canvas draws. */
+  const NOW = new Date("2026-08-27T16:00:00Z");
+
+  async function yearShop(db: AppDb, slug: string) {
+    const [row] = await db
+      .insert(shops)
+      .values({ name: "Year Shop", slug, timezone: TZ })
+      .returning();
+    if (!row) throw new Error("shop insert failed");
+    return row.id;
+  }
+
+  /** A departure at 09:00 shop-local on `day`, already sailed by NOW. */
+  async function sailedTrip(
+    db: AppDb,
+    shopId: string,
+    day: string,
+    capacity: number,
+    divers: number,
+    title = "Two-Tank Reef",
+  ): Promise<string> {
+    const tripId = await makeTrip(db, shopId, new Date(`${day}T13:00:00Z`), capacity, title);
+    for (let seat = 0; seat < divers; seat += 1) {
+      const personId = await makePerson(db, shopId, `Diver ${day}-${seat}`);
+      await makeBooking(db, shopId, tripId, personId);
+    }
+    return tripId;
+  }
+
+  it("counts the year's divers, boats and days in the shop's own zone", async () => {
+    const db = await unseededTestDb();
+    const shopId = await yearShop(db, "year-happy-path");
+    // A departure on the year's first day, so the strip starts at January 1
+    // and nothing is padded away in front of it.
+    await sailedTrip(db, shopId, "2026-01-01", 10, 5);
+    await sailedTrip(db, shopId, "2026-03-14", 10, 2);
+    await sailedTrip(db, shopId, "2026-03-14", 10, 2, "Night");
+    await sailedTrip(db, shopId, "2026-07-04", 12, 12);
+
+    const input = await getShopYear(db, shopId, { timeZone: TZ, now: NOW });
+    const year = summarizeShopYear(input);
+
+    expect(year.year).toBe(2026);
+    expect(year.sinceMonth).toBeNull();
+    expect(year.divers).toBe(21);
+    expect(year.boatsOut).toBe(4);
+    expect(year.daysAtSea).toBe(3);
+    expect(year.busiestDay).toEqual({ day: "2026-07-04", boats: 1, divers: 12, seats: 12 });
+    // Today is the last square drawn, and the strip never runs past it.
+    expect(year.lastDay).toBe("2026-08-27");
+    expect(year.strip.at(-1)?.day).toBe("2026-08-27");
+    expect(year.strip.at(-1)?.isToday).toBe(true);
+    // January 1 2026 is a Thursday, so the first column carries four padding
+    // squares before it.
+    expect(year.strip.slice(0, 4).every((cell) => cell.day === null)).toBe(true);
+    expect(year.strip[4]?.day).toBe("2026-01-01");
+    // A full boat is the deepest water; two boats a fifth full, the shallowest.
+    expect(year.strip.find((cell) => cell.day === "2026-07-04")?.fill).toBe(3);
+    expect(year.strip.find((cell) => cell.day === "2026-03-14")?.fill).toBe(1);
+    expect(year.strip.find((cell) => cell.day === "2026-01-01")?.fill).toBe(2);
+    expect(year.hasActivity).toBe(true);
+  });
+
+  it("names the quietest complete month and never the one still running", async () => {
+    const db = await unseededTestDb();
+    const shopId = await yearShop(db, "year-quietest-month");
+    await sailedTrip(db, shopId, "2026-02-15", 10, 3);
+    await sailedTrip(db, shopId, "2026-06-15", 10, 9);
+    // August is the month NOW sits in, and it is the thinnest of the three.
+    await sailedTrip(db, shopId, "2026-08-03", 10, 1);
+
+    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+
+    expect(year.quietestMonth).toEqual({ month: 2, divers: 3, boats: 1 });
+  });
+
+  it("says since the month a shop opened in, and draws no square before it", async () => {
+    const db = await unseededTestDb();
+    const shopId = await yearShop(db, "year-opened-mid-year");
+    await sailedTrip(db, shopId, "2026-05-20", 8, 6);
+    await sailedTrip(db, shopId, "2026-06-02", 8, 4);
+
+    const input = await getShopYear(db, shopId, { timeZone: TZ, now: NOW });
+    const year = summarizeShopYear(input);
+
+    expect(input.openedThisYear).toBe(true);
+    expect(year.sinceMonth).toBe(5);
+    expect(year.firstDay).toBe("2026-05-20");
+    // 2026-05-20 is a Wednesday: three padding squares, then the first day.
+    expect(year.strip.slice(0, 3).every((cell) => cell.day === null)).toBe(true);
+    expect(year.strip[3]?.day).toBe("2026-05-20");
+  });
+
+  it("says nothing for a year with no departures", async () => {
+    const db = await unseededTestDb();
+    const shopId = await yearShop(db, "year-empty");
+
+    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+
+    expect(year.hasActivity).toBe(false);
+    expect(year.divers).toBe(0);
+    expect(year.boatsOut).toBe(0);
+    expect(year.busiestDay).toBeNull();
+    expect(year.quietestMonth).toBeNull();
+    expect(year.sites).toEqual([]);
+    expect(year.boats).toEqual([]);
+    expect(year.sinceMonth).toBeNull();
+    expect(year.firstDay).toBe("2026-01-01");
+  });
+
+  it("counts a hull's days at sea once however often it went out", async () => {
+    const db = await unseededTestDb();
+    const shopId = await yearShop(db, "year-boat-days");
+    const [boat] = await db
+      .insert(boats)
+      .values({ shopId, name: "Mantis II", capacity: 12 })
+      .returning();
+    if (!boat) throw new Error("boat insert failed");
+    const morning = await sailedTrip(db, shopId, "2026-04-10", 10, 5);
+    const night = await sailedTrip(db, shopId, "2026-04-10", 10, 5, "Night");
+    const later = await sailedTrip(db, shopId, "2026-04-11", 10, 5);
+    await db
+      .update(trips)
+      .set({ boatId: boat.id })
+      .where(inArray(trips.id, [morning, night, later]));
+
+    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+
+    expect(year.boats).toEqual([{ name: "Mantis II", days: 2 }]);
+    expect(year.boatsOut).toBe(3);
+  });
+
+  it("orders sites by the times they were dived and keeps a deleted one off its door", async () => {
+    const db = await unseededTestDb();
+    const shopId = await yearShop(db, "year-sites");
+    const [molasses] = await db
+      .insert(diveSites)
+      .values({ shopId, name: "Molasses Reef" })
+      .returning();
+    const [benwood] = await db
+      .insert(diveSites)
+      .values({ shopId, name: "Benwood", deletedAt: new Date("2026-08-01T00:00:00Z") })
+      .returning();
+    if (!molasses || !benwood) throw new Error("site insert failed");
+    const first = await sailedTrip(db, shopId, "2026-05-01", 10, 4);
+    const second = await sailedTrip(db, shopId, "2026-05-02", 10, 4);
+    await db.insert(tripDives).values([
+      { tripId: first, diveNumber: 1, diveSiteId: molasses.id },
+      { tripId: first, diveNumber: 2, diveSiteId: benwood.id },
+      { tripId: second, diveNumber: 1, diveSiteId: molasses.id },
+    ]);
+
+    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+
+    expect(year.siteCount).toBe(2);
+    expect(year.sites.map((site) => [site.name, site.times, site.live])).toEqual([
+      ["Molasses Reef", 2, true],
+      ["Benwood", 1, false],
+    ]);
+    // The bar beside each row is the share of the busiest site's own count.
+    expect(year.sites[0]?.share).toBe(1);
+    expect(year.sites[1]?.share).toBe(0.5);
+  });
+
+  it("leaves a departure that has not sailed, and a cancelled one, out of the year", async () => {
+    const db = await unseededTestDb();
+    const shopId = await yearShop(db, "year-unsailed");
+    await sailedTrip(db, shopId, "2026-06-01", 10, 5);
+    // Thirty minutes ago: inside the hour of grace every departure check
+    // allows, so it has not sailed yet.
+    const tripId = await makeTrip(db, shopId, new Date(NOW.getTime() - 30 * 60 * 1000), 10, "Soon");
+    const personId = await makePerson(db, shopId, "Waiting diver");
+    await makeBooking(db, shopId, tripId, personId);
+    await makeTrip(db, shopId, new Date("2026-06-15T13:00:00Z"), 10, "Blown out", "cancelled");
+
+    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+
+    expect(year.boatsOut).toBe(1);
+    expect(year.divers).toBe(5);
+  });
+
+  it("lists the year's close-outs newest first, one row per day", async () => {
+    const db = await unseededTestDb();
+    const shopId = await yearShop(db, "year-closeouts");
+    await sailedTrip(db, shopId, "2026-07-04", 12, 12);
+    await sailedTrip(db, shopId, "2026-02-15", 10, 2);
+    const dana = await makePerson(db, shopId, "Dana Reyes");
+    const keiko = await makePerson(db, shopId, "Keiko Tan");
+    const sam = await makePerson(db, shopId, "Sam Ortiz");
+    const empty = { actions: [] } as never;
+    await db.insert(dayCloseouts).values([
+      { shopId, shopDay: "2026-02-15", actorPersonId: dana, outstanding: empty },
+      { shopId, shopDay: "2026-07-04", actorPersonId: keiko, outstanding: empty },
+      // The same day closed twice: the later close is the one that stands.
+      { shopId, shopDay: "2026-07-04", actorPersonId: sam, outstanding: empty },
+    ]);
+
+    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+
+    expect(year.entries).toEqual([
+      { day: "2026-07-04", actor: "Sam Ortiz", divers: 12, boats: 1 },
+      { day: "2026-02-15", actor: "Dana Reyes", divers: 2, boats: 1 },
+    ]);
+  });
+
+  it("never counts another shop's departures", async () => {
+    const db = await unseededTestDb();
+    const shopId = await yearShop(db, "year-tenant-a");
+    const otherId = await yearShop(db, "year-tenant-b");
+    await sailedTrip(db, shopId, "2026-06-01", 10, 5);
+    await sailedTrip(db, otherId, "2026-06-01", 10, 9);
+
+    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+
+    expect(year.divers).toBe(5);
+    expect(year.boatsOut).toBe(1);
   });
 });

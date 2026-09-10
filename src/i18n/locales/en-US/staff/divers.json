@@ -438,5 +438,19 @@
     "referralUnresolved": "Re-signed after a referral, with no physician clearance on file ({date}). Record one, or ask.",
     "sendOptions": "Send options",
     "openClearanceDocument": "Open the physician's evaluation"
+  },
+  "shelf": {
+    "label": "Shelf",
+    "summaryNotSent": "Not sent",
+    "summarySent": "Sent, not opened",
+    "summaryOpened": "{count, plural, one {# open} other {# opens}}",
+    "lastOpened": "Last opened {date}",
+    "phones": "{count, plural, one {# phone holds it} other {# phones hold it}}",
+    "noPhones": "No phone holds it",
+    "send": "Send the link",
+    "sent": "Sent.",
+    "noEmail": "No email address on file.",
+    "failed": "That did not send. Try again.",
+    "unavailable": "This record cannot hold a shelf link."
   }
 }

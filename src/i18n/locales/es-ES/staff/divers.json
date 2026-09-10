@@ -438,5 +438,19 @@
     "referralUnresolved": "Firmada de nuevo tras una derivación médica: no consta autorización de un médico ({date}). Regístrala o pregunta.",
     "sendOptions": "Opciones de envío",
     "openClearanceDocument": "Abrir la evaluación médica"
+  },
+  "shelf": {
+    "label": "Casillero",
+    "summaryNotSent": "Sin enviar",
+    "summarySent": "Enviado, sin abrir",
+    "summaryOpened": "{count, plural, one {# apertura} other {# aperturas}}",
+    "lastOpened": "Última apertura el {date}",
+    "phones": "{count, plural, one {# teléfono lo tiene} other {# teléfonos lo tienen}}",
+    "noPhones": "Ningún teléfono lo tiene",
+    "send": "Enviar el enlace",
+    "sent": "Enviado.",
+    "noEmail": "No hay correo archivado.",
+    "failed": "No se envió. Inténtalo otra vez.",
+    "unavailable": "Esta ficha no puede tener un casillero."
   }
 }

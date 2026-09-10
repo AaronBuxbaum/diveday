@@ -16,12 +16,18 @@ import { requestLocale } from "@/i18n/request";
 import { eventSource } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications";
-import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, type OnboardErrorCode } from "@/lib/onboarding";
+import {
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  type OnboardErrorCode,
+  suggestShopSlug,
+} from "@/lib/onboarding";
 import {
   type CuratedTimeZone,
   type CuratedTimezoneGroupKey,
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
+import { MAX_TRY_IT_NAME, parseTryItHandoff } from "@/lib/try-it";
 import { onboardAction } from "./actions";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -225,9 +231,41 @@ export default async function OnboardPage({
     timezone?: string;
     ownerName?: string;
     ownerEmail?: string;
+    /**
+     * What the homepage hero drew (ADR 20260908-one-hand, decision 6,
+     * possibility Y). `shop` is the hero's own short spelling of the shop's
+     * name; `shopName` is this form's echo of itself on a bounce, and it wins
+     * because it is the more recent answer.
+     */
+    shop?: string;
+    boat?: string;
+    departure?: string;
+    color?: string;
   }>;
 }) {
-  const { error, from, shopName, shopSlug, timezone, ownerName, ownerEmail } = await searchParams;
+  const {
+    error,
+    from,
+    shopName,
+    shopSlug,
+    timezone,
+    ownerName,
+    ownerEmail,
+    shop,
+    boat,
+    departure,
+    color,
+  } = await searchParams;
+  // Every field the hero can carry, judged once. A hand-edited parameter loses
+  // itself and nothing else: this door's job is to be filled in, not to refuse
+  // a link (`src/lib/try-it.ts`).
+  const drawn = parseTryItHandoff({ shop, boat, departure, color });
+  // **The form's own echo wins over the hero's.** A bounce carries `shopName`
+  // back verbatim and it is the more recent answer; it is also the one this
+  // page must not judge, because `onboardSchema` allows a hundred characters
+  // and the hero only carries sixty — reading a bounced long name through the
+  // hero's bounds would silently empty a box a shop had already filled in.
+  const shopNameValue = shopName ?? drawn.shopName ?? "";
   // Which marketing page's "Start a trial" sent them here; the action reads it
   // back off the form for the trial_started funnel event.
   const source = eventSource(from);
@@ -288,7 +326,7 @@ export default async function OnboardPage({
                   type="text"
                   required
                   autoComplete="organization"
-                  defaultValue={shopName ?? ""}
+                  defaultValue={shopNameValue}
                   placeholder={t("account.onboard.shopNamePlaceholder")}
                   className={controlClass}
                 />
@@ -314,7 +352,7 @@ export default async function OnboardPage({
                   <SuggestShopLink
                     nameId="shop-name"
                     slugId="shop-slug"
-                    initialSlug={shopSlug ?? ""}
+                    initialSlug={shopSlug ?? suggestShopSlug(shopNameValue)}
                     urlLead={t("account.onboard.shopLinkUrlHint")}
                     urlHost={storefrontHost}
                     fieldError={fieldError("shopSlug")}
@@ -327,7 +365,7 @@ export default async function OnboardPage({
                   name="shopSlug"
                   type="text"
                   required
-                  defaultValue={shopSlug ?? ""}
+                  defaultValue={shopSlug ?? suggestShopSlug(shopNameValue)}
                   placeholder={t("account.onboard.shopLinkPlaceholder")}
                   pattern="^[a-z0-9-]+$"
                   title={t("account.onboard.shopLinkTitle")}
@@ -379,6 +417,39 @@ export default async function OnboardPage({
                 untouchedValue={timezone || DEFAULT_TIMEZONE}
               />
             </FieldGrid>
+            {/* **The two the hero asked for** (ADR 20260908-one-hand, decision
+                6). Optional here as they are there: a shop that arrived from
+                `/product` or a search result never saw the hero and is not
+                asked for a boat to get through the door. Filled, they become a
+                real hull and a real departure on tomorrow's board, so the first
+                Today has a boat on it (`src/db/first-day.ts`).
+
+                The colour is not a field. The hero drew one from the shop's
+                name and this carries it; Settings is where a shop changes it,
+                which is the one place a brand belongs. */}
+            <FieldGrid columns={2}>
+              <Field label={t("account.onboard.boatLabel")} hint={t("common.optional")}>
+                <input
+                  name="boat"
+                  type="text"
+                  defaultValue={drawn.boatName ?? ""}
+                  placeholder={t("account.onboard.boatPlaceholder")}
+                  maxLength={MAX_TRY_IT_NAME}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("account.onboard.firstDepartureLabel")} hint={t("common.optional")}>
+                <input
+                  name="departure"
+                  type="time"
+                  defaultValue={drawn.departure ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
+            {drawn.brandColor ? (
+              <input type="hidden" name="color" value={drawn.brandColor} />
+            ) : null}
           </section>
 
           <section className="mt-2 flex flex-col gap-4">

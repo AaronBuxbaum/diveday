@@ -29,7 +29,20 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({}) as never) }));
 vi.mock("@/db/shops", () => ({ getShopBySlug: vi.fn() }));
 vi.mock("@/db/trips", () => ({ getTripWithBooked: vi.fn() }));
-vi.mock("@/db/bookings", () => ({ createBookingParty: vi.fn(), getBookingForTrip: vi.fn() }));
+vi.mock("@/db/bookings", () => ({
+  createBookingParty: vi.fn(),
+  createGiftBooking: vi.fn(),
+  getBookingForTrip: vi.fn(),
+}));
+// A gift's own collaborators: the pass, and the checkout that decides whether
+// it waits for the money (security review of the gift slice, finding 1).
+vi.mock("@/db/gifts", () => ({ sendPendingGiftPasses: vi.fn() }));
+vi.mock("@/db/checkouts", () => ({ startBookingCheckout: vi.fn() }));
+vi.mock("@/db/buddy-referrals", () => ({
+  resolveBuddyReferral: vi.fn(async () => null),
+  recordBuddyReferral: vi.fn(),
+}));
+vi.mock("@/db/booking-capabilities", () => ({ issueBookingCapability: vi.fn(async () => null) }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 // The locale is read off the request's cookies, which do not exist here. The
 // words themselves stay real, so an error message that stopped resolving would
@@ -53,7 +66,9 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 
 const { getShopBySlug } = await import("@/db/shops");
 const { getTripWithBooked } = await import("@/db/trips");
-const { createBookingParty } = await import("@/db/bookings");
+const { createBookingParty, createGiftBooking } = await import("@/db/bookings");
+const { sendPendingGiftPasses } = await import("@/db/gifts");
+const { startBookingCheckout } = await import("@/db/checkouts");
 const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { bookSpot } = await import("./actions");
 
@@ -190,5 +205,92 @@ describe("what this dive is for, and what would help", () => {
     const [, requests] = vi.mocked(createBookingParty).mock.calls[0] ?? [];
     expect(requests?.[0]?.diveIntent).toBeUndefined();
     expect(requests?.[0]?.reEntryAsk).toBeUndefined();
+  });
+});
+
+/**
+ * **A gift's pass waits for the money** (security review of the gift slice,
+ * finding 1).
+ *
+ * The action used to mail the pass the moment the form was submitted. That made
+ * the public gift form an "email my own text to any address" endpoint with only
+ * a per-IP booking limiter in front of it, and on a priced departure the mail
+ * said the seat "is paid for" while the giver was still looking at Stripe's
+ * page. The send moved to the paid cascade; what is left here is the fork, and
+ * these are its two sides.
+ */
+describe("the gift form's pass", () => {
+  /** A gift submission — the four fields `GiftFields` renders. */
+  function giftSubmission(overrides: Record<string, string> = {}): FormData {
+    const form = new FormData();
+    form.set("bookingFor", "gift");
+    form.set("giftReceiverName", "Ben Carter");
+    form.set("giftGiverName", "Hannah Liu");
+    form.set("giftGiverEmail", "hannah.liu@example.com");
+    form.set("giftMessage", "From Hannah, for your birthday");
+    for (const [key, value] of Object.entries(overrides)) form.set(key, value);
+    return form;
+  }
+
+  beforeEach(() => {
+    vi.mocked(createGiftBooking).mockResolvedValue({
+      ok: true,
+      bookingId: "aaaaaaaa-1111-4222-8333-444444444444",
+      personId: "bbbbbbbb-1111-4222-8333-444444444444",
+      personName: "Ben Carter",
+    } as never);
+  });
+
+  it("sends nothing while a checkout is about to take the money", async () => {
+    vi.mocked(startBookingCheckout).mockResolvedValue({
+      ok: true,
+      checkout: { checkoutUrl: "https://checkout.stripe.com/c/pay/cs_test" },
+    } as never);
+
+    await expect(bookSpot(ref(TRIP_ID), {}, giftSubmission())).rejects.toThrow(
+      /REDIRECT:https:\/\/checkout\.stripe\.com/,
+    );
+    // The seat is booked; the pass is the webhook's to send once Stripe says
+    // the money settled.
+    expect(vi.mocked(createGiftBooking)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(sendPendingGiftPasses)).not.toHaveBeenCalled();
+  });
+
+  it("sends immediately when there is no checkout to wait for", async () => {
+    // An unpriced departure, or a shop that cannot take money yet: there is no
+    // later moment, and the seat is settled at the counter.
+    vi.mocked(startBookingCheckout).mockResolvedValue({ ok: false, reason: "unpriced" } as never);
+
+    await expect(bookSpot(ref(TRIP_ID), {}, giftSubmission())).rejects.toThrow(/REDIRECT:\/gift\//);
+    expect(vi.mocked(sendPendingGiftPasses)).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * **No control characters in anything a stranger typed** (finding 2). All
+   * three values land somewhere a newline or a bidi override changes what a
+   * reader sees — a staff row, the claim page, the plaintext half of a mail.
+   */
+  it("refuses a line or a name carrying a control character", async () => {
+    vi.mocked(startBookingCheckout).mockResolvedValue({ ok: false, reason: "unpriced" } as never);
+
+    for (const field of ["giftMessage", "giftGiverName", "giftReceiverName"]) {
+      const state = await bookSpot(
+        ref(TRIP_ID),
+        {},
+        giftSubmission({ [field]: "Hannah\nBcc: victim@example.com" }),
+      );
+      expect(state.error).toBeTruthy();
+      expect(vi.mocked(createGiftBooking)).not.toHaveBeenCalled();
+    }
+  });
+
+  it("collapses the runs of whitespace a person leaves behind", async () => {
+    vi.mocked(startBookingCheckout).mockResolvedValue({ ok: false, reason: "unpriced" } as never);
+
+    await expect(
+      bookSpot(ref(TRIP_ID), {}, giftSubmission({ giftGiverName: "Hannah   Liu" })),
+    ).rejects.toThrow(/REDIRECT:/);
+    const [, , gift] = vi.mocked(createGiftBooking).mock.calls[0] ?? [];
+    expect(gift?.giverName).toBe("Hannah Liu");
   });
 });

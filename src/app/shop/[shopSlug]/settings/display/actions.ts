@@ -2,14 +2,43 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { issueDisplayToken, revokeDisplayToken } from "@/db/display-tokens";
+import { setShopPublicBoatLine, setShopYearOnDiveday } from "@/db/shops";
 import { boardPath } from "@/lib/display-tokens";
 import { requireStaffSession } from "@/lib/session";
-import { shopPath } from "@/lib/staff-notices";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import type { DisplayLinkState } from "./display-panel-types";
 
 const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * **Whether this shop's boats say where they are to somebody who is not
+ * aboard** — ADR 20260908-one-hand, decision 6, lever U.
+ *
+ * Owner/manager work like every other row on this page, re-derived here from
+ * live roles rather than trusted from the render that drew the checkbox: what
+ * this switch turns on is a public page, and a staffer who reached this action
+ * through a stale tab is refused at the write.
+ */
+export async function savePublicBoatLineAction(formData: FormData): Promise<void> {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  const path = shopPath(session.user.shopSlug, "settings", "display");
+  const allowed = await canPersonManageShopSettings(db, session.user.shopId, session.user.personId);
+  // The same refusal the page itself makes, and it throws rather than returns:
+  // there is no path here that decides against the caller and carries on.
+  if (!allowed) {
+    redirect(noticeUrl(shopPath(session.user.shopSlug, "settings"), "settings-not-authorized"));
+  }
+  await setShopPublicBoatLine(db, session.user.shopId, formData.get("publicBoatLine") === "on");
+  // The storefront and every boat's own page read this column, so the switch
+  // has to reach past this pane.
+  revalidatePath("/", "layout");
+  revalidatePath(path);
+}
 
 /**
  * The origin this app is served from, for the URL a staffer pastes into a
@@ -79,4 +108,28 @@ export async function displayLinkAction(
     label: outcome.issued.label,
     url: `${origin}${boardPath(outcome.issued.token)}`,
   };
+}
+
+/**
+ * **The shop's yes** for its year on DiveDay's own pages (ADR
+ * 20260908-one-hand, decision 6, lever T). One checkbox, off by default, and
+ * the only thing that makes `/s/<slug>/year-card` exist at all.
+ *
+ * Owner/manager, like the rest of this page — what a shop shows the world is
+ * shop policy — and the gate is re-derived here rather than trusted from the
+ * page that rendered the form, so a staffer who reaches this action through a
+ * stale tab is refused. A plain `<form action>` rather than the panel's
+ * `useActionState`: this is one checkbox that redirects with its own outcome,
+ * and it works before JavaScript.
+ */
+export async function saveYearOnDivedayAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  const path = shopPath(session.user.shopSlug, "settings", "display");
+  const allowed = await canPersonManageShopSettings(db, session.user.shopId, session.user.personId);
+  if (!allowed) redirect(noticeUrl(path, "display-not-authorized"));
+  const on = formData.get("showYearOnDiveday") === "on";
+  await setShopYearOnDiveday(db, session.user.shopId, on);
+  revalidatePath(path);
+  redirect(noticeUrl(path, on ? "year-on-diveday" : "year-off-diveday"));
 }

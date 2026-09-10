@@ -50,5 +50,47 @@
   "pagination": {
     "total": "{count, plural, one {# salida} other {# salidas}}"
   },
-  "partnerArrivals": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde un enlace de socio"
+  "partnerArrivals": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde un enlace de socio",
+  "year": {
+    "title": "Cómo va tu año",
+    "rangeLabel": "Elegir un periodo",
+    "thisMonth": "Este mes",
+    "thisYear": "Este año",
+    "rangeSoFar": "{year} hasta ahora · del 1 de enero a hoy · {zone}",
+    "rangeSince": "{year} hasta ahora · desde {month} · {zone}",
+    "printCard": "Imprimir la tarjeta",
+    "sentence": "{divers, plural, one {# buceador} other {# buceadores}}, {boats, plural, one {# salida} other {# salidas}}, {sites, plural, one {# sitio} other {# sitios}}.",
+    "busiest": "El día más movido fue el {day}.",
+    "quietest": "El mes más tranquilo fue {month}.",
+    "stripLabel": "Los días del año",
+    "stripLegend": "Cada cuadro es un día; cuanto más profunda el agua, más llenos iban los barcos. No se dibuja nada después de hoy.",
+    "stripDay": "{day} · {divers, number} buceadores en {boats, number} barcos",
+    "stripQuietDay": "{day} · sin salidas",
+    "numbersLabel": "Los números del año",
+    "figures": {
+      "diversLabel": "Buceadores",
+      "diversDetail": "{count, plural, one {# día en el mar} other {# días en el mar}}",
+      "boatsLabel": "Salidas",
+      "boatDays": "{name} {count, plural, one {# día} other {# días}}",
+      "busiestLabel": "Día más movido",
+      "busiestDetail": "{day} · {count, plural, one {# barco} other {# barcos}}",
+      "quietestLabel": "Mes más tranquilo",
+      "quietestDetail": "{month} · {count, plural, one {# salida} other {# salidas}}"
+    },
+    "sitesLabel": "Sitios, por las veces que los buceaste",
+    "sitesCount": "{count, plural, one {# sitio} other {# sitios}}",
+    "siteTimes": "{count, plural, one {# vez} other {# veces}}",
+    "sitesRest": "{count, plural, one {# sitio más} other {# sitios más}} · {dives, plural, one {# inmersión entre todos} other {# inmersiones entre todos}}",
+    "entriesLabel": "Los cierres del año",
+    "entriesCount": "{count, plural, one {# día} other {# días}}",
+    "entry": "{divers, plural, one {# buceador} other {# buceadores}} en {boats, plural, one {# salida} other {# salidas}}",
+    "entryClosedBy": "Cerrado por {name}",
+    "entriesRest": "{count, plural, one {# día más} other {# días más}}",
+    "shareOn": "Tu año está en las páginas de DiveDay",
+    "shareOff": "Tu año no está en las páginas de DiveDay",
+    "shareDoor": "Ajustes de la pantalla del vestíbulo",
+    "empty": "Todavía no ha zarpado ninguna salida este año."
+  },
+  "giftSeats": "{given, plural, one {# plaza regalada} other {# plazas regaladas}} · {claimed} reclamadas",
+  "buddySeats": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde el enlace de un buceador"
 }

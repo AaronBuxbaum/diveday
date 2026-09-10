@@ -1,0 +1,97 @@
+{
+  "settings": {
+    "eyebrow": "Configuración",
+    "title": "Impresión",
+    "lede": "Tus hojas, con tu color y tu tipografía. Cada una lleva el día en que se imprimió.",
+    "groups": {
+      "dock": "En el muelle y en la puerta",
+      "boat": "En el barco",
+      "diver": "Para un buceador",
+      "wall": "En la pared"
+    },
+    "door": "Imprimir",
+    "printed": "Impresa el {date}",
+    "neverPrinted": "Nunca impresa",
+    "counterDoor": "En el mostrador",
+    "reportsDoor": "Abre Informes",
+    "dockSign": {
+      "name": "El cartel del muelle",
+      "paper": "A3",
+      "line": "Tus barcos y los dos códigos que un buceador lee en el amarre."
+    },
+    "windowSticker": {
+      "name": "El adhesivo de la puerta",
+      "paper": "100 mm",
+      "line": "Reserva una plaza con tu teléfono."
+    },
+    "boatCard": {
+      "name": "La tarjeta del barco",
+      "paper": "A5, plastificada",
+      "line": "{boat}, de día y de noche."
+    },
+    "siteBriefing": {
+      "name": "Tarjetas de briefing de punto",
+      "paper": "A5",
+      "line": "{count, plural, one {Un punto, una tarjeta} other {# puntos, una tarjeta cada uno}}."
+    },
+    "paperPass": {
+      "name": "El pase en papel",
+      "paper": "A6",
+      "line": "Desde una reserva, para un buceador sin teléfono."
+    },
+    "yearPoster": {
+      "name": "El póster del año",
+      "paper": "A2",
+      "line": "Tu año, hasta ahora."
+    }
+  },
+  "sheet": {
+    "printed": "Impresa el {date}",
+    "dockSign": {
+      "title": "Nuestros barcos salen de aquí.",
+      "capacity": "{count, plural, one {# buceador} other {# buceadores}}",
+      "checkIn": "Regístrate con tu pase",
+      "checkInNote": "O por tu nombre en el mostrador. Preséntate en el muelle {minutes, plural, one {# minuto} other {# minutos}} antes.",
+      "schedule": "Mira lo que sale",
+      "scheduleNote": "Cada salida y cada plaza que sigue libre.",
+      "counter": "Mostrador {phone}"
+    },
+    "boatCard": {
+      "beforeHeading": "Antes de que el barco se mueva",
+      "before": "Pasa lista por nombre, cada buceador y cada tripulante, antes de salir del muelle y después de cada inmersión. Que cuenten dos personas. El pase de lista de la app es el registro; si el teléfono está sin batería, pásala sobre el manifiesto impreso y anota la hora en él.",
+      "missingHeading": "Si falta alguien",
+      "missing": "Anota la hora y marca la posición. No te vayas del sitio. Vuelve a pasar lista por nombre. Después pide ayuda con los números de abajo y llama al centro.",
+      "numbersHeading": "Números",
+      "shop": "Centro",
+      "ashore": "En tierra",
+      "oxygenHeading": "Oxígeno y primeros auxilios",
+      "oxygenWhere": "Oxígeno, dónde",
+      "oxygenChecked": "Última revisión",
+      "fold": "Impresa el {date}. La app es el registro; esta tarjeta es el respaldo.",
+      "daySide": "Cara de día",
+      "nightSide": "Cara de noche",
+      "vessel": "Embarcación",
+      "planHeading": "Si algo sale mal",
+      "firstAidWhere": "Botiquín, dónde"
+    },
+    "sticker": {
+      "title": "Reserva una plaza con tu teléfono"
+    },
+    "pass": {
+      "eyebrow": "Tu pase",
+      "bringHeading": "Trae",
+      "show": "Muestra esto en el mostrador o di tu nombre.",
+      "code": "El código es tu reserva y nada más.",
+      "beAtDock": "Preséntate en el muelle a las {time}"
+    },
+    "briefing": {
+      "briefingHeading": "El briefing",
+      "seenHeading": "Visto aquí",
+      "fold": "Impresa el {date}. Desde el editor de puntos.",
+      "index": "{index} de {total}"
+    }
+  },
+  "counter": {
+    "passDoor": "Imprimir un pase"
+  }
+}

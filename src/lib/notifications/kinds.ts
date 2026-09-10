@@ -161,6 +161,33 @@ const readinessLinkSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
 });
 
+/**
+ * **The shelf link, sent from a diver's record.** A staffer taps "Send the
+ * link" and this carries it (`/shelf/[token]`).
+ *
+ * Anchored to a **person**, not to a booking, which is the one thing that makes
+ * it unlike every kind above it: there is no `bookingId`, so
+ * `sendAndRecordNotification` writes no `notification_deliveries` row and
+ * `move-preflight`'s classification never has to answer for it. The diver
+ * record reads how the link is doing from `person_shelf_tokens` instead — opens
+ * and phones, which is the better question anyway.
+ *
+ * No expiry in the message. The link stands for a year and is meant to live on
+ * a phone; a date a year out reads as a countdown on something that is not one.
+ */
+const shelfLinkSchema = z.object({
+  kind: z.literal("shelf_link"),
+  personId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  shelfUrl: z.url().max(2_000),
+  /** The row this link was minted as, so two taps a second apart send once. */
+  tokenId: z.uuid(),
+});
+
 const waitlistInviteSchema = z.object({
   kind: z.literal("waitlist_invite"),
   waitlistEntryId: z.uuid(),
@@ -193,6 +220,46 @@ const tripInvitationSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
   bookingUrl: z.url().max(2_000),
   invitedAt: z.date(),
+});
+
+/**
+ * **The pass for a seat one person bought for another** (ADR 20260908-one-hand,
+ * decision 6, lever W; owner's call (l)).
+ *
+ * Addressed to the **giver**, not to the diver — the form asks for the
+ * receiver's name and the giver's own address, and never for the receiver's,
+ * because the giver is the one who knows how to reach their friend. So this is
+ * the giver's receipt and the pass in one message: `claimUrl` is the link they
+ * forward, `giftUrl` is their own page.
+ *
+ * **The giver's own line is deliberately not here** (security review of this
+ * slice, finding 1b). It is 280 characters of free text from an unauthenticated
+ * form, and an outbound message is the one place it could be read by somebody
+ * who never opened the pass — a spam filter's quarantine digest, a shared
+ * inbox, a forwarded thread. The line belongs on the claim page, where the
+ * person it was written for reads it. `receiverName` stays because the mail is
+ * useless without saying whose seat it is, and it is a name this same reader
+ * typed.
+ */
+const giftPassSchema = z.object({
+  kind: z.literal("gift_pass"),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  /** The giver, greeted by name — this message is theirs. */
+  giverName: z.string().trim().min(1).max(120),
+  /** Whoever is diving, as the giver named them. */
+  receiverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /** The receiver's claim link, for the giver to forward. */
+  claimUrl: z.url().max(2_000),
+  /** The giver's own read-only page. */
+  giftUrl: z.url().max(2_000),
 });
 
 // A staff-triggered last-minute-fill blast (docs ADR
@@ -711,6 +778,7 @@ export const notificationSchema = z
     bookingConfirmationSchema,
     waiverRequestSchema,
     readinessLinkSchema,
+    shelfLinkSchema,
     bookingHandoffSchema,
     waitlistInviteSchema,
     tripInvitationSchema,
@@ -728,6 +796,7 @@ export const notificationSchema = z
     staffInviteSchema,
     checkoutRecoverySchema,
     lastMinuteDealSchema,
+    giftPassSchema,
     newAccountAlertSchema,
     demoStartedAlertSchema,
     usageCeilingAlertSchema,
@@ -829,6 +898,11 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // the correct number for one diver waiting on one link.
     case "readiness_link":
       return `readiness-link/${notification.bookingId}/${notification.expiresAt.toISOString()}`;
+    // One send per minted link. A staffer sending a second copy to a diver's
+    // tablet mints a second row and is its own send; a double-tapped button
+    // mints once and dedups here.
+    case "shelf_link":
+      return `shelf-link/${notification.tokenId}`;
     case "booking_handoff":
       return `booking-handoff/${notification.bookingId}/${notification.expiresAt.toISOString()}`;
     // Keyed by invite timestamp so a genuine re-invite (a seat opens twice) is a
@@ -885,6 +959,10 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // the same trip is always its own send.
     case "last_minute_deal":
       return `last-minute-deal/${notification.code}/${notification.to}`;
+    // One pass per gift seat, ever. The booking is minted by the same submit
+    // that sends this, so a double-tapped payment return converges on one send.
+    case "gift_pass":
+      return `gift-pass/${notification.bookingId}`;
     // One alert per account, ever — same key shape as welcome above.
     case "new_account_alert":
       return `new-account-alert/${notification.userAccountId}`;

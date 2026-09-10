@@ -23,6 +23,22 @@ describe("recap tokens", () => {
     expect(verifyRecapToken(`${token}x`)).toBeNull();
   });
 
+  /**
+   * **A signature that is not base64url is refused, never thrown at** (security
+   * review of the gift slice, finding 3 — the same shape lives here).
+   * `timingSafeEqual` compares *bytes* and throws on unequal lengths, so a
+   * 43-*character* signature carrying a multibyte character used to reach it
+   * and raise `RangeError`, which on a bearer page is a 500 where "this link
+   * isn't available" belongs.
+   */
+  it("refuses a signature of the right length in the wrong alphabet", () => {
+    const [payload] = signRecapToken(BOOKING).split(".");
+    const multibyte = `${"a".repeat(42)}\u00e9`;
+    expect(multibyte).toHaveLength(43);
+    expect(() => verifyRecapToken(`${payload}.${multibyte}`)).not.toThrow();
+    expect(verifyRecapToken(`${payload}.${multibyte}`)).toBeNull();
+  });
+
   it("rejects garbage", () => {
     expect(verifyRecapToken("not-a-real-token")).toBeNull();
     expect(verifyRecapToken("")).toBeNull();

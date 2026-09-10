@@ -35,7 +35,9 @@ const seedObservedSpecies = await import("./seed-observed-species/route");
 const seedDiveTimes = await import("./seed-dive-times/route");
 const seedReturningDiver = await import("./seed-returning-diver/route");
 const seedBookingHandoff = await import("./seed-booking-handoff/route");
+const seedShelfToken = await import("./seed-shelf-token/route");
 const seedDisplayToken = await import("./seed-display-token/route");
+const seedYearBandShop = await import("./seed-year-band-shop/route");
 const inboundMessage = await import("./inbound-message/route");
 
 const secret = "e2e-test-secret";
@@ -157,6 +159,15 @@ const routes: SeedRoute[] = [
     expectPastTheGuard: expectInvalidBody,
   },
   {
+    slug: "seed-shelf-token",
+    POST: seedShelfToken.POST,
+    // A shop slug and an email, refused first — and it must be, because past
+    // that it mints a year-long credential over a diver's whole file at that
+    // shop. A route answering on a misconfigured deployment would be handing
+    // out the door to a real diver's certifications, waiver and sizes.
+    expectPastTheGuard: expectInvalidBody,
+  },
+  {
     slug: "seed-returning-diver",
     POST: seedReturningDiver.POST,
     // It takes a shop slug and an email, so the body is what it refuses first —
@@ -191,6 +202,19 @@ const routes: SeedRoute[] = [
     // 20260815-per-test-private-shops), so a route that answered on a
     // misconfigured deployment would be handing anyone a shop and the
     // credentials to it.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-year-band-shop",
+    POST: async (request) =>
+      seedYearBandShop.POST(request).catch(() => new Response(null, { status: 500 })),
+    // No body, so reaching the database is what proves the guard let it
+    // through. This one writes a shop with `show_year_on_diveday` on, which is
+    // the row DiveDay's homepage band reads (ADR 20260908-one-hand, decision 6,
+    // lever T): a route that answered on a misconfigured deployment would put a
+    // shop nobody owns under the hero of dive.day.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },

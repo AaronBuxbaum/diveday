@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { BrandStyle } from "@/components/BrandStyle";
+import { Copyable } from "@/components/Copyable";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { SiteMark } from "@/components/illustration/SiteMark";
@@ -13,7 +15,11 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, FormStatus } from "@/components/ui/form";
-import { SHELL_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
+import {
+  SECTION_TITLE_CLASS,
+  SHELL_TITLE_CLASS,
+  SUB_TITLE_CLASS,
+} from "@/components/ui/typography";
 import type { RecapPageData, RecapPhotoView, RecapSite } from "@/db/recap";
 import type { RecapPulseCategory } from "@/db/recap-pulses";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
@@ -234,6 +240,26 @@ export type AfterStateProps = {
   nextDiveWorded: { when: string; reason: string; levelCovers: string | null } | null;
   /** The pick's booking page carrying this diver's own handoff, or null. */
   nextDiveHref?: string | null;
+  /**
+   * The way to this diver's shelf, already built by whichever page is rendering
+   * (`src/components/ShelfDoor.tsx`). Null on a page that has no shelf to offer
+   * — this component decides nothing about which door it is, because the thread
+   * and the recap are allowed different ones and the reason is a security one
+   * (`src/app/actions/shelf-door.ts`).
+   */
+  shelfDoor?: ReactNode;
+  /**
+   * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): this
+   * diver's own link to the shop, carrying a non-secret referral id, for them
+   * to hand to a friend.
+   *
+   * Absolute, because the errand is to put it on a clipboard and send it
+   * somewhere else — a path is not a link anybody can follow out of a message.
+   * Null everywhere it does not belong: the readiness page renders this whole
+   * component too, and "bring a buddy next time" is a thing to say after a dive
+   * rather than before one.
+   */
+  buddyLinkUrl?: string | null;
   /** The four recap actions, already bound to a signed recap token. */
   actions: {
     submitReview: (formData: FormData) => void | Promise<void>;
@@ -318,6 +344,8 @@ export function AfterState({
   nextDive,
   nextDiveWorded,
   nextDiveHref = null,
+  shelfDoor = null,
+  buddyLinkUrl = null,
   actions,
   siteMark,
 }: AfterStateProps) {
@@ -694,6 +722,35 @@ export function AfterState({
         levelCovers={nextDiveWorded?.levelCovers ?? null}
       />
 
+      {/* ——— **Bring a buddy next time** (ADR 20260908-one-hand, decision 6,
+          lever W). One line under the day that just happened, and a link the
+          diver hands to a friend. The friend books their own seat and signs
+          their own waiver; the shop is told where the seat came from.
+
+          **No discount, no code, no reward** — the roadmap's referral-program
+          call stays parked. This is the door, counted. */}
+      {buddyLinkUrl ? (
+        <section className="mt-10 rounded-panel bg-surface-sunken p-5 print:hidden sm:p-6">
+          <h2 className={SECTION_TITLE_CLASS}>{t("recap.buddyHeading")}</h2>
+          <p className="mt-1 text-muted">{t("recap.buddyBody")}</p>
+          {/* **The link is printed, not hidden.** Every other copyable URL in
+              this app is a bearer token behind a disclosure; this one is not a
+              credential at all — it names a booking and authorizes nothing
+              (`src/lib/buddy-tokens.ts`) — and a diver reading a recap on a
+              phone is about to paste it into a message, which is easier when
+              they can see and select it. It is stable per booking, so printing
+              it costs this page's baseline nothing either. */}
+          <Copyable
+            className="mt-3"
+            value={buddyLinkUrl}
+            label={t("recap.buddyLinkLabel")}
+            copyLabel={t("recap.buddyCta")}
+            copiedLabel={t("recap.buddyCopied")}
+            failedLabel={t("recap.buddyCopyFailed")}
+          />
+        </section>
+      ) : null}
+
       {/* ——— One fact, one link. The shop's next public departure is the only
           thing worth saying on the way out; when the board is empty the link
           goes on its own rather than borrowing a sentence.
@@ -714,6 +771,9 @@ export function AfterState({
         >
           {t("recap.seeWhatsNext")}
         </Link>
+        {/* ——— The way to this diver's own shelf, beside the way back to the
+            board: the two things a finished day leaves a diver wanting. */}
+        {shelfDoor}
       </footer>
     </main>
   );

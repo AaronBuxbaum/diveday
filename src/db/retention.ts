@@ -1,4 +1,5 @@
-import { inArray, lt } from "drizzle-orm";
+import { and, eq, inArray, lt, notLike, sql } from "drizzle-orm";
+import { redactedUniqueValue } from "@/lib/anonymization";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -11,19 +12,23 @@ import type { AppDb } from "./client";
 import {
   accountTokens,
   activityEvents,
+  bookingGifts,
   bookingPaymentEvents,
+  bookings,
   formDrafts,
   inboundMessages,
   integrationEvents,
   integrationOauthStates,
   notificationDeliveries,
   notificationDeliveryAttempts,
+  personShelfTokens,
   pushSubscriptions,
   shopContactEmailConfirmationTokens,
   staffReplies,
   stripeWebhookEvents,
   tripDeskEvents,
   tripReadMarks,
+  trips,
 } from "./schema";
 
 /**
@@ -68,11 +73,16 @@ export type PruneSummary = {
 };
 
 /**
- * Deletes at most `PRUNE_BATCH_LIMIT` rows in two statements — select the
- * eligible ids, then delete exactly those — rather than one `DELETE ... LIMIT`,
+ * Retires at most `PRUNE_BATCH_LIMIT` rows in two statements — select the
+ * eligible ids, then act on exactly those — rather than one `DELETE ... LIMIT`,
  * which Postgres does not support and which a subquery would only emulate.
  * Two statements are also what makes the count returned here the count actually
- * deleted rather than an estimate.
+ * retired rather than an estimate.
+ *
+ * "Retires" rather than "deletes" because one arm redacts: `booking_gifts`
+ * keeps its row and loses its giver (see that arm). Every other arm deletes,
+ * and the second callback is what decides which — a selector that cannot tell
+ * an already-retired row from a live one would re-count it on every pass.
  */
 async function pruneBatch<Id extends string>(
   table: RetainedTable,
@@ -231,6 +241,34 @@ export async function pruneExpiredRecords(
     ),
   );
 
+  // The diver's shelf link, once it has stopped working (slice 20t).
+  //
+  // **The later of the two deaths**, which is the only correct clock for a row
+  // that can die twice. A link revoked today has an `expires_at` up to a year
+  // out, so measuring from expiry alone would keep a dead credential's counters
+  // for a year past the revocation; measuring from `revoked_at` alone would
+  // prune a link that simply ran out of time and was never revoked at all,
+  // because that column is null. `greatest` with `expires_at` as the floor
+  // answers both, and a live link — unrevoked, unexpired — is never eligible
+  // under either.
+  outcomes.push(
+    await pruneBatch(
+      "person_shelf_tokens",
+      () =>
+        db
+          .select({ id: personShelfTokens.id })
+          .from(personShelfTokens)
+          .where(
+            lt(
+              sql`greatest(${personShelfTokens.expiresAt}, coalesce(${personShelfTokens.revokedAt}, ${personShelfTokens.expiresAt}))`,
+              cutoff("person_shelf_tokens"),
+            ),
+          )
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(personShelfTokens).where(inArray(personShelfTokens.id, ids)),
+    ),
+  );
+
   // Same shape and same clock as account_tokens: measured from each link's
   // own `expires_at`, so a live confirmation link is never eligible.
   outcomes.push(
@@ -301,6 +339,49 @@ export async function pruneExpiredRecords(
           .where(lt(tripDeskEvents.occurredAt, cutoff("trip_desk_events")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(tripDeskEvents).where(inArray(tripDeskEvents.id, ids)),
+    ),
+  );
+
+  // **The giver on a gift seat**, ninety days after the departure came home
+  // (security review of the gift slice, finding 5). The one arm here that
+  // redacts instead of deleting: the giver is a third party with no `people`
+  // row, and once the boat is back and the money has settled nobody needs their
+  // name — but the row still explains the seat on the till and in an export, so
+  // the identity goes and the gift stays.
+  //
+  // "Not yet redacted" is read off the sentinel the erasure path writes, whose
+  // address ends in the reserved `@invalid` TLD (RFC 2606) and so can never
+  // collide with a real one. Without it every pass would re-count the same rows
+  // forever and report itself permanently capped.
+  //
+  // diveday:allow-deleted-trips: a departure the shop took off the board still
+  // has a giver on file, and their ninety days run from the day it would have
+  // come home like everybody else's.
+  outcomes.push(
+    await pruneBatch(
+      "booking_gifts",
+      () =>
+        db
+          .select({ id: bookingGifts.id })
+          .from(bookingGifts)
+          .innerJoin(bookings, eq(bookings.id, bookingGifts.bookingId))
+          .innerJoin(trips, eq(trips.id, bookings.tripId))
+          .where(
+            and(
+              lt(trips.endsAt, cutoff("booking_gifts")),
+              notLike(bookingGifts.giverEmail, "%@invalid"),
+            ),
+          )
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) =>
+        db
+          .update(bookingGifts)
+          .set({
+            giverName: redactedUniqueValue("erased"),
+            giverEmail: `${redactedUniqueValue("erased")}@invalid`,
+            message: null,
+          })
+          .where(inArray(bookingGifts.id, ids)),
     ),
   );
 

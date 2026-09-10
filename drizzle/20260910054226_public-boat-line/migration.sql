@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "public_boat_line" boolean DEFAULT false NOT NULL;

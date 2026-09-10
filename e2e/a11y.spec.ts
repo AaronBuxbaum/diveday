@@ -939,6 +939,22 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
     await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
     await expectNoA11yViolations(page);
   });
+
+  test("the diver's shelf has no automated a11y violations", async ({ page, request }) => {
+    test.setTimeout(60_000);
+    // Two labelled text forms inside one card, a definition list of standing
+    // facts, and a horizontally scrolling rail — none of which any other scan
+    // in this file covers. Minted through `/api/test/seed-shelf-token`, the
+    // same door the shelf spec and the visual suite use.
+    const seeded = await request.post("/api/test/seed-shelf-token", {
+      data: { shopSlug: "blue-mantis", email: "priya.sharma@example.com" },
+    });
+    expect(seeded.ok()).toBe(true);
+    const { href } = (await seeded.json()) as { href: string };
+    await page.goto(href);
+    await expect(page.getByRole("heading", { name: "Your shelf" })).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
 });
 
 /**
@@ -1065,6 +1081,17 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
     // race the "public schedule" scan at the top of this file documents.
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // **The boat's own page** (ADR 20260908-one-hand, decision 6, lever U).
+    // Reached through the storefront's Follow door rather than by path, since
+    // a seeded departure's id differs on every run — and because that is how
+    // the one reader this page has arrives at it: from a link, with no shop
+    // chrome they have learned and nothing on screen but a word, a time and a
+    // line of rows. Waits on the line's own last row, not the `<h1>`, for the
+    // same streaming reason the schedule above documents.
+    await page.getByRole("link", { name: "Follow", exact: true }).click();
+    await expect(page.getByText("Back", { exact: true })).toBeVisible();
     await expectNoA11yViolations(page);
 
     await scanStaticRoutes(page, [

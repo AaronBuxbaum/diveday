@@ -23,6 +23,7 @@ import { getTripManifests } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import type { ExecutedDive } from "@/db/schema";
+import { listShopPickedSpecies, listTripSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import { listTripDives } from "@/db/trips";
 import { catchUpSentences } from "@/i18n/desk-event-labels";
@@ -33,6 +34,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import { groupCatchUp } from "@/lib/desk-events";
 import { scopedHash, scopedId } from "@/lib/element-id";
@@ -50,10 +52,12 @@ import {
 import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { requireShopSurface } from "@/lib/session";
+import { seenChipSlugs, seenSiteFor } from "@/lib/sightings";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { divesWithMatch } from "@/lib/support-needs";
 import { STAGE_TAP_KEYS, TRIP_STAGES } from "@/lib/trip-stages";
+import { hasSailed } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { TripSurfaceNav } from "../_components/TripSurfaceNav";
@@ -65,6 +69,7 @@ import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/Executed
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
 import type { PersonTrailEntry } from "./_components/PersonSheet";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
+import { SeenGroup } from "./_components/SeenGroup";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import { TripPlanSection } from "./_components/TripPlanSection";
@@ -72,6 +77,7 @@ import {
   addBuddyTeamMemberAction,
   addManifestPrivateNoteAction,
   crewRollCallAction,
+  deleteSightingAction,
   dissolveBuddyTeamAction,
   formBuddyTeamAction,
   isPushSubscribedAction,
@@ -79,6 +85,7 @@ import {
   type ManifestActionContext,
   markTripCaughtUpAction,
   preDepartureCheckAction,
+  recordSightingAction,
   removeBuddyTeamMemberAction,
   rollCallAction,
   saveExecutedDiveAction,
@@ -352,6 +359,14 @@ export default async function TripManifestPage({
     shop.id,
     liveDiveSites.map((site) => site.id),
   );
+  // The crew's own tally for this departure, and every species the shop has
+  // picked anywhere — the two rungs under a site's own field guide in
+  // `seenChipSlugs`. Both are shop-wide reads with no dependency on which
+  // checkpoint is open, so they resolve together beside the guides.
+  const [loggedSightings, shopPickedSpecies] = await Promise.all([
+    listTripSightings(db, shop.id, tripId),
+    listShopPickedSpecies(db, shop.id),
+  ]);
   // The **diver** translator, on a staff page, deliberately: these are the
   // same words the diver will read on their record, and showing a divemaster
   // a different name for the fish they are about to record would be the bug
@@ -409,6 +424,65 @@ export default async function TripManifestPage({
   // one takes the narrower context that has none.
   const boundAddPrivateNoteAction = addManifestPrivateNoteAction.bind(null, { shopSlug, tripId });
   const boundSaveExecutedDiveAction = saveExecutedDiveAction.bind(null, actionContext);
+  // **Which reef these taps attach to.**
+  //
+  // **A recorded dive speaks for itself, and a plan only speaks for a dive with
+  // no record.** The two used to fall through one `??`, so a crew that recorded
+  // the actual site as *unknown* — the boat went somewhere else, or the dive was
+  // aborted — had their taps quietly attributed to the reef on the plan, and
+  // that attribution is what a diver later reads as "seen here". A saved null is
+  // staff saying they do not know where they were; the honest response is no
+  // group at all, and the dive log one disclosure above is where they say where
+  // they actually went.
+  //
+  // A dive with no site either way renders nothing: "seen here this month" is a
+  // claim about a place, and a sighting with nowhere to belong has no reader.
+  const seenDiveNumber = Number(/^after_dive_(\d+)$/.exec(checkpoint)?.[1] ?? 0);
+  const seenSite = seenSiteFor({
+    recorded: executedDives.find((row) => row.executed.diveNumber === seenDiveNumber),
+    planned: plannedDives.find(({ dive }) => dive.diveNumber === seenDiveNumber)?.diveSite ?? null,
+  });
+  // **And a boat that has not left has seen nothing.** A checkpoint is a query
+  // parameter, so the after-dive view is reachable at the dock; the write
+  // refuses a tap there as well, and this is what keeps the crew from meeting
+  // that refusal instead of an absent group.
+  const seenDeparted = hasSailed(departureManifest.trip.startsAt, nowDate());
+  // A slug with no card is dropped rather than rendered raw — the same rule
+  // `fieldGuideCards` follows for a species DiveDay has since retired.
+  const speciesName = new Map<string, string>(
+    catalogSpecies.map((entry) => [entry.slug, entry.name]),
+  );
+  const seenTallies = seenSite
+    ? loggedSightings.flatMap((row) => {
+        const name = speciesName.get(row.speciesSlug);
+        if (row.diveSiteId !== seenSite.id || !name) return [];
+        return [
+          {
+            slug: row.speciesSlug,
+            name,
+            count: row.count,
+            deleteLabel: t("manifest.seen.deleteNamed", { species: name }),
+          },
+        ];
+      })
+    : [];
+  const seenChips = seenSite
+    ? seenChipSlugs({
+        siteGuide: (speciesBySite[seenSite.id] ?? []).map((entry) => entry.slug),
+        shopPicks: shopPickedSpecies,
+        catalog: catalogSpecies.map((entry) => entry.slug),
+      }).flatMap((slug) => {
+        const name = speciesName.get(slug);
+        return name ? [{ slug, name }] : [];
+      })
+    : [];
+  const sightingContext = seenSite ? { ...actionContext, diveSiteId: seenSite.id } : null;
+  const boundRecordSightingAction = sightingContext
+    ? recordSightingAction.bind(null, sightingContext)
+    : null;
+  const boundDeleteSightingAction = sightingContext
+    ? deleteSightingAction.bind(null, sightingContext)
+    : null;
   // *Got it* is checkpoint-independent — the strip is about the departure, not
   // about which list is open — so it takes the narrower context.
   const boundMarkTripCaughtUpAction = markTripCaughtUpAction.bind(null, { shopSlug, tripId });
@@ -874,6 +948,30 @@ export default async function TripManifestPage({
           timeZone={shop.timezone}
           depthUnit={shop.depthUnit}
           checkpoint={checkpoint}
+        />
+      ) : null}
+
+      {/* **The living reef** — the crew's tally of what this departure saw,
+          under the log they are already filling in and nowhere near the roll
+          call's commit path or the head count above it. Nothing here gates
+          anything; it reaches the shop's own public trip page. */}
+      {!isDeparture &&
+      seenDeparted &&
+      seenSite &&
+      boundRecordSightingAction &&
+      boundDeleteSightingAction ? (
+        <SeenGroup
+          idPrefix={idPrefix}
+          chips={seenChips}
+          tallies={seenTallies}
+          copy={{
+            heading: t("manifest.seen.heading"),
+            consequence: t("manifest.seen.consequence", { site: seenSite.name }),
+            delete: t("manifest.seen.delete"),
+            refusal: t("manifest.seen.refusal"),
+          }}
+          recordAction={boundRecordSightingAction}
+          deleteAction={boundDeleteSightingAction}
         />
       ) : null}
 

@@ -42,6 +42,7 @@ import lenses from "./lenses.json";
 import manifest from "./manifest.json";
 import orderLine from "./orderLine.json";
 import orders from "./orders.json";
+import print from "./print.json";
 import promos from "./promos.json";
 import reports from "./reports.json";
 import requests from "./requests.json";
@@ -71,6 +72,7 @@ const staff = {
   display,
   orders,
   orderLine,
+  print,
   promos,
   reports,
   requests,

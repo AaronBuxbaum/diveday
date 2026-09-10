@@ -8,10 +8,12 @@ vi.mock("@/db/seed", () => ({
   resetDemoSchedule: vi.fn(),
   purgeMintedDemoShops: vi.fn(),
 }));
+vi.mock("@/db/seed-year-band", () => ({ dropYearBandShop: vi.fn() }));
 vi.mock("@/db/shops", () => ({ getShopBySlug: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { resetDemoSchedule, purgeMintedDemoShops } = await import("@/db/seed");
+const { dropYearBandShop } = await import("@/db/seed-year-band");
 const { getShopBySlug } = await import("@/db/shops");
 const { POST } = await import("./route");
 
@@ -41,6 +43,9 @@ beforeEach(() => {
   vi.mocked(purgeMintedDemoShops)
     .mockReset()
     .mockResolvedValue(undefined as never);
+  vi.mocked(dropYearBandShop)
+    .mockReset()
+    .mockResolvedValue(false as never);
 });
 
 afterEach(() => {
@@ -81,6 +86,8 @@ describe("POST /api/test/reset — auth gate (specialist-optimization-audit-2026
     expect(response.status).toBe(200);
     expect(resetDemoSchedule).toHaveBeenCalledWith(FAKE_DB, "shop_1", { history: true });
     expect(purgeMintedDemoShops).toHaveBeenCalledWith(FAKE_DB);
+    // The one real shop the year-band spec mints goes with the minted demos.
+    expect(dropYearBandShop).toHaveBeenCalledWith(FAKE_DB);
     // And reclaims what it just deleted — see the route's own comment for why
     // a run of this endpoint that skips it degrades a whole local e2e suite.
     expect(FAKE_DB.execute).toHaveBeenCalledTimes(1);

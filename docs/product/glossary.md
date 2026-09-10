@@ -196,7 +196,7 @@ new domain concept, define it here in the same PR.
   disabled. Never called a *dive profile*, which to a diver is the depth/time curve of a dive that
   already happened.
 - **Card sighting** — the staffer entering the agency, the card number **and the level off the card
-  in their hand**.
+  in their hand**. (Nothing to do with a **Sighting**, which is an animal a crew saw on a dive.)
   It is now the one thing that turns a **Self-declared certification** into evidence, and it is the
   same act as capturing a card rather than an extra attestation — which is the point: the diver's
   claim stops being what the record rests on. It asks for the **level** as well as the number,
@@ -805,6 +805,43 @@ new domain concept, define it here in the same PR.
   raises it and the schedule board badges the departure — **for crew as well as divers**. It comes
   in six distinct kinds, which are deliberately never worded or ranked alike — see **unaccounted
   for** below.
+  Two rules travel with it onto paper, and the **boat card** below carries both in as many words:
+  **the app is the record and the card is the fallback**, so nothing printed is ever a second,
+  quieter register; and **the roll is called by name**, every diver and every crew member, by two
+  people — a head count is the practice that leaves people behind, which is why no DiveDay surface
+  asks for one.
+- **Print register** — the pane in Settings that lists the shop's own printable sheets in the
+  groups of where the paper goes: at the dock and the door, on the boat, for a diver, on the wall
+  (ADR 20260908-one-hand, decision 6, lever X). Every row names the sheet, the paper it prints on,
+  one sentence, and the day it was last printed; its door is a form rather than a link, because
+  opening a sheet is what records that day. A sheet reads what its page reads at the moment it is
+  drawn — nothing on paper is stored copy.
+- **Print run** — one row of `shop_print_runs`: the day a shop last printed one sheet (and, for the
+  boat card, one hull). One row per sheet per subject, replaced in place rather than appended, and
+  the whole of what the register keeps. The paper pass records the day and never the diver.
+- **Boat card** — the laminated A5 card taped to a console: two faces of one lamination, a day side
+  and a night side, one per hull. It exists for the minute the app is not there, so it carries the
+  roll by name, what to do if someone is missing, the shop's own emergency numbers and vessel, the
+  shop's emergency action plan, and ruled blanks for the oxygen and first aid kits. **It wears the
+  boat's colours, never the shop's** — the same ban that keeps a storefront palette off a manifest —
+  and the night side is read under a red torch, so its ink is off-white rather than any hue. Nothing
+  about a diver is on it: no name, no count of who is aboard, and no medical fact of any kind. The
+  card cannot paginate, and says on its own fold line that the app is the record.
+- **Dock sign** — the A3 sheet at the slip: the shop's name and meeting point, its boats with their
+  capacity and the shop's own sentence for each, the counter's number, the shop's dock call, and two
+  codes. **No names, ever** — who is on a boat is the manifest's business, and a manifest is not a
+  public document.
+- **Window sticker** — the 100 mm square for the door and the boat's console: one sentence and the
+  storefront's code. No name on it either.
+- **Site briefing card** — the A5 card on the crew's clipboard, one per dive site: the site editor's
+  own briefing and the field guide the shop picked, so the words a diver hears on the boat are the
+  words on the storefront. The briefing is the shop's; the species names are DiveDay's, in the
+  reader's language.
+- **Paper pass** — the A6 pass printed at the counter for a diver without a phone: the departure,
+  the hull, the meeting point, the shop's dock call, what to bring, and a code carrying **the
+  booking's id and nothing else**. A booking id is not a capability — the counter resolves it inside
+  its own shop — so a pass left on a boat seat hands a finder nothing. It carries the diver's name
+  and no readiness, waiver or medical state.
 - **Pre-departure checklist** — a shop-authored, ordered list of lines a crew confirms once before
   a boat leaves the dock (emergency oxygen, life jackets, a fire extinguisher — whatever the shop's
   own flag state and vessel class require). DiveDay writes none of the content; a shop types its
@@ -892,6 +929,9 @@ new domain concept, define it here in the same PR.
   text throughout, including the phone lines: an international dive line is not a `tel:`-shaped
   string until the shop writes it, and nothing on this card links, dials, escalates, or opens an
   incident. It is a laminated card retyped, priced at zero words of DiveDay's own.
+  The **boat card** below is the same card, printed: it reads these values and prints a ruled blank
+  wherever the shop has recorded nothing, because the rule that forbids a plausible wrong number on
+  the screen forbids it on the console too.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and who recorded it. It carries **no free text**: the
   note field was removed in 2026-08, which also means a roll call records *that* a diver did not
@@ -1600,6 +1640,22 @@ new domain concept, define it here in the same PR.
   diver climbs the ladder talking about. Informs and gates nothing, and it is an ornament rather than
   evidence — an unusable slug is dropped so the dive record still saves. Null means nobody said,
   never "all good".
+- **Sighting** — a species the crew tapped after a dive, tallied per **departure** and per **dive
+  site** (`trip_sightings`, slice 20r). One live row per species per site per departure carrying a
+  count: the first tap writes it at one, a second tap on the same chip counts a second animal. The
+  third of the three things that draw from the marine-life catalog, and the only one a diver
+  deciding on a Saturday can read as a *frequency* — a **field guide** is the shop's standing claim
+  about a place, an **Observed species** is one line on one dive's record, and a sighting is what
+  adds up over a month into "seen here this month: southern stingray on 2 of 3 logged dives here".
+  Nothing to do with a **Card sighting**, which is a staffer reading a certification card in their
+  own hands; the two share only the English word, and neither is ever evidence for the other. The
+  species is refused rather than dropped when the catalog does not carry it, which is the opposite
+  call from an observed species and for the opposite reason: the slug *is* the record here, so one
+  with no words would reach a public page as punctuation. Refused too on a departure that has not
+  sailed (`hasSailed`) — a boat still alongside has seen nothing. Informs and gates nothing — it
+  sits nowhere near the roll call's commit path or the manifest's head count — and it never
+  promises: a site's summary counts *logged* dives in a trailing month, dates itself to the
+  departure rather than to the tap, and says what was logged and when, never what a diver will see.
 - **Fly-safe from** — the instant a diver reads they may board a plane after the day's diving
   (`src/lib/fly-safe.ts`, issue #1425). The shop's own hours (`shops.fly_safe_hours_single` and
   `_repetitive`, defaults 18 and 24, floored at DAN's published minimums of 12 and 18) counted from
@@ -1674,6 +1730,16 @@ new domain concept, define it here in the same PR.
   an "n of capacity" count, the meeting point and the outlook, with no sign-in on that screen. Hashed
   at rest, non-expiring like a calendar feed, revoked from Settings → Lobby display. It never names
   a diver; its one switch, *show names*, adds the crew line (issue #1426).
+- **Follow link** — the public page for one departure's day (`/s/<shopSlug>/boats/<tripId>`), which
+  a diver hands to whoever is waiting for them on the dock. Deliberately **not** a bearer credential
+  and deliberately not revocable: the trip id is in the URL unhashed because the page holds no
+  secret — the stage word a crew member tapped, the time they tapped it, and the departure's own
+  line of times. Never a name, never a count of people, never a position. Two divers on the same
+  boat share one page. A shop publishes it, its storefront's live line and its Follow door together
+  through one switch, `shops.public_boat_line`, which is **off** until the shop turns it on and
+  takes all three with it when it goes back off; a private charter, a cancelled departure and a day
+  that has closed are each a 404 rather than an empty state (ADR
+  [20260908-one-hand](../architecture/decisions/20260908-one-hand.md), decision 6, lever U).
 - **Recovery code** — one of ten single-use strings issued at two-factor enrolment, shown once and
   stored only as a salted HMAC under the deployment's own sealing key. It is a second factor, not
   a password reset: presenting one satisfies the same check a TOTP code does.

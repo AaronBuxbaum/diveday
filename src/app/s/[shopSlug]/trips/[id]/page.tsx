@@ -20,6 +20,7 @@ import { getShopReviewAggregate } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripChangeEvents } from "@/db/trip-change-events";
+import { siteSightings } from "@/db/trip-sightings";
 import {
   getTripWithBooked,
   getWaitlistEntryForTrip,
@@ -149,6 +150,12 @@ export default async function TripDetailPage({
     embed?: string;
     /** A diver's own handoff (ADR 20260906-before-you-ask, decision 3). */
     handoff?: string | string[];
+    /**
+     * Open the booking form on the gift rather than on "Me" (ADR
+     * 20260908-one-hand, decision 6, lever W). The giver's page sends someone
+     * here after a blow-out, to give the same seat on the next departure.
+     */
+    gift?: string | string[];
   }>;
 }) {
   await connection();
@@ -164,6 +171,7 @@ export default async function TripDetailPage({
     pay,
     embed,
     handoff: handoffParam,
+    gift: giftParam,
   } = await searchParams;
   // One string or nothing: a repeated `?handoff=` arrives as an array, and an
   // array must read as no handoff rather than reach the hasher.
@@ -372,11 +380,14 @@ export default async function TripDetailPage({
     waitlistId ? getWaitlistEntryForTrip(db, shop.id, tripId, waitlistId) : null,
   ]);
   // Two queries for the whole day's briefings, not two per dive.
-  const briefingExtras = await listDiveSiteBriefingExtras(
-    db,
-    shop.id,
-    tripDives.map(({ diveSite }) => diveSite?.id).filter((id): id is string => Boolean(id)),
-  );
+  const siteIds = tripDives
+    .map(({ diveSite }) => diveSite?.id)
+    .filter((id): id is string => Boolean(id));
+  const briefingExtras = await listDiveSiteBriefingExtras(db, shop.id, siteIds);
+  // What the crew has actually logged at those sites this month. Batched over
+  // the whole day for the same reason the briefings are: this is a public page,
+  // and a query per site per departure is how one becomes slow.
+  const seenBySite = await siteSightings(db, shop.id, siteIds);
   const diveBriefings = tripDives.map(({ dive, diveSite }) => ({
     dive,
     diveSite,
@@ -714,6 +725,7 @@ export default async function TripDetailPage({
             stays time-neutral, since durations promise no clock. */}
         <TripDayPlan
           briefings={diveBriefings}
+          sightings={seenBySite}
           shop={shop}
           startsAt={trip.startsAt}
           endsAt={trip.endsAt}
@@ -840,6 +852,9 @@ export default async function TripDetailPage({
             terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
             knownDiver={knownDiverPanel}
             offerHandoff={offerHandoff.bind(null, tripRef)}
+            // Exactly `1`, and a repeated parameter reads as absent — the same
+            // single-value rule every other query flag on this page follows.
+            giftDefault={giftParam === "1"}
           />
         )}
         {/* The last line on the page: how to reach a human. Renders nothing at

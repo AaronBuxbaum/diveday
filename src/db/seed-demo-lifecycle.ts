@@ -15,7 +15,9 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
+  bookingGifts,
   bookingPayments,
+  bookingReferrals,
   bookings,
   buddyPairMembers,
   buddyTeamEvents,
@@ -60,6 +62,7 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
+  personShelfTokens,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
   priorGearAssignments,
@@ -76,6 +79,7 @@ import {
   shopBackupDestinations,
   shopContactEmailConfirmationTokens,
   shopIntegrations,
+  shopPrintRuns,
   shopPromoCodes,
   shopPromoRedemptions,
   shopStripeAccounts,
@@ -101,6 +105,7 @@ import {
   tripReviews,
   tripSeries,
   tripSeriesSkips,
+  tripSightings,
   tripStageEvents,
   trips,
   tripWaitlistEntries,
@@ -141,8 +146,13 @@ export const DEFAULT_DEMO_TTL_MS = 7 * DAY_MS;
  * every `/api/test/reset` mid-run. Adding a table here means adding its case
  * there in the same change.
  *
- * Never call this on the canonical blue-mantis demo or any real shop; the reaper
- * below only ever passes it a minted demo (`isDemo`, non-canonical slug).
+ * Never call this on the canonical blue-mantis demo, or on any shop somebody
+ * uses. There are two callers and each addresses one shop it minted itself: the
+ * reaper below, which only ever passes a minted demo (`isDemo`, non-canonical
+ * slug), and `dropYearBandShop` (src/db/seed-year-band.ts), which passes the
+ * homepage band's e2e fixture — a shop that is not a demo, precisely because
+ * the band refuses demos, and is therefore addressed by one reserved slug that
+ * nothing else creates, from routes that exist only under `DIVEDAY_E2E`.
  */
 export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Promise<void> {
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
@@ -181,6 +191,14 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
+  // Shelf links reference `people` with no cascade, the same 23503 shape as
+  // the calendar feeds further down.
+  await db.delete(personShelfTokens).where(eq(personShelfTokens.shopId, shopId));
+  // The gift and the buddy referral both reference bookings, so both go before
+  // them (ADR 20260908-one-hand, decision 6, lever W). `booking_referrals`
+  // names two bookings and neither is deleted first, so it goes here too.
+  await db.delete(bookingGifts).where(eq(bookingGifts.shopId, shopId));
+  await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
@@ -188,6 +206,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
   await db.delete(preDepartureChecklistItems).where(eq(preDepartureChecklistItems.shopId, shopId));
+  // The shop's print register — one row per sheet, owned by the shop and by
+  // nothing else.
+  await db.delete(shopPrintRuns).where(eq(shopPrintRuns.shopId, shopId));
   // The close-out trail references people and the shop, so it must clear
   // before both parents below (ADR 20260804-day-closeout).
   await db.delete(closeoutLeftoverDecisions).where(eq(closeoutLeftoverDecisions.shopId, shopId));
@@ -230,6 +251,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
     await db.delete(executedDives).where(inArray(executedDives.tripId, tripIds));
+    // The crew's sighting tally references trips, dive sites and people, so it
+    // goes with the dive log it sits beside on the manifest.
+    await db.delete(tripSightings).where(inArray(tripSightings.tripId, tripIds));
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
   }
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));

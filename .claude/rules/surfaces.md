@@ -55,7 +55,11 @@ stay in `AGENTS.md`.
   renders *nothing* when empty: stuck payment operations on the Orders index behind
   `canPersonManagePaymentSettings`; stuck media deletions and owed processor erasures lead Settings'
   "Data & integrations" group in `settings/SettingsPage.tsx`. `/shop/[shopSlug]/reports` is the
-  monthly report and nothing else.
+  shop's own reading of itself and nothing else: the month by default, the year at `?range=year`,
+  one segmented control between them, and **no money at all on the year** (ADR 20260908-one-hand,
+  decision 6, lever T). The year prints as a 3:2 card at `reports/card`, and with the shop's yes
+  (`shops.show_year_on_diveday`, one row on Settings' Lobby display page) the same card is public
+  at `/s/<slug>/year-card` and stands under DiveDay's own homepage hero.
 - **A diver asking for a day not on the board**: one composer, `src/components/DateRequestForm.tsx`,
   behind one action `src/app/actions/inquiry.ts`; staff read them at `shop/[shopSlug]/requests`.
   Never the wait list or the last-minute deal list — those answer "tell me when a seat frees".

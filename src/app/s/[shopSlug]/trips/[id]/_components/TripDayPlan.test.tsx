@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
@@ -66,11 +66,52 @@ describe("TripDayPlan", () => {
     // Time-neutral: a dive plan's clock belongs to the day itself, on the
     // thread. A schedule beside a Book button reads as a promise the crew has
     // not made.
-    expect(screen.queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
+    //
+    // Scoped to the run of dives, which is what that rule is about. The sky
+    // line above it has always named a clock — sunset, on a night charter —
+    // and since slice 20r it names sunrise and sunset on a daylight one. Those
+    // are facts about the sky over the day, not a schedule the crew is
+    // promising to keep.
+    const dives = screen.getByRole("list");
+    expect(within(dives).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
   });
 
-  it("renders nothing when the departure has no dive plan", () => {
+  it("says when the light arrives and when it goes, on a daylight departure", () => {
+    // The other half of the night charter's line, and the half that speaks for
+    // nearly every departure on every board: a 9:00 AM two-tank in January
+    // meets in the dark, and the same trip in June does not.
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    expect(screen.getByText(/Sunrise 7:07 AM, sunset 5:44 PM\./)).toBeInTheDocument();
+    // And no moon on a day trip: the moon is what a night diver plans a torch
+    // around, and on a morning boat it is noise.
+    expect(screen.queryByText(/moon/i)).not.toBeInTheDocument();
+  });
+
+  it("renders nothing when the departure has no dive plan and no sky to speak of", () => {
     const { container } = render(
+      <TripDayPlan
+        briefings={[]}
+        shop={NO_ADDRESS}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("keeps the day's light on a departure whose sites are not picked yet", () => {
+    // The daylight twin of the night charter's case below: sunrise and sunset
+    // are facts about the departure, not about the sites nobody has chosen.
+    render(
       <TripDayPlan
         briefings={[]}
         shop={SHOP}
@@ -79,7 +120,7 @@ describe("TripDayPlan", () => {
         locale={DEFAULT_DIVER_LOCALE}
       />,
     );
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByText(/Sunrise 7:07 AM/)).toBeInTheDocument();
   });
 
   it("says when the light goes and what moon there is, on a night departure", () => {
@@ -169,8 +210,10 @@ describe("TripDayPlan's profile", () => {
     expect(screen.getAllByText("Usually 45 minutes in the water")).toHaveLength(2);
     expect(screen.getByText("Usually 60 minutes on the surface")).toBeInTheDocument();
     // Durations, not a clock: the day's hours belong to the booked diver's own
-    // thread, and a schedule beside a Book button reads as a promise.
-    expect(screen.queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
+    // thread, and a schedule beside a Book button reads as a promise. Scoped to
+    // the run of dives for the reason the beat's own test above is — the sky
+    // line names a clock and always has.
+    expect(within(screen.getByRole("list")).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
   });
 
   it("says nothing about a surface interval on a one-tank day", () => {

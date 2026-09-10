@@ -316,6 +316,29 @@ one line beside Add to calendar, *Add to Wallet*, on every state after booking; 
   arrival/change reading and the party hand-off; the same spine grammar the staff home speaks makes
   the product one product.
 
+### The shelf — `/shelf/[token]`
+
+**Built 2026-09-10** (slice 20t of [ADR 20260908-one-hand](../architecture/decisions/20260908-one-hand.md)).
+The first bearer surface anchored to a **person** rather than to a booking, so it outlives every
+seat: `person_shelf_tokens`, stored and revocable, and erasure closes it.
+
+- **One idea:** what this shop already holds for me, and the next reason to come back.
+- **The question it arrives with:** "when am I next out, and what do you have for me?" — answered by
+  the seat the diver holds, the same boat next time, and the crew's own "next time" from the day
+  just dived, in that order, before the file.
+- **Controls that dissolved:** none — this surface is new. What it deliberately never grows: a
+  medical answer, another diver's anything, a price. The reader (`src/db/shelf.ts`) cannot return
+  any of the three, and its test walks the whole object rather than the fields somebody remembered.
+- **Remove first:** the file's rows, before the reasons to come back. A shelf with nothing on it is
+  still worth opening for the next departure; a shelf with nothing ahead of it is a filing cabinet.
+- **Composition:** the thread's shell and measure, in the shop's brand — a diver who reached this
+  from their thread should not feel they left the shop. Two quiet lines close it: what is never here,
+  and "Forget this phone", which clears the storefront's greeting cookie and nothing else.
+- **What it leaves elsewhere:** the storefront reads that cookie and greets the diver by first name
+  with which visit the next one is, puts a "Yours" group above the week, and says why a departure
+  demanding a card is open to them instead of the warn pill. Without the cookie the storefront is
+  unchanged.
+
 ### The waiver — `/waivers/[token]`
 
 **Built 2026-08-29** — same ADR and canvas. Legal surface: wording and presentation floor are
@@ -452,3 +475,22 @@ section 12). The 2026-08-13 composition stands; the findings move copy, not band
 - **Composition:** a day told in order — hero, shared-day statement, moments (which the review
   extends to the evening), breadth as four numbered assertions, the mirrored records diptych,
   one merged close.
+
+**The hero became the visitor's, 2026-09-10** — ADR
+[20260908-one-hand](../architecture/decisions/20260908-one-hand.md) decision 6, possibility Y,
+drawn on that canvas's `TryItWithYourBoats.dc.html`.
+
+- **One idea:** the demo is you — a page that draws the visitor's own shop, in the visitor's own
+  colour, from three words.
+- **The question it arrives with:** "yes, but what does it look like with *my* boats?" — the one
+  question a screenshot of somebody else's shop cannot answer, and the one a shop owner asks first.
+- **What it never does:** look anything up. No website, no listing, no logo, no stored keystroke.
+  The hero says both halves on its face — "Drawn from what you typed" over the drawing, "Nothing is
+  saved until you open it" under the door — and that is what keeps a page arguing from a visitor's
+  own name inside the claims policy.
+- **Controls that dissolved:** none, and that is the constraint the composition was built inside.
+  The three fields sit under the two doors, "Draw my day" is inert until there is something to
+  draw, and the demo still leads at first paint.
+- **Composition, drawn:** their chrome, the day as a line with their boat on it, the app's own
+  greeting, one sentence naming the time and its zone, a live countdown, three rows that are one
+  door, the primary that opens it.

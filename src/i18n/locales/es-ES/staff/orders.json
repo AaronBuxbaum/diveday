@@ -131,7 +131,8 @@
       "today": "Hoy · {date}",
       "continued": "{day}, continuación",
       "dayMeta": "{count, plural, one {# pedido} other {# pedidos}} · {subtotal}",
-      "rowLabel": "{name} — {amount}"
+      "rowLabel": "{name} — {amount}",
+      "giftFrom": "un regalo de {giver}"
     },
     "table": {
       "diver": "Buceador",

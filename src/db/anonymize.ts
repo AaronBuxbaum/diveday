@@ -62,6 +62,7 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
+import { revokeShelfTokens } from "./person-shelf-tokens";
 import { attemptProcessorErasures, recordProcessorErasureObligations } from "./processor-erasure";
 import type { ProcessorErasureObligation } from "./schema";
 import {
@@ -74,6 +75,7 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
+  bookingGifts,
   bookingPayments,
   bookings,
   buddyTeamEvents,
@@ -432,6 +434,17 @@ async function mergedIntoChain(
 async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {
   const { shopId, personId, now } = ctx;
 
+  // **Read before the redaction, because the redaction is what removes it.**
+  // A gift names its giver by address and by nothing else — the giver is a
+  // third party with no `people` row of their own — so the only handle an
+  // erasure has on "gifts this person bought" is the address they are being
+  // erased from (security review of the gift slice, finding 5).
+  const [erasedIdentity] = await tx
+    .select({ email: people.email })
+    .from(people)
+    .where(and(eq(people.shopId, shopId), eq(people.id, personId)))
+    .limit(1);
+
   const bookingRows = await tx
     .select({ id: bookings.id })
     .from(bookings)
@@ -732,6 +745,14 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       ),
     );
 
+  // The diver's shelf link, on however many phones it reached. Same reasoning
+  // as the feed above and the same shape — revoked, not deleted, so the record
+  // says the door was closed. `verifyShelfToken` would already refuse an erased
+  // person on the join, and this is the belt beside that brace: a future reader
+  // querying `person_shelf_tokens` without the join must still find nothing
+  // live (ADR 20260802-diver-data-erasure, H-02).
+  await revokeShelfTokens(tx, { shopId, personId, now });
+
   // --- the diver's own login, if they ever had one -------------------------
   const [account] = await tx
     .select({ id: userAccounts.id, email: userAccounts.email })
@@ -785,6 +806,34 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       .where(eq(userAccounts.id, account.id));
   }
 
+  // **Gifts this person *bought*, which their own bookings never name.**
+  //
+  // The block below erases the giver stamped on seats this person is *diving*;
+  // this one erases the seats they *paid for* — a third party's name and
+  // address on somebody else's booking, held only because this person put it
+  // there. Matched on the address, case-folded, because that is the only handle
+  // a giver has: they have no `people` row, so no id joins them to anything
+  // (security review of the gift slice, finding 5).
+  //
+  // The row survives; the identity does not. The seat and its money are the
+  // shop's record and are not this person's to take away.
+  const erasedEmail = erasedIdentity?.email?.trim().toLowerCase();
+  if (erasedEmail) {
+    await tx
+      .update(bookingGifts)
+      .set({
+        giverName: redactedUniqueValue("erased"),
+        giverEmail: `${redactedUniqueValue("erased")}@invalid`,
+        message: null,
+      })
+      .where(
+        and(
+          eq(bookingGifts.shopId, shopId),
+          sql`lower(${bookingGifts.giverEmail}) = ${erasedEmail}`,
+        ),
+      );
+  }
+
   // --- booking-scoped rows -------------------------------------------------
   if (owned) {
     // `welcomeSharedAt` is a consent stamp, not a fact about the seat: the
@@ -819,6 +868,23 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         pickupTime: null,
       })
       .where(inArray(bookings.id, bookingIds));
+
+    // **The giver of a gift seat is a third party on this diver's booking**
+    // (ADR 20260908-one-hand, decision 6, lever W), held for exactly the reason
+    // a guardian's name is held on a minor's release — because it is on this
+    // person's record and for no other reason. So it goes with the rest of it:
+    // the name, the address the receipt went to, the line that was written for
+    // this diver, and the name the giver typed for them. The row itself stays,
+    // because the seat and its money did.
+    await tx
+      .update(bookingGifts)
+      .set({
+        giverName: redactedUniqueValue("erased"),
+        giverEmail: `${redactedUniqueValue("erased")}@invalid`,
+        receiverName: redactedUniqueValue("erased"),
+        message: null,
+      })
+      .where(inArray(bookingGifts.bookingId, bookingIds));
 
     await tx
       .update(bookingCapabilities)

@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { issueAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
+import { createFirstDay } from "@/db/first-day";
 import { sendNotification } from "@/db/notifications";
 import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/schema";
 import { toDiverLocale } from "@/i18n/settings";
@@ -23,6 +24,7 @@ import { hashPassword } from "@/lib/password-hashing";
 import { alertRecipient } from "@/lib/platform-mail";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { parseTryItHandoff } from "@/lib/try-it";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 
 export async function onboardAction(formData: FormData) {
@@ -33,6 +35,23 @@ export async function onboardAction(formData: FormData) {
   // Non-secret fields only — never the password — echoed back so a bounce to
   // `?error=` doesn't wipe a form a shop owner just spent a minute filling in.
   const PRESERVED_FIELDS = ["shopName", "shopSlug", "timezone", "ownerName", "ownerEmail"] as const;
+  // What the homepage hero drew (ADR 20260908-one-hand, decision 6), judged by
+  // the one module that judges it: bounded lengths, `HH:MM`, a real `#rrggbb`.
+  // Junk in any of the three loses that field and nothing else — none of them
+  // is required to open a shop.
+  //
+  // **Parsed here rather than after the schema, because `backToForm` echoes
+  // it.** A refusal on the password must not cost a shop the boat it typed two
+  // screens ago, so these ride the bounce like every other non-secret field —
+  // but a bounce writes a `Location:` header, and the raw form value is
+  // whatever a crafted POST put in the box. Echoing the *parsed* value means
+  // the header can only ever carry a name inside `MAX_TRY_IT_NAME`, an `HH:MM`
+  // and a six-digit hex; a 50 KB field simply is not echoed.
+  const drawn = parseTryItHandoff({
+    boat: formData.get("boat"),
+    departure: formData.get("departure"),
+    color: formData.get("color"),
+  });
   // Annotated so TypeScript treats the call as never-returning (control-flow
   // analysis only honours that on an explicitly typed const).
   const backToForm: (message: string) => never = (message) => {
@@ -42,6 +61,10 @@ export async function onboardAction(formData: FormData) {
       const value = formData.get(field);
       if (typeof value === "string" && value) params.set(field, value);
     }
+    // `OnboardPage` reads these back under the same names the form posts.
+    if (drawn.boatName) params.set("boat", drawn.boatName);
+    if (drawn.departure) params.set("departure", drawn.departure);
+    if (drawn.brandColor) params.set("color", drawn.brandColor);
     redirect(`/onboard?${params.toString()}`);
   };
 
@@ -81,6 +104,7 @@ export async function onboardAction(formData: FormData) {
   let newAccountId: string | null = null;
   let newShopId: string | null = null;
   let newShopLocale: string | null = null;
+  let createdShop: typeof shops.$inferSelect | null = null;
 
   try {
     await db.transaction(async (tx) => {
@@ -113,6 +137,11 @@ export async function onboardAction(formData: FormData) {
           name: shopName,
           slug: shopSlug,
           timezone,
+          // The colour the homepage hero drew from the shop's name, already
+          // through Harbor's contrast derivation (`suggestedBrandColor`). A
+          // shop that arrived without one wears DiveDay's lagoon, exactly as
+          // before; either way Settings is where a shop changes it.
+          brandColor: drawn.brandColor,
           // **The timezone already answered these.** A shop that just said
           // `America/Cancun` was created pricing in dollars, and a Florida shop
           // — where every briefing says 60 ft — was as likely to get metres
@@ -142,6 +171,7 @@ export async function onboardAction(formData: FormData) {
       }
       newShopId = newShop.id;
       newShopLocale = newShop.defaultLocale;
+      createdShop = newShop;
 
       // Create owner person
       const [newPerson] = await tx
@@ -202,6 +232,27 @@ export async function onboardAction(formData: FormData) {
     // it; the visitor gets a generic, actionable message (CR-014).
     console.error("onboardAction: failed to create shop", err);
     backToForm("create_failed");
+  }
+
+  // The first day, if the hero drew one: a real hull and a real departure on
+  // tomorrow's board, through the schedule's own create path, so the shop's
+  // first Today has a boat on it rather than an empty line.
+  //
+  // **Awaited, not deferred.** The owner is two seconds from looking at that
+  // board, and `after()` runs once the response is on its way. **And never
+  // fatal:** a failure here leaves a shop with no boat, which is a normal state
+  // of a new shop and thirty seconds of work in the schedule builder; it must
+  // not cost anybody the account they just created.
+  if (createdShop && drawn.boatName && drawn.departure) {
+    try {
+      await createFirstDay(db, createdShop, {
+        boatName: drawn.boatName,
+        departure: drawn.departure,
+        now: nowDate(),
+      });
+    } catch (error) {
+      console.error("onboardAction: first departure failed", error);
+    }
   }
 
   // 2. Welcome + verify-email are best-effort — no working link exists

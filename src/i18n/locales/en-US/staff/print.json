@@ -1,0 +1,97 @@
+{
+  "settings": {
+    "eyebrow": "Set up",
+    "title": "Print",
+    "lede": "Your sheets, in your colour and face. Each carries the day it was printed.",
+    "groups": {
+      "dock": "At the dock and the door",
+      "boat": "On the boat",
+      "diver": "For a diver",
+      "wall": "On the wall"
+    },
+    "door": "Print",
+    "printed": "Printed {date}",
+    "neverPrinted": "Never printed",
+    "counterDoor": "On the counter",
+    "reportsDoor": "Opens Reports",
+    "dockSign": {
+      "name": "The dock sign",
+      "paper": "A3",
+      "line": "Your boats, and the two codes a diver reads at the slip."
+    },
+    "windowSticker": {
+      "name": "The window sticker",
+      "paper": "100 mm",
+      "line": "Book a seat with your phone."
+    },
+    "boatCard": {
+      "name": "The boat card",
+      "paper": "A5, laminated",
+      "line": "{boat}, by day and by night."
+    },
+    "siteBriefing": {
+      "name": "Site briefing cards",
+      "paper": "A5",
+      "line": "{count, plural, one {One site, one card} other {# sites, one card each}}."
+    },
+    "paperPass": {
+      "name": "The paper pass",
+      "paper": "A6",
+      "line": "From a booking, for a diver without a phone."
+    },
+    "yearPoster": {
+      "name": "The year poster",
+      "paper": "A2",
+      "line": "Your year, so far."
+    }
+  },
+  "sheet": {
+    "printed": "Printed {date}",
+    "dockSign": {
+      "title": "Our boats leave from here.",
+      "capacity": "{count, plural, one {# diver} other {# divers}}",
+      "checkIn": "Check in with your pass",
+      "checkInNote": "Or by name at the counter. Be at the dock {minutes, plural, one {# minute} other {# minutes}} early.",
+      "schedule": "See what is going out",
+      "scheduleNote": "Every departure, and every seat still open.",
+      "counter": "Counter {phone}"
+    },
+    "boatCard": {
+      "beforeHeading": "Before the boat moves",
+      "before": "Call the roll by name, every diver and every crew member, before you leave the dock and after every dive. Two people count. The roll call in the app is the record; if the phone is dead, call it against the printed manifest and write the time on it.",
+      "missingHeading": "If someone is missing",
+      "missing": "Note the time and mark the position. Do not leave the site. Call the roll again by name. Then call for help on the numbers below, and call the shop.",
+      "numbersHeading": "Numbers",
+      "shop": "Shop",
+      "ashore": "Ashore",
+      "oxygenHeading": "Oxygen and first aid",
+      "oxygenWhere": "Oxygen, where",
+      "oxygenChecked": "Last checked",
+      "fold": "Printed {date}. The app is the record; this card is the fallback.",
+      "daySide": "Day side",
+      "nightSide": "Night side",
+      "vessel": "Vessel",
+      "planHeading": "If something goes wrong",
+      "firstAidWhere": "First aid kit, where"
+    },
+    "sticker": {
+      "title": "Book a seat with your phone"
+    },
+    "pass": {
+      "eyebrow": "Your pass",
+      "bringHeading": "Bring",
+      "show": "Show this at the counter, or say your name.",
+      "code": "The code is your booking and nothing else.",
+      "beAtDock": "Be at the dock by {time}"
+    },
+    "briefing": {
+      "briefingHeading": "The briefing",
+      "seenHeading": "Seen here",
+      "fold": "Printed {date}. From the site editor.",
+      "index": "{index} of {total}"
+    }
+  },
+  "counter": {
+    "passDoor": "Print a pass"
+  }
+}

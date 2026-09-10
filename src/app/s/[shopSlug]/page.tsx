@@ -50,12 +50,14 @@ import {
   formatShortDate,
   formatTime,
   formatTimeRange,
+  formatWeekday,
 } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import {
   publicAvailabilityPath,
+  publicBoatPath,
   publicCoursePath,
   publicCoursesPath,
   publicSchedulePath,
@@ -70,6 +72,7 @@ import {
   pushCursor,
 } from "@/lib/schedule-pagination";
 import { liveSeasonEvents } from "@/lib/season-events";
+import { cardClearsDeparture, chooseShelfGreeting } from "@/lib/shelf-greeting";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
 import { resolveLens } from "@/lib/trip-lenses";
@@ -85,6 +88,8 @@ import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { SeasonBand } from "./_components/SeasonBand";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
 import { WeekLedger, type WeekLedgerRow } from "./_components/WeekLedger";
+import { YoursGroup, type YoursRow } from "./_components/YoursGroup";
+import { readShelfWelcome } from "./_lib/shelf-welcome";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -214,6 +219,17 @@ export default async function SchedulePage({
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);
   const now = nowDate();
+
+  /**
+   * **Who is reading this, when their phone carries their shelf** (slice 20t).
+   *
+   * Null for every anonymous visitor, for a cookie minted at another shop, and
+   * for a token that has since been revoked or expired — all of which render
+   * this page exactly as it ships. Never in embed mode: `?embed=1` is a window
+   * onto the schedule pasted into somebody else's site, and greeting a diver by
+   * name inside a third party's iframe is not a thing this product does.
+   */
+  const shelf = isEmbed ? null : await readShelfWelcome(db, { shopId: shop.id, now });
 
   // Shop-local month boundaries, in UTC, for a given calendar month.
   const monthBoundsUtc = (ref: MonthRef) => {
@@ -365,7 +381,13 @@ export default async function SchedulePage({
       // The boat a crew said is out (ADR 20260904-reef-all-the-way-down,
       // Budget rule 4). Bounded to today's own window so a stage nobody
       // cleared cannot speak for a week, and never read inside the frame.
-      isEmbed ? null : liveShopStage(db, shop.id, now, shopDayBounds(now, shop.timezone).from),
+      // A shop that has not said the world may read its boats publishes none
+      // of this (ADR 20260908-one-hand, decision 6, lever U, owner call j):
+      // the panel, its Follow door and the boat's own page go together, and
+      // the switch is off until a shop turns it on.
+      isEmbed || !shop.publicBoatLine
+        ? null
+        : liveShopStage(db, shop.id, now, shopDayBounds(now, shop.timezone).from),
     ]);
   // The sentences, composed here because word order and the site's place in
   // them are a locale's choice rather than a component's. The boat is the
@@ -467,6 +489,29 @@ export default async function SchedulePage({
           .map((trip) => trip.id)
       : [],
   );
+
+  /**
+   * **Why a departure that demands a card is open to this reader** — one
+   * sentence per row, and only for a reader whose shelf cookie verified.
+   *
+   * The decision is `cardClearsDeparture`, which is the ladder only and never a
+   * gate; a course session is outside it for the same reason its requirement is
+   * not rendered at all.
+   */
+  const shelfCard =
+    shelf && shelf.file.certification.state !== "none" ? shelf.file.certification : null;
+  const clearedByCard = new Map<string, string>();
+  if (shelfCard) {
+    const worded = t("shelf.levelClears", {
+      level: t(DIVER_CERTIFICATION_LEVEL_KEYS[shelfCard.level]),
+    });
+    for (const trip of upcoming) {
+      if (trip.course) continue;
+      const required = requirementsByTrip.get(trip.id)?.minimumCertificationLevel;
+      if (cardClearsDeparture(shelfCard.level, required)) clearedByCard.set(trip.id, worded);
+    }
+  }
+
   const visibleUpcoming = hideAboveFilter
     ? upcoming.filter((trip) => !aboveStatedLevel.has(trip.id))
     : upcoming;
@@ -623,7 +668,16 @@ export default async function SchedulePage({
       requirements: requirement ? tripRequirementMarkers(t, requirement) : [],
       // Marked, never removed, unless the reader asked for the shorter list
       // (issue #696) — and the word is what gives the dimming a name.
-      aboveLevel: aboveStatedLevel.has(trip.id) ? t("schedule.filters.aboveLevelChip") : null,
+      // **The reader's own card wins over the filter's warn.** A diver whose
+      // phone carries their shelf is not guessing at a level: the shop holds
+      // their card, so a departure that demands one either is or is not open to
+      // them, and saying "Above your level" beside a card that clears it would
+      // be the page arguing with the file.
+      aboveLevel:
+        aboveStatedLevel.has(trip.id) && !clearedByCard.has(trip.id)
+          ? t("schedule.filters.aboveLevelChip")
+          : null,
+      clears: clearedByCard.get(trip.id) ?? null,
       capacityText: seats.text,
       capacityTone: seats.tone,
       price:
@@ -663,6 +717,63 @@ export default async function SchedulePage({
       price: total !== null ? formatMoneyScanned(total, currency, locale) : null,
     };
   });
+
+  /**
+   * **The greeting, and the two rows under it** (slice 20t).
+   *
+   * The sentence names the diver and which visit the next one is — `diveCount`
+   * is days already behind them, so the *next* is one past it, and both
+   * surfaces read the same number because both read the same field. Which of
+   * the two sentences it is turns on whether the seat they hold is today in
+   * **the shop's own day**, never the reader's: a diver reading from a hotel
+   * three zones east must not be told tonight about tomorrow.
+   */
+  const yours = shelf
+    ? (() => {
+        const rows: YoursRow[] = [];
+        if (shelf.next) {
+          rows.push({
+            id: shelf.next.tripId,
+            href: publicTripPath(shopSlug, shelf.next.tripId),
+            title: shelf.next.title,
+            when: `${formatRelativeDay(shelf.next.startsAt, now, locale, tz)} · ${formatTime(shelf.next.startsAt, locale, tz)}`,
+            because: null,
+          });
+        }
+        if (shelf.sameBoat) {
+          rows.push({
+            id: shelf.sameBoat.tripId,
+            href: publicTripPath(shopSlug, shelf.sameBoat.tripId),
+            title: shelf.sameBoat.title,
+            when: `${formatShortDate(shelf.sameBoat.startsAt, locale, tz)} · ${formatTime(shelf.sameBoat.startsAt, locale, tz)}`,
+            because: t(
+              shelf.sameBoat.because === "boat" ? "shelf.sameBoatBoat" : "shelf.sameBoatSeries",
+              { weekday: formatWeekday(shelf.sameBoat.startsAt, locale, tz) },
+            ),
+          });
+        }
+        const name = shelf.diver.firstName;
+        const choice = chooseShelfGreeting({
+          diveCount: shelf.diveCount,
+          nextStartsAt: shelf.next?.startsAt ?? null,
+          now,
+          timeZone: tz,
+        });
+        const greeting =
+          choice.kind === "cold"
+            ? t("shelf.welcomeCold", { name })
+            : choice.kind === "tonight"
+              ? t("shelf.welcomeTonight", { name, n: choice.ordinal })
+              : t("shelf.welcomeUpcoming", {
+                  name,
+                  n: choice.ordinal,
+                  // Not null on this branch by construction — `upcoming` is the
+                  // answer only when a seat was passed in.
+                  day: formatRelativeDay(shelf.next?.startsAt ?? now, now, locale, tz),
+                });
+        return { greeting, rows };
+      })()
+    : null;
 
   return (
     <main
@@ -721,6 +832,13 @@ export default async function SchedulePage({
                 eyebrow={t("tripStage.liveEyebrow")}
                 sentence={liveStageSentence}
                 meta={liveStageMeta}
+                // The door to that boat's own day (ADR 20260908-one-hand,
+                // decision 6, lever U). Reached only when the switch is on,
+                // because `liveStage` is null without it.
+                follow={{
+                  href: publicBoatPath(shopSlug, liveStage.tripId),
+                  label: t("boatLine.follow"),
+                }}
               />
             ) : null}
             {nextBoat ? (
@@ -755,6 +873,22 @@ export default async function SchedulePage({
           </div>
         </div>
       )}
+
+      {/* **"Yours", above the week** (slice 20t). A diver whose phone carries
+          their shelf is checking one of two things — when they are next out,
+          and whether the boat they liked runs again — so both sit above the
+          board rather than inside it. The week below is unchanged and complete:
+          being greeted hides nothing. Renders nothing at all without the
+          cookie, which is every anonymous visitor. */}
+      {yours ? (
+        <YoursGroup
+          heading={t("shelf.yoursHeading")}
+          greeting={yours.greeting}
+          rows={yours.rows}
+          shopSlug={shopSlug}
+          shelfLabel={t("shelf.yoursShelf")}
+        />
+      ) : null}
 
       <div className={isEmbed ? undefined : "mt-10"}>
         {isEmbed ? null : (

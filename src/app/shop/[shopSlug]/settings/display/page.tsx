@@ -1,14 +1,35 @@
 import type { Metadata } from "next";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
+import { FieldActions, FieldGrid } from "@/components/ui/form";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { listDisplayTokens } from "@/db/display-tokens";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { DISPLAY_LABEL_MAX_LENGTH } from "@/lib/display-tokens";
 import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
+import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { savePublicBoatLineAction, saveYearOnDivedayAction } from "./actions";
 import { DisplayLinksPanel } from "./DisplayLinksPanel";
 import type { DisplayLinkCopy, DisplayLinkView } from "./display-panel-types";
+import { WorldPanel } from "./WorldPanel";
+
+/**
+ * What the year switch says back. Resolved through `noticeFromParam` and never
+ * a bare index: the parameter is attacker-supplied.
+ */
+/** Names the year section and the form inside it — see the render for why. */
+const YEAR_SECTION_ID = "year-on-diveday";
+
+const YEAR_NOTICES: Record<string, { tone: NoticeTone; text: StaffMessageKey }> = {
+  "year-on-diveday": { tone: "success", text: "display.year.noticeOn" },
+  "year-off-diveday": { tone: "success", text: "display.year.noticeOff" },
+  "display-not-authorized": { tone: "warning", text: "display.notice.denied" },
+};
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately from another `/shop` page, where the staff shell is already
@@ -27,10 +48,13 @@ export const metadata: Metadata = { title: "Lobby display — DiveDay" };
  */
 export default async function LobbyDisplayPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{ notice?: string }>;
 }) {
   const { shopSlug } = await params;
+  const { notice } = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonManageShopSettings,
     refusal: { notice: "settings-not-authorized" },
@@ -38,6 +62,7 @@ export default async function LobbyDisplayPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const links = await listDisplayTokens(db, { shopId: session.user.shopId });
+  const yearNotice = noticeFromParam(notice, YEAR_NOTICES);
 
   const copy: DisplayLinkCopy = {
     createHeading: t("display.create.heading"),
@@ -92,6 +117,76 @@ export default async function LobbyDisplayPage({
         description={t("display.description")}
       />
       <DisplayLinksPanel copy={copy} screens={screens} maxLabelLength={DISPLAY_LABEL_MAX_LENGTH} />
+      {/* **What the world can see** (ADR 20260908-one-hand, decision 6, lever
+          U). Below the screens rather than above them: the page's own subject
+          is the links a shop puts on its own walls, and this is the one row
+          about what leaves the building. */}
+      <WorldPanel
+        action={savePublicBoatLineAction}
+        on={shop.publicBoatLine}
+        copy={{
+          heading: t("display.world.heading"),
+          rowHeading: t("display.world.boatLine.heading"),
+          detail: t("display.world.boatLine.detail"),
+          label: t("display.world.boatLine.label"),
+          valueOn: t("display.world.boatLine.valueOn"),
+          valueOff: t("display.world.boatLine.valueOff"),
+          submit: t("display.world.boatLine.submit"),
+          submitting: t("display.world.boatLine.submitting"),
+        }}
+      />
+
+      {/*
+        **What the shop shows the world, on the page about screens the shop
+        puts things on** (ADR 20260908-one-hand, decision 6, lever T). The
+        sentence under the heading names exactly what leaves: the year card,
+        and no money on it. Off until an owner says otherwise — DiveDay's
+        homepage carries a real shop's card only with that shop's yes, which is
+        the whole of H-71 (k).
+      */}
+      {/*
+        **The form carries its own name**, from the heading above it, because
+        this page holds more than one form with a Save button on it: an
+        unqualified "Save" is ambiguous to a screen reader reading the page's
+        controls, and to anything else addressing them one at a time.
+      */}
+      <SectionCard as="section" className="mt-10 p-5 sm:p-6">
+        <h2 id={YEAR_SECTION_ID} className={SECTION_TITLE_CLASS}>
+          {t("display.year.heading")}
+        </h2>
+        <p className="mt-1 text-sm text-muted">{t("display.year.description")}</p>
+        {yearNotice ? (
+          <ShopNotice tone={yearNotice.tone} className="mt-4">
+            {t(yearNotice.text)}
+          </ShopNotice>
+        ) : null}
+        <FieldGrid
+          as="form"
+          action={saveYearOnDivedayAction}
+          columns={1}
+          className="mt-4"
+          aria-labelledby={YEAR_SECTION_ID}
+        >
+          <label className="flex min-h-11 items-center gap-3 text-sm">
+            <input
+              name="showYearOnDiveday"
+              type="checkbox"
+              defaultChecked={shop.showYearOnDiveday}
+              className="size-4 accent-primary"
+            />
+            {t("display.year.label")}
+          </label>
+          <p className="text-sm text-muted">{t("display.year.detail")}</p>
+          <FieldActions>
+            <SubmitButton
+              pendingLabel={t("display.year.submitting")}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {t("display.year.submit")}
+            </SubmitButton>
+          </FieldActions>
+        </FieldGrid>
+      </SectionCard>
     </main>
   );
 }

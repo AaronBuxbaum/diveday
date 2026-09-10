@@ -434,6 +434,22 @@ export const RATE_LIMITS = {
    */
   selfRegisterEmailByRecipient: perHour(3),
   /**
+   * The gift pass, per **recipient address** (security review of the gift
+   * slice, finding 1c).
+   *
+   * `selfRegisterEmailByRecipient`'s shape and its reason exactly. The public
+   * gift form takes an address nobody has proved anything about and mails it
+   * the shop's own branded pass, and neither the booking limiter (per IP) nor
+   * the checkout (per seat) is keyed on the inbox being written *to*. On a
+   * priced departure money is the real bound — the pass now goes out from the
+   * paid cascade — but an unpriced or pay-at-the-shop departure has no such
+   * bound at all, and that is the one this exists for.
+   *
+   * An empty bucket drops the *send*, never the seat: the giver still holds
+   * their own page and the counter can seat the friend by name.
+   */
+  giftPassByRecipient: perHour(3),
+  /**
    * Contact-email confirmation links (issue #1288), per **shop** and per
    * **recipient address**. The settings form takes any address and the resend
    * control mints a fresh link each tap, and a demo shop's owner login is one
@@ -586,6 +602,26 @@ export const RATE_LIMITS = {
    * because the first was made would read as the feature being broken.
    */
   readinessLinkResendByBooking: perHour(5),
+  /**
+   * The shelf link, asked for from the **recap** (slice 20t).
+   *
+   * Tighter than its two siblings above, and the reason is who can reach it. A
+   * recap link is signed for 180 days, cannot be revoked, and is written to be
+   * forwarded — the page it sits on has a "share with a buddy" control. So the
+   * bearer of that link is not reliably the diver, and the door mails the
+   * address on the booking: without a bucket it is a way to send one person as
+   * much mail as an attacker can tap, from a link they were handed rather than
+   * one they had to guess.
+   *
+   * Three an hour is past any honest use (a diver asks once, and once more when
+   * the first went to spam) and far under a flood. **An empty bucket answers
+   * exactly as a successful send does** — see `mailShelfFromRecapAction` — so
+   * the door cannot be read as an oracle for whether an address is on file.
+   *
+   * The thread's own door needs no bucket: it mints and navigates rather than
+   * sending, so there is no inbox to fill.
+   */
+  shelfLinkSendByBooking: perHour(3),
   /**
    * Core Web Vitals beacons to `/api/vitals`, per IP.
    *

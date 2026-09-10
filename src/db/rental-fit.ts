@@ -154,6 +154,61 @@ export async function saveRentalFitNote(
 }
 
 /**
+ * **The four sizes on their own** — what the diver's shelf writes.
+ *
+ * The shelf shows the sizes the shop has and lets the diver correct them, and
+ * that is the whole of what it may write: which pieces the shop supplies is the
+ * shop's answer, not the diver's, and `saveRentalFit` above would need all
+ * eleven `rents_*` booleans posted to leave them alone. Same shape as
+ * `saveRentalFitNote` for the same reason — one form, one set of columns, and
+ * nothing a diver did not touch.
+ *
+ * `fit_stated_at` **is** set here, unlike the note writer: four sizes typed by
+ * the diver are a stated fit, which is exactly what the packing list should
+ * read them as. An emptied box clears that size, which is the diver saying they
+ * do not know it rather than a value to keep.
+ *
+ * Same tenant proof as its two siblings: a copied URL cannot write a size into
+ * another shop's record.
+ */
+export async function saveRentalFitSizes(
+  db: AppDb,
+  input: {
+    shopId: string;
+    personId: string;
+    bcdSize: string;
+    wetsuitSize: string;
+    bootSize: string;
+    finSize: string;
+  },
+) {
+  const [person] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+    .limit(1);
+  if (!person) return null;
+
+  const values = {
+    bcdSize: optional(input.bcdSize),
+    wetsuitSize: optional(input.wetsuitSize),
+    bootSize: optional(input.bootSize),
+    finSize: optional(input.finSize),
+    fitStatedAt: nowDate(),
+    updatedAt: nowDate(),
+  };
+  const [profile] = await db
+    .insert(rentalFitProfiles)
+    .values({ shopId: input.shopId, personId: input.personId, ...values })
+    .onConflictDoUpdate({
+      target: [rentalFitProfiles.shopId, rentalFitProfiles.personId],
+      set: values,
+    })
+    .returning();
+  return profile ?? null;
+}
+
+/**
  * **Keep the size that actually went out** (issue #1174, delight report D14).
  *
  * The evening's one-tap answer to "Hugo's BCD went out as L — keep that as the

@@ -32,8 +32,10 @@ import {
   bookingArrivalEvents,
   bookingCheckoutBookings,
   bookingCheckouts,
+  bookingGifts,
   bookingPaymentEvents,
   bookingPayments,
+  bookingReferrals,
   bookings,
   buddyPairMembers,
   certificationLevel,
@@ -93,6 +95,7 @@ import {
   tripScheduleDays,
   tripSeries,
   tripSeriesSkips,
+  tripSightings,
   tripStageEvents,
   trips,
   tripWaitlistEntries,
@@ -484,6 +487,21 @@ export async function loadShopExportBundleInput(
         .where(eq(bookingPayments.shopId, shopId));
       const paymentByBooking = new Map(paymentRows.map((row) => [row.bookingId, row]));
 
+      // The gift on a seat and the diver's link that brought one, both folded
+      // into bookings.csv beside `party_lead_booking_id` (ADR 20260908-one-hand,
+      // decision 6, lever W).
+      const giftByBooking = new Map(
+        (await tx.select().from(bookingGifts).where(eq(bookingGifts.shopId, shopId))).map((row) => [
+          row.bookingId,
+          row,
+        ]),
+      );
+      const buddyReferralByBooking = new Map(
+        (await tx.select().from(bookingReferrals).where(eq(bookingReferrals.shopId, shopId))).map(
+          (row) => [row.bookingId, row.referredByBookingId],
+        ),
+      );
+
       // The history behind those current rows. `booking_payments` folds into
       // bookings.csv as one payment_* column set — the state as it stands —
       // and refunds overwrite it in place, so without this file the bundle
@@ -511,6 +529,19 @@ export async function loadShopExportBundleInput(
         .from(executedDives)
         .where(eq(executedDives.shopId, shopId))
         .orderBy(asc(executedDives.tripId), asc(executedDives.diveNumber));
+
+      // The crew's own tally beside the dive log it sits under. Ordered by
+      // departure then site then species, so a reader walking the file stays
+      // inside one day and one reef.
+      const sightingRows = await tx
+        .select()
+        .from(tripSightings)
+        .where(eq(tripSightings.shopId, shopId))
+        .orderBy(
+          asc(tripSightings.tripId),
+          asc(tripSightings.diveSiteName),
+          asc(tripSightings.speciesSlug),
+        );
 
       // Which seats each of those attempts was paying for. Ordered by checkout
       // then booking so a reader walking the file stays inside one attempt.
@@ -890,6 +921,10 @@ export async function loadShopExportBundleInput(
             // restored from one must not come back published.
             "search_listing_opt_out_at",
             "tide_window_public",
+            "public_boat_line",
+            // The shop's yes for its year card on DiveDay's pages, which is the
+            // shop's setting and so the shop's to take with it.
+            "show_year_on_diveday",
             "conservation_commitments",
             "tagline",
             "description",
@@ -951,6 +986,8 @@ export async function loadShopExportBundleInput(
               shop.seasonStartDay,
               shop.searchListingOptOutAt,
               shop.tideWindowPublic,
+              shop.publicBoatLine,
+              shop.showYearOnDiveday,
               JSON.stringify(shop.conservationCommitments),
               shop.tagline,
               shop.description,
@@ -1814,6 +1851,19 @@ export async function loadShopExportBundleInput(
             // CSV cell either — `csvCell`'s formula guard covers the one
             // reachable shape, a leading `-`.
             "referral_source",
+            // **A seat one person bought for another** (ADR 20260908-one-hand,
+            // decision 6, lever W), and **which diver's link brought this one**
+            // (the buddy seat). Both are plain facts about the seat, in exactly
+            // the class `party_lead_booking_id` and `referral_source` above are
+            // in, so both travel with it rather than in files of their own: a
+            // shop that exported its bookings and got them back would otherwise
+            // have lost who paid for a third of Saturday's boat, which is the
+            // one thing a refund conversation needs.
+            "gift_giver_name",
+            "gift_giver_email",
+            "gift_receiver_name",
+            "gift_message",
+            "referred_by_booking_id",
             // The diver's own consent to have the crew told this is a first
             // trip, or a return after a long gap (issue #1182). A statement
             // they made about themselves on this seat, the same kind of record
@@ -1843,6 +1893,7 @@ export async function loadShopExportBundleInput(
           ],
           rows: bookingRows.map((row) => {
             const payment = paymentByBooking.get(row.id);
+            const gift = giftByBooking.get(row.id);
             return [
               row.id,
               row.tripId,
@@ -1859,6 +1910,11 @@ export async function loadShopExportBundleInput(
               row.partyLeadBookingId,
               row.claimedAt,
               row.referralSource,
+              gift?.giverName,
+              gift?.giverEmail,
+              gift?.receiverName,
+              gift?.message,
+              buddyReferralByBooking.get(row.id),
               row.welcomeSharedAt,
               row.carriedFactsConfirmedAt,
               row.courseNextStep,
@@ -2216,6 +2272,41 @@ export async function loadShopExportBundleInput(
             row.updatedAt,
           ]),
           note: EXPORT_FILE_NOTES["executed_dives.csv"],
+        },
+        {
+          file: "trip_sightings.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "dive_site_id",
+            // The site's name as the crew saw it, snapshotted at the tap: a
+            // shop that renames or deletes a reef still has a legible log.
+            "dive_site_name",
+            // A catalog slug rather than a name, for the reason
+            // executed_dives.csv carries one: the words are DiveDay's copy in
+            // the reader's language and a CSV has no reader to resolve them for.
+            "species_slug",
+            "count",
+            "recorded_by_person_id",
+            "recorded_at",
+            "deleted_at",
+            "updated_at",
+          ],
+          rows: sightingRows.map((row) => [
+            row.id,
+            row.tripId,
+            tripTitle.get(row.tripId),
+            row.diveSiteId,
+            row.diveSiteName,
+            row.speciesSlug,
+            row.count,
+            row.recordedByPersonId,
+            row.recordedAt,
+            row.deletedAt,
+            row.updatedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_sightings.csv"],
         },
         {
           file: "booking_arrival_events.csv",
@@ -4973,6 +5064,9 @@ export async function loadShopExportCounts(
     ),
     "executed_dives.csv": await countOf(
       db.select({ n: count() }).from(executedDives).where(eq(executedDives.shopId, shopId)),
+    ),
+    "trip_sightings.csv": await countOf(
+      db.select({ n: count() }).from(tripSightings).where(eq(tripSightings.shopId, shopId)),
     ),
     "internal_notes.csv": await countOf(
       db.select({ n: count() }).from(internalNotes).where(eq(internalNotes.shopId, shopId)),

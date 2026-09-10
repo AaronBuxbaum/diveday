@@ -58,6 +58,7 @@ const EXPECTED_FILES = [
   "booking_checkouts.csv",
   "booking_checkout_bookings.csv",
   "executed_dives.csv",
+  "trip_sightings.csv",
   "booking_arrival_events.csv",
   "roll_call_events.csv",
   "roll_call_crew_events.csv",
@@ -128,6 +129,7 @@ const EXPORTED_TABLES = [
   "booking_checkouts",
   "booking_checkout_bookings",
   "executed_dives",
+  "trip_sightings",
   "internal_notes",
   "activity_events",
   "notification_deliveries",
@@ -174,6 +176,8 @@ const EXPORTED_TABLES = [
 const FOLDED_TABLES = [
   "person_roles", // people.csv / trip_assignments.csv `roles`
   "booking_payments", // bookings.csv payment_* columns
+  "booking_gifts", // bookings.csv gift_* columns — a gift is a fact about the seat
+  "booking_referrals", // bookings.csv `referred_by_booking_id`
 ];
 
 /**
@@ -220,6 +224,11 @@ const EXCLUDED_TABLES = [
   // exactly the reason notification_delivery_attempts is.
   "waiver_deliveries",
   "notification_send_queue", // operational retry state, not shop records
+  // When each printed sheet was last printed (ADR 20260908-one-hand, decision
+  // 6, lever X). Not a shop record at all: every sheet reads what its page
+  // reads, and the only thing stored is how old the copy on the console is.
+  // There is nothing here another system could act on.
+  "shop_print_runs",
   // Per-device Web Push credentials (ADR 20260804-manifest-web-push). Excluded
   // for two independent reasons: they are meaningless in another system — an
   // endpoint is issued by a browser vendor to one installed app on one device,
@@ -266,6 +275,7 @@ const EXCLUDED_TABLES = [
   "display_tokens", // bearer credentials for a lobby screen's departures board, never exported
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "person_shelf_tokens", // bearer credentials over a diver's own file, never exported — same reasoning as booking_capabilities
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   // The shop's own Meta access token (sealed) plus the provider linkage around
   // it. Never exported, for both reasons already on this list: it is a live
@@ -354,6 +364,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   staff_shifts: ["shop_id"],
   staff_credentials: ["shop_id"],
   executed_dives: ["shop_id"],
+  trip_sightings: ["shop_id"],
   review_moderation_events: ["shop_id"],
   people: [
     "shop_id",

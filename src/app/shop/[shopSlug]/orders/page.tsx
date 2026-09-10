@@ -11,6 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { canPersonManagePaymentSettings } from "@/db/authz";
+import { giftGiversByBooking } from "@/db/gifts";
 import { listImportedPaymentHistory } from "@/db/imported-payment-history";
 import { ORDER_DEFAULT_RANGE_DAYS, pagedOrdersByDay } from "@/db/orders";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
@@ -345,6 +346,18 @@ export default async function OrdersIndexPage({
   );
   const clearHref = `/shop/${shopSlug}/orders`;
 
+  // **Which of these seats were gifts** (ADR 20260908-one-hand, decision 6,
+  // lever W). One query for the page, keyed on the bookings this page actually
+  // rendered — the till says the source in the row's own sentence rather than
+  // growing a badge, a column or a filter for it.
+  const giftGivers = await giftGiversByBooking(
+    db,
+    shop.id,
+    ledger.groups.flatMap((group) =>
+      group.orders.flatMap((row) => (row.order.bookingId ? [row.order.bookingId] : [])),
+    ),
+  );
+
   const today = calendarDateInTimezone(nowDate(), shop.timezone);
   const days: OrderLedgerDay[] = ledger.groups.map((group) => {
     // A calendar day has no instant in it, so it is formatted from its own
@@ -378,7 +391,20 @@ export default async function OrdersIndexPage({
           // well as on screen (`OrdersLedger.test.tsx`).
           linkLabel: t("orders.index.ledger.rowLabel", { name: row.person.fullName, amount }),
           diver: row.person.fullName,
-          detail: row.trip?.title ?? row.order.description ?? null,
+          // The departure, then who gave the seat — the middle dot joins
+          // facts, and a gift with no departure title still says the one thing
+          // that explains the row.
+          detail:
+            [
+              row.trip?.title ?? row.order.description ?? null,
+              row.order.bookingId && giftGivers.has(row.order.bookingId)
+                ? t("orders.index.ledger.giftFrom", {
+                    giver: giftGivers.get(row.order.bookingId) as string,
+                  })
+                : null,
+            ]
+              .filter((part): part is string => Boolean(part))
+              .join(" · ") || null,
           // Paid is the expected state and renders as nothing at all; only the
           // exceptional statuses earn a badge (principle 9). That is this
           // page's call, made here — `ORDER_STATUS_TONES` still knows paid is

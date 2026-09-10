@@ -65,6 +65,20 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   // TV's browser is exactly the kind of client that would report a page URL
   // to telemetry forever.
   "board",
+  // The diver's shelf (slice 20t): `/shelf/[token]` is a year-long, revocable
+  // credential over one person's whole file at one shop — their card, where
+  // their release stands, their sizes. Longer-lived than every booking token
+  // and shorter than the calendar feed, and the one page a diver keeps on a
+  // phone rather than opening once, so it is exactly the URL a browser or a
+  // beacon would report repeatedly.
+  "shelf",
+  // The giver's own page for a gift seat (ADR 20260908-one-hand, decision 6,
+  // lever W): `/gift/[token]` is a stateless signed token over one booking,
+  // living a season and revocable by nothing — the recap link's shape, and so
+  // the recap link's exposure. It reads four facts about somebody else's
+  // departure, which is the narrowest payload here, and the giver is exactly
+  // the kind of reader who opens it from a phone and leaves the tab.
+  "gift",
 ] as const;
 
 /**

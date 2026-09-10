@@ -16,6 +16,7 @@ import { getDiverProfile } from "@/db/divers";
 import { canPersonExportShopData } from "@/db/export";
 import { personThread } from "@/db/inbound-messages";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
+import { shelfTokenStanding } from "@/db/person-shelf-tokens";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getSupportNeeds } from "@/db/support-needs";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
@@ -41,6 +42,7 @@ import { NoticeBanner } from "./_components/NoticeBanner";
 import { RemoveDiver } from "./_components/RemoveDiver";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { resolveDiverNotice } from "./_components/record-notices";
+import { ShelfGroup } from "./_components/ShelfGroup";
 import { SupportNeedsPanel } from "./_components/SupportNeedsPanel";
 import { WaiverGroup } from "./_components/WaiverGroup";
 import { bookingIsAhead } from "./_lib/status";
@@ -164,6 +166,7 @@ export default async function DiverDetailPage({
     supportNeeds,
     status,
     thread,
+    shelfStanding,
   ] = await Promise.all([
     canPersonDeleteDiver(db, shop.id, session.user.personId),
     canPersonMergeDiver(db, shop.id, session.user.personId),
@@ -197,6 +200,9 @@ export default async function DiverDetailPage({
     // What this diver wrote and what the shop wrote back, interleaved by time.
     // Shop-scoped from the session like every read here.
     personThread(db, shop.id, personId),
+    // How the diver's own shelf link is doing (slice 20t): opens, when, and how
+    // many phones hold one. Shop-scoped from the session like every read here.
+    shelfTokenStanding(db, { shopId: shop.id, personId, now }),
   ]);
   const mergeCandidates =
     canMerge && !removed ? await listDiverMergeCandidates(db, shop.id, personId) : [];
@@ -385,6 +391,18 @@ export default async function DiverDetailPage({
         locale={locale}
         t={t}
         status={noticeForForm(diverNotice, "fit")}
+      />
+      {/* After the gear it shares its sizes with, and before the notes staff
+          write for the crew: the shelf is the diver's own view of everything
+          above it (slice 20t). */}
+      <ShelfGroup
+        shopSlug={shopSlug}
+        personId={personId}
+        standing={shelfStanding}
+        locale={locale}
+        timezone={shop.timezone}
+        t={t}
+        status={noticeForForm(diverNotice, "shelf")}
       />
       <DiverNotesSection
         notes={notes}

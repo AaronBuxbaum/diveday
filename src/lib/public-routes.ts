@@ -46,6 +46,27 @@ export function publicAvailabilityPath(shopSlug: string): string {
   return `${publicSchedulePath(shopSlug)}/availability.json`;
 }
 
+/**
+ * The shop's year as one 3:2 image (ADR 20260908-one-hand, decision 6, lever
+ * T). It exists **only while the shop says yes**: with
+ * `shops.show_year_on_diveday` off the route 404s, which is what lets
+ * DiveDay's homepage embed it for the shops that turned it on and nobody
+ * else's. Divers, boats out and sites — never money, never a diver's name.
+ */
+export function publicShopYearCardPath(shopSlug: string): string {
+  return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/year-card`;
+}
+
+/**
+ * **The giver's own page for a gift seat** (ADR 20260908-one-hand, decision 6,
+ * lever W). Outside `/s/<shopSlug>` like every other bearer page, because the
+ * URL is the capability rather than the shop: the token names the booking, and
+ * the page reads four facts off it (`src/lib/gift-links.ts`).
+ */
+export function giftLinkPath(token: string): string {
+  return `/gift/${token}`;
+}
+
 /** The site-level overview an agent reads first, at the conventional path. */
 export const LLMS_TXT_PATH = "/llms.txt";
 
@@ -62,6 +83,20 @@ export function publicTripCalendarPath(shopSlug: string, tripId: string): string
 /** A small, public HTML arrival card that can be saved for a no-signal morning. */
 export function publicTripArrivalCardPath(shopSlug: string, tripId: string): string {
   return `${publicTripPath(shopSlug, tripId)}/arrival-card`;
+}
+
+/**
+ * **Follow one departure's day** — ADR 20260908-one-hand, decision 6, lever U.
+ *
+ * One page per boat per day, for the person on the dock a diver shared it
+ * with. The trip id sits in the URL unhashed because it is not a secret: the
+ * page carries a stage word the crew tapped and the time they tapped it, and
+ * nothing a stranger should not read. A capability path (`/ready/<token>`)
+ * would be the wrong shape here — two divers on the same boat share one page,
+ * and nothing on it is theirs to revoke.
+ */
+export function publicBoatPath(shopSlug: string, tripId: string): string {
+  return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/boats/${tripId}`;
 }
 
 /** The diver-facing course catalog (the staff roster is /shop/<slug>/courses). */
