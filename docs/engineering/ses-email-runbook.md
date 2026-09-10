@@ -450,7 +450,7 @@ of its own. The SES sender user gets `s3:GetObject` on the bucket and nothing el
 (`ses-inbound-mx-dns` and `ses-inbound-rule-set-active`; neither is on the short account-approval
 list that renders to [manual-actions.md](manual-actions.md)): the MX record for
 `inbound.ses.dive.day` (Vercel DNS, the `SesInboundMxRecord` output spells it out), and
-activating the rule set — `aws ses set-active-receipt-rule-set --rule-set-name diveday-inbound`.
+activating the rule set — `aws ses set-active-receipt-rule-set --region us-east-2 --rule-set-name diveday-inbound`.
 SES allows one active set per region and the switch has no CloudFormation resource, so the stack
 never flips it. Then set `EMAIL_INBOUND_SNS_TOPIC_ARN` and `EMAIL_INBOUND_S3_BUCKET` from the
 outputs (`pnpm infra:deploy` writes both) and redeploy the app; until they are set the route

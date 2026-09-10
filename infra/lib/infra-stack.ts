@@ -2465,11 +2465,13 @@ exports.handler = async (event) => {
         category: "AWS account",
         when: "once per region, after the first deploy that created it",
         why: "SES allows one active receipt rule set per region and activation is a region-wide switch with no CloudFormation resource behind it. A stack that flipped it on every deploy would silently deactivate whatever else the account receives mail with, so the stack creates the diveday-inbound set and leaves the switch to a person.",
-        run: ["aws ses set-active-receipt-rule-set --rule-set-name diveday-inbound"],
+        run: [
+          `aws ses set-active-receipt-rule-set --region ${SES_REGION} --rule-set-name diveday-inbound`,
+        ],
         produces:
           "Mail to reply+<token>@inbound.ses.dive.day stored in the inbound bucket and announced on the SesInboundMailTopicArn topic, which is subscribed to /api/webhooks/email-inbound.",
         verify: [
-          "aws ses describe-active-receipt-rule-set --query Metadata.Name  # diveday-inbound",
+          `aws ses describe-active-receipt-rule-set --region ${SES_REGION} --query Metadata.Name  # diveday-inbound`,
           "Reply to any DiveDay email from a diver's address and open that diver's record: the reply is on it within a minute.",
         ],
         onFailure:
