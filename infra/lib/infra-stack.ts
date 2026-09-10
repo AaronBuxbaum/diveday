@@ -2403,6 +2403,24 @@ exports.handler = async (event) => {
         note: "The MX names the SES region. One naming a region the identity no longer lives in does not fail loudly: mail keeps sending on the shared amazonses.com envelope, with SPF aligned to Amazon rather than to us, and only DMARC reporting says so. The post-deploy wizard will not do the delete for you -- it finds a rival MX, names it, and skips its own add rather than leaving the subdomain with two.",
       },
       {
+        id: "dmarc-dns",
+        title: "Publish DMARC for the sending subdomain",
+        category: "DNS",
+        when: "once, alongside the DKIM and MAIL FROM records, and re-read whenever a second sender starts using ses.dive.day",
+        why: "No provider hands you this one, which is why it is the SES record most likely to be missing. It is also the record that counts: DMARC reads the From domain's own policy and only walks up to the organizational domain when there isn't one, so ses.dive.day's record -- not dive.day's -- is what every booking confirmation is judged by. dive.day's _dmarc is a CNAME to the mail provider's shared record (p=reject, with the provider's own ruf) and is not ours to edit.",
+        run: [
+          "pnpm exec vercel dns add dive.day _dmarc.ses TXT 'v=DMARC1; p=none; rua=mailto:aaron@dive.day'",
+        ],
+        store:
+          "Vercel -> dive.day -> DNS, on the _dmarc.ses subname. Any dive.day mailbox a person actually reads will do as the rua address; a reporting address in the same organizational domain as the reported domain needs no authorization record at the destination, which an external one would.",
+        verify: [
+          "dig +short TXT _dmarc.ses.dive.day  # v=DMARC1; p=none; rua=mailto:<the address you published>",
+        ],
+        onFailure:
+          "No answer, or an answer with no rua=, means SES mail is being judged at p=none and reporting nothing, so the path off p=none is closed: nobody can tell whether the two senders are aligned. Publish or repair the record before reading anything into a delivery problem on this identity.",
+        note: "It stays at p=none deliberately. That is what stops SES mail inheriting dive.day's p=reject before alignment is proven, so the record is doing real work even while permissive. Move it to quarantine and then reject only once aggregate reports show both senders aligned -- docs/engineering/ses-email-runbook.md, 'SPF, DKIM, DMARC'. ruf is not a substitute: failure reports carry message content and most receivers suppress them entirely.",
+      },
+      {
         id: "ses-inbound-mx-dns",
         title: "Add the inbound mail MX record",
         category: "DNS",
