@@ -805,6 +805,43 @@ new domain concept, define it here in the same PR.
   raises it and the schedule board badges the departure — **for crew as well as divers**. It comes
   in six distinct kinds, which are deliberately never worded or ranked alike — see **unaccounted
   for** below.
+  Two rules travel with it onto paper, and the **boat card** below carries both in as many words:
+  **the app is the record and the card is the fallback**, so nothing printed is ever a second,
+  quieter register; and **the roll is called by name**, every diver and every crew member, by two
+  people — a head count is the practice that leaves people behind, which is why no DiveDay surface
+  asks for one.
+- **Print register** — the pane in Settings that lists the shop's own printable sheets in the
+  groups of where the paper goes: at the dock and the door, on the boat, for a diver, on the wall
+  (ADR 20260908-one-hand, decision 6, lever X). Every row names the sheet, the paper it prints on,
+  one sentence, and the day it was last printed; its door is a form rather than a link, because
+  opening a sheet is what records that day. A sheet reads what its page reads at the moment it is
+  drawn — nothing on paper is stored copy.
+- **Print run** — one row of `shop_print_runs`: the day a shop last printed one sheet (and, for the
+  boat card, one hull). One row per sheet per subject, replaced in place rather than appended, and
+  the whole of what the register keeps. The paper pass records the day and never the diver.
+- **Boat card** — the laminated A5 card taped to a console: two faces of one lamination, a day side
+  and a night side, one per hull. It exists for the minute the app is not there, so it carries the
+  roll by name, what to do if someone is missing, the shop's own emergency numbers and vessel, the
+  shop's emergency action plan, and ruled blanks for the oxygen and first aid kits. **It wears the
+  boat's colours, never the shop's** — the same ban that keeps a storefront palette off a manifest —
+  and the night side is read under a red torch, so its ink is off-white rather than any hue. Nothing
+  about a diver is on it: no name, no count of who is aboard, and no medical fact of any kind. The
+  card cannot paginate, and says on its own fold line that the app is the record.
+- **Dock sign** — the A3 sheet at the slip: the shop's name and meeting point, its boats with their
+  capacity and the shop's own sentence for each, the counter's number, the shop's dock call, and two
+  codes. **No names, ever** — who is on a boat is the manifest's business, and a manifest is not a
+  public document.
+- **Window sticker** — the 100 mm square for the door and the boat's console: one sentence and the
+  storefront's code. No name on it either.
+- **Site briefing card** — the A5 card on the crew's clipboard, one per dive site: the site editor's
+  own briefing and the field guide the shop picked, so the words a diver hears on the boat are the
+  words on the storefront. The briefing is the shop's; the species names are DiveDay's, in the
+  reader's language.
+- **Paper pass** — the A6 pass printed at the counter for a diver without a phone: the departure,
+  the hull, the meeting point, the shop's dock call, what to bring, and a code carrying **the
+  booking's id and nothing else**. A booking id is not a capability — the counter resolves it inside
+  its own shop — so a pass left on a boat seat hands a finder nothing. It carries the diver's name
+  and no readiness, waiver or medical state.
 - **Pre-departure checklist** — a shop-authored, ordered list of lines a crew confirms once before
   a boat leaves the dock (emergency oxygen, life jackets, a fire extinguisher — whatever the shop's
   own flag state and vessel class require). DiveDay writes none of the content; a shop types its
@@ -892,6 +929,9 @@ new domain concept, define it here in the same PR.
   text throughout, including the phone lines: an international dive line is not a `tel:`-shaped
   string until the shop writes it, and nothing on this card links, dials, escalates, or opens an
   incident. It is a laminated card retyped, priced at zero words of DiveDay's own.
+  The **boat card** below is the same card, printed: it reads these values and prints a ruled blank
+  wherever the shop has recorded nothing, because the rule that forbids a plausible wrong number on
+  the screen forbids it on the console too.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and who recorded it. It carries **no free text**: the
   note field was removed in 2026-08, which also means a roll call records *that* a diver did not

@@ -6668,6 +6668,13 @@ test.describe("print", () => {
       .inputValue();
     await page.goto(`/shop/blue-mantis/print/boat-card/${boatId}`);
     await page.getByRole("heading", { name: "Before the boat moves" }).first().waitFor();
+    // The seeded shop has filled its emergency reference in, so this is where
+    // the card's two read-from-settings halves are proven: the vessel a rescue
+    // coordinator asks for, and the shop's own plan in the shop's own words.
+    // `shop-on-paper.spec.ts` asserts the other side of the same rule — a
+    // minted shop that has recorded none of it gets ruled blanks and no plan.
+    await expect(page.getByText("Mantis II - VHF 16, MMSI 338055501").first()).toBeVisible();
+    await page.getByRole("heading", { name: "If something goes wrong" }).first().waitFor();
     await capturePrint(page, "boat-card");
   });
 

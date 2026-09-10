@@ -42,10 +42,23 @@ describe("every sheet", () => {
     const sheet = container.querySelector<HTMLElement>(".paper-sheet");
     const box = PRINT_SHEET_BOX_MM["A3 portrait"];
     expect(sheet?.style.width).toBe(`${box.width}mm`);
-    // A floor, never a ceiling: a sheet that outgrows its paper takes a second
-    // page rather than cutting the shop's own words off.
+    // A floor by default: a sheet that outgrows its paper takes a second page
+    // rather than cutting the shop's own words off.
     expect(sheet?.style.minHeight).toBe(`${box.height}mm`);
     expect(sheet?.style.height).toBe("");
+    expect(container.querySelector(".paper-sheet-fit")).toBeNull();
+  });
+
+  it("holds a laminated card to exactly one page a side", () => {
+    // The boat card is two faces of one lamination, so a face that grew would
+    // be laminated across two cards. It is the one sheet with a ceiling, and
+    // its caller bounds the one unbounded thing on it (`boatCardPlan`).
+    const { container } = renderSheet({ fit: true });
+    const sheet = container.querySelector<HTMLElement>(".paper-sheet");
+    const box = PRINT_SHEET_BOX_MM["A5 landscape"];
+    expect(sheet?.style.height).toBe(`${box.height}mm`);
+    expect(sheet?.style.minHeight).toBe("");
+    expect(container.querySelector(".paper-sheet-fit")).not.toBeNull();
   });
 
   it("takes its band colour as a value, not a token", () => {

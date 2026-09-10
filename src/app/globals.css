@@ -756,6 +756,17 @@ textarea {
   color: var(--sheet-band-ink);
 }
 
+/*
+ * The one sheet that may not paginate. The boat card is two faces of one
+ * lamination, so a face that grew would be laminated across two cards; content
+ * that overruns is cut at the card's own edge, where the fold line makes the
+ * cut visible. Its caller bounds the one unbounded thing it prints, the shop's
+ * emergency plan (`boatCardPlan`).
+ */
+.paper-sheet-fit {
+  overflow: hidden;
+}
+
 /* The night side's band is its own ground, so it needs the rule to show. */
 .paper-sheet-night .paper-sheet-band {
   border-bottom: 1px solid var(--sheet-rule);

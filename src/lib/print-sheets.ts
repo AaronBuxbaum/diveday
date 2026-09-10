@@ -233,16 +233,36 @@ export const PRINT_SHEET_BOX_MM: Record<PrintSheetPaper, { width: number; height
  * the same rule for the screen). So a missing value is `null` here and prints
  * as a rule, and no caller may substitute a default.
  */
-export type BoatCardNumber = { label: string; value: string | null };
+/**
+ * A line on the boat card's numbers block: a stable key, a label, and either
+ * the shop's own value or nothing.
+ *
+ * **Nothing is the point.** A number DiveDay invented is worse on this card
+ * than a ruled blank a skipper fills in with a marker, because the crew
+ * dialling it has spent the minute finding out
+ * (`src/lib/emergency-reference.ts` states the same rule for the screen). So a
+ * missing value is `null` here and prints as a rule, and no caller may
+ * substitute a default.
+ *
+ * **The key is the position, never the label.** A shop's reference lines are
+ * free text and `normalizeEmergencyReference` keeps a line with a number and no
+ * label at all, so two blank or repeated labels are an ordinary state — and
+ * keying a rendered list by label would collapse them into one and drop a
+ * number off the card.
+ */
+export type BoatCardNumber = { key: string; label: string; value: string | null };
 
 /**
  * The numbers the boat card prints, in the order a crew reads them.
  *
- * The shop's own lines come first because they are the ones a shop wrote for
- * this dock; the two labelled slots below them are the ones a card is useless
- * without, and they are ruled blanks until the shop fills them in.
+ * The vessel leads, because it is the first thing a rescue coordinator asks
+ * for and the crew reading this card is the one being asked. Then the shop and
+ * whoever is ashore, then the shop's own lines in the order the shop wrote
+ * them. Every slot prints whether or not it is filled in.
  */
 export function boatCardNumbers(input: {
+  vesselLabel: string;
+  vessel: string | null;
   shopLabel: string;
   shopPhone: string | null;
   shoreLabel: string;
@@ -250,13 +270,42 @@ export function boatCardNumbers(input: {
   reference: readonly { label: string; phone: string }[];
 }): BoatCardNumber[] {
   return [
-    { label: input.shopLabel, value: blankToNull(input.shopPhone) },
-    { label: input.shoreLabel, value: blankToNull(input.shoreContact) },
-    ...input.reference.map((line) => ({
+    { key: "vessel", label: input.vesselLabel, value: blankToNull(input.vessel) },
+    { key: "shop", label: input.shopLabel, value: blankToNull(input.shopPhone) },
+    { key: "ashore", label: input.shoreLabel, value: blankToNull(input.shoreContact) },
+    ...input.reference.map((line, index) => ({
+      key: `line-${index}`,
       label: line.label.trim(),
       value: blankToNull(line.phone),
     })),
   ];
+}
+
+/**
+ * How much of the shop's emergency action plan the boat card carries.
+ *
+ * The card is two faces of one lamination and must not paginate, so the plan —
+ * free prose of whatever length a shop retyped — is bounded here rather than
+ * left to overrun the sheet. The cut is on a word boundary and carries a real
+ * ellipsis, so a crew can see the card is showing part of a longer plan instead
+ * of reading a sentence that stops mid-thought.
+ *
+ * The budget is the half-column the card has for it at A5 landscape, measured
+ * against the seeded shop's own plan. A shop whose plan does not fit on half a
+ * laminated card has a plan for a folder, not for a console.
+ */
+export const BOAT_CARD_PLAN_CHARS = 240;
+
+export function boatCardPlan(
+  plan: string | null | undefined,
+  limit = BOAT_CARD_PLAN_CHARS,
+): string | null {
+  const trimmed = plan?.trim() ?? "";
+  if (trimmed.length === 0) return null;
+  if (trimmed.length <= limit) return trimmed;
+  const cut = trimmed.slice(0, limit);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > limit / 2 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
 function blankToNull(value: string | null | undefined): string | null {
@@ -300,14 +349,16 @@ export function storefrontAddress(shopSlug: string, origin: string | null): stri
  * Nothing that rides a boat wears the shop's colour (ADR
  * 20260901-diveday-reimagined, decision 2, restated on paper), so the card is
  * drawn in boat mode's own action colour by day and on the night ground a red
- * torch reads by night. Stated as values rather than read from `--primary`
+ * torch reads by night — whose band takes the body's own off-white ink, because
+ * a red torch is monochromatic and boat mode's night cyan goes to nothing under
+ * one. Stated as values rather than read from `--primary`
  * because `@media print` redefines that token to repaint the app monochrome;
  * `print-sheets.test.ts` pins each against the block in `globals.css` it is a
  * copy of, so a palette that moved without these moving fails rather than
  * printing a card in a colour the app no longer uses.
  */
 export const BOAT_CARD_DAY = { band: "#075985", bandInk: "#ffffff" } as const;
-export const BOAT_CARD_NIGHT = { band: "#000a0f", bandInk: "#38dbf3", night: true } as const;
+export const BOAT_CARD_NIGHT = { band: "#000a0f", bandInk: "#f4fbfc", night: true } as const;
 
 /**
  * Where a sheet is drawn.

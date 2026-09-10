@@ -83,15 +83,33 @@ test.describe("the shop on paper", () => {
     // Two sides of one card, so every heading appears twice.
     await expect(page.getByRole("heading", { name: "Before the boat moves" })).toHaveCount(2);
     await expect(page.getByRole("heading", { name: "If someone is missing" })).toHaveCount(2);
-    await expect(page.getByText(/Raise help on VHF 16/).first()).toBeVisible();
-    // The count the glossary insists on: before departure *and* after every dive.
+    // The roll the glossary insists on: by name, crew included, before
+    // departure *and* after every dive.
+    await expect(page.getByText(/Call the roll by name/).first()).toBeVisible();
     await expect(page.getByText(/after every dive/).first()).toBeVisible();
+    // A missing diver is worked in the order search and rescue needs: the time
+    // and the position first, and nobody leaves the site.
+    await expect(page.getByText(/Note the time and mark the position/).first()).toBeVisible();
+    await expect(page.getByText(/Do not leave the site/).first()).toBeVisible();
     // The one rule the card exists to state.
     await expect(page.getByText(/the app is the record/i).first()).toBeVisible();
-    // The numbers block reaches the shop's own settings, and prints a labelled
-    // slot whether or not the shop has filled it in.
+    // The numbers block names every slot whether or not the shop has filled it
+    // in — the vessel first, which is what a rescue coordinator asks the crew
+    // reading this card for.
+    await expect(page.getByText("Vessel").first()).toBeVisible();
     await expect(page.getByText("Shop").first()).toBeVisible();
+    // Both kits get a rule of their own to fill in by hand.
     await expect(page.getByText("Oxygen and first aid").first()).toBeVisible();
+    await expect(page.getByText("First aid kit, where").first()).toBeVisible();
+
+    // **A minted shop has recorded none of it, and the card says nothing it
+    // does not know.** Every slot is a ruled blank rather than a plausible
+    // number, and the plan block is absent rather than a heading over nothing —
+    // which on a boat would read as a plan somebody forgot to follow. The
+    // seeded shop's filled-in card is asserted where it is photographed
+    // (`e2e/visual.spec.ts`).
+    await expect(page.locator(".paper-sheet-blank").first()).toBeVisible();
+    await expect(page.getByText("If something goes wrong")).toHaveCount(0);
   });
 
   test("the counter prints a pass for the diver it just checked in", async ({

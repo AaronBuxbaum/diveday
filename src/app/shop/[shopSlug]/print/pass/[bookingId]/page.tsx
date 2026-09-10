@@ -58,7 +58,9 @@ export default async function PaperPassPage({
   const t = staffTranslator(locale);
   const spec = printSheetSpec("paper_pass");
   const theme = deriveBrandTheme(shop.brandColor ?? DIVEDAY_BRAND_COLOR);
-  const checkInAt = new Date(booking.startsAt.getTime() - shop.dockCallMinutes * 60_000);
+  // The shop's own dock call, which is when a diver should *be there* — not
+  // when a counter opens. The same figure the confirmation email states.
+  const dockCallAt = new Date(booking.startsAt.getTime() - shop.dockCallMinutes * 60_000);
   const meetingPoint = [booking.meetingPointLabel, booking.meetingPointAddress]
     .filter((part): part is string => Boolean(part?.trim()))
     .join(", ");
@@ -99,8 +101,8 @@ export default async function PaperPassPage({
         <p className="mt-3 text-sm font-semibold">{booking.diverName}</p>
         {where.length > 0 ? <p className="paper-sheet-muted text-xs">{where.join(" · ")}</p> : null}
         <p className="paper-sheet-muted text-xs">
-          {t("print.sheet.pass.checkInFrom", {
-            time: formatTime(checkInAt, locale, shop.timezone),
+          {t("print.sheet.pass.beAtDock", {
+            time: formatTime(dockCallAt, locale, shop.timezone),
           })}
         </p>
         {shop.packingList.length > 0 ? (

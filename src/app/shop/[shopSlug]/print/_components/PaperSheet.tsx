@@ -13,9 +13,12 @@ import { PRINT_SHEET_BOX_MM, type PrintSheetPaper } from "@/lib/print-sheets";
  *
  * - **The box.** `PRINT_SHEET_BOX_MM` is the paper less the `@page` margin the
  *   route declares, so what is drawn here is the page that comes out of the
- *   printer — as a floor rather than a ceiling. A sheet whose content outgrows
- *   its paper takes a second page; it never clips, because a card that cut a
- *   shop's own briefing off would be read on a boat as the whole briefing.
+ *   printer. It is a floor by default — a sheet whose content outgrows its
+ *   paper takes a second page rather than cutting a shop's own briefing off,
+ *   which on a boat would be read as the whole briefing. `fit` makes it a
+ *   ceiling instead, for the one sheet that cannot paginate: the boat card is
+ *   two faces of one lamination, and a third page is a page nobody laminates.
+ *   Every caller of `fit` bounds its own content first (`boatCardPlan`).
  * - **The band's colour, as a value rather than a token.** `@media print`
  *   redefines `--primary` to repaint the app monochrome, so a band drawn from
  *   the token would print grey. The caller resolves the colour — the shop's
@@ -41,10 +44,16 @@ export function PaperSheet({
   band,
   foldLeft,
   foldRight,
+  fit = false,
   children,
 }: {
   paper: PrintSheetPaper;
   tone: SheetTone;
+  /**
+   * Hold the sheet to exactly one page. Only the boat card: it is two faces of
+   * one lamination, so a face that grew would be laminated across two cards.
+   */
+  fit?: boolean;
   /** What sits in the coloured band across the head of the sheet. */
   band: ReactNode;
   /** The print date, always. */
@@ -56,15 +65,18 @@ export function PaperSheet({
   const box = PRINT_SHEET_BOX_MM[paper];
   return (
     <section
-      className={`paper-sheet${tone.night ? " paper-sheet-night" : ""}`}
+      className={`paper-sheet${tone.night ? " paper-sheet-night" : ""}${
+        fit ? " paper-sheet-fit" : ""
+      }`}
       style={
         {
           width: `${box.width}mm`,
-          // A floor, not a ceiling. A shop's briefing is prose of whatever
-          // length the shop wrote, and a card that clipped it would be read on
-          // a boat as the whole briefing — so a sheet that outgrows its paper
-          // takes a second page rather than losing a word.
-          minHeight: `${box.height}mm`,
+          // A floor by default: a shop's briefing is prose of whatever length
+          // the shop wrote, and a card that clipped it would be read on a boat
+          // as the whole briefing — so a sheet that outgrows its paper takes a
+          // second page rather than losing a word. `fit` is the exception, and
+          // its caller bounds its own content instead.
+          [fit ? "height" : "minHeight"]: `${box.height}mm`,
           "--sheet-band": tone.band,
           "--sheet-band-ink": tone.bandInk,
         } as CSSProperties

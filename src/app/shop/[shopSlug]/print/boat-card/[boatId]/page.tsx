@@ -10,6 +10,7 @@ import {
   BOAT_CARD_DAY,
   BOAT_CARD_NIGHT,
   boatCardNumbers,
+  boatCardPlan,
   printSheetSpec,
   storefrontAddress,
 } from "@/lib/print-sheets";
@@ -40,11 +41,17 @@ export const metadata: Metadata = {
  *   storefront's palette (ADR 20260901-diveday-reimagined, decision 2). The day
  *   side is boat mode's own action colour; the night side is the ground a red
  *   torch reads, so the same card works on a night dive.
- * - **A number DiveDay does not have prints as a blank.** The shop's phone, who
- *   is ashore, and the shop's own emergency lines come off its settings; the
- *   oxygen kit's location and last check have no field in the tree, so they
- *   print as rules for a skipper's marker. A confidently wrong number here
- *   costs the minute it takes to find out (`src/lib/emergency-reference.ts`).
+ * - **A number DiveDay does not have prints as a blank.** The vessel, the
+ *   shop's phone, who is ashore, and the shop's own emergency lines come off
+ *   its settings, and the shop's emergency action plan is printed in the shop's
+ *   own words; the oxygen kit, the first aid kit and their last check have no
+ *   field in the tree, so they print as rules for a skipper's marker. A
+ *   confidently wrong number here costs the minute it takes to find out
+ *   (`src/lib/emergency-reference.ts`).
+ * - **The card is one page a side, and holds itself to it.** Two faces of one
+ *   lamination cannot become three, so the sheet is a fixed box and the one
+ *   unbounded thing on it — the shop's plan — is bounded by `boatCardPlan`
+ *   with a visible ellipsis rather than left to run off the card silently.
  *
  * **Nothing about a diver is on it.** Not a name, not a count of who is aboard,
  * and no medical fact of any kind: the printed manifest is where the roster
@@ -73,25 +80,34 @@ export default async function BoatCardPage({
   });
   const address = storefrontAddress(shopSlug, publicAppUrl());
   const numbers = boatCardNumbers({
+    vesselLabel: t("print.sheet.boatCard.vessel"),
+    vessel: shop.emergencyReference.vessel,
     shopLabel: t("print.sheet.boatCard.shop"),
     shopPhone: shop.contactPhone,
     shoreLabel: t("print.sheet.boatCard.ashore"),
     shoreContact: shop.emergencyReference.shoreContact,
     reference: shop.emergencyReference.lines,
   });
+  // The shop's own emergency action plan, in the shop's own words and bounded
+  // to what one face of the lamination holds.
+  const plan = boatCardPlan(shop.emergencyReference.plan);
 
   const side = (tone: SheetTone, sideLabel: string) => (
     <PaperSheet
       paper={spec.paper}
       tone={tone}
+      // Two faces of one lamination: this is the one sheet held to exactly one
+      // page a side.
+      fit
       band={
+        // The hull's name and the shop's, and nothing else. The capacity used
+        // to sit here and reads on a console as a passenger limit somebody has
+        // been asked to enforce; it belongs on the dock sign, where it is a
+        // fact about which boat a diver is looking at.
         <>
           <SheetMark name={boat.name} size="sm" />
           <span className="text-sm font-bold tracking-wide">
             {boat.name} · {shop.name}
-          </span>
-          <span className="ms-auto font-mono text-[0.625rem]">
-            {t("print.sheet.boatCard.capacity", { count: boat.capacity })}
           </span>
         </>
       }
@@ -110,13 +126,28 @@ export default async function BoatCardPage({
           <p className="paper-sheet-muted mt-1.5 text-xs leading-snug">
             {t("print.sheet.boatCard.missing")}
           </p>
+          {/* The shop's own plan, under the block it answers. Rendered only
+              when the shop has written one: a heading over nothing would read
+              on a boat as a plan somebody forgot to follow. */}
+          {plan ? (
+            <>
+              {/* diveday:allow-type-ramp: the print ramp is the sheet's own, sized in paper millimetres rather than the app's screen ladder */}
+              <h2 className="mt-5 text-lg font-bold">{t("print.sheet.boatCard.planHeading")}</h2>
+              <p className="paper-sheet-muted mt-1.5 text-xs leading-snug whitespace-pre-line">
+                {plan}
+              </p>
+            </>
+          ) : null}
         </div>
         <div>
           {/* diveday:allow-type-ramp: the print ramp is the sheet's own, sized in paper millimetres rather than the app's screen ladder */}
           <h2 className="text-lg font-bold">{t("print.sheet.boatCard.numbersHeading")}</h2>
           <dl className="paper-sheet-muted mt-1.5 space-y-1 text-xs leading-snug">
             {numbers.map((line) => (
-              <div key={line.label} className="flex gap-2">
+              // Keyed by position, never by label: a shop's reference lines are
+              // free text, and two blank or repeated labels would collapse into
+              // one and drop a number off the card.
+              <div key={line.key} className="flex gap-2">
                 <dt className="shrink-0">{line.label}</dt>
                 <dd className="min-w-0 flex-1">
                   <SheetValue value={line.value} />
@@ -129,6 +160,12 @@ export default async function BoatCardPage({
           <dl className="paper-sheet-muted mt-1.5 space-y-1 text-xs leading-snug">
             <div className="flex gap-2">
               <dt className="shrink-0">{t("print.sheet.boatCard.oxygenWhere")}</dt>
+              <dd className="min-w-0 flex-1">
+                <SheetValue value={null} />
+              </dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="shrink-0">{t("print.sheet.boatCard.firstAidWhere")}</dt>
               <dd className="min-w-0 flex-1">
                 <SheetValue value={null} />
               </dd>

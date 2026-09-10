@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest";
 import {
   BOAT_CARD_DAY,
   BOAT_CARD_NIGHT,
+  BOAT_CARD_PLAN_CHARS,
   boatCardNumbers,
+  boatCardPlan,
   isPrintSheetCode,
   PRINT_SHEET_BOX_MM,
   PRINT_SHEET_CODES,
@@ -108,24 +110,27 @@ describe("a print run's key", () => {
 });
 
 describe("the boat card's numbers", () => {
-  const labels = { shopLabel: "Shop", shoreLabel: "Ashore" };
+  const labels = { vesselLabel: "Vessel", shopLabel: "Shop", shoreLabel: "Ashore" };
 
   it("prints a blank where the shop has recorded nothing, never a number", () => {
     const numbers = boatCardNumbers({
       ...labels,
+      vessel: null,
       shopPhone: null,
       shoreContact: "   ",
       reference: [],
     });
     expect(numbers).toEqual([
-      { label: "Shop", value: null },
-      { label: "Ashore", value: null },
+      { key: "vessel", label: "Vessel", value: null },
+      { key: "shop", label: "Shop", value: null },
+      { key: "ashore", label: "Ashore", value: null },
     ]);
   });
 
   it("reads the shop's own lines, in the order the shop wrote them", () => {
     const numbers = boatCardNumbers({
       ...labels,
+      vessel: "Mantis II · MMSI 338100123",
       shopPhone: "(305) 555-0142",
       shoreContact: "Dana Reyes (305) 555-0118",
       reference: [
@@ -134,12 +139,67 @@ describe("the boat card's numbers", () => {
       ],
     });
     expect(numbers.map((line) => line.label)).toEqual([
+      "Vessel",
       "Shop",
       "Ashore",
       "Chamber (Key Largo)",
       "Coast Guard",
     ]);
-    expect(numbers[2]?.value).toBe("(305) 555-0155");
+    // The vessel leads: it is the first thing a rescue coordinator asks the
+    // crew reading this card for.
+    expect(numbers[0]?.value).toBe("Mantis II · MMSI 338100123");
+    expect(numbers[3]?.value).toBe("(305) 555-0155");
+  });
+});
+
+describe("the boat card's reference lines", () => {
+  it("keys every line by its position, never by its label", () => {
+    // A shop's reference lines are free text, and `normalizeEmergencyReference`
+    // keeps a line with a number and no label at all — so two blank or repeated
+    // labels are an ordinary state, and keying a rendered list by label would
+    // collapse them into one and drop a number off the card.
+    const numbers = boatCardNumbers({
+      vesselLabel: "Vessel",
+      vessel: null,
+      shopLabel: "Shop",
+      shopPhone: null,
+      shoreLabel: "Ashore",
+      shoreContact: null,
+      reference: [
+        { label: "", phone: "+1 305 555 0155" },
+        { label: "", phone: "+1 305 555 0188" },
+      ],
+    });
+    const keys = numbers.map((line) => line.key);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(numbers.filter((line) => line.label === "")).toHaveLength(2);
+    expect(numbers.map((line) => line.value)).toContain("+1 305 555 0188");
+  });
+});
+
+describe("the boat card's plan", () => {
+  it("prints the shop's own words when they fit", () => {
+    const plan = "Oxygen on deck. Call the chamber. Run for the ramp at Garden Cove.";
+    expect(boatCardPlan(plan)).toBe(plan);
+  });
+
+  it("has nothing to print when the shop has written nothing", () => {
+    expect(boatCardPlan(null)).toBeNull();
+    expect(boatCardPlan("   ")).toBeNull();
+  });
+
+  it("bounds a long plan on a word, and shows that it did", () => {
+    // The card is two faces of one lamination and cannot paginate, so the one
+    // unbounded thing on it is cut here rather than left to run off the sheet.
+    // The ellipsis is the visible half of that: a crew can see the card is
+    // showing part of a longer plan instead of reading a sentence that stops.
+    const long = `${"call the chamber and then the coastguard ".repeat(20)}`;
+    const bounded = boatCardPlan(long);
+    expect(bounded).not.toBeNull();
+    expect((bounded ?? "").length).toBeLessThanOrEqual(BOAT_CARD_PLAN_CHARS + 1);
+    expect(bounded?.endsWith("…")).toBe(true);
+    // Cut on a word boundary: never mid-word.
+    expect(bounded?.slice(0, -1).trimEnd().endsWith("the")).toBe(true);
   });
 });
 
@@ -192,12 +252,13 @@ describe("the boat card's colours", () => {
     expect(BOAT_CARD_DAY.bandInk).toBe(property(".boat-mode {", "--primary-foreground"));
   });
 
-  it("is the night sheet's own ground and boat mode's night action colour by night", () => {
+  it("is the night sheet's own ground and the night sheet's own ink by night", () => {
     expect(BOAT_CARD_NIGHT.band).toBe(property(".paper-sheet-night {", "--sheet-ground"));
-    // The second `.boat-mode {` block in the file is the one inside
-    // `@media (prefers-color-scheme: dark)`.
-    const dark = globals.indexOf(".boat-mode {", globals.indexOf(".boat-mode {") + 1);
-    expect(BOAT_CARD_NIGHT.bandInk).toBe(property(".boat-mode {", "--primary", dark));
+    // **Not boat mode's night cyan.** The night side exists to be read by a red
+    // torch, which is monochromatic: a cyan band goes to nothing under one, and
+    // what is written across it is the boat's name. The body's own off-white is
+    // the ink that survives.
+    expect(BOAT_CARD_NIGHT.bandInk).toBe(property(".paper-sheet-night {", "--sheet-ink"));
   });
 
   it("never carries the shop's colour", () => {

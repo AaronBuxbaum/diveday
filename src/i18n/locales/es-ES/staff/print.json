@@ -51,36 +51,38 @@
       "title": "Nuestros barcos salen de aquí.",
       "capacity": "{count, plural, one {# buceador} other {# buceadores}}",
       "checkIn": "Regístrate con tu pase",
-      "checkInNote": "O por tu nombre en el mostrador. El embarque abre {minutes, plural, one {# minuto} other {# minutos}} antes de que salga el barco.",
+      "checkInNote": "O por tu nombre en el mostrador. Preséntate en el muelle {minutes, plural, one {# minuto} other {# minutos}} antes.",
       "schedule": "Mira lo que sale",
       "scheduleNote": "Cada salida y cada plaza que sigue libre.",
       "counter": "Mostrador {phone}"
     },
     "boatCard": {
-      "capacity": "{count, plural, one {# buceador} other {# buceadores}}",
       "beforeHeading": "Antes de que el barco se mueva",
-      "before": "Cuenta las cabezas en voz alta antes de salir del muelle y otra vez después de cada inmersión. El pase de lista de la app es el registro. Si el teléfono está sin batería, cuenta por nombre en el manifiesto impreso.",
+      "before": "Pasa lista por nombre, cada buceador y cada tripulante, antes de salir del muelle y después de cada inmersión. Que cuenten dos personas. El pase de lista de la app es el registro; si el teléfono está sin batería, pásala sobre el manifiesto impreso y anota la hora en él.",
       "missingHeading": "Si falta alguien",
-      "missing": "Para el barco. Cuenta otra vez por nombre. Llama al centro. Pide ayuda por el canal VHF 16.",
+      "missing": "Anota la hora y marca la posición. No te vayas del sitio. Vuelve a pasar lista por nombre. Después pide ayuda con los números de abajo y llama al centro.",
       "numbersHeading": "Números",
       "shop": "Centro",
       "ashore": "En tierra",
       "oxygenHeading": "Oxígeno y primeros auxilios",
-      "oxygenWhere": "Dónde está",
+      "oxygenWhere": "Oxígeno, dónde",
       "oxygenChecked": "Última revisión",
       "fold": "Impresa el {date}. La app es el registro; esta tarjeta es el respaldo.",
       "daySide": "Cara de día",
-      "nightSide": "Cara de noche"
+      "nightSide": "Cara de noche",
+      "vessel": "Embarcación",
+      "planHeading": "Si algo sale mal",
+      "firstAidWhere": "Botiquín, dónde"
     },
     "sticker": {
       "title": "Reserva una plaza con tu teléfono"
     },
     "pass": {
       "eyebrow": "Tu pase",
-      "checkInFrom": "Regístrate desde las {time}",
       "bringHeading": "Trae",
       "show": "Muestra esto en el mostrador o di tu nombre.",
-      "code": "El código es tu reserva y nada más."
+      "code": "El código es tu reserva y nada más.",
+      "beAtDock": "Preséntate en el muelle a las {time}"
     },
     "briefing": {
       "briefingHeading": "El briefing",
