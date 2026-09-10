@@ -42,6 +42,8 @@ describe("MarketingFooterView", () => {
       expect(screen.getByRole("link", { name: "Pricing" })).toHaveAttribute("href", "/pricing");
       expect(screen.getByRole("link", { name: "Switch" })).toHaveAttribute("href", "/switching");
       expect(screen.getByRole("link", { name: "About" })).toHaveAttribute("href", "/about");
+      expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
+      expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
       unmount();
     }
   });
