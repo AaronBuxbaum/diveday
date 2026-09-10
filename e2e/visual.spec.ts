@@ -6951,12 +6951,16 @@ test.describe("print", () => {
     await capturePrint(page, "site-briefing-cards");
   });
 
-  // The booking id comes off the counter's own queue row, for the same reason
-  // the boat id comes off the register: it is the id the surface already holds.
+  // **The pinned booking, not the counter's first row.** The pass renders a QR
+  // of `passCodePayload` — the booking's id and nothing else — and
+  // `bookings.id` is `defaultRandom()`, so a capture that reads whichever id
+  // the queue happens to hold photographs a different QR on every seed. It
+  // reported as changed on the first pull request after it landed, with the
+  // diff confined to the code block and no geometry moved. `DEMO_RECAP_BOOKING_ID`
+  // exists for exactly this: the canonical demo pins its first reef booking so
+  // a visual test can address it deterministically.
   test("the paper pass prints A6 with the booking's own code", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/check-in");
-    const bookingId = await page.locator('input[name="bookingId"]').first().inputValue();
-    await page.goto(`/shop/blue-mantis/print/pass/${bookingId}`);
+    await page.goto(`/shop/blue-mantis/print/pass/${DEMO_RECAP_BOOKING_ID}`);
     await page.getByText("Show this at the counter, or say your name.").waitFor();
     await capturePrint(page, "paper-pass");
   });
