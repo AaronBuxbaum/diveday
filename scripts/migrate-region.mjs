@@ -26,7 +26,7 @@
  * `--from us-east-1` names the region being left; it defaults to the only
  * region this repository has ever deployed the main stack into.
  */
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
@@ -323,6 +323,154 @@ async function waitForStackDeletion(stackName, region, deadlineMs = 45 * 60_000)
   );
 }
 
+/**
+ * The most recent failure reasons CloudFormation recorded for a stack.
+ *
+ * Read rather than guessed at: `pnpm()` inherits stdio so this script never
+ * sees `cdk deploy`'s output, and retrying on *any* failure would turn a real
+ * error into a half-hour of silent retries.
+ */
+function recentFailureReasons(stackName, region) {
+  const events = awsMaybe([
+    "cloudformation",
+    "describe-stack-events",
+    "--stack-name",
+    stackName,
+    "--region",
+    region,
+    "--max-items",
+    "60",
+    "--query",
+    "StackEvents[].ResourceStatusReason",
+    "--output",
+    "json",
+  ]);
+  if (events === null) return [];
+  try {
+    return (JSON.parse(events) ?? []).filter((reason) => typeof reason === "string");
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Whether a deploy failed because an S3 bucket name is not creatable *yet*.
+ *
+ * S3's bucket namespace is global and eventually consistent, and deleting a
+ * bucket does not immediately free its name: for some minutes afterwards
+ * `head-bucket` answers 404 -- the name looks free -- while `create-bucket`
+ * answers 409 OperationAborted, "A conflicting conditional operation is
+ * currently in progress against this resource".
+ *
+ * Step 1's check reads the first of those and the deploy hits the second, which
+ * is exactly the gap this closes. There is no API that answers "is this name
+ * creatable", so the only honest test is to try, and the only fix is to wait
+ * and try again.
+ */
+function isBucketNameStillSettling(stackName, region) {
+  return recentFailureReasons(stackName, region).some(
+    (reason) =>
+      reason.includes("conflicting conditional operation") || reason.includes("OperationAborted"),
+  );
+}
+
+/**
+ * Delete a stack that a failed *create* left behind.
+ *
+ * A stack whose first CREATE rolled back sits in ROLLBACK_COMPLETE, and
+ * CloudFormation will not update it -- the only legal operation is delete. A
+ * retry that skipped this would fail on that instead of on whatever it was
+ * actually retrying, which reads as a different bug.
+ */
+async function clearRolledBackCreate(stackName, region) {
+  const status = awsMaybe([
+    "cloudformation",
+    "describe-stacks",
+    "--stack-name",
+    stackName,
+    "--region",
+    region,
+    "--query",
+    "Stacks[0].StackStatus",
+    "--output",
+    "text",
+  ]);
+  if (status === null) return;
+  const trimmed = status.trim();
+  if (trimmed !== "ROLLBACK_COMPLETE" && trimmed !== "CREATE_FAILED") return;
+  log(`  ${stackName} is ${trimmed}; a stack in that state can only be deleted. Deleting it.`);
+  aws(["cloudformation", "delete-stack", "--stack-name", stackName, "--region", region]);
+  await waitForStackDeletion(stackName, region);
+  deleteOrphanedLogGroups(region);
+}
+
+/**
+ * Delete the log groups a rolled-back create leaves behind.
+ *
+ * Every log group in this stack has a **fixed name**, and a Lambda writes to
+ * `/aws/lambda/<function>` whether CloudFormation declared it or not. During a
+ * rollback the custom-resource provider functions are invoked to handle their
+ * own Delete events, and the Lambda service recreates those log groups *after*
+ * CloudFormation has deleted them -- outside the stack, so nothing owns them.
+ * The next create then fails with "Resource of type 'AWS::Logs::LogGroup' with
+ * identifier '/aws/lambda/diveday-access-key-pruner-provider' already exists",
+ * one or two names at a time, for as many attempts as there are orphans.
+ *
+ * The names come out of the synthesized template rather than a list here. A
+ * list would be wrong the first time somebody adds a log group -- and it would
+ * be wrong quietly, surfacing as this same failure months later. Two of them
+ * (`sns/<region>/<account>/DirectPublishToPhoneNumber` and its `/Failure`
+ * sibling) do not even carry the word diveday, so a name filter would miss
+ * them too.
+ *
+ * Safe because of where it is called: only after a *create* rolled back in the
+ * region the estate is being built into, where by definition nothing else of
+ * ours exists yet.
+ */
+function deleteOrphanedLogGroups(region) {
+  let template;
+  try {
+    runBounded("pnpm", ["infra:synth", MAIN_STACK_ID, "--quiet"], {
+      cwd: repoRoot,
+      env: awsEnvironment,
+      stdio: "ignore",
+      timeoutMs: SUBPROCESS_TIMEOUTS.cdkSynth,
+    });
+    template = JSON.parse(
+      readFileSync(join(repoRoot, "cdk.out", `${MAIN_STACK_NAME}.template.json`), "utf8"),
+    );
+  } catch {
+    log("  Could not synthesize the template to find leftover log groups; skipping that cleanup.");
+    log(
+      '  If the next deploy fails with "log group already exists", delete the named group and re-run.',
+    );
+    return;
+  }
+
+  const names = Object.values(template.Resources ?? {})
+    .filter((resource) => resource?.Type === "AWS::Logs::LogGroup")
+    .map((resource) => resource?.Properties?.LogGroupName)
+    .filter((name) => typeof name === "string");
+
+  let deleted = 0;
+  for (const name of names) {
+    // `awsMaybe`, because "there is no such log group" is the expected answer
+    // for most of them and is not a problem.
+    if (
+      awsMaybe(["logs", "delete-log-group", "--log-group-name", name, "--region", region]) !== null
+    ) {
+      deleted += 1;
+    }
+  }
+  log(
+    deleted === 0
+      ? "  No leftover log groups from the rolled-back create."
+      : `  Deleted ${deleted} log group(s) the rolled-back create left behind.`,
+  );
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 function pnpm(args, timeoutMs) {
   const result = runBounded("pnpm", args, {
     cwd: repoRoot,
@@ -502,7 +650,11 @@ try {
           "Delete them by hand, then re-run with --from-step 2.",
       );
     }
-    log("  the global names are free.");
+    // Free as in "nothing answers for them", which is not the same as "S3 will
+    // let you create them". The deploy in step 3 is what finds out, and it is
+    // written to wait rather than to fail.
+    log("  the global names answer as gone. S3 can take a few more minutes to");
+    log("  let them be created again; step 3 waits for that if it has to.");
   }
 
   if (fromStep <= 2) {
@@ -516,10 +668,41 @@ try {
     log(`Step 3/5: deploy ${MAIN_STACK_ID} alone, to widen the deploy grants.`);
     log("  Its own per-region grants come from this stack, so nothing else can");
     log("  be deployed or diffed until it has landed once.");
-    pnpm(
-      ["infra:deploy", MAIN_STACK_ID, "--require-approval", "never"],
-      SUBPROCESS_TIMEOUTS.cdkDeploy,
-    );
+    // Retried, and only on the one failure worth retrying. The buckets this
+    // stack creates carry the names step 1 just deleted, and S3 frees a bucket
+    // name minutes after the delete rather than at it -- so the first attempt
+    // here can fail on names that step 1 correctly reported as gone.
+    // Overridable so the tests can drive the retry loop without sleeping
+    // through it. Not a knob for operators: the default is the only value
+    // anybody running a migration should use, and shortening it in anger just
+    // spends the attempts faster.
+    const settleMs = Number(process.env.DIVEDAY_BUCKET_SETTLE_MS || 5 * 60_000);
+    const attempts = 7;
+    for (let attempt = 1; ; attempt += 1) {
+      await clearRolledBackCreate(MAIN_STACK_NAME, PRIMARY_REGION);
+      try {
+        pnpm(
+          ["infra:deploy", MAIN_STACK_ID, "--require-approval", "never"],
+          SUBPROCESS_TIMEOUTS.cdkDeploy,
+        );
+        break;
+      } catch (error) {
+        if (!isBucketNameStillSettling(MAIN_STACK_NAME, PRIMARY_REGION)) throw error;
+        if (attempt >= attempts) {
+          throw new Error(
+            `${MAIN_STACK_NAME} still cannot create its buckets after ` +
+              `${Math.round((attempts * settleMs) / 60_000)} minutes of waiting for the names ` +
+              "deleted in step 1 to become creatable. S3 usually frees a name in minutes; this " +
+              "is longer than that, so read the stack events rather than waiting further.",
+          );
+        }
+        log("");
+        log(
+          `  S3 has not freed the bucket names yet -- create answered 409 while head-bucket says the names are gone. Waiting and retrying (attempt ${attempt} of ${attempts}).`,
+        );
+        await sleep(settleMs);
+      }
+    }
   }
 
   if (fromStep <= 4) {

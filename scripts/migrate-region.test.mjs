@@ -28,7 +28,12 @@ const directories = [];
  * that kept answering would hang the test for the poll's full 45-minute
  * deadline rather than failing it.
  */
-function fixture({ resourcesExist = false, bucketPages = [] } = {}) {
+function fixture({
+  resourcesExist = false,
+  bucketPages = [],
+  stackEventReasons = [],
+  deployFailures = 0,
+} = {}) {
   const directory = mkdtempSync(join(tmpdir(), "diveday-migrate-"));
   directories.push(directory);
   const bin = join(directory, "bin");
@@ -38,10 +43,15 @@ function fixture({ resourcesExist = false, bucketPages = [] } = {}) {
   for (const [index, page] of bucketPages.entries()) {
     writeFileSync(join(directory, `page-${index}.json`), JSON.stringify(page));
   }
+  writeFileSync(join(directory, "stack-events.json"), JSON.stringify(stackEventReasons));
   writeFileSync(
     join(bin, "aws"),
     `#!/bin/sh
 printf '%s\\n' "$AWS_PROFILE:$*" >> "$DIVEDAY_AWS_LOG"
+if [ "$2" = "describe-stack-events" ]; then
+  cat "$DIVEDAY_DIR/stack-events.json"
+  exit 0
+fi
 if [ "$1" = "sts" ]; then
   printf '%s' '{"Account":"123456789012","Arn":"arn:aws:iam::123456789012:role/admin"}'
   exit 0
@@ -62,10 +72,20 @@ fi
 ${resourcesExist ? "exit 0" : "exit 1"}
 `,
   );
+  // Fails the first `deployFailures` *main-stack deploys*, as `cdk deploy` does
+  // while S3 has not yet freed a bucket name, then succeeds. Scoped to that one
+  // command on purpose: counting every pnpm call would fail the bootstrap in
+  // step 2 and the run would never reach the deploy under test.
   writeFileSync(
     join(bin, "pnpm"),
     `#!/bin/sh
 printf '%s\\n' "$*" >> "$DIVEDAY_PNPM_LOG"
+if [ "$1" = "infra:deploy" ] && [ "$2" = "DiveDay" ]; then
+  n=$(cat "$DIVEDAY_DEPLOY_COUNTER" 2>/dev/null || echo 0)
+  printf '%s' "$((n + 1))" > "$DIVEDAY_DEPLOY_COUNTER"
+  if [ "$n" -lt ${deployFailures} ]; then exit 1; fi
+fi
+exit 0
 `,
   );
   chmodSync(join(bin, "aws"), 0o755);
@@ -85,6 +105,9 @@ function run(directory, ...arguments_) {
         DIVEDAY_AWS_LOG: join(directory, "aws.log"),
         DIVEDAY_DIR: directory,
         DIVEDAY_PAGE_COUNTER: join(directory, "page-counter"),
+        DIVEDAY_DEPLOY_COUNTER: join(directory, "deploy-counter"),
+        // Drives the retry loop without sleeping through its real five minutes.
+        DIVEDAY_BUCKET_SETTLE_MS: "10",
         DIVEDAY_PNPM_LOG: join(directory, "pnpm.log"),
         PATH: `${join(directory, "bin")}:${process.env.PATH}`,
       },
@@ -281,6 +304,59 @@ describe("infra:migrate-region", () => {
     // set of global names to the next step. That refusal is the point.
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Still taken");
+  });
+
+  it("waits and retries while S3 has not freed the deleted bucket names", () => {
+    // The failure this covers: step 1 deletes the buckets and confirms the
+    // names answer as gone, then step 3 creates them and S3 answers 409
+    // OperationAborted because its global namespace has not settled. head-bucket
+    // saying 404 and create-bucket succeeding are not the same question.
+    const directory = fixture({
+      deployFailures: 2,
+      stackEventReasons: [
+        "A conflicting conditional operation is currently in progress against this resource. Please try again.",
+      ],
+    });
+    const result = run(
+      directory,
+      "--from",
+      "us-east-1",
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+      "--confirm-teardown",
+      "us-east-1",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("S3 has not freed the bucket names yet");
+    // Two failed attempts then a success, and only then the rest of the run.
+    const deploys = pnpmLog(directory).trim().split("\n");
+    expect(deploys.filter((line) => line.startsWith("infra:deploy DiveDay "))).toHaveLength(3);
+    expect(deploys.at(-1)).toBe("infra:deploy --require-approval never");
+  });
+
+  it("gives up rather than retrying a deploy that failed for another reason", () => {
+    // No bucket-conflict reason in the stack events, so the failure is real and
+    // retrying it would turn one error into half an hour of silence.
+    const directory = fixture({
+      deployFailures: 1,
+      stackEventReasons: ["Resource handler returned message: not authorized"],
+    });
+    const result = run(
+      directory,
+      "--from",
+      "us-east-1",
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+      "--confirm-teardown",
+      "us-east-1",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).not.toContain("S3 has not freed the bucket names yet");
+    expect(pnpmLog(directory).match(/infra:deploy DiveDay /g)).toHaveLength(1);
   });
 
   it("hands back the manual steps a script cannot do", () => {
