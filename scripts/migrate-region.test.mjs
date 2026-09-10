@@ -35,6 +35,8 @@ function fixture({
   deployFailures = 0,
   stackStatus = null,
   template = null,
+  logGroupsPresent = null,
+  logGroupDeleteError = null,
 } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "diveday-migrate-"));
   directories.push(directory);
@@ -47,6 +49,10 @@ function fixture({
   }
   writeFileSync(join(directory, "stack-events.json"), JSON.stringify(stackEventReasons));
   writeFileSync(join(directory, "stack-status"), stackStatus ?? "");
+  if (logGroupsPresent) {
+    writeFileSync(join(directory, "log-groups-present"), logGroupsPresent.join("\t"));
+  }
+  writeFileSync(join(directory, "log-group-delete-error"), logGroupDeleteError ?? "");
   // A real synthesized template when the test supplies one, written where the
   // cloud assembly puts it. `pnpm infra:synth` is faked, so the fixture stands
   // in for what it would have produced -- but the *filename* is the fixture's
@@ -77,6 +83,17 @@ if [ "$2" = "describe-stacks" ] && [ -f "$DIVEDAY_DIR/stack-deleted" ]; then
 fi
 if [ "$2" = "describe-stacks" ] && [ -s "$DIVEDAY_DIR/stack-status" ]; then
   cat "$DIVEDAY_DIR/stack-status"
+  exit 0
+fi
+if [ "$2" = "describe-log-groups" ]; then
+  if [ -f "$DIVEDAY_DIR/log-groups-present" ]; then cat "$DIVEDAY_DIR/log-groups-present"; fi
+  exit 0
+fi
+if [ "$2" = "delete-log-group" ]; then
+  if [ -s "$DIVEDAY_DIR/log-group-delete-error" ]; then
+    cat "$DIVEDAY_DIR/log-group-delete-error" >&2
+    exit 254
+  fi
   exit 0
 fi
 if [ "$2" = "list-object-versions" ]; then
@@ -124,6 +141,7 @@ function run(directory, ...arguments_) {
         DIVEDAY_DEPLOY_COUNTER: join(directory, "deploy-counter"),
         // Drives the retry loop without sleeping through its real five minutes.
         DIVEDAY_BUCKET_SETTLE_MS: "10",
+        DIVEDAY_CDK_OUT: join(directory, "cdk.out"),
         DIVEDAY_PNPM_LOG: join(directory, "pnpm.log"),
         PATH: `${join(directory, "bin")}:${process.env.PATH}`,
       },
@@ -380,6 +398,76 @@ describe("infra:migrate-region", () => {
     expect(result.status).toBe(1);
     expect(result.stdout).not.toContain("S3 has not freed the bucket names yet");
     expect(pnpmLog(directory).match(/infra:deploy DiveDay /g)).toHaveLength(1);
+  });
+
+  it("stops with the real reason when a leftover log group will not delete", () => {
+    // The failure that survived three fixes: `awsMaybe` swallowed every error,
+    // so a delete refused for any reason counted the same as a log group that
+    // was never there, and the sweep printed "no leftover log groups" either
+    // way. The deploy then failed on exactly the names the sweep said it had
+    // handled.
+    const directory = fixture({
+      template: {
+        Resources: {
+          L: {
+            Type: "AWS::Logs::LogGroup",
+            Properties: { LogGroupName: "/aws/lambda/diveday-access-key-pruner-provider" },
+          },
+        },
+      },
+      logGroupsPresent: ["/aws/lambda/diveday-access-key-pruner-provider"],
+      logGroupDeleteError: "AccessDeniedException: not authorized to perform logs:DeleteLogGroup",
+    });
+    const result = run(
+      directory,
+      "--from",
+      "us-east-1",
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+      "--confirm-teardown",
+      "us-east-1",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Could not delete 1 leftover log group");
+    expect(result.stderr).toContain("/aws/lambda/diveday-access-key-pruner-provider");
+    // The reason AWS gave, not a reason this script invented.
+    expect(result.stderr).toContain("logs:DeleteLogGroup");
+    // And it stops rather than deploying into a failure it already knows about.
+    expect(pnpmLog(directory)).not.toContain("infra:deploy DiveDay");
+  });
+
+  it("deletes a leftover log group and says so, counting the ones already gone", () => {
+    const directory = fixture({
+      template: {
+        Resources: {
+          A: {
+            Type: "AWS::Logs::LogGroup",
+            Properties: { LogGroupName: "/aws/lambda/diveday-access-key-pruner-provider" },
+          },
+          B: { Type: "AWS::Logs::LogGroup", Properties: { LogGroupName: "/diveday/app" } },
+        },
+      },
+      // Only the first is there; the second must not be reported as deleted.
+      logGroupsPresent: ["/aws/lambda/diveday-access-key-pruner-provider"],
+    });
+    const result = run(
+      directory,
+      "--from",
+      "us-east-1",
+      "--execute",
+      "--confirm-account",
+      "123456789012",
+      "--confirm-teardown",
+      "us-east-1",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "Deleted leftover log group /aws/lambda/diveday-access-key-pruner-provider",
+    );
+    expect(result.stdout).toContain("1 deleted, 1 already gone, 0 refused, of 2");
   });
 
   it("hands back the manual steps a script cannot do", () => {

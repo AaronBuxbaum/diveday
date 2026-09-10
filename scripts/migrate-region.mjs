@@ -444,7 +444,12 @@ async function prepareForCreate(stackName, region) {
  * ours exists yet.
  */
 function deleteOrphanedLogGroups(region) {
-  const templatePath = join(repoRoot, "cdk.out", templateFileNameFor(MAIN_STACK_ID));
+  // The cloud assembly is written relative to the repository, not to the
+  // working directory, so the override exists for the tests: a fixture in a
+  // temp directory cannot otherwise reach the file this reads, and that gap is
+  // exactly why a wrong filename survived a green test run.
+  const assemblyDirectory = process.env.DIVEDAY_CDK_OUT || join(repoRoot, "cdk.out");
+  const templatePath = join(assemblyDirectory, templateFileNameFor(MAIN_STACK_ID));
   let template;
   try {
     runBounded("pnpm", ["infra:synth", MAIN_STACK_ID, "--quiet"], {
@@ -470,22 +475,62 @@ function deleteOrphanedLogGroups(region) {
     log("  If the deploy fails saying that group already exists, delete it and re-run.");
   }
 
-  let deleted = 0;
+  const deleted = [];
+  const absent = [];
+  const failed = [];
   for (const name of names) {
-    // `awsMaybe`, because "there is no such log group" is the expected answer
-    // for most of them and is not a problem.
-    if (
-      awsMaybe(["logs", "delete-log-group", "--log-group-name", name, "--region", region]) !== null
-    ) {
-      deleted += 1;
-      log(`  Deleted leftover log group ${name}.`);
+    // Asked before it is deleted, so that "nothing happened" can be told apart
+    // from "the delete was refused". Until this, both came back as `null` from
+    // `awsMaybe` and both printed as "no leftover log groups" -- so a sweep
+    // that deleted nothing because it was not allowed to reported exactly what
+    // a sweep with nothing to do reports. Three runs failed on that.
+    const listed = awsMaybe([
+      "logs",
+      "describe-log-groups",
+      "--log-group-name-prefix",
+      name,
+      "--region",
+      region,
+      "--query",
+      "logGroups[].logGroupName",
+      "--output",
+      "text",
+    ]);
+    // `--log-group-name-prefix` is a prefix match, so an exact comparison is
+    // what decides. A null listing means the question could not be asked, and
+    // that is not an answer -- fall through and try the delete, which reports
+    // its own reason.
+    if (listed !== null && !listed.split(/\s+/).includes(name)) {
+      absent.push(name);
+      continue;
+    }
+    try {
+      aws(["logs", "delete-log-group", "--log-group-name", name, "--region", region]);
+      deleted.push(name);
+      log(`  Deleted leftover log group ${name}`);
+    } catch (error) {
+      const reason = String(error?.stderr ?? "") + String(error?.message ?? error);
+      if (reason.includes("ResourceNotFoundException")) {
+        absent.push(name);
+        continue;
+      }
+      failed.push({ name, reason: reason.trim().split("\n").at(-1) ?? "no reason given" });
     }
   }
+
   log(
-    deleted === 0
-      ? `  No leftover log groups among the ${names.length} this stack declares.`
-      : `  Deleted ${deleted} log group(s) the rolled-back create left behind.`,
+    `  Log groups: ${deleted.length} deleted, ${absent.length} already gone, ${failed.length} refused, of ${names.length} this stack declares.`,
   );
+
+  if (failed.length > 0) {
+    // Thrown, not warned. Every one of these is a name the deploy is about to
+    // try to create, so continuing means failing again in a minute with a
+    // worse message than the one AWS just gave us.
+    throw new Error(
+      `Could not delete ${failed.length} leftover log group(s), and the deploy will fail on them:\n` +
+        failed.map(({ name, reason }) => `  ${name}: ${reason}`).join("\n"),
+    );
+  }
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
