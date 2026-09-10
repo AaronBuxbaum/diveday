@@ -39,7 +39,7 @@ import {
   PRIMARY_REGION,
 } from "../config/aws-regions.mjs";
 import { ensureAwsLogin } from "./aws-login.mjs";
-import { logGroupNamesFrom, templateFileNameFor } from "./log-group-names.mjs";
+import { orphansFrom, templateFileNameFor } from "./stack-orphans.mjs";
 import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -453,11 +453,11 @@ async function prepareForCreate(stackName, region) {
   // also the argument for the sweep being safe -- if no stack owns these names,
   // nothing does, so anything holding one is debris from a create that did not
   // finish.
-  deleteOrphanedLogGroups(region);
+  deleteWhatTheLastCreateLeft(region);
 }
 
 /**
- * Delete the log groups a rolled-back create leaves behind.
+ * Delete what a rolled-back create leaves behind.
  *
  * Every log group in this stack has a **fixed name**, and a Lambda writes to
  * `/aws/lambda/<function>` whether CloudFormation declared it or not. During a
@@ -479,7 +479,7 @@ async function prepareForCreate(stackName, region) {
  * region the estate is being built into, where by definition nothing else of
  * ours exists yet.
  */
-function deleteOrphanedLogGroups(region) {
+function deleteWhatTheLastCreateLeft(region) {
   // The cloud assembly is written relative to the repository, not to the
   // working directory, so the override exists for the tests: a fixture in a
   // temp directory cannot otherwise reach the file this reads, and that gap is
@@ -496,66 +496,119 @@ function deleteOrphanedLogGroups(region) {
     });
     template = JSON.parse(readFileSync(templatePath, "utf8"));
   } catch (error) {
-    // Names the path. The first version of this reported "could not
-    // synthesize" for what was actually a filename mistake, so the one clue
-    // that would have solved it in a minute was the one thing not printed.
-    log(`  Could not read ${templatePath} to find leftover log groups, so none were deleted.`);
+    // Names the path. An earlier version reported "could not synthesize" for
+    // what was actually a filename mistake, so the one clue that would have
+    // solved it in a minute was the one thing not printed.
+    log(`  Could not read ${templatePath} to find what the last create left behind.`);
     log(`  Reason: ${error instanceof Error ? error.message : String(error)}`);
-    log("  If the deploy fails saying a log group already exists, delete that group and re-run.");
+    log("  If the deploy fails saying something already exists, delete it and re-run.");
     return;
   }
 
-  const { names, unresolved } = logGroupNamesFrom(template, { account, region });
+  const { logGroups, buckets, secrets, unresolved, unsupportedRetained } = orphansFrom(template, {
+    account,
+    region,
+  });
   for (const value of unresolved) {
-    log(`  Could not work out one log group's name from the template: ${JSON.stringify(value)}`);
-    log("  If the deploy fails saying that group already exists, delete it and re-run.");
+    log(`  Could not work out one resource's name from the template: ${JSON.stringify(value)}`);
+    log("  If the deploy fails saying it already exists, delete it and re-run.");
+  }
+  for (const { id, type } of unsupportedRetained) {
+    log(`  ${id} is a retained ${type}, which this does not know how to remove.`);
+    log("  A rolled-back create keeps it, and the next create will fail on its name.");
   }
 
   const deleted = [];
   const absent = [];
   const failed = [];
-  for (const name of names) {
-    // Asked before it is deleted, so that "nothing happened" can be told apart
-    // from "the delete was refused". Until this, both came back as `null` from
-    // `awsMaybe` and both printed as "no leftover log groups" -- so a sweep
-    // that deleted nothing because it was not allowed to reported exactly what
-    // a sweep with nothing to do reports. Three runs failed on that.
-    const listed = awsMaybe([
-      "logs",
-      "describe-log-groups",
-      "--log-group-name-prefix",
-      name,
-      "--region",
-      region,
-      "--query",
-      "logGroups[].logGroupName",
-      "--output",
-      "text",
-    ]);
-    // `--log-group-name-prefix` is a prefix match, so an exact comparison is
-    // what decides. A null listing means the question could not be asked, and
-    // that is not an answer -- fall through and try the delete, which reports
-    // its own reason.
-    if (listed !== null && !listed.split(/\s+/).includes(name)) {
-      absent.push(name);
-      continue;
+
+  /** Delete one thing, telling "was not there" apart from "was refused". */
+  const remove = (label, exists, doDelete) => {
+    // Asked before it is deleted, so those two outcomes are different. Until
+    // this, both came back as `null` from `awsMaybe` and both printed as
+    // nothing-to-do -- so a sweep refused at every turn reported exactly what a
+    // sweep with nothing to do reports.
+    if (exists() === false) {
+      absent.push(label);
+      return;
     }
     try {
-      aws(["logs", "delete-log-group", "--log-group-name", name, "--region", region]);
-      deleted.push(name);
-      log(`  Deleted leftover log group ${name}`);
+      doDelete();
+      deleted.push(label);
+      log(`  Deleted ${label}`);
     } catch (error) {
       const reason = String(error?.stderr ?? "") + String(error?.message ?? error);
-      if (reason.includes("ResourceNotFoundException")) {
-        absent.push(name);
-        continue;
+      if (reason.includes("ResourceNotFoundException") || reason.includes("NoSuchBucket")) {
+        absent.push(label);
+        return;
       }
-      failed.push({ name, reason: reason.trim().split("\n").at(-1) ?? "no reason given" });
+      failed.push({ label, reason: reason.trim().split("\n").at(-1) ?? "no reason given" });
     }
+  };
+
+  // Secrets first, then buckets, then log groups -- no ordering requirement
+  // between them, but the secret is the cheapest and the buckets are the ones
+  // whose names S3 takes minutes to free, so freeing them earliest gives step
+  // 3's retry the best chance of not needing to wait.
+  for (const name of secrets) {
+    remove(
+      `secret ${name}`,
+      () => secretExists(name, region),
+      () =>
+        // Purged, not scheduled. A secret in its recovery window still holds its
+        // name, which is the whole reason this one is here: the rolled-back
+        // create retained it, and a 30-day window would block every retry.
+        aws([
+          "secretsmanager",
+          "delete-secret",
+          "--secret-id",
+          name,
+          "--region",
+          region,
+          "--force-delete-without-recovery",
+        ]),
+    );
   }
 
+  for (const name of buckets) {
+    remove(
+      `bucket ${name}`,
+      () => bucketExists(name),
+      () => {
+        emptyBucket(name);
+        aws(["s3api", "delete-bucket", "--bucket", name, "--region", region]);
+      },
+    );
+  }
+
+  for (const name of logGroups) {
+    remove(
+      `log group ${name}`,
+      () => {
+        const listed = awsMaybe([
+          "logs",
+          "describe-log-groups",
+          "--log-group-name-prefix",
+          name,
+          "--region",
+          region,
+          "--query",
+          "logGroups[].logGroupName",
+          "--output",
+          "text",
+        ]);
+        // `--log-group-name-prefix` is a prefix match, so an exact comparison
+        // decides. A null listing means the question could not be asked, which
+        // is not an answer -- fall through to the delete, which reports its own.
+        return listed === null ? null : listed.split(/\s+/).includes(name);
+      },
+      () => aws(["logs", "delete-log-group", "--log-group-name", name, "--region", region]),
+    );
+  }
+
+  const total = secrets.length + buckets.length + logGroups.length;
   log(
-    `  Log groups: ${deleted.length} deleted, ${absent.length} already gone, ${failed.length} refused, of ${names.length} this stack declares.`,
+    `  Left by the last create: ${deleted.length} deleted, ${absent.length} already gone, ${failed.length} refused, of ${total} names this stack claims.`,
   );
 
   if (failed.length > 0) {
@@ -563,8 +616,8 @@ function deleteOrphanedLogGroups(region) {
     // try to create, so continuing means failing again in a minute with a
     // worse message than the one AWS just gave us.
     throw new Error(
-      `Could not delete ${failed.length} leftover log group(s), and the deploy will fail on them:\n` +
-        failed.map(({ name, reason }) => `  ${name}: ${reason}`).join("\n"),
+      `Could not remove ${failed.length} thing(s) the last create left behind, and the deploy will fail on them:\n` +
+        failed.map(({ label, reason }) => `  ${label}: ${reason}`).join("\n"),
     );
   }
 }
