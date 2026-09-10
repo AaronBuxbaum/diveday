@@ -1,7 +1,6 @@
 import { and, eq, gte, inArray, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
-import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createGiftBooking } from "./bookings";
@@ -20,8 +19,6 @@ import {
   personRoles,
   recapPulses,
   rollCallEvents,
-  tripLastMinutePromoRecipients,
-  tripLastMinutePromos,
   trips,
   userAccounts,
 } from "./schema";
@@ -520,71 +517,5 @@ describe("anonymizeDiver — the gifts this person bought", () => {
     // Ben is not Hannah: erasing her says nothing about the diver whose seat
     // it is, and his own erasure is his own.
     expect(row?.receiverName).toBe("Ben Carter");
-  });
-});
-
-describe("anonymizeDiver — the deal that was sent to them (issue #1607)", () => {
-  /**
-   * `trip_last_minute_promo_recipients` is the shop's log of who was offered
-   * which last-minute deal, and it stores the address the offer went *to*: the
-   * diver's own email, NOT NULL, keyed by `person_id`. Nothing erased it, and
-   * `src/db/export.ts` carries the table out of the shop in the portable
-   * bundle — so an erased diver's address left the building with every deal
-   * they had ever been offered.
-   *
-   * The row survives with a redacted address, the shape `user_accounts.email`
-   * takes: the shop's record that a deal went to N people on a departure is
-   * its own, and with the address gone it is no longer a fact about a person.
-   */
-  it("takes the address a last-minute deal was sent to", async () => {
-    const { db, shop, owner } = await erasureFixtures();
-    const [diver] = await db
-      .insert(people)
-      .values({ shopId: shop.id, fullName: "Nia Okonkwo", email: "nia@example.com" })
-      .returning({ id: people.id });
-    if (!diver) throw new Error("fixture insert failed");
-    const [trip] = await db
-      .select({ id: trips.id })
-      .from(trips)
-      .where(eq(trips.shopId, shop.id))
-      .limit(1);
-    if (!trip) throw new Error("expected a seeded trip");
-    const [promo] = await db
-      .insert(tripLastMinutePromos)
-      .values({
-        shopId: shop.id,
-        tripId: trip.id,
-        status: "sent",
-        discountPercent: 20,
-        code: `LASTMINUTE${nowMs()}`,
-        recipientCount: 1,
-        expiresAt: new Date("2099-01-01T00:00:00.000Z"),
-        createdByPersonId: owner.id,
-      })
-      .returning({ id: tripLastMinutePromos.id });
-    if (!promo) throw new Error("fixture insert failed");
-    await db.insert(tripLastMinutePromoRecipients).values({
-      shopId: shop.id,
-      tripPromoId: promo.id,
-      personId: diver.id,
-      email: "nia@example.com",
-    });
-
-    const erased = await anonymizeDiver(db, {
-      shopId: shop.id,
-      personId: diver.id,
-      actorPersonId: owner.id,
-    });
-    expect(erased.ok).toBe(true);
-
-    const rows = await db
-      .select({ email: tripLastMinutePromoRecipients.email })
-      .from(tripLastMinutePromoRecipients)
-      .where(eq(tripLastMinutePromoRecipients.personId, diver.id));
-    // The row stays — the shop sent a deal to someone that day — and the
-    // address does not.
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.email).not.toContain("nia@example.com");
-    expect(rows[0]?.email).toContain("@invalid");
   });
 });

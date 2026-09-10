@@ -704,12 +704,17 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // `src/db/export.ts` carries that table out of the shop in the portable
   // bundle (found by the sweep issue #1607 asks for).
   //
-  // Redacted rather than deleted, the shape `user_accounts.email` above takes
-  // and for the same reason: the shop's record that a deal went to N people on
-  // a departure is its own, and it is not a fact about this person once the
-  // address is gone. `person_id` stays for the reason `course_inquiries` keeps
-  // its own — it points at a row that has itself been erased, and keeping it is
-  // what makes a replayed erasure reach the same rows.
+  // Redacted rather than deleted, the shape `user_accounts.email` above takes.
+  // What is left afterwards is a `person_id` pointing at a row that has itself
+  // been erased and nothing else, which is exactly what `course_inquiries`
+  // keeps and for the same reason: it is what makes a replayed erasure reach
+  // the same rows.
+  //
+  // Not "the count of who was mailed would move": it would not. The number a
+  // shop reads is `trip_last_minute_promos.recipient_count`, denormalized at
+  // send time from the messages that actually went out, while these rows are
+  // written for every *attempted* recipient — the two already disagree, and
+  // deleting these would not change either (security review, 2026-09-10).
   await tx
     .update(tripLastMinutePromoRecipients)
     .set({ email: `${redactedUniqueValue("erased")}@invalid` })
