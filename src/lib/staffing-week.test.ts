@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { CrewAssignmentRequest } from "./crew-requests";
 import {
   GAP_TONE,
+  type StaffGapCode,
   staffGapForCourseGap,
   staffWeek,
   type WeekGap,
@@ -372,6 +374,17 @@ describe("blackouts and requests", () => {
     note: "Family",
   };
   const BEFORE = new Date("2026-08-20T00:00:00.000Z");
+  /** One ask on `GAP`. A divemaster by default — the #1339 case. */
+  const askOn = (overrides: Partial<CrewAssignmentRequest> = {}): CrewAssignmentRequest => ({
+    id: "r1",
+    tripId: GAP.tripId,
+    personId: "person-1",
+    personName: "Keiko Tanaka",
+    inWaterRole: "certified_assistant",
+    state: "pending",
+    requestedAt: BEFORE,
+    ...overrides,
+  });
 
   it("draws a person's own days away in their own row, and nobody else's", () => {
     const week = staffWeek({
@@ -481,16 +494,7 @@ describe("blackouts and requests", () => {
       ask({
         ...base,
         viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: true },
-        requests: [
-          {
-            id: "r1",
-            tripId: GAP.tripId,
-            personId: "person-1",
-            personName: "Keiko Tanaka",
-            state: "pending",
-            requestedAt: BEFORE,
-          },
-        ],
+        requests: [askOn()],
       }),
     ).toBe(false);
   });
@@ -504,22 +508,13 @@ describe("blackouts and requests", () => {
       today: THURSDAY,
       now: BEFORE,
       requests: [
-        {
-          id: "r1",
-          tripId: GAP.tripId,
-          personId: "person-2",
-          personName: "Sal Moretti",
-          state: "pending",
-          requestedAt: BEFORE,
-        },
-        {
+        askOn({ personId: "person-2", personName: "Sal Moretti" }),
+        askOn({
           id: "r2",
           tripId: "some-other-trip",
           personId: "person-2",
           personName: "Sal Moretti",
-          state: "pending",
-          requestedAt: BEFORE,
-        },
+        }),
       ],
     });
     const gap = week.gapDays.flatMap((day) => day.gaps)[0];
@@ -560,7 +555,16 @@ describe("blackouts and requests", () => {
     expect(place(false, { ...GAP, gap: "over_ratio" })?.viewerAskWontClose).toBe(false);
   });
 
-  it("warns nobody when there is nobody reading, or nothing to ask for", () => {
+  /**
+   * The half of #1339 that the first fix moved rather than closed: the line was
+   * computed alongside `viewerMayRequest`, so it lived exactly as long as the
+   * button did. A blackout taking it away is right — the ask is not theirs to
+   * make, so there is no belief to correct. Having *asked* taking it away is
+   * not: "I asked, so that shift is answered" is precisely the belief the line
+   * exists against, and a divemaster already rostered on the over-ratio intro
+   * session, the most operationally live case there is, never saw it at all.
+   */
+  it("keeps the fact on the departure after the ask, and for somebody already aboard", () => {
     const gaps = [{ ...GAP, gap: "over_intro_ratio" } as WeekGap];
     const base = {
       people: [KEIKO],
@@ -570,17 +574,77 @@ describe("blackouts and requests", () => {
       today: THURSDAY,
       now: BEFORE,
     } as const;
-    // No viewer at all: no ask on screen, so no note on the ask.
-    expect(staffWeek(base).gapDays.flatMap((day) => day.gaps)[0]?.viewerAskWontClose).toBe(false);
-    // A blackout the write would refuse on: the ask is gone and the warning
-    // goes with it rather than floating free of the control it annotates.
-    const blocked = staffWeek({
-      ...base,
-      viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: false },
+    const divemaster = { personId: "person-1", isCrew: true, holdsInstructorRole: false } as const;
+    const place = (extra: Partial<Parameters<typeof staffWeek>[0]>) =>
+      staffWeek({ ...base, ...extra }).gapDays.flatMap((day) => day.gaps)[0];
+
+    // No viewer at all: nobody to be wrong about it.
+    expect(place({})?.viewerAskWontClose).toBe(false);
+
+    // A blackout the write would refuse on: still hidden, and this is the
+    // refusal that *should* hide it.
+    const blocked = place({
+      viewer: divemaster,
       blocks: [{ ...AWAY, startsOn: "2026-08-27", endsOn: "2026-08-27" }],
-    }).gapDays.flatMap((day) => day.gaps)[0];
+    });
     expect(blocked?.viewerMayRequest).toBe(false);
     expect(blocked?.viewerAskWontClose).toBe(false);
+
+    // Having asked: the button is gone, the fact is not.
+    const asked = place({ viewer: divemaster, requests: [askOn()] });
+    expect(asked?.viewerMayRequest).toBe(false);
+    expect(asked?.viewerAskWontClose).toBe(true);
+
+    // Already on the crew of the session that is over ratio.
+    const aboard = place({
+      viewer: divemaster,
+      people: [
+        {
+          ...KEIKO,
+          crewingTrips: [{ tripId: GAP.tripId, title: GAP.title, meetings: GAP.meetings }],
+        },
+      ],
+    });
+    expect(aboard?.viewerMayRequest).toBe(false);
+    expect(aboard?.viewerAskWontClose).toBe(true);
+
+    // And an instructor in either of those two states is told nothing: the
+    // line is about the reader who cannot close it.
+    expect(
+      place({
+        viewer: { ...divemaster, holdsInstructorRole: true },
+        requests: [askOn()],
+      })?.viewerAskWontClose,
+    ).toBe(false);
+  });
+
+  /**
+   * The other half of #1339: the person who can actually close the gap. The
+   * owner or manager working the queue saw "{person} asked" and two buttons,
+   * approved, and read "Approved, and they're on the crew" about a session
+   * still over ratio. `inWaterRole` rides on the request so the same sentence
+   * can sit beside Approve.
+   */
+  it("says beside a pending ask whether approving it would close the gap", () => {
+    const place = (gap: StaffGapCode, request: CrewAssignmentRequest) =>
+      staffWeek({
+        people: [KEIKO],
+        gaps: [{ ...GAP, gap }],
+        weekStart: MONDAY,
+        timeZone: TZ,
+        today: THURSDAY,
+        now: BEFORE,
+        requests: [request],
+      }).gapDays.flatMap((day) => day.gaps)[0]?.requests[0]?.askWontClose;
+
+    expect(place("over_intro_ratio", askOn())).toBe(true);
+    // Somebody who does close it.
+    expect(place("over_intro_ratio", askOn({ inWaterRole: "instructor" }))).toBe(false);
+    // The entry-level cap, which a certified assistant does raise.
+    expect(place("over_ratio", askOn())).toBe(false);
+    // An answered request is history; the gap chip above it already says the
+    // session is still short.
+    expect(place("over_intro_ratio", askOn({ state: "approved" }))).toBe(false);
   });
 
   it("counts a week with nothing but somebody's days away as having entries", () => {

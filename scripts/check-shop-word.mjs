@@ -131,6 +131,23 @@ const RULES = [
     says: 'you press a control: "presiona", "mantén presionado". "Pulsar" reads as Spain',
   },
   {
+    id: "intro-session",
+    // README's bautismo section — settled 2026-09-11 after the two ratio chips
+    // were found naming the same thing. `Curso de iniciación` is the entry-level
+    // certification course in Spanish, which is the ratio the *other* chip
+    // watches, so "Ratio de iniciación excedida" beside "Ratio de alumnos
+    // excedida" told a manager one fact twice and hid the only difference that
+    // matters: an intro session is closed by another instructor, and the
+    // entry-level one by a divemaster.
+    //
+    // Narrow on purpose, because `iniciación` keeps the entry-level sense:
+    // `trips.depthWarningNoCard` says "el límite de iniciación" and is right,
+    // and a real Open Water session is "una sesión del curso de iniciación",
+    // which this does not take either.
+    pattern: /\b(sesi[oó]n|ratio|clase)e?s? de iniciaci[oó]n/i,
+    says: 'a taster dive (DSD/Try Scuba) is "un bautismo (de buceo)", masculine — "iniciación" is the entry-level course, which is the other ratio',
+  },
+  {
     id: "check",
     // README:98, and its verificar/revisar paragraph at :100-103.
     //

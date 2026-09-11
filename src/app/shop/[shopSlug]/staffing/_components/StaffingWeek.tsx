@@ -96,6 +96,12 @@ export type StaffingWeekWords = {
   requestDeclined: string;
   /** Beside the ask, when the reader's being aboard would not close it (#1339). */
   askWontClose: string;
+  /**
+   * Beside Approve, when approving *this* ask would not close it (#1339). The
+   * decider is the one person on this surface who can, and they were the one
+   * reader never told.
+   */
+  requestWontClose: string;
 };
 
 export type StaffingWeekLinks = {
@@ -335,6 +341,15 @@ function GapChip({
                   request.state === "approved" ? words.requestApproved : words.requestDeclined
                 }`}
           </span>
+          {/* The fact the requester was already given, said to the person who
+              can act on it (issue #1339). Above the buttons, not under them: a
+              manager clearing the queue at 06:40 taps and moves on, and a
+              sentence after the control is one nobody reads. It goes with the
+              buttons — it is about pressing Approve, so a reader who has no
+              Approve to press is told nothing. */}
+          {canDecide && request.askWontClose ? (
+            <span className="text-warning-strong">{words.requestWontClose}</span>
+          ) : null}
           {canDecide && request.state === "pending" ? (
             <span className="flex flex-wrap gap-1">
               <form action={decideRequestAction}>
@@ -674,6 +689,13 @@ export function StaffingWeek({
                                 ? words.requestApproved
                                 : words.requestDeclined
                             }`}
+                        {/* The grid's own line, wrapped as a block so the two
+                            buttons still get a row of their own (#1339). */}
+                        {canDecide && request.askWontClose ? (
+                          <span className="block text-warning-strong">
+                            {words.requestWontClose}
+                          </span>
+                        ) : null}
                         {canDecide && request.state === "pending" ? (
                           <span className="ms-2 inline-flex gap-2">
                             <form action={decideRequestAction} className="inline">

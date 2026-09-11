@@ -96,6 +96,14 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
     tone: "warning",
     key: "staffing.notice.requestApprovedNotAssigned",
   },
+  // Approved, assigned, and the session is *still* over an intro ratio (issue
+  // #1339): `INTRO_COURSE_RATIO` credits an assistant zero students, so the
+  // plain success line read as a gap closed to the one person who could close
+  // it. Warning, not success — the boat has not changed.
+  "request-approved-ratio-open": {
+    tone: "warning",
+    key: "staffing.notice.requestApprovedRatioOpen",
+  },
   "request-declined": { tone: "success", key: "staffing.notice.requestDeclined" },
   "not-allowed": { tone: "danger", key: "staffing.notice.notAllowed" },
   "person-not-found": { tone: "danger", key: "staffing.notice.personNotFound" },
@@ -465,6 +473,7 @@ export default async function StaffingPage({
               requestApproved: t("staffing.week.requestApproved"),
               requestDeclined: t("staffing.week.requestDeclined"),
               askWontClose: t("staffing.week.askWontClose"),
+              requestWontClose: t("staffing.week.requestWontClose"),
             }}
           />
 

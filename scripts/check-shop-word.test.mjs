@@ -160,6 +160,31 @@ describe("the words the es-ES README settled", () => {
     });
   });
 
+  describe("a taster dive is un bautismo", () => {
+    it("refuses the two shapes that named a bautismo iniciación", () => {
+      // Both were live on 2026-09-11: the chip and the sentence under it.
+      expect(rules({ k: "Ratio de iniciación excedida" })).toEqual(["intro-session"]);
+      expect(rules({ k: "8 reservados en esta sesión de iniciación" })).toEqual(["intro-session"]);
+      expect(rules({ k: "las sesiones de iniciación de mañana" })).toEqual(["intro-session"]);
+    });
+
+    it("accepts bautismo", () => {
+      expect(rules({ k: "Ratio de bautismo excedida" })).toEqual([]);
+      expect(rules({ k: "8 reservados en este bautismo" })).toEqual([]);
+    });
+
+    /**
+     * The other half of the decision, and the reason the pattern names the
+     * nouns in front of the word rather than the word: `iniciación` is the
+     * entry-level *course*, which is the ratio the sibling chip watches.
+     * `el límite de iniciación` is in `staff/trips.json` today and is right.
+     */
+    it("leaves the entry-level readings of iniciación alone", () => {
+      expect(rules({ k: "18 m es el límite de iniciación" })).toEqual([]);
+      expect(rules({ k: "una sesión del curso de iniciación" })).toEqual([]);
+    });
+  });
+
   describe("confirming a fact is verificar", () => {
     it("refuses the comprobar family across its inflections", () => {
       expect(rules({ k: "Lista de comprobación previa a la salida" })).toEqual(["check"]);

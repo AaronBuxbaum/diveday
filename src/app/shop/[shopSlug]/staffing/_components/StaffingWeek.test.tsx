@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import type { AvailabilityBlock, CrewAssignmentRequest } from "@/lib/crew-requests";
 import { staffWeek, type WeekGap, type WeekPerson } from "@/lib/staffing-week";
 import { type GapWords, StaffingWeek, type StaffingWeekWords } from "./StaffingWeek";
@@ -45,7 +46,8 @@ const WORDS: StaffingWeekWords = {
   deciding: "Saving…",
   requestApproved: "Approved",
   requestDeclined: "Declined",
-  askWontClose: "Only another instructor closes this gap.",
+  askWontClose: "You add no seats to this session. Only another instructor does.",
+  requestWontClose: "Approving this one won’t close the gap. Only an instructor adds seats.",
 };
 
 const GAP_WORDS: GapWords = {
@@ -243,15 +245,34 @@ describe("StaffingWeek", () => {
    * The ask stays — the owner chose to warn, not to refuse — and the warning
    * is drawn in both layouts, because the phone loses the columns and never
    * the work.
+   *
+   * **The sentence claims the ratio, never the shop's options.** It shipped as
+   * "Only another instructor closes this gap", which is false: the gap is
+   * `booked > capacity` (src/lib/course-ratios.ts), so a manager also closes
+   * it by moving one intro participant to the afternoon — which is exactly
+   * what a one-instructor shop with three walk-ups does at 07:00. Told "only
+   * another instructor" with no other instructor within forty minutes, a crew
+   * learns to skim the warning channel. The siblings had it right all along
+   * (`trips.pulse.overRatioWarningIntro`, `today.overRatioIntro`): what is
+   * true of the cap is that a non-instructor adds no seats to it.
    */
-  it("warns a divemaster that their ask will not close an intro-ratio gap", () => {
+  it("tells a divemaster their ask adds no seats to an intro-ratio gap", () => {
     const dm = renderWeek({
       gaps: [{ ...GAP, gap: "over_intro_ratio" }],
       viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: false },
     });
 
     // Both layouts render at once in jsdom; the note appears in each.
-    expect(screen.getAllByText("Only another instructor closes this gap.").length).toBe(2);
+    expect(screen.getAllByText(WORDS.askWontClose).length).toBe(2);
+    // The fixture is the shipped sentence, in both locales, and what each one
+    // claims is the cap — what the reader does not add — never a monopoly on
+    // the fix.
+    expect(WORDS.askWontClose).toBe(staffTranslator("en-US")("staffing.week.askWontClose"));
+    expect(WORDS.askWontClose).toContain("no seats");
+    expect(WORDS.askWontClose).not.toMatch(/closes this gap/);
+    const es = staffTranslator("es-ES")("staffing.week.askWontClose");
+    expect(es).toContain("plazas");
+    expect(es).not.toMatch(/cierra/);
     // And it is a note on the act, not a replacement for it.
     expect(screen.getAllByRole("button", { name: "Ask to work Spiegel Grove" }).length).toBe(2);
     dm.unmount();
@@ -261,7 +282,7 @@ describe("StaffingWeek", () => {
       gaps: [{ ...GAP, gap: "over_intro_ratio" }],
       viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: true },
     });
-    expect(screen.queryByText("Only another instructor closes this gap.")).toBeNull();
+    expect(screen.queryByText(WORDS.askWontClose)).toBeNull();
     expect(screen.getAllByRole("button", { name: "Ask to work Spiegel Grove" }).length).toBe(2);
     instructor.unmount();
 
@@ -270,7 +291,61 @@ describe("StaffingWeek", () => {
       gaps: [{ ...GAP, gap: "over_ratio" }],
       viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: false },
     });
-    expect(screen.queryByText("Only another instructor closes this gap.")).toBeNull();
+    expect(screen.queryByText(WORDS.askWontClose)).toBeNull();
+  });
+
+  /**
+   * Issue #1339's other reader. The decider is the one person on this surface
+   * who can close an intro-ratio gap, and the queue told them nothing: a name,
+   * Approve, Decline, and then "Approved, and they're on the crew" about a
+   * session still over ratio.
+   */
+  it("tells the decider, beside Approve, when approving would not close the gap", () => {
+    const ask = (overrides: Partial<CrewAssignmentRequest> = {}): CrewAssignmentRequest => ({
+      id: "r1",
+      tripId: GAP.tripId,
+      personId: "person-2",
+      personName: "Sal Moretti",
+      inWaterRole: "certified_assistant",
+      state: "pending",
+      requestedAt: new Date("2026-08-20T00:00:00.000Z"),
+      ...overrides,
+    });
+    const sentence = "Approving this one won’t close the gap. Only an instructor adds seats.";
+
+    const divemaster = renderWeek({
+      gaps: [{ ...GAP, gap: "over_intro_ratio" }],
+      requests: [ask()],
+    });
+    // Both layouts, and the buttons are still there — it informs, never gates.
+    expect(screen.getAllByText(sentence).length).toBe(2);
+    expect(screen.getAllByRole("button", { name: "Approve" }).length).toBe(2);
+    divemaster.unmount();
+
+    // An instructor's ask does close it, so nothing is said.
+    const instructor = renderWeek({
+      gaps: [{ ...GAP, gap: "over_intro_ratio" }],
+      requests: [ask({ inWaterRole: "instructor" })],
+    });
+    expect(screen.queryByText(sentence)).toBeNull();
+    instructor.unmount();
+
+    // And the entry-level cap, which a certified assistant does raise.
+    const entryLevel = renderWeek({
+      gaps: [{ ...GAP, gap: "over_ratio" }],
+      requests: [ask()],
+    });
+    expect(screen.queryByText(sentence)).toBeNull();
+    entryLevel.unmount();
+
+    // It is a note on Approve, so a reader with no Approve to press — the rest
+    // of the crew, reading the same week — is told nothing.
+    renderWeek({
+      gaps: [{ ...GAP, gap: "over_intro_ratio" }],
+      requests: [ask()],
+      canDecide: false,
+    });
+    expect(screen.queryByText(sentence)).toBeNull();
   });
 
   it("names the current day with a word as well as an ink", () => {

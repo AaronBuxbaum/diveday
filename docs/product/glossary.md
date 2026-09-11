@@ -493,6 +493,9 @@ new domain concept, define it here in the same PR.
   cert. Minimum age 10; maximum depth 6 m/20 ft confined water, 12 m/40 ft open water. Always
   dives with an instructor, at the **intro-session ratio** (below) — tighter than Open Water
   training, because a DSD participant has had no prior water time at all.
+  In Spanish this is **un bautismo (de buceo)**, never *un curso de iniciación*, which is the
+  entry-level certification course and the *other* ratio below
+  (`src/i18n/locales/es-ES/README.md`).
 - **Intro-session in-water ratio** — the cap on a no-certification-required taster session
   (DSD/Try Scuba — `courses.is_intro_course`): PADI's published **Discover Scuba** figure from the
   Instructor Manual (HD-6, sourced 2026-08-02) — **4 students per instructor in confined/pool

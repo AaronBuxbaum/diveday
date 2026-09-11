@@ -9,6 +9,7 @@ import {
   deleteCrewAvailabilityBlock,
   requestCrewAssignment,
   saveCrewAvailabilityBlock,
+  tripOverIntroRatio,
 } from "@/db/crew-requests";
 import { getShopById } from "@/db/shops";
 import { setCrewPublicConsent } from "@/db/staff-accounts";
@@ -358,8 +359,21 @@ export async function decideCrewRequestAction(week: string, formData: FormData) 
     operation: "assign",
     personId: outcome.personId,
   });
+  if (!assigned) {
+    revalidateAndRedirect(path, noticeUrl(path, "request-approved-not-assigned", at));
+    return;
+  }
+  // **An approval that changed nothing says so** (issue #1339). An intro
+  // session's cap is instructor-to-student — `INTRO_COURSE_RATIO` credits an
+  // assistant zero students — so approving a divemaster onto an over-ratio DSD
+  // session is a real assignment that moves capacity by not one seat. The plain
+  // "Approved, and they're on the crew" was the last thing the queue said about
+  // it, and at 06:40 on a Saturday nobody re-reads the chip afterwards. Asked
+  // of the boat after the write rather than inferred from who asked, so a
+  // second instructor rostered in the same minute is reported honestly.
+  const stillOverIntroRatio = await tripOverIntroRatio(db, session.user.shopId, outcome.tripId);
   revalidateAndRedirect(
     path,
-    noticeUrl(path, assigned ? "request-approved" : "request-approved-not-assigned", at),
+    noticeUrl(path, stillOverIntroRatio ? "request-approved-ratio-open" : "request-approved", at),
   );
 }

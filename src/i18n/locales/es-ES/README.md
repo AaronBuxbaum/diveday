@@ -218,6 +218,37 @@ A crew shortfall on a course session is a requirement, not a state: **"El curso 
 instructor"**, not *"Sin instructor"*. A fun dive without an instructor is an ordinary day; a course
 session without one cannot take a single enrolment, and *sin* describes the harmless one.
 
+## A taster dive is **un bautismo**; **iniciación** names the entry-level course
+
+Settled 2026-09-11, reading the two ratio chips above side by side. They sit in the same column of
+the same week and they decide who a manager goes to find: the entry-level cap (Open Water training,
+8 per instructor, +2 per certified assistant) is closed by a divemaster, and the intro-session cap
+(DSD / Try Scuba, 2 per instructor, no assistant bonus) is closed by **another instructor and
+nothing else** (`docs/product/glossary.md`).
+
+The Spanish named them the other way round. **Curso de iniciación (al buceo)** is what a Spanish
+speaker calls the entry-level certification course — the one the *other* chip governs — so "Ratio de
+iniciación excedida" beside "Ratio de alumnos excedida" read as one fact stated twice, and a manager
+picking between them had no way to tell which crew member would fix it. The trade word for a
+first-time taster dive is **bautismo (de buceo)**, also *bautismo submarino*, and it is read that way
+across Latin America and the Caribbean.
+
+| English | Spanish |
+| --- | --- |
+| an intro session / intro course (DSD, Try Scuba) | un bautismo (de buceo) |
+| on this intro session | en este bautismo |
+| Over intro ratio | Ratio de bautismo excedida |
+| Intro-course status | Estado de bautismo de buceo |
+
+The noun is **masculine**: `el`/`un`/`este`, and anything reaching back to it agrees (`lleno`,
+`excedido`, `programado`).
+
+**`iniciación` is not banned — it is the entry-level sense now**, which is why
+`trips.depthWarningNoCard` still says *el límite de iniciación* for the depth an Open Water card
+carries. `scripts/check-shop-word.mjs` refuses only *sesión / ratio / clase de iniciación*, the
+shapes that were naming a bautismo, and leaves *curso de iniciación* and *límite de iniciación*
+alone.
+
 ## The waiver is **la exención**
 
 One document, one word — settled 2026-08-14, after a sweep found the marketing bundle promising to

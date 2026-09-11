@@ -102,7 +102,7 @@
         "description": "Descripción del curso",
         "minimumCertificationLevel": "Requisito de certificación",
         "minimumAge": "Edad mínima",
-        "isIntroCourse": "Curso de iniciación",
+        "isIntroCourse": "Estado de bautismo de buceo",
         "summary": "Subtítulo",
         "overview": "Resumen",
         "durationText": "Duración",
