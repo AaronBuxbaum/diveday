@@ -9,6 +9,7 @@ import type { Shop } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { isDiverLocale } from "@/i18n/settings";
 import { seaStateText, temperatureText, windText } from "@/i18n/unit-labels";
 import { nowDate } from "@/lib/clock";
 import { boardTitleFor } from "@/lib/display-tokens";
@@ -84,8 +85,31 @@ export default async function DeparturesBoardPage({
   }
 
   const now = nowDate();
+  /**
+   * **The shop is the reader here, and only here** (#1462).
+   *
+   * `requestLocale` reads the person's own cookie, then `Accept-Language`,
+   * then the shop's default — the right order on every surface somebody chose
+   * to open, and the wrong one on a wall. A lobby screen has nobody in front
+   * of it who has ever chosen anything, and no staffer can set a cookie on a
+   * television they never browse from, so a shop in Cozumel minting a board
+   * link and opening it on hardware that reports `Accept-Language: en-US`
+   * watched its whole lobby render in English with nothing inside DiveDay able
+   * to change it.
+   *
+   * So this route prefers `shops.default_locale` outright. The asymmetry is
+   * deliberate and should not be "fixed": a Spanish shop's screen now ignores
+   * an English television, and an English shop's ignores a Spanish one. A
+   * stored locale DiveDay no longer carries falls through to the ordinary
+   * negotiation rather than rendering blanks. One shop running two screens in
+   * two languages is still unserved — that is a per-screen column on
+   * `display_tokens`, deliberately not built.
+   *
+   * The refusal card above keeps the anonymous `requestLocale()`: no shop is
+   * resolved at that point, so there is no default to read.
+   */
   const [locale, departures] = await Promise.all([
-    requestLocale(shop.defaultLocale),
+    isDiverLocale(shop.defaultLocale) ? shop.defaultLocale : requestLocale(),
     getDeparturesBoard(db, {
       shopId: shop.id,
       timeZone: shop.timezone,
