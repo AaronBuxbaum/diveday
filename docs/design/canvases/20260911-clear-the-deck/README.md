@@ -1,6 +1,6 @@
 # Clear the deck — six ways to make DiveDay smaller
 
-- **Status:** Live (its ADR is Proposed, pending H-73; round 2 drawn 2026-09-11 on the owner's read of round 1; nothing has shipped from it)
+- **Status:** Live (its ADR is Proposed, pending H-73; rounds 2 and 3 drawn 2026-09-11 on the owner's reads of the rounds before them; nothing has shipped from it)
 - **Date:** 2026-09-11
 - **ADR:** [20260911-clear-the-deck](../../../architecture/decisions/20260911-clear-the-deck.md)
 - **Published:** https://claude.ai/code/artifact/d79e2f2e-a6b7-4692-8f32-c67dc5651bb9
@@ -17,12 +17,14 @@ different axis — by noun, by time, by place, by question, by default, by face 
 the shop home for the same shop on the same morning, at desktop and at 390, so they compare like for
 like. **Nothing here is normative**; the ADR carries the floor and the six, the pick is the owner's
 (H-73), and code obeys the ADR. A second page, drawn the same day on the owner's read of the first,
-redraws the surface itself — see "Round 2" below.
+redraws the surface itself, and a third, on the read of the second, draws one direction deep — see
+"Round 2" and "Round 3" below.
 
 ## Artboards
 
-Two pages. On the first, round 1: the cover on top, the six concepts beneath it in two rows of three.
-On the second, round 2: its cover, then the five surfaces in a row.
+Three pages. On the first, round 1: the cover on top, the six concepts beneath it in two rows of
+three. On the second, round 2: its cover, then the five surfaces in a row. On the third, round 3: its
+cover beside the system sheet, then the home by day, the home at depth, and the three phones.
 
 | File | What it shows |
 | --- | --- |
@@ -59,10 +61,34 @@ Every round-2 board is drawn on the deletions round 1's floor proposes and shows
 a staff surface, which is call (b) drawn rather than assumed; if the owner keeps the decoration the
 boards are not redrawn.
 
+### Round 3 — Console, the instrument that moves
+
+The owner's read of round 2, 2026-09-11: "I think my problem is with the Reef itself. I like when we
+were looking at DiveDay as an instrument, possibly moving farther away from the cutesy-ness." So the
+third page stops offering options and draws one direction deep: **Console** — DiveDay as the shop's
+instrument. It is the third time the instrument has been drawn (Deck on 09-01, C on 09-08); the first
+two lost on movement and on warmth, and Console answers movement with round 1's Three words and Ask
+and answers warmth by not trying — daylight at the desk, depth after dark by the device, the boat
+scheme at the rail. Seven tokens in three schemes, Geist for words and Geist Mono for every figure,
+five sizes, one radius, six parts (the readout, the figure, the line, the ladder, the meter, the
+cell), two signal inks always beside a word, and nothing drawn anywhere.
+
+| File | What it shows |
+| --- | --- |
+| `Round3.dc.html` | The page's cover: the owner's read, what it settles (everything of Reef that leaves, for good), the instrument three times and why the first two lost, what Console fixes about C, the readouts every surface exists to show, the recommendation, the owner's round-3 calls (i)–(l) |
+| `Console.dc.html` | **The sheet** — the seven tokens in the day, depth and boat schemes; the two faces and five sizes; the six parts drawn as specimens; controls, chrome, and the closed list of words allowed in a state's slot |
+| `ConsoleDay.dc.html` | **The home by day** — Thursday at 6:40 AM on the desk: the countdown readout, the ladder of three boats with their figures, the lines with their states, the desk, later |
+| `ConsoleDepth.dc.html` | **The home at depth** — the same page at 6:10 PM with the seven tokens inverted: two boats home counted in souls, the night boat's countdown, the evening's lines, today in figures |
+| `ConsolePhones.dc.html` | **Three phones** — the counter at 6:40 in the day scheme, the roll call on Mantis II at 6:58 in the boat scheme with one diver not aboard, and the home in a pocket with the three-word dock |
+
+Every round-3 board is drawn on round 1's recommended shape, Three words with Ask, which is still call
+(a). The round-3 boards share one app stylesheet, pasted verbatim into each between
+`/* console:start */` and `/* console:end */`.
+
 `today-home.jpg`, `today-storefront.jpg` and `today-settings.jpg` are the three captures round 1's
 cover reads, taken from `pnpm dev` on 2026-09-11 with `scripts/screenshot.mjs` (the demo shop, light, 1280
 and 390) and downsampled. They are evidence, dated like the rest of the canvas, and are never
-refreshed. `canvas.json` lays the thirteen boards out on two pages, pins four notes, and opens on round 2.
+refreshed. `canvas.json` lays the eighteen boards out on three pages, pins five notes, and opens on round 3.
 
 ## The fiction every board holds to
 
@@ -88,7 +114,7 @@ demo-seed fiction. Nothing here is real customer data.
 ## What every board keeps
 
 The name and the mark; Harbor on every diver-facing page (concept 6 makes it everything, never
-less); Geist as the only face on a staff surface (round 1; every round-2 surface names its own face, which is call f); the dock test (44px targets, 16px critical text,
+less); Geist as the only face on a staff surface (round 1; every round-2 surface names its own face, which is call f; round 3 keeps Geist and adds Geist Mono for figures); the dock test (44px targets, 16px critical text,
 AA, never colour alone — every blocked name on every board is a word in danger ink, never a hue);
 the coral bans on manifests, roll call, certs, waivers and payments; the roll call committing before
 it renders; the claims policy; H-02; and One hand's twelve deletions, which every concept stands on
@@ -124,17 +150,18 @@ names the ADR in its doc comment, a test pins the rule, and this table moves.
 | 21f — the floor: DiveDay's own pages become three plus the two legal ones (H-73 d) | open | — | — |
 | 21g — the picked concept's staff shape (H-73 a) | open | — | — |
 | 21h — the boat as its own tool, if the pick includes Ashore and aboard's boat half | open | — | — |
-| 21i — the surface: the picked surface's tokens, radius, face and structure on every staff page, and the deletion of Reef's (H-73 e, f) | open | — | — |
-| 21j — the diver's side on the picked surface: Harbor's storefront on its rows and controls; the postcard's fate (H-73 g) | open | — | — |
+| 21i — the surface: Console's seven tokens in three schemes, its five sizes, its six parts, on every staff page, and the deletion of Reef's tokens, ladder, bed, marks and moments (H-73 i, j, k, l; supersedes round 2's e and f) | open | — | — |
+| 21j — the diver's side on Console: Harbor's storefront on its line, figure and button; the recap as a printed log card, the drawing gone (H-73 g) | open | — | — |
 | 21k — DiveDay's own pages on the picked surface (H-73 h), in the slice that shrinks them (21f) | open | — | — |
 
 ## Working on it
 
 The sources here are the working files. To change a board, edit its `.dc.html`, re-seed a fresh
-copy with the design skill's helper (all thirteen artboards on both pages, `canvas.json`, the three
-`.jpg` files, the title "Clear the deck"), check it, and republish to the URL above. The seeded output is build
-output and is never committed ([design-artifacts.md](../../design-artifacts.md)). The thirteen boards
-share one prose stylesheet, pasted verbatim into each between `/* deck:start */` and `/* deck:end */`:
-change it in one board and copy the block into the other twelve with a scripted replace, never by
+copy with the design skill's helper (all eighteen artboards on the three pages, `canvas.json`, the
+three `.jpg` files, the title "Clear the deck"), check it, and republish to the URL above. The seeded output is build
+output and is never committed ([design-artifacts.md](../../design-artifacts.md)). The eighteen boards
+share one prose stylesheet, pasted verbatim into each between `/* deck:start */` and `/* deck:end */`,
+and the five round-3 boards share Console's between `/* console:start */` and `/* console:end */`:
+change either in one board and copy the block into the others with a scripted replace, never by
 hand and never as a divergent copy. Each round-2 surface carries its own app stylesheet beneath it,
 which is the point of the board and is not shared.

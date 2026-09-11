@@ -3,15 +3,18 @@
 - **Status:** Proposed — pending H-73. **Round 1 read 2026-09-11 (Aaron Buxbaum, in session):**
   the six concepts land, and the surface itself — Reef — is now the problem, "overbearing and ugly";
   go farther. Round 2 (decision 3, below) redraws the surface as five candidates for the owner's
-  pick. The floor's first two rows (the door, the chip and the pill) may start on this ADR alone,
+  pick. **Round 2 read, the same day:** the problem is Reef itself; the instrument is the direction
+  the owner liked; farther from the cutesy. Round 3 (decision 4) draws that one direction deep —
+  Console — and asks calls (i)–(l). The floor's first two rows (the door, the chip and the pill) may start on this ADR alone,
   because they are One hand's slices 20b and 20c taken to zero; every other row, every concept and
-  every surface waits on the owner's calls (a)–(h)
+  every surface waits on the owner's calls (a)–(l)
 - **Date:** 2026-09-11
 - **Design:** [the canvas](../../design/canvases/20260911-clear-the-deck/README.md) — two pages.
   Round 1: the cover with the count, the captures, the floor and the comparison; six concept boards,
   each redrawing the shop home at desktop and at 390 for the same shop on the same morning. Round 2:
   its cover with the layers counted on one screen and the surface floor; five surface boards, each
-  a system sheet, the home at desktop and the counter at 390
+  a system sheet, the home at desktop and the counter at 390. Round 3: its cover, Console's sheet,
+  the home by day, the home at depth, and three phones
 - **Scope:** every staff surface under `src/app/shop/**`, the primitives in `src/components/ui/`,
   the destination registry `src/lib/staff-destinations.ts`, the settings registry
   `src/app/shop/[shopSlug]/settings/settings-groups.ts`; under calls (c) and (d), the storefront
@@ -170,7 +173,58 @@ pick; (g) whether the hand and the coral leave the product entirely or stay on t
 postcard only; (h) whether DiveDay's own pages take the picked surface in the slice that shrinks
 them. Round 1's (a), (c) and (d) stand; (b) is answered by every surface here.
 
-### 4. What this does to One hand
+### 4. Console — the instrument, drawn deep (round 3, H-73 i–l)
+
+**The owner's read of round 2 (2026-09-11):** "I think my problem is with the Reef itself. I like
+when we were looking at DiveDay as an instrument, possibly moving farther away from the cutesy-ness."
+
+The instrument has been drawn twice before: Deck ([20260901-diveday-reimagined](20260901-diveday-reimagined.md))
+— dark by default, IBM Plex Mono figures, the day as a T−minus ladder, the roll call at depth — lost
+to Reef on warmth; C ([20260908-one-hand](20260908-one-hand.md)) — dark, one cyan, every state a word
+in a fixed 128px slot — was declined on 09-09 as hard to move around in and not warm enough. Round
+3 draws it a third time, by name, with both losses answered in the drawing rather than argued with:
+
+- **Movement** is round 1's: three words in the bar and at the bottom of a phone, the Ask field,
+  and the row's own tap; the slot holds a state word or a figure and never a sentence; the way back
+  is the word you are standing on.
+- **Warmth** is not attempted. The desk is drawn in daylight — a matte light ground, near-black ink
+  — and goes to depth only after dark, by the device; the roll call and the counter at the rail
+  take the boat scheme regardless. The owner's read is that warmth is no longer the bar.
+
+**Console, stated so a guard can hold it.** Seven tokens — ground, ink, meta, hairline, red, amber,
+fill — in three schemes (day, depth, boat), plus the shop's colour as a 3px rule at the top edge and
+nowhere else. Geist for every word and Geist Mono for every figure, label, time and state, at five
+sizes (56 readout · 28 figure · 24 title · 18 name · 16 value, with the mono's 14, 12 and 11). One
+radius, 2px. Six parts and nothing else on a staff surface: the readout (the one number a surface
+exists to show, its unit in caps, a meter whose gap carries the signal colour), the figure, the line
+(label · sentence · state in a 128px slot), the ladder (the day as departures with T−minus or the
+hour they came home), the meter, and the cell (the counter's and the roll call's 60px row with a
+48px square target). Figures lead; a state is a word; red is the only ink that stops a boat and
+amber the only ink that needs a person, both always beside a word; there is no green, and "Ready"
+is never shown. Nothing is drawn — the hand, the coral, the sand, the panel and its bed, the band,
+the dial, the chip, the pill, the tints, the greeting and the moments leave for good, and the recap
+becomes a printed log card in the same system. A figure rolling is the one motion kept.
+
+The readouts, per surface: the home shows T−minus to the next boat; the counter, here of booked; the
+roll call, aboard of expected and then back of aboard; a boat's page, seats open; the week, boats;
+a person, dives with the shop; money, the month; the storefront, seats left per boat, in the shop's
+colour and face on Console's line and button.
+
+The recommendation, stated so it can be disagreed with: **adopt Console as the surface, on Three
+words with Ask, with Ashore-and-aboard's boat half as the roll call's home.** It is the direction
+the owner has now named twice, it deletes the idea of decoration rather than the decoration, and
+its one risk — a shop that wanted a brochure gets a console — is answered by the storefront, which
+stays the shop's.
+
+**The owner's round-3 calls (H-73):** (i) Console as the surface on every staff page, replacing
+round 2's (e); (j) the scheme — daylight at the desk with depth after dark by the device and the
+boat scheme at the rail, or depth always as Deck and C were; (k) the figures' face — Geist Mono,
+keeping one family, or IBM Plex Mono if Geist Mono reads soft at 56px; (l) two signal inks, red and
+amber, or red only. With round 3, (b) and (f) are answered by the drawing — the decoration leaves
+and Geist stays — and (g) is recommended as entirely: the hand and the coral leave the product.
+(a), (c), (d) and (h) stand.
+
+### 5. What this does to One hand
 
 One hand's ADR stays Proposed and its floor (20a–20e) stays the floor: nothing here restates it and
 every concept assumes it. Its open slices 20f–20m — the earned moment on the shared door, the levers
@@ -180,7 +234,7 @@ Their features that already shipped (20n–20t: the boat's line, try it with you
 the gift, sightings, paper, the shelf) stay; call (c) decides where they sit — recommended: all
 kept, on by default, and off the storefront's front page.
 
-### 5. What does not change
+### 6. What does not change
 
 The name and the mark. Harbor — the diver-facing pages wear the shop's brand, and concept 6 makes
 that everything rather than less. The dock test: 44px targets, 16px critical text, AA, never colour
@@ -210,6 +264,11 @@ mode under every surface. H-02's retention and erasure promises. Every settled q
   Reef would keep. Every candidate starts from two hues and one radius instead.
 - **Round 2 as one surface, chosen for the owner** — declined: taste is the owner's call, and five
   drawn on one anatomy let it be made by eye; the recommendation is stated so it can be refused.
+- **Round 3 as a sixth surface beside the five** — declined: the owner named the direction, so the
+  page draws it deep (a sheet, two schemes, three phones) instead of adding a sixth card to a row;
+  the five stay on page 2 as the record of what was offered.
+- **Round 3 as Deck or C republished** — declined: both lost for reasons the owner stated, and a
+  drawing that ignores them would lose again; Console keeps their parts and answers the two losses.
 
 ## Consequences
 
@@ -222,10 +281,12 @@ Hard: each retired switch drove a conditional on some surface, and the sweep has
 each one with its guard, message keys and test — the sessions in every cost estimate are mostly
 that. Marketing loses features it currently names (the embed catalogue, the print register) and
 gains a sentence ("nothing to configure before the first boat"). Concept 6 cannot start before
-concept 3's boat half exists. A new surface reverses two accepted picks — Reef's tokens (H-64,
-13a) and Geist as the only face — and the tests that pin them (`card.test.tsx`'s radius and
-elevation rules, `check:type-ramp`'s constants, the water-band palette test) are rewritten to pin
-the new surface, never deleted.
+concept 3's boat half exists. A new surface reverses accepted picks — Reef's tokens (H-64, 13a),
+and under round 3 the H-64 choice of Reef over Deck itself — and the tests that pin them
+(`card.test.tsx`'s radius and elevation rules, `check:type-ramp`'s constants, the water-band and
+night-palette tests, the illustration tests) are rewritten to pin Console, never deleted. Round 3
+also retires H-67's coral count and the earned-moment budget for staff surfaces; the ADRs that
+record them stay as the record and this one supersedes their surface decisions on acceptance.
 
 Commits us to: fewer things, held by guards that refuse a new door, a new pill, a new switch and a
 new front-page section, so the count cannot climb back in silence.

@@ -1,0 +1,301 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+/* deck:start — the Clear-the-deck kit. Pasted verbatim into every board of this canvas; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --lagoon:#0e7490; --lagoon-deep:#0a4d61; --lagoon-tint:#e6f3f5; --shop:#1d7a5f; --shop-deep:#145a46; --shop-tint:#e4f1ea; --ok:#15803d; --warn:#b45309; --danger:#b91c1c; --danger-tint:#f8e8e6; --coral:#ff6f61; --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 960px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.board-head .three p b { color: var(--ink); font-weight: 600; }
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lagoon); }
+.k { font-size: 11px; line-height: 16px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.frame-cap { display: flex; align-items: baseline; gap: 12px; padding: 28px 48px 10px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 960px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.aside b { color: var(--ink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--border); }
+.sec h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 980px; }
+.sec p b { font-weight: 600; }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot p b { color: var(--ink); font-weight: 600; }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot li b { color: var(--ink); font-weight: 600; }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 150px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.stat b { display: block; font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat b small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.stat span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 600; }
+.tbl td b { color: var(--ink); font-weight: 600; }
+.tbl td.ink { color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink); }
+.card p.m { color: var(--muted); }
+.card .k { color: var(--lagoon); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0 48px; }
+.count { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.count .k { display: block; }
+.count b { display: block; margin-top: 4px; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.count span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted); }
+
+/* — a frame: the app drawn inside the board — */
+.frame { margin: 0 48px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.frame.desktop { width: 1084px; }
+.phone { width: 390px; min-height: 760px; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; background: var(--bg); position: relative; }
+.pair { display: flex; gap: 32px; align-items: flex-start; padding: 0 48px; }
+.pair .beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.pair .beside h3 { margin: 0 0 8px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pair .beside p { margin: 0 0 12px 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside p b { color: var(--ink); font-weight: 600; }
+.pair .beside ul { margin: 0 0 16px 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside li b { color: var(--ink); font-weight: 600; }
+
+/* — app type — */
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--lagoon); font-weight: 500; }
+.blocked { color: var(--danger); font-weight: 600; }
+.word { font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 4px; border-bottom: 1px solid var(--border); }
+.row:first-child { border-top: 1px solid var(--border); }
+.row .who { flex: 0 0 200px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.row .what { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .what b { font-weight: 600; color: var(--ink); }
+.row .state { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.row .state.blocked { color: var(--danger); }
+.row .state.ok { color: var(--ok); }
+.row.add { color: var(--lagoon); font-weight: 500; font-size: 16px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px 0 8px 0; }
+.group-h .h { font-size: 20px; line-height: 26px; }
+.group-h .meta { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--shop); color: #fff; }
+.btn.quiet { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); font-size: 16px; color: var(--muted); }
+.field b { color: var(--ink); font-weight: 500; }
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 40px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.chrome .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--shop); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.glyph { width: 20px; height: 20px; flex: 0 0 20px; }
+/* deck:end */
+
+/* console:start — Console, the instrument. Pasted verbatim into every round-3 board; edit it once, re-assemble all. */
+.con, .con * { box-sizing: border-box; }
+.con { --g:#f5f6f5; --ink:#0b0f12; --mu:#5c6670; --hl:#d9dedf; --fill:#0b0f12; --fill-ink:#ffffff; --red:#c81e1e; --amber:#b45309; --shop:#1d7a5f; background: var(--g); color: var(--ink); font-family: Geist,"Helvetica Neue",Arial,system-ui,sans-serif; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased; position: relative; }
+.con.depth { --g:#0b0f12; --ink:#e8ecee; --mu:#8b959c; --hl:#263036; --fill:#e8ecee; --fill-ink:#0b0f12; --red:#ff5a5a; --amber:#ffb020; }
+.con.boat { --g:#000000; --ink:#ffffff; --mu:#b8c2c8; --hl:#3a4650; --fill:#ffffff; --fill-ink:#000000; --red:#ff6b6b; --amber:#ffc247; }
+.con .mono, .con .n, .con .u, .con .lbl, .con .st, .con .clock, .con .tminus { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+.con .bezel { height: 3px; background: var(--shop); }
+.con .bar { display: flex; align-items: center; gap: 24px; height: 48px; padding: 0 32px; border-bottom: 1px solid var(--hl); }
+.con .bar .shop { font-size: 15px; font-weight: 600; white-space: nowrap; }
+.con .bar .words { display: flex; gap: 20px; height: 48px; }
+.con .bar .words span { display: inline-flex; align-items: center; font-size: 14px; font-weight: 500; color: var(--mu); }
+.con .bar .words span.on { color: var(--ink); box-shadow: inset 0 -2px 0 var(--ink); }
+.con .bar .ask { margin-left: auto; display: flex; align-items: center; gap: 8px; width: 300px; height: 34px; padding: 0 10px; border: 1px solid var(--hl); border-radius: 2px; font-size: 14px; color: var(--mu); }
+.con .bar .clock { font-size: 14px; letter-spacing: 0.04em; }
+.con .bar .me { font-size: 14px; color: var(--mu); }
+.con .page { width: 960px; margin: 0 auto; padding: 24px 0 40px 0; }
+.con .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--ink); }
+.con .t { margin: 0; font-size: 24px; line-height: 30px; font-weight: 600; letter-spacing: -0.01em; }
+.con .lede { margin: 4px 0 0 0; font-size: 14px; line-height: 20px; color: var(--mu); }
+.con .readout { display: flex; flex-direction: column; align-items: flex-end; }
+.con .readout .n { font-size: 56px; line-height: 56px; font-weight: 700; letter-spacing: -0.03em; }
+.con .readout .n small { font-size: 20px; font-weight: 500; letter-spacing: 0; color: var(--mu); }
+.con .readout .u { font-size: 11px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); margin-top: 6px; }
+.con .boatrow { display: grid; grid-template-columns: 128px 1fr auto; gap: 0 24px; align-items: start; padding: 22px 0 10px 0; border-bottom: 1px solid var(--hl); }
+.con .tminus { font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; }
+.con .tminus small { display: block; font-size: 11px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); margin-top: 4px; font-weight: 500; }
+.con .tminus.red { color: var(--red); }
+.con .boatrow .name { font-size: 18px; line-height: 24px; font-weight: 600; margin: 0; }
+.con .boatrow .meta { font-size: 14px; line-height: 20px; color: var(--mu); margin: 2px 0 0 0; }
+.con .figs { display: flex; gap: 28px; }
+.con .fig { display: flex; flex-direction: column; align-items: flex-end; }
+.con .fig .n { font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; }
+.con .fig .n small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--mu); }
+.con .fig .u { font-size: 11px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); margin-top: 4px; }
+.con .fig.red .n { color: var(--red); }
+.con .fig.amber .n { color: var(--amber); }
+.con .line { display: grid; grid-template-columns: 112px 1fr 128px; gap: 0 16px; align-items: center; min-height: 44px; border-bottom: 1px solid var(--hl); font-size: 16px; line-height: 22px; }
+.con .line .lbl { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); font-weight: 500; }
+.con .line .val { color: var(--ink); padding: 8px 0; }
+.con .line .val b { font-weight: 600; }
+.con .line .val i { font-style: normal; color: var(--mu); }
+.con .line .st { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; text-align: right; font-weight: 600; }
+.con .line .st.red { color: var(--red); }
+.con .line .st.amber { color: var(--amber); }
+.con .line .st.mu { color: var(--mu); font-weight: 500; }
+.con .line.act .val { font-weight: 600; }
+.con .line.act .lbl { color: var(--ink); }
+.con .meter { height: 4px; background: var(--hl); position: relative; margin-top: 10px; }
+.con .meter i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); }
+.con .meter.gap-amber { background: var(--amber); }
+.con .meter.gap-red { background: var(--red); }
+.con .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--ink); border-radius: 2px; font-size: 15px; font-weight: 600; white-space: nowrap; color: var(--ink); }
+.con .btn.fill { background: var(--fill); color: var(--fill-ink); }
+.con .group { display: flex; align-items: baseline; justify-content: space-between; padding: 26px 0 6px 0; }
+.con .group .g { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mu); font-weight: 600; font-family: "Geist Mono", ui-monospace, Menlo, monospace; }
+.con .group .gm { font-size: 13px; color: var(--mu); font-variant-numeric: tabular-nums; }
+/* the phone */
+.con.ph .bar { height: 48px; padding: 0 14px; gap: 12px; }
+.con.ph .bar .words { gap: 14px; }
+.con.ph .bar .words span { font-size: 14px; }
+.con.ph .page { width: auto; padding: 16px 16px 72px 16px; }
+.con.ph .t { font-size: 18px; line-height: 24px; }
+.con.ph .readout .n { font-size: 64px; line-height: 64px; }
+.con .cell { display: flex; align-items: center; gap: 14px; min-height: 60px; border-bottom: 1px solid var(--hl); font-size: 18px; font-weight: 600; }
+.con .cell .sub { display: block; font-size: 13px; line-height: 18px; font-weight: 400; color: var(--mu); }
+.con .cell .sub.red { color: var(--red); font-weight: 600; }
+.con .cell .sub.amber { color: var(--amber); font-weight: 600; }
+.con .cell .w { margin-left: auto; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; white-space: nowrap; }
+.con .cell .w.mu { color: var(--mu); font-weight: 500; }
+.con .cell .w.red { color: var(--red); }
+.con .cell .tap { margin-left: auto; width: 48px; height: 48px; flex: 0 0 48px; border: 2px solid var(--ink); border-radius: 2px; display: inline-flex; align-items: center; justify-content: center; }
+.con .cell .tap.on { background: var(--fill); color: var(--fill-ink); }
+.con .cell .tap.red { border-color: var(--red); }
+.con .cell.big { min-height: 64px; font-size: 20px; }
+.con .dock { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--hl); background: var(--g); }
+.con .dock span { display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: var(--mu); }
+.con .dock span.on { color: var(--ink); box-shadow: inset 0 2px 0 var(--ink); }
+/* the system sheet's own cells */
+.sys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 0 48px; }
+.sys .cell { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 16px; }
+.sys h4 { margin: 0 0 10px 0; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.sys .sw { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.sys .sw div { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); }
+.sys .sw i { display: block; height: 32px; border-radius: 4px; border: 1px solid rgba(0,0,0,.08); }
+.sys .sw b { font-size: 12px; color: var(--ink); font-weight: 600; }
+.sys .spec { display: flex; flex-direction: column; gap: 8px; }
+.sys .spec small { display: block; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.sys .rules { display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 19px; color: var(--muted); }
+.sys .rules b { color: var(--ink); font-weight: 600; }
+.specimen { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+/* console:end */
+/* the sheet's narrow line specimen */
+.con.line-narrow .line { grid-template-columns: 56px 1fr 78px; gap: 0 10px; font-size: 14px; line-height: 20px; }
+.con.line-narrow .line .st { font-size: 11px; }
+
+  </style>
+</helmet>
+<div class="board">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow">Console · the home by day</span><span class="note">Design canvas · 2026-09-11 · Clear the deck · round 3</span></div>
+    <h1>Thursday at 6:40, read as an instrument</h1>
+    <p class="lede">The home exists to answer one question — how long until the next boat, and what stands in its way — so its one readout is the countdown, and the day beneath it is a ladder: each departure a line with its own figures, each need a labelled line with its state in a slot. Nothing on the page is not a fact. Drawn on round 1's Three words with Ask; the daylight scheme, which the device switches to depth after dark.</p>
+    <div class="three">
+      <div><span class="k">What leads</span><p><b>T−0:20 to the 7:00.</b> Then, per boat, four figures — booked, here, blocked, and the time it leaves — and a meter whose gap is the work. A number is read before a sentence is; that is the whole argument for an instrument.</p></div>
+      <div><span class="k">What moves</span><p>Three words in the bar, the field, and the row: tapping a boat opens it, tapping a line opens the person. Nothing is behind a menu; the way back is the word you are standing on. <b>This is what C did not have.</b></p></div>
+      <div><span class="k">What is gone</span><p>The greeting, the band, the tile, the dial, the chip, the pill, the panel, the bed, the glyph beside a word, the drawn mark, the coral, the sand, the horizon tiles, the intent line. The page has one rule under its head and hairlines between its lines.</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>The shop home</b> · Thursday, August 27, 6:40 AM · desktop · day scheme</div>
+  <div class="frame desktop" style="border-color:#d9dedf;"><div class="con">
+    <div class="bezel"></div>
+    <div class="bar"><span class="shop">Blue Mantis Divers</span><div class="words"><span class="on">Day</span><span>People</span><span>Shop</span></div><div class="ask"><svg class="glyph" style="width:14px;height:14px;flex-basis:14px;" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="M13 13l4 4"></path></svg>Ask — a name, a day, a boat</div><span class="clock">06:40</span><span class="me">Dana Reyes</span></div>
+    <div class="page">
+      <div class="head">
+        <div><h1 class="t">Thursday, August 27</h1><p class="lede">3 boats · 23 divers · 4 things before the 7:00 leaves, and 1 after</p></div>
+        <div class="readout"><span class="n">0:20</span><span class="u">T−minus · 7:00 Two-Tank Reef · Mantis II</span></div>
+      </div>
+
+      <div class="boatrow">
+        <div class="tminus">−0:20<small>Leaves 7:00 · back 10:30</small></div>
+        <div><p class="name">Two-Tank Reef — Molasses &amp; French</p><p class="meta">Mantis II · Keiko Tanaka, Sal Moretti · check-in closes 6:45</p></div>
+        <div class="figs"><div class="fig"><span class="n">10<small>/12</small></span><span class="u">Booked</span></div><div class="fig"><span class="n">6<small>/10</small></span><span class="u">Here</span></div><div class="fig red"><span class="n">2</span><span class="u">Blocked</span></div></div>
+      </div>
+      <div class="meter gap-amber" style="margin-top:0;"><i style="width:60%;"></i></div>
+      <div>
+        <div class="line"><span class="lbl">Cert</span><span class="val"><b>Grace Mensah</b> · Advanced card, added yesterday, waits for a look</span><span class="st red">Blocked</span></div>
+        <div class="line"><span class="lbl">Waiver</span><span class="val"><b>Priya Sharma</b> · not sent</span><span class="st red">Blocked</span></div>
+        <div class="line"><span class="lbl">Contact</span><span class="val"><b>Nadia Petrov</b> · no emergency contact on file <i>· it prints on the manifest</i></span><span class="st amber">Attention</span></div>
+        <div class="line"><span class="lbl">Sizes</span><span class="val">Hannah Liu, Ben Carter, Emma Fischer · no rental sizes yet</span><span class="st amber">Attention</span></div>
+        <div class="line"><span class="lbl">Arrival</span><span class="val">Hugo Marsh, Ben Okafor · not here yet</span><span class="st mu">2 to come</span></div>
+        <div class="line act"><span class="lbl">Seat</span><span class="val">Seat a walk-in</span><span class="st"></span></div>
+      </div>
+
+      <div class="boatrow">
+        <div class="tminus">6:20<small>Leaves 1:00 · back 5:00</small></div>
+        <div><p class="name">Wreck Trip — Spiegel Grove</p><p class="meta">Mantis II · no crew assigned · deep wreck, Advanced</p></div>
+        <div class="figs"><div class="fig"><span class="n">10<small>/10</small></span><span class="u">Booked</span></div><div class="fig red"><span class="n">2</span><span class="u">Blocked</span></div></div>
+      </div>
+      <div>
+        <div class="line"><span class="lbl">Crew</span><span class="val">Nobody is assigned to this boat</span><span class="st red">Blocked</span></div>
+        <div class="line"><span class="lbl">Cert</span><span class="val"><b>Tomás Ferreira</b> · no card on file for a deep wreck</span><span class="st red">Blocked</span></div>
+      </div>
+
+      <div class="boatrow">
+        <div class="tminus">12:50<small>Leaves 7:30 · back 11:00</small></div>
+        <div><p class="name">Night Dive — City of Washington</p><p class="meta">Skiff · Keiko Tanaka · after dark · sunset 7:44</p></div>
+        <div class="figs"><div class="fig"><span class="n">3<small>/8</small></span><span class="u">Booked</span></div><div class="fig amber"><span class="n">5</span><span class="u">Open</span></div></div>
+      </div>
+      <div>
+        <div class="line"><span class="lbl">Seats</span><span class="val">5 open · no last-minute deal sent</span><span class="st amber">No deal</span></div>
+        <div class="line"><span class="lbl">Brief</span><span class="val"><b>Jonas Berg</b> · first dive since 2019</span><span class="st"></span></div>
+      </div>
+
+      <div class="group"><span class="g">At the desk</span><span class="gm">since yesterday</span></div>
+      <div>
+        <div class="line"><span class="lbl">Messages</span><span class="val">3 divers wrote back · Grace Mensah, Priya Sharma, Ravi Nair</span><span class="st n">3</span></div>
+        <div class="line"><span class="lbl">Reviews</span><span class="val">Lars P. · Wreck Trip — Duane · ★★★★★ · waiting on you</span><span class="st n">1</span></div>
+        <div class="line"><span class="lbl">Stripe</span><span class="val"><b>Priya Sharma</b> · $95.00 at 6:02 · not yet confirmed</span><span class="st amber">Unconfirmed</span></div>
+        <div class="line"><span class="lbl">Draft</span><span class="val"><b>Emmet O'Brien</b> on Friday's 7:00 · started 6:02 at this desk</span><span class="st mu">Open</span></div>
+      </div>
+
+      <div class="group"><span class="g">Later</span><span class="gm">this week</span></div>
+      <div>
+        <div class="line"><span class="lbl">Fri 28</span><span class="val">2 boats · 7 things · 10 of 20 seats sold</span><span class="st n">2</span></div>
+        <div class="line"><span class="lbl">Sat 29</span><span class="val">2 boats · the 11:00 sold out, 2 waiting · the 7:30 at 5 of 8</span><span class="st n">2</span></div>
+      </div>
+    </div>
+  </div></div>
+  <p class="aside"><b>Read the figures first, then the words.</b> The countdown at the top right is the page's one readout. Each boat carries its own: booked, here, blocked, and the time it leaves. The meter under the 7:00 is six-tenths ink and four-tenths amber — the gap is the work, per principle 9. Every state is a word in the right-hand slot, in one of three inks: red for what stops a boat, amber for what needs someone, grey for a count. The shop's colour is the 3px rule at the very top and nowhere else.</p>
+
+  <div class="foot">
+    <div><h3>What it keeps of Deck and C</h3><p>The readout, the T−minus ladder, tabular figures in a mono face, a state as a word in a fixed slot, hairline structure, square controls. Everything an instrument is for.</p></div>
+    <div><h3>What it changes</h3><p>Daylight by default — the desk is not a night boat. The slot is 128px and holds a word or a figure, never a sentence. Ink for actions instead of a cyan; red and amber for the two signals, always with the word. Three words and a field to move by.</p></div>
+    <div><h3>What it deletes for good</h3><p>The hand in every use, the coral in every use, the sand, the panel and its bed, the band, the dial, the chip, the pill, the tints, the horizon tiles, the greeting, the eyebrow, a second face for display. The postcard becomes a printed log card in the same system.</p></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

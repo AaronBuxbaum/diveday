@@ -1,0 +1,317 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+/* deck:start — the Clear-the-deck kit. Pasted verbatim into every board of this canvas; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --lagoon:#0e7490; --lagoon-deep:#0a4d61; --lagoon-tint:#e6f3f5; --shop:#1d7a5f; --shop-deep:#145a46; --shop-tint:#e4f1ea; --ok:#15803d; --warn:#b45309; --danger:#b91c1c; --danger-tint:#f8e8e6; --coral:#ff6f61; --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 960px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.board-head .three p b { color: var(--ink); font-weight: 600; }
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lagoon); }
+.k { font-size: 11px; line-height: 16px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.frame-cap { display: flex; align-items: baseline; gap: 12px; padding: 28px 48px 10px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 960px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.aside b { color: var(--ink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--border); }
+.sec h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 980px; }
+.sec p b { font-weight: 600; }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot p b { color: var(--ink); font-weight: 600; }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot li b { color: var(--ink); font-weight: 600; }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 150px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.stat b { display: block; font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat b small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.stat span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 600; }
+.tbl td b { color: var(--ink); font-weight: 600; }
+.tbl td.ink { color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink); }
+.card p.m { color: var(--muted); }
+.card .k { color: var(--lagoon); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0 48px; }
+.count { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.count .k { display: block; }
+.count b { display: block; margin-top: 4px; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.count span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted); }
+
+/* — a frame: the app drawn inside the board — */
+.frame { margin: 0 48px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.frame.desktop { width: 1084px; }
+.phone { width: 390px; min-height: 760px; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; background: var(--bg); position: relative; }
+.pair { display: flex; gap: 32px; align-items: flex-start; padding: 0 48px; }
+.pair .beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.pair .beside h3 { margin: 0 0 8px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pair .beside p { margin: 0 0 12px 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside p b { color: var(--ink); font-weight: 600; }
+.pair .beside ul { margin: 0 0 16px 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside li b { color: var(--ink); font-weight: 600; }
+
+/* — app type — */
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--lagoon); font-weight: 500; }
+.blocked { color: var(--danger); font-weight: 600; }
+.word { font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 4px; border-bottom: 1px solid var(--border); }
+.row:first-child { border-top: 1px solid var(--border); }
+.row .who { flex: 0 0 200px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.row .what { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .what b { font-weight: 600; color: var(--ink); }
+.row .state { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.row .state.blocked { color: var(--danger); }
+.row .state.ok { color: var(--ok); }
+.row.add { color: var(--lagoon); font-weight: 500; font-size: 16px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px 0 8px 0; }
+.group-h .h { font-size: 20px; line-height: 26px; }
+.group-h .meta { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--shop); color: #fff; }
+.btn.quiet { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); font-size: 16px; color: var(--muted); }
+.field b { color: var(--ink); font-weight: 500; }
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 40px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.chrome .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--shop); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.glyph { width: 20px; height: 20px; flex: 0 0 20px; }
+/* deck:end */
+
+/* console:start — Console, the instrument. Pasted verbatim into every round-3 board; edit it once, re-assemble all. */
+.con, .con * { box-sizing: border-box; }
+.con { --g:#f5f6f5; --ink:#0b0f12; --mu:#5c6670; --hl:#d9dedf; --fill:#0b0f12; --fill-ink:#ffffff; --red:#c81e1e; --amber:#b45309; --shop:#1d7a5f; background: var(--g); color: var(--ink); font-family: Geist,"Helvetica Neue",Arial,system-ui,sans-serif; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased; position: relative; }
+.con.depth { --g:#0b0f12; --ink:#e8ecee; --mu:#8b959c; --hl:#263036; --fill:#e8ecee; --fill-ink:#0b0f12; --red:#ff5a5a; --amber:#ffb020; }
+.con.boat { --g:#000000; --ink:#ffffff; --mu:#b8c2c8; --hl:#3a4650; --fill:#ffffff; --fill-ink:#000000; --red:#ff6b6b; --amber:#ffc247; }
+.con .mono, .con .n, .con .u, .con .lbl, .con .st, .con .clock, .con .tminus { font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+.con .bezel { height: 3px; background: var(--shop); }
+.con .bar { display: flex; align-items: center; gap: 24px; height: 48px; padding: 0 32px; border-bottom: 1px solid var(--hl); }
+.con .bar .shop { font-size: 15px; font-weight: 600; white-space: nowrap; }
+.con .bar .words { display: flex; gap: 20px; height: 48px; }
+.con .bar .words span { display: inline-flex; align-items: center; font-size: 14px; font-weight: 500; color: var(--mu); }
+.con .bar .words span.on { color: var(--ink); box-shadow: inset 0 -2px 0 var(--ink); }
+.con .bar .ask { margin-left: auto; display: flex; align-items: center; gap: 8px; width: 300px; height: 34px; padding: 0 10px; border: 1px solid var(--hl); border-radius: 2px; font-size: 14px; color: var(--mu); }
+.con .bar .clock { font-size: 14px; letter-spacing: 0.04em; }
+.con .bar .me { font-size: 14px; color: var(--mu); }
+.con .page { width: 960px; margin: 0 auto; padding: 24px 0 40px 0; }
+.con .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--ink); }
+.con .t { margin: 0; font-size: 24px; line-height: 30px; font-weight: 600; letter-spacing: -0.01em; }
+.con .lede { margin: 4px 0 0 0; font-size: 14px; line-height: 20px; color: var(--mu); }
+.con .readout { display: flex; flex-direction: column; align-items: flex-end; }
+.con .readout .n { font-size: 56px; line-height: 56px; font-weight: 700; letter-spacing: -0.03em; }
+.con .readout .n small { font-size: 20px; font-weight: 500; letter-spacing: 0; color: var(--mu); }
+.con .readout .u { font-size: 11px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); margin-top: 6px; }
+.con .boatrow { display: grid; grid-template-columns: 128px 1fr auto; gap: 0 24px; align-items: start; padding: 22px 0 10px 0; border-bottom: 1px solid var(--hl); }
+.con .tminus { font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; }
+.con .tminus small { display: block; font-size: 11px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); margin-top: 4px; font-weight: 500; }
+.con .tminus.red { color: var(--red); }
+.con .boatrow .name { font-size: 18px; line-height: 24px; font-weight: 600; margin: 0; }
+.con .boatrow .meta { font-size: 14px; line-height: 20px; color: var(--mu); margin: 2px 0 0 0; }
+.con .figs { display: flex; gap: 28px; }
+.con .fig { display: flex; flex-direction: column; align-items: flex-end; }
+.con .fig .n { font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; }
+.con .fig .n small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--mu); }
+.con .fig .u { font-size: 11px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); margin-top: 4px; }
+.con .fig.red .n { color: var(--red); }
+.con .fig.amber .n { color: var(--amber); }
+.con .line { display: grid; grid-template-columns: 112px 1fr 128px; gap: 0 16px; align-items: center; min-height: 44px; border-bottom: 1px solid var(--hl); font-size: 16px; line-height: 22px; }
+.con .line .lbl { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); font-weight: 500; }
+.con .line .val { color: var(--ink); padding: 8px 0; }
+.con .line .val b { font-weight: 600; }
+.con .line .val i { font-style: normal; color: var(--mu); }
+.con .line .st { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; text-align: right; font-weight: 600; }
+.con .line .st.red { color: var(--red); }
+.con .line .st.amber { color: var(--amber); }
+.con .line .st.mu { color: var(--mu); font-weight: 500; }
+.con .line.act .val { font-weight: 600; }
+.con .line.act .lbl { color: var(--ink); }
+.con .meter { height: 4px; background: var(--hl); position: relative; margin-top: 10px; }
+.con .meter i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); }
+.con .meter.gap-amber { background: var(--amber); }
+.con .meter.gap-red { background: var(--red); }
+.con .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--ink); border-radius: 2px; font-size: 15px; font-weight: 600; white-space: nowrap; color: var(--ink); }
+.con .btn.fill { background: var(--fill); color: var(--fill-ink); }
+.con .group { display: flex; align-items: baseline; justify-content: space-between; padding: 26px 0 6px 0; }
+.con .group .g { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mu); font-weight: 600; font-family: "Geist Mono", ui-monospace, Menlo, monospace; }
+.con .group .gm { font-size: 13px; color: var(--mu); font-variant-numeric: tabular-nums; }
+/* the phone */
+.con.ph .bar { height: 48px; padding: 0 14px; gap: 12px; }
+.con.ph .bar .words { gap: 14px; }
+.con.ph .bar .words span { font-size: 14px; }
+.con.ph .page { width: auto; padding: 16px 16px 72px 16px; }
+.con.ph .t { font-size: 18px; line-height: 24px; }
+.con.ph .readout .n { font-size: 64px; line-height: 64px; }
+.con .cell { display: flex; align-items: center; gap: 14px; min-height: 60px; border-bottom: 1px solid var(--hl); font-size: 18px; font-weight: 600; }
+.con .cell .sub { display: block; font-size: 13px; line-height: 18px; font-weight: 400; color: var(--mu); }
+.con .cell .sub.red { color: var(--red); font-weight: 600; }
+.con .cell .sub.amber { color: var(--amber); font-weight: 600; }
+.con .cell .w { margin-left: auto; font-family: "Geist Mono", ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; white-space: nowrap; }
+.con .cell .w.mu { color: var(--mu); font-weight: 500; }
+.con .cell .w.red { color: var(--red); }
+.con .cell .tap { margin-left: auto; width: 48px; height: 48px; flex: 0 0 48px; border: 2px solid var(--ink); border-radius: 2px; display: inline-flex; align-items: center; justify-content: center; }
+.con .cell .tap.on { background: var(--fill); color: var(--fill-ink); }
+.con .cell .tap.red { border-color: var(--red); }
+.con .cell.big { min-height: 64px; font-size: 20px; }
+.con .dock { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--hl); background: var(--g); }
+.con .dock span { display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: var(--mu); }
+.con .dock span.on { color: var(--ink); box-shadow: inset 0 2px 0 var(--ink); }
+/* the system sheet's own cells */
+.sys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 0 48px; }
+.sys .cell { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 16px; }
+.sys h4 { margin: 0 0 10px 0; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.sys .sw { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.sys .sw div { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); }
+.sys .sw i { display: block; height: 32px; border-radius: 4px; border: 1px solid rgba(0,0,0,.08); }
+.sys .sw b { font-size: 12px; color: var(--ink); font-weight: 600; }
+.sys .spec { display: flex; flex-direction: column; gap: 8px; }
+.sys .spec small { display: block; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.sys .rules { display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 19px; color: var(--muted); }
+.sys .rules b { color: var(--ink); font-weight: 600; }
+.specimen { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+/* console:end */
+/* the sheet's narrow line specimen */
+.con.line-narrow .line { grid-template-columns: 56px 1fr 78px; gap: 0 10px; font-size: 14px; line-height: 20px; }
+.con.line-narrow .line .st { font-size: 11px; }
+
+  </style>
+</helmet>
+<div class="board">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow">Console · the system</span><span class="note">Design canvas · 2026-09-11 · Clear the deck · round 3</span></div>
+    <h1>Console — the sheet</h1>
+    <p class="lede">Seven tokens in three schemes, two faces with one job each, five type sizes, one radius, and six parts: the readout, the figure, the line, the ladder, the meter, the cell. Everything on every staff surface is made of these, and a surface that needs more names it here first or does without.</p>
+    <div class="three">
+      <div><span class="k">The idea</span><p>An instrument shows the number you came for, labels it, and gets out of the way. <b>Figures lead; words follow; a state is a word in a slot; nothing is decoration.</b> DiveDay reads like the shop's console, not its brochure.</p></div>
+      <div><span class="k">Where it comes from</span><p>Deck (09-01) drew the readout, the T−minus ladder and the roll call at depth; C (09-08) drew the state in a fixed slot and the two-component discipline. Console keeps all of that and drops what lost them: the dark desk, the cyan, the slot that held sentences, and the tab strip.</p></div>
+      <div><span class="k">What it refuses</span><p>A drawing of anything. A tint behind text. A rounded panel. A second display face. A greeting. Coral. A colour that carries a state without a word beside it. A number that is not tabular. A moment.</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>Colour</b> · seven tokens, three schemes, one rule of the shop's</div>
+  <div class="sys">
+    <div class="cell"><h4>Day · the desk in daylight</h4><div class="sw">
+      <div><i style="background:#f5f6f5;"></i><b>Ground</b>#f5f6f5</div>
+      <div><i style="background:#0b0f12;"></i><b>Ink</b>#0b0f12 · 18:1</div>
+      <div><i style="background:#5c6670;"></i><b>Meta</b>#5c6670 · 5.6:1</div>
+      <div><i style="background:#d9dedf;"></i><b>Hairline</b>#d9dedf</div>
+      <div><i style="background:#c81e1e;"></i><b>Red</b>#c81e1e · blocks a boat · 5.7:1</div>
+      <div><i style="background:#b45309;"></i><b>Amber</b>#b45309 · needs someone · 5.7:1</div>
+      <div><i style="background:#0b0f12;"></i><b>Fill</b>the primary button, a tapped cell</div>
+      <div><i style="background:#1d7a5f;"></i><b>The shop's</b>a 3px rule at the top edge</div>
+    </div></div>
+    <div class="cell"><h4>Depth · after dark, by the device</h4><div class="sw">
+      <div><i style="background:#0b0f12;"></i><b>Ground</b>#0b0f12</div>
+      <div><i style="background:#e8ecee;"></i><b>Ink</b>#e8ecee · 16:1</div>
+      <div><i style="background:#8b959c;"></i><b>Meta</b>#8b959c · 6.4:1</div>
+      <div><i style="background:#263036;"></i><b>Hairline</b>#263036</div>
+      <div><i style="background:#ff5a5a;"></i><b>Red</b>#ff5a5a · 6.3:1</div>
+      <div><i style="background:#ffb020;"></i><b>Amber</b>#ffb020 · 10:1</div>
+      <div><i style="background:#e8ecee;"></i><b>Fill</b>ink on the fill</div>
+      <div><i style="background:#1d7a5f;"></i><b>The shop's</b>the same rule</div>
+    </div></div>
+    <div class="cell"><h4>Boat · the roll call and the counter at the rail</h4><div class="sw">
+      <div><i style="background:#000000;"></i><b>Ground</b>#000000</div>
+      <div><i style="background:#ffffff;"></i><b>Ink</b>#ffffff · 21:1</div>
+      <div><i style="background:#b8c2c8;"></i><b>Meta</b>#b8c2c8 · 12:1</div>
+      <div><i style="background:#3a4650;"></i><b>Hairline</b>#3a4650</div>
+      <div><i style="background:#ff6b6b;"></i><b>Red</b>#ff6b6b · 7:1</div>
+      <div><i style="background:#ffc247;"></i><b>Amber</b>#ffc247 · 13:1</div>
+      <div><i style="background:#ffffff;"></i><b>Fill</b>a diver aboard</div>
+      <div><i style="background:#000000; border-color:#3a4650;"></i><b>The shop's</b>never on the boat</div>
+    </div></div>
+  </div>
+  <p class="aside">Red is the only ink that stops a boat: a diver who cannot board, a boat with no crew, a diver not back aboard. Amber is the only ink that needs a person: a missing contact, missing sizes, a deal not sent, a Stripe call unconfirmed. Both always sit beside a word, and there is no green — a thing that is fine says so by having no colour at all.</p>
+
+  <div class="frame-cap"><b>Type</b> · Geist for words, Geist Mono for figures, labels, times and states · five sizes</div>
+  <div class="sys">
+    <div class="cell" style="grid-column: span 2;"><div class="specimen"><div class="con" style="padding:20px 24px;">
+      <div class="readout" style="align-items:flex-start;"><span class="n">0:20</span><span class="u">Readout · 56 / 700 · Geist Mono · the one number a surface exists to show</span></div>
+      <div class="figs" style="margin-top:16px;"><div class="fig" style="align-items:flex-start;"><span class="n">10<small>/12</small></span><span class="u">Figure · 28 / 600 · Geist Mono</span></div></div>
+      <h1 class="t" style="margin-top:16px;">Thursday, August 27</h1><p class="lede">Title · 24 / 600 · Geist · the page's name, never bigger</p>
+      <p class="name" style="margin:12px 0 0 0; font-size:18px; line-height:24px; font-weight:600;">Two-Tank Reef — Molasses &amp; French</p><p class="lede">Name · 18 / 600 · Geist · a boat, a person</p>
+      <div class="line" style="margin-top:12px; border-top:1px solid var(--hl);"><span class="lbl">Label · 11</span><span class="val">Value · 16 / 400 · Geist · <b>a name in 600</b> · <i>a note in meta</i></span><span class="st red">State · 12</span></div>
+      <p class="lede" style="margin-top:8px;">Label 11 / 500 mono caps · state 12 / 600 mono caps · clock and time 14 / 500 mono · meta 14 / 400 Geist</p>
+    </div></div></div>
+    <div class="cell"><h4>Why two faces, and why these</h4><div class="rules">
+      <span><b>Geist stays.</b> H-64 kept it as the only face; Console keeps it for every word, so no new face enters for prose.</span>
+      <span><b>Geist Mono for every figure</b>, because an instrument's numbers align in columns and hold their width when they roll; the same family, so the two never argue.</span>
+      <span><b>Five sizes:</b> 56 (readout) · 28 (figure) · 24 (title) · 18 (name) · 16 (value); 14, 12 and 11 are the mono's clock, state and label.</span>
+      <span><b>If Geist Mono's figures feel soft</b> at 56px, IBM Plex Mono is the one alternative worth drawing; it is the call in (k).</span>
+      <span><b>No display face, no greeting.</b> The biggest word on any page is 24px; the biggest thing is a number.</span>
+    </div></div>
+  </div>
+
+  <div class="frame-cap"><b>The six parts</b> · everything on a staff surface is one of these</div>
+  <div class="sys">
+    <div class="cell"><h4>1 · The readout</h4><div class="specimen"><div class="con" style="padding:16px 20px;"><div class="readout" style="align-items:flex-start;"><span class="n">6<small>/10</small></span><span class="u">Here</span></div><div class="meter gap-amber" style="margin-top:12px;"><i style="width:60%;"></i></div></div></div><p class="note" style="margin:10px 0 0 0;">One per surface: the number it exists to show, a unit in caps beneath, the meter beneath that with the <b>gap</b> in the signal colour.</p></div>
+    <div class="cell"><h4>2 · The figure</h4><div class="specimen"><div class="con" style="padding:16px 20px;"><div class="figs"><div class="fig" style="align-items:flex-start;"><span class="n">10<small>/12</small></span><span class="u">Booked</span></div><div class="fig red" style="align-items:flex-start;"><span class="n">2</span><span class="u">Blocked</span></div><div class="fig amber" style="align-items:flex-start;"><span class="n">5</span><span class="u">Open</span></div></div></div></div><p class="note" style="margin:10px 0 0 0;">A number that leads a thing rather than a surface — a boat's booked, here, blocked. Red or amber only when the number itself is the alarm.</p></div>
+    <div class="cell"><h4>3 · The line</h4><div class="specimen"><div class="con line-narrow" style="padding:0 16px;"><div class="line"><span class="lbl">Cert</span><span class="val"><b>Grace Mensah</b> · card waits for a look</span><span class="st red">Blocked</span></div><div class="line"><span class="lbl">Sizes</span><span class="val">Hannah, Ben, Emma · none yet</span><span class="st amber">Attention</span></div><div class="line"><span class="lbl">Arrival</span><span class="val">Hugo, Ben O. · not here yet</span><span class="st mu">2 to come</span></div><div class="line act"><span class="lbl">Seat</span><span class="val">Seat a walk-in</span><span class="st"></span></div></div></div><p class="note" style="margin:10px 0 0 0;">Label in 112px, the sentence, the state or figure in 128px. The last line of a list is the one thing you can add to it. The line's tap is its door.</p></div>
+    <div class="cell"><h4>4 · The ladder</h4><div class="specimen"><div class="con" style="padding:0 16px 12px 16px;"><div class="boatrow" style="padding-top:14px; grid-template-columns:88px 1fr auto; gap:0 12px;"><div class="tminus">−0:20<small>Leaves 7:00</small></div><div><p class="name">Two-Tank Reef</p><p class="meta">Mantis II · Keiko, Sal</p></div><div class="figs"><div class="fig"><span class="n">6<small>/10</small></span><span class="u">Here</span></div></div></div></div></div><p class="note" style="margin:10px 0 0 0;">The day as departures in order, each with T−minus (or the hour it came home), its name and crew, and its figures. The home's spine.</p></div>
+    <div class="cell"><h4>5 · The meter</h4><div class="specimen"><div class="con" style="padding:20px;"><div class="meter" style="margin:0;"><i style="width:60%;"></i></div><p class="lede" style="margin-top:8px;">a count, no gap to chase · ink on hairline</p><div class="meter gap-amber" style="margin-top:14px;"><i style="width:60%;"></i></div><p class="lede" style="margin-top:8px;">a gap someone must close · amber</p><div class="meter gap-red" style="margin-top:14px;"><i style="width:90%;"></i></div><p class="lede" style="margin-top:8px;">a gap that stops the boat · red</p></div></div><p class="note" style="margin:10px 0 0 0;">4px, no radius. The filled part is always ink; the colour, when there is one, is the remainder (principle 9). Never a dial.</p></div>
+    <div class="cell"><h4>6 · The cell</h4><div class="specimen"><div class="con" style="padding:0 20px;"><div class="cell"><span>Hugo Marsh</span><span class="tap"></span></div><div class="cell"><span>Ravi Nair</span><span class="tap on"><svg class="glyph" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-8"></path></svg></span></div><div class="cell"><span>Grace Mensah<span class="sub red">Can't board · card waits</span></span><span class="tap red"></span></div></div></div><p class="note" style="margin:10px 0 0 0;">The counter's and the roll call's row: 60px, an 18px name, a 48px square target that fills when tapped and empties when tapped again. Red on the target only with the red sentence beside it.</p></div>
+  </div>
+
+  <div class="frame-cap"><b>Controls, chrome and the words</b></div>
+  <div class="sys">
+    <div class="cell"><h4>Controls</h4><div class="specimen"><div class="con" style="padding:16px 20px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;"><span class="btn fill">Seat him</span><span class="btn">Send the waiver</span><span class="ask" style="width:220px; height:40px; border:1px solid var(--hl); border-radius:2px; display:inline-flex; align-items:center; gap:8px; padding:0 10px; font-size:14px; color:var(--mu);">Name or booking</span></div></div><p class="note" style="margin:10px 0 0 0;">Square, 2px radius, 44px. One primary per surface, filled ink. Everything else is a bordered button or a line's verb. No ghost, no link-as-button, no icon button.</p></div>
+    <div class="cell"><h4>Chrome</h4><div class="specimen"><div class="con"><div class="bezel"></div><div class="bar" style="padding:0 16px; gap:14px;"><span class="shop">Blue Mantis</span><div class="words"><span class="on">Day</span><span>People</span><span>Shop</span></div><span class="clock" style="margin-left:auto;">06:40</span></div></div></div><p class="note" style="margin:10px 0 0 0;">The shop's rule, the name, three words, the field, the clock. 48px. On a phone the three words are the dock at the bottom and the clock stays in the bar. Nothing else is chrome.</p></div>
+    <div class="cell"><h4>The words in the slot</h4><table class="tbl" style="font-size:13px;"><tbody>
+      <tr><td style="color:#c81e1e;">Blocked</td><td>a diver who cannot board; a boat with no crew</td></tr>
+      <tr><td style="color:#c81e1e;">Not aboard · Not back</td><td>the roll call's two red words</td></tr>
+      <tr><td style="color:#b45309;">Attention · No deal · Unconfirmed</td><td>needs a person, does not stop a boat</td></tr>
+      <tr><td>Here · Aboard · Home · Back</td><td>a settled count word, in ink</td></tr>
+      <tr><td style="color:#5c6670;">2 to come · Open · Scheduled · Done</td><td>a fact in meta</td></tr>
+      <tr><td style="color:#5c6670;">—</td><td><b>Ready</b> is never shown; a thing that is fine has an empty slot</td></tr>
+    </tbody></table></div>
+  </div>
+
+  <div class="foot">
+    <div><h3>Motion</h3><p>A figure rolls when it changes and nothing else moves — Nothing from nowhere's roll is the one instrument-native motion and the only one Console keeps. No swell, no settle, no fold. A press sinks a cell in the frame the finger lands.</p></div>
+    <div><h3>The diver's side</h3><p>Harbor stands: the storefront in the shop's colour and face. Its rows and controls are Console's line, figure and button; its one readout per boat is seats left. The recap becomes a printed log card in the same system — figures, sites, times — and the drawing leaves it (call g).</p></div>
+    <div><h3>What it needs</h3><p>Seven tokens in three blocks replacing the palette, the washes, the night palette and the boat palette; five type constants replacing nine; six components — readout, figure, line, ladder, meter, cell — replacing the panel, the dial, the badge, the chip, the ledger row and the tile; the deletions of round 1's floor. Then the family-by-family sweep.</p></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>
