@@ -392,7 +392,9 @@ function GapChip({
           the form so it reads as the consequence of pressing the control above
           it: a divemaster may still ask onto an intro session, but the ratio
           it is over is instructor-to-student and their yes does not clear it. */}
-      {gap.viewerAskWontClose ? <span className={ink}>{words.askWontClose}</span> : null}
+      {gap.viewerAskWontClose ? (
+        <span className="text-warning-strong">{words.askWontClose}</span>
+      ) : null}
     </div>
   );
 }
@@ -710,10 +712,10 @@ export function StaffingWeek({
                         </SubmitButton>
                       </form>
                     ) : null}
-                    {/* The phone loses the columns, never the work — including
-                        this one (`GRID_CLASS`'s note above, issue #1339). */}
+                    {/* Under the ask rather than beside it, which is the only
+                        difference from the grid's copy of this (issue #1339). */}
                     {gap.viewerAskWontClose ? (
-                      <p className="text-sm text-warning-strong">{words.askWontClose}</p>
+                      <p className="mt-1 text-sm text-warning-strong">{words.askWontClose}</p>
                     ) : null}
                   </LedgerRow>
                 ))}

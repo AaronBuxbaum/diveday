@@ -103,11 +103,11 @@ export const GAP_TONE: Record<StaffGapCode, "warning" | "neutral"> = {
  * `courseCrewGap` (src/lib/course-ratios.ts) has always carried `ratio` on
  * `over_ratio` — the entry-level rule and the far tighter intro one measure
  * different things — and every caller but this surface already words the two
- * apart (`trips.detail.overRatioWarningIntro`, `today.detailText.overRatioIntro`).
- * The staffing week collapsed them by placing `courseGap.code` verbatim, which
- * is how the week came to offer a divemaster the one ask that cannot help
- * (issue #1339). Pure and exported so `src/db/staffing.ts` and the tests read
- * the same mapping.
+ * apart (`trips.detail.overRatioWarningIntro`, and `overRatioIntroDetailText`
+ * in src/db/today.ts). The staffing week collapsed them by placing
+ * `courseGap.code` verbatim, which is how it came to offer a divemaster the one
+ * ask that cannot help (issue #1339). Pure and exported so `src/db/staffing.ts`
+ * and the tests read the same mapping.
  *
  * Null for `none`: not a gap, so not a code.
  */

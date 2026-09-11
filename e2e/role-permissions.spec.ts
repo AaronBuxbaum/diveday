@@ -184,12 +184,12 @@ test.describe("H-14 role permissions", () => {
 
     /**
      * **The inbox is not one of the gated surfaces** (issues #1505/#1518,
-     * decided 2026-09-10 as an H-14 amendment). It was, for three days: reading
-     * and answering both sat behind owner/manager until the owner widened them,
-     * on the argument that the message that most wants answering at 7am is
-     * answered by whoever is at the dock. The two halves are asserted together
-     * because they were one decision — the worklist opens, and the composer on
-     * the diver's record is there to type into.
+     * decided 2026-09-10 as an H-14 amendment; the reasoning is in ADR
+     * 20260907-two-way-inbox decision 9). It was, for the three days between
+     * shipping and that amendment, which is why it is asserted here at all:
+     * this file's captain lens is where a gate would come back. The two halves
+     * go together because they were one decision — the worklist opens, and the
+     * composer on the diver's record is there to type into.
      */
     test("the daily crew may read the shop inbox and answer a diver", { tag: READ_ONLY }, async ({
       page,

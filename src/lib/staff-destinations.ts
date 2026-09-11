@@ -328,14 +328,13 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // holds five and the sixth slot is More (ADR
   // 20260813-more-is-the-shops-other-door).
   //
-  // Ungated since 2026-09-10 (issues #1505/#1518), where it carried a gate of
-  // its own for one season's worth of a shift. Both halves of that gate's
-  // argument — a reply leaves as the shop, and a message from an address
-  // nobody holds arrives with a stranger's contact details — now read the
-  // other way: the message that most wants answering at 7am is answered by
-  // whoever is at the dock, and a shop manages the insider risk by choosing
-  // who it employs. Its pending-work signal is Today's `unanswered_messages`
-  // row, never a nav badge — the same rule Reviews follows.
+  // Ungated since 2026-09-10: it carried an owner/manager gate of its own for
+  // the three days between shipping and the owner reading both halves of that
+  // gate's argument the other way (issues #1505/#1518, an H-14 amendment —
+  // the reasoning is in ADR 20260907-two-way-inbox decision 9, and the code it
+  // governs is `replyToDiverAction`). Its pending-work signal is Today's
+  // `unanswered_messages` row, never a nav badge — the same rule Reviews
+  // follows.
   { id: "inbox", suffix: "/inbox", navGroup: "daily", inPalette: true },
   // Money the shop reads daily — a "Run the shop" destination, not one of the
   // five all-day tabs. Orders remains ungated and palette-visible, and the
