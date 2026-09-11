@@ -43,17 +43,18 @@ The same one as every canvas since Clearwater. **Blue Mantis Divers**, Key Largo
 `#1d7a5f`, Bricolage Grotesque on its storefront, boats *Mantis II* (12 seats, slip 14 at Marina Del
 Mar) and *Skiff* (8), Dana Reyes at the desk, Keiko Tanaka and Sal Moretti as crew, Marcus Webb
 teaching the courses. The day is **Thursday, August 27, 2026, at 6:40 AM**: the 7:00 Two-Tank Reef —
-Molasses & French on Mantis II, 10 of 12 booked and 6 of 10 here, Grace Mensah's Advanced card
-awaiting a look, Priya Sharma's waiver not sent, Nadia Petrov without an emergency contact, three
-divers (Hannah Liu, Ben Carter, Emma Fischer) without rental sizes, Hugo Marsh and Ben Okafor not
-yet at the counter, Diego Alvarez about to walk in; the 1:00 Wreck Trip — Spiegel Grove, full, with
+Molasses & French on Mantis II, 10 of 12 booked and 6 of 10 here — Ravi Nair, Hannah Liu, Ben
+Carter, Emma Fischer, Ines Costa and Nadia Petrov checked in; Hugo Marsh and Ben Okafor not yet at
+the counter; Grace Mensah's Advanced card awaiting a look and Priya Sharma's waiver not sent, so
+neither can board yet; Nadia without an emergency contact; Hannah, Ben Carter and Emma without
+rental sizes; Diego Alvarez about to walk in; the 1:00 Wreck Trip — Spiegel Grove, full, with
 no crew assigned and Tomás Ferreira without a card for a deep wreck; the 7:30 Night Dive — City of
 Washington on Skiff, 3 of 8, no last-minute deal sent, Jonas Berg's first dive since 2019. At the
-desk: three messages waiting, one review waiting (Lars P.), Priya's $95 at 6:02 not yet confirmed by
+desk: three messages waiting, one review waiting (Lars P., from the Duane on Saturday, August 22), Priya's $95 at 6:02 not yet confirmed by
 Stripe, and Dana's unfinished booking of Emmet O'Brien on Friday's 7:00. The week around it: the
 sailed and logged boats on Monday to Wednesday (23 divers and 2 boats on Wednesday), Friday's 7:00
 Morning Two-Tank at 9 of 12 and 8:00 Deep Wreck — the Duane at 1 of 8, Saturday's 11:00 Two-Tank —
-French Reef sold out with two waiting, Sunday's 11:30 Two-Tank — Benwood at 3 of 12, Reg #4 due for
+French Reef sold out with two waiting and its 7:30 Night Dive at 5 of 8, Sunday's 11:30 Two-Tank — Benwood at 3 of 12, Reg #4 due for
 service on Monday, and the month at $41,180 with two open orders. Every name, number and time is
 demo-seed fiction. Nothing here is real customer data.
 
