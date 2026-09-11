@@ -2,7 +2,7 @@ import { HOUR_MS } from "./clock";
 import { hasReturned } from "./trips";
 
 /**
- * **"Fly-safe from"** — when a diver may board a plane after a day's diving
+ * **"Earliest flight"** — when a diver may board a plane after a day's diving
  * (issue #1425, N-04; owner decision 2026-09-07).
  *
  * Informs, never gates. DAN's published guidance is a *minimum* preflight
@@ -16,6 +16,13 @@ import { hasReturned } from "./trips";
  * DAN publishes 12 and 18, so a sentence reading "24 hours, by DAN's
  * guidance" misquotes it, and a setting under DAN's floor would leave even
  * the weaker claim false.
+ *
+ * For the same reason the lead-in states the interval rather than a verdict.
+ * It read "Fly-safe from {when}:" until issue #1433: a minimum that lowers DCS
+ * risk does not remove it, "safe" was the only word in the sentence that read
+ * as a promise, and DAN's own term is *minimum preflight surface interval*.
+ * The Spanish carried the verdict twice over — "Puedes volar a partir del" is
+ * literally *you can fly* — so both locales moved together.
  *
  * Three limits worth knowing before this is extended, and none of them can be
  * closed from inside this module.
@@ -171,8 +178,8 @@ export type FlySafeResult = {
  *   monotonic by construction.
  * - **Anchor.** The latest recorded exit, provided no later-numbered dive was
  *   recorded without one. Otherwise the boat's scheduled return, and only once
- *   {@link hasReturned} says it is home — a "fly-safe from" for a boat still
- *   at sea would be a guess dressed as a fact.
+ *   {@link hasReturned} says it is home — an earliest-flight time for a boat
+ *   still at sea would be a guess dressed as a fact.
  */
 export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
   const { executedDives, plannedDives, endsAt, divedRecently, now, hours } = input;

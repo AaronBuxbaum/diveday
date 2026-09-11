@@ -273,16 +273,20 @@ test("the day's facts render once, inside the one record a diver keeps", async (
 });
 
 /**
- * **"Fly-safe from"** (issue #1425, N-04). The line exists only once the record
- * can honestly say: the demo reef boat is still hours from sailing at the
- * frozen clock and nobody has logged a dive, so a cold recap carries no line
- * at all. Once the crew logs both tanks with their times out, the after-state
- * names the instant in the shop's zone, the shop's repetitive hours, and who
- * set them. The exact string is pinned because every word of it is a claim
- * about a diver's body: the weekday and time come from the seeded departure
- * plus the route's fixed dive shape, and the 24 is the shop default.
+ * **"Earliest flight"** (issue #1425, N-04; lead-in reworded by #1433). The
+ * line exists only once the record can honestly say: the demo reef boat is
+ * still hours from sailing at the frozen clock and nobody has logged a dive,
+ * so a cold recap carries no line at all. Once the crew logs both tanks with
+ * their times out, the after-state names the instant in the shop's zone, the
+ * shop's repetitive hours, and who set them. The exact string is pinned
+ * because every word of it is a claim about a diver's body: the weekday and
+ * time come from the seeded departure plus the route's fixed dive shape, and
+ * the 24 is the shop default. The lead-in names the interval rather than
+ * delivering a verdict — DAN's preflight surface interval is a minimum that
+ * lowers DCS risk without removing it, so "fly-safe" promised more than the
+ * sentence behind it can support.
  */
-test("the after-state says when the diver may fly, once the crew has logged the day (N-04)", async ({
+test("the after-state names the earliest flight, once the crew has logged the day (N-04)", async ({
   page,
   request,
 }) => {
@@ -294,7 +298,7 @@ test("the after-state says when the diver may fly, once the crew has logged the 
   expect(seeded.ok(), await seeded.text()).toBe(true);
   await page.reload();
   await expect(page.getByTestId(AFTER_STATE_TEST_IDS.flySafe)).toHaveText(
-    "Fly-safe from Wednesday 6:10 PM: Blue Mantis Divers asks for 24 hours after your last dive, following DAN’s guidance.",
+    "Earliest flight Wednesday 6:10 PM: Blue Mantis Divers asks for 24 hours after your last dive, following DAN’s guidance.",
   );
 });
 

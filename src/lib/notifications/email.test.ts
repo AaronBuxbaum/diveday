@@ -364,10 +364,15 @@ describe("tripRecapEmail", () => {
     const email = tripRecapEmail(recapBase);
     expect(email.text).toContain("Thanks for diving Two-Tank Reef");
     expect(email.text).not.toContain("You dived .");
-    expect(email.text).not.toContain("Fly-safe");
+    expect(email.text).not.toContain("Earliest flight");
   });
 
-  it("carries the fly-safe line in the shop's zone, worded off the last dive or the scheduled end", () => {
+  // The lead-in names the interval rather than delivering a verdict: DAN's
+  // preflight surface interval is a *minimum* that lowers DCS risk without
+  // removing it, so "fly-safe" read as a promise the sentence cannot make
+  // (issue #1433). The tail is untouched — it attributes the figure to the
+  // shop and the practice to DAN, which is the claim the code can support.
+  it("carries the earliest-flight line in the shop's zone, worded off the last dive or the scheduled end", () => {
     // 2026-08-02T14:10Z is a Sunday, 10:10 AM in Key Largo.
     const from = new Date("2026-08-02T14:10:00.000Z");
     const afterDive = tripRecapEmail({
@@ -375,9 +380,9 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "dives_recorded" },
     });
     expect(afterDive.text).toContain(
-      "Fly-safe from Sunday 10:10 AM: Blue Mantis asks for 24 hours after your last dive, following DAN’s guidance.",
+      "Earliest flight Sunday 10:10 AM: Blue Mantis asks for 24 hours after your last dive, following DAN’s guidance.",
     );
-    expect(afterDive.html).toContain("Fly-safe from Sunday 10:10 AM");
+    expect(afterDive.html).toContain("Earliest flight Sunday 10:10 AM");
 
     const afterReturn = tripRecapEmail({
       ...recapBase,
@@ -390,7 +395,39 @@ describe("tripRecapEmail", () => {
       locale: "es-ES",
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "dives_recorded" },
     });
-    expect(spanish.text).toContain("Puedes volar a partir del domingo, 10:10");
+    expect(spanish.text).toContain("Primer vuelo posible a partir del domingo, 10:10");
+  });
+
+  // The earlier-day route (issue #1439) reaches two more keys, one per anchor,
+  // and nothing else in this file renders them — a prefix swap applied to the
+  // plain pair and missed on these two would ship a recap whose lead-in
+  // depended on whether the diver had dived the day before (issue #1433).
+  it("says an earlier dive day is why the wait is longer, in both anchors and both locales", () => {
+    const from = new Date("2026-08-02T14:10:00.000Z");
+    const afterDive = tripRecapEmail({
+      ...recapBase,
+      flySafe: { from, hours: 24, anchor: "last_dive", reason: "earlier_day" },
+    });
+    expect(afterDive.text).toContain(
+      "Earliest flight Sunday 10:10 AM: this was not your first day diving, so Blue Mantis asks for 24 hours after your last dive, following DAN’s guidance.",
+    );
+
+    const afterReturn = tripRecapEmail({
+      ...recapBase,
+      flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "earlier_day" },
+    });
+    expect(afterReturn.text).toContain(
+      "Earliest flight Sunday 10:10 AM: this was not your first day diving, so Blue Mantis asks for 24 hours after the day was due to end, following DAN’s guidance.",
+    );
+
+    const spanish = tripRecapEmail({
+      ...recapBase,
+      locale: "es-ES",
+      flySafe: { from, hours: 24, anchor: "last_dive", reason: "earlier_day" },
+    });
+    expect(spanish.text).toContain(
+      "Primer vuelo posible a partir del domingo, 10:10: no era tu primer día de buceo",
+    );
   });
 });
 

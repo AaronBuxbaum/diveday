@@ -102,10 +102,11 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
 }
 
 /**
- * **"Fly-safe from"** (issue #1425). One sentence, two spellings — the clock
- * started at the last recorded exit, or at the day's scheduled end — and
- * nothing at all when the record could not say. It informs and gates nothing,
- * so it is a paragraph rather than a status panel.
+ * **"Earliest flight"** (issue #1425; lead-in reworded by #1433). One sentence,
+ * two spellings — the clock started at the last recorded exit, or at the day's
+ * scheduled end — and nothing at all when the record could not say. It informs
+ * and gates nothing, so it is a paragraph rather than a status panel. These
+ * assertions pin message *keys*, not English, so the reword left them alone.
  */
 describe("the fly-safe line", () => {
   it("renders nothing when the record could not say", () => {
