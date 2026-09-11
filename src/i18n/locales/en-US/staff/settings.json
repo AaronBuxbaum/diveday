@@ -45,7 +45,7 @@
       "emergencySaved": "Emergency reference saved.",
       "sendWindowSaved": "Message hours saved.",
       "sendWindowInvalid": "That didn’t save. The first hour has to come before the last, on a 24-hour clock.",
-      "flySafeSaved": "Fly-safe hours saved.",
+      "flySafeSaved": "Earliest-flight hours saved.",
       "flySafeInvalid": "That didn’t save. Whole hours, at least DAN’s 12 and 18, at most 72, and the two-dive wait no shorter than the one-dive wait.",
       "packageSaved": "Package added.",
       "packageDeleted": "Package deleted.",
@@ -280,12 +280,12 @@
       "submitting": "Saving…"
     },
     "flySafe": {
-      "heading": "Fly-safe hours",
+      "heading": "Earliest flight",
       "value": "{single} h · {repetitive} h",
-      "description": "Hours after the last dive before a diver reads they can fly. Their recap names the time and says the wait is yours, following DAN’s guidance.",
+      "description": "How long after the day’s diving a diver is asked to wait before flying. Their recap names the time, says the wait is yours, and follows DAN’s guidance.",
       "singleLabel": "After a single dive",
       "repetitiveLabel": "After repetitive dives or more than one day of diving",
-      "submit": "Save fly-safe hours",
+      "submit": "Save earliest-flight hours",
       "submitting": "Saving…"
     },
     "units": {

@@ -186,15 +186,17 @@ Largo sites against Carysfort Reef (8723583). ADR
 N-04 from the 2026-09-07 improvement-ideas decision sheet (issue #1425). Once the crew has logged
 the day, the thread's after-state and the `trip_recap` email say "{shop} asks you to wait at least
 until Wednesday 6:10 PM before flying: 24 hours after your last dive with us, following DAN's
-guidance" — the shop's own pair of hours (`shops.fly_safe_hours_single` / `_repetitive`, a Settings
-row, floored at DAN's 12 and 18), counted from the last recorded exit by `src/lib/fly-safe.ts`, or
-from the buffered return once the boat is home; repetitive whenever the day held more than one dive
-by record or by plan. Nothing at all while the record cannot say. The lead-in read "Fly-safe from"
-until issue #1433 and the shop asks in its own voice now: DAN's published interval is a consensus
-minimum that lowers DCS risk without removing it, so "safe" was the one word in the sentence the
-code behind it could not support, an unattributed time carried an authority nobody had claimed, and
-"your last dive" described a day DiveDay sees only as far as its own bookings. Informs, never
-gates.
+guidance" — the shop's own pair of hours (`shops.fly_safe_hours_single` / `_repetitive`, the
+Settings row headed **Earliest flight**, floored at DAN's 12 and 18), counted from the last recorded
+exit by `src/lib/fly-safe.ts`, or from the buffered return once the boat is home; repetitive
+whenever the day held more than one dive by record or by plan. Where the figure rests on something
+the diver cannot check — a plan of more than one dive the log is short of, or a dive day in the two
+days before this one — the sentence says so, because neither the recap card nor the email carries a
+dive count. Nothing at all while the record cannot say. The lead-in read "Fly-safe from" until issue
+#1433 and the shop asks in its own voice now: DAN's published interval is a consensus minimum that
+lowers DCS risk without removing it, so "safe" was the one word in the sentence the code behind it
+could not support, an unattributed time carried an authority nobody had claimed, and "your last
+dive" described a day DiveDay sees only as far as its own bookings. Informs, never gates.
 
 ## The agent-ready storefront (delivered 2026-09-07)
 

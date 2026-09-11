@@ -344,7 +344,8 @@
       "bottomTime": "Usually {minutes, plural, one {# minute} other {# minutes}} in the water",
       "surfaceInterval": "Usually {minutes, plural, one {# minute} other {# minutes}} on the surface",
       "pickerLabel": "See these depths against your card",
-      "within": "Nothing on this day goes past {limit}.",
+      "within": "Nothing on this day goes past the {limit} your card covers.",
+      "withinNoCard": "A first dive without a card stays inside {limit}, and nothing on this day goes past it.",
       "over": "Dive {number} is at a site that reaches {site}, past the {limit} your card covers. You can still book: tell the crew and they will plan your dive to your limit.",
       "overNoCard": "Dive {number} is at a site that reaches {site}. A first dive without a card stays inside {limit}. You can still book: ask the crew what this day needs."
     },
@@ -795,6 +796,7 @@
     "flySafeAfterDive": "{shopName} asks you to wait at least until {when} before flying: {count, plural, one {# hour} other {# hours}} after your last dive with us, following DAN’s guidance.",
     "flySafeAfterDiveEarlierDay": "{shopName} asks you to wait at least until {when} before flying: our records show another dive day in the last two days, so {count, plural, one {# hour} other {# hours}} after your last dive with us, following DAN’s guidance.",
     "flySafeAfterReturn": "{shopName} asks you to wait at least until {when} before flying: {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
+    "flySafeAfterReturnDivesPlanned": "{shopName} asks you to wait at least until {when} before flying: we planned more than one dive, so {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
     "flySafeAfterReturnEarlierDay": "{shopName} asks you to wait at least until {when} before flying: our records show another dive day in the last two days, so {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
     "milestoneStampFirst": "First dive day",
     "milestoneStamp": "{ordinal} dive day",
@@ -3771,6 +3773,7 @@
       "flySafeAfterDive": "{shopName} asks you to wait at least until {when} before flying: {count, plural, one {# hour} other {# hours}} after your last dive with us, following DAN’s guidance.",
       "flySafeAfterDiveEarlierDay": "{shopName} asks you to wait at least until {when} before flying: our records show another dive day in the last two days, so {count, plural, one {# hour} other {# hours}} after your last dive with us, following DAN’s guidance.",
       "flySafeAfterReturn": "{shopName} asks you to wait at least until {when} before flying: {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
+      "flySafeAfterReturnDivesPlanned": "{shopName} asks you to wait at least until {when} before flying: we planned more than one dive, so {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
       "flySafeAfterReturnEarlierDay": "{shopName} asks you to wait at least until {when} before flying: our records show another dive day in the last two days, so {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
       "seeRecap": "See the recap of your day",
       "footer": "If you loved it, the best thing you can do is bring a buddy next time. See you in the water!"

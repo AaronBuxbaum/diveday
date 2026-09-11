@@ -1739,31 +1739,37 @@ new domain concept, define it here in the same PR.
 - **Earliest flight** — the instant a diver reads they may board a plane after the day's diving
   (`src/lib/fly-safe.ts`, issue #1425). The shop's own hours (`shops.fly_safe_hours_single` and
   `_repetitive`, defaults 18 and 24, floored at DAN's published minimums of 12 and 18) counted from
-  the **last recorded exit**, or from the scheduled return once the boat is home by the one-hour
-  buffer. *Repetitive* by any of three routes — the day held more than one dive by the record, or by
-  the plan, or **this diver already had a dive day at this shop on one of the two local days before
-  the departure** (issue #1439). That third route is DiveDay's *reading* of DAN's "multiple days of
-  diving", not a quotation: DAN publishes no window for that clause. It counts local calendar days in
-  the shop's own zone rather than a span of hours, because two boats leaving at the same time on
-  consecutive days are exactly 24 hours apart — and 25 across a fall-back boundary — so an hours
-  window let the tide and the clock change decide the answer. The evidence is a live booking on a
-  live departure the shop still says ran, not a dive log row: crews do not reliably log, and
-  requiring a row would have let today's boat speak from its plan while yesterday's fell silent.
-  The longer wait is the one that costs nothing if wrong, and reaching repetitive can never shorten
-  one, because a shop's `repetitive` may not be set below its `single`. A record missing its last
-  exit anchors on the return, never on an earlier dive. Rendered on the thread's after-state and in
-  the recap email, in the shop's zone; on the earlier-day route the sentence says so, because two
-  divers who did the identical thing today otherwise read different numbers with nothing on a recap
-  of today explaining it. The sentence names the **shop** as the author of the figure and DAN as the
-  practice behind it, because DAN publishes 12 and 18 and a shop may sit above them. The lead-in
-  states the interval for the same reason. It read "Fly-safe from {when}:" until issue #1433, and
-  DAN's interval is a minimum that lowers DCS risk without removing it, so "safe" was the one word
-  in the sentence that read as a verdict — in Spanish twice over, where "Puedes volar" is literally
-  *you can fly*. Three things it deliberately cannot know: whether a dive took decompression stops,
-  which DAN says needs substantially longer than 18 hours; any dive not booked at this shop, so a
-  week with another operator is invisible; and that two days belong to one diver when the bookings
-  carry no email — a walk-up is a fresh `people` row each time. Informs and gates nothing; never
-  computed from a depth profile, which is a dive computer's job.
+  the **last recorded exit**, or from the **buffered return** — the scheduled return plus the
+  one-hour departure buffer — once the boat is home by that buffer. The gate and the anchor are the
+  same instant on purpose: a boat that came in late must not read an hour early in a sentence that
+  ends by citing DAN. *Repetitive* by any of three routes — the day held more than one dive by the
+  record, or by the plan, or **this diver already had a dive day at this shop on one of the two
+  local days before the departure** (issue #1439). That third route is DiveDay's *reading* of DAN's
+  "multiple days of diving", not a quotation: DAN publishes no window for that clause. It counts
+  local calendar days in the shop's own zone rather than a span of hours, because two boats leaving
+  at the same time on consecutive days are exactly 24 hours apart — and 25 across a fall-back
+  boundary — so an hours window let the tide and the clock change decide the answer. The evidence is
+  a live booking on a live departure the shop still says ran, not a dive log row: crews do not
+  reliably log, and requiring a row would have let today's boat speak from its plan while
+  yesterday's fell silent. The longer wait is the one that costs nothing if wrong, and reaching
+  repetitive can never shorten one, because a shop's `repetitive` may not be set below its `single`.
+  A record that is short of its plan, or missing its last exit, anchors on the return, never on an
+  earlier dive. Rendered on the thread's after-state and in the recap email, in the shop's zone. The
+  sentence states its reason on the two routes a diver cannot check for themselves — the earlier
+  day, which is nowhere on a recap of today, and the multi-dive *plan*, whose figure can be more
+  than the diver dived — because neither surface carries a dive count at all: the record card
+  dropped "{n} dives logged" on 2026-08-28, and the email is a greeting, the sites, this sentence
+  and a link. The recorded-dive route needs no clause, because the diver was in the water for those
+  dives. The sentence names the **shop** as the author of the figure and DAN as the practice behind
+  it, because DAN publishes 12 and 18 and a shop may sit above them. The lead-in states the interval
+  for the same reason. It read "Fly-safe from {when}:" until issue #1433, and DAN's interval is a
+  minimum that lowers DCS risk without removing it, so "safe" was the one word in the sentence that
+  read as a verdict — in Spanish twice over, where "Puedes volar" is literally *you can fly*. Three
+  things it deliberately cannot know: whether a dive took decompression stops, which DAN says needs
+  substantially longer than 18 hours; any dive not booked at this shop, so a week with another
+  operator is invisible; and that two days belong to one diver when the bookings carry no email — a
+  walk-up is a fresh `people` row each time. Informs and gates nothing; never computed from a depth
+  profile, which is a dive computer's job.
 - **Surface interval** — the time between one dive's exit and the next dive's entry. Only ever
   stated between **consecutively numbered** executed dives that were both recorded and do not
   overlap; anything else is "not recorded". An interval measured across a dive nobody logged
@@ -1786,7 +1792,9 @@ new domain concept, define it here in the same PR.
   junior age band, no Deep specialty, because neither has been said. The junior half of that is
   wrong-side-permissive and was **raised and deliberately accepted** (issue #1482, owner's call
   2026-09-10): a child picking "Open Water" reads the adult 18 m, and the answer is left alone
-  because the sentence claims the card, because asking an anonymous stranger for a child's date of
+  because every sentence it renders claims the card in so many words — the clean day ("nothing on
+  this day goes past the 18 m your card covers") as much as the over-limit one, since the clean day
+  is the branch the gap happens on — because asking an anonymous stranger for a child's date of
   birth costs more than the gap it closes, and because the roster's boarding-time depth advisory
   still applies the band in full from a real date of birth (`diverDepthLimit`). The Deep half needs
   no decision — a specialty holder reading their base rung understates what they may do. It

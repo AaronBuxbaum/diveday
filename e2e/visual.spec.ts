@@ -5245,15 +5245,19 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The fly-safe hours, open (issue #1425) — two whole-hour boxes whose
+       * Earliest flight, open (issue #1425) — two whole-hour boxes whose
        * floors are DAN's minimums. Its own capture for the reason the row
        * above has one: closed everywhere else, and the form is the only place
-       * a shop sets the number the recap then credits to it.
+       * a shop sets the number the recap then credits to it. The card read
+       * "Fly-safe hours" until issue #1433 took "safe" out of the diver's
+       * sentence as a verdict the wait does not earn; the baseline key stays
+       * `settings-fly-safe` so the reworded card diffs against the old one
+       * rather than arriving as an unreviewable new capture.
        */
-      test(`the fly-safe hours card renders true to the design (${scheme})`, async ({ page }) => {
+      test(`the earliest-flight card renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Fly-safe hours" }).waitFor();
-        await openSettingsRow(page, "Fly-safe hours");
+        await page.getByRole("heading", { name: "Earliest flight" }).waitFor();
+        await openSettingsRow(page, "Earliest flight");
         await page.getByLabel("After repetitive dives or more than one day of diving").waitFor();
         await capture(page, "settings-fly-safe", scheme);
       });

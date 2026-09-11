@@ -3,7 +3,9 @@ import { HOUR_MS } from "./clock";
 import {
   DEFAULT_FLY_SAFE_HOURS,
   FLY_SAFE_LIMITS,
+  type FlySafeInput,
   flySafeFrom,
+  flySafeMessageKey,
   parseFlySafeHours,
 } from "./fly-safe";
 import { formatWeekdayTime } from "./format";
@@ -411,5 +413,62 @@ describe("parseFlySafeHours", () => {
   it("floors at DAN's published minimums so the attribution stays true", () => {
     expect(FLY_SAFE_LIMITS.single.min).toBe(12);
     expect(FLY_SAFE_LIMITS.repetitive.min).toBe(18);
+  });
+});
+
+describe("flySafeMessageKey", () => {
+  /**
+   * The two routes a diver cannot check state their reason, and the two they
+   * can do not. Neither surface that renders this sentence shows the day's
+   * dive count — the recap card dropped "{n} dives logged" on 2026-08-28
+   * because it counted the trip row rather than the diver, and the recap email
+   * is a greeting, the sites, this sentence and a link — so "it is a few lines
+   * above" was never an answer for either of them.
+   */
+  it("explains itself on the routes the diver cannot read off the day", () => {
+    expect(flySafeMessageKey({ anchor: "last_dive", reason: "one_dive" })).toBe("flySafeAfterDive");
+    expect(flySafeMessageKey({ anchor: "scheduled_return", reason: "one_dive" })).toBe(
+      "flySafeAfterReturn",
+    );
+    // They were in the water for these: the day they remember is the reason.
+    expect(flySafeMessageKey({ anchor: "last_dive", reason: "dives_recorded" })).toBe(
+      "flySafeAfterDive",
+    );
+    expect(flySafeMessageKey({ anchor: "scheduled_return", reason: "dives_recorded" })).toBe(
+      "flySafeAfterReturn",
+    );
+    expect(flySafeMessageKey({ anchor: "last_dive", reason: "earlier_day" })).toBe(
+      "flySafeAfterDiveEarlierDay",
+    );
+    expect(flySafeMessageKey({ anchor: "scheduled_return", reason: "earlier_day" })).toBe(
+      "flySafeAfterReturnEarlierDay",
+    );
+    // The figure comes from the plan, so it can be more than the diver dived:
+    // unexplained, a one-tank diver reads the two-tank number as a bug, and a
+    // number a diver takes for a bug is one they ignore.
+    expect(flySafeMessageKey({ anchor: "scheduled_return", reason: "dives_planned" })).toBe(
+      "flySafeAfterReturnDivesPlanned",
+    );
+  });
+
+  it("has one planned-dives sentence because that route has one anchor", () => {
+    // The route needs a record short of its plan, which is the same condition
+    // that sends the anchor to the buffered return — so a second key would be
+    // copy nobody can reach. The day that stops being true, the sentence drops
+    // its reason in silence, which is why both halves are pinned here.
+    const exit = new Date("2026-07-25T20:10:00.000Z");
+    const shortRecords: FlySafeInput["executedDives"][] = [[], [{ diveNumber: 1, exitedAt: exit }]];
+    for (const executedDives of shortRecords) {
+      const result = flySafeFrom({
+        executedDives,
+        plannedDives: 2,
+        endsAt,
+        divedRecently: false,
+        now: home,
+        hours,
+      });
+      expect(result).toMatchObject({ reason: "dives_planned", anchor: "scheduled_return" });
+      expect(result && flySafeMessageKey(result)).toBe("flySafeAfterReturnDivesPlanned");
+    }
   });
 });

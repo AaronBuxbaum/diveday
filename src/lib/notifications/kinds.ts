@@ -438,7 +438,8 @@ const tripRecapSchema = z.object({
    * record could honestly say, and then the email says nothing about flying.
    *
    * `reason` is not a detail the email prints — it picks *which* sentence the
-   * diver reads, because only the earlier-day route explains itself.
+   * diver reads, and two of the routes state their reason. This email carries
+   * no dive record at all, so nothing in it could stand in for one.
    */
   flySafe: z
     .object({

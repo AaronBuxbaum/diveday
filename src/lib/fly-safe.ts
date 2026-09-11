@@ -82,8 +82,9 @@ export type FlySafeAnchor = "last_dive" | "scheduled_return";
 
 /**
  * Why the basis is what it is. `one_dive` is the single-dive case; the other
- * three each reach `repetitive`, and only `earlier_day` is invisible on the
- * surface that renders the answer.
+ * three each reach `repetitive`. Two of those three name something the diver
+ * has no way to check, and {@link flySafeMessageKey} is where that becomes
+ * words.
  */
 export type FlySafeReason = "one_dive" | "dives_recorded" | "dives_planned" | "earlier_day";
 
@@ -176,11 +177,10 @@ export type FlySafeResult = {
   from: Date;
   basis: FlySafeBasis;
   /**
-   * Which of the three routes reached this basis. The diver's sentence reads
-   * it for one reason: on `earlier_day`, two divers who did the identical
-   * thing today read different numbers, and nothing on a recap of *today*
-   * shows the cause. The other two routes need no explanation — the day's own
-   * dive count is on the same page.
+   * Which of the three routes reached this basis. Not a label: it picks the
+   * sentence the diver reads, and on two of the routes that sentence carries a
+   * reason clause. Which two, and why neither surface can show the cause on
+   * its own, is on {@link flySafeMessageKey}.
    */
   reason: FlySafeReason;
   anchor: FlySafeAnchor;
@@ -294,22 +294,46 @@ export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
  * prefix it with their own namespace (`recap.` on the page,
  * `notifications.tripRecap.` in the inbox).
  *
- * Only `earlier_day` gets its own sentence. The other two routes to
- * *repetitive* are visible on the page that renders the answer — the day's own
- * dive record is a few lines above it — but a dive on an earlier day appears
- * nowhere on a recap of today, so two divers who did the identical thing today
- * read different numbers with nothing saying why. That is the one clause here
- * that carries something the surface cannot show on its own.
+ * Two of the four routes carry a reason clause, and what decides is not what
+ * the surface happens to show — **neither surface shows the day's dive count
+ * at all**. The record card's "{n} dives logged" line was removed on
+ * 2026-08-28 (see `DiveRecord`) because it counted
+ * `max(trips.planned_dives, sites.length)` rather than what this diver did,
+ * and the recap email is a greeting, the day's sites, this sentence and a
+ * link. What decides is whether the diver can account for the figure from the
+ * day they remember.
+ *
+ * `dives_recorded` they can: they were in the water for those dives, and no
+ * clause can tell them anything they did not do. `one_dive` is the base case.
+ *
+ * `dives_planned` they cannot, and this is the route where the number argues
+ * with them: it comes from what the shop *planned*, which is by construction
+ * more than the crew logged and may be more than the diver dived, so someone
+ * who made one dive reads the two-dive figure with nothing to account for it.
+ * A number a diver decides is a bug is a number they ignore, and this one is
+ * about their body. `earlier_day` they cannot either, for its own reason: the
+ * day it rests on is not on a recap of today anywhere.
+ *
+ * `dives_planned` needs only the return-anchored key, because it can only
+ * reach that anchor — the route requires a record short of its plan, which is
+ * exactly what sends {@link flySafeFrom} to the buffered return. If that ever
+ * stops being true the sentence drops its reason in silence, so
+ * `fly-safe.test.ts` pins both halves together.
  */
 export type FlySafeMessageKey =
   | "flySafeAfterDive"
   | "flySafeAfterReturn"
   | "flySafeAfterDiveEarlierDay"
-  | "flySafeAfterReturnEarlierDay";
+  | "flySafeAfterReturnEarlierDay"
+  | "flySafeAfterReturnDivesPlanned";
 
 export function flySafeMessageKey(
   result: Pick<FlySafeResult, "anchor" | "reason">,
 ): FlySafeMessageKey {
   const anchor = result.anchor === "last_dive" ? "flySafeAfterDive" : "flySafeAfterReturn";
-  return result.reason === "earlier_day" ? (`${anchor}EarlierDay` as const) : anchor;
+  if (result.reason === "earlier_day") return `${anchor}EarlierDay` as const;
+  if (result.reason === "dives_planned" && result.anchor === "scheduled_return") {
+    return "flySafeAfterReturnDivesPlanned";
+  }
+  return anchor;
 }

@@ -77,7 +77,22 @@ function ceilingOptions(
       label: level ? t(DIVER_CERT_LEVEL_KEYS[level]) : t("common.certification.levelNone"),
       // A clean day still answers. A control that appears to do nothing when
       // the news is good teaches the reader it is broken.
-      lines: deeper.length > 0 ? deeper : [t("trip.dayProfile.within", { limit: limitText })],
+      //
+      // And the clean-day answer names the card, exactly as the over-limit one
+      // does: this is a claim about a *card*, and the accepted junior gap
+      // (`statedLevelDepthLimit`) happens here rather than on the over-limit
+      // branch — a ten-year-old picking "Open Water" is held to 12 m, so an
+      // unattributed "nothing on this day goes past 18 m" would be wrong about
+      // them by six metres with nothing in the sentence to say whose limit it
+      // was reading.
+      lines:
+        deeper.length > 0
+          ? deeper
+          : [
+              t(level ? "trip.dayProfile.within" : "trip.dayProfile.withinNoCard", {
+                limit: limitText,
+              }),
+            ],
     };
   });
 }

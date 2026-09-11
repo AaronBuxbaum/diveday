@@ -442,6 +442,36 @@ describe("tripRecapEmail", () => {
     );
   });
 
+  // The planned-dives route (the one the page cannot help with either: the
+  // recap card carries no dive count, and this email carries no record at
+  // all). The wait comes from what the shop planned, which is by construction
+  // more than the crew logged and may be more than the diver dived, so a diver
+  // who made one dive reads the two-dive figure while packing with nothing to
+  // account for it — and a number a diver decides is a bug is a number they
+  // ignore. One key, because the route only exists when the record is short of
+  // its plan, which is what puts the anchor on the return.
+  it("says a multi-dive plan is why the wait is longer, in both locales", () => {
+    const from = new Date("2026-08-02T14:10:00.000Z");
+    const planned = tripRecapEmail({
+      ...recapBase,
+      flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "dives_planned" },
+    });
+    expect(planned.text).toContain(
+      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: we planned more than one dive, so 24 hours after the day was due to end, following DAN’s guidance.",
+    );
+    // It may not claim the dive it cannot see: the crew logged at most one.
+    expect(planned.text).not.toContain("your last dive with us");
+
+    const spanish = tripRecapEmail({
+      ...recapBase,
+      locale: "es-ES",
+      flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "dives_planned" },
+    });
+    expect(spanish.text).toContain(
+      "planificamos más de una inmersión, así que 24 horas después del final previsto del día",
+    );
+  });
+
   // Three claims the sentence may not make, pinned across every shape it takes
   // and both locales rather than in the one wording above, because each of
   // them came back once already. It may not call the interval a flight the
@@ -452,7 +482,7 @@ describe("tripRecapEmail", () => {
     const from = new Date("2026-08-02T14:10:00.000Z");
     for (const locale of ["en-US", "es-ES"] as const) {
       for (const anchor of ["last_dive", "scheduled_return"] as const) {
-        for (const reason of ["dives_recorded", "earlier_day"] as const) {
+        for (const reason of ["dives_recorded", "earlier_day", "dives_planned"] as const) {
           const { text } = tripRecapEmail({
             ...recapBase,
             locale,
