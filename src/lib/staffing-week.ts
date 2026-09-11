@@ -1,4 +1,5 @@
 import { type CalendarDate, calendarDateInTimezone } from "./calendar-date";
+import type { CourseCrewGap } from "./course-ratios";
 import {
   type AvailabilityBlock,
   blockCoversDay,
@@ -58,6 +59,14 @@ import { weekDates } from "./week-board";
 export type StaffGapCode =
   | "no_instructor"
   | "over_ratio"
+  // An **intro/DSD** session past its ratio, kept apart from `over_ratio`
+  // because the two are different phone calls (issue #1339). The entry-level
+  // cap is instructor-plus-assistant, so "Over student ratio" correctly
+  // invites rostering a divemaster; the intro cap is instructor-to-student
+  // alone and a divemaster does not move it by one seat. One word for both
+  // sent a divemaster to press "Ask for this one" on the one gap their being
+  // aboard cannot close.
+  | "over_intro_ratio"
   // A course session with nobody in the water: both `no_instructor` and the
   // zero-crew case at once (issue #1338). It is its own code rather than
   // either of them because the chip is the entire information budget of a
@@ -82,10 +91,31 @@ export type StaffGapCode =
 export const GAP_TONE: Record<StaffGapCode, "warning" | "neutral"> = {
   no_instructor: "warning",
   over_ratio: "warning",
+  over_intro_ratio: "warning",
   uncrewed_course: "warning",
   uncrewed_departure: "warning",
   crew_below_target: "neutral",
 };
+
+/**
+ * The one place a course gap's *ratio kind* becomes a chip code.
+ *
+ * `courseCrewGap` (src/lib/course-ratios.ts) has always carried `ratio` on
+ * `over_ratio` — the entry-level rule and the far tighter intro one measure
+ * different things — and every caller but this surface already words the two
+ * apart (`trips.detail.overRatioWarningIntro`, `today.detailText.overRatioIntro`).
+ * The staffing week collapsed them by placing `courseGap.code` verbatim, which
+ * is how the week came to offer a divemaster the one ask that cannot help
+ * (issue #1339). Pure and exported so `src/db/staffing.ts` and the tests read
+ * the same mapping.
+ *
+ * Null for `none`: not a gap, so not a code.
+ */
+export function staffGapForCourseGap(gap: CourseCrewGap): StaffGapCode | null {
+  if (gap.code === "none") return null;
+  if (gap.code === "no_instructor") return "no_instructor";
+  return gap.ratio === "intro" ? "over_intro_ratio" : "over_ratio";
+}
 
 /** A shift, reduced to what a week cell has to draw. */
 export type WeekShift = { id: string; startsAt: Date; endsAt: Date; note: string | null };
@@ -141,6 +171,19 @@ export type PlacedGap = PlacedTrip & {
   gap: StaffGapCode;
   requests: readonly CrewAssignmentRequest[];
   viewerMayRequest: boolean;
+  /**
+   * The reader may ask for this one, but their being aboard will not close it
+   * (issue #1339): an intro session's cap is instructor-to-student, and they
+   * hold no instructor role.
+   *
+   * **It informs, never gates** — the same rule `src/lib/crew-requests.ts`
+   * states for a blackout. The owner chose to warn rather than refuse: a
+   * divemaster on a DSD session is a legitimate ask (a second pair of hands in
+   * the water is worth having), so `viewerMayRequest` is untouched by this and
+   * the write is unchanged. What the line stops is the roster *reading* as
+   * closed once the request is approved.
+   */
+  viewerAskWontClose: boolean;
 };
 
 /** One person's week, before it is placed into days. */
@@ -309,7 +352,12 @@ export function staffWeek(input: {
    * that has no viewer to speak of — every test written before #1235, and the
    * assembly's own unit tests.
    */
-  viewer?: { personId: string; isCrew: boolean };
+  viewer?: {
+    personId: string;
+    isCrew: boolean;
+    /** Whether they can close an instructor-to-student gap themselves (#1339). */
+    holdsInstructorRole: boolean;
+  };
   /** The instant `crewRequestRefusal` measures a sailed departure against. */
   now?: Date;
 }): StaffWeek {
@@ -399,9 +447,19 @@ export function staffWeek(input: {
           now,
         }) === null,
     );
+    // Advisory, and deliberately computed *after* `viewerMayRequest` rather
+    // than inside it: the ask stays offered and the warning sits beside it.
+    const viewerAskWontClose =
+      viewerMayRequest && gap.gap === "over_intro_ratio" && !viewer?.holdsInstructorRole;
     gapsByDay.set(first.date, [
       ...(gapsByDay.get(first.date) ?? []),
-      { ...first.placed, gap: gap.gap, requests: tripRequests, viewerMayRequest },
+      {
+        ...first.placed,
+        gap: gap.gap,
+        requests: tripRequests,
+        viewerMayRequest,
+        viewerAskWontClose,
+      },
     ]);
   }
   const gapDays = dates.map((date) => ({

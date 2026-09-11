@@ -298,6 +298,11 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // Its pending-work signal lives on Today's queue (a `reviews_pending`
   // row), the same pattern as stuck payments — a queue's badge belongs on the
   // page that ranks work, not on a nav row.
+  //
+  // Ungated, and the absent `gate:` covers the destination only: moderating
+  // public words is any-staff work, but the private "asked us to fix" panel
+  // *inside* the page carries its own owner/manager gate (issue #1410), in the
+  // page and again in its action.
   { id: "reviews", suffix: "/reviews", navGroup: "daily", inPalette: true },
   // Divers asking for a day that is not on the board. Part of the shop's
   // running cadence rather than its setup — a shop reads this the way it reads

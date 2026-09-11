@@ -45,11 +45,13 @@ const WORDS: StaffingWeekWords = {
   deciding: "Saving…",
   requestApproved: "Approved",
   requestDeclined: "Declined",
+  askWontClose: "Only another instructor closes this gap.",
 };
 
 const GAP_WORDS: GapWords = {
   no_instructor: "This course session has no instructor yet",
   over_ratio: "More divers booked than the crew can supervise",
+  over_intro_ratio: "Over intro ratio",
   uncrewed_course: "No instructor or crew",
   uncrewed_departure: "Nobody in the water",
   crew_below_target: "Under target",
@@ -86,7 +88,7 @@ function renderWeek({
   canDecide?: boolean;
   blocks?: AvailabilityBlock[];
   requests?: CrewAssignmentRequest[];
-  viewer?: { personId: string; isCrew: boolean };
+  viewer?: { personId: string; isCrew: boolean; holdsInstructorRole: boolean };
 } = {}) {
   const week = staffWeek({
     people,
@@ -232,6 +234,43 @@ describe("StaffingWeek", () => {
 
     const uncrewed = renderWeek({ gaps: [GAP] });
     expect(uncrewed.container.querySelector(".bg-warning-tint")).not.toBeNull();
+  });
+
+  /**
+   * Issue #1339. "Ask for this one" beside "Over intro ratio" read, to a
+   * divemaster, as the control that closes the gap. It is not: an intro
+   * session's cap is instructor-to-student and a divemaster adds no seats.
+   * The ask stays — the owner chose to warn, not to refuse — and the warning
+   * is drawn in both layouts, because the phone loses the columns and never
+   * the work.
+   */
+  it("warns a divemaster that their ask will not close an intro-ratio gap", () => {
+    const dm = renderWeek({
+      gaps: [{ ...GAP, gap: "over_intro_ratio" }],
+      viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: false },
+    });
+
+    // Both layouts render at once in jsdom; the note appears in each.
+    expect(screen.getAllByText("Only another instructor closes this gap.").length).toBe(2);
+    // And it is a note on the act, not a replacement for it.
+    expect(screen.getAllByRole("button", { name: "Ask to work Spiegel Grove" }).length).toBe(2);
+    dm.unmount();
+
+    // The reader who can close it is told nothing.
+    const instructor = renderWeek({
+      gaps: [{ ...GAP, gap: "over_intro_ratio" }],
+      viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: true },
+    });
+    expect(screen.queryByText("Only another instructor closes this gap.")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Ask to work Spiegel Grove" }).length).toBe(2);
+    instructor.unmount();
+
+    // Neither is the entry-level cap, which a certified assistant does raise.
+    renderWeek({
+      gaps: [{ ...GAP, gap: "over_ratio" }],
+      viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: false },
+    });
+    expect(screen.queryByText("Only another instructor closes this gap.")).toBeNull();
   });
 
   it("names the current day with a word as well as an ink", () => {

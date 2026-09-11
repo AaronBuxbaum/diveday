@@ -120,6 +120,7 @@
     "blocked": "{count, plural, one {# diver can’t board yet} other {# divers can’t board yet}}",
     "needsInstructor": "Course needs instructor",
     "overRatio": "Over student ratio",
+    "overIntroRatio": "Over intro ratio",
     "prepGaps": "{count, plural, one {# diver is missing rental sizes} other {# divers are missing rental sizes}}",
     "awaitingPayment": "{count, plural, one {# order is awaiting payment} other {# orders are awaiting payment}}"
   },

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { markRecapPulseAddressed } from "@/db/recap-pulses";
+import { canPersonViewShopReports } from "@/db/reporting";
 import {
   REVIEW_MODERATION_REASONS,
   type ReviewModerationReason,
@@ -188,13 +189,25 @@ export async function publishReviewsAction(
  *
  * Shop comes from the session and is re-checked inside `markRecapPulseAddressed`,
  * so a form replayed against another shop's pulse id changes nothing (CR-007).
+ *
+ * **Owner/manager only** (issue #1410). A pulse is private diver-authored
+ * content and reading it is the owner/manager boundary the Requests page
+ * carries; acting on one is part of reading it. The page hides the panel from
+ * everybody else, and the gate below is why that hiding is safe: a hidden
+ * control is not a gate, and a hand-made POST reaches this action all the same
+ * (ADR-0006). `markRecapPulseAddressed` has no gate of its own and writes
+ * whatever it is handed, so the check has to be here.
  */
 export async function markPulseAddressedAction(formData: FormData) {
   const session = await requireStaffSession();
   const reviews = shopPath(session.user.shopSlug, "reviews");
+  const db = await getDb();
+  if (!(await canPersonViewShopReports(db, session.user.shopId, session.user.personId))) {
+    redirect(noticeUrl(reviews, "pulse-not-authorized"));
+  }
   const pulseId = String(formData.get("pulseId") ?? "");
   const marked = await markRecapPulseAddressed(
-    await getDb(),
+    db,
     session.user.shopId,
     pulseId,
     session.user.personId,

@@ -85,6 +85,7 @@
   "week": {
     "approve": "Approve",
     "ariaLabel": "Who’s working",
+    "askWontClose": "Only another instructor closes this gap.",
     "assign": "Assign",
     "assignAria": "Assign crew to {trip}",
     "away": "Away",

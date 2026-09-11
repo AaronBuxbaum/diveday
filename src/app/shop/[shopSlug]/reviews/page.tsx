@@ -8,7 +8,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { GroupLabel } from "@/components/ui/ledger";
-import { listOpenRecapPulses } from "@/db/recap-pulses";
+import { listOpenRecapPulses, type OpenRecapPulse } from "@/db/recap-pulses";
+import { canPersonViewShopReports } from "@/db/reporting";
 import {
   countStaffReviewGroups,
   getShopReviewAggregate,
@@ -91,6 +92,7 @@ const REVIEW_REASON_KEYS: Record<ReviewModerationReason, StaffMessageKey> = {
  */
 const PULSE_NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey }> = {
   "pulse-addressed": { tone: "success", key: "reviews.notice.pulseAddressed" },
+  "pulse-not-authorized": { tone: "danger", key: "reviews.notice.pulseNotAuthorized" },
   error: { tone: "danger", key: "reviews.notice.error" },
 };
 
@@ -123,6 +125,15 @@ export default async function ReviewsPage({
   const { shopSlug } = await params;
   const { page, notice } = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
+  // **Who on the crew may read the private pulses** (issue #1410). The same
+  // live owner/manager check the Requests page makes, against the database
+  // rather than the JWT, so a demoted manager loses the panel immediately.
+  //
+  // Awaited on its own, ahead of the parallel block, rather than folded into
+  // it: folding it in would read a diver's private words for a staffer this
+  // gate exists to keep them from, and one round trip is the price of not
+  // doing that.
+  const canReadPulses = await canPersonViewShopReports(db, shop.id, session.user.personId);
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone ?? "UTC";
   // The current calendar month in the shop's own timezone — "this month" means
@@ -155,7 +166,11 @@ export default async function ReviewsPage({
       // **What divers asked this shop to fix, privately** (D40, issue #1200).
       // Never a review and never public: nothing here reaches the aggregate,
       // the public list, or the suppression share (src/db/recap-pulses.ts).
-      listOpenRecapPulses(db, session.user.shopId),
+      // Owner/manager only, and unread rather than merely unrendered for
+      // everybody else (issue #1410).
+      canReadPulses
+        ? listOpenRecapPulses(db, session.user.shopId)
+        : Promise.resolve<OpenRecapPulse[]>([]),
     ]);
   // Whether DiveDay has stopped publishing this shop's rating as a
   // machine-readable claim. Not the same as "the rating is unrepresentative":
@@ -274,9 +289,17 @@ export default async function ReviewsPage({
           shop nobody has ever complained to.
 
           Above the ledger because it is the thing on this page a person is
-          waiting on, and behind no gate of its own: whoever may read the shop's
-          reviews may read this. */}
-      {openPulses.length > 0 ? (
+          waiting on, and behind **its own owner/manager gate** — the one thing
+          on this page that is (issue #1410). A review is public words a shop
+          moderates; a pulse is private diver-authored content that renders
+          under the diver's name, beside a link to their record, and names
+          crew. That is the Requests boundary and it is here for the Requests
+          argument. The page around it stays open to every staff role.
+
+          Stated here as well as on the read above, which already hands a
+          refused reader an empty list: the panel stays gated if that read ever
+          stops being the conditional one. */}
+      {canReadPulses && openPulses.length > 0 ? (
         <SectionCard title={t("reviews.pulseTitle")} className="mb-8">
           <ul className="divide-y divide-border">
             {openPulses.map((pulse) => (

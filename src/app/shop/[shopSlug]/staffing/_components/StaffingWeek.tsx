@@ -94,6 +94,8 @@ export type StaffingWeekWords = {
   /** "Approved" / "Declined" — a request that has been answered. */
   requestApproved: string;
   requestDeclined: string;
+  /** Beside the ask, when the reader's being aboard would not close it (#1339). */
+  askWontClose: string;
 };
 
 export type StaffingWeekLinks = {
@@ -386,6 +388,11 @@ function GapChip({
           </form>
         ) : null}
       </span>
+      {/* A note on the ask, not a refusal of it (issue #1339). It sits after
+          the form so it reads as the consequence of pressing the control above
+          it: a divemaster may still ask onto an intro session, but the ratio
+          it is over is instructor-to-student and their yes does not clear it. */}
+      {gap.viewerAskWontClose ? <span className={ink}>{words.askWontClose}</span> : null}
     </div>
   );
 }
@@ -702,6 +709,11 @@ export function StaffingWeek({
                           {words.request}
                         </SubmitButton>
                       </form>
+                    ) : null}
+                    {/* The phone loses the columns, never the work — including
+                        this one (`GRID_CLASS`'s note above, issue #1339). */}
+                    {gap.viewerAskWontClose ? (
+                      <p className="text-sm text-warning-strong">{words.askWontClose}</p>
                     ) : null}
                   </LedgerRow>
                 ))}

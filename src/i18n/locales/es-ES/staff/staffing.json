@@ -85,6 +85,7 @@
   "week": {
     "approve": "Aprobar",
     "ariaLabel": "Quién trabaja",
+    "askWontClose": "Solo otro instructor cierra esta falta.",
     "assign": "Asignar",
     "assignAria": "Asignar tripulación a {trip}",
     "away": "Ausente",

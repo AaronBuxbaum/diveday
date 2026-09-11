@@ -346,10 +346,12 @@ test("the line a diver writes for themselves never reaches the network (D33)", a
  * **The second door, and the shop is the only one who ever sees it** (D40,
  * issue #1200).
  *
- * Three things in one pass: a diver's pulse reaches the staff panel; it appears
+ * Four things in one pass: a diver's pulse reaches the staff panel; it appears
  * on neither public reviews surface, which is the whole distinction between
- * this and a review; and taking it back takes it off the panel rather than
- * leaving a shop answering a complaint that has been withdrawn.
+ * this and a review; it reaches the owner's panel and not a captain's, which
+ * is the distinction issue #1410 drew inside the page; and taking it back
+ * takes it off the panel rather than leaving a shop answering a complaint that
+ * has been withdrawn.
  *
  * `page` stays the anonymous diver throughout and the shop is read on a
  * disposable staff context — the CR-019 pattern — so the surface under test is
@@ -361,8 +363,8 @@ test("a private pulse reaches the shop, appears nowhere public, and can be taken
   workerBaseURL,
   staffStorageState,
 }) => {
-  // Two contexts and five navigations; the default 15s is not enough.
-  test.setTimeout(45_000);
+  // Three contexts and six navigations; the default 15s is not enough.
+  test.setTimeout(60_000);
   const NOTE = "PulseNoteSentinel8815";
   const staffContext = await browser.newContext({
     baseURL: workerBaseURL,
@@ -391,6 +393,28 @@ test("a private pulse reaches the shop, appears nowhere public, and can be taken
     await staff.goto("/shop/blue-mantis/reviews");
     await expect(staff.getByRole("heading", { name: "Asked us to fix" })).toBeVisible();
     await expect(staff.getByText(NOTE)).toBeVisible();
+
+    // **And the owner's kind of reader only** (issue #1410). The gate is on the
+    // panel, not the page: a captain still reaches the moderation queue,
+    // because a review is public words the shop answers in public, and the
+    // diver's private sentence is not on the screen they get. Asserted here
+    // rather than in the captain lens of e2e/role-permissions.spec.ts because
+    // this is the only pass in the suite where an open pulse exists to hide.
+    const captainContext = await browser.newContext({
+      baseURL: workerBaseURL,
+      storageState: await staffStorageState("captain"),
+    });
+    try {
+      const captain = makeActivitySafe(await captainContext.newPage());
+      await captain.goto("/shop/blue-mantis/reviews");
+      await expect(
+        captain.getByRole("heading", { level: 1, name: "What divers said" }),
+      ).toBeVisible();
+      await expect(captain.getByRole("heading", { name: "Asked us to fix" })).toHaveCount(0);
+      await expect(captain.getByText(NOTE)).toHaveCount(0);
+    } finally {
+      await captainContext.close();
+    }
 
     // The diver's way back, and the panel goes with it.
     await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
