@@ -24,6 +24,7 @@ type ImageConfig = {
   };
   assetPrefix?: string;
   outputFileTracingExcludes?: Record<string, string[]>;
+  typescript?: { ignoreBuildErrors?: boolean };
 };
 
 async function loadConfig(env: Record<string, string>): Promise<ImageConfig> {
@@ -173,5 +174,26 @@ describe("next.config.ts outputFileTracingExcludes", () => {
     // Excluding this is the failure the darwin exclusion is carefully not:
     // a function that cannot decode a JPEG.
     expect(globs.some((glob) => glob.includes("linux"))).toBe(false);
+  });
+});
+
+/**
+ * **The in-build type check stays on** (issue #1377).
+ *
+ * It duplicates CI's `typecheck` job on the same commit, and the duplication is
+ * the point: it is the last gate between a merge that somehow bypassed CI and
+ * production. The tempting edit is `typescript: { ignoreBuildErrors: true }` —
+ * it makes a red build green for the price of the only refusal left, and it
+ * takes the check off a developer's local `pnpm build` as well. The reasoning
+ * is in the comment above `experimental` in next.config.ts; this is the half a
+ * later edit cannot walk past.
+ */
+describe("next.config.ts typescript", () => {
+  it("never ignores build errors, since the in-build check is the last gate", async () => {
+    const config = await loadConfig(CONFIGURED);
+    expect(
+      config.typescript?.ignoreBuildErrors,
+      "ignoreBuildErrors disables Next's in-build type check for CI, Vercel and every local `pnpm build`. See the comment above `experimental` in next.config.ts (#1377).",
+    ).toBeUndefined();
   });
 });

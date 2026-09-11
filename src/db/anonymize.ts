@@ -290,6 +290,27 @@ function buddyMemberNameMatch(fullName: string): string | undefined {
 }
 
 /**
+ * The digits of the number on a diver's record, for the sweeps that compare it
+ * against free text somebody else typed.
+ *
+ * `people.phone` is E.164 since issue #1547 (`+13055550142`), while a course
+ * inquiry, a queued lead and a half-finished staff draft each hold the number
+ * exactly as the person typed it into that form (`+1 305 555 0142`). A string
+ * comparison between the two now matches only by coincidence, and a handle
+ * that matches by coincidence is an erasure that quietly does not happen
+ * (H-02). Both sides reduce to digits instead — the same shape the inbound
+ * sweep below already compares on.
+ *
+ * Seven is `normalizePhoneAddress`'s floor, kept here for the same reason: a
+ * shorter run of digits is not a phone number, and these predicates are fuzzy
+ * enough already without reaching half a roster.
+ */
+function erasablePhoneDigits(phone: string | null): string | null {
+  const digits = phone?.replace(/\D/g, "") ?? "";
+  return digits.length >= 7 ? digits : null;
+}
+
+/**
  * Record that a predicate which cannot be tied to a `person_id` matched rows.
  *
  * Several sweeps below are matched on something other than a foreign key — a
@@ -1725,13 +1746,14 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // written reason: a household number is shared, so this can drop a partner's
   // queued lead. That costs a retry of a notification whose own
   // `course_inquiries` row this transaction blanks anyway.
-  if (ctx.phone) {
+  const queuePhoneDigits = erasablePhoneDigits(ctx.phone);
+  if (queuePhoneDigits) {
     const droppedByPhone = await tx
       .delete(notificationSendQueue)
       .where(
         and(
           eq(notificationSendQueue.shopId, shopId),
-          eq(notificationSendQueue.subjectPhone, ctx.phone),
+          sql`regexp_replace(coalesce(${notificationSendQueue.subjectPhone}, ''), '\\D', '', 'g') = ${queuePhoneDigits}`,
         ),
       )
       .returning({ id: notificationSendQueue.id });
@@ -1785,10 +1807,11 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       match: sql`lower(field.value) = ${ctx.email.toLowerCase()}`,
     });
   }
-  if (ctx.phone) {
+  const draftPhoneDigits = erasablePhoneDigits(ctx.phone);
+  if (draftPhoneDigits) {
     draftHandles.push({
       predicate: "form_draft_phone",
-      match: sql`field.value = ${ctx.phone}`,
+      match: sql`regexp_replace(field.value, '\\D', '', 'g') = ${draftPhoneDigits}`,
     });
   }
   const draftNameMatch = buddyMemberNameMatch(ctx.fullName);
@@ -1879,13 +1902,19 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         ),
       );
   }
-  if (ctx.phone) {
+  const inquiryPhoneDigits = erasablePhoneDigits(ctx.phone);
+  if (inquiryPhoneDigits) {
     // Runs after the address sweep, so the count is the rows the number
     // reached that the address did not — the over-reach, isolated.
     const byPhone = await tx
       .update(courseInquiries)
       .set(blankInquiry)
-      .where(and(eq(courseInquiries.shopId, shopId), eq(courseInquiries.phone, ctx.phone)))
+      .where(
+        and(
+          eq(courseInquiries.shopId, shopId),
+          sql`regexp_replace(coalesce(${courseInquiries.phone}, ''), '\\D', '', 'g') = ${inquiryPhoneDigits}`,
+        ),
+      )
       .returning({ id: courseInquiries.id });
     logFuzzyMatch(ctx, "course_inquiry_phone", byPhone.length);
   }
@@ -1924,22 +1953,20 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         ),
       );
   }
-  if (ctx.phone) {
-    const digits = ctx.phone.replace(/\D/g, "");
-    if (digits.length >= 7) {
-      const byPhone = await tx
-        .update(inboundMessages)
-        .set(blankMessage)
-        .where(
-          and(
-            eq(inboundMessages.shopId, shopId),
-            ne(inboundMessages.channel, "email"),
-            eq(inboundMessages.fromAddress, digits),
-          ),
-        )
-        .returning({ id: inboundMessages.id });
-      logFuzzyMatch(ctx, "inbound_message_phone", byPhone.length);
-    }
+  const inboundPhoneDigits = erasablePhoneDigits(ctx.phone);
+  if (inboundPhoneDigits) {
+    const byPhone = await tx
+      .update(inboundMessages)
+      .set(blankMessage)
+      .where(
+        and(
+          eq(inboundMessages.shopId, shopId),
+          ne(inboundMessages.channel, "email"),
+          eq(inboundMessages.fromAddress, inboundPhoneDigits),
+        ),
+      )
+      .returning({ id: inboundMessages.id });
+    logFuzzyMatch(ctx, "inbound_message_phone", byPhone.length);
   }
   await tx
     .update(staffReplies)

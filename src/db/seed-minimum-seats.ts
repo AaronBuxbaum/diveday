@@ -46,9 +46,9 @@ import { at, nextCreatedAt } from "./seed-clock";
  */
 const DEMO_MINIMUM_TRIP = "Tortugas Run — 3 days out, 6 divers to sail";
 const DEMO_MINIMUM_DIVERS = [
-  { fullName: "Rosa Lindqvist", email: "rosa.lindqvist@example.com", phone: "+1-305-555-0192" },
-  { fullName: "Amir Haddad", email: "amir.haddad@example.com", phone: "+1-305-555-0193" },
-  { fullName: "Wren Okafor", email: "wren.okafor@example.com", phone: "+1-305-555-0194" },
+  { fullName: "Rosa Lindqvist", email: "rosa.lindqvist@example.com", phone: "+13055550192" },
+  { fullName: "Amir Haddad", email: "amir.haddad@example.com", phone: "+13055550193" },
+  { fullName: "Wren Okafor", email: "wren.okafor@example.com", phone: "+13055550194" },
 ] as const;
 
 export async function seedMinimumSeats(

@@ -65,10 +65,19 @@ export type RecordInboundMessageResult =
 /**
  * The person an address belongs to, inside one shop. Null for a stranger.
  *
- * Email is an exact match on the lowercased address. A phone is compared by
- * its digits (`phoneMatches`), which needs the candidates in hand: the query
- * narrows to rows whose stored digits end in the inbound number's last ten
- * (or are the whole thing), and the rule decides. Among several matches — a
+ * Email is an exact match on the lowercased address. A phone is decided by
+ * `phoneMatches`, which reads the stored number against the shop's own country
+ * (`shops.address_country`) and then compares for equality — so the shop is
+ * read here, once, and handed to the rule.
+ *
+ * The SQL above it is a **prefilter, not the rule**: it narrows to rows whose
+ * stored digits end in the inbound number's last seven, which is a deliberate
+ * superset. Seven because `normalizePhoneAddress` already refuses anything
+ * shorter, so it is the longest tail that cannot cut off a real national
+ * number in any country DiveDay knows — the old ten was the North American
+ * national-number length in disguise, and it hid every shorter one. A loose
+ * prefilter fetches a few more rows per inbound message inside one shop;
+ * `phoneMatches` is what decides, and it is strict. Among several matches — a
  * duplicate record the merge tool has not met yet — the oldest live diver wins,
  * so a message keeps landing on the record the shop has been using longest.
  */
@@ -92,18 +101,25 @@ export async function matchPersonByAddress(
       .limit(1);
     return row?.id ?? null;
   }
-  const tail = normalizedAddress.slice(-10);
+  const [shop] = await db
+    .select({ country: shops.addressCountry })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  const tail = normalizedAddress.slice(-7);
   const candidates = await db
     .select({ id: people.id, phone: people.phone })
     .from(people)
     .where(
       and(
         live,
-        sql`right(regexp_replace(coalesce(${people.phone}, ''), '\\D', '', 'g'), 10) = ${tail}`,
+        sql`right(regexp_replace(coalesce(${people.phone}, ''), '\\D', '', 'g'), 7) = ${tail}`,
       ),
     )
     .orderBy(asc(people.createdAt));
-  return candidates.find((row) => phoneMatches(row.phone, normalizedAddress))?.id ?? null;
+  return (
+    candidates.find((row) => phoneMatches(row.phone, normalizedAddress, shop?.country))?.id ?? null
+  );
 }
 
 function normalizeAddress(channel: InboundChannel, raw: string): string | null {

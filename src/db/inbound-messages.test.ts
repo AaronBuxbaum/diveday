@@ -44,6 +44,34 @@ async function firstDiver(db: Awaited<ReturnType<typeof seededShopContext>>["db"
   return row as { id: string; email: string; phone: string; fullName: string };
 }
 
+async function shopWithCountry(
+  db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+  country: string,
+  slug: string,
+): Promise<string> {
+  const [row] = await db
+    .insert(shops)
+    .values({ name: slug, slug, timezone: "UTC", addressCountry: country })
+    .returning({ id: shops.id });
+  if (!row) throw new Error("shop insert failed");
+  return row.id;
+}
+
+async function addDiver(
+  db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+  shopId: string,
+  fullName: string,
+  phone: string,
+): Promise<string> {
+  const [row] = await db
+    .insert(people)
+    .values({ shopId, fullName, phone })
+    .returning({ id: people.id });
+  if (!row) throw new Error("person insert failed");
+  await db.insert(personRoles).values({ personId: row.id, role: "diver" });
+  return row.id;
+}
+
 describe("attribution by address", () => {
   it("matches an email to the diver who holds it, however the header spelt it", async () => {
     const { db, shop } = await seededShopContext();
@@ -67,6 +95,27 @@ describe("attribution by address", () => {
     expect(await matchPersonByAddress(db, shop.id, "whatsapp", digits)).toBe(diver.id);
     // A number that merely ends the same way is somebody else.
     expect(await matchPersonByAddress(db, shop.id, "whatsapp", `9${digits.slice(1)}`)).toBeNull();
+  });
+
+  /**
+   * **Attribution is not North American** (issue #1547). `phoneMatches` reads a
+   * stored number against the shop's own `address_country`, so a Mallorca shop
+   * whose diver is on file as `612 345 678` matches an inbound `34612345678` —
+   * and a Key Largo shop holding the same nine digits does not, because they
+   * are not a US number. Before this, the rule accepted any stored number of
+   * ten digits or more that the inbound number ended in, which linked by
+   * coincidence across countries.
+   */
+  it("reads a bare national number against the shop's own country", async () => {
+    const { db } = await seededShopContext();
+    const spanish = await shopWithCountry(db, "ES", "mallorca-inbox");
+    const florida = await shopWithCountry(db, "US", "florida-inbox");
+    const bare = "612 345 678";
+    const spanishDiver = await addDiver(db, spanish, "Nuria Serra", bare);
+    await addDiver(db, florida, "Wes Calder", bare);
+
+    expect(await matchPersonByAddress(db, spanish, "whatsapp", "34612345678")).toBe(spanishDiver);
+    expect(await matchPersonByAddress(db, florida, "whatsapp", "34612345678")).toBeNull();
   });
 
   it("leaves a stranger unmatched rather than guessing", async () => {

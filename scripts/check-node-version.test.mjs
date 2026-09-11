@@ -8,6 +8,7 @@ import { compare as compareVersions, satisfies, validRange } from "semver";
 import { describe, expect, it } from "vitest";
 
 import {
+  ES_LIB,
   findNodeVersionDrift,
   LAMBDA_NODE_MAJOR,
   NODE_FLOOR,
@@ -31,6 +32,8 @@ function repoFiles() {
     "README.md",
     "infra/lib/infra-stack.ts",
     "infra/lib/visual-bucket-pruner.test.ts",
+    "tsconfig.json",
+    "src/worker/tsconfig.json",
   ]) {
     files.set(file, readFileSync(path.join(ROOT, file), "utf8"));
   }
@@ -146,6 +149,29 @@ describe("findNodeVersionDrift", () => {
     ]);
   });
 
+  it("catches a lib array widened back to esnext", () => {
+    // The hole ADR 20260903-node-24-is-the-floor left open and #1329 closed:
+    // `esnext` is what every scaffold writes, so this is the shape the config
+    // drifts back into, and nothing else in the tree would notice.
+    const files = repoFiles();
+    files.set("tsconfig.json", files.get("tsconfig.json").replace(`"${ES_LIB}"]`, '"esnext"]'));
+    expect(findNodeVersionDrift(readerFor(files))).toEqual([
+      `tsconfig.json (compilerOptions.lib) says dom,dom.iterable,esnext, and every other declaration says dom,dom.iterable,${ES_LIB}.`,
+    ]);
+  });
+
+  it("catches the worker config drifting from the root's ES floor", () => {
+    // Read by regex rather than `JSON.parse`, because this file carries `//`
+    // comments: a parser-based rule would report an unreadable file here and
+    // look the same as a real drift.
+    const files = repoFiles();
+    const worker = "src/worker/tsconfig.json";
+    files.set(worker, files.get(worker).replace(`["${ES_LIB}"`, '["esnext"'));
+    expect(findNodeVersionDrift(readerFor(files))).toEqual([
+      `${worker} (compilerOptions.lib) says esnext,webworker,dom.iterable, and every other declaration says ${ES_LIB},webworker,dom.iterable.`,
+    ]);
+  });
+
   it("catches one Lambda left behind on the old runtime", () => {
     // The shape that made a single stack run two majors: three of the seven
     // functions AWS ends up with come from aws-cdk-lib and follow its latest,
@@ -241,6 +267,13 @@ describe("the numbers themselves", () => {
       .sort(compareVersions)
       .find((candidate) => [...ranges.values()].every((range) => satisfies(candidate, range)));
     expect(lowest).toBe(NODE_FLOOR);
+  });
+
+  it("names a fixed ES edition rather than a moving one", () => {
+    // `esnext` and `latest` move under the tree with every TypeScript bump,
+    // which is the drift this constant exists to stop; a floor that follows the
+    // compiler is not a floor.
+    expect(ES_LIB).toMatch(/^es\d{4}$/);
   });
 
   it("is wired into pnpm check:repo, or it protects nothing", () => {

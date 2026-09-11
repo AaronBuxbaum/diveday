@@ -301,14 +301,17 @@ export async function handleInboundReplyKeyword(
     )
     .limit(1);
   if (!shop || !person) return "unknown_sender";
-  // **Stricter than attribution, deliberately.** `matchPersonByAddress` will
-  // accept a stored phone typed without its country code when the inbound
-  // number ends in it (`phoneMatches`), which is the right trade for filing a
-  // sentence on a record a staffer then reads — and the wrong one for a state
-  // change, because a foreign number sharing a diver's last ten digits would
-  // inherit their seat. A keyword needs the address on file to be the address
-  // that wrote, exactly. A shop that stored a local number loses the shortcut,
-  // which is the safe way to lose it.
+  // **Stricter than attribution, deliberately.** `matchPersonByAddress` reads
+  // the stored number against the shop's country first (`phoneMatches`), which
+  // is the right trade for filing a sentence on a record a staffer then reads
+  // — and more than a state change should rest on, because the shop's country
+  // is a settings field one staffer can change. A keyword needs the address on
+  // file to be the address that wrote, exactly, with nothing resolved in
+  // between. Since `createDiver`/`updateDiver` write E.164, that is the
+  // ordinary case rather than the lucky one: the number on the record and the
+  // number the provider reports are the same digits, and the shortcut works.
+  // A row holding something E.164 could not be read from still loses it, which
+  // is the safe way to lose it.
   const onFile =
     message.channel === "email"
       ? normalizeEmailAddress(person.email)

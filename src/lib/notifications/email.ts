@@ -227,8 +227,9 @@ export type TripConditionsHoldEmailInput = {
 
 /**
  * The light-mode `--primary` token, duplicated intentionally: an email
- * document can't reference globals.css custom properties any more than
- * `icon.tsx`'s `ImageResponse` can (see that file's own comment).
+ * document can't reference globals.css custom properties any more than a
+ * satori `ImageResponse` can (see `src/lib/og-rasterizer.ts` and
+ * `scripts/check-tokens.mjs`'s exemption list).
  */
 const BRAND_PRIMARY_COLOR = "#008080";
 const BRAND_PAGE_COLOR = "#FAF9F6";

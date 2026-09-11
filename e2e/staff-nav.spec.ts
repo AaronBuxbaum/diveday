@@ -249,8 +249,9 @@ test.describe("phone dock", () => {
    * scrolled" — and it is still 300px above the fold, so the finger still
    * never reaches for the top of the screen, which is the whole claim.
    *
-   * What is no longer covered here is dismissal begun on the sheet's own rows
-   * once the list overflows; that is issue #1512.
+   * **And the only one, since #1512.** A press on a row of a sheet whose list
+   * can scroll now starts no gesture at all; the case below holds that, so the
+   * two tests together say where a drag may begin and where it may not.
    */
   test("the sheet leaves with a thumb that drags it down by the handle", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
@@ -276,6 +277,62 @@ test.describe("phone dock", () => {
     // It closed rather than navigated: a drag is not a tap on whatever row it
     // started over.
     await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+  });
+
+  /**
+   * **The other half of the same rule** (#1512). Once the sheet's list can
+   * scroll, a press anywhere in that list belongs to the list: the sheet must
+   * not move, and it must not leave. Before #1512 it did leave — and on a real
+   * thumb it did worse, starting a gesture the browser's own scroller then took
+   * away mid-flight, so the sheet sat open with no explanation.
+   *
+   * **Pressed on the group's label, not on a row**, which is not a dodge: a
+   * *mouse* press on a link starts Chromium's own link drag, which cancels the
+   * pointer stream, so a row drag ends in nothing under either rule and would
+   * assert nothing here. The label is the same scrolling content a thumb lands
+   * on, and it is the one part of it a mouse can honestly drag.
+   */
+  test("a drag begun on the full sheet's list leaves the sheet open", async ({ page }) => {
+    await page.goto("/shop/blue-mantis");
+    await page.locator("[data-dock-more]").click();
+    const sheet = page.getByRole("dialog", { name: "More" });
+    await expect(sheet).toBeVisible();
+
+    // The rule only speaks about a sheet whose list can scroll, so hold that
+    // here: a shop whose menu shrank back inside the cap would otherwise fail
+    // the assertions below for a reason nothing in this test names.
+    const overflowing = await sheet.evaluate((node) => node.scrollHeight > node.clientHeight);
+    expect(overflowing, "the demo shop's menu now fits the sheet").toBe(true);
+
+    const sheetBox = await sheet.boundingBox();
+    const box = await sheet.getByText("Run the shop", { exact: true }).boundingBox();
+    if (!box || !sheetBox) throw new Error("sheet content has no box");
+    const x = box.x + box.width / 2;
+    const grip = box.y + box.height / 2;
+    // Far enough down that a gesture, had one started, would have dismissed —
+    // clamped inside the viewport, and checked against the sheet's own height
+    // because that is what `dismissOnRelease` measures the line against.
+    const to = Math.min(grip + 700, 840);
+    expect(to - grip).toBeGreaterThan(sheetBox.height * 0.4);
+
+    await page.mouse.move(x, grip);
+    await page.mouse.down();
+    await page.mouse.move(x, grip + 40, { steps: 6 });
+    await page.mouse.move(x, to, { steps: 10 });
+    // Read while the button is still down: no gesture started, so the sheet is
+    // still exactly where it rose to. This is the assertion that fails against
+    // the old rule, which had it 700px down the screen by now.
+    const travelled = await sheet.evaluate((node) => node.style.transform);
+    expect(travelled, "the sheet moved under a finger that was reading the list").toBe("");
+    await page.mouse.up();
+
+    // Nothing under the finger was taken for a tap on the way past, either.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+    // And the sheet is not merely still in the DOM — it is open and working.
+    // A dismissal would have unmounted this row a fifth of a second later, so
+    // clicking it is what distinguishes "stayed" from "was still leaving".
+    await sheet.getByRole("link", { name: "Staffing" }).click();
+    await expect(page).toHaveURL(/\/staffing$/);
   });
 
   test("the sheet dismisses on an outside tap without navigating", async ({ page }) => {

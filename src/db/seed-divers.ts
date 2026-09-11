@@ -37,7 +37,9 @@ export async function seedDivers(
         shopId,
         fullName: customer.fullName,
         email: `${customer.fullName.toLowerCase().replace(/[^a-z]+/g, ".")}@example.com`,
-        phone: `+1-305-555-01${String(i + 10).padStart(2, "0")}`,
+        // E.164, because that is what `createDiver` writes (issue #1547) and a
+        // demo that stores a shape the app never produces teaches the wrong one.
+        phone: `+130555501${String(i + 10).padStart(2, "0")}`,
         emergencyContactName: customer.emergencyContact?.[0] ?? null,
         emergencyContactPhone: customer.emergencyContact?.[1] ?? null,
         // A few dates on file so the H-08 minimum-age gate and the H-21

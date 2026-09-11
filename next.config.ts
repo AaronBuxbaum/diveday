@@ -167,13 +167,22 @@ const nextConfig: NextConfig = {
       "node_modules/**/*.d.cts",
       "node_modules/**/*.d.mts",
     ],
-    // **Satori, in 45 staff closures that render no image** (issue #1355).
+    // **Satori, in 56 staff closures that render no image** (issue #1355).
     //
-    // `@vercel/og` is 3.07 MiB of renderer, bundled font and WASM. It reaches
-    // every page because `src/app/icon.tsx` and `apple-icon.tsx` import
-    // `ImageResponse`, and Next attaches both as *metadata modules* to every
-    // page entry — so a settings form traces the rasterizer. Measured: 82 of
-    // 144 closures carry it and 7 need it.
+    // `@vercel/og` is 3.07 MiB of renderer, bundled font and WASM, and it
+    // reaches every page entry, because Next attaches a **metadata module** to
+    // every one of them and `src/app/opengraph-image.tsx` imports
+    // `ImageResponse`. So a settings form traces the rasterizer.
+    //
+    // Issue #1361 made the two root icons committed PNGs (`src/app/icon.png`,
+    // `apple-icon.png`, `public/icon-192.png`, `public/icon-512.png`) on the
+    // theory that `icon.tsx` and `apple-icon.tsx` were the importers holding
+    // this open. **They were not the only ones, and this key stays.** Measured
+    // on the build that landed those PNGs: with this key, 46 of 183 closures
+    // carry the module and 6 need it; without it, 102 do. The root
+    // `opengraph-image.tsx` is a real card that cannot be deleted, and Next
+    // attaches it to every page entry exactly as it attached the icons — see
+    // issue #1709 for that half.
     //
     // **`/shop/**` and never `/shop`.** These keys are matched with picomatch
     // and `contains: true`, so they match a *substring* of the route: the bare
@@ -181,18 +190,24 @@ const nextConfig: NextConfig = {
     // nothing to do with staff pages. The trailing slash is what makes it a
     // path segment rather than five letters.
     //
-    // Safe because no route under `/shop/` renders an image — checked against
-    // the tree, not assumed: every `ImageResponse` route in the app is
-    // `icon`, `apple-icon`, `pwa-icon-maskable`, and four `opengraph-image`
-    // routes at the root, `/recap/[token]`, `/s/[shopSlug]` and
-    // `/s/[shopSlug]/trips/[id]`. A `/shop/**` OG route added later would need
-    // this key narrowed, which is why the list is written out here.
+    // **One route under `/shop/` does render an image, and this key strips the
+    // module out from under it**: `/shop/[shopSlug]/reports/card`, the staff
+    // year card, added after this key was written. Confirmed on a build —
+    // its `.nft.json` carries no `@vercel/og` — and an
+    // `outputFileTracingIncludes` entry for the same route does **not** win
+    // over this exclusion, which was also tried on a build. Issue #1710 holds
+    // the fix; it needs the key narrowed or the route moved, not another key.
     //
-    // This is 45 of the 75 closures that do not need it. The other 30 are the
-    // marketing and diver-facing pages, and they cannot be excluded the same
-    // way: substring matching means a `/s/**` key would also match
+    // The other `ImageResponse` surfaces are outside `/shop/` and keep the
+    // module: `pwa-icon-maskable`, `/s/[shopSlug]/year-card`, and four
+    // `opengraph-image` routes at the root, `/recap/[token]`, `/s/[shopSlug]`
+    // and `/s/[shopSlug]/trips/[id]`. Any new one under `/shop/` lands in the
+    // same trap, which is why the list is written out here.
+    //
+    // The marketing and diver-facing pages cannot be excluded the same way:
+    // substring matching means a `/s/**` key would also match
     // `/s/[shopSlug]/opengraph-image`, which genuinely needs the module, and
-    // these keys have no negation. Issue #1361 carries that half.
+    // these keys have no negation.
     "/shop/**": ["node_modules/**/next/dist/compiled/@vercel/og/**"],
   },
   cacheComponents: true,
@@ -262,6 +277,20 @@ const nextConfig: NextConfig = {
   // TypeScript 7 is the native (Go) compiler and no longer exposes the JS
   // compiler API Next used for its in-build type check. Next drives it through
   // the TS CLI instead (tsgo), which this flag enables.
+  //
+  // Yes, this re-runs the check CI's `typecheck` job already ran on the same
+  // commit, and the duplication is deliberate (#1377, decided 2026-09-10: keep
+  // it). It is the last gate between a merge that somehow bypassed CI and
+  // production. A type error does not change what gets deployed — Turbopack
+  // transpiles without checking, so the artifact is byte-identical either way;
+  // what the second run buys is the refusal. The cost is a fraction of a ~70s
+  // cold compile, the smallest of this build's three levers. What would reopen
+  // it: `main` acquiring a branch-protection rule that requires the `typecheck`
+  // job, at which point the gate has a second holder and this one is genuinely
+  // redundant. What is not wanted either way is
+  // `typescript: { ignoreBuildErrors: true }`, which drops the check from a
+  // developer's local `pnpm build` too — src/test/next-config.test.ts pins its
+  // absence.
   experimental: {
     useTypeScriptCli: true,
     // Static-generation workers only need to be serialized when they'd share

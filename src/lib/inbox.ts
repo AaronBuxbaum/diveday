@@ -1,5 +1,6 @@
 import { HOUR_MS } from "@/lib/clock";
 import { phoneDigits } from "@/lib/person-fields";
+import { toE164 } from "@/lib/phone";
 
 /**
  * The rules of the shop inbox, free of any framework (ADR
@@ -64,23 +65,44 @@ export function normalizeEmailAddress(raw: string | null | undefined): string | 
 }
 
 /**
- * Whether a stored phone number is the one a message came from.
+ * Whether a stored phone number is the one a message came from, read against
+ * the country the shop itself is in (`shops.address_country`).
  *
- * Both sides reduce to digits (`phoneDigits`) — the seed holds
- * `+1-305-555-0110` and WhatsApp reports `13055550110`. A stored number that
- * was typed without its country code (`305-555-0110`) still matches when the
- * inbound number ends in it and it is long enough to be a whole local number,
- * never on a short suffix that half the roster would share.
+ * The stored side is resolved to E.164 first (`toE164`) and then compared to
+ * the inbound number for **equality**, digits to digits — `305-555-0110` on a
+ * Key Largo diver's record becomes `+13055550110` and matches the
+ * `13055550110` WhatsApp reports, and `612 345 678` on a Mallorca diver's
+ * record becomes `+34612345678` and matches theirs.
+ *
+ * **This used to end in a suffix rule** — a stored number of ten digits or
+ * more matched any inbound number ending in it — which was the North American
+ * ten-digit national number written into a function that runs for every
+ * country. A British record stored bare as `7700900123` matched a US inbound
+ * `+1 770 090 0123`, and a stranger's message was filed on a named diver.
+ * Equality replaces it; `src/lib/phone.test.ts` and the cases below pin both
+ * halves.
+ *
+ * Two honest costs, neither of them a bug to be fixed here:
+ *
+ * - A shop with **no country on file** — `address_country` is nullable and
+ *   nothing makes a shop fill it in — gets exact-digit matching only. A number
+ *   stored bare there stops matching an inbound `+1…` that it used to match by
+ *   suffix. The shop fixes it by saving its address, which is a thing it can
+ *   see and do.
+ * - A number `toE164` cannot resolve at all (a note in the field, an extension,
+ *   a shape no country above explains) falls back to exact digit equality, so
+ *   it is never dropped from consideration and never guessed at either.
  */
 export function phoneMatches(
   storedPhone: string | null | undefined,
   inboundDigits: string,
+  shopCountry: string | null | undefined,
 ): boolean {
   if (!storedPhone || !inboundDigits) return false;
   const stored = phoneDigits(storedPhone);
   if (stored.length === 0) return false;
-  if (stored === inboundDigits) return true;
-  return stored.length >= 10 && inboundDigits.endsWith(stored);
+  const normalized = toE164(storedPhone, shopCountry);
+  return normalized ? phoneDigits(normalized) === inboundDigits : stored === inboundDigits;
 }
 
 /** The digits-only form a WhatsApp or SMS sender is compared and stored as. */

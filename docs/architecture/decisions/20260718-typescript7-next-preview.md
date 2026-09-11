@@ -38,6 +38,12 @@ experimental and may be renamed. Escape hatch: revert to stable Next 16.2.10 wit
 changes and were verified to build. Revisit when Next 16.3 goes GA (drop the experimental flag if it
 becomes default) or if the preview proves unstable.
 
+`typescript.ignoreBuildErrors: true` above is an escape hatch for *reverting off the preview*, and
+only that. As a standing setting it was declined on 2026-09-10 (#1377): the in-build check
+duplicates CI's `typecheck` job on purpose, because it is the last gate between a merge that
+bypassed CI and production. The reasoning is in the comment above `experimental` in
+`next.config.ts`, and `src/test/next-config.test.ts` pins the flag's absence.
+
 ## Amendment 2026-08-15 — one repository check rides an unstable TypeScript entry point
 
 TypeScript is no longer only a compiler we run; one repository check now *imports* it.

@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { generateImageMetadata } from "./icon";
 import manifest from "./manifest";
 
 /**
@@ -50,23 +51,29 @@ describe("the web app manifest", () => {
     expect(manifest().start_url).not.toBe("/");
   });
 
-  it("points every icon at a route that generates it", () => {
+  it("points every icon at a file that exists, at the size it advertises", () => {
     // The whole failure mode this file exists for is a manifest that *claims*
-    // sizes nothing renders. `icon.tsx` generates its sizes from one list, so
-    // this compares the two rather than trusting either.
-    const generated = new Set(generateImageMetadata().map((image) => `/icon/${image.id}`));
-    const fromIconRoute = icons
-      .map((icon) => String(icon.src))
-      .filter((src) => src.startsWith("/icon/"));
-    expect(fromIconRoute.length).toBeGreaterThan(0);
-    expect(fromIconRoute.filter((src) => !generated.has(src))).toEqual([]);
-  });
+    // sizes nothing renders. The icons were `ImageResponse` routes until issue
+    // #1361 and these two tests compared the manifest against the route's own
+    // size list; now the artwork is four committed PNGs, so the manifest is
+    // compared against the bytes on disk instead — which is the stronger claim
+    // the old pair was reaching for.
+    const nonMaskable = icons.filter((icon) => icon.purpose !== "maskable");
+    expect(nonMaskable.length).toBe(4);
 
-  it("asks each icon route for the size it advertises", () => {
-    for (const image of generateImageMetadata()) {
-      const declared = icons.find((icon) => String(icon.src) === `/icon/${image.id}`);
-      if (!declared) continue;
-      expect(declared.sizes).toBe(`${image.size.width}x${image.size.height}`);
+    for (const icon of nonMaskable) {
+      const src = String(icon.src);
+      // `icon.png` and `apple-icon.png` are Next's static metadata convention
+      // and live beside this file; the other two are plain `public/` files.
+      const file =
+        src === "/icon.png" || src === "/apple-icon.png" ? `src/app${src}` : `public${src}`;
+      const png = readFileSync(path.join(process.cwd(), file));
+      // The PNG signature, then IHDR's width and height as big-endian uint32s.
+      // Read directly rather than pulling an image library into a unit test.
+      expect(png.subarray(0, 8)).toEqual(
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      );
+      expect(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`).toBe(icon.sizes);
     }
   });
 });

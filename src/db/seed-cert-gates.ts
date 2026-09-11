@@ -100,7 +100,7 @@ export async function seedCertGates(
       shopId,
       fullName: "Odile Marchand",
       email: "odile.marchand@example.com",
-      phone: "+33-1-555-0313",
+      phone: "+33155550313",
       emergencyContactName: "Luc Marchand (husband)",
       emergencyContactPhone: "+33-1-555-0314",
     })

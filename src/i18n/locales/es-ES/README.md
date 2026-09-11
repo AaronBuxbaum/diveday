@@ -341,6 +341,17 @@ they were not coming is not a no-show.
 
 `src/i18n/no-show-copy.test.ts` fails if either sentence takes the other's verb, in either locale.
 
+## How names sort: nothing to do here
+
+`Ángel` lands between `Ana` and `Bea`, and `Ñuria` after `Nuria`, on every screen that lists people
+by name — because `people.full_name` carries `COLLATE "und-x-icu"` in the database itself
+(`drizzle/20260911200158_person-name-collation`), not because any query asks for it. Before that
+migration the order came from whatever locale the server was created with, which meant the accented
+names fell after `Zoe` in the test suite and nobody could say where they fell in production.
+
+Nothing in these bundles affects it, and no copy change can break it. If a list ever comes back in
+the wrong order, the column is the place to look, never the translation.
+
 ## Deliberately left alone
 
 Not everything that looks peninsular is. These stay, and changing them would be a retranslation

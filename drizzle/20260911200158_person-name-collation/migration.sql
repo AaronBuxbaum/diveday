@@ -1,0 +1,11 @@
+-- Give `people.full_name` its own ICU collation, so every reader inherits the
+-- order a person expects without naming a collation in the query. PGlite's
+-- database default is `C` (byte order) and a server's is whatever initdb was
+-- handed, so until this line `Ángel` and `Ñuria` sorted after `Zoe` in the test
+-- suite and somewhere else entirely in production — and 21 `orderBy(asc(
+-- people.fullName))` call sites across `src/db` feed `offsetPage`, where a
+-- wrong order is a wrong page one. drizzle-orm's pg-core cannot express a
+-- collation, so this statement is the source of truth; `drizzle-kit` only
+-- *reports* a collation delta and will not regenerate it away.
+-- diveday:allow-destructive alter-column-type people.full_name: text -> text is binary-coercible, so the collation change rewrites no rows and takes no table rewrite; the previous release keeps reading and writing the column and only sees a different sort order.
+ALTER TABLE "people" ALTER COLUMN "full_name" SET DATA TYPE text COLLATE "und-x-icu";

@@ -537,6 +537,24 @@ export const people = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
+    /**
+     * **`COLLATE "und-x-icu"` in the database**, set by
+     * `drizzle/20260911200158_person-name-collation`. The type here is plain
+     * `text` because drizzle-orm's pg-core has no way to say it — and because
+     * drizzle-kit only *reports* a collation delta rather than modelling one,
+     * a later `pnpm db:generate` will not take it back off.
+     *
+     * The collation lives on the column so that it lives nowhere else.
+     * Twenty-one `orderBy(asc(people.fullName))` call sites across `src/db`
+     * inherit it with no query edit, and `offsetPage` (src/db/paging.ts) slices
+     * exactly that order — so a name list ordered by the database default is
+     * not merely untidy, it is a wrong *page one*, with `Ángel` and `Ñuria`
+     * after `Zoe` where a Spanish reader looks for them near the top. The
+     * default is `C` (byte order) on PGlite and whatever initdb was handed on a
+     * server, which is why the suite and production could not agree until the
+     * column answered for itself. `src/db/name-collation.test.ts` proves it on
+     * PGlite and `name-collation.postgres.test.ts` on a real server.
+     */
     fullName: text("full_name").notNull(),
     /** Nullable: walk-ups may not have one on file yet. */
     email: text("email"),

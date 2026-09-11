@@ -18,6 +18,7 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
+import { toE164 } from "@/lib/phone";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
@@ -55,6 +56,38 @@ export type NewDiver = {
 };
 
 /**
+ * The form a diver's phone number is written in: E.164 (`+13055550110`), read
+ * against the country the shop itself is in (`shops.address_country`, ISO
+ * 3166-1 alpha-2, nullable).
+ *
+ * One shape in the column is what lets an inbound SMS or WhatsApp find the
+ * record it belongs to (`phoneMatches`) and what a shop's export hands to any
+ * other system. Normalising *here* rather than at each caller is deliberate:
+ * the Guests tab, the walk-in counter, the diver record and the global
+ * add-booking door all reach `createDiver`, and none of them has to remember.
+ *
+ * **What happens to a number `toE164` cannot read** — a shop with no country on
+ * file, a country DiveDay has no calling code for, an extension, a note, a
+ * count of digits no country explains: the trimmed text the staffer typed is
+ * stored exactly as they typed it. Never blanked, never half-rewritten. A
+ * number DiveDay cannot parse is still the only way that shop can reach that
+ * diver, and `toE164`'s own comment lists every shape it does and does not read.
+ *
+ * **The emergency contact's number is deliberately not touched.** Nothing
+ * matches on it; a crew reads it off a manifest and dials it, and a number
+ * rewritten on a safety document is the failure that rule exists to prevent.
+ */
+async function storedPhone(db: AppDb, shopId: string, typed: string | null) {
+  if (!typed) return null;
+  const [shop] = await db
+    .select({ country: shops.addressCountry })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  return toE164(typed, shop?.country) ?? typed;
+}
+
+/**
  * Create a reusable shop person without requiring a booking first. Returns
  * null both for the ordinary "someone with this email already exists" case
  * and for the race where a concurrent write (a booking, a wait-list join, an
@@ -65,8 +98,12 @@ export type NewDiver = {
  */
 export async function createDiver(db: AppDb, input: NewDiver) {
   const email = input.email?.trim().toLowerCase() || null;
-  const phone = input.phone?.trim() || null;
-  const fullName = input.fullName?.trim() || email || phone || "Unnamed diver";
+  const typed = input.phone?.trim() || null;
+  const phone = await storedPhone(db, input.shopId, typed);
+  // The display-name fallback keeps what the staffer typed rather than the
+  // stored form: a person whose only name is their number reads better as
+  // "+1 305 555 0110" than as "+13055550110", and the name is not a key.
+  const fullName = input.fullName?.trim() || email || typed || "Unnamed diver";
   if (email) {
     const [existing] = await db
       .select({ id: people.id })
@@ -137,13 +174,14 @@ export async function updateDiver(
       .limit(1);
     if (existing) return null;
   }
+  const phone = await storedPhone(db, input.shopId, input.phone?.trim() || null);
   try {
     const [person] = await db
       .update(people)
       .set({
         fullName: input.fullName.trim(),
         email,
-        phone: input.phone?.trim() || null,
+        phone,
         ...(input.diveInsurance === undefined
           ? {}
           : { diveInsurance: input.diveInsurance.trim() || null }),

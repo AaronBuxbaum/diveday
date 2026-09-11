@@ -80,6 +80,7 @@
     "db:migrate": "dotenv -c -- drizzle-kit migrate --config drizzle.config.prod.ts",
     "db:reset": "node scripts/db-reset.mjs",
     "build:sw": "node scripts/build-service-worker.mjs",
+    "brand:icons": "tsx scripts/render-brand-icons.tsx",
     "check:context-budget": "node scripts/check-context-budget.mjs",
     "agent:health": "node scripts/agent-health.mjs",
     "simulate:day": "node scripts/simulate-day.mjs",

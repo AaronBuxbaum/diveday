@@ -89,6 +89,91 @@ describe("person-first diver records", () => {
       phone: "+1 305 555 0188",
     });
     expect(byPhone?.fullName).toBe("+1 305 555 0188");
+    // The *name* keeps the typed spacing; the phone column does not (below).
+    expect(byPhone?.phone).toBe("+13055550188");
+  });
+
+  /**
+   * **A stored phone is E.164** (issue #1547), read against the shop's own
+   * `address_country`, so an inbound SMS or WhatsApp can find the record it
+   * belongs to by equality rather than by a suffix rule that only described
+   * North America. The odd shapes matter more than the ordinary one: nothing a
+   * staffer types may be dropped or half-rewritten on its way into the column,
+   * because the number is how the shop reaches that diver.
+   */
+  it("stores a typed phone number in E.164, against the shop's country", async () => {
+    const { db, shop } = ctx;
+    const local = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Local Lena",
+      phone: "(305) 555-0301",
+    });
+    expect(local?.phone).toBe("+13055550301");
+
+    // Already international: the Key Largo shop's own country is irrelevant.
+    const visiting = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Visiting Vera",
+      phone: "+34 612 345 678",
+    });
+    expect(visiting?.phone).toBe("+34612345678");
+  });
+
+  it("keeps a number it cannot read exactly as the staffer typed it", async () => {
+    const { db, shop } = ctx;
+    // Too few digits to be a number at all, in a shop that has a country.
+    const short = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Short Sam",
+      phone: "555-0110",
+    });
+    expect(short?.phone).toBe("555-0110");
+
+    // A shop with no address on file has no calling code to read a bare
+    // number against, and DiveDay will not guess one.
+    const [countryless] = await db
+      .insert(shops)
+      .values({ name: "No Address Divers", slug: "no-address-divers", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!countryless) throw new Error("shop insert failed");
+    const bare = await createDiver(db, {
+      shopId: countryless.id,
+      fullName: "Bare Bea",
+      phone: "612 345 678",
+    });
+    expect(bare?.phone).toBe("612 345 678");
+    // An international number still normalises there: no country is needed.
+    const plussed = await createDiver(db, {
+      shopId: countryless.id,
+      fullName: "Plussed Pau",
+      phone: "+34 612 345 678",
+    });
+    expect(plussed?.phone).toBe("+34612345678");
+  });
+
+  it("normalises on the way in through an edit as well as a create", async () => {
+    const { db, shop } = ctx;
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Edited Eli",
+      email: "edited-eli@example.com",
+    });
+    if (!diver) throw new Error("diver insert failed");
+    const edited = await updateDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      fullName: "Edited Eli",
+      phone: "305.555.0302",
+    });
+    expect(edited?.phone).toBe("+13055550302");
+
+    const cleared = await updateDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      fullName: "Edited Eli",
+      phone: "   ",
+    });
+    expect(cleared?.phone).toBeNull();
   });
 
   it("resolves the staff member who cleared a self-declared no-certification stamp", async () => {
@@ -1108,6 +1193,8 @@ describe("diver erasure", () => {
         // version of this fix shipped (`security-reviewer`, issue #1298).
         recipientEmail: "desk@blue-mantis.example",
         subjectEmail: null,
+        // As typed into the public composer, not as stored on the record — see
+        // the course inquiry above.
         subjectPhone: "+1 305 555 0142",
         bookingId: null,
         payloadSealed: "v1.sealed-course-inquiry",
@@ -1172,6 +1259,10 @@ describe("diver erasure", () => {
         courseId: course.id,
         name: "Erasure Elena",
         email: "ELENA@example.com",
+        // Spelt the way a diver types it into the public composer, which is
+        // *not* the E.164 now on her record (issue #1547). The erasure sweeps
+        // compare digits for exactly this reason; a string comparison would
+        // leave this lead standing and read green.
         phone: "+1 305 555 0142",
         experienceLevel: "certified",
         timing: "any weekend in September",

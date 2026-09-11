@@ -10,15 +10,34 @@ import { dismissOnRelease, useDragSheet } from "./useDragSheet";
  * from numbers, which is what makes them testable without a real finger.
  */
 
-function Sheet({ onDismiss, height = 400 }: { onDismiss: () => void; height?: number }) {
+function Sheet({
+  onDismiss,
+  height = 400,
+  overflowing = false,
+}: {
+  onDismiss: () => void;
+  height?: number;
+  /** The real sheet: `max-h` and `overflow-y-auto`, with more rows than fit. */
+  overflowing?: boolean;
+}) {
   const drag = useDragSheet({ onDismiss });
   return (
     <div
       data-testid="sheet"
       {...drag.handlers}
-      style={drag.style}
+      style={{ ...drag.style, overflowY: "auto" }}
       ref={(node) => {
-        if (node) node.getBoundingClientRect = () => ({ height }) as DOMRect;
+        if (node) {
+          node.getBoundingClientRect = () => ({ height }) as DOMRect;
+          // jsdom lays nothing out, so the one measurement the gate reads has
+          // to be stated. Both, because the gate compares them.
+          for (const [prop, value] of [
+            ["scrollHeight", overflowing ? height * 2 : height],
+            ["clientHeight", height],
+          ] as const) {
+            Object.defineProperty(node, prop, { value, configurable: true });
+          }
+        }
       }}
     >
       <div data-sheet-handle data-testid="handle" />
@@ -178,6 +197,39 @@ describe("useDragSheet", () => {
     // Dispatched on the handle itself and caught by the sheet's handler as it
     // bubbles, which is the real shape of the gesture: `target` is the handle,
     // `currentTarget` is the sheet.
+    fireEvent.pointerDown(screen.getByTestId("handle"), {
+      clientY: 0,
+      pointerType: "touch",
+      button: -1,
+    });
+    fireEvent.pointerMove(sheet, { clientY: 300, pointerType: "touch" });
+    fireEvent.pointerUp(sheet, { clientY: 300, pointerType: "touch" });
+    expect(onDismiss).toHaveBeenCalledOnce();
+  });
+
+  /**
+   * **A list that can scroll owns the press before it has scrolled** (#1512).
+   * The shop's fifteenth destination took the sheet's content past its
+   * `max-h-[calc(100dvh-8rem)]` cap; a thumb on a row there used to start a
+   * gesture, receive one `pointermove`, and lose the pointer to the browser's
+   * scroller — leaving the sheet open under a thumb that meant to close it.
+   * Nothing starts now, so nothing half-starts.
+   */
+  it("starts no drag off the handle once the list can scroll at all", () => {
+    const onDismiss = vi.fn();
+    const listeners = vi.spyOn(document, "addEventListener");
+    render(<Sheet onDismiss={onDismiss} overflowing />);
+    drag(300);
+    expect(onDismiss).not.toHaveBeenCalled();
+    expect(screen.getByTestId("dragging").textContent).toBe("false");
+    expect(listeners, "a refused press leaves nothing on the document").not.toHaveBeenCalled();
+    listeners.mockRestore();
+  });
+
+  it("still takes the drag from the handle of a sheet that overflows", () => {
+    const onDismiss = vi.fn();
+    render(<Sheet onDismiss={onDismiss} overflowing />);
+    const sheet = screen.getByTestId("sheet");
     fireEvent.pointerDown(screen.getByTestId("handle"), {
       clientY: 0,
       pointerType: "touch",

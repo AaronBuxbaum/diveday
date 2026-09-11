@@ -54,7 +54,7 @@ export async function seedCounterBlockers(
       shopId,
       fullName: DEMO_COUNTER_BLOCKED_DIVER,
       email: DEMO_COUNTER_BLOCKED_EMAIL,
-      phone: "+351-21-555-0148",
+      phone: "+351215550148",
       emergencyContactName: "Inês Ferreira (sister)",
       emergencyContactPhone: "+351-21-555-0149",
       createdAt: nextCreatedAt(),
