@@ -426,12 +426,27 @@ new domain concept, define it here in the same PR.
   the release they already signed becomes a blocker rather than a silent pass. It does not answer
   H-01 or H-03: the release wording is unchanged, still English, and whether typed consent is a
   sufficient assurance level is as open for the guardian as it is for the diver. **A co-signer whose
-  name reads as the diver's own is not a co-signature**, on either path and with no override: the
-  writer compares significant name tokens, so a middle initial is not a difference and a spelled-out
-  middle name or a suffix is. That refusal is a name-match check, not an identity one, so it also
-  catches the family it cannot help — a parent and child whose IDs read identically have no path to
-  a recorded release anywhere in the product today, which is an owner's call and not an agent's
-  (issue 1573).
+  name reads as the diver's own is not a co-signature** — the writer compares significant name
+  tokens, so a middle initial is not a difference and a spelled-out middle name or a suffix is.
+  That refusal is a name-match check, not an identity one, so it also catches the family it cannot
+  help: a parent and child whose IDs read identically. **The paper path is the one way through**,
+  decided by the owner on 2026-09-10 (issue 1573): a staffer recording the release ticks an
+  explicit confirmation that the two really do share a name and that they watched both of them
+  sign, and the co-signature is stored under its own signature method,
+  `in_person_attested_namesake`. **The online path keeps refusing and gains no override** — there
+  the shop has no evidence a second person exists at all. The distinction is evidence and nothing
+  else: no surface renders it, readiness treats the record as co-signed, and the only readers are
+  the integrity seal and the export bundle. The guardian's email is **optional**, and the one thing
+  it is for is a copy of what was signed (see **Guardian's copy** below).
+- **Guardian's copy** — the message a co-signing parent gets when a minor's release is completed
+  online and they left an address (issue 1453, owner decision 2026-09-10). It names the shop, the
+  diver, the release title and version and the day it was signed, and **carries no link of any
+  kind**: no bearer URL, no token, and no medical answers. A guardian is a party to one document,
+  not a marketing contact and not an account, so it is a courtesy to a third party rather than a
+  per-booking delivery channel — no `notification_deliveries` row is written for it, and it is
+  keyed once per release record. No address means no copy, which is every paper release and every
+  family who has none; the address stopped being required on the same decision, because a
+  grandparent at a counter with no email was being refused outright.
 - **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
   OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
   `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence

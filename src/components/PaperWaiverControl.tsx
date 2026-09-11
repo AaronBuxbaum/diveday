@@ -36,6 +36,7 @@ export function PaperWaiverControl({
   bookingId,
   copy,
   requiresGuardian = false,
+  offerNamesake = false,
   className = "mt-2",
   variant = "link",
   defaultOpen = false,
@@ -57,6 +58,16 @@ export function PaperWaiverControl({
    * the refusal, and a hand-built request never gets past it.
    */
   requiresGuardian?: boolean;
+  /**
+   * Draw the namesake confirmation under the guardian fields (issue #1573,
+   * owner decision 2026-09-10). **Only ever true on the form that has already
+   * been refused for it** — the surface reads its own
+   * `?notice=waiver-guardian-name` and scopes it to the booking or record the
+   * refusal named. A parent whose name reads as their child's is refused by
+   * default, and a checkbox drawn on every minor's paper form would turn the
+   * staffer's assertion into a habitual tick.
+   */
+  offerNamesake?: boolean;
   className?: string;
   /**
    * Genuinely different jobs, not skins. Under a primary "send the link"
@@ -141,6 +152,22 @@ export function PaperWaiverControl({
             </select>
           </Field>
         </FieldGrid>
+      ) : null}
+      {/* The one way past the namesake refusal, and only here (ADR
+          20260907-guardian-co-signature, decision 10). It is an assertion
+          about what this staffer saw, not a confirmation of an intent, so it
+          reads as a sentence in the first person like the medical attestation
+          above it — and it is never `required`: a family who reached this form
+          by any other refusal still submits without it. */}
+      {requiresGuardian && offerNamesake ? (
+        <label className="mt-4 flex items-start gap-2.5 text-sm">
+          <input
+            type="checkbox"
+            name="guardianNamesakeAttested"
+            className="mt-0.5 size-4 shrink-0"
+          />
+          <span>{copy.guardian.namesakeLabel}</span>
+        </label>
       ) : null}
       <div className="mt-4 flex flex-wrap gap-2">
         <SubmitButton

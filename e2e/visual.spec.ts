@@ -3750,6 +3750,12 @@ for (const scheme of ["light", "dark"] as const) {
         // Re-opened, and carrying the field the message is about — the half
         // that needs the diver to be a minor.
         await expect(row.getByLabel("Parent or guardian who signed")).toBeVisible();
+        // ...and the way through the refusal names, which only this refusal
+        // draws (issue #1573). It is why this capture moved: the form grew one
+        // line under the two guardian fields.
+        await expect(
+          row.getByLabel("This parent and this diver have the same name", { exact: false }),
+        ).toBeVisible();
         await capture(page, "check-in-waiver-refused", scheme);
       });
 

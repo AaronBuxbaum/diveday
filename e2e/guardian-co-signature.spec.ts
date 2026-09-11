@@ -101,3 +101,71 @@ test("a minor's release asks for a parent, refuses without one, and names who co
   await expect(page.getByText(/Good until/)).toBeVisible();
   await expect(page.getByText(`Co-signed by Jordan Guardian ${stamp} (parent)`)).toBeVisible();
 });
+
+/**
+ * **The namesake family, on paper** (issue #1573, owner decision 2026-09-10;
+ * ADR 20260907-guardian-co-signature, decision 10).
+ *
+ * A parent whose ID reads exactly like their child's is refused on both paths
+ * and has been since the co-signature shipped — which left a family standing
+ * at a counter with a signed form the shop could not record. The paper path
+ * now has one way through, and this walks it end to end from the surface a
+ * staffer actually meets it on: the refusal, the confirmation it now offers,
+ * and the record that comes out the other side saying who co-signed.
+ *
+ * The online half of the same rule does **not** move, and the test above pins
+ * that: a guardian typing the diver's own name into `/waivers/[token]` is
+ * still refused, because online the shop has no evidence a second person is
+ * in the room. `src/db/waivers.test.ts` holds the adversarial version.
+ */
+test("a namesake parent can co-sign on paper, on the staffer's own attestation", async ({
+  page,
+}) => {
+  const stamp = Date.now();
+  const diver = `Namesake E2E Diver ${stamp}`;
+
+  await page.goto(`/shop/${SHOP}/divers/new`);
+  await page.getByLabel("Full name").fill(diver);
+  await page.getByLabel("Email").fill(`namesake-${stamp}@example.com`);
+  await page.getByRole("button", { name: "Add diver" }).click();
+  await page.waitForURL(new RegExp(`/shop/${SHOP}/divers/[0-9a-f-]{36}`));
+  const record = new URL(page.url()).pathname;
+
+  await page.goto(`${record}?edit=1`);
+  await page.getByLabel("Date of birth").fill(daysFromNow(-365 * 13));
+  await page.getByRole("button", { name: "Save details" }).click();
+  await expect(page.getByRole("status")).toContainText("Diver details updated");
+
+  const waiverCard = page.getByRole("region", { name: "Waiver" });
+  const openPaperForm = async () => {
+    await waiverCard.getByText("Send options", { exact: true }).click();
+    await waiverCard.getByRole("button", { name: "Mark signed on paper" }).click();
+  };
+
+  await page.goto(record);
+  await openPaperForm();
+  await page.getByLabel("I have this diver’s signed release on file", { exact: false }).check();
+  await page.getByLabel("Parent or guardian who signed").fill(diver);
+  await page.getByLabel("Relationship").selectOption("parent");
+  // **The refusal is still the default.** Nothing about this submission says
+  // the staffer watched two people sign, so the shop is told what happened and
+  // the release is not recorded.
+  await page.getByRole("button", { name: "Record paper signature" }).click();
+  await expect(page.getByText("The co-signer’s name is the diver’s own")).toBeVisible();
+
+  // And the way through, which only this refusal draws: the form comes back
+  // open, carrying the staffer's own assertion about what they saw.
+  const namesake = page.getByLabel("This parent and this diver have the same name", {
+    exact: false,
+  });
+  await expect(namesake).toBeVisible();
+  await page.getByLabel("I have this diver’s signed release on file", { exact: false }).check();
+  await page.getByLabel("Parent or guardian who signed").fill(diver);
+  await page.getByLabel("Relationship").selectOption("parent");
+  await namesake.check();
+  await page.getByRole("button", { name: "Record paper signature" }).click();
+
+  // What staff read back is what they read back for any other co-signature:
+  // the distinction lives in the evidence, not on the screen.
+  await expect(page.getByText(`Co-signed by ${diver} (parent)`)).toBeVisible();
+});

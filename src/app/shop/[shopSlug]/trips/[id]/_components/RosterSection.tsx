@@ -215,6 +215,7 @@ export function RosterSection({
   depthUnit: _depthUnit,
   tripDate,
   keepOpenBookingId,
+  namesakeRefusedBookingId,
   waitingGroup,
   invitedGroup,
   addDiverGroup,
@@ -236,6 +237,12 @@ export function RosterSection({
    * with its panel open on the way back.
    */
   keepOpenBookingId?: string;
+  /**
+   * The seat whose paper release was just refused for a co-signer sharing the
+   * diver's name (issue #1573). That one row's form offers the staffer's
+   * namesake confirmation; every other minor's does not.
+   */
+  namesakeRefusedBookingId?: string;
   readinessByBooking: ReadinessByBooking;
   waiverByBooking: WaiverByBooking;
   rentalFitByBooking: RentalFitByBooking;
@@ -505,7 +512,12 @@ export function RosterSection({
     const sharedBlockerCount = blockerTexts.length - uniqueBlockers.length;
     const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
     const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
-    const holdOpen = keepOpenBookingId === booking.id;
+    // The namesake refusal (issue #1573) holds its row open for the same
+    // reason a saved contact does: the way through is a control inside the
+    // row, and a staffer sent back to a collapsed list has been told what
+    // happened and not where to act on it.
+    const namesakeRefused = namesakeRefusedBookingId === booking.id;
+    const holdOpen = keepOpenBookingId === booking.id || namesakeRefused;
 
     const headerLeft = (
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -886,6 +898,10 @@ export function RosterSection({
               bookingId={booking.id}
               copy={paperWaiverCopy(t)}
               requiresGuardian={requiresGuardian}
+              offerNamesake={namesakeRefused}
+              // Same reason the counter and the diver record re-open on a
+              // refusal: the correction is inside the form that produced it.
+              defaultOpen={namesakeRefused}
               // The fallback under the row's leading action reads in quiet
               // ink — a teal link out-shouted the bordered send pill above it
               // (design review 2026-08-29).

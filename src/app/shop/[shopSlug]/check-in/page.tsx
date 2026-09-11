@@ -244,7 +244,7 @@ export default async function CheckInPage({
   const waiverNotice =
     copy?.form && bid
       ? noticeForForm(
-          { form: copy.form, tone: copy.tone, text: t(copy.key), bookingId: bid },
+          { form: copy.form, tone: copy.tone, text: t(copy.key), bookingId: bid, code: notice },
           "waiver",
         )
       : undefined;

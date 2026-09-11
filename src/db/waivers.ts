@@ -31,7 +31,11 @@ import { flaggedMedicalPrompts, validateMedicalAnswers } from "@/lib/medical";
 import { operationalWindow } from "@/lib/operational-window";
 import { personNamesMatch } from "@/lib/person-name";
 import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
-import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
+import {
+  inPersonAttestationProvider,
+  localTypedConsentProvider,
+  namesakeAttestationProvider,
+} from "@/lib/signatures";
 import { isUuid } from "@/lib/uuid";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
@@ -979,6 +983,12 @@ function guardianEvidence(
   // is what stands between a hand-built request and an address on a signed
   // release that nobody can ever reach the guardian at.
   if (!GUARDIAN_EMAIL_SHAPE.test(email)) return { ok: false };
+  // **The online path has no namesake exception and must never grow one**
+  // (issue #1573, owner decision 2026-09-10). The paper path does, because a
+  // named staffer physically watched two people sign; here the shop has no
+  // evidence a second person exists at all, so a co-signer with the diver's
+  // own name is one signature wearing two hats and is refused. `GuardianInput`
+  // deliberately carries no field a request could set to get past this.
   if (personNamesMatch(evidence.signerName, diverFullName)) return { ok: false };
   return {
     ok: true,
@@ -1824,7 +1834,18 @@ export async function recordInPersonWaiver(
      * same `in_person_attested` shape. Required when the diver is a minor on
      * the signing day; ignored for an adult.
      */
-    guardian?: { name: string; relationship: string };
+    guardian?: {
+      name: string;
+      relationship: string;
+      /**
+       * The staffer's explicit assertion that the co-signer and the diver
+       * genuinely share a name and that they watched both of them sign (issue
+       * #1573). Honoured only when the names do actually match — see the
+       * refusal below — and never reachable from the online path, whose
+       * `GuardianInput` has no such field.
+       */
+      namesakeAttested?: boolean;
+    };
     now?: Date;
   },
 ): Promise<InPersonWaiverOutcome> {
@@ -1861,12 +1882,34 @@ export async function recordInPersonWaiver(
       // Separated from the two above on purpose. Those mean the request did not
       // come from the form; this one is what the form produces for a family who
       // share a legal name, and it is the last door before somebody gives up or
-      // writes something untrue on a liability release (issue 1539). The
-      // refusal itself does not move — it is what stops a minor signing as
-      // their own guardian — only what the staffer is told about it.
+      // writes something untrue on a liability release (issue 1539).
+      //
+      // **The refusal is still the default** (issue #1573, owner decision
+      // 2026-09-10). It stops a minor signing as their own guardian, which is
+      // the whole point of a second signer. What moves is that the *paper*
+      // path now has one way past it: the staffer ticks a confirmation saying
+      // the two really do share a name on their IDs and that they watched both
+      // of them sign, and the co-signature is re-captured under
+      // `namesakeAttestationProvider` so the assertion is on the record rather
+      // than lost into an ordinary attestation. Without that tick the family
+      // meets the same refusal they met before.
+      //
+      // The online path does not move and must not: there the shop has no
+      // evidence a second person exists at all. See `guardianEvidence` above.
       if (personNamesMatch(guardian.signerName, signer.fullName)) {
-        return { ok: false, reason: "guardian_name_matches_diver" };
+        if (input.guardian.namesakeAttested !== true) {
+          return { ok: false, reason: "guardian_name_matches_diver" };
+        }
+        guardian = namesakeAttestationProvider.capture({
+          signerName: input.guardian.name,
+          agreed: true,
+          signedAt: now,
+        });
+        if (!guardian) return { ok: false, reason: "guardian_invalid" };
       }
+      // A tick on a form whose two names differ asserts nothing, so it records
+      // nothing: the assertion is only meaningful for the case it names, and a
+      // flag silently honoured anywhere else would turn it into a habit.
       guardianRelationship = input.guardian.relationship;
     }
 

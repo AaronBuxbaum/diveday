@@ -29,7 +29,15 @@ import { CheckInActionForm } from "../CheckInActionForm";
  * resolves both and hands this down, because the words come from the staff
  * bundle at render time and only the page holds the translator's locale.
  */
-export type CounterWaiverNotice = FormNotice & { bookingId: string };
+export type CounterWaiverNotice = FormNotice & {
+  bookingId: string;
+  /**
+   * The `?notice=` code itself. Only one refusal on this form has a way
+   * through — a co-signer whose name reads as the diver's own (issue #1573) —
+   * and the row needs to tell it from the others to draw the confirmation.
+   */
+  code?: string;
+};
 
 /**
  * **One diver at the counter** — ADR 20260827-clearwater-surface-language,
@@ -285,6 +293,9 @@ export function CounterQueueRow({
       // A minor's paper release names its co-signer too (ADR
       // 20260907-guardian-co-signature).
       requiresGuardian={guardianSignatureRequired(row.dateOfBirth, today)}
+      // Offered only on the row whose recording was just refused for a
+      // namesake co-signer, never on every minor at the counter.
+      offerNamesake={refusedWaiver?.code === "waiver-guardian-name"}
       className="mt-2"
       // A refused recording lands back here with its notice below; re-open the
       // form so the staffer can correct what it names rather than hunt for the

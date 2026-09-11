@@ -93,6 +93,35 @@ guardian signs the same release beside them, and the release is not usable until
    the Spanish is a translation of a consent statement made by the same agent that wrote the
    English, under the standing rule in `src/i18n/locales/es-ES/README.md`.
 
+10. **A namesake parent may co-sign on paper, on a named staffer's explicit attestation, and never
+    online** (issue #1573, owner decision 2026-09-10). Decision 1's name-match rule is a
+    *name*-match, not an identity check, so it also refuses the family it cannot help: a parent and
+    child whose IDs read every token alike. That left them with both doors shut and readiness
+    raising **guardian signature missing** forever — the same outcome the alternatives list below
+    already rejects for "refusing the paper path for minors outright". **The two paths do not
+    deserve the same answer, because the evidence differs.** Online, the shop has no evidence a
+    second person exists at all, and a co-signer typing the diver's own name is one signature
+    wearing two hats; `guardianEvidence` keeps refusing it and its input shape carries no field
+    that could say otherwise. On paper a named staffer physically watched two people sign, and that
+    staffer is already on the row (`recorded_by_person_id`). So the paper form grows one checkbox —
+    "This parent and this diver have the same name on their IDs. I watched both of them sign the
+    paper release." — and the co-signature is captured under a third provider,
+    `namesakeAttestationProvider`, writing `guardian_signature_method =
+    "in_person_attested_namesake"`. Three fences hold it: **the refusal stays the default** (no
+    tick, same refusal); **the checkbox is drawn only on a form that has already met that refusal**,
+    scoped to the booking or record the `?notice=waiver-guardian-name` named, so it can never become
+    a habitual tick; and **a tick on a form whose names differ records nothing**, because the
+    assertion is only meaningful for the case it names. `guardian_signature_method` is `text` and
+    the `waiver_records_guardian_signature_whole` check constrains only null-ness, so **there is no
+    migration**. **Nothing downstream branches on the new value, deliberately.**
+    `guardianSignatureMissing` tests `guardianSignedAt` alone, so the minor boards; the roster, the
+    manifest and the signature log say "Co-signed by X (parent)" exactly as they do for any other
+    co-signature. The distinction lives in the v1 integrity seal and in the export bundle, which is
+    where a shop or a regulator reading the evidence can tell the two apart — stated here rather
+    than discovered, because a reader looking for a badge on a screen will not find one. **This is a
+    relaxation of a check on a minor's liability release and no attorney has read it**; the owner
+    authorised it on 2026-09-10 and H-01/H-03 stay open.
+
 ## Alternatives considered
 
 - **A second token emailed to the guardian** (the shape N-38 was sketched as) — a second bearer URL
@@ -108,7 +137,19 @@ guardian signs the same release beside them, and the release is not usable until
   rows that do not exist, which AGENTS.md forbids.
 - **Refusing the paper path for minors outright** — leaves a family standing at a counter with a
   signed form the shop cannot record, and leaves the `guardian` parameter the writer already takes
-  with no caller.
+  with no caller. Decision 10 above is the same argument applied to the family the name-match rule
+  refuses.
+- **Letting the namesake case through on the online path too** (issue #1573) — the assertion has
+  nobody behind it there. A browser submitting two identical names is exactly what a minor signing
+  alone looks like, and no tick a page can render changes that.
+- **A silent pass when the names match** — turns a refusal into an omission. The staffer has to
+  say what they saw, per release, and the record has to carry which of the two things happened.
+- **A boolean column beside the six, rather than a distinct signature method** — a seventh column
+  and a migration to record something the method already has room for, on a path whose whole point
+  is which provider captured the evidence.
+- **Rendering the namesake distinction on the roster or the manifest** — a crew reading a boarding
+  list needs to know the release is co-signed, which it is. A second badge would be a fact about
+  paperwork on a surface whose every line is a fact about the water.
 - **Gating on `guardianSignatureRequired` at render only** — a page can be painted before a date of
   birth lands on the record. The writer applies the rule too, and the page renders the section on
   its refusal.

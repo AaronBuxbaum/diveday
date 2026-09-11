@@ -22,7 +22,8 @@
     "recordPaperSignature": "Record paper signature",
     "guardianNameLabel": "Parent or guardian who signed",
     "guardianRelationshipLabel": "Relationship",
-    "guardianRelationshipChoose": "Choose one"
+    "guardianRelationshipChoose": "Choose one",
+    "guardianNamesakeLabel": "This parent and this diver have the same name on their IDs. I watched both of them sign the paper release."
   },
   "guardian": {
     "relationship": {

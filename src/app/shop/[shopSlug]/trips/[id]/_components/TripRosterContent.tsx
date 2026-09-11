@@ -63,6 +63,7 @@ export function TripRosterContent({
   confirmPhone,
   undoBookingId,
   keepOpenBookingId,
+  namesakeRefusedBookingId,
   mayDiscount,
   mayWriteOffPayment,
   compact = false,
@@ -82,6 +83,8 @@ export function TripRosterContent({
   confirmPhone?: string;
   undoBookingId?: string;
   keepOpenBookingId?: string;
+  /** The seat whose paper release was refused for a namesake co-signer (#1573). */
+  namesakeRefusedBookingId?: string;
   mayDiscount: boolean;
   mayWriteOffPayment: boolean;
   /** The canonical Trip surface already owns the masthead capacity read. */
@@ -188,6 +191,7 @@ export function TripRosterContent({
         saveEmergencyContactAction={actions.saveRosterEmergencyContactAction}
         updatePickupAction={actions.updateBookingPickupAction}
         keepOpenBookingId={keepOpenBookingId}
+        namesakeRefusedBookingId={namesakeRefusedBookingId}
         depthUnit={depthUnit}
         tripDate={tripDateIso}
         waitingGroup={

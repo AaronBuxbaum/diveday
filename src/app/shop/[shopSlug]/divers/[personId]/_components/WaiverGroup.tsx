@@ -247,6 +247,11 @@ export function WaiverGroup({
                     diver.person.dateOfBirth,
                     signingDate(nowDate(), timezone),
                   )}
+                  // The namesake confirmation, offered only after this record
+                  // has already been refused for it (issue #1573). The notice
+                  // carries its own `?notice=` code, so the one refusal that
+                  // has a way through is the only one that draws it.
+                  offerNamesake={status?.code === "waiver-guardian-name"}
                   variant="secondary"
                   className=""
                   // A refused attestation lands back here with its notice;

@@ -2855,7 +2855,11 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     const [staff] = await listStaff(ctx.db, ctx.shop.id);
     if (!staff) throw new Error("demo staff missing");
 
-    const attempt = (guardianInput?: { name: string; relationship: string }) =>
+    const attempt = (guardianInput?: {
+      name: string;
+      relationship: string;
+      namesakeAttested?: boolean;
+    }) =>
       recordInPersonWaiver(ctx.db, {
         shopId: ctx.shop.id,
         subject: { bookingId: ctx.booking.id },
@@ -2889,6 +2893,17 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
       ok: false,
       reason: "guardian_name_matches_diver",
     });
+    // **The refusal is still the default** (issue #1573). A namesake co-signer
+    // with `namesakeAttested` left off — which is every form the staffer has
+    // not ticked, and every request that never rendered the confirmation —
+    // meets exactly the refusal it met before.
+    expect(
+      await attempt({
+        name: ctx.person.fullName,
+        relationship: "parent",
+        namesakeAttested: false,
+      }),
+    ).toEqual({ ok: false, reason: "guardian_name_matches_diver" });
     expect(
       await attempt({ name: withMiddleInitial(ctx.person.fullName), relationship: "parent" }),
     ).toEqual({ ok: false, reason: "guardian_name_matches_diver" });
@@ -2937,6 +2952,128 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     if (!recorded.ok) throw new Error(`expected a record: ${recorded.reason}`);
     const [record] = await db_record(ctx, recorded.recordId);
     expect(record).toMatchObject({ guardianName: withMiddleName(ctx.person.fullName) });
+  });
+
+  /**
+   * **The one way past the namesake refusal, and the three fences around it**
+   * (issue #1573, owner decision 2026-09-10; ADR 20260907-guardian-co-signature,
+   * decision 10).
+   *
+   * A parent and child whose IDs read identically had no route to a recorded
+   * release anywhere in the product. The paper path now has one, because there
+   * a named staffer physically watched two people sign — and the assertion
+   * lands on the record as its own signature method rather than disappearing
+   * into an ordinary attestation.
+   */
+  it("records a namesake co-signature on the staffer's explicit attestation", async () => {
+    const ctx = await waiverContext();
+    await makeMinor(ctx.db, ctx.person.id);
+    const [staff] = await listStaff(ctx.db, ctx.shop.id);
+    if (!staff) throw new Error("demo staff missing");
+
+    const recorded = await recordInPersonWaiver(ctx.db, {
+      shopId: ctx.shop.id,
+      subject: { bookingId: ctx.booking.id },
+      recordedByPersonId: staff.person.id,
+      medicalAttested: true,
+      guardian: {
+        name: ctx.person.fullName,
+        relationship: "parent",
+        namesakeAttested: true,
+      },
+      now,
+    });
+
+    if (!recorded.ok) throw new Error(`expected a record: ${recorded.reason}`);
+    const [record] = await db_record(ctx, recorded.recordId);
+    expect(record).toMatchObject({
+      // The diver's own signature is an ordinary attestation; only the
+      // guardian's half carries the distinction, because only it was refused.
+      signatureMethod: "in_person_attested",
+      guardianName: ctx.person.fullName,
+      guardianRelationship: "parent",
+      guardianSignatureMethod: "in_person_attested_namesake",
+      guardianEmail: null,
+    });
+    // The staffer who made the assertion is on the row, which is what the
+    // assertion is worth anything for.
+    expect(record?.recordedByPersonId).toBe(staff.person.id);
+    // Inside the seal: a distinction that could be edited off the row after
+    // the fact would be no distinction at all.
+    if (!record) throw new Error("expected a record row");
+    expect(verifyWaiverIntegrity(record)).toBe("valid");
+
+    // **Readiness does not branch on it.** A namesake record is a co-signed
+    // record, so the minor boards — which is the entire point of the decision,
+    // and the property a future refactor is most likely to break.
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.booking.id);
+    expect(readiness?.blockers ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "guardian_signature_missing" }),
+    );
+  });
+
+  it("ignores the namesake attestation when the two names differ", async () => {
+    const ctx = await waiverContext();
+    await makeMinor(ctx.db, ctx.person.id);
+    const [staff] = await listStaff(ctx.db, ctx.shop.id);
+    if (!staff) throw new Error("demo staff missing");
+
+    // A tick on a form whose names are plainly different asserts nothing, so
+    // it records nothing: the method stays the ordinary one. Without this the
+    // confirmation would become a habitual tick that quietly relabels every
+    // paper co-signature.
+    const recorded = await recordInPersonWaiver(ctx.db, {
+      shopId: ctx.shop.id,
+      subject: { bookingId: ctx.booking.id },
+      recordedByPersonId: staff.person.id,
+      medicalAttested: true,
+      guardian: { name: "Jonas Fischer", relationship: "parent", namesakeAttested: true },
+      now,
+    });
+
+    if (!recorded.ok) throw new Error(`expected a record: ${recorded.reason}`);
+    const [record] = await db_record(ctx, recorded.recordId);
+    expect(record).toMatchObject({
+      guardianName: "Jonas Fischer",
+      guardianSignatureMethod: "in_person_attested",
+    });
+  });
+
+  /**
+   * **Adversarial: the online path gains nothing.** The decision is explicit
+   * that the browser-facing release keeps refusing a co-signer with the
+   * diver's own name — online the shop has no evidence a second person exists
+   * at all. `GuardianInput` carries no attestation field, so a hand-built
+   * request cannot even name one; this pins that a stray property on the
+   * submitted object changes nothing about the answer.
+   */
+  it("keeps refusing a namesake guardian on the online path, attestation or not", async () => {
+    const ctx = await waiverContext();
+    await makeMinor(ctx.db, ctx.person.id);
+    const issued = await liveLink(ctx);
+
+    expect(
+      await completeWaiver(ctx.db, issued.token, {
+        signerName: ctx.person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        // Spread through `unknown`: `namesakeAttested` is not part of
+        // `GuardianInput` and the compiler is right to say so — a hand-built
+        // request is not type-checked, which is exactly what this is standing
+        // in for.
+        guardian: {
+          ...guardian,
+          name: ctx.person.fullName,
+          namesakeAttested: true,
+        } as unknown as typeof guardian,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "guardian_invalid" });
+
+    // Nothing was written, and the link is still the one the family holds.
+    expect(await getWaiverForToken(ctx.db, issued.token, now)).toMatchObject({
+      state: "available",
+    });
   });
 
   it("takes the guardian's name and address under erasure and keeps the signature's fact", async () => {

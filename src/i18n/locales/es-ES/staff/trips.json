@@ -79,7 +79,7 @@
     "diverUnavailable": "Esta salida no puede aceptar nuevos buceadores ahora mismo.",
     "waiverComplete": "Ese buceador ya tiene una exención de responsabilidad completada.",
     "waiverMedicalAttestation": "Confirma que revisaste el cuestionario médico antes de registrar una exención en papel, o envía el enlace digital para que el buceador lo responda.",
-    "waiverGuardianName": "El nombre de la madre, padre o tutor es el mismo del buceador, así que esta exención mostraría a una sola persona firmando dos veces. Escribe ese nombre tal como aparece en su propia identificación, y si el registro del buceador es más corto que su identificación, corrige el registro. Dos identificaciones idénticas no se pueden registrar aquí.",
+    "waiverGuardianName": "El nombre de la madre, padre o tutor es el mismo del buceador, así que esta exención mostraría a una sola persona firmando dos veces. Escribe ese nombre tal como aparece en su propia identificación, y si el registro del buceador es más corto que su identificación, corrige el registro. Si las dos de verdad son idénticas, marca la confirmación en este formulario y registra la exención.",
     "waiverError": "No se pudo registrar esa exención en papel. Abre el registro del buceador para ver por qué.",
     "recapNote": "Nota de resumen guardada. Acompaña el resumen de cada buceador.",
     "recapPhotoRemoved": "Foto eliminada del resumen.",
