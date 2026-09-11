@@ -19,8 +19,13 @@ import {
  * The moderation queue on `reviews/page.tsx` is public words and stays open to
  * every staff role. The "Asked us to fix" panel above it is not: it is the
  * diver's own sentence, under the diver's name, beside a link to their record,
- * and it frequently names crew. So the panel took the boundary the Requests
- * page already carries, and marking a pulse addressed took it with them.
+ * and it frequently names crew. So the panel took an owner/manager boundary,
+ * and marking a pulse addressed took it with them.
+ *
+ * The gate is `canReadPrivateRecapPulse`, the pulse's own predicate, rather
+ * than the reports gate the panel first borrowed: the recap form promises the
+ * diver a reader set in as many words, so widening revenue access must not
+ * widen this (`src/lib/authz.test.ts` holds the sentence to the role set).
  *
  * The page hides the panel from everybody else, and hiding is not a gate — a
  * hand-made form post reaches the action all the same (ADR-0006). Nothing

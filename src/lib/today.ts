@@ -297,6 +297,13 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
 /**
  * Filters the action queue for the viewer's roles, taking the union for multi-role staff.
  * Owners and managers see everything with zero withheld.
+ *
+ * **No roles means no viewer, not an empty audience.** Every surface that
+ * renders this queue passes `session.user.roles`, which `requireStaffSession`
+ * guarantees is non-empty; the one caller that passes nothing is `closeDay`
+ * (`src/db/closeout.ts`), recomputing the day's outstanding snapshot for the
+ * record rather than for a screen. That snapshot is the shop's day, so
+ * withholding from it would falsify a record, not tighten a gate.
  */
 export function filterActionsForRoles(
   actions: readonly TodayAction[],

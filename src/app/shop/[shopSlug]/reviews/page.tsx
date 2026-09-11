@@ -8,8 +8,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { GroupLabel } from "@/components/ui/ledger";
+import { canPersonReadPrivateRecapPulse } from "@/db/authz";
 import { listOpenRecapPulses, type OpenRecapPulse } from "@/db/recap-pulses";
-import { canPersonViewShopReports } from "@/db/reporting";
 import {
   countStaffReviewGroups,
   getShopReviewAggregate,
@@ -125,15 +125,18 @@ export default async function ReviewsPage({
   const { shopSlug } = await params;
   const { page, notice } = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
-  // **Who on the crew may read the private pulses** (issue #1410). The same
-  // live owner/manager check the Requests page makes, against the database
-  // rather than the JWT, so a demoted manager loses the panel immediately.
+  // **Who on the crew may read the private pulses** (issue #1410). The pulse's
+  // own predicate, not the reports gate it used to borrow: the recap form tells
+  // the diver who reads this, so the reader set has a name of its own and moves
+  // only when somebody means to move it (src/lib/authz.ts). Checked live
+  // against the database rather than the JWT, so a demoted manager loses the
+  // panel immediately.
   //
   // Awaited on its own, ahead of the parallel block, rather than folded into
   // it: folding it in would read a diver's private words for a staffer this
   // gate exists to keep them from, and one round trip is the price of not
   // doing that.
-  const canReadPulses = await canPersonViewShopReports(db, shop.id, session.user.personId);
+  const canReadPulses = await canPersonReadPrivateRecapPulse(db, shop.id, session.user.personId);
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone ?? "UTC";
   // The current calendar month in the shop's own timezone — "this month" means

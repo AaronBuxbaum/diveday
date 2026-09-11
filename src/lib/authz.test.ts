@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { messagesFor } from "@/i18n/messages";
+import { DIVER_LOCALES, type DiverLocale } from "@/i18n/settings";
 import {
   ALL_ROLES,
   canConfigureTrips,
@@ -13,6 +15,7 @@ import {
   canManageWaiverTemplates,
   canOverrideGearRequest,
   canReadMedicalClearanceDocument,
+  canReadPrivateRecapPulse,
   canRefund,
   canViewShopReports,
   isStaff,
@@ -55,6 +58,10 @@ describe("accountable-role gates (export/import/reports)", () => {
     // bulk — gating one letter tighter than the questionnaires beneath it would
     // move the door without moving the wall.
     ["canReadMedicalClearanceDocument", canReadMedicalClearanceDocument],
+    // #1410: what a diver privately asked the shop to fix. Same boundary as the
+    // physician's letter above, and promised to the diver in as many words —
+    // the roster below holds the promise to the role set.
+    ["canReadPrivateRecapPulse", canReadPrivateRecapPulse],
   ] as const;
 
   for (const [name, gate] of gates) {
@@ -154,4 +161,58 @@ describe("canOverrideGearRequest (H-06 — owner/manager/instructor/divemaster)"
     expect(canOverrideGearRequest([])).toBe(false);
     expect(canOverrideGearRequest(undefined)).toBe(false);
   });
+});
+
+/**
+ * **The recap form names the pulse's readers, so the gate and the sentence are
+ * one fact held in two places** (D40, issue #1200; the narrowing is #1410).
+ *
+ * `recap.pulseAudience` is shown to a diver deciding whether to type the thing
+ * they did not want to say in public: "Just for {shop}'s owner and managers."
+ * That is a promise, and the only thing that makes it true is which roles
+ * `canReadPrivateRecapPulse` admits. Nothing else connects them — widen the
+ * gate and the sentence goes quietly false, which is the exact failure the
+ * predicate was split off the reports gate to prevent (security review, the
+ * RFH-05 layer). This is the check that turns red instead.
+ */
+describe("canReadPrivateRecapPulse and the promise on the recap form", () => {
+  /**
+   * The word each bundle uses for a role, so "does the sentence name this
+   * role" is a question the test can ask. A locale that widened the gate would
+   * have to add its word here to go green, which is the point: the rewrite of
+   * the promise and the widening of the gate land in the same change.
+   */
+  const ROLE_WORDS: Record<DiverLocale, Record<Role, string>> = {
+    "en-US": {
+      owner: "owner",
+      manager: "manager",
+      instructor: "instructor",
+      divemaster: "divemaster",
+      captain: "captain",
+      crew: "crew",
+      diver: "diver",
+    },
+    "es-ES": {
+      owner: "propietario",
+      manager: "gerente",
+      instructor: "instructor",
+      divemaster: "divemaster",
+      captain: "capitán",
+      crew: "tripulación",
+      diver: "buceador",
+    },
+  };
+
+  for (const locale of DIVER_LOCALES) {
+    it(`names every role the gate admits and no others (${locale})`, () => {
+      const sentence = messagesFor(locale).recap.pulseAudience.toLowerCase();
+      for (const role of ALL_ROLES) {
+        // Paired with the role so a failure says which one drifted.
+        expect([role, sentence.includes(ROLE_WORDS[locale][role])]).toEqual([
+          role,
+          canReadPrivateRecapPulse([role]),
+        ]);
+      }
+    });
+  }
 });

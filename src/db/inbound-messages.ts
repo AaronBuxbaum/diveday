@@ -276,7 +276,15 @@ export async function personThread(
       db
         .select({ reply: staffReplies, sentByName: people.fullName })
         .from(staffReplies)
-        .leftJoin(people, eq(people.id, staffReplies.sentByPersonId))
+        // The shop condition on the join for the same reason as
+        // `pagedInboxMessages` above: `sentByPersonId` is only ever written
+        // from a shop-scoped session, and the query a reader is reading should
+        // say so rather than trust a writer three modules away. Left join, so
+        // an id from another shop yields a null name, never that shop's.
+        .leftJoin(
+          people,
+          and(eq(people.id, staffReplies.sentByPersonId), eq(people.shopId, shopId)),
+        )
         .where(
           and(
             eq(staffReplies.shopId, shopId),

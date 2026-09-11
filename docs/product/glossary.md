@@ -504,7 +504,9 @@ new domain concept, define it here in the same PR.
   a trip is one dated open-water outing — so **only the tighter 2:1 open-water figure is enforced**
   as a booking gate (`INTRO_COURSE_RATIO` in `src/lib/course-ratios.ts`, derived from `DSD_RATIO`);
   the confined-water 4:1 number is recorded for reference, unenforced. A certified assistant aboard
-  buys an intro session no extra seats; only another instructor does.
+  buys an intro session no extra seats; only another instructor does — which is why the staffing
+  week words this gap apart as "Over intro ratio" rather than the entry-level "Over student ratio"
+  (**Crew gap** below).
   Applies to **every agency** — unlike the entry-level ratio below, the *reason* this figure is
   tighter (participants with no prior water time) does not depend on whose logo is on the course, so
   an SSI Try Scuba and a NAUI intro session take the same cap. An intro session stays gated **even
@@ -668,7 +670,12 @@ new domain concept, define it here in the same PR.
   (ADR 20260806-staffing-is-the-shift-roster). A **different** gap, the shop's own **Target
   diver:divemaster ratio** below, fires `uncrewed_departure`/`crew_below_target` instead —
   `courseCrewGap` wins when both would apply to the same course session, **except where nobody is in
-  the water at all, which takes the slot as `uncrewed_course`** (issue #1338). One departure still
+  the water at all, which takes the slot as `uncrewed_course`** (issue #1338). A course session past
+  its ratio splits once more on *which* cap it broke: `staffGapForCourseGap`
+  (`src/lib/staffing-week.ts`) reads `courseCrewGap.ratio` and words an intro session as
+  `over_intro_ratio`, every other course as `over_ratio` (issue #1339) — the entry-level cap takes a
+  certified assistant and the intro one takes only another instructor, so one word for both sent a
+  divemaster to ask for the single gap their being aboard cannot close. One departure still
   never carries two rows for one underlying fact (issue #732); that rule is about the count, and the
   count has not moved. What moved is which row, because "Course needs instructor" beside an empty
   boat reads as though a divemaster is already aboard, and an empty-water phrase beside a course session sends a
@@ -678,11 +685,11 @@ new domain concept, define it here in the same PR.
   statement about the *detector* rather than something a shop can arrange — no trip-creation door
   writes the mark onto a course session any more (issue #1342, see **Self-guided departure**) — and
   it is kept because a row written out of band still has to resolve correctly. Formerly "coverage
-  gap", which named a second vocabulary that no longer exists. **The five words a staffer reads** are
-  "Nobody in the water", "Under target", "Course needs instructor", "No instructor or crew" and
-  "Over student ratio" — the
-  last says *student* precisely because it is the agency cap and not the target two rows down, and
-  they share the same 135px column of the staffing week (issues #1125, #1338).
+  gap", which named a second vocabulary that no longer exists. **The six words a staffer reads** are
+  "Nobody in the water", "Under target", "Course needs instructor", "No instructor or crew",
+  "Over student ratio" and "Over intro ratio" — "student" says the agency cap rather than the
+  target two rows down, "intro" the one cap a divemaster cannot raise, and all six share the same
+  135px column of the staffing week (issues #1125, #1338, #1339).
 - **Self-guided departure** — `trips.self_guided`. A departure the shop has said runs without an
   in-water guide: buddy pairs go in on their own. It silences the shop's own **Target
   diver:divemaster ratio** for that one sailing and reaches nothing else — never an agency training

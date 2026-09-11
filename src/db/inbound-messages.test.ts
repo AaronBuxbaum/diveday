@@ -246,6 +246,55 @@ describe("the unanswered count and the inbox", () => {
     expect(await deleteInboundMessage(db, otherShopId, target.id, NOW)).toBe(false);
     expect(await personThread(db, otherShopId, target.personId ?? "")).toEqual([]);
   });
+
+  it("never names another shop's staffer as the sender of a reply", async () => {
+    // `sentByPersonId` is only ever written from a shop-scoped session, so this
+    // row cannot exist today — which is exactly the invariant worth pinning,
+    // since the join is what a reader trusts. A left join with the shop
+    // condition answers a null name; without it, it would answer the other
+    // shop's staffer by name.
+    const { db, shop } = await seededShopContext();
+    const diver = await firstDiver(db, shop.id);
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-thread", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("shop insert failed");
+    const [foreignStaffer] = await db
+      .insert(people)
+      .values({ shopId: otherShop.id, fullName: "Rival Owner" })
+      .returning({ id: people.id });
+    if (!foreignStaffer) throw new Error("person insert failed");
+
+    const recorded = await recordInboundMessage(db, {
+      shopId: shop.id,
+      channel: "email",
+      fromAddress: diver.email,
+      body: "Who replied to me?",
+      receivedAt: NOW,
+      providerMessageId: "email-cross-sender",
+    });
+    if (recorded.status !== "recorded") throw new Error("not recorded");
+    await recordStaffReply(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      inboundMessageId: recorded.id,
+      channel: "email",
+      toAddress: diver.email,
+      body: "We did.",
+      locale: "en-US",
+      sentByPersonId: foreignStaffer.id,
+      delivery: { status: "sent", providerMessageId: "ses-cross-sender" },
+      sentAt: NOW,
+    });
+
+    const thread = await personThread(db, shop.id, diver.id);
+    const entry = thread.find(
+      (item) => item.direction === "outbound" && item.reply.sentByPersonId === foreignStaffer.id,
+    );
+    if (entry?.direction !== "outbound") throw new Error("reply missing from the thread");
+    expect(entry.sentByName).toBeNull();
+  });
 });
 
 /**

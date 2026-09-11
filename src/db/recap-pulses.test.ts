@@ -9,7 +9,7 @@ import {
   markRecapPulseAddressed,
   submitRecapPulse,
 } from "./recap-pulses";
-import { bookings, people, recapPulses } from "./schema";
+import { bookings, people, recapPulses, shops, trips } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -271,6 +271,39 @@ describe("the shop's panel", () => {
 
     // Idempotent: a second tap on a phone is not a refusal.
     expect(await markRecapPulseAddressed(db, shop.id, open.id, ownerId)).toBe(true);
+  });
+
+  it("keeps a pulse about a departure the shop later took off the board", async () => {
+    // The `diveday:allow-deleted-trips` half of the trips join: the thing the
+    // shop was asked to fix outlives the departure it happened on, and
+    // filtering here would empty the panel rather than answer it.
+    const { db, shop, bookingIds } = await pulseContext();
+    await submitRecapPulse(db, { bookingId: bookingIds[0], categories: ["boat"] });
+    const [open] = await listOpenRecapPulses(db, shop.id);
+
+    await db
+      .update(trips)
+      .set({ deletedAt: new Date("2026-07-21T13:30:00.000Z") })
+      .where(eq(trips.id, open.tripId));
+    expect((await listOpenRecapPulses(db, shop.id)).map((row) => row.id)).toEqual([open.id]);
+  });
+
+  it("never reads a trip title from outside the shop", async () => {
+    // `tripId` is copied off an already-shop-scoped booking, so this row cannot
+    // exist today — which is why the tenant condition belongs on the join a
+    // reader looks at rather than in a writer three modules away.
+    const { db, shop, bookingIds } = await pulseContext();
+    await submitRecapPulse(db, { bookingId: bookingIds[0], categories: ["gear"] });
+    const [open] = await listOpenRecapPulses(db, shop.id);
+
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-pulse", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("shop insert failed");
+    await db.update(trips).set({ shopId: otherShop.id }).where(eq(trips.id, open.tripId));
+
+    expect(await listOpenRecapPulses(db, shop.id)).toHaveLength(0);
   });
 
   it("moves nothing when another shop's id is replayed against it", async () => {

@@ -13,6 +13,7 @@ import {
   canMergeDiver,
   canOverrideGearRequest,
   canReadMedicalClearanceDocument,
+  canReadPrivateRecapPulse,
   canRefund,
   type Role,
 } from "@/lib/authz";
@@ -169,6 +170,16 @@ export const canPersonReadMedicalClearanceDocument = (
   shopId: string,
   personId: string,
 ) => canPerson(db, shopId, personId, canReadMedicalClearanceDocument);
+
+/**
+ * The live check behind the private pulse panel and its "Mark addressed"
+ * (issue #1410). Read from `person_roles` on every request rather than the
+ * session's stamped roles, for the same reason the medical-document gate above
+ * does: a manager demoted this morning must not still be reading what divers
+ * told the shop in confidence from a tab they left open.
+ */
+export const canPersonReadPrivateRecapPulse = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canReadPrivateRecapPulse);
 
 export const canPersonConfigureTrips = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canConfigureTrips);

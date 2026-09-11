@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { canPersonReadPrivateRecapPulse } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { markRecapPulseAddressed } from "@/db/recap-pulses";
-import { canPersonViewShopReports } from "@/db/reporting";
 import {
   REVIEW_MODERATION_REASONS,
   type ReviewModerationReason,
@@ -191,18 +191,21 @@ export async function publishReviewsAction(
  * so a form replayed against another shop's pulse id changes nothing (CR-007).
  *
  * **Owner/manager only** (issue #1410). A pulse is private diver-authored
- * content and reading it is the owner/manager boundary the Requests page
- * carries; acting on one is part of reading it. The page hides the panel from
- * everybody else, and the gate below is why that hiding is safe: a hidden
- * control is not a gate, and a hand-made POST reaches this action all the same
- * (ADR-0006). `markRecapPulseAddressed` has no gate of its own and writes
- * whatever it is handed, so the check has to be here.
+ * content; acting on one is part of reading it. The gate is
+ * `canReadPrivateRecapPulse`, which is the pulse's own predicate rather than
+ * the reports gate this used to borrow — the recap form promises the diver a
+ * reader set, so that set answers to a name of its own and not to whatever
+ * revenue access happens to mean later (src/lib/authz.ts). The page hides the
+ * panel from everybody else, and the gate below is why that hiding is safe: a
+ * hidden control is not a gate, and a hand-made POST reaches this action all
+ * the same (ADR-0006). `markRecapPulseAddressed` has no gate of its own and
+ * writes whatever it is handed, so the check has to be here.
  */
 export async function markPulseAddressedAction(formData: FormData) {
   const session = await requireStaffSession();
   const reviews = shopPath(session.user.shopSlug, "reviews");
   const db = await getDb();
-  if (!(await canPersonViewShopReports(db, session.user.shopId, session.user.personId))) {
+  if (!(await canPersonReadPrivateRecapPulse(db, session.user.shopId, session.user.personId))) {
     redirect(noticeUrl(reviews, "pulse-not-authorized"));
   }
   const pulseId = String(formData.get("pulseId") ?? "");

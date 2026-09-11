@@ -515,6 +515,21 @@ describe("filterActionsForRoles", () => {
     expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
     expect(result.withheldCount).toBe(2);
   });
+
+  it("returns the whole queue when there is no viewer to filter for", () => {
+    // **Not a fail-open default — the absence of a viewer.** The lens narrows a
+    // screen to the person reading it, and the two callers that render one
+    // (`src/app/shop/[shopSlug]/page.tsx`) always pass `session.user.roles`,
+    // which `requireStaffSession` guarantees is non-empty. The caller that
+    // passes nothing is `closeDay` (`src/db/closeout.ts`), which recomputes the
+    // day's outstanding snapshot for the *record*: that snapshot is the shop's
+    // day, and a close-out that dropped every owed refund because nobody was
+    // looking would be a falsified record rather than a tightened gate.
+    const noRoles = filterActionsForRoles(sampleActions, undefined);
+    expect(noRoles.visibleActions).toHaveLength(8);
+    expect(noRoles.withheldCount).toBe(0);
+    expect(filterActionsForRoles(sampleActions, []).visibleActions).toHaveLength(8);
+  });
 });
 
 /**
