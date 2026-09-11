@@ -103,7 +103,7 @@
     "requestApproved": "Aprobado",
     "requestAria": "Pedir trabajar en {trip}",
     "requestDeclined": "Rechazado",
-    "requestWontClose": "Aprobarlo no cerrará la falta. Solo un instructor añade plazas.",
+    "requestWontClose": "Aprobarlo no añade plazas en esta sesión. Solo un instructor las añade.",
     "requested": "{person} lo pidió",
     "requesting": "Pidiendo…",
     "shiftAria": "Turno de {person} el {day}",

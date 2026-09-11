@@ -103,7 +103,7 @@
     "requestApproved": "Approved",
     "requestAria": "Ask to work {trip}",
     "requestDeclined": "Declined",
-    "requestWontClose": "Approving this one won’t close the gap. Only an instructor adds seats.",
+    "requestWontClose": "Approving this one adds no seats to this session. Only an instructor does.",
     "requested": "{person} asked",
     "requesting": "Asking…",
     "shiftAria": "Shift for {person} on {day}",
