@@ -48,13 +48,17 @@
  * - **171** — the trip pitch's three faces (`TripPitch`) and the published
  *   catalog preview (`dive-sites/page.tsx`). 1.00x on the desktop cell and
  *   0.99x on the catalog's measured 173; it also serves the pitch's 109px
- *   phone cell at 1.57x, which is inside the band, so the phone needs no
- *   fourth width.
+ *   phone cell at 1.57x, which is inside the band.
+ * - **224** — the trip pitch inside an embed frame, whose column is `w-full`
+ *   rather than `max-w-xl`: a 413px cell at 1280 and a 117px one at 390,
+ *   measured off the capture. Those two bands overlap only in (206.5, 234), so
+ *   this width exists because no other committed one can serve both — and 640,
+ *   the source, is far outside the phone half.
  *
  * Adding a width means running `--tiles-only` and committing 148 more files;
  * the whole set is 1.19 MB, measured, against 6.81 MB of sources.
  */
-export const MARINE_LIFE_TILE_WIDTHS = [48, 96, 171] as const;
+export const MARINE_LIFE_TILE_WIDTHS = [48, 96, 171, 224] as const;
 
 /**
  * Only `/marine-life/<slug>.jpg`, and nothing deeper.
@@ -77,22 +81,35 @@ const BUNDLED_PHOTO = /^\/marine-life\/([a-z0-9-]+\.jpg)$/;
  * The fix when it fires is to add the width to `MARINE_LIFE_TILE_WIDTHS` and
  * re-run `scripts/fetch-marine-life-photo.mjs --tiles-only`.
  */
-export function tileWidthFor(boxPx: number): number {
-  if (!Number.isFinite(boxPx) || boxPx <= 0) {
-    throw new RangeError(`marine-life tile: ${boxPx} is not a rendered box size`);
+export function tileWidthFor(boxes: number | readonly number[]): number {
+  const rendered = typeof boxes === "number" ? [boxes] : [...boxes];
+  if (rendered.length === 0) {
+    throw new RangeError("marine-life tile: a surface renders at least one box size");
   }
-  const nearest = MARINE_LIFE_TILE_WIDTHS.reduce((best, width) =>
-    Math.abs(width - boxPx) < Math.abs(best - boxPx) ? width : best,
-  );
-  if (nearest <= boxPx / 2 || nearest >= boxPx * 2) {
+  for (const box of rendered) {
+    if (!Number.isFinite(box) || box <= 0) {
+      throw new RangeError(`marine-life tile: ${box} is not a rendered box size`);
+    }
+  }
+  // One file is served to every viewport — there is no srcset in a capture — so
+  // the width has to sit inside the band of EVERY box the surface renders, not
+  // just the widest. Taking the widest alone is what put a 171px file into the
+  // embed's 413px cell and softened three photographs (PR #1663).
+  const low = Math.max(...rendered.map((box) => box / 2));
+  const high = Math.min(...rendered.map((box) => box * 2));
+  const inBand = MARINE_LIFE_TILE_WIDTHS.filter((width) => width > low && width < high);
+  if (inBand.length === 0) {
     throw new RangeError(
-      `marine-life tile: a ${boxPx}px box has no committed width inside (${boxPx / 2}, ${
-        boxPx * 2
-      }) — nearest is ${nearest}. Add it to MARINE_LIFE_TILE_WIDTHS and run ` +
+      `marine-life tile: boxes ${rendered.join(", ")} share no committed width inside (${low}, ${high}) — committed are ${MARINE_LIFE_TILE_WIDTHS.join(
+        ", ",
+      )}. Add one to MARINE_LIFE_TILE_WIDTHS and run ` +
         "`node scripts/fetch-marine-life-photo.mjs --tiles-only`.",
     );
   }
-  return nearest;
+  const widest = Math.max(...rendered);
+  return inBand.reduce((best, width) =>
+    Math.abs(width - widest) < Math.abs(best - widest) ? width : best,
+  );
 }
 
 /**
@@ -104,14 +121,15 @@ export function tileWidthFor(boxPx: number): number {
  * `src/lib/tide-predictions.ts`, and read only in server components, so there
  * is no `NEXT_PUBLIC_` copy of the flag for a bundle to inline as `undefined`.
  *
- * `boxPx` is the box at the **widest** viewport the surface is captured at. A
- * narrower viewport rendering the same tile smaller is still covered as long as
- * it stays inside the band, which is why the trip pitch passes 171 rather than
- * its phone cell's 109.
+ * Pass **every** box the surface renders, not just the widest. A capture has no
+ * srcset, so one file is drawn into all of them, and the width has to satisfy
+ * every band at once. A single number is the shorthand for a surface whose cell
+ * is the same at every viewport (a `size-12` avatar); anything responsive passes
+ * the pair.
  */
-export function capturePhoto(imageUrl: string, boxPx: number): string {
+export function capturePhoto(imageUrl: string, boxes: number | readonly number[]): string {
   if (process.env.DIVEDAY_E2E !== "1") return imageUrl;
   const bundled = BUNDLED_PHOTO.exec(imageUrl);
   if (!bundled) return imageUrl;
-  return `/marine-life/tiles/${tileWidthFor(boxPx)}/${bundled[1]}`;
+  return `/marine-life/tiles/${tileWidthFor(boxes)}/${bundled[1]}`;
 }

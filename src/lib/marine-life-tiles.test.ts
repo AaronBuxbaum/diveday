@@ -20,6 +20,27 @@ describe("marine-life capture tiles", () => {
       expect(tileWidthFor(173)).toBe(171); // the same preview cell at its widest — 0.99x
     });
 
+    /**
+     * The defect this pair form exists for (PR #1663). The trip pitch renders a
+     * 413px cell inside an embed frame and a 171px one on the ordinary page, and
+     * passing only the widest put a 171px file into the 413 cell — a 2.4x
+     * enlargement that softened three photographs on `booking-confirmed-embed`
+     * while every guard passed, because the band was checked against the number
+     * the caller declared rather than the boxes it actually renders.
+     */
+    it("takes a width inside the band of every box a surface renders", () => {
+      expect(tileWidthFor([109, 171])).toBe(171);
+      expect(tileWidthFor([117, 413])).toBe(224);
+      expect(tileWidthFor([413, 117])).toBe(224);
+      expect(tileWidthFor([48])).toBe(tileWidthFor(48));
+    });
+
+    it("refuses a pair whose bands do not overlap", () => {
+      expect(() => tileWidthFor([48, 413])).toThrow(/share no committed width inside/);
+      expect(() => tileWidthFor([])).toThrow(/at least one box size/);
+      expect(() => tileWidthFor([171, 0])).toThrow(/not a rendered box size/);
+    });
+
     it("keeps every answer strictly inside (box/2, 2*box)", () => {
       for (const box of [48, 80, 109, 171, 173]) {
         const width = tileWidthFor(box);
@@ -34,15 +55,15 @@ describe("marine-life capture tiles", () => {
      * silently reintroduced the decode choice, and it has to say so at the
      * first render instead of turning up as an unexplained visual diff.
      *
-     * 400 rather than 300: at a 300px box the band is (150, 600) and the
-     * nearest committed width, 171, is still inside it. 400 is the first size
-     * past 2x171 where nothing committed reaches, and 16 is the failure from
+     * 500 rather than 300 or 400: at 300 the band is (150, 600) and 171 is
+     * inside it; at 400 it is (200, 800) and 224 is. 500 is the first size past
+     * 2x224 where nothing committed reaches, and 16 is the failure from
      * the other side — 48 is three times that box.
      */
     it("refuses a box no committed width can serve, and names the fix", () => {
-      expect(() => tileWidthFor(400)).toThrow(/no committed width inside/);
-      expect(() => tileWidthFor(400)).toThrow(/--tiles-only/);
-      expect(() => tileWidthFor(16)).toThrow(/no committed width inside/);
+      expect(() => tileWidthFor(500)).toThrow(/share no committed width inside/);
+      expect(() => tileWidthFor(500)).toThrow(/--tiles-only/);
+      expect(() => tileWidthFor(16)).toThrow(/share no committed width inside/);
       expect(() => tileWidthFor(0)).toThrow(/not a rendered box size/);
       expect(() => tileWidthFor(Number.NaN)).toThrow(/not a rendered box size/);
     });
@@ -96,7 +117,7 @@ describe("marine-life capture tiles", () => {
      */
     it("still refuses an unservable box under the flag", () => {
       vi.stubEnv("DIVEDAY_E2E", "1");
-      expect(() => capturePhoto("/marine-life/southern-stingray.jpg", 400)).toThrow(
+      expect(() => capturePhoto("/marine-life/southern-stingray.jpg", 500)).toThrow(
         /no committed width inside/,
       );
     });

@@ -105,8 +105,9 @@ const JPEG = { quality: 78, mozjpeg: true };
  * the served file's width must lie strictly inside `(box/2, 2*box)`. Above that
  * band the decoder has a legal half-scale and therefore a choice; below it the
  * tile is upscaled past what a photograph survives. The three widths cover the
- * four boxes the app renders these at -- 48 (the diver's field guide and the
- * recap), 80 (the species picker), and 171 (the trip pitch's three faces and
+ * five boxes the app renders these at -- 48 (the diver's field guide and the
+ * recap), 80 (the species picker), 224 (the trip pitch inside an embed frame,
+ * whose 413px and 117px cells share no other band), and 171 (the trip pitch's three faces and
  * the published-catalog preview, which also covers the pitch's 109px phone
  * cell at 1.57x).
  *
@@ -115,7 +116,7 @@ const JPEG = { quality: 78, mozjpeg: true };
  * nothing here resizes, re-encodes or replaces a file directly under
  * `public/marine-life/`.
  */
-const TILE_WIDTHS = [48, 96, 171];
+const TILE_WIDTHS = [48, 96, 171, 224];
 const TILE_DIR = path.join(PHOTO_DIR, "tiles");
 
 /**

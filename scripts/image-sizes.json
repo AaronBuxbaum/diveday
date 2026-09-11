@@ -20,7 +20,12 @@
   },
   "src/app/s/[shopSlug]/sites/[siteSlug]/page.tsx :: (min-width: 896px) 56rem, 100vw": {
     "measured": "2026-09-09, /s/blue-mantis/sites/molasses-reef. The public dive-site page's cover band, edge to edge of the same max-w-4xl column the course page's hero fills, so the numbers match that entry to within a scrollbar.",
-    "rendered": { "390": 358, "768": 720, "1280": 848, "1920": 848 }
+    "rendered": {
+      "390": 358,
+      "768": 720,
+      "1280": 848,
+      "1920": 848
+    }
   },
   "src/app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx :: (min-width: 896px) 896px, 100vw": {
     "measured": "2026-09-04, /s/blue-mantis/courses/advanced-open-water-diver",
@@ -86,6 +91,15 @@
       "768": 171,
       "1280": 171,
       "1920": 171
+    }
+  },
+  "src/app/s/[shopSlug]/trips/[id]/_components/TripPitch.tsx :: 32vw": {
+    "measured": "2026-09-11, /s/blue-mantis/trips/<id>?embed=1 — 390 and 1280 read off the booking-confirmed-embed captures (tile runs 117/116/117 and 413/414/413); 768 and 1920 derived from the same (vw - 40) / 3 the column's own padding and gaps give",
+    "rendered": {
+      "390": 117,
+      "768": 243,
+      "1280": 413,
+      "1920": 627
     }
   }
 }
