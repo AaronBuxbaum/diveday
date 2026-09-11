@@ -87,6 +87,15 @@ export type CheckoutSessionSnapshot = {
   amountTotalCents: number | null;
   /** Stripe's calculated tax total, or null before Stripe has enough evidence. */
   taxAmountCents: number | null;
+  /**
+   * The `cus_…` Stripe created for this session, or null when it created none.
+   * Sessions go out with `customer_creation: "if_required"`, so an abandoned
+   * session never has one and a settled (or attempted-settlement) one does:
+   * null is a fact about the processor, not a missing read. Stored locally so
+   * diver erasure can raise an obligation against a customer object that
+   * actually exists (issue #1621).
+   */
+  stripeCustomerId: string | null;
   expiresAt: Date | null;
 };
 
@@ -154,6 +163,13 @@ const sessionResponseSchema = z.object({
     .union([z.string().min(1), z.object({ id: z.string().min(1) })])
     .nullable()
     .optional(),
+  // Same string-or-expanded-object shape as `payment_intent`, and nullable for
+  // the same reason it is in Stripe's own payload: `customer_creation:
+  // "if_required"` leaves it null on a session nobody paid.
+  customer: z
+    .union([z.string().min(1), z.object({ id: z.string().min(1) })])
+    .nullable()
+    .optional(),
 });
 
 const refundResponseSchema = z.object({ id: z.string().min(1) });
@@ -164,6 +180,12 @@ function paymentIntentIdOf(body: z.infer<typeof sessionResponseSchema>): string 
   return typeof paymentIntent === "string" ? paymentIntent : paymentIntent.id;
 }
 
+function customerIdOf(body: z.infer<typeof sessionResponseSchema>): string | null {
+  const customer = body.customer;
+  if (!customer) return null;
+  return typeof customer === "string" ? customer : customer.id;
+}
+
 function toSnapshot(body: z.infer<typeof sessionResponseSchema>): CheckoutSessionSnapshot {
   return {
     stripeSessionId: body.id,
@@ -172,6 +194,7 @@ function toSnapshot(body: z.infer<typeof sessionResponseSchema>): CheckoutSessio
     checkoutUrl: body.url ?? null,
     amountTotalCents: body.amount_total ?? null,
     taxAmountCents: body.total_details?.amount_tax ?? null,
+    stripeCustomerId: customerIdOf(body),
     expiresAt: body.expires_at ? new Date(body.expires_at * 1000) : null,
   };
 }

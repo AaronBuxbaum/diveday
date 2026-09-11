@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   boardPath,
   boardTitleFor,
+  CHECK_IN_LINK_TTL_DAYS,
+  checkInLinkExpiresAt,
   DISPLAY_LABEL_MAX_LENGTH,
   normalizeDisplayLabel,
 } from "./display-tokens";
@@ -48,5 +50,25 @@ describe("boardTitleFor", () => {
     const title = boardTitleFor({ title: "The Hendersons' charter", isPrivate: true });
     expect(title).toEqual({ kind: "private" });
     expect(JSON.stringify(title)).not.toContain("Henderson");
+  });
+});
+
+/**
+ * **A check-in link's lifetime is measured from the instant it is minted or
+ * renewed** (issue #1609), so a renewal is a full reset rather than a top-up
+ * onto whatever was left.
+ */
+describe("checkInLinkExpiresAt", () => {
+  it("is the full lifetime past the instant it is given", () => {
+    const now = new Date("2026-04-01T09:30:00.000Z");
+    const expires = checkInLinkExpiresAt(now);
+    expect(expires.getTime() - now.getTime()).toBe(CHECK_IN_LINK_TTL_DAYS * 24 * 60 * 60 * 1000);
+    // A season plus a shoulder: the April tablet is asked about before April.
+    expect(expires.getTime()).toBeLessThan(new Date("2027-04-01T09:30:00.000Z").getTime());
+  });
+
+  it("does not read the wall clock, so a renewal is reproducible", () => {
+    const now = new Date("2026-04-01T09:30:00.000Z");
+    expect(checkInLinkExpiresAt(now)).toEqual(checkInLinkExpiresAt(new Date(now)));
   });
 });

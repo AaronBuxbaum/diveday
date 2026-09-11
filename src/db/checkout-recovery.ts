@@ -8,7 +8,11 @@ import {
   publicAppUrl,
 } from "@/lib/notifications";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
-import { markCheckoutExpiredBySessionId, markCheckoutPaidBySessionId } from "./checkouts";
+import {
+  markCheckoutExpiredBySessionId,
+  markCheckoutPaidBySessionId,
+  recordCheckoutStripeCustomer,
+} from "./checkouts";
 import type { AppDb } from "./client";
 import {
   findCourtesyEmailRecipientByAddress,
@@ -247,6 +251,16 @@ export async function sendDueCheckoutRecoveries(
     if (lookup.status !== "ok") {
       summary.unreconciled += 1;
       continue;
+    }
+    // The third path that ever reads a session back from Stripe, so the third
+    // that has to record the Customer it reports — a scan that reconciles a
+    // checkout no webhook closed is otherwise the one place the id is seen and
+    // dropped (issue #1621).
+    if (lookup.session.stripeCustomerId) {
+      await recordCheckoutStripeCustomer(db, {
+        stripeSessionId: checkout.stripeSessionId,
+        stripeCustomerId: lookup.session.stripeCustomerId,
+      });
     }
     if (lookup.session.paymentStatus === "paid") {
       // Stripe's own settled total travels with the lookup — pass it through so

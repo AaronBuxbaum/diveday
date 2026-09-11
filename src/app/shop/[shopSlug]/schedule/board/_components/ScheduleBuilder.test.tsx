@@ -132,7 +132,8 @@ const COPY: BuilderCopy = {
   isPrivateLabel: "Private charter",
   selfGuidedLabel: "Self-guided dive",
   selfGuidedHint: "Buddy pairs go in without a guide.",
-  isPrivateHint: "Off the public schedule. Only divers with the link can book it.",
+  isPrivateHint:
+    "Off the public schedule. Anyone with the link can see the departure and book a seat.",
   daysLabel: "How many days",
   daysDescription: "Most departures are one day.",
   payAtBookingLegend: "Pay at booking",

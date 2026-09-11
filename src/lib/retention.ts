@@ -30,25 +30,29 @@
  * requested one (`src/db/anonymize.ts`), not a timer.
  *
  * **`gear_service_events` is deliberately unbounded and does not belong here.**
- * It is append-only and it is the one trail in the schema whose value is
- * evidentiary rather than operational: a unit's service, hydro-test and
- * inspection history is what answers "was this regulator serviced on schedule?"
- * long after the dive it was carried on. A window would delete exactly the rows
- * that question reaches for. The history is already bounded by the thing it
- * describes — deleting a unit cascades its events away, retiring one keeps them
- * — and the volume is a few hundred rows a year for a large fleet, so nothing
- * about growth argues the other way. Chosen by the product owner, 2026-08-20,
- * over a 1825-day-past-retirement window.
+ * It is append-only and its value is evidentiary rather than operational: a
+ * unit's service, hydro-test and inspection history is what answers "was this
+ * regulator serviced on schedule?" long after the dive it was carried on. A
+ * window would delete exactly the rows that question reaches for. The history
+ * is already bounded by the thing it describes — deleting a unit cascades its
+ * events away, retiring one keeps them — and the volume is a few hundred rows a
+ * year for a large fleet, so nothing about growth argues the other way. Chosen
+ * by the product owner, 2026-08-20, over a 1825-day-past-retirement window.
  *
- * **`trip_stage_events` is unbounded too, and that is not yet a decision.** The
- * five words a crew taps carry no diver data — a shop, a trip, a stage code, a
- * dive-site id, the staff person who tapped, an instant — so the erasure half
- * is answered by the live join to `people` rather than by a window, and growth
- * is a handful of rows per departure. But "a handful per departure" is still
- * unbounded, and nothing forces an answer the way `export.test.ts` forces every
- * table to be classified for the bundle. Recorded here rather than left silent,
- * because the bad state is a table that is neither pruned nor deliberately kept.
- * The window, if there is to be one, is the product owner's call (H-02): #1397.
+ * **`trip_stage_events` is deliberately unbounded and does not belong here
+ * either.** The five words a crew taps carry no diver data — a shop, a trip, a
+ * stage code, a dive-site id, the staff person who tapped, an instant — so the
+ * erasure half is answered by the live join to `people` rather than by a
+ * window: a redacted staffer's name leaves every reading without a row moving.
+ * Growth is a handful of rows per departure, and every reader takes only the
+ * newest one (`latestTripStage`, `latestTripStagesByTrip`, `liveShopStage`), so
+ * the trail is dead weight operationally — which is the whole of the argument
+ * for a window. Against it is `gear_service_events`' argument on a table with
+ * more rows: the trail may become evidentiary, "when did the crew say this boat
+ * was heading in?" is a question an incident review asks a year later, and any
+ * window short enough to matter for growth deletes exactly those rows. It comes
+ * out the same way. Chosen by the product owner, 2026-09-10, over a 30-day
+ * window matching `trip_desk_events` (issue #1397).
  */
 
 import { DAY_MS } from "@/lib/clock";

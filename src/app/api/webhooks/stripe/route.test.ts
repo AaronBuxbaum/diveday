@@ -10,10 +10,12 @@ vi.mock("@/db/checkouts", () => ({
   markCheckoutPaidBySessionId: vi.fn(),
   markCheckoutExpiredBySessionId: vi.fn(),
   markCheckoutPaymentFailedBySessionId: vi.fn(),
+  recordCheckoutStripeCustomer: vi.fn(),
 }));
 vi.mock("@/db/tips", () => ({
   markTipPaidBySessionId: vi.fn(),
   markTipExpiredBySessionId: vi.fn(),
+  recordTipStripeCustomer: vi.fn(),
 }));
 vi.mock("@/db/orders", () => ({
   markOrderPaidByInvoiceId: vi.fn(),
@@ -35,8 +37,11 @@ const {
   markCheckoutPaidBySessionId,
   markCheckoutExpiredBySessionId,
   markCheckoutPaymentFailedBySessionId,
+  recordCheckoutStripeCustomer,
 } = await import("@/db/checkouts");
-const { markTipPaidBySessionId, markTipExpiredBySessionId } = await import("@/db/tips");
+const { markTipPaidBySessionId, markTipExpiredBySessionId, recordTipStripeCustomer } = await import(
+  "@/db/tips"
+);
 const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } = await import("@/db/orders");
 const { setShopStripeAccountStatus, disconnectShopStripeAccount } = await import(
   "@/db/stripe-accounts"
@@ -95,6 +100,8 @@ beforeEach(() => {
   vi.mocked(disconnectShopStripeAccount).mockReset();
   vi.mocked(markTipPaidBySessionId).mockReset();
   vi.mocked(markTipExpiredBySessionId).mockReset();
+  vi.mocked(recordCheckoutStripeCustomer).mockReset().mockResolvedValue(true);
+  vi.mocked(recordTipStripeCustomer).mockReset().mockResolvedValue(false);
   vi.mocked(claimStripeWebhookEvent).mockReset().mockResolvedValue(true);
   vi.mocked(hasNewerAccountUpdate).mockReset().mockResolvedValue(false);
   vi.mocked(releaseStripeWebhookEventClaim).mockReset().mockResolvedValue(true);
@@ -429,6 +436,101 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
     expect(response.status).toBe(200);
     expect(markTipExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_tip_1", undefined);
+  });
+
+  // Issue #1621. Stripe creates a Customer `if_required`, so the id appears on
+  // a settled (or attempted-settlement) session and never on an abandoned one.
+  // Recording it is what lets diver erasure raise an obligation against a
+  // `cus_...` that actually exists, instead of quietly promising a deletion it
+  // has no handle for.
+  describe("the Customer object a session leaves behind", () => {
+    it("records it on every checkout.session event that carries one", async () => {
+      for (const type of [
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+        "checkout.session.async_payment_failed",
+        "checkout.session.expired",
+      ]) {
+        vi.mocked(recordCheckoutStripeCustomer).mockClear();
+        const response = await post({
+          id: `evt_${type}`,
+          type,
+          data: {
+            object: { id: "cs_123", payment_status: "paid", customer: "cus_diver" },
+          },
+          account: "acct_123",
+        });
+        expect(response.status).toBe(200);
+        expect(recordCheckoutStripeCustomer).toHaveBeenCalledWith(FAKE_DB, {
+          stripeSessionId: "cs_123",
+          stripeCustomerId: "cus_diver",
+          expectedAccountId: "acct_123",
+        });
+      }
+    });
+
+    it("records nothing when Stripe created no Customer for the session", async () => {
+      const response = await post({
+        id: "evt_1",
+        type: "checkout.session.expired",
+        data: { object: { id: "cs_123", customer: null } },
+      });
+      expect(response.status).toBe(200);
+      // Null is "no object exists", so raising nothing is the honest answer —
+      // an obligation against an id nobody has is noise an owner cannot
+      // discharge.
+      expect(recordCheckoutStripeCustomer).not.toHaveBeenCalled();
+      expect(recordTipStripeCustomer).not.toHaveBeenCalled();
+    });
+
+    it("falls back to the tip table on the shared session-id space", async () => {
+      vi.mocked(recordCheckoutStripeCustomer).mockResolvedValue(false);
+      const response = await post({
+        id: "evt_1",
+        type: "checkout.session.completed",
+        data: { object: { id: "cs_tip_1", payment_status: "paid", customer: "cus_tipper" } },
+        account: "acct_123",
+      });
+      expect(response.status).toBe(200);
+      expect(recordTipStripeCustomer).toHaveBeenCalledWith(FAKE_DB, {
+        stripeSessionId: "cs_tip_1",
+        stripeCustomerId: "cus_tipper",
+        expectedAccountId: "acct_123",
+      });
+    });
+
+    it("reads an expanded Customer object as its id", async () => {
+      const response = await post({
+        id: "evt_1",
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: "cs_123",
+            payment_status: "paid",
+            customer: { id: "cus_expanded", object: "customer" },
+          },
+        },
+      });
+      expect(response.status).toBe(200);
+      expect(recordCheckoutStripeCustomer).toHaveBeenCalledWith(
+        FAKE_DB,
+        expect.objectContaining({ stripeCustomerId: "cus_expanded" }),
+      );
+    });
+
+    // The recorder runs before the status dispatch, so a failure there must
+    // never swallow the settlement it precedes — the same treatment
+    // `sendGiftPassesForCheckout` gets.
+    it("still settles the checkout when recording the Customer throws", async () => {
+      vi.mocked(recordCheckoutStripeCustomer).mockRejectedValue(new Error("stripe customer write"));
+      const response = await post({
+        id: "evt_1",
+        type: "checkout.session.completed",
+        data: { object: { id: "cs_123", payment_status: "paid", customer: "cus_diver" } },
+      });
+      expect(response.status).toBe(200);
+      expect(markCheckoutPaidBySessionId).toHaveBeenCalled();
+    });
   });
 
   it("account.updated sets the shop's charges/payouts/details status", async () => {

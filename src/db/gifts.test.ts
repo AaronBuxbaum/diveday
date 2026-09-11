@@ -84,6 +84,7 @@ function giftCheckout(): CheckoutProvider {
           0,
         ),
         taxAmountCents: null,
+        stripeCustomerId: null,
         expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
       };
     },
@@ -393,6 +394,7 @@ describe("a blown-out gift", () => {
             0,
           ),
           taxAmountCents: null,
+          stripeCustomerId: null,
           expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
         };
       },

@@ -64,7 +64,11 @@ import { canPersonErasePersonalData } from "./authz";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
 import { revokeShelfTokens } from "./person-shelf-tokens";
-import { attemptProcessorErasures, recordProcessorErasureObligations } from "./processor-erasure";
+import {
+  attemptProcessorErasures,
+  type ProcessorErasureTargetInput,
+  recordProcessorErasureObligations,
+} from "./processor-erasure";
 import type { ProcessorErasureObligation } from "./schema";
 import {
   accountSecurity,
@@ -491,6 +495,59 @@ async function mergedIntoChain(
   return found;
 }
 
+/**
+ * What a `booking_checkouts` sweep has to hand back beside the row id: the
+ * Stripe objects the redaction just orphaned. Shared by both sweeps so neither
+ * can drift into returning less than the ledger needs (issue #1621).
+ */
+const CHECKOUT_PROCESSOR_HANDLES = {
+  id: bookingCheckouts.id,
+  stripeAccountId: bookingCheckouts.stripeAccountId,
+  stripeSessionId: bookingCheckouts.stripeSessionId,
+  stripeCustomerId: bookingCheckouts.stripeCustomerId,
+} as const;
+
+/**
+ * The three columns a Checkout Session row carries at Stripe. `tips` and
+ * `booking_checkouts` spell them identically, which is what lets one rule
+ * serve both.
+ */
+type SessionProcessorHandles = {
+  stripeAccountId: string;
+  stripeSessionId: string;
+  stripeCustomerId: string | null;
+};
+
+/**
+ * Turn rows that hold a Checkout Session into ledger entries — the one rule
+ * for both tables that have one, so neither can drift from the other. The
+ * session is always owed — no Stripe call rewrites
+ * `customer_email`/`customer_details` on a Checkout Session, so it is a manual
+ * discharge like an invoice snapshot — and the Customer only when Stripe
+ * actually minted one, because sessions are opened with `customer_creation:
+ * "if_required"` and an obligation naming an object that never existed is an
+ * owner chasing nothing.
+ */
+function pushSessionTargets(
+  targets: ProcessorErasureTargetInput[],
+  rows: SessionProcessorHandles[],
+): void {
+  for (const row of rows) {
+    targets.push({
+      target: "stripe_checkout_session_snapshot",
+      externalId: row.stripeSessionId,
+      stripeAccountId: row.stripeAccountId,
+    });
+    if (row.stripeCustomerId) {
+      targets.push({
+        target: "stripe_customer",
+        externalId: row.stripeCustomerId,
+        stripeAccountId: row.stripeAccountId,
+      });
+    }
+  }
+}
+
 async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {
   const { shopId, personId, now } = ctx;
 
@@ -511,6 +568,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)));
   const bookingIds = bookingRows.map((row) => row.id);
   const owned = bookingIds.length > 0;
+
+  // Every Stripe object this scrub finds standing for the erased diver, raised
+  // as one ledger row apiece at the end of the transaction. Three tables feed
+  // it — `orders`, `tips` and `booking_checkouts` — and they are far apart in
+  // this function, so it accumulates rather than each sweep raising its own
+  // batch: one write, one dedupe, and the obligations land inside the same
+  // transaction as the redactions that made them owed (issue #1621, ADR
+  // 20260803-processor-erasure-obligations).
+  const processorTargets: ProcessorErasureTargetInput[] = [];
 
   let queued = 0;
   const retire = async (
@@ -1391,7 +1457,26 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // booking checkout's is the same object beside the address this file already
   // clears. Both are bounded by session expiry and both columns are durable,
   // so the row outlives the window it is safe in (issue #1607).
+  //
+  // The read is separate from the UPDATE on purpose: the UPDATE filters
+  // `isNotNull(checkoutUrl)`, and a tip whose link was already cleared still
+  // names a Stripe session and possibly a Stripe customer that this erasure
+  // owes work against (issue #1621).
   if (owned) {
+    const tipRows = await tx
+      .select({
+        stripeAccountId: tips.stripeAccountId,
+        stripeSessionId: tips.stripeSessionId,
+        stripeCustomerId: tips.stripeCustomerId,
+      })
+      .from(tips)
+      .where(and(eq(tips.shopId, shopId), inArray(tips.bookingId, bookingIds)));
+    // `tips.booking_id` is the handle, and it is a sound one: a tip belongs to
+    // exactly one booking, and `startTipCheckout` (src/db/tips.ts) mints the
+    // session with `customerEmail` taken straight off that booking's
+    // `people.email`. So the address on the session is this diver's by
+    // construction, not by a name match.
+    pushSessionTargets(processorTargets, tipRows);
     await tx
       .update(tips)
       .set({ checkoutUrl: null })
@@ -1548,34 +1633,25 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       );
   }
 
-  // Everything those orders point at *at Stripe* becomes a row in the erasure
-  // ledger (ADR 20260803-processor-erasure-obligations): the customer objects,
-  // which DiveDay deletes itself once this transaction commits, and the
-  // finalized invoices, whose name/email snapshot no API rewrites and which the
-  // shop clears through Stripe's own data-deletion request.
-  //
-  // Recorded here, attempted after — writing the row inside the transaction is
-  // what makes the obligation durable against a crash a millisecond later;
-  // making the *call* here would put a third-party round trip inside the
-  // erasure transaction and let a Stripe outage roll back the scrub. Each
-  // order's own `stripe_account_id` travels with the row rather than the shop's
-  // current account, the same discipline `refundOrder` uses.
-  const raisedProcessorErasures = await recordProcessorErasureObligations(tx, {
-    shopId,
-    personId,
-    targets: [
-      ...orderRows.map((row) => ({
-        target: "stripe_customer" as const,
-        externalId: row.stripeCustomerId,
-        stripeAccountId: row.stripeAccountId,
-      })),
-      ...orderRows.map((row) => ({
-        target: "stripe_invoice_snapshot" as const,
-        externalId: row.stripeInvoiceId,
-        stripeAccountId: row.stripeAccountId,
-      })),
-    ],
-  });
+  // Everything those orders point at *at Stripe* joins the erasure ledger (ADR
+  // 20260803-processor-erasure-obligations): the customer objects, which
+  // DiveDay deletes itself once this transaction commits, and the finalized
+  // invoices, whose name/email snapshot no API rewrites and which the shop
+  // clears through Stripe's own data-deletion request. Each order's own
+  // `stripe_account_id` travels with the entry rather than the shop's current
+  // account, the same discipline `refundOrder` uses.
+  for (const row of orderRows) {
+    processorTargets.push({
+      target: "stripe_customer",
+      externalId: row.stripeCustomerId,
+      stripeAccountId: row.stripeAccountId,
+    });
+    processorTargets.push({
+      target: "stripe_invoice_snapshot",
+      externalId: row.stripeInvoiceId,
+      stripeAccountId: row.stripeAccountId,
+    });
+  }
 
   // --- the checkout's own copy of the diver's address ----------------------
   // `booking_checkouts.customer_email` is the same class of un-normalized PII
@@ -1628,7 +1704,8 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
           sql`lower(${bookingCheckouts.customerEmail}) = ${ctx.email.toLowerCase()}`,
         ),
       )
-      .returning({ id: bookingCheckouts.id });
+      .returning(CHECKOUT_PROCESSOR_HANDLES);
+    pushSessionTargets(processorTargets, byAddress);
     logFuzzyMatch(ctx, "booking_checkout_customer_email", byAddress.length);
   }
   if (owned) {
@@ -1679,7 +1756,8 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
               isNotNull(bookingCheckouts.customerEmail),
             ),
           )
-          .returning({ id: bookingCheckouts.id });
+          .returning(CHECKOUT_PROCESSOR_HANDLES);
+        pushSessionTargets(processorTargets, byBooking);
         logFuzzyMatch(ctx, "booking_checkout_sole_occupant", byBooking.length);
       }
     }
@@ -1976,6 +2054,21 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     // would leave their address in the one row this sweep had just cleaned.
     .set({ body: REDACTED_TEXT, toAddress: REDACTED_TEXT, sendError: null })
     .where(and(eq(staffReplies.shopId, shopId), eq(staffReplies.personId, personId)));
+
+  // Raised last, so every sweep above has had its say, and still *inside* this
+  // transaction — an obligation that only commits if some later step also
+  // succeeds is exactly the "we forgot we owed this" failure the ledger exists
+  // to prevent. The Stripe calls themselves happen after the commit, in
+  // `anonymizeDiver`: a third-party round trip in here would let an outage roll
+  // back an erasure the diver asked for. Entries with a blank handle are
+  // dropped and `(target, external_id)` duplicates fold to one row inside
+  // `recordProcessorErasureObligations`, which is how a party checkout reached
+  // by both sweeps raises a single obligation.
+  const raisedProcessorErasures = await recordProcessorErasureObligations(tx, {
+    shopId,
+    personId,
+    targets: processorTargets,
+  });
 
   return { queuedMediaDeletions: queued, raisedProcessorErasures };
 }

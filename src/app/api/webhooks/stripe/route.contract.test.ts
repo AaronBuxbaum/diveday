@@ -33,10 +33,12 @@ vi.mock("@/db/checkouts", () => ({
   markCheckoutPaidBySessionId: vi.fn(),
   markCheckoutExpiredBySessionId: vi.fn(),
   markCheckoutPaymentFailedBySessionId: vi.fn(),
+  recordCheckoutStripeCustomer: vi.fn(),
 }));
 vi.mock("@/db/tips", () => ({
   markTipPaidBySessionId: vi.fn(),
   markTipExpiredBySessionId: vi.fn(),
+  recordTipStripeCustomer: vi.fn(),
 }));
 vi.mock("@/db/orders", () => ({
   markOrderPaidByInvoiceId: vi.fn(),

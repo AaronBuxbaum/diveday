@@ -1931,13 +1931,14 @@ new domain concept, define it here in the same PR.
   only demanded of an account that has enabled two-factor**, so it is a control a staff member
   opts into rather than a floor under every account.
 - **Display link** — a revocable bearer URL (`display_tokens`) a shop opens on a screen of its own,
-  with no sign-in on that screen. Hashed at rest, non-expiring like a calendar feed, revoked from
-  Settings → Lobby display. A link says which of two surfaces it opens, and the two never cross: a
-  **board** link (`/board/[token]`) is the **departures board** — today's boats, the crew's stage
-  word, an "n of capacity" count, the meeting point and the outlook, never a diver's name; its one
-  switch, *show names*, adds the crew line (issue #1426). A **check-in** link
-  (`/check-in/[token]`) is the **self check-in kiosk** below, and unlike the board it writes
-  (N-24).
+  with no sign-in on that screen. Hashed at rest, revoked from Settings → Lobby display. A link says
+  which of two surfaces it opens, and the two never cross: a **board** link (`/board/[token]`) is
+  the **departures board** — today's boats, the crew's stage word, an "n of capacity" count, the
+  meeting point and the outlook, never a diver's name; its one switch, *show names*, adds the crew
+  line (issue #1426). A **check-in** link (`/check-in/[token]`) is the **self check-in kiosk**
+  below, and unlike the board it writes (N-24). **Only the check-in link expires** — 180 days
+  (`CHECK_IN_LINK_TTL_DAYS`), renewed from the same settings page; a board link is non-expiring like
+  a calendar feed, because a screen on a wall going dark is noticed by nobody (issue #1609).
 - **Follow link** — the public page for one departure's day (`/s/<shopSlug>/boats/<tripId>`), which
   a diver hands to whoever is waiting for them on the dock. Deliberately **not** a bearer credential
   and deliberately not revocable: the trip id is in the URL unhashed because the page holds no

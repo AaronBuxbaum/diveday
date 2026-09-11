@@ -10,6 +10,7 @@ import {
   markCheckoutExpiredBySessionId,
   markCheckoutPaidBySessionId,
   markCheckoutPaymentFailedBySessionId,
+  recordCheckoutStripeCustomer,
   refreshCheckoutFromStripe,
   retirePendingCheckoutIfRepriced,
   startBookingCheckout,
@@ -72,6 +73,9 @@ function retrieved(session: Partial<CheckoutSessionSnapshot>): CheckoutSessionLo
       // Null by default: "Stripe reported no total", not "collected nothing".
       amountTotalCents: null,
       taxAmountCents: null,
+      // Null by default for the same reason: Stripe creates a Customer only
+      // `if_required`, so a session nobody paid never has one (issue #1621).
+      stripeCustomerId: null,
       expiresAt: null,
       ...session,
     },
@@ -1854,6 +1858,56 @@ describe("refreshCheckoutFromStripe", () => {
     expect((await getBookingPayment(db, shop.id, bookingIds[0]))?.amountCents).toBe(15_000);
   });
 
+  it("records the Customer id the direct read carries, paid or not", async () => {
+    // The webhook-less path must learn the same fact the webhook does, or a
+    // diver whose settlement never produced a delivery is erased with a
+    // `cus_...` nobody knows about (issue #1621).
+    const paid = await pendingCheckout();
+    await refreshCheckoutFromStripe(
+      paid.db,
+      paid.shop.id,
+      paid.checkout.id,
+      fakeCheckout({
+        async retrieveCheckoutSession() {
+          return retrieved({
+            stripeStatus: "complete",
+            paymentStatus: "paid",
+            stripeCustomerId: "cus_refreshed",
+          });
+        },
+      }),
+    );
+    const [paidRow] = await paid.db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, paid.checkout.id));
+    expect(paidRow?.stripeCustomerId).toBe("cus_refreshed");
+
+    // Recorded before the status branch, so an expiring session still leaves
+    // the pointer behind rather than taking it to the grave.
+    const expiring = await pendingCheckout();
+    await refreshCheckoutFromStripe(
+      expiring.db,
+      expiring.shop.id,
+      expiring.checkout.id,
+      fakeCheckout({
+        async retrieveCheckoutSession() {
+          return retrieved({
+            stripeStatus: "expired",
+            paymentStatus: "unpaid",
+            stripeCustomerId: "cus_expired_session",
+          });
+        },
+      }),
+    );
+    const [expiredRow] = await expiring.db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, expiring.checkout.id));
+    expect(expiredRow?.status).toBe("expired");
+    expect(expiredRow?.stripeCustomerId).toBe("cus_expired_session");
+  });
+
   it("leaves a still-open unpaid session pending", async () => {
     const { db, shop, bookingIds, checkout } = await pendingCheckout();
     const refreshed = await refreshCheckoutFromStripe(
@@ -2037,5 +2091,85 @@ describe("markCheckoutPaymentFailedBySessionId", () => {
     for (const bookingId of bookingIds) {
       expect(await getBookingPayment(db, shop.id, bookingId)).toBeNull();
     }
+  });
+});
+
+// Issue #1621: a booking checkout's Stripe Customer was never recorded, so
+// diver erasure had nothing to raise an obligation against. Write-once, per
+// connected account, and silent when Stripe created no Customer at all.
+describe("recordCheckoutStripeCustomer", () => {
+  async function pendingCheckout() {
+    const context = await checkoutContext();
+    const start = await startBookingCheckout(
+      context.db,
+      startInput(context.shop.id, context.reef.id, context.bookingIds),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    return { ...context, checkout: start.checkout };
+  }
+
+  async function customerIdOf(
+    db: Awaited<ReturnType<typeof checkoutContext>>["db"],
+    checkoutId: string,
+  ) {
+    const [row] = await db
+      .select({ stripeCustomerId: bookingCheckouts.stripeCustomerId })
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    return row?.stripeCustomerId ?? null;
+  }
+
+  it("records the Customer id once and ignores a replayed event", async () => {
+    const { db, checkout } = await pendingCheckout();
+    expect(await customerIdOf(db, checkout.id)).toBeNull();
+
+    expect(
+      await recordCheckoutStripeCustomer(db, {
+        stripeSessionId: checkout.stripeSessionId,
+        stripeCustomerId: "cus_party",
+      }),
+    ).toBe(true);
+    expect(await customerIdOf(db, checkout.id)).toBe("cus_party");
+
+    // Stripe's webhooks are at-least-once, so the second delivery of the same
+    // session must move nothing and must not overwrite the first id.
+    expect(
+      await recordCheckoutStripeCustomer(db, {
+        stripeSessionId: checkout.stripeSessionId,
+        stripeCustomerId: "cus_second_delivery",
+      }),
+    ).toBe(false);
+    expect(await customerIdOf(db, checkout.id)).toBe("cus_party");
+  });
+
+  it("refuses a connected account that is not this checkout's", async () => {
+    const { db, checkout } = await pendingCheckout();
+    expect(
+      await recordCheckoutStripeCustomer(db, {
+        stripeSessionId: checkout.stripeSessionId,
+        stripeCustomerId: "cus_evil",
+        expectedAccountId: "acct_someone_else",
+      }),
+    ).toBe(false);
+    expect(await customerIdOf(db, checkout.id)).toBeNull();
+
+    expect(
+      await recordCheckoutStripeCustomer(db, {
+        stripeSessionId: checkout.stripeSessionId,
+        stripeCustomerId: "cus_party",
+        expectedAccountId: checkout.stripeAccountId,
+      }),
+    ).toBe(true);
+  });
+
+  it("moves nothing for an unknown session id", async () => {
+    const { db } = await checkoutContext();
+    expect(
+      await recordCheckoutStripeCustomer(db, {
+        stripeSessionId: "cs_unknown",
+        stripeCustomerId: "cus_nobody",
+      }),
+    ).toBe(false);
   });
 });

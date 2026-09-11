@@ -532,6 +532,7 @@ describe("getRecapPageData tip reconciliation", () => {
               checkoutUrl: null,
               amountTotalCents: 1000,
               taxAmountCents: null,
+              stripeCustomerId: null,
               expiresAt: null,
             },
           };
@@ -557,6 +558,7 @@ describe("getRecapPageData tip reconciliation", () => {
               checkoutUrl: null,
               amountTotalCents: 1000,
               taxAmountCents: null,
+              stripeCustomerId: null,
               expiresAt: null,
             },
           };

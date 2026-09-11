@@ -22,7 +22,8 @@
     "copied": "Copied",
     "copyFailed": "Couldn’t copy, select it manually",
     "shared": "Anyone with this link sees today’s departures without signing in. Treat it like a key to the shop.",
-    "sharedCheckIn": "Anyone with this link can mark a diver as arrived without signing in. Treat it like a key to the shop."
+    "sharedCheckIn": "Anyone with this link can mark a diver as arrived without signing in. Treat it like a key to the shop.",
+    "expiresCheckIn": "It stops working in {months, plural, one {# month} other {# months}}. Renew it under Screens before then."
   },
   "list": {
     "heading": "Screens",
@@ -32,6 +33,11 @@
     "neverShown": "Not opened yet",
     "namesOn": "Crew named",
     "namesOff": "Nobody named",
+    "expires": "Expires {when}",
+    "expired": "Expired {when}",
+    "renew": "Renew",
+    "renewNamed": "Renew {label}",
+    "renewing": "Renewing…",
     "revoke": "Revoke",
     "revokeNamed": "Revoke {label}",
     "revoking": "Revoking…",
@@ -42,7 +48,8 @@
   "notice": {
     "denied": "Only an owner or manager can change lobby screens.",
     "invalidLabel": "Give the screen a name of up to {max, plural, one {# character} other {# characters}}.",
-    "revoked": "Link revoked."
+    "revoked": "Link revoked.",
+    "renewed": "Link renewed."
   },
   "world": {
     "heading": "What the world can see",

@@ -705,8 +705,9 @@ These are per-feature rough edges on shipped work, not future subsystems. They a
 - Setting a per-trip crew role from Today's departure board (assign-only by design), and a
   vocabulary for roles this enum cannot express (assistant instructor, safety diver) —
   [20260803-per-trip-crew-role](../../architecture/decisions/20260803-per-trip-crew-role.md).
-- Retrying a `stripe_invoice_snapshot` erasure obligation, if Stripe ever exposes an API that clears
-  a finalized invoice's identity snapshot —
+- Retrying a `stripe_invoice_snapshot` or `stripe_checkout_session_snapshot` erasure obligation, if
+  Stripe ever exposes an API that clears the identity snapshot a finalized invoice or a Checkout
+  Session holds —
   [20260803-processor-erasure-obligations](../../architecture/decisions/20260803-processor-erasure-obligations.md).
 - A free-text companion field for `certification_agency`'s `other` value. CMAS, RAID, GUE and BSAC
   now have their own enum values (2026-08-06), but a diver holding an IANTD, SEI, ANDI, ACUC, PSAI or

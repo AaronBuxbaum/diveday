@@ -105,7 +105,7 @@
     "descriptionLabel": "Description",
     "descriptionPlaceholder": "Sites, conditions, who it’s for, required certs.",
     "isPrivateLabel": "Private charter",
-    "isPrivateHint": "Off the public schedule. Only divers with the link can book it.",
+    "isPrivateHint": "Off the public schedule. Anyone with the link can see the departure and book a seat.",
     "selfGuidedLabel": "Self-guided dive",
     "selfGuidedHint": "Buddy pairs go in without a guide, so DiveDay stops asking you to roster one.",
     "daysLabel": "How many days",

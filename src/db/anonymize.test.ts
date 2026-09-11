@@ -1,6 +1,7 @@
 import { and, eq, gte, inArray, ne } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
+import type { DeleteCustomerResult } from "@/lib/payments/customers";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createGiftBooking } from "./bookings";
@@ -8,9 +9,12 @@ import { mergeDiverRecords } from "./diver-merge";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { saveShopIntegration } from "./integrations";
 import { recordRollCall } from "./manifests";
+import { listOwedProcessorErasures } from "./processor-erasure";
 import {
   authProviderAccounts,
   authVerifications,
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookingGifts,
   bookingPaymentEvents,
   bookingPayments,
@@ -27,6 +31,7 @@ import {
   people,
   personRoles,
   priorGearAssignments,
+  processorErasureObligations,
   recapPulses,
   rollCallEvents,
   shops,
@@ -41,6 +46,7 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
+import { upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -1212,5 +1218,271 @@ describe("anonymizeDiver — the address sweeps stop at the shop boundary", () =
     const theirs = await db.select().from(formDrafts).where(eq(formDrafts.shopId, other.id));
     expect(theirs).toHaveLength(1);
     expect(theirs[0]?.fields.email).toBe(shared);
+  });
+});
+
+/**
+ * The erasure ledger used to read `orders` and nothing else, so a diver who
+ * only ever tipped — or who paid through a checkout that never became an
+ * order — was erased locally and left no trace of what Stripe still held
+ * (issue #1621, ADR 20260803-processor-erasure-obligations).
+ *
+ * A Checkout Session is a snapshot: Stripe can expire one but rewrites neither
+ * `customer_email` nor `customer_details`, so it is owed manually like an
+ * invoice. The Customer beside it is raised only when Stripe reported minting
+ * one, because `customer_creation: "if_required"` means most sessions mint
+ * none.
+ */
+describe("anonymizeDiver — the Stripe objects that live outside orders (issue #1621)", () => {
+  /** A provider that answers the same way every time and counts its calls. */
+  function providerReturning(result: DeleteCustomerResult) {
+    return { deleteCustomer: vi.fn().mockResolvedValue(result) };
+  }
+
+  async function obligationsFor(
+    db: Awaited<ReturnType<typeof erasureFixtures>>["db"],
+    shopId: string,
+  ) {
+    const rows = await db
+      .select()
+      .from(processorErasureObligations)
+      .where(eq(processorErasureObligations.shopId, shopId));
+    return rows.map((row) => `${row.target}:${row.externalId}`).sort();
+  }
+
+  async function seededTripId(
+    db: Awaited<ReturnType<typeof erasureFixtures>>["db"],
+    shopId: string,
+  ) {
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shopId))
+      .orderBy(trips.id)
+      .limit(1);
+    if (!trip) throw new Error("expected a seeded departure");
+    return trip.id;
+  }
+
+  it("raises the session and the customer for a diver who only ever tipped", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Tipping Tomás", email: "tomas@example.com" })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
+    const [booking] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: await seededTripId(db, shop.id), personId: diver.id })
+      .returning({ id: bookings.id });
+    if (!booking) throw new Error("fixture insert failed");
+    await db.insert(tips).values({
+      shopId: shop.id,
+      bookingId: booking.id,
+      stripeAccountId: "acct_test",
+      stripeSessionId: "cs_tip",
+      stripeCustomerId: "cus_tip",
+      currency: "usd",
+      amountCents: 2000,
+      checkoutUrl: "https://checkout.stripe.com/c/pay/cs_tip",
+    });
+    const provider = providerReturning({ status: "deleted" });
+
+    const result = await anonymizeDiver(
+      db,
+      { shopId: shop.id, personId: diver.id, actorPersonId: owner.id },
+      { customerProvider: provider },
+    );
+    expect(result.ok).toBe(true);
+
+    // No order, so no invoice snapshot — the ledger names exactly the two
+    // objects this tip put at Stripe.
+    expect(await obligationsFor(db, shop.id)).toEqual([
+      "stripe_checkout_session_snapshot:cs_tip",
+      "stripe_customer:cus_tip",
+    ]);
+    expect(provider.deleteCustomer).toHaveBeenCalledWith(
+      "acct_test",
+      "cus_tip",
+      expect.stringContaining(":customer-delete"),
+    );
+    // The session is the manual half: nothing automated reaches it.
+    const owed = await listOwedProcessorErasures(db, shop.id);
+    expect(owed.map((row) => row.target)).toEqual(["stripe_checkout_session_snapshot"]);
+  });
+
+  it("raises no customer obligation for a tip Stripe never minted one for", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Abandoned Ama", email: "ama@example.com" })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
+    const [booking] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: await seededTripId(db, shop.id), personId: diver.id })
+      .returning({ id: bookings.id });
+    if (!booking) throw new Error("fixture insert failed");
+    await db.insert(tips).values({
+      shopId: shop.id,
+      bookingId: booking.id,
+      stripeAccountId: "acct_test",
+      stripeSessionId: "cs_abandoned",
+      // Null, because `customer_creation: "if_required"` created none. An
+      // obligation raised here would point an owner at an object that never
+      // existed.
+      stripeCustomerId: null,
+      currency: "usd",
+      amountCents: 1500,
+      // The link is already gone, which is the case the separate read exists
+      // for: the `checkoutUrl` UPDATE would not have returned this row.
+      checkoutUrl: null,
+    });
+    const provider = providerReturning({ status: "deleted" });
+
+    await anonymizeDiver(
+      db,
+      { shopId: shop.id, personId: diver.id, actorPersonId: owner.id },
+      { customerProvider: provider },
+    );
+
+    expect(await obligationsFor(db, shop.id)).toEqual([
+      "stripe_checkout_session_snapshot:cs_abandoned",
+    ]);
+    expect(provider.deleteCustomer).not.toHaveBeenCalled();
+  });
+
+  it("raises a checkout this diver paid for but holds no seat on", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const [payer] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Paying Priya", email: "priya@example.com" })
+      .returning({ id: people.id });
+    const [traveller] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Travelling Tom", email: "tom@example.com" })
+      .returning({ id: people.id });
+    if (!payer || !traveller) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: payer.id, role: "diver" });
+    const tripId = await seededTripId(db, shop.id);
+    const [theirSeat] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId, personId: traveller.id })
+      .returning({ id: bookings.id });
+    if (!theirSeat) throw new Error("fixture insert failed");
+    const [checkout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId,
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_party",
+        stripeCustomerId: "cus_party",
+        currency: "usd",
+        amountPerDiverCents: 12000,
+        totalCents: 12000,
+        customerEmail: "priya@example.com",
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_party",
+      })
+      .returning({ id: bookingCheckouts.id });
+    if (!checkout) throw new Error("fixture insert failed");
+    await db
+      .insert(bookingCheckoutBookings)
+      .values({ shopId: shop.id, checkoutId: checkout.id, bookingId: theirSeat.id });
+    const provider = providerReturning({ status: "deleted" });
+
+    await anonymizeDiver(
+      db,
+      { shopId: shop.id, personId: payer.id, actorPersonId: owner.id },
+      { customerProvider: provider },
+    );
+
+    // The booking join cannot see this checkout at all — the address sweep is
+    // the only handle, and it is the one that now feeds the ledger.
+    expect(await obligationsFor(db, shop.id)).toEqual([
+      "stripe_checkout_session_snapshot:cs_party",
+      "stripe_customer:cus_party",
+    ]);
+  });
+
+  it("folds one customer object reached twice into a single obligation", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Repeat Rina", email: "rina@example.com" })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
+    const tripId = await seededTripId(db, shop.id);
+    const [booking] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId, personId: diver.id })
+      .returning({ id: bookings.id });
+    if (!booking) throw new Error("fixture insert failed");
+    await db.insert(orders).values({
+      shopId: shop.id,
+      personId: diver.id,
+      createdByPersonId: owner.id,
+      currency: "usd",
+      totalCents: 18000,
+      stripeAccountId: "acct_test",
+      stripeCustomerId: "cus_rina",
+      stripeInvoiceId: "in_rina",
+    });
+    await db.insert(tips).values({
+      shopId: shop.id,
+      bookingId: booking.id,
+      stripeAccountId: "acct_test",
+      stripeSessionId: "cs_rina",
+      // The same returning diver, so Stripe reused the customer object her
+      // order already named.
+      stripeCustomerId: "cus_rina",
+      currency: "usd",
+      amountCents: 2500,
+      checkoutUrl: "https://checkout.stripe.com/c/pay/cs_rina",
+    });
+    // A sole-occupant checkout on her own seat, on that same customer again.
+    const [checkout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId,
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_rina_seat",
+        stripeCustomerId: "cus_rina",
+        currency: "usd",
+        amountPerDiverCents: 12000,
+        totalCents: 12000,
+        customerEmail: "rina@example.com",
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_rina_seat",
+      })
+      .returning({ id: bookingCheckouts.id });
+    if (!checkout) throw new Error("fixture insert failed");
+    await db
+      .insert(bookingCheckoutBookings)
+      .values({ shopId: shop.id, checkoutId: checkout.id, bookingId: booking.id });
+    const provider = providerReturning({ status: "deleted" });
+
+    await anonymizeDiver(
+      db,
+      { shopId: shop.id, personId: diver.id, actorPersonId: owner.id },
+      { customerProvider: provider },
+    );
+
+    // Four objects, four rows: two distinct sessions, one invoice, and one
+    // customer no matter how many rows pointed at it. One delete, not three.
+    expect(await obligationsFor(db, shop.id)).toEqual([
+      "stripe_checkout_session_snapshot:cs_rina",
+      "stripe_checkout_session_snapshot:cs_rina_seat",
+      "stripe_customer:cus_rina",
+      "stripe_invoice_snapshot:in_rina",
+    ]);
+    expect(provider.deleteCustomer).toHaveBeenCalledTimes(1);
   });
 });

@@ -453,12 +453,13 @@
       },
       "erasureTarget": {
         "stripe_customer": "Cliente de Stripe",
-        "stripe_invoice_snapshot": "Factura de Stripe"
+        "stripe_invoice_snapshot": "Factura de Stripe",
+        "stripe_checkout_session_snapshot": "Página de pago de Stripe"
       },
       "processorErasures": {
         "sectionLabel": "Borrados sin terminar en Stripe",
         "heading": "{count, plural, one {# registro} other {# registros}} de un buceador borrado siguen en Stripe",
-        "detail": "Borrar a un buceador también elimina su cliente de Stripe. Estos no se completaron. Un registro de cliente se reintenta solo esta noche. Una factura no: solo una solicitud de eliminación de datos a Stripe borra el nombre y el correo que copió. Preséntala y márcalo como hecho.",
+        "detail": "Borrar a un buceador también elimina su cliente de Stripe. Estos no se completaron. Un registro de cliente se reintenta solo esta noche. Una factura o una página de pago no: solo una solicitud de eliminación de datos a Stripe borra el nombre y el correo que copiaron. Preséntala y márcalo como hecho.",
         "raised": "registrado el {date}",
         "retry": "Reintentar borrado",
         "retrying": "Reintentando…",

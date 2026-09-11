@@ -453,12 +453,13 @@
       },
       "erasureTarget": {
         "stripe_customer": "Stripe customer",
-        "stripe_invoice_snapshot": "Stripe invoice"
+        "stripe_invoice_snapshot": "Stripe invoice",
+        "stripe_checkout_session_snapshot": "Stripe payment page"
       },
       "processorErasures": {
         "sectionLabel": "Erasures not finished at Stripe",
         "heading": "{count, plural, one {# record} other {# records}} from an erased diver still at Stripe",
-        "detail": "Erasing a diver also deletes their Stripe customer. These didn’t finish. A customer record retries on its own tonight. An invoice can’t: only a data-deletion request to Stripe clears the name and email it copied. File one, then mark it done.",
+        "detail": "Erasing a diver also deletes their Stripe customer. These didn’t finish. A customer record retries on its own tonight. An invoice or a payment page can’t: only a data-deletion request to Stripe clears the name and email it copied. File one, then mark it done.",
         "raised": "raised {date}",
         "retry": "Retry delete",
         "retrying": "Retrying…",

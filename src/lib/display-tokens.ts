@@ -1,3 +1,5 @@
+import { DAY_MS } from "@/lib/clock";
+
 /**
  * The departures board's framework-free rules (issue #1426, N-23).
  *
@@ -5,12 +7,37 @@
  * dock tablet: `/board/<token>`. The token itself comes from
  * `src/lib/bearer-tokens.ts`; the rows live in `display_tokens`
  * (`src/db/display-tokens.ts`); what the board may show is decided by the
- * reader in `src/db/departures-board.ts`. This module holds the three rules
- * that are neither storage nor rendering.
+ * reader in `src/db/departures-board.ts`. This module holds the rules that are
+ * neither storage nor rendering.
  */
 
 /** A label is the shop's own word for which screen this is — one short line. */
 export const DISPLAY_LABEL_MAX_LENGTH = 60;
+
+/**
+ * **How long a check-in link lives** (issue #1609, security review).
+ *
+ * A season plus a shoulder: a shop that mounts a tablet in April is asked
+ * about it once, before the next April comes round. Long enough that renewing
+ * is not a chore inside one dive season, short enough that a URL photographed
+ * off a counter tablet stops opening anything in under a year.
+ *
+ * A **board** link has no expiry at all, and that is not an oversight. The
+ * table's own docblock makes the argument for it: a screen on a wall going
+ * dark is noticed by nobody until a diver asks why the board is blank, and the
+ * board reads. The kiosk **writes** — it records an arrival against a real
+ * booking — so the two purposes no longer share one lifetime.
+ */
+export const CHECK_IN_LINK_TTL_DAYS = 180;
+
+/**
+ * When a check-in link minted or renewed at `now` stops verifying. Derived
+ * from `purpose` inside the writer (`src/db/display-tokens.ts`), never from a
+ * caller's argument, so no call site can mint a kiosk link that never expires.
+ */
+export function checkInLinkExpiresAt(now: Date): Date {
+  return new Date(now.getTime() + CHECK_IN_LINK_TTL_DAYS * DAY_MS);
+}
 
 /**
  * The board's path for a raw token. The token is base64url and survives a

@@ -68,6 +68,7 @@ function fakeCheckout(
           0,
         ),
         taxAmountCents: null,
+        stripeCustomerId: null,
         expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
       };
     },

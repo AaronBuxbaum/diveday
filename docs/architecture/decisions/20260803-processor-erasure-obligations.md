@@ -125,17 +125,56 @@ does not roll back an erasure a diver asked for. No network call happens inside 
   done there, meaningless elsewhere — the same reasoning as `shop_stripe_accounts`. An outstanding
   compliance obligation also has no business travelling into a bundle where nobody can discharge it.
 
+## Widened 2026-09-11 — tips and booking checkouts (issue #1621)
+
+The original mechanism read **only** `orders`, and orders are not the only table holding a Stripe
+object that stands for a person. `tips.stripe_session_id` and `booking_checkouts.stripe_session_id`
+are the other two, and `shop_stripe_accounts` is the only remaining Stripe handle in the schema that
+names the shop rather than a diver. So a diver who only ever tipped, or who paid through a checkout
+that never became an order, was erased locally and left nothing in this ledger at all — the exact
+silence the ledger exists to break. `src/db/erasure-coverage.test.ts` now asserts over every
+processor handle in `schema.ts`, so a fourth table cannot be added without a decision being recorded
+about it.
+
+**A Checkout Session is a snapshot, not a deletable object.** Stripe exposes
+`POST /v1/checkout/sessions/{id}/expire`, which closes a session, and no delete at all. Expiring
+rewrites neither `customer_email` (handed over at creation) nor `customer_details` (copied on
+completion). That makes a session the same shape as a finalized invoice:
+`stripe_checkout_session_snapshot`, never retried, discharged only by an owner attesting to Stripe's
+data-deletion request.
+
+**A Customer obligation is raised only from a recorded id.** Both session kinds are opened with
+`customer_creation: "if_required"`, so Stripe mints a Customer for some and not others, and nothing
+local could tell which without asking. Part 1 of this issue records the id Stripe reports
+(`tips.stripe_customer_id`, `booking_checkouts.stripe_customer_id`, both nullable); a null column
+means Stripe created no Customer, and no obligation is raised. Guessing one would put an owner in
+front of a Retry button aimed at an object that never existed.
+
+**Which checkouts count as this diver's** is not re-decided here. The two sweeps in
+`src/db/anonymize.ts` that already blank `booking_checkouts.customer_email` — by stored address, and
+by booking when the checkout covers nothing but this diver's seats — now also hand back the Stripe
+handles on the rows they touched. A party checkout reached by both folds to one obligation on the
+table's `(shop_id, target, external_id)` uniqueness. For tips the handle is `tips.booking_id`: a tip
+belongs to exactly one booking and `startTipCheckout` takes the session's `customer_email` straight
+off that booking's person, so the address is the diver's by construction.
+
+**The cost, accepted knowingly:** a diver with several checkouts raises several manual rows an owner
+has to attest to, one per Stripe object. That is the shape `stripe_invoice_snapshot` already had,
+and the alternative — one row per person — cannot be discharged, because the thing being attested to
+is a request filed about a specific object.
+
 ## What this does not do
 
 Stated plainly, because a compliance mechanism that overstates itself is worse than none:
 
-- **It does not erase the diver from finalized invoices.** That is the `stripe_invoice_snapshot`
-  residue, and it needs a data-deletion request to Stripe. An undischarged row means the erasure is
-  genuinely incomplete.
+- **It does not erase the diver from finalized invoices or Checkout Sessions.** Those are the
+  `stripe_invoice_snapshot` and `stripe_checkout_session_snapshot` residues, and each needs a
+  data-deletion request to Stripe. An undischarged row means the erasure is genuinely incomplete.
 - **A discharged `stripe_invoice_snapshot` row is the shop's attestation, not a verified fact.**
   DiveDay does not read anything back from Stripe to confirm it.
-- **It does not reach a customer object no order points at.** Orders are the only handle; a Stripe
-  customer created outside this product is outside this mechanism.
+- **It does not reach a customer object no row of ours points at.** `orders`, `tips` and
+  `booking_checkouts` are the handles; a Stripe customer created outside this product is outside
+  this mechanism.
 - **It is raised only from `anonymizeDiver`,** with no back-fill for erasures performed before this
   table existed.
 

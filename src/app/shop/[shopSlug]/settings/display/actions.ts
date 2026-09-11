@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { issueDisplayToken, revokeDisplayToken } from "@/db/display-tokens";
+import { issueDisplayToken, renewDisplayToken, revokeDisplayToken } from "@/db/display-tokens";
 import { setShopPublicBoatLine, setShopYearOnDiveday } from "@/db/shops";
 import { boardPath } from "@/lib/display-tokens";
 import { kioskCheckInPath } from "@/lib/kiosk-check-in";
@@ -56,9 +56,9 @@ async function requestOrigin(): Promise<string> {
 }
 
 /**
- * The panel's single mutation, dispatched on `intent` — one action for the
- * same reason the calendar panel has one: two `useActionState` hooks cannot
- * say which ran last.
+ * The panel's single mutation, dispatched on `intent` (issue, revoke, renew) —
+ * one action for the same reason the calendar panel has one: two
+ * `useActionState` hooks cannot say which ran last.
  *
  * Whose shop this is comes from the session, never the form, and the raw
  * token comes back in the action's return value rather than a redirect
@@ -74,6 +74,22 @@ export async function displayLinkAction(
   const session = await requireStaffSession();
   const db = await getDb();
   const path = shopPath(session.user.shopSlug, "settings", "display");
+
+  if (formData.get("intent") === "renew") {
+    const id = formData.get("id");
+    if (typeof id !== "string" || !UUID_SHAPE.test(id))
+      return { status: "denied", intent: "renew" };
+    // The store re-derives the owner/manager gate itself: renewing resets the
+    // full lifetime of a credential that records arrivals, so the button this
+    // form came from proves nothing (issue #1609).
+    const renewed = await renewDisplayToken(db, {
+      shopId: session.user.shopId,
+      personId: session.user.personId,
+      id,
+    });
+    revalidatePath(path);
+    return renewed ? { status: "renewed", id } : { status: "denied", intent: "renew" };
+  }
 
   if (formData.get("intent") === "revoke") {
     const id = formData.get("id");

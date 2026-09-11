@@ -415,6 +415,103 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
 };
 
 /**
+ * Every column in the schema that stores a **handle to an object a payment
+ * processor holds**, and what erasure owes against each.
+ *
+ * The processor half of erasure is a ledger (`processor_erasure_obligations`,
+ * ADR 20260803-processor-erasure-obligations) fed from a list of source
+ * columns someone thought to name — and that list was `orders` alone, while
+ * `tips` and `booking_checkouts` carried session ids for a person the whole
+ * time (issue #1621). That is the same failure mode as the keep-list above:
+ * invisible until a person thinks of the table. So the census is exhaustive
+ * rather than sampled, and a new column carrying a `cus_…`/`cs_…`/`in_…` fails
+ * this file on the day it is added.
+ *
+ * **What it proves, and what it does not.** It proves every processor handle in
+ * the schema was *decided about*: `person` means the object is held on behalf
+ * of one diver and erasure owes an obligation for it, `shop` means it names the
+ * shop's own Stripe furniture and no diver is behind it, `ledger` means the
+ * column is the obligation record itself. It does **not** prove the erasure
+ * actually raises a row for every `person` entry — that is asserted per case in
+ * `anonymize.test.ts`, against the write rather than against a name.
+ */
+const PROCESSOR_OBJECT_COLUMNS: Record<
+  string,
+  { held: "person" | "shop" | "ledger"; why: string }
+> = {
+  "orders.stripe_customer_id": {
+    held: "person",
+    why: "a `cus_…` created for the diver being billed; deleted through `DELETE /v1/customers/{id}`",
+  },
+  "orders.stripe_invoice_id": {
+    held: "person",
+    why: "a finalized invoice carrying a snapshot of the diver's name and email that no API rewrites; manual, discharged by a human attesting to Stripe's data-deletion request",
+  },
+  "booking_checkouts.stripe_session_id": {
+    held: "person",
+    why: "a Checkout Session holding `customer_email` as given and `customer_details` after completion; Stripe can expire a session but never rewrites either, so it is the same manual shape as an invoice snapshot",
+  },
+  "booking_checkouts.stripe_customer_id": {
+    held: "person",
+    why: 'the `cus_…` Stripe minted for that session, recorded so an obligation can name a customer object that actually exists (issue #1621). Null when `customer_creation: "if_required"` created none, and then nothing is owed',
+  },
+  "tips.stripe_session_id": {
+    held: "person",
+    why: "the tipping diver's own Checkout Session — same shape and same manual discharge as a booking checkout's",
+  },
+  "tips.stripe_customer_id": {
+    held: "person",
+    why: "the `cus_…` that tip's session created, on the same `if_required` rule as booking_checkouts",
+  },
+  "orders.stripe_account_id": {
+    held: "shop",
+    why: "the connected account the order lives on — the shop's, and the scope an obligation is discharged against, never a person's object",
+  },
+  "booking_checkouts.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
+  "tips.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
+  "shop_stripe_accounts.stripe_account_id": {
+    held: "shop",
+    why: "the shop's own Connect account. Disconnecting it is a shop decision, not an erasure",
+  },
+  "shop_promo_codes.stripe_coupon_id": {
+    held: "shop",
+    why: "a discount the shop published; no diver is behind the object",
+  },
+  "shop_promo_codes.stripe_promotion_code_id": { held: "shop", why: "as stripe_coupon_id above" },
+  "trip_last_minute_promos.stripe_coupon_id": {
+    held: "shop",
+    why: "a trip-scoped deal the shop published; the redemption that ties a person to it lives locally and is erased locally",
+  },
+  "trip_last_minute_promos.stripe_promotion_code_id": {
+    held: "shop",
+    why: "as stripe_coupon_id above",
+  },
+  "payment_operation_intents.stripe_object_id": {
+    held: "shop",
+    why: "the idempotency ledger's record of which object an attempt produced — a pointer to an object already censused under the table that owns it, never a second one",
+  },
+  "imported_payment_history.stripe_reference": {
+    held: "shop",
+    why: "a free-text reference a shop typed or imported from its previous system. It is the shop's own bookkeeping note, scrubbed with the rest of the row rather than chased at a processor",
+  },
+  "processor_erasure_obligations.stripe_account_id": {
+    held: "ledger",
+    why: "the obligation row's own scope column — the ledger, not a source for it",
+  },
+};
+
+/** `table.column` for every column that names an object a processor holds. */
+function processorObjectColumns(tables: Map<string, TableFacts>): string[] {
+  const found: string[] = [];
+  for (const [name, facts] of tables) {
+    for (const column of facts.columns) {
+      if (column.startsWith("stripe_")) found.push(`${name}.${column}`);
+    }
+  }
+  return found.sort();
+}
+
+/**
  * Run `work` against a db that records every table written through it — inside
  * the transaction as well as outside, since the erasure does all of its work on
  * a `tx`. The writes still execute, so a path that would fail still fails.
@@ -601,5 +698,15 @@ describe("erasure coverage", () => {
     expect([...tables.keys()].filter((name) => !scoped.has(name)).sort()).toEqual(
       Object.keys(OUTSIDE_CLOSURE_REASONS).sort(),
     );
+  });
+
+  /**
+   * Issue #1621: the ledger's source list was `orders` alone while two other
+   * tables held a Checkout Session for a person. Nothing failed — an erasure
+   * simply reported success over objects Stripe still held, which is a promise
+   * broken rather than a bug, and exactly the asymmetry this file exists for.
+   */
+  it("decides every processor handle in the schema, not only the ones somebody remembered", () => {
+    expect(processorObjectColumns(tables)).toEqual(Object.keys(PROCESSOR_OBJECT_COLUMNS).sort());
   });
 });

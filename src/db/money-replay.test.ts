@@ -427,6 +427,7 @@ describe("the recovery cron and the completion webhook, in every order that can 
             checkoutUrl: null,
             amountTotalCents: REEF_PRICE_CENTS,
             taxAmountCents: null,
+            stripeCustomerId: null,
             expiresAt: null,
           },
         };

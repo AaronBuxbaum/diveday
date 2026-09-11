@@ -5839,9 +5839,13 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-calendar", scheme);
       });
 
-      // Lobby display (issue #1426) with one screen listed — minted through
-      // the seed route rather than the form, so the shown-once link block is
-      // *not* in the picture: it carries a token that differs on every run.
+      // Lobby display (issue #1426) with both kinds of screen listed — minted
+      // through the seed route rather than the form, so the shown-once link
+      // block is *not* in the picture: it carries a token that differs on every
+      // run. Both kinds, because the rows are not the same shape: only the
+      // check-in link expires, so only it prints an expiry line and carries a
+      // Renew beside its Revoke (issue #1609). The date is stable because the
+      // e2e harness freezes the clock (src/lib/clock.ts).
       test(`the lobby display settings render true to the design (${scheme})`, async ({
         page,
         request,
@@ -5850,9 +5854,14 @@ for (const scheme of ["light", "dark"] as const) {
           data: { label: "Lobby TV" },
         });
         expect(seeded.ok()).toBe(true);
+        const kiosk = await request.post("/api/test/seed-display-token", {
+          data: { label: "Counter tablet", purpose: "check_in" },
+        });
+        expect(kiosk.ok()).toBe(true);
         await page.goto("/shop/blue-mantis/settings/display");
         await page.getByRole("button", { name: "Create link" }).waitFor();
         await page.getByText("Lobby TV").waitFor();
+        await page.getByRole("button", { name: "Renew Counter tablet" }).waitFor();
         await capture(page, "settings-display", scheme);
       });
 

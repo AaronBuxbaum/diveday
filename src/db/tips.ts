@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { majorToMinor, type ShopCurrency, toShopCurrency } from "@/lib/money";
 import {
@@ -314,6 +314,42 @@ export async function getLatestTipForBooking(
 }
 
 /**
+ * Record the `cus_…` Stripe created for this tip's session, once Stripe says
+ * one exists — the tip-table twin of `recordCheckoutStripeCustomer`
+ * (src/db/checkouts.ts), including the write-once `IS NULL` guard that makes a
+ * replayed webhook a no-op.
+ *
+ * Deliberately a second writer rather than one that guesses the table from the
+ * session id: a tip and a booking checkout share the Stripe session-id space
+ * but must never share a statement (ADR 20260726-post-trip-tipping).
+ */
+export async function recordTipStripeCustomer(
+  db: DbExecutor,
+  input: {
+    stripeSessionId: string;
+    stripeCustomerId: string;
+    /** See markTipPaidBySessionId — the same defense-in-depth cross-check. */
+    expectedAccountId?: string;
+  },
+): Promise<boolean> {
+  if (input.stripeCustomerId.trim().length === 0) return false;
+  const [updated] = await db
+    .update(tips)
+    .set({ stripeCustomerId: input.stripeCustomerId })
+    .where(
+      and(
+        eq(tips.stripeSessionId, input.stripeSessionId),
+        isNull(tips.stripeCustomerId),
+        input.expectedAccountId === undefined
+          ? undefined
+          : eq(tips.stripeAccountId, input.expectedAccountId),
+      ),
+    )
+    .returning({ id: tips.id });
+  return updated !== undefined;
+}
+
+/**
  * Mark a tip paid from Stripe's own webhook evidence. Idempotent: an
  * already-paid tip is returned unchanged rather than re-stamping
  * `completedAt`. Deliberately does nothing else — no booking-payment
@@ -397,6 +433,15 @@ export async function refreshTipFromStripe(
 
   const result = await checkout.retrieveCheckoutSession(row.stripeAccountId, row.stripeSessionId);
   if (result.status !== "ok") return row;
+  // Same reason as refreshCheckoutFromStripe: this path is the only one that
+  // runs when a webhook never arrives, so it records the Customer id too
+  // (issue #1621).
+  if (result.session.stripeCustomerId) {
+    await recordTipStripeCustomer(db, {
+      stripeSessionId: row.stripeSessionId,
+      stripeCustomerId: result.session.stripeCustomerId,
+    });
+  }
   if (result.session.paymentStatus === "paid") {
     return markTipPaidBySessionId(db, row.stripeSessionId);
   }

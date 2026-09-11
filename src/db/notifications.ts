@@ -91,6 +91,25 @@ const RETRY_WINDOW_MS = 3 * DAILY_TICK_INTERVAL_MS;
 /** Derived, never hand-tuned: one attempt per drain pass inside the window. */
 const RETRY_QUEUE_MAX_ATTEMPTS = dailyPassesWithin(RETRY_WINDOW_MS);
 
+/**
+ * How many drain passes a row parked as `sealed_payload_unreadable` keeps
+ * being re-offered for, before the drain stops asking.
+ *
+ * Deliberately not the three days above, because the two faults have
+ * different owners. A provider that refuses a send is telling us about
+ * itself, and a fourth silent attempt buys nothing a human could act on. A
+ * payload that will not open is telling us about *this deployment* — a
+ * rotated or mis-set `SECRET_ENCRYPTION_KEY` — and whoever can put the key
+ * back has to notice the fault first. Three daily passes is not that window;
+ * a fortnight is roughly one person's holiday, which is the real unit here.
+ *
+ * Past the bound the row stays `failed` and still holds its payload and its
+ * handles — exactly what it did before this bound existed (issue #1340).
+ * Nothing expires and nothing is thrown away; the drain only stops spending
+ * one UPDATE a day on a key that is evidently not coming back.
+ */
+export const UNREADABLE_RETRY_MAX_ATTEMPTS = dailyPassesWithin(14 * DAILY_TICK_INTERVAL_MS);
+
 /** Use the environment-configured SES provider by default; tests may inject a fake. */
 export function notificationProviderForDb(provider?: NotificationProvider): NotificationProvider {
   return provider ?? notificationProviderFromEnvironment();
@@ -152,7 +171,10 @@ function queueSealingKey(where: "queue" | "drain"): SecretKey | null {
  * authenticates, so a modified ciphertext fails to open rather than decrypting
  * to something that then gets sent. The caller parks the row loudly instead
  * (`sealed_payload_unreadable`), because throwing the notification away on a
- * key rotation is exactly the silent loss this whole queue exists to prevent.
+ * key rotation is exactly the silent loss this whole queue exists to prevent —
+ * and the drain re-offers a row parked under that code on each following pass
+ * until its bound, so what is retained here is a recovery rather than a claim
+ * that somebody will one day go and look (issue #1340).
  */
 function openQueuedPayload(sealed: string, key: SecretKey): Notification | null {
   const plaintext = openSecret(sealed, key);
@@ -448,6 +470,38 @@ export type NotificationRetrySummary = {
   failed: number;
 };
 
+/**
+ * The rows a pass is allowed to claim.
+ *
+ * `queued` is the ordinary arm. The second is the one issue #1340 added: a row
+ * parked as `sealed_payload_unreadable` is *waiting for a restored key*, not
+ * finished, and until this predicate existed nothing anywhere moved it back.
+ * The payload and the four handles that branch deliberately keeps sat there
+ * for good, and its written promise — "a restored key can still drain it" —
+ * was true of no code path in this file.
+ *
+ * One error code and nothing else, because every other `failed` row has
+ * already dropped its payload: re-offering one would claim a row the
+ * `missing_payload` branch immediately re-fails, which is churn dressed as
+ * recovery.
+ *
+ * **The attempts bound is in the predicate, not in the loop**, for the reason
+ * `retryPendingProcessorErasures` (src/db/processor-erasure.ts) writes down: a
+ * parked row keeps a `next_attempt_at` and sits near the head of this
+ * oldest-first, limited scan, so filtering after the LIMIT would let a handful
+ * of permanently-dead rows crowd out every genuinely due one.
+ */
+function drainableStatus() {
+  return or(
+    eq(notificationSendQueue.status, "queued"),
+    and(
+      eq(notificationSendQueue.status, "failed"),
+      eq(notificationSendQueue.errorCode, "sealed_payload_unreadable"),
+      lt(notificationSendQueue.attempts, UNREADABLE_RETRY_MAX_ATTEMPTS),
+    ),
+  );
+}
+
 /** Drain durable transient failures; safe for overlapping cron invocations. */
 export async function drainNotificationRetries(
   db: AppDb,
@@ -457,14 +511,18 @@ export async function drainNotificationRetries(
   // Resolved before anything is claimed, and a `null` ends the pass having
   // touched nothing.
   //
-  // This is not a nicety. Every terminal write below is genuinely terminal —
-  // nothing anywhere moves a `failed` row back to `queued` — so a pass that ran
-  // with an unset or rotated key would claim every due row, fail to open it,
-  // and park the lot `failed` for good: every pending waiver link, password
-  // reset, staff invite and booking confirmation destroyed by one tick of a
-  // misconfigured deploy. Returning here is what makes a restored key a
+  // This is not a nicety. A pass that ran with an unset or rotated key would
+  // claim every due row, fail to open it, and park the lot `failed` in one
+  // tick: every pending waiver link, password reset, staff invite and booking
+  // confirmation, all at once. Returning here is what makes a restored key a
   // recovery rather than an autopsy, and it costs nothing — a pass with no key
   // could not have sent anything anyway.
+  //
+  // It is still the first line of defence rather than the only one. Since
+  // issue #1340 a parked row is re-offered by `drainableStatus()` until its
+  // attempts bound, so the *wrong* key — which gets past this check, because a
+  // key is set — is survivable too. Every other terminal write below remains
+  // genuinely terminal.
   const key = queueSealingKey("drain");
   const summary: NotificationRetrySummary = { scanned: 0, sent: 0, queued: 0, failed: 0 };
   if (!key) return summary;
@@ -490,7 +548,7 @@ export async function drainNotificationRetries(
     .from(notificationSendQueue)
     .where(
       and(
-        eq(notificationSendQueue.status, "queued"),
+        drainableStatus(),
         lte(notificationSendQueue.nextAttemptAt, now),
         or(isNull(notificationSendQueue.lockedUntil), lt(notificationSendQueue.lockedUntil, now)),
       ),
@@ -521,7 +579,11 @@ export async function drainNotificationRetries(
       .where(
         and(
           eq(notificationSendQueue.id, candidate.id),
-          eq(notificationSendQueue.status, "queued"),
+          // The same predicate the SELECT used, never a narrower one: widening
+          // only the SELECT would hand this compare-and-swap a parked row it
+          // then refuses, and the pass would re-scan the same row every tick
+          // while claiming none of them.
+          drainableStatus(),
           or(isNull(notificationSendQueue.lockedUntil), lt(notificationSendQueue.lockedUntil, now)),
         ),
       )
@@ -556,18 +618,24 @@ export async function drainNotificationRetries(
 
     // Reaching here means the key is present and this particular row still will
     // not open: the wrong key, or a value that failed its authentication tag.
-    // Neither is recoverable by waiting, so the row is terminal — and it is
-    // parked under its own code rather than folded into `missing_payload`
+    // It is parked under its own code rather than folded into `missing_payload`
     // because the two describe different faults, and a `failed` row's
     // `error_code` is the only place either is written down. (The recoverable
     // case, no key at all, never gets this far: the pass returned above.)
     //
     // **It keeps its payload and its handles, and that is the one write here
     // that does.** The value is left in place so a restored key can still
-    // drain it (the test below pins that), which makes this row *parked*
-    // rather than finished — and a parked row that had dropped its handles
-    // would be a row an erasure could no longer find. Erasure's own delete
-    // carries no status filter, so it still reaches this one.
+    // drain it — and since issue #1340 something actually does that:
+    // `drainableStatus()` re-offers this exact code on the next daily pass,
+    // bounded by attempts, so putting the right key back is the whole of the
+    // recovery. Keeping the handles is what keeps the row findable meanwhile;
+    // erasure's own delete carries no status filter, so it still reaches this
+    // one.
+    //
+    // `next_attempt_at` moves forward with the park. Left in the past the row
+    // would be due on every invocation rather than once a day, and two
+    // overlapping cron runs could burn two of the fourteen passes the bound
+    // above counts in wall-clock days.
     const opened = openQueuedPayload(candidate.payloadSealed, key);
     if (!opened) {
       await db
@@ -575,6 +643,7 @@ export async function drainNotificationRetries(
         .set({
           status: "failed",
           lockedUntil: null,
+          nextAttemptAt: nextDailyTickAtOrAfter(nowDate()),
           errorCode: "sealed_payload_unreadable",
           lastError: null,
           updatedAt: nowDate(),

@@ -4169,11 +4169,16 @@ export const notificationSendQueue = pgTable(
      * because nothing prunes this table (it is not in `RETENTION_DAYS`), so a
      * `sent` row that kept its recipient would keep it forever. The one
      * exception is `sealed_payload_unreadable`, which keeps the payload *and*
-     * the handles on purpose: that row is waiting for a restored key rather
-     * than finished, and a parked row that had dropped its handles would be a
-     * row an erasure could no longer find. An earlier version of this
-     * paragraph claimed a blanket clear and was wrong about two of the four
-     * writes (`security-reviewer`, on issue #1298).
+     * the handles on purpose: that row is parked rather than finished, and a
+     * parked row that had dropped its handles would be a row an erasure could
+     * no longer find. What does the waiting is the drain's own candidate query
+     * (`drainableStatus` in src/db/notifications.ts), which re-offers this one
+     * code on each daily pass until the row's `attempts` reach a fortnight's
+     * worth — long enough for somebody to notice a mis-set
+     * `SECRET_ENCRYPTION_KEY` and put it back (issue #1340). Past that the row
+     * sits here holding both, and only erasure reaches it. An earlier version
+     * of this paragraph claimed a blanket clear and was wrong about two of the
+     * four writes (`security-reviewer`, on issue #1298).
      *
      * `booking_id` deliberately carries no foreign key: it is a match handle
      * for a sweep, not a relationship, and a real reference would make an
@@ -4765,6 +4770,18 @@ export const bookingCheckouts = pgTable(
     status: checkoutStatus("status").notNull().default("pending"),
     stripeAccountId: text("stripe_account_id").notNull(),
     stripeSessionId: text("stripe_session_id").notNull(),
+    /**
+     * The `cus_…` object Stripe created for this session, once Stripe says one
+     * exists. Sessions are opened with `customer_creation: "if_required"`, so
+     * Stripe mints a Customer only when it settles (or attempts to) and never
+     * for an abandoned one: **null means no Customer object was created**, not
+     * that a write was missed. Recorded so diver erasure can raise a real
+     * obligation against it instead of guessing (issue #1621, ADR
+     * 20260803-processor-erasure-obligations) — the same class of pointer
+     * `orders.stripe_customer_id` already carries, and excluded from the shop
+     * export for the same reason.
+     */
+    stripeCustomerId: text("stripe_customer_id"),
     /** Stripe's hosted payment page; shown again as the recovery link while the session is open. */
     checkoutUrl: text("checkout_url"),
     /**
@@ -4990,6 +5007,13 @@ export const tips = pgTable(
     status: tipStatus("status").notNull().default("pending"),
     stripeAccountId: text("stripe_account_id").notNull(),
     stripeSessionId: text("stripe_session_id").notNull(),
+    /**
+     * The `cus_…` object Stripe created for this tip's session, once Stripe
+     * says one exists — same rule as `booking_checkouts.stripe_customer_id`:
+     * `customer_creation: "if_required"` means null is "Stripe created no
+     * Customer", never "we forgot to write it" (issue #1621).
+     */
+    stripeCustomerId: text("stripe_customer_id"),
     checkoutUrl: text("checkout_url"),
     currency: text("currency").notNull(),
     amountCents: integer("amount_cents").notNull(),
@@ -6388,10 +6412,11 @@ export const calendarFeeds = pgTable(
 /**
  * A long-lived, revocable bearer credential over the shop's **departures board**
  * — the lobby TV / dock tablet at `/board/[token]` (issue #1426, N-23). Same
- * discipline as `calendar_feeds`: only the hash is stored, the raw token exists
- * solely in the response that minted it, and there is no expiry, because a
- * screen on a wall that went dark after 60 days would be noticed by nobody
- * until a diver asked why the board is blank. Revocation is the mitigation.
+ * discipline as `calendar_feeds`: only the hash is stored and the raw token
+ * exists solely in the response that minted it. A **board** link has no expiry,
+ * because a screen on a wall that went dark after 60 days would be noticed by
+ * nobody until a diver asked why the board is blank; revocation is the
+ * mitigation there. A **check-in** link does expire — see `expires_at`.
  *
  * What the board shows is decided at the reader (`src/db/departures-board.ts`),
  * never by a column here: a boat's title, time, site, stage word, meeting point
@@ -6446,6 +6471,19 @@ export const displayTokens = pgTable(
      * a screen that is actually showing from a link nobody ever opened.
      */
     lastShownAt: timestamp("last_shown_at", { withTimezone: true }),
+    /**
+     * **When this link stops verifying** (issue #1609, security review). Null
+     * means never, which is every `board` row and every row that existed before
+     * this column did. The `check_in` case is the one that expires, because it
+     * is the one that **writes**: its URL lives on a tablet on a counter, and a
+     * credential that records arrivals against real bookings should not outlive
+     * the tablet by years. The lifetime is `CHECK_IN_LINK_TTL_DAYS`, derived in
+     * the writer from `purpose`, and a manager renews it from Settings.
+     *
+     * An expired row is not a revoked row: it stays in the settings list, so
+     * the manager whose kiosk stopped working can see why and renew it.
+     */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
   },
   (table) => [
@@ -8715,10 +8753,17 @@ export const mediaDeletionAttempts = pgTable(
  *   Invoice/PaymentIntent/Charge separately in its own data-deletion flow. No
  *   API call clears it, so this kind is a genuinely manual step and is
  *   discharged only by a human attesting they filed that request.
+ * - `stripe_checkout_session_snapshot` — a `cs_…` Checkout Session. It carries
+ *   `customer_email` exactly as DiveDay handed it over and `customer_details`
+ *   once the diver completes it, and Stripe exposes no delete for a session:
+ *   `POST /v1/checkout/sessions/{id}/expire` closes it but rewrites neither
+ *   field. Same shape as the invoice snapshot, therefore, and discharged the
+ *   same way — a human attesting to the data-deletion request (issue #1621).
  */
 export const processorErasureTarget = pgEnum("processor_erasure_target", [
   "stripe_customer",
   "stripe_invoice_snapshot",
+  "stripe_checkout_session_snapshot",
 ]);
 
 export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed", "discharged"]);
@@ -8728,11 +8773,15 @@ export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed"
  * durable counterpart to `mediaDeletionAttempts` for records DiveDay does not
  * store itself (ADR 20260803-processor-erasure-obligations).
  *
- * Raised by `anonymizeDiver` (src/db/anonymize.ts) from the erased diver's
- * orders: one `stripe_customer` row per distinct `orders.stripe_customer_id`,
- * one `stripe_invoice_snapshot` row per distinct `orders.stripe_invoice_id`.
- * Both of those columns are `NOT NULL` pointers into the shop's own Stripe
- * account and the local scrub cannot rewrite either.
+ * Raised by `anonymizeDiver` (src/db/anonymize.ts) from all three tables that
+ * can hold a Stripe object standing for a person — `orders`, `tips` and
+ * `booking_checkouts`. Orders contribute a `stripe_customer` row per distinct
+ * `stripe_customer_id` and a `stripe_invoice_snapshot` row per distinct
+ * `stripe_invoice_id`; the other two contribute a
+ * `stripe_checkout_session_snapshot` row per session and a `stripe_customer`
+ * row per session that actually minted one. Orders alone was the gap issue
+ * #1621 closed: a diver who only ever tipped, or who paid through a checkout
+ * that never became an order, left nothing in this ledger at all.
  *
  * The table does two jobs, and the `target` above says which applies:
  *
@@ -8742,12 +8791,12 @@ export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed"
  *      a dead network must not roll back an erasure the diver asked for, so the
  *      row commits first and the attempt happens after; `attempts`/`lastError`
  *      are why a failure is visible rather than merely retried forever.
- *   2. **A record of what no API can reach.** The invoice-snapshot rows are not
- *      retryable at all. They exist so nothing in the product implies erasure
- *      finished when a copy of the name and email is still sitting on a
- *      finalized invoice.
+ *   2. **A record of what no API can reach.** The invoice-snapshot and
+ *      checkout-session-snapshot rows are not retryable at all. They exist so
+ *      nothing in the product implies erasure finished when a copy of the name
+ *      and email is still sitting on a finalized invoice or a Checkout Session.
  *
- * `external_id` is a `cus_…`/`in_…` handle, not personal data: it is the
+ * `external_id` is a `cus_…`/`in_…`/`cs_…` handle, not personal data: it is the
  * pointer, and the row deliberately keeps no name, address or amount.
  */
 export const processorErasureObligations = pgTable(
@@ -8768,8 +8817,8 @@ export const processorErasureObligations = pgTable(
     target: processorErasureTarget("target").notNull(),
     externalId: text("external_id").notNull(),
     /**
-     * The connected account the object lives on, snapshotted from
-     * `orders.stripe_account_id` rather than re-derived from the shop at retry
+     * The connected account the object lives on, snapshotted from the source
+     * row's own `stripe_account_id` rather than re-derived from the shop at retry
      * time — the same discipline `refundOrder` uses (src/db/orders.ts). A shop
      * that disconnects and reconnects gets a *different* account id, and a
      * delete aimed at the current one would 404 forever against an object that
