@@ -1,0 +1,270 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600&family=Figtree:wght@400;500;600&family=Schibsted+Grotesk:wght@400;700&family=Public+Sans:wght@400;600;700&family=Bricolage+Grotesque:wght@700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+/* deck:start — the Clear-the-deck kit. Pasted verbatim into every board of this canvas; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --lagoon:#0e7490; --lagoon-deep:#0a4d61; --lagoon-tint:#e6f3f5; --shop:#1d7a5f; --shop-deep:#145a46; --shop-tint:#e4f1ea; --ok:#15803d; --warn:#b45309; --danger:#b91c1c; --danger-tint:#f8e8e6; --coral:#ff6f61; --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 960px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.board-head .three p b { color: var(--ink); font-weight: 600; }
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lagoon); }
+.k { font-size: 11px; line-height: 16px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.frame-cap { display: flex; align-items: baseline; gap: 12px; padding: 28px 48px 10px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 960px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.aside b { color: var(--ink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--border); }
+.sec h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 980px; }
+.sec p b { font-weight: 600; }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot p b { color: var(--ink); font-weight: 600; }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot li b { color: var(--ink); font-weight: 600; }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 150px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.stat b { display: block; font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat b small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.stat span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 600; }
+.tbl td b { color: var(--ink); font-weight: 600; }
+.tbl td.ink { color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink); }
+.card p.m { color: var(--muted); }
+.card .k { color: var(--lagoon); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0 48px; }
+.count { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.count .k { display: block; }
+.count b { display: block; margin-top: 4px; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.count span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted); }
+
+/* — a frame: the app drawn inside the board — */
+.frame { margin: 0 48px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.frame.desktop { width: 1084px; }
+.phone { width: 390px; min-height: 760px; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; background: var(--bg); position: relative; }
+.pair { display: flex; gap: 32px; align-items: flex-start; padding: 0 48px; }
+.pair .beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.pair .beside h3 { margin: 0 0 8px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pair .beside p { margin: 0 0 12px 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside p b { color: var(--ink); font-weight: 600; }
+.pair .beside ul { margin: 0 0 16px 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside li b { color: var(--ink); font-weight: 600; }
+
+/* — app type — */
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--lagoon); font-weight: 500; }
+.blocked { color: var(--danger); font-weight: 600; }
+.word { font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 4px; border-bottom: 1px solid var(--border); }
+.row:first-child { border-top: 1px solid var(--border); }
+.row .who { flex: 0 0 200px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.row .what { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .what b { font-weight: 600; color: var(--ink); }
+.row .state { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.row .state.blocked { color: var(--danger); }
+.row .state.ok { color: var(--ok); }
+.row.add { color: var(--lagoon); font-weight: 500; font-size: 16px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px 0 8px 0; }
+.group-h .h { font-size: 20px; line-height: 26px; }
+.group-h .meta { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--shop); color: #fff; }
+.btn.quiet { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); font-size: 16px; color: var(--muted); }
+.field b { color: var(--ink); font-weight: 500; }
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 40px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.chrome .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--shop); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.glyph { width: 20px; height: 20px; flex: 0 0 20px; }
+/* deck:end */
+
+.layers td.dev { white-space: nowrap; }
+.hands { display: flex; flex-direction: column; gap: 10px; padding: 0 48px; }
+.hand { display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-items: center; }
+.hand .lbl { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.hand .rw { display: flex; align-items: center; gap: 16px; min-height: 52px; padding: 0 16px; }
+.surfaces { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+.surface { display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.surface .n { font-family: var(--mono); font-size: 12px; color: var(--border-strong); }
+.surface h3 { margin: 0; font-size: 22px; line-height: 1.15; font-weight: 700; letter-spacing: -0.015em; }
+.surface .axis { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lagoon); }
+.surface p { margin: 0; font-size: 13px; line-height: 19px; color: var(--ink); }
+.surface p.m { color: var(--muted); }
+.surface p b { font-weight: 600; }
+.surface .chip { display: flex; gap: 4px; }
+.surface .chip i { display: block; width: 22px; height: 22px; border-radius: 4px; border: 1px solid rgba(0,0,0,.08); }
+.calls { display: grid; grid-template-columns: 40px 1fr; gap: 10px 14px; font-size: 15px; line-height: 23px; }
+.calls b { font-family: var(--mono); font-size: 13px; color: var(--muted); padding-top: 3px; }
+.calls i { font-style: normal; color: var(--muted); }
+.rec { padding: 20px 24px; border: 1px solid var(--ink); border-radius: 10px; font-size: 15px; line-height: 23px; }
+.rec b { font-weight: 600; }
+.quote { padding: 16px 20px; border-left: 3px solid var(--ink); font-size: 16px; line-height: 25px; max-width: 900px; }
+
+  </style>
+</helmet>
+<div class="board harbor-fonts">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow">Design canvas · 2026-09-11 · round 2 · read me first on this page</span><span class="note">The owner's read of round 1, and five surfaces to replace Reef</span></div>
+    <h1>Clear the deck, round 2 — Reef, rethought</h1>
+    <p class="lede">Round 1 asked what DiveDay is organised by and drew six answers. The owner's read, the same day: the ideas land, but the surface itself — Reef, picked on 09-01 — is now the problem. So this page leaves the six concepts where they are (the shape is still call a) and redraws <b>the surface</b>: five candidates to replace Reef, each a different temperature, density, structure and face, each drawn on the same home for the same shop on the same morning so they compare by eye. Nothing here is normative until the owner picks.</p>
+    <div class="quote">"I like these ideas, but I think we need to go farther. I think our Reef concept needs to be rethought since I'm now finding it overbearing and ugly."</div>
+  </div>
+
+  <div class="sec">
+    <h2>Why Reef reads as overbearing, counted on one screen</h2>
+    <p>Reef was drawn on 09-01 to feel "warm and alive" against a market of grey databases, and every canvas since added a moment on top rather than in place of one: the band followed the clock, the dial got water, the boat got a stage chip, the greeting got a mark, the empty states got rooms. Ten days later the warmth is weight. On the home as it stands — the capture is on round 1's cover — one screen carries:</p>
+    <table class="tbl layers">
+      <thead><tr><th>Layer</th><th>Where it came from</th><th>On the home at HEAD</th></tr></thead>
+      <tbody>
+        <tr><td class="dev">The water band</td><td>Reef all the way down, 16b — four washes by the shop's clock</td><td>the top of every staff page</td></tr>
+        <tr><td class="dev">The drawn site tile</td><td>Reef 13a and 13f — the hand's seven marks</td><td>on every departure panel</td></tr>
+        <tr><td class="dev">The dial with water</td><td>Reef 13h — the count that fills</td><td>on every departure panel</td></tr>
+        <tr><td class="dev">The stage chip</td><td>Reef all the way down, 16c</td><td>on the boarding departure</td></tr>
+        <tr><td class="dev">The 28px panel on a bed</td><td>Reef 13a — the one reversal of "elevation is earned"</td><td>every departure, twice on one screen</td></tr>
+        <tr><td class="dev">The tinted pill and the glyph</td><td>Clearwater's kinds, in Reef's washes</td><td>the kind word on every row</td></tr>
+        <tr><td class="dev">Coral</td><td>Reef 13g–13i — the swell, the greeting's mark, the postcard</td><td>the settled station, the greeting</td></tr>
+        <tr><td class="dev">The horizon tiles</td><td>Reef all the way down</td><td>the foot of the home</td></tr>
+        <tr><td class="dev">The eyebrow and the 44px greeting</td><td>Reef 13a — the one display moment</td><td>the head of the home</td></tr>
+        <tr><td class="dev">The intent line</td><td>Reef all the way down, 16e — "Aboard today: 1 getting comfortable again…"</td><td>the departure's meta</td></tr>
+      </tbody>
+    </table>
+    <div class="strip" style="padding:0;">
+      <div class="stat"><b>10</b><span>decorative devices on one screen of the home</span></div>
+      <div class="stat"><b>5 <small>+ 3</small></b><span>hues — sand, lagoon, coral, amber, shallows — and three signal washes</span></div>
+      <div class="stat"><b>4</b><span>radii on the ladder: 10 · 18 · 28 · pill</span></div>
+      <div class="stat"><b>2</b><span>elevations at rest: the bed, and the lift on the tiles' glyphs</span></div>
+      <div class="stat"><b>9</b><span>rungs on the type ramp, three of them above 24px</span></div>
+    </div>
+    <p>None of these is ugly alone. Together they are a surface that never stops talking, on a page whose job is to be read once at 6 AM. <b>The fix is not a prettier Reef; it is a surface with fewer things on it, and the question is which few.</b></p>
+  </div>
+
+  <div class="sec">
+    <h2>What every surface below shares — the surface floor</h2>
+    <p>Round 1's floor (the door, the pill, the switch, the outside) stands beneath all five. On top of it, every surface here obeys the same six rules, so the pick is a pick of taste and not of discipline:</p>
+    <table class="tbl">
+      <thead><tr><th>Rule</th><th>What it means on the page</th></tr></thead>
+      <tbody>
+        <tr><td>Two hues and red</td><td>ink and the shop's colour (H, which the owner liked) are the palette; red is the word Blocked and nothing else; DiveDay's lagoon, coral, sand and shallows leave every staff surface</td></tr>
+        <tr><td>One radius</td><td>0, 4, 6 or 12 — one number per surface, or none</td></tr>
+        <tr><td>No elevation at rest</td><td>no bed, no lift, no shadow; a sheet or a menu is a border</td></tr>
+        <tr><td>One structural device</td><td>a hairline, a rule, or space — never two at once, never a fill behind text</td></tr>
+        <tr><td>Type carries hierarchy</td><td>size and weight say what matters; no eyebrow, no caps label, no glyph beside a word</td></tr>
+        <tr><td>Nothing drawn</td><td>no tile, dial, band, mark, chip or room on a staff surface; the hand stays on the diver's recap until call (g)</td></tr>
+      </tbody>
+    </table>
+    <p>Every board is drawn on round 1's recommended shape — Three words with Ask as its search — because a surface has to be drawn on something. The shape is still call (a); each surface holds on any of the six.</p>
+  </div>
+
+  <div class="sec">
+    <h2>Five surfaces, one anatomy</h2>
+    <div class="surfaces">
+      <div class="surface"><span class="n">I</span><span class="axis">white · black · square</span><h3>Salt</h3><div class="chip"><i style="background:#ffffff;"></i><i style="background:#0a0a0a;"></i><i style="background:#6b6b6b;"></i><i style="background:#1d7a5f;"></i><i style="background:#c8102e;"></i></div><p>Black on white, one hairline, the shop's colour on the current word and the verb. Instrument Sans. Radius 0.</p><p class="m"><b>For:</b> least to look at, most to read; prints as it stands. <b>Against:</b> cold, and anyone's. <b>2–3 sessions.</b></p></div>
+      <div class="surface"><span class="n">II</span><span class="axis">warm · soft · no lines</span><h3>Air</h3><div class="chip"><i style="background:#fbfbf9;"></i><i style="background:#23272a;"></i><i style="background:#666b70;"></i><i style="background:#f1f1ee;"></i><i style="background:#1d7a5f;"></i></div><p>Space instead of lines; a soft fill under a finger; a humanist face. Figtree. Radius 12.</p><p class="m"><b>For:</b> the gentlest answer to "overbearing". <b>Against:</b> the least distinctive; spends rows. <b>3 sessions.</b></p></div>
+      <div class="surface"><span class="n">III</span><span class="axis">big · bold · two colours</span><h3>Headline</h3><div class="chip"><i style="background:#ffffff;"></i><i style="background:#111111;"></i><i style="background:#1d7a5f;"></i><i style="background:#b42318;"></i></div><p>Four sizes, two colours, no grey, two rules per group. The boats in the shop's colour at 28px. Schibsted Grotesk.</p><p class="m"><b>For:</b> reads across a counter; unlike anything else. <b>Against:</b> spends height; a taste. <b>3–4 sessions.</b></p></div>
+      <div class="surface"><span class="n">IV</span><span class="axis">one hue · theirs</span><h3>Their ink</h3><div class="chip"><i style="background:#ffffff;"></i><i style="background:#145a46;"></i><i style="background:#4a7f6e;"></i><i style="background:#dde9e4;"></i><i style="background:#1d7a5f;"></i></div><p>The shop's colour as the ink, in four strengths; its face on the titles; DiveDay's palette gone. Public Sans. Radius 6.</p><p class="m"><b>For:</b> "it's in our colours"; no mix to be ugly. <b>Against:</b> heavy in a dark hue; a third of colours fall back. <b>4–5 sessions.</b></p></div>
+      <div class="surface"><span class="n">V</span><span class="axis">cool · compact · legible</span><h3>Slate</h3><div class="chip"><i style="background:#eef1f3;"></i><i style="background:#ffffff;"></i><i style="background:#0f1720;"></i><i style="background:#5b6670;"></i><i style="background:#1d7a5f;"></i></div><p>Grey ground, one white sheet, hairlines, 44px rows, a face cut for low vision. Atkinson Hyperlegible. Radius 4.</p><p class="m"><b>For:</b> densest without a table; the dock test as a face. <b>Against:</b> "another app". <b>3 sessions.</b></p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>The same row, in five hands</b> · Grace Mensah's row from the 7:00, as each surface draws it; the sixth is today's</div>
+  <div class="hands">
+    <div class="hand"><span class="lbl">Today · Reef</span><div class="rw" style="background:#fffdf8; border:1px solid #e6dcc8; border-radius:28px; box-shadow:0 2px 10px rgba(88,66,30,.06); font-family:Geist,sans-serif; gap:14px;"><span style="display:inline-flex; align-items:center; gap:6px; flex:0 0 120px; font-size:14px; font-weight:500; color:#b45309;"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3l8 14H2z"></path><path d="M10 8v4M10 14.5v.5"></path></svg>Cert</span><span style="flex:1; font-size:16px; color:#54676d;"><b style="color:#0c2a35; font-weight:600;">Grace Mensah</b> · Advanced card is waiting for verification.</span><span style="display:inline-flex; align-items:center; border-radius:999px; padding:2px 10px; font-size:13px; font-weight:500; background:#f8e8e6; color:#b91c1c;">Blocked</span><span style="font-size:14px; font-weight:500; color:#0e7490; white-space:nowrap;">Open diver ›</span></div></div>
+    <div class="hand"><span class="lbl">I · Salt</span><div class="rw" style="background:#fff; border-top:1px solid #e5e5e5; border-bottom:1px solid #e5e5e5; font-family:'Instrument Sans',sans-serif; font-size:15px; color:#0a0a0a; min-height:48px;"><span style="flex:0 0 200px; font-weight:600;">Grace Mensah</span><span style="flex:1;">Advanced card, added yesterday, waits for a look</span><span style="font-size:14px; font-weight:600; color:#c8102e;">Blocked</span></div></div>
+    <div class="hand"><span class="lbl">II · Air</span><div class="rw" style="background:#f1f1ee; border-radius:12px; font-family:Figtree,sans-serif; font-size:16px; color:#23272a; min-height:56px;"><span style="flex:0 0 210px; font-weight:600;">Grace Mensah</span><span style="flex:1; color:#666b70;">Advanced card, added yesterday, waits for a look</span><span style="font-size:15px; font-weight:600; color:#b42318;">Blocked</span></div></div>
+    <div class="hand"><span class="lbl">III · Headline</span><div class="rw" style="background:#fff; font-family:'Schibsted Grotesk',sans-serif; font-size:17px; color:#111; min-height:48px; gap:12px; align-items:baseline;"><span style="font-weight:700;">Grace Mensah</span><span style="flex:1;">Advanced card, added yesterday, waits for a look</span><span style="font-weight:700; color:#b42318;">Blocked</span></div></div>
+    <div class="hand"><span class="lbl">IV · Their ink</span><div class="rw" style="background:#fff; border-top:1px solid #dde9e4; border-bottom:1px solid #dde9e4; font-family:'Public Sans',sans-serif; font-size:16px; color:#145a46; min-height:52px;"><span style="flex:0 0 210px; font-weight:600;">Grace Mensah</span><span style="flex:1; color:#4a7f6e;">Advanced card, added yesterday, waits for a look</span><span style="font-size:14px; font-weight:700; color:#b42318;">Blocked</span></div></div>
+    <div class="hand"><span class="lbl">V · Slate</span><div class="rw" style="background:#fff; border:1px solid #dfe4e8; border-radius:4px; font-family:'Atkinson Hyperlegible',sans-serif; font-size:14px; color:#0f1720; min-height:44px;"><span style="flex:0 0 200px; font-weight:700;">Grace Mensah</span><span style="flex:1; color:#5b6670;">Advanced card, added yesterday, waits for a look</span><span style="font-size:13px; font-weight:700; color:#b42318;">Blocked</span></div></div>
+  </div>
+  <p class="aside">Six versions of one fact. Today's carries a kind word, a glyph, a pill, a door and a panel around the sentence. The five beneath carry the name, the fact and the word — and differ only in what a surface is allowed to be: a hairline, air, size, one hue, or a sheet.</p>
+
+  <div class="sec">
+    <h2>Side by side</h2>
+    <table class="tbl">
+      <thead><tr><th></th><th>I · Salt</th><th>II · Air</th><th>III · Headline</th><th>IV · Their ink</th><th>V · Slate</th></tr></thead>
+      <tbody>
+        <tr><td>Ground · ink</td><td>#ffffff · #0a0a0a</td><td>#fbfbf9 · #23272a</td><td>#ffffff · #111111</td><td>#ffffff · the shop's, darkened to 7:1</td><td>#eef1f3 on #ffffff · #0f1720</td></tr>
+        <tr><td>Hues on the page</td><td>2 + red</td><td>2 + a grey + red</td><td>2 + red, no grey</td><td>1 in four strengths + red</td><td>2 + a grey + red</td></tr>
+        <tr><td>Face</td><td>Instrument Sans</td><td>Figtree</td><td>Schibsted Grotesk</td><td>the shop's on titles · Public Sans</td><td>Atkinson Hyperlegible</td></tr>
+        <tr><td>Sizes</td><td>28 · 17 · 15</td><td>34 · 20 · 16</td><td>56 · 28 · 20 · 17</td><td>40 · 20 · 16</td><td>24 · 15 · 14</td></tr>
+        <tr><td>Radius</td><td>0</td><td>12</td><td>0</td><td>6</td><td>4</td></tr>
+        <tr><td>Structure</td><td>a hairline</td><td>space</td><td>size, two rules</td><td>a hairline in the hue</td><td>a sheet, hairlines</td></tr>
+        <tr><td>Row · desk / phone</td><td>48 / 56</td><td>56 / 60</td><td>48 / 56</td><td>52 / 58</td><td>44 / 48</td></tr>
+        <tr><td>Chrome</td><td>a bar under an ink rule</td><td>none — words on the ground</td><td>none — big words</td><td>a bar in the shop's colour</td><td>a white bar with a hairline</td></tr>
+        <tr><td>Temperature</td><td>cold</td><td>warm</td><td>loud</td><td>theirs</td><td>cool</td></tr>
+        <tr><td>Cost</td><td>2–3</td><td>3</td><td>3–4</td><td>4–5</td><td>3</td></tr>
+        <tr><td>Its wow</td><td>it was always this simple</td><td>nothing shouts</td><td>a poster of the day</td><td>"it's in our colours"</td><td>nothing to get used to</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2>How they combine, and a recommendation</h2>
+    <p>A surface is picked whole; mixing two makes a third nobody drew. The one honest composition is Their ink's colour rule under any other surface's type and structure — it is a palette rule, not a look — and the one dependency is that Their ink's fallback <i>is</i> Salt with a coloured bar, so picking IV means accepting I for a third of shops.</p>
+    <div class="rec"><b>Stated so it can be disagreed with: Their ink, with Air's spacing already inside it.</b> The owner's "overbearing and ugly" is the mix — DiveDay's teal beside the shop's green beside coral beside amber on sand — and Their ink removes the mix by removing DiveDay's colours rather than tidying them. It is the only one of the five a shop repeats to a friend, and it is the lever the owner already liked, taken to its end. If the phone matters more than the desk, Headline is the pick instead: it is the surface a captain reads from the wheel. Salt if the owner wants the cheapest honest answer; Air if the priority is that nobody can call it anything; Slate if a five-boat Saturday on one laptop screen is the job.</div>
+  </div>
+
+  <div class="sec">
+    <h2>The owner's calls, round 2 (H-73)</h2>
+    <div class="calls">
+      <b>(e)</b><span>Which surface replaces Reef on every staff page — I Salt, II Air, III Headline, IV Their ink, V Slate — or Their ink's colour rule under one of the others. <i>Recommended IV.</i></span>
+      <b>(f)</b><span>Whether Geist leaves the staff app for the picked surface's face (H-64 kept it as the only face). <i>Recommended yes: each surface names its face and the reason; Geist stays only on the boat's roll call until that screen is redrawn.</i></span>
+      <b>(g)</b><span>Whether the hand and the coral leave the product entirely, or stay on the diver's recap postcard only. <i>Recommended the postcard only, unchanged, until a diver-side pass redraws it in the picked surface.</i></span>
+      <b>(h)</b><span>Whether DiveDay's own pages take the picked surface — the homepage, pricing and switching read today in Reef's sand and Geist. <i>Recommended yes, in the same slice that shrinks them (call d).</i></span>
+    </div>
+    <p>Round 1's calls stand: (a) the shape, (b) the decoration — now answered by every surface here, (c) the outside, (d) DiveDay's own pages.</p>
+  </div>
+
+  <div class="sec">
+    <h2>What no surface changes</h2>
+    <p>The name and the mark. Harbor on the diver's side — the storefront in the shop's colour and face, on the picked surface's rows and controls. The dock test, and on every board the two who cannot board carry a sentence, never a hue. The coral bans, which every surface makes moot by having no coral. The roll call commits before it renders, and stays in neutral ink and boat mode under every surface, Their ink included. H-02. The claims policy.</p>
+  </div>
+
+  <div class="sec">
+    <h2>How to read this page</h2>
+    <p>This cover, then the five surfaces in a row: Salt, Air, Headline, Their ink, Slate. Each board opens with its case, its tradeoff and its cost; then its system in three cells — colour, type, shape; then the home at desktop on Three words with Ask; then the counter at 390 beside what stays of Reef, what leaves and what it keeps; and closes with where it stops, what it needs and its one wow. The fiction is round 1's, unchanged: Blue Mantis Divers, Thursday, August 27, 6:40 AM, the 7:00 Two-Tank Reef with its ten divers. Nothing here is real customer data.</p>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

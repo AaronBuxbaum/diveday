@@ -1,6 +1,6 @@
 # Clear the deck — six ways to make DiveDay smaller
 
-- **Status:** Live (its ADR is Proposed, pending H-73; nothing has shipped from it)
+- **Status:** Live (its ADR is Proposed, pending H-73; round 2 drawn 2026-09-11 on the owner's read of round 1; nothing has shipped from it)
 - **Date:** 2026-09-11
 - **ADR:** [20260911-clear-the-deck](../../../architecture/decisions/20260911-clear-the-deck.md)
 - **Published:** https://claude.ai/code/artifact/d79e2f2e-a6b7-4692-8f32-c67dc5651bb9
@@ -16,11 +16,13 @@ deletes kinds of thing rather than spellings; and **six concepts** that each con
 different axis — by noun, by time, by place, by question, by default, by face — every one redrawing
 the shop home for the same shop on the same morning, at desktop and at 390, so they compare like for
 like. **Nothing here is normative**; the ADR carries the floor and the six, the pick is the owner's
-(H-73), and code obeys the ADR.
+(H-73), and code obeys the ADR. A second page, drawn the same day on the owner's read of the first,
+redraws the surface itself — see "Round 2" below.
 
 ## Artboards
 
-One page. The cover on top; the six concepts beneath it in two rows of three.
+Two pages. On the first, round 1: the cover on top, the six concepts beneath it in two rows of three.
+On the second, round 2: its cover, then the five surfaces in a row.
 
 | File | What it shows |
 | --- | --- |
@@ -32,10 +34,35 @@ One page. The cover on top; the six concepts beneath it in two rows of three.
 | `TheCard.dc.html` | **5 · The shop's card** (by default) — the whole of Settings as one card of nine facts and twelve decided sentences; where the 43 rows and 12 pages went; what leaves the surfaces |
 | `OneFace.dc.html` | **6 · One face** (by face) — the storefront in the shop's brand with the staff strip and the layer of ink under every public row; the boat and the till kept apart |
 
-`today-home.jpg`, `today-storefront.jpg` and `today-settings.jpg` are the three captures the cover
-reads, taken from `pnpm dev` on 2026-09-11 with `scripts/screenshot.mjs` (the demo shop, light, 1280
+### Round 2 — Reef, rethought
+
+The owner's read of round 1, 2026-09-11: "I like these ideas, but I think we need to go farther. I
+think our Reef concept needs to be rethought since I'm now finding it overbearing and ugly." So the
+second page leaves the six concepts where they are (the shape is still call a) and redraws the
+surface: a count of the decorative layers on one screen of the home at HEAD (ten devices, five hues
+and three washes, four radii, two elevations, nine type rungs), a surface floor every candidate
+shares (two hues and red, one radius, no elevation at rest, one structural device, type as the
+hierarchy, nothing drawn), and five surfaces that could replace Reef, each a different
+temperature, density, structure and face, each drawn on the same home — round 1's recommended
+shape, Three words with Ask as its search — and on the counter at 390.
+
+| File | What it shows |
+| --- | --- |
+| `Round2.dc.html` | The page's cover: the owner's read, why Reef reads as overbearing (the layers counted on one screen), the surface floor, the five surfaces, the same row in five hands beside today's, the side-by-side table, how they combine and the recommendation, the owner's round-2 calls (e)–(h) |
+| `Salt.dc.html` | **I · Salt** — white, black, one hairline, the shop's colour on the current word and the verb; Instrument Sans; radius 0 |
+| `Air.dc.html` | **II · Air** — a warm-neutral white with no lines; space as the structure, a soft fill under a finger; Figtree; radius 12 |
+| `Headline.dc.html` | **III · Headline** — four sizes, two colours, no grey; the boats in the shop's colour at 28px; Schibsted Grotesk; radius 0 |
+| `TheirInk.dc.html` | **IV · Their ink** — the shop's colour as the ink in four strengths, its face on the titles, DiveDay's palette gone; Public Sans; radius 6; three shops on one system, with the fallback |
+| `Slate.dc.html` | **V · Slate** — a cool grey ground, one white sheet, hairlines, 44px rows, a face cut for low vision; Atkinson Hyperlegible; radius 4 |
+
+Every round-2 board is drawn on the deletions round 1's floor proposes and shows nothing of Reef on
+a staff surface, which is call (b) drawn rather than assumed; if the owner keeps the decoration the
+boards are not redrawn.
+
+`today-home.jpg`, `today-storefront.jpg` and `today-settings.jpg` are the three captures round 1's
+cover reads, taken from `pnpm dev` on 2026-09-11 with `scripts/screenshot.mjs` (the demo shop, light, 1280
 and 390) and downsampled. They are evidence, dated like the rest of the canvas, and are never
-refreshed. `canvas.json` lays the seven boards out on one page and pins three notes.
+refreshed. `canvas.json` lays the thirteen boards out on two pages, pins four notes, and opens on round 2.
 
 ## The fiction every board holds to
 
@@ -61,7 +88,7 @@ demo-seed fiction. Nothing here is real customer data.
 ## What every board keeps
 
 The name and the mark; Harbor on every diver-facing page (concept 6 makes it everything, never
-less); Geist as the only face on a staff surface; the dock test (44px targets, 16px critical text,
+less); Geist as the only face on a staff surface (round 1; every round-2 surface names its own face, which is call f); the dock test (44px targets, 16px critical text,
 AA, never colour alone — every blocked name on every board is a word in danger ink, never a hue);
 the coral bans on manifests, roll call, certs, waivers and payments; the roll call committing before
 it renders; the claims policy; H-02; and One hand's twelve deletions, which every concept stands on
@@ -97,13 +124,17 @@ names the ADR in its doc comment, a test pins the rule, and this table moves.
 | 21f — the floor: DiveDay's own pages become three plus the two legal ones (H-73 d) | open | — | — |
 | 21g — the picked concept's staff shape (H-73 a) | open | — | — |
 | 21h — the boat as its own tool, if the pick includes Ashore and aboard's boat half | open | — | — |
+| 21i — the surface: the picked surface's tokens, radius, face and structure on every staff page, and the deletion of Reef's (H-73 e, f) | open | — | — |
+| 21j — the diver's side on the picked surface: Harbor's storefront on its rows and controls; the postcard's fate (H-73 g) | open | — | — |
+| 21k — DiveDay's own pages on the picked surface (H-73 h), in the slice that shrinks them (21f) | open | — | — |
 
 ## Working on it
 
 The sources here are the working files. To change a board, edit its `.dc.html`, re-seed a fresh
-copy with the design skill's helper (all seven artboards, `canvas.json`, the three `.jpg` files,
-the title "Clear the deck"), check it, and republish to the URL above. The seeded output is build
-output and is never committed ([design-artifacts.md](../../design-artifacts.md)). The seven boards
-share one stylesheet, pasted verbatim into each between `/* deck:start */` and `/* deck:end */`:
-change it in one board and copy the block into the other six with a scripted replace, never by hand
-and never as a divergent copy.
+copy with the design skill's helper (all thirteen artboards on both pages, `canvas.json`, the three
+`.jpg` files, the title "Clear the deck"), check it, and republish to the URL above. The seeded output is build
+output and is never committed ([design-artifacts.md](../../design-artifacts.md)). The thirteen boards
+share one prose stylesheet, pasted verbatim into each between `/* deck:start */` and `/* deck:end */`:
+change it in one board and copy the block into the other twelve with a scripted replace, never by
+hand and never as a divergent copy. Each round-2 surface carries its own app stylesheet beneath it,
+which is the point of the board and is not shared.

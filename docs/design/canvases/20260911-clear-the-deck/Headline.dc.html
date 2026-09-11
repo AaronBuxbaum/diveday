@@ -1,0 +1,294 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+/* deck:start — the Clear-the-deck kit. Pasted verbatim into every board of this canvas; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --lagoon:#0e7490; --lagoon-deep:#0a4d61; --lagoon-tint:#e6f3f5; --shop:#1d7a5f; --shop-deep:#145a46; --shop-tint:#e4f1ea; --ok:#15803d; --warn:#b45309; --danger:#b91c1c; --danger-tint:#f8e8e6; --coral:#ff6f61; --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 960px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.board-head .three p b { color: var(--ink); font-weight: 600; }
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lagoon); }
+.k { font-size: 11px; line-height: 16px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.frame-cap { display: flex; align-items: baseline; gap: 12px; padding: 28px 48px 10px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 960px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.aside b { color: var(--ink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--border); }
+.sec h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 980px; }
+.sec p b { font-weight: 600; }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot p b { color: var(--ink); font-weight: 600; }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot li b { color: var(--ink); font-weight: 600; }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 150px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.stat b { display: block; font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat b small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.stat span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 600; }
+.tbl td b { color: var(--ink); font-weight: 600; }
+.tbl td.ink { color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink); }
+.card p.m { color: var(--muted); }
+.card .k { color: var(--lagoon); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0 48px; }
+.count { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.count .k { display: block; }
+.count b { display: block; margin-top: 4px; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.count span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted); }
+
+/* — a frame: the app drawn inside the board — */
+.frame { margin: 0 48px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.frame.desktop { width: 1084px; }
+.phone { width: 390px; min-height: 760px; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; background: var(--bg); position: relative; }
+.pair { display: flex; gap: 32px; align-items: flex-start; padding: 0 48px; }
+.pair .beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.pair .beside h3 { margin: 0 0 8px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pair .beside p { margin: 0 0 12px 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside p b { color: var(--ink); font-weight: 600; }
+.pair .beside ul { margin: 0 0 16px 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside li b { color: var(--ink); font-weight: 600; }
+
+/* — app type — */
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--lagoon); font-weight: 500; }
+.blocked { color: var(--danger); font-weight: 600; }
+.word { font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 4px; border-bottom: 1px solid var(--border); }
+.row:first-child { border-top: 1px solid var(--border); }
+.row .who { flex: 0 0 200px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.row .what { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .what b { font-weight: 600; color: var(--ink); }
+.row .state { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.row .state.blocked { color: var(--danger); }
+.row .state.ok { color: var(--ok); }
+.row.add { color: var(--lagoon); font-weight: 500; font-size: 16px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px 0 8px 0; }
+.group-h .h { font-size: 20px; line-height: 26px; }
+.group-h .meta { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--shop); color: #fff; }
+.btn.quiet { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); font-size: 16px; color: var(--muted); }
+.field b { color: var(--ink); font-weight: 500; }
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 40px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.chrome .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--shop); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.glyph { width: 20px; height: 20px; flex: 0 0 20px; }
+/* deck:end */
+
+/* Headline — size is the only hierarchy; four sizes, two colours, no lines */
+.app.hl, .app.hl * { box-sizing: border-box; }
+.app.hl { --g:#ffffff; --ink:#111111; --ac:#1d7a5f; --dn:#b42318; background: var(--g); color: var(--ink); font-family: "Schibsted Grotesk","Helvetica Neue",Arial,sans-serif; font-size: 17px; line-height: 26px; }
+.hl .bar { display: flex; align-items: center; gap: 32px; height: 68px; padding: 0 44px; }
+.hl .bar .shop { font-size: 20px; font-weight: 700; }
+.hl .bar .words { display: flex; gap: 24px; }
+.hl .bar .words span { font-size: 20px; font-weight: 500; color: var(--ink); }
+.hl .bar .words span.on { font-weight: 800; box-shadow: inset 0 -3px 0 var(--ac); }
+.hl .bar .ask { margin-left: auto; display: flex; align-items: center; gap: 10px; width: 320px; height: 44px; border-bottom: 2px solid var(--ink); font-size: 20px; color: #6b6b6b; }
+.hl .bar .me { font-size: 17px; }
+.hl .page { width: 920px; margin: 0 auto; padding: 28px 0 44px 0; }
+.hl .t { margin: 0; font-size: 56px; line-height: 58px; font-weight: 700; letter-spacing: -0.03em; }
+.hl .lede { margin: 12px 0 0 0; font-size: 20px; line-height: 28px; }
+.hl .gh { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 40px 0 10px 0; border-bottom: 2px solid var(--ink); margin-bottom: 8px; }
+.hl .gh b { font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.015em; color: var(--ac); }
+.hl .gh span { font-size: 17px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hl .r { display: flex; align-items: baseline; gap: 12px; min-height: 48px; padding: 10px 0; }
+.hl .r .who { font-weight: 700; }
+.hl .r .what { flex: 1 1 auto; min-width: 0; }
+.hl .r .st { flex: 0 0 auto; font-weight: 700; white-space: nowrap; }
+.hl .r .st.dn { color: var(--dn); }
+.hl .r .st.ac { color: var(--ac); }
+.hl .r.add { color: var(--ac); font-weight: 700; }
+.hl.ph .bar { height: 60px; padding: 0 16px; gap: 14px; }
+.hl.ph .bar .words span { font-size: 17px; }
+.hl.ph .t { font-size: 34px; line-height: 36px; }
+.hl.ph .fig { font-size: 64px; line-height: 64px; font-weight: 800; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.hl.ph .fig small { font-size: 20px; font-weight: 500; letter-spacing: 0; margin-left: 8px; }
+.hl.ph .r { min-height: 56px; align-items: center; padding: 6px 0; }
+.hl.ph .r .who { flex: 1 1 auto; font-size: 22px; line-height: 26px; }
+.hl.ph .r .sub { display: block; font-size: 15px; font-weight: 400; line-height: 20px; }
+.hl.ph .r .st { font-size: 17px; }
+.hl.ph .ask { display: flex; align-items: center; gap: 10px; height: 44px; border-bottom: 2px solid var(--ink); font-size: 20px; color: #6b6b6b; margin: 12px 0 8px 0; }
+.sys { display: grid; grid-template-columns: 300px 1fr 300px; gap: 20px; padding: 0 48px; }
+.sys .cell { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 16px; }
+.sys h4 { margin: 0 0 10px 0; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.sys .sw { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sys .sw div { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); }
+.sys .sw i { display: block; height: 36px; border-radius: 6px; border: 1px solid rgba(0,0,0,.08); }
+.sys .sw b { font-size: 12px; color: var(--ink); font-weight: 600; }
+.sys .spec { display: flex; flex-direction: column; gap: 6px; }
+.sys .spec span { display: block; }
+.sys .spec small { display: block; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.sys .shape { display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 19px; color: var(--muted); }
+.sys .shape b { color: var(--ink); font-weight: 600; }
+
+.hl.ph .bar .words { gap: 12px; }
+.hl.ph .bar .words span { font-size: 15px; }
+.hl.ph .bar .shop { font-size: 15px; white-space: nowrap; }
+
+  </style>
+</helmet>
+<div class="board">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow">Surface III · Headline · size is the hierarchy</span><span class="note">Design canvas · 2026-09-11 · Clear the deck · round 2</span></div>
+    <h1>Headline</h1>
+    <p class="lede">Four type sizes and two colours, and that is the whole system. The day's name is 56px, a boat is 28px in the shop's colour, everything else is 17px black; there are no lines but the two rules that hold a group, no grey, no fills, no chrome to speak of. It reads across a counter and in glare because every word is either big or bold, and it is the one surface here that nothing else looks like.</p>
+    <div class="three">
+      <div><span class="k">The case</span><p>Reef put hierarchy in boxes, tints and marks. Headline puts it in the type and deletes everything else, which is what a newspaper front page and a departures board have always done. <b>The 6 AM read is the biggest words on the page</b>: the day, three boats in green, the people in bold. Nobody has to learn what a chip means.</p></div>
+      <div><span class="k">The honest tradeoff</span><p>It spends height. A 56px title and 28px groups push the third boat below the fold on a laptop, and 17px sentences with no muted grey give every fact the same weight, so <b>the eye has to read rather than scan</b> the long lists. Bold enough to be a taste, which is the point and the risk: an owner either loves the poster or wants it quieter by week two.</p></div>
+      <div><span class="k">Cost</span><p><b>3–4 sessions.</b> Four sizes replace the nine-rung ramp and <span class="mono">check:type-ramp</span> shrinks to them; every tint, line, border, shadow and mark goes; one face replaces Geist; the phone gets 22px names and a 64px count from the same four sizes.</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>The system</b> · two colours plus red, four sizes, two rules</div>
+  <div class="sys">
+    <div class="cell"><h4>Colour · four, no grey</h4><div class="sw">
+      <div><i style="background:#ffffff;"></i><b>Ground</b>#ffffff</div>
+      <div><i style="background:#111111;"></i><b>Ink</b>#111111</div>
+      <div><i style="background:#1d7a5f;"></i><b>The shop's</b>every 28px word, the verb</div>
+      <div><i style="background:#b42318;"></i><b>Blocked</b>#b42318 · 6.6:1</div>
+    </div><p class="note" style="margin:10px 0 0 0;">No muted ink at all: a fact that matters less is smaller, never lighter — which is also the dock test's answer.</p></div>
+    <div class="cell" style="font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif; color:#111;"><h4>Type · Schibsted Grotesk, four sizes</h4><div class="spec">
+      <span style="font-size:56px; line-height:58px; font-weight:700; letter-spacing:-0.03em;">Thursday</span><small>56 / 700 · the page's name</small>
+      <span style="font-size:28px; line-height:32px; font-weight:700; letter-spacing:-0.015em; color:#1d7a5f;">7:00 · Two-Tank Reef</span><small>28 / 700 · a boat, in the shop's colour</small>
+      <span style="font-size:20px; line-height:28px;">Three boats. Four things before the 7:00 leaves.</span><small>20 / 400 · the lede, the chrome, the field</small>
+      <span style="font-size:17px; line-height:26px;"><b style="font-weight:700;">Grace Mensah</b> Advanced card, added yesterday, waits for a look <b style="font-weight:700; color:#b42318;">Blocked</b></span><small>17 / 400 and 700 · everything else</small>
+    </div></div>
+    <div class="cell"><h4>Shape and structure</h4><div class="shape">
+      <span><b>Radius 0.</b> There is nothing to round.</span>
+      <span><b>Two rules:</b> a 2px ink rule under a group's heading and under the field. No other line, fill, border or shadow anywhere.</span>
+      <span><b>Density:</b> 48px rows on the desk at 17px; 56px rows and 22px names on the phone.</span>
+      <span><b>Elevation:</b> none.</span>
+      <span><b>Night:</b> ink and ground swap; the shop's colour moved toward white; nothing else to invert.</span>
+    </div></div>
+  </div>
+
+  <div class="frame-cap"><b>The shop home</b> · Thursday, August 27, 6:40 AM · desktop · Three words with Ask as its search</div>
+  <div class="frame desktop" style="border-color:#e5e5e5;"><div class="app hl">
+    <div class="bar"><span class="shop">Blue Mantis Divers</span><div class="words"><span class="on">Day</span><span>People</span><span>Shop</span></div><div class="ask">Ask — a name, a day, a boat</div><span class="me">Dana</span></div>
+    <div class="page">
+      <h1 class="t">Thursday, August 27</h1>
+      <p class="lede">Three boats. Four things before the 7:00 leaves, and one after.</p>
+      <div class="gh"><b>7:00 · Two-Tank Reef — Molasses &amp; French</b><span>Mantis II · Keiko, Sal · 10 of 12 · 6 of 10 here</span></div>
+      <div>
+        <div class="r"><span class="who">Grace Mensah</span><span class="what">Advanced card, added yesterday, waits for a look</span><span class="st dn">Blocked</span></div>
+        <div class="r"><span class="who">Priya Sharma</span><span class="what">Waiver not sent</span><span class="st dn">Blocked</span></div>
+        <div class="r"><span class="who">Nadia Petrov</span><span class="what">No emergency contact on file</span></div>
+        <div class="r"><span class="who">Hannah Liu, Ben Carter, Emma Fischer</span><span class="what">No rental sizes yet</span></div>
+        <div class="r"><span class="who">Hugo Marsh, Ben Okafor</span><span class="what">Not here yet · check-in closes 6:45</span></div>
+        <div class="r add"><span>Seat a walk-in</span></div>
+      </div>
+      <div class="gh"><b>1:00 · Wreck Trip — Spiegel Grove</b><span>Mantis II · no crew yet · 10 of 10</span></div>
+      <div>
+        <div class="r"><span class="who">Crew</span><span class="what">Nobody is assigned to this boat</span><span class="st dn">Blocked</span></div>
+        <div class="r"><span class="who">Tomás Ferreira</span><span class="what">No card on file for a deep wreck</span><span class="st dn">Blocked</span></div>
+      </div>
+      <div class="gh"><b>7:30 · Night Dive — City of Washington</b><span>Skiff · Keiko · 3 of 8</span></div>
+      <div>
+        <div class="r"><span class="who">Seats</span><span class="what">5 open · no deal sent</span></div>
+        <div class="r"><span class="who">Jonas Berg</span><span class="what">First dive since 2019 · the briefing knows</span></div>
+      </div>
+      <div class="gh"><b style="color:#111;">At the desk</b><span>since yesterday</span></div>
+      <div>
+        <div class="r"><span class="who">Messages</span><span class="what">3 divers wrote back</span><span class="st">People</span></div>
+        <div class="r"><span class="who">Reviews</span><span class="what">1 waiting on you</span><span class="st">People</span></div>
+        <div class="r"><span class="who">Money</span><span class="what">Priya's $95 at 6:02 · Stripe has not confirmed</span><span class="st">Shop</span></div>
+        <div class="r"><span class="who">Unfinished</span><span class="what">Emmet O'Brien on Friday's 7:00 · started 6:02</span></div>
+      </div>
+      <div class="gh"><b style="color:#111;">Later</b><span>this week</span></div>
+      <div>
+        <div class="r"><span class="who">Friday</span><span class="what">2 boats · 7 things</span></div>
+        <div class="r"><span class="who">Saturday</span><span class="what">2 boats · the 11:00 sold out, 2 waiting</span></div>
+      </div>
+    </div>
+  </div></div>
+  <p class="aside"><b>What is on the page:</b> four sizes of one face, the shop's green on the three boats and the verbs, two rules per group, red on four words. <b>What is not:</b> a grey, a line between rows, a box, a mark, a tint, a chip, a second face.</p>
+
+  <div class="frame-cap"><b>The counter</b> · the 7:00 at 6:40 AM · 390 · the count at 64, names at 22, readable from the far side of the counter</div>
+  <div class="pair">
+    <div class="phone" style="height:860px; border-radius:0; border-color:#e5e5e5;"><div class="app hl ph">
+      <div class="bar"><span class="shop">Blue Mantis</span><div class="words"><span class="on">Day</span><span>People</span><span>Shop</span></div></div>
+      <div style="padding:10px 16px 24px 16px;">
+        <h1 class="t">Check-in</h1>
+        <p class="lede" style="font-size:17px; line-height:24px; margin-top:4px;">7:00 · Two-Tank Reef · Mantis II</p>
+        <div class="fig" style="margin-top:12px;">6<small>of 10 here</small></div>
+        <div class="ask">Name or booking</div>
+        <div>
+          <div class="r"><span class="who">Ravi Nair</span><span class="st">Here</span></div>
+          <div class="r"><span class="who">Hannah Liu<span class="sub">buddy · Ben Carter</span></span><span class="st">Here</span></div>
+          <div class="r"><span class="who">Ben Carter</span><span class="st">Here</span></div>
+          <div class="r"><span class="who">Emma Fischer<span class="sub">no rental sizes yet</span></span><span class="st">Here</span></div>
+          <div class="r"><span class="who">Ines Costa</span><span class="st">Here</span></div>
+          <div class="r"><span class="who">Nadia Petrov<span class="sub">no emergency contact · ask</span></span><span class="st">Here</span></div>
+          <div class="r"><span class="who">Hugo Marsh</span><span class="st ac">Check in</span></div>
+          <div class="r"><span class="who">Ben Okafor<span class="sub">first time with us</span></span><span class="st ac">Check in</span></div>
+          <div class="r"><span class="who">Grace Mensah<span class="sub" style="color:#b42318; font-weight:700;">Can't board · card waits for a look</span></span><span class="st ac">Verify</span></div>
+          <div class="r"><span class="who">Priya Sharma<span class="sub" style="color:#b42318; font-weight:700;">Can't board · waiver not sent</span></span><span class="st ac">Send</span></div>
+          <div class="r add"><span>Add a walk-in</span></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="beside">
+      <h3>What stays of Reef</h3>
+      <ul><li>Nothing on a staff surface; the postcard on the recap until call (g). Harbor keeps the storefront in the shop's colour and face — and on Headline the storefront's boats are already 28px words in that colour, so the two sides rhyme.</li></ul>
+      <h3>What leaves</h3>
+      <ul>
+        <li>Every hue but ink, the shop's and red — including muted grey; the nine-rung type ramp; the radius ladder; the bed; the band, the tile, the dial, the chip, the pill, the glyph; every hairline; the eyebrow; Geist.</li>
+      </ul>
+      <h3>What it keeps</h3>
+      <ul><li>The safety floor and then some: 22px names and a 64px count on the phone, black on white, the two who cannot board in a red bold sentence with a green verb. The row is the target; the settled state is the word Here.</li></ul>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div><h3>Where it stops</h3><p>The long list. Without a muted grey every sentence is as loud as its neighbour, and a 20-diver roster is a wall of 17px. The answer is the group rule and the bold name, and it holds to about fifteen rows; past that Salt or Slate scan better. The 56px title is a taste an owner has to want.</p></div>
+    <div><h3>What it needs</h3><p><b>Four sizes, two colours, two rules.</b> <span class="mono">typography.ts</span> shrinks to four constants; <span class="mono">--muted</span> is deleted, not dimmed; every line, fill and shadow class on a staff surface goes; one face replaces Geist. The storefront's group headings take the same 28px in the shop's colour.</p></div>
+    <div><h3>Its wow</h3><p>The day reads from across the shop. Three green boats, the people in bold, the count at the top of the counter's screen in numbers a captain can read from the wheel — and not one box, line or icon anywhere. It looks like a poster of the day, because that is what it is.</p></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

@@ -1,12 +1,17 @@
 # 20260911-clear-the-deck — Six ways to make DiveDay smaller, a floor of deletions, and the pick is the owner's
 
-- **Status:** Proposed — pending H-73. The floor's first two rows (the door, the chip and the pill)
-  may start on this ADR alone, because they are One hand's slices 20b and 20c taken to zero; every
-  other row and every concept waits on the owner's calls (a)–(d)
+- **Status:** Proposed — pending H-73. **Round 1 read 2026-09-11 (Aaron Buxbaum, in session):**
+  the six concepts land, and the surface itself — Reef — is now the problem, "overbearing and ugly";
+  go farther. Round 2 (decision 3, below) redraws the surface as five candidates for the owner's
+  pick. The floor's first two rows (the door, the chip and the pill) may start on this ADR alone,
+  because they are One hand's slices 20b and 20c taken to zero; every other row, every concept and
+  every surface waits on the owner's calls (a)–(h)
 - **Date:** 2026-09-11
-- **Design:** [the canvas](../../design/canvases/20260911-clear-the-deck/README.md) — one page: the
-  cover with the count, the captures, the floor and the comparison; six concept boards, each
-  redrawing the shop home at desktop and at 390 for the same shop on the same morning
+- **Design:** [the canvas](../../design/canvases/20260911-clear-the-deck/README.md) — two pages.
+  Round 1: the cover with the count, the captures, the floor and the comparison; six concept boards,
+  each redrawing the shop home at desktop and at 390 for the same shop on the same morning. Round 2:
+  its cover with the layers counted on one screen and the surface floor; five surface boards, each
+  a system sheet, the home at desktop and the counter at 390
 - **Scope:** every staff surface under `src/app/shop/**`, the primitives in `src/components/ui/`,
   the destination registry `src/lib/staff-destinations.ts`, the settings registry
   `src/app/shop/[shopSlug]/settings/settings-groups.ts`; under calls (c) and (d), the storefront
@@ -106,7 +111,66 @@ screen the dock test was always about. Six stays on the canvas as the pitch to r
 boat is its own tool; two is the honest alternative for a shop whose owner already plans on a wall
 calendar.
 
-### 3. What this does to One hand
+### 3. The surface, rethought — round 2 (H-73 e–h)
+
+**The owner's read of round 1 (2026-09-11):** "I like these ideas, but I think we need to go
+farther. I think our Reef concept needs to be rethought since I'm now finding it overbearing and
+ugly."
+
+Reef ([20260901-diveday-reimagined](20260901-diveday-reimagined.md), picked as H-64) was drawn to
+feel warm and alive, and every canvas since added a moment on top of it rather than in place of
+one. Counted on one screen of the home at HEAD: ten decorative devices (the water band, the drawn
+site tile, the dial with water, the stage chip, the 28px panel on a bed, the tinted pill and its
+glyph, coral in three places, the horizon tiles, the eyebrow and the 44px greeting, the intent
+line), five hues and three washes, four radii, two elevations at rest, nine type rungs. The fix is
+not a prettier Reef; it is a surface with fewer things on it.
+
+**The surface floor.** Whichever surface is picked, every staff page obeys six rules, held by the
+same guards that hold round 1's floor: two hues and red (ink and the shop's colour; red is the word
+Blocked and nothing else; DiveDay's lagoon, coral, sand and shallows leave every staff surface); one
+radius per surface, or none; no elevation at rest; one structural device — a hairline, a rule or
+space, never two and never a fill behind text; type carries the hierarchy (no eyebrow, no caps
+label, no glyph beside a word); nothing drawn on a staff surface.
+
+**Five surfaces**, each on the floor, each drawn on round 1's recommended shape (Three words with
+Ask as its search) on the home at desktop and the counter at 390, and each naming its own face:
+
+- **I · Salt** — white, black, one hairline, the shop's colour on the current word and the verb;
+  Instrument Sans; radius 0. For: the least to look at and the most to read; prints as it stands.
+  Against: cold, and anyone's. 2–3 sessions.
+- **II · Air** — a warm-neutral white with no lines; space as the structure, a soft fill under a
+  finger; Figtree; radius 12. For: the gentlest answer to "overbearing". Against: the least
+  distinctive; spends rows. 3 sessions.
+- **III · Headline** — four sizes, two colours, no grey, two rules per group; the boats in the
+  shop's colour at 28px; Schibsted Grotesk; radius 0. For: reads across a counter; unlike anything
+  else. Against: spends height; a taste. 3–4 sessions.
+- **IV · Their ink** — the shop's colour as the ink in four strengths (Harbor's derivation run to
+  7:1, with a twelve-step fallback to neutral ink), its face on the titles, DiveDay's palette gone;
+  Public Sans; radius 6. For: "it's in our colours"; no mix to be ugly. Against: heavy in a dark
+  hue; about a third of shop colours fall back to Salt with a coloured bar. 4–5 sessions.
+- **V · Slate** — a cool grey ground, one white sheet, hairlines, 44px rows, a face cut for low
+  vision; Atkinson Hyperlegible; radius 4. For: the densest without a table; the dock test as a
+  face. Against: "another app". 3 sessions.
+
+A surface is picked whole. The one honest composition is Their ink's colour rule under another
+surface's type and structure. Under every surface the manifest and the roll call keep neutral ink
+and boat mode — a head count is never in a brand — and Harbor keeps the storefront in the shop's
+colour and face on the picked surface's rows and controls.
+
+The recommendation, stated so it can be disagreed with: **Their ink**, with Air's spacing already
+inside it — the owner's "overbearing and ugly" is the mix of DiveDay's colours with the shop's, and
+Their ink removes the mix by removing DiveDay's colours; it is the lever the owner liked on 09-09
+taken to its end, and the one surface a shop repeats to a friend. Headline if the phone matters
+more than the desk; Salt for the cheapest honest answer; Air if the priority is that nobody can
+call it anything; Slate if a five-boat Saturday on one laptop screen is the job.
+
+**The owner's round-2 calls (H-73):** (e) which surface replaces Reef on every staff page;
+(f) whether Geist leaves the staff app for the picked surface's face, reversing H-64's one-face
+pick; (g) whether the hand and the coral leave the product entirely or stay on the diver's recap
+postcard only; (h) whether DiveDay's own pages take the picked surface in the slice that shrinks
+them. Round 1's (a), (c) and (d) stand; (b) is answered by every surface here.
+
+### 4. What this does to One hand
 
 One hand's ADR stays Proposed and its floor (20a–20e) stays the floor: nothing here restates it and
 every concept assumes it. Its open slices 20f–20m — the earned moment on the shared door, the levers
@@ -116,13 +180,14 @@ Their features that already shipped (20n–20t: the boat's line, try it with you
 the gift, sightings, paper, the shelf) stay; call (c) decides where they sit — recommended: all
 kept, on by default, and off the storefront's front page.
 
-### 4. What does not change
+### 5. What does not change
 
 The name and the mark. Harbor — the diver-facing pages wear the shop's brand, and concept 6 makes
 that everything rather than less. The dock test: 44px targets, 16px critical text, AA, never colour
-alone. The coral bans on manifests, roll call, certs, waivers and payments. The claims policy. The
-roll call commits before it renders. H-02's retention and erasure promises. Boat mode as the palette
-of whatever screen is on the boat. Every settled question in
+alone — on every round-2 board the two who cannot board carry a sentence, never a hue. The coral
+bans on manifests, roll call, certs, waivers and payments, which every surface makes moot by having
+no coral. The claims policy. The roll call commits before it renders, and keeps neutral ink and boat
+mode under every surface. H-02's retention and erasure promises. Every settled question in
 [settled-questions.md](../../design/settled-questions.md).
 
 ## Alternatives considered
@@ -140,6 +205,11 @@ of whatever screen is on the boat. Every settled question in
 - **Deleting features outright without the owner's word** — declined: every deletion on the floor
   that removes a feature a shop could see is behind a call; the two rows that start on this ADR
   alone remove doors and pills, not capabilities.
+- **Round 2 as a tidier Reef — the same tokens with fewer moments** — declined: the owner's word
+  is "overbearing and ugly", not "busy", and the ugliness is the mix of hues and rungs that a tidier
+  Reef would keep. Every candidate starts from two hues and one radius instead.
+- **Round 2 as one surface, chosen for the owner** — declined: taste is the owner's call, and five
+  drawn on one anatomy let it be made by eye; the recommendation is stated so it can be refused.
 
 ## Consequences
 
@@ -152,7 +222,10 @@ Hard: each retired switch drove a conditional on some surface, and the sweep has
 each one with its guard, message keys and test — the sessions in every cost estimate are mostly
 that. Marketing loses features it currently names (the embed catalogue, the print register) and
 gains a sentence ("nothing to configure before the first boat"). Concept 6 cannot start before
-concept 3's boat half exists.
+concept 3's boat half exists. A new surface reverses two accepted picks — Reef's tokens (H-64,
+13a) and Geist as the only face — and the tests that pin them (`card.test.tsx`'s radius and
+elevation rules, `check:type-ramp`'s constants, the water-band palette test) are rewritten to pin
+the new surface, never deleted.
 
 Commits us to: fewer things, held by guards that refuse a new door, a new pill, a new switch and a
 new front-page section, so the count cannot climb back in silence.
