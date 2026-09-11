@@ -168,7 +168,8 @@ describe("canOverrideGearRequest (H-06 — owner/manager/instructor/divemaster)"
  * one fact held in two places** (D40, issue #1200; the narrowing is #1410).
  *
  * `recap.pulseAudience` is shown to a diver deciding whether to type the thing
- * they did not want to say in public: "Just for {shop}'s owner and managers."
+ * they did not want to say in public: "Just for the owner and managers at
+ * {shop}."
  * That is a promise, and the only thing that makes it true is which roles
  * `canReadPrivateRecapPulse` admits. Nothing else connects them — widen the
  * gate and the sentence goes quietly false, which is the exact failure the

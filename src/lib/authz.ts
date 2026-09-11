@@ -244,7 +244,7 @@ export function canReadMedicalClearanceDocument(roles: readonly Role[] | undefin
  * **Why this is its own predicate and not a call to {@link canViewShopReports}.**
  * The panel and its action borrowed the revenue gate, which happens to carry
  * the same role set. But the pulse form tells the diver who will read it —
- * `recap.pulseAudience`, "Just for {shop}'s owner and managers" — and a
+ * `recap.pulseAudience`, "Just for the owner and managers at {shop}" — and a
  * sentence like that is only true while the reader set is the one it names.
  * Borrowed, the day somebody opens reports to instructors the panel opens with
  * it and the promise goes quietly false, with nothing to turn red. A reader set
