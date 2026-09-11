@@ -13,7 +13,6 @@ import type { Role } from "./authz";
 import type { DiveIntentCount } from "./dive-intent";
 import type { CrewIncompleteReason } from "./manifests";
 import type { AboardBlockerKind, ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
-import type { SizedRentalKind } from "./rentals";
 import type { SeasonStart } from "./season";
 import type { TripStageReading } from "./trip-stages";
 import { utcToWallTime } from "./zoned";
@@ -535,14 +534,15 @@ export type TodayAction = {
    * `href` stays the row's real destination — the diver's record — so a
    * pre-hydration tap, a middle-click and an open-in-new-tab all still land
    * somewhere the staffer can finish the job by hand.
+   *
+   * The reservation is the whole payload. It carried the diver, the kind and
+   * the size until a `security-reviewer` pass (issue #1453) read what that
+   * meant on the wire: the control binds these into the action, so a bound
+   * size is a size any staff role could post for any diver. The action
+   * re-proves all three from the desk's own `fit_adjusted` return instead, and
+   * the detail a staffer reads is already rendered into `detail` above.
    */
-  rentalFit?: {
-    personId: string;
-    kind: SizedRentalKind;
-    size: string;
-    unitLabel: string;
-    personName: string;
-  };
+  rentalFit?: { reservationId: string };
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };

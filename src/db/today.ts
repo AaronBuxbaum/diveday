@@ -2119,13 +2119,7 @@ export async function getTodayWork(
       }),
       actionLabel: openDiverActionText(t),
       href: `/shop/${shopSlug}/divers/${row.personId}`,
-      rentalFit: {
-        personId: row.personId,
-        kind: row.kind,
-        size: row.size,
-        unitLabel: row.unitLabel,
-        personName: row.personName,
-      },
+      rentalFit: { reservationId: row.reservationId },
       dueAt: row.tripEndsAt,
     });
   }

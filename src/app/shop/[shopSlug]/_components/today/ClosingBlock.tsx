@@ -169,9 +169,7 @@ export function ClosingBlock({
                       // asking a question it can answer. Dismiss stays beside
                       // it, which is the other honest answer.
                       <RentalFitKeepControl
-                        personId={action.rentalFit.personId}
-                        kind={action.rentalFit.kind}
-                        size={action.rentalFit.size}
+                        reservationId={action.rentalFit.reservationId}
                         label={t("today.gear.fitConfirmKeep")}
                         pendingLabel={t("today.gear.fitConfirmSaving")}
                       />
