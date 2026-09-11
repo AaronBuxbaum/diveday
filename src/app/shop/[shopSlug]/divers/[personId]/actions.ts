@@ -1547,12 +1547,11 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
  * 20260907-two-way-inbox).
  *
  * **Every live staff role may send as the shop.** Decided by the product owner
- * on 2026-09-10 as an amendment to H-14 (issues #1505/#1518), and this is the
- * place it is written down. The argument that opened the inbox to reading
- * extends to writing: the message that most wants answering at 7am is
- * answered by whoever is at the dock, and the insider risk of a staffer typing
- * over the shop's own sender is the one a shop manages by choosing who it
- * employs, not by making a captain wait for a manager.
+ * on 2026-09-10 as an amendment to H-14 (issues #1505/#1518); the argument is
+ * decision 9 of that ADR, and the owner's call is H-14 in
+ * `docs/product/human-decisions.md`. What it means here is that the argument
+ * which opened the inbox to reading extends to writing — there is no narrower
+ * gate on sending than there is on looking.
  *
  * So there is one gate left, and `requireDiverActionContext` makes it: the
  * `isLiveStaff` check every action on this page runs before its own. A

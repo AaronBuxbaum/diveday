@@ -125,12 +125,10 @@ export default async function ReviewsPage({
   const { shopSlug } = await params;
   const { page, notice } = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
-  // **Who on the crew may read the private pulses** (issue #1410). The pulse's
-  // own predicate, not the reports gate it used to borrow: the recap form tells
-  // the diver who reads this, so the reader set has a name of its own and moves
-  // only when somebody means to move it (src/lib/authz.ts). Checked live
-  // against the database rather than the JWT, so a demoted manager loses the
-  // panel immediately.
+  // **Who on the crew may read the private pulses** (issue #1410, the reasoning
+  // on `canReadPrivateRecapPulse` in src/lib/authz.ts). Checked live against the
+  // database rather than the JWT, so a demoted manager loses the panel
+  // immediately.
   //
   // Awaited on its own, ahead of the parallel block, rather than folded into
   // it: folding it in would read a diver's private words for a staffer this
@@ -293,15 +291,12 @@ export default async function ReviewsPage({
 
           Above the ledger because it is the thing on this page a person is
           waiting on, and behind **its own owner/manager gate** — the one thing
-          on this page that is (issue #1410). A review is public words a shop
-          moderates; a pulse is private diver-authored content that renders
-          under the diver's name, beside a link to their record, and names
-          crew. That is the Requests boundary and it is here for the Requests
-          argument. The page around it stays open to every staff role.
+          on this page that is (issue #1410). Moderating public words stays open
+          to every staff role; the panel is the exception, not the page.
 
-          Stated here as well as on the read above, which already hands a
-          refused reader an empty list: the panel stays gated if that read ever
-          stops being the conditional one. */}
+          `canReadPulses` is repeated here even though the read above already
+          hands a refused reader an empty list: the panel stays gated if that
+          read ever stops being the conditional one. */}
       {canReadPulses && openPulses.length > 0 ? (
         <SectionCard title={t("reviews.pulseTitle")} className="mb-8">
           <ul className="divide-y divide-border">

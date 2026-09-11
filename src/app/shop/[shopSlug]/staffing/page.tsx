@@ -97,9 +97,8 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
     key: "staffing.notice.requestApprovedNotAssigned",
   },
   // Approved, assigned, and the session is *still* over an intro ratio (issue
-  // #1339): `INTRO_COURSE_RATIO` credits an assistant zero students, so the
-  // plain success line read as a gap closed to the one person who could close
-  // it. Warning, not success — the boat has not changed.
+  // #1339). Warning, not success: the plain success line read as a gap closed
+  // to the one person who could close it, and the boat has not changed.
   "request-approved-ratio-open": {
     tone: "warning",
     key: "staffing.notice.requestApprovedRatioOpen",

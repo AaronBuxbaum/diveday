@@ -363,14 +363,13 @@ export async function decideCrewRequestAction(week: string, formData: FormData) 
     revalidateAndRedirect(path, noticeUrl(path, "request-approved-not-assigned", at));
     return;
   }
-  // **An approval that changed nothing says so** (issue #1339). An intro
-  // session's cap is instructor-to-student — `INTRO_COURSE_RATIO` credits an
-  // assistant zero students — so approving a divemaster onto an over-ratio DSD
-  // session is a real assignment that moves capacity by not one seat. The plain
-  // "Approved, and they're on the crew" was the last thing the queue said about
-  // it, and at 06:40 on a Saturday nobody re-reads the chip afterwards. Asked
-  // of the boat after the write rather than inferred from who asked, so a
-  // second instructor rostered in the same minute is reported honestly.
+  // **An approval that changed nothing says so** (issue #1339). A real
+  // assignment can move an intro session's capacity by not one seat, and the
+  // plain "Approved, and they're on the crew" was the last thing the queue said
+  // about it — at 06:40 on a Saturday nobody re-reads the chip afterwards. Why
+  // the boat is asked here rather than the requester's roles inferred from is
+  // `tripOverIntroRatio`'s own doc (src/db/crew-requests.ts); this call site
+  // only turns its answer into the notice.
   const stillOverIntroRatio = await tripOverIntroRatio(db, session.user.shopId, outcome.tripId);
   revalidateAndRedirect(
     path,
