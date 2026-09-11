@@ -582,8 +582,9 @@ export default async function SchedulePage({
    * `canDiveFilter` on its own is deliberately not in the set: without
    * `hideAbove` it dims and marks the over-level departures and removes none, so
    * the card still names the shop's actual next boat and "in this view" would be
-   * a narrowing that did not happen. The same four the empty state below already
-   * keys its "no matches" title on — one rule, stated twice.
+   * a narrowing that did not happen. The empty state below reads the same flag
+   * for its "no matches" title, because it is the same question — whether what
+   * the reader is looking at is a slice of the board or the board.
    */
   const filteredView =
     hasSpaceFilter || Boolean(tripTypeFilter) || hideAboveFilter || Boolean(activeLens);
@@ -1144,11 +1145,7 @@ export default async function SchedulePage({
             ) : null
           ) : visibleUpcoming.length === 0 ? (
             <EmptyState
-              title={
-                hasSpaceFilter || tripTypeFilter || hideAboveFilter || activeLens
-                  ? t("schedule.filters.noMatches")
-                  : t("schedule.noTripsMonth")
-              }
+              title={filteredView ? t("schedule.filters.noMatches") : t("schedule.noTripsMonth")}
             />
           ) : (
             <WeekLedger
