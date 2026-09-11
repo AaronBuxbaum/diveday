@@ -1127,11 +1127,12 @@
     "guardianRelationshipParent": "Madre o padre",
     "guardianRelationshipLegalGuardian": "Tutor legal",
     "guardianEmail": "Correo electrónico del tutor",
+    "guardianEmailDescription": "Opcional. Si lo das, te enviamos por correo una copia de lo que firmaste.",
     "guardianAgreementCheckbox": "Soy la madre, el padre o el tutor legal de este buceador. He leído esta exención y las preguntas de salud respondidas arriba, las entiendo y las acepto en su nombre.",
     "errorGuardianName": "Escribe el nombre completo del tutor.",
     "errorGuardianNameIsDiver": "El nombre del tutor no puede ser el del buceador. Puede firmar otro progenitor o tutor legal. Si eres el único aquí, escribe tu nombre tal como aparece en tu documento de identidad, con el segundo apellido o el segundo nombre sin abreviar. Si ambos documentos coinciden, pide al centro que añada el segundo apellido o el sufijo al registro del buceador.",
     "errorGuardianRelationship": "Elige la relación del tutor con el buceador.",
-    "errorGuardianEmail": "Escribe el correo electrónico del tutor.",
+    "errorGuardianEmail": "Revisa el correo electrónico del tutor, o déjalo en blanco.",
     "errorGuardianAgreement": "El tutor tiene que marcar la casilla de aceptación para firmar.",
     "railRelease": "Exención",
     "railMedical": "Salud",
@@ -3822,6 +3823,11 @@
     "staffReply": {
       "subject": "Un mensaje de {shopName}",
       "reSubject": "Re: {subject}"
+    },
+    "guardianReleaseCopy": {
+      "subject": "Tu copia de la exención firmada de {diverName}",
+      "body": "Firmaste como madre, padre o tutor legal la exención de responsabilidad de {shopName} para {diverName} el {signedAt}. La exención fue {releaseTitle}, versión {releaseVersion}.",
+      "note": "Este es tu comprobante. No hay nada que hacer ni nada que abrir. Si algo no cuadra, contacta con el centro."
     },
     "waiverRequest": {
       "subject": "Completa tu waiver para {tripTitle}",

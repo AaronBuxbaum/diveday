@@ -49,7 +49,8 @@ guardian signs the same release beside them, and the release is not usable until
    `guardian_signed_at` — the diver's own signature block a second time, plus who they are and how
    to reach them. A check constraint keeps the *signature* whole (signed-at, consented-at, method
    and relationship all present or all absent); the name and email are deliberately outside it, so
-   erasure can take them and leave the fact standing. A guardian is a party to one document, not a
+   erasure can take them and leave the fact standing. **The email is optional**, amended
+   2026-09-10 (decision 11 below), and the one thing it is for is a copy of what was signed. A guardian is a party to one document, not a
    customer: giving them a `people` row would invent a diver the shop never met.
 3. **The relationship is a code, never free text** — `parent` or `legal_guardian`, worded per reader
    in `src/i18n/guardian-labels.ts`, for the same reason a dive site's difficulty is a code
@@ -122,11 +123,43 @@ guardian signs the same release beside them, and the release is not usable until
     relaxation of a check on a minor's liability release and no attorney has read it**; the owner
     authorised it on 2026-09-10 and H-01/H-03 stay open.
 
+11. **The guardian's address is optional, and the one thing it is for is a copy of what was
+    signed** (issue #1453, owner decision 2026-09-10: "send a copy where there is an address, and
+    stop refusing a family that has none"). As shipped, decision 1 made the address **required** and
+    nothing ever read it — the only readers were the export bundle and the erasure path that nulls
+    it. So a parent put their name to a liability release for their child, handed over an address,
+    and received nothing, while DiveDay held a third party's personal data under no stated purpose.
+    Both halves move at once. **Optional**: the page drops `required` and says what giving one buys,
+    and `guardianEvidence` stores blank as null — the column was already nullable and outside the
+    whole-signature check, so **there is no migration**. What is *not* relaxed is the shape: a typed
+    address that is not one is still refused writer-side, never silently stored as null, because
+    dropping `required` widens what a hand-built request can submit. **The copy**: a new
+    notification kind, `guardian_release_copy`, sent once per release from `/waivers/[token]`'s
+    completion inside `after(…)`, carrying the shop, the diver, the release title and version and
+    the day it was signed. Three shapes are load-bearing and are the whole of what this message is.
+    **No link of any kind** — the issue refuses a bearer URL to a third party by name, the release
+    is already signed by the time this sends, and `email.test.ts` asserts there is no anchor and no
+    `http` in the rendered bytes in both locales rather than trusting a comment. **No medical
+    answers** — the questionnaire is the minor's own health information and a courtesy copy to a
+    third party is not where it travels. **No `bookingId`**, so no `notification_deliveries` row is
+    written, the `notification_kind` pg enum needs no new value, and the guardian never becomes a
+    per-booking delivery channel or lands on any list. The diver's own address rides in the payload
+    as `diverEmail` so `notificationSubjectEmail` can surface it: the recipient is the guardian and
+    the *subject* is a named minor, which is exactly the gap that left an erased diver's queued
+    `course_inquiry` alive in issue #1298. Nothing is sent for a paper record, which collects no
+    address by decision 7.
+
 ## Alternatives considered
 
 - **A second token emailed to the guardian** (the shape N-38 was sketched as) — a second bearer URL
   to a third party's inbox, a second expiry, a second delivery failure mode, and a half-signed
-  release sitting in the middle of it. Rejected: the adult is almost always in the room.
+  release sitting in the middle of it. Rejected: the adult is almost always in the room. Decision 11
+  re-rejects it for the copy: that message carries no URL at all.
+- **Keeping the address required and sending nothing, with a line saying the shop may use it**
+  (issue #1453's option 2) — honest about the collection, and it still leaves the parent with no
+  record of a release they signed, and still refuses the grandparent with no email.
+- **Making the address optional and sending nothing** (option 3) — fixes the refusal and leaves the
+  column a reader-less store of a third party's personal data, which is half the complaint.
 - **A distinct minor waiver template** — the right answer eventually, and H-01's to make. Building
   it now would guess at legal wording this decision explicitly does not touch.
 - **A `people` row for the guardian** — invents a diver the shop never met, and puts a

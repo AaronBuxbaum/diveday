@@ -964,7 +964,8 @@ function guardianEvidence(
       ok: true;
       name: string;
       relationship: GuardianRelationship;
-      email: string;
+      /** Null when the family gave none — the column is nullable (issue #1453). */
+      email: string | null;
       method: string;
       consentedAt: Date;
       signedAt: Date;
@@ -978,11 +979,15 @@ function guardianEvidence(
   if (!evidence) return { ok: false };
   if (!isGuardianRelationship(guardian.relationship)) return { ok: false };
   const email = guardian.email.trim().toLowerCase();
-  // The writer's own shape check, not the page's. `/waivers/[token]` runs a
-  // zod `.email()` first and is the enforcement of record for a browser; this
-  // is what stands between a hand-built request and an address on a signed
-  // release that nobody can ever reach the guardian at.
-  if (!GUARDIAN_EMAIL_SHAPE.test(email)) return { ok: false };
+  // **Optional, shape-checked when given** (issue #1453, owner decision
+  // 2026-09-10). Blank is a family with no address — a grandparent at a
+  // counter, or a household sharing the one the diver already gave — and
+  // refusing them outright was the wrong end of the promise, since nothing
+  // ever sent to the column. What is *not* relaxed is the shape: the page
+  // dropped `required`, so this is what stands between a hand-built request
+  // and an address on a signed release that nobody can ever reach the guardian
+  // at. A malformed address is still a refusal, never a silent null.
+  if (email !== "" && !GUARDIAN_EMAIL_SHAPE.test(email)) return { ok: false };
   // **The online path has no namesake exception and must never grow one**
   // (issue #1573, owner decision 2026-09-10). The paper path does, because a
   // named staffer physically watched two people sign; here the shop has no
@@ -994,7 +999,7 @@ function guardianEvidence(
     ok: true,
     name: evidence.signerName,
     relationship: guardian.relationship,
-    email,
+    email: email === "" ? null : email,
     method: evidence.method,
     consentedAt: evidence.consentedAt,
     signedAt: evidence.signedAt,

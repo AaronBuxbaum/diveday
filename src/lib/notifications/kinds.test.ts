@@ -87,6 +87,25 @@ describe("every handle a notification carries is reachable by the erasure sweep"
       inquirerEmail: "diver@example.invalid",
       inquirerPhone: "+1 305 555 0134",
     } as Notification,
+    // The guardian reads it; the minor is the person it is about, by name, at a
+    // named shop, on a named day (issue #1453). Without `diverEmail` reaching
+    // `notificationSubjectEmail`, an erased diver's queued copy would outlive
+    // them in the send queue.
+    guardian_release_copy: {
+      kind: "guardian_release_copy",
+      waiverRecordId: "00000000-0000-4000-8000-000000000007",
+      shopId: "00000000-0000-4000-8000-000000000008",
+      to: "parent@example.invalid",
+      locale: "en-US",
+      guardianName: "Jordan Fischer",
+      diverName: "Lena Fischer",
+      shopName: "Blue Mantis Divers",
+      releaseTitle: "Liability Release",
+      releaseVersion: 3,
+      signedAt: new Date("2026-08-01T13:00:00.000Z"),
+      timezone: "America/New_York",
+      diverEmail: "lena@example.invalid",
+    } as Notification,
     new_account_alert: {
       kind: "new_account_alert",
       userAccountId: "00000000-0000-4000-8000-000000000003",

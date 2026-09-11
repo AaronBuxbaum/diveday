@@ -2739,7 +2739,12 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
       { ...guardian, name: ctx.person.fullName },
       // A relationship this product does not have a word for.
       { ...guardian, relationship: "uncle" },
+      // Blank is now accepted (issue #1453) but a *typed* address that is not
+      // one is still a refusal, never a silent null: the page dropped
+      // `required`, so this writer-side shape check is the enforcement of
+      // record for anything a hand-built request sends.
       { ...guardian, email: "not-an-address" },
+      { ...guardian, email: "  parent@ " },
       // A typed name is not a signature until the guardian's own box is ticked.
       { ...guardian, agreed: false },
     ]) {
@@ -2757,6 +2762,48 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
         state: "available",
       });
     }
+  });
+
+  /**
+   * **The family with no address** (issue #1453, owner decision 2026-09-10:
+   * "send a copy where there is an address, and stop refusing a family that
+   * has none").
+   *
+   * A grandparent at a counter with no email, or a household sharing the one
+   * the diver already gave, was refused outright — while the column they were
+   * being made to fill had no reader at all. It is optional now, stored null,
+   * and the release is a release.
+   */
+  it("records a co-signature with no guardian address, and seals it", async () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const ctx = await waiverContext();
+    await makeMinor(ctx.db, ctx.person.id);
+    const issued = await liveLink(ctx);
+
+    expect(
+      await completeWaiver(ctx.db, issued.token, {
+        signerName: ctx.person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        guardian: { ...guardian, email: "" },
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+
+    const [record] = await db_record(ctx, issued.recordId);
+    expect(record).toMatchObject({
+      guardianName: "Jonas Fischer",
+      guardianRelationship: "parent",
+      guardianEmail: null,
+      guardianSignatureMethod: "typed_consent",
+    });
+    if (!record) throw new Error("expected a record row");
+    expect(verifyWaiverIntegrity(record)).toBe("valid");
+    // The boarding gate is cleared by the signature, never by the address.
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.booking.id);
+    expect(readiness?.blockers ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "guardian_signature_missing" }),
+    );
   });
 
   it("writes the co-signature, seals it, and clears the boarding gate", async () => {

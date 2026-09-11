@@ -3,6 +3,7 @@ import {
   bookingConfirmationEmail,
   courseInquiryEmail,
   demoStartedAlertEmail,
+  guardianReleaseCopyEmail,
   lastMinuteDealEmail,
   newAccountAlertEmail,
   passwordChangedEmail,
@@ -762,5 +763,50 @@ describe("wrapEmailHtml", () => {
     expect(html).toContain("background-color: #008080");
     expect(html).toContain("background-color: #ff6b6b");
     expect(html).toContain("border-radius: 50%");
+  });
+});
+
+/**
+ * **The guardian's copy carries no door** (issue #1453).
+ *
+ * The whole shape of this message is what it refuses: the release is already
+ * signed when it sends, so a second capability URL to a third party is a
+ * security surface with nothing behind it, and the issue rules it out by name.
+ * The renderer beside this one is built from a link and a button, so the
+ * likeliest way this breaks is a copy-paste — which is why the assertion is on
+ * the rendered bytes rather than on the input shape, and why it runs in both
+ * locales: one bundle gaining a URL in a translated string would slip past a
+ * check on the English alone.
+ */
+describe("the guardian's copy of a signed release", () => {
+  const input = {
+    guardianName: "Jordan Fischer",
+    diverName: "Lena Fischer",
+    shopName: "Blue Mantis & Co.",
+    releaseTitle: '<Liability "Release">',
+    releaseVersion: 3,
+    signedAt: new Date("2026-08-01T13:00:00.000Z"),
+    timezone: "America/New_York",
+  };
+
+  it.each(["en-US", "es-ES"] as const)("carries no link and no token (%s)", (locale) => {
+    const email = guardianReleaseCopyEmail({ ...input, locale });
+
+    expect(email.html).not.toContain("<a ");
+    expect(email.html).not.toContain("http");
+    expect(email.text).not.toContain("http");
+    // Every fact the message is for, and nothing about the diver's health:
+    // the questionnaire is the minor's own information and a courtesy copy to
+    // a third party is not where it travels.
+    expect(email.text).toContain("Lena Fischer");
+    expect(email.text).toContain("Blue Mantis & Co.");
+    expect(email.subject).toContain("Lena Fischer");
+  });
+
+  it("escapes the shop and release names it renders into HTML", () => {
+    const email = guardianReleaseCopyEmail({ ...input, locale: "en-US" });
+
+    expect(email.html).toContain("Blue Mantis &amp; Co.");
+    expect(email.html).toContain("&lt;Liability &quot;Release&quot;&gt;");
   });
 });

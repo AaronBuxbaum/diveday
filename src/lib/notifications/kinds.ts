@@ -115,6 +115,53 @@ const waiverRequestSchema = z.object({
 });
 
 /**
+ * **The copy a co-signing parent gets of the release they just put their name
+ * to** (issue #1453, owner decision 2026-09-10).
+ *
+ * The guardian's address was required and nothing ever read it: a parent
+ * signed a liability release for their child, handed over an address, and got
+ * nothing, while DiveDay stored a third party's personal data with no reader.
+ * This is that reader.
+ *
+ * Three shapes here are deliberate and a future kind should not copy them
+ * without meaning to:
+ *
+ * - **No `bookingId`.** A guardian is a party to one document, not a customer
+ *   and not a per-booking delivery channel, so no `notification_deliveries`
+ *   row is written (`sendAndRecordNotification` writes one only for a kind
+ *   that carries a booking). That is also why the `notification_kind` pg enum
+ *   needs no new value and this ships with no migration.
+ * - **No URL of any kind in the payload.** The issue refuses a bearer link to
+ *   a third party outright: the release is already signed by the time this
+ *   sends, so a second capability URL would be a security surface with nothing
+ *   behind it. The renderer takes no `completionUrl` because there is none to
+ *   take.
+ * - **`diverEmail`.** The guardian is the recipient; the minor is the person
+ *   the message is *about*, by name, at a named shop, on a named day. Without
+ *   lifting their address into `notificationSubjectEmail`, an erased diver's
+ *   queued copy would survive the `notification_send_queue` sweep in
+ *   `src/db/anonymize.ts` — the exact hole issue #1298 closed for
+ *   `course_inquiry`. `kinds.test.ts` walks the union and fails if this is
+ *   forgotten.
+ */
+const guardianReleaseCopySchema = z.object({
+  kind: z.literal("guardian_release_copy"),
+  waiverRecordId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  guardianName: z.string().trim().min(1).max(120),
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  releaseTitle: z.string().trim().min(1).max(200),
+  releaseVersion: z.number().int(),
+  signedAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /** The diver's own address, so erasure can reach a queued copy about them. */
+  diverEmail: emailAddressSchema.optional(),
+});
+
+/**
  * **A replacement trip-prep link, asked for by the diver whose link died.**
  *
  * Its own kind rather than a reuse, on both available candidates.
@@ -777,6 +824,7 @@ export const notificationSchema = z
   .discriminatedUnion("kind", [
     bookingConfirmationSchema,
     waiverRequestSchema,
+    guardianReleaseCopySchema,
     readinessLinkSchema,
     shelfLinkSchema,
     bookingHandoffSchema,
@@ -837,6 +885,9 @@ export function notificationSubjectEmail(notification: Notification): string | n
   switch (notification.kind) {
     case "course_inquiry":
       return notification.inquirerEmail ?? null;
+    // The guardian reads it; the minor is who it is about (issue #1453).
+    case "guardian_release_copy":
+      return notification.diverEmail ?? null;
     case "new_account_alert":
       return notification.ownerEmail;
     default:
@@ -885,6 +936,11 @@ export function notificationIdempotencyKey(notification: Notification): string {
         : `booking-confirmation/${notification.bookingId}`;
     case "waiver_request":
       return `waiver-request/${notification.waiverRecordId}`;
+    // One copy per release, ever. A release is completed once — the writer
+    // refuses a second completion on the same row — so the record id is the
+    // whole of the key, and a double-submitted sign converges on one send.
+    case "guardian_release_copy":
+      return `guardian-release-copy/${notification.waiverRecordId}`;
     // **Per booking, in effect** — and the expiry is in it for honesty rather
     // than variety. `capabilityExpiryFor` is `tripEndsAt + 30d` for any booking
     // inside its useful window, independent of `now`, so this key does *not*

@@ -92,7 +92,13 @@ test("a minor's release asks for a parent, refuses without one, and names who co
   // Signed by both, and the page settles exactly as an adult's does. No
   // `/ready` hand-off here: this diver holds no seat, so the thread has no
   // next step to send them to.
+  //
+  // **With the address cleared** (issue #1453): the guardian's email is
+  // optional, and the release a family with none gives is a release. The
+  // browser used to refuse this submit on its own `required`; the server used
+  // to refuse it after that.
   await page.getByLabel("Guardian’s full name").fill(`Jordan Guardian ${stamp}`);
+  await page.getByLabel("Guardian’s email").fill("");
   await page.getByRole("button", { name: "Sign waiver" }).click();
   await expect(page.getByRole("heading", { name: /paperwork done/ })).toBeVisible();
 

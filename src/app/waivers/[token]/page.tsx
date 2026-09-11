@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { connection } from "next/server";
+import { after, connection } from "next/server";
 import { z } from "zod";
 import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
@@ -22,6 +22,7 @@ import { recordDiverOwnLocale } from "@/db/people";
 import { bookings, type MedicalAnswers, people, type Shop, trips } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
+import { sendGuardianReleaseCopy } from "@/db/waiver-guardian-copy";
 import {
   completeWaiver,
   getEmergencyContactForBooking,
@@ -106,7 +107,22 @@ const guardianDraftSchema = z.object({
 const completeGuardianSchema = z.object({
   guardianName: z.string().trim().min(2).max(120),
   guardianRelationship: z.enum(GUARDIAN_RELATIONSHIPS),
-  guardianEmail: z.string().trim().email().max(200),
+  /**
+   * **Optional, and the one thing it is for is a copy of what was signed**
+   * (issue #1453, owner decision 2026-09-10). It was required, and nothing ever
+   * sent to it — so a grandparent at a counter with no email was refused
+   * outright while a third party's address sat on a signed release with no
+   * reader. Blank is now accepted; a typed address that is not one is still
+   * refused, so the `guardianEmail` arm of `WAIVER_FIELD_ERROR` keeps its job.
+   * `guardianEvidence` re-checks the shape writer-side and is the enforcement
+   * of record for anything that did not come from this form.
+   */
+  guardianEmail: z
+    .string()
+    .trim()
+    .max(200)
+    .refine((value) => value === "" || z.email().safeParse(value).success)
+    .optional(),
   guardianAcknowledged: z.literal("on"),
 });
 
@@ -752,7 +768,9 @@ export default async function WaiverPage({
         ? {
             name: guardian.data.guardianName,
             relationship: guardian.data.guardianRelationship,
-            email: guardian.data.guardianEmail,
+            // Blank reaches the writer as an empty string and is stored as
+            // null; a malformed one never gets here.
+            email: guardian.data.guardianEmail ?? "",
             agreed: true,
           }
         : undefined,
@@ -812,6 +830,17 @@ export default async function WaiverPage({
       redirect(`/waivers/${token}?error=unavailable`);
     }
     await trackEvent({ name: "waiver_signed" });
+    // **The guardian's copy** (issue #1453). Deferred past the response for the
+    // same reason every other courtesy send is: the family is watching for
+    // their signed state, and a stalled provider must never stand between them
+    // and it. No-ops for an adult's release and for a family who gave no
+    // address, which is where that decision is made rather than here.
+    after(async () => {
+      await sendGuardianReleaseCopy(await getDb(), {
+        shopId: record.shopId,
+        recordId: record.id,
+      }).catch(() => undefined);
+    });
     // A diver who just signed goes straight to "what's left" instead of a
     // signed-waiver page whose only forward path is the same link — the
     // completed-state render below still shows that page for anyone who
@@ -1180,6 +1209,10 @@ export default async function WaiverPage({
                 </Field>
                 <Field
                   label={t("waiver.guardianEmail")}
+                  // Optional since issue #1453, and the description says what
+                  // giving one buys — an address collected under no stated
+                  // purpose is the wrong end of the promise.
+                  description={t("waiver.guardianEmailDescription")}
                   error={
                     signatureCardError?.anchor === "guardianEmail"
                       ? t(signatureCardError.textKey)
@@ -1192,7 +1225,6 @@ export default async function WaiverPage({
                     type="email"
                     inputMode="email"
                     autoComplete="off"
-                    required
                     maxLength={200}
                     defaultValue={draftGuardian?.email ?? ""}
                     className={controlClass}
