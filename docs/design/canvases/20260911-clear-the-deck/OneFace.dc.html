@@ -1,0 +1,292 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Bricolage+Grotesque:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+/* deck:start — the Clear-the-deck kit. Pasted verbatim into every board of this canvas; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --lagoon:#0e7490; --lagoon-deep:#0a4d61; --lagoon-tint:#e6f3f5; --shop:#1d7a5f; --shop-deep:#145a46; --shop-tint:#e4f1ea; --ok:#15803d; --warn:#b45309; --danger:#b91c1c; --danger-tint:#f8e8e6; --coral:#ff6f61; --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 960px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.board-head .three p b { color: var(--ink); font-weight: 600; }
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lagoon); }
+.k { font-size: 11px; line-height: 16px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.frame-cap { display: flex; align-items: baseline; gap: 12px; padding: 28px 48px 10px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 960px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.aside b { color: var(--ink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--border); }
+.sec h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 980px; }
+.sec p b { font-weight: 600; }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot p b { color: var(--ink); font-weight: 600; }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot li b { color: var(--ink); font-weight: 600; }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 150px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.stat b { display: block; font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat b small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.stat span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 600; }
+.tbl td b { color: var(--ink); font-weight: 600; }
+.tbl td.ink { color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink); }
+.card p.m { color: var(--muted); }
+.card .k { color: var(--lagoon); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0 48px; }
+.count { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.count .k { display: block; }
+.count b { display: block; margin-top: 4px; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.count span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted); }
+
+/* — a frame: the app drawn inside the board — */
+.frame { margin: 0 48px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.frame.desktop { width: 1084px; }
+.phone { width: 390px; min-height: 760px; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; background: var(--bg); position: relative; }
+.pair { display: flex; gap: 32px; align-items: flex-start; padding: 0 48px; }
+.pair .beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.pair .beside h3 { margin: 0 0 8px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pair .beside p { margin: 0 0 12px 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside p b { color: var(--ink); font-weight: 600; }
+.pair .beside ul { margin: 0 0 16px 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside li b { color: var(--ink); font-weight: 600; }
+
+/* — app type — */
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--lagoon); font-weight: 500; }
+.blocked { color: var(--danger); font-weight: 600; }
+.word { font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 4px; border-bottom: 1px solid var(--border); }
+.row:first-child { border-top: 1px solid var(--border); }
+.row .who { flex: 0 0 200px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.row .what { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .what b { font-weight: 600; color: var(--ink); }
+.row .state { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.row .state.blocked { color: var(--danger); }
+.row .state.ok { color: var(--ok); }
+.row.add { color: var(--lagoon); font-weight: 500; font-size: 16px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px 0 8px 0; }
+.group-h .h { font-size: 20px; line-height: 26px; }
+.group-h .meta { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--shop); color: #fff; }
+.btn.quiet { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); font-size: 16px; color: var(--muted); }
+.field b { color: var(--ink); font-weight: 500; }
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 40px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.chrome .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--shop); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.glyph { width: 20px; height: 20px; flex: 0 0 20px; }
+/* deck:end */
+
+.harbor .strip { display: flex; align-items: center; gap: 20px; height: 36px; padding: 0 40px; background: var(--ink); color: #e9f3f4; font-size: 13px; font-weight: 500; }
+.harbor .strip b { font-weight: 600; color: #fff; }
+.harbor .strip .r { margin-left: auto; display: flex; gap: 20px; }
+.harbor .hero { position: relative; height: 240px; background: linear-gradient(160deg, #1d7a5f 0%, #0f4a3a 60%, #0c2a35 100%); color: #fff; display: flex; flex-direction: column; justify-content: flex-end; padding: 28px 40px; }
+.harbor .hero h1 { margin: 0; font-family: var(--display); font-size: 44px; line-height: 1.05; font-weight: 700; letter-spacing: -0.02em; }
+.harbor .hero p { margin: 6px 0 0 0; font-size: 16px; opacity: .92; }
+.harbor .hero .photo { position: absolute; top: 14px; right: 40px; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; opacity: .7; }
+.harbor .pub { width: 960px; margin: 0 auto; padding: 24px 0 36px 0; }
+.harbor .now { display: flex; align-items: center; gap: 14px; min-height: 52px; font-size: 16px; }
+.harbor .now b { font-weight: 600; }
+.harbor .now .dot { width: 10px; height: 10px; border-radius: 999px; background: var(--shop); }
+.harbor .dayrow { display: flex; align-items: baseline; gap: 12px; padding: 24px 0 8px 0; }
+.harbor .dayrow b { font-family: var(--display); font-size: 22px; font-weight: 700; }
+.harbor .dayrow span { font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.harbor .trip { display: grid; grid-template-columns: 110px 1fr auto auto; gap: 0 18px; align-items: center; min-height: 64px; padding: 10px 0; border-top: 1px solid var(--border); }
+.harbor .trip .t { font-family: var(--mono); font-size: 14px; color: var(--ink); }
+.harbor .trip .n { font-size: 17px; font-weight: 600; color: var(--ink); font-family: var(--display); }
+.harbor .trip .m { display: block; font-size: 14px; color: var(--muted); font-family: var(--sans); font-weight: 400; margin-top: 2px; }
+.harbor .trip .seats { font-size: 15px; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.harbor .trip .cta { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border-radius: 10px; background: var(--shop); color: #fff; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.harbor .trip .cta.quiet { background: transparent; color: var(--shop); border: 1px solid var(--shop); }
+/* the staff layer: ink annotations on public rows */
+.harbor .staff { grid-column: 2 / span 3; display: flex; gap: 14px; align-items: center; font-size: 14px; line-height: 20px; color: var(--ink); background: var(--sunken); border-radius: 6px; padding: 6px 10px; margin-top: 6px; }
+.harbor .staff .lbl { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); flex: 0 0 auto; }
+.harbor .staff .blocked { color: var(--danger); font-weight: 600; }
+.harbor .staff .fix { margin-left: auto; color: var(--lagoon); font-weight: 500; white-space: nowrap; }
+.harbor .shelf { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.harbor .course { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.harbor .course .pic { height: 90px; background: linear-gradient(140deg, #cfe6dc, #8fc7b3); }
+.harbor .course .b { padding: 12px 14px; }
+.harbor .course .b b { display: block; font-family: var(--display); font-size: 16px; font-weight: 600; }
+.harbor .course .b span { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
+.harbor .course .b i { display: block; font-style: normal; font-size: 13px; color: var(--lagoon); margin-top: 6px; font-weight: 500; }
+.harbor .h2 { margin: 32px 0 12px 0; font-family: var(--display); font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+.harbor .credit { padding: 20px 40px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+
+  </style>
+</helmet>
+<div class="board">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow">Concept 6 · by face · the storefront is the app</span><span class="note">Design canvas · 2026-09-11 · Clear the deck</span></div>
+    <h1>One face</h1>
+    <p class="lede">There is one DiveDay page per shop: the storefront, in the shop's brand. Staff sign in and <b>the same page</b> grows a thin strip and a layer of ink — the week divers see, with the counts and blockers staff need drawn onto it; a departure's public row opens as its manifest; <i>Book</i> becomes <i>Seat someone</i>. The staff app as a separate product — 57 routes, its own chrome, its own tokens — is deleted. Two things stay apart: the boat (Aboard, no brand, no public address) and the till.</p>
+    <div class="three">
+      <div><span class="k">The case</span><p>A shop looks at one thing, the thing its divers see, and fixes it where they see it. The storefront can never be stale because it is the desk. The design system halves: one component set, the shop's, and DiveDay's chrome is a strip. It is Harbor taken to its conclusion, and <b>the one concept a shop owner would describe to another in a sentence: "our website is our office."</b></p></div>
+      <div><span class="k">The honest tradeoff</span><p>Safety surfaces cannot wear a brand and cannot sit on a public address, so roll call, certs, waivers and medical stay a separate stark tool — <b>this concept needs Ashore-and-aboard's boat half</b>. Privacy is structural: the page a crawler gets must be byte-identical for anyone signed out; the layer renders only after the session. Money and reports have no public analog and live behind one door. And a desk working inside marketing copy will find the hero in its way by the second week.</p></div>
+      <div><span class="k">Cost</span><p><b>8–10 sessions</b>, the most of the six — the boat tool, the layer, the till, and the deletion of the staff app one family at a time. Composes with 5 (the card is the strip's Shop) and requires 3 (the boat). Ask rides in the strip as its one field.</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>Counted</b> · today at HEAD → this concept</div>
+  <div class="counts">
+    <div class="count"><span class="k">Destinations</span><b>21 <small>→ 1 + 2</small></b><span>the page · the boat · the till</span></div>
+    <div class="count"><span class="k">Chrome controls on the home</span><b>20 <small>→ 4</small></b><span>the strip: counts, boat, till, sign out</span></div>
+    <div class="count"><span class="k">Kit</span><b>27 <small>→ storefront + 2</small></b><span>the strip and the annotation; one set of tokens, the shop's</span></div>
+    <div class="count"><span class="k">Staff routes</span><b>57 <small>→ 2</small></b><span>the boat and the till; the rest is the page, signed in</span></div>
+    <div class="count"><span class="k">Outside</span><b>9 <small>→ 9</small></b><span>and inside is outside</span></div>
+  </div>
+
+  <div class="frame-cap"><b>The shop's page, signed in</b> · Thursday, August 27, 6:40 AM · desktop · Dana sees what a diver sees, plus the ink</div>
+  <div class="frame desktop harbor">
+    <div class="strip"><b>Dana Reyes</b><span>Desk</span><span>Counts <b>on</b></span><div class="r"><span>Boat</span><span>Till</span><span>Sign out</span></div></div>
+    <div class="hero"><span class="photo">the shop's photograph</span><h1>Blue Mantis Divers</h1><p>Small-boat reef and wreck diving out of Key Largo · ★ 4.3 · 83 reviews</p></div>
+    <div class="pub">
+      <div class="now"><span class="dot"></span><span><b>Right now</b> · Mantis II boards at 6:45 for the Two-Tank Reef · back around 10:30</span></div>
+      <div class="dayrow"><b>Thursday</b><span>August 27 · today</span></div>
+      <div class="trip">
+        <span class="t">7:00 – 10:30</span>
+        <span class="n">Two-Tank Reef — Molasses &amp; French<span class="m">Easygoing reef · Open Water or higher · Mantis II</span></span>
+        <span class="seats">2 spots left · $95</span>
+        <span class="cta">Seat someone</span>
+        <div class="staff"><span class="lbl">Desk</span><span>6 of 10 here</span><span class="blocked">Grace's card · Priya's waiver</span><span>Nadia's contact · 3 sizes</span><span class="fix">Open the boat</span></div>
+      </div>
+      <div class="trip">
+        <span class="t">1:00 – 5:00</span>
+        <span class="n">Wreck Trip — Spiegel Grove<span class="m">Wrecks · Advanced · Deep · Mantis II</span></span>
+        <span class="seats">Full · $145</span>
+        <span class="cta quiet">Wait list</span>
+        <div class="staff"><span class="lbl">Desk</span><span class="blocked">No crew assigned · Tomás's card</span><span class="fix">Assign</span></div>
+      </div>
+      <div class="trip">
+        <span class="t">7:30 – 11:00</span>
+        <span class="n">Night Dive — City of Washington<span class="m">After dark · Open Water or higher · Skiff</span></span>
+        <span class="seats">5 spots left · $120</span>
+        <span class="cta">Seat someone</span>
+        <div class="staff"><span class="lbl">Desk</span><span>3 of 8 · no deal sent</span><span>Jonas Berg's first dive since 2019</span><span class="fix">Send a deal</span></div>
+      </div>
+      <div class="dayrow"><b>Friday</b><span>August 28</span></div>
+      <div class="trip">
+        <span class="t">7:00 – 10:30</span>
+        <span class="n">Morning Two-Tank — Molasses Reef<span class="m">Easygoing reef · Open Water or higher · Mantis II</span></span>
+        <span class="seats">3 spots left · $95</span>
+        <span class="cta">Seat someone</span>
+        <div class="staff"><span class="lbl">Desk</span><span>9 of 12 · +2 in your unfinished booking</span><span>Emmet O'Brien asked for this day</span><span class="fix">Resume</span></div>
+      </div>
+      <div class="trip">
+        <span class="t">8:00 – 1:00</span>
+        <span class="n">Deep Wreck Charter — the Duane<span class="m">Wrecks · Advanced · Deep · Nitrox · Mantis II</span></span>
+        <span class="seats">7 spots left · $195</span>
+        <span class="cta">Seat someone</span>
+      </div>
+      <div class="trip" style="border-bottom:1px solid #e6dcc8;">
+        <span class="t"></span>
+        <span class="n" style="color:#0e7490; font-family:Geist,sans-serif; font-weight:500; font-size:16px;">Add a boat on Friday</span>
+        <span></span><span></span>
+      </div>
+
+      <h2 class="h2">Courses <span style="font-family:Geist,sans-serif; font-size:14px; font-weight:500; color:#0e7490; margin-left:10px;">Edit</span></h2>
+      <div class="shelf">
+        <div class="course"><div class="pic"></div><div class="b"><b>Discover Scuba Diving</b><span>Half a day · $175 · next Mon, Sep 14</span><i>3 booked · Marcus</i></div></div>
+        <div class="course"><div class="pic"></div><div class="b"><b>Open Water Diver</b><span>3 days · $709 · next Sat, Sep 19</span><i>2 booked · Marcus</i></div></div>
+        <div class="course"><div class="pic"></div><div class="b"><b>Emergency Oxygen Provider</b><span>Half a day · $225 · on request</span><i>1 asked</i></div></div>
+      </div>
+
+      <h2 class="h2">What divers say <span style="font-family:Geist,sans-serif; font-size:14px; font-weight:500; color:#b91c1c; margin-left:10px;">1 waiting for you</span></h2>
+      <div class="row" style="min-height:64px; border-top:1px solid #e6dcc8;"><span class="what" style="color:#0c2a35;">★★★★★ &nbsp;"Vis was unreal and the crew found us a turtle on the second tank." <i style="color:#54676d;">Grace H. · Two-Tank Reef · Wed, Sep 9</i></span></div>
+      <div class="row" style="min-height:64px; background:#f3ecdd; border-radius:6px; padding:0 10px;"><span class="what" style="color:#0c2a35;">★★★★★ &nbsp;"Calm, unhurried briefing — exactly what I wanted for my first boat dive back." <i style="color:#54676d;">Lars P. · Wreck Trip — Duane · Sun, Sep 6</i></span><span class="state" style="color:#0e7490;">Publish</span></div>
+    </div>
+    <div class="credit"><span>100 Ocean Drive, Key Largo, FL 33037 · +1 305 555 0142 · hello@demo.invalid</span><span>Bookings by DiveDay</span></div>
+  </div>
+  <p class="aside"><b>Read the frame twice.</b> Signed out, it is the storefront: the hero, Right now, the week, three courses, two reviews, the credit line — and nothing else on the front page (the floor's "one page per noun outside"). Signed in, every public row carries one grey line of ink underneath it, in DiveDay's tokens, never the shop's, and every <i>Book</i> is a <i>Seat someone</i>. The blocked names are a sentence in danger ink because the release, the card and the count are DiveDay's facts even on the shop's page.</p>
+
+  <div class="frame-cap"><b>The same, at 390</b> · the strip folds to one line; the layer stays</div>
+  <div class="pair">
+    <div class="phone harbor" style="height:860px;">
+      <div class="strip" style="padding:0 16px; gap:12px;"><b>Dana</b><span>Counts <b>on</b></span><div class="r" style="gap:12px;"><span>Boat</span><span>Till</span></div></div>
+      <div class="hero" style="height:150px; padding:16px;"><h1 style="font-size:28px;">Blue Mantis Divers</h1><p style="font-size:14px;">Key Largo · ★ 4.3</p></div>
+      <div style="padding:8px 16px 24px 16px;">
+        <div class="now" style="font-size:15px;"><span class="dot"></span><span><b>Right now</b> · Mantis II boards at 6:45</span></div>
+        <div class="dayrow" style="padding-top:12px;"><b>Thursday</b><span>today</span></div>
+        <div class="trip" style="grid-template-columns:1fr auto; gap:6px 12px;">
+          <span class="n" style="font-size:16px;">7:00 · Two-Tank Reef<span class="m">Molasses &amp; French · 2 spots · $95</span></span>
+          <span class="cta" style="min-height:40px; padding:0 14px; font-size:14px;">Seat</span>
+          <div class="staff" style="grid-column:1 / span 2; flex-wrap:wrap; gap:4px 10px;"><span>6 of 10 here</span><span class="blocked">Grace's card · Priya's waiver</span><span class="fix" style="margin-left:0;">Open the boat</span></div>
+        </div>
+        <div class="trip" style="grid-template-columns:1fr auto; gap:6px 12px;">
+          <span class="n" style="font-size:16px;">1:00 · Wreck Trip<span class="m">Spiegel Grove · full · $145</span></span>
+          <span class="cta quiet" style="min-height:40px; padding:0 14px; font-size:14px;">Wait list</span>
+          <div class="staff" style="grid-column:1 / span 2; flex-wrap:wrap; gap:4px 10px;"><span class="blocked">No crew · Tomás's card</span><span class="fix" style="margin-left:0;">Assign</span></div>
+        </div>
+        <div class="trip" style="grid-template-columns:1fr auto; gap:6px 12px;">
+          <span class="n" style="font-size:16px;">7:30 · Night Dive<span class="m">City of Washington · 5 spots · $120</span></span>
+          <span class="cta" style="min-height:40px; padding:0 14px; font-size:14px;">Seat</span>
+          <div class="staff" style="grid-column:1 / span 2; flex-wrap:wrap; gap:4px 10px;"><span>3 of 8 · no deal sent</span><span class="fix" style="margin-left:0;">Send a deal</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="beside">
+      <h3>What folds into the page</h3>
+      <ul>
+        <li><b>The home</b> → the week, with the layer. <b>Today's needs</b> → the grey line under each row. <b>Divers</b> → the people behind a row and a course. <b>Reviews</b> → the review, with Publish. <b>Courses, sites, the boats</b> → edit where they are shown. <b>Requests</b> → "asked for this day" on the day. <b>The board</b> → the week itself, with "Add a boat" at the end of each day.</li>
+      </ul>
+      <h3>What stays apart, and why</h3>
+      <ul>
+        <li><b>The boat</b> — counter, manifest, roll call, log — in DiveDay's tokens with no brand and no public address, because a head count is never decoration and never public.</li>
+        <li><b>The till</b> — orders, Stripe, the month, the shop's card — one door in the strip, because money has no public face.</li>
+      </ul>
+      <h3>What leaves</h3>
+      <ul><li>The staff chrome, header, dock and More; ⌘K as a list; the staff tokens as a second set; fifty-five of the fifty-seven staff routes; most of the forty staff message bundles. The storefront's front page also loses what the floor removes: the lens rail, the season band, the badge wall, the three disclosures, find-my-booking.</li></ul>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div><h3>Where it stops</h3><p>The hero. A desk does not want a 240px photograph above its morning; the strip has to fold it (one tap, remembered) and the concept has to admit that a page drawn to sell is a page that fights to be worked in. The crawler's page and the staffer's page must be one HTML document with the layer added after the session or the privacy promise is a wish.</p></div>
+    <div><h3>What it needs</h3><p><b>Aboard first</b> (concept 3's boat half), then the layer: one annotation component in DiveDay's tokens, rendered only inside a session, from the readers Today already runs; the till as one page. Then the deletion of <span class="mono">src/app/shop/**</span> one family at a time, each family's e2e spec moving to the page. The storefront's composition tests already hold its length.</p></div>
+    <div><h3>Its wow</h3><p>A shop owner shows a friend her website on her phone, and it is also the thing she ran the morning on. There is no second app to explain, no "and then in the admin". The diver's page and the desk's page are the same page, and it is hers.</p></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

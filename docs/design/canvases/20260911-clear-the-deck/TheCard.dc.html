@@ -1,0 +1,286 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Bricolage+Grotesque:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+/* deck:start — the Clear-the-deck kit. Pasted verbatim into every board of this canvas; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --lagoon:#0e7490; --lagoon-deep:#0a4d61; --lagoon-tint:#e6f3f5; --shop:#1d7a5f; --shop-deep:#145a46; --shop-tint:#e4f1ea; --ok:#15803d; --warn:#b45309; --danger:#b91c1c; --danger-tint:#f8e8e6; --coral:#ff6f61; --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 960px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.board-head .three p b { color: var(--ink); font-weight: 600; }
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lagoon); }
+.k { font-size: 11px; line-height: 16px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.frame-cap { display: flex; align-items: baseline; gap: 12px; padding: 28px 48px 10px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 960px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.aside b { color: var(--ink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--border); }
+.sec h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 980px; }
+.sec p b { font-weight: 600; }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot p b { color: var(--ink); font-weight: 600; }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot li b { color: var(--ink); font-weight: 600; }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 150px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.stat b { display: block; font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat b small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.stat span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 600; }
+.tbl td b { color: var(--ink); font-weight: 600; }
+.tbl td.ink { color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink); }
+.card p.m { color: var(--muted); }
+.card .k { color: var(--lagoon); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0 48px; }
+.count { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.count .k { display: block; }
+.count b { display: block; margin-top: 4px; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.count span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted); }
+
+/* — a frame: the app drawn inside the board — */
+.frame { margin: 0 48px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.frame.desktop { width: 1084px; }
+.phone { width: 390px; min-height: 760px; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; background: var(--bg); position: relative; }
+.pair { display: flex; gap: 32px; align-items: flex-start; padding: 0 48px; }
+.pair .beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.pair .beside h3 { margin: 0 0 8px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pair .beside p { margin: 0 0 12px 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside p b { color: var(--ink); font-weight: 600; }
+.pair .beside ul { margin: 0 0 16px 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside li b { color: var(--ink); font-weight: 600; }
+
+/* — app type — */
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--lagoon); font-weight: 500; }
+.blocked { color: var(--danger); font-weight: 600; }
+.word { font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 4px; border-bottom: 1px solid var(--border); }
+.row:first-child { border-top: 1px solid var(--border); }
+.row .who { flex: 0 0 200px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.row .what { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .what b { font-weight: 600; color: var(--ink); }
+.row .state { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.row .state.blocked { color: var(--danger); }
+.row .state.ok { color: var(--ok); }
+.row.add { color: var(--lagoon); font-weight: 500; font-size: 16px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px 0 8px 0; }
+.group-h .h { font-size: 20px; line-height: 26px; }
+.group-h .meta { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--shop); color: #fff; }
+.btn.quiet { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); font-size: 16px; color: var(--muted); }
+.field b { color: var(--ink); font-weight: 500; }
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 40px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.chrome .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--shop); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.glyph { width: 20px; height: 20px; flex: 0 0 20px; }
+/* deck:end */
+
+.shopcard { width: 680px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 28px 32px; }
+.shopcard .name { display: flex; align-items: center; gap: 16px; }
+.shopcard .sw { width: 44px; height: 44px; border-radius: 10px; background: var(--shop); flex: 0 0 44px; }
+.shopcard .name h2 { margin: 0; font-size: 28px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; font-family: "Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+.shopcard .name span { display: block; font-size: 14px; color: var(--muted); margin-top: 2px; }
+.fact { display: flex; gap: 16px; min-height: 44px; align-items: center; border-top: 1px solid var(--border); font-size: 16px; line-height: 24px; }
+.fact .l { flex: 0 0 120px; font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+.fact .v { flex: 1 1 auto; color: var(--ink); }
+.fact .v i { font-style: normal; color: var(--muted); }
+.decided { display: flex; gap: 16px; align-items: baseline; min-height: 44px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 16px; line-height: 24px; color: var(--ink); }
+.decided:first-child { border-top: 1px solid var(--border); }
+.decided .n { flex: 0 0 28px; font-family: var(--mono); font-size: 12px; color: var(--border-strong); }
+.decided .s { flex: 1 1 auto; }
+.decided .c { flex: 0 0 auto; font-size: 14px; font-weight: 500; color: var(--lagoon); }
+.gone { display: grid; grid-template-columns: 200px 1fr; gap: 6px 16px; font-size: 14px; line-height: 21px; }
+.gone .from { color: var(--ink); font-weight: 600; text-decoration: line-through; text-decoration-color: var(--border-strong); text-decoration-thickness: 1px; }
+.gone .to { color: var(--muted); }
+
+  </style>
+</helmet>
+<div class="board harbor-fonts">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow">Concept 5 · by default · no settings</span><span class="note">Design canvas · 2026-09-11 · Clear the deck</span></div>
+    <h1>The shop's card</h1>
+    <p class="lede">Every switch becomes a default. Settings — 43 rows on the hub and 12 more pages — collapses to <b>one card of what the shop is</b> (its name, colour, address, boats, crew, hours, money, the release it signs) and <b>one line per thing DiveDay decided for it</b>. A feature has no setting: it is on with a default a sentence can change, or it does not exist. Every control on a surface that exists because a setting could be off leaves with the setting.</p>
+    <div class="three">
+      <div><span class="k">The case</span><p>Each of the 43 rows spawned a conditional somewhere else — a lens rail that renders when lenses are set, a print register when print is on, a boat-line switch, a WhatsApp sender, a display page. <b>"Far too many external-facing features" lives here</b>: embeds in eight kinds, six print sheets, four integrations, a lobby display, calendar feeds. A shop leaving FareHarbor is not choosing a settings depth. Delete the switch and the surface loses its control for free.</p></div>
+      <div><span class="k">The honest tradeoff</span><p>DiveDay decides more. A shop with a real exception — no online payments, a state's own release text, a boat that must never be public — needs a door that is not a switch: a sentence to support, or a flag DiveDay sets for them. Marketing loses "features" it currently sells by name. And "Change" is still a door on every decided line; <b>the card has to be honest about which defaults are fixed.</b></p></div>
+      <div><span class="k">Cost</span><p><b>4–5 sessions, mostly deletion</b> — and every deletion has a test, a message key and a guard to remove, which is where the sessions go. The card is one page; each default is one line and one sentence. Composes with every other concept: it is Three words' Shop, The week's drawer, Ask's "settings", Ashore's fifth word and One face's strip.</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>Counted</b> · today at HEAD → this concept</div>
+  <div class="counts">
+    <div class="count"><span class="k">Settings rows</span><b>43 <small>→ 1 card</small></b><span>nine facts and twelve decided lines</span></div>
+    <div class="count"><span class="k">Settings pages</span><b>12 <small>→ 0</small></b><span>embed, print, integrations, WhatsApp, calendar, display, security, checklist, team, backups, import, export</span></div>
+    <div class="count"><span class="k">Switches in the app</span><b>~30 <small>→ 0</small></b><span>a default with a sentence, or gone</span></div>
+    <div class="count"><span class="k">Kit</span><b>27 <small>→ 22</small></b><span>Switch, SegmentedControl, InfoHint, FilterChips and QueryForm leave with what they served</span></div>
+    <div class="count"><span class="k">Outside</span><b>9 + 17 <small>→ 9 + 17</small></b><span>fewer things on each page; the lens rail, the season band and the three disclosures go</span></div>
+  </div>
+
+  <div class="frame-cap"><b>Shop</b> · the whole of Settings, on Thursday · desktop · every line edits in place</div>
+  <div class="frame desktop">
+    <div class="chrome">
+      <div class="shop"><span class="mark">BM</span>Blue Mantis Divers</div>
+      <div class="right"><span>Dana</span></div>
+    </div>
+    <div style="padding:36px 0 40px 0;">
+      <div class="shopcard">
+        <div class="name"><span class="sw"></span><div><h2>Blue Mantis Divers</h2><span>Small-boat reef and wreck diving out of Key Largo · since 1998</span></div></div>
+        <div style="margin-top:20px;">
+          <div class="fact"><span class="l">Where</span><span class="v">100 Ocean Drive, Key Largo, FL 33037 <i>· Eastern Time, read from the address</i></span></div>
+          <div class="fact"><span class="l">Reach us</span><span class="v">+1 305 555 0142 · hello@demo.invalid <i>· texts and WhatsApp go from this number</i></span></div>
+          <div class="fact"><span class="l">Boats</span><span class="v">Mantis II, 12 seats · Skiff, 8 seats <i>· slip 14, Marina Del Mar</i></span></div>
+          <div class="fact"><span class="l">People</span><span class="v">Dana Reyes, owner · Keiko Tanaka and Sal Moretti, crew · Marcus Webb, instructor</span></div>
+          <div class="fact"><span class="l">Season</span><span class="v">All year <i>· dock call 30 minutes before the boat</i></span></div>
+          <div class="fact"><span class="l">Money</span><span class="v">Stripe connected · sales tax on · a seat is $95 unless the boat says otherwise</span></div>
+          <div class="fact"><span class="l">Rentals</span><span class="v">BCD, wetsuit, fins, regulator, computer · $45 the set · sizes in metric</span></div>
+          <div class="fact"><span class="l">The release</span><span class="v">Florida, version 4 · signed on a phone or on paper at the counter</span></div>
+          <div class="fact"><span class="l">Sign-in</span><span class="v">Passkeys on 3 devices · English and Spanish</span></div>
+        </div>
+      </div>
+
+      <div style="width:680px; margin:36px auto 0 auto;">
+        <div class="group-h" style="padding-top:0;"><h2 class="h">What DiveDay decided for you</h2><span class="meta">each one a sentence; each one changes in a sentence</span></div>
+        <div>
+          <div class="decided"><span class="n">01</span><span class="s">Waivers go out the evening before at 8 PM, and again at the counter.</span><span class="c">Change</span></div>
+          <div class="decided"><span class="n">02</span><span class="s">Divers get a text the night before and a recap the evening after.</span><span class="c">Change</span></div>
+          <div class="decided"><span class="n">03</span><span class="s">Your boat's line is public while it is out — a stage word and a time, never a name.</span><span class="c">Change</span></div>
+          <div class="decided"><span class="n">04</span><span class="s">The storefront shows reviews of four stars and up; every review reaches you.</span><span class="c">Change</span></div>
+          <div class="decided"><span class="n">05</span><span class="s">Divers can ask for a day that is not on the board; it lands on that day.</span><span class="c">Change</span></div>
+          <div class="decided"><span class="n">06</span><span class="s">A seat freed inside 48 hours goes to the wait list before anyone else.</span><span class="c">Change</span></div>
+          <div class="decided"><span class="n">07</span><span class="s">Every page prints — the day, the boat card, the dock sign — from the browser, in your colour.</span><span class="c" style="color:#8a8065;">Fixed</span></div>
+          <div class="decided"><span class="n">08</span><span class="s">Your website gets one line of code. It shows this week and books in your colour.</span><span class="c">Copy it</span></div>
+          <div class="decided"><span class="n">09</span><span class="s">Your calendar app can subscribe to the week from one link.</span><span class="c">Copy it</span></div>
+          <div class="decided"><span class="n">10</span><span class="s">Backups run every night; a copy of everything downloads from here in one file.</span><span class="c">Download</span></div>
+          <div class="decided"><span class="n">11</span><span class="s">QuickBooks, Xero and Shopify connect with one button each, when you want them.</span><span class="c">Connect</span></div>
+          <div class="decided"><span class="n">12</span><span class="s">Contacts and gear history come in from a spreadsheet, and DiveDay says what it read.</span><span class="c">Bring a file</span></div>
+        </div>
+        <p class="note" style="margin:16px 0 0 0;">Twelve on the card, and eighteen more like them that need no line at all — units and currency from the address, the tide window from the harbour, the pre-departure checklist as the boat card's own, the packing list as the trip's — because a default nobody changes is not a decision, it is how the thing works.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>Where the 43 rows and 12 pages went</b> · the settings hub at HEAD, read row by row</div>
+  <div style="padding:0 48px;">
+    <div class="two">
+      <div class="gone">
+        <span class="from">Timezone</span><span class="to">read from the address; the card says which</span>
+        <span class="from">Season start</span><span class="to">the Season fact</span>
+        <span class="from">Shop profile &amp; branding</span><span class="to">the card's head: name, colour, sentence, badges</span>
+        <span class="from">Your own words · Hospitality</span><span class="to">deleted; the voice sheet is DiveDay's</span>
+        <span class="from">Shop address</span><span class="to">the Where fact</span>
+        <span class="from">Review link · Search listing</span><span class="to">decided 04; the listing is on unless the shop writes</span>
+        <span class="from">Tide window · Fly-safe hours</span><span class="to">the harbour's tides and 18 hours, fixed</span>
+        <span class="from">Conservation · Packing · Checklist</span><span class="to">the boat card carries DiveDay's checklist; the trip its list</span>
+        <span class="from">Dock-day rhythm · Send window</span><span class="to">the Season fact and decided 01–02</span>
+        <span class="from">Units · Diving options</span><span class="to">from the address; a trip says what it is</span>
+        <span class="from">Emergency reference</span><span class="to">the Reach-us fact, printed on the boat card</span>
+        <span class="from">Boats · Team</span><span class="to">two facts on the card, edited in place</span>
+        <span class="from">Kinds of day · Seasons and events</span><span class="to">DiveDay's four words on every departure; the season band goes</span>
+      </div>
+      <div class="gone">
+        <span class="from">Promo codes · Dive packages</span><span class="to">a deal is sent from the boat that has seats; a package is a price on a course</span>
+        <span class="from">What we rent · Rental prices</span><span class="to">the Rentals fact</span>
+        <span class="from">Sales tax · Park fee · Online payments</span><span class="to">the Money fact and one Connect</span>
+        <span class="from">The counter card</span><span class="to">printed from the day, like every page</span>
+        <span class="from">Website embed (8 kinds)</span><span class="to">decided 08: one line, one look</span>
+        <span class="from">Calendar subscriptions</span><span class="to">decided 09: one link</span>
+        <span class="from">Lobby display</span><span class="to">the storefront's Right now, full screen</span>
+        <span class="from">Print (6 sheets)</span><span class="to">decided 07: every page prints</span>
+        <span class="from">Shopify, QuickBooks, Xero &amp; Zapier</span><span class="to">decided 11: three buttons; Zapier goes</span>
+        <span class="from">WhatsApp</span><span class="to">the Reach-us fact</span>
+        <span class="from">Backups · Import contacts · Import gear · Export</span><span class="to">decided 10 and 12</span>
+        <span class="from">Account security · Display</span><span class="to">the Sign-in fact; the phone's own text size</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>The same, at 390</b> · the card is the page; the decided lines follow it</div>
+  <div class="pair">
+    <div class="phone" style="height:860px;">
+      <div class="chrome" style="padding:0 16px;"><div class="shop"><span class="mark">BM</span>Blue Mantis</div><div class="right"><span>Dana</span></div></div>
+      <div style="padding:20px 16px 24px 16px;">
+        <div class="shopcard" style="width:auto; padding:20px;">
+          <div class="name"><span class="sw" style="width:36px; height:36px; flex-basis:36px;"></span><div><h2 style="font-size:22px;">Blue Mantis Divers</h2><span>Key Largo · since 1998</span></div></div>
+          <div style="margin-top:16px;">
+            <div class="fact" style="flex-direction:column; align-items:flex-start; gap:0; padding:6px 0; min-height:0;"><span class="l">Where</span><span class="v">100 Ocean Drive, Key Largo · Eastern</span></div>
+            <div class="fact" style="flex-direction:column; align-items:flex-start; gap:0; padding:6px 0; min-height:0;"><span class="l">Reach us</span><span class="v">+1 305 555 0142 · hello@demo.invalid</span></div>
+            <div class="fact" style="flex-direction:column; align-items:flex-start; gap:0; padding:6px 0; min-height:0;"><span class="l">Boats</span><span class="v">Mantis II, 12 · Skiff, 8</span></div>
+            <div class="fact" style="flex-direction:column; align-items:flex-start; gap:0; padding:6px 0; min-height:0;"><span class="l">People</span><span class="v">Dana · Keiko, Sal · Marcus</span></div>
+            <div class="fact" style="flex-direction:column; align-items:flex-start; gap:0; padding:6px 0; min-height:0;"><span class="l">Money</span><span class="v">Stripe connected · $95 a seat</span></div>
+            <div class="fact" style="flex-direction:column; align-items:flex-start; gap:0; padding:6px 0; min-height:0;"><span class="l">The release</span><span class="v">Florida, version 4</span></div>
+          </div>
+        </div>
+        <div class="group-h" style="padding-top:24px;"><h2 class="h" style="font-size:17px;">Decided for you</h2><span class="meta">12</span></div>
+        <div>
+          <div class="decided" style="font-size:15px; line-height:22px;"><span class="n">01</span><span class="s">Waivers go out the evening before at 8 PM.</span><span class="c">Change</span></div>
+          <div class="decided" style="font-size:15px; line-height:22px;"><span class="n">02</span><span class="s">A text the night before, a recap after.</span><span class="c">Change</span></div>
+          <div class="decided" style="font-size:15px; line-height:22px;"><span class="n">03</span><span class="s">Your boat's line is public while it is out.</span><span class="c">Change</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="beside">
+      <h3>What leaves the surfaces, not just the hub</h3>
+      <ul>
+        <li><b>On the storefront:</b> the lens rail and its two selects, the season band, "Other ways we can help" (the date request stays as one line under the week), the badge wall's editor.</li>
+        <li><b>On the home:</b> "Print the day" (the day prints), the season row, the lobby-display door.</li>
+        <li><b>On the boat:</b> the boat-mode and glare switches, the haptics toggle, the text-size setting — the phone's own.</li>
+        <li><b>In the chrome:</b> the language picker (the phone's language), the identity menu's four rows.</li>
+      </ul>
+      <h3>What it keeps</h3>
+      <ul><li>Nine facts a shop genuinely owns, edited where they are read. Three Connects. Two Copy-its. One Download. The waiver release as a versioned fact with a person's name on the version. H-02's retention and erasure promises, which were never a setting.</li></ul>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div><h3>Where it stops</h3><p>The genuine exception. A shop that must not take cards online, a state whose release is not Florida's, a boat that is never public — each is one flag DiveDay sets from a sentence the shop writes, and the card says "set by DiveDay for you on Aug 12". That door is support, and support is a person; the concept is honest that it moved a switch to a human.</p></div>
+    <div><h3>What it needs</h3><p><b>One page, nine editable facts, twelve sentences</b> — and then the sweep: each retired row's guard, test, message keys and the conditional it drove in some other component. The embed catalogue becomes one snippet with one look; the print register becomes a print stylesheet on every page; four integrations become three connects. Most of the work is deletion, and it lands one row at a time.</p></div>
+    <div><h3>Its wow</h3><p>A new shop opens Settings and it is one card, already filled from the sentence they typed on the homepage — and under it, twelve things DiveDay already decided, each one a sentence a person would agree with. Nothing to configure before the first boat. That is the whole pitch to a shop leaving a tool with a settings tree.</p></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

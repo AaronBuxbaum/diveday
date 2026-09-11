@@ -1,0 +1,17 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Clear the deck — read me first", "x": 0, "y": 0, "w": 1180, "h": 5700 },
+    { "file": "ThreeWords.dc.html", "title": "1 · Three words — by noun", "x": 0, "y": 5900, "w": 1180, "h": 3520 },
+    { "file": "TheWeek.dc.html", "title": "2 · The week — by time", "x": 1300, "y": 5900, "w": 1180, "h": 3140 },
+    { "file": "AshoreAboard.dc.html", "title": "3 · Ashore and aboard — by place", "x": 2600, "y": 5900, "w": 1180, "h": 2850 },
+    { "file": "Ask.dc.html", "title": "4 · Ask — by question", "x": 0, "y": 9620, "w": 1180, "h": 3330 },
+    { "file": "TheCard.dc.html", "title": "5 · The shop's card — by default", "x": 1300, "y": 9620, "w": 1180, "h": 4110 },
+    { "file": "OneFace.dc.html", "title": "6 · One face — by face", "x": 2600, "y": 9620, "w": 1180, "h": 3820 }
+  ],
+  "annotations": [
+    { "id": "read-first", "x": 1300, "y": 0, "w": 560, "text": "Start with the cover: the count at HEAD, the floor every concept shares, and the owner's four calls (H-73). The six concepts follow in two rows — by noun, by time, by place; then by question, by default, by face. Every board redraws the shop home for Blue Mantis on Thursday, August 27 at 6:40 AM, at desktop and at 390." },
+    { "id": "row-1", "x": 0, "y": 5760, "w": 760, "text": "Row 1 — what the staff app is organised by: the noun (1 · Three words), the date (2 · The week), the place you are standing (3 · Ashore and aboard)." },
+    { "id": "row-2", "x": 0, "y": 9480, "w": 760, "text": "Row 2 — the question (4 · Ask), the default (5 · The shop's card), the shop's own page (6 · One face). 5 composes with every other concept; 6 needs 3's boat half. The recommendation on the cover: 5 now, then 1 with 4 as its search, then 3's boat." }
+  ],
+  "launch": { "view": "canvas" }
+}

@@ -1,0 +1,249 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+/* deck:start — the Clear-the-deck kit. Pasted verbatim into every board of this canvas; edit it once, re-assemble all. */
+.board, .board * { box-sizing: border-box; }
+.board { --bg:#fbf7ef; --surface:#fffdf8; --sunken:#f3ecdd; --border:#e6dcc8; --border-strong:#8a8065; --ink:#0c2a35; --muted:#54676d; --lagoon:#0e7490; --lagoon-deep:#0a4d61; --lagoon-tint:#e6f3f5; --shop:#1d7a5f; --shop-deep:#145a46; --shop-tint:#e4f1ea; --ok:#15803d; --warn:#b45309; --danger:#b91c1c; --danger-tint:#f8e8e6; --coral:#ff6f61; --mono:"Geist Mono",ui-monospace,Menlo,monospace; --sans:Geist,"Helvetica Neue",Arial,system-ui,sans-serif; --display:var(--sans);
+  width: 1180px; margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; padding-bottom: 48px; }
+.harbor { --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif; }
+
+/* — the board's own prose (the canvas, not the app) — */
+.board-head { display: flex; flex-direction: column; gap: 14px; padding: 40px 48px 28px 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.board-head .strap { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.board-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.board-head .lede { margin: 0; max-width: 960px; font-size: 17px; line-height: 27px; }
+.board-head .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board-head .three p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.board-head .three p b { color: var(--ink); font-weight: 600; }
+.eyebrow { font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lagoon); }
+.k { font-size: 11px; line-height: 16px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.frame-cap { display: flex; align-items: baseline; gap: 12px; padding: 28px 48px 10px 48px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--border-strong); }
+.frame-cap b { color: var(--ink); }
+.aside { padding: 12px 48px 0 48px; max-width: 960px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.aside b { color: var(--ink); font-weight: 600; }
+.sec { display: flex; flex-direction: column; gap: 14px; padding: 28px 48px; border-top: 1px solid var(--border); }
+.sec h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+.sec p { margin: 0; font-size: 15px; line-height: 23px; max-width: 980px; }
+.sec p b { font-weight: 600; }
+.foot { margin: 40px 48px 0 48px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.foot p { margin: 6px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot p b { color: var(--ink); font-weight: 600; }
+.foot ul { margin: 6px 0 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.foot li b { color: var(--ink); font-weight: 600; }
+.strip { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 48px; }
+.stat { flex: 1 1 150px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.stat b { display: block; font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat b small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.stat span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
+.tbl td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.tbl td:first-child { color: var(--ink); font-weight: 600; }
+.tbl td b { color: var(--ink); font-weight: 600; }
+.tbl td.ink { color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.card h3 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.card p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink); }
+.card p.m { color: var(--muted); }
+.card .k { color: var(--lagoon); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0 48px; }
+.count { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.count .k { display: block; }
+.count b { display: block; margin-top: 4px; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.count span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted); }
+
+/* — a frame: the app drawn inside the board — */
+.frame { margin: 0 48px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.frame.desktop { width: 1084px; }
+.phone { width: 390px; min-height: 760px; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; background: var(--bg); position: relative; }
+.pair { display: flex; gap: 32px; align-items: flex-start; padding: 0 48px; }
+.pair .beside { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
+.pair .beside h3 { margin: 0 0 8px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pair .beside p { margin: 0 0 12px 0; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside p b { color: var(--ink); font-weight: 600; }
+.pair .beside ul { margin: 0 0 16px 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--muted); }
+.pair .beside li b { color: var(--ink); font-weight: 600; }
+
+/* — app type — */
+.title { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); font-family: var(--display); }
+.h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); }
+.body { font-size: 16px; line-height: 24px; color: var(--ink); }
+.note { font-size: 14px; line-height: 22px; color: var(--muted); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fig small { font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.link { color: var(--lagoon); font-weight: 500; }
+.blocked { color: var(--danger); font-weight: 600; }
+.word { font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+
+/* — the one row — */
+.row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 4px; border-bottom: 1px solid var(--border); }
+.row:first-child { border-top: 1px solid var(--border); }
+.row .who { flex: 0 0 200px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.row .what { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.row .what b { font-weight: 600; color: var(--ink); }
+.row .state { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.row .state.blocked { color: var(--danger); }
+.row .state.ok { color: var(--ok); }
+.row.add { color: var(--lagoon); font-weight: 500; font-size: 16px; }
+.group-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px 0 8px 0; }
+.group-h .h { font-size: 20px; line-height: 26px; }
+.group-h .meta { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* — controls — */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--shop); color: #fff; }
+.btn.quiet { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); font-size: 16px; color: var(--muted); }
+.field b { color: var(--ink); font-weight: 500; }
+.chrome { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 40px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.chrome .shop { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.chrome .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--shop); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.chrome .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.glyph { width: 20px; height: 20px; flex: 0 0 20px; }
+/* deck:end */
+
+.ask { display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 0 18px; border: 1.5px solid var(--border-strong); border-radius: 12px; background: var(--surface); font-size: 19px; color: var(--muted); }
+.ask b { color: var(--ink); font-weight: 500; }
+.ask .caret { display: inline-block; width: 2px; height: 26px; background: var(--ink); margin-left: -8px; }
+.ans { display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 0 6px; border-bottom: 1px solid var(--border); }
+.ans:first-child { border-top: 1px solid var(--border); }
+.ans .who { flex: 0 0 190px; font-size: 16px; font-weight: 600; }
+.ans .fact { flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 24px; color: var(--muted); }
+.ans .fact b { color: var(--ink); font-weight: 600; }
+.ans .fix { flex: 0 0 auto; font-size: 16px; font-weight: 500; color: var(--shop); white-space: nowrap; }
+.ans .fix.none { color: var(--border-strong); font-weight: 400; }
+.try { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; color: var(--muted); }
+.try b { color: var(--ink); font-weight: 500; }
+.qlabel { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+
+  </style>
+</helmet>
+<div class="board">
+  <div class="board-head">
+    <div class="strap"><span class="eyebrow">Concept 4 · by question · one control</span><span class="note">Design canvas · 2026-09-11 · Clear the deck</span></div>
+    <h1>Ask</h1>
+    <p class="lede">One control. A field at the top of every screen takes a name, a day, a boat or a word — <b>Grace</b>, <b>Saturday</b>, <b>Mantis II</b>, <b>waivers</b> — and answers in place with the fact and its one fix. There is no navigation. The home is the answer to the question nobody has to type, <i>today</i>. Lists exist only as answers.</p>
+    <div class="three">
+      <div><span class="k">The case</span><p>DiveDay already holds the facts, and since 09-06 already answers in ⌘K with the fact and its fix. Navigation is a menu of twenty-one places to go and fetch what one question returns. A new staffer types what she means and gets the row, not the page the row is on. <b>Every page deleted here existed only to hold a list somebody had to scroll to the right line of.</b></p></div>
+      <div><span class="k">The honest tradeoff</span><p>Typing on a wet dock — so the boat stays a screen, never a question. Discoverability: a staffer who does not know Gear exists never asks, so the prompts under the field carry the vocabulary. Muscle memory: a page whose shape depends on the question is slow to learn by thumb. <b>And it can read as a launcher</b>, which the owner declined once as "existing apps" — so it is Ask over the day's answer, never Ask over a blank page.</p></div>
+      <div><span class="k">Cost</span><p><b>3–4 sessions.</b> The palette's reader exists; the answer grammar is the row; the deletions are the pages. The prompts and the empty answers need real copy. Composes with anything as its search — with Three words as the fourth control, with The week as the way into a day, with Ashore as the desk's one field.</p></div>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>Counted</b> · today at HEAD → this concept</div>
+  <div class="counts">
+    <div class="count"><span class="k">Destinations</span><b>21 <small>→ 0</small></b><span>answers, and the boat's screen</span></div>
+    <div class="count"><span class="k">Chrome controls on the home</span><b>20 <small>→ 1</small></b><span>the field; the answers are the rest</span></div>
+    <div class="count"><span class="k">Kit</span><b>27 <small>→ 4</small></b><span>field, answer row, sheet, button</span></div>
+    <div class="count"><span class="k">Settings rows</span><b>43 <small>→ 43</small></b><span>each is a question ("waiver" opens the release); or The card (5)</span></div>
+    <div class="count"><span class="k">Outside</span><b>9 + 17 <small>→ same</small></b><span>the diver's side does not move</span></div>
+  </div>
+
+  <div class="frame-cap"><b>The shop home</b> · Thursday, August 27, 6:40 AM · desktop · the question nobody typed</div>
+  <div class="frame desktop">
+    <div class="chrome">
+      <div class="shop"><span class="mark">BM</span>Blue Mantis Divers</div>
+      <div class="right"><span>Dana</span></div>
+    </div>
+    <div style="width:900px; margin:0 auto; padding:40px 0 40px 0;">
+      <div class="ask"><svg class="glyph" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="M13 13l4 4"></path></svg>Ask the desk — a name, a day, a boat, a word</div>
+      <div class="try" style="margin-top:12px;"><span>Try</span><b>Grace</b><b>Saturday</b><b>the night boat</b><b>waivers</b><b>Mantis II</b><b>Reg #4</b><b>last month</b></div>
+
+      <div class="group-h" style="padding-top:36px;"><h2 class="h">Today</h2><span class="meta">Thursday, August 27 · 3 boats · 4 things before the 7:00</span></div>
+      <div>
+        <div class="ans"><span class="who">Grace Mensah</span><span class="fact">Advanced card, added by Grace yesterday, waits for a look · <b>7:00 Two-Tank Reef</b></span><span class="fix">Verify</span></div>
+        <div class="ans"><span class="who">Priya Sharma</span><span class="fact">Waiver not sent · <b>7:00 Two-Tank Reef</b></span><span class="fix">Send</span></div>
+        <div class="ans"><span class="who">Wreck Trip, 1:00</span><span class="fact">Nobody is assigned to the boat · <b>full, 10 of 10</b></span><span class="fix">Assign</span></div>
+        <div class="ans"><span class="who">Tomás Ferreira</span><span class="fact">No card on file for a deep wreck · <b>1:00 Wreck Trip</b></span><span class="fix">Ask him</span></div>
+        <div class="ans"><span class="who">Nadia Petrov</span><span class="fact">No emergency contact on file · it prints on the manifest</span><span class="fix">Ask at the counter</span></div>
+        <div class="ans"><span class="who">Night Dive, 7:30</span><span class="fact">5 seats open, no deal sent · <b>Skiff, 3 of 8</b></span><span class="fix">Send a deal</span></div>
+        <div class="ans"><span class="who">The desk</span><span class="fact">3 messages · 1 review · Priya's $95 at 6:02 unconfirmed · Emmet's booking unfinished</span><span class="fix none">4 answers</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="aside"><b>Read the frame for what is not on it.</b> No tabs, no dock, no More, no eyebrow, no title but the day's, no panel, no chip, no dial. The field is the only control DiveDay draws; every other thing you can do is a verb at the end of a fact. The "Try" line is the whole vocabulary of the app, and it is a sentence, not a menu.</p>
+
+  <div class="frame-cap"><b>Two questions</b> · the same field with three letters in it, and the answers in the row grammar</div>
+  <div style="padding:0 48px; display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:24px;">
+    <div style="border:1px solid #e6dcc8; border-radius:10px; padding:20px; background:#fbf7ef;">
+      <div class="ask"><svg class="glyph" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="M13 13l4 4"></path></svg><b>gra</b><span class="caret"></span></div>
+      <div style="margin-top:16px;">
+        <div class="ans" style="flex-wrap:wrap; gap:4px 12px; padding:12px 6px;"><span class="who" style="flex:1 1 auto;">Grace Mensah</span><span class="fix">Verify</span><span class="fact" style="flex-basis:100%;">Advanced card, added by Grace yesterday, waits for a look · 7:00 Two-Tank Reef</span></div>
+        <div class="ans" style="flex-wrap:wrap; gap:4px 12px; padding:12px 6px;"><span class="who" style="flex:1 1 auto;">Grace wrote back</span><span class="fix">Reply</span><span class="fact" style="flex-basis:100%;">9:12 PM · "Card photo attached, see you at 6:15"</span></div>
+        <div class="ans" style="flex-wrap:wrap; gap:4px 12px; padding:12px 6px;"><span class="who" style="flex:1 1 auto;">Grace's sizes</span><span class="fix none">a fact</span><span class="fact" style="flex-basis:100%;">BCD M · wetsuit ML long · fins 38 · second visit</span></div>
+      </div>
+      <p class="note" style="margin:14px 0 0 0;">A person is three answers: what she needs, what she said, what the shop keeps about her. Her record is the page the first tap lands on.</p>
+    </div>
+    <div style="border:1px solid #e6dcc8; border-radius:10px; padding:20px; background:#fbf7ef;">
+      <div class="ask"><svg class="glyph" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="M13 13l4 4"></path></svg><b>sat</b><span class="caret"></span></div>
+      <div style="margin-top:16px;">
+        <div class="ans" style="flex-wrap:wrap; gap:4px 12px; padding:12px 6px;"><span class="who" style="flex:1 1 auto;">Saturday, August 29</span><span class="fix">Open</span><span class="fact" style="flex-basis:100%;">11:00 Two-Tank — French Reef · sold out, 2 waiting · 7:30 Night Dive · 5 of 8</span></div>
+        <div class="ans" style="flex-wrap:wrap; gap:4px 12px; padding:12px 6px;"><span class="who" style="flex:1 1 auto;">Saturday, September 5</span><span class="fix">Add the 7:00</span><span class="fact" style="flex-basis:100%;">Nothing on the board yet · the last six Saturdays ran the 7:00 Two-Tank Reef on Mantis II</span></div>
+        <div class="ans" style="flex-wrap:wrap; gap:4px 12px; padding:12px 6px;"><span class="who" style="flex:1 1 auto;">Emmet O'Brien</span><span class="fix">Seat him</span><span class="fact" style="flex-basis:100%;">Asked for Friday or Saturday · 2 divers</span></div>
+      </div>
+      <p class="note" style="margin:14px 0 0 0;">A day is what is on it, what is not yet on it, and who asked for it. The second answer is the Before-you-ask add panel, one tap earlier.</p>
+    </div>
+  </div>
+
+  <div class="frame-cap"><b>The same, at 390</b> · the field sits where the thumb is; the keyboard rises under it</div>
+  <div class="pair">
+    <div class="phone" style="height:860px;">
+      <div class="chrome" style="padding:0 16px;"><div class="shop"><span class="mark">BM</span>Blue Mantis</div><div class="right"><span>Dana</span></div></div>
+      <div style="padding:20px 16px 96px 16px;">
+        <div class="group-h" style="padding-top:0;"><h2 class="h">Today</h2><span class="meta">4 things before the 7:00</span></div>
+        <div>
+          <div class="ans" style="flex-wrap:wrap; gap:2px 12px; padding:12px 4px;"><span class="who" style="flex:1 1 auto;">Grace Mensah</span><span class="fix">Verify</span><span class="fact" style="flex-basis:100%; font-size:15px; line-height:22px;">Card waits for a look · 7:00</span></div>
+          <div class="ans" style="flex-wrap:wrap; gap:2px 12px; padding:12px 4px;"><span class="who" style="flex:1 1 auto;">Priya Sharma</span><span class="fix">Send</span><span class="fact" style="flex-basis:100%; font-size:15px; line-height:22px;">Waiver not sent · 7:00</span></div>
+          <div class="ans" style="flex-wrap:wrap; gap:2px 12px; padding:12px 4px;"><span class="who" style="flex:1 1 auto;">Wreck Trip, 1:00</span><span class="fix">Assign</span><span class="fact" style="flex-basis:100%; font-size:15px; line-height:22px;">Nobody on the boat · full</span></div>
+          <div class="ans" style="flex-wrap:wrap; gap:2px 12px; padding:12px 4px;"><span class="who" style="flex:1 1 auto;">Tomás Ferreira</span><span class="fix">Ask him</span><span class="fact" style="flex-basis:100%; font-size:15px; line-height:22px;">No card for a deep wreck · 1:00</span></div>
+          <div class="ans" style="flex-wrap:wrap; gap:2px 12px; padding:12px 4px;"><span class="who" style="flex:1 1 auto;">Nadia Petrov</span><span class="fix">At the counter</span><span class="fact" style="flex-basis:100%; font-size:15px; line-height:22px;">No emergency contact on file</span></div>
+          <div class="ans" style="flex-wrap:wrap; gap:2px 12px; padding:12px 4px;"><span class="who" style="flex:1 1 auto;">Night Dive, 7:30</span><span class="fix">Send a deal</span><span class="fact" style="flex-basis:100%; font-size:15px; line-height:22px;">5 seats open · Skiff</span></div>
+          <div class="ans" style="flex-wrap:wrap; gap:2px 12px; padding:12px 4px;"><span class="who" style="flex:1 1 auto;">The desk</span><span class="fix none">4 answers</span><span class="fact" style="flex-basis:100%; font-size:15px; line-height:22px;">3 messages · 1 review · $95 unconfirmed · 1 unfinished</span></div>
+        </div>
+      </div>
+      <div style="position:absolute; left:0; right:0; bottom:0; padding:12px 16px 16px 16px; background:#fbf7ef; border-top:1px solid #e6dcc8;">
+        <div class="ask" style="min-height:52px; font-size:17px;"><svg class="glyph" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="M13 13l4 4"></path></svg>Ask the desk</div>
+      </div>
+    </div>
+    <div class="beside">
+      <h3>What becomes a question</h3>
+      <ul>
+        <li><b>A person</b> — her needs, what she said, what the shop keeps. <b>A day</b> — what is on it, what is not, who asked for it. <b>A boat</b> — its next departure, its checklist, its card. <b>A word</b> — "waivers" is every unsigned one; "$" or "money" is the month and the two open orders; "Reg #4" is the unit and its service clock; "last month" is Reports.</li>
+        <li><b>The one question nobody types</b> is today, and it is the home.</li>
+      </ul>
+      <h3>What leaves</h3>
+      <ul>
+        <li>All twenty-one destinations as places: the tabs, the dock, More, the eyebrow, every index page's header, filter row, pager and empty state.</li>
+        <li>⌘K as a second thing — the field is the palette, on the page, always open.</li>
+      </ul>
+      <h3>What it keeps</h3>
+      <ul><li>The trip page and the diver's record as the pages an answer lands on; the boat's screen with no field on it at all; the row grammar of the 09-06 palette (a fact, then its fix), which is already tested.</li></ul>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div><h3>Where it stops</h3><p>The wet dock and the first week. On the boat nobody types, so Aboard (concept 3) or the manifest as it ships is the boat's screen. In the first week a staffer does not know the words; the Try line is the whole vocabulary and it has to stay honest and short. And a shop that wants to <i>browse</i> — to see Gear as a wall — gets a list as an answer, never a page.</p></div>
+    <div><h3>What it needs</h3><p><b>The 09-06 reader grown to every noun</b> (a unit, a day's board, the month, a boat), one answer row, one empty state per kind of question ("nothing is waiting on Grace"), and the deletions: twenty-one destinations become answer kinds in <span class="mono">src/lib/staff-destinations.ts</span>, and the routes beneath them go with their tests.</p></div>
+    <div><h3>Its wow</h3><p>You type three letters and the app says what she needs and what to do about it. Nobody has ever been trained on it, because there is nothing to find — the whole shop is one question away, and on a quiet morning the answer is "nothing is waiting on you" above an empty field.</p></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>
