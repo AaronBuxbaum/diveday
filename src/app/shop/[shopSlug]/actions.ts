@@ -267,7 +267,10 @@ export async function keepRentalFitAction(personId: string, kind: SizedRentalKin
     confirmedByPersonId: staff.user.personId,
   });
   if (result !== "saved") revalidateAndRedirect(home, noticeUrl(home, result));
-  revalidateAndRedirect(home, noticeUrl(home, "rental-fit-kept"));
+  // No notice on the way back. The row leaving the leftovers group is the
+  // answer, and a banner reading "Fit saved." over three of those rows told a
+  // staffer who tapped two in a row nothing about which one landed (#1400).
+  revalidateAndRedirect(home);
 }
 
 export async function toggleRecapAutoSendPauseAction(formData: FormData) {

@@ -108,9 +108,11 @@ test.describe("the day closes on the home", () => {
     await expect(keep).toBeVisible();
     await keep.click();
 
-    // The notice is what says the size went somewhere — the diver's record is
-    // two taps away — and the row leaving the group is the rest of the answer.
-    await expect(page.getByText("Fit saved.")).toBeVisible();
+    // The row leaving the leftovers group is the whole answer (#1400). There
+    // used to be a "Fit saved." banner here; on an evening with three of these
+    // rows it said the same sentence twice and named neither diver. This
+    // retrying assertion is now the wait for the write to land — the positive
+    // query for the same button is four lines above.
     await expect(page.getByRole("button", { name: "Keep it" })).toHaveCount(0);
   });
 

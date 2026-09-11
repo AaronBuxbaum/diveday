@@ -30,8 +30,7 @@
     "backupNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo.",
     "whatsappNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
     "promosNotAuthorized": "Los códigos promocionales están limitados a propietarios y gerentes.",
-    "integrationsNotAuthorized": "Solo un propietario o gerente puede cambiar las integraciones.",
-    "rentalFitKept": "Talla guardada."
+    "integrationsNotAuthorized": "Solo un propietario o gerente puede cambiar las integraciones."
   },
   "orientation": {
     "heading": "¿Recién llegado? Algunas pistas para tu puesto.",
