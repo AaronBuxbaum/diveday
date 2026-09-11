@@ -206,6 +206,67 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
 });
 
 /**
+ * **A name the shop half-recognises** (issue #1556). Hand-entering a name one
+ * letter off a diver already on file stops at the counter's prompt rather than
+ * seating anyone; the prompt answers the staffer's real question with the day
+ * the shop last had that candidate on a boat; and picking one seats a diver who
+ * is *blocked* until a staffer says it is them. A `similarity() > 0.4` trigram
+ * match fires on genuinely different people, so the fix is to make a wrong pick
+ * harmless rather than to make the matching cleverer.
+ */
+test("a diver seated off the name prompt is blocked until staff confirm it is them", async ({
+  page,
+}) => {
+  test.setTimeout(30_000);
+  const title = `Name Match Trip ${e2eNow().getTime()}`;
+  await createTrip(page, {
+    title,
+    date: daysFromNow(6),
+    departsAt: "09:00",
+    returnsAt: "11:00",
+    capacity: 6,
+  });
+
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, title);
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+
+  const addDiver = page.locator("#add-diver").filter({ visible: true });
+  await addDiver.scrollIntoViewIfNeeded();
+  await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
+  await page.waitForURL(/\/divers\/new/);
+
+  // One letter off "Marisol Vega", who is in the demo shop's trailing quarter
+  // of sailed departures (src/db/seed-history.ts) — so she has a dive day and
+  // the prompt has something to say beyond repeating the typed name back.
+  await page.getByLabel("Full name").fill("Marisol Vegas");
+  await page.getByLabel("Email").fill(`marisol-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: "Add to trip" }).click();
+
+  // Nobody is seated yet: the question is asked by name, the stake is stated,
+  // and the evidence is on the candidate.
+  await expect(
+    page.getByRole("heading", { name: /Is this the same Marisol Vegas\?/ }),
+  ).toBeVisible();
+  await expect(page.getByText(/Last dived /)).toBeVisible();
+
+  await page.getByRole("button", { name: "Marisol Vega", exact: true }).click();
+  await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
+
+  // Seated, and blocked on the identity the shop only guessed at — the seat
+  // does not inherit her certifications or her waiver on a spelling.
+  const roster = page.locator("#roster");
+  await expect(roster.getByRole("link", { name: "Marisol Vega" }).first()).toBeVisible();
+  await expect(roster.getByText(/Identity unconfirmed/).first()).toBeVisible();
+
+  // One tap at the roster, the same one the shared-inbox path has always cost.
+  await page.getByRole("button", { name: "Confirm this is Marisol Vega" }).click();
+  await page.getByRole("button", { name: "Yes, this is them" }).click();
+  await expect(page.getByRole("status")).toContainText("Identity confirmed.");
+  await expect(page.getByText(/Identity unconfirmed/)).toHaveCount(0);
+});
+
+/**
  * Creates a departure with room on it and returns its id. Every door below
  * needs one this spec owns, so an assertion can never be satisfied (or broken)
  * by a seeded trip another test also touches.

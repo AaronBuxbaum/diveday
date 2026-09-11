@@ -6,6 +6,7 @@ import type { PlanChangeReason } from "./plan-change";
 import { rollCallCheckpoints } from "./roll-call";
 import type { RollCallGapReason, TodayAction, TodayActionKind } from "./today";
 import { sortActions } from "./today";
+import { liveStageOf, type TripStageReading } from "./trip-stages";
 import { shopDayBounds, toDateInputValue, utcToWallTime } from "./zoned";
 
 /**
@@ -165,6 +166,12 @@ export type CloseoutTripInput = {
    * it.
    */
   crew: readonly CrewRollCallSubject[];
+  /**
+   * The crew's last tap on the manifest (`src/lib/trip-stages.ts`), or null.
+   * Read through `liveStageOf`, never raw: a word the crew stopped maintaining
+   * stops speaking, and a stale one must not move this reading either way.
+   */
+  stage?: TripStageReading | null;
   /** Newest non-cancelled booking on this departure. Null when nobody booked. */
   lastBookingAt?: Date | null;
   /** Whether a last-minute deal ever went out on this departure. */
@@ -322,6 +329,10 @@ const ROLL_CALL_KINDS: ReadonlySet<TodayActionKind> = new Set([
 // still needs to be confirmed.
 const STANDING_SETUP_KINDS: ReadonlySet<TodayActionKind> = new Set(["units_unconfirmed"]);
 
+/**
+ * How one departure reads tonight, in strict precedence: an open head count
+ * first, then the clock, and only then the crew's own word.
+ */
 function departureStatus(
   trip: CloseoutTripInput,
   gap: CloseoutRollCallGap | undefined,
@@ -340,7 +351,21 @@ function departureStatus(
     return { status: "not_departed", ...none };
   }
   if (!hasReturned(trip.endsAt, now)) {
-    return { status: "still_out", ...none };
+    // **A crew tap outranks the clock** (issue #1480). The late-arrival hour
+    // is there so a *time-based inference* cannot call a boat home early; a
+    // crew member tapping Home at the rail is not an inference, it is the
+    // statement the buffer was standing in for. So `home` promotes — and only
+    // `home`: no stage demotes, which is why a boat an hour past its end whose
+    // last word is `underway` still reads `all_home` from the clock alone.
+    // `liveStageOf` is what stops a tap outliving its shelf life
+    // (`STAGE_STALE_AFTER_MS` is two buffers, so a stage that is stale here
+    // has always already passed the clock's own test). The gap branch above
+    // returns first either way: a crew tap can never close a day over a diver
+    // nobody counted.
+    const recorded = liveStageOf(trip.stage ?? null, trip.endsAt, now);
+    if (recorded?.stage !== "home") {
+      return { status: "still_out", ...none };
+    }
   }
   return { status: "all_home", ...none };
 }

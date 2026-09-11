@@ -4455,11 +4455,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Email").fill("priya.duplicate@example.com");
         await page.getByLabel("Phone").fill("+1 305 555 0999");
         await page.getByRole("button", { name: "Add diver", exact: true }).click();
-        await page
-          .getByRole("heading", {
-            name: "Did you mean one of these existing potential matches?",
-          })
-          .waitFor();
+        // The prompt asks the counter's question by name now (issue #1556), so
+        // this waits on the half that is about this diver rather than on a
+        // sentence that also carries what picking one costs.
+        await page.getByRole("heading", { name: /^Is this the same Priya Sharma\?/ }).waitFor();
         await page.getByRole("button", { name: "Create new diver anyway" }).click();
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
         await page.getByRole("heading", { name: "Possible duplicate records" }).waitFor();

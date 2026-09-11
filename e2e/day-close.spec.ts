@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { signInAsOwner } from "./helpers";
+import { offlineCopySaved, signInAsOwner } from "./helpers";
 
 /**
  * **Closing the day, on the shop home** — ADR
@@ -87,6 +87,47 @@ test.describe("the day closes on the home", () => {
     expect((await request.post("/api/test/seed-evening?heads=closed")).ok()).toBe(true);
     await page.goto("/shop/blue-mantis");
 
+    await expect(
+      page.getByText(/^All boats are home: \d+ divers and \d+ crew out, \d+ back\.$/),
+    ).toBeVisible();
+  });
+
+  test("closes the day on the crew's own word, an hour before the clock would", async ({
+    page,
+    request,
+  }) => {
+    // **Issue #1480, end to end.** The late-arrival hour is an allowance for a
+    // *time-based inference* about a boat nobody has heard from. A crew member
+    // tapping Home at the rail is not an inference — it is the statement the
+    // buffer was standing in for — so the day may close on it.
+    test.setTimeout(45_000);
+    await signInAsOwner(page);
+    const seeded = await request.post("/api/test/seed-evening?heads=closed&last=just-in");
+    expect(seeded.ok()).toBe(true);
+    const { departures } = (await seeded.json()) as { departures: { id: string }[] };
+    const justIn = departures.at(-1);
+    if (!justIn) throw new Error("the evening fixture moved no departures");
+
+    // Every count is closed and every earlier boat is home, but the last one
+    // tied up five minutes ago — so the clock still says she is out, and
+    // nothing on the page offers to close a day she is on.
+    await page.goto("/shop/blue-mantis");
+    await expect(
+      page.getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Close the day/ })).toHaveCount(0);
+
+    await page.goto(`/shop/blue-mantis/trips/${justIn.id}/manifest`);
+    await offlineCopySaved(page);
+    const home = page.getByRole("button", { name: "Home", exact: true });
+    await home.click();
+    // The strip's own pressed state is what the server sent back, so it is the
+    // wait for the write rather than an optimistic paint — the same reading
+    // e2e/boat-stage.spec.ts makes of this control.
+    await expect(home).toHaveAttribute("aria-pressed", "true");
+
+    await page.goto("/shop/blue-mantis");
+    await expect(page.getByRole("button", { name: /^Close the day/ })).toBeVisible();
     await expect(
       page.getByText(/^All boats are home: \d+ divers and \d+ crew out, \d+ back\.$/),
     ).toBeVisible();

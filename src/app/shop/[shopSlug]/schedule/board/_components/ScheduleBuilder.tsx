@@ -1533,8 +1533,27 @@ function MoveImpact({
   }, [tripId, targetDate, targetTime, loadPreflight]);
 
   if (!preflight) return null;
-  const lines = preflight.sections.flatMap((section) => impactLines(section, copy));
-  if (lines.length === 0 && !preflight.blocked) return null;
+  // Two lists, split by severity — and split here rather than in
+  // `composeMovePreflight`, because the section union already says which kind
+  // is a reason to stop and a `severity` field would restate it in data.
+  //
+  // The crew clash is the one consequence the move *manufactures*: a person on
+  // two overlapping departures is a state `setTripCrew`/`changeTripCrew` both
+  // refuse outright, and it is the manifest the coastguard reads that prints
+  // it twice. Issue #1345 asked whether `moveTrip` should refuse; the answer
+  // was no — the owner assigns crew — but a line saying so in muted grey, at
+  // the same weight as a gear count, is not the shop being told. So it wears
+  // the blocked line's weight and is announced, without becoming a gate.
+  //
+  // `crewAway` deliberately stays in the muted list: a blackout is the crew
+  // member's own note and informs, and the owner's answer named the clash.
+  const alertLines = preflight.sections.flatMap((section) =>
+    section.kind === "crew" ? impactLines(section, copy) : [],
+  );
+  const lines = preflight.sections.flatMap((section) =>
+    section.kind === "crew" ? [] : impactLines(section, copy),
+  );
+  if (lines.length === 0 && alertLines.length === 0 && !preflight.blocked) return null;
 
   return (
     <div className="sm:col-span-2 space-y-3" data-move-impact={tripId}>
@@ -1545,6 +1564,16 @@ function MoveImpact({
             : copy.impactBlockedNotScheduled}
         </p>
       ) : null}
+      {/*
+       * One `role="alert"` per person rather than one wrapping the set, so a
+       * screen reader announces each name the way it announces the refusal
+       * above — two clashing divemasters are two facts, not one paragraph.
+       */}
+      {alertLines.map((line) => (
+        <p key={line} className="text-sm font-medium text-warning" role="alert">
+          {line}
+        </p>
+      ))}
       {lines.length > 0 ? (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">

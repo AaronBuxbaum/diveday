@@ -1198,7 +1198,11 @@ describe("createBooking identity safeguard (H-13)", () => {
     expect(await confirmBookingIdentity(db, shop.id, shared.bookingId)).toBe(false);
   });
 
-  it("never flags the identity path — an existing diver booked by id submits no name", async () => {
+  it("does not flag a returning diver a staffer went looking for and picked", async () => {
+    // The case that keeps "enter once, reuse everywhere" free. A staffer who
+    // searched the roster and tapped a name got the person they meant, and the
+    // seat costs them no extra tap — which is what makes the flagged case below
+    // mean something rather than being the default.
     const { db, shop, open } = await seededContext();
     const diver = await createDiver(db, {
       shopId: shop.id,
@@ -1214,6 +1218,95 @@ describe("createBooking identity safeguard (H-13)", () => {
     });
     if (!outcome.ok) throw new Error("existing-diver booking failed");
     expect(await identityFlag(db, outcome.bookingId)).toBeNull();
+  });
+
+  /**
+   * **A tap on the counter's name prompt is a guess** (issue #1556). Its
+   * candidates come from a `similarity() > 0.4` trigram match on a typed name,
+   * so it fires on genuinely different people; a seat taken off it must not
+   * inherit the matched diver's certifications, waiver coverage and rental fit
+   * on the strength of a spelling.
+   */
+  it("flags a seat taken off the counter's name-match prompt, and blocks it at the rail", async () => {
+    const { db, shop, open } = await seededContext();
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Nadia Ruiz",
+      email: "nadia-1556@example.com",
+    });
+    if (!diver) throw new Error("diver setup failed");
+    const outcome = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: open.id,
+      personId: diver.id,
+      fromNameMatch: true,
+    });
+    if (!outcome.ok) throw new Error("name-match booking failed");
+    expect(await identityFlag(db, outcome.bookingId)).not.toBeNull();
+
+    const readiness = await readinessModule.getBookingReadiness(db, shop.id, outcome.bookingId);
+    expect(readiness?.status).toBe("blocked");
+    expect(readiness?.blockers).toContainEqual(
+      expect.objectContaining({ code: "identity_unconfirmed" }),
+    );
+
+    // One tap at the roster clears it, same as the shared-inbox path.
+    expect(await confirmBookingIdentity(db, shop.id, outcome.bookingId)).toBe(true);
+    expect(await identityFlag(db, outcome.bookingId)).toBeNull();
+  });
+
+  it("writes no certification claim under a name-match seat", async () => {
+    // Pins `persistDeclaration`'s early return through the new door: a claim
+    // made while the shop is not sure whose record this is would be a
+    // statement about somebody who never made it.
+    const { db, shop, open } = await seededContext();
+    const selfDeclaredFor = async (personId: string) =>
+      db
+        .select({ id: certifications.id })
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, shop.id),
+            eq(certifications.personId, personId),
+            isNotNull(certifications.selfDeclaredAt),
+          ),
+        );
+
+    const guessed = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Nadia Ruiz",
+      email: "nadia-declared@example.com",
+    });
+    if (!guessed) throw new Error("diver setup failed");
+    const flagged = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: open.id,
+      personId: guessed.id,
+      fromNameMatch: true,
+      declared: { level: "rescue" },
+    });
+    if (!flagged.ok) throw new Error("name-match booking failed");
+    expect(await selfDeclaredFor(guessed.id)).toEqual([]);
+
+    // The same declaration on a seat nobody guessed at does land — otherwise
+    // this test would pass with the whole declaration path broken.
+    const picked = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Nadia Ruiz",
+      email: "nadia-picked@example.com",
+    });
+    if (!picked) throw new Error("diver setup failed");
+    const plain = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: open.id,
+      personId: picked.id,
+      declared: { level: "rescue" },
+    });
+    if (!plain.ok) throw new Error("picked-diver booking failed");
+    expect(await selfDeclaredFor(picked.id)).toHaveLength(1);
   });
 });
 

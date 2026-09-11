@@ -3,6 +3,7 @@ import {
   assembleDayCloseout,
   assembleEveningClose,
   buildCloseoutSnapshot,
+  type CloseoutRollCallGap,
   type CloseoutTripInput,
   closeoutAdminTaskStatus,
   parseCloseoutSnapshot,
@@ -10,6 +11,8 @@ import {
 } from "./closeout";
 import { type CrewRollCallSubject, rollCallCompleteness } from "./manifests";
 import type { TodayAction } from "./today";
+import { STAGE_STALE_AFTER_MS, type TripStage, type TripStageReading } from "./trip-stages";
+import { DEPARTURE_BUFFER_MS } from "./trips";
 
 const TZ = "America/New_York";
 // A fixed evening instant: 17:30 shop-local on 2026-08-04 (EDT, UTC-4).
@@ -35,6 +38,11 @@ function trip(overrides: Partial<CloseoutTripInput> & { tripId: string }): Close
     recapShoutout: null,
     ...overrides,
   };
+}
+
+/** One tap at the rail, as `latestTripStagesByTrip` hands it in. */
+function stage(word: TripStage, recordedAt: Date): TripStageReading {
+  return { stage: word, siteName: "Molasses Reef", recordedAt, recordedByName: "Marco Diaz" };
 }
 
 function action(overrides: Partial<TodayAction> & { id: string }): TodayAction {
@@ -198,6 +206,118 @@ describe("assembleDayCloseout", () => {
       ["out", "still_out"],
       ["night", "not_departed"],
     ]);
+  });
+
+  // **A crew tap outranks the clock** — issue #1480. The late-arrival hour is
+  // an allowance for a *time-based inference*; a crew member tapping Home at
+  // the rail is the statement that inference was standing in for. Each case
+  // below pins one of the four constraints the issue binds the change with.
+  describe("a recorded home stage", () => {
+    const MINUTE = 60 * 1000;
+    /** Sailed at dawn, due back five minutes ago — still out for another 55. */
+    const inBuffer = (overrides: Partial<CloseoutTripInput> = {}): CloseoutTripInput =>
+      trip({
+        tripId: "t1",
+        startsAt: new Date(now.getTime() - 5 * HOUR),
+        endsAt: new Date(now.getTime() - 5 * MINUTE),
+        ...overrides,
+      });
+    const statusOf = (
+      input: CloseoutTripInput,
+      gaps: readonly CloseoutRollCallGap[] = [],
+      at: Date = now,
+    ) =>
+      assembleDayCloseout({ trips: [input], gaps, actions: [], timeZone: TZ, now: at })
+        .departures[0]?.status;
+
+    it("settles a boat the clock would still call still out", () => {
+      // The control first: without the tap this same departure is still out,
+      // which is what makes the promotion below the stage's doing.
+      expect(statusOf(inBuffer())).toBe("still_out");
+      expect(
+        statusOf(inBuffer({ stage: stage("home", new Date(now.getTime() - 10 * MINUTE)) })),
+      ).toBe("all_home");
+    });
+
+    it("never closes the day over a diver nobody counted", () => {
+      // **Constraint 1**, structurally: the gap branch returns before the
+      // clock and the stage are consulted at all, so no tap at the rail can
+      // promote a departure whose head count is open.
+      const tapped = inBuffer({ stage: stage("home", new Date(now.getTime() - 10 * MINUTE)) });
+      expect(
+        statusOf(tapped, [{ tripId: "t1", reason: "missing_diver", diveNumber: 2, uncounted: 1 }]),
+      ).toBe("unreconciled");
+      expect(
+        statusOf(tapped, [{ tripId: "t1", reason: "no_roll_call", diveNumber: 0, uncounted: 8 }]),
+      ).toBe("count_open");
+    });
+
+    it("leaves a departure nobody tapped to the clock, exactly as before", () => {
+      // **Constraint 2.** The buffer is unchanged for every shop that has
+      // never tapped a stage: an hour past the scheduled return, and home.
+      const elapsed = trip({
+        tripId: "t1",
+        startsAt: new Date(now.getTime() - 6 * HOUR),
+        endsAt: new Date(now.getTime() - HOUR - MINUTE),
+      });
+      expect(statusOf(elapsed)).toBe("all_home");
+      expect(statusOf({ ...elapsed, stage: null })).toBe("all_home");
+    });
+
+    it("stops reading a stage the crew stopped maintaining", () => {
+      // **Constraint 3.** A word goes stale two buffers past the departure's
+      // own end (`STAGE_STALE_AFTER_MS`), and by then the clock has long since
+      // answered on its own — so a stale stage cannot move this reading in
+      // *either* direction. The window in which it could is empty, and that is
+      // arithmetic rather than convention:
+      expect(STAGE_STALE_AFTER_MS).toBeGreaterThan(DEPARTURE_BUFFER_MS);
+
+      const endsAt = new Date(now.getTime() - 3 * HOUR);
+      const long = (word: TripStage) =>
+        trip({
+          tripId: "t1",
+          startsAt: new Date(now.getTime() - 8 * HOUR),
+          endsAt,
+          stage: stage(word, new Date(endsAt.getTime() - 5 * MINUTE)),
+        });
+      expect(statusOf(long("home"))).toBe("all_home");
+      expect(statusOf(long("underway"))).toBe("all_home");
+    });
+
+    it("promotes on home and on nothing else", () => {
+      // **Constraint 4.** Four of the five words say the boat is out; only the
+      // fifth says she is back, and only the fifth is allowed to say so.
+      for (const word of ["boarding", "underway", "surface", "heading_in"] as const) {
+        expect(
+          statusOf(inBuffer({ stage: stage(word, new Date(now.getTime() - 10 * MINUTE)) })),
+        ).toBe("still_out");
+      }
+    });
+
+    it("closes the day an hour early once the tap settles the last station", () => {
+      // The unlock, end to end through the evening join: `settled` reads the
+      // promoted status, so the closing block and the homecoming line both
+      // arrive while the clock still has fifty-five minutes to run.
+      const tapped = inBuffer({ stage: stage("home", new Date(now.getTime() - 10 * MINUTE)) });
+      const untapped = inBuffer();
+
+      expect(
+        assembleEveningClose(
+          assembleDayCloseout({ trips: [untapped], gaps: [], actions: [], timeZone: TZ, now })
+            .departures,
+          now,
+        ).closing,
+      ).toBe(false);
+
+      const evening = assembleEveningClose(
+        assembleDayCloseout({ trips: [tapped], gaps: [], actions: [], timeZone: TZ, now })
+          .departures,
+        now,
+      );
+      expect(evening.stations[0]?.settled).toBe(true);
+      expect(evening.closing).toBe(true);
+      expect(evening.allHome).toBe(true);
+    });
   });
 
   it("marks only the boats that are actually back as ended, and carries each one's recap note", () => {

@@ -2462,3 +2462,157 @@ describe("findSimilarDivers name similarity and exact matching", () => {
     expect(noMatches).toHaveLength(0);
   });
 });
+
+/**
+ * **The evidence half of the counter's prompt** (issue #1556). Five names is
+ * not an answer — the name is what the staffer just typed, which is why every
+ * candidate is on the list. The day the shop last had that person on a boat is
+ * what makes "is this the same Nadia who dived yesterday?" answerable, and it
+ * is the same day `peopleWhoDivedBefore` counts, so the counter and the
+ * fly-safe reader cannot disagree about what a dive day is.
+ */
+describe("findSimilarDivers last dive day", () => {
+  const HOUR_MS = 60 * 60 * 1000;
+  /** Far enough from every seeded name that only this test's rows can match. */
+  const NAME = "Marisol Etxebarria";
+
+  async function candidate(db: AppDb, shopId: string) {
+    const person = await createDiver(db, {
+      shopId,
+      fullName: NAME,
+      email: "marisol.etxebarria@example.com",
+    });
+    if (!person) throw new Error("createDiver refused the candidate");
+    return person;
+  }
+
+  /**
+   * A seat on a departure that has since sailed.
+   *
+   * Booked while the boat is still ahead and back-dated afterwards, because
+   * `createBooking` refuses one that has left — which is the only order a real
+   * seat on a past departure ever happens in.
+   */
+  async function sailedSeat(
+    db: AppDb,
+    shopId: string,
+    personId: string,
+    title: string,
+    startsAt: Date,
+  ) {
+    const [trip] = await db
+      .insert(trips)
+      .values({
+        shopId,
+        title,
+        startsAt: new Date(nowMs() + 48 * HOUR_MS),
+        endsAt: new Date(nowMs() + 52 * HOUR_MS),
+        capacity: 6,
+      })
+      .returning();
+    if (!trip) throw new Error("trip insert returned no row");
+    const booking = await createBooking(db, { actor: "staff", shopId, tripId: trip.id, personId });
+    expect(booking.ok, `seating on ${title} has to land`).toBe(true);
+    const [sailed] = await db
+      .update(trips)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS) })
+      .where(eq(trips.id, trip.id))
+      .returning();
+    if (!sailed) throw new Error("back-dating the departure returned no row");
+    return sailed;
+  }
+
+  const lastDiveDayOf = async (db: AppDb, shopId: string, personId: string) => {
+    const matches = await findSimilarDivers(db, shopId, NAME);
+    const row = matches.find((match) => match.id === personId);
+    if (!row) throw new Error("the candidate has to be on the prompt for this to mean anything");
+    return row.lastDiveDayAt;
+  };
+
+  it("reports the most recent departure a candidate has actually sailed on", async () => {
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    await sailedSeat(db, shop.id, person.id, "Three days ago", new Date(nowMs() - 72 * HOUR_MS));
+    const yesterday = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "Yesterday",
+      new Date(nowMs() - 24 * HOUR_MS),
+    );
+    // A seat on a boat that has not left is not a dive day, however soon it is.
+    const [ahead] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Next week",
+        startsAt: new Date(nowMs() + 7 * 24 * HOUR_MS),
+        endsAt: new Date(nowMs() + 7 * 24 * HOUR_MS + 4 * HOUR_MS),
+        capacity: 6,
+      })
+      .returning();
+    if (!ahead) throw new Error("trip insert returned no row");
+    const booked = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: ahead.id,
+      personId: person.id,
+    });
+    expect(booked.ok).toBe(true);
+
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toEqual(yesterday.startsAt);
+  });
+
+  it("reports nothing for a candidate this shop has never had on a boat", async () => {
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toBeNull();
+  });
+
+  it("reports nothing when the one seat on file was cancelled", async () => {
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    const trip = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "Cancelled seat",
+      new Date(nowMs() - 24 * HOUR_MS),
+    );
+    await db
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(and(eq(bookings.tripId, trip.id), eq(bookings.personId, person.id)));
+
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toBeNull();
+  });
+
+  it("reports nothing for a no-show, or for a departure the shop called off", async () => {
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    const missed = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "Never turned up",
+      new Date(nowMs() - 24 * HOUR_MS),
+    );
+    await db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(and(eq(bookings.tripId, missed.id), eq(bookings.personId, person.id)));
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toBeNull();
+
+    // A blown-out departure leaves its bookings active by design, so without
+    // the trip-status clause this would name a day nobody went in the water.
+    const blownOut = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "Blown out",
+      new Date(nowMs() - 48 * HOUR_MS),
+    );
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, blownOut.id));
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toBeNull();
+  });
+});

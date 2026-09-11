@@ -2392,6 +2392,96 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
   });
 
   /**
+   * **The clash is not a footnote** (issue #1345). Every other line here is a
+   * cost of going ahead — letters to write, kit to re-reserve. The clash is a
+   * state `setTripCrew`/`changeTripCrew` refuse outright and the manifest
+   * prints twice, so it is announced and carries the blocked line's weight
+   * while the gear count stays under the heading.
+   *
+   * The blackout stays muted with the costs on purpose: it is the crew
+   * member's own note, and the owner's answer named the clash.
+   */
+  it("says a crew clash as an alert, not a footnote", async () => {
+    loadMovePreflight.mockImplementation(async () => ({
+      blocked: null,
+      sections: [
+        { kind: "crew", clashes: [{ name: "Marisol", departure: "Thu 07:00 Night Dive" }] },
+        { kind: "crewAway", names: ["Ivo"] },
+        { kind: "gear", count: 1 },
+      ],
+    }));
+    renderBoard();
+    await openMovePanel();
+
+    const clash = await screen.findByText(
+      "Marisol is already on Thu 07:00 Night Dive at that time.",
+    );
+    expect(clash).toHaveClass("text-warning");
+    expect(screen.getAllByRole("alert")).toContain(clash);
+
+    const gear = screen.getByText("1 reserved unit travels with it.");
+    const away = screen.getByText("Ivo has told you they are away then.");
+    for (const line of [gear, away]) {
+      expect(line.closest("ul")).not.toBeNull();
+    }
+    for (const alert of screen.getAllByRole("alert")) {
+      expect(alert).not.toHaveTextContent("1 reserved unit travels with it.");
+      expect(alert).not.toHaveTextContent("Ivo has told you they are away then.");
+    }
+    expect(screen.getByText(COPY.impactTitle)).toBeInTheDocument();
+  });
+
+  /**
+   * A clash on its own used to print the "If you move it" heading over one
+   * grey line. The alert says the whole thing; the heading it would have stood
+   * under has nothing left to introduce.
+   */
+  it("renders the alert with no heading when the clash is the only consequence", async () => {
+    loadMovePreflight.mockImplementation(async () => ({
+      blocked: null,
+      sections: [
+        { kind: "crew", clashes: [{ name: "Marisol", departure: "Thu 07:00 Night Dive" }] },
+      ],
+    }));
+    renderBoard();
+    await openMovePanel();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Marisol is already on Thu 07:00 Night Dive at that time.",
+    );
+    expect(screen.queryByText(COPY.impactTitle)).toBeNull();
+  });
+
+  /**
+   * **Louder, never a gate.** Issue #1345 asked whether `moveTrip` should
+   * refuse a clash or quietly drop the clashing people; the answer was
+   * neither — the owner assigns crew, and a panel that disabled its own button
+   * would be the preview becoming the gate the blocked-line test above
+   * deliberately is not either.
+   */
+  it("still lets the move go through with a clash on screen", async () => {
+    loadMovePreflight.mockImplementation(async () => ({
+      blocked: null,
+      sections: [
+        {
+          kind: "crew",
+          clashes: [
+            { name: "Marisol", departure: "Thu 07:00 Night Dive" },
+            { name: "Ivo", departure: "Thu 08:00 Reef Drift" },
+          ],
+        },
+      ],
+    }));
+    renderBoard();
+    await openMovePanel();
+
+    // One alert per person, not one paragraph naming both: a screen reader
+    // announces two clashes the way it announces two facts.
+    await waitFor(() => expect(screen.getAllByRole("alert")).toHaveLength(2));
+    expect(screen.getByRole("button", { name: COPY.moveIt })).toBeEnabled();
+  });
+
+  /**
    * The restraint case. A departure nobody has been told about, with no crew,
    * no kit and no money composes to no sections — and the panel must then look
    * exactly as it did before this feature existed, heading included.
