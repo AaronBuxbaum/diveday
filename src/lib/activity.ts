@@ -56,6 +56,14 @@ type ActivityParamShapes = {
   booking_removed: { actor: string; diver: string };
   /** …and put back. */
   booking_restored: { actor: string; diver: string };
+  /**
+   * A staffer recorded that a diver never turned up. The tap is also the seat
+   * release (issue #1209), so the trail is the only record of who released it
+   * and when — the question asked when somebody else is sitting in that seat.
+   */
+  booking_no_show: { actor: string; diver: string };
+  /** …and took it back, which puts the diver back on the expected list. */
+  booking_no_show_undone: { actor: string; diver: string };
   /** Somebody was put on the crew for a departure. */
   crew_assigned: { actor: string; crew: string };
   /** …or taken off it. */
@@ -137,6 +145,8 @@ export const ACTIVITY_CODES = [
   "support_needs_cleared",
   "booking_removed",
   "booking_restored",
+  "booking_no_show",
+  "booking_no_show_undone",
   "identity_confirmed",
   "crew_assigned",
   "crew_removed",

@@ -18,13 +18,33 @@
   "instrument": {
     "hereOf": "<figure>{here}</figure> of {expected} here",
     "toCome": "{count} to come",
-    "cantBoard": "{count, plural, one {# diver can’t board yet} other {# divers can’t board yet}}"
+    "cantBoard": "{count, plural, one {# diver can’t board yet} other {# divers can’t board yet}}",
+    "notHere": "{count, plural, one {# diver is not here} other {# divers are not here}}"
   },
   "row": {
     "firstVisit": "First visit",
     "missingEmergencyContact": "No emergency contact",
     "giftUnclaimed": "A gift from {giver}, not claimed yet",
     "giftDoor": "Seat the giver’s friend by name"
+  },
+  "noShow": {
+    "door": "Not here?",
+    "consequence": "Records that they did not arrive and frees the seat. You can put them back.",
+    "confirm": "Mark not here",
+    "confirming": "Marking…",
+    "confirmAriaLabel": "Mark {name} as not here",
+    "badge": "Not here",
+    "group": "Not here — {count}",
+    "undo": "Put back on the list",
+    "undoing": "Putting back…",
+    "undoAriaLabel": "Put {name} back on this boat’s list",
+    "waiting": "{count, plural, one {# diver is waiting for this seat} other {# divers are waiting for this seat}}",
+    "waitingDoor": "Open the wait list",
+    "alternatives": "Nobody is waiting. These departures still have room.",
+    "alternativeDoor": "{title}, {when}",
+    "nothing": "Nobody is waiting, and no similar departure has room.",
+    "money": "Marking someone not here does not charge or refund anything.",
+    "moneyDoor": "Open their orders"
   },
   "settledGroup": "Checked in — {count}",
   "checkInButton": "Check in",
@@ -71,7 +91,15 @@
     "walkinCourseMinAge": "That diver is under the course’s minimum age on the day it runs, going by the date of birth on file.",
     "walkinTripPrerequisite": "That diver’s certifications don’t reach what this boat and its dive sites require.",
     "walkinUnavailable": "That diver can’t take a seat on this boat right now.",
-    "walkinInvalid": "Choose a boat and enter a name before adding a walk-in."
+    "walkinInvalid": "Choose a boat and enter a name before adding a walk-in.",
+    "noShowAlreadyBoarded": "The crew recorded that diver aboard, so they can’t be marked not here. Correct the roll call on the boat’s manifest first.",
+    "noShowAlreadyMarked": "That diver is already marked not here.",
+    "noShowNotBooked": "That seat was given up, so there is nothing to mark.",
+    "noShowTripCancelled": "That departure is cancelled, so nobody is missing from it.",
+    "noShowBeforeDockCall": "That diver is not late yet. Try again once the dock call has passed.",
+    "noShowWindowClosed": "That departure is too far past for the counter. Change the booking from the trip’s guest list instead.",
+    "noShowNotMarked": "That diver is not marked not here.",
+    "noShowTripFull": "The freed seat has already been taken, so that diver cannot go back on this boat."
   },
   "walkIn": {
     "eyebrow": "Counter mode",

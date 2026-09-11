@@ -12,7 +12,9 @@ import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   choosePartySize,
+  createTrip,
   daysFromNow,
+  disclosureSettled,
   manifestRow,
   offlineCopySaved,
   openManifestPerson,
@@ -32,8 +34,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Two hundred and nine key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 836 screenshots per run (see
+ * Visual regression coverage. Two hundred and thirty-three key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 932 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -46,18 +48,20 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * "correct the prose" instruction above ended up chasing a number that was
  * never right.
  *
- * Five more come from the `print` block at the bottom: the manifest, prep,
- * trip-packet, day-packet, and departure-log pages as they render for the
+ * Ten more come from the `print` block at the bottom: the manifest, prep,
+ * trip-packet, day-packet, departure-log, dock-sign, window-sticker,
+ * boat-card, site-briefing-cards and paper-pass pages as they render for the
  * printer. Print
  * is its own concern, not a light/dark one — the `@media print` token override
  * collapses both schemes to one black-and-white palette — so each is captured
  * once, at a US-Letter width, via `capturePrint()`.
  *
  * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
- * and `TABLET_SURFACES` adds 10: five staff surfaces get a third, portrait
- * tablet width, at one screenshot per scheme rather than the usual two. That
- * brings the run to 854 screenshots — the tablet width is a 1.2% addition, not
- * the 50% a third viewport applied to every surface would have cost.
+ * `TABLET_SURFACES` adds 16 — eight surfaces a shop runs on a tablet get a
+ * third, portrait width, at one screenshot per scheme rather than two — and
+ * `TV_SURFACES` adds 2 for the one board a lobby screen shows. That brings the
+ * run to 964 screenshots: the extra widths are a 2% addition, not the 50% a
+ * third viewport applied to every surface would have cost.
  *
  * ## One surface, one `test()`
  *
@@ -3757,6 +3761,87 @@ for (const scheme of ["light", "dark"] as const) {
           row.getByLabel("This co-signer and this diver have the same name", { exact: false }),
         ).toBeVisible();
         await capture(page, "check-in-waiver-refused", scheme);
+      });
+
+      /**
+       * **"Not here?", open** (issue #1209) — the counter's script for the
+       * diver who never turned up.
+       *
+       * The one state of this surface no seeded day can hold. The door is
+       * drawn only inside the shop's own dock call (`noShowGate`, over
+       * `shops.dock_call_minutes`), and on the fleet's frozen 09:30 every
+       * seeded departure is either hours out or already home — which is the
+       * whole reason it went unphotographed when it shipped. So the flow makes
+       * a boat that is boarding now, seats the one diver on it, and clears
+       * their release at the desk the way a staffer does, which is also the
+       * shortest honest route to a row the door is offered on.
+       *
+       * What the frame is for is the restraint: three quiet words *under* a
+       * check-in tap that stays the only large target on the row, and behind
+       * them one sentence and one button. The counter is used with wet hands
+       * on a shared desk tablet, so a second control that grew to look like a
+       * peer of that tap is exactly the regression this baseline catches.
+       */
+      test(`the counter's not-here door renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // A departure, a sale and a release recorded before anything is shot.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const title = "Dock Call Two-Tank";
+        await createTrip(page, {
+          title,
+          date: daysFromNow(0),
+          // 09:45 against the frozen 09:30 (`e2e/servers.ts`): inside the
+          // default 30-minute dock call, so this boat's divers are due at the
+          // desk now. One seat, so the frame holds one row rather than a queue.
+          departsAt: "09:45",
+          returnsAt: "12:00",
+          capacity: 1,
+        });
+        const tripId = await seededTripId(page, "blue-mantis", title);
+
+        // Odile Marchand is seeded carded and booked on nothing
+        // (`src/db/seed-cert-gates.ts`), so she clears this trip's Open Water
+        // baseline and arrives blocked on the release alone.
+        await page.goto(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
+        const findDiver = page.getByRole("searchbox", {
+          name: "Search by name, email, or phone",
+        });
+        await findDiver.fill("Odile Marchand");
+        await findDiver.press("Enter");
+        await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
+        await page.waitForURL(/\/check-in(\?|$)/);
+
+        // `?trip=` pins the departure rather than trusting whichever boat the
+        // instrument focuses — the same reason the refusal capture above does.
+        await page.goto(`/shop/blue-mantis/check-in?trip=${tripId}`);
+        const row = page
+          .locator("article")
+          .filter({ hasText: "Odile Marchand" })
+          .filter({ visible: true });
+        await row.getByText("Mark signed on paper").click();
+        await row
+          .getByLabel("I have this diver’s signed release on file", { exact: false })
+          .filter({ visible: true })
+          .check();
+        await row.getByRole("button", { name: "Record paper signature" }).click();
+        // Cleared in place, which is what puts the door on the row: it is
+        // offered under the check-in tap and nowhere else.
+        await expect(row.getByRole("button", { name: "Check in Odile Marchand" })).toBeVisible();
+
+        const door = row.locator("details").filter({ hasText: "Not here?" });
+        await door.locator("> summary").click();
+        // The body animates in, so `open` flipping is not the frame it is laid
+        // out in — waited on the arrival's end state, never a duration.
+        await disclosureSettled(door);
+        // The search box focuses itself from a mount effect and the ring it
+        // paints is in the frame: the same race, and the same signal, as the
+        // three counter captures above.
+        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
+        await capture(page, "check-in-no-show", scheme);
       });
 
       // **The home's evening reading** (ADR 20260804-day-closeout, folded into

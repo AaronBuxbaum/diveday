@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CheckInQueueRow } from "@/db/check-in";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { CounterQueueRow, type CounterWaiverNotice } from "./CounterQueueRow";
+import type { NoShowSalvageCopy } from "./NoShowScript";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
@@ -44,6 +45,7 @@ function renderRow(
   showEmail = false,
   showFirstVisit = true,
   waiverNotice?: CounterWaiverNotice,
+  noShow: { offered?: boolean; salvage?: NoShowSalvageCopy } = {},
 ) {
   return render(
     <CounterQueueRow
@@ -56,6 +58,10 @@ function renderRow(
       undoAction={vi.fn().mockResolvedValue({ ok: true })}
       waiverAction={vi.fn().mockResolvedValue(undefined)}
       waiverNotice={waiverNotice}
+      noShowOffered={noShow.offered ?? false}
+      markNoShowAction={vi.fn().mockResolvedValue(undefined)}
+      undoNoShowAction={vi.fn().mockResolvedValue(undefined)}
+      salvage={noShow.salvage}
       t={t}
     />,
   );
@@ -280,5 +286,62 @@ describe("a refused paper waiver", () => {
     );
 
     expect(screen.queryByText("That paper waiver could not be recorded.")).not.toBeInTheDocument();
+  });
+});
+
+describe("the no-show script", () => {
+  /**
+   * The door is drawn from the gate, never from the row alone: `noShowGate`
+   * (`src/lib/no-show.ts`) opens it at the shop's own dock call and shuts it
+   * when the arrivals window does, and the page is the layer that holds both.
+   * Offering "Not here?" over a diver who is not due for two hours is an
+   * invitation to a mistake on a shared desk tablet.
+   */
+  it("is not offered on a waiting row the gate has not opened", () => {
+    renderRow();
+    expect(screen.queryByText("Not here?")).not.toBeInTheDocument();
+  });
+
+  it("is offered under the tap once the gate opens, leaving the tap alone", () => {
+    renderRow({}, false, true, undefined, { offered: true });
+    expect(screen.getByText("Not here?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Check in Nadia Petrov" })).toBeInTheDocument();
+  });
+
+  /**
+   * **The word on screen is the plain one.** A released seat is "Not here" —
+   * never archived, never deactivated, never "released" (ADR
+   * 20260820-every-delete-is-soft).
+   */
+  it("wears the plain word and an undo once the seat is released", () => {
+    renderRow({ bookingStatus: "no_show" });
+    expect(screen.getByText("Not here")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Put Nadia Petrov back on this boat’s list" }),
+    ).toBeInTheDocument();
+    // And no check-in tap: the counter is finished with this seat.
+    expect(screen.queryByRole("button", { name: "Check in Nadia Petrov" })).not.toBeInTheDocument();
+  });
+
+  it("renders the salvage under the released row", () => {
+    renderRow({ bookingStatus: "no_show" }, false, true, undefined, {
+      salvage: {
+        line: "2 divers are waiting for this seat",
+        links: [{ href: "/shop/blue-mantis/trips/trip-1/guests", label: "Open the wait list" }],
+        money: {
+          line: "Marking someone not here does not charge or refund anything.",
+          href: "/shop/blue-mantis/orders?personId=person-1",
+          label: "Open their orders",
+        },
+      },
+    });
+    expect(screen.getByText("2 divers are waiting for this seat")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open the wait list" })).toBeInTheDocument();
+  });
+
+  /** A released seat is not a settled one, so it never wears the drawn check. */
+  it("does not wear the settled check", () => {
+    renderRow({ bookingStatus: "no_show" });
+    expect(screen.queryByText("Checked in")).not.toBeInTheDocument();
   });
 });

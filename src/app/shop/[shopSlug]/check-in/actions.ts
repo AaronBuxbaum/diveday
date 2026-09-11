@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
 import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
+import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -99,6 +100,77 @@ export async function undoCheckInAction(
   }
   revalidatePath(back);
   redirect(noticeUrl(back, outcome.reason === "not_checked_in" ? "not-bookable" : outcome.reason));
+}
+
+/**
+ * **"Not here" — the counter records that a diver never turned up** (issue
+ * #1209), and the seat goes back to the shop as the consequence of that one
+ * tap.
+ *
+ * The two halves below are shaped exactly like `checkInAction` and
+ * `undoCheckInAction` above, for the reason those two are shaped that way: a
+ * refusal has to land back on the boat the staffer was working, or a queue
+ * holding three departures answers a question about the wrong one.
+ *
+ * The gate is `noShowGate`, and it runs twice — once on the page to decide
+ * whether the disclosure is drawn at all, and again inside `markBookingNoShow`
+ * against rows read under a lock. This layer adds nothing to it: a door drawn
+ * ten seconds ago is not evidence, and re-deciding here would be a third
+ * opinion nobody asked for.
+ */
+export async function markNoShowAction(
+  shopSlug: string,
+  focusTripId: string | null,
+  formData: FormData,
+): Promise<void> {
+  const session = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const back = counterQueuePath(shopSlug, focusTripId);
+  if (!bookingId) redirect(noticeUrl(back, "invalid"));
+
+  const outcome = await markBookingNoShow(await getDb(), {
+    shopId: session.user.shopId,
+    bookingId,
+    recordedByPersonId: session.user.personId,
+  });
+  if (outcome.ok) {
+    // No success banner, the same rule the two taps above follow: the row
+    // moves into the "Not here" group wearing that word and its Undo, and the
+    // panel under it says who the seat can go to. A sentence at the top of the
+    // page would restate that a screen away (design principle 9).
+    revalidatePath(back);
+    return;
+  }
+  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
+}
+
+/**
+ * The diver who walks up as the lines come off.
+ *
+ * Its one refusal worth a sentence is `trip_full`: by the time somebody taps
+ * Undo the freed seat may be sold, and `undoBookingNoShow` re-counts capacity
+ * under the trip's lock rather than overfilling the boat.
+ */
+export async function undoNoShowAction(
+  shopSlug: string,
+  focusTripId: string | null,
+  formData: FormData,
+): Promise<void> {
+  const session = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const back = counterQueuePath(shopSlug, focusTripId);
+  if (!bookingId) redirect(noticeUrl(back, "invalid"));
+
+  const outcome = await undoBookingNoShow(await getDb(), {
+    shopId: session.user.shopId,
+    bookingId,
+    recordedByPersonId: session.user.personId,
+  });
+  if (outcome.ok) {
+    revalidatePath(back);
+    return;
+  }
+  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
 }
 
 /**

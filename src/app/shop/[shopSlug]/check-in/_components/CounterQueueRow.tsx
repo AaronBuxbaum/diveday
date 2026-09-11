@@ -20,6 +20,7 @@ import { guardianSignatureRequired } from "@/lib/guardian";
 import type { FormNotice } from "@/lib/staff-notices";
 import { counterBlockerDisclosure } from "../blocker-disclosure";
 import { CheckInActionForm } from "../CheckInActionForm";
+import { NoShowSalvage, type NoShowSalvageCopy, NoShowScript } from "./NoShowScript";
 
 /**
  * A refused paper-waiver recording, and the booking it is about.
@@ -140,6 +141,10 @@ export function CounterQueueRow({
   undoAction,
   waiverAction,
   waiverNotice,
+  noShowOffered,
+  markNoShowAction,
+  undoNoShowAction,
+  salvage,
   t,
 }: {
   row: QueueRow;
@@ -164,11 +169,66 @@ export function CounterQueueRow({
    * queue can hold three families at once (issue 1574).
    */
   waiverNotice?: CounterWaiverNotice;
+  /**
+   * Whether "Not here?" is offered on this row at all — the page runs
+   * `noShowGate` (`src/lib/no-show.ts`) over the shop's own dock call and the
+   * arrivals window, because it is the layer holding both. The writer runs the
+   * same gate again under a lock, so this decides only whether the disclosure
+   * is drawn.
+   */
+  noShowOffered: boolean;
+  markNoShowAction: (formData: FormData) => Promise<void>;
+  undoNoShowAction: (formData: FormData) => Promise<void>;
+  /**
+   * What the shop can do with this released seat, already worded — the page
+   * holds the translator, the locale and the shop's timezone, so it is the one
+   * layer that can turn `noShowSalvage`'s codes and dates into these strings.
+   * Absent on every row that is not marked not here.
+   */
+  salvage?: NoShowSalvageCopy;
   t: StaffTranslator;
 }) {
   const refusedWaiver = waiverNotice?.bookingId === row.bookingId ? waiverNotice : undefined;
   const checkedIn = row.bookingStatus === "checked_in";
   const ready = row.readiness.status === "ready";
+
+  if (row.bookingStatus === "no_show") {
+    return (
+      /* **The released seat, and what to do with it** (issue #1209). A plain
+         neutral badge rather than a warning: nothing has gone wrong, a staffer
+         recorded a fact. The word is "Not here" — never archived, never
+         deactivated — and the Undo beside it is the whole reason the row stays
+         on this page instead of vanishing: the diver who walks in as the lines
+         come off needs somewhere for a staffer to walk it back. */
+      <LedgerRow as="article" size="lg" className="py-1">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-5">
+          <div className="min-w-0">
+            <DiverIdentity
+              row={row}
+              showEmail={showEmail}
+              showFirstVisit={showFirstVisit}
+              t={t}
+              name={<span className="block truncate text-base text-muted">{row.personName}</span>}
+            />
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <Badge tone="neutral">{t("checkIn.noShow.badge")}</Badge>
+            <form action={undoNoShowAction}>
+              <input type="hidden" name="bookingId" value={row.bookingId} />
+              <SubmitButton
+                pendingLabel={t("checkIn.noShow.undoing")}
+                ariaLabel={t("checkIn.noShow.undoAriaLabel", { name: row.personName })}
+                className={buttonClass({ variant: "ghost", size: "sm" })}
+              >
+                {t("checkIn.noShow.undo")}
+              </SubmitButton>
+            </form>
+          </div>
+        </div>
+        {salvage ? <NoShowSalvage copy={salvage} /> : null}
+      </LedgerRow>
+    );
+  }
 
   if (checkedIn && ready) {
     return (
@@ -267,6 +327,24 @@ export function CounterQueueRow({
             name={<span className={`block truncate ${SECTION_TITLE_CLASS}`}>{row.personName}</span>}
           />
         </CheckInActionForm>
+        {/* **A sibling of the tap, never inside it.** The whole row above is
+            one `<button>`, so the door has to sit under it — which is also
+            where it belongs: the counter's promise is a name and one large
+            target, and "Not here?" is three quiet words a staffer goes looking
+            for once the boat is about to leave. */}
+        {noShowOffered ? (
+          <NoShowScript
+            action={markNoShowAction}
+            bookingId={row.bookingId}
+            copy={{
+              door: t("checkIn.noShow.door"),
+              consequence: t("checkIn.noShow.consequence"),
+              confirm: t("checkIn.noShow.confirm"),
+              confirming: t("checkIn.noShow.confirming"),
+              confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
+            }}
+          />
+        ) : null}
       </LedgerRow>
     );
   }

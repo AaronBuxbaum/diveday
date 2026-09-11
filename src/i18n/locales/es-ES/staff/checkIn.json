@@ -18,13 +18,33 @@
   "instrument": {
     "hereOf": "<figure>{here}</figure> de {expected} aquí",
     "toCome": "{count} por llegar",
-    "cantBoard": "{count, plural, one {# buceador todavía no puede embarcar} other {# buceadores todavía no pueden embarcar}}"
+    "cantBoard": "{count, plural, one {# buceador todavía no puede embarcar} other {# buceadores todavía no pueden embarcar}}",
+    "notHere": "{count, plural, one {# buceador no vino} other {# buceadores no vinieron}}"
   },
   "row": {
     "firstVisit": "Primera visita",
     "missingEmergencyContact": "Sin contacto de emergencia",
     "giftUnclaimed": "Un regalo de {giver}, todavía sin reclamar",
     "giftDoor": "Registra por su nombre a quien recibió el regalo"
+  },
+  "noShow": {
+    "door": "¿No vino?",
+    "consequence": "Registra que no se presentó y libera la plaza. Puedes volver a ponerlo.",
+    "confirm": "Marcar que no vino",
+    "confirming": "Marcando…",
+    "confirmAriaLabel": "Marcar que {name} no vino",
+    "badge": "No vino",
+    "group": "No vinieron — {count}",
+    "undo": "Volver a ponerlo en la lista",
+    "undoing": "Poniéndolo…",
+    "undoAriaLabel": "Volver a poner a {name} en la lista de esta salida",
+    "waiting": "{count, plural, one {# buceador está esperando esta plaza} other {# buceadores están esperando esta plaza}}",
+    "waitingDoor": "Abrir la lista de espera",
+    "alternatives": "No hay nadie esperando. Estas salidas todavía tienen sitio.",
+    "alternativeDoor": "{title}, {when}",
+    "nothing": "No hay nadie esperando y ninguna salida parecida tiene sitio.",
+    "money": "Marcar que alguien no vino no cobra ni reembolsa nada.",
+    "moneyDoor": "Abrir sus pedidos"
   },
   "settledGroup": "Registrados — {count}",
   "checkInButton": "Registrar",
@@ -71,7 +91,15 @@
     "walkinCourseMinAge": "Ese buceador está por debajo de la edad mínima del curso el día que se imparte, según la fecha de nacimiento registrada.",
     "walkinTripPrerequisite": "Las titulaciones de ese buceador no alcanzan lo que exigen este barco y sus sitios de buceo.",
     "walkinUnavailable": "Ese buceador no puede tomar una plaza en este barco ahora mismo.",
-    "walkinInvalid": "Elige un barco y escribe un nombre antes de añadir un walk-in."
+    "walkinInvalid": "Elige un barco y escribe un nombre antes de añadir un walk-in.",
+    "noShowAlreadyBoarded": "La tripulación registró a ese buceador a bordo, así que no se puede marcar que no vino. Corrige primero el pase de lista en la lista de embarque.",
+    "noShowAlreadyMarked": "Ese buceador ya está marcado como que no vino.",
+    "noShowNotBooked": "Esa plaza se liberó, así que no hay nada que marcar.",
+    "noShowTripCancelled": "Esa salida está cancelada, así que no falta nadie en ella.",
+    "noShowBeforeDockCall": "Ese buceador todavía no llega tarde. Inténtalo de nuevo cuando pase la hora de presentarse.",
+    "noShowWindowClosed": "Esa salida queda demasiado atrás para el mostrador. Cambia la reserva desde la lista de invitados de la salida.",
+    "noShowNotMarked": "Ese buceador no está marcado como que no vino.",
+    "noShowTripFull": "La plaza liberada ya se ocupó, así que ese buceador no puede volver a esta salida."
   },
   "walkIn": {
     "eyebrow": "Modo mostrador",

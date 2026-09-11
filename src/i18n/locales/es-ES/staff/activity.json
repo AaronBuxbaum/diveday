@@ -9,6 +9,8 @@
     "support_needs_cleared": "{self, select, yes {{diver} borró qué preparar para sus buceos} other {{actor} borró qué preparar para los buceos de {diver}}}",
     "booking_removed": "{actor} quitó a {diver} de la salida",
     "booking_restored": "{actor} volvió a poner a {diver} en la salida",
+    "booking_no_show": "{actor} marcó que {diver} no se presentó y liberó la plaza",
+    "booking_no_show_undone": "{actor} volvió a poner a {diver} en la lista de personas esperadas",
     "identity_confirmed": "{actor} confirmó que esta reserva es de {diver}",
     "crew_assigned": "{actor} asignó a {crew} a la tripulación",
     "crew_removed": "{actor} quitó a {crew} de la tripulación",

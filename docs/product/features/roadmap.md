@@ -185,8 +185,8 @@ suite — every slice keeps it green.
 
 **Every slice of this section shipped 2026-08-28** ([shipped.md](../shipped.md)) — 7a–7e, the
 last of them 7d (the after-state and the recap fold) and 7e. Two things the section deliberately did
-not carry are still open and are not slices: the keepsake's unprompted-share artifact, which issue
-#1081 holds, and the second booking-time email, which stays an owner call.
+not carry were not slices: the keepsake's unprompted-share artifact, which issue #1081 held until
+slice 16i shipped it as save-as-image, and the second booking-time email, still an owner call.
 
 ### 8. People, not lists (design complete)
 
@@ -247,11 +247,13 @@ standing reviews. Ordered roughly by leverage-per-effort.
   `milestoneForBooking()` → quiet text on the counter row (6h) and record masthead (8b), one desk
   row when milestones are aboard. Never a badge, never in readiness logic; the projection always
   attributed ("by their own log"). *Small.*
-- **No-show frees the seat.** When a boarding-window booking is `no_show`, the boat full, and
-  live wait-list entries exist, the counter's blocked group offers one row — "Seat free — 3
-  waiting · Invite" — riding the existing freed-seat invite path. Never auto-refunds, never
-  auto-cancels; the seat is still claimed through `bookSpot`'s transaction. *Small; one money
-  policy line for the owner.*
+- **No-show frees the seat — shipped (#1209).** The counter's "Not here?" disclosure records that
+  a diver never turned up and frees the seat as the consequence of that one tap; the released row
+  keeps its place with an Undo, and the panel under it offers the seat to the wait list or to a
+  similar departure, riding the existing freed-seat invite path rather than a second sender. It
+  auto-refunds nothing and auto-cancels nothing — the money is a sentence and a link to the order
+  — and the seat is still claimed through `bookSpot`'s transaction when the next diver takes it.
+  `src/lib/no-show.ts` carries the reasoning.
 - **Usage-based service sentence on gear.** `usageSinceService(unitId)` counts reservation-days
   since the last service event; above a per-kind threshold the row's existing service sentence
   gains the usage clause ("~48 dive-days since service"). Copy says dive-days, never dives;

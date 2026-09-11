@@ -40,6 +40,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 export type CheckInQueueRow = {
   bookingId: string;
@@ -57,7 +58,14 @@ export type CheckInQueueRow = {
   tripTitle: string;
   startsAt: Date;
   endsAt: Date;
-  bookingStatus: "booked" | "checked_in";
+  /**
+   * `no_show` is here because the row must not vanish the instant a staffer
+   * releases the seat (issue #1209): the diver who walks in as the lines come
+   * off needs an Undo to walk back to, and the shop needs somewhere to be told
+   * who is waiting for the seat. It leaves the queue when the arrivals window
+   * does, like every other row.
+   */
+  bookingStatus: "booked" | "checked_in" | "no_show";
   readiness: ReadinessResult;
   /**
    * The diver's latest departure roll-call record on the manifest is
@@ -164,7 +172,7 @@ export async function listCheckInQueue(
         eq(bookings.shopId, shopId),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        inArray(bookings.status, ["booked", "checked_in"]),
+        inArray(bookings.status, ["booked", "checked_in", "no_show"]),
         gte(trips.startsAt, arrivals.from),
         lte(trips.startsAt, arrivals.to),
         queryFilter,
@@ -196,7 +204,7 @@ export async function listCheckInQueue(
   return rows.map(({ emergencyContactName, emergencyContactPhone, claimedAt, ...row }) => ({
     ...row,
     giftGiverName: claimedAt === null ? (giftGivers.get(row.bookingId) ?? null) : null,
-    bookingStatus: row.bookingStatus as "booked" | "checked_in",
+    bookingStatus: row.bookingStatus as "booked" | "checked_in" | "no_show",
     boarded: boardedBookingIds.has(row.bookingId),
     selfReported: selfReportedBookingIds.has(row.bookingId),
     missingEmergencyContact: !emergencyContactName || !emergencyContactPhone,
@@ -307,6 +315,8 @@ export async function listWalkInTrips(
   now: Date = nowDate(),
 ): Promise<WalkInTripOption[]> {
   const arrivals = arrivalsWindow(now);
+  // `seatHeld` counts the seats somebody is holding: a seat released at the
+  // counter is one this picker may offer a walk-in again (issue #1209).
   return db
     .select({
       tripId: trips.id,
@@ -317,7 +327,7 @@ export async function listWalkInTrips(
       booked: count(bookings.id),
     })
     .from(trips)
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), seatHeld))
     .where(
       and(
         liveTrip(),

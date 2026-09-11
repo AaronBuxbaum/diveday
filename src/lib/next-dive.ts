@@ -44,10 +44,16 @@ import type { CertificationLevel } from "./certification-levels";
  * a claim about strength that nothing behind it can support, and a number in
  * the props is a number somebody eventually renders.
  *
- * **This module owns the ranking, and 16e's "Also worth a look" (#1161) takes
- * its alternates from `rankNextDives` here** rather than writing a second one.
- * `pickNextDive` is the head of that list and nothing more, so the two can
- * never disagree about which departure leads.
+ * **`rankNextDives` is the whole ranking and `pickNextDive` is its head**,
+ * which is why both are exported: the precedence above is a claim, and a test
+ * can only walk it against the list rather than against the one row that won.
+ *
+ * The reuse 16e planned — "Also worth a look" (#1161) taking its alternates
+ * from here — did not happen and should not: `src/lib/worth-a-look.ts` reads a
+ * public departure page for an **anonymous** visitor and knows nothing about
+ * any diver, while every rule here is a fact about the day this diver just
+ * finished. There is nothing for the two to disagree about, because they are
+ * never answering the same question.
  *
  * Framework-free, deterministic, and wordless: `src/i18n/next-dive-labels.ts`
  * turns each code into a sentence (ADR 20260731-domain-layer-copy-leaks).

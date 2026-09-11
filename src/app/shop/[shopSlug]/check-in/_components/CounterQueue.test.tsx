@@ -52,6 +52,10 @@ function renderQueue(rows: CheckInQueueRow[], settledOpen = false, showFirstVisi
       checkInAction={vi.fn().mockResolvedValue({ ok: true })}
       undoAction={vi.fn().mockResolvedValue({ ok: true })}
       waiverAction={vi.fn().mockResolvedValue(undefined)}
+      noShowOffered={() => false}
+      markNoShowAction={vi.fn().mockResolvedValue(undefined)}
+      undoNoShowAction={vi.fn().mockResolvedValue(undefined)}
+      salvageFor={() => undefined}
       settledOpen={settledOpen}
       settledHeadingLevel="h3"
       t={t}
@@ -140,5 +144,30 @@ describe("the settled group", () => {
     // Out here with its badge and its reason, where a staffer can act on it.
     expect(screen.getByText("Blocked")).toBeInTheDocument();
     expect(screen.getByText("Payment is outstanding for this trip.")).toBeInTheDocument();
+  });
+});
+
+describe("the released seats", () => {
+  /**
+   * **A released seat is not a receipt.** The settled group is folded because
+   * a checked-in diver is finished; a freed seat is the one thing on this
+   * screen with work still attached to it, and the salvage panel under each
+   * row says who that work could go to. Folding it would hide the whole point
+   * of the mark one tap after making it (issue #1209).
+   */
+  it("stands in its own open group rather than folding in with the receipts", () => {
+    const { container } = renderQueue([settled("Ana"), row("Bo", { bookingStatus: "no_show" })]);
+    expect(screen.getByText("Not here — 1")).toBeInTheDocument();
+    // Two groups, and only the receipts one is a folded disclosure.
+    const details = container.querySelectorAll("details");
+    expect(details).toHaveLength(1);
+    expect(details[0]?.textContent).toContain("Checked in — 1");
+  });
+
+  /** The working list is the people a staffer can still act on. */
+  it("takes a released seat out of the working list", () => {
+    renderQueue([row("Ana"), row("Bo", { bookingStatus: "no_show" })]);
+    expect(screen.getByRole("button", { name: "Check in Ana" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Check in Bo" })).not.toBeInTheDocument();
   });
 });

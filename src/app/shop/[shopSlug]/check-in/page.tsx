@@ -20,6 +20,7 @@ import type {
 } from "@/db/check-in";
 import { listCheckInQueue, listWalkInTrips } from "@/db/check-in";
 import { getDb } from "@/db/client";
+import { type MarkNoShowOutcome, noShowSalvage, type UndoNoShowOutcome } from "@/db/no-show";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { upcomingScheduleStats } from "@/db/trips";
@@ -30,10 +31,12 @@ import {
   counterIsClear,
   counterTally,
   firstVisitMarksAnException,
+  isNoShowAtCounter,
   isSettledAtCounter,
 } from "@/lib/check-in";
 import { nowDate } from "@/lib/clock";
-import { formatDayParts, formatTime } from "@/lib/format";
+import { formatDayParts, formatTime, formatWeekdayTime } from "@/lib/format";
+import { noShowGate } from "@/lib/no-show";
 import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeCodeOf, noticeForForm, noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -42,7 +45,14 @@ import { CounterInstrument } from "./_components/CounterInstrument";
 import { CounterQueue } from "./_components/CounterQueue";
 import { DepartureChips } from "./_components/DepartureChips";
 import { DepartureMeta } from "./_components/DepartureMeta";
-import { checkInAction, markWaiverInPersonFromCheckIn, undoCheckInAction } from "./actions";
+import type { NoShowSalvageCopy } from "./_components/NoShowScript";
+import {
+  checkInAction,
+  markNoShowAction,
+  markWaiverInPersonFromCheckIn,
+  undoCheckInAction,
+  undoNoShowAction,
+} from "./actions";
 import { CheckInQueueRefresh } from "./CheckInQueueRefresh";
 import { CheckInSearch } from "./CheckInSearch";
 import { counterQueuePath, selectFocusedDeparture } from "./focus";
@@ -92,8 +102,19 @@ type UndoRefusal = Extract<UndoCheckInOutcome, { ok: false }>["reason"];
  * reconciling a queued tap, not a staffer at the desk — there is no redirect
  * that can carry one here. See its own note in `src/db/check-in.ts`.
  */
+/**
+ * The counter's two no-show mutations answer in their own vocabulary, and
+ * every one of their refusals reaches this page prefixed (`no_show_…`) so it
+ * cannot collide with the arrival codes above: "not found" means two different
+ * rows depending on which tap produced it, and one map entry for both would
+ * have said the wrong one (issue #1209).
+ */
+type MarkNoShowRefusal = Extract<MarkNoShowOutcome, { ok: false }>["reason"];
+type UndoNoShowRefusal = Extract<UndoNoShowOutcome, { ok: false }>["reason"];
+type NoShowRefusal = MarkNoShowRefusal | UndoNoShowRefusal;
 type CheckInNoticeCode = NoticeCodeOf<
-  Exclude<CheckInRefusal | Exclude<UndoRefusal, "not_checked_in">, ArrivalOfflineRefusal>
+  | Exclude<CheckInRefusal | Exclude<UndoRefusal, "not_checked_in">, ArrivalOfflineRefusal>
+  | `no_show_${NoShowRefusal}`
 >;
 
 type NoticeDefinition = {
@@ -186,6 +207,29 @@ const noticeCopy: NoticeMap = {
     form: "waiver",
   },
   "waiver-error": { tone: "danger", key: "checkIn.notice.waiverError", form: "waiver" },
+  // **The no-show refusals** (issue #1209). No success entry for either tap,
+  // the same rule as checking in: the row moves into the "Not here" group, or
+  // back out of it, under the finger that did it.
+  //
+  // The safety one is `no-show-already-boarded`: the crew recorded this diver
+  // onto the boat, so the counter is being asked to take a person off the
+  // expected list while somebody may be counting heads at the rail. It is a
+  // refusal with an instruction attached, because the staffer is not wrong to
+  // want it — the roll call is simply the record that outranks the desk.
+  "no-show-already-boarded": { tone: "danger", key: "checkIn.notice.noShowAlreadyBoarded" },
+  "no-show-already-marked": { tone: "neutral", key: "checkIn.notice.noShowAlreadyMarked" },
+  "no-show-not-booked": { tone: "neutral", key: "checkIn.notice.noShowNotBooked" },
+  "no-show-trip-cancelled": { tone: "neutral", key: "checkIn.notice.noShowTripCancelled" },
+  "no-show-before-dock-call": { tone: "warning", key: "checkIn.notice.noShowBeforeDockCall" },
+  "no-show-window-closed": { tone: "warning", key: "checkIn.notice.noShowWindowClosed" },
+  "no-show-not-marked": { tone: "neutral", key: "checkIn.notice.noShowNotMarked" },
+  // The seat was resold between the mark and the Undo, which is the one
+  // refusal here a staffer genuinely could not have seen coming.
+  "no-show-trip-full": { tone: "danger", key: "checkIn.notice.noShowTripFull" },
+  // Both taps can answer these two, and they mean the same thing they mean
+  // above — the same words, reached through the prefixed code.
+  "no-show-not-found": { tone: "danger", key: "checkIn.notice.notFound" },
+  "no-show-staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
 };
 
 /**
@@ -353,6 +397,88 @@ export default async function CheckInPage({
   const checkIn = checkInAction.bind(null, shopSlug, focusedTripId);
   const undo = undoCheckInAction.bind(null, shopSlug, focusedTripId);
   const recordPaperWaiver = markWaiverInPersonFromCheckIn.bind(null, shopSlug, focusedTripId);
+  const markNoShow = markNoShowAction.bind(null, shopSlug, focusedTripId);
+  const undoNoShow = undoNoShowAction.bind(null, shopSlug, focusedTripId);
+
+  // **"Not here?" is drawn from the shop's own dock call**, which is why the
+  // gate runs here rather than in the row: this is the layer holding the shop
+  // row, the clock and the queue at once. `markBookingNoShow` runs the same
+  // gate again against locked rows — a door drawn ten seconds ago is not
+  // evidence — so this decides only whether the disclosure exists (#1209).
+  //
+  // `tripStatus` is `"scheduled"` because `listCheckInQueue` filters to that;
+  // the gate re-reads the live value for itself when the tap lands.
+  const noShowOffered = (row: CheckInQueueRow) =>
+    noShowGate({
+      bookingStatus: row.bookingStatus,
+      boarded: row.boarded,
+      tripStatus: "scheduled",
+      startsAt: row.startsAt,
+      dockCallMinutes: shop.dockCallMinutes,
+      now,
+    }) === "eligible";
+
+  // **One read per departure that actually holds a released seat, and none on
+  // an ordinary day.** The salvage is a wait-list read plus, only when nobody
+  // is waiting, a bounded read of the board — worth it for the seat a shop can
+  // still sell, and worth not paying for on the 99 boats that have no no-show.
+  const salvageTripIds = [
+    ...new Set(renderedRows.filter(isNoShowAtCounter).map((row) => row.tripId)),
+  ];
+  const salvageByTrip = new Map(
+    await Promise.all(
+      salvageTripIds.map(
+        async (tripId) =>
+          [tripId, await noShowSalvage(db, { shopId: shop.id, tripId, now })] as const,
+      ),
+    ),
+  );
+
+  /**
+   * The salvage, worded. The precedence is `salvageOffer`'s
+   * (`src/lib/no-show.ts`) and this only picks sentences for it — including
+   * the money one, which is a sentence and a link to where that decision is
+   * made, never a charge or a refund control.
+   */
+  const salvageFor = (row: CheckInQueueRow): NoShowSalvageCopy | undefined => {
+    const offer = salvageByTrip.get(row.tripId);
+    if (!offer || !isNoShowAtCounter(row)) return undefined;
+    const money = {
+      line: t("checkIn.noShow.money"),
+      href: `/shop/${shopSlug}/orders?personId=${encodeURIComponent(row.personId)}`,
+      label: t("checkIn.noShow.moneyDoor"),
+    };
+    if (offer.kind === "waitlist") {
+      return {
+        // The shipped invite control lives on the departure's guest list with
+        // its held send, its undo window and its copyable fallback
+        // (`WaitlistSection.tsx`). The counter points at it rather than
+        // growing a second sender beside it.
+        line: t("checkIn.noShow.waiting", { count: offer.count }),
+        links: [
+          {
+            href: `/shop/${shopSlug}/trips/${row.tripId}/guests`,
+            label: t("checkIn.noShow.waitingDoor"),
+          },
+        ],
+        money,
+      };
+    }
+    if (offer.kind === "alternative") {
+      return {
+        line: t("checkIn.noShow.alternatives"),
+        links: offer.departures.map((departure) => ({
+          href: `/shop/${shopSlug}/trips/${departure.tripId}`,
+          label: t("checkIn.noShow.alternativeDoor", {
+            title: departure.title,
+            when: formatWeekdayTime(departure.startsAt, locale, shop.timezone),
+          }),
+        })),
+        money,
+      };
+    }
+    return { line: t("checkIn.noShow.nothing"), links: [], money };
+  };
 
   // **Three groups, and every seat is in exactly one of them** — the figure,
   // the remainder words, the meter's bands and the queue's own split all read
@@ -363,11 +489,21 @@ export default async function CheckInPage({
   // landing, a card corrected, a deeper second site — leaves this figure and
   // joins `cantBoard`, so the count goes visibly backwards and the row returns
   // to the working list rather than sitting green in a folded receipt.
-  const { here, expected, cantBoard, toCome } = counterTally(focus?.rows ?? []);
+  //
+  // A released seat leaves `expected` rather than joining a band of it: "4 of
+  // 7 here" is a claim about who the boat is carrying, and a staffer who has
+  // just said one diver is not coming should read "4 of 6". It is still said
+  // out loud, in the remainder line, because a figure that silently drops a
+  // person is the other way to lie about a boat (issue #1209).
+  const { here, expected, cantBoard, toCome, notHere } = counterTally(focus?.rows ?? []);
   const remainder = focus
     ? [
         toCome > 0 ? t("checkIn.instrument.toCome", { count: toCome }) : null,
         cantBoard > 0 ? t("checkIn.instrument.cantBoard", { count: cantBoard }) : null,
+        // The band's own sentence, not the group heading below it: this line
+        // reads as a run of clauses beside "3 to come", and "Not here — 1"
+        // dropped into that run is a heading wearing a clause's clothes.
+        notHere > 0 ? t("checkIn.instrument.notHere", { count: notHere }) : null,
       ]
         .filter(Boolean)
         .join(" · ") || null
@@ -633,6 +769,10 @@ export default async function CheckInPage({
               undoAction={undo}
               waiverAction={recordPaperWaiver}
               waiverNotice={waiverNoticeOnRow}
+              noShowOffered={noShowOffered}
+              markNoShowAction={markNoShow}
+              undoNoShowAction={undoNoShow}
+              salvageFor={salvageFor}
               // A boat that has sailed is one the counter is reading rather
               // than working: its receipts are the point, so they arrive open.
               settledOpen={hasSailed(focus.startsAt, now)}
@@ -664,6 +804,10 @@ export default async function CheckInPage({
                     undoAction={undo}
                     waiverAction={recordPaperWaiver}
                     waiverNotice={waiverNoticeOnRow}
+                    noShowOffered={noShowOffered}
+                    markNoShowAction={markNoShow}
+                    undoNoShowAction={undoNoShow}
+                    salvageFor={salvageFor}
                     // **A search is a lookup, so nothing it found is folded
                     // away.** This branch renders only while `query` is set,
                     // and the row a staffer typed a name to reach is very often

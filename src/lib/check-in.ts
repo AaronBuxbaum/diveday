@@ -48,6 +48,35 @@ export function isBlockedAtCounter(seat: CounterSeat): boolean {
 }
 
 /**
+ * **A seat a staffer released**: the diver never turned up, somebody said so
+ * at the counter, and the seat went back to the shop (issue #1209).
+ *
+ * Not "settled", and the distinction is the whole reason this is its own
+ * predicate rather than a widening of `isSettledAtCounter`. Settled means the
+ * diver is through the door and cleared to board; this means nobody is
+ * boarding on that seat at all. The counter is finished with both, which is
+ * what `counterIsDone` says, but every figure on the page that means *people*
+ * — here, can't board, to come, expected — has to leave this one out or it
+ * counts a person the boat is not carrying.
+ */
+export function isNoShowAtCounter(seat: CounterSeat): boolean {
+  return seat.bookingStatus === "no_show";
+}
+
+/**
+ * **The counter has nothing left to do with this seat** — it settled, or it
+ * was released.
+ *
+ * The split `CounterQueue` draws its two groups on. The working list is the
+ * people a staffer can still act on, and a released seat is not one of them:
+ * leaving it up there is a name in a queue of names that needs no tap, which
+ * is exactly the noise the settled group exists to take away.
+ */
+export function counterIsDone(seat: CounterSeat): boolean {
+  return isSettledAtCounter(seat) || isNoShowAtCounter(seat);
+}
+
+/**
  * **Everyone expected is here and nobody is blocked** — the trigger for the
  * counter's one earned line (persona task 71; the coral budget's "The counter"
  * row). An empty queue is *not* a cleared queue: there is nothing to have
@@ -68,7 +97,13 @@ export function isBlockedAtCounter(seat: CounterSeat): boolean {
  * chasing (`dive-domain-expert` review, 2026-09-09).
  */
 export function counterIsClear(seats: readonly CounterSeat[]): boolean {
-  return seats.length > 0 && seats.every(isSettledAtCounter) && !seats.some(isSelfReported);
+  // **A released seat is not somebody still to chase.** Marking a no-show is a
+  // staffer saying, in as many words, that this diver is not coming — so the
+  // boat whose last outstanding name was that diver is clear, and holding the
+  // accent back until the row ages out of the window would be the app arguing
+  // with the person who just told it (issue #1209).
+  const present = seats.filter((seat) => !isNoShowAtCounter(seat));
+  return present.length > 0 && present.every(isSettledAtCounter) && !present.some(isSelfReported);
 }
 
 /** This seat's arrival is hearsay: typed at the tablet, unseen by a staffer. */
@@ -106,7 +141,7 @@ export function firstVisitMarksAnException(seats: readonly { firstVisit: boolean
  * divers a second time, over a meter drawing them as their own band.
  */
 export function counterTally(seats: readonly CounterSeat[]): {
-  /** Everyone booked on the departure. */
+  /** Everyone the boat is still expecting — the three bands below sum to this. */
   expected: number;
   /** Through the counter: checked in and still cleared. */
   here: number;
@@ -114,8 +149,24 @@ export function counterTally(seats: readonly CounterSeat[]): {
   cantBoard: number;
   /** Cleared, and not here yet. */
   toCome: number;
+  /** Seats a staffer released: the diver is not coming (issue #1209). */
+  notHere: number;
 } {
-  const here = seats.filter(isSettledAtCounter).length;
-  const cantBoard = seats.filter(isBlockedAtCounter).length;
-  return { expected: seats.length, here, cantBoard, toCome: seats.length - here - cantBoard };
+  // **A released seat leaves `expected` rather than joining a fourth band of
+  // it.** "4 of 7 here" is a claim about who the boat is carrying, and a
+  // staffer who has just said one diver is not coming should read "4 of 6" —
+  // otherwise the figure can never complete and the cleared line never lands.
+  // Reported separately so the number is still said out loud: a count that
+  // silently drops a person is the other way to lie about a boat.
+  const notHere = seats.filter(isNoShowAtCounter).length;
+  const present = seats.filter((seat) => !isNoShowAtCounter(seat));
+  const here = present.filter(isSettledAtCounter).length;
+  const cantBoard = present.filter(isBlockedAtCounter).length;
+  return {
+    expected: present.length,
+    here,
+    cantBoard,
+    toCome: present.length - here - cantBoard,
+    notHere,
+  };
 }

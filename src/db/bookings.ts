@@ -44,6 +44,7 @@ import {
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
 import { liveTrip } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 /**
  * A booking names its diver one of two ways: a walk-in supplies a name (and,
@@ -798,10 +799,13 @@ async function createBookingRecord(
     }
   }
 
+  // `seatHeld`, not "every status but cancelled": a seat a staffer marked
+  // absent at the counter is the shop's to sell again, and this count is the
+  // one gate every door that sells a seat lands on (issue #1209).
   const [row] = await tx
     .select({ booked: count(bookings.id) })
     .from(bookings)
-    .where(and(eq(bookings.tripId, trip.id), ne(bookings.status, "cancelled")));
+    .where(and(eq(bookings.tripId, trip.id), seatHeld));
   const booked = row?.booked ?? 0;
   if (booked >= trip.capacity) {
     return { ok: false, reason: "trip_full" };
@@ -1263,7 +1267,7 @@ export async function restoreBooking(
     const [row] = await tx
       .select({ booked: count(bookings.id) })
       .from(bookings)
-      .where(and(eq(bookings.tripId, trip.id), ne(bookings.status, "cancelled")));
+      .where(and(eq(bookings.tripId, trip.id), seatHeld));
     const booked = row?.booked ?? 0;
     if (booked >= trip.capacity) return "trip_full";
 

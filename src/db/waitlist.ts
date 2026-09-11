@@ -10,6 +10,7 @@ import { findOrCreatePerson } from "./people";
 import { bookings, people, shops, trips, tripWaitlistEntries } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { liveTrip } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 /**
  * Stamp a wait-list entry as invited, so the roster shows "Invited 2h ago" and
@@ -166,10 +167,15 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
       return { ok: false, reason: "trip_unavailable" };
     }
 
+    // `seatHeld`, the same predicate `createBookingRecord` counts with — this
+    // decision has to be the one the booking door would make, or the two
+    // disagree about the same boat. A seat a staffer released at the counter
+    // is free, so the honest answer to "can I join the wait list?" is
+    // `trip_available`: go and book it (issue #1209).
     const [capacity] = await tx
       .select({ booked: count(bookings.id) })
       .from(bookings)
-      .where(and(eq(bookings.tripId, trip.id), ne(bookings.status, "cancelled")));
+      .where(and(eq(bookings.tripId, trip.id), seatHeld));
     if ((capacity?.booked ?? 0) < trip.capacity) return { ok: false, reason: "trip_available" };
 
     const { person, nameMatches } = await findOrCreatePerson(tx, {

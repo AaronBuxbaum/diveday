@@ -2424,3 +2424,74 @@ describe("createBookingParty declaration writes", () => {
     }
   });
 });
+
+/**
+ * **What holds a seat** — `seatHeld` (`src/db/trips-queries.ts`), the predicate
+ * issue #1209 made necessary.
+ *
+ * Before it, every capacity count in the app asked "is this booking not
+ * cancelled?", which was five spellings of one question and the wrong answer to
+ * it the day the counter got a way to release a seat: a diver a staffer had
+ * said was not coming still filled a place on the boat, so the wait-list invite
+ * beside the mark would have dead-ended at `trip_full` the moment somebody
+ * accepted it.
+ */
+describe("seat capacity counts only the seats somebody holds", () => {
+  it("sells the seat a no-show released, on a boat that was full a moment before", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    expect(await bookVisitor(db, shop.id, fullTrip.id)).toEqual({
+      ok: false,
+      reason: "trip_full",
+    });
+
+    // The counter's own write, as a bare status change: the question here is
+    // what the capacity predicate reads, not how the status got there
+    // (`src/db/no-show.test.ts` owns the writer and its gate).
+    const roster = await getTripRoster(db, shop.id, fullTrip.id);
+    const released = roster[0];
+    if (!released) throw new Error("expected the full trip to have a roster");
+    await db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(eq(bookings.id, released.booking.id));
+
+    expect(await bookVisitor(db, shop.id, fullTrip.id)).toMatchObject({ ok: true });
+  });
+
+  /**
+   * The seat the released diver had is *one* seat, not a hole in the gate: a
+   * second visitor still meets the full boat. The failure this guards against
+   * is an oversell, which is the same predicate read the other way round.
+   */
+  it("frees exactly the one seat, and refuses the next diver after it", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const roster = await getTripRoster(db, shop.id, fullTrip.id);
+    const released = roster[0];
+    if (!released) throw new Error("expected the full trip to have a roster");
+    await db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(eq(bookings.id, released.booking.id));
+
+    expect(await bookVisitor(db, shop.id, fullTrip.id)).toMatchObject({ ok: true });
+    expect(
+      await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: fullTrip.id,
+        fullName: "Ivo Marsh",
+        email: "ivo@example.com",
+      }),
+    ).toEqual({ ok: false, reason: "trip_full" });
+  });
+
+  it("still frees a cancelled seat, which never held one", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const roster = await getTripRoster(db, shop.id, fullTrip.id);
+    const given = roster[0];
+    if (!given) throw new Error("expected the full trip to have a roster");
+    await cancelBooking(db, shop.id, given.booking.id);
+
+    expect(await bookVisitor(db, shop.id, fullTrip.id)).toMatchObject({ ok: true });
+  });
+});

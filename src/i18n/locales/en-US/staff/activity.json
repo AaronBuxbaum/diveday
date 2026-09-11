@@ -9,6 +9,8 @@
     "support_needs_cleared": "{self, select, yes {{diver} cleared what to set up for their dives} other {{actor} cleared what to set up for {diver}’s dives}}",
     "booking_removed": "{actor} removed {diver} from the trip",
     "booking_restored": "{actor} put {diver} back on the trip",
+    "booking_no_show": "{actor} marked {diver} as not here, freeing the seat",
+    "booking_no_show_undone": "{actor} put {diver} back on the expected list",
     "identity_confirmed": "{actor} confirmed this booking is {diver}",
     "crew_assigned": "{actor} assigned {crew} to crew",
     "crew_removed": "{actor} removed {crew} from crew",

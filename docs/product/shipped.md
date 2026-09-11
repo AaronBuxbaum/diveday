@@ -579,10 +579,13 @@ blanks that hold the numbers the record itself will not claim.
 answers on `/ready`, whose URL is a bearer capability that can cancel the booking and move its
 refund, so a button handing the current page to a group chat cannot exist on one of two URLs
 rendering one surface. `RecapShareButton` is deleted with its five copy keys; the keepsake's own
-shareable artifact — an image with no bearer URL in it — is issue #1081 and stayed out of scope. For
-the same reason the three recap actions were left untouched: `/ready`'s after-state mints a *recap*
-token server-side and binds them to that, and a composition test fails the build if any of them is
-ever bound to the page's own readiness token.
+shareable artifact — an image with no bearer URL in it — was issue #1081, out of scope here and
+shipped later as slice 16i's "Save as image": `src/lib/postcard-image.ts` draws the record into a
+canvas, and its `PostcardImage` type carries no url, token or slug field at all, which is the
+structural proof the bearer URL cannot reach the picture. For the same reason the three recap
+actions were left untouched: `/ready`'s after-state mints a *recap* token server-side and binds
+them to that, and a composition test fails the build if any of them is ever bound to the page's own
+readiness token.
 
 The marketing mockup was reconciled in the same change, since slice 12b had shipped
 `RecapPageFallback` on the homepage's evening moment row while this surface was still a stat row and

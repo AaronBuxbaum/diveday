@@ -41,6 +41,7 @@ import {
   validateDiveSites,
 } from "./trips-create";
 import { liveTrip } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 /**
  * One departure's own record: read it, edit its details, its dives, its
@@ -60,7 +61,7 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), seatHeld))
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .groupBy(trips.id, courses.id, diveSites.id)
     .limit(1);
