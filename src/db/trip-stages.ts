@@ -96,17 +96,22 @@ export async function latestTripStage(
   const [row] = await db
     .select(READING_COLUMNS)
     .from(tripStageEvents)
-    // Shop-scoped in its own right, not merely by way of the event row. The
-    // site name this resolves is printed to an anonymous visitor on the
-    // storefront, and `tripDiveSiteSummaries` beside it already joins this
-    // way. Relying on `validateDiveSites` two modules away is the shape
-    // that put another shop's vessel name on the board once already
-    // (`trips.boat_id`, src/db/trips-create.ts).
+    // Both lookups are shop-scoped in their own right, not merely by way of
+    // the event row. The site name this resolves is printed to an anonymous
+    // visitor on the storefront, and `tripDiveSiteSummaries` beside it already
+    // joins this way. Relying on `validateDiveSites` two modules away is the
+    // shape that put another shop's vessel name on the board once already
+    // (`trips.boat_id`, src/db/trips-create.ts) — so the crew name gets the
+    // same predicate rather than an argument about which writer could ever
+    // mis-tenant `recorded_by_person_id`.
     .leftJoin(
       diveSites,
       and(eq(tripStageEvents.diveSiteId, diveSites.id), eq(diveSites.shopId, shopId)),
     )
-    .leftJoin(people, eq(tripStageEvents.recordedByPersonId, people.id))
+    .leftJoin(
+      people,
+      and(eq(tripStageEvents.recordedByPersonId, people.id), eq(people.shopId, shopId)),
+    )
     .where(and(eq(tripStageEvents.shopId, shopId), eq(tripStageEvents.tripId, tripId)))
     .orderBy(desc(tripStageEvents.recordedAt), desc(tripStageEvents.seq))
     .limit(1);
@@ -128,17 +133,22 @@ export async function latestTripStagesByTrip(
   const rows = await db
     .select(READING_COLUMNS)
     .from(tripStageEvents)
-    // Shop-scoped in its own right, not merely by way of the event row. The
-    // site name this resolves is printed to an anonymous visitor on the
-    // storefront, and `tripDiveSiteSummaries` beside it already joins this
-    // way. Relying on `validateDiveSites` two modules away is the shape
-    // that put another shop's vessel name on the board once already
-    // (`trips.boat_id`, src/db/trips-create.ts).
+    // Both lookups are shop-scoped in their own right, not merely by way of
+    // the event row. The site name this resolves is printed to an anonymous
+    // visitor on the storefront, and `tripDiveSiteSummaries` beside it already
+    // joins this way. Relying on `validateDiveSites` two modules away is the
+    // shape that put another shop's vessel name on the board once already
+    // (`trips.boat_id`, src/db/trips-create.ts) — so the crew name gets the
+    // same predicate rather than an argument about which writer could ever
+    // mis-tenant `recorded_by_person_id`.
     .leftJoin(
       diveSites,
       and(eq(tripStageEvents.diveSiteId, diveSites.id), eq(diveSites.shopId, shopId)),
     )
-    .leftJoin(people, eq(tripStageEvents.recordedByPersonId, people.id))
+    .leftJoin(
+      people,
+      and(eq(tripStageEvents.recordedByPersonId, people.id), eq(people.shopId, shopId)),
+    )
     .where(and(eq(tripStageEvents.shopId, shopId), inArray(tripStageEvents.tripId, [...tripIds])))
     .orderBy(desc(tripStageEvents.recordedAt), desc(tripStageEvents.seq));
   const newest = new Map<string, TripStageReading>();
@@ -191,17 +201,22 @@ export async function liveShopStage(
     })
     .from(tripStageEvents)
     .innerJoin(trips, eq(tripStageEvents.tripId, trips.id))
-    // Shop-scoped in its own right, not merely by way of the event row. The
-    // site name this resolves is printed to an anonymous visitor on the
-    // storefront, and `tripDiveSiteSummaries` beside it already joins this
-    // way. Relying on `validateDiveSites` two modules away is the shape
-    // that put another shop's vessel name on the board once already
-    // (`trips.boat_id`, src/db/trips-create.ts).
+    // Both lookups are shop-scoped in their own right, not merely by way of
+    // the event row. The site name this resolves is printed to an anonymous
+    // visitor on the storefront, and `tripDiveSiteSummaries` beside it already
+    // joins this way. Relying on `validateDiveSites` two modules away is the
+    // shape that put another shop's vessel name on the board once already
+    // (`trips.boat_id`, src/db/trips-create.ts) — so the crew name gets the
+    // same predicate rather than an argument about which writer could ever
+    // mis-tenant `recorded_by_person_id`.
     .leftJoin(
       diveSites,
       and(eq(tripStageEvents.diveSiteId, diveSites.id), eq(diveSites.shopId, shopId)),
     )
-    .leftJoin(people, eq(tripStageEvents.recordedByPersonId, people.id))
+    .leftJoin(
+      people,
+      and(eq(tripStageEvents.recordedByPersonId, people.id), eq(people.shopId, shopId)),
+    )
     .where(
       and(
         eq(tripStageEvents.shopId, shopId),

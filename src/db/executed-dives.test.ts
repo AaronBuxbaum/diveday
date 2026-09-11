@@ -4,8 +4,9 @@ import { HOUR_MS } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
-import { checkInBooking, undoCheckInBooking } from "./check-in";
+import { checkInAtKiosk, checkInBooking, undoCheckInBooking } from "./check-in";
 import type { AppDb } from "./client";
+import { issueDisplayToken } from "./display-tokens";
 import {
   deleteExecutedDive,
   listExecutedDives,
@@ -675,24 +676,15 @@ describe("peopleWhoDivedBefore", () => {
   });
 
   /**
-   * **The desk outranks a status column somebody stamped afterwards** (issue
-   * #1558). Every case here goes through `checkInBooking` / `undoCheckInBooking`
-   * rather than inserting `booking_arrival_events` rows by hand, so what is
-   * pinned is the whole path: the counter really does leave the trail this read
-   * depends on, and a sweep really cannot erase it.
-   *
-   * Nothing in the product writes `no_show` yet (`src/db/recap.ts` says so in as
-   * many words), so the sweep is set by hand here and this is hardening for a
-   * writer that does not exist rather than a live bug. The status has to be set
-   * *after* the check-in either way — `checkInBooking` refuses anything but a
-   * `booked` seat.
+   * Everything the seeded shop demands of a diver before any door may tap them
+   * in: a card on file, and a signed release with a clear questionnaire. Both
+   * doors below refuse a seat that is not `ready`, so this is shared rather
+   * than restated.
    */
-  async function checkInAtTheDesk(
+  async function clearForTheBoat(
     ctx: Awaited<ReturnType<typeof twoDays>>,
     bookingId: string,
   ): Promise<void> {
-    // Everything the seeded shop demands of a diver before the desk may tap
-    // them in: a card on file, and a signed release with a clear questionnaire.
     await ctx.db.insert(certifications).values({
       shopId: ctx.shop.id,
       personId: ctx.personId,
@@ -709,6 +701,26 @@ describe("peopleWhoDivedBefore", () => {
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
     });
     if (!signed.ok) throw new Error(`waiver refused: ${signed.reason}`);
+  }
+
+  /**
+   * **The desk outranks a status column somebody stamped afterwards** (issue
+   * #1558). Every case here goes through `checkInBooking` / `undoCheckInBooking`
+   * rather than inserting `booking_arrival_events` rows by hand, so what is
+   * pinned is the whole path: the counter really does leave the trail this read
+   * depends on, and a sweep really cannot erase it.
+   *
+   * Nothing in the product writes `no_show` yet (`src/db/recap.ts` says so in as
+   * many words), so the sweep is set by hand here and this is hardening for a
+   * writer that does not exist rather than a live bug. The status has to be set
+   * *after* the check-in either way — `checkInBooking` refuses anything but a
+   * `booked` seat.
+   */
+  async function checkInAtTheDesk(
+    ctx: Awaited<ReturnType<typeof twoDays>>,
+    bookingId: string,
+  ): Promise<void> {
+    await clearForTheBoat(ctx, bookingId);
     const outcome = await checkInBooking(ctx.db, {
       shopId: ctx.shop.id,
       bookingId,
@@ -749,6 +761,86 @@ describe("peopleWhoDivedBefore", () => {
       .set({ status: "no_show" })
       .where(eq(bookings.id, ctx.earlierBooking.bookingId));
     expect((await ctx.ask()).size).toBe(0);
+  });
+
+  /**
+   * **The lobby tablet is not the desk** (`security-reviewer`, 2026-09-11).
+   * `/check-in/[token]` is a bearer-token page on an unattended tablet — the URL
+   * is the capability — so whoever holds it can type a surname and mark any
+   * seat on today's board arrived. Routed through `checkInAtKiosk` for the same
+   * reason the cases above go through `checkInBooking`: what is pinned is that
+   * the real door leaves a `display_token_id` on the trail, and that
+   * `standingArrivalIsArrived` refuses to spend it.
+   */
+  async function checkInAtTheKiosk(
+    ctx: Awaited<ReturnType<typeof twoDays>>,
+    bookingId: string,
+  ): Promise<void> {
+    await clearForTheBoat(ctx, bookingId);
+    const link = await issueDisplayToken(ctx.db, {
+      shopId: ctx.shop.id,
+      personId: ctx.owner.id,
+      label: "Lobby tablet",
+      purpose: "check_in",
+      showNames: false,
+    });
+    if (!link.ok) throw new Error(`display token refused: ${link.reason}`);
+    const outcome = await checkInAtKiosk(ctx.db, {
+      shopId: ctx.shop.id,
+      displayTokenId: link.issued.id,
+      bookingId,
+      // Ten minutes before that boat leaves: the tablet's window is
+      // forward-only, and the fixture's two departures are a day apart.
+      now: new Date(ctx.before.startsAt.getTime() - 10 * 60 * 1000),
+    });
+    if (!outcome.ok) throw new Error(`kiosk check-in refused: ${outcome.reason}`);
+  }
+
+  it("does not let a self check-in at the lobby tablet rescue a no_show", async () => {
+    // Nobody at the shop saw this diver, so the escape hatch is not theirs to
+    // take: crediting it would hand whoever held the tablet's URL the power to
+    // shorten a stranger's fly-safe wait for a day they spent ashore.
+    const ctx = await twoDays();
+    await checkInAtTheKiosk(ctx, ctx.earlierBooking.bookingId);
+    await ctx.db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(eq(bookings.id, ctx.earlierBooking.bookingId));
+    expect((await ctx.ask()).size).toBe(0);
+  });
+
+  it("still counts the day when the desk confirms a tablet's self check-in", async () => {
+    // The other half of the same rule, and the reason the fix is a verdict on
+    // the newest row rather than a filter on which rows are looked at: a
+    // staffer who taps the same seat afterwards writes a tokenless row on top,
+    // a human has now looked at this diver, and the day counts again.
+    //
+    // Both desk acts state their own `now`. The trail is ordered by
+    // `occurred_at`, the frozen clock sits days before this fixture's
+    // departures, and a confirmation that lands *before* the tap it confirms
+    // would pin nothing.
+    const ctx = await twoDays();
+    await checkInAtTheKiosk(ctx, ctx.earlierBooking.bookingId);
+    const atTheDesk = new Date(ctx.before.startsAt.getTime() - 5 * 60 * 1000);
+    const undone = await undoCheckInBooking(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.earlierBooking.bookingId,
+      recordedByPersonId: ctx.owner.id,
+      now: new Date(atTheDesk.getTime() - 60 * 1000),
+    });
+    expect(undone.ok, "the desk has to be able to take the tablet's word back").toBe(true);
+    const seen = await checkInBooking(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.earlierBooking.bookingId,
+      recordedByPersonId: ctx.owner.id,
+      now: atTheDesk,
+    });
+    expect(seen.ok, "the desk tap has to land for this case to mean anything").toBe(true);
+    await ctx.db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(eq(bookings.id, ctx.earlierBooking.bookingId));
+    expect([...(await ctx.ask())]).toEqual([ctx.personId]);
   });
 
   it("leaves cancelled alone even with a standing arrival", async () => {

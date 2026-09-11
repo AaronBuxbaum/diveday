@@ -212,6 +212,41 @@ describe("recordTripStage", () => {
   });
 });
 
+describe("latestTripStage", () => {
+  it("resolves the crew name only from this shop's own people", async () => {
+    // The `people` join carries its own `shop_id`, for the reason the `dive_sites`
+    // join beside it does: the close-out reads this name back into the day's
+    // record, and a mis-tenanted `recorded_by_person_id` must resolve to no name
+    // at all rather than to another shop's staffer.
+    const { db, shopId } = await freshShop("stage-crew-scope");
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "stage-crew-scope-other", timezone: ZONE })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("expected a second shop");
+    const foreign = await aDiver(db, otherShop.id, "Another Shop's Deckhand");
+    const trip = await aDeparture(db, shopId);
+    const staffer = await aStaffer(db, shopId);
+    await recordTripStage(db, {
+      shopId,
+      tripId: trip.id,
+      stage: "underway",
+      recordedByPersonId: staffer,
+      recordedAt: new Date("2026-07-21T12:10:00.000Z"),
+    });
+    // Reach past the writer, which proves the staff role before it writes, to
+    // the state a future writer or a bad migration could leave behind.
+    await db
+      .update(tripStageEvents)
+      .set({ recordedByPersonId: foreign })
+      .where(eq(tripStageEvents.shopId, shopId));
+
+    const reading = await latestTripStage(db, shopId, trip.id);
+    expect(reading?.stage).toBe("underway");
+    expect(reading?.recordedByName).toBeNull();
+  });
+});
+
 describe("latestTripStagesByTrip", () => {
   it("answers one stage per departure in a single pass", async () => {
     const { db, shopId } = await freshShop("stage-by-trip");

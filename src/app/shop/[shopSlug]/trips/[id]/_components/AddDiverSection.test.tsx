@@ -124,14 +124,22 @@ describe("AddDiverSection name-match prompt", () => {
     ...over,
   });
 
-  const renderPrompt = (confirmMatches: SimilarDiver[]) =>
+  const searchCandidate = {
+    person: { id: "person-2", fullName: "Avery Diver", email: "avery@example.com" },
+    rentalFit: null,
+  } as unknown as BookableDiver;
+
+  const renderPrompt = (
+    confirmMatches: SimilarDiver[],
+    search: { query?: string; candidates?: BookableDiver[] } = {},
+  ) =>
     render(
       <AddDiverSection
         shopSlug="blue-mantis"
         tripId="trip-1"
         full={false}
-        query=""
-        candidates={[]}
+        query={search.query ?? ""}
+        candidates={search.candidates ?? []}
         addBookingAction={action}
         addToWaitlistAction={action}
         addExistingDiverAction={action}
@@ -167,11 +175,21 @@ describe("AddDiverSection name-match prompt", () => {
   });
 
   it("marks the pick as a name match, so the seat it takes is identity-unconfirmed", () => {
-    const { container } = renderPrompt([match({})]);
+    // The search picker renders *beside* the prompt, because the count below
+    // is the whole assertion: a prompt rendered alone would pass it however
+    // many flags the picker grew.
+    const { container } = renderPrompt([match({})], {
+      query: "Avery",
+      candidates: [searchCandidate],
+    });
 
     const candidateForm = screen.getByRole("button", { name: "Nadia Ruiz" }).closest("form");
     expect(candidateForm?.querySelector('input[name="fromNameMatch"]')).toHaveValue("true");
-    // ...and only there. Creating a new diver anyway invents nobody's history.
+    expect(screen.getByText("Avery Diver")).toBeInTheDocument();
+    // ...and only there. The picker seats a diver a staffer went looking for
+    // and found, and "create a new diver anyway" invents nobody's history —
+    // if either raised the flag, every seat would land blocked and the counter
+    // would learn to tap past it.
     expect(container.querySelectorAll('input[name="fromNameMatch"]')).toHaveLength(1);
   });
 });

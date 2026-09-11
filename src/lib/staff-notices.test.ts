@@ -6,6 +6,7 @@ import {
   noticeFromParam,
   noticeRole,
   noticeUrl,
+  safeShopReturnPath,
   shopPath,
   type WidenedNoticeReason,
 } from "./staff-notices";
@@ -89,6 +90,70 @@ describe("shopPath", () => {
   it("keeps the notice on the URL a hostile slug would otherwise have eaten", () => {
     expect(noticeUrl(shopPath("a?steal=1", "check-in"), "invalid")).toBe(
       "/shop/a%3Fsteal%3D1/check-in?notice=invalid",
+    );
+  });
+});
+
+/**
+ * The mirror of `shopPath`, and the one `divers/new` was missing: it read
+ * `?returnTo=` off the query with nothing but a `trim()`, rendered it as the
+ * back link's href, and after a successful create passed it to
+ * `revalidateAndRedirect` as both the `revalidatePath` key and the redirect
+ * target. A staffer who followed a crafted link was therefore bounced
+ * off-origin the instant an authenticated write succeeded.
+ */
+describe("safeShopReturnPath", () => {
+  it("keeps a path inside this shop, query and fragment intact", () => {
+    expect(safeShopReturnPath("blue-mantis", "/shop/blue-mantis/divers?q=priya#row")).toBe(
+      "/shop/blue-mantis/divers?q=priya#row",
+    );
+  });
+
+  it("answers null for an absent, blank or whitespace-only value", () => {
+    expect(safeShopReturnPath("blue-mantis", undefined)).toBeNull();
+    expect(safeShopReturnPath("blue-mantis", null)).toBeNull();
+    expect(safeShopReturnPath("blue-mantis", "")).toBeNull();
+    expect(safeShopReturnPath("blue-mantis", "   ")).toBeNull();
+  });
+
+  // The finding itself: an absolute URL, and the protocol-relative spelling a
+  // prefix test written against `http` alone lets through.
+  it("refuses another origin", () => {
+    expect(safeShopReturnPath("blue-mantis", "https://evil.invalid/steal")).toBeNull();
+    expect(safeShopReturnPath("blue-mantis", "//evil.invalid/steal")).toBeNull();
+    expect(safeShopReturnPath("blue-mantis", "http://evil.invalid/steal")).toBeNull();
+    expect(safeShopReturnPath("blue-mantis", "javascript:alert(1)")).toBeNull();
+    expect(safeShopReturnPath("blue-mantis", "  https://evil.invalid/steal  ")).toBeNull();
+  });
+
+  // Same origin, wrong tenant — the hop `requireShopSurface` would 404, but
+  // only after the staffer has been sent there.
+  it("refuses another shop, and a slug this one is merely a prefix of", () => {
+    expect(safeShopReturnPath("blue-mantis", "/shop/reef-co/divers")).toBeNull();
+    expect(safeShopReturnPath("blue-mantis", "/shop/blue-mantis-evil/divers")).toBeNull();
+    expect(safeShopReturnPath("blue-mantis", "/admin")).toBeNull();
+  });
+
+  /**
+   * The one a `startsWith` alone misses: this passes the prefix test and then
+   * normalises to `/evil` in the browser, which is also the string
+   * `revalidatePath` would have been keyed on.
+   */
+  it("refuses traversal that only escapes the shop once normalised", () => {
+    expect(safeShopReturnPath("blue-mantis", "/shop/blue-mantis/../../evil")).toBeNull();
+    expect(safeShopReturnPath("blue-mantis", "/shop/blue-mantis/trips/../../../evil")).toBeNull();
+  });
+
+  /**
+   * ...and the percent-encoded spelling of the same thing is *not* traversal
+   * and is not refused: neither `URL` nor a browser decodes `%2F` in a
+   * pathname, so it stays one literal segment inside the shop and 404s there.
+   * Asserted so the next reader does not "harden" this into a refusal and
+   * quietly break a legitimate return path carrying an encoded id.
+   */
+  it("keeps a percent-encoded slash, which never leaves the segment", () => {
+    expect(safeShopReturnPath("blue-mantis", "/shop/blue-mantis/..%2F..%2Fevil")).toBe(
+      "/shop/blue-mantis/..%2F..%2Fevil",
     );
   });
 });

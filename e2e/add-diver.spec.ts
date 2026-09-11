@@ -267,6 +267,39 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
 });
 
 /**
+ * **An off-origin `?returnTo=`.** The create-diver page takes a return path in
+ * the query, shows it as the back link, and hands it to `revalidateAndRedirect`
+ * once the diver is written — so before `safeShopReturnPath` a staffer who
+ * followed a crafted link was bounced to another origin the moment an
+ * authenticated write succeeded, with the app's own success state behind it.
+ * Refused by falling back to the roster, never by erroring at the staffer.
+ */
+test("a returnTo pointing off-origin never survives the create", async ({ page }) => {
+  const crafted = "/shop/blue-mantis/divers/new?returnTo=https%3A%2F%2Fevil.invalid%2Fsteal";
+  await page.goto(crafted);
+  await expect(page.getByRole("heading", { level: 1, name: "Add a diver" })).toBeVisible();
+
+  // A name no seeded diver is a trigram match for, so the create lands rather
+  // than stopping at the "is this the same person?" prompt.
+  await page.getByLabel("Full name").fill(`Quorrax Zylbender ${e2eNow().getTime()}`);
+  await page.getByRole("button", { name: "Add diver", exact: true }).click();
+
+  // The write succeeded and the staffer is still inside their own shop, on the
+  // new diver's record — the destination a request with no returnTo gets.
+  await page.waitForURL(/\/shop\/blue-mantis\/divers\/[^/?#]+\?edit=1/);
+
+  // ...and the other half of the same param: the back link and Cancel, which a
+  // staffer can follow before submitting anything.
+  await page.goto(crafted);
+  for (const name of ["All divers", "Cancel"]) {
+    await expect(page.getByRole("link", { name, exact: true }).first()).toHaveAttribute(
+      "href",
+      /^\/shop\/blue-mantis\//,
+    );
+  }
+});
+
+/**
  * Creates a departure with room on it and returns its id. Every door below
  * needs one this spec owns, so an assertion can never be satisfied (or broken)
  * by a seeded trip another test also touches.

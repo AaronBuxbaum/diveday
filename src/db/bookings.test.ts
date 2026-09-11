@@ -15,6 +15,7 @@ import {
 } from "./bookings";
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
+import { listTripActivity, pagedDiverActivity } from "./operations";
 import * as readinessModule from "./readiness";
 import { saveRentalFit } from "./rental-fit";
 import {
@@ -1155,6 +1156,13 @@ describe("createBooking identity safeguard (H-13)", () => {
     return row?.identityUnconfirmedAt ?? null;
   }
 
+  /** Whoever is behind the counter — the name the trail has to end up carrying. */
+  async function counterStaffer(db: AppDb, shopId: string) {
+    const [staffer] = await listStaff(db, shopId);
+    if (!staffer) throw new Error("expected seeded staff");
+    return staffer.person;
+  }
+
   it("does not flag a brand-new walk-in or a same-human re-book", async () => {
     const { db, shop, open } = await seededContext();
     const night = await nightTrip(db, shop.id);
@@ -1193,9 +1201,15 @@ describe("createBooking identity safeguard (H-13)", () => {
     expect(await identityFlag(db, shared.bookingId)).not.toBeNull();
 
     // Staff confirm identity → flag clears; a second confirm is a no-op.
-    expect(await confirmBookingIdentity(db, shop.id, shared.bookingId)).toBe(true);
+    const staffer = await counterStaffer(db, shop.id);
+    const confirm = {
+      shopId: shop.id,
+      bookingId: shared.bookingId,
+      actorPersonId: staffer.id,
+    };
+    expect(await confirmBookingIdentity(db, confirm)).toBe(true);
     expect(await identityFlag(db, shared.bookingId)).toBeNull();
-    expect(await confirmBookingIdentity(db, shop.id, shared.bookingId)).toBe(false);
+    expect(await confirmBookingIdentity(db, confirm)).toBe(false);
   });
 
   it("does not flag a returning diver a staffer went looking for and picked", async () => {
@@ -1252,8 +1266,67 @@ describe("createBooking identity safeguard (H-13)", () => {
     );
 
     // One tap at the roster clears it, same as the shared-inbox path.
-    expect(await confirmBookingIdentity(db, shop.id, outcome.bookingId)).toBe(true);
+    const staffer = await counterStaffer(db, shop.id);
+    expect(
+      await confirmBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId: outcome.bookingId,
+        actorPersonId: staffer.id,
+      }),
+    ).toBe(true);
     expect(await identityFlag(db, outcome.bookingId)).toBeNull();
+  });
+
+  /**
+   * **The tap leaves a trail, and it names the staffer** (`security-reviewer`,
+   * the RFH-07 layer). Clearing this flag hands a stranger the matched diver's
+   * live signed release — `issueWaiverOnJoin` asks for no new one — plus their
+   * cards and any prepaid dives, and every staff role can make the tap. That is
+   * the trade `src/lib/authz.ts` states for the most sensitive read in the
+   * product: what makes it safe is the trail, not the role list. So a
+   * confirmation that wrote no history would be the role list alone.
+   *
+   * Both lines are checked, because they answer different questions: the
+   * departure's trail is what the crew reads that day, and the matched person's
+   * record is where a shop looks months later — a trip-scoped row carries no
+   * booking and no subject, so it never reaches that second surface.
+   */
+  it("records who cleared the flag, on the departure and on the matched diver's record", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const first = await bookVisitor(db, shop.id, open.id);
+    if (!first.ok) throw new Error("setup booking failed");
+    const shared = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: night.id,
+      fullName: "Ben Quinn",
+      email: "nora@example.com",
+    });
+    if (!shared.ok) throw new Error("shared-inbox booking failed");
+    const staffer = await counterStaffer(db, shop.id);
+
+    expect(
+      await confirmBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId: shared.bookingId,
+        actorPersonId: staffer.id,
+      }),
+    ).toBe(true);
+
+    // The name on the line is the *matched* record's, which is the whole point:
+    // it says whose evidence this seat was just attached to.
+    expect((await listTripActivity(db, shop.id, night.id))[0]).toMatchObject({
+      code: "identity_confirmed",
+      params: { actor: staffer.fullName, diver: visitor.fullName },
+    });
+
+    const record = await pagedDiverActivity(db, shop.id, shared.personId);
+    expect(
+      record.rows.some(
+        (row) => row.code === "identity_confirmed" && row.params.actor === staffer.fullName,
+      ),
+    ).toBe(true);
   });
 
   it("writes no certification claim under a name-match seat", async () => {

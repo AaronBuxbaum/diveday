@@ -475,8 +475,10 @@ test.describe("as owner", () => {
     // Same aggregate-cost reasoning as visual.spec.ts's `test.setTimeout`: a
     // traced CI failure measured the total sequential cost at 19s against
     // the default 15s test timeout, every individual step resolving
-    // successfully.
-    test.setTimeout(30_000);
+    // successfully. Raised again with the activity-trail assertion at the end
+    // (RFH-07): the chain measured 28.3s locally against the 30s it had, which
+    // is a margin, not a budget.
+    test.setTimeout(45_000);
     const email = `shared-${e2eNow().getTime()}@example.com`;
     const tripB = `H13 Shared Inbox ${e2eNow().getTime()}`;
 
@@ -544,6 +546,14 @@ test.describe("as owner", () => {
     await expect(
       page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true }),
     ).not.toContainText("Identity unconfirmed");
+
+    // And the tap is on the record. Clearing this flag hands the seat Nora's
+    // live signed release, her cards and any prepaid dives, and every staff
+    // role can make it — `src/lib/authz.ts`'s answer to that weight is the
+    // trail, not the role list, so the shop has to be able to read back who
+    // made the call (the RFH-07 security pass).
+    await openTripActivity(page);
+    await expect(page.getByText(/confirmed this booking is Nora Quinn/)).toBeVisible();
   });
 });
 

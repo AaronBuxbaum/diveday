@@ -45,6 +45,13 @@ type ActivityParamShapes = {
   support_needs_updated: { actor: string; diver: string; self: "yes" | "no" };
   /** The same answers were cleared. */
   support_needs_cleared: { actor: string; diver: string; self: "yes" | "no" };
+  /**
+   * A staffer attested that a booking flagged `identity_unconfirmed` really is
+   * the diver it was attached to. The trail is what makes that tap safe: it
+   * hands a stranger a matched diver's waiver, cards and prepaid dives, and
+   * every staff role can make it (`src/db/bookings.ts`, `confirmBookingIdentity`).
+   */
+  identity_confirmed: { actor: string; diver: string };
   /** A seat was taken off a departure. */
   booking_removed: { actor: string; diver: string };
   /** …and put back. */
@@ -130,6 +137,7 @@ export const ACTIVITY_CODES = [
   "support_needs_cleared",
   "booking_removed",
   "booking_restored",
+  "identity_confirmed",
   "crew_assigned",
   "crew_removed",
   "blowout_called",

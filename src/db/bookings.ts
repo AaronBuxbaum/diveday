@@ -26,6 +26,7 @@ import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./
 import { releaseUnclaimedGearReservations } from "./gear";
 import { recordGift } from "./gifts";
 import { publishManifestEvent } from "./manifest-events";
+import { recordDiverActivity, recordTripActivity } from "./operations";
 import { setBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
@@ -1583,18 +1584,59 @@ export async function setBookingPickupDetails(
  * This never *creates* a separate diver; when it is genuinely a different human
  * behind a shared inbox, staff resolve that by booking them under their own
  * email, not by confirming here.
+ *
+ * **The actor is required because the trail is what makes this tap safe.** What
+ * clearing the flag hands over is not small: the matched diver's current signed
+ * release (`issueWaiverOnJoin` asks for no new one when the person already
+ * holds a live signature, so the seat boards on somebody else's paper), their
+ * certifications once readiness stops withholding them, and any prepaid dives a
+ * later re-booking settles. It used to be true that the flag only ever came off
+ * a shared-inbox email collision, where the two humans at least shared an
+ * identifier; the counter's trigram name prompt now raises the same flag off a
+ * spelling (issue #1556), so the tap is a lighter-weight diver merge. The role
+ * list stays open — a counter staffer who cannot clear the flag they just
+ * raised is its own failure mode, and merge's owner/manager boundary would
+ * strand a walk-in until a manager walked past — and `src/lib/authz.ts` is
+ * explicit about what carries that weight instead: what makes the most
+ * sensitive act in the product safe is the trail, not the role list.
+ *
+ * Two lines, because the consequence lands in two places: one on the
+ * departure, where the crew reads what happened to the roster that day, and one
+ * on the *matched person's* record, which a trip-scoped row never reaches
+ * (`pagedDiverActivity` joins on the booking, and `recordTripActivity` writes
+ * none) and which is where a shop looks months later when a stranger's dives
+ * are sitting under somebody else's name.
  */
-export async function confirmBookingIdentity(db: AppDb, shopId: string, bookingId: string) {
+export async function confirmBookingIdentity(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; actorPersonId: string },
+) {
   const [booking] = await db
     .update(bookings)
     .set({ identityUnconfirmedAt: null })
     .where(
       and(
-        eq(bookings.id, bookingId),
-        eq(bookings.shopId, shopId),
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
         isNotNull(bookings.identityUnconfirmedAt),
       ),
     )
-    .returning({ id: bookings.id });
-  return Boolean(booking);
+    .returning({ tripId: bookings.tripId, personId: bookings.personId });
+  if (!booking) return false;
+  const diver = await bookingDiverName(db, input.shopId, input.bookingId);
+  if (diver) {
+    await recordTripActivity(db, {
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      actorPersonId: input.actorPersonId,
+      entry: { code: "identity_confirmed", diver },
+    });
+  }
+  await recordDiverActivity(db, {
+    shopId: input.shopId,
+    personId: booking.personId,
+    actorPersonId: input.actorPersonId,
+    code: "identity_confirmed",
+  });
+  return true;
 }

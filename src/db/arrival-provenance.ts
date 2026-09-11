@@ -28,6 +28,23 @@ import { bookingArrivalEvents } from "./schema";
  * `booking_arrival_events_shop_trip_booking_occurred_idx`, so the subquery
  * stays an index probe rather than a scan per candidate row.
  *
+ * **A kiosk tap is not a sighting, and the test for that goes in the
+ * projection.** The lobby tablet writes `arrived` with `display_token_id` set,
+ * from a bearer-token page where the URL is the capability and anybody holding
+ * it can type a surname — so it is hearsay, the same hearsay
+ * `listSelfReportedArrivalBookingIds` below exists to keep out of the words a
+ * staffer's sighting earns (N-24, and a `security-reviewer` finding on
+ * 2026-09-11 that this predicate was spending it). Both readers pay for that in
+ * a diver's safety: `findSimilarDivers` prints "Last dived" as the fact the
+ * counter's identity question turns on, and `peopleWhoDivedBefore` feeds the
+ * fly-safe multi-day advisory.
+ *
+ * The provenance test belongs to the **projection** and never to the `where`
+ * clause. Filtering the row selection would step past a kiosk row to an older
+ * tokenless `arrived` and answer `true` on a seat whose latest word is a
+ * retraction, which is the opposite of what the undo above promises. The newest
+ * row still decides, whoever wrote it; only the verdict it earns changes.
+ *
  * Lives here rather than inline in its one caller because "was this diver
  * aboard" is the same question a manifest and `buildIncidentExport`
  * (`src/lib/incident-export.ts`) have to answer honestly, and the answer may
@@ -39,14 +56,14 @@ export function standingArrivalIsArrived(
   tripIdColumn: AnyColumn,
 ): SQL<boolean> {
   return sql<boolean>`(
-    select standing.status
+    select standing.status = 'arrived' and standing.display_token_id is null
     from ${bookingArrivalEvents} as standing
     where standing.shop_id = ${shopId}
       and standing.trip_id = ${tripIdColumn}
       and standing.booking_id = ${bookingIdColumn}
     order by standing.occurred_at desc, standing.created_at desc, standing.seq desc
     limit 1
-  ) = 'arrived'`;
+  )`;
 }
 
 /**

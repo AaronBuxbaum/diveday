@@ -899,7 +899,11 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const parsed = parseAddDiver(formData);
-  if (!parsed.success) redirect(noticeUrl(back, "diver-invalid"));
+  // The departure id is narrowed with the diver fields, not after them: a
+  // malformed one reaches `eq(trips.id, …)` inside the join and Postgres
+  // raises `invalid input syntax for type uuid`, so the staffer gets a 500
+  // where the notice below is the honest answer.
+  if (!uuidParam(tripId) || !parsed.success) redirect(noticeUrl(back, "diver-invalid"));
   const outcome = await joinTripWaitlist(await getDb(), {
     shopId: s.user.shopId,
     tripId,
@@ -1063,7 +1067,7 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
-  if (!bookingId) redirect(back);
+  if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   await cancelBooking(dbi, s.user.shopId, bookingId);
   await trackEvent({ name: "booking_cancelled", source: "staff" });
@@ -1114,7 +1118,7 @@ export async function undoRemoveBookingAction(
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
-  if (!bookingId) redirect(back);
+  if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   const outcome = await restoreBooking(dbi, s.user.shopId, bookingId);
   if (outcome === "not_found") redirect(back);
@@ -1153,6 +1157,10 @@ export async function undoRemoveBookingAction(
  * clearing the `identity_unconfirmed` readiness blocker. Same shop-scoped
  * session gate as every roster action; a no-op on an already-clear booking
  * still settles cleanly so a double-tap is harmless.
+ *
+ * Open to every staff role, and what carries that is the trail
+ * `confirmBookingIdentity` writes under this staffer's name — see its docblock
+ * for what the tap hands over and why the role list stays where it is.
  */
 export async function confirmDiverIdentityAction(
   shopSlug: string,
@@ -1162,8 +1170,12 @@ export async function confirmDiverIdentityAction(
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
-  if (!bookingId) redirect(back);
-  const confirmed = await confirmBookingIdentity(await getDb(), s.user.shopId, bookingId);
+  if (!uuidParam(bookingId)) redirect(back);
+  const confirmed = await confirmBookingIdentity(await getDb(), {
+    shopId: s.user.shopId,
+    bookingId,
+    actorPersonId: s.user.personId,
+  });
   revalidateAndRedirect(
     back,
     noticeUrl(back, confirmed ? "identity-confirmed" : "invalid", { bid: bookingId }),
@@ -1187,7 +1199,7 @@ export async function certifyDiverFromRosterAction(
   const bookingId = String(formData.get("bookingId") ?? "");
   const personId = String(formData.get("personId") ?? "");
   const award = String(formData.get("award") ?? "");
-  if (!bookingId || !personId || !award) redirect(back);
+  if (!uuidParam(bookingId) || !uuidParam(personId) || !award) redirect(back);
   const db = await getDb();
   const issued = { shopId: s.user.shopId, personId, tripId, issuedByPersonId: s.user.personId };
 
@@ -1238,7 +1250,7 @@ export async function saveCourseNextStepAction(
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
-  if (!bookingId) redirect(back);
+  if (!uuidParam(bookingId)) redirect(back);
 
   const outcome = await recordCourseNextStep(await getDb(), {
     shopId: s.user.shopId,

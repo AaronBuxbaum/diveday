@@ -3,6 +3,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { emptyMedicalAnswers, flaggedMedicalPrompts, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { RosterSection } from "./RosterSection";
 import type {
   NitroxByBooking,
@@ -32,6 +33,7 @@ function entry(
   over: {
     emergencyContactName?: string;
     emergencyContactPhone?: string;
+    dateOfBirth?: string;
     reEntryAsk?: "deck_word" | "easy_first_dive" | "refresher_course";
   } = {},
 ): RosterEntry {
@@ -49,7 +51,7 @@ function entry(
       id: `p-${id}`,
       fullName,
       email: `${id}@example.com`,
-      dateOfBirth: null,
+      dateOfBirth: over.dateOfBirth ?? null,
       emergencyContactName: over.emergencyContactName ?? "Ada Contact",
       emergencyContactPhone: over.emergencyContactPhone ?? "+1 555 0100",
     } as unknown as RosterEntry["person"],
@@ -80,12 +82,14 @@ function renderRoster({
   roster,
   readiness,
   waivers,
+  rentalFit,
   compact = false,
   addDiverGroup,
 }: {
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
   waivers: WaiverByBooking;
+  rentalFit?: RentalFitByBooking;
   compact?: boolean;
   addDiverGroup?: ReactNode;
 }) {
@@ -100,7 +104,7 @@ function renderRoster({
       roster={roster}
       readinessByBooking={readiness}
       waiverByBooking={waivers}
-      rentalFitByBooking={new Map() as RentalFitByBooking}
+      rentalFitByBooking={rentalFit ?? (new Map() as RentalFitByBooking)}
       nitroxByBooking={new Map() as NitroxByBooking}
       requiresPayment={false}
       paymentsConnected={false}
@@ -248,5 +252,136 @@ describe("the guests ledger (slice 5d)", () => {
     ).toBeVisible();
     expect(within(addDiver as HTMLElement).getByTestId("add-diver-form")).toBeVisible();
     expect(screen.queryByText("No one on this boat yet")).toBeNull();
+  });
+});
+
+/**
+ * H-13's flag gates **disclosure** as well as boarding (security review
+ * 2026-09-11). A seat attached to an existing person on a guess — a reused
+ * email under a different name, or a name tapped off the counter's trigram
+ * prompt (issue #1556) — used to render that person's whole record under a
+ * name nobody had verified. The row still says what the *seat* is; the
+ * *person's* particulars wait for the confirmation.
+ */
+describe("an unconfirmed identity withholds the matched person's record", () => {
+  const flaggedAnswers = (() => {
+    const answers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+    answers.responses.q3 = true;
+    return answers;
+  })();
+  const flaggedPrompt = flaggedMedicalPrompts(flaggedAnswers)[0] as string;
+
+  const heldWaiver = {
+    waiver: {
+      id: "w-hold",
+      status: "medical_review",
+      completedAt: null,
+      medicalClearedAt: null,
+      medicalClearanceDeclinedAt: null,
+      signatureMethod: "digital",
+      expiresAt: new Date("2027-08-20T15:00:00Z"),
+      medicalAnswers: flaggedAnswers,
+    },
+  } as unknown as WaiverByBooking extends Map<string, infer V> ? V : never;
+
+  const matched = entry("u", "Marisol Vega", {
+    dateOfBirth: "2012-05-04",
+    emergencyContactName: "Pilar Vega",
+    emergencyContactPhone: "+34 600 111 222",
+  });
+  const rentalFit = new Map([
+    [
+      "u",
+      {
+        rentsWetsuit: true,
+        wetsuitSize: "5 mm / M",
+        bootSize: "42",
+        rentsBcd: false,
+        rentsRegulator: false,
+        rentsMaskFins: false,
+        rentsWeights: false,
+        rentsDiveComputer: false,
+        rentsGopro: false,
+        rentsDrysuit: false,
+        rentsHoodGloves: false,
+        rentsTorch: false,
+        rentsSmb: false,
+        bcdSize: null,
+        finSize: null,
+        weightPreference: null,
+        needsStaffFitAt: null,
+        needsStaffFitNote: null,
+      },
+    ],
+  ]) as unknown as RentalFitByBooking;
+
+  const unconfirmed = new Map([
+    ["u", readinessRow("blocked", [{ code: "identity_unconfirmed", params: undefined }])],
+  ]) as ReadinessByBooking;
+  const confirmed = new Map([
+    ["u", readinessRow("blocked", [{ code: "medical_review", params: undefined }])],
+  ]) as ReadinessByBooking;
+
+  it("prints none of the matched person's medical answers, age, contact or sizes", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: unconfirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    expect(screen.queryByText(flaggedPrompt)).toBeNull();
+    expect(screen.queryByText(/Age 14/)).toBeNull();
+    expect(screen.queryByText(/Minor/)).toBeNull();
+    expect(screen.queryByText(/Pilar Vega/)).toBeNull();
+    expect(screen.queryByDisplayValue("Pilar Vega")).toBeNull();
+    expect(screen.queryByText(/5 mm \/ M/)).toBeNull();
+    expect(screen.queryByText("u@example.com")).toBeNull();
+    // Said, never silently blank — an empty panel reads as a diver with no
+    // contact and no sizes, which is a wrong fact rather than an absent one.
+    expect(
+      screen.getByText(
+        "Contact, medical and gear details stay hidden until you confirm who this is.",
+      ),
+      // `toBeInTheDocument`, not `toBeVisible`: the reference panel is a
+      // collapsed `<details>`, which jsdom reports as hidden.
+    ).toBeInTheDocument();
+  });
+
+  it("still says what the seat is, and offers the one control that clears it", () => {
+    // Withholding the person is not withholding the seat: a row nobody can
+    // board has to say so, and the way through stays on the row.
+    renderRoster({
+      roster: [matched],
+      readiness: unconfirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    expect(screen.getByText(/Identity unconfirmed/)).toBeVisible();
+    expect(screen.getByRole("link", { name: "Marisol Vega" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Confirm this is Marisol Vega" })).toBeVisible();
+  });
+
+  it("renders the same facts as soon as the row is confirmed", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: confirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    expect(screen.getByText(flaggedPrompt)).toBeVisible();
+    expect(screen.getByText("Minor · age 14")).toBeVisible();
+    // The last three live in the row's collapsed reference panel, which jsdom
+    // reports as hidden — being in the document is the whole claim.
+    expect(screen.getByText(/Age 14/)).toBeInTheDocument();
+    expect(screen.getByText(/Pilar Vega/)).toBeInTheDocument();
+    expect(screen.getByText(/5 mm \/ M/)).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Contact, medical and gear details stay hidden until you confirm who this is.",
+      ),
+    ).toBeNull();
   });
 });

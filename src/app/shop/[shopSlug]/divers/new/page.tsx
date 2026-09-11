@@ -28,7 +28,12 @@ import {
   diverSearchPrefill,
 } from "@/lib/person-fields";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import {
+  type NoticeTone,
+  noticeFromParam,
+  safeShopReturnPath,
+  shopPath,
+} from "@/lib/staff-notices";
 
 export const instant = true;
 
@@ -119,7 +124,11 @@ export default async function NewDiverPage({
       : null;
   const isWaitlist = waitlistParam === "true";
   const tripId = tripIdParam?.trim() || null;
-  const returnTo = returnToParam?.trim() || null;
+  // `?returnTo=` is whatever was in the address bar, and it becomes the back
+  // link's href here and the redirect target in `createDiverFormAction` below.
+  // Only a path inside this staffer's own shop survives; anything else falls
+  // back to the roster, which is where the page lands with no `returnTo` at all.
+  const returnTo = safeShopReturnPath(shop.slug, returnToParam);
 
   const backLink = returnTo
     ? { href: returnTo, label: t("divers.page.backToRoster") }
@@ -162,7 +171,15 @@ export default async function NewDiverPage({
     const activeSurface = formData.get("surface") as SeatSurfaceId | null;
     const activeTripId = formData.get("tripId") ? String(formData.get("tripId")) : null;
     const activeWaitlist = formData.get("waitlist") === "true";
-    const activeReturnTo = formData.get("returnTo") ? String(formData.get("returnTo")) : null;
+    // Re-validated against the *session's* shop, not the page's: the hidden
+    // input is as client-supplied as the query param was, and this value is
+    // handed to `revalidateAndRedirect` as both the revalidate key and the
+    // redirect target.
+    const returnToField = formData.get("returnTo");
+    const activeReturnTo = safeShopReturnPath(
+      staff.user.shopSlug,
+      typeof returnToField === "string" ? returnToField : null,
+    );
     const force = formData.get("force") === "true";
 
     const buildNewDiverUrl = (extraParams: Record<string, string>) => {
@@ -278,6 +295,14 @@ export default async function NewDiverPage({
                     >
                       <input type="hidden" name="tripId" value={tripId} />
                       <input type="hidden" name="personId" value={match.id} />
+                      {/* The *matched* diver's details, not the spelling the
+                          staffer just typed: a tap here says "this is the same
+                          person", and `addToWaitlistAction` ignores `personId`
+                          — `joinTripWaitlist` resolves the person from the name
+                          and email it is handed, so the typed spelling would
+                          spawn the second person row this prompt exists to
+                          prevent. The seating arm reaches the same record by
+                          id. */}
                       <input type="hidden" name="fullName" value={match.fullName} />
                       <input type="hidden" name="email" value={match.email ?? ""} />
                       <input type="hidden" name="phone" value={match.phone ?? ""} />
@@ -323,7 +348,7 @@ export default async function NewDiverPage({
               <input type="hidden" name="surface" value={surfaceParam ?? ""} />
               <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
               <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
-              <input type="hidden" name="returnTo" value={returnToParam ?? ""} />
+              <input type="hidden" name="returnTo" value={returnTo ?? ""} />
               <input type="hidden" name="request" value={requestParam ?? ""} />
               <input type="hidden" name="force" value="true" />
               <SubmitButton
@@ -364,7 +389,7 @@ export default async function NewDiverPage({
           <input type="hidden" name="surface" value={surfaceParam ?? ""} />
           <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
           <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
-          <input type="hidden" name="returnTo" value={returnToParam ?? ""} />
+          <input type="hidden" name="returnTo" value={returnTo ?? ""} />
           <input type="hidden" name="request" value={requestParam ?? ""} />
           <FieldActions className="mt-6">
             <SubmitButton pendingLabel={t("divers.page.adding")} className={buttonClass()}>
