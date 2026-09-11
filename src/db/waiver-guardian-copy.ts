@@ -49,11 +49,11 @@ export async function sendGuardianReleaseCopy(
       guardianName: waiverRecords.guardianName,
       guardianEmail: waiverRecords.guardianEmail,
       guardianSignedAt: waiverRecords.guardianSignedAt,
+      status: waiverRecords.status,
       templateTitle: waiverRecords.templateTitle,
       templateVersion: waiverRecords.templateVersion,
       signedAt: waiverRecords.signedAt,
       diverName: people.fullName,
-      diverEmail: people.email,
       shopName: shops.name,
       timezone: shops.timezone,
       shopDefaultLocale: shops.defaultLocale,
@@ -91,10 +91,12 @@ export async function sendGuardianReleaseCopy(
       releaseVersion: row.templateVersion,
       signedAt: row.signedAt,
       timezone: row.timezone,
-      // So legal erasure can reach a queued copy about this diver
-      // (`notificationSubjectEmail`; issue #1298's hole, closed here before it
-      // is opened). Null on a diver with no address of their own.
-      diverEmail: row.diverEmail ?? undefined,
+      // **The one case where there IS something to do.** A release whose health
+      // answers need a physician parks in `medical_review`, and the adult who
+      // has to get the child to that physician is this recipient. The note said
+      // "there is nothing to do" to exactly them until a `dive-domain-expert`
+      // pass walked a 13-year-old's asthma answer through it.
+      medicalReviewPending: row.status === "medical_review",
     },
     options,
   );

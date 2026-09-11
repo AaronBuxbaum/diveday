@@ -1128,9 +1128,9 @@
     "guardianRelationshipLegalGuardian": "Tutor legal",
     "guardianEmail": "Correo electrónico del tutor",
     "guardianEmailDescription": "Opcional. Si lo das, te enviamos por correo una copia de lo que firmaste.",
-    "guardianAgreementCheckbox": "Soy la madre, el padre o el tutor legal de este buceador. He leído esta exención y las preguntas de salud respondidas arriba, las entiendo y las acepto en su nombre.",
+    "guardianAgreementCheckbox": "Soy la madre, el padre o el tutor legal de este buceador. He leído esta exención, la entiendo y la acepto en su nombre. Las respuestas de salud de arriba están completas y son correctas hasta donde yo sé.",
     "errorGuardianName": "Escribe el nombre completo del tutor.",
-    "errorGuardianNameIsDiver": "El nombre del tutor no puede ser el del buceador. Puede firmar otro progenitor o tutor legal. Si eres el único aquí, escribe tu nombre tal como aparece en tu documento de identidad, con el segundo apellido o el segundo nombre sin abreviar. Si ambos documentos coinciden, pide al centro que añada el segundo apellido o el sufijo al registro del buceador.",
+    "errorGuardianNameIsDiver": "El nombre del tutor no puede ser el del buceador. Puede firmar otro progenitor o tutor legal. Si eres el único aquí, escribe tu nombre tal como aparece en tu documento de identidad, con el segundo apellido o el segundo nombre sin abreviar. Si ambos documentos coinciden de verdad, el centro puede registrarlo en papel con los dos presentes: lleva la exención al mostrador.",
     "errorGuardianRelationship": "Elige la relación del tutor con el buceador.",
     "errorGuardianEmail": "Revisa el correo electrónico del tutor, o déjalo en blanco.",
     "errorGuardianAgreement": "El tutor tiene que marcar la casilla de aceptación para firmar.",
@@ -3826,8 +3826,9 @@
     },
     "guardianReleaseCopy": {
       "subject": "Tu copia de la exención firmada de {diverName}",
-      "body": "Firmaste como madre, padre o tutor legal la exención de responsabilidad de {shopName} para {diverName} el {signedAt}. La exención fue {releaseTitle}, versión {releaseVersion}.",
-      "note": "Este es tu comprobante. No hay nada que hacer ni nada que abrir. Si algo no cuadra, contacta con el centro."
+      "body": "Firmaste como madre, padre o tutor legal la exención de responsabilidad de {shopName} para {diverName} el {signedAt}. La exención es {releaseTitle}, versión {releaseVersion}.",
+      "note": "Este es tu comprobante. Si algo no cuadra, contacta con el centro.",
+      "noteMedicalReview": "Este es tu comprobante. {shopName} todavía necesita el visto bueno de un médico sobre las respuestas de salud antes de que {diverName} pueda bucear, y se pondrá en contacto contigo."
     },
     "waiverRequest": {
       "subject": "Completa tu waiver para {tripTitle}",

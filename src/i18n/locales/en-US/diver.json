@@ -1128,9 +1128,9 @@
     "guardianRelationshipLegalGuardian": "Legal guardian",
     "guardianEmail": "Guardian’s email",
     "guardianEmailDescription": "Optional. If you give one, we’ll email you a copy of what you signed.",
-    "guardianAgreementCheckbox": "I am this diver’s parent or legal guardian. I have read this waiver and the health questions answered above, understand them, and agree to them on their behalf.",
+    "guardianAgreementCheckbox": "I am this diver’s parent or legal guardian. I have read this waiver, understand it, and agree to it on their behalf. The health answers above are complete and accurate as far as I know.",
     "errorGuardianName": "Type the guardian’s full name.",
-    "errorGuardianNameIsDiver": "The guardian’s name can’t be the diver’s own. Another parent or legal guardian can sign instead. If you are the only one here, type your name as it reads on your ID, with a middle name in full. If both IDs read the same, ask the shop to add the diver’s middle name or suffix to their record.",
+    "errorGuardianNameIsDiver": "The guardian’s name can’t be the diver’s own. Another parent or legal guardian can sign instead. If you are the only one here, type your name as it reads on your ID, with a middle name in full. If both IDs really do read the same, the shop can record this one on paper with you both there. Bring the release to the counter.",
     "errorGuardianRelationship": "Choose the guardian’s relationship to the diver.",
     "errorGuardianEmail": "Check the guardian’s email address, or leave it blank.",
     "errorGuardianAgreement": "The guardian has to tick the agreement to sign.",
@@ -3826,8 +3826,9 @@
     },
     "guardianReleaseCopy": {
       "subject": "Your copy of {diverName}’s signed release",
-      "body": "You co-signed {shopName}’s liability release for {diverName} on {signedAt}. The release was {releaseTitle}, version {releaseVersion}.",
-      "note": "This is your record of it. There is nothing to do and nothing to open. If anything about it looks wrong, contact the shop."
+      "body": "You co-signed {shopName}’s liability release for {diverName} on {signedAt}. The release is {releaseTitle}, version {releaseVersion}.",
+      "note": "This is your record of it. If anything about it looks wrong, contact the shop.",
+      "noteMedicalReview": "This is your record of it. {shopName} still needs a physician’s sign-off on the health answers before {diverName} can dive, and will be in touch about it."
     },
     "waiverRequest": {
       "subject": "Complete your waiver for {tripTitle}",

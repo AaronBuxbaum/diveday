@@ -149,11 +149,20 @@ guardian signs the same release beside them, and the release is not usable until
     answers** — the questionnaire is the minor's own health information and a courtesy copy to a
     third party is not where it travels. **No `bookingId`**, so no `notification_deliveries` row is
     written, the `notification_kind` pg enum needs no new value, and the guardian never becomes a
-    per-booking delivery channel or lands on any list. The diver's own address rides in the payload
-    as `diverEmail` so `notificationSubjectEmail` can surface it: the recipient is the guardian and
-    the *subject* is a named minor, which is exactly the gap that left an erased diver's queued
-    `course_inquiry` alive in issue #1298. Nothing is sent for a paper record, which collects no
-    address by decision 7.
+    per-booking delivery channel or lands on any list. **And it is never queued**
+    (`notificationIsQueueable`): a retryable failure is dropped rather than retained. The first cut
+    did the opposite — it carried the minor's own address as `diverEmail` so
+    `notificationSubjectEmail` could lift it into a column and legal erasure could sweep the queued
+    row, closing for this kind the gap that left an erased diver's `course_inquiry` alive in issue
+    #1298. A `dive-domain-expert` and `security-reviewer` pass found that half-closed: the sweep
+    keys on `recipient_email`, `subject_email` and `booking_id`, this kind carries no booking by
+    design, and a twelve-year-old signing on a shop tablet has no address to lift, so the row
+    survived an erasure and the drain still mailed the copy afterwards. Nothing downstream reads
+    this message and no gate waits on it, so not queueing is the whole fix rather than the cheap
+    half of one, and it costs no migration; with no row to sweep, `diverEmail` had no reader and is
+    gone. Nothing is sent for a paper record, which collects no address by decision 7. One sentence
+    does vary: a release parked in `medical_review` says a physician still owes the shop an answer,
+    because the adult reading the copy is who takes the child to that physician.
 
 ## Alternatives considered
 

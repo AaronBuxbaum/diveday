@@ -585,6 +585,46 @@ describe("what the retry queue is allowed to hold", () => {
     },
   );
 
+  it("holds nothing at all for the one kind erasure could not reach", async () => {
+    // The guardian's copy of a minor's release is addressed to a third party,
+    // carries no booking by design, and is about a child who often has no
+    // address of their own — so a queued row would sit in this table naming a
+    // minor with none of the three handles `anonymizeDiver` sweeps on, and the
+    // drain would mail the copy *after* the erasure. Nothing downstream reads
+    // this message, so it is dropped instead (`dive-domain-expert` and
+    // `security-reviewer`, issue #1453).
+    const { db, shop } = await seededShopContext();
+    const delivery = await sendNotification(
+      db,
+      {
+        kind: "guardian_release_copy",
+        waiverRecordId: "00000000-0000-4000-8000-00000000d001",
+        shopId: shop.id,
+        to: "jordan@example.invalid",
+        locale: "en-US",
+        guardianName: "Jordan Fischer",
+        diverName: "Lena Fischer",
+        shopName: "Blue Mantis Divers",
+        releaseTitle: "Liability Release",
+        releaseVersion: 3,
+        signedAt: new Date("2026-08-01T13:00:00.000Z"),
+        timezone: "America/New_York",
+      } as Notification,
+      failsRetryably,
+    );
+
+    // The failure is still reported as retryable — the provider said so, and
+    // lying about that would hide a throttle from the logs. What changes is
+    // that nobody keeps the payload.
+    expect(delivery).toMatchObject({ status: "failed", retryable: true });
+    expect(
+      await db
+        .select()
+        .from(notificationSendQueue)
+        .where(eq(notificationSendQueue.shopId, shop.id)),
+    ).toEqual([]);
+  });
+
   it("lifts the subject's own handles out for a message addressed to somebody else", async () => {
     // The seam the erasure sweep rests on, exercised through `queueRetry`
     // rather than by inserting a row by hand: `course_inquiry` is addressed to

@@ -28,6 +28,7 @@ import {
   type NotificationProvider,
   type NotificationSender,
   notificationIdempotencyKey,
+  notificationIsQueueable,
   notificationProviderFromEnvironment,
   notificationSchema,
   notificationSubjectEmail,
@@ -176,6 +177,10 @@ function openQueuedPayload(sealed: string, key: SecretKey): Notification | null 
  * a code path anyone exercises: inventing a shop id to satisfy the column
  * would attach a platform alert to an arbitrary tenant's row and put it in
  * that tenant's export.
+ *
+ * The second refusal is `notificationIsQueueable`, which asks whether legal
+ * erasure could ever find the row again. Only `guardian_release_copy` answers
+ * no, and its reasoning is written where the answer is given.
  */
 async function queueRetry(
   db: AppDb,
@@ -183,6 +188,7 @@ async function queueRetry(
   delivery: Extract<NotificationDelivery, { status: "failed" }>,
 ) {
   if (!("shopId" in input)) return;
+  if (!notificationIsQueueable(input)) return;
   // Sealed before it reaches the column, never after (issue #1297). With no
   // key there is nowhere safe to put a payload carrying a capability URL, and
   // storing one in plaintext to preserve a retry would trade a working

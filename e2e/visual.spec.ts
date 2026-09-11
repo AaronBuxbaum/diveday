@@ -3754,7 +3754,7 @@ for (const scheme of ["light", "dark"] as const) {
         // draws (issue #1573). It is why this capture moved: the form grew one
         // line under the two guardian fields.
         await expect(
-          row.getByLabel("This parent and this diver have the same name", { exact: false }),
+          row.getByLabel("This co-signer and this diver have the same name", { exact: false }),
         ).toBeVisible();
         await capture(page, "check-in-waiver-refused", scheme);
       });

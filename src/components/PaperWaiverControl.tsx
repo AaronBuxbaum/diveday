@@ -65,9 +65,19 @@ export function PaperWaiverControl({
    * and scopes it to the booking or record the refusal named, so a roster of
    * minors does not all sprout the same tick.
    *
+   * **Two surfaces set it, and the diver record is deliberately not one of
+   * them.** The checkbox says, in the first person, that the staffer watched
+   * two people sign; the counter queue and the trip roster are the doors a
+   * diver is standing at, and the diver record is documented as the absentee
+   * case (`InPersonWaiverSubject` in `src/db/waivers.ts` — "they phoned ahead,
+   * or handed the release over months before they book anything"). Offering
+   * the tick to somebody reading a scanned PDF asks them to attest to a thing
+   * nobody witnessed, and `in_person_attested_namesake` exists to tell a
+   * regulator that somebody did (`dive-domain-expert`, issue #1453).
+   *
    * **That scoping is a habit fence, not an enforcement.** `?notice=` is
-   * untrusted input on all three surfaces, so a staffer can reach a form with
-   * this drawn by typing a URL, and a request built by hand skips the form
+   * untrusted input on both surfaces, so a staffer can reach a form with this
+   * drawn by typing a URL, and a request built by hand skips the form
    * entirely. What actually contains the assertion is in the writer: the two
    * names must genuinely match before the tick is honoured at all
    * (`recordInPersonWaiver`), the release records *which* of the two things

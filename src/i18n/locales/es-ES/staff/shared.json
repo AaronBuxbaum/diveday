@@ -23,7 +23,7 @@
     "guardianNameLabel": "Madre, padre o tutor que firmó",
     "guardianRelationshipLabel": "Relación",
     "guardianRelationshipChoose": "Elige una opción",
-    "guardianNamesakeLabel": "Esta madre o padre y este buceador tienen el mismo nombre en sus documentos de identidad. Vi a los dos firmar la exención en papel."
+    "guardianNamesakeLabel": "Esta persona que firma y este buceador tienen el mismo nombre en sus documentos de identidad. Vi a los dos firmar la exención en papel."
   },
   "guardian": {
     "relationship": {

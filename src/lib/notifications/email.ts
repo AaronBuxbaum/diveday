@@ -67,6 +67,8 @@ type GuardianReleaseCopyEmailInput = {
   releaseVersion: number;
   signedAt: Date;
   timezone: string;
+  /** See `guardianReleaseCopySchema` — it changes the closing sentence only. */
+  medicalReviewPending?: boolean;
 };
 
 type ReadinessLinkEmailInput = {
@@ -1328,12 +1330,23 @@ export function guardianReleaseCopyEmail(input: GuardianReleaseCopyEmailInput): 
     releaseVersion: input.releaseVersion,
     signedAt: escapeHtml(signedAt),
   });
-  const note = t("notifications.guardianReleaseCopy.note");
+  const note = input.medicalReviewPending
+    ? t("notifications.guardianReleaseCopy.noteMedicalReview", {
+        shopName: input.shopName,
+        diverName: input.diverName,
+      })
+    : t("notifications.guardianReleaseCopy.note");
+  const noteHtml = input.medicalReviewPending
+    ? t("notifications.guardianReleaseCopy.noteMedicalReview", {
+        shopName: escapeHtml(input.shopName),
+        diverName: escapeHtml(input.diverName),
+      })
+    : note;
 
   return {
     subject: t("notifications.guardianReleaseCopy.subject", { diverName: input.diverName }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${note}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p>${note}</p>`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p>${noteHtml}</p>`,
   };
 }
 

@@ -442,11 +442,16 @@ new domain concept, define it here in the same PR.
   the integrity seal and the export bundle. The guardian's email is **optional**, and the one thing
   it is for is a copy of what was signed (see **Guardian's copy** below).
   **Two codes, and only two** — `parent` and `legal_guardian`, confirmed by the owner on 2026-09-10
-  (issue 1541) rather than widened. A grandparent, stepparent, foster carer or a school group
-  leader with eight children is handled at the counter through the **paper / in-person signature**,
-  where a named staffer attests to what they watched, instead of the record asserting a
-  relationship that is false. Free text was rejected in the ADR because the code renders to staff
-  in their own language, and that reason still holds; revisit only if a pilot shop reports it.
+  (issue 1541) rather than widened. Free text was rejected in the ADR because the code renders to
+  staff in their own language, and that reason still holds. **The paper path is not an escape hatch
+  from the two codes**, and an earlier version of this entry said that it was:
+  `recordInPersonWaiver` runs the same `isGuardianRelationship` check the online form does, so a
+  grandmother signing for her grandson at the counter still picks `parent` or `legal_guardian`, and
+  only the second is true of her if a court has said so. What the paper path adds beside that code
+  is the staffer's own name on the row (`recorded_by_person_id`), which is evidence about who
+  watched, not about who the signer is. The cost is a stepparent, foster carer or group leader
+  filing a release under a code that is not quite theirs; accepted for now, and the thing a pilot
+  shop would report (`dive-domain-expert`, issue #1453).
 
   **"Guardian" means two different things in this product and they are never the same record.** The
   *waiver guardian* defined here is a party to one document — six columns on `waiver_records`, never
@@ -460,10 +465,16 @@ new domain concept, define it here in the same PR.
   diver, the release title and version and the day it was signed, and **carries no link of any
   kind**: no bearer URL, no token, and no medical answers. A guardian is a party to one document,
   not a marketing contact and not an account, so it is a courtesy to a third party rather than a
-  per-booking delivery channel — no `notification_deliveries` row is written for it, and it is
-  keyed once per release record. No address means no copy, which is every paper release and every
-  family who has none; the address stopped being required on the same decision, because a
-  grandparent at a counter with no email was being refused outright.
+  per-booking delivery channel — no `notification_deliveries` row is written for it, and a
+  retryable failure is **dropped rather than queued**, because a queue row naming a minor and
+  addressed to somebody else is one legal erasure cannot find (`notificationIsQueueable`). It is
+  *not* keyed to one copy per release, which an earlier version of this entry and the code's own
+  comment both claimed: the send is unguarded, so a resubmitted completion mails a second copy. No
+  address means no copy, which is every paper release and every family who has none; the address
+  stopped being required on the same decision, because a grandparent at a counter with no email was
+  being refused outright. One thing the copy does carry beyond the release's facts: when the health
+  answers parked the record in medical review, it says a physician has to sign off, because the
+  adult reading it is the one who takes the child to that physician.
 - **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
   OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
   `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence

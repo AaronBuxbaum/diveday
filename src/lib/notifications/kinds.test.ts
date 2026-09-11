@@ -87,10 +87,10 @@ describe("every handle a notification carries is reachable by the erasure sweep"
       inquirerEmail: "diver@example.invalid",
       inquirerPhone: "+1 305 555 0134",
     } as Notification,
-    // The guardian reads it; the minor is the person it is about, by name, at a
-    // named shop, on a named day (issue #1453). Without `diverEmail` reaching
-    // `notificationSubjectEmail`, an erased diver's queued copy would outlive
-    // them in the send queue.
+    // Addressed to the guardian and carrying no address for the minor at all:
+    // this kind is never queued (`notificationIsQueueable`), so there is no row
+    // for an erasure sweep to reach and nothing to lift into a column for it
+    // (issue #1453).
     guardian_release_copy: {
       kind: "guardian_release_copy",
       waiverRecordId: "00000000-0000-4000-8000-000000000007",
@@ -104,7 +104,6 @@ describe("every handle a notification carries is reachable by the erasure sweep"
       releaseVersion: 3,
       signedAt: new Date("2026-08-01T13:00:00.000Z"),
       timezone: "America/New_York",
-      diverEmail: "lena@example.invalid",
     } as Notification,
     new_account_alert: {
       kind: "new_account_alert",
