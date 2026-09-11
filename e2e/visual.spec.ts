@@ -7252,10 +7252,29 @@ for (const scheme of ["light", "dark"] as const) {
       await capture(page, "dive-site-planning-note", scheme);
     });
 
+    /**
+     * **The one state on this page where an absence *is* the information**
+     * (issue #1363), photographed on both surfaces that render it.
+     *
+     * The staffed capture is read by a manager at a desk, who can go and fix
+     * it. The offline one is read by a divemaster at the rail from cache, with
+     * no signal and usually no permission to open Settings at all — which is
+     * why the string underneath stopped handing them an errand. Neither frame
+     * existed before, and the populated card sits inside
+     * `offline-manifest-roll-call` already, so this is the half that was
+     * photographed nowhere.
+     *
+     * One test, not two: clearing the reference through the shop's own form is
+     * the expensive half, and the offline snapshot is primed from the staff
+     * manifest *after* the clear has landed, so the copy the shell reads back
+     * carries it.
+     */
     test(`the manifest prompts for an emergency reference nobody filled in (${scheme})`, async ({
       page,
       privateShop,
     }) => {
+      // Settings → clear → manifest → the saved copy, in one flow.
+      test.setTimeout(FLOW_TIMEOUT_MS);
       await page.goto(`/shop/${privateShop.slug}/settings`);
       await openSettingsRow(page, "Emergency reference");
       // Cleared through the shop's own form, which is how a shop would arrive
@@ -7286,6 +7305,18 @@ for (const scheme of ["light", "dark"] as const) {
       // capture is the state where there is nothing under it.
       await page.getByText("No emergency numbers recorded").waitFor();
       await capture(page, "manifest-emergency-empty", scheme);
+
+      // The same absence, on the copy the boat falls back to. The wait is on
+      // the prompt's own words rather than a timeout: if the snapshot were
+      // primed before the clear landed, this frame would photograph a
+      // *populated* card under an "empty" name, and waiting on the rendered
+      // text is what makes that failure loud instead of silent.
+      await settleOfflineShellWorker(page);
+      await openOnThisPhone(page);
+      await page.getByRole("link", { name: "Open offline roll call" }).click();
+      await page.waitForURL(/offline-manifest/);
+      await page.getByText("No emergency numbers recorded").waitFor();
+      await capture(page, "offline-manifest-emergency-empty", scheme);
     });
   });
 }
