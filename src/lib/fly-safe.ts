@@ -37,7 +37,7 @@ import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
  * establishes; it said "this was not your first day diving", which is true of
  * every certified diver alive.
  *
- * Four limits worth knowing before this is extended, and none of them can be
+ * Five limits worth knowing before this is extended, and none of them can be
  * closed from inside this module.
  *
  * DAN's guidance covers **no-decompression** recreational diving — a dive that
@@ -55,6 +55,19 @@ import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
  * and walk-ups are a large share of a busy shop's multi-day divers. Issue
  * #1439 widened this to a second day at this shop; it did not make the shop's
  * records of a person complete.
+ *
+ * Whose answer it is, rather than what it can see: the sentence reaches a
+ * person through a **booking** — `getRecapPageData` resolves it from a booking
+ * id, and `sendRecaps` sends it to booking rows — so crew, who are
+ * `trip_assignments` rows rather than bookings, never receive one at all.
+ * Divemasters diving five or six days a week are the population the "multiple
+ * days of diving" clause is most about, and they are the group this cannot
+ * reach. That is a deferral, not an oversight: the reader needs no work, since
+ * `peopleWhoDivedBefore` already answers for any person id, and what is
+ * missing is a surface — the day close-out, the staffer's own record, or
+ * nowhere. A `dive-domain-expert` review on #1552 raised it, issue #1557 has
+ * the argument, and H-75 in `docs/product/human-decisions.md` is where the
+ * owner's call gets written down.
  *
  * What that guidance is about, finally, is **exposure to altitude**, of which
  * a pressurised cabin is only the common case. A shop with a mountain road

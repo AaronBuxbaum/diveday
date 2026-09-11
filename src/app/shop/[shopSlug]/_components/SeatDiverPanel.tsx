@@ -125,12 +125,12 @@ export function SeatDiverPanel({
                     </button>
                   </form>
                   {match.email || match.phone ? (
-                    <span className="text-muted text-xs ml-1">
+                    <span className="text-muted text-xs ms-1">
                       ({[match.email, match.phone].filter(Boolean).join(", ")})
                     </span>
                   ) : null}
                   {match.lastDiveDayAt && copy.confirmMatchesLastDive ? (
-                    <span className="text-muted text-xs ml-1">
+                    <span className="text-muted text-xs ms-1">
                       {copy.confirmMatchesLastDive(match.lastDiveDayAt)}
                     </span>
                   ) : null}

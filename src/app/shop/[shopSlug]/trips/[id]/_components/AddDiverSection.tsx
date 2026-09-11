@@ -95,12 +95,12 @@ export function AddDiverSection({
                     </button>
                   </form>
                   {match.email || match.phone ? (
-                    <span className="text-muted text-xs ml-1">
+                    <span className="text-muted text-xs ms-1">
                       ({[match.email, match.phone].filter(Boolean).join(", ")})
                     </span>
                   ) : null}
                   {match.lastDiveDayAt ? (
-                    <span className="text-muted text-xs ml-1">
+                    <span className="text-muted text-xs ms-1">
                       {t("divers.page.confirmMatchesLastDive", {
                         date: formatShortDate(match.lastDiveDayAt, locale, timeZone),
                       })}
