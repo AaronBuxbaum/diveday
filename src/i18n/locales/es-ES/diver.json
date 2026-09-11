@@ -1078,7 +1078,7 @@
     "contactName": "Nombre del contacto",
     "contactPhone": "Teléfono del contacto",
     "emergencyOnFile": "Ya registrado: {name} · {phone}.",
-    "emergencyContactChangeHint": "Cámbialo aquí si está desactualizado. Dejar un campo vacío mantiene lo que ya está registrado.",
+    "emergencyContactChangeHint": "Cámbialo aquí si está desactualizado. Dejar un campo vacío mantiene lo que ya está registrado. Pídele al centro que elimine el contacto de tu ficha si ya no quieres tenerlo.",
     "signature": "Tu firma",
     "typeFullName": "Escribe tu nombre completo",
     "typeFullNameHint": "Como está en la reserva: {name}",

@@ -138,6 +138,13 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // The link's own expiry is stated on the page, not just in the email that
   // sent it (task 51).
   await expect(page.getByText(/This link works until/)).toBeVisible();
+  // A blank never overwrites a stored contact, so there is no way in the
+  // product for a diver to say "there is nobody" — the hint says where to go
+  // instead of leaving them guessing (#1399). This branch renders only when a
+  // name *and* a phone are already on file, which the seeded roster carries.
+  await expect(
+    page.getByText(/Ask the shop if you need the contact taken off your record/),
+  ).toBeVisible();
   // The footer's "need help" link goes to the shop's own contact channel, not
   // DiveDay's marketing homepage (a regression this page used to have).
   await expect(page.getByRole("link", { name: "Contact Blue Mantis Divers" })).toHaveAttribute(

@@ -1078,7 +1078,7 @@
     "contactName": "Contact name",
     "contactPhone": "Contact phone",
     "emergencyOnFile": "Already on file: {name} · {phone}.",
-    "emergencyContactChangeHint": "Change it here if it’s out of date. Leaving a field blank keeps what’s on file.",
+    "emergencyContactChangeHint": "Change it here if it’s out of date. Leaving a field blank keeps what’s on file. Ask the shop if you need the contact taken off your record.",
     "signature": "Your signature",
     "typeFullName": "Type your full name",
     "typeFullNameHint": "As booked: {name}",
