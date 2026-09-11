@@ -41,12 +41,6 @@ import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
  * - **Overflow wraps, never scrolls.** Labels stay `whitespace-nowrap`, and a
  *   row too wide for its container stacks onto a second line with each row's
  *   options sharing the width, rather than sliding sideways.
- * - **A caller may supply a shorter word for below `sm`** (`shortLabel`), for a
- *   track whose full labels wrap a phone even after that. Only where the full
- *   name is already on screen at that width: the short form is a handle, not a
- *   rename. Both forms are in the DOM and `hidden` picks one, so whichever is
- *   shown is also the accessible name — no `aria-hidden` juggling and nothing
- *   read twice.
  *
  *   It scrolled until 2026-08-22, and that was measured wrong rather than
  *   decided wrong. At 390px the departure's four tabs came to `scrollWidth 343`
@@ -63,6 +57,12 @@ import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
  *   and hides nothing, which is what the dock test wants; `e2e/` asserts no
  *   control scrolls at 390px in either locale, because a rendered-pixel diff
  *   cannot tell a clipped strip from a scrollable one.
+ * - **A caller may supply a shorter word for below `sm`** (`shortLabel`), for a
+ *   track whose full labels wrap a phone even after that. Only where the full
+ *   name is already on screen at that width: the short form is a handle, not a
+ *   rename. Both forms are in the DOM and `hidden` picks one, so whichever is
+ *   shown is also the accessible name — no `aria-hidden` juggling and nothing
+ *   read twice.
  * - **Never on paper.** A way to switch surfaces means nothing printed, so
  *   the track is `print:hidden` unconditionally.
  *
