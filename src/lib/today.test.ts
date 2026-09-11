@@ -712,6 +712,31 @@ describe("the Say hello row", () => {
 });
 
 /**
+ * **A waiting diver reaches everyone** (issues #1505/#1518). The inbox carried
+ * an owner/manager gate until 2026-09-10, and this row was narrowed to match
+ * it; the owner opened both, so the row follows. Pinned per role rather than
+ * left to the registry literal, because the failure this guards against is
+ * quiet: a narrowed row does not error, it just stops telling the person at
+ * the dock that a diver is waiting.
+ */
+describe("the unanswered-messages row", () => {
+  it("reaches every staff role, because every staff role may answer it", () => {
+    for (const role of [
+      "owner",
+      "manager",
+      "instructor",
+      "divemaster",
+      "captain",
+      "crew",
+    ] as const) {
+      expect(
+        filterActionsForRoles([action({ kind: "unanswered_messages" })], [role]).withheldCount,
+      ).toBe(0);
+    }
+  });
+});
+
+/**
  * **The quiet day** — the composition's other silence, and the one that decides
  * whether the spine renders at all (SPEC 6c's pinned pair, "A quiet day at the
  * dock." over "No boats today, and nothing is waiting on you.").

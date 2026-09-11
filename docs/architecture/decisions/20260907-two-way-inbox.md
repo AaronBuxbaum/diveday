@@ -89,6 +89,21 @@ URL the app then acts on without checking it against what the stack provisioned.
    the daily crew is a decision for a shop that has run the inbox for a season, not for the change
    that built it.
 
+   **Amended 2026-09-10: widened to every live staff role** (issues #1505/#1518, an H-14
+   amendment made by the product owner). Reading and answering both open; `canAnswerShopInbox` and
+   `canPersonAnswerShopInbox` are deleted rather than relaxed, because "any live staff role" is
+   what `requireShopSurface` and `requireDiverActionContext` already assert, and an ungated staff
+   surface in this repo carries no predicate. The season of experience the paragraph above waited
+   for was not the thing the owner needed: the message that most wants answering at 7am is
+   answered by whoever is at the dock, and the insider risk of a staffer typing over the shop's own
+   sender is the one a shop manages by choosing who it employs, not by making a captain wait for a
+   manager. What remains is the live check — a demoted, disabled or deleted account loses both the
+   worklist and the composer on its next request, not at its next sign-in. The rest of this
+   decision stands unchanged: the composer still lives only on the diver's record, and
+   `/shop/<slug>/inbox` is still a worklist that ranks and opens records. Today's
+   `unanswered_messages` row widened with it, because a role that may answer a waiting diver has to
+   be told one is waiting.
+
 ## Alternatives considered
 
 - **Keep `Reply-To` on the front desk and forward a copy into the app** — rejected: two inboxes

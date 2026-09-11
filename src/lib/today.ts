@@ -272,9 +272,11 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   failed_photo_deletion: ["owner", "manager"],
   owed_refund: ["owner", "manager"],
   reviews_pending: ["owner", "manager"],
-  // The same two roles the inbox itself is gated to (`canAnswerShopInbox`):
-  // a row pointing at a page its reader cannot open is a dead end.
-  unanswered_messages: ["owner", "manager"],
+  // Every staff role, since the inbox stopped carrying a gate of its own on
+  // 2026-09-10 (issues #1505/#1518). A row pointing at a page its reader
+  // cannot open is a dead end — and the other way round, a role that may
+  // answer a waiting diver is a role that has to be told one is waiting.
+  unanswered_messages: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_overdue: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_due_back: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_service_due: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],

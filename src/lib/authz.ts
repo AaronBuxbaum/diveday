@@ -296,23 +296,3 @@ export function canOverrideGearRequest(roles: readonly Role[] | undefined): bool
       role === "owner" || role === "manager" || role === "instructor" || role === "divemaster",
   );
 }
-
-/**
- * **Read the shop's inbox and answer it** (ADR 20260907-two-way-inbox).
- *
- * Owner or manager, for the two reasons the same boundary already exists
- * around the shop's other outward-facing voice. What a staffer types here
- * leaves as the shop, to a diver, over the shop's own sender — the same
- * accountability `canManageMessagingSettings` puts on connecting that sender
- * in the first place. And the list holds strangers: a message from an address
- * nobody on the roster holds arrives with its sender's contact details, which
- * is the argument that put the requests board behind a gate too.
- *
- * A captain who needs to know a diver is running late reads it where they
- * already work — the diver is on their manifest, and this is not the surface
- * that tells them. Widening it is a decision for a shop that has run the
- * inbox for a season, not for the change that builds it.
- */
-export function canAnswerShopInbox(roles: readonly Role[] | undefined): boolean {
-  return isOwnerOrManager(roles);
-}

@@ -7,7 +7,6 @@ import { z } from "zod";
 import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
 import { anonymizeDiver } from "@/db/anonymize";
 import {
-  canPersonAnswerShopInbox,
   canPersonDeleteDiver,
   canPersonErasePersonalData,
   canPersonMergeDiver,
@@ -1547,10 +1546,19 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
  * **Answer the diver, in the channel they wrote on** (ADR
  * 20260907-two-way-inbox).
  *
- * Two gates, in this order: the live staff check every action on this page
- * makes, then the inbox's own owner/manager gate — re-read here rather than
- * trusted from the render that drew the composer, because hiding a control is
- * a courtesy and never the control itself.
+ * **Every live staff role may send as the shop.** Decided by the product owner
+ * on 2026-09-10 as an amendment to H-14 (issues #1505/#1518), and this is the
+ * place it is written down. The argument that opened the inbox to reading
+ * extends to writing: the message that most wants answering at 7am is
+ * answered by whoever is at the dock, and the insider risk of a staffer typing
+ * over the shop's own sender is the one a shop manages by choosing who it
+ * employs, not by making a captain wait for a manager.
+ *
+ * So there is one gate left, and `requireDiverActionContext` makes it: the
+ * `isLiveStaff` check every action on this page runs before its own. A
+ * demoted, disabled or deleted account loses the composer on its next request
+ * rather than at its next sign-in, which is what the deleted owner/manager
+ * gate was really buying.
  *
  * Everything after that belongs to `sendStaffReply`, which owns the whole
  * consequence: the message decides the channel, the diver's own locale decides
@@ -1566,9 +1574,6 @@ export async function replyToDiverAction(shopSlug: string, personId: string, for
   );
   personId = context.personId;
   const { base, db, staff } = context;
-  if (!(await canPersonAnswerShopInbox(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, backTo(base, "not-authorized-reply", "reply"));
-  }
   // A posted id is caller-controlled: narrowed before it reaches a `uuid`
   // comparison, and answered with the same "no such message" a wrong-record or
   // wrong-tenant id gets.

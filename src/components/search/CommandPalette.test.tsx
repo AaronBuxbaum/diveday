@@ -65,7 +65,7 @@ function renderPalette() {
   return render(
     <CommandPalette
       shopSlug="blue-mantis"
-      gates={{ waivers: true, reports: true, team: true, settings: true, inbox: true }}
+      gates={{ waivers: true, reports: true, team: true, settings: true }}
       locale="en-US"
       languages={[]}
       setLocaleAction={async () => {}}

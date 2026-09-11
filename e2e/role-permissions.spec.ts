@@ -181,6 +181,36 @@ test.describe("H-14 role permissions", () => {
         page.getByText(/Importing writes divers’ personal and medical records/i),
       ).toBeVisible();
     });
+
+    /**
+     * **The inbox is not one of the gated surfaces** (issues #1505/#1518,
+     * decided 2026-09-10 as an H-14 amendment). It was, for three days: reading
+     * and answering both sat behind owner/manager until the owner widened them,
+     * on the argument that the message that most wants answering at 7am is
+     * answered by whoever is at the dock. The two halves are asserted together
+     * because they were one decision — the worklist opens, and the composer on
+     * the diver's record is there to type into.
+     */
+    test("the daily crew may read the shop inbox and answer a diver", { tag: READ_ONLY }, async ({
+      page,
+    }) => {
+      await page.goto(`/shop/${SHOP}/inbox`);
+      // The worklist's own heading, not a bounce to Today with a notice on it
+      // — which is what every refusal in the test above looks like.
+      await expect(page).toHaveURL(`/shop/${SHOP}/inbox`);
+      await expect(
+        page.getByRole("heading", { level: 1, name: "What divers wrote" }),
+      ).toBeVisible();
+
+      // Through the row to the record, the way a captain would reach it. The
+      // composer's presence is the whole assertion: nothing is typed and
+      // nothing is sent, so this stays READ_ONLY (the send is
+      // `e2e/inbox.spec.ts`).
+      await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
+      await expect(
+        page.getByLabel("Reply by email to priya.sharma@example.com", { exact: true }),
+      ).toBeVisible();
+    });
   });
 
   test.describe("instructor", () => {

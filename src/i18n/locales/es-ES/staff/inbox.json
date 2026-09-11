@@ -51,6 +51,6 @@
     "cannotBeSent": "Esta respuesta no se puede enviar tal como está. No salió nada, y volver a intentarlo no cambiará eso.",
     "whatsappWindowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo.",
     "whatsappNotConnected": "Para responder por WhatsApp hace falta el remitente que conectas en Ajustes.",
-    "notAuthorized": "Responder a los buceadores es trabajo del propietario o del gerente."
+    "notAuthorized": "Tu cuenta ya no puede responder a los buceadores en este centro. Pide a un propietario o gerente que revise tu acceso."
   }
 }

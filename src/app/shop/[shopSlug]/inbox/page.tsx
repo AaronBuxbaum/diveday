@@ -3,7 +3,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { LedgerGroup } from "@/components/ui/ledger";
-import { canPersonAnswerShopInbox } from "@/db/authz";
 import { pagedInboxMessages } from "@/db/inbound-messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -44,15 +43,13 @@ export default async function InboxPage({
 }) {
   const { shopSlug } = await params;
   const { page } = await searchParams;
-  // Checked against the database rather than the JWT, so a demoted manager
-  // loses the inbox on their next request. The nav already hides the
-  // destination from everyone else (ADR
-  // 20260724-role-gated-surfaces-hide-not-explain); this is for a bookmark, a
-  // deep link, or a role that changed under someone.
-  const { db, shop } = await requireShopSurface(shopSlug, {
-    allow: canPersonAnswerShopInbox,
-    refusal: { notice: "inbox-not-authorized" },
-  });
+  // No gate of its own since 2026-09-10 (issues #1505/#1518): every live staff
+  // role may read this and answer it. `requireShopSurface` is still the whole
+  // check — `requireStaffSession` re-reads the account's live roles on every
+  // request and sends a disabled, deleted or fully demoted staffer to
+  // `/sign-in?session=ended`, and the tenant assert follows it — so a stale
+  // 30-day token buys nobody the shop's messages.
+  const { db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 

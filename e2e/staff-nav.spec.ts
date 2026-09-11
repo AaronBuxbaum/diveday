@@ -143,6 +143,7 @@ test.describe("captain", () => {
       "Dive sites",
       "Gear",
       "Reviews",
+      "Inbox",
       "Orders",
     ]);
     // "Set up" collapses to the one personal row — a visible heading over a
@@ -152,21 +153,12 @@ test.describe("captain", () => {
     ]);
     // Requests is gated with Reports and Promo codes: it holds contact details
     // for people who have not booked, and choosing which unscheduled day gets a
-    // boat is desk work, not the captain's. Inbox is gated for the neighbouring
-    // reason (`canAnswerShopInbox`, owner/manager): a reply leaves as the shop,
-    // and the list carries addresses for people who never booked. Named here
-    // rather than left to the length of the list above, so the gate is asserted
-    // rather than implied — whichever way #1518 is answered, this is the line
-    // that has to change with it.
-    for (const gated of [
-      "Waivers",
-      "Requests",
-      "Inbox",
-      "Reports",
-      "Team",
-      "Promo codes",
-      "Settings",
-    ]) {
+    // boat is desk work, not the captain's. Inbox is *not* here any more — it
+    // sat in this loop until 2026-09-10, when #1505/#1518 opened reading and
+    // answering to every live staff role; it is asserted visible in the list
+    // above instead. Each row below is named rather than left to the length of
+    // that list, so a gate is asserted rather than implied.
+    for (const gated of ["Waivers", "Requests", "Reports", "Team", "Promo codes", "Settings"]) {
       await expect(menu.getByRole("link", { name: gated })).toHaveCount(0);
     }
   });

@@ -1,6 +1,5 @@
 import { and, eq } from "drizzle-orm";
 import {
-  canAnswerShopInbox,
   canConfigureTrips,
   canDeleteDiver,
   canErasePersonalData,
@@ -190,12 +189,3 @@ export const canPersonOverrideGearRequest = (db: DbExecutor, shopId: string, per
 /** Live DB-checked companion of the staff-account gate (20260726-staff-invite-accounts). */
 export const canPersonManageStaffAccounts = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageStaffAccounts);
-
-/**
- * Live DB-checked companion of the inbox gate (ADR 20260907-two-way-inbox).
- * Read on every request rather than off the session's stamped roles: a reply
- * goes out as the shop, so a demoted manager loses the composer on their next
- * request instead of at their next sign-in.
- */
-export const canPersonAnswerShopInbox = (db: DbExecutor, shopId: string, personId: string) =>
-  canPerson(db, shopId, personId, canAnswerShopInbox);

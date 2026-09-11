@@ -63,7 +63,7 @@ function outbound(status: "sent" | "failed" = "sent"): ThreadEntry {
   } as ThreadEntry;
 }
 
-function renderSection(entries: ThreadEntry[], canAnswer = true, removed = false) {
+function renderSection(entries: ThreadEntry[], removed = false) {
   return render(
     <ConversationSection
       entries={entries}
@@ -73,7 +73,6 @@ function renderSection(entries: ThreadEntry[], canAnswer = true, removed = false
       locale="en-US"
       timezone="America/Cancun"
       now={NOW}
-      canAnswer={canAnswer}
       removed={removed}
       t={t}
     />,
@@ -137,12 +136,6 @@ describe("a conversation", () => {
     expect(screen.queryByLabelText(/^Reply by/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
   });
-
-  it("hides the composer from a staffer who may not answer", () => {
-    renderSection([inbound()], false);
-    expect(screen.queryByLabelText(/^Reply by email/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
-  });
 });
 
 /**
@@ -153,14 +146,14 @@ describe("a conversation", () => {
  */
 describe("a removed diver", () => {
   it("keeps the conversation readable but offers no composer", () => {
-    renderSection([inbound()], true, true);
+    renderSection([inbound()], true);
     expect(screen.getByText("Could I switch to the afternoon boat?")).toBeInTheDocument();
     expect(screen.queryByLabelText(/^Reply by/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
   });
 
   it("says why the box is gone rather than letting it vanish", () => {
-    renderSection([inbound()], true, true);
+    renderSection([inbound()], true);
     expect(
       screen.getByText("This diver’s record was removed, so replies are switched off."),
     ).toBeInTheDocument();
@@ -183,7 +176,6 @@ describe("a removed diver", () => {
           },
         } as Partial<ThreadEntry & { direction: "inbound" }>),
       ],
-      true,
       true,
     );
     expect(

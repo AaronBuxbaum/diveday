@@ -23,14 +23,12 @@ const owner: StaffDestinationGates = {
   reports: true,
   team: true,
   settings: true,
-  inbox: true,
 };
 const crew: StaffDestinationGates = {
   waivers: false,
   reports: false,
   team: false,
   settings: false,
-  inbox: false,
 };
 
 describe("the staff destination registry", () => {
@@ -156,18 +154,10 @@ describe("permission gating", () => {
     // Requests carries the `reports` gate rather than none: it is a pile of
     // contact details for people who have not booked, and deciding which
     // unscheduled day is worth a boat is the same commercial work Reports and
-    // Promo codes sit behind. The inbox carries a gate of its own
-    // (`canAnswerShopInbox`) for the near half of that reason plus one more: a
-    // reply typed there leaves as the shop.
-    expect(gated).toEqual([
-      "waivers",
-      "requests",
-      "inbox",
-      "reports",
-      "team",
-      "promoCodes",
-      "settings",
-    ]);
+    // Promo codes sit behind. The inbox is *not* on this list — it carried a
+    // gate of its own until 2026-09-10, when the owner opened reading and
+    // answering to every live staff role (issues #1505/#1518).
+    expect(gated).toEqual(["waivers", "requests", "reports", "team", "promoCodes", "settings"]);
 
     const visible = visibleStaffDestinations(crew).map((destination) => destination.id);
     const palette = staffPaletteDestinations(crew).map((destination) => destination.id);
@@ -194,7 +184,6 @@ describe("permission gating", () => {
       reports: true,
       team: false,
       settings: false,
-      inbox: false,
     };
     const ids = visibleStaffDestinations(reportsOnly).map((destination) => destination.id);
     expect(ids).toContain("reports");
@@ -248,6 +237,18 @@ describe("what each consumer derives", () => {
       "calendarFeed",
       "settings",
     ]);
+  });
+
+  /**
+   * The widening of 2026-09-10 (issues #1505/#1518) read from the nav: Inbox
+   * is a "Run the shop" row for the captain and the deckhand too, not only for
+   * the desk. Asserted on its own rather than left to the gated-ids list
+   * above, because that list would still pass if Inbox were dropped from the
+   * registry outright.
+   */
+  it("puts Inbox in More for the daily crew, not only for owners", () => {
+    expect(staffNavDestinations("daily", crew).map((d) => d.id)).toContain("inbox");
+    expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("inbox");
   });
 
   it("keeps only non-places out of the nav", () => {

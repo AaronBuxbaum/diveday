@@ -57,9 +57,11 @@ record grows a **Conversation** group, both directions in one column, with a com
 the diver's latest message on the channel it arrived on and in the diver's own recorded locale
 (`src/db/staff-reply.ts` owns the whole consequence: channel, language, Meta's 24-hour window
 checked before the send, and the outcome recorded whether it went or not). Today carries one
-`unanswered_messages` row and nothing at zero. Owner and manager only
-(`canAnswerShopInbox`): a reply leaves as the shop, and the list holds addresses for people who
-never booked.
+`unanswered_messages` row and nothing at zero. Owner and manager only at delivery: a reply leaves
+as the shop, and the list holds addresses for people who never booked. **Widened 2026-09-10** to
+every live staff role, reading and answering both — the message that most wants answering at 7am is
+answered by whoever is at the dock (issues #1505/#1518, an H-14 amendment; the two predicates are
+deleted, and the Today row widened with them).
 
 ## The counter survives a lost signal (delivered 2026-09-07)
 

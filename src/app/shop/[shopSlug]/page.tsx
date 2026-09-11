@@ -108,7 +108,6 @@ const AUTH_NOTICES: Record<string, StaffMessageKey> = {
   "export-not-authorized": "shopHome.notice.exportNotAuthorized",
   "reports-not-authorized": "shopHome.notice.reportsNotAuthorized",
   "requests-not-authorized": "shopHome.notice.requestsNotAuthorized",
-  "inbox-not-authorized": "shopHome.notice.inboxNotAuthorized",
   "settings-not-authorized": "shopHome.notice.settingsNotAuthorized",
   // These four used to land on Settings, which was the nearest parent that
   // could explain them. Settings is owner/manager work now, and every one of
