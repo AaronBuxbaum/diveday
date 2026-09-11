@@ -202,6 +202,9 @@ test.describe("a screen speaks the shop's language, not the television's", () =>
       // The footer renders on every board, empty day or not. Before this the
       // reader's `Accept-Language` won and it read "Actualizado a las …".
       await expect(board.getByText(/^Updated /)).toBeVisible();
+      // And the subtree says which language it is in, since `<html lang>` is
+      // corrected client-side from the television's own `navigator.languages`.
+      await expect(board.locator("main")).toHaveAttribute("lang", "en-US");
     } finally {
       await visitor.close();
     }

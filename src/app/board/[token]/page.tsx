@@ -124,7 +124,17 @@ export default async function DeparturesBoardPage({
   const showsOutlook = departures.some((row) => row.outlook !== null);
 
   return (
-    <main className="boat-mode flex min-h-screen flex-col bg-background px-6 py-6 text-foreground sm:px-10 sm:py-8 lg:px-14 lg:py-12">
+    <main
+      // The one place in the app where the document's language and the
+      // content's can disagree. `<html lang>` is corrected client-side from
+      // `navigator.languages` (src/i18n/lang-script.ts), which on a lobby
+      // television is the hardware's language — and this route deliberately
+      // renders the shop's instead, so the subtree says which language it is
+      // actually in rather than letting a screen reader take the television's
+      // word for it.
+      lang={locale}
+      className="boat-mode flex min-h-screen flex-col bg-background px-6 py-6 text-foreground sm:px-10 sm:py-8 lg:px-14 lg:py-12"
+    >
       <BoardRefresh everyMs={REFRESH_MS} />
       <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
         <h1 className="text-[2rem] leading-tight font-bold tracking-tight text-balance lg:text-[2.75rem]">
