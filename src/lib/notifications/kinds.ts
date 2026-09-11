@@ -434,7 +434,7 @@ const tripRecapSchema = z.object({
   /**
    * When the diver may fly (`src/lib/fly-safe.ts`, issue #1425): the instant,
    * the hours that produced it, and whether the clock started at the last
-   * recorded exit or the boat's scheduled return. Absent when nothing on the
+   * recorded exit or the buffered return. Absent when nothing on the
    * record could honestly say, and then the email says nothing about flying.
    *
    * `reason` is not a detail the email prints — it picks *which* sentence the

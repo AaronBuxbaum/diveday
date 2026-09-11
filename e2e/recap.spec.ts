@@ -281,10 +281,11 @@ test("the day's facts render once, inside the one record a diver keeps", async (
  * shop's repetitive hours, and who set them. The exact string is pinned
  * because every word of it is a claim about a diver's body: the weekday and
  * time come from the seeded departure plus the route's fixed dive shape, and
- * the 24 is the shop default. The lead-in names the interval rather than
- * delivering a verdict — DAN's preflight surface interval is a minimum that
- * lowers DCS risk without removing it, so "fly-safe" promised more than the
- * sentence behind it can support.
+ * the 24 is the shop default. The shop asks, and it asks for a minimum — DAN's
+ * preflight surface interval is a consensus floor that lowers DCS risk without
+ * removing it, so "fly-safe" promised more than the sentence behind it can
+ * support and an unhedged time promised the rest. "With us" is the other
+ * claim: the only dives DiveDay can see are the ones booked here.
  */
 test("the after-state names the earliest flight, once the crew has logged the day (N-04)", async ({
   page,
@@ -298,7 +299,7 @@ test("the after-state names the earliest flight, once the crew has logged the da
   expect(seeded.ok(), await seeded.text()).toBe(true);
   await page.reload();
   await expect(page.getByTestId(AFTER_STATE_TEST_IDS.flySafe)).toHaveText(
-    "Earliest flight Wednesday 6:10 PM: Blue Mantis Divers asks for 24 hours after your last dive, following DAN’s guidance.",
+    "Blue Mantis Divers asks you to wait at least until Wednesday 6:10 PM before flying: 24 hours after your last dive with us, following DAN’s guidance.",
   );
 });
 

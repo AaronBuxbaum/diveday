@@ -364,14 +364,20 @@ describe("tripRecapEmail", () => {
     const email = tripRecapEmail(recapBase);
     expect(email.text).toContain("Thanks for diving Two-Tank Reef");
     expect(email.text).not.toContain("You dived .");
-    expect(email.text).not.toContain("Earliest flight");
+    // No fly-safe result, no sentence: the recap says nothing about flying
+    // rather than guessing an interval from a record that could not say.
+    expect(email.text).not.toContain("before flying");
   });
 
-  // The lead-in names the interval rather than delivering a verdict: DAN's
-  // preflight surface interval is a *minimum* that lowers DCS risk without
-  // removing it, so "fly-safe" read as a promise the sentence cannot make
-  // (issue #1433). The tail is untouched — it attributes the figure to the
-  // shop and the practice to DAN, which is the claim the code can support.
+  // The sentence is the shop asking, not the product announcing. An
+  // unattributed "Earliest flight 10:10" followed by an attributed reason read
+  // as a fact and then its justification, which handed the authority to the
+  // time; naming the shop in the lead-in puts it where the claim is made. Two
+  // more words carry two claims the code can support: "at least", because DAN
+  // publishes consensus *minimums* and longer is safer, and "with us", because
+  // the only dives DiveDay can see are the ones booked at this shop. The tail
+  // is untouched: it attributes the figure to the shop and the practice to
+  // DAN, which is the claim the code can support.
   it("carries the earliest-flight line in the shop's zone, worded off the last dive or the scheduled end", () => {
     // 2026-08-02T14:10Z is a Sunday, 10:10 AM in Key Largo.
     const from = new Date("2026-08-02T14:10:00.000Z");
@@ -380,9 +386,9 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "dives_recorded" },
     });
     expect(afterDive.text).toContain(
-      "Earliest flight Sunday 10:10 AM: Blue Mantis asks for 24 hours after your last dive, following DAN’s guidance.",
+      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: 24 hours after your last dive with us, following DAN’s guidance.",
     );
-    expect(afterDive.html).toContain("Earliest flight Sunday 10:10 AM");
+    expect(afterDive.html).toContain("wait at least until Sunday 10:10 AM before flying");
 
     const afterReturn = tripRecapEmail({
       ...recapBase,
@@ -395,13 +401,19 @@ describe("tripRecapEmail", () => {
       locale: "es-ES",
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "dives_recorded" },
     });
-    expect(spanish.text).toContain("Primer vuelo posible a partir del domingo, 10:10");
+    expect(spanish.text).toContain(
+      "Blue Mantis te pide esperar al menos hasta el domingo, 10:10 antes de volar: 24 horas después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
+    );
   });
 
   // The earlier-day route (issue #1439) reaches two more keys, one per anchor,
-  // and nothing else in this file renders them — a prefix swap applied to the
-  // plain pair and missed on these two would ship a recap whose lead-in
-  // depended on whether the diver had dived the day before (issue #1433).
+  // and nothing else in this file renders them — a lead-in swap applied to the
+  // plain pair and missed on these two would ship a recap whose voice depended
+  // on whether the diver had dived the day before (issue #1433). What the
+  // clause states is the fact the lookback actually establishes: a dive day on
+  // this shop's own record inside two local days. It said "this was not your
+  // first day diving", which is true of every certified diver alive and reads
+  // as a remark about experience rather than about this week.
   it("says an earlier dive day is why the wait is longer, in both anchors and both locales", () => {
     const from = new Date("2026-08-02T14:10:00.000Z");
     const afterDive = tripRecapEmail({
@@ -409,7 +421,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "earlier_day" },
     });
     expect(afterDive.text).toContain(
-      "Earliest flight Sunday 10:10 AM: this was not your first day diving, so Blue Mantis asks for 24 hours after your last dive, following DAN’s guidance.",
+      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: our records show another dive day in the last two days, so 24 hours after your last dive with us, following DAN’s guidance.",
     );
 
     const afterReturn = tripRecapEmail({
@@ -417,7 +429,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "earlier_day" },
     });
     expect(afterReturn.text).toContain(
-      "Earliest flight Sunday 10:10 AM: this was not your first day diving, so Blue Mantis asks for 24 hours after the day was due to end, following DAN’s guidance.",
+      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: our records show another dive day in the last two days, so 24 hours after the day was due to end, following DAN’s guidance.",
     );
 
     const spanish = tripRecapEmail({
@@ -426,8 +438,38 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "earlier_day" },
     });
     expect(spanish.text).toContain(
-      "Primer vuelo posible a partir del domingo, 10:10: no era tu primer día de buceo",
+      "nuestros registros muestran otro día de buceo en los últimos dos días",
     );
+  });
+
+  // Three claims the sentence may not make, pinned across every shape it takes
+  // and both locales rather than in the one wording above, because each of
+  // them came back once already. It may not call the interval a flight the
+  // shop can see ("Earliest flight", "Primer vuelo posible"), it may not state
+  // the wait without the minimum DAN attaches to it, and it may not describe
+  // as *your* last dive a dive it only knows because it was booked here.
+  it("never states the interval as a flight, an unhedged wait, or a dive it cannot see", () => {
+    const from = new Date("2026-08-02T14:10:00.000Z");
+    for (const locale of ["en-US", "es-ES"] as const) {
+      for (const anchor of ["last_dive", "scheduled_return"] as const) {
+        for (const reason of ["dives_recorded", "earlier_day"] as const) {
+          const { text } = tripRecapEmail({
+            ...recapBase,
+            locale,
+            flySafe: { from, hours: 24, anchor, reason },
+          });
+          const where = `${locale} ${anchor} ${reason}`;
+          expect(text, where).toContain(locale === "en-US" ? "at least until" : "al menos hasta");
+          expect(text, where).not.toContain("Earliest flight");
+          expect(text, where).not.toContain("vuelo posible");
+          if (anchor === "last_dive") {
+            expect(text, where).toContain(
+              locale === "en-US" ? "your last dive with us" : "tu última inmersión con nosotros",
+            );
+          }
+        }
+      }
+    }
   });
 });
 

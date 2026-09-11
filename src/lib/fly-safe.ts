@@ -1,5 +1,5 @@
 import { HOUR_MS } from "./clock";
-import { hasReturned } from "./trips";
+import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
 
 /**
  * **"Earliest flight"** — when a diver may board a plane after a day's diving
@@ -11,11 +11,11 @@ import { hasReturned } from "./trips";
  * to wait longer. So the hours are the shop's own pair (`shops.fly_safe_hours_*`,
  * defaults 18 and 24), and the floors below are DAN's minimums. The sentence
  * a diver reads names the shop as the author of the figure and DAN as the
- * practice behind it ("{shop} asks for 24 hours after your last dive,
- * following DAN's guidance") rather than putting the figure in DAN's mouth:
- * DAN publishes 12 and 18, so a sentence reading "24 hours, by DAN's
- * guidance" misquotes it, and a setting under DAN's floor would leave even
- * the weaker claim false.
+ * practice behind it ("{shop} asks you to wait at least until {when} before
+ * flying: 24 hours after your last dive with us, following DAN's guidance")
+ * rather than putting the figure in DAN's mouth: DAN publishes 12 and 18, so
+ * a sentence reading "24 hours, by DAN's guidance" misquotes it, and a setting
+ * under DAN's floor would leave even the weaker claim false.
  *
  * For the same reason the lead-in states the interval rather than a verdict.
  * It read "Fly-safe from {when}:" until issue #1433: a minimum that lowers DCS
@@ -24,7 +24,20 @@ import { hasReturned } from "./trips";
  * The Spanish carried the verdict twice over — "Puedes volar a partir del" is
  * literally *you can fly* — so both locales moved together.
  *
- * Three limits worth knowing before this is extended, and none of them can be
+ * Three more words of it are load-bearing, and each answers a limit below.
+ * The shop is the *subject*, because "Earliest flight 18:10" followed by an
+ * attributed reason read as a fact and then its justification, and the time
+ * got the authority. "At least", because every DAN publication of these
+ * figures carries the qualifier: they are consensus minimums, and longer is
+ * safer. And "with us", because of the second limit below — the sentence may
+ * not describe as *your* last dive a dive it knows only because it was booked
+ * here. The earlier-day clause is scoped the same way ("our records show
+ * another dive day in the last two days"), which is both the honest reading of
+ * {@link FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS} and the fact that clause
+ * establishes; it said "this was not your first day diving", which is true of
+ * every certified diver alive.
+ *
+ * Four limits worth knowing before this is extended, and none of them can be
  * closed from inside this module.
  *
  * DAN's guidance covers **no-decompression** recreational diving — a dive that
@@ -43,16 +56,28 @@ import { hasReturned } from "./trips";
  * #1439 widened this to a second day at this shop; it did not make the shop's
  * records of a person complete.
  *
+ * What that guidance is about, finally, is **exposure to altitude**, of which
+ * a pressurised cabin is only the common case. A shop with a mountain road
+ * between the dock and the airport has divers whose real exposure is the drive,
+ * hours before the flight this names, and nothing in DiveDay knows the road is
+ * there. A shop whose divers take one asks them for more than the defaults;
+ * the diver's sentence stays a sentence about flying, because naming a road
+ * DiveDay cannot see would be the same guess in longer words.
+ *
  * Two things this deliberately does not do. It never computes from a dive
  * profile — depth and bottom time are a computer's business, and DiveDay is
  * not a dive computer. And it never chooses the shorter reading when the
  * record is ambiguous: a day whose record disagrees with its plan takes the
  * repetitive hours, and a record short of its plan or missing its last exit
- * time anchors on the boat's scheduled return rather than on an earlier dive.
+ * time anchors on the buffered return rather than on an earlier dive.
  */
 export type FlySafeBasis = "single" | "repetitive";
 
-/** Where the clock started: the last recorded exit, or the boat's scheduled return. */
+/**
+ * Where the clock started: the last recorded exit, or the buffered return —
+ * the scheduled return plus {@link DEPARTURE_BUFFER_MS}, which is the instant
+ * the rest of the product calls the boat home.
+ */
 export type FlySafeAnchor = "last_dive" | "scheduled_return";
 
 /**
@@ -178,9 +203,11 @@ export type FlySafeResult = {
  *   monotonic by construction.
  * - **Anchor.** The latest recorded exit, provided the record is whole — as
  *   many dives logged as the departure planned, none of them later-numbered
- *   and missing its exit. Otherwise the boat's scheduled return, and only once
- *   {@link hasReturned} says it is home — an earliest-flight time for a boat
- *   still at sea would be a guess dressed as a fact.
+ *   and missing its exit. Otherwise the *buffered* return — the scheduled time
+ *   plus {@link DEPARTURE_BUFFER_MS} — and only once {@link hasReturned} says
+ *   the boat is home: an earliest-flight time for a boat still at sea would be
+ *   a guess dressed as a fact, and one computed as if a late boat tied up on
+ *   time is the same guess with the gate already conceding otherwise.
  */
 export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
   const { executedDives, plannedDives, endsAt, divedRecently, now, hours } = input;
@@ -228,12 +255,26 @@ export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
   if (endsAt && hasReturned(endsAt, now)) {
     // A dive the crew never logged, or logged without an exit time: the
     // return is the only instant on the record that is not before the day's
-    // real last dive ended.
+    // real last dive ended — and the return that satisfies that is the
+    // *buffered* one. Boats run late, which is the whole reason this branch
+    // waits for `hasReturned` (scheduled return plus DEPARTURE_BUFFER_MS)
+    // before it answers at all; anchoring on the bare scheduled time would
+    // use that knowledge to decide whether to speak and then compute as if
+    // the boat tied up on time. A departure due at 14:00 that comes in at
+    // 15:30 would hand the diver a time ninety minutes early — at the
+    // settable minimum of 18 repetitive hours, a real interval of 16.5,
+    // under DAN's floor in a sentence that ends by citing DAN.
+    //
+    // The copy is not the hole. It reads "after the day was due to end",
+    // never "after your last dive", so it never claims the anchor is an
+    // observation; an honest label on an early number is still an early
+    // number.
+    const scheduledHome = endsAt.getTime() + DEPARTURE_BUFFER_MS;
     const anchorAt = lastExit
-      ? new Date(Math.max(lastExit.exitedAt.getTime(), endsAt.getTime()))
-      : endsAt;
+      ? Math.max(lastExit.exitedAt.getTime(), scheduledHome)
+      : scheduledHome;
     return {
-      from: new Date(anchorAt.getTime() + wait * HOUR_MS),
+      from: new Date(anchorAt + wait * HOUR_MS),
       basis,
       reason,
       anchor: "scheduled_return",

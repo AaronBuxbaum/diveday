@@ -7,8 +7,15 @@ import {
   parseFlySafeHours,
 } from "./fly-safe";
 import { formatWeekdayTime } from "./format";
+import { DEPARTURE_BUFFER_MS } from "./trips";
 
 const endsAt = new Date("2026-07-25T22:00:00.000Z");
+/**
+ * The instant the rest of the product calls the boat home, and the only
+ * scheduled-return anchor this module may use: boats run late, `hasReturned`
+ * is what says one is back, and it allows the departure buffer first.
+ */
+const scheduledHome = new Date(endsAt.getTime() + DEPARTURE_BUFFER_MS);
 const home = new Date(endsAt.getTime() + 2 * HOUR_MS);
 const hours = DEFAULT_FLY_SAFE_HOURS;
 
@@ -159,7 +166,7 @@ describe("flySafeFrom", () => {
       hours,
     });
     expect(result).toEqual({
-      from: new Date(endsAt.getTime() + 24 * HOUR_MS),
+      from: new Date(scheduledHome.getTime() + 24 * HOUR_MS),
       basis: "repetitive",
       reason: "dives_planned",
       anchor: "scheduled_return",
@@ -185,10 +192,12 @@ describe("flySafeFrom", () => {
     ).toBeNull();
   });
 
-  it("keeps the logged exit when a short record's one tank ran past the scheduled return", () => {
+  it("keeps the logged exit when a short record's one tank ran past the buffered return", () => {
     // The return is a floor under the anchor, never a ceiling over it: a boat
-    // that came in late must not shorten the wait.
-    const lateExit = new Date(endsAt.getTime() + HOUR_MS);
+    // that came in late must not shorten the wait. The exit is two hours past
+    // the scheduled return so it is past the buffered one too — at one hour it
+    // would merely tie with it and prove nothing.
+    const lateExit = new Date(endsAt.getTime() + 2 * HOUR_MS);
     const result = flySafeFrom({
       executedDives: [{ diveNumber: 1, exitedAt: lateExit }],
       plannedDives: 2,
@@ -242,12 +251,42 @@ describe("flySafeFrom", () => {
       hours,
     });
     expect(result).toEqual({
-      from: new Date(endsAt.getTime() + 24 * HOUR_MS),
+      from: new Date(scheduledHome.getTime() + 24 * HOUR_MS),
       basis: "repetitive",
       reason: "dives_planned",
       anchor: "scheduled_return",
       hours: 24,
     });
+  });
+
+  it("carries the departure buffer into the scheduled-return anchor", () => {
+    // The hole this pins: the branch gated on `hasReturned` — scheduled return
+    // plus the buffer, because boats run late — and then anchored on the bare
+    // scheduled time, computing as if the same boat tied up punctually. A day
+    // due back at 22:00Z that comes in at 23:30Z read an hour early, and at the
+    // settable minimum of 18 repetitive hours that is a real interval of 17,
+    // under DAN's floor in a sentence that ends by citing DAN.
+    const result = flySafeFrom({
+      executedDives: [],
+      plannedDives: 2,
+      endsAt,
+      divedRecently: false,
+      now: home,
+      hours,
+    });
+    expect(result?.from).toEqual(new Date(endsAt.getTime() + DEPARTURE_BUFFER_MS + 24 * HOUR_MS));
+    expect(result?.from.getTime()).toBeGreaterThan(endsAt.getTime() + 24 * HOUR_MS);
+    // And it is exactly the buffer, not an hour this module spells for itself:
+    // the earliest `now` that gets an answer at all is the anchor.
+    const earliestAnswer = flySafeFrom({
+      executedDives: [],
+      plannedDives: 2,
+      endsAt,
+      divedRecently: false,
+      now: scheduledHome,
+      hours,
+    });
+    expect(earliestAnswer?.from).toEqual(new Date(scheduledHome.getTime() + 24 * HOUR_MS));
   });
 
   it("says nothing while the boat is still out by the one-hour buffer", () => {
@@ -291,7 +330,7 @@ describe("flySafeFrom", () => {
         hours,
       }),
     ).toEqual({
-      from: new Date(endsAt.getTime() + 24 * HOUR_MS),
+      from: new Date(scheduledHome.getTime() + 24 * HOUR_MS),
       basis: "repetitive",
       reason: "dives_recorded",
       anchor: "scheduled_return",
@@ -310,8 +349,8 @@ describe("flySafeFrom", () => {
     ).toBeNull();
   });
 
-  it("keeps a recorded exit that runs past the scheduled return when the record is incomplete", () => {
-    const lateExit = new Date(endsAt.getTime() + HOUR_MS);
+  it("keeps a recorded exit that runs past the buffered return when the record is incomplete", () => {
+    const lateExit = new Date(endsAt.getTime() + 2 * HOUR_MS);
     const result = flySafeFrom({
       executedDives: [
         { diveNumber: 1, exitedAt: lateExit },
