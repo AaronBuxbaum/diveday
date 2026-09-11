@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { trips } from "@/db/schema";
@@ -37,19 +38,19 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * Gated like every other `/api/test/*` route, and demo-shop only, so it can
  * never be reachable in a real deployment.
  */
+const bodySchema = z.object({
+  tripId: z.string().trim().min(1),
+  /** How long ago it left; `positive()` also refuses `NaN` and an infinity. */
+  minutesAgo: z.number().positive(),
+});
+
 export async function POST(request: Request) {
   if (!e2eTestRouteAuthorized(request)) {
     return NextResponse.json({ error: "not_available" }, { status: 404 });
   }
-  const body = (await request.json().catch(() => null)) as {
-    tripId?: unknown;
-    minutesAgo?: unknown;
-  } | null;
-  const tripId = typeof body?.tripId === "string" ? body.tripId : "";
-  const minutesAgo = typeof body?.minutesAgo === "number" ? body.minutesAgo : Number.NaN;
-  if (!tripId || !Number.isFinite(minutesAgo) || minutesAgo <= 0) {
-    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
-  }
+  const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+  const { tripId, minutesAgo } = parsed.data;
 
   const db = await getDb();
   const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
@@ -71,6 +72,15 @@ export async function POST(request: Request) {
   }
   const endsAt = new Date(trip.endsAt.getTime() - (trip.startsAt.getTime() - startsAt.getTime()));
 
-  await db.update(trips).set({ startsAt, endsAt }).where(eq(trips.id, tripId));
+  // The tenant predicate rides on the write too, not only on the read that
+  // cleared it: `tripId` came off the request body, and a caller-supplied id is
+  // re-scoped by every query that touches it, never by an earlier one
+  // (`.claude/rules/db.md`, "Tenant isolation"). Redundant while the select
+  // above is the only thing standing between the two statements, which is
+  // exactly the reasoning that stops being true later.
+  await db
+    .update(trips)
+    .set({ startsAt, endsAt })
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shop.id)));
   return NextResponse.json({ ok: true, startsAt: startsAt.toISOString() });
 }

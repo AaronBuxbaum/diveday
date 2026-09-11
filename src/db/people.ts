@@ -2,6 +2,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { type DiverLocale, isDiverLocale } from "@/i18n/settings";
 import { personNamesMatch } from "@/lib/person-name";
 import { type DbExecutor, isUniqueConstraintViolation } from "./client";
+import { storedPhone } from "./person-phone";
 import { bookings, people, personRoles } from "./schema";
 
 export type FindOrCreatePersonInput = {
@@ -9,6 +10,11 @@ export type FindOrCreatePersonInput = {
   fullName: string;
   /** Caller must have already trimmed and lower-cased this. */
   email: string;
+  /**
+   * As the person typed it. Normalised here, not by the caller — see
+   * `storedPhone` (src/db/person-phone.ts) for why the column may not hold a
+   * bare national number.
+   */
   phone?: string;
 };
 
@@ -60,6 +66,11 @@ export async function findOrCreatePerson(
     };
   }
 
+  // Before the savepoint, not inside it: a read that runs on the losing branch
+  // of a unique violation would be one more statement to unwind, and the shop's
+  // country cannot change between here and the insert in any way that matters.
+  const phone = await storedPhone(tx, input.shopId, input.phone);
+
   try {
     return await tx.transaction(async (tx2) => {
       const [inserted] = await tx2
@@ -68,7 +79,7 @@ export async function findOrCreatePerson(
           shopId: input.shopId,
           fullName: input.fullName,
           email: input.email,
-          phone: input.phone,
+          phone,
         })
         .returning();
       if (!inserted) throw new Error("findOrCreatePerson: insert returned no row");

@@ -1194,7 +1194,7 @@ describe("diver erasure", () => {
         recipientEmail: "desk@blue-mantis.example",
         subjectEmail: null,
         // As typed into the public composer, not as stored on the record — see
-        // the course inquiry above.
+        // the course inquiry below, which carries the same spelling.
         subjectPhone: "+1 305 555 0142",
         bookingId: null,
         payloadSealed: "v1.sealed-course-inquiry",

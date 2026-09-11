@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { trips } from "@/db/schema";
+import { shops, trips } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { HOUR_MS, MINUTE_MS, nowDate } from "@/lib/clock";
 import { noShowClaim, noShowGate } from "@/lib/no-show";
@@ -148,6 +148,57 @@ describe("POST /api/test/depart-trip", () => {
     expect(response.status).toBe(404);
   });
 
+  it("leaves another shop's departure where it is, on both statements", async () => {
+    // The id arrives in the request body, so the shop it belongs to is the
+    // route's to establish — and the write re-establishes it rather than
+    // trusting the read two lines above. A real foreign trip rather than an
+    // absent id, because an id that matches nothing cannot tell the two
+    // statements apart.
+    const { db, shop } = await seededShopContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Reef Runners", slug: "reef-runners", timezone: "America/New_York" })
+      .returning();
+    if (!otherShop) throw new Error("insert failed");
+    expect(otherShop.id).not.toBe(shop.id);
+    const startsAt = new Date(nowDate().getTime() + 4 * HOUR_MS);
+    const [foreign] = await db
+      .insert(trips)
+      .values({
+        shopId: otherShop.id,
+        title: "Reef Runners morning two-tank",
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 3 * HOUR_MS),
+        capacity: 8,
+      })
+      .returning();
+    if (!foreign) throw new Error("insert failed");
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const response = await POST(departRequest({ tripId: foreign.id, minutesAgo: 10 }));
+    expect(response.status).toBe(404);
+
+    const still = await startsAtOf(db, foreign.id);
+    expect(still.startsAt.getTime()).toBe(startsAt.getTime());
+    expect(doorFor(still.startsAt)).toBe("before_departure");
+  });
+
+  it("carries the tenant predicate on the write, which no answer of its own can show", async () => {
+    // Ids are unique, so nothing a caller can send makes the select clear one
+    // trip and the update reach another: the shop filter on the write is
+    // defence in depth and invisible at runtime. Pinned where it lives, the
+    // way the trip-series route pins its crontab against vercel.json — the
+    // alternative is a rule stated in a comment and enforced by nothing.
+    const { readFileSync } = await import("node:fs");
+    const path = await import("node:path");
+    const source = readFileSync(
+      path.join(process.cwd(), "src/app/api/test/depart-trip/route.ts"),
+      "utf8",
+    );
+    expect(source).toContain(".update(trips)");
+    expect(source.slice(source.indexOf(".update(trips)"))).toContain("eq(trips.shopId, shop.id)");
+  });
+
   it("refuses a body with no trip or no distance to move", async () => {
     const { db } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);
@@ -155,5 +206,11 @@ describe("POST /api/test/depart-trip", () => {
     expect((await POST(departRequest({ minutesAgo: 10 }))).status).toBe(400);
     expect((await POST(departRequest({ tripId: "x", minutesAgo: 0 }))).status).toBe(400);
     expect((await POST(departRequest({ tripId: "x", minutesAgo: -MINUTE_MS }))).status).toBe(400);
+    // The shapes the hand-rolled parse used to widen away: a number that
+    // arrived as text, an id that is not one, and no body at all.
+    expect((await POST(departRequest({ tripId: "x", minutesAgo: "10" }))).status).toBe(400);
+    expect((await POST(departRequest({ tripId: 7, minutesAgo: 10 }))).status).toBe(400);
+    expect((await POST(departRequest({ tripId: "   ", minutesAgo: 10 }))).status).toBe(400);
+    expect((await POST(departRequest(undefined))).status).toBe(400);
   });
 });

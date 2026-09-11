@@ -85,9 +85,10 @@ function inE164Range(digits: string): boolean {
  *   code goes on — null.
  *
  * **Null is never a licence to drop the number.** Every caller stores what the
- * person typed when this returns null (`createDiver`, `updateDiver`), because
- * an unparseable phone is still the only way that shop can reach that diver,
- * and a number silently blanked or half-rewritten is worse than an odd one.
+ * person typed when this returns null — that is {@link phoneForStorage}, which
+ * is how every writer of `people.phone` reaches this — because an unparseable
+ * phone is still the only way that shop can reach that diver, and a number
+ * silently blanked or half-rewritten is worse than an odd one.
  */
 export function toE164(
   raw: string | null | undefined,
@@ -108,4 +109,28 @@ export function toE164(
   const national = digits.startsWith("0") ? digits.slice(1) : digits;
   const full = `${home}${national}`;
   return inE164Range(full) ? `+${full}` : null;
+}
+
+/**
+ * The form a number is written into `people.phone`: E.164 when {@link toE164}
+ * can read this text, and otherwise the trimmed text exactly as it was typed.
+ *
+ * This is the *whole* rule for that column, and it is pure so that the writer
+ * holding the shop's country already (the CSV importer, which reads the shop
+ * once for a file of thousands of rows) and the writer that has to go and fetch
+ * it (`storedPhone`, src/db/person-phone.ts) cannot drift apart.
+ *
+ * Normalising on **write** rather than at each read is what makes the stored
+ * string carry its own country instead of the shop's current address setting.
+ * `storedPhone` holds that account in full — the incident that forced it and
+ * the list of every writer the rule binds — and this is the half of it that a
+ * caller can reach without a database.
+ */
+export function phoneForStorage(
+  raw: string | null | undefined,
+  country: string | null | undefined,
+): string | null {
+  const typed = raw?.trim();
+  if (!typed) return null;
+  return toE164(typed, country) ?? typed;
 }

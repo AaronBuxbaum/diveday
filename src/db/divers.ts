@@ -18,13 +18,13 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
-import { toE164 } from "@/lib/phone";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import { listOrdersForPerson } from "./orders";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { listPersonBookingPayments } from "./payments";
+import { storedPhone } from "./person-phone";
 import {
   bookings,
   certifications,
@@ -54,38 +54,6 @@ export type NewDiver = {
   email?: string;
   phone?: string;
 };
-
-/**
- * The form a diver's phone number is written in: E.164 (`+13055550110`), read
- * against the country the shop itself is in (`shops.address_country`, ISO
- * 3166-1 alpha-2, nullable).
- *
- * One shape in the column is what lets an inbound SMS or WhatsApp find the
- * record it belongs to (`phoneMatches`) and what a shop's export hands to any
- * other system. Normalising *here* rather than at each caller is deliberate:
- * the Guests tab, the walk-in counter, the diver record and the global
- * add-booking door all reach `createDiver`, and none of them has to remember.
- *
- * **What happens to a number `toE164` cannot read** — a shop with no country on
- * file, a country DiveDay has no calling code for, an extension, a note, a
- * count of digits no country explains: the trimmed text the staffer typed is
- * stored exactly as they typed it. Never blanked, never half-rewritten. A
- * number DiveDay cannot parse is still the only way that shop can reach that
- * diver, and `toE164`'s own comment lists every shape it does and does not read.
- *
- * **The emergency contact's number is deliberately not touched.** Nothing
- * matches on it; a crew reads it off a manifest and dials it, and a number
- * rewritten on a safety document is the failure that rule exists to prevent.
- */
-async function storedPhone(db: AppDb, shopId: string, typed: string | null) {
-  if (!typed) return null;
-  const [shop] = await db
-    .select({ country: shops.addressCountry })
-    .from(shops)
-    .where(eq(shops.id, shopId))
-    .limit(1);
-  return toE164(typed, shop?.country) ?? typed;
-}
 
 /**
  * Create a reusable shop person without requiring a booking first. Returns

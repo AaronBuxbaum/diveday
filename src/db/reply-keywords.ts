@@ -307,11 +307,11 @@ export async function handleInboundReplyKeyword(
   // — and more than a state change should rest on, because the shop's country
   // is a settings field one staffer can change. A keyword needs the address on
   // file to be the address that wrote, exactly, with nothing resolved in
-  // between. Since `createDiver`/`updateDiver` write E.164, that is the
-  // ordinary case rather than the lucky one: the number on the record and the
-  // number the provider reports are the same digits, and the shortcut works.
-  // A row holding something E.164 could not be read from still loses it, which
-  // is the safe way to lose it.
+  // between. Since every writer of `people.phone` stores E.164 (`storedPhone`,
+  // src/db/person-phone.ts), that is the ordinary case rather than the lucky
+  // one: the number on the record and the number the provider reports are the
+  // same digits, and the shortcut works. A row still holding a number `toE164`
+  // could not read loses the shortcut, which is the safe way to lose it.
   const onFile =
     message.channel === "email"
       ? normalizeEmailAddress(person.email)

@@ -82,6 +82,14 @@ export function normalizeEmailAddress(raw: string | null | undefined): string | 
  * Equality replaces it; `src/lib/phone.test.ts` and the cases below pin both
  * halves.
  *
+ * **The country is a fallback, not the input it looks like.** Every writer of
+ * `people.phone` stores E.164 (`storedPhone`, src/db/person-phone.ts), so for
+ * an ordinary row `toE164` here is a no-op that ignores `shopCountry`
+ * entirely. That is deliberate: this function is where a bare column's meaning
+ * used to follow the shop's address setting, which is the incident
+ * `storedPhone` records. The resolution stays for the rows a writer could not
+ * resolve either.
+ *
  * Two honest costs, neither of them a bug to be fixed here:
  *
  * - A shop with **no country on file** — `address_country` is nullable and

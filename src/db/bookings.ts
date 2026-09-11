@@ -29,6 +29,7 @@ import { publishManifestEvent } from "./manifest-events";
 import { recordDiverActivity, recordTripActivity } from "./operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
+import { storedPhone } from "./person-phone";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookingPayments,
@@ -890,7 +891,7 @@ async function createBookingRecord(
           shopId: req.shopId,
           fullName: pendingInsert.fullName,
           email: null,
-          phone: pendingInsert.phone,
+          phone: await storedPhone(tx, req.shopId, pendingInsert.phone),
         })
         .returning();
       if (!inserted) throw new Error("createBookingRecord: person insert returned no row");
