@@ -602,6 +602,15 @@ test.describe("staff", () => {
     // A clean form says nothing at all — the note is a consequence, not a label.
     await expect(page.getByText(/^Unsaved changes/)).toHaveCount(0);
 
+    // Wait for hydration before typing. The dirty flag is the guard's
+    // `onInputCapture`, so a keystroke landing before React attaches is a native
+    // event nobody is listening to: the box holds the text and the bar never says
+    // so, and nothing later in the test types again to recover it. The guard
+    // renders `data-hydrated` for exactly this and the visual suite already waits
+    // on the same signal; only this spec typed blind. Failed that way twice on CI
+    // on 2026-09-11, on two different heads, passing on a re-run in between.
+    await expect(page.locator("[data-hydrated]")).toBeVisible();
+
     await page.getByLabel("Subhead").fill("Three days from pool to reef");
     await expect(page.getByText("Unsaved changes in The pitch")).toBeVisible();
 
