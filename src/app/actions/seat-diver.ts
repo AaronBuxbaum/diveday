@@ -43,6 +43,14 @@ const existingDiverSchema = z.object({
    * nothing here, and nothing must read as "this was a real pick".
    */
   fromNameMatch: z.literal("true").optional(),
+  /**
+   * What the staffer typed to raise that prompt. The prompt also fires on an
+   * exact spelling, so the tap by itself says nothing about whether the
+   * identity is in doubt — `createBooking` compares this against the matched
+   * diver's name on file. Unbounded on purpose: it is compared and discarded,
+   * never stored.
+   */
+  nameMatchQuery: z.string().optional(),
 });
 
 /**
@@ -130,13 +138,29 @@ async function seat(
   const settled: SeatLanding = { ...landing, personId: result.personId };
   const path = surface.seatedPath(settled);
   // The seat happened either way; what differs is whether the staffer can walk
-  // away. A waiver that was issued but never mailed — no address on file, no
-  // provider, a bounced test recipient — leaves work at the desk, so the notice
-  // says so instead of letting "Added…" imply an email is on its way while the
-  // diver's readiness waits for a signature nobody asked for. The link itself
-  // stays off the URL and on the diver's row (`seatedWaiverUndeliveredNotice`).
-  const notice =
-    result.waiver === "not_delivered" || result.waiver === "failed"
+  // away.
+  //
+  // A **held seat** first: `createBooking` attached this booking to an existing
+  // person on something short of proof, so the boarding gate refuses it until
+  // someone confirms the identity (H-13, issue #1556). "Added" hid that, and
+  // the staffer met it on the next tap — `checkInBooking` refusing `not_ready`
+  // with the diver at the counter and the confirm control on the trip roster
+  // (`dive-domain-expert`, 2026-09-11).
+  //
+  // Then a waiver that was issued but never mailed — no address on file, no
+  // provider, a bounced test recipient — which leaves work at the desk, so the
+  // notice says so instead of letting "Added…" imply an email is on its way
+  // while the diver's readiness waits for a signature nobody asked for. The
+  // link itself stays off the URL and on the diver's row
+  // (`seatedWaiverUndeliveredNotice`).
+  //
+  // Held outranks undelivered because a held seat withholds the matched
+  // person's particulars, the waiver control among them (`RosterSection.tsx`'s
+  // `showsPersonDetail`) — the link the waiver notice sends a staffer to fetch
+  // is one of the things the confirm releases.
+  const notice = result.identityUnconfirmed
+    ? surface.seatedIdentityUnconfirmedNotice
+    : result.waiver === "not_delivered" || result.waiver === "failed"
       ? surface.seatedWaiverUndeliveredNotice
       : surface.seatedNotice;
   revalidateAndRedirect(
@@ -163,6 +187,7 @@ export async function seatExistingDiverAction(
     tripId: formData.get("tripId"),
     personId: formData.get("personId"),
     fromNameMatch: formData.get("fromNameMatch") ?? undefined,
+    nameMatchQuery: formData.get("nameMatchQuery") ?? undefined,
   });
   // A landing built from the raw fields: the staffer must get back to the page
   // they submitted from even when what they submitted was unusable.
@@ -175,10 +200,18 @@ export async function seatExistingDiverAction(
   await seat(
     surface,
     landing,
-    // A tap on the name prompt is a guess, and the seat it takes carries that
-    // through to the booking rather than quietly inheriting this person's
-    // certifications and waiver (issue #1556).
-    { personId: parsed.data.personId, fromNameMatch: parsed.data.fromNameMatch === "true" },
+    // A tap on the name prompt carries the name it was guessing from through to
+    // the booking, which is what decides whether the seat may quietly inherit
+    // this person's certifications and waiver (issue #1556). A missing query
+    // stays an empty string rather than dropping the field: it reads as
+    // disagreement there, and the blocker is the safe side of this.
+    {
+      personId: parsed.data.personId,
+      fromNameMatch:
+        parsed.data.fromNameMatch === "true"
+          ? { typedName: parsed.data.nameMatchQuery ?? "" }
+          : undefined,
+    },
     { shopId: session.user.shopId, personId: session.user.personId },
   );
 }

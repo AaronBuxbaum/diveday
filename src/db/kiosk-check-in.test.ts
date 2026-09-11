@@ -11,7 +11,10 @@ import {
 } from "@/lib/kiosk-check-in";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
-import { listSelfReportedArrivalBookingIds } from "./arrival-provenance";
+import {
+  listSelfReportedArrivalBookingIds,
+  listSelfReportedArrivalBookingIdsForTrip,
+} from "./arrival-provenance";
 import { checkInAtKiosk } from "./check-in";
 import { issueDisplayToken, revokeDisplayToken, verifyDisplayToken } from "./display-tokens";
 import { findKioskSeats, kioskNameMatch } from "./kiosk-check-in";
@@ -618,6 +621,87 @@ describe("listSelfReportedArrivalBookingIds", () => {
     expect([...(await listSelfReportedArrivalBookingIds(db, shop.id, [booking.id]))].length).toBe(
       0,
     );
+  });
+
+  /**
+   * **The tie is the ordinary case, and it is broken by the trail's own three
+   * keys.** `occurred_at` ties constantly — a frozen e2e clock, and a batched
+   * offline sync replaying a queue of taps that all carry the moment the device
+   * recorded them — so this read orders by `occurred_at`, `created_at`, `seq`,
+   * the same keys `standingArrivalIsArrived` and `newestArrivalEvent` use. It
+   * used to tie on `id`, a `defaultRandom()` uuid, and half of those coin flips
+   * handed the desk row the win: the booking silently stopped reading as
+   * self-reported, which is the direction that claims a human looked when none
+   * did (`dive-domain-expert` and `security-reviewer`, 2026-09-11). The ids
+   * below are written the wrong way round on purpose — under the old ordering
+   * the row that should lose sorts first, every run.
+   */
+  it("lets the later tablet tap win an identical-timestamp tie", async () => {
+    const { db, shop, link, booking, person, atTheDoor } = await counter();
+    const tie = { occurredAt: atTheDoor, createdAt: atTheDoor };
+    await db.insert(bookingArrivalEvents).values({
+      id: "ffffffff-ffff-4fff-bfff-ffffffffffff",
+      shopId: shop.id,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: person.id,
+      status: "arrived",
+      source: "live",
+      ...tie,
+    });
+    await db.insert(bookingArrivalEvents).values({
+      id: "00000000-0000-4000-8000-000000000001",
+      shopId: shop.id,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: person.id,
+      displayTokenId: link.id,
+      status: "arrived",
+      source: "live",
+      ...tie,
+    });
+
+    expect([...(await listSelfReportedArrivalBookingIds(db, shop.id, [booking.id]))]).toEqual([
+      booking.id,
+    ]);
+    // The manifest asks the same question a different way and must not get a
+    // different answer.
+    expect([
+      ...(await listSelfReportedArrivalBookingIdsForTrip(db, shop.id, booking.tripId)),
+    ]).toEqual([booking.id]);
+  });
+
+  it("lets the later desk tap win an identical-timestamp tie", async () => {
+    const { db, shop, link, booking, person, atTheDoor } = await counter();
+    const tie = { occurredAt: atTheDoor, createdAt: atTheDoor };
+    await db.insert(bookingArrivalEvents).values({
+      id: "ffffffff-ffff-4fff-bfff-ffffffffffff",
+      shopId: shop.id,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: person.id,
+      displayTokenId: link.id,
+      status: "arrived",
+      source: "live",
+      ...tie,
+    });
+    await db.insert(bookingArrivalEvents).values({
+      id: "00000000-0000-4000-8000-000000000001",
+      shopId: shop.id,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: person.id,
+      status: "arrived",
+      source: "live",
+      ...tie,
+    });
+
+    expect([...(await listSelfReportedArrivalBookingIds(db, shop.id, [booking.id]))].length).toBe(
+      0,
+    );
+    expect(
+      [...(await listSelfReportedArrivalBookingIdsForTrip(db, shop.id, booking.tripId))].length,
+    ).toBe(0);
   });
 });
 

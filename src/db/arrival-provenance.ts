@@ -12,8 +12,8 @@ import { bookingArrivalEvents } from "./schema";
  * a staffer stood in front of that diver at 06:40 and tapped them in. The
  * append-only trail underneath never loses that — `booking_arrival_events` is
  * not soft-deletable and not pruned, and it is absent from `RETENTION_DAYS`
- * (`src/lib/retention.ts`) on purpose — so a reader asking "was this person
- * aboard" should ask the trail rather than the slot.
+ * (`src/lib/retention.ts`) on purpose — so a reader asking "did anybody here
+ * see this diver that morning" should ask the trail rather than the slot.
  *
  * **The newest row wins, and it may be a retraction.** The ordering here is
  * `newestArrivalEvent`'s own three columns (`src/db/check-in.ts`), deliberately
@@ -35,9 +35,9 @@ import { bookingArrivalEvents } from "./schema";
  * `listSelfReportedArrivalBookingIds` below exists to keep out of the words a
  * staffer's sighting earns (N-24, and a `security-reviewer` finding on
  * 2026-09-11 that this predicate was spending it). Both readers pay for that in
- * a diver's safety: `findSimilarDivers` prints "Last dived" as the fact the
- * counter's identity question turns on, and `peopleWhoDivedBefore` feeds the
- * fly-safe multi-day advisory.
+ * a diver's safety: `findSimilarDivers` prints "Last dive day here" as the
+ * fact the counter's identity question turns on, and `peopleWhoDivedBefore`
+ * feeds the fly-safe multi-day advisory.
  *
  * The provenance test belongs to the **projection** and never to the `where`
  * clause. Filtering the row selection would step past a kiosk row to an older
@@ -45,10 +45,30 @@ import { bookingArrivalEvents } from "./schema";
  * retraction, which is the opposite of what the undo above promises. The newest
  * row still decides, whoever wrote it; only the verdict it earns changes.
  *
- * Lives here rather than inline in its one caller because "was this diver
- * aboard" is the same question a manifest and `buildIncidentExport`
- * (`src/lib/incident-export.ts`) have to answer honestly, and the answer may
- * not differ by who is asking.
+ * **This says the desk saw them. It does not say they dived, and it must not be
+ * read as if it did** (`dive-domain-expert`, 2026-09-11, on an earlier draft of
+ * this docblock that claimed it answered "was this diver aboard"). A diver
+ * checks in at 06:40 and is seasick on the ramp; or is checked in and then held
+ * at the rail on a medical flag; or is bumped to the afternoon boat when the
+ * morning one is overbooked. Three ordinary mornings where this predicate is
+ * `true` and nobody went in the water.
+ *
+ * So it is a dive-day heuristic and is only ever spent as one: both callers —
+ * `peopleWhoDivedBefore` (`src/db/executed-dives.ts`) and `findSimilarDivers`
+ * (`src/db/divers.ts`) — use it to contradict a `no_show` the close-of-day
+ * sweep wrote over a seat, never to assert a dive on its own. It lives here
+ * rather than inline in either because that contradiction may not be argued
+ * two ways in one codebase.
+ *
+ * **Who was aboard is a different question with a different table**: a standing
+ * `boarded` roll-call event, which the manifest asks through
+ * `listDepartureBoardedBookingIds` (`src/db/manifests.ts`) and
+ * `getIncidentExport` (`src/db/incident-export.ts`) reads straight out of
+ * `roll_call_events` / `roll_call_crew_events`. Not this trail, and not by
+ * extending it: the writer these events reach cannot touch `roll_call_events`
+ * at all, on purpose (`src/lib/arrival.ts`, pinned by "puts nobody on a boat —
+ * a queued arrival writes no roll-call row at all" in `src/db/check-in.test.ts`).
+ * A counter tap is never the answer to "was this diver aboard".
  */
 export function standingArrivalIsArrived(
   shopId: string,
@@ -86,9 +106,17 @@ export function standingArrivalIsArrived(
  * strength of it is acting on a claim nobody verified
  * (`security-reviewer` and `dive-domain-expert` reviews, 2026-09-09).
  *
- * **The latest arrival wins.** A kiosk tap that a staffer later confirms at the
- * desk writes a second, tokenless row, and this stops calling that booking
- * self-reported — which is right: a human has now looked at them.
+ * **The latest arrival wins, by the same three keys as everything else here.**
+ * A kiosk tap that a staffer later confirms at the desk writes a second,
+ * tokenless row, and this stops calling that booking self-reported — which is
+ * right: a human has now looked at them. Which row is *latest* is decided by
+ * `occurred_at`, `created_at`, `seq`, the ordering `standingArrivalIsArrived`
+ * above and `newestArrivalEvent` (`src/db/check-in.ts`) already use. This read
+ * broke the rule the file states: it tied on `id`, a `defaultRandom()` uuid, so
+ * a kiosk tap and a desk confirm landing in the same batched-sync millisecond
+ * resolved by coin flip — and half of those flips dropped the booking out of
+ * this set, claiming a human had looked when none had
+ * (`dive-domain-expert` and `security-reviewer`, 2026-09-11).
  *
  * Batched over a whole queue or roster, never one query per row.
  */
@@ -111,7 +139,11 @@ export async function listSelfReportedArrivalBookingIds(
         inArray(bookingArrivalEvents.bookingId, [...bookingIds]),
       ),
     )
-    .orderBy(desc(bookingArrivalEvents.occurredAt), desc(bookingArrivalEvents.id));
+    .orderBy(
+      desc(bookingArrivalEvents.occurredAt),
+      desc(bookingArrivalEvents.createdAt),
+      desc(bookingArrivalEvents.seq),
+    );
   return latestPerBooking(rows);
 }
 
@@ -137,7 +169,11 @@ export async function listSelfReportedArrivalBookingIdsForTrip(
         eq(bookingArrivalEvents.status, "arrived"),
       ),
     )
-    .orderBy(desc(bookingArrivalEvents.occurredAt), desc(bookingArrivalEvents.id));
+    .orderBy(
+      desc(bookingArrivalEvents.occurredAt),
+      desc(bookingArrivalEvents.createdAt),
+      desc(bookingArrivalEvents.seq),
+    );
   return latestPerBooking(rows);
 }
 

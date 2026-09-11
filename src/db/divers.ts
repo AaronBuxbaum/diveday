@@ -802,13 +802,35 @@ export type SimilarDiver = {
    * (src/db/executed-dives.ts): a non-cancelled booking, on a live departure
    * the shop still says ran, that has already left — plus that reader's two
    * escapes, a `no_show` the desk itself contradicted by tapping the diver in
-   * (issue #1558) and a blown-out departure the crew logged dives on. The
-   * counter and the fly-safe reader may not disagree about what a dive day is:
-   * one of them would then be telling a staffer something the other refuses.
+   * (issue #1558) and a blown-out departure the crew logged dives on. Those
+   * two may not disagree about what a dive day is: one of them would then be
+   * telling a staffer something the other refuses.
    *
-   * Null renders nothing at all. "No dives on file" is true of every genuine
-   * first-timer and of every candidate this shop has only ever typed in, so it
-   * distinguishes nobody from nobody.
+   * **This is the widest of four readers of that question, and the gap is not
+   * an accident** (`dive-domain-expert`, 2026-09-11). The recap's dive-day
+   * count (`getRecapPageData`, src/db/recap.ts) and the diver shelf
+   * (src/db/shelf.ts) take a plain `no_show` and a plain non-`scheduled` trip
+   * as disqualifying, with neither escape. So a day the desk tapped a diver in
+   * on and the close-of-day sweep then stamped `no_show` is named here and is
+   * not counted there.
+   *
+   * The widening is affordable in this direction only. This prompt asks *who
+   * is standing at the counter*, and it asks a staffer who can see them: a day
+   * this shop has on file under that name is evidence about the person, and
+   * naming one they do not recognise costs a shake of the head, while
+   * withholding one costs the match — and a duplicate record is what later
+   * hides a certification or a signed waiver from a roster. The recap tells
+   * the diver "your 3rd dive day" with nobody there to correct it, and feeds
+   * `visitMilestone`'s exact equality on {1, 10, 25, 50, 100}, where a day that
+   * moves does not blur a stamp but skips it permanently. Putting all four
+   * behind one predicate is issue #1694; it is a change to what a diver's
+   * keepsake counts, not a tidy-up, which is why it is not done here.
+   *
+   * **Whether a null says anything on screen is not this reader's call**: it
+   * speaks when a sibling candidate has a day and is silent when they all
+   * lack one, argued once on `noDiveDayNeedsSaying`
+   * (`src/lib/name-match-evidence.ts`) so the three doors rendering the prompt
+   * cannot answer it two ways.
    */
   lastDiveDayAt: Date | null;
 };

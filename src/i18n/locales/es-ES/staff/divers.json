@@ -106,8 +106,9 @@
     "adding": "Añadiendo…",
     "cancel": "Cancelar",
     "addDiver": "Añadir buceador",
-    "confirmMatchesTitle": "¿Es {name} alguna de estas personas? Al elegir una, esta reserva se queda con sus certificaciones y su exención.",
-    "confirmMatchesLastDive": "Última inmersión el {date}",
+    "confirmMatchesTitle": "¿Es {name} alguna de estas personas? Al elegir una se reutiliza su ficha, y sus certificaciones y su exención no cuentan hasta que alguien confirme que es la misma persona.",
+    "confirmMatchesLastDive": "Último día de buceo aquí: {date}",
+    "confirmMatchesNoDiveDay": "Ningún día de buceo aquí todavía",
     "confirmMatchesSubmit": "Crear nuevo buceador de todos modos"
   },
   "list": {
@@ -314,6 +315,7 @@
     "alreadyBooked": "Este buceador ya está reservado en esa actividad.",
     "booked": "Actividad reservada. Revísala abajo, luego crea y envía la factura.",
     "bookedWaiverUndelivered": "Actividad reservada, pero no se envió su exención por correo. Abre la lista de invitados de la salida para enviarla o compartir el enlace.",
+    "bookedIdentityUnconfirmed": "Actividad reservada, pero la plaza queda retenida hasta que confirmes que es la misma persona. Abre la lista de invitados de la salida para confirmarlo.",
     "bookingInvalid": "Añade un correo electrónico y elige una actividad disponible.",
     "cardCertifiedToast": "Marcada como certificada.",
     "cardConfirmedToast": "Certificación confirmada.",

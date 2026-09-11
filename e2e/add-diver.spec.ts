@@ -248,10 +248,16 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
   await expect(
     page.getByRole("heading", { name: /Is this the same Marisol Vegas\?/ }),
   ).toBeVisible();
-  await expect(page.getByText(/Last dived /)).toBeVisible();
+  await expect(page.getByText(/Last dive day here: /)).toBeVisible();
 
   await page.getByRole("button", { name: "Marisol Vega", exact: true }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
+
+  // And the seating itself says the seat is held. It used to answer the plain
+  // "Diver added to the trip", so the staffer learned the seat was blocked one
+  // tap later — a check-in refusal, with the diver at the counter and the
+  // confirm control on this page (`dive-domain-expert`, 2026-09-11).
+  await expect(page.getByText(/the seat is held until you confirm/)).toBeVisible();
 
   // Seated, and blocked on the identity the shop only guessed at — the seat
   // does not inherit her certifications or her waiver on a spelling.

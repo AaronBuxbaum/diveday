@@ -1,4 +1,4 @@
-import { and, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, count, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { checkMinimumAge } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -27,7 +27,7 @@ import { releaseUnclaimedGearReservations } from "./gear";
 import { recordGift } from "./gifts";
 import { publishManifestEvent } from "./manifest-events";
 import { recordDiverActivity, recordTripActivity } from "./operations";
-import { setBookingPayment } from "./payments";
+import { getBookingPayment, setBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
@@ -62,24 +62,28 @@ export type BookingPerson =
   | {
       personId: string;
       /**
-       * This person was not *picked*, they were *guessed* — the staffer tapped
-       * a name off the counter's "is this the same diver?" prompt, whose
-       * candidates come from a `similarity() > 0.4` trigram match on a typed
-       * name (issue #1556).
+       * This person may not have been *picked* — the staffer tapped a name off
+       * the counter's "is this the same diver?" prompt, whose candidates come
+       * from `lower(full_name) = lower(typed) OR similarity() > 0.4`
+       * (`findSimilarDivers`, issue #1556).
        *
        * That prompt fires on genuinely different people, so a seat taken from
        * it must not silently inherit the matched diver's certifications,
-       * sign-once waiver coverage and rental fit. Set, it raises
-       * `identityUnconfirmed` exactly as a shared-inbox email mismatch does
-       * (H-13): the diver is Blocked at the rail until a staffer taps confirm
-       * identity, and no certification claim is written under their name.
+       * sign-once waiver coverage and rental fit. It also fires on an exact
+       * spelling, which is why this carries `typedName` rather than a bare
+       * boolean: the flag is raised by the same test the by-email path uses,
+       * not by the tap. See {@link nameMatchLeavesIdentityInDoubt}.
+       *
+       * Raised, it means what a shared-inbox email mismatch means (H-13): the
+       * diver is Blocked at the rail until a staffer taps confirm identity,
+       * and no certification claim is written under their name.
        *
        * Absent on every other identity booking, which is the point — a
        * returning diver picked out of the search by a staffer who went looking
        * for them is not a guess, and "enter once, reuse everywhere" has to keep
        * costing nothing.
        */
-      fromNameMatch?: boolean;
+      fromNameMatch?: { typedName: string };
     }
   | { fullName: string; email?: string; phone?: string };
 
@@ -254,6 +258,20 @@ export type BookingSuccess = {
   bookingId: string;
   personId: string;
   personName: string;
+  /**
+   * The seat is real and it is **held**: this booking attached itself to an
+   * existing person on something short of proof, so the row is stamped
+   * `identityUnconfirmedAt`, readiness fails closed, and none of that person's
+   * cards, waiver or package reach the seat until a staffer confirms it
+   * (H-13, issue #1556).
+   *
+   * Reported rather than left for the caller to re-read, because the caller
+   * that most needs it is the one furthest from the row: every staff seating
+   * door answered a plain "Added" for a held seat, and the staffer learned the
+   * seat was held on the next tap — a check-in refusal, three screens from the
+   * confirm control (`dive-domain-expert`, 2026-09-11).
+   */
+  identityUnconfirmed: boolean;
   admissionAdvisory?: BookingAdmissionAdvisory;
 };
 
@@ -576,6 +594,54 @@ export async function releasePackageCoverageForBooking(
   return released;
 }
 
+/**
+ * Does a tap on the counter's name prompt actually leave the identity in doubt?
+ *
+ * The prompt's candidates are `lower(full_name) = lower(typed)` **or**
+ * `similarity() > 0.4` (`findSimilarDivers`), so the regular a shop has carded
+ * fifteen times is on it every time a staffer spells the name right. Flagging
+ * that seat put a blocker on the ordinary morning: twenty taps of confirm
+ * identity before lunch, and the shop learns to tap it without reading it —
+ * which spends exactly the credibility H-13's blocker needs to keep
+ * (`dive-domain-expert`, the RFH-07 layer). So the tap alone no longer decides;
+ * the same test the by-email path at `createBookingRecord` uses does, on the
+ * name the staffer actually typed.
+ *
+ * The one case a matching spelling does not settle is the real "which John
+ * Smith": when a second diver in this shop answers to that exact name, the
+ * prompt listed both and the tap was a coin flip however well the spelling
+ * agrees. Counted here rather than sent from the door, because a door
+ * asserting its own ambiguity is a door that can forget to.
+ */
+async function nameMatchLeavesIdentityInDoubt(
+  tx: DbExecutor,
+  shopId: string,
+  matched: { id: string; fullName: string },
+  typedName: string,
+): Promise<boolean> {
+  // An empty typed name reads as disagreement, not as agreement: a door that
+  // marks a tap as a guess and then sends nothing to compare it with must fail
+  // towards the blocker.
+  if (!personNamesMatch(matched.fullName, typedName)) return true;
+  const namesakes = await tx
+    .select({ id: people.id })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        eq(personRoles.role, "diver"),
+        isNull(people.deletedAt),
+        ne(people.id, matched.id),
+        // The prompt's exact-match branch, restated: a namesake is another row
+        // the staffer was offered under the same spelling.
+        eq(sql`lower(${people.fullName})`, typedName.trim().toLowerCase()),
+      ),
+    )
+    .limit(1);
+  return namesakes.length > 0;
+}
+
 async function createBookingRecord(
   db: DbExecutor,
   req: BookingRequest,
@@ -642,11 +708,9 @@ async function createBookingRecord(
   //    submitted one — the shared-inbox / different-human signal this flag was
   //    built for;
   //  - the identity path carries `fromNameMatch`, meaning the person id came
-  //    off the counter's trigram name prompt rather than out of a search a
-  //    staffer went looking in (issue #1556). It used to be true that the
-  //    identity path "submits no name to disagree with"; it stopped being true
-  //    the day that prompt shipped, because the name it guesses from is
-  //    precisely what disagrees.
+  //    off the counter's name prompt rather than out of a search a staffer went
+  //    looking in (issue #1556) — and, on that path, the typed name disagrees
+  //    with the one on file, or two divers answer to it.
   let identityUnconfirmed = false;
   if ("personId" in req) {
     [person] = await tx
@@ -658,7 +722,9 @@ async function createBookingRecord(
       .limit(1);
     // A copied URL or a since-removed diver must not book into this tenant.
     if (!person) return { ok: false, reason: "person_not_found" };
-    identityUnconfirmed = req.fromNameMatch === true;
+    identityUnconfirmed = req.fromNameMatch
+      ? await nameMatchLeavesIdentityInDoubt(tx, req.shopId, person, req.fromNameMatch.typedName)
+      : false;
   } else {
     const email = req.email?.trim().toLowerCase() || null;
     if (email) {
@@ -884,6 +950,7 @@ async function createBookingRecord(
       bookingId: existing.id,
       personId: person.id,
       personName: person.fullName,
+      identityUnconfirmed,
       admissionAdvisory,
     };
   }
@@ -949,7 +1016,8 @@ async function createBookingRecord(
   // prepaid property is the same act with a worse failure: anyone who knows a
   // regular's email could book seats in their name on the public form and drain
   // their package, and the victim's only notice would be a balance nothing
-  // renders (`dive-domain-expert`, issue #706).
+  // renders (`dive-domain-expert`, issue #706). Withheld, not forfeited:
+  // `settleConfirmedPackageCoverage` spends them when staff clear the flag.
   await settlePackageCoverage(tx, {
     shopId: req.shopId,
     personId: person.id,
@@ -963,6 +1031,7 @@ async function createBookingRecord(
     bookingId: created.id,
     personId: person.id,
     personName: person.fullName,
+    identityUnconfirmed,
     admissionAdvisory,
   };
 }
@@ -1577,6 +1646,56 @@ export async function setBookingPickupDetails(
 }
 
 /**
+ * The prepaid dives the flag withheld, spent now that the shop has said who
+ * this seat belongs to.
+ *
+ * `settlePackageCoverage` returns empty under an unconfirmed identity, and
+ * that refusal used to be the end of it: nothing re-ran when the flag came
+ * off, so the seat stayed unpaid and the ten-dive regular was asked for money
+ * on a departure their package covers. Rare while the flag only ever came off
+ * a shared-inbox collision; every spelled-right name match at the counter
+ * since issue #1556 (`dive-domain-expert`, the RFH-07 layer).
+ *
+ * Inside the confirm's own transaction, for the reason `createBookingRecord`
+ * states at its own call: the claim has to be serialised with the row it
+ * belongs to, or two taps read the same unused dive and both take it.
+ *
+ * **Only onto a seat nothing has settled yet.** A booking already carrying a
+ * payment — cash taken at the desk, a card, a waived fare — would otherwise
+ * spend the diver's dives *on top of* what they already handed over and
+ * overwrite the record that they did; handing that money back needs a refund
+ * path this does not have (issue #1697). A cancelled seat is skipped for the
+ * plainer reason that the action takes a booking id from the form and a
+ * cancelled row can still carry the flag: nobody's package pays for a seat
+ * that is off the roster.
+ */
+async function settleConfirmedPackageCoverage(
+  tx: DbExecutor,
+  input: { shopId: string; bookingId: string; personId: string },
+) {
+  const payment = await getBookingPayment(tx, input.shopId, input.bookingId);
+  if (payment && payment.status !== "unpaid") return;
+  const [row] = await tx
+    .select({
+      status: bookings.status,
+      courseId: trips.courseId,
+      plannedDives: trips.plannedDives,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!row || row.status === "cancelled") return;
+  await settlePackageCoverage(tx, {
+    shopId: input.shopId,
+    personId: input.personId,
+    bookingId: input.bookingId,
+    identityUnconfirmed: false,
+    trip: { courseId: row.courseId, plannedDives: row.plannedDives },
+  });
+}
+
+/**
  * Staff confirm a flagged booking really is the person it was attached to
  * (H-13): clears `identity_unconfirmed_at`, which drops the readiness blocker.
  * Shop-scoped and idempotent — a no-op on an already-clear or unknown booking
@@ -1585,20 +1704,22 @@ export async function setBookingPickupDetails(
  * behind a shared inbox, staff resolve that by booking them under their own
  * email, not by confirming here.
  *
- * **The actor is required because the trail is what makes this tap safe.** What
- * clearing the flag hands over is not small: the matched diver's current signed
- * release (`issueWaiverOnJoin` asks for no new one when the person already
- * holds a live signature, so the seat boards on somebody else's paper), their
- * certifications once readiness stops withholding them, and any prepaid dives a
- * later re-booking settles. It used to be true that the flag only ever came off
- * a shared-inbox email collision, where the two humans at least shared an
- * identifier; the counter's trigram name prompt now raises the same flag off a
- * spelling (issue #1556), so the tap is a lighter-weight diver merge. The role
- * list stays open — a counter staffer who cannot clear the flag they just
- * raised is its own failure mode, and merge's owner/manager boundary would
- * strand a walk-in until a manager walked past — and `src/lib/authz.ts` is
- * explicit about what carries that weight instead: what makes the most
- * sensitive act in the product safe is the trail, not the role list.
+ * **The actor is required because the trail is what makes this tap safe.**
+ * What clearing the flag hands over is not small: the matched diver's current
+ * signed release (`issueWaiverOnJoin` asks for no new one when the person
+ * already holds a live signature, so the seat boards on somebody else's
+ * paper), their certifications once readiness stops withholding them, and the
+ * prepaid dives the seat is owed, which the tap itself now spends
+ * (`settleConfirmedPackageCoverage`). It used to be true that the flag only
+ * ever came off a shared-inbox email collision, where the two humans at least
+ * shared an identifier; the counter's trigram name prompt now raises the same
+ * flag off a spelling (issue #1556), so the tap is a lighter-weight diver
+ * merge. The role list stays open — a counter staffer who cannot clear the
+ * flag they just raised is its own failure mode, and merge's owner/manager
+ * boundary would strand a walk-in until a manager walked past — and
+ * `src/lib/authz.ts` is explicit about what carries that weight instead: what
+ * makes the most sensitive act in the product safe is the trail, not the role
+ * list.
  *
  * Two lines, because the consequence lands in two places: one on the
  * departure, where the crew reads what happened to the roster that day, and one
@@ -1611,17 +1732,26 @@ export async function confirmBookingIdentity(
   db: AppDb,
   input: { shopId: string; bookingId: string; actorPersonId: string },
 ) {
-  const [booking] = await db
-    .update(bookings)
-    .set({ identityUnconfirmedAt: null })
-    .where(
-      and(
-        eq(bookings.id, input.bookingId),
-        eq(bookings.shopId, input.shopId),
-        isNotNull(bookings.identityUnconfirmedAt),
-      ),
-    )
-    .returning({ tripId: bookings.tripId, personId: bookings.personId });
+  const booking = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null })
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          isNotNull(bookings.identityUnconfirmedAt),
+        ),
+      )
+      .returning({ tripId: bookings.tripId, personId: bookings.personId });
+    if (!row) return null;
+    await settleConfirmedPackageCoverage(tx, {
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+      personId: row.personId,
+    });
+    return row;
+  });
   if (!booking) return false;
   const diver = await bookingDiverName(db, input.shopId, input.bookingId);
   if (diver) {

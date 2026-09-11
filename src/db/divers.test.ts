@@ -24,6 +24,7 @@ import { listOwedProcessorErasures } from "./processor-erasure";
 import { saveRentalFit } from "./rental-fit";
 import {
   activityEvents,
+  bookingArrivalEvents,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -34,6 +35,7 @@ import {
   certifications,
   courseInquiries,
   courses,
+  executedDives,
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -2470,6 +2472,13 @@ describe("findSimilarDivers name similarity and exact matching", () => {
  * what makes "is this the same Nadia who dived yesterday?" answerable, and it
  * is the same day `peopleWhoDivedBefore` counts, so the counter and the
  * fly-safe reader cannot disagree about what a dive day is.
+ *
+ * That rule includes both of the fly-safe reader's escapes, which is what makes
+ * this the widest of the four readers of "did this person dive" — the recap's
+ * count and the diver's shelf are narrower on purpose, and
+ * `SimilarDiver.lastDiveDayAt` argues why (issue #1694). The two cases below
+ * are the escapes; without them the counter goes quiet on exactly the days a
+ * shop's own records disagree with the status column.
  */
 describe("findSimilarDivers last dive day", () => {
   const HOUR_MS = 60 * 60 * 1000;
@@ -2614,5 +2623,73 @@ describe("findSimilarDivers last dive day", () => {
     );
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, blownOut.id));
     expect(await lastDiveDayOf(db, shop.id, person.id)).toBeNull();
+  });
+
+  /**
+   * The trail row is written here rather than through `checkInBooking`, whose
+   * door is readiness-gated and already pinned exhaustively against this
+   * predicate in `executed-dives.test.ts` (a kiosk tap, an undo, a desk
+   * confirmation on top of a tablet's tap). What this file owns is whether the
+   * *counter* spends the standing verdict at all.
+   */
+  async function deskSawThem(db: AppDb, shopId: string, tripId: string, bookingId: string) {
+    const [staffer] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shopId), eq(personRoles.role, "owner")))
+      .limit(1);
+    if (!staffer) throw new Error("the seeded shop has to have an owner to record an arrival");
+    await db.insert(bookingArrivalEvents).values({
+      shopId,
+      tripId,
+      bookingId,
+      recordedByPersonId: staffer.id,
+      status: "arrived",
+      // Tokenless: a staffer's own tap, not the lobby tablet, which
+      // `standingArrivalIsArrived` refuses to spend (N-24).
+      displayTokenId: null,
+      occurredAt: new Date(nowMs() - 25 * HOUR_MS),
+    });
+  }
+
+  it("still names the day when a staffer saw the diver and the sweep wrote no_show over it", async () => {
+    // `bookings.status` has one slot and the last writer wins it, so a
+    // close-of-day sweep erases the fact that somebody stood in front of this
+    // diver that morning (issue #1558). The counter asks the append-only trail
+    // instead, and a day the shop's own staff vouched for is exactly the
+    // evidence the identity question turns on.
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    const startsAt = new Date(nowMs() - 24 * HOUR_MS);
+    const trip = await sailedSeat(db, shop.id, person.id, "Swept to no-show", startsAt);
+    const [seat] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, trip.id), eq(bookings.personId, person.id)));
+    if (!seat) throw new Error("the seat has to exist for this case to mean anything");
+    await deskSawThem(db, shop.id, trip.id, seat.id);
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, seat.id));
+
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toEqual(trip.startsAt);
+  });
+
+  it("still names a called-off departure the crew logged a dive on", async () => {
+    // A status column changed afterwards for a refund or a re-papered charter
+    // does not outrank a dive somebody wrote down. Without this the counter
+    // goes quiet on a day the shop has a dive log for.
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    const trip = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "Called off after the fact",
+      new Date(nowMs() - 24 * HOUR_MS),
+    );
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
+    await db.insert(executedDives).values({ shopId: shop.id, tripId: trip.id, diveNumber: 1 });
+
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toEqual(trip.startsAt);
   });
 });

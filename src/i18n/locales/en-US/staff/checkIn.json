@@ -62,6 +62,7 @@
     "waiverError": "That paper waiver couldn’t be recorded. Try again, or open the diver’s trip to see why.",
     "walkinAdded": "Added to this boat’s list. Check them in when they arrive.",
     "walkinAddedWaiverUndelivered": "Added to this boat’s list, but their waiver wasn’t emailed. Send it or share the link from their row below.",
+    "walkinAddedIdentityUnconfirmed": "Added to this boat’s list, but the seat is held until you confirm it’s the same person. Confirm it on the trip’s guest list before they board.",
     "walkinFull": "That boat is full. Try the wait list from its trip page instead.",
     "walkinAlready": "That diver is already on this boat.",
     "walkinCourseUnstaffed": "That’s a course session with no instructor assigned yet. Assign one from its trip page first.",

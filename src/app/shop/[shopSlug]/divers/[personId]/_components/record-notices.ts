@@ -356,6 +356,15 @@ const NOTICE_KEYS: Record<
     tone: "warning",
     key: "divers.notices.bookedWaiverUndelivered",
   },
+  // This door books a diver the staffer picked by identity, so it has never
+  // raised the hold — the flag is `createBooking`'s call, not the door's, and a
+  // door with no sentence for it would answer a held seat with a plain
+  // "Activity booked" (`seatedIdentityUnconfirmedNotice`).
+  "booked-identity-unconfirmed": {
+    form: "book",
+    tone: "warning",
+    key: "divers.notices.bookedIdentityUnconfirmed",
+  },
   "trip-full": { form: "book", tone: "danger", key: "divers.notices.tripFull" },
   "already-booked": { form: "book", tone: "danger", key: "divers.notices.alreadyBooked" },
   "course-unstaffed": {

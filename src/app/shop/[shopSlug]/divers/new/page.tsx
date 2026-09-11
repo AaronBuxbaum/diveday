@@ -20,6 +20,7 @@ import { discardFormDraft, readFormDraft } from "@/db/form-drafts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime } from "@/lib/format";
+import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   blankableDiverEmailSchema,
@@ -111,6 +112,9 @@ export default async function NewDiverPage({
   const t = staffTranslator(locale);
 
   const potentialMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
+  // A candidate with no dive day says so only when a sibling has one; the rule
+  // and the bias it corrects are in `noDiveDayNeedsSaying`.
+  const sayNoDiveDay = noDiveDayNeedsSaying(potentialMatches);
 
   const rawQuery = q?.trim() ?? "";
   const prefill = diverSearchPrefill(rawQuery);
@@ -306,13 +310,18 @@ export default async function NewDiverPage({
                       <input type="hidden" name="fullName" value={match.fullName} />
                       <input type="hidden" name="email" value={match.email ?? ""} />
                       <input type="hidden" name="phone" value={match.phone ?? ""} />
-                      {/* Only on the seating arm: a tap here is a guess off a
-                          trigram name match, so the seat it takes is
-                          identity-unconfirmed until a staffer confirms it
-                          (issue #1556). The wait-list arm writes an entry, not
-                          a seat, and nobody boards from one. */}
+                      {/* Only on the seating arm: a tap here came off a name
+                          match, so the booking is told the name it matched on —
+                          the prompt fires on an exact spelling too, and only the
+                          comparison says whether the seat is
+                          identity-unconfirmed (issue #1556). The wait-list arm
+                          writes an entry, not a seat, and nobody boards from
+                          one. */}
                       {isWaitlist ? null : (
-                        <input type="hidden" name="fromNameMatch" value="true" />
+                        <>
+                          <input type="hidden" name="fromNameMatch" value="true" />
+                          <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
+                        </>
                       )}
                       <button type="submit" className="underline font-medium text-left">
                         {match.fullName}
@@ -336,6 +345,10 @@ export default async function NewDiverPage({
                       {t("divers.page.confirmMatchesLastDive", {
                         date: formatShortDate(match.lastDiveDayAt, locale, shop.timezone),
                       })}
+                    </span>
+                  ) : sayNoDiveDay ? (
+                    <span className="text-muted text-sm ms-1">
+                      {t("divers.page.confirmMatchesNoDiveDay")}
                     </span>
                   ) : null}
                 </li>

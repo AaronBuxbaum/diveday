@@ -57,7 +57,7 @@ const COPY: BuilderCopy = {
   dayCountLabelOne: "{count} day",
   dayCountLabelOther: "{count} days",
   impactTitle: "If you move it",
-  impactCrewClash: "{name} is already on {departure} at that time.",
+  impactCrewClash: "{name} is already crewing {departure} at that time and cannot be on both.",
   impactCrewAway: "{name} has told you they are away then.",
   impactToldOne: "{count} diver has already been told this date. Moving it sends nothing.",
   impactToldOther: "{count} divers have already been told this date. Moving it sends nothing.",
@@ -2414,7 +2414,7 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     await openMovePanel();
 
     const clash = await screen.findByText(
-      "Marisol is already on Thu 07:00 Night Dive at that time.",
+      "Marisol is already crewing Thu 07:00 Night Dive at that time and cannot be on both.",
     );
     expect(clash).toHaveClass("text-warning");
     expect(screen.getAllByRole("alert")).toContain(clash);
@@ -2447,7 +2447,7 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     await openMovePanel();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Marisol is already on Thu 07:00 Night Dive at that time.",
+      "Marisol is already crewing Thu 07:00 Night Dive at that time and cannot be on both.",
     );
     expect(screen.queryByText(COPY.impactTitle)).toBeNull();
   });
@@ -2620,7 +2620,9 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     // panel to find out whether "another departure" is the 07:00 or the 15:00
     // — which is the question they opened it to settle.
     expect(
-      await screen.findByText("Marcus Webb is already on Night Dive at that time."),
+      await screen.findByText(
+        "Marcus Webb is already crewing Night Dive at that time and cannot be on both.",
+      ),
     ).toBeInTheDocument();
     expect(loadMovePreflight).toHaveBeenCalledWith("trip-1", {
       date: "2026-08-06",
@@ -2683,10 +2685,14 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     fireEvent.change(screen.getByLabelText(COPY.newDate), { target: { value: "2026-08-06" } });
 
     expect(
-      await screen.findByText("Marcus Webb is already on Night Dive at that time."),
+      await screen.findByText(
+        "Marcus Webb is already crewing Night Dive at that time and cannot be on both.",
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Talia Okonkwo is already on Two-Tank Reef at that time."),
+      screen.getByText(
+        "Talia Okonkwo is already crewing Two-Tank Reef at that time and cannot be on both.",
+      ),
     ).toBeInTheDocument();
   });
 

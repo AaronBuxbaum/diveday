@@ -58,6 +58,7 @@
     "bookingRestoreCancelled": "No se pudo deshacer. Esta salida está cancelada. Reactiva la salida y vuelve a añadirlo.",
     "diverAdded": "Buceador añadido a la salida.",
     "diverAddedWaiverUndelivered": "Buceador añadido a la salida, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
+    "diverAddedIdentityUnconfirmed": "Buceador añadido a la salida, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila de abajo.",
     "diverWaitlisted": "Buceador añadido a la lista de espera.",
     "identityConfirmed": "Identidad confirmada. Este buceador puede autorizarse a embarcar.",
     "certified": "Certificado. Puede reservar el siguiente nivel sin más revisión.",

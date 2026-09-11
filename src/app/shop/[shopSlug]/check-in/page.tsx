@@ -149,6 +149,15 @@ const noticeCopy: NoticeMap = {
     tone: "warning",
     key: "checkIn.notice.walkinAddedWaiverUndelivered",
   },
+  // The counter's name-match prompt hands a booking an existing diver's record
+  // on a guess, and the seat is held until someone confirms it is the same
+  // person (H-13, issue #1556). Said here rather than left for the check-in tap
+  // to refuse: that refusal arrives with the diver at the counter, and the
+  // confirm control is on the trip's guest list.
+  "walkin-added-identity-unconfirmed": {
+    tone: "warning",
+    key: "checkIn.notice.walkinAddedIdentityUnconfirmed",
+  },
   // Every walk-in *refusal* now lands back on the walk-in form with the boat
   // still chosen and says which gate it was (`SEAT_SURFACES["walk-in"]`), so
   // the queue only ever carries the two outcomes above. The refusal codes stay

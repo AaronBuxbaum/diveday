@@ -602,14 +602,23 @@ new domain concept, define it here in the same PR.
   copy was saved", never the present tense.
 - **Close-out** — the end-of-day ritual, and Today's evening mirror: one surface
   (`/shop/<slug>/close-out`, ADR 20260804-day-closeout) where staff confirm the day actually
-  ended — every departure's end state read off the same roll-call evidence Today chases, today's
-  unresolved queue rows each given an explicit **carry** or **dismiss**, and tomorrow's first
-  blockers as the parting glance. Closing the day is a **recorded act, never a gate**: an
-  append-only `day_closeouts` row remembers who closed, when, and exactly what was outstanding,
-  and nothing anywhere conditions on it — a dismissed item resurfaces tomorrow if it is still
-  true, and re-opening is just working again and closing again. An open after-dive head count or
-  a boat still out makes the close *loud* (a by-name acknowledgement before the button) but never
-  impossible: the human is the authority on their own day, and the count stays chased either way.
+  ended — every departure's end state read in strict precedence off the same roll-call evidence
+  Today chases, then the clock, and only then the crew's own **trip stage** (`departureStatus`,
+  `src/lib/closeout.ts`); today's unresolved queue rows each given an explicit **carry** or
+  **dismiss**; and tomorrow's first blockers as the parting glance. **A stage settles a station the
+  clock would leave open, and never reopens one the clock has closed** (issue #1480): inside the
+  late-arrival hour a live `home` reads `all_home`, because a crew member tapping Home at the rail
+  is the statement that buffer was standing in for rather than an inference from a time. Nothing
+  demotes — a stage that says `underway` over a departure the clock calls back is silence, not a
+  contradiction, and so is one the crew stopped maintaining. The asymmetry is affordable only
+  because the head count returns before any of it: the promotion is reached solely over a departure
+  whose divers are all already counted back aboard. Closing the day is a **recorded act, never a
+  gate**: an append-only `day_closeouts` row remembers who closed, when, and exactly what was
+  outstanding, and nothing anywhere conditions on it — a dismissed item resurfaces tomorrow if it
+  is still true, and re-opening is just working again and closing again. An open after-dive head
+  count or a boat still out makes the close *loud* (a by-name acknowledgement before the button)
+  but never impossible: the human is the authority on their own day, and the count stays chased
+  either way.
   The evening's **"All boats are home"** line is narrower than the close itself, and deliberately:
   it needs every departure of the shop day settled, every one of them reading `all_home`, **and**
   every *assigned* crew member accounted for at the closing checkpoint — the manifest's own
@@ -1165,6 +1174,26 @@ new domain concept, define it here in the same PR.
   points (Today's departure card, the command palette's "Boarding" jump) open the manifest on that
   checkpoint. Crew, emergency contacts, after-dive roll call, print, and the offline snapshot are all
   on the same page.
+- **Trip stage** — where a departure is, in the crew's own word: one of five (`boarding`,
+  `underway`, `surface`, `heading_in`, `home`) tapped on the **manifest** and then repeated, with
+  the time it was tapped, everywhere DiveDay draws that boat — the shop home's station chip, the
+  storefront's live line, the **follow link**, the **departures board**, and a diver's own link (ADR
+  [20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md),
+  decision 2; `src/lib/trip-stages.ts`). **Never inferred and never a position.** A clock implies no
+  stage: a departure nobody tapped has none, renders nothing, and never renders "Unknown"; and
+  DiveDay follows no vessel, because a position is a promise this app cannot keep. Only an active
+  staff member of that shop, on a live departure, records one (`recordTripStage`,
+  `src/db/trip-stages.ts`), and records rather than edits: `trip_stage_events` is append-only, a
+  crew that taps the wrong word taps the right one, and the newest row wins. **A stage goes stale
+  rather than wrong** — it stops speaking two late-arrival buffers past the departure's own end
+  (`liveStageOf`, `STAGE_STALE_AFTER_MS`), because a crew that tapped *Underway* and then got busy
+  would otherwise leave a diver's family reading "out on the reef" at midnight. `home` alone carries
+  the roll call's success tone, and `home` alone is withheld from the anonymous surfaces: the diver
+  who was aboard reads it on their own link, a storefront panel about tomorrow does not. It was a
+  display word until issue #1480 made it load-bearing — the **close-out** reads a live `home` as a
+  boat that is in, which is what lets a tap settle a station the clock would leave open. So the
+  staleness rule is a safety rule there and not a courtesy: a stage the crew stopped maintaining
+  says nothing about whether the day may close.
 - **Waiver / release** — the single liability release a shop uses, typically with a **medical
   statement**. DiveDay keeps one versioned release per shop: a *changed* release saves a new immutable
   version and new links snapshot the current one. The exact template version is snapshotted into each
@@ -1408,7 +1437,20 @@ new domain concept, define it here in the same PR.
   morning and an afternoon single on one date are one day, not two. **A day nobody dived is never
   one**: a cancelled booking, a no-show, an imported visit standing `did_not_happen`, and a
   cancelled departure are all excluded, the last of those because a blow-out leaves its bookings
-  active by design and the count read them as days until a review caught it (2026-08-28).
+  active by design and the count read them as days until a review caught it (2026-08-28). **Two of
+  those exclusions now have an escape, and only two of the four readers carry it.** A `no_show` the
+  desk itself contradicted by tapping the diver in (`standingArrivalIsArrived`, issue #1558), and a
+  cancelled departure the crew logged dives on, are both dive days to the fly-safe reader
+  (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`) and to the counter's name-match prompt
+  (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) — and to neither the recap's own count
+  (`getRecapPageData`, `src/db/recap.ts`) nor the diver shelf (`src/db/shelf.ts`), which still read
+  a plain `no_show` and a plain non-`scheduled` departure as disqualifying. The definition above is
+  the narrow reading, and it is the one this entry's own count uses: a day the desk tapped a diver
+  in on and the evening sweep then stamped `no_show` is named at the counter and not counted on the
+  keepsake. The gap is deliberate. The two that widened answer a staffer who can see the person and
+  can shake their head, while this count tells the diver "your 3rd dive day" with nobody there to
+  correct it and feeds `visitMilestone`'s exact equality, where a day that moves skips a stamp
+  permanently rather than blurring it. Putting all four behind one predicate is issue #1694.
 - **Milestone stamp** — the drawn double-ring roundel beside the dive record, on the dive days
   `src/lib/visit-milestones.ts` names and no others: the 1st, 10th, 25th, 50th and 100th. Exact
   equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.

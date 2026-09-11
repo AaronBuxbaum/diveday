@@ -1235,11 +1235,11 @@ describe("createBooking identity safeguard (H-13)", () => {
   });
 
   /**
-   * **A tap on the counter's name prompt is a guess** (issue #1556). Its
-   * candidates come from a `similarity() > 0.4` trigram match on a typed name,
-   * so it fires on genuinely different people; a seat taken off it must not
-   * inherit the matched diver's certifications, waiver coverage and rental fit
-   * on the strength of a spelling.
+   * **A tap on the counter's name prompt is a guess when the spelling
+   * disagrees** (issue #1556). Its candidates come from a `similarity() > 0.4`
+   * trigram match on a typed name, so it fires on genuinely different people; a
+   * seat taken off it must not inherit the matched diver's certifications,
+   * waiver coverage and rental fit on the strength of a near spelling.
    */
   it("flags a seat taken off the counter's name-match prompt, and blocks it at the rail", async () => {
     const { db, shop, open } = await seededContext();
@@ -1254,7 +1254,7 @@ describe("createBooking identity safeguard (H-13)", () => {
       shopId: shop.id,
       tripId: open.id,
       personId: diver.id,
-      fromNameMatch: true,
+      fromNameMatch: { typedName: "Nadia Ruis" },
     });
     if (!outcome.ok) throw new Error("name-match booking failed");
     expect(await identityFlag(db, outcome.bookingId)).not.toBeNull();
@@ -1275,6 +1275,70 @@ describe("createBooking identity safeguard (H-13)", () => {
       }),
     ).toBe(true);
     expect(await identityFlag(db, outcome.bookingId)).toBeNull();
+  });
+
+  /**
+   * **The prompt is not the flag** (`dive-domain-expert`, the RFH-07 layer).
+   * `findSimilarDivers` lists exact matches beside the trigram guesses, so a
+   * regular whose name the desk spells right is on the prompt every single
+   * morning. Flagging that seat put a blocker on the ordinary case, and a
+   * blocker a shop clears twenty times before lunch is one it stops reading —
+   * which is the credibility H-13's blocker exists to spend elsewhere.
+   */
+  it("does not flag a tap on a candidate whose name is the one that was typed", async () => {
+    const { db, shop, open } = await seededContext();
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Nadia Karim",
+      email: "nadia-karim@example.com",
+    });
+    if (!diver) throw new Error("diver setup failed");
+    const outcome = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: open.id,
+      personId: diver.id,
+      // What the staffer typed, spelled the way the record is — `personNamesMatch`
+      // is the same test the by-email path uses, so case and accents are noise.
+      fromNameMatch: { typedName: "nadia karim" },
+    });
+    if (!outcome.ok) throw new Error("name-match booking failed");
+    expect(await identityFlag(db, outcome.bookingId)).toBeNull();
+
+    const readiness = await readinessModule.getBookingReadiness(db, shop.id, outcome.bookingId);
+    expect(readiness?.blockers ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "identity_unconfirmed" }),
+    );
+  });
+
+  /**
+   * **The one "which John Smith" a matching spelling does not settle.** Two
+   * divers on file under the same name means the prompt offered both, and the
+   * tap was a coin flip however well the spelling agrees — so this seat is the
+   * exception that keeps the exact-match case above honest.
+   */
+  it("flags an exact-name tap when a second diver in the shop answers to that name", async () => {
+    const { db, shop, open } = await seededContext();
+    const first = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "John Smith",
+      email: "john-smith-1@example.com",
+    });
+    const second = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "John Smith",
+      email: "john-smith-2@example.com",
+    });
+    if (!first || !second) throw new Error("namesake setup failed");
+    const outcome = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: open.id,
+      personId: first.id,
+      fromNameMatch: { typedName: "John Smith" },
+    });
+    if (!outcome.ok) throw new Error("namesake booking failed");
+    expect(await identityFlag(db, outcome.bookingId)).not.toBeNull();
   });
 
   /**
@@ -1357,7 +1421,7 @@ describe("createBooking identity safeguard (H-13)", () => {
       shopId: shop.id,
       tripId: open.id,
       personId: guessed.id,
-      fromNameMatch: true,
+      fromNameMatch: { typedName: "Nadia Ruis" },
       declared: { level: "rescue" },
     });
     if (!flagged.ok) throw new Error("name-match booking failed");

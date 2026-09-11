@@ -79,7 +79,7 @@
     "moving": "Moving…",
     "moveIt": "Move it",
     "impactTitle": "If you move it",
-    "impactCrewClash": "{name} is already on {departure} at that time.",
+    "impactCrewClash": "{name} is already crewing {departure} at that time and cannot be on both.",
     "impactCrewAway": "{name} has told you they are away then.",
     "impactToldOne": "{count} diver has already been told this date. Moving it sends nothing.",
     "impactToldOther": "{count} divers have already been told this date. Moving it sends nothing.",

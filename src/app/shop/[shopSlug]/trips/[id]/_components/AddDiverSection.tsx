@@ -10,6 +10,7 @@ import { rentalFitLineText } from "@/i18n/rental-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { formatShortDate } from "@/lib/format";
+import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { newDiverHref } from "@/lib/person-fields";
 import type { FormNotice } from "@/lib/staff-notices";
 
@@ -66,6 +67,9 @@ export function AddDiverSection({
 }) {
   const t = staffTranslator(locale);
   const searched = query.length > 0;
+  // A candidate with no dive day says so only when a sibling has one; the rule
+  // and the bias it corrects are in `noDiveDayNeedsSaying`.
+  const sayNoDiveDay = noDiveDayNeedsSaying(confirmMatches ?? []);
   return (
     <>
       <FormStatus tone={status?.tone} className="mt-2">
@@ -84,12 +88,14 @@ export function AddDiverSection({
                   <form action={addExistingDiverAction} className="inline">
                     <input type="hidden" name="tripId" value={tripId} />
                     <input type="hidden" name="personId" value={match.id} />
-                    {/* A tap here is a guess off a trigram name match, so the
-                        seat it takes is identity-unconfirmed until a staffer
-                        confirms it (issue #1556). The "create a new diver
-                        anyway" form below carries no such field: it invents
-                        nobody's history. */}
+                    {/* A tap here came off a name match, so the booking is
+                        told the name it matched on: the prompt fires on an
+                        exact spelling too, and only the comparison says whether
+                        the seat is identity-unconfirmed (issue #1556). The
+                        "create a new diver anyway" form below carries no such
+                        field: it invents nobody's history. */}
                     <input type="hidden" name="fromNameMatch" value="true" />
+                    <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
                     <button type="submit" className="underline font-medium text-left">
                       {match.fullName}
                     </button>
@@ -104,6 +110,10 @@ export function AddDiverSection({
                       {t("divers.page.confirmMatchesLastDive", {
                         date: formatShortDate(match.lastDiveDayAt, locale, timeZone),
                       })}
+                    </span>
+                  ) : sayNoDiveDay ? (
+                    <span className="text-muted text-xs ms-1">
+                      {t("divers.page.confirmMatchesNoDiveDay")}
                     </span>
                   ) : null}
                 </li>

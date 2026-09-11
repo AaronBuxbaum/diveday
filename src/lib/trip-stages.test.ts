@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   liveStageOf,
@@ -98,5 +100,54 @@ describe("the five stages", () => {
     for (const stage of TRIP_STAGES.filter((s) => s !== "home")) {
       expect(stageIsPublishable(stage)).toBe(true);
     }
+  });
+});
+
+/**
+ * A stage was a display word — five taps DiveDay repeated on four surfaces —
+ * until the close-out started reading one (issue #1480): a live `home` is now
+ * part of whether a day may close. A word the day's end depends on is a domain
+ * concept, and AGENTS.md gives a new domain concept a glossary entry; this one
+ * had two passing mentions and no definition (`dive-domain-expert`, the RFH-07
+ * layer).
+ *
+ * A text scan, in the spirit of `src/lib/gear.test.ts`'s register-group entry:
+ * it cannot judge prose and does not try. It fails when the entry is gone or
+ * has been rewritten past the rules it exists to carry.
+ */
+describe("the glossary's trip-stage entry", () => {
+  const entry = async () => {
+    const glossary = await readFile(path.join(process.cwd(), "docs/product/glossary.md"), "utf8");
+    const block = glossary.split(/^- \*\*/m).find((part) => part.startsWith("Trip stage**"));
+    expect(block, "docs/product/glossary.md has no **Trip stage** entry").toBeDefined();
+    return block ?? "";
+  };
+
+  it("names all five words and who records one", async () => {
+    const text = await entry();
+    for (const stage of TRIP_STAGES) {
+      expect(text).toContain(`\`${stage}\``);
+    }
+    expect(text).toContain("recordTripStage");
+    expect(text).toMatch(/active\s+staff member/);
+  });
+
+  it("carries the two rules a reader could otherwise invert", async () => {
+    const text = await entry();
+    // Never inferred: a clock does not produce a stage, and an absent one is
+    // absent rather than "Unknown".
+    expect(text).toMatch(/Never inferred/);
+    expect(text).toContain('"Unknown"');
+    // One-way: a tap settles a station the clock would leave open, and never
+    // the reverse (issue #1480).
+    expect(text).toContain("#1480");
+    expect(text).toMatch(/settle a station the clock would leave open/);
+  });
+
+  it("says a stale stage is silence rather than a contradiction", async () => {
+    const text = await entry();
+    expect(text).toContain("STAGE_STALE_AFTER_MS");
+    expect(text).toMatch(/stale\s+rather than wrong/);
+    expect(text).toMatch(/says nothing about whether the day may close/);
   });
 });

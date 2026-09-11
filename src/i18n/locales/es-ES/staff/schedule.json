@@ -79,7 +79,7 @@
     "moving": "Moviendo…",
     "moveIt": "Moverla",
     "impactTitle": "Si la mueves",
-    "impactCrewClash": "{name} ya tiene {departure} a esa hora.",
+    "impactCrewClash": "{name} ya está en la tripulación de {departure} a esa hora y no puede estar en las dos.",
     "impactCrewAway": "{name} ha avisado de que no está esos días.",
     "impactToldOne": "{count} buceador ya ha recibido esta fecha; moverla no envía nada.",
     "impactToldOther": "{count} buceadores ya han recibido esta fecha; moverla no envía nada.",

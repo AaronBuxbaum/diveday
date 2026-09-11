@@ -62,6 +62,7 @@
     "waiverError": "No se pudo registrar esa exención en papel. Inténtalo de nuevo, o abre la salida del buceador para ver por qué.",
     "walkinAdded": "Añadido a la lista de este barco. Regístralo cuando llegue.",
     "walkinAddedWaiverUndelivered": "Añadido a la lista de este barco, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
+    "walkinAddedIdentityUnconfirmed": "Añadido a la lista de este barco, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en la lista de invitados de la salida antes de que embarque.",
     "walkinFull": "Ese barco está completo. Prueba la lista de espera desde su página de salida.",
     "walkinAlready": "Ese buceador ya está en este barco.",
     "walkinCourseUnstaffed": "Esa es una sesión de curso sin instructor asignado. Asigna uno desde su página de salida primero.",

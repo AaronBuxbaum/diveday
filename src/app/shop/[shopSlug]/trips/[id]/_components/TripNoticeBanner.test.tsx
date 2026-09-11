@@ -115,4 +115,22 @@ describe("resolveTripNotice", () => {
     expect(resolve("constructor")).toBeUndefined();
     expect(resolve(undefined)).toBeUndefined();
   });
+
+  /**
+   * The two trip doors (`SEAT_SURFACES["trip-guests"]` and `["new-booking"]`)
+   * land a held seat here — a booking attached to an existing diver on a guess,
+   * which the boarding gate refuses until someone confirms it (H-13, issue
+   * #1556). It used to land as the plain `diver-added`, so the staffer learned
+   * the seat was held on the next tap, at the check-in queue
+   * (`dive-domain-expert`, 2026-09-11). Distinct words, and a tone that is not
+   * "you can walk away".
+   */
+  it("says a held seat is held, beside the form that seated it", () => {
+    const held = resolve("diver-added-identity-unconfirmed");
+
+    expect(held?.form).toBe("add-diver");
+    expect(held?.tone).toBe("warning");
+    expect(held?.text).not.toBe(resolve("diver-added")?.text);
+    expect(held?.text).toMatch(/confirm/i);
+  });
 });

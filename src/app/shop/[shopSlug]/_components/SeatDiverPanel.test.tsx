@@ -30,8 +30,9 @@ const copy: SeatDiverPanelCopy = {
   noMatches: "No returning diver matches.",
   noMatchesAction: "Add diver",
   confirmMatchesTitle:
-    "Is this the same Nadia Ruis? Picking one gives this booking that diver’s certifications and waiver.",
-  confirmMatchesLastDive: (at) => `Last dived ${at.toISOString().slice(0, 10)}`,
+    "Is this the same Nadia Ruis? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person.",
+  confirmMatchesLastDive: (at) => `Last dive day here: ${at.toISOString().slice(0, 10)}`,
+  confirmMatchesNoDiveDay: "No dive days here yet",
 };
 
 const match = (over: Partial<SimilarDiver> = {}): SimilarDiver => ({
@@ -81,6 +82,10 @@ describe("SeatDiverPanel name-match prompt", () => {
 
     const candidateForm = screen.getByRole("button", { name: "Nadia Ruiz" }).closest("form");
     expect(candidateForm?.querySelector('input[name="fromNameMatch"]')).toHaveValue("true");
+    // ...along with the name it was guessing from. The prompt lists exact
+    // matches beside the trigram guesses, so this is what lets the booking flag
+    // the guess and leave the regular the desk spelled right alone.
+    expect(candidateForm?.querySelector('input[name="nameMatchQuery"]')).toHaveValue("Nadia Ruis");
     // The search picker below submits the same action for a diver a staffer
     // went looking for and found, and "create new diver anyway" invents
     // nobody's history — neither may raise the flag, or every seat is blocked
@@ -88,16 +93,29 @@ describe("SeatDiverPanel name-match prompt", () => {
     expect(container.querySelectorAll('input[name="fromNameMatch"]')).toHaveLength(1);
   });
 
-  it("carries the last dive day the page dated, and says nothing without one", () => {
+  it("carries the last dive day the page dated, and says so where there is none", () => {
     renderPanel([
       match({ lastDiveDayAt: new Date("2026-08-26T15:00:00Z") }),
       match({ id: "person-3", fullName: "Nadia Ruiseco" }),
     ]);
 
-    expect(screen.getByText("Last dived 2026-08-26")).toBeInTheDocument();
-    // One line, not two: "no dives on file" is true of every first-timer and
-    // distinguishes nobody from nobody.
-    expect(screen.getAllByText(/Last dived/)).toHaveLength(1);
+    expect(screen.getByText("Last dive day here: 2026-08-26")).toBeInTheDocument();
+    // The blank is the whole finding (`dive-domain-expert`, 2026-09-11): a
+    // candidate left silent beside a dated sibling reads as the lesser diver,
+    // and the counter taps the record with the cards — which is the wrong
+    // record exactly when the namesake at the desk is the first-timer.
+    expect(screen.getByText("No dive days here yet")).toBeInTheDocument();
+    expect(screen.getAllByText(/Last dive day here/)).toHaveLength(1);
+  });
+
+  it("says nothing about dive days when this shop has one for nobody on the list", () => {
+    // Silence is honest here and the line is not: it would be true of every
+    // genuine first-timer and of every candidate this shop has only ever typed
+    // in, so it would distinguish nobody from nobody, twice over.
+    renderPanel([match(), match({ id: "person-3", fullName: "Nadia Ruiseco" })]);
+
+    expect(screen.queryByText("No dive days here yet")).toBeNull();
+    expect(screen.queryByText(/Last dive day here/)).toBeNull();
   });
 
   it("heads the list with the question and the stake, never an empty heading", () => {
@@ -105,7 +123,7 @@ describe("SeatDiverPanel name-match prompt", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Is this the same Nadia Ruis? Picking one gives this booking that diver’s certifications and waiver.",
+        name: "Is this the same Nadia Ruis? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person.",
       }),
     ).toBeInTheDocument();
   });

@@ -106,8 +106,9 @@
     "adding": "Adding…",
     "cancel": "Cancel",
     "addDiver": "Add diver",
-    "confirmMatchesTitle": "Is this the same {name}? Picking one gives this booking that diver’s certifications and waiver.",
-    "confirmMatchesLastDive": "Last dived {date}",
+    "confirmMatchesTitle": "Is this the same {name}? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person.",
+    "confirmMatchesLastDive": "Last dive day here: {date}",
+    "confirmMatchesNoDiveDay": "No dive days here yet",
     "confirmMatchesSubmit": "Create new diver anyway"
   },
   "list": {
@@ -314,6 +315,7 @@
     "alreadyBooked": "This diver is already booked on that activity.",
     "booked": "Activity booked. Review it below, then create and send the invoice.",
     "bookedWaiverUndelivered": "Activity booked, but their waiver wasn’t emailed. Open the trip’s guest list to send it or share the link.",
+    "bookedIdentityUnconfirmed": "Activity booked, but the seat is held until you confirm it’s the same person. Open the trip’s guest list to confirm it.",
     "bookingInvalid": "Add an email and choose an available activity.",
     "cardCertifiedToast": "Marked certified.",
     "cardConfirmedToast": "Certification confirmed.",

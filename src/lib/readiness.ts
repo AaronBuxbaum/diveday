@@ -406,9 +406,20 @@ export type ReadinessInput = {
   /** The booking's current payment state; absent is treated as unpaid. */
   paymentStatus?: PaymentStatus | null;
   /**
-   * The booking reused an existing person by email under a mismatched name and
-   * has not been staff-confirmed (H-13). Fails closed until staff confirm it is
-   * the same human, so a shared-inbox booking can't board on borrowed evidence.
+   * The booking attached itself to an existing person on something short of
+   * proof and has not been staff-confirmed (H-13). Fails closed until staff
+   * confirm it is the same human, so a seat can't board on borrowed evidence.
+   *
+   * **Two doors raise it, and the module that acts on the flag documented one**
+   * (`dive-domain-expert`, the RFH-07 layer). The by-email path reused a row
+   * whose name on file disagrees with the submitted one — the shared-inbox
+   * signal this flag was built for — and the counter's name-match prompt handed
+   * over a person id on a tap, where either the typed name disagrees with the
+   * one on file or a second diver in the shop answers to that exact name
+   * (issue #1556). Each is argued where it is set, in `createBookingRecord` and
+   * `nameMatchLeavesIdentityInDoubt` (`src/db/bookings.ts`); a safety module
+   * describing only the older one teaches a reader that a tap at the counter
+   * cannot produce the blocker they are looking at.
    */
   identityUnconfirmed?: boolean;
   /**
@@ -702,9 +713,10 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   const blockers: ReadinessBlocker[] = [];
 
   // Evaluated ahead of — and independently of — the trip's own requirements: a
-  // booking that reused an existing person under a mismatched name must never
-  // board on that person's certs/waiver until staff confirm it is the same
-  // human (H-13), even on a trip whose requirements aren't configured yet.
+  // booking that attached itself to an existing person on something short of
+  // proof must never board on that person's certs/waiver until staff confirm it
+  // is the same human (H-13), even on a trip whose requirements aren't
+  // configured yet.
   if (input.identityUnconfirmed) {
     blockers.push({ code: "identity_unconfirmed" });
   }

@@ -58,6 +58,7 @@
     "bookingRestoreCancelled": "Couldn’t undo. This trip has been cancelled. Reinstate the trip first, then add them back.",
     "diverAdded": "Diver added to the trip.",
     "diverAddedWaiverUndelivered": "Diver added to the trip, but their waiver wasn’t emailed. Send it or share the link from their row below.",
+    "diverAddedIdentityUnconfirmed": "Diver added to the trip, but the seat is held until you confirm it’s the same person. Confirm it on their row below.",
     "diverWaitlisted": "Diver added to the wait list.",
     "identityConfirmed": "Identity confirmed. This diver can be cleared to board.",
     "certified": "Certified. They can book their next level with no further review.",

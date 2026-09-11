@@ -155,7 +155,7 @@ describe("AddDiverSection name-match prompt", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Is this the same Nadia Ruis? Picking one gives this booking that diver’s certifications and waiver.",
+        name: "Is this the same Nadia Ruis? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person.",
       }),
     ).toBeInTheDocument();
   });
@@ -165,13 +165,31 @@ describe("AddDiverSection name-match prompt", () => {
     // line that read the server's zone would name the wrong day.
     renderPrompt([match({ lastDiveDayAt: new Date("2026-08-27T00:30:00Z") })]);
 
-    expect(screen.getByText("Last dived Wed, Aug 26")).toBeInTheDocument();
+    expect(screen.getByText("Last dive day here: Wed, Aug 26")).toBeInTheDocument();
   });
 
-  it("says nothing at all about a candidate with no dive day on file", () => {
+  it("says nothing about dive days when this shop has one for nobody on the list", () => {
+    // The line would be true of every genuine first-timer and of every
+    // candidate this shop has only ever typed in, so here it distinguishes
+    // nobody from nobody.
     renderPrompt([match({ lastDiveDayAt: null })]);
 
-    expect(screen.queryByText(/Last dived/)).toBeNull();
+    expect(screen.queryByText(/Last dive day here/)).toBeNull();
+    expect(screen.queryByText("No dive days here yet")).toBeNull();
+  });
+
+  it("names the candidate with no dive day once a sibling has one", () => {
+    // The finding (`dive-domain-expert`, 2026-09-11): a blank beside a date
+    // reads as "the one with the date is the real diver", which biases the tap
+    // toward the record that already has cards — the wrong way round when the
+    // namesake at the counter is the first-timer.
+    renderPrompt([
+      match({ lastDiveDayAt: new Date("2026-08-27T00:30:00Z") }),
+      match({ id: "person-3", fullName: "Nadia Ruiseco" }),
+    ]);
+
+    expect(screen.getByText("Last dive day here: Wed, Aug 26")).toBeInTheDocument();
+    expect(screen.getByText("No dive days here yet")).toBeInTheDocument();
   });
 
   it("marks the pick as a name match, so the seat it takes is identity-unconfirmed", () => {
@@ -185,6 +203,10 @@ describe("AddDiverSection name-match prompt", () => {
 
     const candidateForm = screen.getByRole("button", { name: "Nadia Ruiz" }).closest("form");
     expect(candidateForm?.querySelector('input[name="fromNameMatch"]')).toHaveValue("true");
+    // ...along with the name it was guessing from, which is what the booking
+    // compares: the prompt lists an exact match too, and flagging that seat is
+    // how a shop learns to tap confirm identity without reading it.
+    expect(candidateForm?.querySelector('input[name="nameMatchQuery"]')).toHaveValue("Nadia Ruis");
     expect(screen.getByText("Avery Diver")).toBeInTheDocument();
     // ...and only there. The picker seats a diver a staffer went looking for
     // and found, and "create a new diver anyway" invents nobody's history —

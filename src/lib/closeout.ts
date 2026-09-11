@@ -331,7 +331,8 @@ const STANDING_SETUP_KINDS: ReadonlySet<TodayActionKind> = new Set(["units_uncon
 
 /**
  * How one departure reads tonight, in strict precedence: an open head count
- * first, then the clock, and only then the crew's own word.
+ * first, then the clock, and only then the crew's own word — which may settle
+ * a station the clock would leave open, and never reopen one it has closed.
  */
 function departureStatus(
   trip: CloseoutTripInput,
@@ -351,17 +352,32 @@ function departureStatus(
     return { status: "not_departed", ...none };
   }
   if (!hasReturned(trip.endsAt, now)) {
-    // **A crew tap outranks the clock** (issue #1480). The late-arrival hour
+    // **A crew tap settles a station the clock would leave open; it never
+    // reopens one the clock has closed** (issue #1480). The late-arrival hour
     // is there so a *time-based inference* cannot call a boat home early; a
     // crew member tapping Home at the rail is not an inference, it is the
-    // statement the buffer was standing in for. So `home` promotes — and only
-    // `home`: no stage demotes, which is why a boat an hour past its end whose
-    // last word is `underway` still reads `all_home` from the clock alone.
+    // statement the buffer was standing in for, so `home` promotes. The
+    // asymmetry is the rule and not a hole in it: no stage demotes, and a
+    // stale or contrary stage is silence rather than a contradiction.
     // `liveStageOf` is what stops a tap outliving its shelf life
-    // (`STAGE_STALE_AFTER_MS` is two buffers, so a stage that is stale here
-    // has always already passed the clock's own test). The gap branch above
-    // returns first either way: a crew tap can never close a day over a diver
-    // nobody counted.
+    // (`STAGE_STALE_AFTER_MS` is two buffers).
+    //
+    // Which leaves the overdue hour — from `endsAt` plus one buffer, where the
+    // clock starts saying home, to `endsAt` plus `STAGE_STALE_AFTER_MS`, where
+    // the word stops speaking — in which this branch no longer runs, a live
+    // `underway` is outvoted, and the departure still reads `all_home`. What
+    // keeps that from being a boat lost quietly is the gap branch above, which
+    // returns first: this line is only reached over a departure whose head
+    // count is complete, every diver counted back aboard, and a shop running
+    // no roll call gets `no_roll_call` and never arrives here at all. Read the
+    // other way, a tap the crew forgot to update would hold a finished day
+    // open until the word went stale.
+    //
+    // `hasSailed` above carries no matching promotion either: a crew tapping
+    // Boarding at 07:50 on an 08:00 boat reads `not_departed` until 09:00.
+    // Nothing turns on that — `not_departed` and `still_out` are both
+    // unsettled, and neither ends the day — so it stays one clock reading
+    // rather than a second rule to keep in step with it.
     const recorded = liveStageOf(trip.stage ?? null, trip.endsAt, now);
     if (recorded?.stage !== "home") {
       return { status: "still_out", ...none };

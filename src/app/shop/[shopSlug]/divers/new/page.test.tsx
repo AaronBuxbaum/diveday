@@ -57,7 +57,7 @@ const MATCH = {
 
 afterEach(cleanup);
 
-async function renderPage(search: Record<string, string>) {
+async function renderPage(search: Record<string, string>, matches: unknown[] = [MATCH]) {
   vi.mocked(requireShopSurface).mockResolvedValue({
     session: { user: { shopId: SHOP_ID, shopSlug: "blue-mantis", personId: "staff" } },
     db: {},
@@ -68,7 +68,7 @@ async function renderPage(search: Record<string, string>) {
       timezone: "America/Cancun",
     },
   } as never);
-  vi.mocked(findSimilarDivers).mockResolvedValue([MATCH] as never);
+  vi.mocked(findSimilarDivers).mockResolvedValue(matches as never);
   return render(
     await NewDiverPage({
       params: Promise.resolve({ shopSlug: "blue-mantis" }),
@@ -93,6 +93,10 @@ describe("NewDiverPage name-match prompt", () => {
 
     const candidateForm = screen.getByRole("button", { name: MATCH.fullName }).closest("form");
     expect(candidateForm?.querySelector('input[name="fromNameMatch"]')).toHaveValue("true");
+    // ...along with the name it was guessing from, which is what the booking
+    // compares. `fullName` beside it is the *matched* diver's, so only this
+    // field can tell a guess from a regular the desk spelled right.
+    expect(candidateForm?.querySelector('input[name="nameMatchQuery"]')).toHaveValue("Nadia Ruis");
     // Not on "create a new diver anyway", which invents nobody's history, and
     // not on the hand-entry form below it: a flag on either would block every
     // seat and teach the counter to tap past it.
@@ -104,6 +108,7 @@ describe("NewDiverPage name-match prompt", () => {
 
     expect(screen.getByRole("button", { name: MATCH.fullName })).toBeInTheDocument();
     expect(container.querySelectorAll('input[name="fromNameMatch"]')).toHaveLength(0);
+    expect(container.querySelectorAll('input[name="nameMatchQuery"]')).toHaveLength(0);
   });
 
   it("wait-lists the matched diver's own record, not the name that was typed", async () => {
@@ -119,6 +124,30 @@ describe("NewDiverPage name-match prompt", () => {
     expect(form?.querySelector('input[name="email"]')).toHaveValue(MATCH.email);
     expect(form?.querySelector('input[name="phone"]')).toHaveValue(MATCH.phone);
     expect(form?.querySelector('input[name="personId"]')).toHaveValue(MATCH.id);
+  });
+
+  it("names the candidate with no dive day once a sibling has one", async () => {
+    // The third door renders its own dive-day line, so it gets its own pin
+    // (`dive-domain-expert`, 2026-09-11): a blank beside a dated sibling reads
+    // as "the one with the date is the real diver" and biases the tap toward
+    // the record that already has cards. With no date anywhere on the list the
+    // line says nothing and is not rendered — `noDiveDayNeedsSaying`.
+    await renderPage(seatingArm, [
+      { ...MATCH, lastDiveDayAt: new Date("2026-08-27T00:30:00Z") },
+      { ...MATCH, id: "44444444-4444-4444-8444-444444444444", fullName: "Nadia Ruiseco" },
+    ]);
+
+    // The translator is mocked to echo keys here, so these are the two message
+    // keys; the sentences themselves are pinned in `i18n/name-match-prompt`.
+    expect(screen.getByText("divers.page.confirmMatchesLastDive")).toBeInTheDocument();
+    expect(screen.getByText("divers.page.confirmMatchesNoDiveDay")).toBeInTheDocument();
+  });
+
+  it("says nothing about dive days when this shop has one for nobody on the list", async () => {
+    await renderPage(seatingArm);
+
+    expect(screen.queryByText("divers.page.confirmMatchesLastDive")).toBeNull();
+    expect(screen.queryByText("divers.page.confirmMatchesNoDiveDay")).toBeNull();
   });
 
   it("links the match instead of seating them when there is no trip to seat onto", async () => {

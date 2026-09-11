@@ -270,6 +270,7 @@ export default async function NewBookingDiverPage({
             t("divers.page.confirmMatchesLastDive", {
               date: formatShortDate(at, locale, shop.timezone),
             }),
+          confirmMatchesNoDiveDay: t("divers.page.confirmMatchesNoDiveDay"),
           confirmMatchesSubmit: t("divers.page.confirmMatchesSubmit"),
         }}
       />

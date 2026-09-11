@@ -9,6 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { fill } from "@/i18n/fill";
+import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { newDiverHref } from "@/lib/person-fields";
 
 /** Every word this panel says, resolved by the page from the staff bundle. */
@@ -45,7 +46,15 @@ export type SeatDiverPanelCopy = {
    * and `addPersonAriaLabel` above sets the precedent: the panel holds no
    * translator and no timezone.
    */
-  confirmMatchesLastDive?: (at: Date) => string;
+  confirmMatchesLastDive: (at: Date) => string;
+  /**
+   * The same line for a candidate this shop has no dive day for. Both halves
+   * are required, unlike their neighbours: they are one line with two values,
+   * and a panel holding only the dated half leaves a first-timer silent beside
+   * a sibling that speaks — which argues for the record that already has cards
+   * (`noDiveDayNeedsSaying`, `src/lib/name-match-evidence.ts`).
+   */
+  confirmMatchesNoDiveDay: string;
   confirmMatchesSubmit?: string;
 };
 
@@ -89,6 +98,9 @@ export function SeatDiverPanel({
   confirmPhone?: string;
   confirmMatches?: SimilarDiver[];
 }) {
+  // A candidate with no dive day says so only when a sibling has one; the rule
+  // and the bias it corrects are in `noDiveDayNeedsSaying`.
+  const sayNoDiveDay = noDiveDayNeedsSaying(confirmMatches ?? []);
   const addHref = newDiverHref(shopSlug, {
     query,
     surface,
@@ -114,12 +126,14 @@ export function SeatDiverPanel({
                   >
                     <input type="hidden" name="tripId" value={tripId} />
                     <input type="hidden" name="personId" value={match.id} />
-                    {/* A tap here is a guess off a trigram name match, so the
-                        seat it takes is identity-unconfirmed until a staffer
-                        confirms it (issue #1556). The picker below, where a
-                        staffer went looking for a diver by name, carries no
-                        such field. */}
+                    {/* A tap here came off a name match, so the booking is
+                        told the name it matched on: the prompt fires on an
+                        exact spelling too, and only the comparison says whether
+                        the seat is identity-unconfirmed (issue #1556). The
+                        picker below, where a staffer went looking for a diver
+                        by name, carries no such field. */}
                     <input type="hidden" name="fromNameMatch" value="true" />
+                    <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
                     <button type="submit" className="underline font-medium text-left">
                       {match.fullName}
                     </button>
@@ -129,10 +143,12 @@ export function SeatDiverPanel({
                       ({[match.email, match.phone].filter(Boolean).join(", ")})
                     </span>
                   ) : null}
-                  {match.lastDiveDayAt && copy.confirmMatchesLastDive ? (
+                  {match.lastDiveDayAt ? (
                     <span className="text-muted text-xs ms-1">
                       {copy.confirmMatchesLastDive(match.lastDiveDayAt)}
                     </span>
+                  ) : sayNoDiveDay ? (
+                    <span className="text-muted text-xs ms-1">{copy.confirmMatchesNoDiveDay}</span>
                   ) : null}
                 </li>
               ))}
