@@ -215,6 +215,60 @@
       "w": 1180,
       "h": 3120,
       "page": "page-4"
+    },
+    {
+      "file": "Round5.dc.html",
+      "title": "Round 5 — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 3100,
+      "page": "page-5"
+    },
+    {
+      "file": "TheDial.dc.html",
+      "title": "The dial — the same morning at three stops",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 3080,
+      "page": "page-5"
+    },
+    {
+      "file": "Chart.dc.html",
+      "title": "Chart — the sheet",
+      "x": 2600,
+      "y": 0,
+      "w": 1180,
+      "h": 3700,
+      "page": "page-5"
+    },
+    {
+      "file": "ChartHome.dc.html",
+      "title": "Chart — the home by day, 6:40 AM",
+      "x": 0,
+      "y": 4000,
+      "w": 1180,
+      "h": 2500,
+      "page": "page-5"
+    },
+    {
+      "file": "ChartNight.dc.html",
+      "title": "Chart — the home at night, 6:10 PM",
+      "x": 1300,
+      "y": 4000,
+      "w": 1180,
+      "h": 2340,
+      "page": "page-5"
+    },
+    {
+      "file": "ChartPhones.dc.html",
+      "title": "Chart — the counter, the roll call, the pocket",
+      "x": 2600,
+      "y": 4000,
+      "w": 1180,
+      "h": 2900,
+      "page": "page-5"
     }
   ],
   "annotations": [
@@ -265,11 +319,19 @@
       "w": 620,
       "page": "page-4",
       "text": "Round 4, drawn on the owner's read of round 3 (\"can we improve this further?\"): more instrument, not more decoration. Five additions to the sheet — the display, the seat gauge, the telemetry line, fixed digits and the crew's words, motion complete — the home redrawn with them, and four more surfaces: a boat and the week, a person and the money, and the outside. Calls (m)–(o) are on the cover."
+    },
+    {
+      "id": "round-5",
+      "x": 3900,
+      "y": 0,
+      "w": 620,
+      "page": "page-5",
+      "text": "Round 5, drawn on the owner’s read of round 4 (light mode should render light still; further changes follow; somewhere between an instrument and the existing design): Chart — the instrument printed on Reef’s own paper. The dial beside the cover draws the same morning at three stops (Console, Chart, Reef after the floor) so “between” is a position; then Chart’s sheet, its home by day, its home at night, and three phones. Calls (p)–(r) are on the cover."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-4"
+    "page": "page-5"
   },
   "pages": [
     {
@@ -287,6 +349,10 @@
     {
       "id": "page-4",
       "name": "Round 4 — Console, further"
+    },
+    {
+      "id": "page-5",
+      "name": "Round 5 — Chart: light renders light"
     }
   ]
 }

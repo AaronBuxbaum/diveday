@@ -1,6 +1,6 @@
 # Clear the deck — six ways to make DiveDay smaller
 
-- **Status:** Live (its ADR is Proposed, pending H-73; rounds 2, 3 and 4 drawn 2026-09-11, each on the owner's read of the round before; nothing has shipped from it)
+- **Status:** Live (its ADR is Proposed, pending H-73; rounds 2, 3, 4 and 5 drawn 2026-09-11, each on the owner's read of the round before; nothing has shipped from it)
 - **Date:** 2026-09-11
 - **ADR:** [20260911-clear-the-deck](../../../architecture/decisions/20260911-clear-the-deck.md)
 - **Published:** https://claude.ai/code/artifact/d79e2f2e-a6b7-4692-8f32-c67dc5651bb9
@@ -18,15 +18,17 @@ the shop home for the same shop on the same morning, at desktop and at 390, so t
 like. **Nothing here is normative**; the ADR carries the floor and the six, the pick is the owner's
 (H-73), and code obeys the ADR. A second page, drawn the same day on the owner's read of the first,
 redraws the surface itself; a third, on the read of the second, draws one direction deep; a fourth,
-on the read of the third, takes it further — see "Round 2", "Round 3" and "Round 4" below.
+on the read of the third, takes it further; a fifth, on the read of the fourth, prints it on the app's
+own paper, light rendering light — see "Round 2" through "Round 5" below.
 
 ## Artboards
 
-Four pages. On the first, round 1: the cover on top, the six concepts beneath it in two rows of
+Five pages. On the first, round 1: the cover on top, the six concepts beneath it in two rows of
 three. On the second, round 2: its cover, then the five surfaces in a row. On the third, round 3: its
 cover beside the system sheet, then the home by day, the home at depth, and the three phones. On the
 fourth, round 4: its cover, the parts and the refined home in a row; a boat and the week, a person
-and the money, and the outside beneath.
+and the money, and the outside beneath. On the fifth, round 5: its cover, the dial and Chart's sheet in
+a row; the home by day, the home at night, and the three phones beneath.
 
 | File | What it shows |
 | --- | --- |
@@ -106,10 +108,35 @@ card that replaces the postcard, and DiveDay's own hero as a live console.
 | `ConsolePerson.dc.html` | **A person, and the money** — Grace Mensah's record with the fix as its primary and her dives as lines; Shop › Money at 6:10 PM as the till on one page with the weeks as gauges |
 | `ConsoleOutside.dc.html` | **The outside** — the storefront's boat rows on Console's parts under the shop's colour and face; Grace's log card printed that evening; DiveDay's homepage hero with the visitor's boat on glass |
 
+### Round 5 — Chart: light renders light
+
+The owner's read of round 4, 2026-09-11: "I think light mode should render light still. This may
+imply we make additional changes and maybe make it somewhere between an instrument and the existing
+design." The fifth page answers with **Chart** — the instrument printed on Reef's own paper:
+Console's parts, figures, words and discipline on the sand, shell, rope and ink the app already
+has; the display's reading on a lit face instead of dark glass; the night palette the app already
+has as the one dark; glare as a word in the roll call's bar wrapping the app's own boat-mode skin,
+never the theme's doing; one radius of 6; and a boat as a sheet of shell on the sand where Reef had
+a card. And a dial: the same morning drawn at three stops — Console, Chart, Reef after the floor —
+so "between" is a position the owner can point at.
+
+| File | What it shows |
+| --- | --- |
+| `Round5.dc.html` | The page's cover: the owner's read, what "light renders light" changes (the display becomes the face, the day scheme becomes Reef's paper, the depth scheme becomes the app's night, the boat scheme becomes a word, one radius of 6, the sheet, the gauge on paper, the shop's colour in two places), the dial in words, what returns from Reef and what stays from Console, what is still refused, the recommendation, the owner's round-5 calls (p)–(r) |
+| `TheDial.dc.html` | **The dial** — the top of the home three times, like for like: Console as round 4 left it, Chart, and Reef after the floor; what each keeps, costs and reads as; how to read the dial and where the recommendation sits |
+| `Chart.dc.html` | **The sheet** — nine tokens in light and nine at night with where each comes from (eight of each are `globals.css` at HEAD); the shape (one radius, the face, the sheet, two buttons); the parts in light; the same parts at night; glare as a choice; the words, and what the sheet changes in code |
+| `ChartHome.dc.html` | **The home by day** — Thursday at 6:40 on the chart table: the face, three sheets with their gauges and lines, the desk and the week on the paper, the telemetry line |
+| `ChartNight.dc.html` | **The home at night** — the same page at 6:10 PM in the night palette the app already has: souls counted home on sheets, the night boat's face, today in figures |
+| `ChartPhones.dc.html` | **Three phones** — the counter and the roll call in light, with the glare word in the roll call's bar, and the home in a pocket with a sheet and a gauge per boat |
+
+Every round-5 board is drawn on round 1's Three words with Ask, which is still call (a). The six
+round-5 boards layer Chart's stylesheet over Console's, and the dial's third stop carries a Reef
+stylesheet lifted from `globals.css` at `748021f`.
+
 `today-home.jpg`, `today-storefront.jpg` and `today-settings.jpg` are the three captures round 1's
 cover reads, taken from `pnpm dev` on 2026-09-11 with `scripts/screenshot.mjs` (the demo shop, light, 1280
 and 390) and downsampled. They are evidence, dated like the rest of the canvas, and are never
-refreshed. `canvas.json` lays the twenty-four boards out on four pages, pins six notes, and opens on round 4.
+refreshed. `canvas.json` lays the thirty boards out on five pages, pins seven notes, and opens on round 5.
 
 ## The fiction every board holds to
 
@@ -175,18 +202,21 @@ names the ADR in its doc comment, a test pins the rule, and this table moves.
 | 21l — the display, the seat gauge and the telemetry line (H-73 m, n, o); the four freshness components they replace deleted | open | — | — |
 | 21m — a boat's page as one instrument (the four trip tabs become one), then the week as gauges (the board's tiles and buttons go) | open | — | — |
 | 21n — a person's record with the fix as its primary; the till as one page | open | — | — |
+| 21o — the surface, if (q) is Chart: Reef's tokens and night palette kept; the ladder's two upper rungs, the bed, the marks and the moments deleted; one radius of 6; the sheet as the one panel, for boats only (H-73 q, r; narrows 21i, whose token deletion does not happen) | open | — | — |
+| 21p — light renders light: the face on `--surface` and `--border` in place of the display's glass; the app's night palette as the one dark, Console's depth scheme not built; glare as the crew's word wrapping `.boat-mode` on the roll call and the counter (H-73 p; amends 21l's display and 21i's schemes) | open | — | — |
 | 21j — the diver's side on Console: Harbor's storefront on its row, figure and button; the recap as the log card, the drawing gone (H-73 g); DiveDay's hero as a live console | open | — | — |
 | 21k — DiveDay's own pages on the picked surface (H-73 h), in the slice that shrinks them (21f) | open | — | — |
 
 ## Working on it
 
 The sources here are the working files. To change a board, edit its `.dc.html`, re-seed a fresh
-copy with the design skill's helper (all twenty-four artboards on the four pages, `canvas.json`, the
+copy with the design skill's helper (all thirty artboards on the five pages, `canvas.json`, the
 three `.jpg` files, the title "Clear the deck"), check it, and republish to the URL above. The seeded output is build
-output and is never committed ([design-artifacts.md](../../design-artifacts.md)). The twenty-four boards
+output and is never committed ([design-artifacts.md](../../design-artifacts.md)). The thirty boards
 share one prose stylesheet, pasted verbatim into each between `/* deck:start */` and `/* deck:end */`,
-and the eleven round-3 and round-4 boards share Console's between `/* console:start */` and
-`/* console:end */`:
+and the seventeen round-3, round-4 and round-5 boards share Console's between `/* console:start */`
+and `/* console:end */`; the six round-5 boards layer Chart's over it between `/* chart:start */` and
+`/* chart:end */`, and the dial's third stop carries Reef's between `/* reef:start */` and `/* reef:end */`:
 change either in one board and copy the block into the others with a scripted replace, never by
 hand and never as a divergent copy. Each round-2 surface carries its own app stylesheet beneath it,
 which is the point of the board and is not shared.

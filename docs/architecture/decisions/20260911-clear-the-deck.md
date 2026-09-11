@@ -6,18 +6,23 @@
   pick. **Round 2 read, the same day:** the problem is Reef itself; the instrument is the direction
   the owner liked; farther from the cutesy. Round 3 (decision 4) draws that one direction deep —
   Console — and asks calls (i)–(l). **Round 3 read, the same day:** "Can we improve this further?"
-  Round 4 (decision 5) takes Console further along its own axis and asks calls (m)–(o). The floor's
+  Round 4 (decision 5) takes Console further along its own axis and asks calls (m)–(o). **Round 4
+  read, the same day:** light mode should still render light; that implies further changes; and the
+  surface should sit somewhere between an instrument and the existing design. Round 5 (decision 6)
+  prints the instrument on Reef's own paper — Chart — and asks calls (p)–(r). The floor's
   first two rows (the door, the chip and the pill) may start on this ADR alone,
   because they are One hand's slices 20b and 20c taken to zero; every other row, every concept and
-  every surface waits on the owner's calls (a)–(o)
+  every surface waits on the owner's calls (a)–(r)
 - **Date:** 2026-09-11
-- **Design:** [the canvas](../../design/canvases/20260911-clear-the-deck/README.md) — two pages.
+- **Design:** [the canvas](../../design/canvases/20260911-clear-the-deck/README.md) — five pages.
   Round 1: the cover with the count, the captures, the floor and the comparison; six concept boards,
   each redrawing the shop home at desktop and at 390 for the same shop on the same morning. Round 2:
   its cover with the layers counted on one screen and the surface floor; five surface boards, each
   a system sheet, the home at desktop and the counter at 390. Round 3: its cover, Console's sheet,
   the home by day, the home at depth, and three phones. Round 4: its cover, the parts, the home
-  refined, a boat's page and the week, a person and the money, the outside
+  refined, a boat's page and the week, a person and the money, the outside. Round 5: its cover, the
+  dial (the same morning at three stops), Chart's sheet, the home by day, the home at night, three
+  phones
 - **Scope:** every staff surface under `src/app/shop/**`, the primitives in `src/components/ui/`,
   the destination registry `src/lib/staff-destinations.ts`, the settings registry
   `src/app/shop/[shopSlug]/settings/settings-groups.ts`; under calls (c) and (d), the storefront
@@ -271,7 +276,64 @@ gauge, with the meter kept for counts that are not seats; the line on every surf
 instrument that only sometimes says when it read is one you learn not to trust. Every earlier call
 stands as put.
 
-### 6. What this does to One hand
+### 6. Chart — light renders light, and the instrument on Reef's paper (round 5, H-73 p–r)
+
+**The owner's read of round 4 (2026-09-11):** light mode should still render light; that implies
+further changes; and the surface should sit somewhere between an instrument and the existing
+design. Round 5 answers with **Chart** — Console's parts, figures, words and discipline printed on
+the paper the app already has — and with a dial, the same morning drawn at three stops so
+"between" is a position rather than a word: Console as round 4 left it; Chart; and Reef after the
+floor (today's tokens, ladder, bed and cards with only the floor applied). What changes from
+Console:
+
+- **The face.** The display's one reading, at the same size, on a lit panel: `--surface` with a
+  `--border` hairline by day; the night surface after dark, where it reads as glass by its edge
+  alone. Never a colour of its own; one per surface, dashes when empty, as round 4 specified.
+- **The paper.** Sand, shell, tideline, rope, deep-sea ink and its muted, red and amber — the eight
+  light tokens in `globals.css` at HEAD, unchanged; the ninth is the shop's own colour, on the bezel
+  and the one filled button. Console's grey, black and slate leave. Lagoon stays on DiveDay's own
+  pages and leaves every shop's.
+- **The night.** The night palette the app already has — open ocean, its surface, sunken, border,
+  ink, muted, the lifted red and amber — as the one dark; Console's depth scheme is not built, and
+  the night-palette test stands as it is. The shop's colour at night is lifted as `brand.ts` lifts
+  Harbor's.
+- **Glare.** Console's boat scheme becomes a word in the roll call's and the counter's bar that
+  turns the app's own `.boat-mode` skin on for that phone until the same word turns it off. The
+  theme never does it: light renders light, dark renders the night, and a crew chooses glare when
+  spray and sun say so. Round 3's rule that the roll call is black whatever the phone says leaves.
+- **One radius of 6**, between Console's 2 and Reef's control rung of 10; the inset and panel rungs
+  go, and the pill with the chip.
+- **The sheet.** The one panel: a boat is a sheet of shell on the sand with a hairline and no bed;
+  the desk, the week, a person's dives, the till's lines and every group head sit on the paper. The
+  rule for when a thing gets a panel is that it sails.
+- **The gauge on paper.** An empty seat is the tideline with a hairline, so a gauge reads on sand
+  as it read on grey. Everything else — the figure, the line, the ladder, the cell, the telemetry
+  line, fixed digits, the crew's words, motion — is round 4's, unchanged.
+
+The dial's ends are not candidates: today's Reef, uncut, is what the owner asked to leave, and the
+boat scheme by decree is what light-renders-light rules out. A stop between Chart and Reef keeps
+the bed or a second rung, which is the ladder returning; a stop between Console and Chart keeps the
+grey, which is the cold returning.
+
+The recommendation, stated so it can be disagreed with: **Chart, as drawn — the middle stop.**
+Eight of nine tokens in each scheme are already in the tree, so the slice that lands it deletes
+the ladder's two upper rungs, the bed, the marks and the moments and repaints nothing; the parts
+are Console's, drawn on nine surfaces across pages 3 and 4, and every one holds on paper without a
+change; the one new thing is the face, which is the display with its glass off. Its risk is the
+owner's sentence in reverse — a shop that wanted the instrument's severity gets paper — and glare,
+one word at the rail, is where that severity still lives.
+
+**The owner's round-5 calls (H-73):** (p) light renders light — the face replaces the display's
+glass by day, the night palette is the device's, glare is the crew's word — or round 4's display
+and boat scheme as drawn; (q) where on the dial: Console, Chart, or Reef after the floor; (r) what
+Chart takes from Reef (the paper and ink, the night palette, the sheet) and what it leaves (the
+ladder's upper rungs, the bed, the lagoon on staff pages, the coral, the marks, the moments, the
+greeting), with the radius as the one open notch — 6 as drawn, or Reef's control rung of 10.
+Recommended: yes; Chart; as drawn. (p) answers (j) and (m): the scheme is the device's everywhere
+and the display stays, lit. If (q) is Chart, (i) reads "Chart as the surface". Every other call
+stands as put.
+
+### 7. What this does to One hand
 
 One hand's ADR stays Proposed and its floor (20a–20e) stays the floor: nothing here restates it and
 every concept assumes it. Its open slices 20f–20m — the earned moment on the shared door, the levers
@@ -281,7 +343,7 @@ Their features that already shipped (20n–20t: the boat's line, try it with you
 the gift, sightings, paper, the shelf) stay; call (c) decides where they sit — recommended: all
 kept, on by default, and off the storefront's front page.
 
-### 7. What does not change
+### 8. What does not change
 
 The name and the mark. Harbor — the diver-facing pages wear the shop's brand, and concept 6 makes
 that everything rather than less. The dock test: 44px targets, 16px critical text, AA, never colour
@@ -322,6 +384,15 @@ mode under every surface. H-02's retention and erasure promises. Every settled q
 - **Round 4 as a dashboard** — declined: two displays on one surface, or a gauge without its legend,
   would make Console the thing the brand's own words rule out; the sheet says one display and one
   reading per surface.
+- **Round 5 as Reef with fewer moments** — declined: the owner's words were "between", not "back";
+  the ladder, the bed, the lagoon and the coral leave the staff pages under Chart, and the dial's
+  third stop draws what keeping them looks like so the middle can be seen as the middle.
+- **Round 5 as Console in beige** — declined: a grey page recoloured is still a page with a dark
+  block on it and a boat scheme by decree; Chart changes three things Console refused — the face is
+  the surface, a boat is a sheet, glare is a word — which is what "light renders light" costs.
+- **Round 5 as a lighter display on Console's grey** — declined as the only move: it answers the
+  first sentence of the read and not the second, and the grey is the cold the instrument lost on
+  before.
 
 ## Consequences
 
@@ -337,7 +408,10 @@ gains a sentence ("nothing to configure before the first boat"). Concept 6 canno
 concept 3's boat half exists. A new surface reverses accepted picks — Reef's tokens (H-64, 13a),
 and under round 3 the H-64 choice of Reef over Deck itself — and the tests that pin them
 (`card.test.tsx`'s radius and elevation rules, `check:type-ramp`'s constants, the water-band and
-night-palette tests, the illustration tests) are rewritten to pin Console, never deleted. Round 3
+night-palette tests, the illustration tests) are rewritten to pin Console, never deleted. Under
+round 5 the reversal narrows: Chart keeps Reef's tokens and its night palette, so the night-palette
+test stands as it is and the rewrite is the ladder (one rung), the bed, the water band and the
+illustrations, to pin Chart. Round 3
 also retires H-67's coral count and the earned-moment budget for staff surfaces; the ADRs that
 record them stay as the record and this one supersedes their surface decisions on acceptance.
 
