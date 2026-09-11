@@ -356,7 +356,10 @@ new domain concept, define it here in the same PR.
   restrictions — 10–11-year-olds are limited to 12 m and must dive with a PADI Professional or a
   certified parent/guardian; 12–14-year-olds reach 18 m (21 m on an AOW deep dive) with any
   certified adult. The restrictions lift at 15. They drive dock-side decisions, so course copy and
-  staff surfaces state them rather than implying the adult limits.
+  staff surfaces state them rather than implying the adult limits. **The certified adult here is
+  not the waiver's guardian** — see **Guardian co-signature** for the two senses of the word: this
+  one is a diver with a booking, a card and a place on the manifest, and nothing about them is
+  recorded on `waiver_records`.
 - **Site maximum depth** — `dive_sites.max_depth_meters`, the site's deepest point, stored in
   **metres always** whatever unit the shop reads. Distinct from `depth_range`, the free-text
   briefing prose that lives beside it: the number exists solely to be comparable to a
@@ -438,6 +441,20 @@ new domain concept, define it here in the same PR.
   else: no surface renders it, readiness treats the record as co-signed, and the only readers are
   the integrity seal and the export bundle. The guardian's email is **optional**, and the one thing
   it is for is a copy of what was signed (see **Guardian's copy** below).
+  **Two codes, and only two** — `parent` and `legal_guardian`, confirmed by the owner on 2026-09-10
+  (issue 1541) rather than widened. A grandparent, stepparent, foster carer or a school group
+  leader with eight children is handled at the counter through the **paper / in-person signature**,
+  where a named staffer attests to what they watched, instead of the record asserting a
+  relationship that is false. Free text was rejected in the ADR because the code renders to staff
+  in their own language, and that reason still holds; revisit only if a pilot shop reports it.
+
+  **"Guardian" means two different things in this product and they are never the same record.** The
+  *waiver guardian* defined here is a party to one document — six columns on `waiver_records`, never
+  a `people` row, no booking, no card, no place on a manifest — and answers "who signed this
+  release". The *Junior-certification guardian* (see **Junior certification**) is a certified adult
+  who must be **in the water** with a 10–11-year-old, and therefore has a booking, a card and a
+  place on the manifest. "Is the guardian diving with the junior?" can never be answered from
+  `waiver_records`, which is the exact mistake this clause exists to stop.
 - **Guardian's copy** — the message a co-signing parent gets when a minor's release is completed
   online and they left an address (issue 1453, owner decision 2026-09-10). It names the shop, the
   diver, the release title and version and the day it was signed, and **carries no link of any
@@ -1172,6 +1189,18 @@ new domain concept, define it here in the same PR.
   the evaluation itself, or the clinician's name — because without one the row says only that a
   member of the shop's own staff pressed a button. Any live staff member may record one, and the
   row names who did. Issue #1252.
+
+  **A recorded answer is final for that waiver record**, cleared or not cleared — confirmed by the
+  owner on 2026-09-10 (issue #1366) as the shipped default rather than a first cut. The two stamps
+  are mutually exclusive by the `waiver_records_medical_clearance_attributed` check, so recording a
+  clearance over a refusal is refused and so is the reverse: a physician's "no" is not erasable by
+  whoever is at the desk next. A diver re-evaluated three months later gets back on a boat by
+  **signing a fresh release** — a new questionnaire, a new record, cleared on its own terms, which
+  is also the honest thing to do with a disclosure that is now months old. Deliberate and
+  fail-closed, not an omission, and the staff notice says the act rather than the rule ("Seat them
+  on a departure and send a new release from there"). A supersede act — one owner/manager tap that
+  retires the refused record and issues a new link — is the thing to build if a pilot shop actually
+  hits this.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded
