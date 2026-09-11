@@ -142,6 +142,13 @@ describe("flySafeFrom", () => {
   });
 
   it("reads a two-dive plan as repetitive even when the crew logged only one tank", () => {
+    // Asserted whole, anchor and instant included. It used to assert the basis
+    // and the hours alone, which left the one thing that was wrong unpinned:
+    // the day's record is short of its plan, so tank one's exit is the last
+    // *recorded* one rather than the last one, and the clock started there. On
+    // a two-tank morning charter that is about two and a half hours early, and
+    // at the settable minimum of 18 repetitive hours it lands under DAN's
+    // floor.
     const exit = new Date("2026-07-25T20:10:00.000Z");
     const result = flySafeFrom({
       executedDives: [{ diveNumber: 1, exitedAt: exit }],
@@ -151,7 +158,78 @@ describe("flySafeFrom", () => {
       now: home,
       hours,
     });
-    expect(result).toMatchObject({ basis: "repetitive", hours: 24 });
+    expect(result).toEqual({
+      from: new Date(endsAt.getTime() + 24 * HOUR_MS),
+      basis: "repetitive",
+      reason: "dives_planned",
+      anchor: "scheduled_return",
+      hours: 24,
+    });
+    expect(result?.from.getTime()).toBeGreaterThan(exit.getTime() + 24 * HOUR_MS);
+  });
+
+  it("says nothing, rather than tank one's answer, while a short record's boat is still out", () => {
+    // The same treatment the untimed later dive gets: an unlogged tank is a
+    // hole in the record, and until the boat is home there is no instant on it
+    // that is not before the day's real last dive ended.
+    const exit = new Date("2026-07-25T20:10:00.000Z");
+    expect(
+      flySafeFrom({
+        executedDives: [{ diveNumber: 1, exitedAt: exit }],
+        plannedDives: 2,
+        endsAt,
+        divedRecently: false,
+        now: endsAt,
+        hours,
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps the logged exit when a short record's one tank ran past the scheduled return", () => {
+    // The return is a floor under the anchor, never a ceiling over it: a boat
+    // that came in late must not shorten the wait.
+    const lateExit = new Date(endsAt.getTime() + HOUR_MS);
+    const result = flySafeFrom({
+      executedDives: [{ diveNumber: 1, exitedAt: lateExit }],
+      plannedDives: 2,
+      endsAt,
+      divedRecently: false,
+      now: new Date(lateExit.getTime() + 3 * HOUR_MS),
+      hours,
+    });
+    expect(result).toEqual({
+      from: new Date(lateExit.getTime() + 24 * HOUR_MS),
+      basis: "repetitive",
+      reason: "dives_planned",
+      anchor: "scheduled_return",
+      hours: 24,
+    });
+  });
+
+  it("anchors on the last exit once the crew logged every tank the departure planned", () => {
+    // The other side of the line: a whole record is the crew's own answer and
+    // the scheduled return never overrides it, late boat or early one.
+    const first = new Date("2026-07-25T19:00:00.000Z");
+    const second = new Date("2026-07-25T21:15:00.000Z");
+    expect(
+      flySafeFrom({
+        executedDives: [
+          { diveNumber: 1, exitedAt: first },
+          { diveNumber: 2, exitedAt: second },
+        ],
+        plannedDives: 2,
+        endsAt,
+        divedRecently: false,
+        now: home,
+        hours,
+      }),
+    ).toEqual({
+      from: new Date(second.getTime() + 24 * HOUR_MS),
+      basis: "repetitive",
+      reason: "dives_recorded",
+      anchor: "last_dive",
+      hours: 24,
+    });
   });
 
   it("falls back to the scheduled return once the boat is home, when nothing was recorded", () => {

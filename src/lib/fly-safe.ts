@@ -47,8 +47,8 @@ import { hasReturned } from "./trips";
  * profile — depth and bottom time are a computer's business, and DiveDay is
  * not a dive computer. And it never chooses the shorter reading when the
  * record is ambiguous: a day whose record disagrees with its plan takes the
- * repetitive hours, and a record missing its last exit time anchors on the
- * boat's scheduled return rather than on an earlier dive.
+ * repetitive hours, and a record short of its plan or missing its last exit
+ * time anchors on the boat's scheduled return rather than on an earlier dive.
  */
 export type FlySafeBasis = "single" | "repetitive";
 
@@ -176,8 +176,9 @@ export type FlySafeResult = {
  *   None of the three can ever *shorten* a wait: {@link parseFlySafeHours}
  *   refuses a `repetitive` shorter than `single`, so reaching repetitive is
  *   monotonic by construction.
- * - **Anchor.** The latest recorded exit, provided no later-numbered dive was
- *   recorded without one. Otherwise the boat's scheduled return, and only once
+ * - **Anchor.** The latest recorded exit, provided the record is whole — as
+ *   many dives logged as the departure planned, none of them later-numbered
+ *   and missing its exit. Otherwise the boat's scheduled return, and only once
  *   {@link hasReturned} says it is home — an earliest-flight time for a boat
  *   still at sea would be a guess dressed as a fact.
  */
@@ -206,8 +207,16 @@ export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
   const laterDiveUntimed =
     lastExit !== null &&
     executedDives.some((dive) => dive.exitedAt === null && dive.diveNumber > lastExit.diveNumber);
+  // A tank the crew never opened a row for is the same hole as one logged
+  // without its exit, and the basis above already reads it that way. The
+  // anchor has to agree: on a two-tank morning charter with only tank one
+  // logged, its exit is around 09:45 against a 12:15 return, so anchoring
+  // there hands the diver a time two and a half hours early — at the
+  // settable minimum of 18 repetitive hours, a real interval of about 15.5,
+  // under DAN's floor in a sentence that ends by citing DAN.
+  const recordShortOfPlan = executedDives.length < plannedDives;
 
-  if (lastExit && !laterDiveUntimed) {
+  if (lastExit && !laterDiveUntimed && !recordShortOfPlan) {
     return {
       from: new Date(lastExit.exitedAt.getTime() + wait * HOUR_MS),
       basis,
@@ -217,8 +226,9 @@ export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
     };
   }
   if (endsAt && hasReturned(endsAt, now)) {
-    // A later dive with no exit time: the return is the only instant on the
-    // record that is not before that dive ended.
+    // A dive the crew never logged, or logged without an exit time: the
+    // return is the only instant on the record that is not before the day's
+    // real last dive ended.
     const anchorAt = lastExit
       ? new Date(Math.max(lastExit.exitedAt.getTime(), endsAt.getTime()))
       : endsAt;
