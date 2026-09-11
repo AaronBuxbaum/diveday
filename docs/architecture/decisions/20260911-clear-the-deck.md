@@ -5,16 +5,19 @@
   go farther. Round 2 (decision 3, below) redraws the surface as five candidates for the owner's
   pick. **Round 2 read, the same day:** the problem is Reef itself; the instrument is the direction
   the owner liked; farther from the cutesy. Round 3 (decision 4) draws that one direction deep —
-  Console — and asks calls (i)–(l). The floor's first two rows (the door, the chip and the pill) may start on this ADR alone,
+  Console — and asks calls (i)–(l). **Round 3 read, the same day:** "Can we improve this further?"
+  Round 4 (decision 5) takes Console further along its own axis and asks calls (m)–(o). The floor's
+  first two rows (the door, the chip and the pill) may start on this ADR alone,
   because they are One hand's slices 20b and 20c taken to zero; every other row, every concept and
-  every surface waits on the owner's calls (a)–(l)
+  every surface waits on the owner's calls (a)–(o)
 - **Date:** 2026-09-11
 - **Design:** [the canvas](../../design/canvases/20260911-clear-the-deck/README.md) — two pages.
   Round 1: the cover with the count, the captures, the floor and the comparison; six concept boards,
   each redrawing the shop home at desktop and at 390 for the same shop on the same morning. Round 2:
   its cover with the layers counted on one screen and the surface floor; five surface boards, each
   a system sheet, the home at desktop and the counter at 390. Round 3: its cover, Console's sheet,
-  the home by day, the home at depth, and three phones
+  the home by day, the home at depth, and three phones. Round 4: its cover, the parts, the home
+  refined, a boat's page and the week, a person and the money, the outside
 - **Scope:** every staff surface under `src/app/shop/**`, the primitives in `src/components/ui/`,
   the destination registry `src/lib/staff-destinations.ts`, the settings registry
   `src/app/shop/[shopSlug]/settings/settings-groups.ts`; under calls (c) and (d), the storefront
@@ -224,7 +227,51 @@ amber, or red only. With round 3, (b) and (f) are answered by the drawing — th
 and Geist stays — and (g) is recommended as entirely: the hand and the coral leave the product.
 (a), (c), (d) and (h) stand.
 
-### 5. What this does to One hand
+### 5. Console, further — round 4 (H-73 m–o)
+
+**The owner's read of round 3 (2026-09-11):** "Can we improve this further?" Round 4 takes
+"further" along the instrument's own axis — more instrument, not more decoration — and adds to
+the sheet what every instrument has and round 3 lacked:
+
+- **The display.** The one reading a surface exists to show sits on dark glass even by day —
+  #0b0f12 with a #263036 edge, the same at depth and on the boat — with its unit in caps beneath.
+  One per surface, never two; a surface with nothing to read shows dashes and says why. The only
+  dark block Console allows on a light page.
+- **The seat gauge.** A boat's count as one segment per seat — ink for here, red for cannot board,
+  amber for still to come, grey for booked and not yet here, empty for unsold — with a legend in
+  words beneath it, so the gauge is never the only carrier. It replaces the meter wherever the count
+  is people on a boat; the meter stays for counts that are not seats.
+- **The telemetry line.** The last line of every surface, in mono caps: live and the time; saved on
+  this phone and since when; stale and what to do ("refresh before you rely on it", principle 4's
+  own sentence, with a fixed place); and who is at the desk and aboard, which is One hand's K in
+  one line. It replaces the connectivity pill, the freshness pill, the offline banner and the
+  shell-version banner.
+- **Digits and words.** T−00:20, 06:40, 10/12 — fixed width as they roll, seconds only under five
+  minutes; "lines off", "home", "not aboard", "not back"; no greeting.
+- **Motion, complete.** A digit rolls, a gauge segment fills in the same beat, a cell sinks under a
+  finger; nothing else moves.
+
+And four more surfaces drawn on the sheet, so the direction is proven where the shop works: a
+boat's page as one instrument (the four trip tabs become one: display, gauge, six figures, seven
+lines, the roster as cells, the roll call as the one primary); the week as seven columns of gauges
+(the board's tiles and buttons go; "Add a boat" is the last line); a person's record with the fix
+as its primary and the till as one page with the month on glass and the weeks as gauges; and the
+outside — the storefront's row on Console's parts under the shop's colour and face, the recap as a
+log card in the same seven tokens (the drawing gone, call g), and DiveDay's own hero as a live
+console with the visitor's boat on glass.
+
+The recommendation, stated so it can be disagreed with: **all five additions, and the four
+surfaces as the order to build after the home** — the boat's page first, the week second, the
+person and the money third, the outside last, because Harbor already holds it.
+
+**The owner's round-4 calls (H-73):** (m) the display, or round 3's plain figure; (n) the seat
+gauge with a legend on every boat count, or the plain meter; (o) the telemetry line on every
+surface, or only where a reading can be stale. Recommended: the display, one per surface; the
+gauge, with the meter kept for counts that are not seats; the line on every surface — an
+instrument that only sometimes says when it read is one you learn not to trust. Every earlier call
+stands as put.
+
+### 6. What this does to One hand
 
 One hand's ADR stays Proposed and its floor (20a–20e) stays the floor: nothing here restates it and
 every concept assumes it. Its open slices 20f–20m — the earned moment on the shared door, the levers
@@ -234,7 +281,7 @@ Their features that already shipped (20n–20t: the boat's line, try it with you
 the gift, sightings, paper, the shelf) stay; call (c) decides where they sit — recommended: all
 kept, on by default, and off the storefront's front page.
 
-### 6. What does not change
+### 7. What does not change
 
 The name and the mark. Harbor — the diver-facing pages wear the shop's brand, and concept 6 makes
 that everything rather than less. The dock test: 44px targets, 16px critical text, AA, never colour
@@ -269,6 +316,12 @@ mode under every surface. H-02's retention and erasure promises. Every settled q
   the five stay on page 2 as the record of what was offered.
 - **Round 3 as Deck or C republished** — declined: both lost for reasons the owner stated, and a
   drawing that ignores them would lose again; Console keeps their parts and answers the two losses.
+- **Round 4 as decoration returning under another name** — declined: a display, a scale and a
+  time-of-reading are what instruments have, not ornaments; each addition is held to one per
+  surface, a word beside every colour, and no new hue.
+- **Round 4 as a dashboard** — declined: two displays on one surface, or a gauge without its legend,
+  would make Console the thing the brand's own words rule out; the sheet says one display and one
+  reading per surface.
 
 ## Consequences
 

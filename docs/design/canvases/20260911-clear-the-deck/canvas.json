@@ -161,6 +161,60 @@
       "w": 1180,
       "h": 2820,
       "page": "page-3"
+    },
+    {
+      "file": "Round4.dc.html",
+      "title": "Round 4 — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 2420,
+      "page": "page-4"
+    },
+    {
+      "file": "ConsoleParts.dc.html",
+      "title": "Console — the display, the gauge, the telemetry line",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 2360,
+      "page": "page-4"
+    },
+    {
+      "file": "ConsoleRefined.dc.html",
+      "title": "Console — the home, refined",
+      "x": 2600,
+      "y": 0,
+      "w": 1180,
+      "h": 2420,
+      "page": "page-4"
+    },
+    {
+      "file": "ConsoleBoat.dc.html",
+      "title": "Console — a boat's page, and the week",
+      "x": 0,
+      "y": 2700,
+      "w": 1180,
+      "h": 2900,
+      "page": "page-4"
+    },
+    {
+      "file": "ConsolePerson.dc.html",
+      "title": "Console — a person, and the money",
+      "x": 1300,
+      "y": 2700,
+      "w": 1180,
+      "h": 2820,
+      "page": "page-4"
+    },
+    {
+      "file": "ConsoleOutside.dc.html",
+      "title": "Console — the storefront, the log card, DiveDay's hero",
+      "x": 2600,
+      "y": 2700,
+      "w": 1180,
+      "h": 3120,
+      "page": "page-4"
     }
   ],
   "annotations": [
@@ -203,11 +257,19 @@
       "w": 620,
       "page": "page-3",
       "text": "Round 3, drawn on the owner's read of round 2: the problem is Reef itself; the instrument is the direction; farther from the cutesy. One direction, deep — Console — the sheet beside this cover, then the home by day, the home at depth, and three phones. The recommendation and calls (i)–(l) are on the cover."
+    },
+    {
+      "id": "round-4",
+      "x": 3900,
+      "y": 0,
+      "w": 620,
+      "page": "page-4",
+      "text": "Round 4, drawn on the owner's read of round 3 (\"can we improve this further?\"): more instrument, not more decoration. Five additions to the sheet — the display, the seat gauge, the telemetry line, fixed digits and the crew's words, motion complete — the home redrawn with them, and four more surfaces: a boat and the week, a person and the money, and the outside. Calls (m)–(o) are on the cover."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-3"
+    "page": "page-4"
   },
   "pages": [
     {
@@ -221,6 +283,10 @@
     {
       "id": "page-3",
       "name": "Round 3 — Console, the instrument"
+    },
+    {
+      "id": "page-4",
+      "name": "Round 4 — Console, further"
     }
   ]
 }

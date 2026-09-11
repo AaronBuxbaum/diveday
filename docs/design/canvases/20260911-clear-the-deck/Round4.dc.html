@@ -267,102 +267,70 @@
 .con.line-narrow .line { grid-template-columns: 56px 1fr 78px; gap: 0 10px; font-size: 14px; line-height: 20px; }
 .con.line-narrow .line .st { font-size: 11px; }
 
+.calls { display: grid; grid-template-columns: 40px 1fr; gap: 10px 14px; font-size: 15px; line-height: 23px; }
+.calls b { font-family: var(--mono); font-size: 13px; color: var(--muted); padding-top: 3px; }
+.calls i { font-style: normal; color: var(--muted); }
+.rec { padding: 20px 24px; border: 1px solid var(--ink); border-radius: 10px; font-size: 15px; line-height: 23px; }
+.rec b { font-weight: 600; }
+.quote { padding: 16px 20px; border-left: 3px solid var(--ink); font-size: 16px; line-height: 25px; max-width: 900px; }
+
   </style>
 </helmet>
 <div class="board">
   <div class="board-head">
-    <div class="strap"><span class="eyebrow">Console · the system</span><span class="note">Design canvas · 2026-09-11 · Clear the deck · round 3</span></div>
-    <h1>Console — the sheet</h1>
-    <p class="lede">Seven tokens in three schemes, two faces with one job each, five type sizes, one radius, and six parts: the readout, the figure, the line, the ladder, the meter, the cell. Everything on every staff surface is made of these, and a surface that needs more names it here first or does without.</p>
-    <div class="three">
-      <div><span class="k">The idea</span><p>An instrument shows the number you came for, labels it, and gets out of the way. <b>Figures lead; words follow; a state is a word in a slot; nothing is decoration.</b> DiveDay reads like the shop's console, not its brochure.</p></div>
-      <div><span class="k">Where it comes from</span><p>Deck (09-01) drew the readout, the T−minus ladder and the roll call at depth; C (09-08) drew the state in a fixed slot and the two-component discipline. Console keeps all of that and drops what lost them: the dark desk, the cyan, the slot that held sentences, and the tab strip.</p></div>
-      <div><span class="k">What it refuses</span><p>A drawing of anything. A tint behind text. A rounded panel. A second display face. A greeting. Coral. A colour that carries a state without a word beside it. A number that is not tabular. A moment.</p></div>
+    <div class="strap"><span class="eyebrow">Design canvas · 2026-09-11 · round 4 · read me first on this page</span><span class="note">The owner's read of round 3, and Console taken further</span></div>
+    <h1>Clear the deck, round 4 — Console, further</h1>
+    <p class="lede">Round 3 drew Console: DiveDay as the shop's instrument, exact and undecorated. The owner's read: can we improve this further? This page takes "further" along the instrument's own axis — <b>more instrument, not more decoration</b> — and answers in three parts: five additions to the sheet that make a reading behave like a reading, the home redrawn with them, and four more surfaces drawn so the direction is proven where the shop actually works: a boat, the week, a person, the money, and the outside.</p>
+    <div class="quote">"Can we improve this further?"</div>
+  </div>
+
+  <div class="sec">
+    <h2>What "further" means for an instrument</h2>
+    <p>An instrument is not a quieter page; it is a thing with a display, a scale, a reading and a time. Round 3 had the reading and the words. What it lacked, read against a dive computer or a boat's console: the reading did not sit on a display, the count was a bar rather than a scale, nothing said when the reading was taken, an empty reading had no idiom, and the digits changed width as they rolled. Each is fixed below, and each is a thing every instrument has always had.</p>
+    <table class="tbl">
+      <thead><tr><th>Addition</th><th>What it adds</th><th>What it costs</th><th>Where it shows</th></tr></thead>
+      <tbody>
+        <tr><td>The display</td><td class="ink">the one reading on dark glass, even by day; the same glass at depth; one per surface; dashes when there is nothing to read</td><td>one dark block on a light page — the only one Console allows</td><td>every surface's head</td></tr>
+        <tr><td>The seat gauge</td><td class="ink">a boat's count as one segment per seat: here, blocked, to come, open, in four inks with a legend in words</td><td>a second count component beside the meter</td><td>every boat, the week, the counter, the roll call</td></tr>
+        <tr><td>The telemetry line</td><td class="ink">the last line of every surface: live and when · saved on this phone and since when · stale and what to do; who is at the desk and aboard</td><td>one line of mono at the foot of every page</td><td>every surface; replaces four components</td></tr>
+        <tr><td>Digits and words</td><td class="ink">T−00:20 · 06:40 · 10/12 — fixed width as they roll; "lines off", "home", "not aboard"; no greeting</td><td>a formatting rule and a bundle sweep</td><td>everywhere a number or a time is</td></tr>
+        <tr><td>Motion, complete</td><td class="ink">a digit rolls, a segment fills, a cell sinks under a finger; nothing else moves</td><td>—; it is a shorter list than today's</td><td>the whole app</td></tr>
+        <tr><td>A boat's page</td><td class="ink">the four trip tabs as one instrument: display, gauge, six figures, seven lines, the roster as cells, one primary</td><td>the trip layout's four pages become one</td><td>`ConsoleBoat`</td></tr>
+        <tr><td>The week</td><td class="ink">seven columns of gauges, one per boat per day; ink sailed, grey booked, red blocked, amber unsold; "Add a boat" as the last line</td><td>the board's tiles and buttons go</td><td>`ConsoleBoat`</td></tr>
+        <tr><td>A person, the money</td><td class="ink">a record with the fix as its primary; the till as one page with the month on glass and the weeks as gauges</td><td>the record's tabs and Orders' bands go</td><td>`ConsolePerson`</td></tr>
+        <tr><td>The outside</td><td class="ink">the storefront's row on Console's parts under the shop's brand; the log card in place of the postcard; DiveDay's hero as a live console</td><td>the storefront's ledger row, the recap and the try-it hero rebuilt</td><td>`ConsoleOutside`</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2>What it still refuses</h2>
+    <p>A second display on one surface. A gauge whose colour is not said in words beneath it. A telemetry line that softens a stale reading. A drawing in an empty state — dashes, and a sentence. Any hue beyond the seven. A moment. A greeting. A photograph on a staff surface. Everything round 3 refused, still refused.</p>
+  </div>
+
+  <div class="sec">
+    <h2>The boards on this page</h2>
+    <p><b>The parts:</b> the display, the seat gauge, the telemetry line, the digits and the words, and motion, each as a specimen with why it earns its place. <b>The home, refined:</b> Thursday at 6:40 with the five additions on it, 80px shorter than round 3's. <b>A boat's page and the week:</b> the 7:00 as one instrument, and August 24–30 as seven columns of gauges. <b>A person and the money:</b> Grace Mensah's record with the fix as its primary, and Shop › Money as the till on one page. <b>The outside:</b> the storefront's row in the shop's brand, the log card, and DiveDay's hero with the visitor's boat on glass.</p>
+  </div>
+
+  <div class="sec">
+    <h2>The recommendation</h2>
+    <div class="rec"><b>Stated so it can be disagreed with: all five additions, and the four surfaces as the order to build after the home.</b> The display and the gauge are what make a person say "instrument" rather than "clean list", and they cost one component each. The telemetry line is the safety floor's freshness rule given a permanent place, which is worth more than it looks. The boat's page is where the shop lives and the first surface to build after the home; the week second; the person and the money third; the outside last, because Harbor already holds it and the log card can wait for the crew's log.</div>
+  </div>
+
+  <div class="sec">
+    <h2>The owner's calls, round 4 (H-73)</h2>
+    <div class="calls">
+      <b>(m)</b><span>The display: the one reading on dark glass by day, or round 3's plain figure. <i>Recommended the display, one per surface.</i></span>
+      <b>(n)</b><span>The seat gauge: one segment per seat with a legend, on every boat count, or the plain meter. <i>Recommended the gauge; the meter stays for counts that are not seats.</i></span>
+      <b>(o)</b><span>The telemetry line on every surface, or only where a reading can be stale — the boat and the counter. <i>Recommended every surface: an instrument that only sometimes says when it read is one you learn not to trust.</i></span>
     </div>
+    <p>Rounds 1 to 3's calls stand as put: (a) the shape, (c) the outside, (d) DiveDay's own pages, (g) the hand and the coral — recommended entirely, with the log card drawn here as what replaces the postcard — (h) DiveDay's own pages on Console, (i) Console itself, (j) the scheme, (k) the figures' face, (l) the two signal inks.</p>
   </div>
 
-  <div class="frame-cap"><b>Colour</b> · seven tokens, three schemes, one rule of the shop's</div>
-  <div class="sys">
-    <div class="cell"><h4>Day · the desk in daylight</h4><div class="sw">
-      <div><i style="background:#f5f6f5;"></i><b>Ground</b>#f5f6f5</div>
-      <div><i style="background:#0b0f12;"></i><b>Ink</b>#0b0f12 · 18:1</div>
-      <div><i style="background:#5c6670;"></i><b>Meta</b>#5c6670 · 5.6:1</div>
-      <div><i style="background:#d9dedf;"></i><b>Hairline</b>#d9dedf</div>
-      <div><i style="background:#c81e1e;"></i><b>Red</b>#c81e1e · blocks a boat · 5.7:1</div>
-      <div><i style="background:#b45309;"></i><b>Amber</b>#b45309 · needs someone · 5.7:1</div>
-      <div><i style="background:#0b0f12;"></i><b>Fill</b>the primary button, a tapped cell</div>
-      <div><i style="background:#1d7a5f;"></i><b>The shop's</b>a 3px rule at the top edge</div>
-    </div></div>
-    <div class="cell"><h4>Depth · after dark, by the device</h4><div class="sw">
-      <div><i style="background:#0b0f12;"></i><b>Ground</b>#0b0f12</div>
-      <div><i style="background:#e8ecee;"></i><b>Ink</b>#e8ecee · 16:1</div>
-      <div><i style="background:#8b959c;"></i><b>Meta</b>#8b959c · 6.4:1</div>
-      <div><i style="background:#263036;"></i><b>Hairline</b>#263036</div>
-      <div><i style="background:#ff5a5a;"></i><b>Red</b>#ff5a5a · 6.3:1</div>
-      <div><i style="background:#ffb020;"></i><b>Amber</b>#ffb020 · 10:1</div>
-      <div><i style="background:#e8ecee;"></i><b>Fill</b>ink on the fill</div>
-      <div><i style="background:#1d7a5f;"></i><b>The shop's</b>the same rule</div>
-    </div></div>
-    <div class="cell"><h4>Boat · the roll call and the counter at the rail</h4><div class="sw">
-      <div><i style="background:#000000;"></i><b>Ground</b>#000000</div>
-      <div><i style="background:#ffffff;"></i><b>Ink</b>#ffffff · 21:1</div>
-      <div><i style="background:#b8c2c8;"></i><b>Meta</b>#b8c2c8 · 12:1</div>
-      <div><i style="background:#3a4650;"></i><b>Hairline</b>#3a4650</div>
-      <div><i style="background:#ff6b6b;"></i><b>Red</b>#ff6b6b · 7:1</div>
-      <div><i style="background:#ffc247;"></i><b>Amber</b>#ffc247 · 13:1</div>
-      <div><i style="background:#ffffff;"></i><b>Fill</b>a diver aboard</div>
-      <div><i style="background:#000000; border-color:#3a4650;"></i><b>The shop's</b>never on the boat</div>
-    </div></div>
-  </div>
-  <p class="aside">Red is the only ink that stops a boat: a diver who cannot board, a boat with no crew, a diver not back aboard. Amber is the only ink that needs a person: a missing contact, missing sizes, a deal not sent, a Stripe call unconfirmed. Both always sit beside a word, and there is no green — a thing that is fine says so by having no colour at all.</p>
-
-  <div class="frame-cap"><b>Type</b> · Geist for words, Geist Mono for figures, labels, times and states · five sizes</div>
-  <div class="sys">
-    <div class="cell" style="grid-column: span 2;"><div class="specimen"><div class="con" style="padding:20px 24px;">
-      <div class="readout" style="align-items:flex-start;"><span class="n">0:20</span><span class="u">Readout · 56 / 700 · Geist Mono · the one number a surface exists to show</span></div>
-      <div class="figs" style="margin-top:16px;"><div class="fig" style="align-items:flex-start;"><span class="n">10<small>/12</small></span><span class="u">Figure · 28 / 600 · Geist Mono</span></div></div>
-      <h1 class="t" style="margin-top:16px;">Thursday, August 27</h1><p class="lede">Title · 24 / 600 · Geist · the page's name, never bigger</p>
-      <p class="name" style="margin:12px 0 0 0; font-size:18px; line-height:24px; font-weight:600;">Two-Tank Reef — Molasses &amp; French</p><p class="lede">Name · 18 / 600 · Geist · a boat, a person</p>
-      <div class="line" style="margin-top:12px; border-top:1px solid var(--hl);"><span class="lbl">Label · 11</span><span class="val">Value · 16 / 400 · Geist · <b>a name in 600</b> · <i>a note in meta</i></span><span class="st red">State · 12</span></div>
-      <p class="lede" style="margin-top:8px;">Label 11 / 500 mono caps · state 12 / 600 mono caps · clock and time 14 / 500 mono · meta 14 / 400 Geist</p>
-    </div></div></div>
-    <div class="cell"><h4>Why two faces, and why these</h4><div class="rules">
-      <span><b>Geist stays.</b> H-64 kept it as the only face; Console keeps it for every word, so no new face enters for prose.</span>
-      <span><b>Geist Mono for every figure</b>, because an instrument's numbers align in columns and hold their width when they roll; the same family, so the two never argue.</span>
-      <span><b>Five sizes:</b> 56 (readout) · 28 (figure) · 24 (title) · 18 (name) · 16 (value); 14, 12 and 11 are the mono's clock, state and label.</span>
-      <span><b>If Geist Mono's figures feel soft</b> at 56px, IBM Plex Mono is the one alternative worth drawing; it is the call in (k).</span>
-      <span><b>No display face, no greeting.</b> The biggest word on any page is 24px; the biggest thing is a number.</span>
-    </div></div>
-  </div>
-
-  <div class="frame-cap"><b>The six parts</b> · everything on a staff surface is one of these</div>
-  <div class="sys">
-    <div class="cell"><h4>1 · The readout</h4><div class="specimen"><div class="con" style="padding:16px 20px;"><div class="readout" style="align-items:flex-start;"><span class="n">6<small>/10</small></span><span class="u">Here</span></div><div class="meter gap-amber" style="margin-top:12px;"><i style="width:60%;"></i></div></div></div><p class="note" style="margin:10px 0 0 0;">One per surface: the number it exists to show, a unit in caps beneath, the meter beneath that with the <b>gap</b> in the signal colour.</p></div>
-    <div class="cell"><h4>2 · The figure</h4><div class="specimen"><div class="con" style="padding:16px 20px;"><div class="figs"><div class="fig" style="align-items:flex-start;"><span class="n">10<small>/12</small></span><span class="u">Booked</span></div><div class="fig red" style="align-items:flex-start;"><span class="n">2</span><span class="u">Blocked</span></div><div class="fig amber" style="align-items:flex-start;"><span class="n">5</span><span class="u">Open</span></div></div></div></div><p class="note" style="margin:10px 0 0 0;">A number that leads a thing rather than a surface — a boat's booked, here, blocked. Red or amber only when the number itself is the alarm.</p></div>
-    <div class="cell"><h4>3 · The line</h4><div class="specimen"><div class="con line-narrow" style="padding:0 16px;"><div class="line"><span class="lbl">Cert</span><span class="val"><b>Grace Mensah</b> · card waits for a look</span><span class="st red">Blocked</span></div><div class="line"><span class="lbl">Sizes</span><span class="val">Hannah, Ben, Emma · none yet</span><span class="st amber">Attention</span></div><div class="line"><span class="lbl">Arrival</span><span class="val">Hugo, Ben O. · not here yet</span><span class="st mu">2 to come</span></div><div class="line act"><span class="lbl">Seat</span><span class="val">Seat a walk-in</span><span class="st"></span></div></div></div><p class="note" style="margin:10px 0 0 0;">Label in 112px, the sentence, the state or figure in 128px. The last line of a list is the one thing you can add to it. The line's tap is its door.</p></div>
-    <div class="cell"><h4>4 · The ladder</h4><div class="specimen"><div class="con" style="padding:0 16px 12px 16px;"><div class="boatrow" style="padding-top:14px; grid-template-columns:88px 1fr auto; gap:0 12px;"><div class="tminus">−0:20<small>Leaves 7:00</small></div><div><p class="name">Two-Tank Reef</p><p class="meta">Mantis II · Keiko, Sal</p></div><div class="figs"><div class="fig"><span class="n">6<small>/10</small></span><span class="u">Here</span></div></div></div></div></div><p class="note" style="margin:10px 0 0 0;">The day as departures in order, each with T−minus (or the hour it came home), its name and crew, and its figures. The home's spine.</p></div>
-    <div class="cell"><h4>5 · The meter</h4><div class="specimen"><div class="con" style="padding:20px;"><div class="meter" style="margin:0;"><i style="width:60%;"></i></div><p class="lede" style="margin-top:8px;">a count, no gap to chase · ink on hairline</p><div class="meter gap-amber" style="margin-top:14px;"><i style="width:60%;"></i></div><p class="lede" style="margin-top:8px;">a gap someone must close · amber</p><div class="meter gap-red" style="margin-top:14px;"><i style="width:90%;"></i></div><p class="lede" style="margin-top:8px;">a gap that stops the boat · red</p></div></div><p class="note" style="margin:10px 0 0 0;">4px, no radius. The filled part is always ink; the colour, when there is one, is the remainder (principle 9). Never a dial.</p></div>
-    <div class="cell"><h4>6 · The cell</h4><div class="specimen"><div class="con" style="padding:0 20px;"><div class="cell"><span>Hugo Marsh</span><span class="tap"></span></div><div class="cell"><span>Ravi Nair</span><span class="tap on"><svg class="glyph" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-8"></path></svg></span></div><div class="cell"><span>Grace Mensah<span class="sub red">Can't board · card waits</span></span><span class="tap red"></span></div></div></div><p class="note" style="margin:10px 0 0 0;">The counter's and the roll call's row: 60px, an 18px name, a 48px square target that fills when tapped and empties when tapped again. Red on the target only with the red sentence beside it.</p></div>
-  </div>
-
-  <div class="frame-cap"><b>Controls, chrome and the words</b></div>
-  <div class="sys">
-    <div class="cell"><h4>Controls</h4><div class="specimen"><div class="con" style="padding:16px 20px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;"><span class="btn fill">Seat him</span><span class="btn">Send the waiver</span><span class="ask" style="width:220px; height:40px; border:1px solid var(--hl); border-radius:2px; display:inline-flex; align-items:center; gap:8px; padding:0 10px; font-size:14px; color:var(--mu);">Name or booking</span></div></div><p class="note" style="margin:10px 0 0 0;">Square, 2px radius, 44px. One primary per surface, filled ink. Everything else is a bordered button or a line's verb. No ghost, no link-as-button, no icon button.</p></div>
-    <div class="cell"><h4>Chrome</h4><div class="specimen"><div class="con"><div class="bezel"></div><div class="bar" style="padding:0 16px; gap:14px;"><span class="shop">Blue Mantis</span><div class="words"><span class="on">Day</span><span>People</span><span>Shop</span></div><span class="clock" style="margin-left:auto;">06:40</span></div></div></div><p class="note" style="margin:10px 0 0 0;">The shop's rule, the name, three words, the field, the clock. 48px. On a phone the three words are the dock at the bottom and the clock stays in the bar. Nothing else is chrome.</p></div>
-    <div class="cell"><h4>The words in the slot</h4><table class="tbl" style="font-size:13px;"><tbody>
-      <tr><td style="color:#c81e1e;">Blocked</td><td>a diver who cannot board; a boat with no crew</td></tr>
-      <tr><td style="color:#c81e1e;">Not aboard · Not back</td><td>the roll call's two red words</td></tr>
-      <tr><td style="color:#b45309;">Attention · No deal · Unconfirmed</td><td>needs a person, does not stop a boat</td></tr>
-      <tr><td>Here · Aboard · Home · Back</td><td>a settled count word, in ink</td></tr>
-      <tr><td style="color:#5c6670;">2 to come · Open · Scheduled · Done</td><td>a fact in meta</td></tr>
-      <tr><td style="color:#5c6670;">—</td><td><b>Ready</b> is never shown; a thing that is fine has an empty slot</td></tr>
-    </tbody></table></div>
-  </div>
-
-  <div class="foot">
-    <div><h3>Motion</h3><p>A figure rolls when it changes and nothing else moves — Nothing from nowhere's roll is the one instrument-native motion and the only one Console keeps. No swell, no settle, no fold. A press sinks a cell in the frame the finger lands.</p></div>
-    <div><h3>The diver's side</h3><p>Harbor stands: the storefront in the shop's colour and face. Its rows and controls are Console's line, figure and button; its one readout per boat is seats left. The recap becomes a printed log card in the same system — figures, sites, times — and the drawing leaves it (call g).</p></div>
-    <div><h3>What it needs</h3><p>Seven tokens in three blocks replacing the palette, the washes, the night palette and the boat palette; five type constants replacing nine; six components — readout, figure, line, ladder, meter, cell — replacing the panel, the dial, the badge, the chip, the ledger row and the tile; the deletions of round 1's floor. Then the family-by-family sweep.</p></div>
+  <div class="sec">
+    <h2>What no round changes</h2>
+    <p>The name and the mark. Harbor on the diver's side, on Console's parts. The dock test: on every board here the red seats have red words beneath them and the one not aboard carries the minutes left. The roll call commits before it renders. Medical answers on no page. H-02. The claims policy: the hero shows the instrument and claims nothing it cannot do today.</p>
   </div>
 </div>
 
