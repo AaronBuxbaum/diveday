@@ -571,6 +571,23 @@ export default async function SchedulePage({
   const nextBoat =
     isEmbed || explicitMonth || after ? null : nextBookableDeparture(visibleUpcoming);
   /**
+   * **Whether the card is answering a narrowed question** (issue #1391).
+   *
+   * Under any of these four, `visibleUpcoming` is a subset of the board and the
+   * card's boat is the next bookable one *in this view* — three are applied in
+   * SQL by the reader's `hasSpace` / `tripType` / `lensId` arguments, the fourth
+   * by the `hideAboveFilter` filter above. Unqualified, the eyebrow would claim
+   * the shop's next boat while a lens hid an earlier one.
+   *
+   * `canDiveFilter` on its own is deliberately not in the set: without
+   * `hideAbove` it dims and marks the over-level departures and removes none, so
+   * the card still names the shop's actual next boat and "in this view" would be
+   * a narrowing that did not happen. The same four the empty state below already
+   * keys its "no matches" title on — one rule, stated twice.
+   */
+  const filteredView =
+    hasSpaceFilter || Boolean(tripTypeFilter) || hideAboveFilter || Boolean(activeLens);
+  /**
    * **How many boats the card stepped over to find a seat** (issue #1374, ADR
    * 20260904-reef-all-the-way-down).
    *
@@ -912,6 +929,7 @@ export default async function SchedulePage({
                       ? formatTime(firstSkippedBoat.startsAt, locale, shop.timezone)
                       : undefined
                   }
+                  filtered={filteredView}
                   t={t}
                 />
               </div>

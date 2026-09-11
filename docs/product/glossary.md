@@ -1736,7 +1736,7 @@ new domain concept, define it here in the same PR.
   sits nowhere near the roll call's commit path or the manifest's head count — and it never
   promises: a site's summary counts *logged* dives in a trailing month, dates itself to the
   departure rather than to the tap, and says what was logged and when, never what a diver will see.
-- **Fly-safe from** — the instant a diver reads they may board a plane after the day's diving
+- **Earliest flight** — the instant a diver reads they may board a plane after the day's diving
   (`src/lib/fly-safe.ts`, issue #1425). The shop's own hours (`shops.fly_safe_hours_single` and
   `_repetitive`, defaults 18 and 24, floored at DAN's published minimums of 12 and 18) counted from
   the **last recorded exit**, or from the scheduled return once the boat is home by the one-hour
@@ -1755,12 +1755,15 @@ new domain concept, define it here in the same PR.
   the recap email, in the shop's zone; on the earlier-day route the sentence says so, because two
   divers who did the identical thing today otherwise read different numbers with nothing on a recap
   of today explaining it. The sentence names the **shop** as the author of the figure and DAN as the
-  practice behind it, because DAN publishes 12 and 18 and a shop may sit above them. Three things it
-  deliberately cannot know: whether a dive took decompression stops, which DAN says needs
-  substantially longer than 18 hours; any dive not booked at this shop, so a week with another
-  operator is invisible; and that two days belong to one diver when the bookings carry no email —
-  a walk-up is a fresh `people` row each time. Informs and gates nothing; never computed from a
-  depth profile, which is a dive computer's job.
+  practice behind it, because DAN publishes 12 and 18 and a shop may sit above them. The lead-in
+  states the interval for the same reason. It read "Fly-safe from {when}:" until issue #1433, and
+  DAN's interval is a minimum that lowers DCS risk without removing it, so "safe" was the one word
+  in the sentence that read as a verdict — in Spanish twice over, where "Puedes volar" is literally
+  *you can fly*. Three things it deliberately cannot know: whether a dive took decompression stops,
+  which DAN says needs substantially longer than 18 hours; any dive not booked at this shop, so a
+  week with another operator is invisible; and that two days belong to one diver when the bookings
+  carry no email — a walk-up is a fresh `people` row each time. Informs and gates nothing; never
+  computed from a depth profile, which is a dive computer's job.
 - **Surface interval** — the time between one dive's exit and the next dive's entry. Only ever
   stated between **consecutively numbered** executed dives that were both recorded and do not
   overlap; anything else is "not recorded". An interval measured across a dive nobody logged
@@ -1780,9 +1783,15 @@ new domain concept, define it here in the same PR.
   their own browser and nowhere else: no `people` row, no account, nothing that travels with a
   booking. The departure page uses one to answer "does this day go deeper than what I hold?"
   (`statedLevelDepthLimit`), and it is a claim about a **card** rather than about a person — no
-  junior age band, no Deep specialty, because neither has been said. It **informs and gates
-  nothing** (H-08), and it is not a **self-declared card**, which is an answer given *to the shop*
-  on a form and stored.
+  junior age band, no Deep specialty, because neither has been said. The junior half of that is
+  wrong-side-permissive and was **raised and deliberately accepted** (issue #1482, owner's call
+  2026-09-10): a child picking "Open Water" reads the adult 18 m, and the answer is left alone
+  because the sentence claims the card, because asking an anonymous stranger for a child's date of
+  birth costs more than the gap it closes, and because the roster's boarding-time depth advisory
+  still applies the band in full from a real date of birth (`diverDepthLimit`). The Deep half needs
+  no decision — a specialty holder reading their base rung understates what they may do. It
+  **informs and gates nothing** (H-08), and it is not a **self-declared card**, which is an answer
+  given *to the shop* on a form and stored.
 - **Material generation** — a shop's explicit assertion that a new waiver version changes the
   bargain, and therefore that standing signatures no longer cover it
   (`waiver_materiality_decisions`, ADR

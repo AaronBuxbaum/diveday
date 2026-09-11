@@ -30,6 +30,15 @@ export function MarketingFooterView({
           <Link href="/about" className="hover:text-foreground hover:underline">
             {t("nav.about")}
           </Link>
+          {/* The status page shipped on 2026-09-07 with nothing pointing at
+              it, and it is `noindex` by design (src/app/status/page.tsx), so
+              the only way in was already knowing the URL — which the shop whose
+              bookings just broke does not (issue #1475). Beside About, and not
+              in the staff chrome: `staff-destinations.ts` is places inside a
+              shop. */}
+          <Link href="/status" className="hover:text-foreground hover:underline">
+            {t("nav.status")}
+          </Link>
           {/* The only route to either legal page from anywhere on the site.
               Both have existed since 2026-08-14 and nothing linked them, so
               they were reachable by typed URL alone -- and the SES

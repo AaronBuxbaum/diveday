@@ -111,6 +111,30 @@ describe("next boat with space", () => {
 
     expect(container.textContent).not.toContain("full");
   });
+
+  /**
+   * **What the card claims once the reader has narrowed the board** (issue
+   * #1391). A lens, a trip type, `?hasSpace=1` or `?canDive=…&hideAbove=1`
+   * removes departures, so the card's boat is the next bookable one in that
+   * view and the eyebrow has to say which question it answered.
+   */
+  it("qualifies the eyebrow, and the region with it, when the reader has narrowed the board", () => {
+    render(card({ filtered: true }));
+
+    expect(
+      screen.getByRole("region", { name: "Next boat with space in this view" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Next boat with space in this view")).toBeInTheDocument();
+  });
+
+  it("claims the shop's own next boat when nothing is narrowed", () => {
+    const { container } = render(card());
+
+    // The regression that matters: a default-true or inverted boolean would
+    // qualify every unfiltered storefront, which is the opposite lie.
+    expect(screen.getByRole("region", { name: "Next boat with space" })).toBeInTheDocument();
+    expect(container.textContent).not.toContain("in this view");
+  });
 });
 
 describe("elevation is earned", () => {

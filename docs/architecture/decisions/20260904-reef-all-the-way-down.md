@@ -62,6 +62,17 @@ rail; the thread gains one step; the recap gains a postcard. Each slice ends in 
 obligation from [design-artifacts.md](../../design/design-artifacts.md): the component names this
 ADR and a test pins the rule.
 
+One caption is deliberately not the drawing's. The BookingPhone artboard heads the second-departure
+section "Also worth a look", as does 16e's roadmap bullet; it ships as "Also on the schedule"
+(`booking.alsoOnTheSchedule` in both diver bundles), because [brand.md](../../design/brand.md) bans
+"worth" as a value judgement pretending to be a fact, and a heading naming where the reader is
+looking is a fact. The owner made that call on 2026-09-10 (issue #1387); no wording in this ADR ever
+carried the banned word, so what disagreed was the drawing and the brand guide, not this decision.
+Two things stay as they are, so that a later session grepping for "worth" does not tidy them: the
+artboard keeps its caption, because design-artifacts.md closes a canvas once its ADR is Accepted,
+and "worth" does not join `scripts/check-voice.mjs` — which brand rules get mechanised is its own
+call, and this heading is only its first piece of evidence.
+
 ### 2. The delight budget widens along one axis — time — and every ban stands (H-67 a)
 
 [principles.md](../../design/principles.md) §3 rations joy to finishes and declines a standing

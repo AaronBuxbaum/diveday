@@ -173,6 +173,28 @@ export function diverDepthLimit(
  * `null` is the reader saying they hold nothing yet, which is the entry-level
  * DSD ceiling rather than silence — the same call `diverDepthLimit` makes, and
  * for the same reason.
+ *
+ * **The junior gap here is accepted, not overlooked.** A 10- or 11-year-old
+ * holding a Junior Open Water card is held to 12 m/40 ft whatever the plastic
+ * says, so picking "Open Water" here reads 18 m and, on a 15 m reef, reads
+ * that nothing on the day passes their limit — true of the card, false of
+ * them, and permissive in the wrong direction. Left exactly as it is on the
+ * owner's call of 2026-09-10 (issue #1482): the sentence claims the card and
+ * not the diver; asking an anonymous stranger for a child's date of birth to
+ * place a band costs more than the gap it closes, since there is no account,
+ * no consent path and no reason the shop needs that fact at that moment; and
+ * the gap is bounded, because nothing here gates anything (H-08) and the
+ * roster's boarding-time depth advisory still applies the junior band in full
+ * from a real date of birth (`diverDepthLimit` above, read by
+ * `listTripReadiness`), which is unchanged.
+ *
+ * Two fixes were weighed and declined with it, so neither is a free edit for
+ * a later session: a junior row in the picker — one row has to resolve to
+ * 12 m and is then wrong for the 12–14 half it invited to rely on it, and the
+ * two or three rows that are right name *ages* beside five rows that name
+ * *cards* — and a standing sentence under the answer naming the junior rule
+ * to every reader in order to serve a few. Re-raising either is the owner's
+ * call, not a fix.
  */
 export function statedLevelDepthLimit(level: CertificationLevel | null): DepthLimit {
   if (!level) return { ceiling: NO_CARD_LIMIT, basis: "no_card", level: null };

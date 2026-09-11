@@ -208,7 +208,8 @@
     "spotsLeftUrgent": "{count, plural, one {Solo queda # plaza} other {Solo quedan # plazas}}",
     "nextWithSpace": {
       "eyebrow": "Próxima salida con plazas",
-      "earlierFull": "{count, plural, one {la salida de {time} está llena} other {las # salidas anteriores están llenas}}"
+      "earlierFull": "{count, plural, one {la salida de {time} está llena} other {las # salidas anteriores están llenas}}",
+      "eyebrowFiltered": "Próxima salida con plazas en esta vista"
     },
     "lenses": {
       "railLabel": "Tipos de día",
@@ -2432,6 +2433,7 @@
     "pricing": "Precios",
     "switch": "Cambiar",
     "about": "Quiénes somos",
+    "status": "Estado",
     "privacy": "Privacidad",
     "terms": "Términos",
     "signIn": "Iniciar sesión",
