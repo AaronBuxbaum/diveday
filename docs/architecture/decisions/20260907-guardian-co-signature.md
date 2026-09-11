@@ -80,6 +80,18 @@ guardian signs the same release beside them, and the release is not usable until
    diver's release, so they go with the diver's own under `anonymizeDiver`. The shop-wide bundle
    needs them because it is inside the seal — a destination re-verifying the hash without them
    would read every minor's release as tampered.
+9. **The guardian's consent names the health questions as well as the release** (issue #1452,
+   owner decision 2026-09-10). The box a parent ticks used to read "I have read this waiver,
+   understand it, and agree to it on their behalf" — which attested to the liability text and said
+   nothing about the ten RSTC questions sitting above it on the same page, answered by the child.
+   It now reads "I have read this waiver **and the health questions answered above**, understand
+   them, and agree to them on their behalf." One clause, in both locales; the questionnaire is not
+   presented a second time in the guardian's card, there is no `medical_answered_by` column, and
+   there is no minor-specific template — all three are H-01's and were explicitly out of the
+   issue's scope. **No attorney has read this sentence.** The owner authorised the wording on
+   2026-09-10 and H-01/H-03 remain open for it exactly as they do for the release text above it;
+   the Spanish is a translation of a consent statement made by the same agent that wrote the
+   English, under the standing rule in `src/i18n/locales/es-ES/README.md`.
 
 ## Alternatives considered
 

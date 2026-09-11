@@ -1127,7 +1127,7 @@
     "guardianRelationshipParent": "Parent",
     "guardianRelationshipLegalGuardian": "Legal guardian",
     "guardianEmail": "Guardian’s email",
-    "guardianAgreementCheckbox": "I am this diver’s parent or legal guardian. I have read this waiver, understand it, and agree to it on their behalf.",
+    "guardianAgreementCheckbox": "I am this diver’s parent or legal guardian. I have read this waiver and the health questions answered above, understand them, and agree to them on their behalf.",
     "errorGuardianName": "Type the guardian’s full name.",
     "errorGuardianNameIsDiver": "The guardian’s name can’t be the diver’s own. Another parent or legal guardian can sign instead. If you are the only one here, type your name as it reads on your ID, with a middle name in full. If both IDs read the same, ask the shop to add the diver’s middle name or suffix to their record.",
     "errorGuardianRelationship": "Choose the guardian’s relationship to the diver.",
