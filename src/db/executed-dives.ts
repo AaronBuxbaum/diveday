@@ -146,18 +146,12 @@ export async function peopleWhoDivedBefore(
         // they spent ashore.
         ne(bookings.status, "cancelled"),
         // **A no-show still excludes — unless the desk saw them** (issue
-        // #1558). `bookings.status` has one slot and the last writer takes it,
-        // so a close-of-day sweep that stamps `no_show` over a whole boat
-        // silently overwrites the moment a staffer stood in front of that diver
-        // and tapped them in. That tap is a person stating a diver was in the
-        // building; a bulk sweep is a default. The append-only trail keeps the
-        // first one, so it is what gets asked here.
+        // #1558). Why the append-only trail outranks the status slot, and what
+        // an undo does to it, is argued once on `standingArrivalIsArrived`
+        // (`src/db/arrival-provenance.ts`); this is the reader that asks.
         //
-        // A `cleared` undo collapses the standing event to "nothing stands" and
-        // the exclusion holds, which is the point: an undo is the shop taking
-        // the sighting back, and it is allowed to.
-        //
-        // `cancelled` deliberately gets no such escape. A cancellation is a
+        // What is local to here is *which* status gets the escape.
+        // `cancelled` deliberately gets none. A cancellation is a
         // re-papering of the sale — it can land days later, on a seat somebody
         // really did check in before the card failed — and it says nothing
         // about the dock. Only `no_show` is a claim about who turned up, which

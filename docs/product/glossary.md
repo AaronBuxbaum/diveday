@@ -1987,8 +1987,13 @@ new domain concept, define it here in the same PR.
   `bookings.identity_unconfirmed_at`. That raises a fail-closed `identity_unconfirmed` readiness
   blocker — so a shared inbox (a spouse, or a minor booked under a parent's email; see **Junior
   certification**) can't board on the matched diver's evidence — until staff **Confirm identity** on
-  the roster. Staff-facing diver create/edit/restore still **refuse** on the same email collision
-  rather than reuse, and a soft-deleted person's email frees up for a new, unrelated person (that
+  the roster. **The same blocker has a second raiser (#1556):** a staffer who types a name at the
+  counter is shown the divers it half-matches (`similarity() > 0.4`, `findSimilarDivers`) with the
+  day each of them last dived, and tapping one seats that diver `identity_unconfirmed` too. The
+  prompt fires on genuinely different people, so the answer is to make a wrong tap harmless rather
+  than the matching cleverer — the seat inherits no certification, waiver or rental fit until the
+  same **Confirm identity** tap. Staff-facing diver create/edit/restore still **refuse** on the
+  same email collision rather than reuse, and a soft-deleted person's email frees up for a new, unrelated person (that
   soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
   [human-decisions.md](human-decisions.md) and
   [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md).

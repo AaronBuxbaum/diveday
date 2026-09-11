@@ -745,8 +745,10 @@ export function RosterSection({
           </p>
         ) : null}
 
-        {/* This seat reused an existing diver's email under a different name
-            (H-13). Staff verify it really is the same person before it can
+        {/* This seat attached itself to an existing diver on something short
+            of proof: a reused email under a different name (H-13), or a name
+            tapped off the counter's "is this the same diver?" prompt (issue
+            #1556). Staff verify it really is the same person before it can
             board on that person's certs/waiver — the one action that clears
             the identity_unconfirmed blocker above. */}
         {identityUnconfirmed ? (

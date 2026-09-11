@@ -877,13 +877,14 @@ export async function findSimilarDivers(
         eq(bookings.shopId, shopId),
         eq(trips.shopId, shopId),
         inArray(bookings.personId, ids),
+        // The four clauses below are `peopleWhoDivedBefore`'s dive-day rule
+        // (`src/db/executed-dives.ts`), which is where each one is argued and
+        // where a change to any of them belongs. Restated as a query rather
+        // than shared because that reader answers "has this person dived
+        // before" per person and this one needs the day itself; the rule may
+        // not drift apart, and `SimilarDiver.lastDiveDayAt` says why.
         ne(bookings.status, "cancelled"),
-        // A no-show still excludes unless the desk saw them (issue #1558):
-        // `bookings.status` has one slot, so a close-of-day sweep overwrites
-        // the moment a staffer stood in front of that diver and tapped them in.
         or(ne(bookings.status, "no_show"), standingArrivalIsArrived(shopId, bookings.id, trips.id)),
-        // A blown-out departure is not a dive day — unless the crew logged one
-        // on it, which beats a status column changed afterwards for a refund.
         or(eq(trips.status, "scheduled"), isNotNull(executedDives.id)),
         liveTrip(),
         lt(trips.startsAt, now),
