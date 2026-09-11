@@ -7306,15 +7306,21 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByText("No emergency numbers recorded").waitFor();
       await capture(page, "manifest-emergency-empty", scheme);
 
-      // The same absence, on the copy the boat falls back to. The wait is on
-      // the prompt's own words rather than a timeout: if the snapshot were
-      // primed before the clear landed, this frame would photograph a
-      // *populated* card under an "empty" name, and waiting on the rendered
-      // text is what makes that failure loud instead of silent.
+      // The same absence, on the copy the boat falls back to. Straight to the
+      // route with the trip's own id rather than through the manifest's "On
+      // this phone" group: the capture above has already resized this page
+      // through three viewports, and the disclosure does not reopen reliably
+      // afterwards. `offlineCopySaved` is the honest precondition either way —
+      // it waits on the freshness pill, which is the summary line's own report
+      // that a copy exists.
       await settleOfflineShellWorker(page);
-      await openOnThisPhone(page);
-      await page.getByRole("link", { name: "Open offline roll call" }).click();
-      await page.waitForURL(/offline-manifest/);
+      await offlineCopySaved(page);
+      const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
+      await page.goto(`/offline-manifest?trip=${tripId}`);
+      // The prompt's own words, not a timeout: the snapshot is primed in the
+      // background from the staff manifest, and if it had been written before
+      // the clear landed this frame would photograph a *populated* card under
+      // an "empty" name. Waiting on the rendered text makes that loud.
       await page.getByText("No emergency numbers recorded").waitFor();
       await capture(page, "offline-manifest-emergency-empty", scheme);
     });

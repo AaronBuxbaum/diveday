@@ -23,10 +23,13 @@ export function rollCallCheckpointText(t: StaffTranslator, checkpoint: RollCallC
  * (#1320).
  *
  * **Only ever rendered where the full name is already on the same screen.**
- * The manifest's summary panel states "Active checkpoint · Before departure"
- * directly above the track, so the short form never has to carry the whole
- * meaning on its own — it is a handle for a choice that is spelled out a line
- * up. Never use it as a standalone label anywhere else.
+ * `DiverRollCall` renders `manifest.checkpointRollCallHeading` ("Before
+ * departure roll call") as an unconditional `<h2>` immediately below the
+ * track, at every width and in every state — that is the guarantee, not the
+ * summary panel above it, which swaps the checkpoint's name for "Roll call
+ * complete" once every result is in. The short form is a handle for a choice
+ * that is spelled out a line down; never use it as a standalone label
+ * anywhere else.
  */
 export function rollCallCheckpointShortText(
   t: StaffTranslator,
