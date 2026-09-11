@@ -12,7 +12,7 @@ afterEach(cleanup);
  */
 describe("EarnedMomentLine", () => {
   it("announces itself as a status, so a screen reader hears the moment without a reload", () => {
-    render(<EarnedMomentLine>Everyone's aboard.</EarnedMomentLine>);
+    render(<EarnedMomentLine>Everyone’s aboard.</EarnedMomentLine>);
     expect(screen.getByRole("status")).toHaveTextContent("Everyone’s aboard.");
   });
 

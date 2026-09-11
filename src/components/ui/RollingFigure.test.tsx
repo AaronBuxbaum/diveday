@@ -90,7 +90,7 @@ describe("RollingFigure", () => {
   it("swaps when the sentence around the number changed, not just the number", () => {
     reducedMotion(false);
     const { container, rerender } = render(<RollingFigure>3 to come</RollingFigure>);
-    rerender(<RollingFigure>1 to come · 2 can't board yet</RollingFigure>);
+    rerender(<RollingFigure>1 to come · 2 can’t board yet</RollingFigure>);
     expect(container.textContent).toBe("1 to come · 2 can’t board yet");
     expect(container.querySelector(".rolling-digit-in")).toBeNull();
   });

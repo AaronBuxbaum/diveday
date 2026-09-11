@@ -46,7 +46,7 @@ const ANSWER: NonNullable<SearchResults["answer"]> = {
   title: "Grace Mensah on the 7:00 AM Thu, Aug 27 · Two-Tank Reef",
   lines: ["Blocked · Waiver not sent"],
   act: { label: "Open the roster", href: "/shop/blue-mantis/trips/t-1#booking-b-1" },
-  more: { label: "Open Grace Mensah's record", href: "/shop/blue-mantis/divers/p-grace" },
+  more: { label: "Open Grace Mensah’s record", href: "/shop/blue-mantis/divers/p-grace" },
 };
 
 function results(answer: SearchResults["answer"]): SearchResults {
@@ -99,7 +99,7 @@ describe("CommandPalette answer card", () => {
     expect(card).toHaveTextContent("Blocked · Waiver not sent");
     expect(card).toHaveTextContent("Open the roster");
     // The doors that ship today render beneath it.
-    expect(screen.getByRole("option", { name: "Open Grace Mensah's record" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Open Grace Mensah’s record" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Grace Mensah" })).toBeInTheDocument();
 
     await userEvent.keyboard("{Enter}");
