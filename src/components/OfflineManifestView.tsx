@@ -38,7 +38,7 @@ import {
   type OfflineManifestTranslator,
   offlineManifestTranslator,
 } from "@/i18n/offline-manifest-messages";
-import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
+import { readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { supportNeedsLines } from "@/i18n/support-needs-labels";
@@ -2432,7 +2432,14 @@ export function OfflineManifestView() {
             tapHint: t("manifest.missingDiversTapHint"),
             rentsKitLabel: t("manifest.rentsKitLabel"),
             ownKitLabel: t("manifest.ownKitLabel"),
-            blockedLabel: readinessStatusText(t, "blocked"),
+            // The offline exception, all the way down: the diver's own row
+            // reads "Blocked when saved", so the face in this grid has to say
+            // the same thing. The bare readiness word here made the glossary's
+            // "every readiness word on this page carries the qualifier"
+            // sentence false, and put an unqualified badge one scroll from a
+            // qualified one on a page whose whole point is that it may be
+            // stale (#1360).
+            blockedLabel: t("shared.offlineManifest.single.blockedBadge"),
           }}
         />
 

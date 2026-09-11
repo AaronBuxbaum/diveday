@@ -598,11 +598,16 @@ new domain concept, define it here in the same PR.
   through `readinessStatusText`/`readinessStatusTone` in `src/i18n/readiness-labels.ts`. The same
   fact used to read as "Needs attention" in warning at the counter and "Blocked" in danger on the
   manifest, for the same diver. **The offline manifest is a deliberate exception**: it says
-  "Ready when saved" / "Blocked when saved" (`shared.offlineManifest.single.readyBadge`) rather
-  than resolving through those helpers, because a snapshot on a boat with no signal cannot know
-  whether a waiver was signed or a card sighted since it was taken. Dropping the qualifier there
-  would be the one lie a roll-call surface must not tell — a stale copy reading as current
-  (design/principles.md #4, "safety surfaces keep their precision").
+  "Ready when saved" / "Blocked when saved" (`shared.offlineManifest.single.readyBadge` /
+  `.blockedBadge`) rather than resolving through those helpers, because a snapshot on a boat with
+  no signal cannot know whether a waiver was signed or a card sighted since it was taken. Dropping
+  the qualifier there would be the one lie a roll-call surface must not tell — a stale copy reading
+  as current (design/principles.md #4, "safety surfaces keep their precision"). The exception
+  covers **every readiness word on that page, not just the diver row's status pill** — the
+  missing-divers grid's blocked chip reads the same qualified key, and no caller anywhere under
+  `/offline-manifest` resolves through `readinessStatusText`. The grid held a bare "Blocked" one
+  scroll from a qualified badge until #1360; a future session narrowing this sentence back to the
+  row would re-open that gap.
 - **Shop day scan** — the coarse ±26-hour bound (`shopDayWindow`, `src/lib/operational-window.ts`)
   a query casts when the question is about the shop's own *calendar date* rather than a horizon —
   today's boat, for the command palette's boarding jump. SQL cannot ask "same day in this shop's

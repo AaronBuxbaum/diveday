@@ -1473,6 +1473,31 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(within(grid).getByRole("button", { name: /Priya/ })).toBeInTheDocument();
   });
 
+  /**
+   * The glossary's offline exception covers the whole page, not one pill
+   * (#1360). A face in this grid and that diver's own row are one scroll apart
+   * on a surface whose only real risk is being read as current, so a bare
+   * "Blocked" beside the face was the one wording that could make a stale copy
+   * look live.
+   */
+  it("qualifies the grid's blocked chip the way the diver's own row does", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      richEnvelope("trip-1", { readiness: "blocked" }),
+    );
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const grid = document.getElementById("missing-divers-grid");
+    if (!grid) throw new Error("the missing-divers grid is missing");
+    expect(within(grid).getByText("Blocked when saved")).toBeInTheDocument();
+    // `getByText` with a string matches an element's whole normalised text, so
+    // this finds an *unqualified* chip and never the qualified one above.
+    expect(within(grid).queryByText("Blocked")).toBeNull();
+  });
+
   it("ports the WaterLocker disable toggle onto the offline surface", async () => {
     searchParams = new URLSearchParams({ trip: "trip-1" });
     vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));

@@ -11,8 +11,7 @@ type MissingDiver = {
   /**
    * Readiness says this diver cannot board yet. Display only — the grid never
    * gates anything, it just stops saying "not yet called" beside somebody whose
-   * own row says "Blocked". Absent on the offline copy, which carries readiness
-   * but is a dock document, not a readiness screen.
+   * own row already says so.
    */
   blocked?: boolean;
 };
@@ -30,7 +29,13 @@ export interface MissingDiversGridCopy {
   tapHint: string;
   rentsKitLabel: string;
   ownKitLabel: string;
-  /** The one readiness word (`readinessStatusText`), for a blocked diver's chip. */
+  /**
+   * The word on a blocked diver's chip, in whatever vocabulary the calling
+   * surface uses for readiness. The offline manifest — this grid's only caller
+   * — passes its own qualified `shared.offlineManifest.single.blockedBadge`
+   * ("Blocked when saved"), never the bare `readinessStatusText` word, because
+   * every readiness word on that page carries the qualifier (#1360).
+   */
   blockedLabel: string;
 }
 
@@ -146,21 +151,28 @@ export function MissingDiversGrid({
               <span className="block w-full truncate text-xs text-muted">
                 {diver.rentsKit ? copy.rentsKitLabel : copy.ownKitLabel}
               </span>
-              {/* A blocked diver's own row says "Blocked"; without this the
-                  grid quietly said the opposite beside their face. Same word,
-                  from the same readiness vocabulary — and *below* the kit
-                  line, so one blocked diver doesn't push their own tile's
-                  labels a line out of step with the rest of the row. */}
+              {/* A blocked diver's own row says they are blocked; without this
+                  the grid quietly said the opposite beside their face. The same
+                  words their row uses — on the offline copy that is the
+                  qualified "Blocked when saved" pair, not the live readiness
+                  word — and *below* the kit line, so one blocked diver doesn't
+                  push their own tile's labels a line out of step with the rest
+                  of the row. */}
               {/* `toneMark={false}`: the canonical danger `Badge`, minus its
                   status mark — a tile is 80px wide and the mark would take a third of
                   the chip from a word the red fill has already coloured. Same
                   exemption the nav's blocked count takes. */}
+              {/* Wraps rather than truncates: the qualifier is the whole point
+                  of the word here, and `truncate` on an 80px tile renders
+                  "Blocked wh…" — a clipped chip that says less than the bare
+                  word it replaced. Two or three tight lines is the density
+                  cost, accepted on #1360. */}
               {diver.blocked ? (
                 <Badge
                   tone="danger"
                   size="sm"
                   toneMark={false}
-                  className="mt-0.5 max-w-full truncate font-semibold"
+                  className="mt-0.5 max-w-full text-balance leading-tight font-semibold"
                 >
                   {copy.blockedLabel}
                 </Badge>
