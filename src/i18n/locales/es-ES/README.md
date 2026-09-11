@@ -140,6 +140,14 @@ reading two names for one thing — which is the exact confusion the English fix
 
 - **la inmersión** is one dive — one tank, in the water. `plannedDives`, "Dive 2", every roll-call
   checkpoint. A two-tank day is *dos inmersiones* at one *sitio*, or at two.
+
+  **The manifest's checkpoint track abbreviates it below `sm`**, and that is deliberate rather than
+  drift: *Muelle* / *Inm. 2* (`shared.rollCallCheckpoint.departureShort` / `.afterDiveShort`)
+  against *Antes de zarpar* / *Después de la inmersión 2*. At boat size the full Spanish forms
+  overrun a 390px track and the row reads as two lines, which is the whole of issue #1320; even
+  *Inmersión 2* does not fit three options across. The abbreviation keeps the sanctioned noun
+  instead of reaching for a shorter one, the full name is on screen a line above at every width,
+  and nothing else may use the short keys. Do not expand them back.
 - **el punto** survives only for a literal coordinate: the marine forecast's offshore
   point (`diveSites.form.forecastLegend`, "punto de pronóstico"). Never for the place itself.
 

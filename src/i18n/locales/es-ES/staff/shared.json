@@ -443,7 +443,9 @@
   },
   "rollCallCheckpoint": {
     "departure": "Antes de zarpar",
-    "afterDive": "Después de la inmersión {n}"
+    "afterDive": "Después de la inmersión {n}",
+    "departureShort": "Muelle",
+    "afterDiveShort": "Inm. {n}"
   },
   "rollCallState": {
     "awaiting": "Pendiente de pase de lista",

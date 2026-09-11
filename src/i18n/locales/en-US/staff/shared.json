@@ -443,7 +443,9 @@
   },
   "rollCallCheckpoint": {
     "departure": "Before departure",
-    "afterDive": "After dive {n}"
+    "afterDive": "After dive {n}",
+    "departureShort": "Dock",
+    "afterDiveShort": "Dive {n}"
   },
   "rollCallState": {
     "awaiting": "Awaiting roll call",

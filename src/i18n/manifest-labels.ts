@@ -16,6 +16,27 @@ export function rollCallCheckpointText(t: StaffTranslator, checkpoint: RollCallC
   return t("shared.rollCallCheckpoint.afterDive", { n });
 }
 
+/**
+ * The same checkpoint in the shortest words it can be said in — "Dock" /
+ * "Dive N", *Muelle* / *Inm. N*. The full name at boat size overran a 390px
+ * track and the row read as two, on the one surface a crew works at the rail
+ * (#1320).
+ *
+ * **Only ever rendered where the full name is already on the same screen.**
+ * The manifest's summary panel states "Active checkpoint · Before departure"
+ * directly above the track, so the short form never has to carry the whole
+ * meaning on its own — it is a handle for a choice that is spelled out a line
+ * up. Never use it as a standalone label anywhere else.
+ */
+export function rollCallCheckpointShortText(
+  t: StaffTranslator,
+  checkpoint: RollCallCheckpoint,
+): string {
+  if (checkpoint === "departure") return t("shared.rollCallCheckpoint.departureShort");
+  const n = Number(checkpoint.slice("after_dive_".length));
+  return t("shared.rollCallCheckpoint.afterDiveShort", { n });
+}
+
 const ROLL_CALL_STATE_KEYS: Record<RollCallLabel, StaffMessageKey> = {
   awaiting: "shared.rollCallState.awaiting",
   boarded: "shared.rollCallState.boarded",
