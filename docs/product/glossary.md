@@ -1736,8 +1736,11 @@ new domain concept, define it here in the same PR.
   sits nowhere near the roll call's commit path or the manifest's head count — and it never
   promises: a site's summary counts *logged* dives in a trailing month, dates itself to the
   departure rather than to the tap, and says what was logged and when, never what a diver will see.
-- **Earliest flight** — the instant a diver reads they may board a plane after the day's diving
-  (`src/lib/fly-safe.ts`, issue #1425). The shop's own hours (`shops.fly_safe_hours_single` and
+- **Earliest flight** — the instant a shop's preflight wait ends, after the day's diving
+  (`src/lib/fly-safe.ts`, issue #1425). **Never a clearance, and since #1433 the copy does not
+  read as one**: whether a diver may fly is between them, their profile and their physician, and a
+  shop knows one interval — so the sentence asks them to wait at least until this instant rather
+  than telling them they may go, and attributes both the number and the practice. The shop's own hours (`shops.fly_safe_hours_single` and
   `_repetitive`, defaults 18 and 24, floored at DAN's published minimums of 12 and 18) counted from
   the **last recorded exit**, or from the **buffered return** — the scheduled return plus the
   one-hour departure buffer — once the boat is home by that buffer. The gate and the anchor are the

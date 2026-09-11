@@ -261,9 +261,9 @@ export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
     // before it answers at all; anchoring on the bare scheduled time would
     // use that knowledge to decide whether to speak and then compute as if
     // the boat tied up on time. A departure due at 14:00 that comes in at
-    // 15:30 would hand the diver a time ninety minutes early — at the
-    // settable minimum of 18 repetitive hours, a real interval of 16.5,
-    // under DAN's floor in a sentence that ends by citing DAN.
+    // 15:30 would hand the diver a time ninety minutes early — the same
+    // shortfall the short-of-plan hole above reaches by its own route, and
+    // under the same floor.
     //
     // The copy is not the hole. It reads "after the day was due to end",
     // never "after your last dive", so it never claims the anchor is an
