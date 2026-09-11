@@ -10,6 +10,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  max,
   ne,
   notInArray,
   or,
@@ -19,6 +20,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
+import { standingArrivalIsArrived } from "./arrival-provenance";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import { listOrdersForPerson } from "./orders";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -27,6 +29,7 @@ import {
   bookings,
   certifications,
   courses,
+  executedDives,
   nitroxCertifications,
   people,
   personRoles,
@@ -36,6 +39,7 @@ import {
   specialtyCertifications,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 import {
   getCurrentWaiverTemplate,
   getDiverWaiverChannelStates,
@@ -777,14 +781,56 @@ export async function getDiverProfile(
 }
 
 /**
- * Finds divers in a shop whose names match exactly (case-insensitive) or are similar
- * (similarity score > 0.4 using pg_trgm similarity).
+ * One name the counter is being asked about, and the one fact that makes the
+ * question answerable.
+ *
+ * A list of five names is not evidence: the name is what the staffer just
+ * typed, which is why every one of them is on the list. "Is this the same
+ * Nadia who dived yesterday?" is a question about a *day*, so the day comes
+ * with the name (issue #1556).
  */
-export async function findSimilarDivers(db: AppDb, shopId: string, fullName: string) {
+export type SimilarDiver = {
+  id: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  /**
+   * The most recent departure this diver was actually on, or null when this
+   * shop has no dive day on file for them.
+   *
+   * **The same evidence rule `peopleWhoDivedBefore` uses**
+   * (src/db/executed-dives.ts): a non-cancelled booking, on a live departure
+   * the shop still says ran, that has already left — plus that reader's two
+   * escapes, a `no_show` the desk itself contradicted by tapping the diver in
+   * (issue #1558) and a blown-out departure the crew logged dives on. The
+   * counter and the fly-safe reader may not disagree about what a dive day is:
+   * one of them would then be telling a staffer something the other refuses.
+   *
+   * Null renders nothing at all. "No dives on file" is true of every genuine
+   * first-timer and of every candidate this shop has only ever typed in, so it
+   * distinguishes nobody from nobody.
+   */
+  lastDiveDayAt: Date | null;
+};
+
+/**
+ * Finds divers in a shop whose names match exactly (case-insensitive) or are similar
+ * (similarity score > 0.4 using pg_trgm similarity), each with the last dive day
+ * this shop can put behind the name.
+ *
+ * **Two queries, never one per candidate.** The dive days are one grouped read
+ * over the five ids the name search just returned; a per-row lookup here would
+ * put five round trips in front of a staffer with a queue at the desk.
+ */
+export async function findSimilarDivers(
+  db: AppDb,
+  shopId: string,
+  fullName: string,
+): Promise<SimilarDiver[]> {
   const trimmed = fullName.trim();
   const lowerName = trimmed.toLowerCase();
 
-  return db
+  const candidates = await db
     .select({
       id: people.id,
       fullName: people.fullName,
@@ -806,4 +852,48 @@ export async function findSimilarDivers(db: AppDb, shopId: string, fullName: str
     )
     .orderBy(desc(sql`similarity(lower(${people.fullName}), ${lowerName})`))
     .limit(5);
+  if (candidates.length === 0) return [];
+
+  const now = nowDate();
+  const ids = candidates.map((candidate) => candidate.id);
+  const dived = await db
+    .select({ personId: bookings.personId, lastDiveDayAt: max(trips.startsAt) })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    // Only so a logged dive can speak for a departure the shop later marked
+    // something other than `scheduled` — see the trip-status clause below.
+    .leftJoin(
+      executedDives,
+      and(
+        eq(executedDives.tripId, trips.id),
+        eq(executedDives.shopId, shopId),
+        isNull(executedDives.deletedAt),
+      ),
+    )
+    .where(
+      and(
+        // Both tables scoped, not only the one this read starts from: this
+        // answer must not be reachable from another shop's row by any path.
+        eq(bookings.shopId, shopId),
+        eq(trips.shopId, shopId),
+        inArray(bookings.personId, ids),
+        ne(bookings.status, "cancelled"),
+        // A no-show still excludes unless the desk saw them (issue #1558):
+        // `bookings.status` has one slot, so a close-of-day sweep overwrites
+        // the moment a staffer stood in front of that diver and tapped them in.
+        or(ne(bookings.status, "no_show"), standingArrivalIsArrived(shopId, bookings.id, trips.id)),
+        // A blown-out departure is not a dive day — unless the crew logged one
+        // on it, which beats a status column changed afterwards for a refund.
+        or(eq(trips.status, "scheduled"), isNotNull(executedDives.id)),
+        liveTrip(),
+        lt(trips.startsAt, now),
+      ),
+    )
+    .groupBy(bookings.personId);
+
+  const lastDiveDay = new Map(dived.map((row) => [row.personId, row.lastDiveDayAt]));
+  return candidates.map((candidate) => ({
+    ...candidate,
+    lastDiveDayAt: lastDiveDay.get(candidate.id) ?? null,
+  }));
 }

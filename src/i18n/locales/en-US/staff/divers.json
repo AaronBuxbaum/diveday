@@ -106,7 +106,8 @@
     "adding": "Adding…",
     "cancel": "Cancel",
     "addDiver": "Add diver",
-    "confirmMatchesTitle": "Did you mean one of these existing potential matches?",
+    "confirmMatchesTitle": "Is this the same {name}? Picking one gives this booking that diver’s certifications and waiver.",
+    "confirmMatchesLastDive": "Last dived {date}",
     "confirmMatchesSubmit": "Create new diver anyway"
   },
   "list": {

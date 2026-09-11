@@ -106,7 +106,8 @@
     "adding": "Añadiendo…",
     "cancel": "Cancelar",
     "addDiver": "Añadir buceador",
-    "confirmMatchesTitle": "¿Te refieres a alguno de estos posibles duplicados?",
+    "confirmMatchesTitle": "¿Es {name} alguna de estas personas? Al elegir una, esta reserva se queda con sus certificaciones y su exención.",
+    "confirmMatchesLastDive": "Última inmersión el {date}",
     "confirmMatchesSubmit": "Crear nuevo buceador de todos modos"
   },
   "list": {

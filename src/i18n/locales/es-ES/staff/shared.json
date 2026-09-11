@@ -190,7 +190,7 @@
     },
     "blockers": {
       "requirementsNotConfigured": "Aún no se han configurado los requisitos de la salida.",
-      "identityUnconfirmed": "Identidad sin confirmar: esta reserva usó el correo de un buceador existente con un nombre distinto. Confirma que es la misma persona antes de embarcar.",
+      "identityUnconfirmed": "Identidad sin confirmar: esta reserva se asoció al registro de un buceador existente por una coincidencia, de un correo compartido o de un nombre elegido de una lista. Confirma que es la misma persona antes de embarcar.",
       "waiverNotSent": "La exención aún no se ha enviado.",
       "waiverPending": "La exención espera la firma del buceador.",
       "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",

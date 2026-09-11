@@ -3,6 +3,7 @@ import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS } from "@/lib/fly-safe";
 import { PLAN_CHANGE_NOTE_MAX, type PlanChangeReason } from "@/lib/plan-change";
+import { standingArrivalIsArrived } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { isMarineLifeSlug } from "./marine-life-catalog";
@@ -140,11 +141,28 @@ export async function peopleWhoDivedBefore(
         eq(bookings.shopId, shopId),
         eq(trips.shopId, shopId),
         inArray(bookings.personId, [...personIds]),
-        // A diver who cancelled or never showed was not aboard, whatever the
-        // crew recorded for the boat. Crediting them would hand them the
-        // longer wait for a day they spent ashore.
+        // A diver who cancelled was not aboard, whatever the crew recorded for
+        // the boat. Crediting them would hand them the longer wait for a day
+        // they spent ashore.
         ne(bookings.status, "cancelled"),
-        ne(bookings.status, "no_show"),
+        // **A no-show still excludes — unless the desk saw them** (issue
+        // #1558). `bookings.status` has one slot and the last writer takes it,
+        // so a close-of-day sweep that stamps `no_show` over a whole boat
+        // silently overwrites the moment a staffer stood in front of that diver
+        // and tapped them in. That tap is a person stating a diver was in the
+        // building; a bulk sweep is a default. The append-only trail keeps the
+        // first one, so it is what gets asked here.
+        //
+        // A `cleared` undo collapses the standing event to "nothing stands" and
+        // the exclusion holds, which is the point: an undo is the shop taking
+        // the sighting back, and it is allowed to.
+        //
+        // `cancelled` deliberately gets no such escape. A cancellation is a
+        // re-papering of the sale — it can land days later, on a seat somebody
+        // really did check in before the card failed — and it says nothing
+        // about the dock. Only `no_show` is a claim about who turned up, which
+        // is why only `no_show` can be contradicted by who turned up.
+        or(ne(bookings.status, "no_show"), standingArrivalIsArrived(shopId, bookings.id, trips.id)),
         // A blown-out departure is not a dive day — a cancellation leaves its
         // bookings active by design, so without this the answer counts days
         // nobody dived. **Unless the crew logged a dive on it**, which is

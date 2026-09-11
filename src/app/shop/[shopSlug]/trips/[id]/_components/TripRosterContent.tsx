@@ -239,6 +239,7 @@ export function TripRosterContent({
               inviteAction={actions.createDirectTripInvitationAction}
               status={noticeForForm(tripNotice, "add-diver")}
               locale={locale}
+              timeZone={timezone}
               confirmName={confirmName}
               confirmEmail={confirmEmail}
               confirmPhone={confirmPhone}

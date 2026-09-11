@@ -1,6 +1,53 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { type AnyColumn, and, desc, eq, inArray, type SQL, sql } from "drizzle-orm";
 import type { AppDb } from "./client";
 import { bookingArrivalEvents } from "./schema";
+
+/**
+ * **"Somebody at this shop saw this diver arrive, and has not taken it back"**
+ * — as a predicate a query can carry, for the one booking it is correlated to
+ * (issue #1558).
+ *
+ * `bookings.status` is a projection with one slot, so the last writer wins it:
+ * a close-of-day sweep that stamps `no_show` over a seat erases the fact that
+ * a staffer stood in front of that diver at 06:40 and tapped them in. The
+ * append-only trail underneath never loses that — `booking_arrival_events` is
+ * not soft-deletable and not pruned, and it is absent from `RETENTION_DAYS`
+ * (`src/lib/retention.ts`) on purpose — so a reader asking "was this person
+ * aboard" should ask the trail rather than the slot.
+ *
+ * **The newest row wins, and it may be a retraction.** The ordering here is
+ * `newestArrivalEvent`'s own three columns (`src/db/check-in.ts`), deliberately
+ * and not approximately: `occurred_at` ties constantly under a frozen clock or
+ * a batched offline sync, and "what stands" must not be answerable two ways in
+ * one codebase. An undo writes a `cleared` row rather than deleting the
+ * `arrived` one, so a taken-back sighting collapses to `false` here — which is
+ * the point. The shop is allowed to say it was wrong.
+ *
+ * Correlated on `trip_id` as well as `booking_id` even though a booking belongs
+ * to exactly one departure: that pair is the exact prefix of
+ * `booking_arrival_events_shop_trip_booking_occurred_idx`, so the subquery
+ * stays an index probe rather than a scan per candidate row.
+ *
+ * Lives here rather than inline in its one caller because "was this diver
+ * aboard" is the same question a manifest and `buildIncidentExport`
+ * (`src/lib/incident-export.ts`) have to answer honestly, and the answer may
+ * not differ by who is asking.
+ */
+export function standingArrivalIsArrived(
+  shopId: string,
+  bookingIdColumn: AnyColumn,
+  tripIdColumn: AnyColumn,
+): SQL<boolean> {
+  return sql<boolean>`(
+    select standing.status
+    from ${bookingArrivalEvents} as standing
+    where standing.shop_id = ${shopId}
+      and standing.trip_id = ${tripIdColumn}
+      and standing.booking_id = ${bookingIdColumn}
+    order by standing.occurred_at desc, standing.created_at desc, standing.seq desc
+    limit 1
+  ) = 'arrived'`;
+}
 
 /**
  * **Which arrivals the shop has only been *told* about** (N-24).

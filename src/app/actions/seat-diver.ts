@@ -33,7 +33,17 @@ import {
  * a diver's record) submit the same shape.
  */
 
-const existingDiverSchema = z.object({ tripId: z.uuid(), personId: z.uuid() });
+const existingDiverSchema = z.object({
+  tripId: z.uuid(),
+  personId: z.uuid(),
+  /**
+   * Present only on the candidate forms of the "is this the same diver?"
+   * prompt (issue #1556). A literal rather than a boolean because a form field
+   * is a string and absence is the ordinary case: every other door submits
+   * nothing here, and nothing must read as "this was a real pick".
+   */
+  fromNameMatch: z.literal("true").optional(),
+});
 
 /**
  * Email optional here and required by refinement per surface, rather than two
@@ -152,6 +162,7 @@ export async function seatExistingDiverAction(
   const parsed = existingDiverSchema.safeParse({
     tripId: formData.get("tripId"),
     personId: formData.get("personId"),
+    fromNameMatch: formData.get("fromNameMatch") ?? undefined,
   });
   // A landing built from the raw fields: the staffer must get back to the page
   // they submitted from even when what they submitted was unusable.
@@ -164,7 +175,10 @@ export async function seatExistingDiverAction(
   await seat(
     surface,
     landing,
-    { personId: parsed.data.personId },
+    // A tap on the name prompt is a guess, and the seat it takes carries that
+    // through to the booking rather than quietly inheriting this person's
+    // certifications and waiver (issue #1556).
+    { personId: parsed.data.personId, fromNameMatch: parsed.data.fromNameMatch === "true" },
     { shopId: session.user.shopId, personId: session.user.personId },
   );
 }

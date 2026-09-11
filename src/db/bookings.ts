@@ -58,7 +58,28 @@ import { liveTrip } from "./trips-live";
  * and still no email creates its own row rather than guessing an identity.
  */
 export type BookingPerson =
-  | { personId: string }
+  | {
+      personId: string;
+      /**
+       * This person was not *picked*, they were *guessed* — the staffer tapped
+       * a name off the counter's "is this the same diver?" prompt, whose
+       * candidates come from a `similarity() > 0.4` trigram match on a typed
+       * name (issue #1556).
+       *
+       * That prompt fires on genuinely different people, so a seat taken from
+       * it must not silently inherit the matched diver's certifications,
+       * sign-once waiver coverage and rental fit. Set, it raises
+       * `identityUnconfirmed` exactly as a shared-inbox email mismatch does
+       * (H-13): the diver is Blocked at the rail until a staffer taps confirm
+       * identity, and no certification claim is written under their name.
+       *
+       * Absent on every other identity booking, which is the point — a
+       * returning diver picked out of the search by a staffer who went looking
+       * for them is not a guess, and "enter once, reuse everywhere" has to keep
+       * costing nothing.
+       */
+      fromNameMatch?: boolean;
+    }
   | { fullName: string; email?: string; phone?: string };
 
 /**
@@ -611,12 +632,20 @@ async function createBookingRecord(
   // only written after the capacity gate passes (`pendingInsert`).
   let person: typeof people.$inferSelect | undefined;
   let pendingInsert: { fullName: string; email: string | null; phone?: string } | null = null;
-  // Set when this booking reused an existing person by email but the submitted
-  // name did not match — a possible shared-inbox / different-human signal that
-  // must not silently inherit the matched person's evidence (H-13). Only the
-  // by-email path can raise it; the identity path re-books a diver picked from
-  // their own record and submits no name to disagree with, and a fresh
-  // no-email row has no prior identity to disagree with either.
+  // Set when this booking attached itself to an existing person on something
+  // short of proof, and must not silently inherit that person's evidence
+  // (H-13). Two ways in, and a fresh no-email row raises neither because it has
+  // no prior identity to disagree with:
+  //
+  //  - the by-email path reused a row whose name on file does not match the
+  //    submitted one — the shared-inbox / different-human signal this flag was
+  //    built for;
+  //  - the identity path carries `fromNameMatch`, meaning the person id came
+  //    off the counter's trigram name prompt rather than out of a search a
+  //    staffer went looking in (issue #1556). It used to be true that the
+  //    identity path "submits no name to disagree with"; it stopped being true
+  //    the day that prompt shipped, because the name it guesses from is
+  //    precisely what disagrees.
   let identityUnconfirmed = false;
   if ("personId" in req) {
     [person] = await tx
@@ -628,6 +657,7 @@ async function createBookingRecord(
       .limit(1);
     // A copied URL or a since-removed diver must not book into this tenant.
     if (!person) return { ok: false, reason: "person_not_found" };
+    identityUnconfirmed = req.fromNameMatch === true;
   } else {
     const email = req.email?.trim().toLowerCase() || null;
     if (email) {

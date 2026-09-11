@@ -19,7 +19,7 @@ import { createDiver, findSimilarDivers } from "@/db/divers";
 import { discardFormDraft, readFormDraft } from "@/db/form-drafts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { formatTime } from "@/lib/format";
+import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   blankableDiverEmailSchema,
@@ -261,7 +261,9 @@ export default async function NewDiverPage({
       {potentialMatches.length > 0 ? (
         <ShopNotice tone="warning" className="mt-6">
           <div className="flex flex-col gap-2 text-left">
-            <h3 className="font-semibold text-base">{t("divers.page.confirmMatchesTitle")}</h3>
+            <h3 className="font-semibold text-base">
+              {t("divers.page.confirmMatchesTitle", { name: confirmName ?? "" })}
+            </h3>
             <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
               {potentialMatches.map((match) => (
                 <li key={match.id}>
@@ -279,6 +281,14 @@ export default async function NewDiverPage({
                       <input type="hidden" name="fullName" value={match.fullName} />
                       <input type="hidden" name="email" value={match.email ?? ""} />
                       <input type="hidden" name="phone" value={match.phone ?? ""} />
+                      {/* Only on the seating arm: a tap here is a guess off a
+                          trigram name match, so the seat it takes is
+                          identity-unconfirmed until a staffer confirms it
+                          (issue #1556). The wait-list arm writes an entry, not
+                          a seat, and nobody boards from one. */}
+                      {isWaitlist ? null : (
+                        <input type="hidden" name="fromNameMatch" value="true" />
+                      )}
                       <button type="submit" className="underline font-medium text-left">
                         {match.fullName}
                       </button>
@@ -294,6 +304,13 @@ export default async function NewDiverPage({
                   {match.email || match.phone ? (
                     <span className="text-muted text-sm ml-1">
                       ({[match.email, match.phone].filter(Boolean).join(", ")})
+                    </span>
+                  ) : null}
+                  {match.lastDiveDayAt ? (
+                    <span className="text-muted text-sm ml-1">
+                      {t("divers.page.confirmMatchesLastDive", {
+                        date: formatShortDate(match.lastDiveDayAt, locale, shop.timezone),
+                      })}
                     </span>
                   ) : null}
                 </li>

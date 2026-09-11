@@ -399,7 +399,7 @@
     "certifySpecialtyGroup": "Especialidad",
     "certifying": "Certificando…",
     "checkedInPill": "Registrado",
-    "confirmIdentityMessage": "¿Confirmar que esta reserva es de {name}? Hazlo solo una vez que hayas verificado que es la misma persona y no alguien más compartiendo el correo.",
+    "confirmIdentityMessage": "¿Confirmar que esta reserva es de {name}? Hazlo solo una vez que hayas verificado que es la misma persona y no alguien más con un nombre parecido o un correo compartido.",
     "confirmRemoveBooking": "¿Eliminar a {name} de esta salida? Si tiene derecho a reembolso, se emitirá automáticamente.",
     "confirmResendWaiver": "¿Enviar a {name} un nuevo enlace de exención? Su enlace anterior dejará de funcionar.",
     "confirmThisIs": "Confirmar que es {name}",

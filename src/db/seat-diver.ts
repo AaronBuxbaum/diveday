@@ -59,7 +59,13 @@ export type SeatDiverRefusalDetail = "specific" | "coarse";
 
 /** Who is being seated: a diver already on file, or a name typed at the desk. */
 export type SeatDiverPerson =
-  | { personId: string }
+  /**
+   * `fromNameMatch` mirrors `BookingPerson`'s field of the same name and is
+   * spread straight into `createBooking` below: the counter's "is this the same
+   * diver?" prompt guesses from a typed name, so a seat taken off it is
+   * identity-unconfirmed until a staffer says otherwise (issue #1556).
+   */
+  | { personId: string; fromNameMatch?: boolean }
   | { fullName: string; email?: string; phone?: string };
 
 export type SeatDiverInput = {

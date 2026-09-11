@@ -1,8 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
+import { checkInBooking, undoCheckInBooking } from "./check-in";
 import type { AppDb } from "./client";
 import {
   deleteExecutedDive,
@@ -13,6 +15,7 @@ import {
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
 import {
   bookings,
+  certifications,
   diveSiteCreatures,
   diveSites,
   executedDives,
@@ -24,6 +27,7 @@ import {
   trips,
 } from "./schema";
 import { createTrip } from "./trips";
+import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 async function logFixture() {
   const { db, shop } = await seededShopContext();
@@ -654,6 +658,8 @@ describe("peopleWhoDivedBefore", () => {
   });
 
   it("does not count a diver who cancelled or never showed", async () => {
+    // The plain shape, with nothing on the arrival trail — the leg that proves
+    // #1558's escape hatch below did not simply delete the exclusion.
     for (const status of ["cancelled", "no_show"] as const) {
       const { db, shop, after, personId, earlierBooking } = await twoDays();
       await db.update(bookings).set({ status }).where(eq(bookings.id, earlierBooking.bookingId));
@@ -666,6 +672,96 @@ describe("peopleWhoDivedBefore", () => {
       );
       expect(found.size, `a ${status} booking is not a dive day`).toBe(0);
     }
+  });
+
+  /**
+   * **The desk outranks a status column somebody stamped afterwards** (issue
+   * #1558). Every case here goes through `checkInBooking` / `undoCheckInBooking`
+   * rather than inserting `booking_arrival_events` rows by hand, so what is
+   * pinned is the whole path: the counter really does leave the trail this read
+   * depends on, and a sweep really cannot erase it.
+   *
+   * Nothing in the product writes `no_show` yet (`src/db/recap.ts` says so in as
+   * many words), so the sweep is set by hand here and this is hardening for a
+   * writer that does not exist rather than a live bug. The status has to be set
+   * *after* the check-in either way — `checkInBooking` refuses anything but a
+   * `booked` seat.
+   */
+  async function checkInAtTheDesk(
+    ctx: Awaited<ReturnType<typeof twoDays>>,
+    bookingId: string,
+  ): Promise<void> {
+    // Everything the seeded shop demands of a diver before the desk may tap
+    // them in: a card on file, and a signed release with a clear questionnaire.
+    await ctx.db.insert(certifications).values({
+      shopId: ctx.shop.id,
+      personId: ctx.personId,
+      agency: "padi",
+      level: "instructor",
+      identifier: "C-TWODAY",
+      status: "verified",
+    });
+    const issued = await issueWaiverRequest(ctx.db, { shopId: ctx.shop.id, bookingId });
+    if (!issued.ok) throw new Error(`waiver request refused: ${issued.reason}`);
+    const signed = await completeWaiver(ctx.db, issued.token, {
+      signerName: "Nadia Twoday",
+      agreed: true,
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+    });
+    if (!signed.ok) throw new Error(`waiver refused: ${signed.reason}`);
+    const outcome = await checkInBooking(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId,
+      recordedByPersonId: ctx.owner.id,
+    });
+    if (!outcome.ok) {
+      // The blockers, not just "not_ready": a fixture that stops being ready
+      // because readiness grew a rule is otherwise a silent afternoon.
+      const blockers = "blockers" in outcome ? JSON.stringify(outcome.blockers) : "";
+      throw new Error(`check-in refused: ${outcome.reason} ${blockers}`);
+    }
+  }
+
+  it("counts a dive day a later no_show tried to erase", async () => {
+    const ctx = await twoDays();
+    await checkInAtTheDesk(ctx, ctx.earlierBooking.bookingId);
+    await ctx.db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(eq(bookings.id, ctx.earlierBooking.bookingId));
+    expect([...(await ctx.ask())]).toEqual([ctx.personId]);
+  });
+
+  it("still refuses a no_show whose check-in was undone", async () => {
+    // An undo is the shop taking the sighting back, and it is allowed to: the
+    // standing event is `cleared`, so nothing says this diver was in the
+    // building and the exclusion holds.
+    const ctx = await twoDays();
+    await checkInAtTheDesk(ctx, ctx.earlierBooking.bookingId);
+    const undone = await undoCheckInBooking(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.earlierBooking.bookingId,
+      recordedByPersonId: ctx.owner.id,
+    });
+    expect(undone.ok, "the undo has to land for this case to mean anything").toBe(true);
+    await ctx.db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(eq(bookings.id, ctx.earlierBooking.bookingId));
+    expect((await ctx.ask()).size).toBe(0);
+  });
+
+  it("leaves cancelled alone even with a standing arrival", async () => {
+    // A cancellation is a re-papering of the sale, not a statement about the
+    // dock — it lands days later, on a seat somebody really did check in — so
+    // it gets none of the escape `no_show` gets.
+    const ctx = await twoDays();
+    await checkInAtTheDesk(ctx, ctx.earlierBooking.bookingId);
+    await ctx.db
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(eq(bookings.id, ctx.earlierBooking.bookingId));
+    expect((await ctx.ask()).size).toBe(0);
   });
 
   it("does not count a blown-out departure nobody dived, or a deleted one", async () => {

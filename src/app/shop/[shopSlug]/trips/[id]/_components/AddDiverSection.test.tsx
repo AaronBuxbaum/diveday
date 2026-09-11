@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { BookableDiver } from "@/db/divers";
+import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { AddDiverSection } from "./AddDiverSection";
 
 vi.mock("next/navigation", () => ({
@@ -26,6 +26,7 @@ describe("AddDiverSection", () => {
         addToWaitlistAction={action}
         addExistingDiverAction={action}
         locale="en-US"
+        timeZone="America/Cancun"
       />,
     );
 
@@ -48,6 +49,7 @@ describe("AddDiverSection", () => {
         addToWaitlistAction={action}
         addExistingDiverAction={action}
         locale="en-US"
+        timeZone="America/Cancun"
       />,
     );
 
@@ -69,6 +71,7 @@ describe("AddDiverSection", () => {
         addToWaitlistAction={action}
         addExistingDiverAction={action}
         locale="en-US"
+        timeZone="America/Cancun"
       />,
     );
 
@@ -96,11 +99,79 @@ describe("AddDiverSection", () => {
         addToWaitlistAction={action}
         addExistingDiverAction={action}
         locale="en-US"
+        timeZone="America/Cancun"
       />,
     );
 
     expect(screen.getByText("Avery Diver")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Add diver" })).toHaveLength(1);
     expect(screen.queryByText("Not listed?")).toBeNull();
+  });
+});
+
+/**
+ * The counter prompt (issue #1556). A list of five names answers nothing — the
+ * name is what the staffer just typed — so each candidate carries the last day
+ * this shop had them on a boat, and picking one is marked as the guess it is.
+ */
+describe("AddDiverSection name-match prompt", () => {
+  const match = (over: Partial<SimilarDiver>): SimilarDiver => ({
+    id: "person-1",
+    fullName: "Nadia Ruiz",
+    email: null,
+    phone: null,
+    lastDiveDayAt: null,
+    ...over,
+  });
+
+  const renderPrompt = (confirmMatches: SimilarDiver[]) =>
+    render(
+      <AddDiverSection
+        shopSlug="blue-mantis"
+        tripId="trip-1"
+        full={false}
+        query=""
+        candidates={[]}
+        addBookingAction={action}
+        addToWaitlistAction={action}
+        addExistingDiverAction={action}
+        locale="en-US"
+        timeZone="America/Cancun"
+        confirmName="Nadia Ruis"
+        confirmMatches={confirmMatches}
+      />,
+    );
+
+  it("asks the owner's question by name and names the stake", () => {
+    renderPrompt([match({})]);
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Is this the same Nadia Ruis? Picking one gives this booking that diver’s certifications and waiver.",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("dates a candidate's last dive day in the shop's zone", () => {
+    // 00:30 UTC on the 27th is still the evening of the 26th in Cancún, so a
+    // line that read the server's zone would name the wrong day.
+    renderPrompt([match({ lastDiveDayAt: new Date("2026-08-27T00:30:00Z") })]);
+
+    expect(screen.getByText("Last dived Wed, Aug 26")).toBeInTheDocument();
+  });
+
+  it("says nothing at all about a candidate with no dive day on file", () => {
+    renderPrompt([match({ lastDiveDayAt: null })]);
+
+    expect(screen.queryByText(/Last dived/)).toBeNull();
+  });
+
+  it("marks the pick as a name match, so the seat it takes is identity-unconfirmed", () => {
+    const { container } = renderPrompt([match({})]);
+
+    const candidateForm = screen.getByRole("button", { name: "Nadia Ruiz" }).closest("form");
+    expect(candidateForm?.querySelector('input[name="fromNameMatch"]')).toHaveValue("true");
+    // ...and only there. Creating a new diver anyway invents nobody's history.
+    expect(container.querySelectorAll('input[name="fromNameMatch"]')).toHaveLength(1);
   });
 });

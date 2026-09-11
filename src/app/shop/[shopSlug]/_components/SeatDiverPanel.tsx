@@ -7,7 +7,7 @@ import { PersonCandidateList } from "@/components/seat-diver/PersonCandidateList
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import type { BookableDiver } from "@/db/divers";
+import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { fill } from "@/i18n/fill";
 import { newDiverHref } from "@/lib/person-fields";
 
@@ -33,7 +33,19 @@ export type SeatDiverPanelCopy = {
   emailLabel?: string;
   phoneLabel?: string;
   optionalHint?: string;
-  confirmMatchesTitle?: string;
+  /**
+   * Required, unlike its neighbours: the prompt it heads is the one place a
+   * staffer is told what picking a candidate costs, and a panel that rendered
+   * the list under an empty heading would drop exactly that sentence.
+   */
+  confirmMatchesTitle: string;
+  /**
+   * A candidate's last dive day, already dated in the shop's zone by the page.
+   * A function rather than a string because the date differs per candidate,
+   * and `addPersonAriaLabel` above sets the precedent: the panel holds no
+   * translator and no timezone.
+   */
+  confirmMatchesLastDive?: (at: Date) => string;
   confirmMatchesSubmit?: string;
 };
 
@@ -75,12 +87,7 @@ export function SeatDiverPanel({
   confirmName?: string;
   confirmEmail?: string;
   confirmPhone?: string;
-  confirmMatches?: Array<{
-    id: string;
-    fullName: string;
-    email: string | null;
-    phone: string | null;
-  }>;
+  confirmMatches?: SimilarDiver[];
 }) {
   const addHref = newDiverHref(shopSlug, {
     query,
@@ -97,9 +104,7 @@ export function SeatDiverPanel({
       {confirmMatches && confirmMatches.length > 0 ? (
         <div className="border border-warning/25 bg-warning/10 rounded-inset p-4 text-left">
           <div className="flex flex-col gap-2">
-            <h3 className="font-semibold text-sm">
-              {copy.confirmMatchesTitle || "Did you mean one of these existing potential matches?"}
-            </h3>
+            <h3 className="font-semibold text-sm">{copy.confirmMatchesTitle}</h3>
             <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
               {confirmMatches.map((match) => (
                 <li key={match.id}>
@@ -109,6 +114,12 @@ export function SeatDiverPanel({
                   >
                     <input type="hidden" name="tripId" value={tripId} />
                     <input type="hidden" name="personId" value={match.id} />
+                    {/* A tap here is a guess off a trigram name match, so the
+                        seat it takes is identity-unconfirmed until a staffer
+                        confirms it (issue #1556). The picker below, where a
+                        staffer went looking for a diver by name, carries no
+                        such field. */}
+                    <input type="hidden" name="fromNameMatch" value="true" />
                     <button type="submit" className="underline font-medium text-left">
                       {match.fullName}
                     </button>
@@ -116,6 +127,11 @@ export function SeatDiverPanel({
                   {match.email || match.phone ? (
                     <span className="text-muted text-xs ml-1">
                       ({[match.email, match.phone].filter(Boolean).join(", ")})
+                    </span>
+                  ) : null}
+                  {match.lastDiveDayAt && copy.confirmMatchesLastDive ? (
+                    <span className="text-muted text-xs ml-1">
+                      {copy.confirmMatchesLastDive(match.lastDiveDayAt)}
                     </span>
                   ) : null}
                 </li>

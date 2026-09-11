@@ -5,10 +5,11 @@ import { PersonCandidateList } from "@/components/seat-diver/PersonCandidateList
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
-import type { BookableDiver } from "@/db/divers";
+import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { rentalFitLine } from "@/lib/dive-prep";
+import { formatShortDate } from "@/lib/format";
 import { newDiverHref } from "@/lib/person-fields";
 import type { FormNotice } from "@/lib/staff-notices";
 
@@ -33,6 +34,7 @@ export function AddDiverSection({
   inviteAction,
   status,
   locale,
+  timeZone,
   confirmName,
   confirmEmail,
   confirmPhone,
@@ -55,15 +57,12 @@ export function AddDiverSection({
    */
   status?: FormNotice;
   locale: string;
+  /** The shop's own zone, so a candidate's last dive day is dated in it. */
+  timeZone: string;
   confirmName?: string;
   confirmEmail?: string;
   confirmPhone?: string;
-  confirmMatches?: Array<{
-    id: string;
-    fullName: string;
-    email: string | null;
-    phone: string | null;
-  }>;
+  confirmMatches?: SimilarDiver[];
 }) {
   const t = staffTranslator(locale);
   const searched = query.length > 0;
@@ -76,13 +75,21 @@ export function AddDiverSection({
       {confirmMatches && confirmMatches.length > 0 ? (
         <div className="border border-warning/25 bg-warning/10 rounded-inset p-4 mt-4 text-left">
           <div className="flex flex-col gap-2">
-            <h3 className="font-semibold text-sm">{t("divers.page.confirmMatchesTitle")}</h3>
+            <h3 className="font-semibold text-sm">
+              {t("divers.page.confirmMatchesTitle", { name: confirmName ?? "" })}
+            </h3>
             <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
               {confirmMatches.map((match) => (
                 <li key={match.id}>
                   <form action={addExistingDiverAction} className="inline">
                     <input type="hidden" name="tripId" value={tripId} />
                     <input type="hidden" name="personId" value={match.id} />
+                    {/* A tap here is a guess off a trigram name match, so the
+                        seat it takes is identity-unconfirmed until a staffer
+                        confirms it (issue #1556). The "create a new diver
+                        anyway" form below carries no such field: it invents
+                        nobody's history. */}
+                    <input type="hidden" name="fromNameMatch" value="true" />
                     <button type="submit" className="underline font-medium text-left">
                       {match.fullName}
                     </button>
@@ -90,6 +97,13 @@ export function AddDiverSection({
                   {match.email || match.phone ? (
                     <span className="text-muted text-xs ml-1">
                       ({[match.email, match.phone].filter(Boolean).join(", ")})
+                    </span>
+                  ) : null}
+                  {match.lastDiveDayAt ? (
+                    <span className="text-muted text-xs ml-1">
+                      {t("divers.page.confirmMatchesLastDive", {
+                        date: formatShortDate(match.lastDiveDayAt, locale, timeZone),
+                      })}
                     </span>
                   ) : null}
                 </li>

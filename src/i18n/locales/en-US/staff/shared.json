@@ -190,7 +190,7 @@
     },
     "blockers": {
       "requirementsNotConfigured": "Trip requirements have not been configured yet.",
-      "identityUnconfirmed": "Identity unconfirmed: this booking used an existing diver’s email under a different name. Confirm it’s the same person before boarding.",
+      "identityUnconfirmed": "Identity unconfirmed: this booking was attached to an existing diver’s record on a guess, from a shared email or a name picked off a list. Confirm it’s the same person before boarding.",
       "waiverNotSent": "Waiver has not been sent.",
       "waiverPending": "Waiver is waiting for the diver’s signature.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
