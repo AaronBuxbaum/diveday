@@ -393,6 +393,10 @@ function TheFile({
           {error === "contact" ? (
             <FormStatus>{t("shelf.emergencyContactRefused")}</FormStatus>
           ) : null}
+          {/* The waiver's own sentence: the same two boxes, the same fix. */}
+          {error === "contact-pair" ? (
+            <FormStatus>{t("waiver.errorContactPair")}</FormStatus>
+          ) : null}
         </div>
       </form>
     </SectionCard>

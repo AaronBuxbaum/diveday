@@ -9,7 +9,9 @@
     "crewPhotoRemoved": "Foto del equipo eliminada.",
     "crewPhotoLimit": "Esta salida ya tiene el máximo de fotos del equipo.",
     "crewPhotoUnsupported": "La carga de fotos todavía no está configurada para este centro.",
-    "crewPhotoFailed": "No se pudo añadir esa foto. Revisa el archivo e inténtalo de nuevo."
+    "crewPhotoFailed": "No se pudo añadir esa foto. Revisa el archivo e inténtalo de nuevo.",
+    "invalid": "Eso no se completó. Recarga la página e inténtalo de nuevo.",
+    "unknownPerson": "Ese buceador no está en los registros de este centro, así que no se guardó nada."
   },
   "departures": {
     "status": {

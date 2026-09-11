@@ -7301,7 +7301,7 @@ for (const scheme of ["light", "dark"] as const) {
         .getByRole("button", { name: "Emergency numbers & response plan" })
         .filter({ visible: true })
         .click();
-      // The prompt itself, not just the heading — the whole point of the
+      // The line itself, not just the heading — the whole point of the
       // capture is the state where there is nothing under it.
       await page.getByText("No emergency numbers recorded").waitFor();
       await capture(page, "manifest-emergency-empty", scheme);
@@ -7317,7 +7317,7 @@ for (const scheme of ["light", "dark"] as const) {
       await offlineCopySaved(page);
       const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
       await page.goto(`/offline-manifest?trip=${tripId}`);
-      // The prompt's own words, not a timeout: the snapshot is primed in the
+      // The empty state's own words, not a timeout: the snapshot is primed in the
       // background from the staff manifest, and if it had been written before
       // the clear landed this frame would photograph a *populated* card under
       // an "empty" name. Waiting on the rendered text makes that loud.

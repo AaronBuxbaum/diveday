@@ -577,6 +577,24 @@ new domain concept, define it here in the same PR.
   the boat each one holds up, with a per-departure batch waiver send. It had its own route until
   ADR 20260803-not-ready-is-a-view folded it in; that URL now redirects. "Not ready" names the
   *view*; an individual diver's status is **Blocked** or **Ready**, never "Not ready".
+- **Blocked / Ready** — the shop's one readiness vocabulary, and the only two states a booking's
+  readiness check has. Every *live* surface that shows one — roster, counter check-in, manifest,
+  departure board — uses these words and one tone per state (blocked is always danger), resolved
+  through `readinessStatusText`/`readinessStatusTone` in `src/i18n/readiness-labels.ts`. The same
+  fact used to read as "Needs attention" in warning at the counter and "Blocked" in danger on the
+  manifest, for the same diver. **The offline manifest is a deliberate exception**: it says
+  "Ready when saved" / "Blocked when saved" (`shared.offlineManifest.single.readyBadge` /
+  `.blockedBadge`) rather than resolving through those helpers, because a snapshot on a boat with
+  no signal cannot know whether a waiver was signed or a card sighted since it was taken. Dropping
+  the qualifier there would be the one lie a roll-call surface must not tell — a stale copy reading
+  as current (design/principles.md #4, "safety surfaces keep their precision"). The exception
+  covers **every readiness word on that page, not just the diver row's status pill** — the
+  missing-divers grid's blocked chip reads the same qualified key, and no caller anywhere under
+  `/offline-manifest` resolves through `readinessStatusText`. The grid held a bare "Blocked" one
+  scroll from a qualified badge until #1360; a future session narrowing this sentence back to the
+  row would re-open that gap. The **refusal** counts too: the sentence a turned-down boarding tap
+  shows (`shared.offlineManifest.single.record.notAllowed`) reads "wasn't ready to board when this
+  copy was saved", never the present tense.
 - **Close-out** — the end-of-day ritual, and Today's evening mirror: one surface
   (`/shop/<slug>/close-out`, ADR 20260804-day-closeout) where staff confirm the day actually
   ended — every departure's end state read off the same roll-call evidence Today chases, today's
@@ -593,21 +611,6 @@ new domain concept, define it here in the same PR.
   `crewIsAccountedFor` (issue #1346). Roll-call gaps stay as they were: tightening those would
   raise a danger-toned row on every departure of every shop that has not adopted crew roll call,
   so the moment is what narrows, not the chase.
-  readiness check has. Every *live* surface that shows one — roster, counter check-in, manifest,
-  departure board — uses these words and one tone per state (blocked is always danger), resolved
-  through `readinessStatusText`/`readinessStatusTone` in `src/i18n/readiness-labels.ts`. The same
-  fact used to read as "Needs attention" in warning at the counter and "Blocked" in danger on the
-  manifest, for the same diver. **The offline manifest is a deliberate exception**: it says
-  "Ready when saved" / "Blocked when saved" (`shared.offlineManifest.single.readyBadge` /
-  `.blockedBadge`) rather than resolving through those helpers, because a snapshot on a boat with
-  no signal cannot know whether a waiver was signed or a card sighted since it was taken. Dropping
-  the qualifier there would be the one lie a roll-call surface must not tell — a stale copy reading
-  as current (design/principles.md #4, "safety surfaces keep their precision"). The exception
-  covers **every readiness word on that page, not just the diver row's status pill** — the
-  missing-divers grid's blocked chip reads the same qualified key, and no caller anywhere under
-  `/offline-manifest` resolves through `readinessStatusText`. The grid held a bare "Blocked" one
-  scroll from a qualified badge until #1360; a future session narrowing this sentence back to the
-  row would re-open that gap.
 - **Shop day scan** — the coarse ±26-hour bound (`shopDayWindow`, `src/lib/operational-window.ts`)
   a query casts when the question is about the shop's own *calendar date* rather than a horizon —
   today's boat, for the command palette's boarding jump. SQL cannot ask "same day in this shop's

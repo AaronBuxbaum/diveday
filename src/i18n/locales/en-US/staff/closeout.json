@@ -9,7 +9,9 @@
     "crewPhotoRemoved": "Crew photo removed.",
     "crewPhotoLimit": "This departure already has the maximum number of crew photos.",
     "crewPhotoUnsupported": "Photo uploads are not configured for this shop yet.",
-    "crewPhotoFailed": "That photo could not be added. Check the file and try again."
+    "crewPhotoFailed": "That photo could not be added. Check the file and try again.",
+    "invalid": "That didn’t go through. Refresh the page and try again.",
+    "unknownPerson": "That diver isn’t in this shop’s records, so nothing was saved."
   },
   "departures": {
     "status": {

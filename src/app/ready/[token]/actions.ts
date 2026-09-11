@@ -34,7 +34,7 @@ import { requestFirstHandLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { emergencyContactSchema } from "@/lib/contact";
+import { emergencyContactSchema, readEmergencyContact } from "@/lib/contact";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -449,12 +449,23 @@ export async function saveTanksFromReady(token: string, formData: FormData) {
  * It never blanks a field, which is that writer's own standing rule: a diver
  * who submits an empty box keeps what is on file. A contact on a manifest is
  * safety data, and a silent clear is worse than a stale one.
+ *
+ * **The two boxes move together.** This form prefills from the record, so a
+ * new name typed over a cleared number is not a partial edit to merge: merging
+ * it would keep the *old* contact's phone under the new contact's name, which
+ * dials a stranger on the one day it matters (`readEmergencyContact`). Refused
+ * here, on its own notice, because the writer can only decline it silently.
  */
 export async function saveEmergencyContactFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=contact`);
+  const submitted = readEmergencyContact({
+    name: parsed.data.emergencyContactName,
+    phone: parsed.data.emergencyContactPhone,
+  });
+  if (submitted.kind === "half") redirect(`${base(token)}?error=contact-pair`);
   const saved = await saveBookingEmergencyContact(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,

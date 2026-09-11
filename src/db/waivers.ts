@@ -18,6 +18,7 @@ import {
 import { isStaff } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { readEmergencyContact } from "@/lib/contact";
 import {
   type GuardianRelationship,
   type GuardianSigner,
@@ -1016,22 +1017,24 @@ function completedStatus(
 export type EmergencyContactInput = { name?: string; phone?: string };
 
 /**
- * Write the diver's emergency contact to their person record, but only fill
- * blanks it actually supplied — a diver who leaves a field empty must never
- * wipe a value the shop already has on file. The person is reached through the
- * record's booking, so a bearer token can only ever touch its own diver.
+ * Write the diver's emergency contact to their person record, as a pair or not
+ * at all — `readEmergencyContact` holds that rule and says why a half-filled
+ * submission is refused rather than merged. Both boxes blank is still the
+ * no-change case: a diver who leaves the section alone must never wipe a value
+ * the shop already has on file. The person is reached through the record's
+ * booking, so a bearer token can only ever touch its own diver.
  */
 async function saveEmergencyContact(
   db: AppDb,
   bookingId: string,
   contact: EmergencyContactInput,
 ): Promise<void> {
-  const name = contact.name?.trim();
-  const phone = contact.phone?.trim();
-  if (!name && !phone) return;
-  const patch: Partial<typeof people.$inferInsert> = {};
-  if (name) patch.emergencyContactName = name;
-  if (phone) patch.emergencyContactPhone = phone;
+  const submitted = readEmergencyContact(contact);
+  if (submitted.kind !== "pair") return;
+  const patch: Partial<typeof people.$inferInsert> = {
+    emergencyContactName: submitted.name,
+    emergencyContactPhone: submitted.phone,
+  };
   const [booking] = await db
     .select({ personId: bookings.personId })
     .from(bookings)
@@ -1075,18 +1078,22 @@ export async function getEmergencyContactForPerson(
 /**
  * Save an emergency contact for a booking's diver, scoped to the shop so a
  * bearer-token surface (the `/ready` page) can only ever write to its own
- * booking's person. Blanks never overwrite an existing value.
+ * booking's person. Blanks never overwrite an existing value, and a name
+ * without a number (or a number without a name) writes nothing at all and
+ * returns `false` — `readEmergencyContact` is where that rule lives. Callers
+ * that can say so to a person check the pair themselves first, so the refusal
+ * arrives as words rather than as a save that quietly did not happen.
  */
 export async function saveBookingEmergencyContact(
   db: AppDb,
   input: { shopId: string; bookingId: string; name?: string; phone?: string },
 ): Promise<boolean> {
-  const name = input.name?.trim();
-  const phone = input.phone?.trim();
-  if (!name && !phone) return false;
-  const patch: Partial<typeof people.$inferInsert> = {};
-  if (name) patch.emergencyContactName = name;
-  if (phone) patch.emergencyContactPhone = phone;
+  const submitted = readEmergencyContact(input);
+  if (submitted.kind !== "pair") return false;
+  const patch: Partial<typeof people.$inferInsert> = {
+    emergencyContactName: submitted.name,
+    emergencyContactPhone: submitted.phone,
+  };
   const [booking] = await db
     .select({ personId: bookings.personId })
     .from(bookings)
@@ -1096,22 +1103,31 @@ export async function saveBookingEmergencyContact(
   const [updated] = await db
     .update(people)
     .set(patch)
-    .where(eq(people.id, booking.personId))
+    // The shop is restated rather than inherited from the read above. That
+    // read proves the *booking* is this shop's; it does not prove
+    // `bookings.person_id` points at a person inside it. This is the write a
+    // bearer-token page reaches, so a row that ever goes wrong that way is
+    // non-exploitable instead of merely unlikely — the same predicate
+    // `savePersonEmergencyContact` below makes.
+    .where(and(eq(people.id, booking.personId), eq(people.shopId, input.shopId)))
     .returning({ id: people.id });
   return Boolean(updated);
 }
 
-/** Save a person-level emergency contact when the waiver has no booking context. */
+/**
+ * Save a person-level emergency contact when the waiver has no booking context.
+ * Same pair-or-nothing rule as `saveBookingEmergencyContact`.
+ */
 export async function savePersonEmergencyContact(
   db: DbExecutor,
   input: { shopId: string; personId: string; name?: string; phone?: string },
 ): Promise<boolean> {
-  const name = input.name?.trim();
-  const phone = input.phone?.trim();
-  if (!name && !phone) return false;
-  const patch: Partial<typeof people.$inferInsert> = {};
-  if (name) patch.emergencyContactName = name;
-  if (phone) patch.emergencyContactPhone = phone;
+  const submitted = readEmergencyContact(input);
+  if (submitted.kind !== "pair") return false;
+  const patch: Partial<typeof people.$inferInsert> = {
+    emergencyContactName: submitted.name,
+    emergencyContactPhone: submitted.phone,
+  };
   const [updated] = await db
     .update(people)
     .set(patch)

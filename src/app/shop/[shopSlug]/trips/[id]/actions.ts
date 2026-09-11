@@ -1339,8 +1339,10 @@ export async function saveRosterEmergencyContactAction(
     name,
     phone,
   });
-  // A contact is only usable with a reachable number, so only a name+phone
-  // pair earns the "saved" confirmation — matches `saveEmergencyContactFromReady`.
+  // A contact is only usable with a reachable number, and the writer holds
+  // that line for every surface (`readEmergencyContact`): a name without a
+  // number wrote nothing at all, rather than landing the new name on the
+  // contact's old phone. So this notice reports a refusal, not a half-save.
   const complete = Boolean(name && phone);
   revalidateAndRedirect(
     back,

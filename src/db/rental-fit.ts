@@ -209,6 +209,15 @@ export async function saveRentalFitSizes(
 }
 
 /**
+ * What a fit-keep can answer. Named so the one surface that has to find words
+ * for every refusal — the shop home, where the tap lands — can type its notice
+ * map against this union with `NoticeCodeOf` rather than rediscovering it by
+ * reading this function. Both refusals used to reach that page and render
+ * nothing at all.
+ */
+export type ConfirmRentalFitOutcome = "saved" | "unknown_person" | "invalid";
+
+/**
  * **Keep the size that actually went out** (issue #1174, delight report D14).
  *
  * The evening's one-tap answer to "Hugo's BCD went out as L — keep that as the
@@ -246,7 +255,7 @@ export async function confirmRentalFitSize(
     confirmedByPersonId: string;
     now?: Date;
   },
-): Promise<"saved" | "unknown_person" | "invalid"> {
+): Promise<ConfirmRentalFitOutcome> {
   const size = input.size.trim();
   if (!size) return "invalid";
   // The same tenant proof `saveRentalFit` makes: a copied id must not write a

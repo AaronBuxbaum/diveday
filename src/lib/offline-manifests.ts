@@ -975,10 +975,11 @@ export function canRecordOfflineStatus(
   // `not_boarded` means *this person did not come back*, the loudest row the
   // app has, and nothing about a gap in the saved copy's contents makes it less
   // true. Refusing it would silence the alarm and hand the crew the readiness
-  // refusal's copy — "this diver isn't ready to board yet" — which is the worst
-  // sentence this product could show at that moment (dive-domain-expert review,
-  // 2026-08-06). The server re-validates checkpoint, tenant, staff and booking
-  // on reconcile, so the worst case is an event it rejects, not a bad write.
+  // refusal's copy — "this diver wasn't ready to board when this copy was
+  // saved" — which is the worst sentence this product could show at that
+  // moment (dive-domain-expert review, 2026-08-06). The server re-validates
+  // checkpoint, tenant, staff and booking on reconcile, so the worst case is
+  // an event it rejects, not a bad write.
   //
   // **A retraction is refused on exactly the same terms — never** (ADR
   // 20260815-offline-can-unsay-a-missing-diver). `cleared` returns a row to

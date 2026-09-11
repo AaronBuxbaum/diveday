@@ -146,8 +146,11 @@ reading two names for one thing — which is the exact confusion the English fix
   against *Antes de zarpar* / *Después de la inmersión 2*. At boat size the full Spanish forms
   overrun a 390px track and the row reads as two lines, which is the whole of issue #1320; even
   *Inmersión 2* does not fit three options across. The abbreviation keeps the sanctioned noun
-  instead of reaching for a shorter one, the full name is on screen a line above at every width,
-  and nothing else may use the short keys. Do not expand them back.
+  instead of reaching for a shorter one, the full name is on screen *below* the track in the
+  roll-call heading (`manifest.checkpointRollCallHeading`, *Pase de lista · Después de la inmersión
+  2*) at every width and in every state, and nothing else may use the short keys. Not the summary
+  panel above the track — it says *Pase de lista completo* once the checkpoint closes, and names no
+  checkpoint at all from then on. Do not expand them back.
 - **el punto** survives only for a literal coordinate: the marine forecast's offshore
   point (`diveSites.form.forecastLegend`, "punto de pronóstico"). Never for the place itself.
 

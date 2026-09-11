@@ -379,7 +379,7 @@
         "expiredRecordOnLive": "Expired — record on the live manifest",
         "saved": "Saved on this phone. It’ll send when you’re back in service.",
         "genericError": "That change couldn’t be saved on this device. Try it again.",
-        "notAllowed": "This diver isn’t ready to board yet. Clear what’s outstanding on the live manifest first.",
+        "notAllowed": "This diver wasn’t ready to board when this copy was saved. Open the live manifest before they board.",
         "unavailable": "This saved copy isn’t available anymore. Open the live manifest to record roll call."
       },
       "checklist": {

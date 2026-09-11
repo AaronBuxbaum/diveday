@@ -1132,6 +1132,32 @@ describe("emergency contact captured with the waiver", () => {
     });
   });
 
+  it("never splices a new name onto the contact's old number", async () => {
+    const { db, person, shop, booking } = await waiverContext();
+    await db
+      .update(people)
+      .set({ emergencyContactName: "Old Contact", emergencyContactPhone: "555-0000" })
+      .where(eq(people.id, booking.personId));
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+
+    // The page refuses this shape before it gets here; the writer refuses it
+    // again, because a half pair reaching the record is the whole hazard.
+    const outcome = await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      emergencyContact: { name: "New Person", phone: "" },
+      now,
+    });
+
+    expect(outcome.ok).toBe(true);
+    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+      name: "Old Contact",
+      phone: "555-0000",
+    });
+  });
+
   it("never wipes a contact already on file when the diver leaves it blank", async () => {
     const { db, person, shop, booking } = await waiverContext();
     await db
@@ -1196,6 +1222,96 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
     });
     expect(saved).toBe(false);
     await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual(before);
+  });
+
+  // The splice these two refuse is written out over
+  // `EmergencyContactSubmission` in `src/lib/contact.ts`. The writer restates
+  // the refusal rather than trusting its callers: this is the write a
+  // bearer-token page reaches.
+  it("writes nothing when a name arrives with the number cleared", async () => {
+    const { db, shop, booking } = await waiverContext();
+    await db
+      .update(people)
+      .set({ emergencyContactName: "Old Contact", emergencyContactPhone: "555-0000" })
+      .where(eq(people.id, booking.personId));
+
+    const saved = await saveBookingEmergencyContact(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      name: "New Person",
+      phone: "   ",
+    });
+
+    expect(saved).toBe(false);
+    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+      name: "Old Contact",
+      phone: "555-0000",
+    });
+  });
+
+  it("writes nothing when a number arrives with the name cleared", async () => {
+    const { db, shop, booking } = await waiverContext();
+    await db
+      .update(people)
+      .set({ emergencyContactName: "Old Contact", emergencyContactPhone: "555-0000" })
+      .where(eq(people.id, booking.personId));
+
+    const saved = await saveBookingEmergencyContact(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      name: "",
+      phone: "555-0111",
+    });
+
+    expect(saved).toBe(false);
+    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+      name: "Old Contact",
+      phone: "555-0000",
+    });
+  });
+
+  /**
+   * **The tenant is restated on the write, not inherited from the read.** The
+   * booking read above it proves the booking is this shop's; nothing in it
+   * proves `bookings.person_id` points at a person inside the shop. This is the
+   * write a bearer-token page reaches, so the day a row goes wrong that way it
+   * has to be non-exploitable rather than merely unlikely.
+   */
+  it("writes nothing when the booking's person belongs to another shop", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-cross-tenant-person", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("second shop insert failed");
+    const [stranger] = await db
+      .insert(people)
+      .values({
+        shopId: otherShop.id,
+        fullName: "Stranger Diver",
+        emergencyContactName: "Their Own Contact",
+        emergencyContactPhone: "555-0042",
+      })
+      .returning();
+    if (!stranger) throw new Error("stranger insert failed");
+    await db.update(bookings).set({ personId: stranger.id }).where(eq(bookings.id, booking.id));
+
+    const saved = await saveBookingEmergencyContact(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      name: "Should Not Land",
+      phone: "+1 000 000 0000",
+    });
+
+    expect(saved).toBe(false);
+    const [after] = await db
+      .select({
+        name: people.emergencyContactName,
+        phone: people.emergencyContactPhone,
+      })
+      .from(people)
+      .where(eq(people.id, stranger.id));
+    expect(after).toEqual({ name: "Their Own Contact", phone: "555-0042" });
   });
 
   it("is a no-op when both fields are blank, never wiping what's on file", async () => {

@@ -2043,7 +2043,23 @@ export function OfflineManifestView() {
                           documents as measuring under AA at pill sizes — on
                           the surface read in direct sunlight. The words stay
                           the offline ones ("Ready when saved"), because that
-                          distinction is real: this is a snapshot, not live. */}
+                          distinction is real: this is a snapshot, not live.
+
+                          **Every checkpoint, unlike the live capsule and
+                          unlike the grid below.** The live row's readiness
+                          word is `blockedAtDock` — one exception capsule, and
+                          readiness stops being an exception once the boat is
+                          back. This is a different construct: a two-state
+                          statement on every diver saying what the desk knew
+                          when this copy was taken, which is the per-diver
+                          instance of the freshness banner at the top of the
+                          page. Gating it would have to gate the blocked half
+                          alone — leaving "Ready when saved" as the only
+                          readiness word on the page and silence beside the one
+                          diver it is not true of — and the desk's record has
+                          nowhere else to be read on a boat with no signal. The
+                          row's *alarm* already follows the live rule: its
+                          untouched fill is checkpoint-gated above. */}
                         <Badge tone={readinessStatusTone(ready ? "ready" : "blocked")}>
                           {ready
                             ? t("shared.offlineManifest.single.readyBadge")
@@ -2409,17 +2425,34 @@ export function OfflineManifestView() {
 
           The grid is also a scanning surface rather than a jump list, and this
           is the copy read underway, at the rail, looking up from the water for
-          a face rather than down at a name. Its rents-kit and blocked accents
-          carry information no chip does. Keeping it is a considered divergence
+          a face rather than down at a name. Its rents-kit line carries
+          information no chip does. Keeping it is a considered divergence
           from the live page, not a leftover: the *rows* above now read
           identically on both surfaces, which is what a captain working the two
-          minutes apart actually needs. */}
+          minutes apart actually needs.
+
+          The blocked accent is **not** part of that divergence — it follows
+          the live chip's checkpoint rule below. The one thing that does stay
+          ungated is the diver row's own readiness badge, for the reason
+          written above it: that badge is the snapshot's two-state record, not
+          an exception accent on a checkpoint-scoped prompt. */}
         <MissingDiversGrid
           divers={missingDivers.map((diver) => ({
             bookingId: diver.bookingId,
             fullName: diver.fullName,
             rentsKit: diver.rentalFit.state === "rents",
-            blocked: diver.readiness.status === "blocked",
+            // A readiness fact, and only at the dock — the same gate the live
+            // chip this grid stands in for applies (`blocked: diver.blocked &&
+            // isDeparture`, SummaryPanel). Every face here is somebody nobody
+            // has called yet, so after a dive every one of them is somebody who
+            // went in the water: the saved paperwork word is stale by
+            // definition there, and its red competed with the one red on the
+            // page that means a diver has not come back. The live row states
+            // the same rule in the same words (`blockedAtDock`, DiverRollCall),
+            // and this page's own head-count note says it of itself
+            // (`isDeparture`, above) — the grid was the one place that said it
+            // and then rendered the word anyway.
+            blocked: isDeparture && diver.readiness.status === "blocked",
           }))}
           tone={isDeparture ? "neutral" : "urgent"}
           copy={{

@@ -323,6 +323,65 @@ test("the medical questionnaire refuses to complete with an unanswered question,
 });
 
 /**
+ * **The half-edited contact**, driven the way a diver meets it: type a new name
+ * over a number you know is wrong, and sign. The rule this exercises, and the
+ * splice it exists to stop, are written out over `EmergencyContactSubmission`
+ * in `src/lib/contact.ts`.
+ */
+test("a contact with one box filled and the other cleared is refused, not spliced", async ({
+  page,
+}) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
+  // the slow budget rather than racing the hold against the default.
+  test.slow();
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Trip");
+  const waiverHref = await sendWaiverForFirstDiver(page);
+
+  await page.goto(waiverHref ?? "/");
+  const contactName = page.getByLabel("Contact name");
+  const contactPhone = page.getByLabel("Contact phone");
+  await contactName.waitFor();
+  // Whatever the shop already holds — the assertion below is that this
+  // survives the refusal untouched, whether it is a pair or nothing at all.
+  const nameOnFile = await contactName.inputValue();
+
+  await page.getByLabel("Type your full name").fill("Priya Sharma");
+  await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
+  const medicalNo = page.getByRole("radio", { name: "No" });
+  await expect(medicalNo).not.toHaveCount(0);
+  for (const radio of await medicalNo.all()) {
+    await radio.check();
+  }
+  await contactName.fill("Someone Else");
+  await contactPhone.fill("");
+  await page.getByRole("button", { name: "Sign waiver" }).click();
+
+  // Refused on the box the diver emptied, in the same shape as every other
+  // refusal here: the words beside the control, the reader carried to it, no
+  // page banner. The sentence says nothing changed, because the boxes below it
+  // are back to whatever the shop holds — the contact is not part of the draft
+  // this page saves, so the refusal restores rather than re-shows.
+  await expect(
+    page.getByText("A contact needs both a name and a phone number, so nothing changed"),
+  ).toBeVisible();
+  await expect(contactPhone).toHaveAttribute("aria-invalid", "true");
+  await expect(contactPhone).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).not.toBeVisible();
+  // Nothing was written: the box reads what the shop had before the attempt,
+  // not the name the diver typed over it.
+  await expect(contactName).toHaveValue(nameOnFile);
+
+  // Both boxes filled, and the release signs.
+  await contactName.fill("Asha Sharma");
+  await contactPhone.fill("+1 305 555 0231");
+  await page.getByRole("button", { name: "Sign waiver" }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+});
+
+/**
  * "Type your full name" *is* the signature — it used to accept any two
  * characters, so a release could be executed under a name that was nobody's
  * and still read as signed on the manifest.

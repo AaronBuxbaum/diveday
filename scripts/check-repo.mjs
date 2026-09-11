@@ -55,6 +55,7 @@ const checks = [
   ["adrs", "check-adrs.mjs"],
   ["design-canvases", "check-design-canvases.mjs"],
   ["docs", "check-doc-links.mjs"],
+  ["glossary", "check-glossary.mjs"],
   ["agents", "check-agents.mjs"],
   ["context-budget", "check-context-budget.mjs"],
   ["follow-ups", "check-follow-ups.mjs"],

@@ -820,9 +820,11 @@ export default async function TripManifestPage({
           key: value,
           label: rollCallCheckpointText(t, value),
           // Below `sm` the full names overran a 390px track and the row read as
-          // two — the one segmented control in the app that did (#1320). The
-          // summary panel above says "Active checkpoint · Before departure" in
-          // full at every width, so the short word is a handle, not a rename.
+          // two — the one segmented control in the app that did (issue #1320).
+          // This is the call site that earns the short form, and what makes it
+          // a handle rather than a rename is `DiverRollCall`'s heading
+          // underneath: the condition is spelled out over
+          // `rollCallCheckpointShortText`.
           shortLabel: rollCallCheckpointShortText(t, value),
           href: `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${value}`,
         }))}
