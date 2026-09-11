@@ -1848,6 +1848,14 @@ export async function recordInPersonWaiver(
        * #1573). Honoured only when the names do actually match — see the
        * refusal below — and never reachable from the online path, whose
        * `GuardianInput` has no such field.
+       *
+       * A request built by hand can set this without ever seeing the
+       * checkbox, and that is contained rather than prevented: the caller is
+       * already live staff of this shop attesting that a release was signed
+       * on paper at all, the flag changes nothing unless the two names match,
+       * and both the assertion and the staffer who made it are written onto
+       * the record (`guardian_signature_method`, `recorded_by_person_id`)
+       * inside the integrity seal.
        */
       namesakeAttested?: boolean;
     };

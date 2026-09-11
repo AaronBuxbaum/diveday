@@ -112,7 +112,13 @@ guardian signs the same release beside them, and the release is not usable until
     tick, same refusal); **the checkbox is drawn only on a form that has already met that refusal**,
     scoped to the booking or record the `?notice=waiver-guardian-name` named, so it can never become
     a habitual tick; and **a tick on a form whose names differ records nothing**, because the
-    assertion is only meaningful for the case it names. `guardian_signature_method` is `text` and
+    assertion is only meaningful for the case it names. The second of those three is a habit fence
+    rather than an enforcement, and the ADR says so rather than letting a later reader mistake it
+    for one: `?notice=` is untrusted input, so a staffer can reach a form with the checkbox drawn
+    by typing a URL and a hand-built request skips the form entirely. What contains it is that the
+    caller is already live staff attesting that a paper release exists at all, that the flag does
+    nothing unless the names match, and that both the assertion and its author are on the row
+    inside the seal. `guardian_signature_method` is `text` and
     the `waiver_records_guardian_signature_whole` check constrains only null-ness, so **there is no
     migration**. **Nothing downstream branches on the new value, deliberately.**
     `guardianSignatureMissing` tests `guardianSignedAt` alone, so the minor boards; the roster, the

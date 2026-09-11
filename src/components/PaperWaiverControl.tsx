@@ -60,12 +60,21 @@ export function PaperWaiverControl({
   requiresGuardian?: boolean;
   /**
    * Draw the namesake confirmation under the guardian fields (issue #1573,
-   * owner decision 2026-09-10). **Only ever true on the form that has already
-   * been refused for it** — the surface reads its own
-   * `?notice=waiver-guardian-name` and scopes it to the booking or record the
-   * refusal named. A parent whose name reads as their child's is refused by
-   * default, and a checkbox drawn on every minor's paper form would turn the
-   * staffer's assertion into a habitual tick.
+   * owner decision 2026-09-10). Set only on the form that has already been
+   * refused for it — each surface reads its own `?notice=waiver-guardian-name`
+   * and scopes it to the booking or record the refusal named, so a roster of
+   * minors does not all sprout the same tick.
+   *
+   * **That scoping is a habit fence, not an enforcement.** `?notice=` is
+   * untrusted input on all three surfaces, so a staffer can reach a form with
+   * this drawn by typing a URL, and a request built by hand skips the form
+   * entirely. What actually contains the assertion is in the writer: the two
+   * names must genuinely match before the tick is honoured at all
+   * (`recordInPersonWaiver`), the release records *which* of the two things
+   * happened in `guardian_signature_method`, and the staffer who made the
+   * assertion is on the row as `recorded_by_person_id`. This prop's job is to
+   * keep the checkbox off every ordinary minor's form so it stays an
+   * assertion rather than a box people learn to tick.
    */
   offerNamesake?: boolean;
   className?: string;
