@@ -294,8 +294,23 @@ export function SummaryPanel({
               is everyone who left the dock — `totalDivers − ashore` — so a
               diver who never boarded does not hold the figure short all day;
               at the dock it is everyone on the manifest. `ashore` is 0 at
-              departure by construction, so one expression serves both. */}
-          <HeadCount aboard={summary.boarded} out={summary.totalDivers - ashore} t={t} />
+              departure by construction, so one expression serves both.
+
+              **And a seat the desk released is not a body to expect** (#1209,
+              dive-domain review 20260911). A diver marked not here has had
+              their seat put back on sale, quite possibly to somebody already
+              standing at the rail, so counting them in the denominator asks
+              the crew for a head that the shop has told is not coming. They
+              keep their row, their chip and their place in "still to call" —
+              the crew's statement is still what closes the checkpoint — but
+              they are out of the fraction. `notHere` counts only rows with no
+              roll-call result, so it can never subtract the same diver twice
+              with `ashore`. */}
+          <HeadCount
+            aboard={summary.boarded}
+            out={summary.totalDivers - ashore - summary.notHere}
+            t={t}
+          />
         </div>
         {/* The counts the six tiles used to carry, folded in under the bar they
             explain. A definition list, not a grid of cards: label/number pairs
@@ -357,6 +372,20 @@ export function SummaryPanel({
               </li>
             ))}
           </ul>
+        ) : null}
+        {/* **More bodies aboard than the boat has seats.** Nothing on the
+            boarding path refuses — a crew member tapping Boarded on a diver
+            the desk wrote off as not here takes that seat back rather than
+            being told no (`reclaimReleasedSeat`, src/db/manifests.ts) — so
+            this line is the whole of how the consequence reaches anybody. It
+            is pinned with the other danger lines for the same reason they are:
+            a captain scrolling the roster must not be able to push it off the
+            top of the screen. It counts divers the crew have recorded aboard,
+            never roster rows, so it can only ever be about the boat. */}
+        {summary.overCapacity > 0 ? (
+          <p className="mt-2 text-base font-bold text-danger" role="status">
+            {t("manifest.overCapacityLine", { count: summary.overCapacity })}
+          </p>
         ) : null}
         {/* Buddy teams that came back split — someone aboard, someone not
             (ADR 20260804-buddy-teams). Its own line, never folded into the

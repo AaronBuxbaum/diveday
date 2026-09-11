@@ -2309,7 +2309,10 @@ describe("unclosed roll call (DOM-H3)", () => {
     /**
      * Alarm fatigue is a safety property. Crews tap "Boarded" for the people in
      * front of them and never touch the two who didn't show — there is no bulk
-     * action, and nothing in the app writes `no_show`. Counting those two as
+     * action, and the counter's no-show mark (`markBookingNoShow`,
+     * src/db/no-show.ts) writes `bookings.status`, never a `roll_call_events`
+     * row, so a walk-away arrives here with no result at any checkpoint whether
+     * or not the desk released their seat. Counting those two as
      * unaccounted-for after every dive raised a danger-toned row on most real
      * trips, and within a fortnight the red row is wallpaper.
      */

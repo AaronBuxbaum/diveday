@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CheckInQueueRow } from "@/db/check-in";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { NoShowClaim } from "@/lib/no-show";
 import { CounterQueueRow, type CounterWaiverNotice } from "./CounterQueueRow";
 import type { NoShowSalvageCopy } from "./NoShowScript";
 
@@ -45,7 +46,7 @@ function renderRow(
   showEmail = false,
   showFirstVisit = true,
   waiverNotice?: CounterWaiverNotice,
-  noShow: { offered?: boolean; salvage?: NoShowSalvageCopy } = {},
+  noShow: { claim?: NoShowClaim | null; salvage?: NoShowSalvageCopy } = {},
 ) {
   return render(
     <CounterQueueRow
@@ -58,7 +59,7 @@ function renderRow(
       undoAction={vi.fn().mockResolvedValue({ ok: true })}
       waiverAction={vi.fn().mockResolvedValue(undefined)}
       waiverNotice={waiverNotice}
-      noShowOffered={noShow.offered ?? false}
+      noShowClaim={noShow.claim ?? null}
       markNoShowAction={vi.fn().mockResolvedValue(undefined)}
       undoNoShowAction={vi.fn().mockResolvedValue(undefined)}
       salvage={noShow.salvage}
@@ -292,20 +293,44 @@ describe("a refused paper waiver", () => {
 describe("the no-show script", () => {
   /**
    * The door is drawn from the gate, never from the row alone: `noShowGate`
-   * (`src/lib/no-show.ts`) opens it at the shop's own dock call and shuts it
-   * when the arrivals window does, and the page is the layer that holds both.
-   * Offering "Not here?" over a diver who is not due for two hours is an
-   * invitation to a mistake on a shared desk tablet.
+   * (`src/lib/no-show.ts`) opens it when the boat leaves without the diver and
+   * shuts it when the arrivals window does, and the page is the layer that
+   * holds both. Offering "Not here?" over a diver who is not due for two hours
+   * is an invitation to a mistake on a shared desk tablet.
    */
   it("is not offered on a waiting row the gate has not opened", () => {
     renderRow();
     expect(screen.queryByText("Not here?")).not.toBeInTheDocument();
+    expect(screen.queryByText("Did not dive?")).not.toBeInTheDocument();
   });
 
   it("is offered under the tap once the gate opens, leaving the tap alone", () => {
-    renderRow({}, false, true, undefined, { offered: true });
+    renderRow({}, false, true, undefined, { claim: "frees_seat" });
     expect(screen.getByText("Not here?")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Check in Nadia Petrov" })).toBeInTheDocument();
+  });
+
+  /**
+   * **The louder door, for the tap nobody comes back to undo**
+   * (dive-domain-expert review, 2026-09-11). Once the boat has gone the same
+   * tap stops being about a seat — there is no seat to sell — and becomes a
+   * statement that this person did not dive, which costs them their recap,
+   * their review, their tip and the day itself. The diver is at sea or gone
+   * home and will never tell the desk it was a mis-tap, so the words have to
+   * say what is being written before it is written.
+   */
+  it("asks the other question once the boat has gone, and says what it costs", () => {
+    renderRow({}, false, true, undefined, { claim: "did_not_dive" });
+    expect(screen.getByText("Did not dive?")).toBeInTheDocument();
+    expect(screen.queryByText("Not here?")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The boat has gone, so this records that they did not dive. They get no recap and the day will not count for them. You can put them back.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Mark that Nadia Petrov did not dive" }),
+    ).toBeInTheDocument();
   });
 
   /**

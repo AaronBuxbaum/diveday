@@ -11,6 +11,8 @@
     "booking_restored": "{actor} put {diver} back on the trip",
     "booking_no_show": "{actor} marked {diver} as not here, freeing the seat",
     "booking_no_show_undone": "{actor} put {diver} back on the expected list",
+    "booking_no_show_undo_refused": "{actor} could not put {diver} back: {reason, select, course_ratio_full {the session was already at its instructor ratio} other {the freed seat had been sold}}",
+    "booking_no_show_boarded": "{actor} boarded {diver} at the boat, so the released seat is theirs again",
     "identity_confirmed": "{actor} confirmed this booking is {diver}",
     "crew_assigned": "{actor} assigned {crew} to crew",
     "crew_removed": "{actor} removed {crew} from crew",

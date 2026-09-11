@@ -36,7 +36,7 @@ import {
 } from "@/lib/check-in";
 import { nowDate } from "@/lib/clock";
 import { formatDayParts, formatTime, formatWeekdayTime } from "@/lib/format";
-import { noShowGate } from "@/lib/no-show";
+import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
 import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeCodeOf, noticeForForm, noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -56,6 +56,7 @@ import {
 import { CheckInQueueRefresh } from "./CheckInQueueRefresh";
 import { CheckInSearch } from "./CheckInSearch";
 import { counterQueuePath, selectFocusedDeparture } from "./focus";
+import { noShowSalvageCopy } from "./salvage-copy";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -101,8 +102,7 @@ type UndoRefusal = Extract<UndoCheckInOutcome, { ok: false }>["reason"];
  * `ArrivalOfflineRefusal` is excluded because those three answer a device
  * reconciling a queued tap, not a staffer at the desk — there is no redirect
  * that can carry one here. See its own note in `src/db/check-in.ts`.
- */
-/**
+ *
  * The counter's two no-show mutations answer in their own vocabulary, and
  * every one of their refusals reaches this page prefixed (`no_show_…`) so it
  * cannot collide with the arrival codes above: "not found" means two different
@@ -219,13 +219,20 @@ const noticeCopy: NoticeMap = {
   "no-show-already-boarded": { tone: "danger", key: "checkIn.notice.noShowAlreadyBoarded" },
   "no-show-already-marked": { tone: "neutral", key: "checkIn.notice.noShowAlreadyMarked" },
   "no-show-not-booked": { tone: "neutral", key: "checkIn.notice.noShowNotBooked" },
+  // Both taps answer this one: nobody fails to show for a boat that never left,
+  // and nobody goes back on one either. The sentence says the departure is
+  // cancelled without instructing a fix, because the fix differs by tap.
   "no-show-trip-cancelled": { tone: "neutral", key: "checkIn.notice.noShowTripCancelled" },
-  "no-show-before-dock-call": { tone: "warning", key: "checkIn.notice.noShowBeforeDockCall" },
+  "no-show-before-departure": { tone: "warning", key: "checkIn.notice.noShowBeforeDeparture" },
   "no-show-window-closed": { tone: "warning", key: "checkIn.notice.noShowWindowClosed" },
   "no-show-not-marked": { tone: "neutral", key: "checkIn.notice.noShowNotMarked" },
   // The seat was resold between the mark and the Undo, which is the one
   // refusal here a staffer genuinely could not have seen coming.
   "no-show-trip-full": { tone: "danger", key: "checkIn.notice.noShowTripFull" },
+  // Same race, tighter limit: on a ratio-gated course session the boat can
+  // still have room while the instructor does not. This is the refusal that
+  // keeps a walk-up and a late participant from making a third student.
+  "no-show-course-ratio-full": { tone: "danger", key: "checkIn.notice.noShowCourseRatioFull" },
   // Both taps can answer these two, and they mean the same thing they mean
   // above — the same words, reached through the prefixed code.
   "no-show-not-found": { tone: "danger", key: "checkIn.notice.notFound" },
@@ -400,23 +407,25 @@ export default async function CheckInPage({
   const markNoShow = markNoShowAction.bind(null, shopSlug, focusedTripId);
   const undoNoShow = undoNoShowAction.bind(null, shopSlug, focusedTripId);
 
-  // **"Not here?" is drawn from the shop's own dock call**, which is why the
-  // gate runs here rather than in the row: this is the layer holding the shop
-  // row, the clock and the queue at once. `markBookingNoShow` runs the same
-  // gate again against locked rows — a door drawn ten seconds ago is not
-  // evidence — so this decides only whether the disclosure exists (#1209).
+  // **"Not here?" opens when the boat leaves without them**, and says something
+  // different once it is gone — which is why both questions are answered here
+  // rather than in the row: this is the layer holding the clock and the queue
+  // at once. `markBookingNoShow` runs the same gate again against locked rows
+  // — a door drawn ten seconds ago is not evidence — so this decides only
+  // whether the disclosure exists and which script it carries (#1209).
   //
   // `tripStatus` is `"scheduled"` because `listCheckInQueue` filters to that;
   // the gate re-reads the live value for itself when the tap lands.
-  const noShowOffered = (row: CheckInQueueRow) =>
+  const noShowClaimFor = (row: CheckInQueueRow): NoShowClaim | null =>
     noShowGate({
       bookingStatus: row.bookingStatus,
       boarded: row.boarded,
       tripStatus: "scheduled",
       startsAt: row.startsAt,
-      dockCallMinutes: shop.dockCallMinutes,
       now,
-    }) === "eligible";
+    }) === "eligible"
+      ? noShowClaim({ startsAt: row.startsAt, now })
+      : null;
 
   // **One read per departure that actually holds a released seat, and none on
   // an ordinary day.** The salvage is a wait-list read plus, only when nobody
@@ -435,49 +444,20 @@ export default async function CheckInPage({
   );
 
   /**
-   * The salvage, worded. The precedence is `salvageOffer`'s
-   * (`src/lib/no-show.ts`) and this only picks sentences for it — including
-   * the money one, which is a sentence and a link to where that decision is
-   * made, never a charge or a refund control.
+   * The salvage, worded — who the freed seat can go to, or which day the diver
+   * it was taken from can still be put on (`salvage-copy.ts`).
    */
   const salvageFor = (row: CheckInQueueRow): NoShowSalvageCopy | undefined => {
     const offer = salvageByTrip.get(row.tripId);
     if (!offer || !isNoShowAtCounter(row)) return undefined;
-    const money = {
-      line: t("checkIn.noShow.money"),
-      href: `/shop/${shopSlug}/orders?personId=${encodeURIComponent(row.personId)}`,
-      label: t("checkIn.noShow.moneyDoor"),
-    };
-    if (offer.kind === "waitlist") {
-      return {
-        // The shipped invite control lives on the departure's guest list with
-        // its held send, its undo window and its copyable fallback
-        // (`WaitlistSection.tsx`). The counter points at it rather than
-        // growing a second sender beside it.
-        line: t("checkIn.noShow.waiting", { count: offer.count }),
-        links: [
-          {
-            href: `/shop/${shopSlug}/trips/${row.tripId}/guests`,
-            label: t("checkIn.noShow.waitingDoor"),
-          },
-        ],
-        money,
-      };
-    }
-    if (offer.kind === "alternative") {
-      return {
-        line: t("checkIn.noShow.alternatives"),
-        links: offer.departures.map((departure) => ({
-          href: `/shop/${shopSlug}/trips/${departure.tripId}`,
-          label: t("checkIn.noShow.alternativeDoor", {
-            title: departure.title,
-            when: formatWeekdayTime(departure.startsAt, locale, shop.timezone),
-          }),
-        })),
-        money,
-      };
-    }
-    return { line: t("checkIn.noShow.nothing"), links: [], money };
+    return noShowSalvageCopy({
+      t,
+      offer,
+      shopSlug,
+      tripId: row.tripId,
+      diver: { id: row.personId, name: row.personName },
+      formatWhen: (startsAt) => formatWeekdayTime(startsAt, locale, shop.timezone),
+    });
   };
 
   // **Three groups, and every seat is in exactly one of them** — the figure,
@@ -490,11 +470,10 @@ export default async function CheckInPage({
   // joins `cantBoard`, so the count goes visibly backwards and the row returns
   // to the working list rather than sitting green in a folded receipt.
   //
-  // A released seat leaves `expected` rather than joining a band of it: "4 of
-  // 7 here" is a claim about who the boat is carrying, and a staffer who has
-  // just said one diver is not coming should read "4 of 6". It is still said
-  // out loud, in the remainder line, because a figure that silently drops a
-  // person is the other way to lie about a boat (issue #1209).
+  // A released seat is the fourth answer and the one that leaves `expected`
+  // altogether; `counterTally` argues why. What is this page's half is where
+  // the number then goes: the remainder line below, so it is still said out
+  // loud (issue #1209).
   const { here, expected, cantBoard, toCome, notHere } = counterTally(focus?.rows ?? []);
   const remainder = focus
     ? [
@@ -769,7 +748,7 @@ export default async function CheckInPage({
               undoAction={undo}
               waiverAction={recordPaperWaiver}
               waiverNotice={waiverNoticeOnRow}
-              noShowOffered={noShowOffered}
+              noShowClaimFor={noShowClaimFor}
               markNoShowAction={markNoShow}
               undoNoShowAction={undoNoShow}
               salvageFor={salvageFor}
@@ -804,7 +783,7 @@ export default async function CheckInPage({
                     undoAction={undo}
                     waiverAction={recordPaperWaiver}
                     waiverNotice={waiverNoticeOnRow}
-                    noShowOffered={noShowOffered}
+                    noShowClaimFor={noShowClaimFor}
                     markNoShowAction={markNoShow}
                     undoNoShowAction={undoNoShow}
                     salvageFor={salvageFor}

@@ -7,6 +7,30 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## No-show frees the seat (delivered 2026-09-11)
+
+Item 11 of the 2026-08-27 sweep (issue #1209). `bookings.status = 'no_show'` had existed since the
+first schema with a dozen readers branching on it and no writer anywhere; the counter's "Not here?"
+disclosure is that writer. **The staffer's confirm tap is the release** — no second tap, no timer,
+no close-of-day sweep and no `seat_released_at` column: `no_show` leaves `SEAT_HELD_STATUSES`, so
+the boat reads one seat lighter the moment the mark commits and the next diver claims it through
+`bookSpot`'s ordinary capacity transaction. The door opens when the boat leaves without the diver
+rather than at the shop's **dock call time**, and closes at the end of the arrivals window; once the
+boat has genuinely sailed the same tap asks a louder question, because it has stopped being about a
+seat and become a statement that this person did not dive. It auto-refunds and auto-cancels nothing
+— the money is one sentence and a link to that diver's orders. ADR
+[20260911-the-confirm-tap-is-the-release](../architecture/decisions/20260911-the-confirm-tap-is-the-release.md).
+
+**A statement made at the boat outranks one made at a desk.** A diver the crew recorded aboard at
+any checkpoint can never be marked absent, and when the crew get there second, boarding takes the
+released seat straight back (`reclaimReleasedSeat`) rather than refusing a body somebody is looking
+at — over-capacity is then something the manifest *says*, not something it prevents. The released
+row keeps its place on the manifest with a mark of its own, so it cannot read as a diver still
+walking down the dock, and an Undo the seat has outrun refuses under both limits every seat-granting
+path applies — a sold seat or a full instructor ratio — leaving its own trail line naming which.
+Under the mark the counter offers the seat to the **wait list** first, then offers the diver who
+missed another day by name, then says plainly that there is nothing.
+
 ## Fifteen personas walk the product every Monday (delivered 2026-09-07)
 
 N-61 from the 2026-09-07 improvement-ideas sheet (issue #1494). `docs/product/personas.md` was a
@@ -530,13 +554,14 @@ own departure roll call decides it wherever a shop kept one — `not_boarded` ne
 afterglow at all, `boarded` opens it once the boat is scheduled home plus the standing one-hour
 late-arrival buffer — and where a shop recorded none it waits the four hours the recap *send* has
 always waited before asserting the same thing by email. Nothing else in the product knows whether a
-particular person dived: `bookings.status = 'no_show'` is a close-out act that may not happen for
-hours or at all, so an hour of elapsed time is not evidence. A **cancelled departure** is answered
-before either state — a blow-out cancels the trip and leaves every booking active by design, so the
-thread reads `trips.status` itself and renders the cancellation with the way back to the shop's
-schedule — and a no-show is told plainly that the booking is recorded as one, with the shop's name
-and contact details, instead of the old "This readiness link isn't available · This booking didn't
-sail", two sentences that were both false for that reader.
+particular person dived: `bookings.status = 'no_show'` is one staffer's discretionary tap on a seat
+— a shop that never works the counter queue writes none, and the crew hand the seat straight back by
+boarding the diver — so an hour of elapsed time is not evidence. A **cancelled departure** is
+answered before either state — a blow-out cancels the trip and leaves every booking active by
+design, so the thread reads `trips.status` itself and renders the cancellation with the way back to
+the shop's schedule — and a no-show is told plainly that the booking is recorded as one, with the
+shop's name and contact details, instead of the old "This readiness link isn't available · This
+booking didn't sail", two sentences that were both false for that reader.
 
 **The day's facts render once, and only the ones a shop wrote down.** `/recap` had been saying them
 twice for months: a quiet stat row of conditions and a dotted site itinerary in its first act, then

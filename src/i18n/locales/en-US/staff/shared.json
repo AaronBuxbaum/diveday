@@ -356,6 +356,7 @@
       "crewAwaiting": "{count, plural, one {# crew member still to call.} other {# crew members still to call.}} Every person on the crew list needs a result of their own.",
       "readyBadge": "Ready when saved",
       "blockedBadge": "Blocked when saved",
+      "notHereBadge": "Not here when saved",
       "statePendingSuffix": "· waiting to send",
       "emergencyContact": "Emergency contact",
       "notOnFile": "Not on file",

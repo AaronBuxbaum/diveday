@@ -80,17 +80,20 @@ export function NoShowScript({
 }
 
 /**
- * What the shop can do with the seat that just came free, already worded.
+ * What the shop can still do once the seat is released, already worded.
  *
- * The precedence — wait list, then a similar departure, then nothing — is
- * decided in `src/lib/no-show.ts` and read in `src/db/no-show.ts`; the page
- * turns it into these strings because it is the only layer holding both the
- * translator and the shop's timezone.
+ * The precedence — wait list, then a rebooking for the diver who missed, then
+ * nothing — is decided in `src/lib/no-show.ts` and read in `src/db/no-show.ts`;
+ * `salvage-copy.ts` turns it into these strings a layer up, where the
+ * translator and the shop's timezone both are.
  */
 export type NoShowSalvageCopy = {
-  /** One line naming what is there: who is waiting, or which boats have room. */
+  /**
+   * One line naming the offer **and who it is for**: the divers waiting for
+   * this seat, or the diver, by name, the shop can put on another day.
+   */
   line: string;
-  /** Where to act on it. At most two — the wait list, or two other departures. */
+  /** Where to act on it. At most two — the wait list, or two days to seat them on. */
   links: readonly { href: string; label: string }[];
   /**
    * **The money, as a sentence.** What happens to the fare is a decision a

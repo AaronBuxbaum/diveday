@@ -60,6 +60,8 @@ function tripPayload(tripId: string, shopSlug: string): OfflineManifestPayload {
           notBackAboard: 0,
           awaiting: 0,
           unaccountedFor: 0,
+          overCapacity: 0,
+          notHere: 0,
         },
       },
     ],

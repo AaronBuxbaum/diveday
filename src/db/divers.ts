@@ -20,7 +20,6 @@ import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
-import { standingArrivalIsArrived } from "./arrival-provenance";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import { listOrdersForPerson } from "./orders";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -799,32 +798,35 @@ export type SimilarDiver = {
    * shop has no dive day on file for them.
    *
    * **The same evidence rule `peopleWhoDivedBefore` uses**
-   * (src/db/executed-dives.ts): a non-cancelled booking, on a live departure
-   * the shop still says ran, that has already left — plus that reader's two
-   * escapes, a `no_show` the desk itself contradicted by tapping the diver in
-   * (issue #1558) and a blown-out departure the crew logged dives on. Those
+   * (src/db/executed-dives.ts): a non-cancelled, non-`no_show` booking, on a
+   * live departure the shop still says ran, that has already left — plus that
+   * reader's one escape, a blown-out departure the crew logged dives on. The
    * two may not disagree about what a dive day is: one of them would then be
    * telling a staffer something the other refuses.
    *
-   * **This is the widest of four readers of that question, and the gap is not
-   * an accident** (`dive-domain-expert`, 2026-09-11). The recap's dive-day
-   * count (`getRecapPageData`, src/db/recap.ts) and the diver shelf
-   * (src/db/shelf.ts) take a plain `no_show` and a plain non-`scheduled` trip
-   * as disqualifying, with neither escape. So a day the desk tapped a diver in
-   * on and the close-of-day sweep then stamped `no_show` is named here and is
-   * not counted there.
+   * **A released seat is not a dive day here either** (`dive-domain-expert`,
+   * 2026-09-11). Both readers used to let a standing desk sighting outrank a
+   * `no_show`, against a close-of-day sweep that does not exist; the only
+   * writer of that status is one staffer's deliberate tap, always later than
+   * the check-in it overwrites, so the escape told the next staffer this
+   * person dived here on a morning the shop's own record says they never came
+   * — and that is the fact the counter's identity question turns on. The full
+   * argument sits on the `no_show` clause in `peopleWhoDivedBefore`.
    *
-   * The widening is affordable in this direction only. This prompt asks *who
-   * is standing at the counter*, and it asks a staffer who can see them: a day
-   * this shop has on file under that name is evidence about the person, and
-   * naming one they do not recognise costs a shake of the head, while
-   * withholding one costs the match — and a duplicate record is what later
-   * hides a certification or a signed waiver from a roster. The recap tells
-   * the diver "your 3rd dive day" with nobody there to correct it, and feeds
-   * `visitMilestone`'s exact equality on {1, 10, 25, 50, 100}, where a day that
-   * moves does not blur a stamp but skips it permanently. Putting all four
-   * behind one predicate is issue #1694; it is a change to what a diver's
-   * keepsake counts, not a tidy-up, which is why it is not done here.
+   * What still differs between the four readers is the *trip-status* leg: the
+   * recap's dive-day count (`getRecapPageData`, src/db/recap.ts) and the diver
+   * shelf (src/db/shelf.ts) take a plain non-`scheduled` departure as
+   * disqualifying, with no escape for a crew-logged dive. That gap is
+   * affordable in this direction only. This prompt asks *who is standing at
+   * the counter*, and it asks a staffer who can see them, so naming a day they
+   * do not recognise costs a shake of the head while withholding one costs the
+   * match — and a duplicate record is what later hides a certification or a
+   * signed waiver from a roster. The recap tells the diver "your 3rd dive day"
+   * with nobody there to correct it, and feeds `visitMilestone`'s exact
+   * equality on {1, 10, 25, 50, 100}, where a day that moves does not blur a
+   * stamp but skips it permanently. Putting all four behind one predicate is
+   * issue #1694; it is a change to what a diver's keepsake counts, not a
+   * tidy-up, which is why it is not done here.
    *
    * **Whether a null says anything on screen is not this reader's call**: it
    * speaks when a sibling candidate has a day and is silent when they all
@@ -906,7 +908,7 @@ export async function findSimilarDivers(
         // before" per person and this one needs the day itself; the rule may
         // not drift apart, and `SimilarDiver.lastDiveDayAt` says why.
         ne(bookings.status, "cancelled"),
-        or(ne(bookings.status, "no_show"), standingArrivalIsArrived(shopId, bookings.id, trips.id)),
+        ne(bookings.status, "no_show"),
         or(eq(trips.status, "scheduled"), isNotNull(executedDives.id)),
         liveTrip(),
         lt(trips.startsAt, now),

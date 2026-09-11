@@ -1,6 +1,7 @@
 import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { courseSeatCapacity } from "@/lib/course-ratios";
 import {
   type NoShowGate,
   noShowGate,
@@ -9,11 +10,13 @@ import {
   salvageOffer,
 } from "@/lib/no-show";
 import { similarDepartures } from "@/lib/similar-departures";
+import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
+import { tripCourseCrewCounts } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
-import { departureRollCallForBooking } from "./manifests";
-import { activityEvents, bookings, people, shops, trips } from "./schema";
+import { boardedAtAnyCheckpoint } from "./manifests";
+import { activityEvents, bookings, courses, people, trips } from "./schema";
 import { getTripWaitlist, pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
 
@@ -28,9 +31,9 @@ import { liveTrip } from "./trips-live";
  * **The staffer's confirm tap is the seat release.** There is no
  * `seat_released_at` column and no second tap: the mark is the human act, and
  * the seat becoming sellable is its consequence (`src/lib/no-show.ts` carries
- * the reasoning, and `docs/product/features/roadmap.md` specifies it). Which
- * makes the one thing this module must not do worth stating in a docblock and
- * then proving in a test rather than trusting a comment:
+ * the reasoning, and ADR 20260911-the-confirm-tap-is-the-release records it).
+ * Which makes the one thing this module must not do worth stating in a docblock
+ * and then proving in a test rather than trusting a comment:
  *
  * **It touches no money.** Not an order, not a payment, not a refund, not a
  * checkout, not a line item. A diver who missed a boat may be owed a refund,
@@ -51,7 +54,16 @@ export type MarkNoShowOutcome =
 
 export type UndoNoShowOutcome =
   | { ok: true; bookingId: string; tripId: string; personName: string }
-  | { ok: false; reason: "not_found" | "staff_not_found" | "not_marked" | "trip_full" };
+  | {
+      ok: false;
+      reason:
+        | "not_found"
+        | "staff_not_found"
+        | "not_marked"
+        | "trip_full"
+        | "course_ratio_full"
+        | "trip_cancelled";
+    };
 
 /**
  * The person recording this is staff at this shop, right now.
@@ -88,6 +100,22 @@ async function activeStaffRecorderId(
  * `publishManifestEvent` fires after the transaction commits, because a seat
  * leaving the expected list is the change most likely to land while a captain
  * is already walking to the boat with a phone in their hand.
+ *
+ * **It writes nothing to the arrival trail, and that is the point** (issue
+ * #1558). Missing the boat is not the desk taking back what it saw: a staffer
+ * stood in front of this diver at 06:40 and tapped them in, and that happened
+ * whatever the seat becomes afterwards. The trail is an append-only record of
+ * sightings, so the only rows it takes are a new statement about who was seen
+ * — and the retraction it *does* take is `undoCheckInBooking`'s, where the desk
+ * is saying it was wrong about that. The standing `arrived` row left here is
+ * what `undoBookingNoShow` below reads to put the seat back as `checked_in`
+ * rather than `booked` (`standingArrivalStatus`, src/db/arrival-provenance.ts).
+ *
+ * It does **not** survive as a dive day. Until a `dive-domain-expert` review on
+ * 2026-09-11 the two dive-day readers let that row outrank the status this
+ * writes; the mark is later than the sighting and made by a person looking at
+ * the empty space, so it is the newer statement and it wins
+ * (`peopleWhoDivedBefore`, src/db/executed-dives.ts).
  */
 export async function markBookingNoShow(
   db: AppDb,
@@ -118,23 +146,23 @@ export async function markBookingNoShow(
     // it may not see exists.
     if (!seat) return { ok: false, reason: "not_found" };
 
-    // The shop's own arrival call opens the window. Read outside the lock
-    // above on purpose: locking the shop row to mark one diver absent would
-    // serialise every counter in the building behind it.
-    const [shop] = await tx
-      .select({ dockCallMinutes: shops.dockCallMinutes })
-      .from(shops)
-      .where(eq(shops.id, input.shopId))
-      .limit(1);
-    if (!shop) return { ok: false, reason: "not_found" };
-
     const gate = noShowGate({
       bookingStatus: seat.status,
-      boarded:
-        (await departureRollCallForBooking(tx, input.shopId, seat.tripId, seat.id)) === "boarded",
+      // Read without a lock of its own, and correct only because the rail takes
+      // the *booking* row `FOR UPDATE` too (`recordRollCall`, src/db/manifests.ts).
+      // That is the shared object: while this transaction holds it, no roll
+      // call can commit, so "nobody has boarded them" cannot go stale between
+      // this line and the update below. Before that lock existed the two shared
+      // no object at all and it could — `roll-call.postgres.test.ts` races them
+      // for real and goes red the moment the lock is taken back out.
+      //
+      // Any checkpoint, not only the dock (`boardedAtAnyCheckpoint`): a diver
+      // the crew counted at the second site has no departure event at all, and
+      // reading the dock alone left this refusal silent about exactly the
+      // divers `inAfterDivePopulation` (src/db/today.ts) says are on the water.
+      boarded: await boardedAtAnyCheckpoint(tx, input.shopId, seat.tripId, seat.id),
       tripStatus: seat.tripStatus,
       startsAt: seat.startsAt,
-      dockCallMinutes: shop.dockCallMinutes,
       now,
     });
     if (gate !== "eligible") return { ok: false, reason: gate };
@@ -166,14 +194,42 @@ export async function markBookingNoShow(
  *
  * Not a plain status flip, because the release was real: by the time somebody
  * taps Undo the shop may have sold the seat to the diver who was waiting for
- * it, and putting the first one back would overfill the boat. So the capacity
+ * it, and putting the first one back would overfill the boat. So the seat
  * count re-runs under the trip's own lock — the same `FOR UPDATE` on `trips`
- * that `restoreBooking` and `bookSpot` take — and a resold seat refuses with
- * `trip_full` rather than quietly oversells.
+ * that `restoreBooking` and `bookSpot` take — and a seat that is gone refuses
+ * rather than quietly oversells.
  *
- * The trail keeps both taps. A correction is its own line, never a deletion of
- * the first one: "who released this seat, and did they take it back?" is a
- * question asked at a desk with a stranger standing at it.
+ * "Gone" means gone under **both** limits every seat-granting path applies, the
+ * same pair `restoreBooking` checks and for the same reason: the trip's own
+ * capacity, and on a ratio-gated course session the crew's seat cap
+ * (`courseSeatCapacity`). Capacity alone left the tightest control in the
+ * product one tap from being exceeded — mark a late participant not here on a
+ * two-seat intro session, let a walk-up take the freed seat, then tap Undo as
+ * they arrive at the dock, and a third uncertified first-timer joins one
+ * instructor with no refusal anywhere.
+ *
+ * The trip's own state is read under that lock too, for the one condition that
+ * makes an undo meaningless: **cancelled**. Nobody fails to show for a boat
+ * that never left, so the mark is already refused there (`noShowGate`); the
+ * undo answers the same way `restoreBooking` does, and reinstating the
+ * departure is the recovery. No hold check and no departure-time check: an undo
+ * is not a new booking, and the diver it puts back is the one standing at the
+ * dock as the lines come off.
+ *
+ * The trail keeps both taps, and the tap that was refused. A correction is its
+ * own line, never a deletion of the first one: "who released this seat, and did
+ * they take it back?" is a question asked at a desk with a stranger standing at
+ * it — and "somebody tried and the seat was gone" is the answer that question
+ * most needs (`booking_no_show_undo_refused`, and the `refuse` helper below).
+ *
+ * **And the seat comes back as what it was**, which the arrival trail is the
+ * only record of: a diver a staffer checked in at 06:40 and released at 07:10
+ * is `checked_in` underneath, and the mark leaves that `arrived` row standing
+ * on purpose (`standingArrivalStatus`, src/db/arrival-provenance.ts, is what
+ * reads it back). Restoring every seat to `booked` put a diver who is standing
+ * at the desk back on the counter's "still to come" list and asked a staffer to
+ * check them in a second time with the diver in front of them
+ * (`dive-domain-expert`, 2026-09-11).
  */
 export async function undoBookingNoShow(
   db: AppDb,
@@ -200,12 +256,18 @@ export async function undoBookingNoShow(
     if (seat.status !== "no_show") return { ok: false, reason: "not_marked" };
 
     const [trip] = await tx
-      .select({ id: trips.id, capacity: trips.capacity })
+      .select({
+        id: trips.id,
+        capacity: trips.capacity,
+        status: trips.status,
+        courseId: trips.courseId,
+      })
       .from(trips)
       .where(and(eq(trips.id, seat.tripId), eq(trips.shopId, input.shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (!trip) return { ok: false, reason: "not_found" };
+    if (trip.status === "cancelled") return { ok: false, reason: "trip_cancelled" };
 
     // Counted under the lock, and counting only the seats somebody else holds:
     // this booking is `no_show` right now, so it is not in the total, and the
@@ -214,11 +276,64 @@ export async function undoBookingNoShow(
       .select({ booked: count(bookings.id) })
       .from(bookings)
       .where(and(eq(bookings.tripId, trip.id), inArray(bookings.status, [...SEAT_HELD_STATUSES])));
-    if ((held?.booked ?? 0) >= trip.capacity) return { ok: false, reason: "trip_full" };
+    const booked = held?.booked ?? 0;
+    /**
+     * **The two refusals that get a line of their own.**
+     *
+     * Every other one is either nothing happening (`not_marked` is a second
+     * tap, `not_found` is a row this shop cannot see) or a fact already on the
+     * board (`trip_cancelled`). These two are different: the seat is gone, a
+     * staffer is standing at a desk with the diver in front of them, and until
+     * this existed the shop's record of that morning ended at "somebody was
+     * written off" — the mark was on the trail, the attempt to take it back was
+     * not, and the person reconciling a full departure afterwards had no way to
+     * learn that anyone had tried.
+     *
+     * The trail rather than the manifest, for the reason the mark is there:
+     * the manifest answers "who is aboard", and nobody is. This is history,
+     * and history is what the trail is for.
+     */
+    const refuse = async (
+      reason: "trip_full" | "course_ratio_full",
+    ): Promise<UndoNoShowOutcome> => {
+      await tx.insert(activityEvents).values({
+        shopId: input.shopId,
+        tripId: seat.tripId,
+        bookingId: seat.id,
+        actorPersonId: recorder.id,
+        code: "booking_no_show_undo_refused",
+        params: { actor: recorder.name, diver: seat.personName, reason },
+        occurredAt: now,
+      });
+      return { ok: false, reason };
+    };
+    if (booked >= trip.capacity) return await refuse("trip_full");
 
+    if (trip.courseId) {
+      const [course] = await tx
+        .select()
+        .from(courses)
+        .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, input.shopId)))
+        .limit(1);
+      const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, trip.id);
+      // Null means the session carries no ratio at all, so capacity alone binds.
+      // A gated session that has since lost its last instructor caps at zero and
+      // refuses too: a seat cannot be handed back to a session that could not
+      // sell it in the first place.
+      const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
+      if (seatCap !== null && booked >= seatCap) return await refuse("course_ratio_full");
+    }
+
+    // The status the standing arrival supports, never an assumed one. Not a new
+    // check-in and so no readiness re-read: this restores a statement the desk
+    // already made, and boarding re-gates readiness of its own at the rail
+    // (`recordRollCall`, src/db/manifests.ts). Both restored statuses hold a
+    // seat (`SEAT_HELD_STATUSES`), so the two caps counted above bind either
+    // way.
+    const standing = await standingArrivalStatus(tx, input.shopId, seat.tripId, seat.id);
     const [updated] = await tx
       .update(bookings)
-      .set({ status: "booked" })
+      .set({ status: standing === "arrived" ? "checked_in" : "booked" })
       .where(and(eq(bookings.id, seat.id), eq(bookings.status, "no_show")))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "not_marked" };
@@ -239,11 +354,12 @@ export async function undoBookingNoShow(
 }
 
 /**
- * **What the shop can do with the seat that just came free.**
+ * **What the shop can do once the seat comes free** — sell it to somebody
+ * waiting, or give the diver who missed another day.
  *
- * Wait list first, a similar departure second, nothing third — the precedence
- * itself lives in `salvageOffer`, so the surface and this reader can never
- * disagree about which offer outranks which.
+ * Wait list first, a rebooking for that diver second, nothing third — the
+ * precedence itself lives in `salvageOffer`, so the surface and this reader
+ * can never disagree about which offer outranks which.
  *
  * Wait-list entries already invited are filtered out here rather than counted
  * and struck through: the count is what a staffer reads in one glance while
@@ -270,10 +386,10 @@ export async function noShowSalvage(
     .limit(1);
   if (!trip) return salvageOffer({ waitlistCount: 0, alternatives: [] });
 
-  // The storefront's own reader, with `hasSpace`, so an alternative offered at
-  // the counter is one a diver could actually be moved onto, and a private
-  // charter is never offered. Bounded rather than paged for the reason the
-  // public trip page gives: `similarDepartures` needs a pool, not a page.
+  // The storefront's own reader, with `hasSpace`, so a day offered at the
+  // counter is one the diver who missed could actually be moved onto, and a
+  // private charter is never offered. Bounded rather than paged for the reason
+  // the public trip page gives: `similarDepartures` needs a pool, not a page.
   const board = await pagedUpcomingTripsWithCounts(db, input.shopId, {
     now,
     limit: 50,

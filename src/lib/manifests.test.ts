@@ -113,6 +113,8 @@ describe("buildTripManifest", () => {
       notBackAboard: 0,
       awaiting: 1,
       unaccountedFor: 1,
+      overCapacity: 0,
+      notHere: 0,
     });
     // Counter check-in and boat roll call are different questions (task 149):
     // a diver can be checked in at the counter without being boarded, or
@@ -1097,5 +1099,80 @@ describe("rollCallRecordedTone", () => {
     expect(carried.notBackAboard).toBe(false);
     expect(carried.recordedHere).toBe(false);
     expect(rollCallRecordedTone(carried)).toBe("notBoardedImplied");
+  });
+});
+
+/**
+ * **A seat the counter released is still a row, and must not read like a diver
+ * who is merely late** (#1209, `dive-domain-expert` review 20260911).
+ */
+describe("a seat the counter released", () => {
+  const seat = (
+    bookingId: string,
+    extra: Partial<ManifestDiverInput> = {},
+  ): ManifestDiverInput => ({
+    bookingId,
+    fullName: bookingId,
+    email: null,
+    emergencyContactName: null,
+    emergencyContactPhone: null,
+    readiness: { status: "ready", blockers: [] },
+    rentalFit: { state: "own_kit" as const },
+    nitroxRequested: false,
+    checkedIn: false,
+    ...extra,
+  });
+
+  it("counts a released seat nobody at the boat has spoken for", () => {
+    const manifest = buildTripManifest({
+      trip,
+      crew: [],
+      divers: [seat("booking-late"), seat("booking-written-off", { notHere: true })],
+    });
+    expect(manifest.summary.notHere).toBe(1);
+    // A subset of `awaiting`, never a bucket beside it: the desk's statement
+    // is not the crew's, so the checkpoint stays open on both names and the
+    // count row's entries still sum to the boat.
+    expect(manifest.summary.awaiting).toBe(2);
+    expect(manifest.summary.unaccountedFor).toBe(2);
+    expect(manifest.summary.boarded + manifest.summary.notBoarded + manifest.summary.awaiting).toBe(
+      manifest.summary.totalDivers,
+    );
+    // The flag itself rides onto the row, which is what the chip reads.
+    expect(manifest.divers.find((d) => d.bookingId === "booking-written-off")?.notHere).toBe(true);
+  });
+
+  it("stops counting one the boat has since answered for, either way", () => {
+    // Boarded: the rail overruled the desk and took the released seat back
+    // (`reclaimReleasedSeat`), so counting it would subtract a body that is
+    // standing on the deck from the head count's denominator.
+    const boarded = buildTripManifest({
+      trip,
+      crew: [],
+      divers: [seat("booking-walked-up", { notHere: true, rollCall: boardedAt() })],
+    });
+    expect(boarded.summary.notHere).toBe(0);
+    expect(boarded.summary.boarded).toBe(1);
+    // Not boarded: the crew said the same thing the desk did. One statement
+    // per row, and the boat's is the one the row already renders — counting
+    // both would take the same diver out of the denominator twice, against
+    // `ashore` at an after-dive checkpoint.
+    const notBoarded = buildTripManifest({
+      trip,
+      checkpoint: "after_dive_1",
+      crew: [],
+      divers: [seat("booking-stayed-ashore", { notHere: true, rollCall: notBoardedAt() })],
+    });
+    expect(notBoarded.summary.notHere).toBe(0);
+    expect(notBoarded.summary.notBoarded).toBe(1);
+  });
+
+  it("says nothing at all about a manifest with nobody written off", () => {
+    // Absent means false, everywhere: a manifest assembled by hand — and every
+    // one that existed before the counter could write the status — has no
+    // released seats, and the denominator is the whole roster.
+    const manifest = buildTripManifest({ trip, crew: [], divers: [seat("booking-one")] });
+    expect(manifest.summary.notHere).toBe(0);
+    expect(manifest.divers[0]?.notHere).toBeUndefined();
   });
 });

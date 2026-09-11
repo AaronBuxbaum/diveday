@@ -356,6 +356,7 @@
       "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} Cada persona de la lista de tripulación necesita su propio resultado.",
       "readyBadge": "Listo cuando se guardó",
       "blockedBadge": "Bloqueado cuando se guardó",
+      "notHereBadge": "Marcado “no vino” cuando se guardó",
       "statePendingSuffix": "· esperando para enviarse",
       "emergencyContact": "Contacto de emergencia",
       "notOnFile": "Sin datos registrados",

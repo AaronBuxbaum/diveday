@@ -1,89 +1,58 @@
-import { type AnyColumn, and, desc, eq, inArray, type SQL, sql } from "drizzle-orm";
-import type { AppDb } from "./client";
+import { and, desc, eq, inArray } from "drizzle-orm";
+import type { AppDb, DbExecutor } from "./client";
 import { bookingArrivalEvents } from "./schema";
 
 /**
- * **"Somebody at this shop saw this diver arrive, and has not taken it back"**
- * — as a predicate a query can carry, for the one booking it is correlated to
- * (issue #1558).
+ * **What the trail currently says about one seat**, as the word itself rather
+ * than a verdict on it — the question a writer of `bookings.status` asks before
+ * it puts that slot back.
  *
- * `bookings.status` is a projection with one slot, so the last writer wins it:
- * a close-of-day sweep that stamps `no_show` over a seat erases the fact that
- * a staffer stood in front of that diver at 06:40 and tapped them in. The
- * append-only trail underneath never loses that — `booking_arrival_events` is
- * not soft-deletable and not pruned, and it is absent from `RETENTION_DAYS`
- * (`src/lib/retention.ts`) on purpose — so a reader asking "did anybody here
- * see this diver that morning" should ask the trail rather than the slot.
+ * The only reader of this trail that answers a writer rather than a person:
+ * `undoBookingNoShow` (`src/db/no-show.ts`) puts a released seat back and needs
+ * the state it was released *from*, and guessing that is how the slot and the
+ * trail drift apart. A kiosk tap counts here, because it wrote `checked_in`
+ * into the slot in the first place (`checkInAtKiosk`, `src/db/check-in.ts`);
+ * whether that arrival was a *sighting* is the separate question
+ * `listSelfReportedArrivalBookingIds` below answers, and the two must not be
+ * confused.
  *
- * **The newest row wins, and it may be a retraction.** The ordering here is
- * `newestArrivalEvent`'s own three columns (`src/db/check-in.ts`), deliberately
- * and not approximately: `occurred_at` ties constantly under a frozen clock or
- * a batched offline sync, and "what stands" must not be answerable two ways in
- * one codebase. An undo writes a `cleared` row rather than deleting the
- * `arrived` one, so a taken-back sighting collapses to `false` here — which is
- * the point. The shop is allowed to say it was wrong.
+ * **The trail is a record of who was seen, never of who dived** — and no
+ * reader here may spend it as the latter. Until a `dive-domain-expert` review
+ * on 2026-09-11 a third export let a standing `arrived` row outrank
+ * `bookings.status = 'no_show'` in the two dive-day readers, against a
+ * close-of-day sweep that does not exist. The only writer of that status is
+ * one staffer's deliberate tap, always later than the check-in it overwrites,
+ * so the escape only ever let an earlier human statement beat a later human
+ * correction. A diver can be checked in at 06:40 and seasick on the ramp at
+ * 06:50; the desk seeing somebody is not the boat carrying them.
  *
- * Correlated on `trip_id` as well as `booking_id` even though a booking belongs
- * to exactly one departure: that pair is the exact prefix of
- * `booking_arrival_events_shop_trip_booking_occurred_idx`, so the subquery
- * stays an index probe rather than a scan per candidate row.
- *
- * **A kiosk tap is not a sighting, and the test for that goes in the
- * projection.** The lobby tablet writes `arrived` with `display_token_id` set,
- * from a bearer-token page where the URL is the capability and anybody holding
- * it can type a surname — so it is hearsay, the same hearsay
- * `listSelfReportedArrivalBookingIds` below exists to keep out of the words a
- * staffer's sighting earns (N-24, and a `security-reviewer` finding on
- * 2026-09-11 that this predicate was spending it). Both readers pay for that in
- * a diver's safety: `findSimilarDivers` prints "Last dive day here" as the
- * fact the counter's identity question turns on, and `peopleWhoDivedBefore`
- * feeds the fly-safe multi-day advisory.
- *
- * The provenance test belongs to the **projection** and never to the `where`
- * clause. Filtering the row selection would step past a kiosk row to an older
- * tokenless `arrived` and answer `true` on a seat whose latest word is a
- * retraction, which is the opposite of what the undo above promises. The newest
- * row still decides, whoever wrote it; only the verdict it earns changes.
- *
- * **This says the desk saw them. It does not say they dived, and it must not be
- * read as if it did** (`dive-domain-expert`, 2026-09-11, on an earlier draft of
- * this docblock that claimed it answered "was this diver aboard"). A diver
- * checks in at 06:40 and is seasick on the ramp; or is checked in and then held
- * at the rail on a medical flag; or is bumped to the afternoon boat when the
- * morning one is overbooked. Three ordinary mornings where this predicate is
- * `true` and nobody went in the water.
- *
- * So it is a dive-day heuristic and is only ever spent as one: both callers —
- * `peopleWhoDivedBefore` (`src/db/executed-dives.ts`) and `findSimilarDivers`
- * (`src/db/divers.ts`) — use it to contradict a `no_show` the close-of-day
- * sweep wrote over a seat, never to assert a dive on its own. It lives here
- * rather than inline in either because that contradiction may not be argued
- * two ways in one codebase.
- *
- * **Who was aboard is a different question with a different table**: a standing
- * `boarded` roll-call event, which the manifest asks through
- * `listDepartureBoardedBookingIds` (`src/db/manifests.ts`) and
- * `getIncidentExport` (`src/db/incident-export.ts`) reads straight out of
- * `roll_call_events` / `roll_call_crew_events`. Not this trail, and not by
- * extending it: the writer these events reach cannot touch `roll_call_events`
- * at all, on purpose (`src/lib/arrival.ts`, pinned by "puts nobody on a boat —
- * a queued arrival writes no roll-call row at all" in `src/db/check-in.test.ts`).
- * A counter tap is never the answer to "was this diver aboard".
+ * The same three ordering keys as everything else in this file, and for the
+ * same reason: `occurred_at` ties constantly, so the last-appended row has to
+ * win or two readers order one pair of taps differently.
  */
-export function standingArrivalIsArrived(
+export async function standingArrivalStatus(
+  tx: DbExecutor,
   shopId: string,
-  bookingIdColumn: AnyColumn,
-  tripIdColumn: AnyColumn,
-): SQL<boolean> {
-  return sql<boolean>`(
-    select standing.status = 'arrived' and standing.display_token_id is null
-    from ${bookingArrivalEvents} as standing
-    where standing.shop_id = ${shopId}
-      and standing.trip_id = ${tripIdColumn}
-      and standing.booking_id = ${bookingIdColumn}
-    order by standing.occurred_at desc, standing.created_at desc, standing.seq desc
-    limit 1
-  )`;
+  tripId: string,
+  bookingId: string,
+): Promise<"arrived" | "cleared" | undefined> {
+  const [standing] = await tx
+    .select({ status: bookingArrivalEvents.status })
+    .from(bookingArrivalEvents)
+    .where(
+      and(
+        eq(bookingArrivalEvents.shopId, shopId),
+        eq(bookingArrivalEvents.tripId, tripId),
+        eq(bookingArrivalEvents.bookingId, bookingId),
+      ),
+    )
+    .orderBy(
+      desc(bookingArrivalEvents.occurredAt),
+      desc(bookingArrivalEvents.createdAt),
+      desc(bookingArrivalEvents.seq),
+    )
+    .limit(1);
+  return standing?.status;
 }
 
 /**
@@ -110,7 +79,7 @@ export function standingArrivalIsArrived(
  * A kiosk tap that a staffer later confirms at the desk writes a second,
  * tokenless row, and this stops calling that booking self-reported — which is
  * right: a human has now looked at them. Which row is *latest* is decided by
- * `occurred_at`, `created_at`, `seq`, the ordering `standingArrivalIsArrived`
+ * `occurred_at`, `created_at`, `seq`, the ordering `standingArrivalStatus`
  * above and `newestArrivalEvent` (`src/db/check-in.ts`) already use. This read
  * broke the rule the file states: it tied on `id`, a `defaultRandom()` uuid, so
  * a kiosk tap and a desk confirm landing in the same batched-sync millisecond

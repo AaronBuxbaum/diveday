@@ -10,7 +10,8 @@ afterEach(() => {
 
 const scriptCopy = {
   door: "Not here?",
-  consequence: "Records that they did not arrive and frees the seat. You can put them back.",
+  consequence:
+    "Records that they did not arrive and frees the seat. You can put them back while the seat is still free.",
   confirm: "Mark not here",
   confirming: "Marking…",
   confirmAriaLabel: "Mark Nadia Petrov as not here",
@@ -81,29 +82,44 @@ describe("NoShowSalvage", () => {
     );
   });
 
-  it("offers the similar departures when nobody is waiting", () => {
+  it("offers the diver another day when nobody is waiting", () => {
     render(
       <NoShowSalvage
         copy={salvage({
-          line: "Nobody is waiting. These departures still have room.",
+          line: "Nobody is waiting. Offer Nadia Petrov another day.",
           links: [
-            { href: "/shop/blue-mantis/trips/trip-2", label: "Two-Tank Reef, Thu 8:00 AM" },
-            { href: "/shop/blue-mantis/trips/trip-3", label: "Two-Tank Reef, Sat 8:00 AM" },
+            {
+              href: "/shop/blue-mantis/bookings/new/trip-2?diverq=Nadia%20Petrov",
+              label: "Add them to Two-Tank Reef, Thu 8:00 AM",
+            },
+            {
+              href: "/shop/blue-mantis/bookings/new/trip-3?diverq=Nadia%20Petrov",
+              label: "Add them to Two-Tank Reef, Sat 8:00 AM",
+            },
           ],
         })}
       />,
     );
-    expect(screen.getByRole("link", { name: "Two-Tank Reef, Thu 8:00 AM" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Two-Tank Reef, Sat 8:00 AM" })).toBeTruthy();
+    expect(screen.getByText("Nobody is waiting. Offer Nadia Petrov another day.")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "Add them to Two-Tank Reef, Thu 8:00 AM" })
+        .getAttribute("href"),
+    ).toBe("/shop/blue-mantis/bookings/new/trip-2?diverq=Nadia%20Petrov");
+    expect(
+      screen.getByRole("link", { name: "Add them to Two-Tank Reef, Sat 8:00 AM" }),
+    ).toBeTruthy();
   });
 
   it("says so plainly when there is nothing to offer", () => {
     render(
       <NoShowSalvage
-        copy={salvage({ line: "Nobody is waiting, and no similar departure has room." })}
+        copy={salvage({ line: "Nobody is waiting, and no similar departure has room for them." })}
       />,
     );
-    expect(screen.getByText("Nobody is waiting, and no similar departure has room.")).toBeTruthy();
+    expect(
+      screen.getByText("Nobody is waiting, and no similar departure has room for them."),
+    ).toBeTruthy();
     expect(screen.queryAllByRole("link")).toHaveLength(1);
   });
 

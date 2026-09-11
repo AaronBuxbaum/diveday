@@ -97,6 +97,8 @@ function payload(tripId: string, title: string, totalDivers = 2): OfflineManifes
           notBackAboard: 0,
           awaiting: totalDivers,
           unaccountedFor: totalDivers,
+          overCapacity: 0,
+          notHere: 0,
         },
       },
     ],
@@ -172,6 +174,8 @@ function richPayload(
      * fail-closed direction (`crewOlderCopy`, `canRecordOfflineCrewStatus`).
      */
     crewWithoutIds?: boolean;
+    /** The counter released this diver's seat before the copy was saved (#1209). */
+    notHere?: boolean;
   } = {},
 ): OfflineManifestPayload {
   // Every charter is crewed, so both cases carry the same two people; the
@@ -240,6 +244,7 @@ function richPayload(
     readiness: { status: opts.readiness ?? "ready", blockers: [] },
     rentalFit: { state: "not_recorded" },
     nitroxRequested: false,
+    notHere: opts.notHere ?? false,
     rollCall: undefined,
   };
   const carried: DiverFixture = {
@@ -286,6 +291,8 @@ function richPayload(
           notBackAboard: 0,
           awaiting: divers.length,
           unaccountedFor: divers.length,
+          overCapacity: 0,
+          notHere: 0,
         },
       },
       {
@@ -306,6 +313,8 @@ function richPayload(
           unaccountedFor: opts.withCarriedNotBoarded
             ? diversAfterDive.length - 1
             : diversAfterDive.length,
+          overCapacity: 0,
+          notHere: 0,
         },
       },
     ],
@@ -1568,6 +1577,42 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     const row = document.getElementById("offline-roll-call-diver-priya");
     if (!row) throw new Error("Priya's row missing");
     expect(within(row).getByText("Blocked when saved")).toBeInTheDocument();
+  });
+
+  /**
+   * **A released seat reads as one on the only copy at the rail** (#1209,
+   * `dive-domain-expert` review 20260911). The dock copy carried one booking
+   * signal — the counter's arrival — so a diver the desk wrote off at 07:20
+   * looked exactly like one still walking down the pier to a crew with no
+   * signal. The qualifier is the point: this copy cannot know the desk has
+   * since put them back, and a stale copy reading as current is the one lie a
+   * roll-call surface must not tell.
+   */
+  it("says which seat the counter released, and still lets the crew board them", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1", { notHere: true }));
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const row = document.getElementById("offline-roll-call-diver-priya");
+    if (!row) throw new Error("Priya's row missing");
+    expect(within(row).getByText("Not here when saved")).toBeInTheDocument();
+    // It refuses nothing: the crew tap boards a body they can see, and the
+    // rail takes the released seat back when the event syncs.
+    expect(within(row).getByRole("button", { name: "Mark boarded" })).toBeEnabled();
+  });
+
+  it("says nothing on a copy where nobody was written off", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    expect(screen.queryByText("Not here when saved")).toBeNull();
   });
 
   /**

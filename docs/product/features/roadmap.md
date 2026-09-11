@@ -232,8 +232,12 @@ first morning, argued in the Proposed ADR
 is to be picked up by a session before the first pilot shop has run a boat day. The sketches below
 stay so that a green-light after the pilot starts warm; re-triage them then, not now.
 
-Thirteen ideas from the 2026-08-27 design sweep, each composing into a surface items 6–10 already
-design — none adds a nav destination. Every one carries a schema/lib/surface sketch here so a
+**One of the thirteen was built anyway.** *No-show frees the seat* (#1209) shipped on 2026-09-11 and
+its entry now lives in [shipped.md](../shipped.md#no-show-frees-the-seat-delivered-2026-09-11), where
+built work belongs; the twelve sketches below are what the ruling still governs.
+
+Thirteen ideas from the 2026-08-27 design sweep, twelve of them still sketches below, each composing
+into a surface items 6–10 already design — none adds a nav destination. Every one carries a schema/lib/surface sketch here so a
 green-light starts warm; none is scheduled, and several are safety-adjacent enough to need the
 standing reviews. Ordered roughly by leverage-per-effort.
 
@@ -247,13 +251,6 @@ standing reviews. Ordered roughly by leverage-per-effort.
   `milestoneForBooking()` → quiet text on the counter row (6h) and record masthead (8b), one desk
   row when milestones are aboard. Never a badge, never in readiness logic; the projection always
   attributed ("by their own log"). *Small.*
-- **No-show frees the seat — shipped (#1209).** The counter's "Not here?" disclosure records that
-  a diver never turned up and frees the seat as the consequence of that one tap; the released row
-  keeps its place with an Undo, and the panel under it offers the seat to the wait list or to a
-  similar departure, riding the existing freed-seat invite path rather than a second sender. It
-  auto-refunds nothing and auto-cancels nothing — the money is a sentence and a link to the order
-  — and the seat is still claimed through `bookSpot`'s transaction when the next diver takes it.
-  `src/lib/no-show.ts` carries the reasoning.
 - **Usage-based service sentence on gear.** `usageSinceService(unitId)` counts reservation-days
   since the last service event; above a per-kind threshold the row's existing service sentence
   gains the usage clause ("~48 dive-days since service"). Copy says dive-days, never dives;

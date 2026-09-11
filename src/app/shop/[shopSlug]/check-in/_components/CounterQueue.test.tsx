@@ -52,7 +52,7 @@ function renderQueue(rows: CheckInQueueRow[], settledOpen = false, showFirstVisi
       checkInAction={vi.fn().mockResolvedValue({ ok: true })}
       undoAction={vi.fn().mockResolvedValue({ ok: true })}
       waiverAction={vi.fn().mockResolvedValue(undefined)}
-      noShowOffered={() => false}
+      noShowClaimFor={() => null}
       markNoShowAction={vi.fn().mockResolvedValue(undefined)}
       undoNoShowAction={vi.fn().mockResolvedValue(undefined)}
       salvageFor={() => undefined}

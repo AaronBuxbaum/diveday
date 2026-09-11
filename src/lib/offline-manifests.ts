@@ -301,6 +301,31 @@ export type OfflineManifestPayload = {
            */
           checkedIn?: boolean;
           /**
+           * **The desk released this seat** (`notHere`, issue #1209) — the
+           * other thing the counter can say about a booking, and the one a
+           * crew with no signal has no other way to learn.
+           *
+           * It rides for the reason the whole allow-list is argued from: what
+           * dock-side roll call actually needs. A copy saved at 07:05 and read
+           * at the rail at 07:40 is the only thing on that phone, and without
+           * this field a name the counter wrote off at 07:20 reads on it as a
+           * diver still walking down the dock.
+           *
+           * Shown with the "when saved" qualifier every readiness word on that
+           * page wears, because that is exactly what it is: the desk may have
+           * put them back on the list since (`undoBookingNoShow`), and a saved
+           * copy reading as current is the one lie a roll-call surface must
+           * not tell. It refuses nothing either way — the crew's tap boards a
+           * body they can see, here as on the live manifest.
+           *
+           * Optional and additive, like `checkedIn` above and for the same
+           * reason (no `OFFLINE_MANIFEST_RECORD_VERSION` bump — a bump is a
+           * purge of every roll call a captain has queued and not synced).
+           * Absent reads as "nobody was written off", which every roster
+           * looked like before the counter could say it.
+           */
+          notHere?: boolean;
+          /**
            * Optional and additive, like `buddyTeamNames` above and for the
            * same reason: a snapshot written before this change still decrypts
            * (`OFFLINE_MANIFEST_RECORD_VERSION` is the AAD and this field did
@@ -821,6 +846,7 @@ export function serializeManifests(
         rentalFit: diver.rentalFit,
         nitroxRequested: diver.nitroxRequested,
         checkedIn: diver.checkedIn,
+        notHere: diver.notHere,
         // Whole or absent, never partially: `supportNeedFacts` is the one
         // derivation of what this record says, and it reads every column.
         supportNeeds: diver.supportNeeds

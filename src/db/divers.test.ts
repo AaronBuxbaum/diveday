@@ -2626,11 +2626,10 @@ describe("findSimilarDivers last dive day", () => {
   });
 
   /**
-   * The trail row is written here rather than through `checkInBooking`, whose
-   * door is readiness-gated and already pinned exhaustively against this
-   * predicate in `executed-dives.test.ts` (a kiosk tap, an undo, a desk
-   * confirmation on top of a tablet's tap). What this file owns is whether the
-   * *counter* spends the standing verdict at all.
+   * A tokenless `arrived` row — a staffer's own tap rather than the lobby
+   * tablet's — written here rather than through `checkInBooking`, whose door is
+   * readiness-gated. What this file owns is whether the *counter* spends the
+   * standing verdict at all.
    */
   async function deskSawThem(db: AppDb, shopId: string, tripId: string, bookingId: string) {
     const [staffer] = await db
@@ -2646,23 +2645,23 @@ describe("findSimilarDivers last dive day", () => {
       bookingId,
       recordedByPersonId: staffer.id,
       status: "arrived",
-      // Tokenless: a staffer's own tap, not the lobby tablet, which
-      // `standingArrivalIsArrived` refuses to spend (N-24).
       displayTokenId: null,
       occurredAt: new Date(nowMs() - 25 * HOUR_MS),
     });
   }
 
-  it("still names the day when a staffer saw the diver and the sweep wrote no_show over it", async () => {
-    // `bookings.status` has one slot and the last writer wins it, so a
-    // close-of-day sweep erases the fact that somebody stood in front of this
-    // diver that morning (issue #1558). The counter asks the append-only trail
-    // instead, and a day the shop's own staff vouched for is exactly the
-    // evidence the identity question turns on.
+  it("stays silent on a seat the desk checked in and a staffer then released", async () => {
+    // The escape this used to assert, run backwards (`dive-domain-expert`,
+    // 2026-09-11). A standing desk sighting used to outrank `no_show` here,
+    // against a close-of-day sweep the product never had; the real writer is
+    // one staffer's deliberate tap, always later than the check-in it
+    // overwrites. Naming the day would tell the next staffer this person dived
+    // here on a morning the shop's own record says they never came — and that
+    // is the fact the identity question turns on.
     const { db, shop } = ctx;
     const person = await candidate(db, shop.id);
     const startsAt = new Date(nowMs() - 24 * HOUR_MS);
-    const trip = await sailedSeat(db, shop.id, person.id, "Swept to no-show", startsAt);
+    const trip = await sailedSeat(db, shop.id, person.id, "Seen, then released", startsAt);
     const [seat] = await db
       .select({ id: bookings.id })
       .from(bookings)
@@ -2671,7 +2670,7 @@ describe("findSimilarDivers last dive day", () => {
     await deskSawThem(db, shop.id, trip.id, seat.id);
     await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, seat.id));
 
-    expect(await lastDiveDayOf(db, shop.id, person.id)).toEqual(trip.startsAt);
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toBeNull();
   });
 
   it("still names a called-off departure the crew logged a dive on", async () => {

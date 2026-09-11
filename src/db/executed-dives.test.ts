@@ -1,12 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { HOUR_MS } from "@/lib/clock";
+import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
-import { checkInAtKiosk, checkInBooking, undoCheckInBooking } from "./check-in";
+import { checkInBooking } from "./check-in";
 import type { AppDb } from "./client";
-import { issueDisplayToken } from "./display-tokens";
 import {
   deleteExecutedDive,
   listExecutedDives,
@@ -14,7 +13,9 @@ import {
   upsertExecutedDive,
 } from "./executed-dives";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
+import { markBookingNoShow } from "./no-show";
 import {
+  bookingArrivalEvents,
   bookings,
   certifications,
   diveSiteCreatures,
@@ -27,7 +28,7 @@ import {
   tripDives,
   trips,
 } from "./schema";
-import { createTrip } from "./trips";
+import { createTrip, listStaff } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 async function logFixture() {
@@ -704,17 +705,22 @@ describe("peopleWhoDivedBefore", () => {
   }
 
   /**
-   * **The desk outranks a status column somebody stamped afterwards** (issue
-   * #1558). Every case here goes through `checkInBooking` / `undoCheckInBooking`
-   * rather than inserting `booking_arrival_events` rows by hand, so what is
-   * pinned is the whole path: the counter really does leave the trail this read
-   * depends on, and a sweep really cannot erase it.
+   * **A released seat is not a dive day, whatever the trail says** (issue
+   * #1558, inverted by a `dive-domain-expert` review on 2026-09-11).
    *
-   * Nothing in the product writes `no_show` yet (`src/db/recap.ts` says so in as
-   * many words), so the sweep is set by hand here and this is hardening for a
-   * writer that does not exist rather than a live bug. The status has to be set
-   * *after* the check-in either way — `checkInBooking` refuses anything but a
-   * `booked` seat.
+   * This case used to pin the opposite. A standing tokenless `arrived` row
+   * outranked `bookings.status = "no_show"`, on the reasoning that a
+   * close-of-day sweep would otherwise erase the fact that somebody stood in
+   * front of this diver at 06:40. No sweep was ever written and none is
+   * coming: `markBookingNoShow` is the only writer of that status, it is one
+   * staffer's deliberate tap on one seat, and `checkInBooking` refuses
+   * anything but a `booked` seat — so the sighting is always the *older*
+   * statement and the escape could only ever let 06:40 beat 07:15.
+   *
+   * Which is why the case below goes through both real doors rather than
+   * setting the status by hand: what is pinned is that the product's own two
+   * human statements about one seat are ordered the way a person would order
+   * them.
    */
   async function checkInAtTheDesk(
     ctx: Awaited<ReturnType<typeof twoDays>>,
@@ -734,113 +740,35 @@ describe("peopleWhoDivedBefore", () => {
     }
   }
 
-  it("counts a dive day a later no_show tried to erase", async () => {
+  it("does not count a seat the desk checked in and then released", async () => {
+    // 06:40 and 07:15 on the same seat, both taps a person made. The second
+    // one is a staffer looking at the empty space where this diver should be,
+    // and it is the newer statement about whether they were here.
     const ctx = await twoDays();
     await checkInAtTheDesk(ctx, ctx.earlierBooking.bookingId);
-    await ctx.db
-      .update(bookings)
-      .set({ status: "no_show" })
-      .where(eq(bookings.id, ctx.earlierBooking.bookingId));
-    expect([...(await ctx.ask())]).toEqual([ctx.personId]);
-  });
-
-  it("still refuses a no_show whose check-in was undone", async () => {
-    // An undo is the shop taking the sighting back, and it is allowed to: the
-    // standing event is `cleared`, so nothing says this diver was in the
-    // building and the exclusion holds.
-    const ctx = await twoDays();
-    await checkInAtTheDesk(ctx, ctx.earlierBooking.bookingId);
-    const undone = await undoCheckInBooking(ctx.db, {
+    const [staffer] = await listStaff(ctx.db, ctx.shop.id);
+    if (!staffer) throw new Error("the seeded shop has to have staff to release a seat");
+    const released = await markBookingNoShow(ctx.db, {
       shopId: ctx.shop.id,
       bookingId: ctx.earlierBooking.bookingId,
-      recordedByPersonId: ctx.owner.id,
+      recordedByPersonId: staffer.person.id,
+      // Ten minutes after the boat left without them and inside the arrivals
+      // window, which is the only span the counter's door exists in.
+      now: new Date(ctx.before.startsAt.getTime() + 10 * MINUTE_MS),
     });
-    expect(undone.ok, "the undo has to land for this case to mean anything").toBe(true);
-    await ctx.db
-      .update(bookings)
-      .set({ status: "no_show" })
-      .where(eq(bookings.id, ctx.earlierBooking.bookingId));
+    expect(released, "the release has to land for this case to mean anything").toMatchObject({
+      ok: true,
+    });
+    // The mark leaves the sighting standing (`markBookingNoShow` writes no
+    // arrival row at all), so this is the escape's exact shape and not a
+    // fixture that quietly lost the trail row.
+    const trail = await ctx.db
+      .select({ status: bookingArrivalEvents.status })
+      .from(bookingArrivalEvents)
+      .where(eq(bookingArrivalEvents.bookingId, ctx.earlierBooking.bookingId));
+    expect(trail.map((row) => row.status)).toEqual(["arrived"]);
+
     expect((await ctx.ask()).size).toBe(0);
-  });
-
-  /**
-   * **The lobby tablet is not the desk** (`security-reviewer`, 2026-09-11).
-   * `/check-in/[token]` is a bearer-token page on an unattended tablet — the URL
-   * is the capability — so whoever holds it can type a surname and mark any
-   * seat on today's board arrived. Routed through `checkInAtKiosk` for the same
-   * reason the cases above go through `checkInBooking`: what is pinned is that
-   * the real door leaves a `display_token_id` on the trail, and that
-   * `standingArrivalIsArrived` refuses to spend it.
-   */
-  async function checkInAtTheKiosk(
-    ctx: Awaited<ReturnType<typeof twoDays>>,
-    bookingId: string,
-  ): Promise<void> {
-    await clearForTheBoat(ctx, bookingId);
-    const link = await issueDisplayToken(ctx.db, {
-      shopId: ctx.shop.id,
-      personId: ctx.owner.id,
-      label: "Lobby tablet",
-      purpose: "check_in",
-      showNames: false,
-    });
-    if (!link.ok) throw new Error(`display token refused: ${link.reason}`);
-    const outcome = await checkInAtKiosk(ctx.db, {
-      shopId: ctx.shop.id,
-      displayTokenId: link.issued.id,
-      bookingId,
-      // Ten minutes before that boat leaves: the tablet's window is
-      // forward-only, and the fixture's two departures are a day apart.
-      now: new Date(ctx.before.startsAt.getTime() - 10 * 60 * 1000),
-    });
-    if (!outcome.ok) throw new Error(`kiosk check-in refused: ${outcome.reason}`);
-  }
-
-  it("does not let a self check-in at the lobby tablet rescue a no_show", async () => {
-    // Nobody at the shop saw this diver, so the escape hatch is not theirs to
-    // take: crediting it would hand whoever held the tablet's URL the power to
-    // shorten a stranger's fly-safe wait for a day they spent ashore.
-    const ctx = await twoDays();
-    await checkInAtTheKiosk(ctx, ctx.earlierBooking.bookingId);
-    await ctx.db
-      .update(bookings)
-      .set({ status: "no_show" })
-      .where(eq(bookings.id, ctx.earlierBooking.bookingId));
-    expect((await ctx.ask()).size).toBe(0);
-  });
-
-  it("still counts the day when the desk confirms a tablet's self check-in", async () => {
-    // The other half of the same rule, and the reason the fix is a verdict on
-    // the newest row rather than a filter on which rows are looked at: a
-    // staffer who taps the same seat afterwards writes a tokenless row on top,
-    // a human has now looked at this diver, and the day counts again.
-    //
-    // Both desk acts state their own `now`. The trail is ordered by
-    // `occurred_at`, the frozen clock sits days before this fixture's
-    // departures, and a confirmation that lands *before* the tap it confirms
-    // would pin nothing.
-    const ctx = await twoDays();
-    await checkInAtTheKiosk(ctx, ctx.earlierBooking.bookingId);
-    const atTheDesk = new Date(ctx.before.startsAt.getTime() - 5 * 60 * 1000);
-    const undone = await undoCheckInBooking(ctx.db, {
-      shopId: ctx.shop.id,
-      bookingId: ctx.earlierBooking.bookingId,
-      recordedByPersonId: ctx.owner.id,
-      now: new Date(atTheDesk.getTime() - 60 * 1000),
-    });
-    expect(undone.ok, "the desk has to be able to take the tablet's word back").toBe(true);
-    const seen = await checkInBooking(ctx.db, {
-      shopId: ctx.shop.id,
-      bookingId: ctx.earlierBooking.bookingId,
-      recordedByPersonId: ctx.owner.id,
-      now: atTheDesk,
-    });
-    expect(seen.ok, "the desk tap has to land for this case to mean anything").toBe(true);
-    await ctx.db
-      .update(bookings)
-      .set({ status: "no_show" })
-      .where(eq(bookings.id, ctx.earlierBooking.bookingId));
-    expect([...(await ctx.ask())]).toEqual([ctx.personId]);
   });
 
   it("leaves cancelled alone even with a standing arrival", async () => {

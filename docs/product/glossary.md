@@ -657,6 +657,49 @@ new domain concept, define it here in the same PR.
   **self check-in**: `display_token_id` names the counter tablet it was tapped on, and
   `recorded_by_person_id` is the diver themselves — which is what lets a shop reading its own trail
   tell "Dana checked Priya in" from "Priya checked herself in", on a shop where staff dive too.
+- **No-show** — one staffer's recorded statement that a booked diver did not come. The status is
+  `bookings.status = "no_show"`, written only by `markBookingNoShow` (`src/db/no-show.ts`), behind
+  the counter's "Not here?" disclosure and its confirm tap. **It is not the three things it is most easily mistaken
+  for.** Not a **cancellation**: a diver who told the shop they were not coming gave the seat up
+  themselves, and the mark is refused on that booking (`not_booked`), because the difference between
+  a courtesy and an accusation is the whole point of keeping them apart. Not a charge or a refund:
+  it touches no order, no payment and no checkout, and what the diver owes or is owed stays a
+  decision a person makes on the order. Not a boarding decision: nothing on the boarding path reads
+  it. **The door opens when the boat leaves without them**, never at the shop's **dock call time** —
+  late for the dock call and not coming are different statements, and only the second is what this
+  tap writes — and it closes at the end of the **arrivals window**, so it can never outlive the
+  queue row it sits on. Inside that window the same tap says two different things either side of a
+  sailed boat: while the boat is still there it is about the seat, and once the boat has gone it is
+  about the day, and the disclosure's words change to match (`noShowClaim`). **It removes nobody
+  from the manifest.** The roster keeps every non-cancelled booking (`getTripRoster`,
+  `src/db/trips-roster.ts`), because a diver the desk wrote off is still a name the crew must
+  account for at roll call; the row wears a mark of its own so it cannot read as somebody merely
+  late, and it stays in the expected head count until somebody at the boat speaks for them. **A
+  statement made at the boat outranks one made at a desk.** A diver the crew recorded aboard at any
+  **roll-call checkpoint** can never be marked absent (`already_boarded`), and when the crew get
+  there second, boarding takes the released seat straight back rather than refusing a body somebody
+  is looking at (`reclaimReleasedSeat`, `src/db/manifests.ts`). It is never a **dive day**, in any
+  of the four readers that count them.
+- **Seat release** — the confirm tap on a **no-show** *is* the release. There is no second tap, no
+  timer, no evening sweep and no `seat_released_at` column: `no_show` leaves the statuses that hold
+  a seat (**seat held**), so the boat reads one seat lighter the moment the mark lands and the next
+  diver claims it through `bookSpot`'s ordinary transaction. Releasing is the desk's act and is
+  gated and confirmed once (`noShowGate`); a mis-tap at the rail may never sell a diver's seat out
+  from under them, so a later `not_boarded` releases nothing. The **Undo** is the only way back, and
+  it is not a status flip: the seat may already be sold, so it re-counts under the departure's own
+  lock against both limits every seat-granting path applies — the boat's capacity and a ratio-gated
+  session's crew cap — and refuses with its own line on the trail rather than overfilling the boat. See
+  [20260911-the-confirm-tap-is-the-release](../architecture/decisions/20260911-the-confirm-tap-is-the-release.md).
+- **Salvage offer** — what the counter offers in the seconds after a seat is released, as a
+  precedence rather than a list: the **wait list** first, a rebooking for the diver who missed
+  second, nothing third (`salvageOffer`, `src/lib/no-show.ts`). The wait list leads because those
+  divers asked for this exact boat — the offer and the empty seat are the same object — and the
+  counter points at the departure's own invite control rather than growing a second sender beside
+  it. The second offer is about the **diver**, not the seat: a departure cannot take a seat on
+  another departure, so it names the person and links to the door that seats them on a **similar
+  departure**. The third is said plainly, because a surface that invents an offer here is worse than
+  one that says nobody is waiting. No branch moves money; the money is one sentence and a link to
+  that diver's orders.
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.
@@ -737,6 +780,18 @@ new domain concept, define it here in the same PR.
   their own waiver and trip prep; the organizer's surfaces show which seats are claimed. It never
   creates or frees a seat, never moves money, and is never required — an unclaimed seat boards
   under the organizer's party exactly as before claiming existed.
+- **Seat held** — the booking statuses that count against a departure's capacity: `booked` and
+  `checked_in`, and nothing else (`SEAT_HELD_STATUSES` and `seatIsHeld`, `src/lib/no-show.ts`,
+  spelled once as a `where` clause in `seatHeld`, `src/db/trips-queries.ts`). `cancelled` never held
+  a seat, and `no_show` stopped holding one when the counter gained the power to release it (**seat
+  release**). Every seat *count* reads that one predicate — the booking transaction, the restore,
+  the walk-in picker, the departure's own record and its capacity floor, the wait-list join, the
+  public dive-site page's departures, and the schedule board — because a call site that spells the
+  rule itself instead shows a shop "Full" over a seat that is free, or oversells a seat that is not.
+  It is not the roster: the **manifest**, the gear register and the buddy builder still read every
+  non-cancelled booking, and must. A few counts stay deliberately looser and treat a released seat
+  as still held — crew sizing, the minimum-decision sweep, blow-out candidates — each conservative
+  in the direction its own question needs, and none of them can oversell.
 - **Wait list** — a record of divers who asked to hear if a full trip frees a seat. It is not a
   booking, does not consume capacity, and never appears on a manifest. It is also **not a queue**:
   joining buys no standing, and staff invite whoever fits the departure. The join date is kept and
@@ -1437,20 +1492,23 @@ new domain concept, define it here in the same PR.
   morning and an afternoon single on one date are one day, not two. **A day nobody dived is never
   one**: a cancelled booking, a no-show, an imported visit standing `did_not_happen`, and a
   cancelled departure are all excluded, the last of those because a blow-out leaves its bookings
-  active by design and the count read them as days until a review caught it (2026-08-28). **Two of
-  those exclusions now have an escape, and only two of the four readers carry it.** A `no_show` the
-  desk itself contradicted by tapping the diver in (`standingArrivalIsArrived`, issue #1558), and a
-  cancelled departure the crew logged dives on, are both dive days to the fly-safe reader
-  (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`) and to the counter's name-match prompt
-  (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) — and to neither the recap's own count
-  (`getRecapPageData`, `src/db/recap.ts`) nor the diver shelf (`src/db/shelf.ts`), which still read
-  a plain `no_show` and a plain non-`scheduled` departure as disqualifying. The definition above is
-  the narrow reading, and it is the one this entry's own count uses: a day the desk tapped a diver
-  in on and the evening sweep then stamped `no_show` is named at the counter and not counted on the
-  keepsake. The gap is deliberate. The two that widened answer a staffer who can see the person and
-  can shake their head, while this count tells the diver "your 3rd dive day" with nobody there to
-  correct it and feeds `visitMilestone`'s exact equality, where a day that moves skips a stamp
-  permanently rather than blurring it. Putting all four behind one predicate is issue #1694.
+  active by design and the count read them as days until a review caught it (2026-08-28). **A
+  `no_show` has no escape in any of the four readers** (issue #1558, settled the other way by a
+  `dive-domain-expert` review on 2026-09-11). The fly-safe reader and the counter's name-match
+  prompt used to let a standing desk sighting outrank it, to keep a close-of-day sweep from erasing
+  the 06:40 tap. No sweep exists and none is coming: `markBookingNoShow` (`src/db/no-show.ts`) is
+  the only writer of that status, it is one staffer's deliberate tap on one seat, and check-in
+  refuses anything but a `booked` seat — so the sighting is always the older statement, and the
+  escape only ever let 06:40 beat 07:15. **One exclusion still has an escape, and only two of the
+  four readers carry it.** A cancelled departure the crew logged dives on is a dive day to the
+  fly-safe reader (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`) and to the counter's
+  name-match prompt (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) — and to neither the recap's
+  own count (`getRecapPageData`, `src/db/recap.ts`) nor the diver shelf (`src/db/shelf.ts`), which
+  still read a plain non-`scheduled` departure as disqualifying. The gap is deliberate: the two that
+  widened answer a staffer who can see the person and can shake their head, while this count tells
+  the diver "your 3rd dive day" with nobody there to correct it and feeds `visitMilestone`'s exact
+  equality, where a day that moves skips a stamp permanently rather than blurring it. Putting all
+  four behind one predicate is issue #1694.
 - **Milestone stamp** — the drawn double-ring roundel beside the dive record, on the dive days
   `src/lib/visit-milestones.ts` names and no others: the 1st, 10th, 25th, 50th and 100th. Exact
   equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.
@@ -1533,10 +1591,15 @@ new domain concept, define it here in the same PR.
   [20260816-imported-payment-history-is-evidence](../architecture/decisions/20260816-imported-payment-history-is-evidence.md).
 - **Fill rate** — seats booked ÷ seats offered. On a report it is the month's active bookings over
   the sum of its trips' capacities; on one trip it is that trip's active bookings over its capacity,
-  capped at fully booked. "Active" excludes cancellations and no-shows. That is **not** the manifest
-  roster: the manifest lists every non-cancelled booking, no-shows included, because a no-show is a
-  name the crew has to account for at roll call (`getTripRoster`, `src/db/trips.ts`). Fill rate is a
-  commercial measure of seats that earned; the manifest is a head count of who was expected aboard.
+  capped at fully booked. "Active" excludes cancellations and **no-shows**. That is **not** the
+  manifest roster, and since the counter could release a seat the two have drifted further apart
+  than a filter. The manifest still lists every non-cancelled booking, no-shows included, because a
+  name the desk wrote off is a name the crew must account for at roll call (`getTripRoster`,
+  `src/db/trips-roster.ts`) — but the seat behind that name may since have been sold to somebody
+  else, so one departure can carry two names for one seat and count it once. Fill rate is a
+  commercial measure of seats that earned; the manifest is a head count of who may come aboard,
+  which is why carrying more bodies than seats is something it *says* (`summary.overCapacity`)
+  rather than something it prevents.
 - **Waiver completion** — the share of a month's active bookings that carry a signed
   (completed, non-superseded) **waiver record**. The reporting counterpart of the per-trip roster's
   waiver gate.

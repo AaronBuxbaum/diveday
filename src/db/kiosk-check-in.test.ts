@@ -628,7 +628,7 @@ describe("listSelfReportedArrivalBookingIds", () => {
    * keys.** `occurred_at` ties constantly — a frozen e2e clock, and a batched
    * offline sync replaying a queue of taps that all carry the moment the device
    * recorded them — so this read orders by `occurred_at`, `created_at`, `seq`,
-   * the same keys `standingArrivalIsArrived` and `newestArrivalEvent` use. It
+   * the same keys `standingArrivalStatus` and `newestArrivalEvent` use. It
    * used to tie on `id`, a `defaultRandom()` uuid, and half of those coin flips
    * handed the desk row the win: the booking silently stopped reading as
    * self-reported, which is the direction that claims a human looked when none

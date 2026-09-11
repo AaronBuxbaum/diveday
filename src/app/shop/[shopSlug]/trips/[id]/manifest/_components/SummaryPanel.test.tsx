@@ -40,6 +40,7 @@ function summary(overrides: Partial<TripManifest["summary"]> = {}): TripManifest
     notBoarded: 1,
     notBackAboard: 1,
     awaiting: 0,
+    notHere: 0,
     ...overrides,
   } as TripManifest["summary"];
 }
@@ -196,5 +197,82 @@ describe("the closed checkpoint (ADR 20260901-diveday-reimagined, slice 13h)", (
     expect(figure.getAttribute("aria-valuetext")).toBe("7 of 7 divers aboard");
     const water = document.querySelector<HTMLElement>("[data-head-count-water]");
     expect(water?.style.transform).toBe("scaleY(1)");
+  });
+});
+
+/**
+ * **The line that exists because nothing refuses.**
+ *
+ * A seat the counter released as a no-show is sellable at once, and boarding
+ * the diver who turns up anyway takes the seat back rather than refusing a body
+ * the crew is looking at (`reclaimReleasedSeat`, src/db/manifests.ts). The boat
+ * can then be carrying one more person than it seats, and this panel is the
+ * only place that is said — so it is pinned with the other danger lines, not
+ * left to the prose half that scrolls away.
+ */
+describe("a boat carrying more than it seats says so", () => {
+  it("raises the count of divers aboard beyond the seats, and stays quiet within them", () => {
+    renderPanel({ summary: summary({ overCapacity: 1 }) });
+    const line = screen.getByText(/aboard beyond the seats this boat has/);
+    expect(line.textContent).toContain("1 diver is aboard beyond the seats this boat has.");
+    // Pinned, never in the half a captain can scroll past.
+    expect(line.closest("section")).not.toBeNull();
+
+    cleanup();
+    renderPanel({ summary: summary({ overCapacity: 0 }) });
+    expect(screen.queryByText(/aboard beyond the seats this boat has/)).toBeNull();
+  });
+});
+
+/**
+ * **The denominator is bodies to expect, not rows on paper** (#1209,
+ * `dive-domain-expert` review 20260911).
+ *
+ * The counter's own figures already leave a released seat out of every count
+ * that means people (`isNoShowAtCounter`, src/lib/check-in.ts). The head count
+ * at the rail is the same kind of figure and was the one that still asked the
+ * crew for a head the shop had been told was not coming.
+ */
+describe("a seat the counter released is not a head to count", () => {
+  it("drops a written-off diver from who the crew are expecting", () => {
+    // Eight bought seats, one written off at the desk, six aboard. The crew
+    // are looking for seven people, and the one still to come is the seventh.
+    renderPanel({
+      isDeparture: true,
+      checkpoint: "departure",
+      completeness: completeness({ reason: "divers_awaiting" }),
+      summary: summary({
+        totalDivers: 8,
+        boarded: 6,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 2,
+        notHere: 1,
+      }),
+      notBackAboardDivers: [],
+    });
+    const figure = screen.getByRole("progressbar");
+    expect(figure.getAttribute("aria-valuemax")).toBe("7");
+    expect(figure.getAttribute("aria-valuetext")).toBe("6 of 7 divers aboard");
+  });
+
+  it("never subtracts the same diver twice", () => {
+    // `notHere` counts only rows with no roll-call result, so a diver the desk
+    // released *and* the crew then recorded ashore is in `ashore` alone. If
+    // both took a turn at the denominator this would read "7 of 6".
+    renderPanel({
+      summary: summary({
+        totalDivers: 8,
+        boarded: 7,
+        notBoarded: 1,
+        notBackAboard: 0,
+        awaiting: 0,
+        notHere: 0,
+      }),
+      notBackAboardDivers: [],
+    });
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toBe(
+      "7 of 7 divers aboard",
+    );
   });
 });

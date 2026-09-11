@@ -430,9 +430,12 @@ class PartyBookingError extends Error {
  * ratio rules count them — `countInWaterCrew` (src/lib/crew-roles.ts) is the one
  * definition of that, shared with Today, the staffing window, and the trip page.
  * One query for every seat-granting path, so the undo of a roster removal can
- * never read a looser crew than the booking that preceded it.
+ * never read a looser crew than the booking that preceded it. Exported for the
+ * counter's other seat-granting undo, `undoBookingNoShow` (src/db/no-show.ts):
+ * a second copy of this query is a second chance for the two undos to disagree
+ * about who is in the water.
  */
-async function tripCourseCrewCounts(
+export async function tripCourseCrewCounts(
   tx: DbExecutor,
   tripId: string,
 ): Promise<{ instructorCount: number; assistantCount: number }> {

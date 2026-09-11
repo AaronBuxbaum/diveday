@@ -5,6 +5,7 @@ import type { CheckInQueueRow as QueueRow } from "@/db/check-in";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { counterIsDone, isNoShowAtCounter, isSettledAtCounter } from "@/lib/check-in";
+import type { NoShowClaim } from "@/lib/no-show";
 import { CounterQueueRow, type CounterWaiverNotice } from "./CounterQueueRow";
 import type { NoShowSalvageCopy } from "./NoShowScript";
 
@@ -42,7 +43,7 @@ export function CounterQueue({
   undoAction,
   waiverAction,
   waiverNotice,
-  noShowOffered,
+  noShowClaimFor,
   markNoShowAction,
   undoNoShowAction,
   salvageFor,
@@ -79,8 +80,11 @@ export function CounterQueue({
    * that would be a trap for whoever changes `isSettledAtCounter`.
    */
   waiverNotice?: CounterWaiverNotice;
-  /** Whether this row may be marked not here — the page runs `noShowGate`. */
-  noShowOffered: (row: QueueRow) => boolean;
+  /**
+   * Which "Not here?" script this row gets, or `null` for no door at all — the
+   * page runs `noShowGate` and, when it opens, `noShowClaim`.
+   */
+  noShowClaimFor: (row: QueueRow) => NoShowClaim | null;
   markNoShowAction: (formData: FormData) => Promise<void>;
   undoNoShowAction: (formData: FormData) => Promise<void>;
   /** What the shop can do with a released seat, already worded by the page. */
@@ -124,7 +128,7 @@ export function CounterQueue({
               undoAction={undoAction}
               waiverAction={waiverAction}
               waiverNotice={waiverNotice}
-              noShowOffered={noShowOffered(row)}
+              noShowClaim={noShowClaimFor(row)}
               markNoShowAction={markNoShowAction}
               undoNoShowAction={undoNoShowAction}
               salvage={salvageFor(row)}
@@ -162,7 +166,7 @@ export function CounterQueue({
                 undoAction={undoAction}
                 waiverAction={waiverAction}
                 waiverNotice={waiverNotice}
-                noShowOffered={noShowOffered(row)}
+                noShowClaim={noShowClaimFor(row)}
                 markNoShowAction={markNoShowAction}
                 undoNoShowAction={undoNoShowAction}
                 salvage={salvageFor(row)}
@@ -203,7 +207,7 @@ export function CounterQueue({
                 undoAction={undoAction}
                 waiverAction={waiverAction}
                 waiverNotice={waiverNotice}
-                noShowOffered={noShowOffered(row)}
+                noShowClaim={noShowClaimFor(row)}
                 markNoShowAction={markNoShowAction}
                 undoNoShowAction={undoNoShowAction}
                 salvage={salvageFor(row)}

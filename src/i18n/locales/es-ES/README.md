@@ -325,6 +325,22 @@ America and the Caribbean.
 The noun is **masculine**: `el`/`un`/`este`, and anything reaching back to it agrees (`abierto`,
 `enviado`, `guardado`).
 
+## A seat the diver gave up is **cancelada**; only the shop **libera** one
+
+Settled 2026-09-11 (dive-domain-expert review of the counter's no-show door). English already keeps
+the two apart — a seat "given up" by the diver against a seat the shop "freed" — and the counter can
+show both sentences minutes apart on the same screen, so Spanish may not answer both with *liberar*.
+`checkIn.notice.noShowNotBooked` fires only on a cancellation, and `src/lib/no-show.ts` argues that
+distinction is the whole difference between a courtesy and an accusation: somebody who told the shop
+they were not coming is not a no-show.
+
+| English | Spanish |
+| --- | --- |
+| that seat was given up (the diver cancelled) | esa reserva se canceló |
+| the freed seat (the shop wrote the diver off) | la plaza liberada |
+
+`src/i18n/no-show-copy.test.ts` fails if either sentence takes the other's verb, in either locale.
+
 ## Deliberately left alone
 
 Not everything that looks peninsular is. These stay, and changing them would be a retranslation

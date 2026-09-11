@@ -34,8 +34,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Two hundred and thirty-three key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 932 screenshots per run (see
+ * Visual regression coverage. Two hundred and thirty-four key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 936 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -60,7 +60,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * `TABLET_SURFACES` adds 16 — eight surfaces a shop runs on a tablet get a
  * third, portrait width, at one screenshot per scheme rather than two — and
  * `TV_SURFACES` adds 2 for the one board a lobby screen shows. That brings the
- * run to 964 screenshots: the extra widths are a 2% addition, not the 50% a
+ * run to 968 screenshots: the extra widths are a 2% addition, not the 50% a
  * third viewport applied to every surface would have cost.
  *
  * ## One surface, one `test()`
@@ -3767,23 +3767,33 @@ for (const scheme of ["light", "dark"] as const) {
        * **"Not here?", open** (issue #1209) — the counter's script for the
        * diver who never turned up.
        *
-       * The one state of this surface no seeded day can hold. The door is
-       * drawn only inside the shop's own dock call (`noShowGate`, over
-       * `shops.dock_call_minutes`), and on the fleet's frozen 09:30 every
-       * seeded departure is either hours out or already home — which is the
-       * whole reason it went unphotographed when it shipped. So the flow makes
-       * a boat that is boarding now, seats the one diver on it, and clears
-       * their release at the desk the way a staffer does, which is also the
-       * shortest honest route to a row the door is offered on.
+       * The one state of this surface no seeded day can hold. The door opens
+       * when the boat leaves without the diver (`noShowGate`) and shuts when
+       * the arrivals window does, and on the fleet's frozen 09:30 every seeded
+       * departure is either hours out or already home — which is the whole
+       * reason it went unphotographed when it shipped. So the flow sells the
+       * seat on a boat that is still ahead, clears the release at the desk the
+       * way a staffer does, and then sends the boat out without her
+       * (`/api/test/depart-trip`, which moves the departure because the fleet's
+       * clock cannot move).
        *
-       * What the frame is for is the restraint: three quiet words *under* a
-       * check-in tap that stays the only large target on the row, and behind
-       * them one sentence and one button. The counter is used with wet hands
-       * on a shared desk tablet, so a second control that grew to look like a
-       * peer of that tap is exactly the regression this baseline catches.
+       * **Two frames, because the tap is two different claims**
+       * (`noShowClaim`, src/lib/no-show.ts). Ten minutes out it is about a
+       * seat the shop can still sell, and the door is three quiet words.
+       * Ninety minutes out the boat is gone, the seat is worth nothing, and the
+       * same tap says this person did not dive — the one nobody comes back to
+       * undo, because the diver is at sea or home. That frame is the argument
+       * that the louder script is actually louder.
+       *
+       * What both frames are for is the restraint: the door sits *under* a
+       * check-in tap that stays the only large target on the row, and behind it
+       * one sentence and one button. The counter is used with wet hands on a
+       * shared desk tablet, so a second control that grew to look like a peer
+       * of that tap is exactly the regression these baselines catch.
        */
       test(`the counter's not-here door renders true to the design (${scheme})`, async ({
         page,
+        request,
       }) => {
         // A departure, a sale and a release recorded before anything is shot.
         test.setTimeout(FLOW_TIMEOUT_MS);
@@ -3791,9 +3801,9 @@ for (const scheme of ["light", "dark"] as const) {
         await createTrip(page, {
           title,
           date: daysFromNow(0),
-          // 09:45 against the frozen 09:30 (`e2e/servers.ts`): inside the
-          // default 30-minute dock call, so this boat's divers are due at the
-          // desk now. One seat, so the frame holds one row rather than a queue.
+          // 09:45 against the frozen 09:30 (`e2e/servers.ts`): still ahead, so
+          // the seat can be sold. The boat is sent out below. One seat, so the
+          // frame holds one row rather than a queue.
           departsAt: "09:45",
           returnsAt: "12:00",
           capacity: 1,
@@ -3811,6 +3821,17 @@ for (const scheme of ["light", "dark"] as const) {
         await findDiver.press("Enter");
         await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
         await page.waitForURL(/\/check-in(\?|$)/);
+
+        // **The boat goes without her**, ten minutes ago: past the departure,
+        // inside the hour a late boat is allowed, which is the seat half of
+        // the door.
+        const depart = async (minutesAgo: number) => {
+          const moved = await request.post("/api/test/depart-trip", {
+            data: { tripId, minutesAgo },
+          });
+          expect(moved.ok()).toBe(true);
+        };
+        await depart(10);
 
         // `?trip=` pins the departure rather than trusting whichever boat the
         // instrument focuses — the same reason the refusal capture above does.
@@ -3842,6 +3863,26 @@ for (const scheme of ["light", "dark"] as const) {
           "true",
         );
         await capture(page, "check-in-no-show", scheme);
+
+        // **The same row once the boat is really gone.** Ninety minutes past
+        // its departure the seat is worth nothing and the tap has stopped
+        // being about one: the door asks the other question and says what it
+        // costs the diver. Nothing else about the row moves, which is the
+        // comparison this second frame is for.
+        await depart(90);
+        await page.goto(`/shop/blue-mantis/check-in?trip=${tripId}`);
+        const sailedRow = page
+          .locator("article")
+          .filter({ hasText: "Odile Marchand" })
+          .filter({ visible: true });
+        const sailedDoor = sailedRow.locator("details").filter({ hasText: "Did not dive?" });
+        await sailedDoor.locator("> summary").click();
+        await disclosureSettled(sailedDoor);
+        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
+        await capture(page, "check-in-no-show-sailed", scheme);
       });
 
       // **The home's evening reading** (ADR 20260804-day-closeout, folded into
@@ -4916,6 +4957,96 @@ for (const scheme of ["light", "dark"] as const) {
         // of that group's state on the summary line, and it is what this shot
         // must not race.
         await capture(page, "manifest", scheme);
+      });
+
+      /**
+       * **The same manifest with one seat released** (#1209,
+       * `dive-domain-expert` review 20260911).
+       *
+       * The capture above is a boat nobody has written anybody off on, which
+       * is every seeded departure: the counter's door only opens once a boat
+       * has left without the diver, so the state that needs photographing
+       * cannot be reached without making a departure whose time has just
+       * passed. The flow is the counter's own — seat the diver, clear their
+       * release, tap the door —
+       * and then walks to the rail, which is where the pixels under test are.
+       *
+       * What the frame is for is the restraint. A released seat is the absence
+       * of an exception, not one, so the row wears a plain neutral chip beside
+       * the name and keeps its boarding tap: nothing here refuses a body the
+       * crew can see. A future session that reaches for a warning tone, or
+       * moves the word into the person sheet where it costs a tap, has a
+       * baseline to argue with. The count above it is in frame for the other
+       * half of the same fix — the head count's denominator drops the seat,
+       * so the figure is bodies to expect rather than rows on paper.
+       */
+      test(`a manifest with a released seat renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // A departure, a sale and a release recorded before anything is shot.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const title = "Dock Call Reef Manifest";
+        await createTrip(page, {
+          title,
+          date: daysFromNow(0),
+          // 09:00 against the frozen 09:30 (`e2e/servers.ts`): half an hour
+          // past its departure, which is the window the door opens in, and
+          // still inside the hour a late boat is allowed, so the walk-in can
+          // seat these two. Two seats, because the frame is about the *contrast*: a boat
+          // of one released diver photographs the chip and a head count with
+          // nobody left to expect, which is not the row a crew reads.
+          departsAt: "09:00",
+          returnsAt: "12:00",
+          capacity: 2,
+        });
+        const tripId = await seededTripId(page, "blue-mantis", title);
+
+        // Odile Marchand and Hana Kobayashi are both seeded booked on nothing
+        // (`src/db/seed-cert-gates.ts`, `src/db/seed-cast.ts`), so seating
+        // them here flips no other departure's manifest, readiness or queue.
+        const seat = async (name: string) => {
+          await page.goto(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
+          const findDiver = page.getByRole("searchbox", {
+            name: "Search by name, email, or phone",
+          });
+          await findDiver.fill(name);
+          await findDiver.press("Enter");
+          await page.getByRole("button", { name: `Add ${name} to this boat` }).click();
+          await page.waitForURL(/\/check-in(\?|$)/);
+        };
+        await seat("Odile Marchand");
+        await seat("Hana Kobayashi");
+
+        // Both cleared the same way a staffer does, so neither row wears a
+        // blocker that would compete with the one chip under test.
+        await page.goto(`/shop/blue-mantis/check-in?trip=${tripId}`);
+        const counterRow = (name: string) =>
+          page.locator("article").filter({ hasText: name }).filter({ visible: true });
+        for (const name of ["Odile Marchand", "Hana Kobayashi"]) {
+          const row = counterRow(name);
+          await row.getByText("Mark signed on paper").click();
+          await row
+            .getByLabel("I have this diver’s signed release on file", { exact: false })
+            .filter({ visible: true })
+            .check();
+          await row.getByRole("button", { name: "Record paper signature" }).click();
+          await expect(row.getByRole("button", { name: `Check in ${name}` })).toBeVisible();
+        }
+
+        const odile = counterRow("Odile Marchand");
+        await odile.getByText("Not here?").click();
+        await odile.getByRole("button", { name: "Mark Odile Marchand as not here" }).click();
+        await expect(page.getByRole("heading", { name: "Not here — 1" })).toBeVisible();
+
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest`);
+        await page.getByRole("heading", { level: 1, name: new RegExp(title) }).waitFor();
+        // The chip itself, waited on rather than assumed: this capture is
+        // worthless if it photographs the manifest a moment before the row
+        // says anything.
+        await expect(manifestRow(page, "Odile Marchand").getByText("Not here")).toBeVisible();
+        // The same background save the capture above waits out.
+        await offlineCopySaved(page);
+        await capture(page, "manifest-not-here", scheme);
       });
 
       // The departure log: the hand-to-authorities document of the

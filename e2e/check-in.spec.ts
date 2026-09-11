@@ -516,6 +516,7 @@ test("a dropped signal at the counter fails on the row, not on the page", async 
  */
 test("the counter releases a no-show's seat, offers it to the wait list, and the boat sells it again", async ({
   page,
+  request,
 }) => {
   // Two sales, a wait-list join in a second browser context, and one
   // eight-second held send (ADR 20260906-before-you-ask, decision 2) chained
@@ -523,11 +524,16 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // hold alone is a fixed eight seconds of it.
   test.setTimeout(120_000);
 
-  // **A boat inside its own dock call**, which is the window "Not here?" opens
-  // in (`noShowGate`, over the shop's `dock_call_minutes` — the default 30).
-  // The fleet's frozen clock is 09:30 in the shop's zone (`e2e/servers.ts`),
-  // so 09:45 is a departure whose divers are due at the desk *now*; every
-  // seeded boat is either hours out or already home.
+  // **A boat that is still ahead while it is being filled, and has left by the
+  // time the desk writes anybody off.** "Not here?" opens at the departure
+  // rather than at the shop's dock call (`noShowGate`), because a diver late
+  // for the arrival time the shop asked for has not missed anything yet — and
+  // the two halves of this flow need opposite sides of that line: a wait list
+  // takes nobody once the boat has left (`joinTripWaitlist`), and the door
+  // exists for nobody until it has. The fleet's clock is frozen at 09:30 in
+  // the shop's zone and shared by every spec the worker runs, so the departure
+  // moves instead (`/api/test/depart-trip`), which is the lever
+  // `seed-evening` already uses for the same reason.
   const title = `Dock Call ${e2eNow().getTime()}`;
   await createTrip(page, {
     title,
@@ -576,6 +582,17 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   } finally {
     await visitorContext.close();
   }
+
+  // **The boat leaves.** Ten minutes ago, which is past its departure and
+  // inside the hour a late boat is allowed — so the seat is still the shop's to
+  // sell, which is what the rest of this flow is about.
+  expect(
+    (
+      await request.post("/api/test/depart-trip", {
+        data: { tripId, minutesAgo: 10 },
+      })
+    ).ok(),
+  ).toBe(true);
 
   // Back at the desk. Odile has no release on file yet, so she arrives blocked
   // — and the door is on the row a staffer can act on, not on a blocked one.
@@ -652,7 +669,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   await page.goto(counter);
   await expect(page.getByText("1 diver is waiting for this seat")).toHaveCount(0);
   await expect(
-    page.getByText("Nobody is waiting, and no similar departure has room."),
+    page.getByText("Nobody is waiting, and no similar departure has room for them."),
   ).toBeVisible();
 
   // **And the seat is genuinely sellable.** The walk-in door reads the boat as

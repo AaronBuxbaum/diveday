@@ -2065,6 +2065,22 @@ export function OfflineManifestView() {
                             ? t("shared.offlineManifest.single.readyBadge")
                             : t("shared.offlineManifest.single.blockedBadge")}
                         </Badge>
+                        {/* **The desk released this seat** (#1209), with the
+                          same qualifier the badge above wears and for the same
+                          reason: a copy saved at 07:05 cannot know that the
+                          counter put them back on the list at 07:20. Neutral,
+                          because it is the absence of an exception rather than
+                          one, and it refuses nothing — the control below still
+                          boards a body the crew can see, which is the live
+                          manifest's rule on a phone with no signal. Without
+                          it this copy is the one surface where a written-off
+                          name and a diver still walking down the dock are the
+                          same row. */}
+                        {diver.notHere ? (
+                          <Badge tone="neutral">
+                            {t("shared.offlineManifest.single.notHereBadge")}
+                          </Badge>
+                        ) : null}
                         {/* Same resolver the live manifest renders (DOM-H3):
                           one word list, so a diver who has not come back from
                           dive one cannot read "Not boarded" here and "Not back

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, MINUTE_MS } from "./clock";
-import { type NoShowGateInput, noShowGate, salvageOffer, seatIsHeld } from "./no-show";
+import { type NoShowGateInput, noShowClaim, noShowGate, salvageOffer, seatIsHeld } from "./no-show";
 import type { SimilarDeparture } from "./similar-departures";
 
 const DEPARTURE = new Date("2026-09-11T14:00:00.000Z");
@@ -11,28 +11,32 @@ function gate(overrides: Partial<NoShowGateInput> = {}) {
     boarded: false,
     tripStatus: "scheduled",
     startsAt: DEPARTURE,
-    dockCallMinutes: 30,
-    now: new Date(DEPARTURE.getTime() - 10 * MINUTE_MS),
+    now: new Date(DEPARTURE.getTime() + 10 * MINUTE_MS),
     ...overrides,
   });
 }
 
 describe("noShowGate", () => {
-  it("opens at the shop's own dock call and not a minute before", () => {
-    expect(gate({ now: new Date(DEPARTURE.getTime() - 31 * MINUTE_MS) })).toBe("before_dock_call");
-    expect(gate({ now: new Date(DEPARTURE.getTime() - 30 * MINUTE_MS) })).toBe("eligible");
+  /**
+   * **The opening the dive-domain-expert review moved** (2026-09-11). It sat at
+   * the shop's dock call, which is when the diver was *asked* to be there —
+   * but this tap does not write "late", it writes "did not come", and at the
+   * dock call half the manifest is still in the car park.
+   */
+  it("opens when the boat leaves without them, not when the shop asked them to be there", () => {
+    expect(gate({ now: new Date(DEPARTURE.getTime() - 30 * MINUTE_MS) })).toBe("before_departure");
+    expect(gate({ now: new Date(DEPARTURE.getTime() - MINUTE_MS) })).toBe("before_departure");
     expect(gate({ now: DEPARTURE })).toBe("eligible");
   });
 
   /**
-   * A shop that asks divers to be there two hours early gets two hours of
-   * door, and one that asks for ten minutes gets ten. The window is the shop's
-   * statement about its own day, not a constant in here.
+   * `dock_call_minutes` is the shop's diver-facing arrival time, and this gate
+   * no longer reads it: a shop that asks divers to be there two hours early
+   * does not thereby get two hours of "Not here?" over divers who are not late
+   * at all. `NoShowGateInput` has no field left to pass it through.
    */
-  it("moves the opening with the shop's dock call", () => {
-    const ninetyMinutesOut = new Date(DEPARTURE.getTime() - 90 * MINUTE_MS);
-    expect(gate({ dockCallMinutes: 30, now: ninetyMinutesOut })).toBe("before_dock_call");
-    expect(gate({ dockCallMinutes: 120, now: ninetyMinutesOut })).toBe("eligible");
+  it("gives a shop with a long dock call no earlier door than a shop without one", () => {
+    expect(gate({ now: new Date(DEPARTURE.getTime() - 120 * MINUTE_MS) })).toBe("before_departure");
   });
 
   it("closes when the counter stops looking backwards", () => {
@@ -76,6 +80,36 @@ describe("noShowGate", () => {
   });
 });
 
+/**
+ * **The same tap, two claims** (dive-domain-expert review, 2026-09-11). Before
+ * the boat is gone the mark is about a seat the shop can still sell, over a
+ * diver who may yet come running down the dock. After it, the seat is worth
+ * nothing and the mark is a statement about a person that seven readers spend,
+ * which is why the counter says a different sentence over it.
+ */
+describe("noShowClaim", () => {
+  it("is about the seat while the boat is still there, late included", () => {
+    expect(noShowClaim({ startsAt: DEPARTURE, now: DEPARTURE })).toBe("frees_seat");
+    // The hour every "has it sailed?" question in this codebase allows,
+    // because boats run late (`hasSailed`, src/lib/trips.ts).
+    expect(
+      noShowClaim({
+        startsAt: DEPARTURE,
+        now: new Date(DEPARTURE.getTime() + HOUR_MS - MINUTE_MS),
+      }),
+    ).toBe("frees_seat");
+  });
+
+  it("is about the person once the boat has gone", () => {
+    expect(noShowClaim({ startsAt: DEPARTURE, now: new Date(DEPARTURE.getTime() + HOUR_MS) })).toBe(
+      "did_not_dive",
+    );
+    expect(
+      noShowClaim({ startsAt: DEPARTURE, now: new Date(DEPARTURE.getTime() + 5 * HOUR_MS) }),
+    ).toBe("did_not_dive");
+  });
+});
+
 describe("seatIsHeld", () => {
   it("counts the two statuses that hold a seat, and no others", () => {
     expect(seatIsHeld("booked")).toBe(true);
@@ -102,9 +136,12 @@ describe("salvageOffer", () => {
     });
   });
 
-  it("falls back to a similar departure when nobody is waiting", () => {
+  // The second offer is about the diver, not the seat: nobody else can take a
+  // seat on a different boat, so what is left to salvage is the day of the
+  // person the seat was taken from (dive-domain-expert review, 2026-09-11).
+  it("offers the diver who missed another day when nobody is waiting", () => {
     expect(salvageOffer({ waitlistCount: 0, alternatives: [alternative] })).toEqual({
-      kind: "alternative",
+      kind: "rebook",
       departures: [alternative],
     });
   });

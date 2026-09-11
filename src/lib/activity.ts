@@ -64,6 +64,34 @@ type ActivityParamShapes = {
   booking_no_show: { actor: string; diver: string };
   /** …and took it back, which puts the diver back on the expected list. */
   booking_no_show_undone: { actor: string; diver: string };
+  /**
+   * …or tried to and could not, because the seat was already gone.
+   *
+   * The only refusal in the product that gets a line of its own, and it earns
+   * it: the release was real, so by the time somebody taps Undo the seat may
+   * have been sold to the diver who was waiting for it, or the session may have
+   * filled back up to its instructor ratio. What is left is a staffer at a desk
+   * with a diver in front of them who cannot get back on, and until this code
+   * existed that moment was recorded nowhere at all — the mark was on the trail,
+   * the attempt to take it back was not, and the shop reconciling the departure
+   * afterwards could only see that somebody was written off.
+   *
+   * `reason` is which limit refused, because the two ask for different next
+   * acts: a sold seat means find the diver another boat, a full ratio means
+   * find the session another instructor.
+   */
+  booking_no_show_undo_refused: {
+    actor: string;
+    diver: string;
+    reason: "trip_full" | "course_ratio_full";
+  };
+  /**
+   * …or the crew boarded them anyway, which takes it back at the rail. Its own
+   * line rather than the undo above, because it says something the undo does
+   * not: the boat carried somebody the desk had written off, which is exactly
+   * what an owner reconciling a full departure needs to see.
+   */
+  booking_no_show_boarded: { actor: string; diver: string };
   /** Somebody was put on the crew for a departure. */
   crew_assigned: { actor: string; crew: string };
   /** …or taken off it. */
@@ -147,6 +175,8 @@ export const ACTIVITY_CODES = [
   "booking_restored",
   "booking_no_show",
   "booking_no_show_undone",
+  "booking_no_show_undo_refused",
+  "booking_no_show_boarded",
   "identity_confirmed",
   "crew_assigned",
   "crew_removed",

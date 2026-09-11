@@ -3,7 +3,6 @@ import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS } from "@/lib/fly-safe";
 import { PLAN_CHANGE_NOTE_MAX, type PlanChangeReason } from "@/lib/plan-change";
-import { standingArrivalIsArrived } from "./arrival-provenance";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { isMarineLifeSlug } from "./marine-life-catalog";
@@ -145,18 +144,25 @@ export async function peopleWhoDivedBefore(
         // the boat. Crediting them would hand them the longer wait for a day
         // they spent ashore.
         ne(bookings.status, "cancelled"),
-        // **A no-show still excludes — unless the desk saw them** (issue
-        // #1558). Why the append-only trail outranks the status slot, and what
-        // an undo does to it, is argued once on `standingArrivalIsArrived`
-        // (`src/db/arrival-provenance.ts`); this is the reader that asks.
+        // **A no-show excludes, with no escape** (issue #1558, settled the
+        // other way by a `dive-domain-expert` review on 2026-09-11). This
+        // clause used to let a standing tokenless `arrived` row outrank the
+        // status slot, on the reasoning that a close-of-day sweep would
+        // otherwise erase the fact that a staffer stood in front of this diver
+        // at 06:40. There is no
+        // such sweep and there never was: `markBookingNoShow`
+        // (`src/db/no-show.ts`) is the only writer of `no_show`, it is one
+        // staffer's deliberate tap on one seat, and `checkInBooking` refuses
+        // anything but a `booked` seat — so the sighting is *always* older than
+        // the mark. The escape could only ever let an earlier human statement
+        // beat a later human correction, which is the opposite of the
+        // newest-row-wins rule the arrival trail is built on.
         //
-        // What is local to here is *which* status gets the escape.
-        // `cancelled` deliberately gets none. A cancellation is a
-        // re-papering of the sale — it can land days later, on a seat somebody
-        // really did check in before the card failed — and it says nothing
-        // about the dock. Only `no_show` is a claim about who turned up, which
-        // is why only `no_show` can be contradicted by who turned up.
-        or(ne(bookings.status, "no_show"), standingArrivalIsArrived(shopId, bookings.id, trips.id)),
+        // `cancelled` never had the escape and still does not: a cancellation
+        // is a re-papering of the sale — it can land days later, on a seat
+        // somebody really did check in before the card failed — and says
+        // nothing about the dock.
+        ne(bookings.status, "no_show"),
         // A blown-out departure is not a dive day — a cancellation leaves its
         // bookings active by design, so without this the answer counts days
         // nobody dived. **Unless the crew logged a dive on it**, which is

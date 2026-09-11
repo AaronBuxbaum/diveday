@@ -1,27 +1,39 @@
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { MINUTE_MS } from "@/lib/clock";
+import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { seededShopContext } from "@/test/db";
+import { createBooking } from "./bookings";
+import { checkInBooking, undoCheckInBooking } from "./check-in";
 import { recordRollCall } from "./manifests";
 import { markBookingNoShow, noShowSalvage, undoBookingNoShow } from "./no-show";
 import {
   activityEvents,
+  bookingArrivalEvents,
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingPaymentEvents,
   bookingPayments,
   bookings,
+  courses,
   orderLineItems,
   orders,
   paymentOperationIntents,
   people,
+  rollCallEvents,
   shops,
   trips,
   tripWaitlistEntries,
 } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import {
+  createTrip,
+  getTripRoster,
+  listStaff,
+  setTripCrew,
+  setTripStatus,
+  upcomingTripsWithCounts,
+} from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 /**
@@ -72,8 +84,8 @@ async function context() {
     staffId: staff.person.id,
     bookingId: seat.booking.id,
     personName: seat.person.fullName,
-    /** Inside the arrivals window and past the shop's dock call. */
-    now: new Date(trip.startsAt.getTime() - 10 * MINUTE_MS),
+    /** Inside the arrivals window, ten minutes after the boat left without them. */
+    now: new Date(trip.startsAt.getTime() + 10 * MINUTE_MS),
   };
 }
 
@@ -83,6 +95,158 @@ async function statusOf(db: Awaited<ReturnType<typeof context>>["db"], bookingId
     .from(bookings)
     .where(eq(bookings.id, bookingId));
   return row?.status;
+}
+
+/** The seats a departure is actually holding, which is what every cap counts. */
+async function heldSeats(db: Awaited<ReturnType<typeof context>>["db"], tripId: string) {
+  const [row] = await db
+    .select({ seats: count(bookings.id) })
+    .from(bookings)
+    .where(and(eq(bookings.tripId, tripId), inArray(bookings.status, [...SEAT_HELD_STATUSES])));
+  return row?.seats ?? 0;
+}
+
+/**
+ * **The desk really sees the diver**, through `checkInBooking` rather than a
+ * hand-written `booking_arrival_events` row, so what the cases below pin is the
+ * whole path: the counter leaves the trail this module reads back, and the two
+ * cannot drift apart in a fixture. Readiness gates the tap, so the seat's
+ * waiver is signed first — the same setup the boarded-diver cases use.
+ */
+async function checkInAtTheDesk(ctx: Awaited<ReturnType<typeof context>>): Promise<void> {
+  const issued = await issueWaiverRequest(ctx.db, {
+    shopId: ctx.shop.id,
+    bookingId: ctx.bookingId,
+  });
+  if (!issued.ok) throw new Error("waiver request refused");
+  await completeWaiver(ctx.db, issued.token, {
+    signerName: ctx.personName,
+    agreed: true,
+    medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+  });
+  const outcome = await checkInBooking(ctx.db, {
+    shopId: ctx.shop.id,
+    bookingId: ctx.bookingId,
+    recordedByPersonId: ctx.staffId,
+    now: ctx.now,
+  });
+  if (!outcome.ok) {
+    // The blockers, not just "not_ready": a fixture that stops being ready
+    // because readiness grew a rule is otherwise a silent afternoon.
+    const blockers = "blockers" in outcome ? JSON.stringify(outcome.blockers) : "";
+    throw new Error(`check-in refused: ${outcome.reason} ${blockers}`);
+  }
+}
+
+/** The seat's arrival statements, newest first — the three keys every reader of
+ * this trail orders by (`src/db/arrival-provenance.ts`). */
+async function arrivalTrail(db: Awaited<ReturnType<typeof context>>["db"], bookingId: string) {
+  const rows = await db
+    .select({ status: bookingArrivalEvents.status })
+    .from(bookingArrivalEvents)
+    .where(eq(bookingArrivalEvents.bookingId, bookingId))
+    .orderBy(
+      desc(bookingArrivalEvents.occurredAt),
+      desc(bookingArrivalEvents.createdAt),
+      desc(bookingArrivalEvents.seq),
+    );
+  return rows.map((row) => row.status);
+}
+
+/**
+ * A solo-instructor Discover Scuba session on a hull with room to spare, so the
+ * only limit that can ever refuse a seat here is the 2:1 intro ratio. Far out
+ * on the calendar for the reason `src/db/bookings.test.ts` gives its twin: it
+ * must not land among the seeded board the other tests read.
+ */
+const INTRO_SESSION_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
+
+async function introSession(db: Awaited<ReturnType<typeof context>>["db"], shopId: string) {
+  const [course] = await db
+    .select()
+    .from(courses)
+    .where(and(eq(courses.shopId, shopId), eq(courses.title, "Discover Scuba Diving")));
+  if (!course) throw new Error("Discover Scuba Diving course missing");
+  const instructor = (await listStaff(db, shopId)).find((entry) =>
+    entry.roles.includes("instructor"),
+  );
+  if (!instructor) throw new Error("seeded instructor missing");
+  const startsAt = new Date(nowMs() + INTRO_SESSION_OFFSET_MS);
+  const trip = await createTrip(db, {
+    shopId,
+    courseId: course.id,
+    title: "Discover Scuba — counter undo test",
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+    capacity: 12,
+    plannedDives: 2,
+  });
+  if (!trip) throw new Error("failed to create intro test trip");
+  if (!(await setTripCrew(db, shopId, trip.id, [instructor.person.id]))) {
+    throw new Error("failed to assign instructor");
+  }
+  return trip;
+}
+
+/**
+ * **A second shop, with a departure, a diver and a seat of its own.**
+ *
+ * Every reader in this module takes the caller's `shopId` *and* a
+ * caller-supplied id, and the pairing is the whole tenancy boundary (CR-007).
+ * A fixture that only ever holds this shop's rows can prove a function returns
+ * the right answer and nothing about whose rows it looked at, so the cases
+ * below hand each one a row that really belongs to somebody else.
+ */
+async function otherTenant(db: Awaited<ReturnType<typeof context>>["db"], now: Date, slug: string) {
+  const [shop] = await db
+    .insert(shops)
+    .values({ name: "Other Reef", slug, timezone: "America/New_York" })
+    .returning();
+  if (!shop) throw new Error("other shop insert failed");
+  const [stranger] = await db
+    .insert(people)
+    .values({ shopId: shop.id, fullName: "Someone Else" })
+    .returning();
+  const [trip] = await db
+    .insert(trips)
+    .values({
+      shopId: shop.id,
+      title: "Their Reef Run",
+      startsAt: new Date(now.getTime() + 10 * MINUTE_MS),
+      endsAt: new Date(now.getTime() + 4 * 60 * MINUTE_MS),
+      capacity: 6,
+    })
+    .returning();
+  if (!stranger || !trip) throw new Error("other tenant fixture failed");
+  const [seat] = await db
+    .insert(bookings)
+    .values({ shopId: shop.id, tripId: trip.id, personId: stranger.id })
+    .returning();
+  if (!seat) throw new Error("other tenant booking failed");
+  return { shop, stranger, trip, seat };
+}
+
+/** Books `seats` students onto a session, asserting every one is accepted. */
+async function seatStudents(
+  db: Awaited<ReturnType<typeof context>>["db"],
+  shopId: string,
+  tripId: string,
+  seats: number,
+) {
+  const ids: string[] = [];
+  for (let i = 0; i < seats; i++) {
+    const suffix = `${tripId.slice(0, 8)}-${ids.length}-${seats}`;
+    const outcome = await createBooking(db, {
+      actor: "staff",
+      shopId,
+      tripId,
+      fullName: `DSD Student ${suffix}`,
+      email: `dsd-student-${suffix}@example.com`,
+    });
+    if (!outcome.ok) throw new Error(`intro seat refused: ${outcome.reason}`);
+    ids.push(outcome.bookingId);
+  }
+  return ids;
 }
 
 describe("markBookingNoShow", () => {
@@ -106,6 +270,59 @@ describe("markBookingNoShow", () => {
       );
     expect(trail).toHaveLength(1);
     expect(trail[0]?.params).toMatchObject({ diver: personName });
+  });
+
+  /**
+   * **The mark does not take the sighting back** (issue #1558). A staffer stood
+   * in front of this diver at 06:40 and tapped them in; that they then missed
+   * the boat is a different statement, and writing a `cleared` row here would
+   * erase the first one. Two readers spend the standing `arrived` row precisely
+   * to contradict this status — `findSimilarDivers` prints "Last dive day here"
+   * at the counter's identity question, and `peopleWhoDivedBefore` feeds the
+   * fly-safe multi-day advisory — so a retraction written here costs a diver a
+   * day off their surface interval for a morning the shop really did see them.
+   */
+  it("leaves the sighting the desk already made standing on the trail", async () => {
+    const ctx = await context();
+    await checkInAtTheDesk(ctx);
+    expect(await arrivalTrail(ctx.db, ctx.bookingId)).toEqual(["arrived"]);
+
+    expect(
+      await markBookingNoShow(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.bookingId,
+        recordedByPersonId: ctx.staffId,
+        now: ctx.now,
+      }),
+    ).toMatchObject({ ok: true });
+
+    expect(await statusOf(ctx.db, ctx.bookingId)).toBe("no_show");
+    expect(await arrivalTrail(ctx.db, ctx.bookingId)).toEqual(["arrived"]);
+  });
+
+  /**
+   * **The mark is not a roll call, and the after-dive head count rests on
+   * that** (`inAfterDivePopulation`, src/db/today.ts). That reader decides who
+   * is at risk in the water from `roll_call_events` alone, because a walk-away
+   * leaves no result at any checkpoint whether or not the desk released their
+   * seat. Releasing it writes `bookings.status` and a trail line; the day it
+   * also wrote a checkpoint result, every released seat would join the
+   * population the danger-toned "still in the water" row counts, and a red row
+   * that fires on most trips is read by nobody within a fortnight.
+   */
+  it("writes nothing into the crew's roll call", async () => {
+    const { db, shop, trip, staffId, bookingId, now } = await context();
+
+    expect(
+      await markBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now }),
+    ).toMatchObject({ ok: true });
+
+    expect(
+      await db
+        .select({ rows: count() })
+        .from(rollCallEvents)
+        .where(and(eq(rollCallEvents.shopId, shop.id), eq(rollCallEvents.tripId, trip.id))),
+    ).toEqual([{ rows: 0 }]);
   });
 
   /**
@@ -168,16 +385,54 @@ describe("markBookingNoShow", () => {
     expect(await statusOf(db, bookingId)).not.toBe("no_show");
   });
 
-  it("refuses before the shop's dock call and after the counter stops looking back", async () => {
+  /**
+   * **The dock is not the only place the crew says a diver is aboard.** A diver
+   * who joined at the second site, or one the crew counted without a dock
+   * result, has no departure event at all — the population `src/db/today.ts`
+   * names at `inAfterDivePopulation`. Reading the departure checkpoint alone
+   * left the counter's first and most important refusal silent about exactly
+   * those divers, and the counter's window runs six hours past `startsAt`,
+   * which covers a whole two-tank morning.
+   *
+   * No waiver here on purpose: readiness gates boarding at the dock only, so an
+   * after-dive head count takes the diver as they are (`recordRollCall`).
+   */
+  it("refuses a diver the crew counted at an after-dive checkpoint", async () => {
+    const { db, shop, trip, staffId, bookingId, now } = await context();
+    expect(
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        status: "boarded",
+        checkpoint: "after_dive_1",
+      }),
+    ).toMatchObject({ ok: true });
+
+    expect(
+      await markBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now }),
+    ).toEqual({ ok: false, reason: "already_boarded" });
+    expect(await statusOf(db, bookingId)).not.toBe("no_show");
+  });
+
+  /**
+   * The opening moved off the shop's dock call on 2026-09-11: a diver who is
+   * late for the arrival time the shop asked for has not missed the boat, and
+   * this tap writes the second fact rather than the first.
+   */
+  it("refuses before the boat leaves and after the counter stops looking back", async () => {
     const { db, shop, trip, staffId, bookingId } = await context();
     expect(
       await markBookingNoShow(db, {
         shopId: shop.id,
         bookingId,
         recordedByPersonId: staffId,
-        now: new Date(trip.startsAt.getTime() - 3 * 60 * MINUTE_MS),
+        // Past the shop's own dock call, which used to open this door, and
+        // still ten minutes before the lines come off.
+        now: new Date(trip.startsAt.getTime() - 10 * MINUTE_MS),
       }),
-    ).toEqual({ ok: false, reason: "before_dock_call" });
+    ).toEqual({ ok: false, reason: "before_departure" });
     expect(
       await markBookingNoShow(db, {
         shopId: shop.id,
@@ -228,31 +483,7 @@ describe("markBookingNoShow", () => {
    */
   it("never reaches across shops", async () => {
     const { db, shop, staffId, now } = await context();
-    const [other] = await db
-      .insert(shops)
-      .values({ name: "Other Reef", slug: "other-reef-no-show", timezone: "America/New_York" })
-      .returning();
-    if (!other) throw new Error("other shop insert failed");
-    const [stranger] = await db
-      .insert(people)
-      .values({ shopId: other.id, fullName: "Someone Else" })
-      .returning();
-    const [otherTrip] = await db
-      .insert(trips)
-      .values({
-        shopId: other.id,
-        title: "Their Reef Run",
-        startsAt: new Date(now.getTime() + 10 * MINUTE_MS),
-        endsAt: new Date(now.getTime() + 4 * 60 * MINUTE_MS),
-        capacity: 6,
-      })
-      .returning();
-    if (!stranger || !otherTrip) throw new Error("other tenant fixture failed");
-    const [theirSeat] = await db
-      .insert(bookings)
-      .values({ shopId: other.id, tripId: otherTrip.id, personId: stranger.id })
-      .returning();
-    if (!theirSeat) throw new Error("other tenant booking failed");
+    const { seat: theirSeat } = await otherTenant(db, now, "other-reef-no-show");
 
     expect(
       await markBookingNoShow(db, {
@@ -291,11 +522,88 @@ describe("undoBookingNoShow", () => {
   });
 
   /**
+   * **The seat comes back as what it was.** The undo is for the diver who walks
+   * up as the lines come off, and half of them are people the desk had already
+   * checked in before releasing the seat. Restoring every one of them to
+   * `booked` put a diver standing at the counter back on the "still to come"
+   * list and asked the staffer to check them in a second time with the diver in
+   * front of them (`dive-domain-expert`, 2026-09-11). The arrival trail is the
+   * only record of which it was, because the mark deliberately leaves it alone.
+   */
+  it("puts a diver the desk had already seen back as checked in", async () => {
+    const ctx = await context();
+    await checkInAtTheDesk(ctx);
+    const seatsBefore = await heldSeats(ctx.db, ctx.trip.id);
+    await markBookingNoShow(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.bookingId,
+      recordedByPersonId: ctx.staffId,
+      now: ctx.now,
+    });
+
+    expect(
+      await undoBookingNoShow(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.bookingId,
+        recordedByPersonId: ctx.staffId,
+        now: ctx.now,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await statusOf(ctx.db, ctx.bookingId)).toBe("checked_in");
+    // `checked_in` holds a seat exactly as `booked` does, so the boat is back
+    // to the count it had before the release — the caps this undo checks are
+    // counting the same thing either way.
+    expect(await heldSeats(ctx.db, ctx.trip.id)).toBe(seatsBefore);
+  });
+
+  /**
+   * The other half of the same rule, and the reason it is the trail that
+   * decides rather than "was there ever an arrival": a sighting the desk took
+   * back before the mark leaves a `cleared` row standing, nothing says this
+   * diver is in the building, and the seat comes back as `booked`.
+   */
+  it("puts a seat whose sighting was taken back before the mark back as booked", async () => {
+    const ctx = await context();
+    await checkInAtTheDesk(ctx);
+    expect(
+      await undoCheckInBooking(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.bookingId,
+        recordedByPersonId: ctx.staffId,
+        now: ctx.now,
+      }),
+    ).toMatchObject({ ok: true });
+    await markBookingNoShow(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.bookingId,
+      recordedByPersonId: ctx.staffId,
+      now: ctx.now,
+    });
+
+    expect(
+      await undoBookingNoShow(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.bookingId,
+        recordedByPersonId: ctx.staffId,
+        now: ctx.now,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await arrivalTrail(ctx.db, ctx.bookingId)).toEqual(["cleared", "arrived"]);
+    expect(await statusOf(ctx.db, ctx.bookingId)).toBe("booked");
+  });
+
+  /**
    * **The release was real, so the undo can fail.** By the time somebody taps
    * it the shop may have sold the freed seat to the diver who was waiting for
    * it, and putting the first one back would overfill the boat.
+   *
+   * And the failure is itself history: a staffer stood at a desk with a diver
+   * in front of them who could not get back on, and the shop reconciling that
+   * departure afterwards can only see it if the refusal left a line. The seat
+   * does **not** move, so the roster write is still the thing that must not
+   * happen.
    */
-  it("refuses and writes nothing when the freed seat has been resold", async () => {
+  it("refuses a resold seat and puts the attempt on the trail", async () => {
     const { db, shop, trip, staffId, bookingId, now } = await context();
     await markBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now });
 
@@ -324,6 +632,131 @@ describe("undoBookingNoShow", () => {
         ),
       );
     expect(undone).toHaveLength(0);
+    // Which limit refused, because the two ask for different next acts: a sold
+    // seat means find the diver another boat.
+    const refused = await db
+      .select({ params: activityEvents.params })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.bookingId, bookingId),
+          eq(activityEvents.code, "booking_no_show_undo_refused"),
+        ),
+      );
+    expect(refused).toHaveLength(1);
+    expect(refused[0]?.params).toMatchObject({ reason: "trip_full" });
+  });
+
+  /**
+   * **The boat is not the tightest limit a seat can hit.** An intro session
+   * seats two students per instructor whatever the boat holds (DOM-H2,
+   * `src/lib/course-ratios.ts`), and an undo is a seat-granting write like
+   * every other one: capacity alone reads room on a twelve-seat hull while the
+   * instructor has none, and the morning it costs somebody looks like this —
+   * a late participant marked not here as the boat pulls out, a walk-up seated
+   * into the freed place, then Undo as the lines come off.
+   */
+  it("refuses an undo that would put a third student on a two-seat intro session", async () => {
+    const { db, shop, staffId } = await context();
+    const trip = await introSession(db, shop.id);
+    const now = new Date(trip.startsAt.getTime() + 10 * MINUTE_MS);
+    const [late, onTime] = await seatStudents(db, shop.id, trip.id, 2);
+    if (!late || !onTime) throw new Error("setup bookings failed");
+
+    expect(
+      await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: late,
+        recordedByPersonId: staffId,
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+    // The walk-up is legitimate: the session is back at its two students, and
+    // the boat still shows ten empty seats.
+    await seatStudents(db, shop.id, trip.id, 1);
+
+    expect(
+      await undoBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: late,
+        recordedByPersonId: staffId,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "course_ratio_full" });
+    expect(await statusOf(db, late)).toBe("no_show");
+    // The ratio refusal reads as itself on the trail, not as the sold-seat one:
+    // this session needs another instructor, not another boat.
+    const refused = await db
+      .select({ params: activityEvents.params })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.bookingId, late),
+          eq(activityEvents.code, "booking_no_show_undo_refused"),
+        ),
+      );
+    expect(refused).toHaveLength(1);
+    expect(refused[0]?.params).toMatchObject({ reason: "course_ratio_full" });
+    // Two students in the water, which is what one instructor may take. The
+    // roster itself still lists three rows — the marked one among them, wearing
+    // "Not here" — so the seats are counted, not the lines.
+    expect(await heldSeats(db, trip.id)).toBe(2);
+  });
+
+  it("still undoes onto an intro session while the ratio genuinely has room", async () => {
+    const { db, shop, staffId } = await context();
+    const trip = await introSession(db, shop.id);
+    const now = new Date(trip.startsAt.getTime() + 10 * MINUTE_MS);
+    const [late] = await seatStudents(db, shop.id, trip.id, 2);
+    if (!late) throw new Error("setup bookings failed");
+    await markBookingNoShow(db, {
+      shopId: shop.id,
+      bookingId: late,
+      recordedByPersonId: staffId,
+      now,
+    });
+
+    expect(
+      await undoBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: late,
+        recordedByPersonId: staffId,
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await statusOf(db, late)).toBe("booked");
+  });
+
+  /**
+   * Nobody fails to show for a boat that never left, and nobody goes back on
+   * one either: the mark is already refused on a cancelled departure
+   * (`noShowGate`), and the undo answers the way `restoreBooking` does —
+   * reinstating the trip is the recovery, not a roster write against a day
+   * that is off the board.
+   */
+  it("refuses an undo onto a departure the shop cancelled in between", async () => {
+    const { db, shop, trip, staffId, bookingId, now } = await context();
+    await markBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now });
+    expect(await setTripStatus(db, shop.id, trip.id, "cancelled")).toBeTruthy();
+
+    expect(
+      await undoBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now }),
+    ).toEqual({ ok: false, reason: "trip_cancelled" });
+    expect(await statusOf(db, bookingId)).toBe("no_show");
+    // Neither the undo nor a refusal line: the two refusals that get their own
+    // entry are the ones where the *seat* is gone and a shop has a next act to
+    // take. A cancelled departure is already on the board, and reinstating it
+    // is the recovery.
+    const written = await db
+      .select({ code: activityEvents.code })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.bookingId, bookingId),
+          inArray(activityEvents.code, ["booking_no_show_undone", "booking_no_show_undo_refused"]),
+        ),
+      );
+    expect(written).toHaveLength(0);
   });
 
   it("refuses a seat nobody marked", async () => {
@@ -343,6 +776,37 @@ describe("undoBookingNoShow", () => {
     ).toMatchObject({ ok: true });
 
     expect(await moneyRowCounts(db)).toEqual(before);
+  });
+
+  /**
+   * The undo is the half that hands a seat back, so a leak here is worse than
+   * the mark's: it would put a stranger's diver onto a departure this shop
+   * cannot see, under a cap this shop did not set. Not found, like the mark,
+   * and for the same reason — a refusal on the merits (`not_marked`,
+   * `trip_full`) would confirm to one shop that a seat exists at another.
+   */
+  it("never reaches across shops either", async () => {
+    const { db, shop, staffId, now } = await context();
+    const { seat: theirSeat } = await otherTenant(db, now, "other-reef-no-show-undo");
+    // Marked at their own counter, so a leak would be a *successful* undo
+    // rather than the `not_marked` a plain booking would answer with.
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, theirSeat.id));
+
+    expect(
+      await undoBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: theirSeat.id,
+        recordedByPersonId: staffId,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+    expect(await statusOf(db, theirSeat.id)).toBe("no_show");
+    expect(
+      await db
+        .select({ code: activityEvents.code })
+        .from(activityEvents)
+        .where(eq(activityEvents.bookingId, theirSeat.id)),
+    ).toHaveLength(0);
   });
 });
 
@@ -367,7 +831,7 @@ describe("noShowSalvage", () => {
     });
   });
 
-  it("falls back to what else the shop is running that week", async () => {
+  it("falls back to a day the diver who missed could be put on instead", async () => {
     const { db, shop, trip, now } = await context();
     const [site] = await db
       .select({ diveSiteId: trips.diveSiteId })
@@ -387,8 +851,8 @@ describe("noShowSalvage", () => {
     if (!alternative) throw new Error("alternative trip insert failed");
 
     const offer = await noShowSalvage(db, { shopId: shop.id, tripId: trip.id, now });
-    expect(offer.kind).toBe("alternative");
-    if (offer.kind !== "alternative") throw new Error("unreachable");
+    expect(offer.kind).toBe("rebook");
+    if (offer.kind !== "rebook") throw new Error("unreachable");
     expect(offer.departures.map((row) => row.tripId)).toContain(alternative.id);
   });
 
@@ -397,6 +861,30 @@ describe("noShowSalvage", () => {
     // Nothing else on this shop's board shares the reef trip's site or course.
     await db.update(trips).set({ diveSiteId: null, courseId: null }).where(eq(trips.id, trip.id));
     expect(await noShowSalvage(db, { shopId: shop.id, tripId: trip.id, now })).toEqual({
+      kind: "none",
+    });
+  });
+
+  /**
+   * **The `tripId` is caller-supplied and fans out**, which is what makes this
+   * the reader worth pinning: it is spent on a wait-list read and then on the
+   * board, so a scope dropped anywhere along that path hands one shop the
+   * names another shop is holding. Nothing, not a count — a salvage offer that
+   * said "1 waiting" about somebody else's list would send a staffer after a
+   * diver they have no relationship with.
+   */
+  it("never counts another shop's wait list", async () => {
+    const { db, shop, now } = await context();
+    const {
+      shop: other,
+      stranger,
+      trip: theirTrip,
+    } = await otherTenant(db, now, "other-reef-salvage");
+    await db
+      .insert(tripWaitlistEntries)
+      .values({ shopId: other.id, tripId: theirTrip.id, personId: stranger.id });
+
+    expect(await noShowSalvage(db, { shopId: shop.id, tripId: theirTrip.id, now })).toEqual({
       kind: "none",
     });
   });

@@ -264,11 +264,32 @@ function hasSpaceHaving(hasSpace: boolean | undefined) {
  * write `ne(bookings.status, "cancelled")` again.
  *
  * **Only the seat *counts* take it** — the booking transaction, the restore,
- * the walk-in picker, the departure's own record, the wait-list join, and the
+ * the walk-in picker, the departure's own record and its capacity floor, the
+ * wait-list join, the public dive-site page's departures, and the
  * schedule/board join below. The roster, the manifest, the gear register and
  * the buddy builder still reach for every booking that is not cancelled, and
  * must: a diver marked absent stays on the manifest, which is what the crew
  * needs to see.
+ *
+ * **The counts that deliberately stay looser**, each counting a released seat
+ * as still held. None can oversell — every one of them counts *more* seats
+ * than `createBookingRecord` will — and each is conservative in the direction
+ * its own question needs (reviewed 2026-09-11, after the public dive-site page
+ * was found telling a stranger a released seat's boat was full):
+ *
+ * - `getStaffingView` (`./staffing.ts`) and `tripOverIntroRatio`
+ *   (`./crew-requests.ts`) size crew against the count. A diver the desk wrote
+ *   off can still be boarded at the rail (`reclaimReleasedSeat`,
+ *   `./manifests.ts`), so the ratio has to already cover them; under-crewing a
+ *   course is the one error here that reaches the water.
+ * - `listDeparturesAwaitingMinimumDecision` and `listMinimumNotMetRecipients`
+ *   (`./trips-minimum.ts`) decide whether a boat runs and who hears that it did
+ *   not. Cancelling a departure is not reversible for the divers on it, so the
+ *   sweep counts the fuller number and tells everyone who ever held a seat.
+ * - `blowoutCandidates` (`./blowouts.ts`) gates which boats a weather cascade
+ *   may offer. Withholding a seat that turns out to exist costs a rescue
+ *   offer; offering one that does not exist costs the diver a second refusal
+ *   on the day their trip was already cancelled.
  */
 export const seatHeld = inArray(bookings.status, [...SEAT_HELD_STATUSES]);
 

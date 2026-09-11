@@ -17,6 +17,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { blockerFixFor } from "@/lib/blockers";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { guardianSignatureRequired } from "@/lib/guardian";
+import type { NoShowClaim } from "@/lib/no-show";
 import type { FormNotice } from "@/lib/staff-notices";
 import { counterBlockerDisclosure } from "../blocker-disclosure";
 import { CheckInActionForm } from "../CheckInActionForm";
@@ -141,7 +142,7 @@ export function CounterQueueRow({
   undoAction,
   waiverAction,
   waiverNotice,
-  noShowOffered,
+  noShowClaim,
   markNoShowAction,
   undoNoShowAction,
   salvage,
@@ -170,13 +171,13 @@ export function CounterQueueRow({
    */
   waiverNotice?: CounterWaiverNotice;
   /**
-   * Whether "Not here?" is offered on this row at all — the page runs
-   * `noShowGate` (`src/lib/no-show.ts`) over the shop's own dock call and the
-   * arrivals window, because it is the layer holding both. The writer runs the
-   * same gate again under a lock, so this decides only whether the disclosure
-   * is drawn.
+   * Which "Not here?" script this row gets, or `null` for none — the page runs
+   * `noShowGate` (`src/lib/no-show.ts`) over the departure and the arrivals
+   * window, because it is the layer holding both, and then `noShowClaim` for
+   * what the tap would be saying. The writer runs the same gate again under a
+   * lock, so this decides only what is drawn.
    */
-  noShowOffered: boolean;
+  noShowClaim: NoShowClaim | null;
   markNoShowAction: (formData: FormData) => Promise<void>;
   undoNoShowAction: (formData: FormData) => Promise<void>;
   /**
@@ -330,19 +331,40 @@ export function CounterQueueRow({
         {/* **A sibling of the tap, never inside it.** The whole row above is
             one `<button>`, so the door has to sit under it — which is also
             where it belongs: the counter's promise is a name and one large
-            target, and "Not here?" is three quiet words a staffer goes looking
-            for once the boat is about to leave. */}
-        {noShowOffered ? (
+            target, and the door is a quiet line a staffer goes looking for once
+            the boat has left without somebody. */}
+        {noShowClaim ? (
           <NoShowScript
             action={markNoShowAction}
             bookingId={row.bookingId}
-            copy={{
-              door: t("checkIn.noShow.door"),
-              consequence: t("checkIn.noShow.consequence"),
-              confirm: t("checkIn.noShow.confirm"),
-              confirming: t("checkIn.noShow.confirming"),
-              confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
-            }}
+            // **Two scripts, because the tap is two different claims**
+            // (`noShowClaim`, src/lib/no-show.ts). While the boat is still
+            // there the sentence is about a seat and the diver may yet come
+            // running down the dock. Once it has gone the same tap says this
+            // person did not dive, which is the claim seven readers spend and
+            // the one nobody comes back to undo — so the door asks the louder
+            // question rather than the same three quiet words.
+            copy={
+              noShowClaim === "did_not_dive"
+                ? {
+                    door: t("checkIn.noShow.sailedDoor"),
+                    consequence: t("checkIn.noShow.sailedConsequence"),
+                    confirm: t("checkIn.noShow.sailedConfirm"),
+                    confirming: t("checkIn.noShow.confirming"),
+                    confirmAriaLabel: t("checkIn.noShow.sailedConfirmAriaLabel", {
+                      name: row.personName,
+                    }),
+                  }
+                : {
+                    door: t("checkIn.noShow.door"),
+                    consequence: t("checkIn.noShow.consequence"),
+                    confirm: t("checkIn.noShow.confirm"),
+                    confirming: t("checkIn.noShow.confirming"),
+                    confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", {
+                      name: row.personName,
+                    }),
+                  }
+            }
           />
         ) : null}
       </LedgerRow>

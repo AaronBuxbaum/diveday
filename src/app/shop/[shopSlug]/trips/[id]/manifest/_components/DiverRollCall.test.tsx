@@ -586,3 +586,44 @@ describe("the checkpoint is named in full under the abbreviated track (issue #13
     });
   }
 });
+
+/**
+ * **A released seat and a diver still walking down the dock are not the same
+ * row** (#1209, `dive-domain-expert` review 20260911).
+ *
+ * The manifest keeps every non-cancelled booking on purpose, so the counter's
+ * write-off stays on the list — and until this chip the only booking signal it
+ * carried was "Checked in", which made a settled seat read as somebody merely
+ * late. On the row rather than in the person sheet, because the sheet costs a
+ * tap and the point is to stop the crew looking.
+ */
+describe("the counter's write-off is on the row", () => {
+  const NOT_HERE: Record<TestLocale, string> = { "en-US": "Not here", "es-ES": "No vino" };
+
+  it.each(["en-US", "es-ES"] as const)(
+    "shows it without opening the sheet, in %s",
+    (locale: TestLocale) => {
+      renderList({
+        locale,
+        checkpoint: "departure",
+        divers: [diver({ notHere: true, checkedIn: true })],
+      });
+      const row = screen.getByRole("listitem");
+      const trigger = within(row).getByRole("button", { name: /Meera Iyer/ });
+      expect(within(trigger).getByText(NOT_HERE[locale])).toBeVisible();
+      // Quiet, not an alarm: it is the absence of an exception, and the row a
+      // crew most wants calm is not the place for a second loud thing.
+      expect(dangerToned(trigger)).toEqual([]);
+      // And it never becomes a gate — the boarding tap is exactly where it was,
+      // because a crew member looking at a body outrules the desk.
+      expect(
+        within(row).getByRole("button", { name: TRANSLATORS[locale]("manifest.markBoarded") }),
+      ).toBeVisible();
+    },
+  );
+
+  it("says nothing about a diver nobody wrote off", () => {
+    renderList({ checkpoint: "departure", divers: [diver({ checkedIn: true })] });
+    expect(screen.queryByText(NOT_HERE["en-US"])).toBeNull();
+  });
+});

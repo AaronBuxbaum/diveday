@@ -99,6 +99,8 @@ const payload: OfflineManifestPayload = {
         notBackAboard: 0,
         awaiting: 1,
         unaccountedFor: 1,
+        overCapacity: 0,
+        notHere: 0,
       },
     },
   ],

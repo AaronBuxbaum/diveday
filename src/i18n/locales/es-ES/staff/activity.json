@@ -11,6 +11,8 @@
     "booking_restored": "{actor} volvió a poner a {diver} en la salida",
     "booking_no_show": "{actor} marcó que {diver} no se presentó y liberó la plaza",
     "booking_no_show_undone": "{actor} volvió a poner a {diver} en la lista de personas esperadas",
+    "booking_no_show_undo_refused": "{actor} no pudo volver a poner a {diver}: {reason, select, course_ratio_full {la sesión ya estaba en su ratio de instructor} other {la plaza liberada ya se había vendido}}",
+    "booking_no_show_boarded": "{actor} embarcó a {diver} en el barco, así que la plaza liberada vuelve a ser suya",
     "identity_confirmed": "{actor} confirmó que esta reserva es de {diver}",
     "crew_assigned": "{actor} asignó a {crew} a la tripulación",
     "crew_removed": "{actor} quitó a {crew} de la tripulación",

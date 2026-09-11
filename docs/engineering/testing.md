@@ -51,8 +51,8 @@ one serial `test` each, so the first state the day cannot reach fails by name an
 The spec lives under `scripts/simulate-day/` rather than `e2e/` because the fleet discovers every
 spec in that tree and CI deals them into shards, and this one takes minutes, owns its clock and
 belongs to a nightly job. The clock route is likewise for this runner alone: a fleet worker's clock
-is shared by every spec it runs (`seed-evening`'s docblock says why the departures move there
-instead), so no `e2e/` spec may call it.
+is shared by every spec it runs (`seed-evening` moves the whole day's departures instead, and
+`depart-trip` moves the one a spec names), so no `e2e/` spec may call it.
 
 What it leaves behind (`simulation/`, gitignored): a full-page screenshot per state, and `day.md`
 listing each state with the shop-clock time it was reached, how long it really took, and its
@@ -251,6 +251,7 @@ named, and all picked up by that glob rather than by a list anyone has to rememb
 | `bookings.postgres.test.ts` | Two — and five — genuinely concurrent transactions racing for the last seat sell exactly the seats that exist |
 | `payments.postgres.test.ts` | Two simultaneous payment writes leave one unbroken `booking_payment_events` chain rather than a fork |
 | `refunds.postgres.test.ts` | Two — and five — simultaneous taps of Refund on one paid order reach Stripe exactly once; the losers are refused locally with `in_progress` rather than by Stripe's over-refund rejection (PAY-L3) |
+| `roll-call.postgres.test.ts` | The counter marking a diver not here and the crew boarding them at the rail serialise on the booking row, so a standing `boarded` result and a released seat never both stand — the rail overrules the desk, and never refuses |
 | `postgres-harness.postgres.test.ts` | The harness itself: finishing a test never terminates a connection that is still alive, and an unreleased `holdRowLock` gate does not hang teardown |
 
 A new suite needs no wiring beyond the name: write `src/db/<thing>.postgres.test.ts` against
@@ -428,7 +429,7 @@ the full suite locally with identical pass counts across repeated runs.
   20260815-per-test-private-shops for why this is per test rather than per file, and why a
   `finally` that restores the setting is not the answer.
 - **Every `/api/test/*` route is guarded, and that is enforced.** The harness's own endpoints
-  (`reset` plus the `seed-*` routes) reset and seed state and mint real tokens — `seed-account-token`
+  (`reset`, `depart-trip`, plus the `seed-*` routes) reset and seed state and mint real tokens — `seed-account-token`
   hands back a valid password-reset or invite token for any account by email — so each handler must
   open with `e2eTestRouteAuthorized(request)` (`src/lib/e2e-test-routes.ts`: env predicate plus a
   `DIVEDAY_E2E_SECRET` bearer token, failing closed). `pnpm check:e2e-fixtures` fails when a handler

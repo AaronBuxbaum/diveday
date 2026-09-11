@@ -414,10 +414,17 @@ export async function updateTrip(
       .for("update");
     if (!existing) return { ok: false, reason: "not_found" };
 
+    // `seatHeld`, the same predicate `getTripWithBooked` above shows the
+    // staffer and `createBookingRecord` enforces capacity with. Counting every
+    // non-cancelled row instead made this floor argue with the page that opened
+    // it: the trip read "3 booked", capacity 3 was refused as "below the 4
+    // divers already booked", and the fourth was a seat the desk had already
+    // released — one nothing on screen showed and nobody could cancel
+    // (`dive-domain-expert` review, 2026-09-11).
     const [{ bookedCount }] = await tx
       .select({ bookedCount: count() })
       .from(bookings)
-      .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
+      .where(and(eq(bookings.tripId, tripId), seatHeld));
     if (patch.capacity < bookedCount) {
       return { ok: false, reason: "capacity_below_booked", detail: { bookedCount } };
     }
