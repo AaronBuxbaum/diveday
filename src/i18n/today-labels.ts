@@ -1,3 +1,4 @@
+import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlockerCode } from "@/lib/readiness";
@@ -421,36 +422,55 @@ export function emailDeliveryDetailText(
   });
 }
 
-/** A stuck operation's kind word ("Invoice", "Refund", "Checkout"), matching Reports' own wording. */
-const STUCK_OPERATION_KIND_KEYS: Record<string, StaffMessageKey> = {
+/**
+ * A stuck operation's kind word ("Invoice", "Refund", "Checkout"), matching
+ * Orders' own wording. Keyed by the `payment_operation_kind` enum rather than
+ * by `string`, so a fourth kind is a compile error here instead of a Stripe
+ * enum value standing in for a word on the queue.
+ */
+const STUCK_OPERATION_KIND_KEYS: Record<PaymentOperationKind, StaffMessageKey> = {
   checkout_session: "today.opsAlert.operationKind.checkoutSession",
   invoice: "today.opsAlert.operationKind.invoice",
   refund: "today.opsAlert.operationKind.refund",
 };
 
-/** A stuck photo-deletion's media kind, matching Reports' own wording. */
-const MEDIA_DELETION_KIND_KEYS: Record<string, StaffMessageKey> = {
+/**
+ * A stuck photo-deletion's media kind, matching Settings' own wording.
+ *
+ * Keyed by the `media_deletion_kind` enum, which is what closes the gap this
+ * map shipped with: it held seven of the enum's nine kinds, and
+ * `listPendingMediaDeletions` filters by shop and staleness and by nothing
+ * else, so a stuck shop-logo or cover-photo deletion — both queued from
+ * Settings' own image forms — put the raw `shop_logo` through as the Today
+ * row's subject and again inside its sentence. `certification_card` is
+ * unreachable and keeps its word anyway, for the reason `src/db/schema.ts`
+ * gives at the enum: Postgres cannot drop an enum member, so a pre-release row
+ * still renders.
+ */
+const MEDIA_DELETION_KIND_KEYS: Record<MediaDeletionKind, StaffMessageKey> = {
   course_photo: "today.opsAlert.mediaKind.coursePhoto",
   recap_photo: "today.opsAlert.mediaKind.recapPhoto",
   arrival_photo: "today.opsAlert.mediaKind.arrivalPhoto",
-  // Queued by diver erasure (ADR 20260802-diver-data-erasure) — see the same
-  // note on Reports' `MEDIA_KIND_KEYS`: a missing entry renders the raw enum.
+  // Queued by diver erasure (ADR 20260802-diver-data-erasure).
   certification_card: "today.opsAlert.mediaKind.certificationCard",
   waiver_document: "today.opsAlert.mediaKind.waiverDocument",
   dive_site_photo: "today.opsAlert.mediaKind.diveSitePhoto",
+  shop_logo: "today.opsAlert.mediaKind.shopLogo",
+  shop_hero: "today.opsAlert.mediaKind.shopHero",
   payment_receipt: "today.opsAlert.mediaKind.paymentReceipt",
 };
 
 /** A stuck operation's kind word, standalone — `src/db/today.ts` uses this for the row's `subject`. */
-export function stuckOperationKindText(t: StaffTranslator, operationKind: string): string {
-  return STUCK_OPERATION_KIND_KEYS[operationKind]
-    ? t(STUCK_OPERATION_KIND_KEYS[operationKind])
-    : operationKind;
+export function stuckOperationKindText(
+  t: StaffTranslator,
+  operationKind: PaymentOperationKind,
+): string {
+  return t(STUCK_OPERATION_KIND_KEYS[operationKind]);
 }
 
 /** A failed deletion's media kind word, standalone — `src/db/today.ts` uses this for the row's `subject`. */
-export function mediaDeletionKindText(t: StaffTranslator, mediaKind: string): string {
-  return MEDIA_DELETION_KIND_KEYS[mediaKind] ? t(MEDIA_DELETION_KIND_KEYS[mediaKind]) : mediaKind;
+export function mediaDeletionKindText(t: StaffTranslator, mediaKind: MediaDeletionKind): string {
+  return t(MEDIA_DELETION_KIND_KEYS[mediaKind]);
 }
 
 /**
@@ -462,7 +482,7 @@ export function mediaDeletionKindText(t: StaffTranslator, mediaKind: string): st
  */
 export function stuckPaymentOperationDetailText(
   t: StaffTranslator,
-  operationKind: string,
+  operationKind: PaymentOperationKind,
   when: string,
   stripeObjectId: string | null,
 ): string {
@@ -475,7 +495,7 @@ export function stuckPaymentOperationDetailText(
 /** A failed/stuck photo-deletion's detail line (task 157), mirroring Reports' media-deletions panel. */
 export function failedPhotoDeletionDetailText(
   t: StaffTranslator,
-  mediaKind: string,
+  mediaKind: MediaDeletionKind,
   when: string,
 ): string {
   return t("today.opsAlert.mediaDeletionDetail", {

@@ -1,11 +1,21 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
 import type { CertificationCardRowState } from "@/lib/certification-cards";
+import type { DepthUnit } from "@/lib/depth-units";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
+import type { RentalItemKind } from "@/lib/dive-prep";
 import { DIVE_SITE_DIFFICULTIES } from "@/lib/dive-site-difficulty";
+import {
+  GEAR_ITEM_STATUSES,
+  type GearItemKind,
+  type GearReservationPhase,
+  type GearServiceKind,
+} from "@/lib/gear";
 import { GUARDIAN_RELATIONSHIPS } from "@/lib/guardian";
-import type { BuddyAlert } from "@/lib/manifests";
+import type { BuddyAlert, RollCallLabel } from "@/lib/manifests";
+import { CARDINAL_DIRECTIONS, SEA_STATES, WIND_STATES } from "@/lib/marine-forecast";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import {
   BLOCKER_CATEGORY,
@@ -14,7 +24,8 @@ import {
 } from "@/lib/readiness";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 import { MOON_PHASES, type NightSky } from "@/lib/sky";
-import { ROLL_CALL_GAP_KINDS } from "@/lib/today";
+import type { TemperatureUnit } from "@/lib/temperature-units";
+import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
 import { buddyAlertText } from "./buddy-labels";
 import {
   CARD_STATUS_KEYS,
@@ -28,6 +39,7 @@ import {
   closeoutDepartureDetailText,
   planChangeText,
 } from "./closeout-labels";
+import { compassText } from "./compass-labels";
 import {
   DIVER_DIVE_INTENT_KEYS,
   DIVER_RE_ENTRY_KEYS,
@@ -37,11 +49,24 @@ import {
 import { diveSiteDifficultyLabel } from "./dive-site-labels";
 import { DIVER_FACT_SOURCE_KEYS } from "./fact-source-labels";
 import {
+  gearItemKindLabel,
+  gearPhaseLabel,
+  gearServiceKindLabel,
+  gearStatusLabel,
+} from "./gear-labels";
+import {
   DIVER_GUARDIAN_RELATIONSHIP_KEYS,
   guardianRelationshipText,
   staffGuardianRelationshipOptions,
 } from "./guardian-labels";
+import { rollCallLabelText } from "./manifest-labels";
 import { diverTranslator } from "./messages";
+import {
+  DIVER_CERT_LEVEL_KEYS,
+  NEXT_DIVE_REASON_KEYS,
+  RECAP_PULSE_CATEGORY_KEYS,
+  STAFF_PULSE_CATEGORY_KEYS,
+} from "./next-dive-labels";
 import { ORDER_STATUS_KEYS } from "./order-labels";
 import {
   CERTIFICATION_LEVEL_KEYS,
@@ -57,10 +82,20 @@ import {
 } from "./readiness-labels";
 import { CHECKLIST_DETAIL_KEYS } from "./readiness-summary-labels";
 import { reminderActionText } from "./reminder-labels";
+import { rentalItemLabel } from "./rental-labels";
 import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, type DiverLocale } from "./settings";
 import { nightSkyLine } from "./sky-labels";
 import { staffTranslator } from "./staff-messages";
 import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "./thread-labels";
+import {
+  ACTION_KIND_KEYS,
+  blockerActionLabelText,
+  GREETING_KEYS,
+  mediaDeletionKindText,
+  seasonalBriefingText,
+  stuckOperationKindText,
+} from "./today-labels";
+import { depthText, seaStateText, temperatureText, windText } from "./unit-labels";
 import { type WaiverRowState, waiverRowStateText } from "./waiver-labels";
 
 /**
@@ -94,9 +129,32 @@ import { type WaiverRowState, waiverRowStateText } from "./waiver-labels";
  * 2. **English sitting in the es-ES bundle.** A missing es-ES key falls back to
  *    the *English* string rather than throwing, so "not empty" is satisfied by
  *    a bundle with no translation in it. Only comparing the two locales sees it.
- * 3. **A private map nobody has a door to.** Ten of the maps below are not
- *    exported; they are reached here through the resolver the app calls, which
- *    is also the only way the interpolation those resolvers do gets exercised.
+ * 3. **A private map nobody has a door to.** Twenty-eight of the maps below are
+ *    not exported; they are reached here through the resolver the app calls,
+ *    which is also the only way the interpolation those resolvers do gets
+ *    exercised. Exporting one to reach it would change a module's public
+ *    surface to suit a test, so none of them is exported.
+ *
+ * ## Every map, not most of them
+ *
+ * The table began at thirty-four of the directory's fifty-eight maps, with
+ * seven modules deferred to their own test files in a `PROVED_BY_MODULE_TEST`
+ * list. That was the weaker claim of the two and said so: `gear-labels.ts`
+ * carries four maps and `gear-labels.test.ts` exercised one of them, so
+ * `STATUS_KEYS`, `SERVICE_KIND_KEYS` and `PHASE_KEYS` had no proof that the key
+ * each code maps to resolves at all. The list is gone (issue #1756) and every
+ * map in the directory has a row; the scan at the bottom now has no allowlist
+ * to fall through, and it holds the table to the map count as well as to the
+ * names, so a row left behind by a deleted map fails too.
+ *
+ * The two maps that made it real work were `today-labels.ts`'s
+ * `STUCK_OPERATION_KIND_KEYS` and `MEDIA_DELETION_KIND_KEYS`, keyed by `string`
+ * rather than a union, so "every code" had no compiler answer and the keys of
+ * the literal would only ever have proved the rows somebody already wrote.
+ * Both had a closed source of truth sitting unused — the `payment_operation_kind`
+ * and `media_deletion_kind` pg enums — so they are keyed on those now, and the
+ * second one turned out to hold seven of nine reachable kinds: a stuck
+ * `shop_logo` or `shop_hero` deletion put the raw enum value on the Today queue.
  *
  * The failure the issue opens with — a code mapped to the **wrong real key** —
  * is caught by none of that on its own: a wrong-but-real key renders a
@@ -175,6 +233,117 @@ const WAIVER_ROW_STATES = everyCodeOf<WaiverRowState>({
   failed: true,
 });
 
+const ROLL_CALL_LABELS = everyCodeOf<RollCallLabel>({
+  awaiting: true,
+  boarded: true,
+  not_boarded: true,
+  not_boarded_carried: true,
+  not_back_aboard: true,
+});
+
+/**
+ * The register's kinds. `GEAR_KIND_ORDER` is a display order typed
+ * `readonly GearItemKind[]`, which the compiler cannot hold exhaustive — a
+ * kind added to the union and forgotten there would drop out of this table
+ * silently, so the codes are spelled here instead.
+ */
+const GEAR_ITEM_KINDS = everyCodeOf<GearItemKind>({
+  bcd: true,
+  regulator: true,
+  wetsuit: true,
+  boots: true,
+  mask: true,
+  fins: true,
+  weights: true,
+  dive_computer: true,
+  gopro: true,
+  tank: true,
+  drysuit: true,
+  hood: true,
+  gloves: true,
+  torch: true,
+  dpv: true,
+  smb: true,
+  reel: true,
+  camera: true,
+  nitrox_analyzer: true,
+  o2_kit: true,
+  other: true,
+});
+
+const GEAR_SERVICE_KINDS = everyCodeOf<GearServiceKind>({
+  service: true,
+  hydro_test: true,
+  visual_inspection: true,
+  o2_clean: true,
+  note: true,
+});
+
+const GEAR_RESERVATION_PHASES = everyCodeOf<GearReservationPhase>({
+  reserved: true,
+  out: true,
+  due_back_today: true,
+  overdue: true,
+  never_picked_up: true,
+  returned: true,
+});
+
+const RENTAL_ITEM_KINDS = everyCodeOf<RentalItemKind>({
+  bcd: true,
+  regulator: true,
+  wetsuit: true,
+  boots: true,
+  mask_fins: true,
+  weights: true,
+  dive_computer: true,
+  gopro: true,
+  drysuit: true,
+  hood_gloves: true,
+  torch: true,
+  smb: true,
+});
+
+const DEPTH_UNITS = everyCodeOf<DepthUnit>({ meters: true, feet: true });
+
+const TEMPERATURE_UNITS = everyCodeOf<TemperatureUnit>({ celsius: true, fahrenheit: true });
+
+const TODAY_SEASONS = everyCodeOf<TodaySeason>({
+  summer: true,
+  autumn: true,
+  winter: true,
+  spring: true,
+});
+
+/**
+ * **The two maps that were keyed by `string`, now keyed by their enum.** The
+ * issue that folded these rows in (#1756) called deciding their codes the one
+ * judgement call, because `Record<string, StaffMessageKey>` has no codes a
+ * compiler can name and the keys of the literal only ever prove the rows
+ * somebody already wrote. Both had a closed source of truth already — the
+ * `payment_operation_kind` and `media_deletion_kind` pg enums — so the answer
+ * was to key the maps on those rather than to assert the weaker thing here.
+ * `media_deletion_kind` carries nine members against the map's seven, and both
+ * missing kinds were reachable, which is what the weaker assertion would have
+ * missed.
+ */
+const PAYMENT_OPERATION_KINDS = everyCodeOf<PaymentOperationKind>({
+  checkout_session: true,
+  invoice: true,
+  refund: true,
+});
+
+const MEDIA_DELETION_KINDS = everyCodeOf<MediaDeletionKind>({
+  course_photo: true,
+  recap_photo: true,
+  certification_card: true,
+  waiver_document: true,
+  dive_site_photo: true,
+  shop_logo: true,
+  shop_hero: true,
+  arrival_photo: true,
+  payment_receipt: true,
+});
+
 /**
  * The params the readiness engine attaches to the five blockers whose sentence
  * interpolates. A code that grows a placeholder and no params throws here
@@ -188,6 +357,9 @@ const BLOCKER_PARAMS: Partial<Record<ReadinessBlockerCode, ReadinessBlockerParam
   specialty_import_unconfirmed: { specialty: "wreck" },
   under_minimum_age: { age: 14, minimumAge: 15 },
 };
+
+/** Every fact a next-dive reason sentence can name, so one object covers all five. */
+const NEXT_DIVE_FACTS = { site: "Blue Hole", course: "Advanced Open Water", lens: "drift" };
 
 /** A sky with a moon up and setting inside the window, so the phase is named. */
 const MOONLIT_SKY: Omit<NightSky, "phase"> = {
@@ -278,6 +450,17 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
+    module: "compass-labels.ts",
+    map: "COMPASS_KEYS",
+    // Private, and the reason the module exists: five of the eight letters are
+    // the same in Spanish and three are not (O, SO, NO), so the table's
+    // es-ES assertion is the one that would have caught `.toUpperCase()`
+    // standing in for a lookup.
+    rows: codeRows(CARDINAL_DIRECTIONS, (locale, code) =>
+      compassText(staffTranslator(locale), code),
+    ),
+  },
+  {
     module: "dive-intent-labels.ts",
     map: "DIVER_DIVE_INTENT_KEYS",
     rows: codeRows(keysOf(DIVER_DIVE_INTENT_KEYS), (locale, intent) =>
@@ -320,6 +503,36 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
+    module: "gear-labels.ts",
+    map: "KIND_SOURCES",
+    // The one map in the directory whose value is a key *or* a redirection
+    // into `rental-labels.ts`, so the resolver is the only honest door.
+    rows: codeRows(GEAR_ITEM_KINDS, (locale, kind) =>
+      gearItemKindLabel(staffTranslator(locale), kind),
+    ),
+  },
+  {
+    module: "gear-labels.ts",
+    map: "STATUS_KEYS",
+    rows: codeRows(GEAR_ITEM_STATUSES, (locale, status) =>
+      gearStatusLabel(staffTranslator(locale), status),
+    ),
+  },
+  {
+    module: "gear-labels.ts",
+    map: "SERVICE_KIND_KEYS",
+    rows: codeRows(GEAR_SERVICE_KINDS, (locale, kind) =>
+      gearServiceKindLabel(staffTranslator(locale), kind),
+    ),
+  },
+  {
+    module: "gear-labels.ts",
+    map: "PHASE_KEYS",
+    rows: codeRows(GEAR_RESERVATION_PHASES, (locale, phase) =>
+      gearPhaseLabel(staffTranslator(locale), phase),
+    ),
+  },
+  {
     module: "guardian-labels.ts",
     map: "GUARDIAN_RELATIONSHIP_KEYS",
     rows: codeRows(GUARDIAN_RELATIONSHIPS, (locale, relationship) =>
@@ -342,6 +555,44 @@ const CASES: readonly LabelMapCase[] = [
       const options = staffGuardianRelationshipOptions(staffTranslator(locale));
       return options.find((option) => option.value === relationship)?.label ?? null;
     }),
+  },
+  {
+    module: "manifest-labels.ts",
+    map: "ROLL_CALL_STATE_KEYS",
+    rows: codeRows(ROLL_CALL_LABELS, (locale, label) =>
+      rollCallLabelText(staffTranslator(locale), label),
+    ),
+  },
+  {
+    module: "next-dive-labels.ts",
+    map: "NEXT_DIVE_REASON_KEYS",
+    // Four of the five sentences name a fact, and the recap passes all three
+    // placeholders on every branch — so one params object covers the map, the
+    // same way `next-dive-labels.test.ts` does it.
+    rows: codeRows(keysOf(NEXT_DIVE_REASON_KEYS), (locale, reason) =>
+      diverTranslator(locale)(NEXT_DIVE_REASON_KEYS[reason], NEXT_DIVE_FACTS),
+    ),
+  },
+  {
+    module: "next-dive-labels.ts",
+    map: "DIVER_CERT_LEVEL_KEYS",
+    rows: codeRows(keysOf(DIVER_CERT_LEVEL_KEYS), (locale, level) =>
+      diverTranslator(locale)(DIVER_CERT_LEVEL_KEYS[level]),
+    ),
+  },
+  {
+    module: "next-dive-labels.ts",
+    map: "RECAP_PULSE_CATEGORY_KEYS",
+    rows: codeRows(keysOf(RECAP_PULSE_CATEGORY_KEYS), (locale, category) =>
+      diverTranslator(locale)(RECAP_PULSE_CATEGORY_KEYS[category]),
+    ),
+  },
+  {
+    module: "next-dive-labels.ts",
+    map: "STAFF_PULSE_CATEGORY_KEYS",
+    rows: codeRows(keysOf(STAFF_PULSE_CATEGORY_KEYS), (locale, category) =>
+      staffTranslator(locale)(STAFF_PULSE_CATEGORY_KEYS[category]),
+    ),
   },
   {
     module: "order-labels.ts",
@@ -430,6 +681,15 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
+    module: "rental-labels.ts",
+    map: "RENTAL_ITEM_LABEL_KEYS",
+    // Keyed by dive-prep's packing alphabet, which is the superset — the
+    // register and the shop catalog both index this one map.
+    rows: codeRows(RENTAL_ITEM_KINDS, (locale, kind) =>
+      rentalItemLabel(staffTranslator(locale), kind),
+    ),
+  },
+  {
     module: "sky-labels.ts",
     map: "MOON_PHASE_KEYS",
     rows: codeRows(MOON_PHASES, (locale, phase) =>
@@ -455,6 +715,99 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
+    module: "today-labels.ts",
+    map: "ACTION_KIND_KEYS",
+    rows: codeRows(keysOf(ACTION_KIND_KEYS), (locale, kind) =>
+      staffTranslator(locale)(ACTION_KIND_KEYS[kind]),
+    ),
+  },
+  {
+    module: "today-labels.ts",
+    map: "BLOCKER_ACTION_LABEL_KEYS",
+    // The singular verb on a row that fixes one diver in place.
+    rows: codeRows(keysOf(BLOCKER_CATEGORY), (locale, code) =>
+      blockerActionLabelText(staffTranslator(locale), code, false),
+    ),
+  },
+  {
+    module: "today-labels.ts",
+    map: "BLOCKER_GROUP_LABEL_KEYS",
+    // The same twenty-two codes in the plural, for a row standing for several
+    // divers — one resolver, one boolean apart, so both maps need a row.
+    rows: codeRows(keysOf(BLOCKER_CATEGORY), (locale, code) =>
+      blockerActionLabelText(staffTranslator(locale), code, true),
+    ),
+  },
+  {
+    module: "today-labels.ts",
+    map: "STUCK_OPERATION_KIND_KEYS",
+    rows: codeRows(PAYMENT_OPERATION_KINDS, (locale, kind) =>
+      stuckOperationKindText(staffTranslator(locale), kind),
+    ),
+  },
+  {
+    module: "today-labels.ts",
+    map: "MEDIA_DELETION_KIND_KEYS",
+    rows: codeRows(MEDIA_DELETION_KINDS, (locale, kind) =>
+      mediaDeletionKindText(staffTranslator(locale), kind),
+    ),
+  },
+  {
+    module: "today-labels.ts",
+    map: "GREETING_KEYS",
+    rows: codeRows(keysOf(GREETING_KEYS), (locale, band) =>
+      staffTranslator(locale)(GREETING_KEYS[band], { name: "Priya" }),
+    ),
+  },
+  {
+    module: "today-labels.ts",
+    map: "SEASONAL_BRIEFING_KEYS",
+    // Private, and every sentence carries a `select` on whether there is a
+    // shop to name — rendered with a name, so the branch that interpolates is
+    // the one exercised.
+    rows: codeRows(TODAY_SEASONS, (locale, season) =>
+      seasonalBriefingText(staffTranslator(locale), season, "Blue Mantis Divers"),
+    ),
+  },
+  {
+    module: "unit-labels.ts",
+    map: "DEPTH_UNIT_KEYS",
+    rows: codeRows(DEPTH_UNITS, (locale, unit) => depthText(diverTranslator(locale), 18, unit)),
+  },
+  {
+    module: "unit-labels.ts",
+    map: "TEMPERATURE_UNIT_KEYS",
+    rows: codeRows(TEMPERATURE_UNITS, (locale, unit) =>
+      temperatureText(diverTranslator(locale), 24, unit),
+    ),
+  },
+  {
+    module: "unit-labels.ts",
+    map: "SEA_STATE_KEYS",
+    rows: codeRows(
+      SEA_STATES,
+      (locale, state) => seaStateText(diverTranslator(locale), state).label,
+    ),
+  },
+  {
+    module: "unit-labels.ts",
+    map: "SEA_STATE_DETAIL_KEYS",
+    rows: codeRows(
+      SEA_STATES,
+      (locale, state) => seaStateText(diverTranslator(locale), state).detail,
+    ),
+  },
+  {
+    module: "unit-labels.ts",
+    map: "WIND_STATE_KEYS",
+    rows: codeRows(WIND_STATES, (locale, state) => windText(diverTranslator(locale), state).label),
+  },
+  {
+    module: "unit-labels.ts",
+    map: "WIND_STATE_DETAIL_KEYS",
+    rows: codeRows(WIND_STATES, (locale, state) => windText(diverTranslator(locale), state).detail),
+  },
+  {
     module: "waiver-labels.ts",
     map: "WAIVER_STATUS_KEYS",
     rows: codeRows(WAIVER_ROW_STATES, (locale, state) =>
@@ -478,10 +831,17 @@ function keysOf<Code extends string>(map: Record<Code, unknown>): readonly Code[
  * these does have a Spanish form, this file says so in one failing line and the
  * fix is deleting the entry.
  *
- * Eighteen keys is what the thirty-four maps below happen to reach. The
- * bundles hold 206 identical values across 7,944 keys, and a count that covers
- * every key rather than the mapped ones belongs in `check:locale` as a ratchet
- * — issue #1757.
+ * **This list stays now that `check:locale` counts identical values too**
+ * (issue #1757), because the two make different claims. That guard compares
+ * two bundle *values*; this compares two *rendered* labels, and a resolver
+ * sits between them — it interpolates, it translates a second code into a
+ * placeholder, and `KIND_SOURCES` redirects half its codes into another
+ * module's keys. Two identical bundle values are therefore neither necessary
+ * nor sufficient for the label a reader sees being identical, and the guard
+ * cannot address a code at all: it knows `shared.compass.n`, not
+ * `COMPASS_KEYS.n`. The guard carries the bundle-wide fact and its own
+ * per-key reasons; this carries the per-code one. Neither is the other's
+ * baseline.
  */
 const SAME_IN_BOTH_LOCALES = new Map<string, string>([
   // "Plan" is spelled and read the same in Spanish.
@@ -507,6 +867,36 @@ const SAME_IN_BOTH_LOCALES = new Map<string, string>([
   ["DIVER_CERTIFICATION_AGENCY_KEYS.raid", "agency acronym"],
   ["DIVER_CERTIFICATION_AGENCY_KEYS.gue", "agency acronym"],
   ["DIVER_CERTIFICATION_AGENCY_KEYS.bsac", "agency acronym"],
+  // The five compass points Spanish spells with the same letter. The three it
+  // does not — O, SO, NO — are the whole reason `compass-labels.ts` exists, so
+  // they are deliberately absent from this list and asserted as different.
+  ["COMPASS_KEYS.n", "same letter on both compasses"],
+  ["COMPASS_KEYS.ne", "same letters on both compasses"],
+  ["COMPASS_KEYS.e", "same letter on both compasses"],
+  ["COMPASS_KEYS.se", "same letters on both compasses"],
+  ["COMPASS_KEYS.s", "same letter on both compasses"],
+  // The gear register's brand and initialism, and the prep list's own copy of
+  // the first — one word, resolved through two maps.
+  ["KIND_SOURCES.gopro", "brand name"],
+  ["KIND_SOURCES.dpv", "initialism, used untranslated"],
+  ["RENTAL_ITEM_LABEL_KEYS.gopro", "brand name"],
+  // The diver bundle's copy of the same ladder the staff bundle allowlists
+  // above, `rescue` excepted the same way.
+  ["DIVER_CERT_LEVEL_KEYS.open_water", "course name, used untranslated"],
+  ["DIVER_CERT_LEVEL_KEYS.advanced_open_water", "course name, used untranslated"],
+  ["DIVER_CERT_LEVEL_KEYS.divemaster", "course name, used untranslated"],
+  ["DIVER_CERT_LEVEL_KEYS.instructor", "course name, used untranslated"],
+  // The diver's own chip for the same category *is* translated ("La sesión
+  // informativa"); the staff panel's one-word version keeps the loanword a
+  // crew says out loud.
+  ["STAFF_PULSE_CATEGORY_KEYS.briefing", "loanword the Spanish diving world uses"],
+  // A gas and a processor.
+  ["ACTION_KIND_KEYS.nitrox_gate", "gas name, used untranslated"],
+  ["ACTION_KIND_KEYS.stuck_payment_operation", "the processor’s brand name"],
+  // The abbreviation is the whole message — "{value} m" carries no word to
+  // translate. The spelled-out forms (`course.depthUnits.*`) do, and differ.
+  ["DEPTH_UNIT_KEYS.meters", "the unit’s abbreviation, and the template is nothing else"],
+  ["DEPTH_UNIT_KEYS.feet", "the unit’s abbreviation, and the template is nothing else"],
 ]);
 
 /** A rendered label that is nothing but a dotted key — what a missing key renders as. */
@@ -569,33 +959,13 @@ describe.each(CASES)("$module › $map", ({ rows, map }) => {
  * **The half a guard is good at.**
  *
  * A table proves what is in it. This finds every `Record<…MessageKey…>` in the
- * directory and requires each one to be accounted for — in the table above, or
- * in a module whose own test file covers it — so a map added tomorrow fails
- * here rather than joining the fourteen that had no proof for months. It is a
- * text scan for the same reason `provider-coverage.test.ts` is: the maps it
- * looks for are private to their modules and there is nothing to import.
+ * directory and requires the table to hold exactly those maps, so a map added
+ * tomorrow fails here rather than joining the twenty-four that had no proof
+ * for months. It is a text scan for the same reason
+ * `provider-coverage.test.ts` is: the maps it looks for are private to their
+ * modules and there is nothing to import.
  */
 const I18N_DIR = path.join(process.cwd(), "src/i18n");
-
-/**
- * Modules whose maps are proved by their own `<module>.test.ts` instead of the
- * table above. Named per module rather than per map, which is what those files
- * actually do — `today-labels.ts` carries seven maps behind one test file — and
- * is the weaker claim of the two: `gear-labels.test.ts` is sixteen lines and
- * exercises one of that module's four maps. The table above is the stronger
- * form, and folding these twenty-four in is issue #1756 — not a silent
- * exemption. Delete this list, and the test below that guards it, when it
- * empties.
- */
-const PROVED_BY_MODULE_TEST = [
-  "compass-labels.ts",
-  "gear-labels.ts",
-  "manifest-labels.ts",
-  "next-dive-labels.ts",
-  "rental-labels.ts",
-  "today-labels.ts",
-  "unit-labels.ts",
-];
 
 /** Comments in this directory quote map literals constantly — never scan them. */
 function stripComments(source: string): string {
@@ -632,22 +1002,29 @@ function messageKeyMaps(source: string): string[] {
 }
 
 describe("the directory's message-key maps", () => {
-  it("accounts for every one of them", async () => {
+  it("accounts for every one of them, and holds the table to exactly them", async () => {
     const accounted = new Set(CASES.map((entry) => `${entry.module} ${entry.map}`));
+    const found: string[] = [];
     const unaccounted: string[] = [];
     const modules = (await readdir(I18N_DIR)).filter(
       (name) => name.endsWith(".ts") && !name.endsWith(".test.ts") && !name.endsWith(".d.ts"),
     );
 
     for (const module of modules.sort()) {
-      if (PROVED_BY_MODULE_TEST.includes(module)) continue;
       const source = stripComments(await readFile(path.join(I18N_DIR, module), "utf8"));
       for (const map of messageKeyMaps(source)) {
+        found.push(`${module} ${map}`);
         if (!accounted.has(`${module} ${map}`)) unaccounted.push(`${module} ${map}`);
       }
     }
 
     expect(unaccounted).toEqual([]);
+    // The other direction, which is what a deferral list used to hide: with
+    // every map in the table the two sets are equal, so a row whose map was
+    // renamed or deleted fails here rather than sitting on as a row that
+    // renders something nothing reads. It also means a scan that found nothing
+    // cannot read as clean.
+    expect([...accounted].sort()).toEqual([...found].sort());
   });
 
   it("finds the maps it claims to, so a broken scan can't read as clean", async () => {
@@ -662,12 +1039,5 @@ describe("the directory's message-key maps", () => {
     expect(messageKeyMaps(readiness)).toContain("READINESS_BLOCKER_KEYS");
     expect(messageKeyMaps(thread)).toContain("THREAD_STEP_STATE_KEYS");
     expect(messageKeyMaps("const TONES: Record<Status, BadgeTone> = {};")).toEqual([]);
-  });
-
-  it("keeps a test file beside every module it defers to", async () => {
-    const present = await readdir(I18N_DIR);
-    for (const module of PROVED_BY_MODULE_TEST) {
-      expect(present, module).toContain(module.replace(/\.ts$/, ".test.ts"));
-    }
   });
 });
