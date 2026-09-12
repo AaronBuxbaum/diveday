@@ -6,6 +6,7 @@ import {
   REQUEST_PATH_HEADER,
 } from "@/lib/embed-routes";
 import type { PublicRouteShape } from "@/lib/public-route-shape";
+import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 
 /**
  * The edge refusal's two database modules, stubbed at the module boundary.
@@ -79,6 +80,27 @@ function request(url: string, headers?: Record<string, string>): NextRequest {
 
 async function run(req: NextRequest): Promise<Response> {
   const res = await proxy(req, {});
+  if (!res) throw new Error("proxy returned no response");
+  return res;
+}
+
+/**
+ * The proxy with the refused-statement damper's module state reset.
+ *
+ * `reportRefusedQuery` keeps its last-reported instant and swallowed count in
+ * module scope — that is what makes the bound per instance — so a test that
+ * expects the first line of a fresh instance has to say so, or it passes or
+ * fails on file order. The `vi.hoisted` `existence` stub survives
+ * `vi.resetModules()`, which is what makes this safe (`src/lib/rate-limit.test.ts`
+ * leans on the same thing).
+ */
+async function freshProxy(): Promise<typeof proxy> {
+  vi.resetModules();
+  return (await import("@/proxy")).proxy;
+}
+
+async function runOn(fresh: typeof proxy, req: NextRequest): Promise<Response> {
+  const res = await fresh(req, {});
   if (!res) throw new Error("proxy returned no response");
   return res;
 }
@@ -181,6 +203,22 @@ describe("the public namespace's edge refusal", () => {
     existence.asked = [];
     existence.liveShops = null;
   });
+
+  /**
+   * A slug Postgres refuses: SQLSTATE 22021, wrapped by drizzle exactly as the
+   * driver hands it over — the SQL followed by the bound parameters verbatim,
+   * which is the caller's own string and must never reach a log line.
+   */
+  function refuseWithSqlState(): void {
+    const driver = Object.assign(new Error('invalid byte sequence for encoding "UTF8": 0x00'), {
+      code: "22021",
+    });
+    existence.throws = true;
+    existence.throwsWith = new Error(
+      'Failed query: select "id" from "shops" where "shops"."slug" = $1\nparams: probe-slug,1',
+      { cause: driver },
+    );
+  }
 
   function rewriteTarget(res: Response): string | null {
     const value = res.headers.get("x-middleware-rewrite");
@@ -511,24 +549,84 @@ describe("the public namespace's edge refusal", () => {
     // outage put whoever was sending it in charge of the alarm, and the line
     // carried their own path *and* drizzle's wrapper message, which is the SQL
     // followed by the bound parameters verbatim.
-    const driver = Object.assign(new Error('invalid byte sequence for encoding "UTF8": 0x00'), {
-      code: "22021",
-    });
-    existence.throws = true;
-    existence.throwsWith = new Error(
-      'Failed query: select "id" from "shops" where "shops"."slug" = $1\nparams: probe-slug,1',
-      { cause: driver },
-    );
-    const lines = await logged(() => run(request("/s/probe-slug")));
+    refuseWithSqlState();
+    const fresh = await freshProxy();
+    const lines = await logged(() => runOn(fresh, request("/s/probe-slug")));
     expect(lines).toHaveLength(1);
+    // The level is asserted, not just the count: putting this back to `error`
+    // would hand whoever is sending `/s/%00` the `AppErrors` alarm.
     expect(lines[0]).toMatchObject({
       level: "warn",
       event: "public_route.existence_query_refused",
       shape: "shop",
       code: "22021",
+      swallowed: 1,
     });
     expect(JSON.stringify(lines)).not.toContain("probe-slug");
     expect(JSON.stringify(lines)).not.toContain("invalid byte sequence");
+  });
+
+  it("writes one line for a flood of refused statements, and still serves every page", async () => {
+    // The line is what an anonymous GET can make the app write, so it is
+    // bounded per instance. 200 requests, one line.
+    refuseWithSqlState();
+    const fresh = await freshProxy();
+    const responses: Response[] = [];
+    const lines = await logged(async () => {
+      for (let i = 0; i < 200; i += 1) {
+        responses.push(await runOn(fresh, request("/s/probe-slug")));
+      }
+    });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ level: "warn", swallowed: 1 });
+    // Failing open is the behaviour the damper must not have disturbed: every
+    // one of those requests still served its page rather than a refusal.
+    expect(responses.filter((res) => rewriteTarget(res) !== null)).toEqual([]);
+  });
+
+  it("carries the swallowed count into the next interval, so the rate stays visible", async () => {
+    // Damped is not dropped. The second line says how many the first stood in
+    // for, the same as `rate_limit.store_failed`.
+    refuseWithSqlState();
+    const fresh = await freshProxy();
+    const first = await logged(async () => {
+      for (let i = 0; i < 200; i += 1) await runOn(fresh, request("/s/probe-slug"));
+    });
+    expect(first).toHaveLength(1);
+
+    // The unit clock is frozen, so a minute has to be stated rather than waited
+    // for.
+    const later = new Date(Date.parse(TEST_FROZEN_CLOCK) + 61_000).toISOString();
+    vi.stubEnv("DIVEDAY_CLOCK", later);
+    const second = await logged(() => runOn(fresh, request("/s/probe-slug")));
+    expect(second).toHaveLength(1);
+    expect(second[0]).toMatchObject({
+      level: "warn",
+      event: "public_route.existence_query_refused",
+      swallowed: 200,
+    });
+  });
+
+  it("never damps an unreachable database", async () => {
+    // The other branch is the one worth waking somebody for:
+    // `DatabaseUnavailable` alarms at one datapoint in five minutes, so a
+    // damper on it would blunt the alarm the split exists to protect.
+    existence.throws = true;
+    existence.throwsWith = Object.assign(new Error("connect ECONNREFUSED 10.0.0.1:5432"), {
+      code: "ECONNREFUSED",
+    });
+    const fresh = await freshProxy();
+    const lines = await logged(async () => {
+      await runOn(fresh, request("/s/blue-mantis"));
+      await runOn(fresh, request("/s/blue-mantis"));
+    });
+    expect(lines).toHaveLength(2);
+    for (const line of lines) {
+      expect(line).toMatchObject({
+        level: "error",
+        event: "public_route.existence_unavailable",
+      });
+    }
   });
 });
 

@@ -15,6 +15,12 @@
  * month. Past those it is $0.30 per metric, $0.10 per alarm, $3.00 per
  * dashboard, $0.50/GB ingested and $0.12/GB scanned.
  *
+ * Ingestion is the half a stranger can move, and the noisiest anonymous line
+ * in the app is `public_route.existence_query_refused`. It is bounded at its
+ * own emit, per instance, and priced there rather than here -- see
+ * `reportRefusedQuery` in `src/proxy.ts`. The number lives in one place; this
+ * is the pointer to it.
+ *
  * This registry currently declares 17 metrics (11 log signals + 5 web vitals
  * + the mutation-duration metric, which is one metric *permanently* because its
  * filter carries no dimension -- see `MUTATION_DURATION_SIGNAL`) and 14 alarms (8 + the 3 alarmed vitals + the

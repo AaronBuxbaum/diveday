@@ -190,7 +190,13 @@ Postgres refuses (SQLSTATE 22021), once per request, free for whoever is sending
 `public_route.existence_query_refused` at `warn`, split by `src/lib/db-failure.ts` on whether a
 server answered at all. Neither line carries the pathname or the driver's message: drizzle's wrapper
 message is the SQL followed by the bound parameters verbatim, and both were being shipped to
-CloudWatch unauthenticated and unthrottled at the request of a stranger.
+CloudWatch unauthenticated at the request of a stranger. The volume was the other half of that, and
+is now bounded too: the refused branch emits at most one line per instance per minute and carries a
+`swallowed` count so the real rate stays readable (`reportRefusedQuery` in `src/proxy.ts`, issue
+#1736). Per instance, not fleet-wide — serverless instances are many, so this damps one instance's
+chatter rather than rate-limiting the fleet. The `unavailable` branch beside it is deliberately
+undamped, because `DatabaseUnavailable` alarms at one datapoint in five minutes and a delayed first
+line would blunt the alarm this split exists to protect.
 
 **What it discloses.** A status line is an oracle, and under `/s/**` there is one row whose
 visibility a page decides for itself: `courses.is_active` is the shop's Hidden toggle, and

@@ -12,6 +12,7 @@ import {
   buddyReferralFromSearchParams,
   encodeBuddyCookie,
 } from "@/lib/buddy-links";
+import { MINUTE_MS, nowMs } from "@/lib/clock";
 import {
   type CspOptions,
   enforcedPolicy,
@@ -321,6 +322,55 @@ function rememberPartnerReferral(req: NextRequest, res: Response): void {
  */
 const NOT_FOUND_ROUTE = "/_not-found";
 
+/** One refused-statement line per instance per minute. */
+const REFUSED_QUERY_REPORT_INTERVAL_MS = MINUTE_MS;
+
+/** Module state, so the bound is per instance and dies with the instance. */
+const refusedQueries = { lastReportedAt: Number.NEGATIVE_INFINITY, swallowed: 0 };
+
+/**
+ * The refused-statement line, bounded — the damper shape `reportStoreFailure`
+ * in `src/lib/rate-limit.ts` already uses.
+ *
+ * **Why this branch and not its neighbour.** A stranger reaches this one at
+ * will: the slugs below go to Postgres unfiltered and length-unbounded on
+ * purpose, so `/s/%00` is a statement the server refuses, once per request,
+ * for as long as it is sent. An anonymous GET should not be able to make the
+ * app write without limit. The `error` branch is deliberately left undamped:
+ * `DatabaseUnavailable` alarms at one datapoint in five minutes
+ * (`infra/lib/observability.ts`), and delaying it would blunt the one line
+ * here worth waking somebody for — which is the whole reason
+ * `classifyDatabaseFailure` splits the two.
+ *
+ * **The bound is per instance, not fleet-wide.** Serverless instances are many
+ * and short-lived, so a flood spread across them still writes a line each.
+ * This damps one instance's chatter; it is not a rate limit, and the
+ * fleet-wide answer to a flood is a platform rule
+ * (docs/engineering/rate-limiting-runbook.md).
+ *
+ * **Priced once, here, so nobody re-derives it.** The line is about 126 bytes,
+ * roughly 152 with CloudWatch's per-event overhead, so on the order of 35M
+ * such requests a month still sit inside the 5 GB always-free allowance. Each
+ * of those requests already costs a Vercel invocation and a Neon read, and the
+ * `vercel_spend` and `neon_compute` ceilings in `src/lib/cost-guardrails.ts`
+ * meet that long first. The bound exists because an unbounded
+ * attacker-triggered write is the wrong shape, not because the bill was large.
+ *
+ * `swallowed` keeps the real rate visible through the damping, the same as
+ * `rate_limit.store_failed`.
+ */
+function reportRefusedQuery(shape: string, code: string, now: number): void {
+  refusedQueries.swallowed += 1;
+  const sinceLastReport = now - refusedQueries.lastReportedAt;
+  // A `now` that moved backwards reports rather than silently suppressing
+  // until the clock catches up again.
+  if (sinceLastReport >= 0 && sinceLastReport < REFUSED_QUERY_REPORT_INTERVAL_MS) return;
+  const swallowed = refusedQueries.swallowed;
+  refusedQueries.swallowed = 0;
+  refusedQueries.lastReportedAt = now;
+  log("public_route.existence_query_refused", "warn", { shape, code, swallowed });
+}
+
 /**
  * **A `/s/**` URL that names nothing is refused here, above the streaming
  * boundary** (ADR 20260912-the-public-namespace-refuses-at-the-edge).
@@ -399,7 +449,8 @@ async function refusedPublicRoute(
     // Neither branch logs the caught message or the pathname. Drizzle's
     // wrapper message is the SQL followed by the bound parameters verbatim,
     // which is the attacker's own string, and so was the `path` this used to
-    // ship to CloudWatch unauthenticated and unthrottled. `shape.kind` says
+    // ship to CloudWatch unauthenticated — and, until `reportRefusedQuery`
+    // above, once per request for as long as it was sent. `shape.kind` says
     // which lookup failed out of a closed set of five, and
     // `classifyDatabaseFailure` reports a SQLSTATE, a Node errno, or
     // `"unknown"` — closed vocabularies, never a string off the wire.
@@ -409,9 +460,9 @@ async function refusedPublicRoute(
     // codes the app emits straight off the source, and a metric filter
     // matching a code nothing writes counts zero forever without erroring.
     const failure = classifyDatabaseFailure(error);
-    const context = { shape: shape.kind, code: failure.code };
-    if (failure.unreachable) log("public_route.existence_unavailable", "error", context);
-    else log("public_route.existence_query_refused", "warn", context);
+    if (failure.unreachable)
+      log("public_route.existence_unavailable", "error", { shape: shape.kind, code: failure.code });
+    else reportRefusedQuery(shape.kind, failure.code, nowMs());
     return null;
   }
 }
