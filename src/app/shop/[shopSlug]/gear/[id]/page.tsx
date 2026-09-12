@@ -35,6 +35,7 @@ import {
   gearServiceState,
   reservationPhase,
 } from "@/lib/gear";
+import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -393,10 +394,13 @@ export default async function GearUnitPage({
                   className={controlClass}
                 />
               </Field>
+              {/* The action's own cap, which is the fit forms' cap
+                  (`RENTAL_FIT_TEXT_LIMITS.size`) because `keepRentalFitAction`
+                  copies this value into `rental_fit_profiles` — issue #1754. */}
               <Field label={t("gear.form.size")} hint={t("gear.form.optionalHint")}>
                 <input
                   name="size"
-                  maxLength={40}
+                  maxLength={RENTAL_FIT_TEXT_LIMITS.size}
                   defaultValue={item.size ?? ""}
                   className={controlClass}
                 />

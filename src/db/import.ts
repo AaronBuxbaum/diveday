@@ -37,6 +37,7 @@ import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { type PreparedImport, type PreparedRow, parseImportedMoney } from "@/lib/import";
 import { phoneForStorage } from "@/lib/phone";
+import { NOTHING_RENTED } from "@/lib/rentals";
 import { storeImportReceiptDocument, storeImportWaiverDocument } from "@/lib/storage";
 import { ingestImageUrl } from "@/lib/storage/ingest-url";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
@@ -610,7 +611,22 @@ async function writeEvidence(
     };
     await tx
       .insert(rentalFitProfiles)
-      .values({ shopId, personId, ...sizeSet })
+      // **A new profile claims nothing**, and only on the insert path —
+      // issue #1755's rule, reached through the importer, which the
+      // `security-reviewer` pass over both changes found still open here.
+      //
+      // Five of the eleven `rents_*` columns are `not null default true`, so a
+      // row created here with sizes and no flags stated a fit claiming a BCD, a
+      // regulator, a wetsuit, a mask, fins and weights — for up to 20,000
+      // divers in one action, at a shop whose catalog may hold none of them,
+      // and the packing-list reader applies no catalog filter. A file carries no claim about which pieces
+      // a diver *wants*: a size column says what fits, not what they asked
+      // for, which is the same reading `registerDiverAtShop` already takes of
+      // the counter's QR form (`src/db/self-registration.ts`).
+      //
+      // `set:` deliberately keeps only the sizes, so a diver's real stated fit
+      // is never rewritten by a re-import.
+      .values({ shopId, personId, ...NOTHING_RENTED, ...sizeSet })
       .onConflictDoUpdate({
         target: [rentalFitProfiles.shopId, rentalFitProfiles.personId],
         set: sizeSet,

@@ -186,12 +186,24 @@ export function offeredRentalFitFields(rentalItems: readonly string[]): Set<Rent
  * "This diver rents nothing" — every `rents_*` flag off, from the one list that
  * defines them.
  *
- * Two writers need it and neither may spell eleven `false`s of its own: the
- * walk-up self-registration, which records sizes without claiming the diver
- * asked for equipment, and `saveRentalFit`, which starts a **new** profile from
- * here so a column the form never asked about cannot arrive as its
- * `default(true)` (`src/db/schema.ts` — five of the eleven default on, which is
- * six unasked-for pieces on a packing list).
+ * **Every writer that can create a `rental_fit_profiles` row lays this under
+ * its insert**, and none may spell eleven `false`s of its own: the walk-up
+ * self-registration and the contact importer, which record sizes without
+ * claiming the diver asked for equipment, and all four writers in
+ * `src/db/rental-fit.ts` — the fit forms, the diver's note, the diver's shelf
+ * and the evening's "keep it". A column no form asked about must not arrive as
+ * its `default(true)` (`src/db/schema.ts` — five of the eleven default on,
+ * which is six unasked-for pieces on a packing list), and a row created
+ * claiming nothing is also the only thing that makes it safe for the next
+ * writer to stamp `fit_stated_at` on a row it did not create.
+ *
+ * The cast is load-bearing and cannot check itself: `Object.fromEntries` types
+ * as an index signature, so a member of {@link RentalFitField} with no
+ * {@link RENTABLE_ITEMS} entry would be missing from this object and the cast
+ * would say otherwise — the one column left at its `default(true)` on every new
+ * row, with nothing red. `rentals.test.ts` holds that line by checking both
+ * lists against a hand-spelled `Record<RentalFitField, true>`, which the
+ * compiler will not let be short a member.
  */
 export const NOTHING_RENTED = Object.fromEntries(
   RENTABLE_ITEMS.map((item) => [item.field, false]),

@@ -11,6 +11,7 @@ import {
 } from "@/db/gear";
 import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
@@ -19,7 +20,13 @@ const kindValues = GEAR_KIND_ORDER as [GearItemKind, ...GearItemKind[]];
 const unitFormSchema = z.object({
   kind: z.enum(kindValues),
   label: z.string().trim().max(80),
-  size: z.string().trim().max(40),
+  // **The fit cap, not a number that happens to match it.** A unit's size is
+  // copied verbatim into `rental_fit_profiles.bcd_size` and its siblings by
+  // `keepRentalFitAction` — the evening's one-tap "Keep it" — where every form
+  // caps at `RENTAL_FIT_TEXT_LIMITS.size` and re-posts what is stored. A wider
+  // cap here re-creates issue #1754 through this door: a size that lands in the
+  // column and then makes that diver's whole fit form unsaveable.
+  size: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size),
   serialNumber: z.string().trim().max(80),
   brandModel: z.string().trim().max(120),
   purchasedOn: z.string().trim().max(10),

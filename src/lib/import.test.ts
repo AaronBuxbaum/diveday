@@ -195,13 +195,37 @@ describe("prepareContactImport — rental sizes every fit form can re-submit (#1
     );
     const row = prepared.rows[0];
     expect(row?.sizes.wetsuitSize).toBeNull();
-    // The whole original cell reaches the staffer running the import — the one
-    // person who can read it and set the size by hand.
+    // The column is named, and the value quoted back is bounded: the staffer
+    // running the import is the one person who can set the size by hand, and
+    // what they need is which cell on which row — the file itself is open in
+    // front of them (`security-reviewer`, issue #1754). Unbounded, four size
+    // columns over sixty previewed rows was a quarter of a megabyte of warning
+    // text in one table column.
     expect(row?.issues).toEqual(
       expect.arrayContaining([
-        { level: "warning", code: "size_too_long", params: { value: noteFiledAsASize } },
+        {
+          level: "warning",
+          code: "size_too_long",
+          params: { field: "wetsuit_size", value: noteFiledAsASize },
+        },
       ]),
     );
+  });
+
+  it("quotes back only the head of a chatty cell, and names its column", () => {
+    // A prior system's notes field mapped onto a size column. Sixty rows of
+    // this in a preview is why the echo is bounded at all.
+    const essay = `Medium Large ${"and a further remark ".repeat(20)}`.trim();
+    const prepared = prepareContactImport(`full_name,bcd_size\nChatty Chris,"${essay}"`);
+    const echoed = prepared.rows[0]?.issues.find((i) => i.code === "size_too_long")?.params?.value;
+    expect(echoed).toBe(`${essay.slice(0, 60)}…`);
+    expect(echoed?.length).toBe(61);
+    // Twenty characters past the size cap, so any value that could have been a
+    // size is shown whole and only what is too long to be one is cut.
+    expect(essay.slice(0, 60).length).toBeGreaterThan(RENTAL_FIT_TEXT_LIMITS.size);
+    // One sentence per column, so a row with three unusable cells says which
+    // piece to re-enter three different ways.
+    expect(prepared.rows[0]?.issues[0]?.params?.field).toBe("bcd_size");
   });
 
   it("holds a size right at the cap, and never truncates one past it", () => {
@@ -233,7 +257,16 @@ describe("prepareContactImport — rental sizes every fit form can re-submit (#1
         `Four Fiona,"${noteFiledAsASize}","${noteFiledAsASize}",9,"${noteFiledAsASize}"`,
       ].join("\n"),
     );
-    expect(prepared.rows[0]?.issues.filter((i) => i.code === "size_too_long")).toHaveLength(3);
+    const raised = prepared.rows[0]?.issues.filter((i) => i.code === "size_too_long");
+    expect(raised).toHaveLength(3);
+    // And each names its own column. Three warnings that read identically tell
+    // a staffer nothing about which piece to go and set (`dive-domain-expert`
+    // review); every sibling warning in this file names its field.
+    expect(raised?.map((issue) => issue.params?.field)).toEqual([
+      "bcd_size",
+      "wetsuit_size",
+      "fin_size",
+    ]);
     expect(prepared.rows[0]?.sizes.bootSize).toBe("9");
   });
 

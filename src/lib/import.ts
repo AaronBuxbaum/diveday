@@ -687,6 +687,15 @@ export type ImportIssueCode =
 export type ImportIssueParams = {
   email?: string;
   value?: string;
+  /**
+   * Which column the issue is about, as the same `ImportField` code the
+   * wizard's own mapping table is keyed by — a code, never a word, like
+   * everything else this file emits. The preview resolves it to the column
+   * label a staffer already sees on that header (`ImportWizard.tsx`), so a row
+   * with three unusable size cells says which piece to re-enter instead of
+   * repeating one sentence three times.
+   */
+  field?: ImportField;
   parsed?: string;
   status?: string;
   specialty?: string;
@@ -1414,13 +1423,35 @@ function freeText(value: string | null): string | null {
  * (`src/lib/dive-prep.ts`) and is acted on at the dock, while a size DiveDay
  * does not hold is a gap the product already chases: `rentalFitCompleteness`
  * names the missing piece, and the diver's own gear form asks for it again in a
- * box that cannot exceed the cap. The full original cell is on the import
- * report beside the row, so nothing the file carried is lost to the staffer
- * running the import.
+ * box that cannot exceed the cap. The declined cell is named and quoted on the
+ * import report beside its row ({@link MAX_ECHOED_CELL_LENGTH} of it), at the
+ * moment the one person who can set the size by hand is looking at the file
+ * itself.
  */
 function fitSize(value: string | null): string | null {
   if (!value) return null;
   return value.length > RENTAL_FIT_TEXT_LIMITS.size ? null : value;
+}
+
+/**
+ * How much of a declined cell a warning quotes back. Twenty characters past the
+ * size cap itself, so any value that could have been a size is shown whole and
+ * anything cut is by definition too long to be one.
+ *
+ * The bound exists because the echo was the *cell*, capped only by
+ * `MAX_IMPORT_CELL_LENGTH`: four size columns over sixty previewed rows is a
+ * quarter of a megabyte of warning text in one table column
+ * (`security-reviewer`, issue #1754). Nothing is lost that anyone needed — the
+ * head of the value is what identifies the row, and the staffer running the
+ * import has the file itself open.
+ */
+const MAX_ECHOED_CELL_LENGTH = RENTAL_FIT_TEXT_LIMITS.size + 20;
+
+/** A declined cell quoted back to the staffer, bounded for display. */
+function echoedCell(value: string): string {
+  return value.length > MAX_ECHOED_CELL_LENGTH
+    ? `${value.slice(0, MAX_ECHOED_CELL_LENGTH)}…`
+    : value;
 }
 
 /**
@@ -1755,14 +1786,22 @@ export function prepareContactImport(text: string): PreparedImport {
 
     // Bounded here, at the one door values enter by, rather than at each of the
     // three forms that read them back out (`fitSize`, issue #1754). A declined
-    // size raises a `warning` carrying the whole original cell: the staffer
-    // running the import is the one person who can read it and set the size by
-    // hand, and this is the moment they are looking.
+    // size raises a `warning` naming its column and quoting the head of the
+    // cell: the staffer running the import is the one person who can read it
+    // and set the size by hand, and this is the moment they are looking.
     const sizeCell = (field: ImportField) => {
       const raw = clean(at(cells, field));
       const held = fitSize(raw);
       if (raw && !held) {
-        issues.push({ level: "warning", code: "size_too_long", params: { value: raw } });
+        // The column, then as much of its value as identifies the row
+        // (`echoedCell`): every sibling warning here names its field, and a
+        // row with three unusable size cells otherwise reads as one sentence
+        // said three times with nothing to act on.
+        issues.push({
+          level: "warning",
+          code: "size_too_long",
+          params: { field, value: echoedCell(raw) },
+        });
       }
       return held;
     };

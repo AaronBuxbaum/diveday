@@ -243,7 +243,14 @@ describe("the file the shelf shows", () => {
       .from(rentalFitProfiles)
       .where(and(eq(rentalFitProfiles.shopId, shop.id), eq(rentalFitProfiles.personId, personId)));
     expect(row?.bcdSize).toBe("M");
-    expect(row?.rentsBcd).toBe(true);
+    // **And the row it creates claims nothing.** This read `true` until the
+    // shelf's writer laid `NOTHING_RENTED` under its insert, and that `true`
+    // was the schema's `default(true)` rather than an answer anybody gave: the
+    // shelf has no checkbox, so a diver correcting a size stated a fit
+    // claiming a BCD, a regulator, a wetsuit, a mask, fins and weights their
+    // shop may not rent (`security-reviewer`, issue #1755). An answer already
+    // on file is preserved instead — `rental-fit.test.ts` holds that half.
+    expect(row?.rentsBcd).toBe(false);
     // A size a diver typed is a stated fit, so the packing list reads it.
     expect(row?.fitStatedAt).not.toBeNull();
   });

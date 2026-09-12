@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
+import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import {
   SELF_DECLARED_LEVELS,
   SELF_REGISTRATION_DONE,
@@ -151,15 +152,34 @@ export function RegisterForm({
       <fieldset>
         <legend className={LEAD_TITLE_CLASS}>{t("register.sizesHeading")}</legend>
         <p className="mt-1 mb-4 text-sm text-muted">{t("register.sizesHint")}</p>
+        {/* The same cap the action parses with and every later fit form reads
+            (`RENTAL_FIT_TEXT_LIMITS.size`), never a literal: a box wider than
+            the schema's own bound accepts a size the diver's gear form could
+            not save back, which is issue #1754 from this door. */}
         <FieldGrid columns={3}>
           <Field label={t("register.wetsuitLabel")} htmlFor="wetsuitSize">
-            <input id="wetsuitSize" name="wetsuitSize" maxLength={40} className={controlClass} />
+            <input
+              id="wetsuitSize"
+              name="wetsuitSize"
+              maxLength={RENTAL_FIT_TEXT_LIMITS.size}
+              className={controlClass}
+            />
           </Field>
           <Field label={t("register.bootLabel")} htmlFor="bootSize">
-            <input id="bootSize" name="bootSize" maxLength={40} className={controlClass} />
+            <input
+              id="bootSize"
+              name="bootSize"
+              maxLength={RENTAL_FIT_TEXT_LIMITS.size}
+              className={controlClass}
+            />
           </Field>
           <Field label={t("register.finLabel")} htmlFor="finSize">
-            <input id="finSize" name="finSize" maxLength={40} className={controlClass} />
+            <input
+              id="finSize"
+              name="finSize"
+              maxLength={RENTAL_FIT_TEXT_LIMITS.size}
+              className={controlClass}
+            />
           </Field>
         </FieldGrid>
       </fieldset>

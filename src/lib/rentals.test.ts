@@ -11,6 +11,7 @@ import {
   quoteRentalFit,
   RENTABLE_ITEMS,
   RENTAL_FIT_TEXT_LIMITS,
+  type RentalFitField,
   type RentalFitSizes,
   type RentalPricing,
   rentalFitCompleteness,
@@ -461,9 +462,32 @@ describe("offeredRentalFitFields / NOTHING_RENTED", () => {
     // A brand-new profile starts here, because five of the eleven columns
     // default to **true** in the schema: a column no form asked about must not
     // arrive as six unasked-for pieces on a packing list.
-    expect(Object.keys(NOTHING_RENTED).sort()).toEqual(
-      RENTABLE_ITEMS.map((item) => item.field).sort(),
-    );
+    //
+    // **Both sides are checked against a third thing**, spelled by hand, or
+    // this assertion cannot fail: `NOTHING_RENTED` is built by mapping
+    // `RENTABLE_ITEMS`, so comparing the two compares one list with itself
+    // (`security-reviewer`, issue #1754). `RentalFitField` is the union the
+    // `rents_*` columns answer to, and `Record<RentalFitField, true>` is the
+    // one shape the compiler will not let be short a member — so a twelfth
+    // column added to the union without a `RENTABLE_ITEMS` entry is a type
+    // error here, rather than a field silently missing from the baseline and
+    // arriving at its `default(true)` on every new row.
+    const EVERY_RENTAL_FIT_FIELD: Record<RentalFitField, true> = {
+      rentsBcd: true,
+      rentsRegulator: true,
+      rentsWetsuit: true,
+      rentsMaskFins: true,
+      rentsWeights: true,
+      rentsDiveComputer: true,
+      rentsGopro: true,
+      rentsDrysuit: true,
+      rentsHoodGloves: true,
+      rentsTorch: true,
+      rentsSmb: true,
+    };
+    const everyField = Object.keys(EVERY_RENTAL_FIT_FIELD).sort();
+    expect(Object.keys(NOTHING_RENTED).sort()).toEqual(everyField);
+    expect(RENTABLE_ITEMS.map((item) => item.field).sort()).toEqual(everyField);
     expect(Object.values(NOTHING_RENTED).every((value) => value === false)).toBe(true);
   });
 });

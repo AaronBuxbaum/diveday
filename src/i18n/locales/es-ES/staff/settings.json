@@ -884,7 +884,7 @@
       "noName": "Esta fila no tiene nombre y se omitió.",
       "mergedDuplicate": "Mismo buceador que la fila {row} ({email}), así que las certificaciones, la exención y la visita anterior de esta fila se añaden a ese registro; los datos de contacto se dejan como los tiene la fila anterior.",
       "noEmailNewRecord": "Esta fila no tiene correo y se importó como registro nuevo; una reimportación no podrá relacionarlo para actualizarlo.",
-      "sizeTooLong": "La talla de alquiler “{value}” es demasiado larga para una casilla de talla, así que el buceador se importa sin ella. Indícala en su registro o su formulario de equipo se la pedirá."
+      "sizeTooLong": "{field}: “{value}” es demasiado larga para un campo de talla, así que el buceador se importa sin ella. Indícala en su ficha, o su formulario de equipo se la pedirá."
     },
     "errors": {
       "notOwnerOrManager": "Importar contactos está limitado al propietario o gerente del centro.",

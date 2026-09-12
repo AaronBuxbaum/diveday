@@ -183,6 +183,42 @@ function chooseFile(input: HTMLElement, text: string, name = "contacts.csv") {
   return userEvent.upload(input, file);
 }
 
+describe("a row's issues", () => {
+  it("names the column an issue is about, in the words the mapping table uses", async () => {
+    // `src/lib/import.ts` emits codes and never words, so an issue that is
+    // about one column carries the `ImportField` and the label is resolved
+    // here (`dive-domain-expert` review). Rendering the code itself would put
+    // `wetsuit_size` on a staffer's screen.
+    const copy = {
+      ...COPY,
+      fieldLabels: { ...COPY.fieldLabels, wetsuit_size: "Wetsuit size" },
+      issues: { ...COPY.issues, size_too_long: "{field} “{value}” is too long." },
+    };
+    render(
+      <ImportWizard
+        diversHref="/shop/blue-mantis/divers"
+        intro="Upload contacts.csv"
+        copy={copy}
+        locale="en-US"
+      />,
+    );
+
+    const input = screen.getByLabelText(/choose a file/i, { selector: "input" });
+    await chooseFile(
+      input,
+      'full_name,wetsuit_size\nOverlong Olive,"Medium Large, long torso, prefers 5mm not 3mm"\n',
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /Wetsuit size “Medium Large, long torso, prefers 5mm not 3mm” is too long/,
+        ),
+      ).toBeInTheDocument();
+    });
+  });
+});
+
 describe("ImportWizard reset on revisit", () => {
   it("clears the parsed CSV preview on a pathname change, instead of a stale preview surviving to be committed", async () => {
     const { rerender } = render(

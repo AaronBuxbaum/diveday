@@ -7293,12 +7293,21 @@ export const rentalFitProfiles = pgTable(
      * exists: since issue 627 the diver's free-text note ("titanium hip, I run
      * heavy") is its own question on `/ready`, saved by `saveRentalFitNote`,
      * which will create this row for a diver who has never touched the gear
-     * form. Every `rents_*` column above defaults to **true**, so without this
-     * discriminator a diver who only left a note would appear on the boat's
-     * packing list renting a BCD, regulator, wetsuit, mask, fins and weights —
-     * six pieces, no sizes, nobody asked for any of them. `rentalFitLine` and
-     * the prep checklist read a null here as "no fit recorded", exactly as they
-     * already read a missing row.
+     * form. **Five** of the eleven `rents_*` columns above default to `true`
+     * (the core kit: BCD, regulator, wetsuit, mask and fins, weights), so
+     * without this discriminator a diver who only left a note would appear on
+     * the boat's packing list renting all five with no sizes, nobody having
+     * asked for any of them. `rentalFitLine` and the prep checklist read a null
+     * here as "no fit recorded", exactly as they already read a missing row.
+     *
+     * That hazard now has a second defence under it rather than only this one:
+     * every writer that can *create* one of these rows lays `NOTHING_RENTED`
+     * (src/lib/rentals.ts) under its insert, including `saveRentalFitNote`
+     * itself — so a note-only row holds eleven explicit `false`s and no longer
+     * hands those five defaults to whichever writer stamps this column next
+     * (`security-reviewer`, issue #1755). The discriminator still earns its
+     * keep: it is what separates a note from a fit for every reader, and no
+     * amount of explicit `false` makes a row with no answers into an answer.
      */
     fitStatedAt: timestamp("fit_stated_at", { withTimezone: true }),
     /**

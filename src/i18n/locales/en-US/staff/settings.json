@@ -884,7 +884,7 @@
       "noName": "This row has no name and was skipped.",
       "mergedDuplicate": "Same diver as row {row} ({email}), so this row’s certifications, waiver, and past visit are added to them, with contact details left as the earlier row has them.",
       "noEmailNewRecord": "This row has no email and was imported as a new record; a re-import can’t match it to update.",
-      "sizeTooLong": "Rental size \"{value}\" is too long for a size box, so the diver imports without it. Set it on their record, or their gear form will ask them for it."
+      "sizeTooLong": "{field} \"{value}\" is too long for a size box, so the diver imports without it. Set it on their record, or their gear form will ask them for it."
     },
     "errors": {
       "notOwnerOrManager": "Importing contacts is limited to the shop’s owner or manager.",

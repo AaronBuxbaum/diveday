@@ -8,6 +8,7 @@ import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { canPersonImportShopData, commitContactImport } from "./import";
+import { saveRentalFit } from "./rental-fit";
 import {
   bookings,
   certifications,
@@ -179,6 +180,60 @@ describe("commitContactImport", () => {
       .from(rentalFitProfiles)
       .where(eq(rentalFitProfiles.personId, person.id));
     expect(profile).toMatchObject({ bcdSize: "M", wetsuitSize: "3mm/M", finSize: "L" });
+    // **And claims nothing.** Five of the eleven `rents_*` columns are `not
+    // null default true`, so a row created by the importer with no flags at
+    // all stated a fit claiming six pieces nobody ticked (`security-reviewer`,
+    // issue #1754). A size says what fits, never what the diver asked for.
+    expect(profile).toMatchObject({
+      rentsBcd: false,
+      rentsRegulator: false,
+      rentsWetsuit: false,
+      rentsMaskFins: false,
+      rentsWeights: false,
+      rentsDiveComputer: false,
+    });
+  });
+
+  it("never rewrites what a diver already said they rent (#1754)", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    await commitContactImport(
+      db,
+      shop.id,
+      prepareContactImport("full_name,email\nStated Steph,steph.import@example.com"),
+      importer,
+    );
+    const person = await personByEmail(db, shop.id, "steph.import@example.com");
+    if (!person) throw new Error("person not created");
+    // The diver's own answer, given on their gear form.
+    await saveRentalFit(db, {
+      shopId: shop.id,
+      personId: person.id,
+      rentsWetsuit: true,
+      rentsMaskFins: true,
+      wetsuitSize: "3mm/M",
+    });
+
+    // A later file carrying a size must merge with that, not flatten it: the
+    // all-false baseline is for a profile the import *creates*, and `set:`
+    // carries only sizes for exactly this reason.
+    await commitContactImport(
+      db,
+      shop.id,
+      prepareContactImport("full_name,email,bcd_size\nStated Steph,steph.import@example.com,M"),
+      importer,
+    );
+
+    const [profile] = await db
+      .select()
+      .from(rentalFitProfiles)
+      .where(eq(rentalFitProfiles.personId, person.id));
+    expect(profile).toMatchObject({
+      rentsWetsuit: true,
+      rentsMaskFins: true,
+      wetsuitSize: "3mm/M",
+      bcdSize: "M",
+    });
   });
 
   it("never lands a size the diver's own fit form could not save back (#1754)", async () => {

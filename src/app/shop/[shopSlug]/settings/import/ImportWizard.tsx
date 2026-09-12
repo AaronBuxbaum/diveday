@@ -13,6 +13,7 @@ import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { fill, pluralForm } from "@/i18n/fill";
 import {
   type ImportField,
+  type ImportIssue,
   type ImportIssueCode,
   type PreparedImport,
   prepareContactImport,
@@ -151,6 +152,21 @@ type ImportWizardCopy = {
  */
 function issueTemplate(template: string | { one: string; other: string }, count?: number): string {
   return typeof template === "string" ? template : pluralForm(count ?? 0, template);
+}
+
+/**
+ * One issue's placeholder values, with `field` resolved from the `ImportField`
+ * code to the column label this staffer is already reading on the mapping
+ * table above. `src/lib/import.ts` emits codes and never words, so the label
+ * can only be looked up here, where the translated copy is.
+ */
+function issueValues(
+  copy: ImportWizardCopy,
+  params: ImportIssue["params"],
+): Record<string, string | number | undefined> {
+  if (!params) return {};
+  const { field, ...rest } = params;
+  return field ? { ...rest, field: copy.fieldLabels[field] } : rest;
 }
 
 const PREVIEW_LIMIT = 60;
@@ -455,7 +471,7 @@ export function ImportWizard({
                               >
                                 {fill(
                                   issueTemplate(copy.issues[issue.code], issue.params?.count),
-                                  issue.params ?? {},
+                                  issueValues(copy, issue.params),
                                 )}
                               </li>
                             ))}
