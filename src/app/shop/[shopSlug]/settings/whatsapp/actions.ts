@@ -46,8 +46,12 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
  * Spelled lower-case kebab, because on this page the code *is* the message-bundle
  * key — the banner renders `whatsapp.notice.<code>` — so a fork between the two
  * spellings shows a staffer nothing at all (src/lib/staff-notices.ts).
+ *
+ * Exported so `page.tsx` can type its tone map `Record<NoticeCodeOf<Notice |
+ * WhatsAppConnectRefusal>, NoticeTone>`: a member added here with no tone entry
+ * there used to render no banner at all, silently and green (issue #1768).
  */
-type Notice =
+export type Notice =
   | "connected"
   | "signup-unavailable"
   | "signup-failed-exchange"

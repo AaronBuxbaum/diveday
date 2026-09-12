@@ -1575,7 +1575,7 @@ export async function replyToDiverAction(shopSlug: string, personId: string, for
   // wrong-tenant id gets.
   const messageId = uuidParam(String(formData.get("messageId") ?? ""));
   if (!messageId) {
-    revalidateAndRedirect(base, backTo(base, "reply-message_not_found", "reply"));
+    revalidateAndRedirect(base, backTo(base, "reply-message-not-found", "reply"));
   }
   const result = await sendStaffReply(db, {
     shopId: staff.user.shopId,

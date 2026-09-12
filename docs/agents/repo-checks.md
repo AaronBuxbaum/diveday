@@ -54,7 +54,7 @@ The transaction-concurrency one (`scripts/check-db-concurrency.mjs`) refuses a `
 
 ### notice-code
 
-The notice-code one (`scripts/check-notice-codes.mjs`) holds every literal staff `?notice=` code to `/^[a-z0-9-]+$/` — the raw query string, the second argument of `noticeUrl(…)`, and a `searchParams.set("notice", …)` alike — because the two halves of that pattern live in different files and the only thing joining them is the code spelling identically on both sides. It did not: three meanings existed in **both** casings at once until 2026-08-15, and `orders/new/page.tsx` emitted two casings of one concept on adjacent lines of a single ternary. A code with no matching map key renders **no banner at all**, which looks exactly like a dead link and fails nothing.
+The notice-code one (`scripts/check-notice-codes.mjs`) holds every literal staff `?notice=` code to `/^[a-z0-9-]+$/` — the raw query string, the second argument of `noticeUrl(…)`, a `searchParams.set("notice", …)`, a `notice === "…"` on the reader side, and a literal passed through a page-local helper that forwards its own parameter to `noticeUrl` (`done(path, notice)`, `backTo(base, notice, form?)`), at that parameter's position only and including both branches of a conditional there — because the two halves of that pattern live in different files and the only thing joining them is the code spelling identically on both sides. It did not: three meanings existed in **both** casings at once until 2026-08-15, and `orders/new/page.tsx` emitted two casings of one concept on adjacent lines of a single ternary. A code with no matching map key renders **no banner at all**, which looks exactly like a dead link and fails nothing.
 
 ### scroll-preservation
 
