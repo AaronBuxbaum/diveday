@@ -1065,7 +1065,7 @@ export function OfflineManifestView() {
            * this page arguing with the only authority there is.
            */
           const seat = {
-            bookingStatus: arrival ? "checked_in" : "booked",
+            bookingStatus: diver.notHere ? "no_show" : arrival ? "checked_in" : "booked",
             readiness: diver.readiness,
           };
           return {
@@ -1084,7 +1084,7 @@ export function OfflineManifestView() {
         // but the counter is as finished with it as with a receipt, and a name
         // needing no tap sitting at the top of the working list is the noise
         // this ordering exists to take away.
-        .sort((a, b) => Number(a.settled) - Number(b.settled));
+        .sort((a, b) => Number(a.done) - Number(b.done));
   // Readiness gates boarding at departure only. After a dive, roll call is a
   // head count — a diver aboard is recorded present whatever the saved paperwork
   // said. The server re-checks the same way, so an offline board still syncs.
@@ -1570,7 +1570,7 @@ export function OfflineManifestView() {
                 // still boards a body the crew can see, and the rail takes the
                 // released seat back on sync rather than turning that body
                 // away.
-                if (diver.readiness.status !== "ready") {
+                if (diver.readiness.status !== "ready" || diver.notHere) {
                   return (
                     <li
                       key={diver.bookingId}
