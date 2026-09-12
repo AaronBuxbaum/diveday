@@ -50,6 +50,13 @@
     "money": "Marking someone not here does not charge or refund anything.",
     "moneyDoor": "Open their orders"
   },
+  "identity": {
+    "trigger": "Confirm this is {name}",
+    "message": "Is the person at the counter {name}? Confirming releases that diver’s certifications, waiver and packages to this seat, and it cannot be undone.",
+    "confirm": "Yes, this is them",
+    "cancel": "Never mind",
+    "confirming": "Confirming…"
+  },
   "settledGroup": "Checked in — {count}",
   "checkInButton": "Check in",
   "checkInAriaLabel": "Check in {name}",
@@ -86,7 +93,7 @@
     "waiverError": "That paper waiver couldn’t be recorded. Try again, or open the diver’s trip to see why.",
     "walkinAdded": "Added to this boat’s list. Check them in when they arrive.",
     "walkinAddedWaiverUndelivered": "Added to this boat’s list, but their waiver wasn’t emailed. Send it or share the link from their row below.",
-    "walkinAddedIdentityUnconfirmed": "Added to this boat’s list, but the seat is held until you confirm it’s the same person. Confirm it on the trip’s guest list before they board.",
+    "walkinAddedIdentityUnconfirmed": "Added to this boat’s list, but the seat is held until you confirm it’s the same person. Confirm it on their row below before they board.",
     "walkinFull": "That boat is full. Try the wait list from its trip page instead.",
     "walkinAlready": "That diver is already on this boat.",
     "walkinCourseUnstaffed": "That’s a course session with no instructor assigned yet. Assign one from its trip page first.",
@@ -98,6 +105,7 @@
     "walkinInvalid": "Choose a boat and enter a name before adding a walk-in.",
     "noShowAlreadyBoarded": "The crew boarded that diver, so they can’t be marked as not diving. Open the trip’s manifest.",
     "noShowAlreadyMissingAfterDive": "The crew recorded that diver as not back aboard after a dive. Call the boat and open the trip’s manifest.",
+    "identityNotHeld": "That seat is no longer held. Somebody has already confirmed who this diver is.",
     "noShowAlreadyMarked": "That diver is already marked not here.",
     "noShowNotBooked": "That seat was given up, so there is nothing to mark.",
     "noShowTripCancelled": "That departure is cancelled, so its guest list can’t change.",

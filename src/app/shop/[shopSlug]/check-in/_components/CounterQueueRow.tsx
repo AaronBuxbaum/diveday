@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -71,6 +72,26 @@ export type CounterWaiverNotice = FormNotice & {
  *   a neutral badge. The tinted row fills the counter used to wear retire with
  *   the card stack (decision 2): hairlines and ink, not eight fills.
  */
+
+/**
+ * **What the counter's identity confirm says**, resolved once by the page like
+ * every other string on this surface (`NoShowScript`'s copy object sets the
+ * precedent; `staffTranslator` is server-side only).
+ *
+ * Worded for this door rather than borrowed from the roster's: at the counter
+ * the person is standing in front of the staffer, which is the evidence the
+ * attestation is actually made on. The roster's sentence is written for
+ * somebody reading a list.
+ */
+export type CounterIdentityCopy = {
+  /** The unarmed trigger, naming the diver — one row's confirm must not read like the next row's. */
+  trigger: string;
+  /** What confirming releases, in one sentence. Shown only once armed. */
+  message: string;
+  confirm: string;
+  cancel: string;
+  confirming: string;
+};
 
 /** The row's leading identity block — name, exceptional badges, quiet meta. */
 function DiverIdentity({
@@ -146,6 +167,8 @@ export function CounterQueueRow({
   noShowClaim,
   markNoShowAction,
   undoNoShowAction,
+  confirmIdentityAction,
+  identityCopy,
   salvage,
   t,
 }: {
@@ -183,6 +206,13 @@ export function CounterQueueRow({
   noShowClaim: NoShowClaim | null;
   markNoShowAction: (formData: FormData) => Promise<void>;
   undoNoShowAction: (formData: FormData) => Promise<void>;
+  /**
+   * The counter's own door onto the roster's attestation (issue #1696) — one
+   * `confirmBookingIdentity`, two surfaces, as with seating.
+   */
+  confirmIdentityAction: (formData: FormData) => Promise<void>;
+  /** Its words, resolved by the page — see {@link CounterIdentityCopy}. */
+  identityCopy: CounterIdentityCopy;
   /**
    * What the shop can do with this released seat, already worded — the page
    * holds the translator, the locale and the shop's timezone, so it is the one
@@ -385,6 +415,19 @@ export function CounterQueueRow({
     },
     t,
   );
+  /**
+   * **This seat is held on a guess** (H-13, issue #1556): it attached itself to
+   * an existing diver's record off the counter's own name prompt, or off a
+   * reused email under a different name, and `identity_unconfirmed` refuses it
+   * at the rail until a staffer vouches for the person in front of them.
+   *
+   * Read off the blockers the row already carries rather than from a new
+   * column — the same list `blockerFixFor` above and `counterBlockerDisclosure`
+   * below are reading (`src/lib/readiness.ts`).
+   */
+  const identityUnconfirmed = row.readiness.blockers.some(
+    (blocker) => blocker.code === "identity_unconfirmed",
+  );
   // A diver at the counter with a signed paper release in hand: record it here
   // rather than sending them off to the trip's guest list. Offered only when
   // the waiver is the one fix this row is showing.
@@ -409,6 +452,47 @@ export function CounterQueueRow({
       // the button with what they typed still in the boxes (issue #1674).
       defaultOpen={Boolean(refusedWaiver)}
     />
+  ) : null;
+  const waiverBlock = refusedWaiver ? (
+    <div className="min-w-0">
+      {paperControl}
+      <FormStatus tone={refusedWaiver.tone} className="mt-2">
+        {refusedWaiver.text}
+      </FormStatus>
+    </div>
+  ) : (
+    // Unwrapped when nothing was refused, so every ordinary row keeps the exact
+    // flex child it had before the refusal routing landed (issue 1574).
+    paperControl
+  );
+  /**
+   * **The counter's own identity confirm** (issue #1696), so a walk-in seated
+   * off the name prompt can be cleared where the staffer is standing instead of
+   * on the trip roster a navigation away.
+   *
+   * A two-step `InlineConfirm` and never the one-tap `SubmitButton` its
+   * neighbours on this row use: this attestation releases another person's
+   * certifications, waiver and packages onto this seat and there is no undo,
+   * which is the case `docs/design/principles.md` §7 reserves a blocking
+   * confirm for. The row's own check-in tap stays the only large target while
+   * this sits unarmed.
+   *
+   * The row still prints nothing new about the matched person. The flag gates
+   * disclosure as well as boarding (security review 2026-09-11), and the fix
+   * for the walk was a control, not a preview.
+   */
+  const identityControl = identityUnconfirmed ? (
+    <form action={confirmIdentityAction} className="mt-3">
+      <input type="hidden" name="bookingId" value={row.bookingId} />
+      <InlineConfirm
+        triggerLabel={identityCopy.trigger}
+        message={identityCopy.message}
+        confirmLabel={identityCopy.confirm}
+        cancelLabel={identityCopy.cancel}
+        pendingLabel={identityCopy.confirming}
+        triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
+      />
+    </form>
   ) : null;
   return (
     <LedgerRow as="article" size="lg" className="px-4 py-3 sm:px-5">
@@ -471,17 +555,17 @@ export function CounterQueueRow({
           //
           // `BlockedDiverRow` renders `extra` unconditionally in both layouts,
           // so a refusal routed to a rendered row always has somewhere to land.
-          refusedWaiver ? (
-            <div className="min-w-0">
-              {paperControl}
-              <FormStatus tone={refusedWaiver.tone} className="mt-2">
-                {refusedWaiver.text}
-              </FormStatus>
-            </div>
+          identityControl ? (
+            // The confirm sits *after* the waiver control, in the order the
+            // desk works them: the identity is what releases the matched
+            // person's waiver onto the seat, so a staffer who clears it may
+            // find the paper control gone on the next render.
+            <>
+              {waiverBlock}
+              {identityControl}
+            </>
           ) : (
-            // Unwrapped when nothing was refused, so every ordinary row keeps
-            // the exact flex child it had before this change.
-            paperControl
+            waiverBlock
           )
         }
       />

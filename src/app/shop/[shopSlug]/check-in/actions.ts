@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
+import { confirmBookingIdentity } from "@/db/bookings";
 import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
@@ -243,4 +244,55 @@ export async function markWaiverInPersonFromCheckIn(
   // namesake confirmation on the same form, with what they typed still in it.
   // Nothing was written, so nothing is revalidated.
   return paperWaiverRefused(outcome.reason, formData);
+}
+
+/**
+ * **The counter confirms a held seat is who the record says** (H-13, issue
+ * #1696) — the second door onto the roster's attestation, never a second
+ * attestation.
+ *
+ * A seat the counter's own name-match prompt created is attached to an existing
+ * diver on a guess, and `identity_unconfirmed` refuses it at the rail until a
+ * staffer vouches for the person in front of them. Until now the only control
+ * that cleared it was on the trip roster, so the counter met the flag as a
+ * `not_ready` refusal from `checkInBooking` and had to leave the queue, open
+ * the trip, expand a confirm and walk back — with a diver at the desk and a
+ * queue behind them.
+ *
+ * `confirmBookingIdentity` is called, not copied: one write, one trail line,
+ * one set of package settlements, whichever door reached it — the same rule
+ * seating follows (`src/db/seat-diver.ts`).
+ *
+ * **Success answers in place, like every other tap on this surface.** The row
+ * loses its confirm control and its identity blocker under the finger that did
+ * it, and a redirect would throw away the search that found the diver — the
+ * exact regression issue #1674 removed from the paper-waiver door two controls
+ * over, on this same row. `counterQueuePath` carries the focused departure and
+ * nothing else, so there is no landing that keeps a `?q=`.
+ *
+ * The refusal does navigate, because it has no row state to land on: the seat
+ * was not held when the tap arrived — a double tap, or a row another staffer
+ * cleared while this one was reading it — and the row it is about renders
+ * exactly as it did before.
+ */
+export async function confirmIdentityFromCheckIn(
+  shopSlug: string,
+  focusTripId: string | null,
+  formData: FormData,
+): Promise<void> {
+  const session = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const back = counterQueuePath(shopSlug, focusTripId);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+
+  const confirmed = await confirmBookingIdentity(await getDb(), {
+    shopId: session.user.shopId,
+    bookingId,
+    actorPersonId: session.user.personId,
+  });
+  if (confirmed) {
+    revalidatePath(back);
+    return;
+  }
+  revalidateAndRedirect(back, noticeUrl(back, "identity-not-held"));
 }

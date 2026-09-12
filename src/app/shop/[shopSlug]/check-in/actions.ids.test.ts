@@ -42,6 +42,7 @@ const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
 const {
   checkInAction,
+  confirmIdentityFromCheckIn,
   markNoShowAction,
   markWaiverInPersonFromCheckIn,
   undoCheckInAction,
@@ -79,6 +80,7 @@ describe("a malformed booking id at the counter", () => {
     ["undoing a check-in", undoCheckInAction],
     ["marking a diver not here", markNoShowAction],
     ["undoing that mark", undoNoShowAction],
+    ["confirming a held seat's identity", confirmIdentityFromCheckIn],
   ])("settles %s back on the focused departure instead of erroring", async (_label, action) => {
     signIn();
 

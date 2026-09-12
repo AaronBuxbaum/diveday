@@ -8,6 +8,10 @@ import { CounterQueue } from "./CounterQueue";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
+  // `InlineConfirm` — the held seat's identity confirm — keys its disarm-on-
+  // revisit effect off `usePathname()`, so the row needs a stand-in for the
+  // router context this render has none of.
+  usePathname: () => "/shop/blue-mantis/check-in",
   unstable_rethrow: vi.fn(),
 }));
 
@@ -56,6 +60,14 @@ function renderQueue(rows: CheckInQueueRow[], settledOpen = false, showFirstVisi
       noShowClaimFor={() => null}
       markNoShowAction={vi.fn().mockResolvedValue(undefined)}
       undoNoShowAction={vi.fn().mockResolvedValue(undefined)}
+      confirmIdentityAction={vi.fn().mockResolvedValue(undefined)}
+      identityCopyFor={(queued) => ({
+        trigger: `Confirm this is ${queued.personName}`,
+        message: `Is the person at the counter ${queued.personName}?`,
+        confirm: "Yes, this is them",
+        cancel: "Never mind",
+        confirming: "Confirming…",
+      })}
       salvageFor={() => undefined}
       settledOpen={settledOpen}
       settledHeadingLevel="h3"

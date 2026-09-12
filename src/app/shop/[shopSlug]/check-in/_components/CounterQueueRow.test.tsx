@@ -10,6 +10,10 @@ import type { NoShowSalvageCopy } from "./NoShowScript";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
+  // `InlineConfirm` — the held seat's identity confirm — keys its disarm-on-
+  // revisit effect off `usePathname()`, so the row needs a stand-in for the
+  // router context this render has none of.
+  usePathname: () => "/shop/blue-mantis/check-in",
   unstable_rethrow: vi.fn(),
 }));
 
@@ -18,6 +22,15 @@ afterEach(() => {
 });
 
 const t = staffTranslator("en-US");
+
+/** The page resolves these; the row only places them (issue #1696). */
+const IDENTITY_COPY = {
+  trigger: "Confirm this is Nadia Petrov",
+  message: "Is the person at the counter Nadia Petrov?",
+  confirm: "Yes, this is them",
+  cancel: "Never mind",
+  confirming: "Confirming…",
+};
 
 function row(overrides: Partial<CheckInQueueRow> = {}): CheckInQueueRow {
   return {
@@ -63,6 +76,8 @@ function renderRow(
       noShowClaim={noShow.claim ?? null}
       markNoShowAction={vi.fn().mockResolvedValue(undefined)}
       undoNoShowAction={vi.fn().mockResolvedValue(undefined)}
+      confirmIdentityAction={vi.fn().mockResolvedValue(undefined)}
+      identityCopy={IDENTITY_COPY}
       salvage={noShow.salvage}
       t={t}
     />,
@@ -130,6 +145,64 @@ describe("a blocked row", () => {
       "/shop/blue-mantis/divers/person-1",
     );
     expect(screen.getByText("Payment is outstanding for this trip.")).toBeInTheDocument();
+  });
+});
+
+/**
+ * **The counter's own identity confirm** (issue #1696). The walk this replaces
+ * was real: a walk-in seated off the name prompt produced a queue row whose
+ * only control was a link to the trip roster, so clearing it meant leaving the
+ * desk with a diver standing at it.
+ */
+describe("a held seat's identity confirm", () => {
+  const held: Partial<CheckInQueueRow> = {
+    readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+  };
+
+  it("offers the confirm on the row whose seat is held", () => {
+    renderRow(held);
+    expect(
+      screen.getByRole("button", { name: "Confirm this is Nadia Petrov" }),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * Unarmed it is a plain `button`, never a submit: the arming tap must not
+   * post the attestation (`InlineConfirm`). The consequence sentence is behind
+   * that tap, so it is not on the glass for the next person in the queue to
+   * read either.
+   */
+  it("arms before it submits, and says what confirming costs only once armed", () => {
+    renderRow(held);
+    const trigger = screen.getByRole("button", { name: "Confirm this is Nadia Petrov" });
+    expect(trigger).toHaveAttribute("type", "button");
+    expect(screen.queryByText(/Is the person at the counter/)).not.toBeInTheDocument();
+  });
+
+  /** Every other blocked row is unchanged: one control, for one blocker. */
+  it("is absent on a row blocked on anything else", () => {
+    renderRow({ readiness: { status: "blocked", blockers: [{ code: "waiver_not_sent" }] } });
+    expect(screen.queryByRole("button", { name: /^Confirm this is / })).not.toBeInTheDocument();
+  });
+
+  it("is absent on a ready row", () => {
+    renderRow();
+    expect(screen.queryByRole("button", { name: /^Confirm this is / })).not.toBeInTheDocument();
+  });
+
+  /**
+   * **The flag gates disclosure as well as boarding** (security review
+   * 2026-09-11). The roster withholds the matched person's particulars behind
+   * this same blocker, and the fix for the walk was a control on the row, not a
+   * preview of the record: a held row says no more about the person than an
+   * ordinary one does.
+   */
+  it("prints nothing about the matched person that an ordinary row would not", () => {
+    renderRow({ ...held, dateOfBirth: "1996-04-02", missingEmergencyContact: true });
+    expect(screen.queryByText("1996")).not.toBeInTheDocument();
+    expect(screen.queryByText(/04\/02/)).not.toBeInTheDocument();
+    // The one fact the row already carried for every diver, unchanged.
+    expect(screen.getByText("No emergency contact")).toBeInTheDocument();
   });
 });
 

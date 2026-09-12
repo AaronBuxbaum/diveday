@@ -7,7 +7,11 @@ import type { CalendarDate } from "@/lib/calendar-date";
 import { counterIsDone, isNoShowAtCounter, isSettledAtCounter } from "@/lib/check-in";
 import type { NoShowClaim } from "@/lib/no-show";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
-import { CounterQueueRow, type CounterWaiverNotice } from "./CounterQueueRow";
+import {
+  type CounterIdentityCopy,
+  CounterQueueRow,
+  type CounterWaiverNotice,
+} from "./CounterQueueRow";
 import type { NoShowSalvageCopy } from "./NoShowScript";
 
 /**
@@ -47,6 +51,8 @@ export function CounterQueue({
   noShowClaimFor,
   markNoShowAction,
   undoNoShowAction,
+  confirmIdentityAction,
+  identityCopyFor,
   salvageFor,
   settledOpen,
   settledHeadingLevel,
@@ -89,6 +95,17 @@ export function CounterQueue({
   noShowClaimFor: (row: QueueRow) => NoShowClaim | null;
   markNoShowAction: (formData: FormData) => Promise<void>;
   undoNoShowAction: (formData: FormData) => Promise<void>;
+  /**
+   * The counter's door onto the roster's identity attestation (issue #1696),
+   * drawn by a row whose readiness carries `identity_unconfirmed`.
+   */
+  confirmIdentityAction: (formData: FormData) => Promise<void>;
+  /**
+   * Its words for one row — a function rather than a string, because the
+   * trigger names the diver and the page is the layer holding the translator
+   * (the same shape `salvageFor` below takes).
+   */
+  identityCopyFor: (row: QueueRow) => CounterIdentityCopy;
   /** What the shop can do with a released seat, already worded by the page. */
   salvageFor: (row: QueueRow) => NoShowSalvageCopy | undefined;
   /**
@@ -133,6 +150,8 @@ export function CounterQueue({
               noShowClaim={noShowClaimFor(row)}
               markNoShowAction={markNoShowAction}
               undoNoShowAction={undoNoShowAction}
+              confirmIdentityAction={confirmIdentityAction}
+              identityCopy={identityCopyFor(row)}
               salvage={salvageFor(row)}
               t={t}
             />
@@ -171,6 +190,8 @@ export function CounterQueue({
                 noShowClaim={noShowClaimFor(row)}
                 markNoShowAction={markNoShowAction}
                 undoNoShowAction={undoNoShowAction}
+                confirmIdentityAction={confirmIdentityAction}
+                identityCopy={identityCopyFor(row)}
                 salvage={salvageFor(row)}
                 t={t}
               />
@@ -212,6 +233,8 @@ export function CounterQueue({
                 noShowClaim={noShowClaimFor(row)}
                 markNoShowAction={markNoShowAction}
                 undoNoShowAction={undoNoShowAction}
+                confirmIdentityAction={confirmIdentityAction}
+                identityCopy={identityCopyFor(row)}
                 salvage={salvageFor(row)}
                 t={t}
               />

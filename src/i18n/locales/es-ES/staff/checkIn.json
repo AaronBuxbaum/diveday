@@ -50,6 +50,13 @@
     "money": "Marcar que alguien no vino no cobra ni reembolsa nada.",
     "moneyDoor": "Abrir sus pedidos"
   },
+  "identity": {
+    "trigger": "Confirmar que es {name}",
+    "message": "¿La persona que está en el mostrador es {name}? Al confirmar, las certificaciones, la exención y los paquetes de ese buceador pasan a esta reserva, y no se puede deshacer.",
+    "confirm": "Sí, es esta persona",
+    "cancel": "Mejor no",
+    "confirming": "Confirmando…"
+  },
   "settledGroup": "Registrados — {count}",
   "checkInButton": "Registrar",
   "checkInAriaLabel": "Registrar a {name}",
@@ -86,7 +93,7 @@
     "waiverError": "No se pudo registrar esa exención en papel. Inténtalo de nuevo, o abre la salida del buceador para ver por qué.",
     "walkinAdded": "Añadido a la lista de este barco. Regístralo cuando llegue.",
     "walkinAddedWaiverUndelivered": "Añadido a la lista de este barco, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
-    "walkinAddedIdentityUnconfirmed": "Añadido a la lista de este barco, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en la lista de invitados de la salida antes de que embarque.",
+    "walkinAddedIdentityUnconfirmed": "Añadido a la lista de este barco, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila, aquí abajo, antes de que embarque.",
     "walkinFull": "Ese barco está completo. Prueba la lista de espera desde su página de salida.",
     "walkinAlready": "Ese buceador ya está en este barco.",
     "walkinCourseUnstaffed": "Esa es una sesión de curso sin instructor asignado. Asigna uno desde su página de salida primero.",
@@ -98,6 +105,7 @@
     "walkinInvalid": "Elige un barco y escribe un nombre antes de añadir un walk-in.",
     "noShowAlreadyBoarded": "La tripulación embarcó a ese buceador, así que no se puede marcar que no buceó. Abre el manifiesto de la salida.",
     "noShowAlreadyMissingAfterDive": "La tripulación registró que ese buceador no volvió a bordo después de una inmersión. Llama al barco y abre el manifiesto de la salida.",
+    "identityNotHeld": "Esa reserva ya no está retenida. Alguien ya confirmó de quién se trata.",
     "noShowAlreadyMarked": "Ese buceador ya está marcado como que no vino.",
     "noShowNotBooked": "Esa reserva se canceló, así que no hay nada que marcar.",
     "noShowTripCancelled": "Esa salida está cancelada, así que su lista de invitados no puede cambiar.",
