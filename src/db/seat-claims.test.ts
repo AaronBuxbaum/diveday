@@ -149,6 +149,53 @@ describe("issuePartySeatClaims", () => {
     }
   });
 
+  /**
+   * **The one reader on issue #1753's list production reaches.** Every row
+   * this query returns is one party, and `createBookingParty` writes the whole
+   * party in a single transaction with `createBooking` stamping `nowDate()`
+   * per seat at millisecond resolution — so two seats typed into one form
+   * sharing a `created_at` is ordinary rather than unlucky. Under the frozen
+   * test clock it is certain: all three seats below share one instant.
+   *
+   * The panel (`PartyClaimPanel`) renders this array in order, so the
+   * organizer's list of who still has to claim was ordered by a
+   * `defaultRandom()` uuid.
+   *
+   * The ids are forced and the **alphabetically-first seat is given the higher
+   * uuid**, so the old `asc(bookings.id)` clause answers the exact opposite
+   * every time rather than half the time.
+   */
+  it("orders a party's seats by the seat's name, not by whichever uuid sorted higher", async () => {
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne, memberTwo } = await bookParty(db, shop.id, open.id);
+
+    const [{ createdAt }] = await db
+      .select({ createdAt: bookings.createdAt })
+      .from(bookings)
+      .where(eq(bookings.id, lead.bookingId))
+      .limit(1);
+    const [{ createdAt: memberCreatedAt }] = await db
+      .select({ createdAt: bookings.createdAt })
+      .from(bookings)
+      .where(eq(bookings.id, memberOne.bookingId))
+      .limit(1);
+    // The premise this test rests on: the party's seats already tie, written
+    // by the application clock rather than the column's `defaultNow()`.
+    expect(memberCreatedAt).toEqual(createdAt);
+
+    // "Milo Member" sorts before "Pia Member"; give Milo the higher uuid.
+    const lower = "00000000-0000-4000-8000-000000000001";
+    const higher = "00000000-0000-4000-8000-000000000002";
+    await db.update(bookings).set({ id: lower }).where(eq(bookings.id, memberTwo.bookingId));
+    await db.update(bookings).set({ id: higher }).where(eq(bookings.id, memberOne.bookingId));
+
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.map((seat) => seat.seatName)).toEqual(["Milo Member", "Pia Member"]);
+  });
+
   it("reports whether each seat's own current waiver is signed", async () => {
     // The one fact beyond `claimed` the party panel's aggregate line rests on
     // (ADR 20260827-the-divers-thread, slice 7c). A *superseded* record must

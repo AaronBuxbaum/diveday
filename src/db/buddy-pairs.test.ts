@@ -493,6 +493,70 @@ describe("buddy teams (in-memory PGlite)", () => {
     expect(trail[3]?.memberNames.sort()).toEqual([a.person.fullName, b.person.fullName].sort());
   });
 
+  /**
+   * **Which team is "Team 1" used to be a coin flip per database.**
+   *
+   * The index of `listTripBuddyTeams`' array is a team's number: the panel
+   * renders `manifest.buddyTeamLabel` with `index + 1`, and
+   * `buildIncidentExport` builds its `teamNumberById` the same way — so the
+   * number printed beside a diver on the document handed to authorities came
+   * off this order. The tie-break used to be `asc(buddy_pair_members.pair_id)`,
+   * a writer-minted uuid with no parent row (issue #1753).
+   *
+   * The tie above it needs no forcing: `formBuddyTeam` stamps `created_at`
+   * from `input.now ?? nowDate()`, and the clock is frozen for the unit fleet,
+   * so both teams below share one instant by construction — asserted here so
+   * the premise is not silently lost. The **pair ids** are forced, because the
+   * uuid is the confounder under test: the team that must sort first is given
+   * the *higher* id, so the old clause answers the exact opposite every time
+   * rather than half the time.
+   */
+  it("numbers the teams by their members' names, not by whichever pair uuid sorted higher", async () => {
+    const { db, shop, trip, a, b, c, staff } = await buddyContext();
+    await assignCrew(db, trip.id, staff.id);
+    const base = { shopId: shop.id, tripId: trip.id, recordedByPersonId: staff.id };
+
+    const alphas = await formBuddyTeam(db, {
+      ...base,
+      members: [diver(a.booking.id), diver(b.booking.id)],
+    });
+    const zulus = await formBuddyTeam(db, {
+      ...base,
+      members: [diver(c.booking.id), crew(staff.id)],
+    });
+    if (!alphas.ok || !zulus.ok) throw new Error("expected two teams");
+
+    await db.update(people).set({ fullName: "Alpha Adler" }).where(eq(people.id, a.person.id));
+    await db.update(people).set({ fullName: "Alpha Brecht" }).where(eq(people.id, b.person.id));
+    await db.update(people).set({ fullName: "Zulu Cabral" }).where(eq(people.id, c.person.id));
+    await db.update(people).set({ fullName: "Zulu Dorn" }).where(eq(people.id, staff.id));
+
+    // The premise: both teams were formed at one instant.
+    const stamps = await db
+      .select({ createdAt: buddyPairMembers.createdAt })
+      .from(buddyPairMembers)
+      .where(eq(buddyPairMembers.tripId, trip.id));
+    expect(new Set(stamps.map((row) => row.createdAt.getTime())).size).toBe(1);
+
+    // Lower pair id to the team that must come *second*.
+    const lower = "00000000-0000-4000-8000-000000000001";
+    const higher = "00000000-0000-4000-8000-000000000002";
+    await db
+      .update(buddyPairMembers)
+      .set({ pairId: lower })
+      .where(eq(buddyPairMembers.pairId, zulus.teamId));
+    await db
+      .update(buddyPairMembers)
+      .set({ pairId: higher })
+      .where(eq(buddyPairMembers.pairId, alphas.teamId));
+
+    const teams = await listTripBuddyTeams(db, shop.id, trip.id);
+    expect(teams.map((team) => team.members.map((member) => member.fullName))).toEqual([
+      ["Alpha Adler", "Alpha Brecht"],
+      ["Zulu Cabral", "Zulu Dorn"],
+    ]);
+  });
+
   it("keeps a half-cancelled team visible and dissolvable, but off the manifest", async () => {
     const { db, shop, trip, a, b, c, staff } = await buddyContext();
     const base = { shopId: shop.id, tripId: trip.id, recordedByPersonId: staff.id };

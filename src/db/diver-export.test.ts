@@ -8,7 +8,15 @@ import { createBookingParty } from "./bookings";
 import { formBuddyTeam } from "./buddy-pairs";
 import { canPersonExportShopData, loadDiverExportBundleInput } from "./export";
 import { addDiverNote } from "./operations";
-import { orderLineItems, orders, shops, userAccounts, waiverRecords } from "./schema";
+import {
+  bookings,
+  orderLineItems,
+  orders,
+  people,
+  shops,
+  userAccounts,
+  waiverRecords,
+} from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { getCurrentWaiverTemplate } from "./waivers";
 
@@ -260,6 +268,53 @@ describe("one diver's own record export (issue #726)", () => {
       (candidate) => candidate[lineItems.header.indexOf("order_id")] === order.id,
     );
     expect(lineRow?.[lineItems.header.indexOf("unit_amount_cents")]).toBe(2_000);
+  });
+
+  /**
+   * **A diver's own `bookings.csv` is ordered by the boat, not by a uuid.**
+   *
+   * Every row of this bundle is the *same* person, so the `people.full_name`
+   * key `bookings.csv` uses in the shop bundle is a constant here and settles
+   * nothing (issue #1753). The tie above the last key is real — `created_at`
+   * is stamped from the application clock, frozen for the unit fleet and for
+   * e2e, so two seats written in one run share an instant — and it used to
+   * fall through to `asc(bookings.id)`, a `defaultRandom()` uuid.
+   *
+   * The **earlier** departure's booking is given the **higher** uuid, so the
+   * old clause put the later boat first every time rather than half the time.
+   */
+  it("orders a diver's own bookings.csv by the departure when two seats share an instant", async () => {
+    const { db, shop } = await seededShopContext();
+    const tripRows = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const [earlier, later] = [...tripRows].sort(
+      (left, right) => left.startsAt.getTime() - right.startsAt.getTime(),
+    );
+    if (!earlier || !later) throw new Error("demo shop needs two departures");
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Twice Aboard" })
+      .returning();
+    const seat = async (tripId: string, id: string) => {
+      await db
+        .insert(bookings)
+        .values({
+          id,
+          shopId: shop.id,
+          tripId,
+          personId: diver.id,
+          createdAt: new Date("2026-07-21T13:30:00.000Z"),
+        })
+        .returning();
+    };
+    await seat(earlier.id, "00000000-0000-4000-8000-000000000002");
+    await seat(later.id, "00000000-0000-4000-8000-000000000001");
+
+    const input = await loadDiverExportBundleInput(db, shop.id, diver.id);
+    if (!input) throw new Error("export failed to load");
+    const bookingsTable = input.tables.find((t) => t.file === "bookings.csv");
+    if (!bookingsTable) throw new Error("bookings.csv missing");
+    const titleIndex = bookingsTable.header.indexOf("trip_title");
+    expect(bookingsTable.rows.map((row) => row[titleIndex])).toEqual([earlier.title, later.title]);
   });
 
   it("resolves a staff name onto a roll-call event without naming any other diver", async () => {

@@ -462,11 +462,31 @@ export async function loadShopExportBundleInput(
         .where(eq(staffCredentials.shopId, shopId))
         .orderBy(asc(staffCredentials.createdAt), asc(staffCredentials.id));
 
+      // **`bookings.csv`'s row order, and why the diver's name is in it.**
+      //
+      // This file is the one a shop diffs against last week's, so its order
+      // has to be one a person can predict. `created_at` alone is not:
+      // `createBooking` stamps it from the application clock (`nowDate()`, at
+      // millisecond resolution) rather than the column's `defaultNow()`, so a
+      // party written in one transaction can tie in production, and under the
+      // frozen clock every booking a test or an e2e run writes ties by
+      // construction. The tie used to go to `asc(bookings.id)` — a
+      // `defaultRandom()` uuid — which is the same defect `roll_call_events`
+      // above already refuses by ordering on `seq` (issue #1753).
+      //
+      // `people` is joined only to reach `full_name`; `getTableColumns` keeps
+      // the row shape flat, exactly as the `trip_dives` and `trip_assignments`
+      // reads above do. **`leftJoin`, not `innerJoin`**: this bundle's own
+      // rule is that a migration loses nothing, and an inner join is one
+      // unexpected missing parent away from silently dropping a booking row
+      // from a shop's whole record. A null name sorts last and changes no
+      // other column.
       const bookingRows = await tx
-        .select()
+        .select(getTableColumns(bookings))
         .from(bookings)
+        .leftJoin(people, eq(people.id, bookings.personId))
         .where(eq(bookings.shopId, shopId))
-        .orderBy(asc(bookings.createdAt), asc(bookings.id));
+        .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
       const bookingPerson = new Map(bookingRows.map((row) => [row.id, row.personId]));
 
       const tripHelpRequestRows = await tx
@@ -3822,11 +3842,27 @@ export async function loadDiverExportBundleInput(
       // deleted is still the diver's own booking history — dropping it from
       // their own export would be exactly the "migration loses data" failure
       // the shop bundle's own rule refuses, applied to a bundle of one.
+      //
+      // **Ordered by the departure, not by the diver's name.** Every row here
+      // is the *same* person, so the key `bookings.csv` uses in the shop
+      // bundle is a constant here and buys nothing (issue #1753). What a diver
+      // reading their own history can predict is the boat: seat time, then the
+      // departure's own clock and title, with the booking id last as the only
+      // resort. The tie above it is real — `createBooking` stamps `created_at`
+      // from the application clock, frozen for tests and e2e, so two of this
+      // diver's seats written in one run share an instant — and it used to be
+      // broken by `asc(bookings.id)`, a `defaultRandom()` uuid.
+      //
+      // `trips` is joined only to order by; `getTableColumns` keeps the row
+      // shape flat, and the title/starts-at maps below still come from the
+      // separate `trips` read, which is the one that has to answer for
+      // deleted departures.
       const bookingRows = await tx
-        .select()
+        .select(getTableColumns(bookings))
         .from(bookings)
+        .innerJoin(trips, eq(trips.id, bookings.tripId))
         .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)))
-        .orderBy(asc(bookings.createdAt), asc(bookings.id));
+        .orderBy(asc(bookings.createdAt), asc(trips.startsAt), asc(trips.title), asc(bookings.id));
       const bookingIds = bookingRows.map((row) => row.id);
       const tripIds = [...new Set(bookingRows.map((row) => row.tripId))];
       const tripRows = tripIds.length

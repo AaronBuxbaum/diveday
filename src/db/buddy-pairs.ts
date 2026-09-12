@@ -627,6 +627,42 @@ export type TripBuddyTeam = {
  * dissolvable rather than becoming an invisible row that still refuses a
  * re-team; the manifest derivation keeps only the members who are actually
  * aboard (see `getTripManifests`).
+ *
+ * **The index of this array is a team's number, so the order is not
+ * cosmetic.** `BuddyTeamsPanel` renders `manifest.buddyTeamLabel` with
+ * `index + 1`, and `buildIncidentExport` builds `teamNumberById` the same way
+ * — so "Team 2" on the panel, on the roster line beside a diver, in the crew
+ * section, and on the document handed to authorities all read off *this*
+ * order. It used to end on `asc(buddy_pair_members.pair_id)`, and `pair_id` is
+ * a writer-minted uuid with no parent row: which team was Team 1 was a coin
+ * flip per database (issue #1753, the same defect as the manifest's rail
+ * numbering in #1720).
+ *
+ * The tie above it is guaranteed rather than occasional. `created_at` here is
+ * stamped from the application clock (`input.now ?? nowDate()` in the writers
+ * above, not the column's `defaultNow()`), and that clock is frozen for the
+ * unit fleet and for e2e — so **two teams formed in one spec or one e2e run
+ * share an instant by construction** and the uuid decided the whole order.
+ * Production does reach it too, at millisecond resolution, when a staffer
+ * forms two teams from one builder submit.
+ *
+ * **What orders a team is its members' names** — the same answer
+ * `getTripRoster` gives, one level up. A team has no label, no sequence and no
+ * column of its own to sort by, and it is identified on every surface by who
+ * is in it, so the list of member names *is* the team's name to the person
+ * reading it. `sortMembers` has already put those names in order inside each
+ * team, so the key costs nothing extra and the second of the two people
+ * calling the roll can find a team the way they find a diver. Formation time
+ * stays above it: a team built at the rail this morning does not jump ahead of
+ * the ones built last night. `teamId` stays last, as the only resort for two
+ * teams formed in one instant with the same member names.
+ *
+ * **Deliberately not fixed here**: a team's `recordedByName` is read off the
+ * first of its rows, so when `formBuddyTeam` and a later
+ * `addBuddyTeamMember` tie on `created_at` — which the frozen clock
+ * guarantees — "recorded by" can name the adder rather than the person who
+ * formed the team. That is a different bug with a different answer (the
+ * `formed` row of `buddy_team_events`), not an ordering key.
  */
 export async function listTripBuddyTeams(
   db: DbExecutor,
@@ -654,7 +690,14 @@ export async function listTripBuddyTeams(
     .leftJoin(crewPeople, eq(crewPeople.id, buddyPairMembers.crewPersonId))
     .innerJoin(recordedBy, eq(recordedBy.id, buddyPairMembers.pairedByPersonId))
     .where(and(eq(buddyPairMembers.shopId, shopId), eq(buddyPairMembers.tripId, tripId)))
-    .orderBy(asc(buddyPairMembers.createdAt), asc(buddyPairMembers.pairId));
+    // `created_at` only. The trailing `asc(pair_id)` that used to be here did
+    // no work the `Map` below does not already do — every row of a team shares
+    // a `pair_id`, so it never separated two teams — and it was the random
+    // uuid the whole order fell through to. What this key still buys is that
+    // the *first* row seen for a team is its earliest, which is where
+    // `createdAt` and `recordedByName` below come from. The order of the teams
+    // themselves is decided after the grouping, on their members' names.
+    .orderBy(asc(buddyPairMembers.createdAt));
   const byTeam = new Map<string, TripBuddyTeam>();
   for (const row of rows) {
     const team = byTeam.get(row.teamId) ?? {
@@ -685,7 +728,25 @@ export async function listTripBuddyTeams(
       member.kind === "diver" ? `booking:${member.bookingId}` : `crew:${member.personId}`,
     );
   }
-  return [...byTeam.values()];
+  // …and then a stable order *of* teams, because the index is the team number.
+  // Read after the member sort above on purpose: the key is the members' names
+  // in their own display order, so the two can never disagree about which team
+  // sorts where.
+  return [...byTeam.values()].sort((left, right) => {
+    const byCreated = left.createdAt.getTime() - right.createdAt.getTime();
+    if (byCreated !== 0) return byCreated;
+    const byMembers = teamNameKey(left).localeCompare(teamNameKey(right));
+    return byMembers !== 0 ? byMembers : left.teamId.localeCompare(right.teamId);
+  });
+}
+
+/**
+ * A team's members' names, in the order the team displays them, as one
+ * comparable string. `\u0000` separates them so a team of "Ana" + "Ben Okafor"
+ * cannot collide with one of "Ana Ben" + "Okafor" — no name can contain it.
+ */
+function teamNameKey(team: TripBuddyTeam): string {
+  return team.members.map((member) => member.fullName).join("\u0000");
 }
 
 /** One entry of the append-only pairing trail, oldest first. */

@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seasonStartInstant } from "@/lib/season";
 import { seededTestDb } from "@/test/db";
@@ -51,7 +52,12 @@ async function aSeat(
 ) {
   const [person] = await db.insert(people).values({ shopId, fullName }).returning();
   if (!person) throw new Error("test person insert failed");
-  await db.insert(bookings).values({ shopId, tripId, personId: person.id, status });
+  const [booking] = await db
+    .insert(bookings)
+    .values({ shopId, tripId, personId: person.id, status })
+    .returning();
+  if (!booking) throw new Error("test booking insert failed");
+  return booking;
 }
 
 const scale = (db: AppDb, shopId: string) => seasonScale(db, shopId, ZONE, SEASON, NOW);
@@ -124,6 +130,45 @@ describe("seasonScale", () => {
     expect((await scale(db, shopId)).todaySeats.map((seat) => seat.diverName)).toEqual([
       "Ben Okafor",
       "Hugo Marsh",
+    ]);
+  });
+
+  /**
+   * **Two seats on one boat at one instant: the name decides, not the uuid.**
+   *
+   * The order of `todaySeats` is what picks the diver the home *names* —
+   * `factOfScaleFor` walks it and stops at the seat that crosses the hundred —
+   * so an arbitrary order means an arbitrary diver in the sentence. The tie is
+   * guaranteed under the frozen clock (`createBooking` stamps `created_at`
+   * from the application clock) and reachable in production for a party
+   * written in one transaction.
+   *
+   * The `created_at` and the ids are both forced, because **the id is the
+   * confounder under test**: the alphabetically-first diver is given the
+   * *higher* uuid, so the old `asc(bookings.id)` clause answers the exact
+   * opposite every time rather than half the time (issue #1753).
+   */
+  it("breaks a shared-instant tie on the diver's name, not on whichever uuid sorted higher", async () => {
+    const { db, shopId } = await freshShop("season-uuid-tie");
+    const boat = await aDeparture(db, shopId, new Date("2026-07-21T11:00:00.000Z"));
+    const zulu = await aSeat(db, shopId, boat.id, "Zulu Mbeki");
+    const alpha = await aSeat(db, shopId, boat.id, "Alpha Nord");
+
+    const together = new Date("2026-07-21T09:00:00.000Z");
+    const lower = "00000000-0000-4000-8000-000000000001";
+    const higher = "00000000-0000-4000-8000-000000000002";
+    await db
+      .update(bookings)
+      .set({ createdAt: together, id: lower })
+      .where(eq(bookings.id, zulu.id));
+    await db
+      .update(bookings)
+      .set({ createdAt: together, id: higher })
+      .where(eq(bookings.id, alpha.id));
+
+    expect((await scale(db, shopId)).todaySeats.map((seat) => seat.diverName)).toEqual([
+      "Alpha Nord",
+      "Zulu Mbeki",
     ]);
   });
 

@@ -2362,18 +2362,31 @@ export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tri
  * Staff roster view: only the current record joins each active booking across
  * multiple trips.
  *
- * Ordered by seat time then id. `bookings.created_at` alone is not a total
- * order — `createBooking` stamps the application clock, frozen for tests, so a
- * party or a spec's own writes tie — and a list a staffer works down is not
- * left to the heap.
+ * **Ordered exactly as `getTripRoster` is** — seat time, then the diver's
+ * name, then the booking id as the last resort (issue #1753). The divergence
+ * this docblock used to record is closed: two readers of one roster answering
+ * in two different orders is a trap for whoever next renders these rows
+ * directly.
  *
- * **Note the divergence, deliberately left.** `getTripRoster` no longer agrees
- * with this: it breaks the same tie on `people.full_name` and calls
- * `bookings.id` "the wrong half of the promise" (issue #1720), because the
- * index of *that* array is the manifest's rail numbering and a random uuid was
- * deciding who is 01. This reader feeds no numbering, so it was left where it
- * was rather than reordering five surfaces in a change about the manifest.
- * Issue #1753 carries it and the four others with the same clause.
+ * Be precise about what the old `asc(bookings.id)` cost, because the
+ * overstatement that was here — "a list a staffer works down" — was not true.
+ * **No surface observes this array's order.** Every consumer re-keys it by
+ * booking id: `listTripsReadiness` builds `readinessByBooking` /
+ * `depthByBooking` maps from it, the trip page's `WaiverByBooking` is a `Map`,
+ * the Guests tab hangs waiver detail off the roster's own spine
+ * (`trips-guests.ts`), and the requirements action reduces it to a count. So
+ * nobody — a staffer, a capture, or a diff — can see the tie broken either
+ * way today.
+ *
+ * What the id key cost was the *contract*: `bookings.created_at` is not a
+ * total order (`createBooking` stamps the application clock, frozen for the
+ * unit fleet and for e2e, so a party booked in one transaction and every
+ * booking a spec writes tie by construction), and `bookings.id` is a
+ * `defaultRandom()` uuid, so the documented order was "seat time, then
+ * whichever uuid the database happened to mint" — unpredictable to a reader
+ * and different in every freshly seeded database. `people.full_name` carries
+ * `COLLATE "und-x-icu"` (`drizzle/20260911200158_person-name-collation`), so
+ * the name key is locale-sensible without the query saying so.
  */
 export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tripIds: string[]) {
   if (tripIds.length === 0) return [];
@@ -2392,5 +2405,5 @@ export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tr
         ne(bookings.status, "cancelled"),
       ),
     )
-    .orderBy(asc(bookings.createdAt), asc(bookings.id));
+    .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
 }

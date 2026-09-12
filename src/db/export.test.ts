@@ -10,6 +10,7 @@ import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCount
 import * as schema from "./schema";
 import {
   activityEvents,
+  bookings,
   certifications,
   courseInquiries,
   courses,
@@ -22,6 +23,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
+import { createTrip } from "./trips";
 import { getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 
 const EXPECTED_FILES = [
@@ -1290,6 +1292,66 @@ describe("full-shop export dataset", () => {
     if (!rivalInput) throw new Error("rival shop failed to load");
     expect(table(rivalInput, "people.csv").rows).toHaveLength(1);
     expect(table(rivalInput, "bookings.csv").rows).toHaveLength(0);
+  });
+
+  /**
+   * **`bookings.csv` is the file a shop diffs against last week's**, so its row
+   * order has to be one a person can predict. `created_at` alone is not a
+   * total order: `createBooking` stamps it from the application clock
+   * (`nowDate()`, millisecond resolution) rather than the column's
+   * `defaultNow()`, so a party written in one transaction can tie in
+   * production and every booking a test or e2e run writes ties by
+   * construction. The tie used to go to `asc(bookings.id)` — a
+   * `defaultRandom()` uuid, a different answer in every database holding the
+   * same rows (issue #1753).
+   *
+   * Its own shop, so the seeded bundle's rows cannot mask the ordering, and
+   * the ids are forced with the **higher** one on the alphabetically-first
+   * diver, so the old clause answers the exact opposite every time.
+   */
+  it("orders bookings.csv on the diver's name when seats share an instant, not on a random uuid", async () => {
+    const { db } = await seededShopContext();
+    const [shop] = await db
+      .insert(shops)
+      .values({ name: "Tie Break Divers", slug: "tie-break", timezone: "America/New_York" })
+      .returning();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Two-Tank Reef",
+      startsAt: new Date("2026-08-01T13:00:00.000Z"),
+      endsAt: new Date("2026-08-01T17:00:00.000Z"),
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("test trip insert failed");
+    const diver = async (fullName: string) => {
+      const [person] = await db.insert(people).values({ shopId: shop.id, fullName }).returning();
+      const [booking] = await db
+        .insert(bookings)
+        .values({ shopId: shop.id, tripId: trip.id, personId: person.id })
+        .returning();
+      return booking;
+    };
+    const zulu = await diver("Zulu Mbeki");
+    const alpha = await diver("Alpha Nord");
+
+    const together = new Date("2026-07-21T13:30:00.000Z");
+    const lower = "00000000-0000-4000-8000-000000000001";
+    const higher = "00000000-0000-4000-8000-000000000002";
+    await db
+      .update(bookings)
+      .set({ createdAt: together, id: lower })
+      .where(eq(bookings.id, zulu.id));
+    await db
+      .update(bookings)
+      .set({ createdAt: together, id: higher })
+      .where(eq(bookings.id, alpha.id));
+
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("shop failed to load");
+    const bookingsTable = table(input, "bookings.csv");
+    const nameIndex = bookingsTable.header.indexOf("person_name");
+    expect(bookingsTable.rows.map((row) => row[nameIndex])).toEqual(["Alpha Nord", "Zulu Mbeki"]);
   });
 
   it("returns null for an unknown shop instead of an empty bundle", async () => {
