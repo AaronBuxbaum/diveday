@@ -142,6 +142,41 @@ export type WeekGap = {
   meetings: readonly TripMeeting[];
 };
 
+/** Another departure the same person crews at the same hours as this one. */
+export type CrewClash = { tripId: string; title: string };
+
+/**
+ * Every other departure this person crews whose hours overlap `window`.
+ *
+ * **The window, not the day**, and the same half-open predicate
+ * `setTripCrew` refuses on (`src/db/trips-crew.ts`): a morning two-tank and an
+ * afternoon single are an ordinary double shift for a divemaster, and calling
+ * that a clash is the saturation failure #757 and #1203 already paid for once.
+ * A departure that ties up exactly as the next one sails is not a clash either.
+ *
+ * Asked per **placed meeting** rather than once per run, unlike the blackout
+ * above it: a course clashing on its Tuesday leg is not clashing on its Monday,
+ * and the week's whole claim is that a chip states its own day's commitment.
+ */
+export function clashingDepartures(
+  window: TripMeeting,
+  tripId: string,
+  crewing: readonly WeekCrewing[],
+): CrewClash[] {
+  const clashes: CrewClash[] = [];
+  for (const other of crewing) {
+    if (other.tripId === tripId || clashes.some((found) => found.tripId === other.tripId)) continue;
+    if (
+      other.meetings.some(
+        (meeting) => meeting.startsAt < window.endsAt && meeting.endsAt > window.startsAt,
+      )
+    ) {
+      clashes.push({ tripId: other.tripId, title: other.title });
+    }
+  }
+  return clashes;
+}
+
 /**
  * A departure placed in one day cell, carrying that day's own hours.
  *
@@ -150,6 +185,12 @@ export type WeekGap = {
  * owner's assignment is not refused — the week says the crew member told the
  * shop they were away, and the conversation is the shop's to have. Empty for
  * almost every chip.
+ *
+ * `clashes` are the other departures this same person crews at these very
+ * hours (issue #1695) — a state `setTripCrew` refuses to write and only
+ * `moveTrip` can manufacture, which until now nothing said outside the Move
+ * panel that made it. Informs, never gates, for the reason #1345 settled: the
+ * owner assigns crew. Empty for every honest chip.
  */
 export type PlacedTrip = {
   tripId: string;
@@ -157,6 +198,7 @@ export type PlacedTrip = {
   startsAt: Date;
   endsAt: Date;
   awayBlocks: readonly AvailabilityBlock[];
+  clashes: readonly CrewClash[];
 };
 
 /**
@@ -326,6 +368,8 @@ function placements(
   timeZone: string,
   dates: readonly CalendarDate[],
   awayBlocks: readonly AvailabilityBlock[] = [],
+  /** The clash, per meeting — a fact about that day's hours, not about the run. */
+  clashesFor: (meeting: TripMeeting) => readonly CrewClash[] = () => [],
 ): { date: CalendarDate; placed: PlacedTrip }[] {
   const byDate = new Map<CalendarDate, PlacedTrip>();
   for (const meeting of [...trip.meetings].sort(byStart)) {
@@ -337,6 +381,7 @@ function placements(
         startsAt: meeting.startsAt,
         endsAt: meeting.endsAt,
         awayBlocks,
+        clashes: clashesFor(meeting),
       });
     }
   }
@@ -411,7 +456,14 @@ export function staffWeek(input: {
       // The warning word an overlapping blackout earns, resolved once per
       // departure rather than per column: it is a fact about the run.
       const away = overlappingBlocks(blocks, person.personId, trip.meetings, input.timeZone);
-      for (const { date, placed } of placements(trip, input.timeZone, dates, away)) {
+      // The clash is read off this person's own crewing list, which is already
+      // scheduled, live departures only (`getStaffingView`) — the same rule the
+      // departure page's `crewClashes` asks in SQL. A clash with a boat outside
+      // this week cannot exist: an overlapping window is in the same week the
+      // chip is, so the week the overlap falls in is the week that shows it.
+      for (const { date, placed } of placements(trip, input.timeZone, dates, away, (meeting) =>
+        clashingDepartures(meeting, trip.tripId, person.crewingTrips),
+      )) {
         crewingByDay.set(date, [...(crewingByDay.get(date) ?? []), placed]);
       }
     }

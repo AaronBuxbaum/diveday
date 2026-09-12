@@ -4,6 +4,7 @@ import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -42,6 +43,11 @@ export type CrewSectionCopy = {
   /** `{name}` placeholder, filled per crew member client-side. */
   unassignAria: string;
   assignFailed: string;
+  /**
+   * `{departure}` — the other boat this person is on at the same hours (issue
+   * #1695). It sits in their own row, so it names the departure and not them.
+   */
+  clash: string;
   onShift: string;
   notOnShift: string;
   manageShifts: string;
@@ -65,6 +71,7 @@ export function CrewSection({
   crewIds,
   crewRoles,
   onShiftIds,
+  clashes = [],
   crewGapCode,
   shopSlug,
   updateCrewAction,
@@ -84,6 +91,17 @@ export function CrewSection({
    * amber pill for shops that don't keep one (design principle 9).
    */
   onShiftIds: string[] | null;
+  /**
+   * Crew on this departure who are also on another one whose hours overlap it
+   * (`crewClashes`, src/db/trips-crew.ts). A physical impossibility the roster
+   * refuses to *write* and only a move can manufacture — and until issue #1695
+   * the schedule board's Move panel was the one surface that ever said so,
+   * which closed the moment the move went through.
+   *
+   * **Information, never a gate.** The owner assigns crew (issue #1345), so
+   * nothing here refuses anything; the row is marked and the fix is theirs.
+   */
+  clashes?: readonly { personId: string; otherTripId: string; otherTitle: string }[];
   crewGapCode: "none" | "no_instructor" | "over_ratio";
   shopSlug: string;
   updateCrewAction: (tripId: string, change: TripCrewChange) => Promise<{ ok: boolean }>;
@@ -302,14 +320,15 @@ export function CrewSection({
                   key={entry.id}
                   className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
                 >
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">{entry.fullName}</span>
-                    {/* No shop-role echo beside the name: the trip-role select
+                  <span className="flex flex-col gap-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{entry.fullName}</span>
+                      {/* No shop-role echo beside the name: the trip-role select
                         on the same row is the operative fact once someone is
                         aboard, and "divemaster … [Divemaster ▾]" said it twice
                         (principle 9). The assign menu lists bare names, the
                         same grammar as Today's departure board. */}
-                    {/* Badge only for the exceptional state: at a shop that
+                      {/* Badge only for the exceptional state: at a shop that
                         schedules shifts, a normal day has every crew member on
                         one, and a green pill per row is the expected state
                         formatted as an alert (design/principles.md #9). A row
@@ -317,13 +336,41 @@ export function CrewSection({
                         fact audible. At a shop with no shift schedule at all
                         (`onShift === null`) the question doesn't apply and
                         nothing renders — see `onShiftIds` above. */}
-                    {onShift === null ? null : onShift.has(entry.id) ? (
-                      <span className="sr-only">{copy.onShift}</span>
-                    ) : (
-                      <Badge tone="warning" size="sm">
-                        {copy.notOnShift}
-                      </Badge>
-                    )}
+                      {onShift === null ? null : onShift.has(entry.id) ? (
+                        <span className="sr-only">{copy.onShift}</span>
+                      ) : (
+                        <Badge tone="warning" size="sm">
+                          {copy.notOnShift}
+                        </Badge>
+                      )}
+                    </span>
+                    {/* **The clash the panel used to say nothing about** (issue
+                        #1695). Not a badge: it names the other boat, which is
+                        the question the reader has the moment they see it, and
+                        a pill that long is a paragraph in a pill. Warning ink
+                        and the glyph, as the staffing week draws the same fact,
+                        plus the weight the Move panel's line carries: one
+                        `role="alert"` per clash rather than one wrapping the
+                        roster, so two clashing divemasters are announced as two
+                        facts. A gate is what #1345 decided against: the owner
+                        assigns crew.
+
+                        Keyed on the other departure's **id**, never its title —
+                        two boats can be called the same thing, and the reader
+                        loses one of them silently (the reason `crewClashes`
+                        dedupes on ids too). */}
+                    {clashes
+                      .filter((clash) => clash.personId === entry.id)
+                      .map((clash) => (
+                        <span
+                          key={clash.otherTripId}
+                          role="alert"
+                          className="flex items-start gap-1 font-medium text-warning-strong"
+                        >
+                          <DiveDayIcon name="warning" className="mt-0.5 size-3.5 shrink-0" />
+                          <span>{fill(copy.clash, { departure: clash.otherTitle })}</span>
+                        </span>
+                      ))}
                   </span>
                   <span className="flex items-center gap-2">
                     {/* The job on *this* sailing (ADR 20260803-per-trip-crew-role).

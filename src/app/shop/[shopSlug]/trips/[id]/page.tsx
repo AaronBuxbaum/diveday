@@ -187,7 +187,7 @@ export default async function ManageTripPage({
     pulse,
     crew,
   } = overview;
-  const { crewIds, tripRoleByPerson, crewGap, ratioGap, languageGap, onShiftIds } = crew;
+  const { crewIds, tripRoleByPerson, crewGap, ratioGap, languageGap, onShiftIds, clashes } = crew;
   // Same tone as underTargetNote below: informs, refuses nothing (issue
   // #708). Each missing language is named in the reader's own locale
   // (`languageNameIn`), matching the team settings form's convention —
@@ -718,6 +718,11 @@ export default async function ManageTripPage({
             // live-trip nudges — the ratio gates, the shop's target, and the
             // shift-coverage badges are all about a boat that will leave.
             onShiftIds={cancelled ? null : onShiftIds}
+            // The clash is a fact about two boats that will both sail, so a
+            // called-off departure drops it with the rest of the live-trip
+            // nudges — `crewClashes` answers nothing for one anyway, and this
+            // keeps the two from ever disagreeing on screen.
+            clashes={cancelled ? [] : clashes}
             crewGapCode={cancelled ? "none" : crewGap.code}
             updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
             copy={{
@@ -732,6 +737,9 @@ export default async function ManageTripPage({
               assignOption: t("trips.crew.assignOption"),
               unassignAria: t.raw("trips.crew.unassignAria"),
               assignFailed: t("trips.crew.assignFailed"),
+              // `t.raw`: `{departure}` is the other boat's own title, which
+              // only the component has per row (src/i18n/fill.ts).
+              clash: t.raw("trips.crew.clash"),
               roleAria: t.raw("trips.crew.roleAria"),
               roleUnspecified: t("trips.crew.roleUnspecified"),
               roleOptions: {

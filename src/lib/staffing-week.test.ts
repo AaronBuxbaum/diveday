@@ -688,3 +688,127 @@ describe("staffGapForCourseGap", () => {
     expect(GAP_TONE.over_intro_ratio).toBe(GAP_TONE.over_ratio);
   });
 });
+
+/**
+ * **A standing crew clash** (issue #1695): one person rostered on two
+ * departures whose hours overlap. `setTripCrew` refuses to write that, so the
+ * only door into it is `moveTrip` — and the week showed the person on both
+ * boats as if it were a shift pattern.
+ *
+ * The rule is the **window**, never the day, and it is the same half-open
+ * predicate the roster refuses on (`src/db/trips-crew.ts`): a morning boat plus
+ * an afternoon boat is an ordinary double shift, and a warning that is
+ * routinely wrong is one a crew learns to click past (#757, #1203).
+ */
+describe("a standing crew clash", () => {
+  /** Thursday, Key Largo: 9:00 AM – 1:00 PM. */
+  const DRIFT = {
+    tripId: "trip-drift",
+    title: "Reef drift",
+    meetings: [
+      {
+        startsAt: new Date("2026-08-27T13:00:00.000Z"),
+        endsAt: new Date("2026-08-27T17:00:00.000Z"),
+      },
+    ],
+  };
+
+  function clashesOn(date: string, crewingTrips: WeekPerson["crewingTrips"], tripId: string) {
+    const week = build({ people: [person({ crewingTrips })] });
+    const day = week.people[0]?.days.find((entry) => entry.date === date);
+    return day?.crewing.find((trip) => trip.tripId === tripId)?.clashes ?? null;
+  }
+
+  it("names the other departure, on both chips", () => {
+    const wreck = {
+      tripId: "trip-wreck",
+      title: "Spiegel Grove",
+      // 10:00 AM – 2:00 PM, straight over the drift's second hour.
+      meetings: [
+        {
+          startsAt: new Date("2026-08-27T14:00:00.000Z"),
+          endsAt: new Date("2026-08-27T18:00:00.000Z"),
+        },
+      ],
+    };
+    expect(clashesOn("2026-08-27", [DRIFT, wreck], "trip-drift")).toEqual([
+      { tripId: "trip-wreck", title: "Spiegel Grove" },
+    ]);
+    expect(clashesOn("2026-08-27", [DRIFT, wreck], "trip-wreck")).toEqual([
+      { tripId: "trip-drift", title: "Reef drift" },
+    ]);
+  });
+
+  it("leaves the ordinary double shift alone, and a hand-off at the dock too", () => {
+    const afternoon = {
+      tripId: "trip-afternoon",
+      title: "Afternoon single",
+      // 3:00 PM – 6:00 PM: two hours after the drift ties up.
+      meetings: [
+        {
+          startsAt: new Date("2026-08-27T19:00:00.000Z"),
+          endsAt: new Date("2026-08-27T22:00:00.000Z"),
+        },
+      ],
+    };
+    expect(clashesOn("2026-08-27", [DRIFT, afternoon], "trip-drift")).toEqual([]);
+
+    // And the exact hand-off: the next boat sails the instant this one is back.
+    const backToBack = {
+      tripId: "trip-back-to-back",
+      title: "The 1:00 PM",
+      meetings: [
+        {
+          startsAt: new Date("2026-08-27T17:00:00.000Z"),
+          endsAt: new Date("2026-08-27T21:00:00.000Z"),
+        },
+      ],
+    };
+    expect(clashesOn("2026-08-27", [DRIFT, backToBack], "trip-drift")).toEqual([]);
+  });
+
+  /**
+   * **Per meeting, not per run.** A course clashing on its Tuesday leg is not
+   * clashing on its Monday, and a chip that claimed otherwise would be warning
+   * about a morning the instructor is genuinely free.
+   */
+  it("marks only the leg of a multi-day course that the overlap falls on", () => {
+    const course = {
+      tripId: "trip-course",
+      title: "Rescue, Mon to Wed",
+      meetings: [
+        {
+          startsAt: new Date("2026-08-24T13:00:00.000Z"),
+          endsAt: new Date("2026-08-24T17:00:00.000Z"),
+        },
+        {
+          startsAt: new Date("2026-08-25T13:00:00.000Z"),
+          endsAt: new Date("2026-08-25T17:00:00.000Z"),
+        },
+        {
+          startsAt: new Date("2026-08-26T13:00:00.000Z"),
+          endsAt: new Date("2026-08-26T17:00:00.000Z"),
+        },
+      ],
+    };
+    const tuesdayBoat = {
+      tripId: "trip-tuesday",
+      title: "Tuesday's charter",
+      meetings: [
+        {
+          startsAt: new Date("2026-08-25T14:00:00.000Z"),
+          endsAt: new Date("2026-08-25T18:00:00.000Z"),
+        },
+      ],
+    };
+    expect(clashesOn("2026-08-24", [course, tuesdayBoat], "trip-course")).toEqual([]);
+    expect(clashesOn("2026-08-25", [course, tuesdayBoat], "trip-course")).toEqual([
+      { tripId: "trip-tuesday", title: "Tuesday's charter" },
+    ]);
+    expect(clashesOn("2026-08-26", [course, tuesdayBoat], "trip-course")).toEqual([]);
+  });
+
+  it("never counts a departure against itself, however many legs it has", () => {
+    expect(clashesOn("2026-08-27", [DRIFT], "trip-drift")).toEqual([]);
+  });
+});

@@ -34,8 +34,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Two hundred and thirty-four key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 936 screenshots per run (see
+ * Visual regression coverage. Two hundred and thirty-eight key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 952 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -2788,6 +2788,43 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **Stopping the code on a card that is already on paper** — issue #1729.
+       *
+       * The one control on this thread whose subject is never on screen: the
+       * arrival code rides a QR inside the saved file, and the page shows only
+       * the card that file was made from. So what a baseline can catch here is
+       * the *armed* state — whether a consequence sentence long enough to be
+       * honest still reads at phone width, and whether a destructive confirm
+       * sitting inside a card of facts reads as a decision rather than as one
+       * more fact.
+       *
+       * Its own capture rather than a row added to `readiness` above, and the
+       * download below is why: the control is offered only where a card has
+       * actually been saved, so folding it into the calm thread would mean
+       * every night-before baseline pretending a diver had downloaded one. The
+       * calm capture correctly has no control at all.
+       */
+      test(`the thread offers a way out of a lost arrival card (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await bookAVisualRegressionSeat(page, scheme);
+        const thread = new URL(page.url()).pathname;
+        // Fetched rather than clicked: the link carries `download`, and a real
+        // click hands the file to the browser instead of the route. The GET is
+        // what mints the `arrival` capability, which is the state being
+        // photographed.
+        const cardHref = await page
+          .getByRole("link", { name: "Save arrival card" })
+          .getAttribute("href");
+        if (!cardHref) throw new Error("the arrival card offers no download");
+        expect((await page.request.get(cardHref)).status()).toBe(200);
+        await page.goto(thread);
+        await threadStatus(page).waitFor();
+        await page.getByRole("button", { name: "Stop the code on a saved card" }).click();
+        await expect(page.getByRole("button", { name: "Yes, stop the code" })).toBeVisible();
+        await capture(page, "thread-arrival-code", scheme);
+      });
+
+      /**
        * **The thread's Day-of step, answered "Getting comfortable again"** (D12
        * and D18).
        *
@@ -3996,6 +4033,44 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staffing-week-gap", scheme);
       });
 
+      /**
+       * **A crew clash standing in the week** (issue #1695): one divemaster on
+       * two hulls at the same hours, drawn on the day it falls, naming the
+       * other boat.
+       *
+       * The state is not seeded into blue-mantis and cannot be: `setTripCrew`
+       * and `changeTripCrew` both refuse to write an overlap, so the only door
+       * into it is `moveTrip` — `?crewClash=1` slides one seeded departure onto
+       * another through that very mutation and hands back the day it landed on.
+       * Opt-in because moving a departure moves the board, Today's queue and
+       * every subscribed calendar with it.
+       *
+       * A baseline of its own rather than a change to `staffing` above: the
+       * healthy week is the state a shop sees every day, and photographing only
+       * the broken one would lose it.
+       */
+      test(`the staffing week carries a standing crew clash (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?crewClash=1");
+        expect(seeded.ok()).toBe(true);
+        const { crewClash } = (await seeded.json()) as {
+          crewClash?: { tripId: string; otherTitle: string; date: string };
+        };
+        if (!crewClash) throw new Error("seed-trouble-states found no two departures to clash");
+
+        // `?week=` snaps any date to its own Monday (`resolveWeekStart`), so
+        // the day the boat landed on is enough to ask for the week holding it.
+        await page.goto(`/shop/blue-mantis/staffing?week=${crewClash.date}`);
+        // The destination's own words, not a timing guess.
+        await page
+          .getByText(/cannot be on both/)
+          .first()
+          .waitFor();
+        await capture(page, "staffing-week-crew-clash", scheme);
+      });
+
       // The fast walk-in flow, both halves: pick today's boat, then search or
       // hand-enter a diver — no trip page detour, no required email at the
       // counter. Two captures and two tests, for the same reason the
@@ -4754,6 +4829,39 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
         await capture(page, "trip-manage", scheme);
+      });
+
+      /**
+       * **The Crew panel with a clash on one of its rows** (issue #1695) — a
+       * warning line inside a roster row, which is the one place on this
+       * surface a sentence has to sit under a name without pushing the row's
+       * own controls off the end of it.
+       *
+       * Photographed through `?crewClash=1` rather than seeded: the overlap is
+       * a state the roster refuses to write, so the seed reaches it the way a
+       * shop does, by moving one departure onto another. The About disclosure
+       * holds the Crew panel, so it is opened before the shot the way every
+       * other panel inside it is.
+       */
+      test(`a departure's crew panel carries a standing clash (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?crewClash=1");
+        expect(seeded.ok()).toBe(true);
+        const { crewClash } = (await seeded.json()) as {
+          crewClash?: { tripId: string; otherTitle: string; date: string };
+        };
+        if (!crewClash) throw new Error("seed-trouble-states found no two departures to clash");
+
+        await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}`);
+        await openTripAbout(page);
+        await page
+          .locator("#crew")
+          .getByText(/cannot be on both/)
+          .first()
+          .waitFor();
+        await capture(page, "trip-crew-clash", scheme);
       });
 
       /**

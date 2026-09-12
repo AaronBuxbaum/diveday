@@ -19,6 +19,7 @@ import { listTripPrepDivers } from "./rental-fit";
 import { crewShiftCoverage } from "./staffing";
 import {
   bookedDiverLanguages,
+  crewClashes,
   getTripCrewAssignments,
   getTripSeriesSummary,
   getTripWithBooked,
@@ -206,7 +207,15 @@ export async function getTripOverview(
   // The other half of the shift <-> crew cross-link: whether each assigned crew
   // member actually has a working shift covering this sailing. `null` — the shop
   // has never scheduled a shift — means the question doesn't apply.
-  const shiftCoverage = await crewShiftCoverage(db, shop.id, trip, crewIds);
+  //
+  // Beside it, the clash the crew panel had no way to know about (issue #1695):
+  // who on this crew is on another departure whose hours overlap this one. A
+  // state only `moveTrip` can manufacture, and until now one nothing said
+  // outside the Move panel that made it.
+  const [shiftCoverage, clashes] = await Promise.all([
+    crewShiftCoverage(db, shop.id, trip, crewIds),
+    crewClashes(db, shop.id, trip.id),
+  ]);
 
   return {
     trip,
@@ -234,6 +243,7 @@ export async function getTripOverview(
       ratioGap,
       languageGap,
       onShiftIds: shiftCoverage === null ? null : [...shiftCoverage],
+      clashes,
     },
   };
 }

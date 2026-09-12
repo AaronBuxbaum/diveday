@@ -106,6 +106,7 @@
   "/ready/[token]": {
     "e2e": [
       "a11y.spec.ts",
+      "arrival-arc.spec.ts",
       "blowout.spec.ts",
       "booking.spec.ts",
       "certifications.spec.ts",
@@ -133,6 +134,7 @@
       "readiness-easing-back",
       "stranded-diver-card",
       "thread-anything-changed",
+      "thread-arrival-code",
       "thread-high-contrast",
       "thread-prep-current-step"
     ],
@@ -603,8 +605,8 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/staffing": {
-    "e2e": ["staffing.spec.ts"],
-    "visual": ["staffing"],
+    "e2e": ["crew-clash.spec.ts", "staffing.spec.ts"],
+    "visual": ["staffing", "staffing-week-crew-clash"],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/trips/[id]": {
@@ -616,6 +618,7 @@
       "certifications.spec.ts",
       "check-in.spec.ts",
       "courses.spec.ts",
+      "crew-clash.spec.ts",
       "depth-and-age-surfaces.spec.ts",
       "divemaster-ratio.spec.ts",
       "divers.spec.ts",
@@ -633,6 +636,7 @@
       "trips.spec.ts"
     ],
     "visual": [
+      "trip-crew-clash",
       "trip-manage",
       "trip-manage-course-requirements",
       "trip-minimum-seats",

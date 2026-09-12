@@ -244,6 +244,7 @@
     "assignLabel": "Assign crew",
     "assignOption": "Assign crew…",
     "unassignAria": "Unassign {name}",
+    "clash": "Also crewing {departure} at these hours and cannot be on both.",
     "assignFailed": "That didn’t save. Recheck your connection or try again."
   },
   "recapNote": {

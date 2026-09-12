@@ -56,6 +56,7 @@ const COPY: CrewSectionCopy = {
   assignOption: "Choose someone…",
   unassignAria: "Remove {name} from crew",
   assignFailed: "Couldn’t save that change.",
+  clash: "Also crewing {departure} at these hours and cannot be on both.",
   onShift: "On shift",
   notOnShift: "Not on shift",
   manageShifts: "Manage shifts",
@@ -295,5 +296,84 @@ describe("CrewSection shift coverage", () => {
     );
     expect(screen.queryByText("Not on shift")).not.toBeInTheDocument();
     expect(screen.queryByText("On shift")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * **The clash a staffer used to have to open the Move panel to learn about**
+ * (issue #1695). `moveTrip` manufactures it — it slides a departure's window
+ * and never looks at crew — and until this row carried the mark, the panel that
+ * warned about it had already closed.
+ *
+ * Two things are pinned here and both were the point: the other boat is
+ * **named** (the question the reader has the instant they see the mark), and
+ * the mark is an alert rather than a refusal — the owner assigns crew (#1345),
+ * so every control on the row keeps working.
+ */
+describe("CrewSection standing crew clash", () => {
+  const props = {
+    tripId: "trip-a",
+    staff: [staffMember("staff-1", "Marisol Vega"), staffMember("staff-2", "Ana Cruz")],
+    crewRoles: {},
+    crewIds: ["staff-1", "staff-2"],
+    onShiftIds: null,
+    crewGapCode: "none" as const,
+    shopSlug: "blue-mantis",
+  };
+
+  it("names the other departure, on the row of the person who is on both", () => {
+    render(
+      <CrewSection
+        {...props}
+        clashes={[
+          { personId: "staff-1", otherTripId: "trip-b", otherTitle: "The 09:00 reef drift" },
+        ]}
+        updateCrewAction={vi.fn(async () => ({ ok: true }))}
+        copy={COPY}
+      />,
+    );
+    const alerts = screen.getAllByRole("alert");
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toHaveTextContent(
+      "Also crewing The 09:00 reef drift at these hours and cannot be on both.",
+    );
+    // On her row, not the section's: the name is already the line above it, so
+    // the sentence spends its words on the boat she is double-booked onto.
+    expect(screen.getByText("Marisol Vega").closest("li")).toContainElement(alerts[0]);
+    expect(screen.getByText("Ana Cruz").closest("li")).not.toContainElement(alerts[0]);
+  });
+
+  it("still lets the owner work the roster — it informs, it does not gate", async () => {
+    const updateCrewAction = vi.fn(async () => ({ ok: true }));
+    render(
+      <CrewSection
+        {...props}
+        clashes={[
+          { personId: "staff-1", otherTripId: "trip-b", otherTitle: "The 09:00 reef drift" },
+        ]}
+        updateCrewAction={updateCrewAction}
+        copy={COPY}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Remove Marisol Vega from crew" }));
+    await waitFor(() =>
+      expect(updateCrewAction).toHaveBeenCalledWith("trip-a", {
+        personId: "staff-1",
+        operation: "unassign",
+      }),
+    );
+  });
+
+  /**
+   * The silent case, which is every ordinary departure: a morning two-tank and
+   * an afternoon single are how a divemaster works a Saturday, so a panel that
+   * marked them would be the saturation failure #757 and #1203 paid for once.
+   */
+  it("says nothing at all when no crew member is on two boats", () => {
+    render(
+      <CrewSection {...props} updateCrewAction={vi.fn(async () => ({ ok: true }))} copy={COPY} />,
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText(/cannot be on both/)).toBeNull();
   });
 });

@@ -27,6 +27,7 @@ import {
   waiverRecords,
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import { moveTrip } from "@/db/trips";
 import { completeWaiver, issueWaiverRequest, recordWaiverDelivery } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -327,7 +328,95 @@ export async function POST(request: Request) {
       ? await unsignTheSeededMinorsRelease(db, shop.id, now)
       : null;
 
-  return NextResponse.json({ ok: true, ...(blockedMinor ? { blockedMinor } : {}) });
+  // Opt-in, and it moves a departure: the board, Today's queue and every
+  // subscribed calendar's `SEQUENCE` go with it. The two captures that want a
+  // standing crew clash ask for it, and both address the boat it made by id.
+  const crewClash =
+    new URL(request.url).searchParams.get("crewClash") === "1"
+      ? await slideOneDepartureOntoAnother(db, shop.id, now, shop.timezone)
+      : null;
+
+  return NextResponse.json({
+    ok: true,
+    ...(blockedMinor ? { blockedMinor } : {}),
+    ...(crewClash ? { crewClash } : {}),
+  });
+}
+
+/**
+ * **One divemaster on two hulls at the same hours** (issue #1695) — the state
+ * `setTripCrew` and `changeTripCrew` both refuse to write, and the one a shop
+ * reaches anyway.
+ *
+ * The only door into it is `moveTrip`: it slides a departure's window and never
+ * looks at crew, so a boat landed on top of another leaves both crews as they
+ * were. Reached here the same way, through the real mutation, rather than by
+ * inserting the overlap by hand — an assignment row the roster would have
+ * refused is not the state this photographs.
+ *
+ * Not seeded into blue-mantis for the reason the whole route exists: a demo
+ * shop permanently warning that its divemaster cannot be where the schedule
+ * says she is, is a worse demo.
+ *
+ * Returns the boat that moved, because both captures address it — the trip
+ * page by id, the staffing week by the shop-local day it landed on (`?week=`
+ * snaps any date to its Monday, `resolveWeekStart`).
+ */
+async function slideOneDepartureOntoAnother(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  now: Date,
+  timezone: string,
+): Promise<{ tripId: string; otherTitle: string; date: string } | null> {
+  // Upcoming, crewed, scheduled departures, earliest first — one row per crew
+  // member. An hour of slack ahead of the frozen clock keeps a boat that is
+  // already out of it: `moveTrip` refuses one the crew has counted heads on.
+  const rows = await db
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      personId: tripAssignments.personId,
+    })
+    .from(trips)
+    .innerJoin(tripAssignments, eq(tripAssignments.tripId, trips.id))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        isNull(trips.deletedAt),
+        gte(trips.startsAt, new Date(now.getTime() + HOUR_MS)),
+      ),
+    )
+    .orderBy(trips.startsAt);
+
+  type Departure = { id: string; title: string; startsAt: Date; endsAt: Date; crew: Set<string> };
+  const byTrip = new Map<string, Departure>();
+  for (const row of rows) {
+    const entry = byTrip.get(row.id) ?? { ...row, crew: new Set<string>() };
+    entry.crew.add(row.personId);
+    byTrip.set(row.id, entry);
+  }
+  const departures = [...byTrip.values()];
+  const [host] = departures;
+  if (!host) return null;
+  // The first later departure sharing somebody with the host and **not already
+  // overlapping it** — landing one on top of the other is what makes the clash,
+  // and a pair that already overlaps would mean the move changed nothing.
+  const mover = departures.find(
+    (departure) =>
+      departure.id !== host.id &&
+      [...departure.crew].some((personId) => host.crew.has(personId)) &&
+      (departure.startsAt >= host.endsAt || departure.endsAt <= host.startsAt),
+  );
+  if (!mover) return null;
+  if (!(await moveTrip(db, shopId, mover.id, host.startsAt)).ok) return null;
+  return {
+    tripId: mover.id,
+    otherTitle: host.title,
+    date: calendarDateInTimezone(host.startsAt, timezone),
+  };
 }
 
 /**

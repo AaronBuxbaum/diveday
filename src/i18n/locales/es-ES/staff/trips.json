@@ -244,6 +244,7 @@
     "assignLabel": "Asignar tripulante",
     "assignOption": "Asignar tripulante…",
     "unassignAria": "Quitar a {name}",
+    "clash": "También está en la tripulación de {departure} a esas horas y no puede estar en las dos.",
     "assignFailed": "No se ha guardado. Verifica tu conexión o inténtalo de nuevo."
   },
   "recapNote": {

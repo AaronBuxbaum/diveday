@@ -733,7 +733,12 @@ new domain concept, define it here in the same PR.
   can answer are this one and the **Working shift** blackout above, reported as its own separate
   line because one is an inference from the roster and the other is the crew member's own
   statement. The third — over her hours — is unmodelled, and nothing says otherwise. `moveTrip`
-  does not refuse a clash; the preview informs and the owner decides.
+  does not refuse a clash; the preview informs and the owner decides. **And the preview is no longer
+  the only reader** (issue #1695): `moveTrip` is the one thing that manufactures a clash and the
+  panel that warned about it closes with the move, so the clash a departure is *standing* in is read
+  back on its own Crew panel and in the staffing week, on the day the overlap falls
+  (`crewClashes`, the same overlap query the preview asks with a shifted window). Still information
+  on every surface — nothing gates on it.
 - **Crew gap** — a scheduled trip with nobody rostered on it, or a course session `courseCrewGap`
   reports as instructorless or booked past its ratio. It is a prompt for staff, not a boarding
   authorization by itself. **Today owns it**: Today names it (`instructor_missing`) and its

@@ -84,6 +84,165 @@ export type CrewMoveConflicts = {
   away: CrewMoveConflict[];
 };
 
+/** One window a departure occupies — its own, or the one a move proposes. */
+type CrewWindow = { startsAt: Date; endsAt: Date };
+
+/**
+ * **The overlap question, asked once.** Who among these crew members is on
+ * another live, scheduled departure whose window meets any of `windows`.
+ *
+ * The one place the predicate lives, so the move preview
+ * (`crewMoveConflicts`, shifted windows) and the standing clash a departure is
+ * already in (`crewClashes`, its own windows) cannot come to different answers
+ * about the same pair of boats. Rows fan out per leg of the *other* departure,
+ * so every caller dedupes what it is about to render.
+ *
+ * ## The window, not the day
+ *
+ * A clash is a **time overlap**, asked of each window the departure actually
+ * occupies. Two reasons it cannot be "the same calendar day":
+ *
+ * 1. `setTripCrew` and `changeTripCrew` already define a crew conflict, and
+ *    they define it exactly this way — and *refuse* it. A reading using a
+ *    looser rule would report as a problem a state the shop can only be in
+ *    because the model deliberately allows it.
+ * 2. A morning two-tank and an afternoon single are an ordinary double shift
+ *    for a divemaster. Calling that a clash is the saturation failure #757 and
+ *    #1203 already paid for once: a warning that is routinely wrong is one a
+ *    crew learns to click past, and the cost lands on the next warning, which
+ *    may be right.
+ *
+ * Tenancy is proved through `trips` on both sides, because `trip_assignments`
+ * carries no `shop_id` of its own (CR-007). Reads only.
+ */
+async function overlappingCrewDepartures(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  crewIds: readonly string[],
+  windows: readonly CrewWindow[],
+) {
+  return db
+    .select({
+      personId: tripAssignments.personId,
+      fullName: people.fullName,
+      otherTripId: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+    })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        // A called-off departure holds nobody's day. `setTripCrew`'s own
+        // conflict check does not exclude these; this one does, and the
+        // difference is filed rather than quietly copied.
+        eq(trips.status, "scheduled"),
+        ne(trips.id, tripId),
+        inArray(tripAssignments.personId, [...crewIds]),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        // The predicate `setTripCrew` refuses on, against the *other* side's
+        // own legs where it has them.
+        or(
+          ...windows.map((day) =>
+            and(
+              lt(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`, day.endsAt),
+              gt(sql`coalesce(${tripScheduleDays.endsAt}, ${trips.endsAt})`, day.startsAt),
+            ),
+          ),
+        ),
+      ),
+    )
+    .orderBy(asc(people.fullName), asc(trips.startsAt));
+}
+
+/**
+ * One crew member this departure cannot sail with as it stands: they are on
+ * another departure whose hours overlap it.
+ */
+export type CrewClash = {
+  personId: string;
+  fullName: string;
+  otherTripId: string;
+  /** The other departure they are on, named — never "another departure". */
+  otherTitle: string;
+};
+
+/**
+ * **The clash a departure is standing in right now** (issue #1695) — no
+ * proposed move, no panel open.
+ *
+ * `setTripCrew` and `changeTripCrew` refuse to *write* this state, so the only
+ * way a shop reaches it is `moveTrip`: a departure's window shifts, its crew
+ * stay as they were, and two hulls are counting on the same divemaster. Before
+ * this the one surface that ever said so was the schedule board's Move panel,
+ * which closes the moment the move goes through — after that the departure's
+ * own Crew panel listed the person with no mark at all.
+ *
+ * **A read, never a row.** The answer is computed from the roster every time it
+ * is asked, so it cannot go stale against a roster the owner then fixes, and
+ * there is nothing to clear when they do (`.claude/rules/db.md` — this
+ * repository writes no reconciliation code).
+ *
+ * **Information, not a gate.** Issue #1345 settled that a move neither refuses
+ * a clash nor drops the clashing crew, because the owner assigns crew. Nothing
+ * here refuses anything; it is the sentence a staffer was never shown.
+ *
+ * The subject departure must be `scheduled` too — symmetric with the other
+ * side, and for the same reason: a called-off boat holds nobody's day, so its
+ * crew are not double-booked by it.
+ */
+export async function crewClashes(db: AppDb, shopId: string, tripId: string): Promise<CrewClash[]> {
+  const [trip] = await db
+    .select({ startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.id, tripId),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  if (!trip) return [];
+
+  const crewIds = await getTripCrewIds(db, shopId, tripId);
+  if (crewIds.length === 0) return [];
+
+  // Every leg, because the overlap is per window: a course whose Tuesday
+  // meeting lands on another boat clashes even though its Monday is clear.
+  const days = await db
+    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+    .from(tripScheduleDays)
+    .where(eq(tripScheduleDays.tripId, tripId));
+  const windows = days.length > 0 ? days : [{ startsAt: trip.startsAt, endsAt: trip.endsAt }];
+
+  const rows = await overlappingCrewDepartures(db, shopId, tripId, crewIds, windows);
+  // **One line per person per other departure**, and the id is what dedupes —
+  // never the name. Two crew members who share a name are two people to ring,
+  // and the left join above repeats a row per leg of the other boat.
+  const clashes: CrewClash[] = [];
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const key = `${row.personId}:${row.otherTripId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    clashes.push({
+      personId: row.personId,
+      fullName: row.fullName,
+      otherTripId: row.otherTripId,
+      otherTitle: row.title,
+    });
+  }
+  return clashes;
+}
+
 /**
  * **What moving this departure would ask of the people on it** (issue #1310) —
  * the one consequence of a move that nothing else in the app can answer, and
@@ -107,22 +266,11 @@ export type CrewMoveConflicts = {
  * They are separate lists because they are separate facts: one is an
  * inference from the roster, the other is the crew member's own statement.
  *
- * ## The window, not the day
- *
- * A clash is a **time overlap**, computed against the days the move actually
- * proposes — every leg of a multi-day course, shifted by the same wall-clock
- * delta `moveTrip` will apply. Two reasons it cannot be "the same calendar
- * day":
- *
- * 1. `setTripCrew` and `changeTripCrew` already define a crew conflict, and
- *    they define it exactly this way — and *refuse* it. A preview using a
- *    looser rule would report as a problem a state the shop can only be in
- *    because the model deliberately allows it.
- * 2. A morning two-tank and an afternoon single are an ordinary double shift
- *    for a divemaster. Calling that a clash is the saturation failure #757 and
- *    #1203 already paid for once: a warning that is routinely wrong is one a
- *    crew learns to click past, and the cost lands on the next warning, which
- *    may be right.
+ * The windows asked about are every leg of a multi-day course, shifted by the
+ * same wall-clock delta `moveTrip` will apply — so the preview and the move
+ * cannot disagree about where the boat lands. Why a clash is a time overlap
+ * and never a shared calendar day is argued once, on
+ * `overlappingCrewDepartures`, which owns the predicate both readings use.
  *
  * Tenancy is proved through `trips` on both sides, because `trip_assignments`
  * carries no `shop_id` of its own (CR-007). Reads only.
@@ -159,42 +307,9 @@ export async function crewMoveConflicts(
   ).map((day) => ({ startsAt: shift(day.startsAt), endsAt: shift(day.endsAt) }));
 
   const [overlapping, blocks] = await Promise.all([
-    db
-      .select({
-        personId: tripAssignments.personId,
-        fullName: people.fullName,
-        title: trips.title,
-        startsAt: trips.startsAt,
-      })
-      .from(tripAssignments)
-      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-      .innerJoin(people, eq(people.id, tripAssignments.personId))
-      .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
-      .where(
-        and(
-          liveTrip(),
-          eq(trips.shopId, shopId),
-          // A called-off departure holds nobody's day. `setTripCrew`'s own
-          // conflict check does not exclude these; this one does, and the
-          // difference is filed rather than quietly copied.
-          eq(trips.status, "scheduled"),
-          ne(trips.id, tripId),
-          inArray(tripAssignments.personId, crewIds),
-          eq(people.shopId, shopId),
-          isNull(people.deletedAt),
-          // The predicate `setTripCrew` refuses on, against the *other* side's
-          // own legs where it has them.
-          or(
-            ...proposed.map((day) =>
-              and(
-                lt(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`, day.endsAt),
-                gt(sql`coalesce(${tripScheduleDays.endsAt}, ${trips.endsAt})`, day.startsAt),
-              ),
-            ),
-          ),
-        ),
-      )
-      .orderBy(asc(people.fullName), asc(trips.startsAt)),
+    // The same predicate `crewClashes` asks of a departure standing still,
+    // against the windows this move proposes rather than the ones it has.
+    overlappingCrewDepartures(db, shopId, tripId, crewIds, proposed),
     // The shop-local days the move would occupy, from the earliest leg to the
     // latest — `min`/`max` rather than first and last, because
     // `trip_schedule_days` comes back in no particular order and a course
