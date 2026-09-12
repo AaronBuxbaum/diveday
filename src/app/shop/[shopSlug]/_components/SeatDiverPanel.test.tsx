@@ -74,6 +74,18 @@ function renderPanel(
  * guess is most likely to be taken for a pick.
  */
 describe("SeatDiverPanel name-match prompt", () => {
+  /**
+   * `people.phone` holds E.164 since #1547, and this is the panel used with the
+   * diver standing there — the staffer is comparing the line to the number they
+   * just typed, or reading it back to them. Ungrouped, it is eleven digits in a
+   * row (#1712).
+   */
+  it("groups a candidate's stored number", () => {
+    renderPanel([match({ email: "nadia@example.test", phone: "+13055550142" })]);
+
+    expect(screen.getByText("(nadia@example.test, +1 305 555 0142)")).toBeInTheDocument();
+  });
+
   it("marks a tap on a candidate as the guess it is, and nothing else on the panel", () => {
     const { container } = renderPanel([match()], {
       query: "Avery",

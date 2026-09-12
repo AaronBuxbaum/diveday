@@ -118,7 +118,14 @@ describe("what one request says", () => {
     row({});
     const email = screen.getByRole("link", { name: "tomas.ferreira@example.com" });
     expect(email.getAttribute("href")).toBe("mailto:tomas.ferreira@example.com");
+    // Left exactly as the diver typed it: this column is their own text, not a
+    // normalised `people.phone` (#1712).
     expect(screen.getByText(/\+1-305-555-0433/)).toBeTruthy();
+  });
+
+  it("groups a number a diver typed as one unbroken run", () => {
+    row({ phone: "+13055550433" });
+    expect(screen.getByText(/\+1 305 555 0433/)).toBeTruthy();
   });
 });
 

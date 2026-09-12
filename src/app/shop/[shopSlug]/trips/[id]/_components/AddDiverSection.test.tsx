@@ -150,6 +150,16 @@ describe("AddDiverSection name-match prompt", () => {
       />,
     );
 
+  /**
+   * `people.phone` holds E.164 since #1547, so the number beside a candidate's
+   * name is grouped for the staffer reading it against what they typed (#1712).
+   */
+  it("groups a candidate's stored number", () => {
+    renderPrompt([match({ email: "nadia@example.test", phone: "+13055550142" })]);
+
+    expect(screen.getByText("(nadia@example.test, +1 305 555 0142)")).toBeInTheDocument();
+  });
+
   it("asks the owner's question by name and names the stake", () => {
     renderPrompt([match({})]);
 
