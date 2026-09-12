@@ -141,7 +141,22 @@ const GLOB_CHARS = /[*?[\]{}]/;
  * `Touches:` rule is about giving a cold reader an anchored place to start, and
  * a filer who wants to write something useless could always have named a
  * directory.
+ *
+ * **Two bounds on the expansion, both of them about this guard's blast radius**
+ * (`security-reviewer`, issue 1356). A pattern that escapes the checkout —
+ * `../../../etc/ssh/*` — is refused rather than walked, so an issue body cannot
+ * turn `check:repo` into a file-existence oracle for the runner. And a pattern
+ * that matches nothing forces a full recursive walk before `glob` can say so,
+ * which over `node_modules/`, `.git/`, `.next/` and `.pglite/` is slow enough
+ * to hit `check:repo`'s own kill timer — and that reports a **failure**, on
+ * every open pull request at once, which is precisely the outage this module
+ * exists to prevent. So the big directories are skipped and the walk has a
+ * deadline. A walk that runs out of time answers **yes**: this guard fails
+ * open, because a slow filesystem must not redden somebody else's branch.
  */
+const GLOB_WALK_BUDGET_MS = 2_000;
+const GLOB_SKIPPED = ["node_modules", ".git", ".next", ".pglite", "test-results"];
+
 export async function touchedPathExists(root, token) {
   if (!GLOB_CHARS.test(token)) {
     try {
@@ -151,15 +166,23 @@ export async function touchedPathExists(root, token) {
       return false;
     }
   }
-  for await (const match of glob(token, { cwd: root })) {
+  if (path.isAbsolute(token) || token.split("/").includes("..")) return false;
+  const deadline = Date.now() + GLOB_WALK_BUDGET_MS;
+  for await (const match of glob(token, {
+    cwd: root,
+    exclude: (name) => GLOB_SKIPPED.includes(name),
+  })) {
     if (match) return true;
+    if (Date.now() > deadline) return true;
   }
-  return false;
+  return Date.now() > deadline;
 }
 
 /** The sentence for a `Touches:` token that resolved to nothing, saying which
  *  kind of nothing — a pattern that matched no files reads as a typo otherwise. */
 export function missingTouchedProblem(token) {
+  if (GLOB_CHARS.test(token) && (path.isAbsolute(token) || token.split("/").includes("..")))
+    return `**Touches:** “${token}” points outside the checkout — name a path relative to the repository root.`;
   const detail = GLOB_CHARS.test(token) ? ` The pattern “${token}” matched no files.` : "";
   return `**Touches:** path “${token}” does not exist — name where the work lives today. A file only your own unmerged branch adds is not that: this resolves against the working tree, so it reddens every other session's \`pnpm check\` until you merge. List paths that exist on main and name the arriving ones in prose instead.${detail}`;
 }

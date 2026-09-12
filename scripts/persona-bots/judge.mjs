@@ -56,6 +56,16 @@ export const JUDGED_FILE_NAME = "judged.json";
 export const JUDGE_MODEL = "claude-opus-5";
 
 /**
+ * How long one Messages API call may take before it is abandoned.
+ *
+ * Sized like `SUBPROCESS_TIMEOUTS` in `scripts/subprocess.mjs`: generously
+ * above the honest case — a 16k-token reply reading five screenshots is slow —
+ * and far under the job's own thirty minutes, so a wedged call is reported
+ * rather than swallowed by the runner timeout.
+ */
+export const JUDGE_REQUEST_TIMEOUT_MS = 300_000;
+
+/**
  * One persona's section of `docs/product/personas.md`, from its `## N. Name`
  * heading to the next heading.
  *
@@ -207,6 +217,35 @@ function firstJsonObject(text) {
  * an opinion with nothing behind it. Both are dropped silently: this pass is
  * allowed to report less than it saw, and is not allowed to report more.
  */
+/** How much of one model-written string reaches a filed issue. */
+const JUDGED_TEXT_MAX = 300;
+
+/**
+ * Model-written text, made safe to interpolate into a GitHub issue body.
+ *
+ * Two things a raw string can do from inside that body, filed by a bot holding
+ * `issues: write`: **notify real people**, because `@someone` and `@org/team`
+ * are live mentions wherever they appear, and **restructure the issue**,
+ * because a newline followed by `## Proposed change` makes `section()` in
+ * `check-follow-ups.mjs` read the model's words as that section. Collapsing
+ * whitespace kills the second, and defusing `@` kills the first. The cap
+ * bounds a 16k-token reply against GitHub's own body limit.
+ *
+ * Not presently reachable by anyone: the only input is a screenshot of a
+ * locally seeded demo shop, so planting text on a walked page needs commit
+ * access. It becomes reachable the day a judged stop shows shop-supplied
+ * prose — a review, a course description, a site briefing
+ * (`security-reviewer`, issue 1498).
+ */
+function asIssueText(value) {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/@(?=[\w/-])/g, "@\u200b")
+    .replace(/`/g, "'")
+    .slice(0, JUDGED_TEXT_MAX)
+    .trim();
+}
+
 export function parseJudgeResponse(text, { stops = [], persona }) {
   const parsed = firstJsonObject(text);
   const shown = new Set(stops.map((stop) => stop.path));
@@ -225,7 +264,7 @@ export function parseJudgeResponse(text, { stops = [], persona }) {
       probe,
       path: urlPath,
       personas: [persona.id],
-      detail: `“${quote}” — ${claim}`,
+      detail: `“${asIssueText(quote)}” — ${asIssueText(claim)}`,
       impact: JUDGED_IMPACT,
     });
     if (findings.length >= JUDGED_FINDINGS_PER_PERSONA) break;
@@ -269,7 +308,13 @@ export function imageReaderFor(outDir) {
     try {
       return {
         media_type: "image/png",
-        data: readFileSync(path.join(outDir, stop.screenshot)).toString("base64"),
+        // `basename` again at the read, though the walk already wrote one:
+        // this value comes back off disk through `findings.json`, and a stale
+        // or tampered report naming `../../.env.local` would otherwise be
+        // base64'd and shipped to the API. It costs nothing and it is the
+        // same discipline as re-scoping an id at the write
+        // (`security-reviewer`, issue 1498).
+        data: readFileSync(path.join(outDir, path.basename(stop.screenshot))).toString("base64"),
       };
     } catch {
       return null;
@@ -290,6 +335,14 @@ export async function askAnthropic({ prompt, images, apiKey = process.env.ANTHRO
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
+    // The only network call in `scripts/` that is not already behind
+    // `runBounded`, and the same failure that rule exists for: a server that
+    // stalls after the headers produces no output, no exit and no diagnosis,
+    // bounded only by the job's own thirty minutes. Generous, because a
+    // 16k-token reply over five images is genuinely slow, and fail-open —
+    // an abort throws, the caller prints `DID NOT JUDGE`, and the mechanical
+    // findings file as usual (`security-reviewer`, issue 1498).
+    signal: AbortSignal.timeout(JUDGE_REQUEST_TIMEOUT_MS),
     headers: {
       "content-type": "application/json",
       "x-api-key": apiKey,

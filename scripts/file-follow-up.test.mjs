@@ -10,7 +10,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -185,6 +185,14 @@ describe("the refusal, at the process boundary", () => {
     ];
   };
 
+  /** Repoint one file flag's value. The parser refuses a repeated flag, so a
+   *  second `--noticed` on the end would be rejected before the path is read. */
+  const pointFlagAt = (args, flag, value) => {
+    const at = args.indexOf(flag);
+    if (at < 0) throw new Error(`no ${flag} in these args`);
+    return args.map((arg, index) => (index === at + 1 ? value : arg));
+  };
+
   const run = (...args) => {
     rmSync(marker, { force: true });
     const result = spawnSync(
@@ -220,6 +228,44 @@ describe("the refusal, at the process boundary", () => {
     expect(result.status).toBe(1);
     expect(result.spawnedGh).toBe(false);
     expect(result.stderr).toMatch(/is not in this tree/);
+  });
+
+  it("refuses to read prose from outside the checkout and the scratch directory", () => {
+    // The finding this guard exists for: `--noticed .env.local` would put the
+    // shop's Stripe key and AUTH_SECRET into the "What I noticed" section of a
+    // public issue, and the word-count check would wave it through, because an
+    // env file clears the floor comfortably (`security-reviewer`, issue 1356).
+    // A home directory is the realistic shape — a credential store nobody
+    // meant to publish.
+    const outside = path.join(homedir(), ".aws", "credentials");
+    const result = run(...pointFlagAt(argsFor(), "--noticed", outside));
+    expect(result.status).toBe(1);
+    expect(result.spawnedGh).toBe(false);
+    expect(result.stderr).toMatch(/neither in the checkout nor in the scratch directory/);
+  });
+
+  it("refuses an env file even where it is allowed to read", () => {
+    // Inside the checkout, so the containment check passes it — the name is
+    // what refuses it. Both doors, because either alone leaves a way through.
+    const result = run(...pointFlagAt(argsFor(), "--why", path.join(root, ".env.local")));
+    expect(result.status).toBe(1);
+    expect(result.spawnedGh).toBe(false);
+    expect(result.stderr).toMatch(/is an env file/);
+  });
+
+  it("refuses a body that carries something credential-shaped", () => {
+    // The seatbelt under the two checks above, for a secret that arrives
+    // through an ordinary file in an allowed place — a scratch note, a pasted
+    // log, a captured request. Refused at the body, after composing and before
+    // `gh`.
+    const result = run(
+      ...argsFor({
+        why: `${fields.why}\n\nThe connection string in the log was postgresql://diveday:hunter2@db.example.com:5432/diveday which is how I found it.`,
+      }),
+    );
+    expect(result.status).toBe(1);
+    expect(result.spawnedGh).toBe(false);
+    expect(result.stderr).toMatch(/looks like it carries a credential/);
   });
 
   it("refuses a Touches glob that matches nothing", () => {

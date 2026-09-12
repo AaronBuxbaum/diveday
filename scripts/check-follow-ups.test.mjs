@@ -289,6 +289,20 @@ describe("a glob in Touches", () => {
     expect(await touchedPathExists(root, "src/i18n/locales/*/staff/trips.json")).toBe(true);
   });
 
+  it("refuses a pattern that climbs out of the checkout, rather than walking it", async () => {
+    // Without this, an issue body is a file-existence oracle for whatever runs
+    // `check:repo`: the pass or fail is one readable bit per pattern, in a CI
+    // log (`security-reviewer`, issue 1356).
+    expect(await touchedPathExists(root, "../../../etc/ssh/*")).toBe(false);
+    expect(await touchedPathExists(root, "/etc/*")).toBe(false);
+  });
+
+  it("says the pattern points outside rather than that it matched no files", async () => {
+    // The two are different mistakes and a filer fixes them differently.
+    expect(missingTouchedProblem("../../*.ts")).toMatch(/points outside the checkout/);
+    expect(missingTouchedProblem("src/does-not-exist/*.ts")).toMatch(/matched no files/);
+  });
+
   it("refuses a pattern that expands to nothing", async () => {
     expect(await touchedPathExists(root, "src/i18n/locales/*/staff/no-such-namespace.json")).toBe(
       false,

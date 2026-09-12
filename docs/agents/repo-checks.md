@@ -194,6 +194,12 @@ Five writes touch `trips.startsAt` today and the rule reads all five. `moveTrip`
 
 The `.set()` search, and the brace match that reads its literal, both end at the next `.update(trips)`. That bound is issue #635's lesson ported from `scripts/check-live-trips.mjs` rather than re-learned there: a fixed line window once let one write pass because a *neighbour* carried the thing being looked for.
 
+**A `.set()` given anything but an object literal is refused, not passed.** `.set(patch)`, `.set(buildPatch())` and `.set({ ...timesPatch, status })` give the brace matcher nothing of this write to read — it would take the first `{` anywhere after `.set(`, which for the last anchor in a file means the rest of the file, and conclude from someone else's object that no departure moved. That is the shape a developer writes the moment two branches share a patch, and the failure would be silent: the guard's own move count would drop by one with nothing watching it. So the rule says it cannot read the write and asks for the literal to be inlined, or for the exemption by name. The move count is pinned in the tests for the same reason (`security-reviewer`, issue #1394).
+
+**The exemption's reason is required.** `diveday:allow-flat-revision:` with nothing after the colon is refused; `check-redirect-in-try.mjs` and `check-db-concurrency.mjs` already spell theirs the same way.
+
+The anchor is matched per line, so a `.update(\n  trips,\n)` split across three lines is not an anchor and the write goes uninspected. Biome keeps it on one line today. If that ever changes, this is the line to change with it.
+
 The opposite mistake the issue names — bumping for something immaterial, which re-alerts every diver's phone for a typo fixed in a conditions note — is deliberately left un-guarded. It has no mechanical signature; guarding the cheap half of a rule beats guarding neither.
 
 ### departure-buffer

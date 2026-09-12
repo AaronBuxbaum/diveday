@@ -1,4 +1,6 @@
+import { realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 
@@ -191,14 +193,90 @@ export function renderFollowUpBody(fields) {
   return `${lines.join("\n")}\n`;
 }
 
-/** `-` is stdin; anything else is a path, resolved from where the caller stands. */
+/**
+ * Files whose contents may never become an issue body, whatever a caller typed.
+ *
+ * The generated env files are denied to the *file tools* in `.claude/settings.json`
+ * for the reason AGENTS.md states in one line: secrets never enter the repo. A
+ * helper that reads a path and publishes it to a public tracker is a second door
+ * onto the same files, so it carries the same refusal
+ * (`security-reviewer`, issue 1356).
+ */
+const SECRET_SHAPED_FILE = /(^|\/)\.env(\.|$)/;
+
+/**
+ * `os.tmpdir()` through `realpath`, because macOS reports `/var/folders/…`
+ * while a path handed in resolves through `/private/var/folders/…`; comparing
+ * the two unresolved makes a legitimate scratch file look like it is outside.
+ */
+function realTmpDir() {
+  try {
+    return realpathSync(tmpdir());
+  } catch {
+    return tmpdir();
+  }
+}
+
+/**
+ * A last look at the composed body before `gh` is spawned. Coarse on purpose:
+ * it is the seatbelt under the containment check above, for the case where a
+ * secret reaches a section through a file that is inside the checkout and not
+ * named `.env` — a scratch note, a pasted log, a captured request.
+ *
+ * A false positive costs one `DID NOT FILE` and a re-run; a false negative is
+ * permanent, public and indexed.
+ */
+const SECRET_SHAPED_TEXT = [
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+  /\bsk_(live|test)_[A-Za-z0-9]{8,}/,
+  /\bAKIA[0-9A-Z]{16}\b/,
+  /\bgh[pousr]_[A-Za-z0-9]{20,}/,
+  /\bpostgres(ql)?:\/\/[^\s/@]+:[^\s/@]+@/,
+];
+
+/** True when `child` is `parent` itself or sits under it. */
+function within(parent, child) {
+  const relative = path.relative(parent, child);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+/**
+ * `-` is stdin; anything else is a path in one of two places.
+ *
+ * **Why there are only two.** Without a bound this is an
+ * arbitrary-file-to-public-tracker primitive: `--noticed .env.local` puts the
+ * shop's Stripe key and `AUTH_SECRET` into the "What I noticed" section of a
+ * GitHub issue, and `findIssueProblems` waves it through, because an env file
+ * clears the word count comfortably. `../` and an absolute path read the same
+ * way. This helper exists to refuse a malformed body before it is public;
+ * refusing an unpublishable one is the same job (`security-reviewer`, issue
+ * 1356).
+ *
+ * **Why it is not just the checkout.** Prose for a follow-up is drafted in a
+ * session's scratchpad, which lives under the system temp directory and not in
+ * the tree — that is the intended workflow, not a workaround, and narrowing to
+ * the checkout would push everyone back to `--body` and the hand-typed
+ * headings this door exists to replace. So: the checkout, or the temp
+ * directory. A credential store in a home directory is neither.
+ */
 async function readSection(root, spec) {
   if (spec === "-") {
     const chunks = [];
     for await (const chunk of process.stdin) chunks.push(chunk);
     return Buffer.concat(chunks).toString("utf8");
   }
-  return readFile(path.resolve(root, spec), "utf8");
+  const resolved = path.resolve(root, spec);
+  if (!within(root, resolved) && !within(realTmpDir(), resolved)) {
+    throw new Error(
+      `“${spec}” is neither in the checkout nor in the scratch directory (${realTmpDir()}), and this body goes to a public tracker — draft the prose in one of those, or pipe it in as “-”`,
+    );
+  }
+  if (SECRET_SHAPED_FILE.test(resolved)) {
+    throw new Error(
+      `“${spec}” is an env file, and this body goes to a public tracker — put the prose in a file of its own`,
+    );
+  }
+  return readFile(resolved, "utf8");
 }
 
 async function main() {
@@ -236,6 +314,17 @@ async function main() {
     if (await touchedPathExists(root, token)) continue;
     problems.push(
       `**Touches:** “${token}” is not in this tree — name a path that exists on main, and name an arriving one in prose instead.`,
+    );
+  }
+
+  // The seatbelt under `readSection`'s containment check, read over the whole
+  // composed body: a secret can reach a section through a file that is inside
+  // the checkout and is not called `.env` — a scratch note, a pasted log, a
+  // captured request. Coarse on purpose. A false positive costs one
+  // `DID NOT FILE` and a re-run; a false negative is public and permanent.
+  if (SECRET_SHAPED_TEXT.some((pattern) => pattern.test(body))) {
+    problems.push(
+      "the composed body looks like it carries a credential — a private key, an API key, or a connection string with a password in it. Nothing with one in it goes to a public tracker.",
     );
   }
 

@@ -159,3 +159,81 @@ describe("two writes of trips sharing one block", () => {
     ).toEqual([]);
   });
 });
+
+describe("a `.set()` the rule cannot read", () => {
+  /**
+   * The shape a developer writes the moment two branches share a patch. The
+   * brace matcher would take the first `{` anywhere after `.set(` — for the
+   * last anchor in a file, that search runs to the end of it — and conclude
+   * from someone else's object that this write is not a calendar move. A
+   * departure would move with the calendar left on the old time, and the
+   * guard's own `moves` count would fall by one with nothing to notice it
+   * (`security-reviewer`, issue 1394).
+   */
+  const hoisted = `
+    const patch = { startsAt, endsAt };
+    await db.update(trips).set(patch).where(eq(trips.id, id));
+
+    const settings = { revision: 1 };
+  `;
+
+  it("is refused rather than quietly passed", () => {
+    expect(lines(hoisted)).toEqual([3]);
+  });
+
+  it("says it could not read the write, not that the write forgot to bump", () => {
+    const [only] = findFlatRevisionWrites(hoisted).findings;
+    expect(only.opaque).toBe(true);
+  });
+
+  it("can still be exempted by name, for a write that genuinely needs no bump", () => {
+    expect(
+      lines(`
+        // diveday:allow-flat-revision: a fixture, and no calendar is subscribed to it.
+        await db.update(trips).set(patch).where(eq(trips.id, id));
+      `),
+    ).toEqual([]);
+  });
+});
+
+describe("the exemption's reason", () => {
+  /** The comment sits directly above the write, which is where
+   *  `commentBlockStart` reads from — a blank line between them is not a
+   *  preamble at all. */
+  const withComment = (comment) => `
+    ${comment}
+    await db.update(trips).set({ startsAt, endsAt }).where(eq(trips.id, id));
+  `;
+
+  it("is required — a bare colon silences nothing", () => {
+    // The docblock, the failure message and .claude/rules/db.md all promise
+    // `diveday:allow-flat-revision: <why>`. An exemption with nothing after the
+    // colon tells the next reader nothing at all.
+    expect(lines(withComment("// diveday:allow-flat-revision:"))).toEqual([3]);
+  });
+
+  it("is accepted when it actually says why", () => {
+    expect(
+      lines(
+        withComment("// diveday:allow-flat-revision: a per-worker database nobody subscribes to."),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("the count the success line reports", () => {
+  it("counts calendar moves, not every write of trips", () => {
+    // The line used to print the anchor count, which claimed eighteen calendar
+    // moves were inspected when five were. Pinned here so a refactor that
+    // hides a move behind a shape the rule cannot read turns this red rather
+    // than dropping the number silently.
+    const source = `
+      await db.update(trips).set({ startsAt, endsAt, revision: sql\`x\` }).where(eq(trips.id, a));
+      await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, b));
+      await db.update(trips).set({ deletedAt: now }).where(eq(trips.id, c));
+    `;
+    const result = findFlatRevisionWrites(source);
+    expect(result.guarded).toBe(3);
+    expect(result.moves).toBe(1);
+  });
+});

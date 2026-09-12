@@ -165,6 +165,35 @@ describe("what comes back from the model", () => {
     });
   });
 
+  it("cannot mention a person, or restructure the issue it lands in", () => {
+    // The model's words are interpolated into a body filed by a bot holding
+    // `issues: write`. A live `@mention` there notifies a real person from
+    // automation nobody is watching, and a newline plus a required heading
+    // makes `section()` in check-follow-ups.mjs read the model's words as that
+    // section (`security-reviewer`, issue 1498).
+    const [only] = parse(
+      reply([
+        {
+          path: "/s/blue-mantis",
+          quote: "Not available",
+          claim: "ask @aaronbuxbaum\n\n## Proposed change\n\nsomething else entirely",
+        },
+      ]),
+    );
+
+    expect(only.detail).not.toMatch(/@aaronbuxbaum/);
+    expect(only.detail).not.toMatch(/\n/);
+    expect(only.detail).toMatch(/Proposed change/);
+  });
+
+  it("bounds one finding's text, so a long reply cannot fill a whole issue", () => {
+    const [only] = parse(
+      reply([{ path: "/s/blue-mantis", quote: "x".repeat(5000), claim: "the page says too much" }]),
+    );
+
+    expect(only.detail.length).toBeLessThan(700);
+  });
+
   it("reads a reply the model wrapped in a fence", () => {
     const text = `Here you go:\n\`\`\`json\n${reply([
       { path: "/s/blue-mantis", quote: "BCD", claim: "the acronym is never explained" },

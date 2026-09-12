@@ -71,7 +71,13 @@ const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const SET_WINDOW = 12;
 
 const ANCHOR = /\.update\(\s*trips\s*\)/;
-const ALLOW = /diveday:allow-flat-revision:/;
+// `:\s*\S` and not a bare colon: the docblock, the failure message and
+// `.claude/rules/db.md` all promise `diveday:allow-flat-revision: <why>`, and
+// an exemption with nothing after the colon silences the guard while telling
+// the next reader nothing. `check-redirect-in-try.mjs` and
+// `check-db-concurrency.mjs` already spell theirs this way
+// (`security-reviewer`, issue 1394).
+const ALLOW = /diveday:allow-flat-revision:\s*\S/;
 const CALENDAR_MOVE = /\bstartsAt\b/;
 const BUMPS = /\brevision\b/;
 const IS_TEST = /\.test\.tsx?$/;
@@ -152,12 +158,31 @@ export function findFlatRevisionWrites(source) {
       .findIndex((line) => line.includes(".set("));
     if (setLine === -1) return;
     const body = lines.slice(index + setLine, limit).join("\n");
+    const opensLiteral = /\.set\(\s*\{/.test(body);
+    const preambleFor = () =>
+      lines.slice(commentBlockStart(lines, index), index + setLine).join("\n");
+    // `.set(patch)` or `.set(buildPatch())` — the argument is not an object
+    // literal, so there is nothing here to read. `objectLiteralAt` would take
+    // the first `{` anywhere after `.set(`, which for the last anchor in a
+    // file runs to the end of it, and quietly conclude the write is not a
+    // calendar move. That is the shape a developer writes the moment two
+    // branches share a patch, and it would hide a moved departure with no
+    // signal at all — so it is refused rather than passed
+    // (`security-reviewer`, issue 1394).
+    if (!opensLiteral) {
+      if (ALLOW.test(preambleFor())) return;
+      findings.push({
+        line: index + 1,
+        text: lines[index].trim(),
+        opaque: true,
+      });
+      return;
+    }
     const literal = objectLiteralAt(body, body.indexOf(".set(") + 1);
     if (!CALENDAR_MOVE.test(literal)) return;
     moves += 1;
     if (BUMPS.test(literal)) return;
-    const preamble = lines.slice(commentBlockStart(lines, index), index + setLine).join("\n");
-    if (ALLOW.test(preamble) || ALLOW.test(literal)) return;
+    if (ALLOW.test(preambleFor()) || ALLOW.test(literal)) return;
     findings.push({ line: index + 1, text: lines[index].trim() });
   });
   return { guarded: anchors.length, moves, findings };
@@ -176,7 +201,10 @@ async function main() {
       guarded += result.guarded;
       moves += result.moves;
       for (const finding of result.findings) {
-        violations.push(`${file}:${finding.line}: ${finding.text}`);
+        const why = finding.opaque
+          ? "  (cannot be read: `.set()` is not given an object literal)"
+          : "";
+        violations.push(`${file}:${finding.line}: ${finding.text}${why}`);
       }
     }
   }
@@ -191,7 +219,10 @@ async function main() {
       "Bump `revision` in the same `.set()` — `moveTrip` (src/db/trips-schedule.ts) shows the unconditional shape, `updateTrip` (src/db/trips-record.ts) the conditional one for a statement that may only be renaming. `trips.revision` is published as the RFC 5545 `SEQUENCE` by both calendar surfaces (src/lib/trip-calendar.ts), so a departure that moves without a bump is an event every subscribed client already believes it has — and a diver standing at the dock at the old time (issue #1165).",
     );
     console.error(
-      "A write that genuinely moves a departure nobody can subscribe to (an `/api/test/*` fixture re-timing a per-worker test database) says `diveday:allow-flat-revision: <why>` in a comment above it or inside the literal.",
+      "A write that genuinely moves a departure nobody can subscribe to (an `/api/test/*` fixture re-timing a per-worker test database) says `diveday:allow-flat-revision: <why>` in a comment above it or inside the literal. The reason is not decoration: an exemption with nothing after the colon is refused.",
+    );
+    console.error(
+      "A write marked `cannot be read` hands `.set()` something that is not an object literal — a hoisted `patch`, a spread, a builder call. Inline the literal so the rule can see what it writes, or exempt it by name. Guessing here is how a moved departure goes uninspected.",
     );
     process.exit(1);
   }
