@@ -1,7 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { nowDate } from "@/lib/clock";
 import { prepareContactImport } from "@/lib/import";
+import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
@@ -177,6 +179,56 @@ describe("commitContactImport", () => {
       .from(rentalFitProfiles)
       .where(eq(rentalFitProfiles.personId, person.id));
     expect(profile).toMatchObject({ bcdSize: "M", wetsuitSize: "3mm/M", finSize: "L" });
+  });
+
+  it("never lands a size the diver's own fit form could not save back (#1754)", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    // A staffer's note filed under "wetsuit size" in the prior system, 45
+    // characters. Stored whole, it failed `safeParse` on all three writers of
+    // `rental_fit_profiles` — the staff fit editor, the `/ready` gear form and
+    // the diver's own shelf — so every visible box read right and the save
+    // died. `boot_size` is the quietest of the four: no form has a box of its
+    // own for it.
+    const wetsuitCell = "Medium Large, long torso, prefers 5mm not 3mm";
+    const bootCell = "Wide, 9.5 US in a 10 EU boot, sock liner too";
+    expect(wetsuitCell.length).toBeGreaterThan(RENTAL_FIT_TEXT_LIMITS.size);
+    expect(bootCell.length).toBeGreaterThan(RENTAL_FIT_TEXT_LIMITS.size);
+    const csv = [
+      "full_name,email,wetsuit_size,boot_size,fin_size",
+      `Overlong Olive,olive.import@example.com,"${wetsuitCell}","${bootCell}",L`,
+    ].join("\n");
+    await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+
+    const person = await personByEmail(db, shop.id, "olive.import@example.com");
+    if (!person) throw new Error("person not created");
+    const [profile] = await db
+      .select()
+      .from(rentalFitProfiles)
+      .where(eq(rentalFitProfiles.personId, person.id));
+
+    // The predicate every fit form applies, run against what actually landed:
+    // a stored size must survive being posted straight back.
+    const resubmittable = z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size);
+    for (const size of [
+      profile?.bcdSize,
+      profile?.wetsuitSize,
+      profile?.drysuitSize,
+      profile?.bootSize,
+      profile?.finSize,
+    ]) {
+      if (size !== null && size !== undefined) {
+        expect(resubmittable.safeParse(size).success).toBe(true);
+      }
+    }
+    // Declined rather than truncated: a cut-off size is a plausible-looking
+    // wrong size on the packing list, while an absent one is a gap
+    // `rentalFitCompleteness` chases and the diver's gear form asks for again.
+    // The readable size on the same row still lands, so one unusable cell
+    // never costs the diver the sizes their old shop did record.
+    expect(profile?.wetsuitSize).toBeNull();
+    expect(profile?.bootSize).toBeNull();
+    expect(profile?.finSize).toBe("L");
   });
 
   it("imports a nitrox card as verified-and-flagged, surfaced for a confirm", async () => {

@@ -62,6 +62,7 @@ const ISSUE_CODES: ImportIssueCode[] = [
   "no_name",
   "merged_duplicate",
   "no_email_new_record",
+  "size_too_long",
 ];
 
 const ERROR_CODES: ImportActionErrorCode[] = [
