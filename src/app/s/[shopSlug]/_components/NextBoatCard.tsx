@@ -37,6 +37,15 @@ import type { DiverTranslator } from "@/i18n/messages";
  *   the page's *subject* instead, so the answer is to keep the week honest
  *   rather than to withhold the shopfront's lead.
  *
+ * **The card follows the reader's filters on purpose** (issue #1391, the
+ * owner's 2026-09-10 call). A reader of the `explicitMonth`/`after` suppression
+ * in `page.tsx` might read that as an oversight — if a bounded month kills the
+ * card, why does a lens not? Because they are different acts. A month or a
+ * stepped cursor is somebody *browsing a window*, and a card claiming the shop's
+ * next boat out of a window is wrong with nothing on screen to say so. A filter
+ * is the diver's own stated question, which the card answers — and then `filtered`
+ * makes the eyebrow name the narrowing, so the claim matches the board.
+ *
  * On the panel's bed, `rounded-panel` from `SectionCard` — the `rounded-3xl`
  * `border-primary/25 bg-primary/5 shadow-sm` panel this replaces was one of the
  * two one-off radii decision 1 retired.
@@ -51,6 +60,7 @@ export function NextBoatCard({
   price,
   skipped = 0,
   firstSkippedTime,
+  filtered = false,
   t,
 }: {
   /** The trip page's booking anchor. */
@@ -73,16 +83,23 @@ export function NextBoatCard({
   skipped?: number;
   /** The first skipped boat's departure time, in the shop's own zone. */
   firstSkippedTime?: string;
+  /**
+   * The reader has narrowed the board — a lens, a trip type, `?hasSpace=1`, or
+   * `?canDive=…&hideAbove=1` — so this card is the next bookable boat *in that
+   * view*, not the shop's next. The eyebrow says so.
+   */
+  filtered?: boolean;
   t: DiverTranslator;
 }) {
+  // One derivation, used for the region's accessible name and for the visible
+  // eyebrow, so the two can never drift apart.
+  const eyebrow = t(
+    filtered ? "schedule.nextWithSpace.eyebrowFiltered" : "schedule.nextWithSpace.eyebrow",
+  );
   return (
-    <SectionCard
-      as="section"
-      ariaLabel={t("schedule.nextWithSpace.eyebrow")}
-      className="flex flex-col gap-4"
-    >
+    <SectionCard as="section" ariaLabel={eyebrow} className="flex flex-col gap-4">
       <div className="min-w-0">
-        <p className={EYEBROW_CLASS}>{t("schedule.nextWithSpace.eyebrow")}</p>
+        <p className={EYEBROW_CLASS}>{eyebrow}</p>
         {/* The departure time is the figure a returning diver came to check,
             with the day reading as its caption (decision 3: numbers that lead
             render as figures). */}

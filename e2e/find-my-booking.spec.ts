@@ -36,22 +36,22 @@ test("a diver with a booking sees the same confirmation as one who has none", as
 
   await page.goto("/s/blue-mantis");
   const findMyBooking = page.locator("#find-my-booking");
-  await findMyBooking.getByText("Can't find your link?").click();
+  await findMyBooking.getByText("Can’t find your link?").click();
   await findMyBooking.getByLabel("Email").fill(email);
   await findMyBooking.getByRole("button", { name: "Send my link" }).click();
   await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
   const matchedBody = await page
-    .getByText("If that email has a current booking with us, we've sent a fresh link to it.")
+    .getByText("If that email has a current booking with us, we’ve sent a fresh link to it.")
     .textContent();
 
   await page.goto("/s/blue-mantis");
   const secondAttempt = page.locator("#find-my-booking");
-  await secondAttempt.getByText("Can't find your link?").click();
+  await secondAttempt.getByText("Can’t find your link?").click();
   await secondAttempt.getByLabel("Email").fill(`nobody-fmb-${e2eNow().getTime()}@example.com`);
   await secondAttempt.getByRole("button", { name: "Send my link" }).click();
   await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
   const unmatchedBody = await page
-    .getByText("If that email has a current booking with us, we've sent a fresh link to it.")
+    .getByText("If that email has a current booking with us, we’ve sent a fresh link to it.")
     .textContent();
 
   expect(unmatchedBody).toBe(matchedBody);
@@ -61,7 +61,7 @@ test("the form is collapsed by default and asks for nothing but an email", async
   await page.goto("/s/blue-mantis");
   const findMyBooking = page.locator("#find-my-booking");
   await expect(findMyBooking.getByLabel("Email")).toBeHidden();
-  await findMyBooking.getByText("Can't find your link?").click();
+  await findMyBooking.getByText("Can’t find your link?").click();
   await expect(findMyBooking.getByLabel("Email")).toBeVisible();
   await expect(findMyBooking.getByRole("button", { name: "Send my link" })).toBeVisible();
 });

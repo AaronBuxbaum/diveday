@@ -421,6 +421,8 @@ const MEDIA_KIND_KEYS: Record<string, StaffMessageKey> = {
 const PROCESSOR_ERASURE_TARGET_KEYS: Record<string, StaffMessageKey> = {
   stripe_customer: "settings.main.dataJobs.erasureTarget.stripe_customer",
   stripe_invoice_snapshot: "settings.main.dataJobs.erasureTarget.stripe_invoice_snapshot",
+  stripe_checkout_session_snapshot:
+    "settings.main.dataJobs.erasureTarget.stripe_checkout_session_snapshot",
 };
 
 /**

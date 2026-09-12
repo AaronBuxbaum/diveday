@@ -1,5 +1,13 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  HELD_SEND_TIMEOUT_MS,
+  openTripFromBoard,
+  publicTripUrl,
+  seededTripId,
+} from "./helpers";
 
 test.describe.configure({ timeout: 45_000 });
 
@@ -375,7 +383,7 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
   await expect(searchIsShowing).toBeVisible();
   await card.getByText("Mark signed on paper").click();
   await card
-    .getByLabel("I have this diver's signed release on file", { exact: false })
+    .getByLabel("I have this diver’s signed release on file", { exact: false })
     .filter({ visible: true })
     .check();
   await card.getByRole("button", { name: "Record paper signature" }).click();
@@ -479,4 +487,208 @@ test("a dropped signal at the counter fails on the row, not on the page", async 
   ).toBeVisible();
 
   await context.setOffline(false);
+});
+
+/**
+ * **The respectful no-show salvage, end to end** (issue #1209).
+ *
+ * One spec for the whole arc, because each step of it is the consequence of
+ * the one before: a staffer records that a diver never turned up, the seat
+ * that frees is offered to the person already waiting for it, and the boat
+ * sells it again. Split into three, each would have to rebuild a full boat
+ * with a wait list behind it — the setup *is* most of the cost — and a green
+ * "the seat is bookable" that never released one proves nothing.
+ *
+ * **The seat is never released by arithmetic.** Nothing in this flow
+ * decrements a count: the mark changes one booking's status, `seatHeld`
+ * (`src/lib/no-show.ts`) stops counting that status toward capacity, and the
+ * next diver claims the seat through `createBooking`'s own capacity
+ * transaction — the one every door that sells a seat lands on, the counter's
+ * walk-in and the storefront's `bookSpot` alike. The walk-in at the end is
+ * that claim, which is why it is here rather than an assertion about a number
+ * on a page.
+ *
+ * **The offer rides the shipped invite.** The counter's panel points at the
+ * departure's own wait list, where `WaitlistInvite` sends through the held-send
+ * path with its eight-second undo and its composer fallback — no second sender
+ * anywhere in this tree. Sending one is also what moves the counter's own
+ * offer on, since `noShowSalvage` counts only the entries nobody has chased.
+ */
+test("the counter releases a no-show's seat, offers it to the wait list, and the boat sells it again", async ({
+  page,
+  request,
+}) => {
+  // Two sales, a wait-list join in a second browser context, and one
+  // eight-second held send (ADR 20260906-before-you-ask, decision 2) chained
+  // in one test. The budget is what that chain costs, not a guess at it: the
+  // hold alone is a fixed eight seconds of it.
+  test.setTimeout(120_000);
+
+  // **A boat that is still ahead while it is being filled, and has left by the
+  // time the desk writes anybody off.** "Not here?" opens at the departure
+  // rather than at the shop's dock call (`noShowGate`), because a diver late
+  // for the arrival time the shop asked for has not missed anything yet — and
+  // the two halves of this flow need opposite sides of that line: a wait list
+  // takes nobody once the boat has left (`joinTripWaitlist`), and the door
+  // exists for nobody until it has. The fleet's clock is frozen at 09:30 in
+  // the shop's zone and shared by every spec the worker runs, so the departure
+  // moves instead (`/api/test/depart-trip`), which is the lever
+  // `seed-evening` already uses for the same reason.
+  const title = `Dock Call ${e2eNow().getTime()}`;
+  await createTrip(page, {
+    title,
+    date: daysFromNow(0),
+    departsAt: "09:45",
+    returnsAt: "12:00",
+    // One seat, so seating one diver fills the boat and the wait list is the
+    // only way onto it.
+    capacity: 1,
+  });
+  const tripId = await seededTripId(page, "blue-mantis", title);
+  const counter = `/shop/blue-mantis/check-in?trip=${tripId}`;
+  const walkIn = `/shop/blue-mantis/check-in/walk-in/${tripId}`;
+
+  // Odile Marchand is seeded carded and deliberately booked on nothing
+  // (`src/db/seed-cert-gates.ts`), so she clears this trip's Open Water
+  // baseline and is the only diver on this boat.
+  await page.goto(walkIn);
+  const findDiver = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
+  await findDiver.fill("Odile Marchand");
+  await findDiver.press("Enter");
+  await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
+  await page.waitForURL(/\/check-in(\?|$)/);
+
+  // The diver who wants the seat Odile is about to give up. A signed-out
+  // context, because the wait list is a diver-facing form and a staff session
+  // on the same page is the manage view (`e2e/departures-board.spec.ts` opens
+  // its lobby screen the same way).
+  const visitorContext = await page.context().browser()?.newContext();
+  if (!visitorContext) throw new Error("no browser to open a signed-out context with");
+  try {
+    const visitor = makeActivitySafe(await visitorContext.newPage());
+    await visitor.goto(
+      new URL(publicTripUrl(`/shop/blue-mantis/trips/${tripId}`), page.url()).toString(),
+    );
+    // The boat is full, said by the page a diver reads — which is what makes
+    // the wait list the form on offer rather than the booking one.
+    await expect(visitor.getByRole("heading", { name: "This boat’s full" })).toBeVisible();
+    await expect(visitor.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await visitor.getByLabel("Name").fill("Nora Quinn");
+    await visitor.getByLabel("Email").fill(`waitlist-${e2eNow().getTime()}@example.com`);
+    await visitor.getByRole("button", { name: "Join the wait list" }).click();
+    await expect(
+      visitor.getByRole("heading", { name: /You’re on the wait list, Nora/ }),
+    ).toBeVisible();
+  } finally {
+    await visitorContext.close();
+  }
+
+  // **The boat leaves.** Ten minutes ago, which is past its departure and
+  // inside the hour a late boat is allowed — so the seat is still the shop's to
+  // sell, which is what the rest of this flow is about.
+  expect(
+    (
+      await request.post("/api/test/depart-trip", {
+        data: { tripId, minutesAgo: 10 },
+      })
+    ).ok(),
+  ).toBe(true);
+
+  // Back at the desk. Odile has no release on file yet, so she arrives blocked
+  // — and the door is on the row a staffer can act on, not on a blocked one.
+  // The counter's own paper-waiver control clears it in place, which is the
+  // ordinary counter path for a diver standing there with a signed form.
+  await page.goto(counter);
+  const odile = page
+    .locator("article")
+    .filter({ hasText: "Odile Marchand" })
+    .filter({ visible: true });
+  await expect(odile).toHaveCount(1);
+  await odile.getByText("Mark signed on paper").click();
+  await odile
+    .getByLabel("I have this diver’s signed release on file", { exact: false })
+    .filter({ visible: true })
+    .check();
+  await odile.getByRole("button", { name: "Record paper signature" }).click();
+  await expect(odile.getByRole("button", { name: "Check in Odile Marchand" })).toBeVisible();
+
+  // **The door, and one tap inside it.** Closed it is three words under the
+  // check-in tap; open it says what the tap does before it does it.
+  await odile.getByText("Not here?").click();
+  await expect(
+    odile.getByText("Records that they did not arrive and frees the seat.", { exact: false }),
+  ).toBeVisible();
+  await odile.getByRole("button", { name: "Mark Odile Marchand as not here" }).click();
+
+  // The row stays on the page in its own group — never folded, because it is
+  // the one row left with work attached to it — wearing the plain word and an
+  // Undo for the diver who walks up as the lines come off.
+  await expect(page.getByRole("heading", { name: "Not here — 1" })).toBeVisible();
+  const released = page
+    .locator("article")
+    .filter({ hasText: "Odile Marchand" })
+    .filter({ visible: true });
+  await expect(released.getByText("Not here", { exact: true })).toBeVisible();
+  await expect(
+    released.getByRole("button", { name: "Put Odile Marchand back on this boat’s list" }),
+  ).toBeVisible();
+  await expect(released.getByRole("button", { name: "Check in Odile Marchand" })).toHaveCount(0);
+
+  // **The salvage: who the seat can go to, and where the money question
+  // lives.** The money is a sentence and a link to the order — there is no
+  // charge control and no refund control anywhere in this tree, which is the
+  // ticket's own boundary and is asserted rather than trusted.
+  await expect(released.getByText("1 diver is waiting for this seat")).toBeVisible();
+  await expect(
+    released.getByText("Marking someone not here does not charge or refund anything."),
+  ).toBeVisible();
+  await expect(released.getByRole("button", { name: /refund|charge/i })).toHaveCount(0);
+
+  // The door goes to the shipped control rather than growing a second sender
+  // beside it.
+  await released.getByRole("link", { name: "Open the wait list" }).click();
+  await page.waitForURL(new RegExp(`/shop/blue-mantis/trips/${tripId}/guests$`));
+  await expect(page.getByRole("heading", { name: /Waiting for a seat/ })).toBeVisible();
+
+  await page.getByRole("button", { name: "Email Nora an invite" }).click();
+  // The send holds eight seconds with Undo where the button stood, then runs.
+  // The fleet configures no email provider, so the server reports what it
+  // could not do and the control falls back to its composer — but the outreach
+  // is recorded either way, and *that* is the fact the counter reads next. The
+  // row says it in both halves: the button becomes a re-send, and the line
+  // under it dates the invite.
+  await expect(page.getByRole("status").filter({ hasText: /Sending/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Re-send invite" })).toBeVisible({
+    timeout: HELD_SEND_TIMEOUT_MS,
+  });
+  await expect(page.getByText("Invited just now")).toBeVisible();
+
+  // **The counter stops counting a diver somebody has already chased.** Nora
+  // is still on the list; she is no longer an offer, because sending two staff
+  // after the same diver is the whole failure `noShowSalvage`'s filter avoids.
+  await page.goto(counter);
+  await expect(page.getByText("1 diver is waiting for this seat")).toHaveCount(0);
+  await expect(
+    page.getByText("Nobody is waiting, and no similar departure has room for them."),
+  ).toBeVisible();
+
+  // **And the seat is genuinely sellable.** The walk-in door reads the boat as
+  // having room again — `getTripWithBooked` counts on the same `seatHeld`
+  // predicate the booking transaction enforces — and the sale itself runs
+  // through `createBooking`, not through anything this ticket added.
+  await page.goto(walkIn);
+  await expect(page.getByText(/0\/1 booked/)).toBeVisible();
+  const findSecond = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
+  await findSecond.fill("Diego Alvarez");
+  await findSecond.press("Enter");
+  await page.getByRole("button", { name: "Add Diego Alvarez to this boat" }).click();
+  await page.waitForURL(/\/check-in(\?|$)/);
+
+  await page.goto(counter);
+  await expect(
+    page.locator("article").filter({ hasText: "Diego Alvarez" }).filter({ visible: true }),
+  ).toHaveCount(1);
+  // Odile's row is still here, and still hers: a released seat sold on is not
+  // a deleted booking, and the crew reading this boat gets both facts.
+  await expect(page.getByRole("heading", { name: "Not here — 1" })).toBeVisible();
 });

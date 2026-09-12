@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { access, glob, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -66,7 +66,9 @@ export const PARKED_LABEL = "parked";
 
 const VALID_KINDS = new Set(["question", "improvement", "risk", "cleanup", "half-done"]);
 const VALID_EFFORTS = new Set(["S", "M", "L"]);
-const REQUIRED_SECTIONS = [
+/** Exported so `scripts/file-follow-up.mjs` composes a body in this order rather
+ *  than keeping a second copy of the headings that would drift from these. */
+export const REQUIRED_SECTIONS = [
   "What I noticed",
   "Why it isn't already done",
   "Proposed change",
@@ -118,6 +120,71 @@ function looksLikeAPath(token) {
  *  existence check rather than refusing the entry for including one. */
 function withoutLineSuffix(token) {
   return token.replace(/:\d+(?::\d+)?$/, "");
+}
+
+/** A token carrying any of these is a pattern to expand, not a filename to look up. */
+const GLOB_CHARS = /[*?[\]{}]/;
+
+/**
+ * Does this `**Touches:**` token name something in the tree?
+ *
+ * A plain token is the literal `access()` this has always done. A token with a
+ * glob character in it is expanded instead, and one match is enough. Issue
+ * #1339 is why: a change that edits the same namespace in every locale honestly
+ * touches every `staff/trips.json` under `src/i18n/locales`, the entry said so
+ * with a star for the locale segment, and the literal lookup failed — which
+ * reddened `Repository safeguards` on PR #1335, a branch that had nothing to do
+ * with it. Spelling out every locale instead is the same fact twice, and goes
+ * stale the day a third one lands.
+ *
+ * The cost, accepted with eyes open: `src/**` satisfies this line forever. The
+ * `Touches:` rule is about giving a cold reader an anchored place to start, and
+ * a filer who wants to write something useless could always have named a
+ * directory.
+ *
+ * **Two bounds on the expansion, both of them about this guard's blast radius**
+ * (`security-reviewer`, issue 1356). A pattern that escapes the checkout —
+ * `../../../etc/ssh/*` — is refused rather than walked, so an issue body cannot
+ * turn `check:repo` into a file-existence oracle for the runner. And a pattern
+ * that matches nothing forces a full recursive walk before `glob` can say so,
+ * which over `node_modules/`, `.git/`, `.next/` and `.pglite/` is slow enough
+ * to hit `check:repo`'s own kill timer — and that reports a **failure**, on
+ * every open pull request at once, which is precisely the outage this module
+ * exists to prevent. So the big directories are skipped and the walk has a
+ * deadline. A walk that runs out of time answers **yes**: this guard fails
+ * open, because a slow filesystem must not redden somebody else's branch.
+ */
+const GLOB_WALK_BUDGET_MS = 2_000;
+const GLOB_SKIPPED = ["node_modules", ".git", ".next", ".pglite", "test-results"];
+
+export async function touchedPathExists(root, token) {
+  if (!GLOB_CHARS.test(token)) {
+    try {
+      await access(path.join(root, token));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  if (path.isAbsolute(token) || token.split("/").includes("..")) return false;
+  const deadline = Date.now() + GLOB_WALK_BUDGET_MS;
+  for await (const match of glob(token, {
+    cwd: root,
+    exclude: (name) => GLOB_SKIPPED.includes(name),
+  })) {
+    if (match) return true;
+    if (Date.now() > deadline) return true;
+  }
+  return Date.now() > deadline;
+}
+
+/** The sentence for a `Touches:` token that resolved to nothing, saying which
+ *  kind of nothing — a pattern that matched no files reads as a typo otherwise. */
+export function missingTouchedProblem(token) {
+  if (GLOB_CHARS.test(token) && (path.isAbsolute(token) || token.split("/").includes("..")))
+    return `**Touches:** “${token}” points outside the checkout — name a path relative to the repository root.`;
+  const detail = GLOB_CHARS.test(token) ? ` The pattern “${token}” matched no files.` : "";
+  return `**Touches:** path “${token}” does not exist — name where the work lives today. A file only your own unmerged branch adds is not that: this resolves against the working tree, so it reddens every other session's \`pnpm check\` until you merge. List paths that exist on main and name the arriving ones in prose instead.${detail}`;
 }
 
 /** One `**Label:** …` line, including its wrapped continuation lines — the
@@ -339,11 +406,8 @@ async function checkDraft(bodyPath, title) {
   });
   const missing = [];
   for (const item of touched) {
-    try {
-      await access(path.join(process.cwd(), item));
-    } catch {
-      missing.push(item);
-    }
+    if (await touchedPathExists(process.cwd(), item)) continue;
+    missing.push(GLOB_CHARS.test(item) ? `${item} (matched no files)` : item);
   }
   if (problems.length > 0) {
     console.error(
@@ -443,13 +507,8 @@ async function main() {
     });
     problems.push(...result.problems);
     for (const touched of result.touched) {
-      try {
-        await access(path.join(root, touched));
-      } catch {
-        problems.push(
-          `#${issue.number} “${issue.title}”: **Touches:** path “${touched}” does not exist — name where the work lives today. A file only your own unmerged branch adds is not that: this resolves against the working tree, so it reddens every other session's \`pnpm check\` until you merge. List paths that exist on main and name the arriving ones in prose instead.`,
-        );
-      }
+      if (await touchedPathExists(root, touched)) continue;
+      problems.push(`#${issue.number} “${issue.title}”: ${missingTouchedProblem(touched)}`);
     }
   }
 
@@ -466,7 +525,7 @@ async function main() {
     // malformed issue fails it on every open pull request at once, and nothing
     // in your diff caused it or can fix it.
     console.error(
-      "These are tracker problems, not branch problems: edit the issues named above. Nothing in this branch caused them, and every other open pull request is failing the same way until they are fixed. Draft a body to a file and run `node scripts/check-follow-ups.mjs --body <path>` before filing, to avoid adding to this.",
+      "These are tracker problems, not branch problems: edit the issues named above. Nothing in this branch caused them, and every other open pull request is failing the same way until they are fixed. File through `node scripts/file-follow-up.mjs` — it composes the body and refuses to call `gh` when it would not pass — or draft a body to a file and run `node scripts/check-follow-ups.mjs --body <path>` before filing, to avoid adding to this.",
     );
     process.exit(1);
   }

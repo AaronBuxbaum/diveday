@@ -17,13 +17,13 @@ test.describe("owner", () => {
   }) => {
     await page.goto("/shop/blue-mantis/reports");
 
-    await expect(page.getByRole("heading", { level: 1, name: "How's your month" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "How’s your month" })).toBeVisible();
 
     // The five headline figures the buyer asks about — unboxed since slice 9f
     // of ADR 20260827-the-shops-shelves, which is why these are exact matches:
     // "Seats" is a figure's own label, and the rows below it say "9 of 12
     // seats" without being one.
-    const metrics = page.getByRole("region", { name: "This month's numbers" });
+    const metrics = page.getByRole("region", { name: "This month’s numbers" });
     await expect(metrics.getByText("Net revenue", { exact: true })).toBeVisible();
     await expect(metrics.getByText("Tips", { exact: true })).toBeVisible();
     await expect(metrics.getByText("Seats", { exact: true })).toBeVisible();
@@ -43,7 +43,7 @@ test.describe("owner", () => {
     await page.getByRole("link", { name: "Previous month" }).click();
     await expect(page).toHaveURL(/reports\?month=\d{4}-\d{2}/);
     // A month that has fully sailed still renders its numbers and its trips.
-    await expect(page.getByRole("region", { name: "This month's numbers" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "This month’s numbers" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Trips this month" })).toBeVisible();
   });
 
@@ -56,7 +56,7 @@ test.describe("owner", () => {
 
     await expect(page).toHaveURL(/reports\?month=2026-03$/);
     await expect(page.getByRole("heading", { level: 2, name: "March 2026" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "This month's numbers" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "This month’s numbers" })).toBeVisible();
   });
 
   test("a month before the shop's first departure is clamped, not rendered as the year 1", {
@@ -84,7 +84,7 @@ test.describe("owner", () => {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/reports");
-    const metrics = page.getByRole("region", { name: "This month's numbers" });
+    const metrics = page.getByRole("region", { name: "This month’s numbers" });
     // "vs $X in <Month> <Year>", with or without a leading percent/points
     // trend — see reports.comparison.yearAgo / previousMonthFallback.
     await expect(metrics.getByText(/vs .+ in \w+ \d{4}/).first()).toBeVisible();
@@ -99,7 +99,7 @@ test.describe("owner", () => {
     // "0%" or "—".
     await page.goto("/shop/blue-mantis/reports?month=0001-01");
     await expect(page.getByRole("link", { name: "Previous month" })).toHaveCount(0);
-    const metrics = page.getByRole("region", { name: "This month's numbers" });
+    const metrics = page.getByRole("region", { name: "This month’s numbers" });
     await expect(metrics.getByText(/vs .+ in \w+ \d{4}/)).toHaveCount(0);
   });
 
@@ -150,7 +150,7 @@ test.describe("owner", () => {
     // baseline concern for a shop that does; see the page's own comment).
     await page.goto("/shop/blue-mantis/reports");
     const chooser = page.getByRole("navigation", { name: "Choose month" });
-    const numbers = page.getByRole("region", { name: "This month's numbers" });
+    const numbers = page.getByRole("region", { name: "This month’s numbers" });
     const ledger = page.getByRole("region", { name: "Trips this month" });
     await expect(ledger).toBeVisible();
 
@@ -173,6 +173,6 @@ test.describe("as captain", () => {
     // The captain has no use for revenue, so the surface doesn't exist for
     // them — bounced to Today rather than shown a read-only/explained page.
     await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
-    await expect(page.getByRole("region", { name: "This month's numbers" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "This month’s numbers" })).toHaveCount(0);
   });
 });

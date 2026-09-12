@@ -152,7 +152,7 @@ describe("listDeskEventsSince", () => {
       .insert(people)
       .values({ shopId: otherShop.id, fullName: "Stranger", email: "stranger@example.invalid" })
       .returning({ id: people.id });
-    if (!stranger) throw new Error("test setup: a second shop's staffer is required");
+    if (!stranger) throw new Error("test setup: a second shop’s staffer is required");
 
     // Neither the mark nor the events are reachable across the tenant line, and
     // the mark write is refused rather than silently landing.

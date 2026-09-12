@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { DIVER_MESSAGES, diverTranslator } from "@/i18n/messages";
 import { DIVER_LOCALES } from "@/i18n/settings";
+import { MARINE_LIFE_TILE_WIDTHS } from "@/lib/marine-life-tiles";
 import { MARINE_LIFE_CATALOG, MARINE_LIFE_KINDS, marineLifeImage } from "./marine-life-catalog";
 
 /**
@@ -38,6 +39,38 @@ describe("the marine-life catalog", () => {
     const missing = MARINE_LIFE_CATALOG.filter(
       (species) => !existsSync(path.join(process.cwd(), "public", marineLifeImage(species.slug))),
     ).map((species) => species.slug);
+    expect(missing).toEqual([]);
+  });
+
+  /**
+   * The capture variants are the same promise one directory down, and they go
+   * stale in the one way nobody would notice: a species added today gets its
+   * source from `scripts/fetch-marine-life-photo.mjs` and its variants in the
+   * same breath, but a source added by hand, or a width added to
+   * `MARINE_LIFE_TILE_WIDTHS` without a `--tiles-only` sweep, leaves a hole.
+   *
+   * A hole here is quiet by construction: the variants are only ever served to
+   * an e2e capture, so the miss is a broken image in a screenshot nobody reads
+   * as a missing file — it reads as a surface that changed. Which is the exact
+   * class of unexplained visual diff this whole mechanism exists to end
+   * (`src/lib/marine-life-tiles.ts`).
+   */
+  it("has every capture variant on disk for every species", () => {
+    const missing = MARINE_LIFE_CATALOG.flatMap((species) =>
+      MARINE_LIFE_TILE_WIDTHS.filter(
+        (width) =>
+          !existsSync(
+            path.join(
+              process.cwd(),
+              "public",
+              "marine-life",
+              "tiles",
+              String(width),
+              `${species.slug}.jpg`,
+            ),
+          ),
+      ).map((width) => `${species.slug} @ ${width}px`),
+    );
     expect(missing).toEqual([]);
   });
 

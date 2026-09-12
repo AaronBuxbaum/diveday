@@ -34,10 +34,10 @@ describe("BookingPartyFields", () => {
     const email2 = screen.getByRole("textbox", { name: "Diver 2 email" });
     expect(email2).toBeRequired();
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /use the main contact's email/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /use the main contact’s email/i }));
     expect(screen.queryByRole("textbox", { name: "Diver 2 email" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /use the main contact's email/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /use the main contact’s email/i }));
     expect(screen.getByRole("textbox", { name: "Diver 2 email" })).toBeRequired();
   });
 

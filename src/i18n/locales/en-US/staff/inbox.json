@@ -19,6 +19,12 @@
   },
   "attachments": "{count, plural, one {# attachment, still with the sender} other {# attachments, still with the sender}}",
   "openRecord": "Open the record for {name}",
+  "delete": {
+    "action": "Delete",
+    "actionFor": "Delete the message from {address}",
+    "confirm": "Delete this message?",
+    "pending": "Deleting…"
+  },
   "pagination": {
     "total": "{count, plural, one {# message} other {# messages}}"
   },
@@ -37,8 +43,8 @@
     "placeholder": "Type your answer",
     "send": "Send",
     "sending": "Sending",
-    "windowClosed": "WhatsApp takes a typed reply for 24 hours after a diver's last message. Theirs is older than that.",
-    "diverRemoved": "This diver's record was removed, so replies are switched off."
+    "windowClosed": "WhatsApp takes a typed reply for 24 hours after a diver’s last message. Theirs is older than that.",
+    "diverRemoved": "This diver’s record was removed, so replies are switched off."
   },
   "notices": {
     "failed": "That did not send, so the message is still waiting on an answer.",
@@ -49,8 +55,10 @@
     "channelUnsupported": "DiveDay cannot answer a text message yet.",
     "noReplyAddress": "There is no address to answer on.",
     "cannotBeSent": "This reply cannot be sent as it stands. Nothing went out, and trying again will not change that.",
-    "whatsappWindowClosed": "WhatsApp takes a typed reply for 24 hours after a diver's last message. Theirs is older than that.",
+    "whatsappWindowClosed": "WhatsApp takes a typed reply for 24 hours after a diver’s last message. Theirs is older than that.",
     "whatsappNotConnected": "Answering on WhatsApp needs the sender you connect in Settings.",
-    "notAuthorized": "Answering divers is owner and manager work."
+    "notAuthorized": "Your account can’t answer divers for this shop any more. Ask an owner or manager to check your access.",
+    "deleted": "Message deleted.",
+    "gone": "That message is no longer in the inbox."
   }
 }

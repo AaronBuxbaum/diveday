@@ -772,7 +772,7 @@ test("a shop writes its own landmarks and picks its own field guide", async ({ p
   // which is how DiveDay decides what the catalog grows by next.
   await page.getByLabel("Find a species").fill("Pygmy seahorse");
   await page.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(guide.getByText(/Not in DiveDay's catalog/)).toBeVisible();
+  await expect(guide.getByText(/Not in DiveDay’s catalog/)).toBeVisible();
   await page.getByRole("button", { name: "Tell DiveDay about it" }).click();
   await expect(guide.getByText(/we have noted Pygmy seahorse/)).toBeVisible();
 

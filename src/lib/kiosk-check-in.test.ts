@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { createCapabilityToken } from "./booking-capabilities";
 import {
   FOLD_FROM,
   FOLD_TO,
   foldNameWord,
+  isCapabilityToken,
   KIOSK_INPUT_MAX,
   KIOSK_RESPONSE_FLOOR_MS,
   kioskCheckInPath,
@@ -171,6 +173,50 @@ describe("readKioskInput", () => {
   });
 
   /**
+   * **The scanned code comes back byte for byte.** base64url is case-sensitive,
+   * so the `.toLowerCase()` one branch up would silently turn every scan into
+   * "See the desk" — a failure nobody could diagnose from a lobby, since the
+   * refusal is the same sentence a stranger gets.
+   */
+  it("reads a capability token as a capability, unchanged", () => {
+    const token = createCapabilityToken();
+    expect(readKioskInput(token)).toEqual({ kind: "capability", token });
+    expect(readKioskInput(` ${token} `)).toEqual({ kind: "capability", token });
+  });
+
+  /**
+   * Length is the whole of the shape, so both sides of it are checked: a string
+   * one character short or long of a real token is a surname, not a credential,
+   * and falls through to the name lookup the way any other typing does.
+   */
+  it("reads a near-miss of the token shape as a surname", () => {
+    expect(readKioskInput("a".repeat(42))).toEqual({ kind: "surname", surname: "a".repeat(42) });
+    expect(readKioskInput("a".repeat(44))).toEqual({ kind: "surname", surname: "a".repeat(44) });
+    // A character outside base64url is not a token either, whatever the length.
+    const plus = `${"a".repeat(42)}+`;
+    expect(readKioskInput(plus)).toEqual({ kind: "surname", surname: plus });
+  });
+
+  /**
+   * **The collision the shape leaves, pinned rather than fixed.** The hyphen is
+   * in base64url, so one typed word of exactly 43 characters from that charset
+   * is read as a code and never tried as a name — a genuinely long hyphenated
+   * surname reaches it. The behaviour is deliberate (`readKioskInput` says why
+   * retrying a failed code as a surname is the wrong repair), and this test is
+   * what stops it being rediscovered as a bug and quietly changed.
+   */
+  it("reads a 43-character hyphenated surname as a code, not a name", () => {
+    const surname = "Featherstonehaugh-Cholmondeley-Marjoribanks";
+    expect(surname).toHaveLength(43);
+    expect(readKioskInput(surname)).toEqual({ kind: "capability", token: surname });
+    // The diver's own repair: a given name in front, and it is a name again.
+    expect(readKioskInput(`Alice ${surname}`)).toEqual({
+      kind: "surname",
+      surname: surname.toLowerCase(),
+    });
+  });
+
+  /**
    * Everything unusable is `null`, and the surface answers `null` with the same
    * sentence it answers a miss with. A kiosk that said "that isn't a name"
    * would be telling whoever typed it something about the shape of the lookup.
@@ -185,6 +231,46 @@ describe("readKioskInput", () => {
     expect(readKioskInput("n".repeat(KIOSK_INPUT_MAX + 1))).toBeNull();
     // The boundary itself is allowed.
     expect(readKioskInput("n".repeat(KIOSK_INPUT_MAX))).not.toBeNull();
+  });
+});
+
+/**
+ * **The shape and the mint must not drift.** `isCapabilityToken` is written in
+ * this module rather than beside `createCapabilityToken`, because that one
+ * reaches `node:crypto` and this one is imported by a client component — so the
+ * only thing holding the two together is this test, which draws real tokens and
+ * asserts the regex matches every one.
+ */
+describe("isCapabilityToken", () => {
+  it("matches every token the mint actually produces", () => {
+    // 200 draws: base64url's alphabet is 64 wide, so a shape that happened to
+    // exclude one character would otherwise pass a single-draw test most runs.
+    for (let draw = 0; draw < 200; draw += 1) {
+      const token = createCapabilityToken();
+      expect(isCapabilityToken(token)).toBe(true);
+    }
+  });
+
+  it("refuses anything that is not one, shape alone and nothing more", () => {
+    expect(isCapabilityToken("")).toBe(false);
+    expect(isCapabilityToken("a1b2c3d4-1111-4222-8333-444444444444")).toBe(false);
+    expect(isCapabilityToken("a".repeat(42))).toBe(false);
+    expect(isCapabilityToken("a".repeat(44))).toBe(false);
+    // base64, not base64url: `+` and `/` never come out of `createBearerToken`,
+    // and `/` in particular must never be read as a credential — it is the one
+    // character that would change the shape of a URL this token is put into.
+    expect(isCapabilityToken(`${"a".repeat(42)}+`)).toBe(false);
+    expect(isCapabilityToken(`${"a".repeat(42)}/`)).toBe(false);
+    expect(isCapabilityToken(`${"a".repeat(42)}=`)).toBe(false);
+  });
+
+  /**
+   * It says nothing about whether the token works. A well-shaped string that
+   * was never minted is refused by `verifyBookingCapability`, one module over,
+   * with the same "See the desk" everything else gets.
+   */
+  it("answers for a well-shaped string nobody ever minted", () => {
+    expect(isCapabilityToken("a".repeat(43))).toBe(true);
   });
 });
 

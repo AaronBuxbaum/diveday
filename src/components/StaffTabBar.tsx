@@ -335,16 +335,20 @@ function StaffTabBarContent({
         >
           <div className="mx-auto w-full max-w-xl p-3 pb-2">
             {/* The one thing the sheet gains at rest: the affordance that says
-                it can be held, and the one place a drag may start however far
-                the list beneath it has been scrolled. It is `aria-hidden` and
-                focusable by nobody — Escape and the scrim already close this
-                sheet for everyone not using a thumb, and a focusable handle
-                would add a tab stop that does nothing when it is reached. */}
-            <div
-              aria-hidden="true"
-              data-sheet-handle
-              className="mx-auto mb-2 h-1.5 w-10 shrink-0 rounded-full bg-border-strong/60"
-            />
+                it can be held, and — once a shop's menu is long enough to
+                scroll — the *only* place a drag may start (#1512). It is
+                `aria-hidden` and focusable by nobody — Escape and the scrim
+                already close this sheet for everyone not using a thumb, and a
+                focusable handle would add a tab stop that does nothing when it
+                is reached.
+
+                The press area is the strip, not the 6px bar drawn inside it:
+                the bar is the smallest thing on the surface and the sheet's
+                sole dismissal now depends on hitting it. Nothing else lives in
+                this band, so the whole width of it is the handle. */}
+            <div aria-hidden="true" data-sheet-handle className="py-2">
+              <div className="mx-auto h-1.5 w-10 shrink-0 rounded-full bg-border-strong/60" />
+            </div>
             <h2 id={`${sheetId}-heading`} className="sr-only">
               {moreLabel}
             </h2>

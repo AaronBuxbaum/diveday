@@ -26,6 +26,11 @@ import { DiverRollCall } from "./DiverRollCall";
 afterEach(cleanup);
 
 const t = staffTranslator("en-US");
+const TRANSLATORS = {
+  "en-US": t,
+  "es-ES": staffTranslator("es-ES"),
+} as const;
+type TestLocale = keyof typeof TRANSLATORS;
 
 function diver(
   overrides: Partial<TripManifest["divers"][number]> = {},
@@ -65,9 +70,12 @@ function notBackAt(): RollCallRecord {
 function renderList({
   divers,
   checkpoint = "after_dive_1",
+  locale = "en-US",
 }: {
   divers: TripManifest["divers"];
   checkpoint?: RollCallCheckpoint;
+  /** Both locales, for the copy this list is the on-screen guarantee for. */
+  locale?: TestLocale;
 }) {
   return render(
     <DiverRollCall
@@ -77,14 +85,14 @@ function renderList({
       isDeparture={checkpoint === "departure"}
       shopSlug="blue-mantis"
       tripId="00000000-0000-4000-8000-0000000000ff"
-      locale="en-US"
+      locale={locale}
       timezone="America/New_York"
       notesByBooking={new Map()}
       rollCallAction={vi.fn(async () => ({ ok: true }) as const)}
       addPrivateNoteAction={vi.fn(async () => undefined) as never}
       rollCallButtonCopy={() => ({ errorRefusal: "Try again", blockedMessage: "Still blocked" })}
       buddyTeamLabel={() => null}
-      t={t}
+      t={TRANSLATORS[locale]}
     />,
   );
 }
@@ -528,5 +536,94 @@ describe("the welcome word", () => {
     });
     expect(welcomeLine(container, "first time with us")).toBeDefined();
     expect(container.textContent).toContain("Birthday today");
+  });
+});
+
+/**
+ * **This heading is what makes the abbreviated checkpoint track safe** (#1320).
+ * Below `sm` the manifest's checkpoint switch says only "Dock" / "Dive 2"
+ * (*Muelle* / *Inm. 2*), and a short word is a handle for a choice only while
+ * the choice is spelled out somewhere on the same screen. That somewhere is
+ * this list's opening `<h2>`, rendered unconditionally under the track at every
+ * width and in every state. The summary panel *above* the track is not it: it
+ * swaps the checkpoint's name for "Roll call complete" the moment every result
+ * is in, which is exactly when a phone would otherwise be showing a checkpoint
+ * nobody has named.
+ *
+ * So: whoever conditionalizes, moves or restyles this heading fails here rather
+ * than shipping an unnamed checkpoint to a crew at the rail.
+ */
+describe("the checkpoint is named in full under the abbreviated track (issue #1320)", () => {
+  /** The section's opening heading, which is the guarantee's actual position. */
+  function rollCallHeading(container: HTMLElement) {
+    return container.querySelector("h2")?.textContent;
+  }
+
+  /** Nothing recorded, every result in, and the alarm — the three the list has. */
+  const states: Record<string, () => TripManifest["divers"]> = {
+    "nothing recorded": () => [diver({ bookingId: "b-1", fullName: "Ana Ruiz" })],
+    "every result in": () => [
+      diver({ bookingId: "b-1", fullName: "Ana Ruiz", rollCall: boardedAt() }),
+    ],
+    "an alarm standing": () => [
+      diver({ bookingId: "b-1", fullName: "Ana Ruiz", rollCall: notBackAt() }),
+    ],
+  };
+
+  const headings: ReadonlyArray<readonly [TestLocale, RollCallCheckpoint, string]> = [
+    ["en-US", "departure", "Before departure roll call"],
+    ["en-US", "after_dive_2", "After dive 2 roll call"],
+    ["es-ES", "departure", "Pase de lista · Antes de zarpar"],
+    ["es-ES", "after_dive_2", "Pase de lista · Después de la inmersión 2"],
+  ];
+
+  for (const [locale, checkpoint, heading] of headings) {
+    it(`says "${heading}" in every state (${locale})`, () => {
+      for (const [state, roster] of Object.entries(states)) {
+        const { container } = renderList({ divers: roster(), checkpoint, locale });
+        expect(rollCallHeading(container), state).toBe(heading);
+      }
+    });
+  }
+});
+
+/**
+ * **A released seat and a diver still walking down the dock are not the same
+ * row** (#1209, `dive-domain-expert` review 20260911).
+ *
+ * The manifest keeps every non-cancelled booking on purpose, so the counter's
+ * write-off stays on the list — and until this chip the only booking signal it
+ * carried was "Checked in", which made a settled seat read as somebody merely
+ * late. On the row rather than in the person sheet, because the sheet costs a
+ * tap and the point is to stop the crew looking.
+ */
+describe("the counter's write-off is on the row", () => {
+  const NOT_HERE: Record<TestLocale, string> = { "en-US": "Not here", "es-ES": "No vino" };
+
+  it.each(["en-US", "es-ES"] as const)(
+    "shows it without opening the sheet, in %s",
+    (locale: TestLocale) => {
+      renderList({
+        locale,
+        checkpoint: "departure",
+        divers: [diver({ notHere: true, checkedIn: true })],
+      });
+      const row = screen.getByRole("listitem");
+      const trigger = within(row).getByRole("button", { name: /Meera Iyer/ });
+      expect(within(trigger).getByText(NOT_HERE[locale])).toBeVisible();
+      // Quiet, not an alarm: it is the absence of an exception, and the row a
+      // crew most wants calm is not the place for a second loud thing.
+      expect(dangerToned(trigger)).toEqual([]);
+      // And it never becomes a gate — the boarding tap is exactly where it was,
+      // because a crew member looking at a body outrules the desk.
+      expect(
+        within(row).getByRole("button", { name: TRANSLATORS[locale]("manifest.markBoarded") }),
+      ).toBeVisible();
+    },
+  );
+
+  it("says nothing about a diver nobody wrote off", () => {
+    renderList({ checkpoint: "departure", divers: [diver({ checkedIn: true })] });
+    expect(screen.queryByText(NOT_HERE["en-US"])).toBeNull();
   });
 });

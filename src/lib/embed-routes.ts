@@ -37,6 +37,14 @@ const EMBED_WIDGET_SHAPE = /^\/s\/[a-z0-9-]+\/embed\/([^/]+)\/?$/;
  * shell has already gone out with a 200 by the time the page body runs, so a
  * crawler or a host page with a typo would get a 200 not-found. The proxy
  * answers these with a plain 404 before any shell is sent.
+ *
+ * This was the first edge refusal in the namespace and for a while the only
+ * one, which made it look like a property of the embed *page* — a wrong reading
+ * that cost three issues (#1489, #1510, #1604). It is not: every `/s/**` URL
+ * that names nothing is now refused in `src/proxy.ts` for exactly this reason
+ * (ADR 20260912-the-public-namespace-refuses-at-the-edge). This predicate stays
+ * as the widget-catalogue half of that one rule — the only segment here whose
+ * answer is a closed list rather than a row.
  */
 export function isUnknownEmbedWidgetRoute(pathname: string): boolean {
   const match = EMBED_WIDGET_SHAPE.exec(pathname);
@@ -109,3 +117,33 @@ export const EMBED_REQUEST_HEADER = "x-diveday-embed";
  * else, so a value that somehow arrived unproxied still grants nothing.
  */
 export const REQUEST_PATH_HEADER = "x-diveday-path";
+
+/**
+ * **Whose 404 this is.** Stamped by `src/proxy.ts` with a shop's slug when —
+ * and only when — the request it refused named a shop that exists and a
+ * resource under it that does not; empty on every other request, including a
+ * refusal whose *shop* is the part that is missing.
+ *
+ * Issue #765's rule is that a diver who taps a link outliving its departure
+ * lands somewhere that still looks like the shop they were trying to reach,
+ * never on DiveDay's sales-page 404. That used to be a matter of which
+ * `not-found.tsx` Next picked; since the namespace started refusing above the
+ * streaming boundary (ADR 20260912-the-public-namespace-refuses-at-the-edge)
+ * the refusal is a rewrite to `/_not-found`, which renders under the *root*
+ * layout where the shop's segment layout never runs. So the frame has to be
+ * composed there, and this header is how that file — handed no props and no
+ * URL — learns which shop to compose it for.
+ *
+ * Why the slug and not the path: `REQUEST_PATH_HEADER` beside it already
+ * carries the original URL, and `shopSlugFromPublicPath` would read a slug out
+ * of it — but that slug is only ever *claimed*. Offering a schedule that is
+ * itself a 404 is a worse landing than DiveDay's own, so the one bit the
+ * reader cannot work out for itself is the one this header carries: the proxy
+ * looked, and the shop is really there.
+ *
+ * Overwritten on every proxied request exactly like the two headers above, and
+ * the reader still holds the value to the slug charset rather than trusting
+ * it, because the proxy matcher's static-asset escape hatch means "proxied" is
+ * not "all".
+ */
+export const REFUSED_SHOP_SLUG_HEADER = "x-diveday-refused-shop";

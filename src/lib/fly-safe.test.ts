@@ -3,12 +3,21 @@ import { HOUR_MS } from "./clock";
 import {
   DEFAULT_FLY_SAFE_HOURS,
   FLY_SAFE_LIMITS,
+  type FlySafeInput,
   flySafeFrom,
+  flySafeMessageKey,
   parseFlySafeHours,
 } from "./fly-safe";
 import { formatWeekdayTime } from "./format";
+import { DEPARTURE_BUFFER_MS } from "./trips";
 
 const endsAt = new Date("2026-07-25T22:00:00.000Z");
+/**
+ * The instant the rest of the product calls the boat home, and the only
+ * scheduled-return anchor this module may use: boats run late, `hasReturned`
+ * is what says one is back, and it allows the departure buffer first.
+ */
+const scheduledHome = new Date(endsAt.getTime() + DEPARTURE_BUFFER_MS);
 const home = new Date(endsAt.getTime() + 2 * HOUR_MS);
 const hours = DEFAULT_FLY_SAFE_HOURS;
 
@@ -142,6 +151,13 @@ describe("flySafeFrom", () => {
   });
 
   it("reads a two-dive plan as repetitive even when the crew logged only one tank", () => {
+    // Asserted whole, anchor and instant included. It used to assert the basis
+    // and the hours alone, which left the one thing that was wrong unpinned:
+    // the day's record is short of its plan, so tank one's exit is the last
+    // *recorded* one rather than the last one, and the clock started there. On
+    // a two-tank morning charter that is about two and a half hours early, and
+    // at the settable minimum of 18 repetitive hours it lands under DAN's
+    // floor.
     const exit = new Date("2026-07-25T20:10:00.000Z");
     const result = flySafeFrom({
       executedDives: [{ diveNumber: 1, exitedAt: exit }],
@@ -151,7 +167,80 @@ describe("flySafeFrom", () => {
       now: home,
       hours,
     });
-    expect(result).toMatchObject({ basis: "repetitive", hours: 24 });
+    expect(result).toEqual({
+      from: new Date(scheduledHome.getTime() + 24 * HOUR_MS),
+      basis: "repetitive",
+      reason: "dives_planned",
+      anchor: "scheduled_return",
+      hours: 24,
+    });
+    expect(result?.from.getTime()).toBeGreaterThan(exit.getTime() + 24 * HOUR_MS);
+  });
+
+  it("says nothing, rather than tank one's answer, while a short record's boat is still out", () => {
+    // The same treatment the untimed later dive gets: an unlogged tank is a
+    // hole in the record, and until the boat is home there is no instant on it
+    // that is not before the day's real last dive ended.
+    const exit = new Date("2026-07-25T20:10:00.000Z");
+    expect(
+      flySafeFrom({
+        executedDives: [{ diveNumber: 1, exitedAt: exit }],
+        plannedDives: 2,
+        endsAt,
+        divedRecently: false,
+        now: endsAt,
+        hours,
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps the logged exit when a short record's one tank ran past the buffered return", () => {
+    // The return is a floor under the anchor, never a ceiling over it: a boat
+    // that came in late must not shorten the wait. The exit is two hours past
+    // the scheduled return so it is past the buffered one too — at one hour it
+    // would merely tie with it and prove nothing.
+    const lateExit = new Date(endsAt.getTime() + 2 * HOUR_MS);
+    const result = flySafeFrom({
+      executedDives: [{ diveNumber: 1, exitedAt: lateExit }],
+      plannedDives: 2,
+      endsAt,
+      divedRecently: false,
+      now: new Date(lateExit.getTime() + 3 * HOUR_MS),
+      hours,
+    });
+    expect(result).toEqual({
+      from: new Date(lateExit.getTime() + 24 * HOUR_MS),
+      basis: "repetitive",
+      reason: "dives_planned",
+      anchor: "scheduled_return",
+      hours: 24,
+    });
+  });
+
+  it("anchors on the last exit once the crew logged every tank the departure planned", () => {
+    // The other side of the line: a whole record is the crew's own answer and
+    // the scheduled return never overrides it, late boat or early one.
+    const first = new Date("2026-07-25T19:00:00.000Z");
+    const second = new Date("2026-07-25T21:15:00.000Z");
+    expect(
+      flySafeFrom({
+        executedDives: [
+          { diveNumber: 1, exitedAt: first },
+          { diveNumber: 2, exitedAt: second },
+        ],
+        plannedDives: 2,
+        endsAt,
+        divedRecently: false,
+        now: home,
+        hours,
+      }),
+    ).toEqual({
+      from: new Date(second.getTime() + 24 * HOUR_MS),
+      basis: "repetitive",
+      reason: "dives_recorded",
+      anchor: "last_dive",
+      hours: 24,
+    });
   });
 
   it("falls back to the scheduled return once the boat is home, when nothing was recorded", () => {
@@ -164,12 +253,42 @@ describe("flySafeFrom", () => {
       hours,
     });
     expect(result).toEqual({
-      from: new Date(endsAt.getTime() + 24 * HOUR_MS),
+      from: new Date(scheduledHome.getTime() + 24 * HOUR_MS),
       basis: "repetitive",
       reason: "dives_planned",
       anchor: "scheduled_return",
       hours: 24,
     });
+  });
+
+  it("carries the departure buffer into the scheduled-return anchor", () => {
+    // The hole this pins: the branch gated on `hasReturned` — scheduled return
+    // plus the buffer, because boats run late — and then anchored on the bare
+    // scheduled time, computing as if the same boat tied up punctually. A day
+    // due back at 22:00Z that comes in at 23:30Z read an hour early, and at the
+    // settable minimum of 18 repetitive hours that is a real interval of 17,
+    // under DAN's floor in a sentence that ends by citing DAN.
+    const result = flySafeFrom({
+      executedDives: [],
+      plannedDives: 2,
+      endsAt,
+      divedRecently: false,
+      now: home,
+      hours,
+    });
+    expect(result?.from).toEqual(new Date(endsAt.getTime() + DEPARTURE_BUFFER_MS + 24 * HOUR_MS));
+    expect(result?.from.getTime()).toBeGreaterThan(endsAt.getTime() + 24 * HOUR_MS);
+    // And it is exactly the buffer, not an hour this module spells for itself:
+    // the earliest `now` that gets an answer at all is the anchor.
+    const earliestAnswer = flySafeFrom({
+      executedDives: [],
+      plannedDives: 2,
+      endsAt,
+      divedRecently: false,
+      now: scheduledHome,
+      hours,
+    });
+    expect(earliestAnswer?.from).toEqual(new Date(scheduledHome.getTime() + 24 * HOUR_MS));
   });
 
   it("says nothing while the boat is still out by the one-hour buffer", () => {
@@ -213,7 +332,7 @@ describe("flySafeFrom", () => {
         hours,
       }),
     ).toEqual({
-      from: new Date(endsAt.getTime() + 24 * HOUR_MS),
+      from: new Date(scheduledHome.getTime() + 24 * HOUR_MS),
       basis: "repetitive",
       reason: "dives_recorded",
       anchor: "scheduled_return",
@@ -232,8 +351,8 @@ describe("flySafeFrom", () => {
     ).toBeNull();
   });
 
-  it("keeps a recorded exit that runs past the scheduled return when the record is incomplete", () => {
-    const lateExit = new Date(endsAt.getTime() + HOUR_MS);
+  it("keeps a recorded exit that runs past the buffered return when the record is incomplete", () => {
+    const lateExit = new Date(endsAt.getTime() + 2 * HOUR_MS);
     const result = flySafeFrom({
       executedDives: [
         { diveNumber: 1, exitedAt: lateExit },
@@ -294,5 +413,62 @@ describe("parseFlySafeHours", () => {
   it("floors at DAN's published minimums so the attribution stays true", () => {
     expect(FLY_SAFE_LIMITS.single.min).toBe(12);
     expect(FLY_SAFE_LIMITS.repetitive.min).toBe(18);
+  });
+});
+
+describe("flySafeMessageKey", () => {
+  /**
+   * The two routes a diver cannot check state their reason, and the two they
+   * can do not. Neither surface that renders this sentence shows the day's
+   * dive count — the recap card dropped "{n} dives logged" on 2026-08-28
+   * because it counted the trip row rather than the diver, and the recap email
+   * is a greeting, the sites, this sentence and a link — so "it is a few lines
+   * above" was never an answer for either of them.
+   */
+  it("explains itself on the routes the diver cannot read off the day", () => {
+    expect(flySafeMessageKey({ anchor: "last_dive", reason: "one_dive" })).toBe("flySafeAfterDive");
+    expect(flySafeMessageKey({ anchor: "scheduled_return", reason: "one_dive" })).toBe(
+      "flySafeAfterReturn",
+    );
+    // They were in the water for these: the day they remember is the reason.
+    expect(flySafeMessageKey({ anchor: "last_dive", reason: "dives_recorded" })).toBe(
+      "flySafeAfterDive",
+    );
+    expect(flySafeMessageKey({ anchor: "scheduled_return", reason: "dives_recorded" })).toBe(
+      "flySafeAfterReturn",
+    );
+    expect(flySafeMessageKey({ anchor: "last_dive", reason: "earlier_day" })).toBe(
+      "flySafeAfterDiveEarlierDay",
+    );
+    expect(flySafeMessageKey({ anchor: "scheduled_return", reason: "earlier_day" })).toBe(
+      "flySafeAfterReturnEarlierDay",
+    );
+    // The figure comes from the plan, so it can be more than the diver dived:
+    // unexplained, a one-tank diver reads the two-tank number as a bug, and a
+    // number a diver takes for a bug is one they ignore.
+    expect(flySafeMessageKey({ anchor: "scheduled_return", reason: "dives_planned" })).toBe(
+      "flySafeAfterReturnDivesPlanned",
+    );
+  });
+
+  it("has one planned-dives sentence because that route has one anchor", () => {
+    // The route needs a record short of its plan, which is the same condition
+    // that sends the anchor to the buffered return — so a second key would be
+    // copy nobody can reach. The day that stops being true, the sentence drops
+    // its reason in silence, which is why both halves are pinned here.
+    const exit = new Date("2026-07-25T20:10:00.000Z");
+    const shortRecords: FlySafeInput["executedDives"][] = [[], [{ diveNumber: 1, exitedAt: exit }]];
+    for (const executedDives of shortRecords) {
+      const result = flySafeFrom({
+        executedDives,
+        plannedDives: 2,
+        endsAt,
+        divedRecently: false,
+        now: home,
+        hours,
+      });
+      expect(result).toMatchObject({ reason: "dives_planned", anchor: "scheduled_return" });
+      expect(result && flySafeMessageKey(result)).toBe("flySafeAfterReturnDivesPlanned");
+    }
   });
 });

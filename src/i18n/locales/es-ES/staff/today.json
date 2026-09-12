@@ -167,7 +167,7 @@
     "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
     "uncrewedCourse": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}} y nadie en el agua. Esta sesión no puede aceptar inscripciones hasta que se asigne un instructor.",
     "overRatio": "{booked, plural, one {# reservado} other {# reservados}}, pero la tripulación asignada solo cubre {capacity} según la ratio de nivel inicial publicada por PADI.",
-    "overRatioIntro": "{booked, plural, one {# reservado} other {# reservados}} en esta sesión de iniciación, y la tripulación cubre {capacity} a {perInstructor} por instructor para la inmersión en aguas abiertas. Un asistente certificado no lo aumenta; solo otro instructor añade plazas.",
+    "overRatioIntro": "{booked, plural, one {# reservado} other {# reservados}} en este bautismo, y la tripulación cubre {capacity} a {perInstructor} por instructor para la inmersión en aguas abiertas. Un asistente certificado no lo aumenta; solo otro instructor añade plazas.",
     "uncrewedDeparture": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}} y no hay divemaster ni instructor asignado para supervisar esta salida.",
     "crewBelowTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasterCount, plural, one {# supervisor} other {# supervisores}}, bajo tu objetivo de {ratio}:1.",
     "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado. Pregunta en el mostrador; se imprime en el manifiesto.",

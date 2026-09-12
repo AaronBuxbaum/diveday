@@ -34,7 +34,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
-import { listStaff, setTripCrew } from "./trips";
+import { getTripRoster, listStaff, setTripCrew } from "./trips";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 type BookingStatus = "booked" | "checked_in" | "cancelled" | "no_show";
@@ -350,6 +350,37 @@ describe("getMonthlyReport", () => {
     expect(summary.seatsOffered).toBe(16);
     expect(summary.seatsBooked).toBe(9);
     expect(summary.atCapacityTrips).toBe(1);
+  });
+
+  /**
+   * A released seat leaves the commercial measure and stays on the roster.
+   *
+   * Since the counter gained a writer for `no_show` (issue #1209) the two
+   * numbers answer genuinely different questions: fill rate counts seats that
+   * earned, so a seat the shop released is a seat it can sell again and no
+   * longer one of them, while the manifest keeps the name because the crew have
+   * to account for it at roll call. This module holds its own
+   * `ACTIVE_BOOKING_STATUSES` rather than importing `SEAT_HELD_STATUSES` — a
+   * revenue metric should not silently follow a change to what holds a seat —
+   * and two identical lists in two files is exactly the drift worth pinning.
+   */
+  it("drops a released seat from fill rate and keeps it on the roster", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 4, "Reef");
+    const stayed = await makePerson(db, shop.id, "Nadia Okonkwo");
+    const missed = await makePerson(db, shop.id, "Tomas Rivera");
+    await makeBooking(db, shop.id, trip, stayed);
+    const released = await makeBooking(db, shop.id, trip, missed, "no_show");
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.trips.find((t) => t.title === "Reef")).toMatchObject({
+      capacity: 4,
+      activeBookings: 1,
+    });
+    expect(summarizeMonth(report).fillRate).toBe(0.25);
+
+    const roster = await getTripRoster(db, shop.id, trip);
+    expect(roster.map((row) => row.booking.id)).toContain(released);
   });
 
   /**

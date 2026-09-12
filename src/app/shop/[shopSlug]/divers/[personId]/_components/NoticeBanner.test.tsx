@@ -106,7 +106,7 @@ describe("NoticeBanner", () => {
         signTripAdmissionGate(deepCardRefusal, { kind: "diver", id: PERSON }),
       );
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "This charter requires a Deep certification. There's none on this diver's record.",
+        "This charter requires a Deep certification. There’s none on this diver’s record.",
       );
     });
 
@@ -116,7 +116,7 @@ describe("NoticeBanner", () => {
       renderBanner("trip-prerequisite", "~~deep~0");
       const banner = screen.getByRole("alert");
       expect(banner).toHaveTextContent(
-        "This diver's certifications on file don't reach what that trip and its dive sites require",
+        "This diver’s certifications on file don’t reach what that trip and its dive sites require",
       );
       expect(banner).not.toHaveTextContent("Deep certification");
     });
@@ -132,7 +132,7 @@ describe("NoticeBanner", () => {
     it("still renders — never blank — when the gate is absent", () => {
       renderBanner("trip-prerequisite");
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "This diver's certifications on file don't reach what that trip and its dive sites require",
+        "This diver’s certifications on file don’t reach what that trip and its dive sites require",
       );
     });
 
@@ -161,7 +161,7 @@ describe("NoticeBanner", () => {
   describe("payment-not-connected", () => {
     it("explains why the invoice door refused, beside the door", () => {
       renderStatus("payment-not-connected");
-      expect(screen.getByRole("status")).toHaveTextContent(/Payments aren't connected yet/i);
+      expect(screen.getByRole("status")).toHaveTextContent(/Payments aren’t connected yet/i);
       // The story is where the invoice door lives now — the `payments`
       // section it used to sit beside folded into it (ADR
       // 20260827-people-not-lists).

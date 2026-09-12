@@ -15,6 +15,13 @@ import { expect, READ_ONLY, test } from "./fixtures";
 const rail = (page: Page) => page.getByRole("navigation", { name: "Kinds of day" });
 
 /**
+ * The storefront's one card. `getByRole` matches an accessible name by
+ * substring, so this finds the card under either eyebrow and the assertions
+ * below name the one they expect.
+ */
+const nextBoat = (page: Page) => page.getByRole("region", { name: "Next boat with space" });
+
+/**
  * The departures, addressed the way the rest of this suite addresses them — the
  * `ul` immediately after the filter form. The rail sits *above* the form
  * precisely so this locator keeps working.
@@ -35,6 +42,8 @@ test("a lens narrows the board, and every row left wears its word", {
   await expect(
     list(page).getByRole("listitem").filter({ hasText: "Two-Tank Reef — Molasses & French" }),
   ).not.toHaveCount(0);
+  // Nothing is narrowed yet, so the card claims the shop's own next boat.
+  await expect(nextBoat(page)).toHaveAccessibleName("Next boat with space");
 
   await rail(page).getByRole("link", { name: "After dark", exact: true }).click();
 
@@ -58,6 +67,10 @@ test("a lens narrows the board, and every row left wears its word", {
   await expect(
     list(page).getByRole("listitem").filter({ hasText: "Two-Tank Reef — Molasses & French" }),
   ).toHaveCount(0);
+  // And the card says which question it answered (issue #1391): the lens can
+  // hide an earlier bookable boat, so "Next boat with space" on its own would
+  // be a claim about a board the reader is not looking at.
+  await expect(nextBoat(page)).toHaveAccessibleName("Next boat with space in this view");
 });
 
 test("'Every departure' puts the whole board back", { tag: READ_ONLY }, async ({ page }) => {

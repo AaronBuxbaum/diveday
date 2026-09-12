@@ -151,6 +151,80 @@ test("sitemap.xml lists the marketing pages, excludes the demo shop, and never l
   expect(body).not.toContain("/waivers/");
 });
 
+/**
+ * **The crawler-facing status of a dead link, asserted as a status.**
+ *
+ * This sits beside robots.txt and sitemap.xml because it is the same kind of
+ * fact: what a crawler is told about a URL. `robots.txt` says where not to
+ * look, `sitemap.xml` says what is worth indexing, and this says what happens
+ * to everything else.
+ *
+ * It is a status assertion rather than a heading assertion on purpose. Every
+ * unknown URL in this namespace already rendered the right not-found page, so
+ * every heading assertion in `e2e/` was green for the whole life of the soft
+ * 404 — the shell streamed at 200, `notFound()` landed in the body far too
+ * late to change a status, and a crawler kept the page. Three issues (#1489,
+ * #1510, #1604) chased that without a single test going red, because no test
+ * was reading the one byte that was wrong. The refusal now happens above the
+ * streaming boundary in `src/proxy.ts` (ADR
+ * 20260912-the-public-namespace-refuses-at-the-edge), and this is the
+ * assertion that can tell.
+ *
+ * The two 200s at the end are not decoration: a guard that only proves
+ * unknown URLs are refused is satisfied by refusing every URL, which would be
+ * the far worse bug — a shop's storefront off the internet.
+ *
+ * The `no-store` assertion is a floor, not a discriminator, and that is worth
+ * knowing before trusting it: in this build Next's own default for a response
+ * it did not prerender is already `private, no-cache, no-store, max-age=0,
+ * must-revalidate`, so this passes with or without the proxy's own stamp
+ * (measured 2026-09-12). It is here because the promise — a negative answer is
+ * never pinned to a URL that later becomes real — is DiveDay's rather than the
+ * framework's, and this is the only assertion in the repository that reads it
+ * off the wire. `src/proxy.test.ts` is what goes red if the stamp is removed.
+ */
+test("an unknown URL under /s/** answers 404, not 200 with the not-found page", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  for (const path of [
+    // A shop slug nobody minted.
+    "/s/no-such-shop-here",
+    // …and one of its children, which must not resolve past its missing shop.
+    "/s/no-such-shop-here/courses",
+    // The one route in the namespace that states a caching intent of its own —
+    // its handler answers 404 `no-store` deliberately, and for a shop that does
+    // not exist the edge refuses before the handler runs.
+    "/s/no-such-shop-here/availability.json",
+    // A live shop, naming a course, a site and a departure it does not have.
+    `/s/${DEMO_SHOP_SLUG}/courses/nope-nope`,
+    `/s/${DEMO_SHOP_SLUG}/sites/somebody-elses-ledge`,
+    `/s/${DEMO_SHOP_SLUG}/trips/00000000-0000-4000-8000-000000000000`,
+    // Segments no shop could have minted: refused on shape, before any query.
+    `/s/${DEMO_SHOP_SLUG}/sites/Molasses%20Reef`,
+    `/s/${DEMO_SHOP_SLUG}/trips/nope`,
+  ]) {
+    const res = await page.request.get(path);
+    expect(res.status(), path).toBe(404);
+    // A negative answer must never be pinned to a URL that later becomes real:
+    // a shop slug probed before onboarding finishes, a course slug probed
+    // before the shop publishes it.
+    expect(res.headers()["cache-control"], path).toContain("no-store");
+  }
+
+  // The one path that answered 404 before any of this — the widget catalogue,
+  // refused at the edge since it shipped. It is asserted separately because it
+  // is a complete response rather than a rewrite, and its segment is a closed
+  // list in this repository that no row can turn real.
+  expect((await page.request.get(`/s/${DEMO_SHOP_SLUG}/embed/nope`)).status()).toBe(404);
+
+  for (const path of [
+    `/s/${DEMO_SHOP_SLUG}`,
+    `/s/${DEMO_SHOP_SLUG}/courses/discover-scuba-diving`,
+  ]) {
+    expect((await page.request.get(path)).status(), path).toBe(200);
+  }
+});
+
 test("the schedule page's canonical stays on the standalone URL in both standalone and embed views, and JSON-LD only renders standalone", {
   tag: READ_ONLY,
 }, async ({ page }) => {

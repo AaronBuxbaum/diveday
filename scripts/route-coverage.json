@@ -308,7 +308,13 @@
   },
   "/shop/[shopSlug]/check-in": {
     "e2e": ["check-in.spec.ts", "tenant-isolation.spec.ts", "trip-admission.spec.ts"],
-    "visual": ["check-in", "check-in-checked", "check-in-waiver-refused"],
+    "visual": [
+      "check-in",
+      "check-in-checked",
+      "check-in-no-show",
+      "check-in-no-show-sailed",
+      "check-in-waiver-refused"
+    ],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/check-in/walk-in": {
@@ -689,6 +695,7 @@
       "manifest-buddy-teams-panel",
       "manifest-dive-support",
       "manifest-not-back-aboard",
+      "manifest-not-here",
       "manifest-person-panel",
       "manifest-plan-change",
       "manifest-seen",

@@ -474,7 +474,7 @@ test.describe("staff", () => {
     // shares the same accessible name.
     await page.getByRole("button", { name: "Pull for service" }).click();
     const dialog = page.getByRole("dialog", { name: "Pull for service" });
-    await dialog.getByLabel("Why it's coming off the wall").fill("Dump valve leaks");
+    await dialog.getByLabel("Why it’s coming off the wall").fill("Dump valve leaks");
     await dialog.getByRole("button", { name: "Pull for service" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
     await expect(page.getByText("Needs service").first()).toBeVisible();

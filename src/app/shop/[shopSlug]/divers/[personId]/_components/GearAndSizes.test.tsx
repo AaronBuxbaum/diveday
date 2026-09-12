@@ -31,6 +31,7 @@ function makeRentalFit(overrides: Partial<RentalFit> = {}): RentalFit {
     rentsSmb: false,
     bcdSize: null,
     wetsuitSize: null,
+    drysuitSize: null,
     bootSize: null,
     finSize: null,
     weightPreference: null,
@@ -87,5 +88,45 @@ describe("GearAndSizes", () => {
     expect(summary).toHaveTextContent("Rental fit on file");
     expect(summary).not.toHaveTextContent(/BCD M|Wetsuit ML|Boots 8/);
     expect(screen.getByText("BCD M · Wetsuit ML · Boots 8")).toBeInTheDocument();
+  });
+
+  /**
+   * Staff-side the drysuit size is free text, not the diver form's select: the
+   * counter is where a size off the proposed grid gets recorded (issue 1414).
+   */
+  it("asks for a drysuit size only when the shop's catalog has one, prefilled", () => {
+    renderGear(makeRentalFit({ rentsDrysuit: true, drysuitSize: "MT" }), ["drysuit"]);
+    expect(screen.getByLabelText("Drysuit size")).toHaveValue("MT");
+  });
+
+  it("never asks a shop that does not rent drysuits", () => {
+    renderGear(makeRentalFit({ rentsBcd: true, bcdSize: "M" }), ["bcd"]);
+    expect(screen.queryByLabelText("Drysuit size")).not.toBeInTheDocument();
+  });
+
+  /**
+   * A drysuit renter gets no boots line on the packing list, because a rental
+   * drysuit usually has its boots vulcanised on (`src/lib/dive-prep.ts`). A
+   * fleet whose suits take separate rock boots has no column, no tick and no
+   * piece to say so with, and a missing line on a packing list is invisible
+   * until somebody is standing on the dock in a suit they cannot fin in. This
+   * box is the one field that reaches the line verbatim, so it is where the
+   * rock-boot size goes — and nothing but this hint tells the staffer that.
+   */
+  it("tells the staffer that a sock suit's rock-boot size goes in this box", () => {
+    renderGear(makeRentalFit({ rentsDrysuit: true, drysuitSize: "MT" }), ["drysuit"]);
+    const trigger = screen.getByRole("button", { name: "About drysuit size" });
+    const describedBy = trigger.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy ?? "")?.textContent).toMatch(
+      /separate rock boots, put that size in here/i,
+    );
+    // The hint is a description, never folded into what the box is called.
+    expect(screen.getByLabelText("Drysuit size")).toHaveValue("MT");
+  });
+
+  it("hangs no hint on a size box that has nothing extra to say", () => {
+    renderGear(makeRentalFit({ rentsBcd: true, bcdSize: "M" }), ["bcd"]);
+    expect(screen.queryByRole("button", { name: /^About / })).not.toBeInTheDocument();
   });
 });

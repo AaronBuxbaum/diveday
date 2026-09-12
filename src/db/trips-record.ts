@@ -41,6 +41,7 @@ import {
   validateDiveSites,
 } from "./trips-create";
 import { liveTrip } from "./trips-live";
+import { seatHeld } from "./trips-queries";
 
 /**
  * One departure's own record: read it, edit its details, its dives, its
@@ -53,6 +54,44 @@ import { liveTrip } from "./trips-live";
  * recorded a roll call against (CR-006).
  */
 
+/**
+ * "Does this shop have a departure with this id?" — nothing about it, just
+ * whether the row is there.
+ *
+ * Read by `src/proxy.ts` before the static shell of a `/s/<shop>/trips/<id>`
+ * request, so that an id naming no departure answers a real 404 rather than a
+ * 200 whose body says otherwise (ADR
+ * 20260912-the-public-namespace-refuses-at-the-edge).
+ *
+ * **On the board, and nothing beyond that** — `liveTrip()` and no other
+ * predicate. The filter is here because every public reader of a departure
+ * carries it and therefore 404s a deleted one anyway (`getTripWithBooked`
+ * below, which the page, the `.ics` route and the arrival card all read
+ * through, and `publicBoatLine`), so refusing a removed departure at the edge
+ * matches the page rather than overruling it — and `scripts/check-live-trips.mjs`
+ * exists to stop a reader of this table quietly meaning "tombstones too".
+ *
+ * Status and `isPrivate` are deliberately *not* here. Each is a reason a page
+ * declines to render a departure that is still on the board, and the page
+ * answers several of them at 200 on purpose: a cancelled departure gets its
+ * own soft landing, and a shop with the boat line switched off renders
+ * `notFound()` rather than confirm the departure exists. The edge refusing
+ * either would be stricter than the page, which is the one failure this whole
+ * mechanism must not have.
+ */
+export async function tripExistsForShop(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  return rows.length > 0;
+}
+
 /** Trip scoped to a shop (staff pages must never cross tenants), with booked count. */
 export async function getTripWithBooked(db: AppDb, shopId: string, tripId: string) {
   const rows = await db
@@ -60,7 +99,7 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), seatHeld))
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .groupBy(trips.id, courses.id, diveSites.id)
     .limit(1);
@@ -413,10 +452,17 @@ export async function updateTrip(
       .for("update");
     if (!existing) return { ok: false, reason: "not_found" };
 
+    // `seatHeld`, the same predicate `getTripWithBooked` above shows the
+    // staffer and `createBookingRecord` enforces capacity with. Counting every
+    // non-cancelled row instead made this floor argue with the page that opened
+    // it: the trip read "3 booked", capacity 3 was refused as "below the 4
+    // divers already booked", and the fourth was a seat the desk had already
+    // released — one nothing on screen showed and nobody could cancel
+    // (`dive-domain-expert` review, 2026-09-11).
     const [{ bookedCount }] = await tx
       .select({ bookedCount: count() })
       .from(bookings)
-      .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
+      .where(and(eq(bookings.tripId, tripId), seatHeld));
     if (patch.capacity < bookedCount) {
       return { ok: false, reason: "capacity_below_booked", detail: { bookedCount } };
     }

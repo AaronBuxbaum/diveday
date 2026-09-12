@@ -41,11 +41,12 @@ cannot see it.
 | Course inquiry | `src/app/s/[shopSlug]/courses/[slug]/actions.ts` | IP | `RATE_LIMITS.courseInquiry` (10/hour) |
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | IP | `RATE_LIMITS.selfRegisterByIp` (10/hour) |
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | shop | `RATE_LIMITS.selfRegisterByShop` (120/hour) |
-| Self check-in (the lobby tablet) | `src/app/check-in/[token]/actions.ts` | the display token, not the IP — every tap comes from the same tablet on the same network, so an IP key would bound the whole lobby as one caller | `RATE_LIMITS.kioskLookup` (120/hour) |
+| Self check-in (the lobby tablet) | `src/app/check-in/[token]/actions.ts` | IP **and** the display token (IP first, before the token is verified, so an unresolvable link is not free) — the per-token net exists because every tap comes from the same tablet on the same network, so an IP key alone would bound the whole lobby as one caller | `RATE_LIMITS.kioskLookupByIp` (60/hour) + `RATE_LIMITS.kioskLookup` (120/hour) |
 | Self-registration's waiver mail | `src/app/s/[shopSlug]/register/actions.ts` | recipient address | `RATE_LIMITS.selfRegisterEmailByRecipient` (3/hour) — drops the send, never the registration |
 | Contact-email confirmation link (a save that changes the address, or the resend control; issue #1288) | `src/app/shop/[shopSlug]/settings/actions.ts` | shop, **and** the recipient address | `RATE_LIMITS.contactConfirmationByShop` (3/hour) + `RATE_LIMITS.contactConfirmationByRecipient` (3/hour) — drops the send, never the save; the settings form takes any address and a demo owner login is one click away, so this is what keeps it from being a branded-mail relay |
 | Readiness actions | `src/app/ready/[token]/actions.ts` `contextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Self-cancelling a booking from the readiness link | same file | IP | `RATE_LIMITS.bookingSelfCancel` (5/hour) |
+| Saving the arrival card from the readiness link | `src/app/s/[shopSlug]/trips/[id]/arrival-card/route.ts` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) — a GET that mints a capability row per request, so an unthrottled loop by anyone holding a forwarded readiness link would grow the table and retire the code the diver already printed |
 | Waiver draft/complete | `src/app/waivers/[token]/page.tsx` | IP | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Emailing a fresh waiver link from a dead one | `src/app/waivers/[token]/actions.ts` | IP, **and** the booking whose inbox receives it | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.waiverLinkResendByBooking` (5/hour) |
 | Emailing a fresh trip-prep link from a dead one | `src/app/ready/[token]/actions.ts` | IP, **and** the booking whose inbox receives it | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.readinessLinkResendByBooking` (5/hour) |
@@ -116,8 +117,13 @@ say nothing for reasons of their own, one of them by accident.
   identical-response assertion. The account-token
   actions (verify, reset submit, invite accept, unsubscribe confirm) bounce
   back to their own page, which re-derives the same "this link isn't valid"
-  notice a genuinely dead token gets. Naming the limiter on any of these would
-  turn it into an oracle for "is this an account" / "is this a live token".
+  notice a genuinely dead token gets. The self check-in kiosk answers a spent
+  bucket with its one "see the desk" card — the same card, in the same words,
+  that it answers an unknown link, a name nobody holds and a diver readiness
+  will not clear with, and since issue #1608 after the same wall-clock floor, so
+  neither the sentence nor the wait says which it was. Naming the limiter on any
+  of these would turn it into an oracle for "is this an account" / "is this a
+  live token".
 - **Explicit where the caller already holds the secret.** A diver on
   `/waivers/[token]`, `/ready/[token]` or `/claim/[token]` is acting on a
   capability they were sent, so there is nothing left to enumerate — telling

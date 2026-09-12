@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { canPersonReadPrivateRecapPulse } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { markRecapPulseAddressed } from "@/db/recap-pulses";
 import {
@@ -188,13 +189,28 @@ export async function publishReviewsAction(
  *
  * Shop comes from the session and is re-checked inside `markRecapPulseAddressed`,
  * so a form replayed against another shop's pulse id changes nothing (CR-007).
+ *
+ * **Owner/manager only** (issue #1410). A pulse is private diver-authored
+ * content; acting on one is part of reading it, so it takes the same gate the
+ * panel does — `canReadPrivateRecapPulse`, whose own doc says why it is the
+ * pulse's predicate and not the reports gate this used to borrow
+ * (src/lib/authz.ts).
+ *
+ * Checked here and not only on the page: a hidden control is not a gate, and a
+ * hand-made POST reaches this action all the same (ADR-0006).
+ * `markRecapPulseAddressed` has no gate of its own and writes whatever it is
+ * handed, so this is the only thing between a captain and somebody's complaint.
  */
 export async function markPulseAddressedAction(formData: FormData) {
   const session = await requireStaffSession();
   const reviews = shopPath(session.user.shopSlug, "reviews");
+  const db = await getDb();
+  if (!(await canPersonReadPrivateRecapPulse(db, session.user.shopId, session.user.personId))) {
+    redirect(noticeUrl(reviews, "pulse-not-authorized"));
+  }
   const pulseId = String(formData.get("pulseId") ?? "");
   const marked = await markRecapPulseAddressed(
-    await getDb(),
+    db,
     session.user.shopId,
     pulseId,
     session.user.personId,

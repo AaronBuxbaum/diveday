@@ -6,7 +6,8 @@ import { EmergencyReferenceCard } from "./EmergencyReferenceCard";
 
 const copy = {
   heading: "In an emergency",
-  empty: "No emergency numbers recorded yet. Add them in Settings.",
+  // The shipped words (`manifest.emergency.empty`): a fact, with no errand.
+  empty: "No emergency numbers recorded for this shop.",
   vesselLabel: "Vessel:",
   shoreContactLabel: "Shore contact:",
   planLabel: "First moves",
@@ -45,13 +46,38 @@ describe("EmergencyReferenceCard", () => {
     expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 
-  it("says so when the shop has recorded nothing, rather than rendering an empty box", () => {
+  it("states the absence and asks for nothing", () => {
     render(<EmergencyReferenceCard copy={copy} reference={EMPTY_EMERGENCY_REFERENCE} />);
 
     // The panel is still there — a crew that finds no card cannot tell the
     // difference between "nothing recorded" and "this build lost the feature".
     expect(screen.getByRole("heading", { name: "In an emergency" })).toBeInTheDocument();
     expect(screen.getByText(copy.empty)).toBeInTheDocument();
+    // And nothing to tap. This reader is offshore, with no signal and usually
+    // no permission to open Settings, so an errand here is a job they cannot
+    // do; it lives on the Settings hub, beside the form that ends it.
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+  });
+
+  it("wears the same chrome empty as it does full", () => {
+    // The tint is the card's identity on a wet screen in glare, not an alarm
+    // that fires on a condition — the crew finds the red box before reading a
+    // word of it. A panel that went neutral exactly when there is nothing
+    // under it is the one a crew skims past.
+    const empty = render(
+      <EmergencyReferenceCard copy={copy} reference={EMPTY_EMERGENCY_REFERENCE} />,
+    );
+    const full = render(
+      <EmergencyReferenceCard
+        copy={copy}
+        reference={{ ...EMPTY_EMERGENCY_REFERENCE, lines: [{ label: "Chamber", phone: "VHF 16" }] }}
+      />,
+    );
+
+    const emptyClass = empty.container.querySelector("section")?.className;
+    expect(emptyClass).toBe(full.container.querySelector("section")?.className);
+    expect(emptyClass).toContain("border-danger/40");
   });
 
   it("keeps the plan's own line breaks", () => {

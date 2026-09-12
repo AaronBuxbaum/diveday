@@ -1,5 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import type { CourtesyProvider } from "@/lib/notifications/courtesy";
 import {
   type WhatsAppCredentials,
@@ -86,23 +87,41 @@ export async function getShopWhatsAppAccount(
 }
 
 /**
- * The shop a WhatsApp Business Account belongs to, or null when none does.
+ * The shop a WhatsApp Business Account belongs to, or null when no single shop
+ * does.
  *
  * This is the tenant key for inbound delivery events: Meta names the WABA in
  * `entry[].id`, and scoping the update to the shop it resolves to is what stops
  * a delivery outcome being applied across a multi-tenant table on a provider
  * message id alone.
+ *
+ * Two rows asked for, one expected. Nothing in the database stops two shops
+ * holding the same WABA — `waba_id` carries no unique index (issue #1715) — and
+ * a chain or an agency completing Embedded Signup for two DiveDay tenants
+ * against one Meta Business is the ordinary way to get there. Taking the first
+ * of an unordered `limit(1)` would then route every inbound diver message and
+ * every reply keyword to an arbitrary one of them, and a reply keyword is a
+ * cancellation: the wrong shop's booking, silently. There is no honest answer
+ * to pick, so pick none and say so loudly — the webhook already drops what it
+ * cannot place.
  */
 export async function shopIdForWhatsAppWaba(
   db: DbExecutor,
   wabaId: string,
 ): Promise<string | null> {
-  const [row] = await db
+  const rows = await db
     .select({ shopId: shopWhatsappAccounts.shopId })
     .from(shopWhatsappAccounts)
     .where(eq(shopWhatsappAccounts.wabaId, wabaId))
-    .limit(1);
-  return row?.shopId ?? null;
+    .limit(2);
+  if (rows.length > 1) {
+    // Ids, never the WABA or the sender — the same posture as the webhook route.
+    log("whatsapp_account.ambiguous_waba", "error", {
+      shopIds: rows.map((row) => row.shopId).join(" "),
+    });
+    return null;
+  }
+  return rows[0]?.shopId ?? null;
 }
 
 /**

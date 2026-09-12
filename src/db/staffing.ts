@@ -7,7 +7,7 @@ import {
   divemasterRatioGap,
   inWaterDivemasterCount,
 } from "@/lib/divemaster-ratio";
-import type { StaffGapCode, TripMeeting } from "@/lib/staffing-week";
+import { type StaffGapCode, staffGapForCourseGap, type TripMeeting } from "@/lib/staffing-week";
 import type { AppDb } from "./client";
 import {
   bookings,
@@ -353,9 +353,10 @@ export async function getStaffingView(
     // instructor closes a course gap.
     //
     // Two things this walk is safe because of, neither previously written
-    // down. `over_ratio` can never be suppressed here: it requires
-    // `instructorCount >= 1` (src/lib/course-ratios.ts), which forces a
-    // non-zero in-water count, so the branch below cannot be reached with it.
+    // down. Neither ratio code — `over_ratio` nor `over_intro_ratio` — can be
+    // suppressed here: both require `instructorCount >= 1`
+    // (src/lib/course-ratios.ts), which forces a non-zero in-water count, so
+    // the branch below cannot be reached with either.
     // And the shop's own `diversPerDivemaster` cannot route a departure
     // between these rows: with divers aboard and nobody in the water,
     // `ceil(divers / ratio) >= 1` across the whole legal range, so
@@ -364,8 +365,12 @@ export async function getStaffingView(
       place(courseGap.code === "no_instructor" ? "uncrewed_course" : "uncrewed_departure");
       continue;
     }
-    if (courseGap.code !== "none") {
-      place(courseGap.code);
+    // Through the mapper, not `courseGap.code`: the code the chip renders has
+    // to keep the intro cap apart from the entry-level one, and placing the
+    // raw code threw `ratio` away (issue #1339, `staffGapForCourseGap`).
+    const courseGapCode = staffGapForCourseGap(courseGap);
+    if (courseGapCode) {
+      place(courseGapCode);
       continue;
     }
     if (ratioGap.code === "none") continue;

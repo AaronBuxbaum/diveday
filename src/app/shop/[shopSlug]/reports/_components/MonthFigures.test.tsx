@@ -32,7 +32,7 @@ const FIGURES: MonthFigure[] = [
 ];
 
 function renderFigures(figures: MonthFigure[] = FIGURES) {
-  return render(<MonthFigures label="This month's numbers" figures={figures} />);
+  return render(<MonthFigures label="This month’s numbers" figures={figures} />);
 }
 
 describe("the figures are unboxed", () => {
@@ -71,7 +71,7 @@ describe("the figures are unboxed", () => {
 
 describe("a month with nothing in it", () => {
   it("renders no figure row at all rather than a row of zeroes", () => {
-    const { container } = render(<MonthFigures label="This month's numbers" figures={[]} />);
+    const { container } = render(<MonthFigures label="This month’s numbers" figures={[]} />);
     expect(container.firstChild).toBeNull();
   });
 });
@@ -88,11 +88,11 @@ describe("the coral budget", () => {
   it("renders the earned line in place of the detail, never beside it", () => {
     const allIn = FIGURES.map((figure) =>
       figure.key === "waivers"
-        ? { ...figure, value: "100%", detail: undefined, earned: "Everyone's paperwork is in" }
+        ? { ...figure, value: "100%", detail: undefined, earned: "Everyone’s paperwork is in" }
         : figure,
     );
     renderFigures(allIn);
-    const earned = screen.getByText("Everyone's paperwork is in");
+    const earned = screen.getByText("Everyone’s paperwork is in");
     expect(earned.className).toContain("bg-accent/10");
     expect(screen.queryByText("9 still to collect")).toBeNull();
     // One accent element on the surface, not one per figure.
@@ -104,9 +104,9 @@ describe("the coral budget", () => {
     // happened — `rise-in` here would celebrate every visit to a past month.
     renderFigures(
       FIGURES.map((figure) =>
-        figure.key === "waivers" ? { ...figure, earned: "Everyone's paperwork is in" } : figure,
+        figure.key === "waivers" ? { ...figure, earned: "Everyone’s paperwork is in" } : figure,
       ),
     );
-    expect(screen.getByText("Everyone's paperwork is in").className).not.toContain("rise-in");
+    expect(screen.getByText("Everyone’s paperwork is in").className).not.toContain("rise-in");
   });
 });

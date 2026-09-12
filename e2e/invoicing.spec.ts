@@ -55,7 +55,7 @@ test.describe("as owner", () => {
     // strips the query, so assert the banner, not the URL param.
     await page.goto(NEW_ORDER);
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/orders$/);
-    await expect(page.getByText(/Payments aren't connected yet/).first()).toBeVisible();
+    await expect(page.getByText(/Payments aren’t connected yet/).first()).toBeVisible();
   });
 
   test("an owner builds an invoice and it gets as far as Stripe, which this fleet can't reach", async ({
@@ -92,7 +92,7 @@ test.describe("as owner", () => {
     // always-present `#__next-route-announcer__` also carries `role="alert"`,
     // so an unfiltered query is ambiguous the moment a navigation mounts it.
     await expect(page.getByRole("alert").filter({ hasText: "Stripe" })).toContainText(
-      "Stripe couldn't create that invoice. Try again in a moment.",
+      "Stripe couldn’t create that invoice. Try again in a moment.",
     );
     await expect(page).toHaveURL(/\/orders\/new/);
     await expect(page.getByRole("heading", { level: 1, name: "New order" })).toBeVisible();

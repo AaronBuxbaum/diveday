@@ -33,6 +33,7 @@ function storedFit(overrides: Partial<DiverRentalFit> = {}): DiverRentalFit {
     rentsSmb: false,
     bcdSize: "M",
     wetsuitSize: "M",
+    drysuitSize: null,
     bootSize: "9",
     finSize: "9",
     weightPreference: "16 lb",

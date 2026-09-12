@@ -1,8 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { HOUR_MS } from "@/lib/clock";
+import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
+import { checkInBooking } from "./check-in";
 import type { AppDb } from "./client";
 import {
   deleteExecutedDive,
@@ -11,8 +13,11 @@ import {
   upsertExecutedDive,
 } from "./executed-dives";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
+import { markBookingNoShow } from "./no-show";
 import {
+  bookingArrivalEvents,
   bookings,
+  certifications,
   diveSiteCreatures,
   diveSites,
   executedDives,
@@ -23,7 +28,8 @@ import {
   tripDives,
   trips,
 } from "./schema";
-import { createTrip } from "./trips";
+import { createTrip, listStaff } from "./trips";
+import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 async function logFixture() {
   const { db, shop } = await seededShopContext();
@@ -252,7 +258,7 @@ describe("upsertExecutedDive — the observed species", () => {
     const offGuide = MARINE_LIFE_CATALOG.map((species) => species.slug).find(
       (slug) => !guide.has(slug),
     );
-    if (!offGuide) throw new Error("this site's guide is the whole catalog");
+    if (!offGuide) throw new Error("this site’s guide is the whole catalog");
 
     const saved = await upsertExecutedDive(db, {
       shopId: shop.id,
@@ -654,6 +660,8 @@ describe("peopleWhoDivedBefore", () => {
   });
 
   it("does not count a diver who cancelled or never showed", async () => {
+    // The plain shape, with nothing on the arrival trail — the leg that proves
+    // #1558's escape hatch below did not simply delete the exclusion.
     for (const status of ["cancelled", "no_show"] as const) {
       const { db, shop, after, personId, earlierBooking } = await twoDays();
       await db.update(bookings).set({ status }).where(eq(bookings.id, earlierBooking.bookingId));
@@ -666,6 +674,114 @@ describe("peopleWhoDivedBefore", () => {
       );
       expect(found.size, `a ${status} booking is not a dive day`).toBe(0);
     }
+  });
+
+  /**
+   * Everything the seeded shop demands of a diver before any door may tap them
+   * in: a card on file, and a signed release with a clear questionnaire. Both
+   * doors below refuse a seat that is not `ready`, so this is shared rather
+   * than restated.
+   */
+  async function clearForTheBoat(
+    ctx: Awaited<ReturnType<typeof twoDays>>,
+    bookingId: string,
+  ): Promise<void> {
+    await ctx.db.insert(certifications).values({
+      shopId: ctx.shop.id,
+      personId: ctx.personId,
+      agency: "padi",
+      level: "instructor",
+      identifier: "C-TWODAY",
+      status: "verified",
+    });
+    const issued = await issueWaiverRequest(ctx.db, { shopId: ctx.shop.id, bookingId });
+    if (!issued.ok) throw new Error(`waiver request refused: ${issued.reason}`);
+    const signed = await completeWaiver(ctx.db, issued.token, {
+      signerName: "Nadia Twoday",
+      agreed: true,
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+    });
+    if (!signed.ok) throw new Error(`waiver refused: ${signed.reason}`);
+  }
+
+  /**
+   * **A released seat is not a dive day, whatever the trail says** (issue
+   * #1558, inverted by a `dive-domain-expert` review on 2026-09-11).
+   *
+   * This case used to pin the opposite. A standing tokenless `arrived` row
+   * outranked `bookings.status = "no_show"`, on the reasoning that a
+   * close-of-day sweep would otherwise erase the fact that somebody stood in
+   * front of this diver at 06:40. No sweep was ever written and none is
+   * coming: `markBookingNoShow` is the only writer of that status, it is one
+   * staffer's deliberate tap on one seat, and `checkInBooking` refuses
+   * anything but a `booked` seat — so the sighting is always the *older*
+   * statement and the escape could only ever let 06:40 beat 07:15.
+   *
+   * Which is why the case below goes through both real doors rather than
+   * setting the status by hand: what is pinned is that the product's own two
+   * human statements about one seat are ordered the way a person would order
+   * them.
+   */
+  async function checkInAtTheDesk(
+    ctx: Awaited<ReturnType<typeof twoDays>>,
+    bookingId: string,
+  ): Promise<void> {
+    await clearForTheBoat(ctx, bookingId);
+    const outcome = await checkInBooking(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId,
+      recordedByPersonId: ctx.owner.id,
+    });
+    if (!outcome.ok) {
+      // The blockers, not just "not_ready": a fixture that stops being ready
+      // because readiness grew a rule is otherwise a silent afternoon.
+      const blockers = "blockers" in outcome ? JSON.stringify(outcome.blockers) : "";
+      throw new Error(`check-in refused: ${outcome.reason} ${blockers}`);
+    }
+  }
+
+  it("does not count a seat the desk checked in and then released", async () => {
+    // 06:40 and 07:15 on the same seat, both taps a person made. The second
+    // one is a staffer looking at the empty space where this diver should be,
+    // and it is the newer statement about whether they were here.
+    const ctx = await twoDays();
+    await checkInAtTheDesk(ctx, ctx.earlierBooking.bookingId);
+    const [staffer] = await listStaff(ctx.db, ctx.shop.id);
+    if (!staffer) throw new Error("the seeded shop has to have staff to release a seat");
+    const released = await markBookingNoShow(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.earlierBooking.bookingId,
+      recordedByPersonId: staffer.person.id,
+      // Ten minutes after the boat left without them and inside the arrivals
+      // window, which is the only span the counter's door exists in.
+      now: new Date(ctx.before.startsAt.getTime() + 10 * MINUTE_MS),
+    });
+    expect(released, "the release has to land for this case to mean anything").toMatchObject({
+      ok: true,
+    });
+    // The mark leaves the sighting standing (`markBookingNoShow` writes no
+    // arrival row at all), so this is the escape's exact shape and not a
+    // fixture that quietly lost the trail row.
+    const trail = await ctx.db
+      .select({ status: bookingArrivalEvents.status })
+      .from(bookingArrivalEvents)
+      .where(eq(bookingArrivalEvents.bookingId, ctx.earlierBooking.bookingId));
+    expect(trail.map((row) => row.status)).toEqual(["arrived"]);
+
+    expect((await ctx.ask()).size).toBe(0);
+  });
+
+  it("leaves cancelled alone even with a standing arrival", async () => {
+    // A cancellation is a re-papering of the sale, not a statement about the
+    // dock — it lands days later, on a seat somebody really did check in — so
+    // it gets none of the escape `no_show` gets.
+    const ctx = await twoDays();
+    await checkInAtTheDesk(ctx, ctx.earlierBooking.bookingId);
+    await ctx.db
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(eq(bookings.id, ctx.earlierBooking.bookingId));
+    expect((await ctx.ask()).size).toBe(0);
   });
 
   it("does not count a blown-out departure nobody dived, or a deleted one", async () => {

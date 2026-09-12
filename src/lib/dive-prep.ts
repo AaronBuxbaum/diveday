@@ -53,6 +53,8 @@ export type RentalFit = {
   rentsSmb: boolean;
   bcdSize: string | null;
   wetsuitSize: string | null;
+  /** On the drysuit scale, never the wetsuit's (issue 1414, schema.ts). */
+  drysuitSize: string | null;
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
@@ -168,7 +170,21 @@ export function isPrepGrouping(value: string | undefined): value is PrepGrouping
 }
 
 /** One piece to pull: an item, the size to pull it in, and whether that size is deferred. */
-export type PrepPiece = { kind: RentalItemKind; size: string | null; fitAtCheckIn: boolean };
+export type PrepPiece = {
+  kind: RentalItemKind;
+  size: string | null;
+  fitAtCheckIn: boolean;
+  /**
+   * The weights piece of a diver in a drysuit, whose stated weighting is a
+   * wetsuit answer and never a number to pack to (see `rentedItems`).
+   */
+  drysuitWeightCheck: boolean;
+  /**
+   * The fins piece of a diver in a drysuit, whose stated fin size is a bare
+   * foot's and never the pair that goes over the boot (see `rentedItems`).
+   */
+  drysuitFinFit: boolean;
+};
 
 /** One row of the packing list: N of this item in this size, and who they're for. */
 export type PrepLine = {
@@ -184,6 +200,21 @@ export type PrepLine = {
    * ever wrote one down.
    */
   fitAtCheckIn: boolean;
+  /**
+   * These divers are in drysuits, so the lead they need is settled in the water
+   * rather than packed to a stated number (see `rentedItems`). A third kind of
+   * absent size, kept apart from the other two for the same reason they are
+   * kept apart from each other: the answer at the dock differs.
+   */
+  drysuitWeightCheck: boolean;
+  /**
+   * These divers are in drysuits, so the size on this line is the shoe size
+   * they stated and the fins pulled against it have to clear a drysuit boot
+   * (see `rentedItems`). A size-9 line for a drysuit diver and a size-9 line
+   * for a wetsuit diver are two different pairs off the rack, so they are two
+   * rows.
+   */
+  drysuitFinFit: boolean;
 };
 
 /**
@@ -282,7 +313,7 @@ export type DivePrepChecklist = {
      * "bring a range in their band" means starting from scratch on a moving
      * dock. It is a starting point, not an allocation.
      */
-    statedSizes: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins"; size: string }[];
+    statedSizes: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[];
     /**
      * Whole days since the flag was raised. A shortage is a fact about one
      * day, so an old flag is a prompt to re-ask the diver rather than a
@@ -340,6 +371,7 @@ const KIND_ORDER: RentalItemKind[] = [
   "regulator",
   "wetsuit",
   "boots",
+  "drysuit",
   "mask_fins",
   "weights",
   "dive_computer",
@@ -348,6 +380,23 @@ const KIND_ORDER: RentalItemKind[] = [
 
 function size(value: string | null): string | null {
   return value?.trim() || null;
+}
+
+/**
+ * What makes two pieces of one kind the same packing row. A deferred size and
+ * a drysuit's in-water weight check both carry a null size and mean different
+ * things, so each gets its own sentinel rather than collapsing into the row
+ * for "nobody wrote a size down". Exported because the page keys its rendered
+ * rows by it: two rows the grouping kept apart must not share a React key.
+ */
+export function prepLineKey(piece: Omit<PrepPiece, "kind">): string {
+  if (piece.fitAtCheckIn) return "\u0000fit";
+  if (piece.drysuitWeightCheck) return "\u0000drysuit-weight";
+  const stated = piece.size?.toLowerCase() ?? "";
+  // A stated shoe size means one pair over a bare foot and another over a
+  // drysuit boot, so the same string is two rows rather than one of two.
+  if (piece.drysuitFinFit) return `\u0000drysuit-fin:${stated}`;
+  return stated;
 }
 
 /**
@@ -367,23 +416,80 @@ function rentedItems(fit: RentalFit): PrepPiece[] {
   /** A piece whose size is the thing in question — blanked when flagged. */
   const sized = (kind: RentalItemKind, value: string | null): PrepPiece =>
     flagged
-      ? { kind, size: null, fitAtCheckIn: true }
-      : { kind, size: size(value), fitAtCheckIn: false };
+      ? { kind, size: null, fitAtCheckIn: true, drysuitWeightCheck: false, drysuitFinFit: false }
+      : {
+          kind,
+          size: size(value),
+          fitAtCheckIn: false,
+          drysuitWeightCheck: false,
+          drysuitFinFit: false,
+        };
   /** A piece with no size at all; a flag never changes what to pack. */
-  const unsized = (kind: RentalItemKind): PrepPiece => ({ kind, size: null, fitAtCheckIn: false });
+  const unsized = (kind: RentalItemKind): PrepPiece => ({
+    kind,
+    size: null,
+    fitAtCheckIn: false,
+    drysuitWeightCheck: false,
+    drysuitFinFit: false,
+  });
   /**
-   * A piece that records a value but has no stock *size* to be short of, so
-   * the flag leaves it alone. Weights are the case: lead is bulk stock in 2 lb
+   * Weights: a piece that records a value but has no stock *size* to be short
+   * of, so the H-06 flag leaves it alone. Lead is bulk stock in 2 lb
    * increments — a shop is never "out of 12 lb" — and usual weighting is the
    * most safety-relevant number in the fit. Under-weighting is a diver who
    * can't hold a safety stop; over-weighting is an over-inflated BCD and a bad
    * ascent. Blanking it because there's no L BCD trades a real number for
    * nothing, and "bring a range in their band" is meaningless applied to lead.
+   *
+   * **Unless they are in a drysuit.** `weightPreference` is one free-text
+   * answer to a question both fit forms ask against a wetsuit ("Usually 12 lb
+   * with 3 mm suit" in staff/divers.json, "e.g. 16 lb with a 3 mm suit" in
+   * diver.json), so on a drysuit it is short by the two to four kilos the suit
+   * and its undergarment add — short, which is the direction that cannot hold
+   * a safety stop on a near-empty tank in a suit the diver cannot fully vent.
+   * Nothing here knows their undergarment, so the number is neither corrected
+   * nor quietly packed to: the line says the weighting is settled in the
+   * water, and the stated answer stays where it was written, on the diver
+   * profile. Blanking it here rather than at the packing table is deliberate —
+   * `rentalFitLine` feeds the roll call, the offline manifest and the roster
+   * from these same pieces, and the rail is the last place a wetsuit number
+   * should appear beside "Drysuit ML".
    */
-  const stated = (kind: RentalItemKind, value: string | null): PrepPiece => ({
-    kind,
-    size: size(value),
-    fitAtCheckIn: false,
+  const weights = (value: string | null): PrepPiece => {
+    if (fit.rentsDrysuit) {
+      return {
+        kind: "weights",
+        size: null,
+        fitAtCheckIn: false,
+        drysuitWeightCheck: true,
+        drysuitFinFit: false,
+      };
+    }
+    return {
+      kind: "weights",
+      size: size(value),
+      fitAtCheckIn: false,
+      drysuitWeightCheck: false,
+      drysuitFinFit: false,
+    };
+  };
+
+  /**
+   * Mask & fins. The fit forms ask **one shoe size** for them — "Fin & boot
+   * size", placeholder "US 9 / EU 42" in staff/divers.json and diver.json
+   * alike, and the actions behind both write that one answer to `boot_size`
+   * *and* `fin_size` (divers/[personId]/actions.ts, ready/[token]/actions.ts).
+   * A drysuit's vulcanised boot is two to three fin sizes bigger than the bare
+   * foot inside it. Packed to the stated number, the fin does not go on: the
+   * diver sits on the bench, the boat waits, and the fix is somebody's spare
+   * pair. The size stays on the line, because it is the number the packer
+   * sizes *up* from, and the line carries the flag that says so rather than
+   * reading like any other size to pull. A diver already flagged for hands-on
+   * fitting keeps "fit at check-in", which is this same job done in person.
+   */
+  const maskFins = (): PrepPiece => ({
+    ...sized("mask_fins", fit.finSize),
+    drysuitFinFit: fit.rentsDrysuit && !flagged,
   });
 
   const items: PrepPiece[] = [];
@@ -393,15 +499,29 @@ function rentedItems(fit: RentalFit): PrepPiece[] {
     items.push(sized("wetsuit", fit.wetsuitSize));
     items.push(sized("boots", fit.bootSize));
   }
-  if (fit.rentsMaskFins) items.push(sized("mask_fins", fit.finSize));
-  if (fit.rentsWeights) items.push(stated("weights", fit.weightPreference));
+  if (fit.rentsMaskFins) items.push(maskFins());
+  if (fit.rentsWeights) items.push(weights(fit.weightPreference));
   if (fit.rentsDiveComputer) items.push(unsized("dive_computer"));
   if (fit.rentsGopro) items.push(unsized("gopro"));
-  // The four add-ons that carry no size (see `RENTABLE_ITEMS`). A drysuit is
-  // the one that visibly wants one; until it has a size column it reaches the
-  // packing list as a piece, which is still what the crew has to pull off the
-  // wall.
-  if (fit.rentsDrysuit) items.push(unsized("drysuit"));
+  // **One piece, and no boot beside it** (issue 1414). Most rental drysuits
+  // have their boots vulcanised on: they come off the wall with the suit, the
+  // shop cannot be out of them separately, and there is nothing extra to pack.
+  // Deliberately a different shape from `rentsWetsuit` above, which pushes two
+  // pieces from one shoe-size answer — do not "fix" this to match it.
+  //
+  // **Most, not all.** A neoprene-sock suit worn with separate rock boots is
+  // real, and it is stocked by exactly the cold-water and tech-leaning fleets
+  // most likely to rent drysuits at all. Nothing on the fit can tell the two
+  // shapes apart — it records a size, not a suit — so the shop says so in the
+  // size: `drysuitSize` is free text staff-side ("ML, rock boot 9") and reaches
+  // the packing list verbatim. Pushing a second piece here on a guess packs
+  // boots the shop does not own, which is the failure issue 1414 named.
+  //
+  // The fins that go over that boot are a size the shop cannot read off the
+  // shoe size either, which is what `maskFins` above marks rather than what
+  // this line handles.
+  if (fit.rentsDrysuit) items.push(sized("drysuit", fit.drysuitSize));
+  // The three add-ons that carry no size (see `RENTABLE_ITEMS`).
   if (fit.rentsHoodGloves) items.push(unsized("hood_gloves"));
   if (fit.rentsTorch) items.push(unsized("torch"));
   if (fit.rentsSmb) items.push(unsized("smb"));
@@ -416,8 +536,8 @@ function rentedItems(fit: RentalFit): PrepPiece[] {
  */
 function statedSizeItems(
   fit: RentalFit,
-): { kind: "bcd" | "wetsuit" | "boots" | "mask_fins"; size: string }[] {
-  const items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins"; size: string }[] = [];
+): { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[] {
+  const items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[] = [];
   const bcdSize = size(fit.bcdSize);
   if (fit.rentsBcd && bcdSize) items.push({ kind: "bcd", size: bcdSize });
   if (fit.rentsWetsuit) {
@@ -426,6 +546,10 @@ function statedSizeItems(
     const bootSize = size(fit.bootSize);
     if (bootSize) items.push({ kind: "boots", size: bootSize });
   }
+  // The flag blanks a drysuit's size on the packing line like any other sized
+  // piece, so the fitter needs the size the diver actually asked for (issue 1414).
+  const drysuitSize = size(fit.drysuitSize);
+  if (fit.rentsDrysuit && drysuitSize) items.push({ kind: "drysuit", size: drysuitSize });
   const finSize = size(fit.finSize);
   if (fit.rentsMaskFins && finSize) items.push({ kind: "mask_fins", size: finSize });
   return items;
@@ -545,7 +669,7 @@ export function buildDivePrepChecklist(input: {
       lastDivedBand: diver.lastDivedBand,
     });
     for (const item of items) {
-      const key = `${item.kind}:${item.fitAtCheckIn ? "\u0000fit" : (item.size?.toLowerCase() ?? "")}`;
+      const key = `${item.kind}:${prepLineKey(item)}`;
       const line = grouped.get(key);
       if (line) {
         line.count += 1;
@@ -558,6 +682,8 @@ export function buildDivePrepChecklist(input: {
         count: 1,
         divers: [diver.fullName],
         fitAtCheckIn: item.fitAtCheckIn,
+        drysuitWeightCheck: item.drysuitWeightCheck,
+        drysuitFinFit: item.drysuitFinFit,
       });
     }
   }
@@ -569,9 +695,23 @@ export function buildDivePrepChecklist(input: {
     // last thing the packer deals with, in person, once the rack is loaded.
     if (a.fitAtCheckIn !== b.fitAtCheckIn) return a.fitAtCheckIn ? 1 : -1;
     // An unrecorded size sorts last so it reads as the loose end it is.
-    if (a.size === null) return b.size === null ? 0 : 1;
+    if (a.size === null) {
+      if (b.size !== null) return 1;
+      // Both blank: an in-water weight check is an instruction, an unrecorded
+      // size is a gap, and the instruction is the one the packer acts on.
+      if (a.drysuitWeightCheck !== b.drysuitWeightCheck) return a.drysuitWeightCheck ? -1 : 1;
+      // Same reason, same order: "fins that clear a drysuit boot" is a job,
+      // "nobody wrote a shoe size down" is a gap.
+      if (a.drysuitFinFit !== b.drysuitFinFit) return a.drysuitFinFit ? -1 : 1;
+      return 0;
+    }
     if (b.size === null) return -1;
-    return a.size.localeCompare(b.size);
+    const bySize = a.size.localeCompare(b.size);
+    if (bySize !== 0) return bySize;
+    // One stated size, two rows (see `prepLineKey`): the bare-foot pair first,
+    // the drysuit pair under it, in that order on every render.
+    if (a.drysuitFinFit !== b.drysuitFinFit) return a.drysuitFinFit ? 1 : -1;
+    return 0;
   });
   for (const line of lines) line.divers.sort((a, b) => a.localeCompare(b));
 
@@ -623,7 +763,17 @@ export type RentalFitLine =
   | { state: "not_recorded" }
   | { state: "own_kit" }
   | { state: "needs_staff_fit"; note: string | null }
-  | { state: "rents"; items: { kind: RentalItemKind; size: string | null }[] };
+  | {
+      state: "rents";
+      /**
+       * `drysuitFinFit` rides along on the fins of a diver in a drysuit: their
+       * stated size is a shoe size and the pair has to clear the boot. The
+       * rail is the last place a bare-foot number should read like the pair to
+       * hand over (see `rentedItems`). Absent rather than `false` on every
+       * other piece, so a reader that has never heard of it is unchanged.
+       */
+      items: { kind: RentalItemKind; size: string | null; drysuitFinFit?: true }[];
+    };
 
 export function rentalFitLine(fit: RentalFit | null): RentalFitLine {
   // A row that exists only to hold the diver's note reads exactly as no row at
@@ -637,7 +787,11 @@ export function rentalFitLine(fit: RentalFit | null): RentalFitLine {
   if (fit.needsStaffFitAt) {
     return { state: "needs_staff_fit", note: fit.needsStaffFitNote?.trim() || null };
   }
-  const items = rentedItems(fit).map((item) => ({ kind: item.kind, size: item.size }));
+  const items = rentedItems(fit).map((item) =>
+    item.drysuitFinFit
+      ? { kind: item.kind, size: item.size, drysuitFinFit: true as const }
+      : { kind: item.kind, size: item.size },
+  );
   if (items.length === 0) return { state: "own_kit" };
   return { state: "rents", items };
 }

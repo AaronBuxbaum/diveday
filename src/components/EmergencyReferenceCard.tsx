@@ -16,7 +16,7 @@ import { type EmergencyReference, hasEmergencyReference } from "@/lib/emergency-
  */
 export type EmergencyReferenceCopy = {
   heading: string;
-  /** Shown to staff when the shop has recorded nothing — never to hide the panel. */
+  /** The absence, stated, when the shop has recorded nothing — never a hidden panel. */
   empty: string;
   vesselLabel: string;
   shoreContactLabel: string;
@@ -37,6 +37,12 @@ export function EmergencyReferenceCard({
 }) {
   const filled = hasEmergencyReference(reference);
   return (
+    // **The same chrome full or empty.** The tint is the card's identity on a
+    // wet screen in glare, not an alarm that fires on a condition — a crew
+    // finds the red box before it reads a word of it, and a panel that went
+    // neutral exactly when there is nothing under it is the one a crew skims
+    // past. Colour carries nothing on its own here: every line says what it is
+    // in words (design principle 6).
     <section
       aria-labelledby={headingId}
       className={`rounded-panel border border-danger/40 bg-danger/5 p-4 sm:p-5 ${className}`}
@@ -87,7 +93,11 @@ export function EmergencyReferenceCard({
         </div>
       ) : (
         // Never nothing: a silently empty panel is indistinguishable from a shop
-        // that has no numbers, and getting shops to fill it in is the whole value.
+        // that has no numbers. It states the absence and asks for nothing —
+        // this reader is offshore, with no signal and usually no permission to
+        // open Settings, so "add them in Settings" would be an errand they
+        // cannot run. The errand belongs on the Settings hub, where the same
+        // absence reads "Nothing recorded" beside the form that fixes it.
         <p className="mt-2 text-sm text-muted">{copy.empty}</p>
       )}
     </section>

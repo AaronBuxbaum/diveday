@@ -20,18 +20,16 @@
   "notice": {
     "waiversNotAuthorized": "Editing the waiver is limited to owners and managers.",
     "exportNotAuthorized": "Data export is limited to owners and managers.",
-    "reportsNotAuthorized": "Reports read the shop's revenue, so they're limited to owners and managers.",
+    "reportsNotAuthorized": "Reports read the shop’s revenue, so they’re limited to owners and managers.",
     "requestsNotAuthorized": "Date requests carry contact details for people who have not booked yet, so they are limited to owners and managers.",
-    "inboxNotAuthorized": "A reply leaves as the shop, and the inbox holds addresses for people who have not booked, so it is limited to owners and managers.",
     "settingsNotAuthorized": "Shop settings are managed by the owner or a manager. Your calendar subscription is still yours to set up.",
     "teamNotAuthorized": "Team management is limited to owners and managers.",
-    "importNotAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers.",
+    "importNotAuthorized": "Importing writes divers’ personal and medical records, so it’s limited to owners and managers.",
     "gearImportNotAuthorized": "Importing gear service history is limited to owners and managers.",
     "backupNotAuthorized": "Only an owner or manager can change backup settings.",
     "whatsappNotAuthorized": "Only an owner or manager can change WhatsApp settings.",
     "promosNotAuthorized": "Promo codes are limited to owners and managers.",
-    "integrationsNotAuthorized": "Only an owner or manager can change integrations.",
-    "rentalFitKept": "Fit saved."
+    "integrationsNotAuthorized": "Only an owner or manager can change integrations."
   },
   "orientation": {
     "heading": "New here? A few pointers for your role.",
@@ -40,18 +38,18 @@
     "dismiss": "Got it",
     "roles": {
       "owner": {
-        "title": "You're steering the whole shop",
-        "desc": "Today is your work queue: bookings, blockers, and today's departures in one place.",
-        "tryThis": "Open Board to see this week's departures."
+        "title": "You’re steering the whole shop",
+        "desc": "Today is your work queue: bookings, blockers, and today’s departures in one place.",
+        "tryThis": "Open Board to see this week’s departures."
       },
       "manager": {
         "title": "Keeping the shop running day to day",
-        "desc": "Today surfaces what needs attention first; the rest of the shop's admin lives under More in the nav.",
+        "desc": "Today surfaces what needs attention first; the rest of the shop’s admin lives under More in the nav.",
         "tryThis": "Check Reviews for feedback waiting on you."
       },
       "instructor": {
         "title": "Teaching and certifying divers",
-        "desc": "Divers holds every diver's certification records and specialty history.",
+        "desc": "Divers holds every diver’s certification records and specialty history.",
         "tryThis": "Open Divers to check a certification record before class."
       },
       "divemaster": {
@@ -62,11 +60,11 @@
       "captain": {
         "title": "Running the boat",
         "desc": "The manifest is your boarding pass and roll call, built for wet hands and spotty signal.",
-        "tryThis": "Open today's manifest to see who's on the boat."
+        "tryThis": "Open today’s manifest to see who’s on the boat."
       },
       "crew": {
         "title": "Checking divers in as they arrive",
-        "desc": "Check-in shows who's arrived, who's still missing paperwork, and what to do about it.",
+        "desc": "Check-in shows who’s arrived, who’s still missing paperwork, and what to do about it.",
         "tryThis": "Open Check-in to check divers in as they arrive."
       }
     }

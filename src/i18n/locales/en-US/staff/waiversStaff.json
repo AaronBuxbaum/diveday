@@ -3,8 +3,8 @@
   "banner": {
     "savedNew": "Saved as a new version.",
     "savedFirst": "Your waiver is saved.",
-    "invalid": "That didn't save. The release needs to be at least a few sentences long.",
-    "materialityRequired": "That didn't publish. Say whether this is a correction or a material change, then publish again.",
+    "invalid": "That didn’t save. The release needs to be at least a few sentences long.",
+    "materialityRequired": "That didn’t publish. Say whether this is a correction or a material change, then publish again.",
     "unchanged": "No change. The release is exactly as it was, so nothing was published and no signature was affected.",
     "resigningSendLink": "Send them by departure",
     "resigning": "{count, plural, one {New version published. # diver signs again before boarding.} other {New version published. # divers sign again before boarding.}}"

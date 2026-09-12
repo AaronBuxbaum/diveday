@@ -17,9 +17,11 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { blockerFixFor } from "@/lib/blockers";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { guardianSignatureRequired } from "@/lib/guardian";
+import type { NoShowClaim } from "@/lib/no-show";
 import type { FormNotice } from "@/lib/staff-notices";
 import { counterBlockerDisclosure } from "../blocker-disclosure";
 import { CheckInActionForm } from "../CheckInActionForm";
+import { NoShowSalvage, type NoShowSalvageCopy, NoShowScript } from "./NoShowScript";
 
 /**
  * A refused paper-waiver recording, and the booking it is about.
@@ -29,7 +31,15 @@ import { CheckInActionForm } from "../CheckInActionForm";
  * resolves both and hands this down, because the words come from the staff
  * bundle at render time and only the page holds the translator's locale.
  */
-export type CounterWaiverNotice = FormNotice & { bookingId: string };
+export type CounterWaiverNotice = FormNotice & {
+  bookingId: string;
+  /**
+   * The `?notice=` code itself. Only one refusal on this form has a way
+   * through — a co-signer whose name reads as the diver's own (issue #1573) —
+   * and the row needs to tell it from the others to draw the confirmation.
+   */
+  code?: string;
+};
 
 /**
  * **One diver at the counter** — ADR 20260827-clearwater-surface-language,
@@ -132,6 +142,10 @@ export function CounterQueueRow({
   undoAction,
   waiverAction,
   waiverNotice,
+  noShowClaim,
+  markNoShowAction,
+  undoNoShowAction,
+  salvage,
   t,
 }: {
   row: QueueRow;
@@ -156,11 +170,66 @@ export function CounterQueueRow({
    * queue can hold three families at once (issue 1574).
    */
   waiverNotice?: CounterWaiverNotice;
+  /**
+   * Which "Not here?" script this row gets, or `null` for none — the page runs
+   * `noShowGate` (`src/lib/no-show.ts`) over the departure and the arrivals
+   * window, because it is the layer holding both, and then `noShowClaim` for
+   * what the tap would be saying. The writer runs the same gate again under a
+   * lock, so this decides only what is drawn.
+   */
+  noShowClaim: NoShowClaim | null;
+  markNoShowAction: (formData: FormData) => Promise<void>;
+  undoNoShowAction: (formData: FormData) => Promise<void>;
+  /**
+   * What the shop can do with this released seat, already worded — the page
+   * holds the translator, the locale and the shop's timezone, so it is the one
+   * layer that can turn `noShowSalvage`'s codes and dates into these strings.
+   * Absent on every row that is not marked not here.
+   */
+  salvage?: NoShowSalvageCopy;
   t: StaffTranslator;
 }) {
   const refusedWaiver = waiverNotice?.bookingId === row.bookingId ? waiverNotice : undefined;
   const checkedIn = row.bookingStatus === "checked_in";
   const ready = row.readiness.status === "ready";
+
+  if (row.bookingStatus === "no_show") {
+    return (
+      /* **The released seat, and what to do with it** (issue #1209). A plain
+         neutral badge rather than a warning: nothing has gone wrong, a staffer
+         recorded a fact. The word is "Not here" — never archived, never
+         deactivated — and the Undo beside it is the whole reason the row stays
+         on this page instead of vanishing: the diver who walks in as the lines
+         come off needs somewhere for a staffer to walk it back. */
+      <LedgerRow as="article" size="lg" className="py-1">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-5">
+          <div className="min-w-0">
+            <DiverIdentity
+              row={row}
+              showEmail={showEmail}
+              showFirstVisit={showFirstVisit}
+              t={t}
+              name={<span className="block truncate text-base text-muted">{row.personName}</span>}
+            />
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <Badge tone="neutral">{t("checkIn.noShow.badge")}</Badge>
+            <form action={undoNoShowAction}>
+              <input type="hidden" name="bookingId" value={row.bookingId} />
+              <SubmitButton
+                pendingLabel={t("checkIn.noShow.undoing")}
+                ariaLabel={t("checkIn.noShow.undoAriaLabel", { name: row.personName })}
+                className={buttonClass({ variant: "ghost", size: "sm" })}
+              >
+                {t("checkIn.noShow.undo")}
+              </SubmitButton>
+            </form>
+          </div>
+        </div>
+        {salvage ? <NoShowSalvage copy={salvage} /> : null}
+      </LedgerRow>
+    );
+  }
 
   if (checkedIn && ready) {
     return (
@@ -259,6 +328,45 @@ export function CounterQueueRow({
             name={<span className={`block truncate ${SECTION_TITLE_CLASS}`}>{row.personName}</span>}
           />
         </CheckInActionForm>
+        {/* **A sibling of the tap, never inside it.** The whole row above is
+            one `<button>`, so the door has to sit under it — which is also
+            where it belongs: the counter's promise is a name and one large
+            target, and the door is a quiet line a staffer goes looking for once
+            the boat has left without somebody. */}
+        {noShowClaim ? (
+          <NoShowScript
+            action={markNoShowAction}
+            bookingId={row.bookingId}
+            // **Two scripts, because the tap is two different claims**
+            // (`noShowClaim`, src/lib/no-show.ts). While the boat is still
+            // there the sentence is about a seat and the diver may yet come
+            // running down the dock. Once it has gone the same tap says this
+            // person did not dive, which is the claim seven readers spend and
+            // the one nobody comes back to undo — so the door asks the louder
+            // question rather than the same three quiet words.
+            copy={
+              noShowClaim === "did_not_dive"
+                ? {
+                    door: t("checkIn.noShow.sailedDoor"),
+                    consequence: t("checkIn.noShow.sailedConsequence"),
+                    confirm: t("checkIn.noShow.sailedConfirm"),
+                    confirming: t("checkIn.noShow.confirming"),
+                    confirmAriaLabel: t("checkIn.noShow.sailedConfirmAriaLabel", {
+                      name: row.personName,
+                    }),
+                  }
+                : {
+                    door: t("checkIn.noShow.door"),
+                    consequence: t("checkIn.noShow.consequence"),
+                    confirm: t("checkIn.noShow.confirm"),
+                    confirming: t("checkIn.noShow.confirming"),
+                    confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", {
+                      name: row.personName,
+                    }),
+                  }
+            }
+          />
+        ) : null}
       </LedgerRow>
     );
   }
@@ -285,6 +393,9 @@ export function CounterQueueRow({
       // A minor's paper release names its co-signer too (ADR
       // 20260907-guardian-co-signature).
       requiresGuardian={guardianSignatureRequired(row.dateOfBirth, today)}
+      // Offered only on the row whose recording was just refused for a
+      // namesake co-signer, never on every minor at the counter.
+      offerNamesake={refusedWaiver?.code === "waiver-guardian-name"}
       className="mt-2"
       // A refused recording lands back here with its notice below; re-open the
       // form so the staffer can correct what it names rather than hunt for the

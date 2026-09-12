@@ -51,6 +51,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
+import { liveBookingJoin } from "./trips-queries";
 
 export type DiveSiteInput = {
   shopId: string;
@@ -1267,6 +1268,15 @@ export async function listUpcomingTripsForSite(
  * does — live, scheduled, **not private**, inside the hour's late-arrival
  * buffer — and counts live bookings so the page can say how much room is left.
  *
+ * "Live" is `liveBookingJoin` — the seats somebody is actually holding — and
+ * not "every booking but cancelled". A stranger reading this page must be told
+ * the same number `createBooking` will honour a second later: with the looser
+ * predicate, the moment the desk released a seat (`bookings.status =
+ * "no_show"`) this page said **Full** while the trip page and the booking
+ * transaction agreed there was room, and the only person who saw the lie was
+ * the one who could not sign in to check (`security-reviewer` review,
+ * 2026-09-11).
+ *
  * The site match is an `exists` over `trip_dives` rather than a join, because a
  * two-tank day on one mooring names the site twice and a join would both
  * duplicate the row and multiply the seat count by two.
@@ -1296,7 +1306,7 @@ export async function listUpcomingDeparturesForSite(
       booked: count(bookings.id),
     })
     .from(trips)
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
         liveTrip(),

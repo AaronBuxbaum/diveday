@@ -50,40 +50,54 @@ test("a departure's site name opens that site's own page, which leads back to a 
 });
 
 /**
- * **What "not found" looks like here, and why it is asserted as a body rather
- * than a status code.**
+ * **What "not found" looks like here, and where the status code comes from.**
  *
- * A segment that names nothing renders this namespace's own `not-found.tsx` —
- * and in the production build it renders it under a **200**. The route has a
- * static shell (`instant = true` plus a `loading.tsx`), the shell is on the
- * wire before the page's `notFound()` is reached, and a status cannot be
- * changed after that. Measured across the built app on 2026-09-09: an unknown
- * site, an unknown course and an unknown shop all answer 200, and only
- * `/s/<shop>/embed/<widget>` — whose metadata is static and whose refusal is a
- * pure function of the segment — answers 404.
+ * This docblock used to say the opposite of the truth, and three issues chased
+ * it (#1489, #1510, #1604): that the one `/s/**` path answering a real 404 was
+ * `/s/<shop>/embed/<widget>`, because "its metadata is static and its refusal
+ * is a pure function of the segment". Neither clause is why. That path is
+ * refused in `src/proxy.ts` before Next resolves a route at all, and the page's
+ * own check never runs on it. Every other path here was a 200 for the same
+ * reason any of them would be: the static shell is on the wire before the page
+ * body reaches `notFound()`, and nothing a page does after that can change a
+ * status (ADR 20260912-the-public-namespace-refuses-at-the-edge).
  *
- * That is a property of the whole `/s/**` namespace rather than of this page,
- * and turning it into a real 404 is one change across every route in it. So
- * this asserts what is actually this page's contract: a segment no shop could
- * have minted never reaches a query, and one shop's segment is not another
- * shop's site.
+ * So the status is the proxy's answer and belongs to the namespace, not to this
+ * page, while the body below it is this page's own. The test asserts both on
+ * every refusal, because the two halves fail apart and only the body half was
+ * ever watched: a segment no shop could have minted never reaches a query, one
+ * shop's segment is not another shop's site, and neither of those is served at
+ * 200.
  */
-test("a segment no shop could have minted lands on not-found, and a site belongs to one shop", {
+test("a segment no shop could have minted is a 404, and a site belongs to one shop", {
   tag: READ_ONLY,
 }, async ({ page }) => {
   const notFound = page.getByRole("heading", { name: "That page isn’t here any more" });
+  /**
+   * Each refusal is read twice, because the two halves fail apart. The body is
+   * this page's own contract — the diver still lands somewhere, framed by the
+   * shop. The status belongs to the namespace, and it is the half that was
+   * wrong: the heading below was green for the whole life of the soft 404
+   * (issues #1489, #1510, #1604), while the wire said 200 and crawlers kept a
+   * dead site page. The status-code sweep over the whole namespace lives in
+   * `seo.spec.ts`; these three paths carry it here too so this page's own
+   * refusals cannot quietly go soft again on their own.
+   */
+  const refuses = async (path: string) => {
+    expect((await page.request.get(path)).status(), path).toBe(404);
+    await page.goto(path);
+    await expect(notFound).toBeVisible();
+  };
+
   // Malformed: refused by the parser before it can reach a query.
-  await page.goto(`/s/${DEMO_SHOP_SLUG}/sites/Molasses%20Reef`);
-  await expect(notFound).toBeVisible();
+  await refuses(`/s/${DEMO_SHOP_SLUG}/sites/Molasses%20Reef`);
   // Well-formed and unknown: this shop has no site under this segment.
-  await page.goto(`/s/${DEMO_SHOP_SLUG}/sites/somebody-elses-ledge`);
-  await expect(notFound).toBeVisible();
+  await refuses(`/s/${DEMO_SHOP_SLUG}/sites/somebody-elses-ledge`);
   // Real — but the demo's own, so it is a page here and nothing at the
   // neighbouring shop, whose whole library is one site and it is not this one.
   await page.goto(`/s/${DEMO_SHOP_SLUG}/sites/benwood-wreck`);
   await expect(page.getByRole("heading", { level: 1, name: "Benwood Wreck" })).toBeVisible();
-  await page.goto("/s/reef-line-divers/sites/benwood-wreck");
-  await expect(notFound).toBeVisible();
+  await refuses("/s/reef-line-divers/sites/benwood-wreck");
 });
 
 test("a listed shop's site pages are in the sitemap, and the demo's are not", {

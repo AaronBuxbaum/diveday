@@ -96,6 +96,13 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
     tone: "warning",
     key: "staffing.notice.requestApprovedNotAssigned",
   },
+  // Approved, assigned, and the session is *still* over an intro ratio (issue
+  // #1339). Warning, not success: the plain success line read as a gap closed
+  // to the one person who could close it, and the boat has not changed.
+  "request-approved-ratio-open": {
+    tone: "warning",
+    key: "staffing.notice.requestApprovedRatioOpen",
+  },
   "request-declined": { tone: "success", key: "staffing.notice.requestDeclined" },
   "not-allowed": { tone: "danger", key: "staffing.notice.notAllowed" },
   "person-not-found": { tone: "danger", key: "staffing.notice.personNotFound" },
@@ -240,7 +247,14 @@ export default async function StaffingPage({
     // asking to run Saturday's boat is the ordinary case, and narrowing it to
     // instructors would rebuild the "only the owner writes here" shape this
     // slice exists to open (ADR 20260902-crew-requests-and-blackouts).
-    viewer: { personId: session.user.personId, isCrew: true },
+    // `holdsInstructorRole` off the signed claims rather than a live read: it
+    // decides one advisory line and nothing else (#1339), and the write it
+    // sits beside is gated where it always was.
+    viewer: {
+      personId: session.user.personId,
+      isCrew: true,
+      holdsInstructorRole: session.user.roles.includes("instructor"),
+    },
     now,
     people: view.staff.map((member) => ({
       personId: member.person.id,
@@ -277,9 +291,15 @@ export default async function StaffingPage({
   // (issue #1338): a course session with nobody in the water needs an
   // instructor *and* has nobody supervising, and a chip saying only the second
   // sends a manager to phone any divemaster, who cannot close the first.
+  //
+  // `over_intro_ratio` is the second one that has to say a different thing in
+  // that column (issue #1339): "Over student ratio" is a true sentence about
+  // an intro session and a useless one, because the cap it names is
+  // instructor-to-student and the divemaster it invites raises it by nothing.
   const gapWords: GapWords = {
     no_instructor: t("trips.pulse.needsInstructor"),
     over_ratio: t("trips.pulse.overRatio"),
+    over_intro_ratio: t("trips.pulse.overIntroRatio"),
     uncrewed_course: t("today.actionKind.uncrewedCourse"),
     uncrewed_departure: t("today.actionKind.uncrewedDeparture"),
     crew_below_target: t("today.actionKind.crewBelowTarget"),
@@ -451,6 +471,8 @@ export default async function StaffingPage({
               deciding: t("staffing.week.deciding"),
               requestApproved: t("staffing.week.requestApproved"),
               requestDeclined: t("staffing.week.requestDeclined"),
+              askWontClose: t("staffing.week.askWontClose"),
+              requestWontClose: t("staffing.week.requestWontClose"),
             }}
           />
 

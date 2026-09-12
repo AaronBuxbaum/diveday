@@ -166,3 +166,64 @@ test.describe("the departures board", () => {
     }
   });
 });
+
+/**
+ * **A wall has no reader** (#1462). Every test above opens its signed-out
+ * screen in a context that reports the runner's own language; these two hand
+ * the television a language the shop does not speak, which is the whole of the
+ * defect — factory-default US hardware in a Spanish-speaking lobby, and no
+ * cookie a staffer could ever set on it.
+ *
+ * The locale goes on `newContext()` rather than `test.use()`: the board is
+ * always opened in a context this spec mints by hand, and a fixture-level
+ * locale would never reach it.
+ */
+test.describe("a screen speaks the shop's language, not the television's", () => {
+  signedInAsOwner();
+
+  test("a Spanish-speaking television still renders an English shop's board in English", async ({
+    page,
+    request,
+  }) => {
+    const seeded = await request.post("/api/test/seed-display-token", {
+      data: { label: "Lobby TV" },
+    });
+    expect(seeded.ok()).toBe(true);
+    const { path } = (await seeded.json()) as { path: string };
+
+    // blue-mantis takes the column default, `en-US`; nothing in the seed
+    // writes `defaultLocale`. So the shop is English and the screen is not.
+    const visitor = await page.context().browser()?.newContext({ locale: "es-ES" });
+    if (!visitor) throw new Error("no browser to open a signed-out context with");
+    try {
+      const board = makeActivitySafe(await visitor.newPage());
+      await board.goto(path);
+      await expect(board.getByText("Blue Mantis Divers")).toBeVisible();
+      // The footer renders on every board, empty day or not. Before this the
+      // reader's `Accept-Language` won and it read "Actualizado a las …".
+      await expect(board.getByText(/^Updated /)).toBeVisible();
+      // And the subtree says which language it is in, since `<html lang>` is
+      // corrected client-side from the television's own `navigator.languages`.
+      await expect(board.locator("main")).toHaveAttribute("lang", "en-US");
+    } finally {
+      await visitor.close();
+    }
+  });
+
+  test("a refused screen link still answers in the reader's own language", async ({ page }) => {
+    // The other half of the answer, and the half that must not change: no
+    // token resolves to no shop, so there is no default to prefer and the
+    // person holding a dead link reads it in their own words.
+    const visitor = await page.context().browser()?.newContext({ locale: "es-ES" });
+    if (!visitor) throw new Error("no browser to open a signed-out context with");
+    try {
+      const forged = makeActivitySafe(await visitor.newPage());
+      await forged.goto("/board/not-a-real-token");
+      await expect(
+        forged.getByRole("heading", { name: "Este enlace de pantalla no está disponible" }),
+      ).toBeVisible();
+    } finally {
+      await visitor.close();
+    }
+  });
+});

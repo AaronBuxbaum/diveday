@@ -532,6 +532,7 @@ describe("getRecapPageData tip reconciliation", () => {
               checkoutUrl: null,
               amountTotalCents: 1000,
               taxAmountCents: null,
+              stripeCustomerId: null,
               expiresAt: null,
             },
           };
@@ -557,6 +558,7 @@ describe("getRecapPageData tip reconciliation", () => {
               checkoutUrl: null,
               amountTotalCents: 1000,
               taxAmountCents: null,
+              stripeCustomerId: null,
               expiresAt: null,
             },
           };
@@ -997,7 +999,7 @@ describe("sendDueRecaps", () => {
         .select({ personId: bookings.personId })
         .from(bookings)
         .where(eq(bookings.id, bookingId));
-      if (!rae) throw new Error("today's booking missing");
+      if (!rae) throw new Error("today’s booking missing");
       // Inserted rather than booked: `createBookingParty` refuses a departure
       // that has already sailed, which yesterday's has.
       await db

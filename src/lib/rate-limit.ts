@@ -389,9 +389,10 @@ export const RATE_LIMITS = {
    * first name. Generous enough that a real morning never meets it — a
    * twelve-diver boat is twelve taps, and a mistyped name is a thirteenth —
    * and low enough that working through a name list is not a thing anybody can
-   * do in an afternoon. Keyed on the token rather than the IP: every tap comes
-   * from the same tablet on the same network, so an IP key would bound the
-   * whole lobby as one caller.
+   * do in an afternoon. Keyed on the token, not the IP, because every tap comes
+   * from the same tablet on the same network: an IP key alone would bound the
+   * whole lobby as one caller. `kioskLookupByIp` below is that second key, and
+   * it is deliberately the wider-reaching, smaller one.
    *
    * **This number was sized against surname entropy, and the lookup no longer
    * has only that.** Issue #1610 widened the match to every word of a stored
@@ -405,6 +406,26 @@ export const RATE_LIMITS = {
    * number is left where a person set it until then.
    */
   kioskLookup: perHour(120),
+  /**
+   * Kiosk lookups **per caller**, spent before the display token is verified
+   * (issue #1609).
+   *
+   * `kioskLookup` above bounds what one link may spend; this bounds what one
+   * caller may spend across every link, including links that resolve to
+   * nothing. That second half is the gap it closes: the per-link bucket cannot
+   * be keyed until a token has already been verified, so until this existed a
+   * stranger who never held a working link paid nothing at all for guessing at
+   * one, and each guess was a free database read. Same two-net shape as
+   * `recapUploadByToken` / `recapUploadByIp` below.
+   *
+   * 60 is comfortable for a whole lobby behind one NAT address — a twelve-diver
+   * morning is twelve taps plus retypes — and useless for working a name list
+   * from somewhere else. A shop whose tablet shares an egress address with its
+   * staff laptops spends one bucket between them; that is the accepted trade,
+   * and it is why this is a second net rather than a replacement for the
+   * per-link one. Issue #1657 owns whether `kioskLookup` itself comes down.
+   */
+  kioskLookupByIp: perHour(60),
   /** Credentials sign-in attempts, per IP — the wider net. */
   signInByIp: per15Min(20),
   /** Credentials sign-in attempts, per attempted email — the narrow net. */

@@ -111,6 +111,16 @@ const NOTICE_KEYS: Record<
     tone: "warning",
     key: "trips.notices.diverAddedWaiverUndelivered",
   },
+  // Seated onto an existing diver's record on a guess, so the seat is held
+  // until someone confirms it is the same person (H-13, issue #1556). Warning
+  // for the same reason as the waiver code above: nothing needs undoing, and
+  // the diver cannot board until the staffer acts. The confirm control is on
+  // this page, on the row the `&bid=` scrolls to.
+  "diver-added-identity-unconfirmed": {
+    form: "add-diver",
+    tone: "warning",
+    key: "trips.notices.diverAddedIdentityUnconfirmed",
+  },
   "diver-waitlisted": { form: "add-diver", tone: "success", key: "trips.notices.diverWaitlisted" },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
   certified: { form: "roster", tone: "success", key: "trips.notices.certified" },

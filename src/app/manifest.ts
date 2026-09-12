@@ -13,7 +13,18 @@ import type { MetadataRoute } from "next";
  * Chrome wants at least 192×192 before it will fire `beforeinstallprompt`, and
  * 512 for the splash screen; with neither, the "Install app" option never
  * appeared on Android — for the app whose whole purpose is a crew phone holding
- * a manifest for a boat with no signal (issue #794).
+ * a manifest for a boat with no signal (issue #794). This file is now the only
+ * place that names the four sizes, so the reason they exist lives here.
+ *
+ * Every `src` below is a committed PNG, not a route: `icon.png` and
+ * `apple-icon.png` are Next's static metadata convention under `src/app`, and
+ * the 192 and 512 are plain files in `public/` because only this array reads
+ * them — the numbered-icon convention would turn each into another
+ * `<link rel="icon">` a browser may pick for a tab. They were `ImageResponse`
+ * routes until issue #1361; `pnpm brand:icons` re-renders them from
+ * `_brand/mark.tsx` when the mark changes. A `public/` file is served without
+ * Next's content hash, so a browser holding an old 192 keeps it until its cache
+ * turns over — nothing to manage pre-pilot.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -36,10 +47,10 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#faf9f6",
     theme_color: "#0e7490",
     icons: [
-      { src: "/icon/32", sizes: "32x32", type: "image/png" },
-      { src: "/apple-icon", sizes: "180x180", type: "image/png" },
-      { src: "/icon/192", sizes: "192x192", type: "image/png" },
-      { src: "/icon/512", sizes: "512x512", type: "image/png" },
+      { src: "/icon.png", sizes: "32x32", type: "image/png" },
+      { src: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
       // Drawn to be cropped: the mark sits inside Android's safe zone and the
       // brand colour bleeds to the edge, so the launcher can cut a circle, a
       // squircle or a teardrop out of it. Without a maskable entry Android

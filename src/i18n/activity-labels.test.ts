@@ -19,10 +19,14 @@ describe("activity lines", () => {
     const t = staffTranslator(locale);
 
     for (const code of ACTIVITY_CODES) {
-      // `self` is only read by the two support-needs sentences, and passing it
-      // everywhere costs nothing: an ICU select over a parameter a message does
-      // not mention is simply unused.
-      const line = activityLine(t, { code, params: { ...NAMES, self: "no" } });
+      // `self` and `reason` are each read by one sentence — the support-needs
+      // pair and the refused no-show undo — and passing them everywhere costs
+      // nothing: an ICU select over a parameter a message does not mention is
+      // unused.
+      const line = activityLine(t, {
+        code,
+        params: { ...NAMES, self: "no", reason: "trip_full" },
+      });
       expect(line.trim(), code).not.toBe("");
       // A missing key renders as the key itself, which is the failure this
       // catches: a code added to the union and to neither bundle.
@@ -46,6 +50,23 @@ describe("activity lines", () => {
     expect(staff).toContain(NAMES.actor);
     expect(own).not.toContain(NAMES.actor);
     expect(own).toContain("their dives");
+  });
+
+  /**
+   * The two limits that can refuse an undo ask for different next acts — find
+   * the diver another boat, or find the session another instructor — so the
+   * line has to say which one refused, in both languages.
+   */
+  it.each(["en-US", "es-ES"])("says which limit refused a no-show undo in %s", (locale) => {
+    const t = staffTranslator(locale);
+    const line = (reason: string) =>
+      activityLine(t, { code: "booking_no_show_undo_refused", params: { ...NAMES, reason } });
+
+    expect(line("trip_full")).not.toBe(line("course_ratio_full"));
+    for (const reason of ["trip_full", "course_ratio_full"]) {
+      expect(line(reason)).toContain(NAMES.actor);
+      expect(line(reason)).toContain(NAMES.diver);
+    }
   });
 
   /**

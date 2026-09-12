@@ -29,6 +29,7 @@ export type RentalFitInput = {
   rentsSmb: boolean;
   bcdSize?: string;
   wetsuitSize?: string;
+  drysuitSize?: string;
   bootSize?: string;
   finSize?: string;
   weightPreference?: string;
@@ -44,6 +45,7 @@ function sizeUpdates(input: RentalFitInput) {
   const sizes = {
     bcdSize: input.bcdSize,
     wetsuitSize: input.wetsuitSize,
+    drysuitSize: input.drysuitSize,
     bootSize: input.bootSize,
     finSize: input.finSize,
     weightPreference: input.weightPreference,
@@ -209,6 +211,15 @@ export async function saveRentalFitSizes(
 }
 
 /**
+ * What a fit-keep can answer. Named so the one surface that has to find words
+ * for every refusal — the shop home, where the tap lands — can type its notice
+ * map against this union with `NoticeCodeOf` rather than rediscovering it by
+ * reading this function. Both refusals used to reach that page and render
+ * nothing at all.
+ */
+export type ConfirmRentalFitOutcome = "saved" | "unknown_person" | "invalid";
+
+/**
  * **Keep the size that actually went out** (issue #1174, delight report D14).
  *
  * The evening's one-tap answer to "Hugo's BCD went out as L — keep that as the
@@ -246,7 +257,7 @@ export async function confirmRentalFitSize(
     confirmedByPersonId: string;
     now?: Date;
   },
-): Promise<"saved" | "unknown_person" | "invalid"> {
+): Promise<ConfirmRentalFitOutcome> {
   const size = input.size.trim();
   if (!size) return "invalid";
   // The same tenant proof `saveRentalFit` makes: a copied id must not write a
@@ -380,6 +391,13 @@ export type DiverRentalFit = {
   rentsSmb: boolean;
   bcdSize: string | null;
   wetsuitSize: string | null;
+  /**
+   * Crosses the boundary because the diver is the one who states it: the
+   * drysuit size is their own answer on their own form (issue 1414), the same
+   * standing as the wetsuit size above it — not something the shop wrote
+   * about them, which is what this projection exists to hold back.
+   */
+  drysuitSize: string | null;
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
@@ -411,6 +429,7 @@ export function toDiverRentalFit(
     rentsSmb: profile.rentsSmb,
     bcdSize: profile.bcdSize,
     wetsuitSize: profile.wetsuitSize,
+    drysuitSize: profile.drysuitSize,
     bootSize: profile.bootSize,
     finSize: profile.finSize,
     weightPreference: profile.weightPreference,

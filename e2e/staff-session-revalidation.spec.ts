@@ -50,7 +50,7 @@ test.describe("a disabled staff account loses its live session", () => {
     await captainPage.goto(`/shop/${privateShop.slug}/divers`);
     await expect(captainPage).toHaveURL(/\/sign-in\?session=ended$/);
     await expect(
-      captainPage.getByText("You've been signed out because this account is no longer active."),
+      captainPage.getByText("You’ve been signed out because this account is no longer active."),
     ).toBeVisible();
 
     await captainContext.close();

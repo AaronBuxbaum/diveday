@@ -262,7 +262,7 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
   await page.getByRole("button", { name: "Mark certified" }).click();
   await expect(
     page.getByText(
-      "That doesn't look like a certification number. Type the number exactly as shown in the certification record, digits included.",
+      "That doesn’t look like a certification number. Type the number exactly as shown in the certification record, digits included.",
       {
         exact: true,
       },
@@ -296,9 +296,9 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
   await page.getByRole("link", { name: /Nadia Petrov/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Nadia Petrov" })).toBeVisible();
   await expect(page.getByText("Not certified yet — unverified", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "They didn't tell us that" }).click();
+  await page.getByRole("button", { name: "They didn’t tell us that" }).click();
   await expect(page.getByRole("status")).toContainText(
-    "Cleared. This diver's record no longer says anything about certification",
+    "Cleared. This diver’s record no longer says anything about certification",
   );
   await expect(page.getByText("Not certified yet — unverified", { exact: true })).toHaveCount(0);
 });

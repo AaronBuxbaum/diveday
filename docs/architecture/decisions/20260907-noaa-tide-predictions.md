@@ -104,3 +104,54 @@ the half hour around a turn, which is what it has always computed.
 
 Pinned by `src/i18n/tide-labels.test.ts`, which fails on a sentence that opens with "Slack at" or
 its Spanish twin "Estoa a las".
+
+## Amendment 2026-09-10 — a second endpoint, for confirmation only
+
+The Decision above says NOAA CO-OPS is reached "through one endpoint". It is now reached through
+two, and the provider is still one.
+
+The rule that a station id is seven digits (`isTideStationId`) was the whole of its validation, and
+it cannot be more: a subordinate station's id looks exactly like a harmonic one's, every seven-digit
+id answers the predictions endpoint, and nothing on the dive-site form ever said what those digits
+named. A shop that typed the station for the wrong end of the Keys therefore got a confident tide
+sentence about the wrong water on every departure, with nothing anywhere saying so — issue #1468.
+This record's own Context rules that out: the sentence "must either be right or absent".
+
+So `mdapi/prod/webapi/stations/<id>.json` is read for the station's **own name and position**, in
+`src/lib/tide-stations.ts`, behind the same seam shape as `tide-predictions.ts`: injectable fetcher,
+four-second bound, `DIVEDAY_DISABLE_EXTERNAL_HTTP` honoured with a deterministic fixture for the
+e2e fleet and an offline dev server, every failure answering `null`. Its own cache, keyed on the id
+alone and living a day rather than half of one, because a station's name and position do not depend
+on the day.
+
+Two things come off it, both on the dive-site editor and nowhere else. The station's name is
+**echoed back** under the id, so a wrong id is legible as a wrong *place* rather than as seven
+digits nobody can check. And when the station sits further than `IMPLAUSIBLE_STATION_DISTANCE_KM`
+(40 km) from the site's own coordinates, one sentence says so. Forty is calibrated on the mistake
+the demo's own seed comment names — a Key Largo reef reading Vaca Key at Marathon, eighty
+kilometres down the chain — against a genuinely nearest ocean-side station, normally inside
+twenty-five; the demo's correct Carysfort pairing is twenty-nine.
+
+**It authorizes and blocks nothing.** The lookup lives in the page's render, not in `saveAction`,
+which is what makes "a failed lookup never blocks a save" structural rather than careful: the save
+writes the id and redirects, and the echo appears on the render that follows. A site with no
+coordinates gets no distance sentence at all — a site that has not said where it is cannot
+contradict anything — and the flag is a prompt to look, never a refusal. There is still no station
+picker: choosing one is a question NOAA's own list answers better than a dropdown could.
+
+What is committed to: one more endpoint shape from the same provider. The escape hatch is
+unchanged — a rename there costs a parser change, and dropping the confirmation is one module, one
+prop and three bundle keys.
+
+**What the distance sentence says, and where the station list ends.** The sentence names what the
+distance costs on the water rather than the kilometres alone: eighty kilometres down a chain moves
+the predicted turn by the better part of an hour, on a number that is already a height turn rather
+than slack (the 2026-09-07 amendment above), and a divemaster acts on the consequence, not on what
+a row measured. The field's hint also says that CO-OPS covers **US waters only** — a shop in
+Cozumel, Bonaire or the Red Sea has no station to pick, which degrades to silence and is correct,
+but the one that typed the nearest US id was otherwise being told to check something it could not
+act on. Two things this still does not have, both filed rather than guessed at: a way for a
+genuinely remote site to *answer* the sentence, which needs a column on the site row (Flower Garden
+Banks reads Galveston at about 190 km and warns forever) — issue #1731; and the station's name on
+the departure line, where the person who needs to know whose tide this is actually reads it —
+issue #1732.

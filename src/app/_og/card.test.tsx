@@ -126,7 +126,7 @@ describe("every link-preview card wears the shared chrome", () => {
       const isShopCard = relative.startsWith(`s${path.sep}`);
       const source = stripComments(await readFile(file, "utf8"));
       if (isShopCard) {
-        expect(source, `${relative} closes with DiveDay's tagline`).not.toMatch(/OG_TAGLINE/);
+        expect(source, `${relative} closes with DiveDay’s tagline`).not.toMatch(/OG_TAGLINE/);
         expect(source, `${relative} should credit DiveDay at the foot`).toMatch(/ogCredit\(\)/);
         // Exactly one lockup survives on each: the unknown-slug fallback, which
         // names no shop and is therefore DiveDay's own card rather than
@@ -137,7 +137,7 @@ describe("every link-preview card wears the shared chrome", () => {
         ).toBeLessThanOrEqual(1);
       } else {
         // DiveDay's own cards keep both: there, DiveDay *is* the subject.
-        expect(source, `${relative} is DiveDay's own card and should wear the lockup`).toMatch(
+        expect(source, `${relative} is DiveDay’s own card and should wear the lockup`).toMatch(
           /\{OG_WORDMARK\}/,
         );
       }

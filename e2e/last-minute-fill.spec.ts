@@ -68,7 +68,7 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   // The send holds eight seconds with Undo first (ADR 20260906-before-you-ask,
   // decision 2); the outcome is allowed the hold plus the Stripe attempt.
   await expect(
-    page.getByText("Stripe couldn't create the discount code. Try again in a moment."),
+    page.getByText("Stripe couldn’t create the discount code. Try again in a moment."),
   ).toBeVisible({ timeout: HELD_SEND_TIMEOUT_MS });
 
   // The attempt is durable evidence even though it failed — a staffer sees
@@ -160,16 +160,16 @@ test("a diver can self-serve unsubscribe from last-minute deal emails", async ({
   await expect(page.getByRole("heading", { name: "Stop last-minute deal emails?" })).toBeVisible();
   await expect(page.getByText("Blue Mantis Divers")).toBeVisible();
   await page.getByRole("button", { name: "Stop these emails" }).click();
-  await expect(page.getByRole("heading", { name: "You're unsubscribed" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re unsubscribed" })).toBeVisible();
 
   // Revisiting the same link is idempotent, not a dead link.
   await page.goto(`/unsubscribe/${token}`);
-  await expect(page.getByRole("heading", { name: "You're unsubscribed" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re unsubscribed" })).toBeVisible();
 });
 
 test("an unknown unsubscribe link reads as unavailable, not a crash", async ({ page }) => {
   await page.goto("/unsubscribe/not-a-real-token");
-  await expect(page.getByRole("heading", { name: "This link isn't available" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This link isn’t available" })).toBeVisible();
 });
 
 /**
@@ -192,7 +192,7 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
   await dealList.getByLabel("Certification level").selectOption("open_water");
   // The shop-wide deal list records only a broad level signal. Nitrox remains
   // a trip-specific declaration on the wait list, not a deal-list checkbox.
-  await expect(dealList.getByLabel("I'm certified for nitrox (enriched air)")).toHaveCount(0);
+  await expect(dealList.getByLabel("I’m certified for nitrox (enriched air)")).toHaveCount(0);
   await page.locator('input[name="availableFrom"]').filter({ visible: true }).fill("2020-01-01");
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
@@ -249,7 +249,7 @@ test("an uncertified joiner is excluded from the last-minute send list", async (
   await dealList.getByLabel("Name").fill("Nell Byrne");
   await dealList.getByLabel("Email").fill("nell.e2e@example.com");
   await dealList.getByLabel("Certification level").selectOption("none_declared");
-  await expect(dealList.getByLabel("I'm certified for nitrox (enriched air)")).toHaveCount(0);
+  await expect(dealList.getByLabel("I’m certified for nitrox (enriched air)")).toHaveCount(0);
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
 
@@ -264,7 +264,7 @@ test("an uncertified joiner is excluded from the last-minute send list", async (
   await expect(
     page.locator("li").filter({ hasText: "Nell Byrne" }).filter({ visible: true }),
   ).toHaveCount(0);
-  await expect(page.getByText(/below this departure's requirement/)).toHaveCount(0);
+  await expect(page.getByText(/below this departure’s requirement/)).toHaveCount(0);
 
   // Other eligible recipients can still receive the deal.
   await expect(page.getByRole("button", { name: /Send to \d+ diver/ })).toBeEnabled();

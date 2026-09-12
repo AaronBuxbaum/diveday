@@ -83,7 +83,7 @@ test("the public trip page names the crew who agreed, by first name only", async
   // "about the places" beats (ADR 20260904-reef-all-the-way-down, decision 1).
   // Nothing about the rule changed; where a diver taps to read it did.
   await page.getByRole("heading", { name: "The rest of the briefing" }).click();
-  const crew = page.getByRole("heading", { name: "Who you're diving with" });
+  const crew = page.getByRole("heading", { name: "Who you’re diving with" });
   await expect(crew).toBeVisible();
   const list = crew.locator("xpath=..").getByRole("list");
 
@@ -125,5 +125,5 @@ test("a shop with no recorded languages shows no line at all", async ({ page, pr
   // (ADR 20260904-reef-all-the-way-down) a closed door would satisfy that
   // whether or not the heading exists. This counts the element itself, open or
   // shut, so the absence is the consent filter and not the fold.
-  await expect(page.locator('h2:text-is("Who you\'re diving with")')).toHaveCount(0);
+  await expect(page.locator('h2:text-is("Who you’re diving with")')).toHaveCount(0);
 });

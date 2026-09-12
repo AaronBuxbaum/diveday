@@ -25,7 +25,7 @@ test.describe("full-shop data export", () => {
     // a closed disclosure — 44 cards of it used to push Backups off the bottom
     // of the page. Closed, the card still states how many files are in there;
     // opening it is what the promise "one CSV per record type" is read from.
-    const bundle = page.getByRole("group").filter({ hasText: "What's in the bundle" });
+    const bundle = page.getByRole("group").filter({ hasText: "What’s in the bundle" });
     await expect(bundle.getByText(/\d+ files, with a row count for each/)).toBeVisible();
     // `exact` because a file's *note* may name another file: `contacts.csv`'s
     // now ends "people.csv carries the raw stamp and its clearance separately",
@@ -33,7 +33,7 @@ test.describe("full-shop data export", () => {
     // two elements. The assertion here is about the bundle listing the file, so
     // it wants the file-name line and not any prose mentioning it.
     await expect(page.getByText("people.csv", { exact: true })).toBeHidden();
-    await bundle.getByText("What's in the bundle").click();
+    await bundle.getByText("What’s in the bundle").click();
     await expect(page.getByText("people.csv", { exact: true })).toBeVisible();
     await expect(page.getByText("waiver_records.csv", { exact: true })).toBeVisible();
 
@@ -114,7 +114,7 @@ test.describe("the crew sheet", () => {
     await expect(page.getByRole("heading", { name: "Crew sheet" })).toBeVisible();
     // The one sentence that keeps this from reading as a pay run.
     await expect(
-      page.getByText("what anyone is owed is your bookkeeper's call", { exact: false }),
+      page.getByText("what anyone is owed is your bookkeeper’s call", { exact: false }),
     ).toBeVisible();
 
     const downloadPromise = page.waitForEvent("download");

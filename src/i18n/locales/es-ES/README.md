@@ -140,6 +140,17 @@ reading two names for one thing — which is the exact confusion the English fix
 
 - **la inmersión** is one dive — one tank, in the water. `plannedDives`, "Dive 2", every roll-call
   checkpoint. A two-tank day is *dos inmersiones* at one *sitio*, or at two.
+
+  **The manifest's checkpoint track abbreviates it below `sm`**, and that is deliberate rather than
+  drift: *Muelle* / *Inm. 2* (`shared.rollCallCheckpoint.departureShort` / `.afterDiveShort`)
+  against *Antes de zarpar* / *Después de la inmersión 2*. At boat size the full Spanish forms
+  overrun a 390px track and the row reads as two lines, which is the whole of issue #1320; even
+  *Inmersión 2* does not fit three options across. The abbreviation keeps the sanctioned noun
+  instead of reaching for a shorter one, the full name is on screen *below* the track in the
+  roll-call heading (`manifest.checkpointRollCallHeading`, *Pase de lista · Después de la inmersión
+  2*) at every width and in every state, and nothing else may use the short keys. Not the summary
+  panel above the track — it says *Pase de lista completo* once the checkpoint closes, and names no
+  checkpoint at all from then on. Do not expand them back.
 - **el punto** survives only for a literal coordinate: the marine forecast's offshore
   point (`diveSites.form.forecastLegend`, "punto de pronóstico"). Never for the place itself.
 
@@ -206,6 +217,63 @@ shop's own diver:divemaster target, which binds nothing.
 A crew shortfall on a course session is a requirement, not a state: **"El curso necesita
 instructor"**, not *"Sin instructor"*. A fun dive without an instructor is an ordinary day; a course
 session without one cannot take a single enrolment, and *sin* describes the harmless one.
+
+## A taster dive is **un bautismo**; **iniciación** names the entry-level course
+
+Settled 2026-09-11, reading the two ratio chips above side by side. They sit in the same column of
+the same week and they decide who a manager goes to find: the entry-level cap (Open Water training,
+8 per instructor, +2 per certified assistant) is closed by a divemaster, and the intro-session cap
+(DSD / Try Scuba, 2 per instructor, no assistant bonus) is closed by **another instructor and
+nothing else** (`docs/product/glossary.md`).
+
+The Spanish named them the other way round. **Curso de iniciación (al buceo)** is what a Spanish
+speaker calls the entry-level certification course — the one the *other* chip governs — so "Ratio de
+iniciación excedida" beside "Ratio de alumnos excedida" read as one fact stated twice, and a manager
+picking between them had no way to tell which crew member would fix it. The trade word for a
+first-time taster dive is **bautismo (de buceo)**, also *bautismo submarino*, and it is read that way
+across Latin America and the Caribbean.
+
+| English | Spanish |
+| --- | --- |
+| an intro session / intro course (DSD, Try Scuba) | un bautismo (de buceo) |
+| on this intro session | en este bautismo |
+| Over intro ratio | Ratio de bautismo excedida |
+| Intro-course status | Estado de bautismo de buceo |
+
+The noun is **masculine**: `el`/`un`/`este`, and anything reaching back to it agrees (`lleno`,
+`excedido`, `programado`).
+
+**`iniciación` is not banned — it is the entry-level sense now**, which is why
+`trips.depthWarningNoCard` still says *el límite de iniciación* for the depth an Open Water card
+carries. `scripts/check-shop-word.mjs` refuses only *sesión / ratio / clase de iniciación*, the
+shapes that were naming a bautismo, and leaves *curso de iniciación* and *límite de iniciación*
+alone.
+
+## The wetsuit is **el neopreno**; **el traje seco** is the drysuit
+
+Settled 2026-09-12, the day the drysuit got a size field of its own. Until then the Spanish called the
+wetsuit *Traje* — the item label on the diver's kit picker, on the diver's packing list and on the
+staff one, and *Talla de traje* on both fit forms — and *traje* on its own is just "suit". The moment
+**Talla de traje seco** landed directly under **Talla de traje**, a diver reading the two had no
+reliable way to tell that the first one meant the wetsuit, on the form that decides what comes off the
+rental wall for them. *Neopreno* is the word a Spanish-speaking shop says out loud, everywhere the
+market is, and it cannot be read as the other suit.
+
+| English | Spanish |
+| --- | --- |
+| wetsuit (kit list, fit form, packing list) | el neopreno |
+| Wetsuit size | Talla de neopreno |
+| a 3 mm wetsuit | un neopreno de 3 mm |
+| drysuit | el traje seco |
+| Drysuit size | Talla de traje seco |
+
+The noun is **masculine**: `el`/`un`/`este`, and anything reaching back to it agrees (`corto`,
+`completo`, `húmedo`).
+
+**`traje` is not banned — it names the dry one now.** *Traje seco* is exactly right and must not
+change, *traje estanco* survives in the drysuit's own jargon hint, and a *traje de baño* is a
+swimsuit. `scripts/check-shop-word.mjs` refuses the two shapes the wetsuit labels actually used: a
+*talla de traje* with no *seco* after it, and a string that is nothing but the word *Traje*.
 
 ## The waiver is **la exención**
 
@@ -282,6 +350,33 @@ America and the Caribbean.
 
 The noun is **masculine**: `el`/`un`/`este`, and anything reaching back to it agrees (`abierto`,
 `enviado`, `guardado`).
+
+## A seat the diver gave up is **cancelada**; only the shop **libera** one
+
+Settled 2026-09-11 (dive-domain-expert review of the counter's no-show door). English already keeps
+the two apart — a seat "given up" by the diver against a seat the shop "freed" — and the counter can
+show both sentences minutes apart on the same screen, so Spanish may not answer both with *liberar*.
+`checkIn.notice.noShowNotBooked` fires only on a cancellation, and `src/lib/no-show.ts` argues that
+distinction is the whole difference between a courtesy and an accusation: somebody who told the shop
+they were not coming is not a no-show.
+
+| English | Spanish |
+| --- | --- |
+| that seat was given up (the diver cancelled) | esa reserva se canceló |
+| the freed seat (the shop wrote the diver off) | la plaza liberada |
+
+`src/i18n/no-show-copy.test.ts` fails if either sentence takes the other's verb, in either locale.
+
+## How names sort: nothing to do here
+
+`Ángel` lands between `Ana` and `Bea`, and `Ñuria` after `Nuria`, on every screen that lists people
+by name — because `people.full_name` carries `COLLATE "und-x-icu"` in the database itself
+(`drizzle/20260911200158_person-name-collation`), not because any query asks for it. Before that
+migration the order came from whatever locale the server was created with, which meant the accented
+names fell after `Zoe` in the test suite and nobody could say where they fell in production.
+
+Nothing in these bundles affects it, and no copy change can break it. If a list ever comes back in
+the wrong order, the column is the place to look, never the translation.
 
 ## Deliberately left alone
 

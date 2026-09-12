@@ -119,8 +119,40 @@ describe("checkout provider against real Checkout Session payloads", () => {
       checkoutUrl: session.url,
       amountTotalCents: 36_000,
       taxAmountCents: 0,
+      // The fixture's `customer` is null beside `customer_creation:
+      // "if_required"` — Stripe has created no Customer for a session nobody
+      // has paid yet, so there is no object for erasure to owe against.
+      stripeCustomerId: null,
       expiresAt: new Date(1_784_727_000 * 1000),
     });
+  });
+
+  it("reads the Customer id off a settled session, and null off an open one", async () => {
+    // Diver erasure can only raise an obligation against a `cus_...` something
+    // local actually recorded (issue #1621), and the only place that id ever
+    // appears is Stripe's own session payload. These two fixtures are the whole
+    // rule: `customer_creation: "if_required"` means a settled session has a
+    // Customer and an abandoned one never does, so null here is "no object was
+    // created", not "we failed to read it".
+    const paid = stripeObjectFixture("checkout-session.paid-expanded-payment-intent");
+    const settled = checkoutProviderFromEnvironment(ENV, fetchReturning({ body: paid }));
+    const settledResult = await settled.retrieveCheckoutSession(
+      "acct_1Nv0FGQ9RKHgCVdK",
+      "cs_test_a1H7",
+    );
+    expect(settledResult.status).toBe("ok");
+    if (settledResult.status !== "ok") return;
+    expect(settledResult.session.stripeCustomerId).toBe(paid.customer);
+    expect(settledResult.session.stripeCustomerId).toMatch(/^cus_/);
+
+    const open = checkoutProviderFromEnvironment(
+      ENV,
+      fetchReturning({ body: stripeObjectFixture("checkout-session.open") }),
+    );
+    const openResult = await open.retrieveCheckoutSession("acct_1Nv0FGQ9RKHgCVdK", "cs_test_a1H7");
+    expect(openResult.status).toBe("ok");
+    if (openResult.status !== "ok") return;
+    expect(openResult.session.stripeCustomerId).toBeNull();
   });
 
   it("takes the settled total from Stripe's amount_total, after the discount it applied", async () => {

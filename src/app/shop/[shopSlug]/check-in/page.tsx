@@ -20,6 +20,7 @@ import type {
 } from "@/db/check-in";
 import { listCheckInQueue, listWalkInTrips } from "@/db/check-in";
 import { getDb } from "@/db/client";
+import { type MarkNoShowOutcome, noShowSalvage, type UndoNoShowOutcome } from "@/db/no-show";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { upcomingScheduleStats } from "@/db/trips";
@@ -30,10 +31,13 @@ import {
   counterIsClear,
   counterTally,
   firstVisitMarksAnException,
+  isNoShowAtCounter,
   isSettledAtCounter,
 } from "@/lib/check-in";
 import { nowDate } from "@/lib/clock";
-import { formatDayParts, formatTime } from "@/lib/format";
+import { displayStoredPhone } from "@/lib/forgiving-fields";
+import { formatDayParts, formatTime, formatWeekdayTime } from "@/lib/format";
+import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
 import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeCodeOf, noticeForForm, noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -42,10 +46,18 @@ import { CounterInstrument } from "./_components/CounterInstrument";
 import { CounterQueue } from "./_components/CounterQueue";
 import { DepartureChips } from "./_components/DepartureChips";
 import { DepartureMeta } from "./_components/DepartureMeta";
-import { checkInAction, markWaiverInPersonFromCheckIn, undoCheckInAction } from "./actions";
+import type { NoShowSalvageCopy } from "./_components/NoShowScript";
+import {
+  checkInAction,
+  markNoShowAction,
+  markWaiverInPersonFromCheckIn,
+  undoCheckInAction,
+  undoNoShowAction,
+} from "./actions";
 import { CheckInQueueRefresh } from "./CheckInQueueRefresh";
 import { CheckInSearch } from "./CheckInSearch";
 import { counterQueuePath, selectFocusedDeparture } from "./focus";
+import { noShowSalvageCopy } from "./salvage-copy";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -91,9 +103,19 @@ type UndoRefusal = Extract<UndoCheckInOutcome, { ok: false }>["reason"];
  * `ArrivalOfflineRefusal` is excluded because those three answer a device
  * reconciling a queued tap, not a staffer at the desk — there is no redirect
  * that can carry one here. See its own note in `src/db/check-in.ts`.
+ *
+ * The counter's two no-show mutations answer in their own vocabulary, and
+ * every one of their refusals reaches this page prefixed (`no_show_…`) so it
+ * cannot collide with the arrival codes above: "not found" means two different
+ * rows depending on which tap produced it, and one map entry for both would
+ * have said the wrong one (issue #1209).
  */
+type MarkNoShowRefusal = Extract<MarkNoShowOutcome, { ok: false }>["reason"];
+type UndoNoShowRefusal = Extract<UndoNoShowOutcome, { ok: false }>["reason"];
+type NoShowRefusal = MarkNoShowRefusal | UndoNoShowRefusal;
 type CheckInNoticeCode = NoticeCodeOf<
-  Exclude<CheckInRefusal | Exclude<UndoRefusal, "not_checked_in">, ArrivalOfflineRefusal>
+  | Exclude<CheckInRefusal | Exclude<UndoRefusal, "not_checked_in">, ArrivalOfflineRefusal>
+  | `no_show_${NoShowRefusal}`
 >;
 
 type NoticeDefinition = {
@@ -149,6 +171,15 @@ const noticeCopy: NoticeMap = {
     tone: "warning",
     key: "checkIn.notice.walkinAddedWaiverUndelivered",
   },
+  // The counter's name-match prompt hands a booking an existing diver's record
+  // on a guess, and the seat is held until someone confirms it is the same
+  // person (H-13, issue #1556). Said here rather than left for the check-in tap
+  // to refuse: that refusal arrives with the diver at the counter, and the
+  // confirm control is on the trip's guest list.
+  "walkin-added-identity-unconfirmed": {
+    tone: "warning",
+    key: "checkIn.notice.walkinAddedIdentityUnconfirmed",
+  },
   // Every walk-in *refusal* now lands back on the walk-in form with the boat
   // still chosen and says which gate it was (`SEAT_SURFACES["walk-in"]`), so
   // the queue only ever carries the two outcomes above. The refusal codes stay
@@ -177,6 +208,36 @@ const noticeCopy: NoticeMap = {
     form: "waiver",
   },
   "waiver-error": { tone: "danger", key: "checkIn.notice.waiverError", form: "waiver" },
+  // **The no-show refusals** (issue #1209). No success entry for either tap,
+  // the same rule as checking in: the row moves into the "Not here" group, or
+  // back out of it, under the finger that did it.
+  //
+  // The safety one is `no-show-already-boarded`: the crew recorded this diver
+  // onto the boat, so the counter is being asked to take a person off the
+  // expected list while somebody may be counting heads at the rail. It is a
+  // refusal with an instruction attached, because the staffer is not wrong to
+  // want it — the roll call is simply the record that outranks the desk.
+  "no-show-already-boarded": { tone: "danger", key: "checkIn.notice.noShowAlreadyBoarded" },
+  "no-show-already-marked": { tone: "neutral", key: "checkIn.notice.noShowAlreadyMarked" },
+  "no-show-not-booked": { tone: "neutral", key: "checkIn.notice.noShowNotBooked" },
+  // Both taps answer this one: nobody fails to show for a boat that never left,
+  // and nobody goes back on one either. The sentence says the departure is
+  // cancelled without instructing a fix, because the fix differs by tap.
+  "no-show-trip-cancelled": { tone: "neutral", key: "checkIn.notice.noShowTripCancelled" },
+  "no-show-before-departure": { tone: "warning", key: "checkIn.notice.noShowBeforeDeparture" },
+  "no-show-window-closed": { tone: "warning", key: "checkIn.notice.noShowWindowClosed" },
+  "no-show-not-marked": { tone: "neutral", key: "checkIn.notice.noShowNotMarked" },
+  // The seat was resold between the mark and the Undo, which is the one
+  // refusal here a staffer genuinely could not have seen coming.
+  "no-show-trip-full": { tone: "danger", key: "checkIn.notice.noShowTripFull" },
+  // Same race, tighter limit: on a ratio-gated course session the boat can
+  // still have room while the instructor does not. This is the refusal that
+  // keeps a walk-up and a late participant from making a third student.
+  "no-show-course-ratio-full": { tone: "danger", key: "checkIn.notice.noShowCourseRatioFull" },
+  // Both taps can answer these two, and they mean the same thing they mean
+  // above — the same words, reached through the prefixed code.
+  "no-show-not-found": { tone: "danger", key: "checkIn.notice.notFound" },
+  "no-show-staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
 };
 
 /**
@@ -244,7 +305,7 @@ export default async function CheckInPage({
   const waiverNotice =
     copy?.form && bid
       ? noticeForForm(
-          { form: copy.form, tone: copy.tone, text: t(copy.key), bookingId: bid },
+          { form: copy.form, tone: copy.tone, text: t(copy.key), bookingId: bid, code: notice },
           "waiver",
         )
       : undefined;
@@ -344,6 +405,61 @@ export default async function CheckInPage({
   const checkIn = checkInAction.bind(null, shopSlug, focusedTripId);
   const undo = undoCheckInAction.bind(null, shopSlug, focusedTripId);
   const recordPaperWaiver = markWaiverInPersonFromCheckIn.bind(null, shopSlug, focusedTripId);
+  const markNoShow = markNoShowAction.bind(null, shopSlug, focusedTripId);
+  const undoNoShow = undoNoShowAction.bind(null, shopSlug, focusedTripId);
+
+  // **"Not here?" opens when the boat leaves without them**, and says something
+  // different once it is gone — which is why both questions are answered here
+  // rather than in the row: this is the layer holding the clock and the queue
+  // at once. `markBookingNoShow` runs the same gate again against locked rows
+  // — a door drawn ten seconds ago is not evidence — so this decides only
+  // whether the disclosure exists and which script it carries (#1209).
+  //
+  // `tripStatus` is `"scheduled"` because `listCheckInQueue` filters to that;
+  // the gate re-reads the live value for itself when the tap lands.
+  const noShowClaimFor = (row: CheckInQueueRow): NoShowClaim | null =>
+    noShowGate({
+      bookingStatus: row.bookingStatus,
+      boarded: row.boarded,
+      tripStatus: "scheduled",
+      startsAt: row.startsAt,
+      now,
+    }) === "eligible"
+      ? noShowClaim({ startsAt: row.startsAt, now })
+      : null;
+
+  // **One read per departure that actually holds a released seat, and none on
+  // an ordinary day.** The salvage is a wait-list read plus, only when nobody
+  // is waiting, a bounded read of the board — worth it for the seat a shop can
+  // still sell, and worth not paying for on the 99 boats that have no no-show.
+  const salvageTripIds = [
+    ...new Set(renderedRows.filter(isNoShowAtCounter).map((row) => row.tripId)),
+  ];
+  const salvageByTrip = new Map(
+    await Promise.all(
+      salvageTripIds.map(
+        async (tripId) =>
+          [tripId, await noShowSalvage(db, { shopId: shop.id, tripId, now })] as const,
+      ),
+    ),
+  );
+
+  /**
+   * The salvage, worded — who the freed seat can go to, or which day the diver
+   * it was taken from can still be put on (`salvage-copy.ts`).
+   */
+  const salvageFor = (row: CheckInQueueRow): NoShowSalvageCopy | undefined => {
+    const offer = salvageByTrip.get(row.tripId);
+    if (!offer || !isNoShowAtCounter(row)) return undefined;
+    return noShowSalvageCopy({
+      t,
+      offer,
+      shopSlug,
+      tripId: row.tripId,
+      diver: { id: row.personId, name: row.personName },
+      formatWhen: (startsAt) => formatWeekdayTime(startsAt, locale, shop.timezone),
+    });
+  };
 
   // **Three groups, and every seat is in exactly one of them** — the figure,
   // the remainder words, the meter's bands and the queue's own split all read
@@ -354,11 +470,20 @@ export default async function CheckInPage({
   // landing, a card corrected, a deeper second site — leaves this figure and
   // joins `cantBoard`, so the count goes visibly backwards and the row returns
   // to the working list rather than sitting green in a folded receipt.
-  const { here, expected, cantBoard, toCome } = counterTally(focus?.rows ?? []);
+  //
+  // A released seat is the fourth answer and the one that leaves `expected`
+  // altogether; `counterTally` argues why. What is this page's half is where
+  // the number then goes: the remainder line below, so it is still said out
+  // loud (issue #1209).
+  const { here, expected, cantBoard, toCome, notHere } = counterTally(focus?.rows ?? []);
   const remainder = focus
     ? [
         toCome > 0 ? t("checkIn.instrument.toCome", { count: toCome }) : null,
         cantBoard > 0 ? t("checkIn.instrument.cantBoard", { count: cantBoard }) : null,
+        // The band's own sentence, not the group heading below it: this line
+        // reads as a run of clauses beside "3 to come", and "Not here — 1"
+        // dropped into that run is a heading wearing a clause's clothes.
+        notHere > 0 ? t("checkIn.instrument.notHere", { count: notHere }) : null,
       ]
         .filter(Boolean)
         .join(" · ") || null
@@ -624,6 +749,10 @@ export default async function CheckInPage({
               undoAction={undo}
               waiverAction={recordPaperWaiver}
               waiverNotice={waiverNoticeOnRow}
+              noShowClaimFor={noShowClaimFor}
+              markNoShowAction={markNoShow}
+              undoNoShowAction={undoNoShow}
+              salvageFor={salvageFor}
               // A boat that has sailed is one the counter is reading rather
               // than working: its receipts are the point, so they arrive open.
               settledOpen={hasSailed(focus.startsAt, now)}
@@ -655,6 +784,10 @@ export default async function CheckInPage({
                     undoAction={undo}
                     waiverAction={recordPaperWaiver}
                     waiverNotice={waiverNoticeOnRow}
+                    noShowClaimFor={noShowClaimFor}
+                    markNoShowAction={markNoShow}
+                    undoNoShowAction={undoNoShow}
+                    salvageFor={salvageFor}
                     // **A search is a lookup, so nothing it found is folded
                     // away.** This branch renders only while `query` is set,
                     // and the row a staffer typed a name to reach is very often
@@ -690,7 +823,9 @@ export default async function CheckInPage({
                         {diver.fullName}
                       </Link>
                       <p className="text-sm text-muted">
-                        {[diver.email, diver.phone].filter(Boolean).join(" · ")}
+                        {[diver.email, displayStoredPhone(diver.phone, shop.addressCountry)]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                     </div>
                     {openDepartures.length > 0 ? (

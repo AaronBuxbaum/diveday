@@ -185,8 +185,8 @@ suite — every slice keeps it green.
 
 **Every slice of this section shipped 2026-08-28** ([shipped.md](../shipped.md)) — 7a–7e, the
 last of them 7d (the after-state and the recap fold) and 7e. Two things the section deliberately did
-not carry are still open and are not slices: the keepsake's unprompted-share artifact, which issue
-#1081 holds, and the second booking-time email, which stays an owner call.
+not carry were not slices: the keepsake's unprompted-share artifact, which issue #1081 held until
+slice 16i shipped it as save-as-image, and the second booking-time email, still an owner call.
 
 ### 8. People, not lists (design complete)
 
@@ -232,8 +232,12 @@ first morning, argued in the Proposed ADR
 is to be picked up by a session before the first pilot shop has run a boat day. The sketches below
 stay so that a green-light after the pilot starts warm; re-triage them then, not now.
 
-Thirteen ideas from the 2026-08-27 design sweep, each composing into a surface items 6–10 already
-design — none adds a nav destination. Every one carries a schema/lib/surface sketch here so a
+**One of the thirteen was built anyway.** *No-show frees the seat* (#1209) shipped on 2026-09-11 and
+its entry now lives in [shipped.md](../shipped.md#no-show-frees-the-seat-delivered-2026-09-11), where
+built work belongs; the twelve sketches below are what the ruling still governs.
+
+Thirteen ideas from the 2026-08-27 design sweep, twelve of them still sketches below, each composing
+into a surface items 6–10 already design — none adds a nav destination. Every one carries a schema/lib/surface sketch here so a
 green-light starts warm; none is scheduled, and several are safety-adjacent enough to need the
 standing reviews. Ordered roughly by leverage-per-effort.
 
@@ -247,11 +251,6 @@ standing reviews. Ordered roughly by leverage-per-effort.
   `milestoneForBooking()` → quiet text on the counter row (6h) and record masthead (8b), one desk
   row when milestones are aboard. Never a badge, never in readiness logic; the projection always
   attributed ("by their own log"). *Small.*
-- **No-show frees the seat.** When a boarding-window booking is `no_show`, the boat full, and
-  live wait-list entries exist, the counter's blocked group offers one row — "Seat free — 3
-  waiting · Invite" — riding the existing freed-seat invite path. Never auto-refunds, never
-  auto-cancels; the seat is still claimed through `bookSpot`'s transaction. *Small; one money
-  policy line for the owner.*
 - **Usage-based service sentence on gear.** `usageSinceService(unitId)` counts reservation-days
   since the last service event; above a per-kind threshold the row's existing service sentence
   gains the usage clause ("~48 dive-days since service"). Copy says dive-days, never dives;
@@ -397,8 +396,9 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
   planned pull request per issue: batch A the `.ics` SEQUENCE and the reminder rhythm, batch B the
   six the shop's own words run through. #1284's remaining half — the stored named set of embed
   departures — was dropped from this slice on 2026-09-05: the owner deferred it on 2026-09-03
-  pending a shop asking, and slice 16f's lens vocabulary is now a live candidate for the reusable
-  tag that deferral wanted decided first. #1357 keeps its take-down question open, which is
+  pending a shop asking. The tag question that deferral wanted decided first was answered on
+  2026-09-10 (issue #1395): the set is the shape, no reusable departure tag is built for the
+  embeds, and 16f's lens vocabulary stays a lens. #1357 keeps its take-down question open, which is
   `ready-for-human`; its consent stamp shipped.
 
 16h, 16i and 16j landed as a stack, each cut from the layer below and merged bottom-up.
@@ -706,8 +706,9 @@ These are per-feature rough edges on shipped work, not future subsystems. They a
 - Setting a per-trip crew role from Today's departure board (assign-only by design), and a
   vocabulary for roles this enum cannot express (assistant instructor, safety diver) —
   [20260803-per-trip-crew-role](../../architecture/decisions/20260803-per-trip-crew-role.md).
-- Retrying a `stripe_invoice_snapshot` erasure obligation, if Stripe ever exposes an API that clears
-  a finalized invoice's identity snapshot —
+- Retrying a `stripe_invoice_snapshot` or `stripe_checkout_session_snapshot` erasure obligation, if
+  Stripe ever exposes an API that clears the identity snapshot a finalized invoice or a Checkout
+  Session holds —
   [20260803-processor-erasure-obligations](../../architecture/decisions/20260803-processor-erasure-obligations.md).
 - A free-text companion field for `certification_agency`'s `other` value. CMAS, RAID, GUE and BSAC
   now have their own enum values (2026-08-06), but a diver holding an IANTD, SEI, ANDI, ACUC, PSAI or

@@ -145,19 +145,34 @@ overlay with a default, never a requirement.
   mechanism — the night palette is a `prefers-color-scheme` block and `data-theme` appears nowhere
   in `globals.css` — so a "DiveDay dark" widget would mean a second copy of the night tokens for one
   frame; a widget follows the visitor's scheme like every other page. **"One course" ships; "a named
-  set" is deferred.** #1348 gave the courses widget `data-show=<course-slug>`, so three of this
+  set" is deferred.** #1284 gave the courses widget `data-show=<course-slug>`, so three of this
   paragraph's four "what it shows" answers are live. The fourth waits on a shop asking for it — the
   owner's ruling on issue #1284, 2026-09-03, which also closed #1262 into it: a stored set needs a
   table, and the open question is whether that table should instead be the reusable departure **tag**
   that [20260904-reef-all-the-way-down](20260904-reef-all-the-way-down.md)'s lens vocabulary has since
   become. Building it now would answer that by accident. What the same pass *did* close: the
-  lightbox's payment step really does open the real page and says so (`?pay=due` lands the frame on a "Continue to payment"
-  door at the top level; Stripe's page refuses framing, and a redirect inside the frame was a blank
-  box), the button widget darkens a pale host colour in the loader itself (the one widget not
-  framed, so the server's rule never ran for it), the generator refuses a departure card with no
-  departure chosen, previews the look that was chosen, and can point a QR code at one boat; the
-  widget views are `noindex`; and a framed widget carries **one** credit line — the loader draws
-  the crawlable one on the host page and tells the frame (`credit=host`) to draw none.
+  lightbox's payment step really does open the real page and says so (`?pay=due` lands the frame on
+  a "Continue to payment" door at the top level; Stripe's page refuses framing, and a redirect
+  inside the frame was a blank box), the button widget darkens a pale host colour in the loader
+  itself (the one widget not framed, so the server's rule never ran for it), the generator refuses
+  a departure card with no departure chosen, previews the look that was chosen, and can point a QR
+  code at one boat; the widget views are `noindex`; and a framed widget carries **one** credit line
+  — the loader draws the crawlable one on the host page and tells the frame (`credit=host`) to draw
+  none.
+
+  **Answered 2026-09-10 (issue #1395): the set is the shape, and no departure tag is built for the
+  embeds.** The two shapes answer different questions. A set says "these three Saturdays", which is
+  what a shop maintains for "the wreck week" — a curated list with nothing in common but the shop's
+  reason for grouping it. A tag says "every departure marked beginner", which is a rule, stays
+  correct as departures are created, and is a feature no shop has asked for. #1262's recommendation
+  to prefer a reusable tag column over a set table is declined on that ground. The lens vocabulary
+  stays a lens: `trip_lenses` and `trips.lens_id` are the shop's word for a kind of day on its
+  **public schedule**, and overloading them into an embed selector would make one column answer to
+  two surfaces whose rules already differ (a lens is single-select, never a safety signal, and
+  rendered verbatim to a diver). This closes a question and touches no code in either direction: the
+  set is still unbuilt — there is no `embed_sets` table in `src/db/schema.ts` and no `data-set`
+  attribute in `src/lib/embed-snippets.ts` or `public/embed.js` — and the set stays the chosen shape
+  if and when a shop asks.
 
 ### 3. The offer gains a hosted website, built to order
 

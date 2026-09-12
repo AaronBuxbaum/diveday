@@ -6,13 +6,14 @@
     "hiddenToast": "Review hidden.",
     "publishedManyOne": "{count} review published to your schedule page.",
     "publishedManyOther": "{count} reviews published to your schedule page.",
-    "error": "That review couldn't be updated. Try again.",
+    "error": "That review couldn’t be updated. Try again.",
     "reasonRequired": "Choose a reason before hiding a review.",
     "noteRequired": "Say what happened, in a few words, when the reason is “Something else”.",
     "noteTooLong": "That note is too long. Keep it to 200 characters.",
     "standout": "Review marked as standout.",
     "standoutRemoved": "Review removed from standouts.",
-    "pulseAddressed": "Marked addressed."
+    "pulseAddressed": "Marked addressed.",
+    "pulseNotAuthorized": "Reading what a diver asked the shop to fix is limited to owners and managers."
   },
   "ratingWithheld": "Your rating still shows on your own schedule page, but DiveDay has stopped publishing it to search engines: more than one in five of the reviews you have ruled on are now hidden. Republishing {count, plural, one {# hidden review} other {# hidden reviews}} brings it back.",
   "standout": "Standout",

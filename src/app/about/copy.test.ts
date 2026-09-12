@@ -58,11 +58,11 @@ describe("the /about 'from day one' band", () => {
     // sentence someone thought was on-topic. Asserted by value rather than by
     // key, because the key is the one that stayed.
     const retired = [
-      "Who you're actually buying from.",
+      "Who you’re actually buying from.",
       "Los registros y las personas detrás del producto.",
       // And the metaphor that briefly replaced it, 2026-08-28 — a headline
       // that made no claim over the band carrying the page's strongest ones.
-      "What you're standing on.",
+      "What you’re standing on.",
       "En qué te apoyas.",
     ];
     expect(retired).not.toContain(messages.marketing.about.leaveTitle);

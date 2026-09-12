@@ -247,6 +247,16 @@ export function WaiverGroup({
                     diver.person.dateOfBirth,
                     signingDate(nowDate(), timezone),
                   )}
+                  // **No namesake confirmation here, deliberately.** This door
+                  // is the absentee case — the family phoned ahead, or handed a
+                  // release over months before they booked (`waivers.ts`,
+                  // `InPersonWaiverSubject`) — and the confirmation asserts in
+                  // the first person that the staffer watched two people sign.
+                  // Offering it to somebody reading a scanned PDF in February
+                  // asks them to attest to a thing nobody witnessed, and the
+                  // value it writes exists to tell a regulator somebody did. A
+                  // namesake family is sent to the counter, where the words are
+                  // true (`divers.notice.waiverGuardianName`).
                   variant="secondary"
                   className=""
                   // A refused attestation lands back here with its notice;

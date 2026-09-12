@@ -64,7 +64,10 @@ describe("commitContactImport", () => {
     expect(summary).toMatchObject({ peopleCreated: 1, peopleUpdated: 0, cardsAdded: 1 });
 
     const person = await personByEmail(db, shop.id, "nadia.import@example.com");
-    expect(person).toMatchObject({ fullName: "Nadia Okonkwo", phone: "+1 305 555 0140" });
+    // E.164, not the spacing the CSV carried: every writer of `people.phone`
+    // normalises so the column does not change meaning when a shop edits its
+    // address (src/db/person-phone.ts).
+    expect(person).toMatchObject({ fullName: "Nadia Okonkwo", phone: "+13055550140" });
     if (!person) throw new Error("person not created");
 
     const roles = await db
@@ -119,6 +122,33 @@ describe("commitContactImport", () => {
     // Re-importing the same card number does not touch it a second time.
     const again = await commitContactImport(db, shop.id, prepareContactImport(second), importer);
     expect(again).toMatchObject({ cardsAdded: 0, cardsSkippedExisting: 1, peopleUpdated: 1 });
+  });
+
+  it("normalises the phone on the update branch too, not only on insert", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    // First file has no phone, so the second one lands through `applyUpdate`
+    // rather than the insert. A CSV is where somebody else's export arrives,
+    // and a bare national column is the ordinary shape it arrives in — stored
+    // bare, its meaning would follow the shop's address field
+    // (src/db/person-phone.ts).
+    await commitContactImport(
+      db,
+      shop.id,
+      prepareContactImport("full_name,email\nUpdate Ursula,ursula.import@example.com"),
+      importer,
+    );
+    await commitContactImport(
+      db,
+      shop.id,
+      prepareContactImport(
+        "full_name,email,phone\nUpdate Ursula,ursula.import@example.com,305-555-0143",
+      ),
+      importer,
+    );
+
+    const person = await personByEmail(db, shop.id, "ursula.import@example.com");
+    expect(person).toMatchObject({ phone: "+13055550143" });
   });
 
   it("merges rental sizes without wiping ones the import doesn't carry", async () => {

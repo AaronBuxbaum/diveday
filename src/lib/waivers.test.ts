@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { WaiverRecord } from "@/db/schema";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "./medical";
-import { localTypedConsentProvider } from "./signatures";
+import { localTypedConsentProvider, namesakeAttestationProvider } from "./signatures";
 import {
   effectiveWaiverForBooking,
   isCleanCompletion,
@@ -43,6 +43,25 @@ describe("waiver domain rules", () => {
       localTypedConsentProvider.capture({ signerName: "  Nora Quinn  ", agreed: true }),
     ).toMatchObject({
       method: "typed_consent",
+      signerName: "Nora Quinn",
+    });
+  });
+
+  /**
+   * The namesake co-signature's own provider (issue #1573): the same shape and
+   * the same two refusals as the attestation it sits beside, distinguished
+   * only by the method it writes — which is the whole of what it is for, since
+   * nothing branches on the value except the seal and the export bundle.
+   */
+  it("captures a namesake co-signature under its own method", () => {
+    expect(namesakeAttestationProvider.capture({ signerName: "A", agreed: true })).toBeNull();
+    expect(
+      namesakeAttestationProvider.capture({ signerName: "Nora Quinn", agreed: false }),
+    ).toBeNull();
+    expect(
+      namesakeAttestationProvider.capture({ signerName: "  Nora Quinn  ", agreed: true }),
+    ).toMatchObject({
+      method: "in_person_attested_namesake",
       signerName: "Nora Quinn",
     });
   });

@@ -3,7 +3,7 @@ import { getAccountSecurity, hasStepUp } from "@/db/account-security";
 import type { AppDb } from "@/db/client";
 import { userAccounts } from "@/db/schema";
 import type { DiveDaySession } from "@/lib/auth";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { noticeUrl, safeShopReturnPath, shopPath } from "@/lib/staff-notices";
 
 export type StepUpPurpose = "money" | "export" | "backup";
 
@@ -11,21 +11,15 @@ export function isStepUpPurpose(value: string | null | undefined): value is Step
   return value === "money" || value === "export" || value === "backup";
 }
 
-/** Only return paths inside the current shop can be resumed after a challenge. */
-export function safeStepUpReturnPath(shopSlug: string, value: string | null | undefined) {
-  if (!value) return null;
-  const prefix = `${shopPath(shopSlug)}/`;
-  if (!value.startsWith(prefix) || value.startsWith("//")) return null;
-  try {
-    const parsed = new URL(value, "https://diveday.invalid");
-    if (parsed.origin !== "https://diveday.invalid" || !parsed.pathname.startsWith(prefix)) {
-      return null;
-    }
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-  } catch {
-    return null;
-  }
-}
+/**
+ * Only return paths inside the current shop can be resumed after a challenge.
+ *
+ * The body moved to `safeShopReturnPath` when `divers/new` turned out to accept
+ * a `?returnTo=` with no check at all; the name stays because the step-up
+ * callers read better for it, and one implementation means the next surface to
+ * accept a return path cannot re-derive a weaker one.
+ */
+export const safeStepUpReturnPath = safeShopReturnPath;
 
 export function stepUpChallengeUrl(
   shopSlug: string,

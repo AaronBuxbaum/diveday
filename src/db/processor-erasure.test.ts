@@ -33,6 +33,11 @@ const INVOICE = (externalId: string, stripeAccountId = "acct_test") => ({
   externalId,
   stripeAccountId,
 });
+const SESSION = (externalId: string, stripeAccountId = "acct_test") => ({
+  target: "stripe_checkout_session_snapshot" as const,
+  externalId,
+  stripeAccountId,
+});
 
 async function personIdByName(db: AppDb, shopId: string, fullName: string) {
   const [row] = await db
@@ -367,6 +372,25 @@ describe("attempting the Stripe customer delete", () => {
     expect(provider.deleteCustomer).not.toHaveBeenCalled();
     expect(await rowById(db, obligation.id)).toMatchObject({ status: "owed", attempts: 0 });
   });
+
+  // A tip's or a booking checkout's Checkout Session (issue #1621). Stripe can
+  // expire a session but exposes no delete, and expiring rewrites neither
+  // `customer_email` nor `customer_details` — so a call here could only be a
+  // call that cannot do the job.
+  it("never calls Stripe for a checkout session either — expire is not erase", async () => {
+    const { db, shop, ownerId } = await twoShops();
+    const [obligation] = await recordProcessorErasureObligations(db, {
+      shopId: shop.id,
+      personId: ownerId,
+      targets: [SESSION("cs_1")],
+    });
+    if (!obligation) throw new Error("obligation missing");
+    const provider = providerReturning({ status: "deleted" });
+
+    expect(await attemptProcessorErasure(db, obligation, provider)).toEqual({ status: "manual" });
+    expect(provider.deleteCustomer).not.toHaveBeenCalled();
+    expect(await rowById(db, obligation.id)).toMatchObject({ status: "owed", attempts: 0 });
+  });
 });
 
 describe("retrying an owed delete", () => {
@@ -434,6 +458,25 @@ describe("retrying an owed delete", () => {
     // retry would be a call that can never succeed.
     const stillOwed = await listOwedProcessorErasures(db, shop.id);
     expect(stillOwed.map((row) => row.target)).toEqual(["stripe_invoice_snapshot"]);
+  });
+
+  it("leaves a checkout session out of the nightly drain, forever", async () => {
+    const { db, shop, ownerId } = await twoShops();
+    await recordProcessorErasureObligations(db, {
+      shopId: shop.id,
+      personId: ownerId,
+      targets: [SESSION("cs_nightly"), CUSTOMER("cus_nightly")],
+    });
+
+    const provider = providerReturning({ status: "deleted" });
+    expect(await retryPendingProcessorErasures(db, { provider })).toEqual({
+      attempted: 1,
+      discharged: 1,
+    });
+    expect(provider.deleteCustomer.mock.calls.map((call) => call[1])).toEqual(["cus_nightly"]);
+    const stillOwed = await listOwedProcessorErasures(db, shop.id);
+    expect(stillOwed.map((row) => row.target)).toEqual(["stripe_checkout_session_snapshot"]);
+    expect(stillOwed[0]).toMatchObject({ attempts: 0, lastError: null });
   });
 
   it("stops retrying a permanently broken delete, but never forgets it", async () => {

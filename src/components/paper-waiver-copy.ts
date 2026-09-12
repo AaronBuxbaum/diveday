@@ -31,6 +31,12 @@ export type PaperWaiverCopy = {
     relationshipLabel: string;
     relationshipChoose: string;
     relationshipOptions: Array<{ value: GuardianRelationship; label: string }>;
+    /**
+     * The namesake confirmation, drawn only on a form that has already been
+     * refused for it (issue #1573). Resolved unconditionally like the rest —
+     * the surface decides whether it appears.
+     */
+    namesakeLabel: string;
   };
 };
 
@@ -46,6 +52,7 @@ export function paperWaiverCopy(t: StaffTranslator): PaperWaiverCopy {
       relationshipLabel: t("shared.paperWaiver.guardianRelationshipLabel"),
       relationshipChoose: t("shared.paperWaiver.guardianRelationshipChoose"),
       relationshipOptions: staffGuardianRelationshipOptions(t),
+      namesakeLabel: t("shared.paperWaiver.guardianNamesakeLabel"),
     },
   };
 }

@@ -427,6 +427,41 @@ export function LedgerRow({
         // agenda rows use: an invisible overlay makes the whole row the tap
         // target, and the label keeps the destination's name for a screen
         // reader. Anything interactive in `trailing` sits above it.
+        //
+        // **Prefetch: deliberately left on (decided 2026-09-10, #1447).** The
+        // measurement that raised the question, so nobody re-runs it: on the
+        // seeded demo shop's diver roster under `next start` against a
+        // production build, one view of one page issued **16 prefetch
+        // renders** — five nav destinations plus `divers/new`, then one per
+        // visible LedgerRow — and 43 across three navigations, each fired twice
+        // a second apart (what a zero dynamic stale time looks like from
+        // outside), still in flight and holding Chromium's six connections to
+        // the origin when a page turn on the same screen needed one.
+        // `prefetch={false}` on this one link halved it to 8 and cost the row
+        // open 83-103ms -> 308-360ms, on the 34 surfaces that render a
+        // LedgerRow and on the single interaction the roster exists for ("the
+        // row is the door", ADR 20260827-people-not-lists). A quarter second of
+        // dead air on the roster's whole purpose is not worth halving a cost
+        // the shell was already about to cut.
+        //
+        // Read the numbers as history, not as this tree. They were taken
+        // 2026-09-07, and what made each prefetch expensive was the six awaits
+        // the staff layout held above `{children}` — session, shop row, locale,
+        // countBlockedDivers — which #1446 moved into `ShopChrome`, beside
+        // `{children}` behind a `<Suspense>`, on 2026-09-08 (ADR
+        // 20260804-instant-navigation, amendment of that date). So each
+        // prefetch now costs less than the figure above, by an amount **nobody
+        // has measured**. That re-measurement is the only thing standing
+        // between this comment and an answer; it is not waiting on any other
+        // change.
+        //
+        // Two things not to reach for meanwhile: `prefetch={true}`, which is
+        // the per-link prefetch and so the same problem with more work; and a
+        // "use client" boundary here for `router.prefetch` on
+        // pointer-enter/focus — Next's own guide names it for exactly this
+        // shape, but it is a boundary this component does not have, and 34
+        // render trees would follow it to the client. If it is ever taken, it
+        // wraps this `<Link>` alone.
         <Link href={href} aria-label={linkLabel} className="absolute inset-0 z-0" />
       ) : null}
     </Tag>

@@ -124,7 +124,10 @@ export async function addDiverNote(
  * parameters these two sentences take. A code needing a third name would
  * compile here and render with a gap, so it does not compile here.
  */
-export type DiverActivityCode = "medical_clearance_opened" | "record_exported";
+export type DiverActivityCode =
+  | "identity_confirmed"
+  | "medical_clearance_opened"
+  | "record_exported";
 
 /**
  * One line on the diver-record trail, subject-only — the same shape
@@ -469,7 +472,12 @@ export async function pagedDiverActivity(
  */
 export type TripActivityEntry =
   | {
-      code: "booking_removed" | "booking_restored" | "seat_added" | "seat_added_walk_in";
+      code:
+        | "booking_removed"
+        | "booking_restored"
+        | "identity_confirmed"
+        | "seat_added"
+        | "seat_added_walk_in";
       diver: string;
     }
   | { code: "crew_assigned" | "crew_removed"; crew: string }

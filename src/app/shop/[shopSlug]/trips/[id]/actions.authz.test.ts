@@ -505,6 +505,15 @@ describe("who may run each action on the trip page", () => {
     "createDirectTripInvitationAction",
     "removeBookingAction",
     "undoRemoveBookingAction",
+    // Attesting that a flagged booking really is the diver it was attached to
+    // is a lighter-weight diver merge, and merge is owner-or-manager — so this
+    // was re-examined in the RFH-07 security pass and deliberately left open.
+    // The flag is raised at the counter, by the trigram name prompt and by a
+    // shared inbox, and a staffer who cannot clear the flag they just raised
+    // strands a walk-in until a manager walks past. What carries it instead is
+    // the trail `confirmBookingIdentity` now writes under the staffer's name,
+    // on the departure and on the matched diver's record — `src/lib/authz.ts`'s
+    // own standard for the most sensitive read in the product.
     "confirmDiverIdentityAction",
     "markWaiverInPersonAction",
     "saveRosterEmergencyContactAction",

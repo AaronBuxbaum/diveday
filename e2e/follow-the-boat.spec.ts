@@ -30,7 +30,7 @@ test.describe("the shop's own boats", () => {
     // The share row is on the diver's own thread, and what it hands over is
     // the boat's page rather than the capability URL the diver is standing on.
     const diver = await page.context().browser()?.newContext();
-    if (!diver) throw new Error("no browser to open a diver's context with");
+    if (!diver) throw new Error("no browser to open a diver’s context with");
     let followUrl: string;
     try {
       const diverPage = makeActivitySafe(await diver.newPage());

@@ -537,6 +537,24 @@ export const people = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
+    /**
+     * **`COLLATE "und-x-icu"` in the database**, set by
+     * `drizzle/20260911200158_person-name-collation`. The type here is plain
+     * `text` because drizzle-orm's pg-core has no way to say it — and because
+     * drizzle-kit only *reports* a collation delta rather than modelling one,
+     * a later `pnpm db:generate` will not take it back off.
+     *
+     * The collation lives on the column so that it lives nowhere else.
+     * Twenty-one `orderBy(asc(people.fullName))` call sites across `src/db`
+     * inherit it with no query edit, and `offsetPage` (src/db/paging.ts) slices
+     * exactly that order — so a name list ordered by the database default is
+     * not merely untidy, it is a wrong *page one*, with `Ángel` and `Ñuria`
+     * after `Zoe` where a Spanish reader looks for them near the top. The
+     * default is `C` (byte order) on PGlite and whatever initdb was handed on a
+     * server, which is why the suite and production could not agree until the
+     * column answered for itself. `src/db/name-collation.test.ts` proves it on
+     * PGlite and `name-collation.postgres.test.ts` on a real server.
+     */
     fullName: text("full_name").notNull(),
     /** Nullable: walk-ups may not have one on file yet. */
     email: text("email"),
@@ -4151,11 +4169,22 @@ export const notificationSendQueue = pgTable(
      * because nothing prunes this table (it is not in `RETENTION_DAYS`), so a
      * `sent` row that kept its recipient would keep it forever. The one
      * exception is `sealed_payload_unreadable`, which keeps the payload *and*
-     * the handles on purpose: that row is waiting for a restored key rather
-     * than finished, and a parked row that had dropped its handles would be a
-     * row an erasure could no longer find. An earlier version of this
-     * paragraph claimed a blanket clear and was wrong about two of the four
-     * writes (`security-reviewer`, on issue #1298).
+     * the handles on purpose: that row is parked rather than finished, and a
+     * parked row that had dropped its handles would be a row an erasure could
+     * no longer find. What does the waiting is the drain's own candidate query
+     * (`drainableStatus` in src/db/notifications.ts), which re-offers this one
+     * code on each daily pass until the row's `attempts` reach a fortnight's
+     * worth — long enough for somebody to notice a mis-set
+     * `SECRET_ENCRYPTION_KEY` and put it back (issue #1340).
+     *
+     * **The exception ends with the waiting.** The pass that takes the row's
+     * last attempt parks it clearing all five columns, because past the bound
+     * nothing offers the row again: the payload could not be drained by a
+     * restored key, and the handles would be keeping a name and an address
+     * alive in a table with no window. Parked used to mean kept for good here
+     * (H-02; `security-reviewer`). An earlier version of this paragraph
+     * claimed a blanket clear and was wrong about two of the four writes
+     * (`security-reviewer`, on issue #1298).
      *
      * `booking_id` deliberately carries no foreign key: it is a match handle
      * for a sweep, not a relationship, and a real reference would make an
@@ -4747,6 +4776,31 @@ export const bookingCheckouts = pgTable(
     status: checkoutStatus("status").notNull().default("pending"),
     stripeAccountId: text("stripe_account_id").notNull(),
     stripeSessionId: text("stripe_session_id").notNull(),
+    /**
+     * The `cus_…` object Stripe created for this session, once Stripe says one
+     * exists. Sessions are opened with `customer_creation: "if_required"`, so
+     * Stripe mints a Customer only when it settles (or attempts to) and never
+     * for an abandoned one: **null means no Customer object was created**, not
+     * that a write was missed. Recorded so diver erasure can raise a real
+     * obligation against it instead of guessing (issue #1621, ADR
+     * 20260803-processor-erasure-obligations) — the same class of pointer
+     * `orders.stripe_customer_id` already carries, and excluded from the shop
+     * export for the same reason.
+     *
+     * **For a row written before `20260911222255_checkout-stripe-customer`,
+     * null also means the column did not exist yet**, and nothing on the row
+     * tells that apart from the abandoned case. A `pending` row self-heals —
+     * the webhook and `refreshCheckoutFromStripe` both record what Stripe
+     * reports — but a `completed` one is never read from Stripe again, so its
+     * null is permanent. There is no backfill because H-49 says so: the rows
+     * predating the column are seed and demo data. The promise that survives
+     * either way is the manual half — `pushSessionTargets` raises
+     * `stripe_checkout_session_snapshot` for every session row regardless of
+     * this column, so an owner still files Stripe's data-deletion request and
+     * erasure never reports that nothing is owed (`security-reviewer`,
+     * 2026-09-12).
+     */
+    stripeCustomerId: text("stripe_customer_id"),
     /** Stripe's hosted payment page; shown again as the recovery link while the session is open. */
     checkoutUrl: text("checkout_url"),
     /**
@@ -4972,6 +5026,17 @@ export const tips = pgTable(
     status: tipStatus("status").notNull().default("pending"),
     stripeAccountId: text("stripe_account_id").notNull(),
     stripeSessionId: text("stripe_session_id").notNull(),
+    /**
+     * The `cus_…` object Stripe created for this tip's session, once Stripe
+     * says one exists — same rule as `booking_checkouts.stripe_customer_id`:
+     * `customer_creation: "if_required"` means null is "Stripe created no
+     * Customer", never "we forgot to write it" (issue #1621) — and the same
+     * exception, that a row written before
+     * `20260911222255_checkout-stripe-customer` is null too, unbackfilled under
+     * H-49, with the session snapshot still owed for it
+     * (`security-reviewer`, 2026-09-12).
+     */
+    stripeCustomerId: text("stripe_customer_id"),
     checkoutUrl: text("checkout_url"),
     currency: text("currency").notNull(),
     amountCents: integer("amount_cents").notNull(),
@@ -6259,6 +6324,11 @@ export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
   // 3): ten minutes, minted by the diver's own thread and consumed by the
   // booking it leads to. The one purpose whose expiry is not the trip's.
   "handoff",
+  // The QR on the arrival card the diver downloads, prints and can forward.
+  // It authorizes nothing but being recognised at the counter tablet — the
+  // same thing typing a surname there already buys — so a card left on a
+  // hotel desk leaks no more than the diver's name on the manifest.
+  "arrival",
 ]);
 
 /**
@@ -6370,10 +6440,11 @@ export const calendarFeeds = pgTable(
 /**
  * A long-lived, revocable bearer credential over the shop's **departures board**
  * — the lobby TV / dock tablet at `/board/[token]` (issue #1426, N-23). Same
- * discipline as `calendar_feeds`: only the hash is stored, the raw token exists
- * solely in the response that minted it, and there is no expiry, because a
- * screen on a wall that went dark after 60 days would be noticed by nobody
- * until a diver asked why the board is blank. Revocation is the mitigation.
+ * discipline as `calendar_feeds`: only the hash is stored and the raw token
+ * exists solely in the response that minted it. A **board** link has no expiry,
+ * because a screen on a wall that went dark after 60 days would be noticed by
+ * nobody until a diver asked why the board is blank; revocation is the
+ * mitigation there. A **check-in** link does expire — see `expires_at`.
  *
  * What the board shows is decided at the reader (`src/db/departures-board.ts`),
  * never by a column here: a boat's title, time, site, stage word, meeting point
@@ -6428,6 +6499,24 @@ export const displayTokens = pgTable(
      * a screen that is actually showing from a link nobody ever opened.
      */
     lastShownAt: timestamp("last_shown_at", { withTimezone: true }),
+    /**
+     * **When this link stops verifying** (issue #1609, security review). The
+     * `check_in` case is the one that expires, because it is the one that
+     * **writes**: its URL lives on a tablet on a counter, and a credential that
+     * records arrivals against real bookings should not outlive the tablet by
+     * years. The lifetime is `CHECK_IN_LINK_TTL_DAYS`, derived in the writer
+     * from `purpose`, and a manager renews it from Settings.
+     *
+     * Null means never **for a board link only**. A `check_in` row with no
+     * expiry — every one minted before this column existed — is not an
+     * unbounded kiosk credential: `verifyDisplayToken` reads the purpose
+     * alongside the expiry and refuses it (security review, 2026-09-12), so the
+     * column being nullable never widens what the counter's URL can do.
+     *
+     * An expired row is not a revoked row: it stays in the settings list, so
+     * the manager whose kiosk stopped working can see why and renew it.
+     */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
   },
   (table) => [
@@ -7071,10 +7160,13 @@ export const tripRequirements = pgTable(
  * confirmation can only ever name one of them.
  *
  * Deliberately not `gear_item_kind` below: that one is the *register's*
- * alphabet and carries `regulator`, `tank`, `drysuit`, `hood` and a split
- * `mask`/`fins`, none of which has a size column on `rental_fit_profiles`. A
- * confirmation naming one of those could not be printed back to a diver
- * against any size the shop actually holds.
+ * alphabet and carries `regulator`, `tank`, `hood` and a split `mask`/`fins`,
+ * none of which has a size column on `rental_fit_profiles`. A confirmation
+ * naming one of those could not be printed back to a diver against any size
+ * the shop actually holds.
+ *
+ * `drysuit` was in that excluded company until issue 1414 gave it `drysuit_size`
+ * below; it is a sized piece now, on a scale of its own, and belongs here.
  */
 export const rentalFitItem = pgEnum("rental_fit_item", [
   "bcd",
@@ -7082,6 +7174,7 @@ export const rentalFitItem = pgEnum("rental_fit_item", [
   "boots",
   "mask_fins",
   "weights",
+  "drysuit",
 ]);
 
 /**
@@ -7125,6 +7218,24 @@ export const rentalFitProfiles = pgTable(
     rentsSmb: boolean("rents_smb").notNull().default(false),
     bcdSize: text("bcd_size"),
     wetsuitSize: text("wetsuit_size"),
+    /**
+     * The one add-on that carries a size (issue 1414), and it is **not** the
+     * wetsuit's. A drysuit is sized on the manufacturer grid a rental wall is
+     * racked from — a girth letter, a trailing `T` for the tall cut — so a
+     * plain wetsuit value written here drops the axis the wall is racked by.
+     * `text`, not an enum: the grid varies by manufacturer, staff record an
+     * off-grid size as free text, and which codes the diver's own select
+     * offers is the owner's open call (H-76).
+     *
+     * Most rental drysuits have their boots vulcanised on, so this size
+     * answers for them too — there is no boot piece to pull off the rack
+     * separately, which is why `rents_drysuit` pushes one packing piece where
+     * `rents_wetsuit` pushes two (`src/lib/dive-prep.ts`). A fleet stocking
+     * neoprene-sock suits worn with separate rock boots says so in this same
+     * free text ("ML, rock boot 9"): no column records a rock-boot size, and
+     * this is the one field on the fit that reaches the packing list verbatim.
+     */
+    drysuitSize: text("drysuit_size"),
     bootSize: text("boot_size"),
     finSize: text("fin_size"),
     weightPreference: text("weight_preference"),
@@ -8697,10 +8808,17 @@ export const mediaDeletionAttempts = pgTable(
  *   Invoice/PaymentIntent/Charge separately in its own data-deletion flow. No
  *   API call clears it, so this kind is a genuinely manual step and is
  *   discharged only by a human attesting they filed that request.
+ * - `stripe_checkout_session_snapshot` — a `cs_…` Checkout Session. It carries
+ *   `customer_email` exactly as DiveDay handed it over and `customer_details`
+ *   once the diver completes it, and Stripe exposes no delete for a session:
+ *   `POST /v1/checkout/sessions/{id}/expire` closes it but rewrites neither
+ *   field. Same shape as the invoice snapshot, therefore, and discharged the
+ *   same way — a human attesting to the data-deletion request (issue #1621).
  */
 export const processorErasureTarget = pgEnum("processor_erasure_target", [
   "stripe_customer",
   "stripe_invoice_snapshot",
+  "stripe_checkout_session_snapshot",
 ]);
 
 export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed", "discharged"]);
@@ -8710,11 +8828,15 @@ export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed"
  * durable counterpart to `mediaDeletionAttempts` for records DiveDay does not
  * store itself (ADR 20260803-processor-erasure-obligations).
  *
- * Raised by `anonymizeDiver` (src/db/anonymize.ts) from the erased diver's
- * orders: one `stripe_customer` row per distinct `orders.stripe_customer_id`,
- * one `stripe_invoice_snapshot` row per distinct `orders.stripe_invoice_id`.
- * Both of those columns are `NOT NULL` pointers into the shop's own Stripe
- * account and the local scrub cannot rewrite either.
+ * Raised by `anonymizeDiver` (src/db/anonymize.ts) from all three tables that
+ * can hold a Stripe object standing for a person — `orders`, `tips` and
+ * `booking_checkouts`. Orders contribute a `stripe_customer` row per distinct
+ * `stripe_customer_id` and a `stripe_invoice_snapshot` row per distinct
+ * `stripe_invoice_id`; the other two contribute a
+ * `stripe_checkout_session_snapshot` row per session and a `stripe_customer`
+ * row per session that actually minted one. Orders alone was the gap issue
+ * #1621 closed: a diver who only ever tipped, or who paid through a checkout
+ * that never became an order, left nothing in this ledger at all.
  *
  * The table does two jobs, and the `target` above says which applies:
  *
@@ -8724,12 +8846,12 @@ export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed"
  *      a dead network must not roll back an erasure the diver asked for, so the
  *      row commits first and the attempt happens after; `attempts`/`lastError`
  *      are why a failure is visible rather than merely retried forever.
- *   2. **A record of what no API can reach.** The invoice-snapshot rows are not
- *      retryable at all. They exist so nothing in the product implies erasure
- *      finished when a copy of the name and email is still sitting on a
- *      finalized invoice.
+ *   2. **A record of what no API can reach.** The invoice-snapshot and
+ *      checkout-session-snapshot rows are not retryable at all. They exist so
+ *      nothing in the product implies erasure finished when a copy of the name
+ *      and email is still sitting on a finalized invoice or a Checkout Session.
  *
- * `external_id` is a `cus_…`/`in_…` handle, not personal data: it is the
+ * `external_id` is a `cus_…`/`in_…`/`cs_…` handle, not personal data: it is the
  * pointer, and the row deliberately keeps no name, address or amount.
  */
 export const processorErasureObligations = pgTable(
@@ -8750,8 +8872,8 @@ export const processorErasureObligations = pgTable(
     target: processorErasureTarget("target").notNull(),
     externalId: text("external_id").notNull(),
     /**
-     * The connected account the object lives on, snapshotted from
-     * `orders.stripe_account_id` rather than re-derived from the shop at retry
+     * The connected account the object lives on, snapshotted from the source
+     * row's own `stripe_account_id` rather than re-derived from the shop at retry
      * time — the same discipline `refundOrder` uses (src/db/orders.ts). A shop
      * that disconnects and reconnects gets a *different* account id, and a
      * delete aimed at the current one would 404 forever against an object that

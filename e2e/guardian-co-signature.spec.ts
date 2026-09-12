@@ -92,7 +92,13 @@ test("a minor's release asks for a parent, refuses without one, and names who co
   // Signed by both, and the page settles exactly as an adult's does. No
   // `/ready` hand-off here: this diver holds no seat, so the thread has no
   // next step to send them to.
+  //
+  // **With the address cleared** (issue #1453): the guardian's email is
+  // optional, and the release a family with none gives is a release. The
+  // browser used to refuse this submit on its own `required`; the server used
+  // to refuse it after that.
   await page.getByLabel("Guardian’s full name").fill(`Jordan Guardian ${stamp}`);
+  await page.getByLabel("Guardian’s email").fill("");
   await page.getByRole("button", { name: "Sign waiver" }).click();
   await expect(page.getByRole("heading", { name: /paperwork done/ })).toBeVisible();
 
@@ -100,4 +106,146 @@ test("a minor's release asks for a parent, refuses without one, and names who co
   await page.goto(record);
   await expect(page.getByText(/Good until/)).toBeVisible();
   await expect(page.getByText(`Co-signed by Jordan Guardian ${stamp} (parent)`)).toBeVisible();
+});
+
+/**
+ * **The namesake family, on paper, at the counter** (issue #1573, owner
+ * decision 2026-09-10; ADR 20260907-guardian-co-signature, decision 10).
+ *
+ * A parent whose ID reads exactly like their child's is refused on both paths
+ * and has been since the co-signature shipped — which left a family standing
+ * at a counter with a signed form the shop could not record. The paper path
+ * now has one way through, and this walks it end to end from the surface a
+ * staffer actually meets it on: the refusal, the confirmation it now offers,
+ * and the record that comes out the other side saying who co-signed.
+ *
+ * **At the counter rather than on the diver record**, because the confirmation
+ * says in the first person that the staffer watched two people sign, and the
+ * counter is a door a diver is standing at. The diver record is the absentee
+ * case by design, and the second half of this test pins that it offers no way
+ * through (`dive-domain-expert`, issue #1453).
+ *
+ * The online half of the same rule does **not** move, and the test above pins
+ * that: a guardian typing the diver's own name into `/waivers/[token]` is
+ * still refused, because online the shop has no evidence a second person is
+ * in the room. `src/db/waivers.test.ts` holds the adversarial version.
+ */
+test("a namesake parent can co-sign on paper, on the staffer's own attestation", async ({
+  page,
+  request,
+}) => {
+  // The demo shop has a blocked adult and a co-signed minor and nobody who is
+  // both, so the one row this flow needs is seeded rather than built: Lena
+  // Fischer, thirteen, with her release taken back out from under her. The
+  // seat comes back by id because the queue addresses its departure that way.
+  const seeded = await request.post("/api/test/seed-trouble-states?blockedMinor=1");
+  expect(seeded.ok()).toBe(true);
+  const { blockedMinor } = (await seeded.json()) as {
+    blockedMinor?: { bookingId: string; tripId: string };
+  };
+  if (!blockedMinor) throw new Error("seed-trouble-states found no seat for the demo's minor");
+
+  // By departure rather than by search: the counter re-renders its whole list
+  // when a search lands, which rebuilds the row and closes the form on it
+  // (`check-in.spec.ts` says so at length). Naming the trip puts her row on
+  // screen in one render and keeps it there.
+  await page.goto(`/shop/${SHOP}/check-in?trip=${blockedMinor.tripId}`);
+  const row = page.locator("article").filter({ hasText: "Lena Fischer" }).filter({ visible: true });
+  await expect(row.getByText("Blocked")).toBeVisible();
+
+  const fillPaperForm = async () => {
+    await row
+      .getByLabel("I have this diver’s signed release on file", { exact: false })
+      .filter({ visible: true })
+      .check();
+    await row.getByLabel("Parent or guardian who signed").fill("Lena Fischer");
+    await row.getByLabel("Relationship").selectOption("parent");
+  };
+
+  await row.getByText("Mark signed on paper").click();
+  await fillPaperForm();
+  // **The refusal is still the default.** Nothing about this submission says
+  // the staffer watched two people sign, so the shop is told what happened and
+  // the release is not recorded.
+  await row.getByRole("button", { name: "Record paper signature" }).click();
+  const refused = page.locator("article").filter({ hasText: "Lena Fischer" }).filter({
+    visible: true,
+  });
+  await expect(refused.getByText("The co-signer’s name is the diver’s own")).toBeVisible();
+
+  // And the way through, which only this refusal draws: the form comes back
+  // open, carrying the staffer's own assertion about what they saw.
+  const namesake = refused.getByLabel("This co-signer and this diver have the same name", {
+    exact: false,
+  });
+  await expect(namesake).toBeVisible();
+  await refused
+    .getByLabel("I have this diver’s signed release on file", { exact: false })
+    .filter({ visible: true })
+    .check();
+  await refused.getByLabel("Parent or guardian who signed").fill("Lena Fischer");
+  await refused.getByLabel("Relationship").selectOption("parent");
+  await namesake.check();
+  await refused.getByRole("button", { name: "Record paper signature" }).click();
+
+  // The blocker is genuinely gone rather than hidden: the same immutable
+  // record a self-service signature produces, so the counter offers the act it
+  // was holding back.
+  await expect(
+    page
+      .locator("article")
+      .filter({ hasText: "Lena Fischer" })
+      .filter({ visible: true })
+      .getByRole("button", { name: "Check in Lena Fischer" }),
+  ).toBeVisible();
+});
+
+/**
+ * **The diver record offers no way through the same refusal**, and that is the
+ * point rather than an omission.
+ *
+ * That door is the absentee case — the family phoned ahead, or handed a
+ * release over months before they booked — and the confirmation next door
+ * asserts that the staffer watched two people sign. Offering it to somebody
+ * reading a scanned PDF in February asks them to attest to a thing nobody
+ * witnessed, and `in_person_attested_namesake` exists to tell a regulator that
+ * somebody did (`dive-domain-expert`, issue #1453).
+ *
+ * Driven by the notice in the URL rather than by a submit, because `?notice=`
+ * is exactly the untrusted input a staffer could reach this state with by
+ * hand: if the checkbox is drawn for anyone, it is drawn here.
+ */
+test("the diver record refuses a namesake co-signer and offers no tick", async ({ page }) => {
+  const stamp = Date.now();
+  const diver = `Namesake E2E Diver ${stamp}`;
+
+  await page.goto(`/shop/${SHOP}/divers/new`);
+  await page.getByLabel("Full name").fill(diver);
+  await page.getByLabel("Email").fill(`namesake-${stamp}@example.com`);
+  await page.getByRole("button", { name: "Add diver" }).click();
+  await page.waitForURL(new RegExp(`/shop/${SHOP}/divers/[0-9a-f-]{36}`));
+  const record = new URL(page.url()).pathname;
+
+  await page.goto(`${record}?edit=1`);
+  await page.getByLabel("Date of birth").fill(daysFromNow(-365 * 13));
+  await page.getByRole("button", { name: "Save details" }).click();
+  await expect(page.getByRole("status")).toContainText("Diver details updated");
+
+  const waiverCard = page.getByRole("region", { name: "Waiver" });
+  await page.goto(record);
+  await waiverCard.getByText("Send options", { exact: true }).click();
+  await waiverCard.getByRole("button", { name: "Mark signed on paper" }).click();
+  await page.getByLabel("I have this diver’s signed release on file", { exact: false }).check();
+  await page.getByLabel("Parent or guardian who signed").fill(diver);
+  await page.getByLabel("Relationship").selectOption("parent");
+  await page.getByRole("button", { name: "Record paper signature" }).click();
+
+  // Refused, and told where the confirmation lives instead of being offered one
+  // here.
+  await expect(page.getByText("The co-signer’s name is the diver’s own")).toBeVisible();
+  await expect(page.getByText("record the release at the check-in counter")).toBeVisible();
+  await expect(page.getByLabel("Parent or guardian who signed")).toBeVisible();
+  await expect(
+    page.getByLabel("This co-signer and this diver have the same name", { exact: false }),
+  ).toHaveCount(0);
 });

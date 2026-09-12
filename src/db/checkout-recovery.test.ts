@@ -49,6 +49,8 @@ const stillOpen: CheckoutProvider["retrieveCheckoutSession"] = async () => ({
     checkoutUrl: "https://checkout.stripe.com/c/pay/cs_1",
     amountTotalCents: 18_000,
     taxAmountCents: null,
+    // An open session has no Customer: Stripe mints one only `if_required`.
+    stripeCustomerId: null,
     expiresAt: new Date(NOW.getTime() + 24 * HOUR_MS),
   },
 });
@@ -62,6 +64,7 @@ const alreadyPaid: CheckoutProvider["retrieveCheckoutSession"] = async () => ({
     checkoutUrl: null,
     amountTotalCents: 18_000,
     taxAmountCents: null,
+    stripeCustomerId: "cus_recovered",
     expiresAt: null,
   },
 });
@@ -75,6 +78,7 @@ const alreadyPaidWithTax: CheckoutProvider["retrieveCheckoutSession"] = async ()
     checkoutUrl: null,
     amountTotalCents: 19_800,
     taxAmountCents: 1_800,
+    stripeCustomerId: "cus_recovered_with_tax",
     expiresAt: null,
   },
 });
@@ -310,6 +314,11 @@ describe("sendDueCheckoutRecoveries", () => {
       .from(bookingCheckouts)
       .where(eq(bookingCheckouts.id, checkoutId));
     expect(row?.status).toBe("completed");
+    // The scan is the third and last path that ever reads a session back from
+    // Stripe, so it records the Customer the settlement left behind too —
+    // otherwise a checkout no webhook ever closed is the one place the id is
+    // seen and dropped (issue #1621).
+    expect(row?.stripeCustomerId).toBe("cus_recovered");
   });
 
   it("keeps Stripe tax when recovery resolves a paid tax-enabled checkout", async () => {

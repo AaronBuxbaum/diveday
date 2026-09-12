@@ -16,9 +16,29 @@ import type { AppDb } from "./client";
 import { courses, divePackages, orders, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
+/**
+ * The shop a public URL names. Its predicate is `eq(shops.slug, slug)` and
+ * nothing else, and {@link shopIdBySlug} below must refuse exactly the same
+ * rows: the edge asks the cheap question and the page asks the full one, so
+ * the moment the two predicates disagree the edge 404s a storefront the page
+ * would have rendered (ADR 20260912-the-public-namespace-refuses-at-the-edge).
+ */
 export async function getShopBySlug(db: AppDb, slug: string) {
   const [shop] = await db.select().from(shops).where(eq(shops.slug, slug)).limit(1);
   return shop ?? null;
+}
+
+/**
+ * "Is there a shop at this slug?" — the id alone, for the one caller that only
+ * needs to know the answer is yes.
+ *
+ * `src/proxy.ts` runs this before the static shell of every `/s/**` document
+ * request, so it reads one unique index and carries no row back. Same
+ * predicate as {@link getShopBySlug} above, deliberately: see its note.
+ */
+export async function shopIdBySlug(db: AppDb, slug: string): Promise<string | null> {
+  const [shop] = await db.select({ id: shops.id }).from(shops).where(eq(shops.slug, slug)).limit(1);
+  return shop?.id ?? null;
 }
 
 /**

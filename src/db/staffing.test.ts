@@ -148,10 +148,12 @@ describe("staffing view", () => {
    * Stands up an instructor-crewed session on `courseTitle`, seats `withinRatio`
    * divers through the booking gate, then inserts one more seat *directly* to
    * push it over — see the note above for why the extra seat bypasses
-   * `createBooking`. Returns the roster's crew-gap summary for a window
-   * holding that one session and nothing else.
+   * `createBooking`. Returns the whole staffing view for a window holding that
+   * one session and nothing else: the summary is the count, and `gapTrips`
+   * carries the *code* the week's chip renders, which is a separate fact since
+   * issue #1339 split the intro cap off from the entry-level one.
    */
-  async function overRatioSessionCrewGaps(courseTitle: string, withinRatio: number, tag: string) {
+  async function overRatioSessionView(courseTitle: string, withinRatio: number, tag: string) {
     const { db, shop } = await seededShopContext();
     const [course] = await db
       .select()
@@ -200,7 +202,7 @@ describe("staffing view", () => {
       new Date(trip.startsAt.getTime() - 60 * 60 * 1000),
       new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
     );
-    return view.crewGaps;
+    return view;
   }
 
   // A session already carrying an instructor but booked past its ratio still
@@ -210,7 +212,7 @@ describe("staffing view", () => {
   // "has an instructor?" boolean this replaced would have done.
   it("counts a ratio-over-capacity session that already has an instructor as needing crew", async () => {
     // Open Water training dives: 8 through the gate, the 9th inserted directly.
-    expect(await overRatioSessionCrewGaps("Open Water Diver", 8, "ow")).toEqual({
+    expect((await overRatioSessionView("Open Water Diver", 8, "ow")).crewGaps).toEqual({
       departures: 1,
       needCrew: 1,
     });
@@ -220,10 +222,27 @@ describe("staffing view", () => {
     // The same advisory at the Instructor Manual DSD ratio (DOM-H2, HD-6): 2
     // through the gate, the 3rd inserted directly. Under the old 8/12 numbers
     // this trip read as covered.
-    expect(await overRatioSessionCrewGaps("Discover Scuba Diving", 2, "dsd")).toEqual({
+    expect((await overRatioSessionView("Discover Scuba Diving", 2, "dsd")).crewGaps).toEqual({
       departures: 1,
       needCrew: 1,
     });
+  });
+
+  /**
+   * Issue #1339. Both sessions reached the staffing week as `over_ratio`,
+   * because this walk placed `courseCrewGap`'s bare `code` and dropped the
+   * `ratio` beside it. On the week's chip that reads "Over student ratio",
+   * which sends a manager — or a divemaster pressing "Ask for this one" — after
+   * crew who cannot raise an instructor-to-student cap by a single seat.
+   */
+  it("tells the intro cap and the entry-level one apart in the code it hands back", async () => {
+    const intro = await overRatioSessionView("Discover Scuba Diving", 2, "dsd-code");
+    expect(intro.gapTrips.map((trip) => trip.gap)).toEqual(["over_intro_ratio"]);
+
+    // The entry-level cap, which a certified assistant does raise, keeps the
+    // word it had: the split adds a code, it does not rename the old one.
+    const entryLevel = await overRatioSessionView("Open Water Diver", 8, "ow-code");
+    expect(entryLevel.gapTrips.map((trip) => trip.gap)).toEqual(["over_ratio"]);
   });
 
   it("counts a crewed course session with no instructor as needing crew", async () => {

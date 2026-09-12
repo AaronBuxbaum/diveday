@@ -36,7 +36,7 @@ const copy: DateRequestCopy = {
   send: "Send inquiry",
   sending: "Sending…",
   sentHeading: "Inquiry sent",
-  sentBody: "We'll be in touch.",
+  sentBody: "We’ll be in touch.",
 };
 
 function renderInquiry(

@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { ageOnDate, birthdayCallout } from "@/lib/age";
 import { STAFF_ROLES } from "@/lib/authz";
@@ -17,6 +17,7 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { seededShopContext } from "@/test/db";
 import { subscribeManifestEvents } from "./manifest-events";
 import {
+  boardedAtAnyCheckpoint,
   departureRollCallForBooking,
   getTripManifest,
   getTripManifests,
@@ -25,7 +26,9 @@ import {
   recordCrewRollCall,
   recordRollCall,
 } from "./manifests";
+import { markBookingNoShow } from "./no-show";
 import {
+  activityEvents,
   bookings,
   people,
   personRoles,
@@ -33,6 +36,7 @@ import {
   rollCallEvents,
   shops,
   tripAssignments,
+  trips,
   userAccounts,
   waiverRecords,
 } from "./schema";
@@ -43,6 +47,28 @@ import { completeWaiver, getCurrentWaiverTemplate, issueWaiverRequest } from "./
 vi.mock("@/lib/log", () => ({ log: vi.fn() }));
 
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+
+/** One booking's status, for the seat a no-show releases and a boarding takes back. */
+async function statusOf(db: Awaited<ReturnType<typeof manifestContext>>["db"], bookingId: string) {
+  const [row] = await db
+    .select({ status: bookings.status })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId));
+  return row?.status;
+}
+
+/** Every code on this booking's trail. */
+async function activityCodesFor(
+  db: Awaited<ReturnType<typeof manifestContext>>["db"],
+  bookingId: string,
+) {
+  const rows = await db
+    .select({ code: activityEvents.code, occurredAt: activityEvents.occurredAt })
+    .from(activityEvents)
+    .where(eq(activityEvents.bookingId, bookingId))
+    .orderBy(asc(activityEvents.occurredAt), asc(activityEvents.id));
+  return rows.map((row) => row.code);
+}
 
 async function manifestContext() {
   const { db, shop } = await seededShopContext();
@@ -116,6 +142,207 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       readiness: { status: "ready" },
       rollCall: { state: "boarded", recordedByName: staff.fullName },
     });
+  });
+
+  /**
+   * **The desk said not here; the crew says aboard. The crew wins, and the seat
+   * comes back with them** (security and dive-domain review 20260911).
+   *
+   * `markBookingNoShow` releases the seat on the confirm tap — `no_show` leaves
+   * `SEAT_HELD_STATUSES`, so a walk-in can buy it. Nothing on the boarding path
+   * read booking status: readiness does not, and `getTripRoster` drops only
+   * cancelled rows, so the released seat stayed on the manifest as a tappable
+   * name and boarding it put capacity plus one on the water with the seat count
+   * still saying the boat was full at capacity. The tap is not refused — a crew
+   * member looking at a body is the best evidence this product has — so it
+   * takes the release back instead.
+   */
+  it("takes a released seat back when the crew board the diver the counter wrote off", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.booking.id });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+
+    expect(
+      await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        now: reef.startsAt,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await statusOf(db, booking.booking.id)).toBe("no_show");
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    expect(await statusOf(db, booking.booking.id)).toBe("booked");
+    // The trail keeps both taps, and the second one is its own line: "who
+    // released this seat, and who took it back" is asked at a desk with a
+    // stranger standing at it. (The demo booking arrives with a trail of its
+    // own, so this asks what was added rather than what the whole list is.)
+    expect(await activityCodesFor(db, booking.booking.id)).toEqual(
+      expect.arrayContaining(["booking_no_show", "booking_no_show_boarded"]),
+    );
+  });
+
+  /**
+   * Releasing a seat is the desk's act, with its own gate and its own confirm
+   * tap. A mis-tap at the rail corrects the head count; it must never sell a
+   * diver's seat out from under them.
+   */
+  it("does not release the seat again when the crew correct a boarding", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.booking.id });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    await markBookingNoShow(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      now: reef.startsAt,
+    });
+    const board = {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+    };
+    await recordRollCall(db, { ...board, status: "boarded" });
+
+    await expect(recordRollCall(db, { ...board, status: "not_boarded" })).resolves.toMatchObject({
+      ok: true,
+    });
+
+    expect(await statusOf(db, booking.booking.id)).toBe("booked");
+  });
+
+  /**
+   * **The manifest says which of its names the desk wrote off** (#1209,
+   * `dive-domain-expert` review 20260911).
+   *
+   * The roster keeps every non-cancelled booking on purpose, so a released
+   * seat is still a row — and until this flag it was a row indistinguishable
+   * from a diver still walking down the dock, because `checkedIn` was the only
+   * booking signal the manifest carried. The crew then count heads against a
+   * name the counter settled. Boarding takes the release back, which is why
+   * the flag has to come off the same read rather than from a rule of its own.
+   */
+  it("marks the counter's released seat on the manifest, and unmarks it when the rail boards them", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.booking.id });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    const diverOn = async () =>
+      (await getTripManifest(db, shop.id, reef.id))?.divers.find(
+        (diver) => diver.bookingId === booking.booking.id,
+      );
+    expect(await diverOn()).toMatchObject({ notHere: false });
+
+    await markBookingNoShow(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      now: reef.startsAt,
+    });
+
+    expect(await diverOn()).toMatchObject({ notHere: true });
+    // Nobody at the boat has spoken for them yet, so they are the one name in
+    // the head count's denominator that is not a body to expect. They stay in
+    // `awaiting`: the crew's statement is still what closes the checkpoint.
+    expect((await getTripManifest(db, shop.id, reef.id))?.summary).toMatchObject({ notHere: 1 });
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    expect(await diverOn()).toMatchObject({ notHere: false });
+    expect((await getTripManifest(db, shop.id, reef.id))?.summary).toMatchObject({ notHere: 0 });
+  });
+
+  /**
+   * The seat comes back even when it is the seat the shop has already sold.
+   * Refusing would leave a person aboard whom the manifest does not carry, so
+   * the boat being over is *said* instead — `summary.overCapacity`, the one
+   * number on the page that reports what nothing refused.
+   */
+  it("boards a diver onto a full boat and raises the over-capacity count instead", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.booking.id });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    await markBookingNoShow(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      now: reef.startsAt,
+    });
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    // Everyone else readiness clears, aboard too — counted rather than assumed,
+    // so this stays about capacity whatever the demo roster's paperwork says.
+    let aboard = 1;
+    for (const row of await getTripRoster(db, shop.id, reef.id)) {
+      if (row.booking.id === booking.booking.id) continue;
+      const result = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: row.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      });
+      if (result.ok) aboard += 1;
+    }
+
+    await db.update(trips).set({ capacity: aboard }).where(eq(trips.id, reef.id));
+    expect((await getTripManifest(db, shop.id, reef.id))?.summary).toMatchObject({
+      boarded: aboard,
+      overCapacity: 0,
+    });
+    // The walk-in holds the released seat, so the boat seats one fewer than the
+    // crew have counted aboard. Nothing refused that; this is what says it.
+    await db
+      .update(trips)
+      .set({ capacity: aboard - 1 })
+      .where(eq(trips.id, reef.id));
+    expect((await getTripManifest(db, shop.id, reef.id))?.summary.overCapacity).toBe(1);
   });
 
   it("answers 'who is aboard' the same way for the counter and for the departure board", async () => {
@@ -244,6 +471,40 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     expect(await departureRollCallForBooking(db, shop.id, reef.id, booking.booking.id)).toBe(
       "boarded",
     );
+  });
+
+  it("answers whether the crew put a seat on the water at any checkpoint", async () => {
+    // The counter's `already_boarded` refusal reads this rather than the dock
+    // alone: a diver who joined at the second site has no departure event at
+    // all, and the desk must not be able to call them absent
+    // (`inAfterDivePopulation`, src/db/today.ts).
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    expect(await boardedAtAnyCheckpoint(db, shop.id, reef.id, booking.booking.id)).toBe(false);
+
+    // No waiver: readiness gates boarding at the dock only, so an after-dive
+    // head count takes the diver as they are.
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "boarded",
+      checkpoint: "after_dive_1",
+    });
+    expect(await boardedAtAnyCheckpoint(db, shop.id, reef.id, booking.booking.id)).toBe(true);
+    expect(await departureRollCallForBooking(db, shop.id, reef.id, booking.booking.id)).toBeNull();
+
+    // And a `cleared` undo drops it back out, the same supersession every other
+    // reader here applies — there is then nothing standing anywhere.
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "cleared",
+      checkpoint: "after_dive_1",
+    });
+    expect(await boardedAtAnyCheckpoint(db, shop.id, reef.id, booking.booking.id)).toBe(false);
   });
 
   it("carries the counter check-in status onto the manifest, independent of roll call (task 149)", async () => {

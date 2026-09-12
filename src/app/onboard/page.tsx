@@ -206,7 +206,7 @@ export const metadata: Metadata = {
     ...sharedLinkCard,
     title: "Start a dive shop trial — DiveDay",
     description:
-      "A few details and you're looking at your own working shop. No card, no setup fee.",
+      "A few details and you’re looking at your own working shop. No card, no setup fee.",
     url: "/onboard",
   },
   // `summary_large_image`: the OG block above names the shared link card
@@ -216,7 +216,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Start a dive shop trial — DiveDay",
     description:
-      "A few details and you're looking at your own working shop. No card, no setup fee.",
+      "A few details and you’re looking at your own working shop. No card, no setup fee.",
   },
 };
 

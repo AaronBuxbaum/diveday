@@ -134,7 +134,7 @@ export async function seedHistory(
         shopId,
         fullName,
         email: `${fullName.toLowerCase().replace(/[^a-z]+/g, ".")}@example.com`,
-        phone: `+1-305-555-02${String(i + 20).padStart(2, "0")}`,
+        phone: `+130555502${String(i + 20).padStart(2, "0")}`,
         createdAt: nextCreatedAt(),
       })),
     )

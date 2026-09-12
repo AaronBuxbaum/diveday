@@ -57,6 +57,12 @@ import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
  *   and hides nothing, which is what the dock test wants; `e2e/` asserts no
  *   control scrolls at 390px in either locale, because a rendered-pixel diff
  *   cannot tell a clipped strip from a scrollable one.
+ * - **A caller may supply a shorter word for below `sm`** (`shortLabel`), for a
+ *   track whose full labels wrap a phone even after that. Only where the full
+ *   name is already on screen at that width: the short form is a handle, not a
+ *   rename. Both forms are in the DOM and `hidden` picks one, so whichever is
+ *   shown is also the accessible name — no `aria-hidden` juggling and nothing
+ *   read twice.
  * - **Never on paper.** A way to switch surfaces means nothing printed, so
  *   the track is `print:hidden` unconditionally.
  *
@@ -76,6 +82,14 @@ export type SegmentedControlItem = {
   key: string;
   /** Resolved copy — words come from a message bundle at the call site. */
   label: ReactNode;
+  /**
+   * A shorter form of `label`, rendered instead of it below `sm` — for a track
+   * that still wraps a 390px phone at full length. Supply it only where the
+   * full name is visible on the same screen at that width; the short word is a
+   * handle for a choice that is spelled out elsewhere, never the only place
+   * the choice is named.
+   */
+  shortLabel?: ReactNode;
   href: string;
 };
 
@@ -245,6 +259,19 @@ export function SegmentedControl({
             ? `text-primary${pillReady ? "" : ` ${PILL_CLASS}`}`
             : "text-muted hover:bg-surface hover:text-foreground"
         }`;
+        // `hidden` is `display: none`, so exactly one form is in the
+        // accessibility tree at any width and the accessible name is whichever
+        // one a reader can see. An item with no `shortLabel` renders its label
+        // bare, so no existing call site gains a wrapper element.
+        const content =
+          item.shortLabel === undefined ? (
+            item.label
+          ) : (
+            <>
+              <span className="sm:hidden">{item.shortLabel}</span>
+              <span className="max-sm:hidden">{item.label}</span>
+            </>
+          );
         if (active && !currentIsLink) {
           return (
             <span
@@ -253,7 +280,7 @@ export function SegmentedControl({
               aria-current={ariaCurrentValue}
               className={cls}
             >
-              {item.label}
+              {content}
             </span>
           );
         }
@@ -266,7 +293,7 @@ export function SegmentedControl({
             aria-current={active ? ariaCurrentValue : undefined}
             className={cls}
           >
-            {item.label}
+            {content}
           </Link>
         );
       })}

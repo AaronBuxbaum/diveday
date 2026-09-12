@@ -345,10 +345,11 @@ export async function getRecapPageState(
   // departure is not `"cancelled"`, so it took the departure branch — and a
   // bearer who could see the trip had left the shop's public board could then
   // tell a cancelled seat from a no-show by which card rendered, which is the
-  // one distinction the paragraph above promises never to make. Nothing in the
-  // product writes `no_show` yet (`src/db/today.ts`), so it was latent; the
-  // day an action does write one it would have shipped working (`security-reviewer`,
-  // on issue #1119).
+  // one distinction the paragraph above promises never to make. It was latent
+  // when it was found, because nothing in the product wrote `no_show` at all;
+  // `markBookingNoShow` (`src/db/no-show.ts`, issue #1209) is the writer that
+  // arrived, so the ordering is live now and shipped ahead of it
+  // (`security-reviewer`, on issue #1119).
   if (bookingStatus === "cancelled" || bookingStatus === "no_show") return { kind: "dead", shop };
   if (tripStatus === "cancelled") return { kind: "departure-cancelled", shop };
   // An active booking on a live departure that `getRecapPageData` still nulled

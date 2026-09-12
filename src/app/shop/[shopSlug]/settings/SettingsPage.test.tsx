@@ -8,6 +8,7 @@ import { listDiveSites } from "@/db/dive-sites";
 import { diveSites, mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
 import { getShopBySlug, setShopDivingOptions } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
+import { STAFF_MESSAGES } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { seededTestDb } from "@/test/db";
@@ -240,7 +241,7 @@ describe("the units card", () => {
  * rendering condition (non-empty, never an empty table) and the owner-only
  * split on the erasure buttons.
  */
-const MEDIA_PANEL = "Photos that didn't finish deleting";
+const MEDIA_PANEL = "Photos that didn’t finish deleting";
 const ERASURE_PANEL = "Erasures not finished at Stripe";
 
 async function queueStuckDeletion(db: AppDb, session: DiveDaySession) {
@@ -499,5 +500,50 @@ describe("the season a shop counts in", () => {
     // enumerated.
     expect(selectNamesIn(element)).toContain("seasonStartMonth");
     expect(inputNamesIn(element)).toContain("seasonStartDay");
+  });
+});
+
+/**
+ * **The screen where the number is set says what the diver reads** (issue
+ * #1433). The recap stopped saying "Fly-safe from {when}" because DAN's
+ * interval lowers DCS risk without removing it, so "safe" was the one word in
+ * the sentence that read as a verdict — in Spanish twice over, where "puedes
+ * volar" is literally *you can fly*. This card kept both the word and the
+ * claim ("before a diver reads they can fly") for a layer longer, and it is
+ * the screen an owner forms their picture of the feature on: an owner who
+ * sets hours under a heading reading *fly-safe* is the one who then tells a
+ * diver on the dock they are fly-safe from 6:10. The glossary term is
+ * **Earliest flight**.
+ */
+describe("the earliest-flight card", () => {
+  it("heads the row with the glossary's term", async () => {
+    const row = findElements<{ sectionId?: string; heading?: string }>(
+      await renderSettings("owner"),
+      settingsRowsModule.SettingsRow,
+    ).find((candidate) => candidate.props.sectionId === "flySafe");
+    expect(row?.props.heading).toBe("Earliest flight");
+  });
+
+  /**
+   * Read off the bundles rather than the render because Spanish never reaches
+   * this page from a test: the shop's own locale decides, and the seeded shop
+   * is en-US. Every string the card can put on screen is covered, the saved
+   * notice included — it is the same words coming back after the save.
+   */
+  it("carries neither the retired word nor the verdict, in either locale", () => {
+    const verdicts: Record<string, RegExp> = {
+      "en-US": /fly-safe|can fly|safe to fly/i,
+      "es-ES": /puedes? volar|vuelo seguro|seguro para volar|horas para volar/i,
+    };
+    for (const [locale, verdict] of Object.entries(verdicts)) {
+      const { main } = STAFF_MESSAGES[locale as keyof typeof STAFF_MESSAGES].settings;
+      for (const [key, value] of [
+        ...Object.entries(main.flySafe),
+        ["notice.flySafeSaved", main.notice.flySafeSaved],
+        ["notice.flySafeInvalid", main.notice.flySafeInvalid],
+      ] as [string, string][]) {
+        expect(value, `${locale} ${key}`).not.toMatch(verdict);
+      }
+    }
   });
 });

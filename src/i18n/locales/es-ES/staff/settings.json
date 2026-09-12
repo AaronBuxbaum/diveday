@@ -45,7 +45,7 @@
       "emergencySaved": "Referencia de emergencia guardada.",
       "sendWindowSaved": "Horario de mensajes guardado.",
       "sendWindowInvalid": "Eso no se guardó. La primera hora tiene que ir antes que la última, en formato de 24 horas.",
-      "flySafeSaved": "Horas para volar guardadas.",
+      "flySafeSaved": "Espera antes de volar guardada.",
       "flySafeInvalid": "Eso no se guardó. Horas enteras, como mínimo las 12 y 18 de DAN, como máximo 72, y la espera tras dos inmersiones no puede ser menor que la de una.",
       "packageSaved": "Paquete añadido.",
       "packageDeleted": "Paquete eliminado.",
@@ -149,7 +149,7 @@
         "blue_star": "Operador Blue Star",
         "green_fins": "Miembro de Green Fins",
         "dan_partner": "Socio empresarial de DAN",
-        "readers_choice": "Premio Readers' Choice"
+        "readers_choice": "Premio Readers’ Choice"
       },
       "brandColorLightenedAtNight": "De noche tu página pública lo aclara a {hex} para que siga leyéndose sobre el fondo oscuro.",
       "brandPreview": "Cómo se ve",
@@ -280,12 +280,12 @@
       "submitting": "Guardando…"
     },
     "flySafe": {
-      "heading": "Horas para volar",
+      "heading": "Espera antes de volar",
       "value": "{single} h · {repetitive} h",
-      "description": "Horas después de la última inmersión antes de que un buceador lea que puede volar. Su resumen dice la hora y que la espera la fijas tú, siguiendo la guía de DAN.",
+      "description": "Cuánto se le pide esperar a un buceador después del buceo del día antes de volar. Su resumen dice la hora, que la espera la fijas tú y que sigue las recomendaciones de DAN.",
       "singleLabel": "Tras una sola inmersión",
       "repetitiveLabel": "Tras inmersiones repetitivas o más de un día de buceo",
-      "submit": "Guardar horas para volar",
+      "submit": "Guardar horas de espera",
       "submitting": "Guardando…"
     },
     "units": {
@@ -340,7 +340,7 @@
       "description": "Lo que se cotiza a un buceador por su equipo de alquiler.",
       "detail": "Pon precio al equipo completo (suele salir más barato) y a cada pieza por separado: cinco piezas cotizan el conjunto, menos se pagan por pieza. Deja una casilla vacía para cobrarlo en el centro.",
       "fullSetLabel": "Equipo completo",
-      "fullSetHint": "(BCD, regulador, traje, máscara y aletas, lastre, computadora de buceo)",
+      "fullSetHint": "(BCD, regulador, neopreno, máscara y aletas, lastre, computadora de buceo)",
       "nitroxLabel": "Nitrox",
       "nitroxHint": "(por inmersión)",
       "submit": "Guardar precios de alquiler",
@@ -453,12 +453,13 @@
       },
       "erasureTarget": {
         "stripe_customer": "Cliente de Stripe",
-        "stripe_invoice_snapshot": "Factura de Stripe"
+        "stripe_invoice_snapshot": "Factura de Stripe",
+        "stripe_checkout_session_snapshot": "Página de pago de Stripe"
       },
       "processorErasures": {
         "sectionLabel": "Borrados sin terminar en Stripe",
         "heading": "{count, plural, one {# registro} other {# registros}} de un buceador borrado siguen en Stripe",
-        "detail": "Borrar a un buceador también elimina su cliente de Stripe. Estos no se completaron. Un registro de cliente se reintenta solo esta noche. Una factura no: solo una solicitud de eliminación de datos a Stripe borra el nombre y el correo que copió. Preséntala y márcalo como hecho.",
+        "detail": "Borrar a un buceador también elimina su cliente de Stripe. Estos no se completaron. Un registro de cliente se reintenta solo esta noche. Una factura o una página de pago no: solo una solicitud de eliminación de datos a Stripe borra el nombre y el correo que copiaron. Preséntala y márcalo como hecho.",
         "raised": "registrado el {date}",
         "retry": "Reintentar borrado",
         "retrying": "Reintentando…",
@@ -677,7 +678,7 @@
       },
       "rentalSizes": {
         "what": "Tallas de alquiler",
-        "detail": "Las tallas de BCD, traje, bota y aleta se convierten en un perfil de ajuste de alquiler."
+        "detail": "Las tallas de BCD, neopreno, bota y aleta se convierten en un perfil de ajuste de alquiler."
       },
       "certificationCard": {
         "what": "Registro de certificación",
@@ -749,7 +750,7 @@
         "nitrox_certified": "Nitrox",
         "nitrox_certification_number": "Número de nitrox",
         "bcd_size": "Talla de BCD",
-        "wetsuit_size": "Talla de traje",
+        "wetsuit_size": "Talla de neopreno",
         "boot_size": "Talla de botas",
         "fin_size": "Talla de aletas",
         "waiver_accepted": "Waiver aceptado",

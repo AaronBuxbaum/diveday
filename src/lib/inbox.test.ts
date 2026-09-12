@@ -55,20 +55,48 @@ describe("normalizeEmailAddress", () => {
 });
 
 describe("phoneMatches", () => {
-  it("compares digits only, so the seed's dashes and WhatsApp's bare number agree", () => {
-    expect(phoneMatches("+1-305-555-0110", "13055550110")).toBe(true);
-    expect(phoneMatches("+1 (305) 555 0110", "13055550110")).toBe(true);
+  it("compares digits only, so a typed number and WhatsApp's bare one agree", () => {
+    expect(phoneMatches("+1-305-555-0110", "13055550110", "US")).toBe(true);
+    expect(phoneMatches("+1 (305) 555 0110", "13055550110", "US")).toBe(true);
   });
 
-  it("accepts a stored number typed without its country code, but never a short suffix", () => {
-    expect(phoneMatches("305-555-0110", "13055550110")).toBe(true);
-    expect(phoneMatches("555-0110", "13055550110")).toBe(false);
-    expect(phoneMatches("", "13055550110")).toBe(false);
-    expect(phoneMatches(null, "13055550110")).toBe(false);
+  it("resolves a bare national number against the shop's country, then compares", () => {
+    expect(phoneMatches("305-555-0110", "13055550110", "US")).toBe(true);
+    expect(phoneMatches("555-0110", "13055550110", "US")).toBe(false);
+    expect(phoneMatches("", "13055550110", "US")).toBe(false);
+    expect(phoneMatches(null, "13055550110", "US")).toBe(false);
+  });
+
+  it("reads a bare number against a country that is not North America", () => {
+    expect(phoneMatches("612 345 678", "34612345678", "ES")).toBe(true);
+    expect(phoneMatches("0612 345 678", "34612345678", "ES")).toBe(true);
+    // The same stored digits in a US shop are not a Spanish number.
+    expect(phoneMatches("612 345 678", "34612345678", "US")).toBe(false);
+  });
+
+  /**
+   * **The wrong-linking failure the suffix rule allowed.** `phoneMatches` used
+   * to accept any stored number of ten digits or more that the inbound number
+   * *ended in* — the North American national-number length, applied to every
+   * country. A London diver stored bare as `7700900123` therefore matched a US
+   * inbound `+1 770 090 0123`: a stranger's message filed on a named diver's
+   * record, for a shop that had done nothing wrong. Both directions stay shut.
+   */
+  it("never files a US inbound on a British record whose last ten digits collide", () => {
+    expect(phoneMatches("7700900123", "17700900123", "GB")).toBe(false);
+    expect(phoneMatches("+44 7700 900123", "17700900123", "GB")).toBe(false);
+    expect(phoneMatches("7700900123", "447700900123", "GB")).toBe(true);
+  });
+
+  it("falls back to exact digits when the shop has no country on file", () => {
+    expect(phoneMatches("+1-305-555-0110", "13055550110", null)).toBe(true);
+    // Bare, with nothing to read it against: exact digits or nothing.
+    expect(phoneMatches("305-555-0110", "13055550110", null)).toBe(false);
+    expect(phoneMatches("3055550110", "3055550110", null)).toBe(true);
   });
 
   it("does not match a different number that merely shares a prefix", () => {
-    expect(phoneMatches("+1-305-555-0111", "13055550110")).toBe(false);
+    expect(phoneMatches("+1-305-555-0111", "13055550110", "US")).toBe(false);
   });
 });
 

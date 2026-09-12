@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { InboxRow } from "./InboxRow";
@@ -40,6 +40,7 @@ function renderRow(
         locale="en-US"
         timezone="America/Cancun"
         t={t}
+        deleteAction={vi.fn()}
       />
     </ul>,
   );
@@ -72,6 +73,25 @@ describe("a message from a stranger", () => {
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText("Unknown sender")).toBeInTheDocument();
     expect(screen.getByText(/marta\.keller@example\.net/)).toBeInTheDocument();
+  });
+
+  it("offers a Delete, because nothing else on any surface can finish this row", () => {
+    // Issue #1506: no record means no door and no composer, so without this
+    // the row could only be read — and it went on counting against Today's
+    // unanswered messages for as long as it sat there.
+    const container = renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
+    expect(
+      screen.getByRole("button", { name: "Delete the message from marta.keller@example.net" }),
+    ).toBeInTheDocument();
+    // The id the action deletes rides in the form, not in the URL.
+    expect(container.querySelector('input[name="messageId"]')).toHaveValue(MESSAGE.id);
+  });
+});
+
+describe("what a row with a record behind it does not offer", () => {
+  it("has no Delete: it has a door and a composer, and the way to finish it is to answer it", () => {
+    renderRow();
+    expect(screen.queryByRole("button", { name: /^Delete/ })).toBeNull();
   });
 });
 

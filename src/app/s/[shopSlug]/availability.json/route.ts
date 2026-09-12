@@ -20,6 +20,15 @@ import { publicAppUrl } from "@/lib/notifications";
  * demo is its own throwaway playground, and the canonical fixture is what the
  * e2e fleet reads.
  *
+ * **A shop that does not exist is usually refused before this runs.** The edge
+ * check answers the whole `/s/**` namespace above the streaming boundary (ADR
+ * 20260912-the-public-namespace-refuses-at-the-edge), and it stamps the same
+ * `no-store` this branch does, so the intent survives the hop. The opt-out
+ * refusal below is untouched by it — an opted-out shop is still a shop, and
+ * `publicRouteLookup` says so on purpose — and the `!shop` branch is still
+ * live, because the edge fails open on a database throw and a shop can be
+ * deleted between the two reads.
+ *
  * Five minutes at a shared cache, one at the reader: seats move as bookings
  * land, and the booking page has the last word either way. `noindex` because
  * this is an answer for an agent, not a search result.

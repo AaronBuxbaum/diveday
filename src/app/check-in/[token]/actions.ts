@@ -12,6 +12,7 @@ import { formatTime } from "@/lib/format";
 import { kioskResponseWaitMs, kioskSelection, readKioskInput } from "@/lib/kiosk-check-in";
 import { firstNameOf } from "@/lib/person-name";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-ip";
 import type { KioskResult } from "./kiosk-types";
 
 /**
@@ -58,21 +59,48 @@ export async function kioskCheckInAction(
 }
 
 async function answerKioskSubmission(token: string, formData: FormData): Promise<KioskResult> {
+  // **The wider of the two nets, and the only one an unresolvable token can
+  // reach** (issue #1609). The per-link bucket below cannot be keyed until a
+  // token has resolved, so a link that resolves to nothing used to cost
+  // nothing: a stranger could spray guesses at the signature all afternoon,
+  // paying one database read each and never touching a budget. Spending the
+  // per-caller bucket first is what makes a guess cost something, and the
+  // refusal skips the lookup entirely, so a spray is now cheaper for us than
+  // for whoever is sending it.
+  //
+  // This lives here rather than in `kioskCheckInAction` on purpose: a refusal
+  // raised in the wrapper would answer outside the timing floor and re-open the
+  // side channel #1608 closed. Inside, it is held to the same floor as every
+  // other answer, and it is the same `desk` card in the same words — nothing
+  // distinguishes a spent bucket from an unknown link from a diver who is not
+  // on a boat today.
+  //
+  // `clientIp()` returning null (local dev, a bare `next start`) collapses to
+  // one shared "unknown" bucket, which is what its own docblock instructs.
+  const ipBudget = await checkRateLimit(
+    rateLimitKey("kiosk-ip", await clientIp()),
+    RATE_LIMITS.kioskLookupByIp,
+  );
   const db = await getDb();
-  const display = await verifyDisplayToken(db, { token, purpose: "check_in" });
+  const display = ipBudget.allowed
+    ? await verifyDisplayToken(db, { token, purpose: "check_in" })
+    : null;
   const shop = display ? await getShopById(db, display.shopId) : null;
   // No shop resolved, so no shop locale to prefer.
   const locale = await requestLocale(shop?.defaultLocale);
   const t = diverTranslator(locale);
   // One sentence for everything this screen will not explain: a revoked link, a
-  // link that was never ours, a rate limit, an unusable answer, no match,
+  // link that was never ours, either rate limit, an unusable answer, no match,
   // several matches, a cancelled seat, and a diver readiness will not clear.
   const desk: KioskResult = {
     status: "desk",
     heading: t("kiosk.deskHeading"),
     body: t("kiosk.deskBody"),
   };
-  if (!display || !shop) return desk;
+  // `!ipBudget.allowed` is stated rather than left to imply itself through the
+  // null `display` above: this is the refusal, and a refusal that depends on a
+  // reader noticing a ternary three lines up is one an edit can silently drop.
+  if (!ipBudget.allowed || !display || !shop) return desk;
 
   const budget = await checkRateLimit(
     rateLimitKey("kiosk-lookup", display.id),

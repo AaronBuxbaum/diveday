@@ -79,6 +79,7 @@ export {
   type Notification,
   type NotificationSender,
   notificationIdempotencyKey,
+  notificationIsQueueable,
   notificationSchema,
   notificationSubjectEmail,
   notificationSubjectPhone,

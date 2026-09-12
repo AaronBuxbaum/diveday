@@ -36,6 +36,7 @@ export function PaperWaiverControl({
   bookingId,
   copy,
   requiresGuardian = false,
+  offerNamesake = false,
   className = "mt-2",
   variant = "link",
   defaultOpen = false,
@@ -57,6 +58,35 @@ export function PaperWaiverControl({
    * the refusal, and a hand-built request never gets past it.
    */
   requiresGuardian?: boolean;
+  /**
+   * Draw the namesake confirmation under the guardian fields (issue #1573,
+   * owner decision 2026-09-10). Set only on the form that has already been
+   * refused for it — each surface reads its own `?notice=waiver-guardian-name`
+   * and scopes it to the booking or record the refusal named, so a roster of
+   * minors does not all sprout the same tick.
+   *
+   * **Two surfaces set it, and the diver record is deliberately not one of
+   * them.** The checkbox says, in the first person, that the staffer watched
+   * two people sign; the counter queue and the trip roster are the doors a
+   * diver is standing at, and the diver record is documented as the absentee
+   * case (`InPersonWaiverSubject` in `src/db/waivers.ts` — "they phoned ahead,
+   * or handed the release over months before they book anything"). Offering
+   * the tick to somebody reading a scanned PDF asks them to attest to a thing
+   * nobody witnessed, and `in_person_attested_namesake` exists to tell a
+   * regulator that somebody did (`dive-domain-expert`, issue #1453).
+   *
+   * **That scoping is a habit fence, not an enforcement.** `?notice=` is
+   * untrusted input on both surfaces, so a staffer can reach a form with this
+   * drawn by typing a URL, and a request built by hand skips the form
+   * entirely. What actually contains the assertion is in the writer: the two
+   * names must genuinely match before the tick is honoured at all
+   * (`recordInPersonWaiver`), the release records *which* of the two things
+   * happened in `guardian_signature_method`, and the staffer who made the
+   * assertion is on the row as `recorded_by_person_id`. This prop's job is to
+   * keep the checkbox off every ordinary minor's form so it stays an
+   * assertion rather than a box people learn to tick.
+   */
+  offerNamesake?: boolean;
   className?: string;
   /**
    * Genuinely different jobs, not skins. Under a primary "send the link"
@@ -141,6 +171,22 @@ export function PaperWaiverControl({
             </select>
           </Field>
         </FieldGrid>
+      ) : null}
+      {/* The one way past the namesake refusal, and only here (ADR
+          20260907-guardian-co-signature, decision 10). It is an assertion
+          about what this staffer saw, not a confirmation of an intent, so it
+          reads as a sentence in the first person like the medical attestation
+          above it — and it is never `required`: a family who reached this form
+          by any other refusal still submits without it. */}
+      {requiresGuardian && offerNamesake ? (
+        <label className="mt-4 flex items-start gap-2.5 text-sm">
+          <input
+            type="checkbox"
+            name="guardianNamesakeAttested"
+            className="mt-0.5 size-4 shrink-0"
+          />
+          <span>{copy.guardian.namesakeLabel}</span>
+        </label>
       ) : null}
       <div className="mt-4 flex flex-wrap gap-2">
         <SubmitButton

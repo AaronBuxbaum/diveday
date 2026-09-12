@@ -222,6 +222,32 @@ export type ManifestDiverInput = {
    * staffer's tap, which is exactly what the plain pill has always said.
    */
   checkedInSelfReported?: boolean;
+  /**
+   * **The desk wrote this diver off and the seat went back on sale**
+   * (`bookings.status === "no_show"`, issue #1209).
+   *
+   * They stay on the manifest, and that part was already right: the roster
+   * reads every non-cancelled booking on purpose (`seatHeld`,
+   * src/db/trips-queries.ts), because a diver marked absent is still the
+   * crew's to account for. What they must not do is read as a diver who is
+   * merely late. Until the counter could write this status no such row
+   * existed, so the manifest carried one booking signal — {@link checkedIn} —
+   * and a released seat rendered identically to somebody still on their way.
+   * A crew member at the rail then chases a name the desk settled forty
+   * minutes ago, at the two minutes of the day they can least afford it
+   * (`dive-domain-expert` review, 2026-09-11).
+   *
+   * Display and head-count input only, and **never a gate**: nothing on the
+   * boarding path refuses. If the diver walks up after all the crew board
+   * them, and the rail takes the released seat back (`reclaimReleasedSeat`,
+   * src/db/manifests.ts) — which is also why this flag goes false on the next
+   * read rather than needing a rule of its own.
+   *
+   * Optional, and absent means false: a manifest assembled by hand, or a
+   * snapshot saved before this field, has nobody written off, which is what
+   * every roster looked like before the first writer landed.
+   */
+  notHere?: boolean;
 };
 
 export type ManifestCrewMember = {
@@ -765,6 +791,17 @@ export type TripManifest = {
     startsAt: Date;
     endsAt: Date;
     plannedDives: number;
+    /**
+     * The seats this departure sells — the only thing `summary.overCapacity`
+     * measures a head count against.
+     *
+     * **Optional, and its absence says nothing rather than "fine".** A caller
+     * that does not know the number (an offline copy saved before this slice,
+     * a test assembling a manifest by hand) gets `overCapacity: 0` and no line
+     * on screen, which is the same silence the page had before the count
+     * existed. It is not a licence to omit it from a real manifest.
+     */
+    capacity?: number;
   };
   checkpoint: RollCallCheckpoint;
   crew: (ManifestCrewMember & {
@@ -812,6 +849,41 @@ export type TripManifest = {
      * checkpoint's diver half is closed — never `awaiting` on its own.
      */
     unaccountedFor: number;
+    /**
+     * **How many divers are aboard beyond the seats this boat has**, 0 when it
+     * is within them or when `trip.capacity` is unknown.
+     *
+     * `boarded`, not the roster: a manifest lists every non-cancelled booking,
+     * including a seat the counter released as a no-show, so counting rows
+     * would raise an alarm about paper. Counting bodies the crew have recorded
+     * aboard raises it about the boat.
+     *
+     * It exists because nothing on the boarding path refuses: a diver marked
+     * not here has a released seat a walk-in can buy, and boarding them at the
+     * rail takes it back (`reclaimReleasedSeat`, src/db/manifests.ts) rather
+     * than refusing a body the crew is looking at. Over-capacity is the
+     * consequence that must then be *said*, since it is no longer prevented.
+     * Attention state only — it gates nothing, here or anywhere.
+     */
+    overCapacity: number;
+    /**
+     * **Divers the desk wrote off and nobody at the boat has spoken for** —
+     * `notHere` rows with no roll-call result of any kind.
+     *
+     * A subset of {@link awaiting}, deliberately, rather than a bucket beside
+     * it. Two things fall out of that. The count row's entries stay mutually
+     * exclusive and still sum to `totalDivers`, so nothing double-counts a
+     * diver the desk released *and* the crew then marked not boarded. And the
+     * rule that closes a checkpoint stays the crew's: a statement made at a
+     * desk does not account for a body at the rail, which is the same
+     * precedence `noShowGate`'s `already_boarded` refusal sets in the other
+     * direction (src/lib/no-show.ts).
+     *
+     * What it does change is who the crew are *expecting*. The head count's
+     * denominator drops a released seat, so the figure is a fraction of the
+     * people who could actually walk up the gangway rather than of the paper.
+     */
+    notHere: number;
   };
 };
 
@@ -917,15 +989,26 @@ export function buildTripManifest(input: {
   const notBackAboard = divers.filter((diver) =>
     isNotBackAboard(checkpoint, diver.rollCall),
   ).length;
+  const boarded = divers.filter((diver) => diver.rollCall?.state === "boarded").length;
+  const capacity = input.trip.capacity;
   const summary = {
     totalDivers: divers.length,
     ready: divers.filter((diver) => diver.readiness.status === "ready").length,
     blocked: divers.filter((diver) => diver.readiness.status === "blocked").length,
-    boarded: divers.filter((diver) => diver.rollCall?.state === "boarded").length,
+    boarded,
     notBoarded: divers.filter((diver) => diver.rollCall?.state === "not_boarded").length,
     notBackAboard,
     awaiting,
     unaccountedFor: awaiting + notBackAboard,
+    // Unknown capacity is silence, never an all-clear — the field's own
+    // docblock says why, and a zero here reads on screen as "no line", not as
+    // "the boat is fine".
+    overCapacity: capacity === undefined ? 0 : Math.max(0, boarded - capacity),
+    // `!rollCall` is what keeps this disjoint from every other entry: the
+    // moment anybody at the boat states a result — boarded, which takes the
+    // released seat back, or not boarded — that result is the row's answer and
+    // the desk's is history.
+    notHere: divers.filter((diver) => diver.notHere && !diver.rollCall).length,
   };
   return {
     trip: input.trip,

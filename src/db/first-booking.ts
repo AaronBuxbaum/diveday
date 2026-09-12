@@ -52,8 +52,13 @@ const LIVE_BOOKING_STATUSES: readonly string[] = ["booked", "checked_in"];
  *   the whole test, and it is why this costs the same on a shop with four
  *   thousand bookings as on a shop with one.
  * - **That booking is still live.** A first booking cancelled before the boat
- *   left is not a moment. `no_show` is unreachable here — it is marked after a
- *   departure has sailed, which the next clause already excludes.
+ *   left is not a moment, and neither is one the counter wrote off. `no_show`
+ *   is reachable here, for about an hour, because the two doors do not share a
+ *   boundary: the no-show mark opens at the scheduled departure (`noShowGate`,
+ *   src/lib/no-show.ts, issue #1209) and the clause below only calls the boat
+ *   gone an hour after it (`hasSailed`). In between, a shop's one booking can
+ *   be marked absent while its departure is still ahead by this reader's rule,
+ *   and it is this status test — not the clock — that ends the moment.
  * - **Its departure has not gone**, carrying the standing one-hour
  *   late-arrival buffer every "has it sailed" question in this app carries, and
  *   a soft-deleted departure takes its booking's moment with it. (The join

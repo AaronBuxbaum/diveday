@@ -295,7 +295,7 @@ describe("the terminal outcomes are flat", () => {
 
   it("ExpiredLinkCard renders no shadow", () => {
     const { container } = render(
-      <ExpiredLinkCard title="This link isn't available" text="Ask the shop for a fresh one." />,
+      <ExpiredLinkCard title="This link isn’t available" text="Ask the shop for a fresh one." />,
     );
     expect(container.innerHTML).not.toMatch(/shadow-/);
   });

@@ -1,7 +1,8 @@
-import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, notInArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { people, personRoles, userAccounts } from "@/db/schema";
+import { recordInboundMessage } from "@/db/inbound-messages";
+import { people, personRoles, staffReplies, userAccounts } from "@/db/schema";
 import { getSupportNeeds } from "@/db/support-needs";
 import { STAFF_ROLES } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
@@ -48,7 +49,8 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { deletePersonAction, erasePersonAction, saveSupportNeedsAction } = await import("./actions");
+const { deletePersonAction, erasePersonAction, replyToDiverAction, saveSupportNeedsAction } =
+  await import("./actions");
 
 /**
  * A seeded diver — someone with no *staff* role. `anonymizeDiver` refuses to
@@ -304,5 +306,113 @@ describe("recording a diver's dive support arrangements", () => {
 
     expect(to).toBe(`/shop/${shop.slug}/divers/${diver}?notice=support-saved&form=support#support`);
     expect(await getSupportNeeds(db, shop.id, diver)).toMatchObject({ supportDiversNeeded: 1 });
+  });
+});
+
+/**
+ * **Answering a diver is open to every live staff role** (issues #1505/#1518,
+ * decided 2026-09-10 as an H-14 amendment). `replyToDiverAction` carried
+ * `canPersonAnswerShopInbox` on top of the live-staff check until then; with
+ * that predicate deleted, this is the test that catches the gate coming back
+ * by accident, and the one that names the check still standing —
+ * `requireDiverActionContext`'s `isLiveStaff`.
+ *
+ * The send itself goes nowhere: no notification provider is configured under
+ * test, so `sendStaffReply` records the attempt and reports `not_configured`.
+ * That is the right evidence anyway — what a refused captain leaves behind is
+ * *no row at all*, so the row on `staff_replies` with their name on it is the
+ * authorization decision, not the delivery.
+ */
+describe("answering a diver from their record", () => {
+  /** A seeded diver with an address a message can arrive from. */
+  async function diverWithEmail(db: AppDb, shopId: string) {
+    const staffIds = await db
+      .select({ personId: personRoles.personId })
+      .from(personRoles)
+      .where(inArray(personRoles.role, [...STAFF_ROLES]))
+      .then((rows) => rows.map((row) => row.personId));
+    const [diver] = await db
+      .select({ id: people.id, email: people.email })
+      .from(people)
+      .where(
+        and(
+          eq(people.shopId, shopId),
+          isNull(people.deletedAt),
+          isNull(people.anonymizedAt),
+          isNotNull(people.email),
+          staffIds.length > 0 ? notInArray(people.id, staffIds) : undefined,
+        ),
+      )
+      .orderBy(people.fullName)
+      .limit(1);
+    if (!diver?.email) throw new Error("seeded shop has no diver with an email");
+    return diver as { id: string; email: string };
+  }
+
+  async function waitingMessage(db: AppDb, shopId: string, fromAddress: string) {
+    const result = await recordInboundMessage(db, {
+      shopId,
+      channel: "email",
+      fromAddress,
+      subject: "Re: Your Saturday departure",
+      body: "Could I switch to the afternoon boat?",
+      receivedAt: new Date("2026-07-21T13:30:00.000Z"),
+      providerMessageId: `email-${Math.random()}`,
+      emailMessageId: "<diver-thread@example.com>",
+    });
+    if (result.status !== "recorded") throw new Error(`unexpected ${result.status}`);
+    return result.id;
+  }
+
+  function reply(messageId: string, body: string) {
+    const formData = new FormData();
+    formData.set("messageId", messageId);
+    formData.set("body", body);
+    return formData;
+  }
+
+  it("lets a captain answer as the shop, and records what they typed", async () => {
+    const { db, shop, captain } = await context();
+    const diver = await diverWithEmail(db, shop.id);
+    const messageId = await waitingMessage(db, shop.id, diver.email);
+    signIn(shop, captain);
+
+    const to = await redirectedTo(() =>
+      replyToDiverAction(shop.slug, diver.id, reply(messageId, "You’re on the 1pm boat now.")),
+    );
+
+    expect(to).not.toContain("not-authorized-reply");
+    const [recorded] = await db
+      .select()
+      .from(staffReplies)
+      .where(eq(staffReplies.inboundMessageId, messageId));
+    expect(recorded).toMatchObject({
+      personId: diver.id,
+      sentByPersonId: captain,
+      body: "You’re on the 1pm boat now.",
+    });
+  });
+
+  it("refuses someone whose staff roles are gone, and writes nothing", async () => {
+    const { db, shop, captain } = await context();
+    const diver = await diverWithEmail(db, shop.id);
+    const messageId = await waitingMessage(db, shop.id, diver.email);
+    // Demoted off every staff role between sign-in and the post — the window
+    // `isLiveStaff` exists to close, and the only gate left on this action.
+    await db.delete(personRoles).where(eq(personRoles.personId, captain));
+    signIn(shop, captain);
+
+    const to = await redirectedTo(() =>
+      replyToDiverAction(shop.slug, diver.id, reply(messageId, "You’re on the 1pm boat now.")),
+    );
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${diver.id}?notice=not-authorized-reply&form=reply#conversation`,
+    );
+    // Scoped to the message this test put there: the seeded shop ships a
+    // conversation of its own, so a bare count would pass on someone else's row.
+    expect(
+      await db.select().from(staffReplies).where(eq(staffReplies.inboundMessageId, messageId)),
+    ).toHaveLength(0);
   });
 });

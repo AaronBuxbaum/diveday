@@ -67,6 +67,15 @@ Shadows belong exclusively to things that float above the page — menus, sheets
 `shadow-sm` retires from resting cards, tables and stat tiles. (Rejected alternative below explains
 why the borderless iOS treatment is not available to this palette.)
 
+**One exception, and it is the whole list: the `primary` variant of `buttonClass()`
+(`src/components/ui/button.ts`) keeps its `shadow-sm` at rest.** Decision 1 governs *panels* — the
+surfaces a page is built out of — and a button is not one of them. The single primary per section
+is principle 8's one obvious action, and a 1px lift is how it stays obvious against a surface that
+is otherwise flat everywhere; take it away and the action reads as another tile. No other variant
+carries a resting shadow (`danger-solid` never had one), and none may acquire one. **Decided
+2026-09-10 (#1231): this is the app's only sanctioned resting shadow** — a later sweep for stray
+`shadow-sm` stops at this line instead of re-deriving the question and stripping the button again.
+
 ### 2. Two grouped anatomies are the default composition; the card stack retires
 
 - **The open ledger** — rows directly on `--background`, separated by hairlines, under a group

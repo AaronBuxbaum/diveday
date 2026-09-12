@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
@@ -13,6 +13,7 @@ import {
   renderSummary,
   sourceFileForPath,
 } from "./persona-bots/findings.mjs";
+import { imageReaderFor, JUDGED_FILE_NAME, judgeAll } from "./persona-bots/judge.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 /**
@@ -41,7 +42,9 @@ import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
  * no bot, and both failures are one bad week away without this.
  *
  * Options: `--dry-run` (shape and print, file nothing — what a session runs),
- * `--no-build`, `--keep`, `--out <dir>` (default `persona-bots`).
+ * `--no-build`, `--keep`, `--out <dir>` (default `persona-bots`), `--judge`
+ * (the opt-in judged pass — see `scripts/persona-bots/judge.mjs`; off unless a
+ * human asks for it, and costing nothing at all when it is off).
  */
 
 const args = process.argv.slice(2);
@@ -52,12 +55,20 @@ const option = (name) => {
 };
 
 const dryRun = flag("--dry-run");
+const judging = flag("--judge");
 const root = process.cwd();
 const outDir = path.resolve(
   root,
   option("--out") ?? process.env.PERSONA_BOTS_OUT ?? "persona-bots",
 );
-const env = { ...process.env, PERSONA_BOTS_OUT: outDir };
+// `PERSONA_BOTS_JUDGE` reaches the walk, not this script: it is what tells the
+// photograph test to capture the judged personas' stops whether or not a lens
+// fired on them, which is the input the second pass reads.
+const env = {
+  ...process.env,
+  PERSONA_BOTS_OUT: outDir,
+  ...(judging ? { PERSONA_BOTS_JUDGE: "1" } : {}),
+};
 
 /** The workflow run this was: named in every issue so the screenshots are findable. */
 const runContext = {
@@ -135,6 +146,38 @@ try {
 
 runContext.screenshots = report.screenshots ?? {};
 const findings = report.findings ?? [];
+
+// **The judged pass, and every way it can decline to happen.** No key, no
+// stops, an API that answered badly — each prints why and leaves the mechanical
+// findings exactly as they were. Same fail-open contract as every other step
+// here: this is a report, and half a report beats a red scheduled job.
+if (judging) {
+  try {
+    // The walk records the picture on the stop itself, because a judged stop is
+    // photographed under the role the persona holds and the path-keyed map is
+    // the owner's view. Falling back to the map keeps an anonymous stop working
+    // if the walk only managed the shared capture.
+    const judgeStops = (report.judgeStops ?? []).map((stop) => ({
+      ...stop,
+      screenshot: stop.screenshot ?? runContext.screenshots[stop.path],
+    }));
+    if (judgeStops.length === 0) throw new Error("the walk recorded no judged stops");
+    const judged = await judgeAll({
+      personasMarkdown: readFileSync(path.join(root, "docs/product/personas.md"), "utf8"),
+      judgeStops,
+      readImage: imageReaderFor(outDir),
+    });
+    writeFileSync(
+      path.join(outDir, JUDGED_FILE_NAME),
+      `${JSON.stringify({ stops: judgeStops, findings: judged }, null, 2)}\n`,
+    );
+    findings.push(...judged);
+    console.log(`persona-bots: judged ${judgeStops.length} stop(s); ${judged.length} finding(s).`);
+  } catch (error) {
+    console.error(`persona-bots: DID NOT JUDGE — ${error.message}`);
+  }
+}
+
 const classes = classify(findings);
 
 // The tracker, read once. Both lists fail open: `listIssuesByLabel` returns
@@ -145,11 +188,18 @@ const classes = classify(findings);
 // in most containers this repository is developed in.
 const openIssues = listIssuesByLabel(root, {
   label: LABEL,
-  fields: "number,title,body",
+  // `labels` is here for the brake alone (#1497): an issue a human has parked
+  // or is waiting on somebody else for has been triaged, so it does not count
+  // towards the ceiling. Without the field the filter reads an empty list and
+  // silently counts everything, which is the old behaviour wearing the new
+  // code's clothes.
+  fields: "number,title,body,labels",
   what: "persona-bots",
 });
 const closedIssues = listIssuesByLabel(root, {
   label: LABEL,
+  // No `labels` here: the closed list feeds suppression only, which reads
+  // nothing but the fingerprint in the body.
   fields: "number,title,body",
   state: "closed",
   what: "persona-bots (closed)",

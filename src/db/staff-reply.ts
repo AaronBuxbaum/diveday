@@ -115,9 +115,10 @@ function replySubject(
 /**
  * Send one reply from the shop, and record what happened to it.
  *
- * The caller has already decided *who may* (`canPersonAnswerShopInbox`, or —
- * for an automatic reply — the evidence rules in `src/db/reply-keywords.ts`);
- * this decides whether the message can be answered at all, and on what.
+ * The caller has already decided *who may* (`replyToDiverAction`'s live staff
+ * check, or — for an automatic reply — the evidence rules in
+ * `src/db/reply-keywords.ts`); this decides whether the message can be
+ * answered at all, and on what.
  */
 export async function sendStaffReply(
   db: AppDb,

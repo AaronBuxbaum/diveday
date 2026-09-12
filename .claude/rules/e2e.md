@@ -36,6 +36,12 @@ Loaded when a spec, fixture or the coverage ledger is read. The **e2e-and-visual
   write landed, so the rule steps straight over it — assert the round trip after a real wait, never
   as one. Both instances that reached CI failed dozens of lines away from the cause
   ([docs/agents/repo-checks.md](../../docs/agents/repo-checks.md)).
+- **An absence assertion pairs with a positive query.** A locator naming a string nothing renders
+  any more satisfies `.toHaveCount(0)` for the wrong reason, so keep the same string queried
+  positively somewhere in the spec — that pairing is the only thing that proves the name still
+  matches anything. It is a convention, not a guard: the rule was written and swept, and it flags
+  98 lines across 46 of the 112 files here, so it is not live (#1403, counts in
+  [docs/agents/repo-checks.md](../../docs/agents/repo-checks.md)).
 - **A failing or flaky test is part of the work, even when unrelated to your change.** Never skip
   it, widen a timeout, or leave it red. Search open PRs first for a fix already in flight on the same
   spec.

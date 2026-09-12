@@ -25,7 +25,7 @@ function member(over: Partial<PublicCrewMember> = {}): PublicCrewMember {
 describe("TripCrewLine", () => {
   it("names each crew member with their job and their languages", () => {
     render(<TripCrewLine crew={[member()]} locale="en-US" />);
-    expect(screen.getByText("Who you're diving with")).toBeInTheDocument();
+    expect(screen.getByText("Who you’re diving with")).toBeInTheDocument();
     const row = screen.getByRole("listitem");
     expect(row).toHaveTextContent("Marcus");
     expect(row).toHaveTextContent("Divemaster");

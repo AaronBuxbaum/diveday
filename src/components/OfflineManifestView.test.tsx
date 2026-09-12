@@ -7,6 +7,7 @@ import {
   appendOfflineRollCall,
   listOfflineManifests,
   loadOfflineManifest,
+  OfflineManifestError,
   purgeOfflineManifestsExceptShop,
   readDiscardedOfflineRecords,
   syncOfflineManifest,
@@ -39,7 +40,16 @@ let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
 }));
-vi.mock("@/lib/offline-manifest-store", () => ({
+vi.mock("@/lib/offline-manifest-store", async () => ({
+  // The real class, not a stand-in: the view branches on
+  // `error instanceof OfflineManifestError` and then on `error.code`, so a
+  // duplicate declared here would make every refusal fall through to the
+  // generic message and the copy tests below would assert nothing.
+  OfflineManifestError: (
+    await vi.importActual<typeof import("@/lib/offline-manifest-store")>(
+      "@/lib/offline-manifest-store",
+    )
+  ).OfflineManifestError,
   // The counter's queue is a *different* writer from roll call's, and this
   // mock keeps them apart so a test can prove which one a tap reached
   // (ADR 20260907-the-counter-survives-offline).
@@ -87,6 +97,8 @@ function payload(tripId: string, title: string, totalDivers = 2): OfflineManifes
           notBackAboard: 0,
           awaiting: totalDivers,
           unaccountedFor: totalDivers,
+          overCapacity: 0,
+          notHere: 0,
         },
       },
     ],
@@ -162,6 +174,8 @@ function richPayload(
      * fail-closed direction (`crewOlderCopy`, `canRecordOfflineCrewStatus`).
      */
     crewWithoutIds?: boolean;
+    /** The counter released this diver's seat before the copy was saved (#1209). */
+    notHere?: boolean;
   } = {},
 ): OfflineManifestPayload {
   // Every charter is crewed, so both cases carry the same two people; the
@@ -230,6 +244,7 @@ function richPayload(
     readiness: { status: opts.readiness ?? "ready", blockers: [] },
     rentalFit: { state: "not_recorded" },
     nitroxRequested: false,
+    notHere: opts.notHere ?? false,
     rollCall: undefined,
   };
   const carried: DiverFixture = {
@@ -276,6 +291,8 @@ function richPayload(
           notBackAboard: 0,
           awaiting: divers.length,
           unaccountedFor: divers.length,
+          overCapacity: 0,
+          notHere: 0,
         },
       },
       {
@@ -296,6 +313,8 @@ function richPayload(
           unaccountedFor: opts.withCarriedNotBoarded
             ? diversAfterDive.length - 1
             : diversAfterDive.length,
+          overCapacity: 0,
+          notHere: 0,
         },
       },
     ],
@@ -487,7 +506,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     render(<OfflineManifestView />);
 
     await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1"));
-    expect(await screen.findByText("Everything's sent across these trips.")).toBeInTheDocument();
+    expect(await screen.findByText("Everything’s sent across these trips.")).toBeInTheDocument();
   });
 
   it("never reconciles a foreign shop's pending trip under the current session", async () => {
@@ -838,7 +857,7 @@ describe("OfflineManifestView — never claims what it hasn't read", () => {
 
     render(<OfflineManifestView />);
 
-    expect(screen.getByText("Opening this device's saved copy")).toBeInTheDocument();
+    expect(screen.getByText("Opening this device’s saved copy")).toBeInTheDocument();
     expect(screen.queryByText("Nothing saved on this phone yet")).not.toBeInTheDocument();
 
     await act(async () => {
@@ -859,7 +878,7 @@ describe("OfflineManifestView — never claims what it hasn't read", () => {
 
     render(<OfflineManifestView />);
 
-    expect(screen.getByText("Opening this device's saved copy")).toBeInTheDocument();
+    expect(screen.getByText("Opening this device’s saved copy")).toBeInTheDocument();
     expect(screen.queryByText("Nothing saved on this device yet")).not.toBeInTheDocument();
 
     await act(async () => {
@@ -956,6 +975,33 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(screen.queryByText(/does not allow boarding/)).not.toBeInTheDocument();
   });
 
+  /**
+   * **The refusal is in the past tense, like every other readiness word here.**
+   *
+   * `canRecordOfflineStatus` answers the departure gate from the *snapshot's*
+   * `readiness.status`, so this sentence is the saved copy talking — and until
+   * 2026-09-11 it read "This diver isn't ready to board yet", a stale copy
+   * reading as current: the one lie a roll-call surface must not tell
+   * (docs/product/glossary.md's Blocked / Ready entry). The badge beside it has
+   * said "when saved" since #1360; the refusal now says the same thing.
+   */
+  it("says the readiness it refused on was true when the copy was saved", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+    vi.mocked(appendOfflineRollCall).mockRejectedValue(new OfflineManifestError("not_allowed"));
+
+    render(<OfflineManifestView />);
+    fireEvent.click(await screen.findByRole("button", { name: "Mark boarded" }));
+
+    expect(
+      await screen.findByText(
+        "This diver wasn’t ready to board when this copy was saved. " +
+          "Open the live manifest before they board.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("invariant 3: an expired copy shows no board/not-board buttons, a distinct message, and never fires a haptic or the celebration", async () => {
     searchParams = new URLSearchParams({ trip: "trip-1" });
     const expired = richEnvelope(
@@ -975,7 +1021,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     // manifest" copy — not the generic freshness banner every other stale
     // copy shows.
     expect(
-      screen.getByText(/This saved copy has expired and can't be used to board divers/),
+      screen.getByText(/This saved copy has expired and can’t be used to board divers/),
     ).toBeInTheDocument();
     expect(screen.getByText("Expired — record on the live manifest")).toBeInTheDocument();
     expect(appendOfflineRollCall).not.toHaveBeenCalled();
@@ -1039,7 +1085,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(screen.queryByText(/Not boarded ☑️/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "After dive 1 roll call" })).toBeInTheDocument();
-    expect(screen.queryByText(/everyone's aboard/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/everyone’s aboard/)).not.toBeInTheDocument();
 
     // SubSurfaceRipple mounts the celebration markup one render *after* its
     // `complete` prop flips (its own `useEffect` calls `setActive(true)`,
@@ -1471,6 +1517,122 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     const grid = document.getElementById("missing-divers-grid");
     if (!grid) throw new Error("the missing-divers grid is missing");
     expect(within(grid).getByRole("button", { name: /Priya/ })).toBeInTheDocument();
+  });
+
+  /**
+   * The glossary's offline exception covers the whole page, not one pill
+   * (#1360). A face in this grid and that diver's own row are one scroll apart
+   * on a surface whose only real risk is being read as current, so a bare
+   * "Blocked" beside the face was the one wording that could make a stale copy
+   * look live.
+   */
+  it("qualifies the grid's blocked chip the way the diver's own row does", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      richEnvelope("trip-1", { readiness: "blocked" }),
+    );
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const grid = document.getElementById("missing-divers-grid");
+    if (!grid) throw new Error("the missing-divers grid is missing");
+    expect(within(grid).getByText("Blocked when saved")).toBeInTheDocument();
+    // `getByText` with a string matches an element's whole normalised text, so
+    // this finds an *unqualified* chip and never the qualified one above.
+    expect(within(grid).queryByText("Blocked")).toBeNull();
+  });
+
+  /**
+   * The checkpoint rule the live page applies three times — the roll-call row's
+   * untouched fill, its capsule (`blockedAtDock`) and the summary panel's
+   * still-to-call chip (`blocked: diver.blocked && isDeparture`) — and which
+   * this page states of itself and then broke in one place. After a dive every
+   * face in the grid is somebody who went in the water, so the saved paperwork
+   * word beside it is stale by definition, and its red competed with the one
+   * red on the page that means a diver has not come back.
+   *
+   * The diver's own row is the deliberate exception and is asserted here in the
+   * same breath: it is the snapshot's two-state record, not an exception accent
+   * on a checkpoint-scoped prompt, so it keeps its badge at every checkpoint.
+   */
+  it("drops the grid's blocked chip after a dive, and keeps the diver row's badge", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      richEnvelope("trip-1", { readiness: "blocked" }),
+    );
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const grid = document.getElementById("missing-divers-grid");
+    if (!grid) throw new Error("the missing-divers grid is missing");
+    // She is still uncalled, so she is still a face to tap — this asserts the
+    // chip went away, not the grid.
+    expect(within(grid).getByRole("button", { name: /Priya/ })).toBeInTheDocument();
+    expect(within(grid).queryByText("Blocked when saved")).toBeNull();
+
+    const row = document.getElementById("offline-roll-call-diver-priya");
+    if (!row) throw new Error("Priya's row missing");
+    expect(within(row).getByText("Blocked when saved")).toBeInTheDocument();
+  });
+
+  /**
+   * **A released seat reads as one on the only copy at the rail** (#1209,
+   * `dive-domain-expert` review 20260911). The dock copy carried one booking
+   * signal — the counter's arrival — so a diver the desk wrote off at 07:20
+   * looked exactly like one still walking down the pier to a crew with no
+   * signal. The qualifier is the point: this copy cannot know the desk has
+   * since put them back, and a stale copy reading as current is the one lie a
+   * roll-call surface must not tell.
+   */
+  it("says which seat the counter released, and still lets the crew board them", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1", { notHere: true }));
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const row = document.getElementById("offline-roll-call-diver-priya");
+    if (!row) throw new Error("Priya's row missing");
+    expect(within(row).getByText("Not here when saved")).toBeInTheDocument();
+    // It refuses nothing: the crew tap boards a body they can see, and the
+    // rail takes the released seat back when the event syncs.
+    expect(within(row).getByRole("button", { name: "Mark boarded" })).toBeEnabled();
+  });
+
+  it("says nothing on a copy where nobody was written off", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    expect(screen.queryByText("Not here when saved")).toBeNull();
+  });
+
+  /**
+   * The other half of the same rule, kept beside it so a session that gates the
+   * chip one checkpoint too far has a failing test rather than a quieter dock.
+   * At departure the word is the thing to fix before this diver boards.
+   */
+  it("keeps the grid's blocked chip at the dock", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      richEnvelope("trip-1", { readiness: "blocked" }),
+    );
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const grid = document.getElementById("missing-divers-grid");
+    if (!grid) throw new Error("the missing-divers grid is missing");
+    expect(within(grid).getByText("Blocked when saved")).toBeInTheDocument();
   });
 
   it("ports the WaterLocker disable toggle onto the offline surface", async () => {
@@ -2013,7 +2175,7 @@ describe("OfflineManifestView — when a purge deletes the record on screen", ()
 
     expect(await screen.findByText("Nothing saved on this phone yet")).toBeInTheDocument();
     expect(
-      screen.getByText("There's no current saved manifest for this trip on this device."),
+      screen.getByText("There’s no current saved manifest for this trip on this device."),
     ).toBeInTheDocument();
     expect(screen.queryByText("That saved copy has been removed")).not.toBeInTheDocument();
   });

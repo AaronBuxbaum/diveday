@@ -22,6 +22,34 @@ import type { RentalFit } from "./types";
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
 /**
+ * A drysuit is not sized on the wetsuit scale above (issue 1414): a rental wall
+ * is racked on the manufacturer grid, where a girth letter carries a second
+ * axis the wetsuit has none of — the cut. One rule holds this list together: a
+ * girth letter, optionally followed by `T` for the tall cut. The second
+ * character therefore means exactly one thing wherever it appears.
+ *
+ * That rule is what a `dive-domain-expert` pass took off the provisional list.
+ * `MS` and `ML` shipped here as in-between *girths* while `MT` beside them was
+ * a *height*, and both readings are real — manufacturer charts gloss `MS` as
+ * medium short and `ML` as medium large — so a diver picking `MS` for a short
+ * torso and a packer reading it as a girth were never naming the same suit.
+ * They join `LS` and `MLT`: real sizes, rarely stocked as rentals, and a shop
+ * holding one records it staff-side, where the field is free text. `XS` goes
+ * back on: every major maker publishes it, a cold-water fleet stocks it, and
+ * the wetsuit select one field above starts there — so its absence read to a
+ * small-framed diver as "this shop has nothing for me".
+ *
+ * The grid is the owner's call and is open as **H-76** in
+ * `docs/product/human-decisions.md`, which carries the two questions this list
+ * cannot answer for itself: the short cut is missing where the tall one is not,
+ * and a diver may not know their drysuit size at all. This list ships
+ * provisionally. Only this array depends on the answer — the column is `text`
+ * and the staff field is free text — so changing the grid is an edit to this
+ * one line.
+ */
+const DRYSUIT_SIZES = ["XS", "S", "M", "MT", "L", "LT", "XL", "XLT", "XXL"];
+
+/**
  * `src/lib/rentals.ts` returns item codes, never rendered words (see the
  * domain-strings-common notes on a domain function rendered on both a staff
  * and a diver page) — `SettingsPage.tsx`/`RentalFit.tsx` resolve the same
@@ -44,15 +72,24 @@ export const RENTABLE_ITEM_LABEL_KEYS: Record<RentableItemKind, DiverMessageKey>
 };
 
 /**
- * Plain-language definitions for the two acronyms this checklist is most
- * likely to stump a newcomer with. They used to sit under the list as
- * permanent paragraphs; now they hang off the item they explain as an
- * `InfoHint`, so the checklist reads as a checklist and the explanation is
- * one hover (or tap, or tab-stop) away for whoever wants it.
+ * Plain-language definitions for the items this checklist is most likely to
+ * stump a newcomer with. They used to sit under the list as permanent
+ * paragraphs; now they hang off the item they explain as an `InfoHint`, so the
+ * checklist reads as a checklist and the explanation is one hover (or tap, or
+ * tab-stop) away for whoever wants it.
+ *
+ * The drysuit is here for a different reason from the two acronyms: it is the
+ * one tick that silently answers a second question. The packing list gives a
+ * drysuit renter no boots line at all, because a rental drysuit usually has
+ * its boots vulcanised on (`src/lib/dive-prep.ts`'s `rentedItems`), and a
+ * diver who packs their own boots against a suit that already has them, or
+ * turns up expecting to be handed a pair, finds out at the dock. Saying it on
+ * the tick is the only place a diver ever reads it.
  */
 export const RENTABLE_ITEM_HINT_KEYS: Partial<Record<RentableItemKind, DiverMessageKey>> = {
   bcd: "rental.jargonHints.bcd",
   regulator: "rental.jargonHints.regulator",
+  drysuit: "rental.jargonHints.drysuit",
 };
 
 /**
@@ -140,6 +177,7 @@ export function RentalFitForm({
   );
   const [bcdSize, setBcdSize] = useState(rentalFit?.bcdSize ?? "");
   const [wetsuitSize, setWetsuitSize] = useState(rentalFit?.wetsuitSize ?? "");
+  const [drysuitSize, setDrysuitSize] = useState(rentalFit?.drysuitSize ?? "");
   // One shoe-size figure for fins and boots alike: they were two fields asking
   // the same question, and a diver who answered one and not the other left the
   // crew guessing. `bootSize` is still its own column (imports carry one), and
@@ -148,7 +186,8 @@ export function RentalFitForm({
 
   const bcdOk = !rentedKinds.has("bcd") || !!bcdSize;
   const wetsuitOk = !rentedKinds.has("wetsuit") || !!wetsuitSize;
-  const isConfirmed = rentedKinds.size > 0 && bcdOk && wetsuitOk;
+  const drysuitOk = !rentedKinds.has("drysuit") || !!drysuitSize;
+  const isConfirmed = rentedKinds.size > 0 && bcdOk && wetsuitOk && drysuitOk;
 
   const [nitroxRequested, setNitroxRequested] = useState(wantsNitrox);
   /**
@@ -362,6 +401,7 @@ export function RentalFitForm({
             the order is unchanged. */}
         {offers.has("bcd") ||
         offers.has("wetsuit") ||
+        offers.has("drysuit") ||
         offers.has("mask_fins") ||
         offers.has("weights") ? (
           <FieldGrid columns={2}>
@@ -390,6 +430,21 @@ export function RentalFitForm({
                 >
                   <option value="">{t("rental.notSure")}</option>
                   {SIZES.map((size) => (
+                    <option key={size}>{size}</option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
+            {offers.has("drysuit") ? (
+              <Field label={t("rental.drysuitSize")}>
+                <select
+                  name="drysuitSize"
+                  value={drysuitSize}
+                  onChange={(e) => setDrysuitSize(e.target.value)}
+                  className={controlClass}
+                >
+                  <option value="">{t("rental.notSure")}</option>
+                  {DRYSUIT_SIZES.map((size) => (
                     <option key={size}>{size}</option>
                   ))}
                 </select>

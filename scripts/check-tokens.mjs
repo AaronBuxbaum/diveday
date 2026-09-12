@@ -23,10 +23,10 @@ import { pathToFileURL } from "node:url";
  *   - `src/app/globals.css` — the one place hex is *supposed* to live; token
  *     definitions are the point of the file, and it is CSS, not a component.
  *   - Next's metadata-file conventions (`opengraph-image.tsx`,
- *     `twitter-image.tsx`, `icon.tsx`, `apple-icon.tsx`, `manifest.ts`) —
- *     these render to bitmaps (Satori) or JSON served outside any stylesheet,
- *     so CSS custom properties literally cannot reach them. Hex there is not
- *     a missed token, it is the only mechanism that exists.
+ *     `twitter-image.tsx`, `manifest.ts`) — these render to bitmaps (Satori)
+ *     or JSON served outside any stylesheet, so CSS custom properties
+ *     literally cannot reach them. Hex there is not a missed token, it is the
+ *     only mechanism that exists.
  *   - the shared code those metadata files render *through*, listed one exact
  *     path at a time in `exemptPaths` below. Same bitmap, same reason; the
  *     only difference is that a shared module carries no convention name to
@@ -56,13 +56,7 @@ const guardedRoots = ["src/app", "src/components", "src/features"];
  * metadata-file names, and honored only under `src/app` where the conventions
  * exist, so an ordinary component can't opt out by taking one of the names.
  */
-const metadataFileNames = new Set([
-  "opengraph-image.tsx",
-  "twitter-image.tsx",
-  "icon.tsx",
-  "apple-icon.tsx",
-  "manifest.ts",
-]);
+const metadataFileNames = new Set(["opengraph-image.tsx", "twitter-image.tsx", "manifest.ts"]);
 
 /**
  * Exempt for the same reason and by the same rule as the names above —
@@ -79,11 +73,17 @@ const metadataFileNames = new Set([
  * opt out by moving house.
  *
  * `src/app/_brand/colors.ts` is the same arrangement for two things a token
- * genuinely cannot reach: the bubble-trail mark's fills, which `icon.tsx`,
- * `apple-icon.tsx` and `pwa-icon-maskable/route.tsx` now render through at five
- * sizes rather than each hand-placing them at one, and the `<meta
+ * genuinely cannot reach: the bubble-trail mark's fills, which
+ * `pwa-icon-maskable/route.tsx` renders through at request time and
+ * `scripts/render-brand-icons.tsx` renders through into the four committed
+ * PNGs, rather than each hand-placing them at one size; and the `<meta
  * name="theme-color">` pair — an HTML attribute, where a custom property has
  * nothing to resolve against (issue #794).
+ *
+ * `icon.tsx` and `apple-icon.tsx` were in the name list above until issue
+ * #1361 turned them into `icon.png` and `apple-icon.png`. The names are gone
+ * from the list with the files, so an ordinary component cannot claim the
+ * exemption by taking one.
  */
 const exemptPaths = new Set(["src/app/_og/card.tsx", "src/app/_brand/colors.ts"]);
 

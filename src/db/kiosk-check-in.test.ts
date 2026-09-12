@@ -11,7 +11,11 @@ import {
 } from "@/lib/kiosk-check-in";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
-import { listSelfReportedArrivalBookingIds } from "./arrival-provenance";
+import {
+  listSelfReportedArrivalBookingIds,
+  listSelfReportedArrivalBookingIdsForTrip,
+} from "./arrival-provenance";
+import { issueBookingCapability, revokeBookingCapabilities } from "./booking-capabilities";
 import { checkInAtKiosk } from "./check-in";
 import { issueDisplayToken, revokeDisplayToken, verifyDisplayToken } from "./display-tokens";
 import { findKioskSeats, kioskNameMatch } from "./kiosk-check-in";
@@ -22,6 +26,7 @@ import {
   diveSupportNeeds,
   people,
   rollCallEvents,
+  shops,
   trips,
 } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -93,6 +98,47 @@ async function clearForBoarding(
     agreed: true,
     medicalAnswers: clearAnswers,
   });
+}
+
+/**
+ * **A departure whose UTC calendar date is not the day it sails.** Moves the
+ * shop to Hawaii — no DST, so this holds in every month — and the boat to 01:00
+ * UTC, which is 15:00 the *previous* afternoon in Honolulu. Hands back the date
+ * of birth of a diver who turns eighteen on the UTC date: an adult by the
+ * server's calendar and a minor by the shop's, on the same boat.
+ *
+ * This is the gap both kiosk doors fell into until 2026-09-12. They measured
+ * majority with `calendarDateInTimezone(startsAt, "UTC")` while the captain's
+ * manifest measured it in `shop.timezone` (`src/db/manifests.ts`), so west of
+ * UTC the tablet called that diver an adult and the manifest called them a
+ * minor — and because this is a routing rule rather than a gate, the minor
+ * walked past the person who was meant to meet their guardian
+ * (`dive-domain-expert` review).
+ */
+async function boatSailsTheAfternoonBeforeItsUtcDate(
+  db: Awaited<ReturnType<typeof counter>>["db"],
+  shopId: string,
+  tripId: string,
+  seededStartsAt: Date,
+) {
+  await db.update(shops).set({ timezone: "Pacific/Honolulu" }).where(eq(shops.id, shopId));
+  // The boat keeps the seeded day, so readiness and the kiosk window stay the
+  // ones every other test here works against — unless that day is February 29,
+  // which has no eighteenth anniversary in a non-leap year. Then the boat moves
+  // a day rather than the scenario inventing a date the `date` column rejects.
+  const seededDay = seededStartsAt.toISOString().slice(0, 10);
+  const utcDay = seededDay.endsWith("-02-29") ? `${seededDay.slice(0, 4)}-03-01` : seededDay;
+  const sails = new Date(`${utcDay}T01:00:00.000Z`);
+  await db
+    .update(trips)
+    .set({ startsAt: sails, endsAt: new Date(sails.getTime() + 4 * 60 * 60 * 1000) })
+    .where(eq(trips.id, tripId));
+  return {
+    /** Ten minutes before it leaves, the way every other lookup here states it. */
+    atTheDoor: new Date(sails.getTime() - 10 * 60 * 1000),
+    /** Eighteen on the UTC date, seventeen on the day the boat actually sails. */
+    eighteenTheDayAfter: `${Number(utcDay.slice(0, 4)) - 18}${utcDay.slice(4)}`,
+  };
 }
 
 describe("findKioskSeats", () => {
@@ -561,6 +607,185 @@ describe("findKioskSeats", () => {
       }),
     ).toEqual([]);
   });
+
+  /**
+   * **And it is the shop's calendar day that decides, not the server's.** The
+   * manifest measures age, minor status and birthdays on the day the boat
+   * sails in `shop.timezone`; this door read the departure's UTC date, which
+   * west of UTC is the *next* day for every afternoon boat.
+   */
+  it("measures majority on the day the boat sails in the shop's own timezone", async () => {
+    const { db, shop, booking, person, reef } = await counter();
+    const { atTheDoor, eighteenTheDayAfter } = await boatSailsTheAfternoonBeforeItsUtcDate(
+      db,
+      shop.id,
+      reef.id,
+      reef.startsAt,
+    );
+    await db
+      .update(people)
+      .set({ dateOfBirth: eighteenTheDayAfter })
+      .where(eq(people.id, person.id));
+    const lookup = () =>
+      findKioskSeats(db, { shopId: shop.id, lookup: readKioskInput(booking.id), now: atTheDoor });
+    expect(await lookup()).toEqual([]);
+
+    // The same diver, the same boat, the same instant — and a shop whose own
+    // calendar agrees with the server's. Now they are the adult they read as,
+    // which is what keeps the assertion above about the timezone rather than
+    // about the tablet refusing everybody with a birth date.
+    await db.update(shops).set({ timezone: "UTC" }).where(eq(shops.id, shop.id));
+    expect(await lookup()).toHaveLength(1);
+  });
+
+  /**
+   * **The arrival card's QR, scanned at the counter** (issue #1600). A wedge
+   * reader types the code into the same box a surname goes in, so the whole
+   * branch is `readKioskInput` recognising its shape and this reader resolving
+   * it — through `verifyBookingCapability`, before a single seat is read, so
+   * every filter above applies to a scan exactly as it applies to a name.
+   */
+  it("finds the seat behind a live arrival code", async () => {
+    const { db, shop, booking, atTheDoor } = await counter();
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "arrival",
+      now: atTheDoor,
+    });
+    if (!issued) throw new Error("could not mint an arrival code");
+    const seats = await findKioskSeats(db, {
+      shopId: shop.id,
+      lookup: readKioskInput(issued.token),
+      now: atTheDoor,
+    });
+    expect(seats.map((row) => row.bookingId)).toEqual([booking.id]);
+  });
+
+  /**
+   * **The purpose gate, and the reason the card got a credential of its own.**
+   * The same booking's readiness token is the diver's medical, waiver and
+   * payment surface; the card is a file they save, print and can forward. If
+   * the counter accepted either, the card would be carrying the wrong one
+   * around a hotel lobby. It is refused with the sentence a stranger gets.
+   */
+  it("refuses the same booking's readiness token", async () => {
+    const { db, shop, booking, atTheDoor } = await counter();
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "readiness",
+      now: atTheDoor,
+    });
+    if (!readiness) throw new Error("could not mint a readiness token");
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(readiness.token),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * **A code is not a tenant claim.** The token and the tablet arrive from two
+   * different people, so the shop the capability names is checked against the
+   * shop the display link opened — otherwise one shop's arrival card would
+   * write an arrival at another shop's counter.
+   */
+  it("refuses an arrival code at another shop's counter", async () => {
+    const { db, shop, booking, atTheDoor } = await counter();
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "arrival",
+      now: atTheDoor,
+    });
+    if (!issued) throw new Error("could not mint an arrival code");
+    expect(
+      await findKioskSeats(db, {
+        shopId: OTHER_SHOP,
+        lookup: readKioskInput(issued.token),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * **A revoked card is a dead card**, which is what makes the credential
+   * withdrawable at all: cancelling the booking revokes every purpose, and the
+   * cap on live capabilities per purpose retires the oldest. Both reach the
+   * counter through this one check.
+   */
+  it("refuses a revoked arrival code", async () => {
+    const { db, shop, booking, atTheDoor } = await counter();
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "arrival",
+      now: atTheDoor,
+    });
+    if (!issued) throw new Error("could not mint an arrival code");
+    await revokeBookingCapabilities(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now: atTheDoor,
+    });
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(issued.token),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * **A code does not buy past the two routing rules.** Holding a valid arrival
+   * credential says who you are, and says nothing about which door should
+   * answer: a diver who stated a support need and a minor still meet a person,
+   * exactly as they do when they type their name. This is the assertion that
+   * would fail if the code were ever resolved outside this reader.
+   */
+  it("still sends a support-needs diver and a minor to the desk when they scan", async () => {
+    const { db, shop, booking, person, reef, atTheDoor } = await counter();
+    const supported = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "arrival",
+      now: atTheDoor,
+    });
+    if (!supported) throw new Error("could not mint an arrival code");
+    await db.insert(diveSupportNeeds).values({
+      shopId: shop.id,
+      personId: person.id,
+      supportDiversNeeded: 1,
+      supportDiversProvidedBy: "shop",
+    });
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(supported.token),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+
+    // The same seat again, this time a minor rather than a supported diver.
+    await db.delete(diveSupportNeeds).where(eq(diveSupportNeeds.personId, person.id));
+    const fourteen = new Date(reef.startsAt.getTime());
+    fourteen.setUTCFullYear(fourteen.getUTCFullYear() - 14);
+    await db
+      .update(people)
+      .set({ dateOfBirth: fourteen.toISOString().slice(0, 10) })
+      .where(eq(people.id, person.id));
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(supported.token),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
 });
 
 /**
@@ -618,6 +843,87 @@ describe("listSelfReportedArrivalBookingIds", () => {
     expect([...(await listSelfReportedArrivalBookingIds(db, shop.id, [booking.id]))].length).toBe(
       0,
     );
+  });
+
+  /**
+   * **The tie is the ordinary case, and it is broken by the trail's own three
+   * keys.** `occurred_at` ties constantly — a frozen e2e clock, and a batched
+   * offline sync replaying a queue of taps that all carry the moment the device
+   * recorded them — so this read orders by `occurred_at`, `created_at`, `seq`,
+   * the same keys `standingArrivalStatus` and `newestArrivalEvent` use. It
+   * used to tie on `id`, a `defaultRandom()` uuid, and half of those coin flips
+   * handed the desk row the win: the booking silently stopped reading as
+   * self-reported, which is the direction that claims a human looked when none
+   * did (`dive-domain-expert` and `security-reviewer`, 2026-09-11). The ids
+   * below are written the wrong way round on purpose — under the old ordering
+   * the row that should lose sorts first, every run.
+   */
+  it("lets the later tablet tap win an identical-timestamp tie", async () => {
+    const { db, shop, link, booking, person, atTheDoor } = await counter();
+    const tie = { occurredAt: atTheDoor, createdAt: atTheDoor };
+    await db.insert(bookingArrivalEvents).values({
+      id: "ffffffff-ffff-4fff-bfff-ffffffffffff",
+      shopId: shop.id,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: person.id,
+      status: "arrived",
+      source: "live",
+      ...tie,
+    });
+    await db.insert(bookingArrivalEvents).values({
+      id: "00000000-0000-4000-8000-000000000001",
+      shopId: shop.id,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: person.id,
+      displayTokenId: link.id,
+      status: "arrived",
+      source: "live",
+      ...tie,
+    });
+
+    expect([...(await listSelfReportedArrivalBookingIds(db, shop.id, [booking.id]))]).toEqual([
+      booking.id,
+    ]);
+    // The manifest asks the same question a different way and must not get a
+    // different answer.
+    expect([
+      ...(await listSelfReportedArrivalBookingIdsForTrip(db, shop.id, booking.tripId)),
+    ]).toEqual([booking.id]);
+  });
+
+  it("lets the later desk tap win an identical-timestamp tie", async () => {
+    const { db, shop, link, booking, person, atTheDoor } = await counter();
+    const tie = { occurredAt: atTheDoor, createdAt: atTheDoor };
+    await db.insert(bookingArrivalEvents).values({
+      id: "ffffffff-ffff-4fff-bfff-ffffffffffff",
+      shopId: shop.id,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: person.id,
+      displayTokenId: link.id,
+      status: "arrived",
+      source: "live",
+      ...tie,
+    });
+    await db.insert(bookingArrivalEvents).values({
+      id: "00000000-0000-4000-8000-000000000001",
+      shopId: shop.id,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: person.id,
+      status: "arrived",
+      source: "live",
+      ...tie,
+    });
+
+    expect([...(await listSelfReportedArrivalBookingIds(db, shop.id, [booking.id]))].length).toBe(
+      0,
+    );
+    expect(
+      [...(await listSelfReportedArrivalBookingIdsForTrip(db, shop.id, booking.tripId))].length,
+    ).toBe(0);
   });
 });
 
@@ -779,6 +1085,41 @@ describe("checkInAtKiosk", () => {
     // And the seat is untouched by any of the four.
     const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
     expect(saved?.status).toBe("booked");
+  });
+
+  /**
+   * **The write door measures majority on the same calendar day the reader
+   * does, and both are the shop's.** Two doors disagreeing about which day it
+   * is would be the same hole with an extra step.
+   */
+  it("measures majority on the day the boat sails in the shop's own timezone", async () => {
+    const { db, shop, link, booking, person, reef } = await counter();
+    await clearForBoarding(db, shop.id, booking.id, person.fullName);
+    const { atTheDoor, eighteenTheDayAfter } = await boatSailsTheAfternoonBeforeItsUtcDate(
+      db,
+      shop.id,
+      reef.id,
+      reef.startsAt,
+    );
+    await db
+      .update(people)
+      .set({ dateOfBirth: eighteenTheDayAfter })
+      .where(eq(people.id, person.id));
+    const tap = () =>
+      checkInAtKiosk(db, {
+        shopId: shop.id,
+        displayTokenId: link.id,
+        bookingId: booking.id,
+        now: atTheDoor,
+      });
+    expect(await tap()).toMatchObject({ ok: false, reason: "not_found" });
+    const [held] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(held?.status).toBe("booked");
+
+    // And the same tap goes through once the shop's own calendar agrees with
+    // the server's, so the refusal above is about the day and not the diver.
+    await db.update(shops).set({ timezone: "UTC" }).where(eq(shops.id, shop.id));
+    expect(await tap()).toMatchObject({ ok: true, bookingId: booking.id });
   });
 
   it("refuses a booking belonging to another shop", async () => {

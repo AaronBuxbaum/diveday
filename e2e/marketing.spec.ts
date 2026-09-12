@@ -72,7 +72,7 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   // The diver preview moved out of the hero (where it was a third competing
   // door) onto the diver's row of the daily-moments section, still tagged for
   // attribution.
-  const scheduleLink = page.getByRole("link", { name: "See a diver's booking page →" });
+  const scheduleLink = page.getByRole("link", { name: "See a diver’s booking page →" });
   const href = await scheduleLink.getAttribute("href");
   // Sourced from DEMO_SHOP_SLUG rather than a hand-typed literal, and tagged
   // for funnel attribution the same way the trial link is. The source moved to
@@ -106,7 +106,7 @@ test("the homepage answers price and offers a way to ask before the footer", asy
   // rather than at the door.
   await expect(page.getByText(/^One flat price of/)).toHaveCount(2);
   await expect(page.getByText(/locked for two years for founding shops/)).toBeVisible();
-  await expect(page.getByRole("link", { name: "See what's included →" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "See what’s included →" })).toHaveAttribute(
     "href",
     "/pricing",
   );
@@ -142,7 +142,7 @@ test("the homepage's day reaches the evening, and answers mid-season where it di
   // The clause that makes this a revenue argument rather than an
   // administrative one: the shop's name is on the artifact the diver sends.
   await expect(
-    momentsBand.getByText("with your shop's name on the page they send their buddy."),
+    momentsBand.getByText("with your shop’s name on the page they send their buddy."),
   ).toBeVisible();
   // The screen is the claim in every row of this band, so the recap is shown,
   // not described — and named for a screen reader by a label the *caller*
@@ -157,7 +157,7 @@ test("the homepage's day reaches the evening, and answers mid-season where it di
   // need a funnel tag and would spend the page's door budget on the one band
   // that is not asking for anything.
   await expect(momentsBand.getByRole("link")).toHaveCount(1);
-  await expect(momentsBand.getByRole("link")).toHaveText("See a diver's booking page →");
+  await expect(momentsBand.getByRole("link")).toHaveText("See a diver’s booking page →");
   await expect(momentsBand.locator("button:not([disabled])")).toHaveCount(0);
 
   // Mid-season is answered in the column that raises it. A shop reading "bring
@@ -301,7 +301,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // the reader to go do any of these lines in the demo right now, and the page
   // had no way to spend that intent for another two bands
   // (docs/product/marketing-review-20260827.md, "the dare gets a door").
-  await expect(page.getByRole("heading", { name: "What DiveDay doesn't do." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What DiveDay doesn’t do." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(5);
 
   // Each door added beside the page's original pair carries its own funnel
@@ -374,7 +374,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // subject — the price, not the reader — because this is the fine-print slot
   // a burned buyer scans for the catch.
   await expect(
-    page.getByText("Today's price, locked for two years for founding shops."),
+    page.getByText("Today’s price, locked for two years for founding shops."),
   ).toBeVisible();
   // The trial's own terms, at both decision points — free, three weeks, no
   // card, and the soft expiry that src/lib/trial.ts actually implements. The
@@ -608,7 +608,7 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   // The Stripe half is asserted beside the headline because the headline alone
   // would be the second failure again.
   await expect(
-    page.getByRole("heading", { name: "Your season doesn't hang on us." }),
+    page.getByRole("heading", { name: "Your season doesn’t hang on us." }),
   ).toBeVisible();
   // Case-insensitive on purpose. The claim is "the money is in the shop's own
   // account"; whether the sentence happens to start with it is not part of the
@@ -627,7 +627,7 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
     page.getByRole("heading", { name: "Three facts before you move a season of bookings." }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "DiveDay is new." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "It doesn't do everything." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "It doesn’t do everything." })).toBeVisible();
 
   // Trust here is checkable, not asserted: each rule ships with the demo action
   // that proves it.
@@ -884,7 +884,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
     page.getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat." }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Keep FareHarbor. Add the day it can't run." }),
+    page.getByRole("heading", { name: "Keep FareHarbor. Add the day it can’t run." }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Or leave the per-booking fee behind." }),
@@ -916,7 +916,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
     page.getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat." }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Keep Rezdy. Add the day it can't run." }),
+    page.getByRole("heading", { name: "Keep Rezdy. Add the day it can’t run." }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Or leave the monthly fee and the per-booking cut behind." }),
@@ -937,9 +937,15 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // (`dynamicParams = false` and `experimental_ppr` are both removed under
   // `nextConfig.cacheComponents`). The rendered document still correctly
   // lands on Next's own not-found boundary — only the raw first-byte HTTP
-  // status of a cold hit is 200 instead of 404. Same known Next 16
-  // cacheComponents limitation the certification-path spec documented before
-  // ADR 20260805-remove-certification-paths deleted it.
+  // status of a cold hit is 200 instead of 404.
+  //
+  // This was once the whole app's behaviour. It is not any more: `/s/**`
+  // decides the status in `src/proxy.ts`, above the streaming boundary (ADR
+  // 20260912-the-public-namespace-refuses-at-the-edge), so a retired course
+  // URL like `/s/blue-mantis/courses/paths` answers a real 404 and
+  // `e2e/courses.spec.ts` asserts it. This route was left out because it asks
+  // a different question — `MIGRATION_GUIDE_SLUGS` is a closed list, not a row
+  // — and issue #1734 carries it.
   await page.goto("/switching/checkfront");
   await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
   // `.first()`: the server HTML (confirmed via curl against a fresh build)
@@ -1354,7 +1360,7 @@ test.describe("with Accept-Language: es", () => {
       spanish: "Trae la hoja de cálculo contigo.",
     },
     "/about": {
-      english: "Your season doesn't hang on us.",
+      english: "Your season doesn’t hang on us.",
       spanish: "Tu temporada no depende de nosotros.",
     },
   } as const;

@@ -162,7 +162,12 @@ export default async function WalkInDiverPage({
           addDiverAction: t("seatDiver.addDiverAction"),
           addDiverPrompt: t.raw("seatDiver.addDiverPrompt"),
           addNewDiverAction: t.raw("seatDiver.addNewDiverAction"),
-          confirmMatchesTitle: t("divers.page.confirmMatchesTitle"),
+          confirmMatchesTitle: t("divers.page.confirmMatchesTitle", { name: confirmName ?? "" }),
+          confirmMatchesLastDive: (at) =>
+            t("divers.page.confirmMatchesLastDive", {
+              date: formatShortDate(at, locale, shop.timezone),
+            }),
+          confirmMatchesNoDiveDay: t("divers.page.confirmMatchesNoDiveDay"),
           confirmMatchesSubmit: t("divers.page.confirmMatchesSubmit"),
         }}
       />

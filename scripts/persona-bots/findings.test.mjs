@@ -17,8 +17,10 @@ import {
   COMMENTS_PER_RUN,
   carriesFingerprint,
   classify,
+  DEFERRED_LABELS,
   fingerprint,
   INBOX_BRAKE,
+  inboxCount,
   NEW_ISSUES_PER_RUN,
   planRun,
   renderComment,
@@ -26,7 +28,15 @@ import {
   renderSummary,
   sourceFileForPath,
 } from "./findings.mjs";
-import { DEAD_CAPABILITY_TOKENS, PERSONAS, PROBES, probeFor, walkPlan } from "./personas.mjs";
+import { judgedProbeId } from "./judge.mjs";
+import {
+  AXE_PROBE,
+  DEAD_CAPABILITY_TOKENS,
+  PERSONAS,
+  PROBES,
+  probeFor,
+  walkPlan,
+} from "./personas.mjs";
 
 const finding = (probe, path, extra = {}) => ({
   probe,
@@ -36,11 +46,21 @@ const finding = (probe, path, extra = {}) => ({
   ...extra,
 });
 
-/** An issue as `gh issue list --json number,title,body` hands it back. */
-const issueFor = (number, probe) => ({
+/** A judged finding, shaped exactly as `judge.mjs` emits one. */
+const judgedFinding = (personaId, urlPath, claim) => ({
+  probe: judgedProbeId({ persona: personaId, path: urlPath, claim }),
+  path: urlPath,
+  personas: [personaId],
+  detail: `“some words on screen” — ${claim}`,
+  impact: "judged",
+});
+
+/** An issue as `gh issue list --json number,title,body,labels` hands it back. */
+const issueFor = (number, probe, labels = []) => ({
   number,
   title: `whatever ${number}`,
   body: fingerprint(probe),
+  labels: labels.map((name) => ({ name })),
 });
 
 describe("classify", () => {
@@ -73,6 +93,23 @@ describe("classify", () => {
     ]);
 
     expect(only.impact).toBe("critical");
+  });
+
+  /**
+   * #1498's severity contract, and the only thing holding it: a judged class
+   * ranks after every mechanical one whatever the surface counts, so the
+   * issue budget reaches an opinion only once the facts have left some.
+   */
+  it("ranks every judged class after every mechanical one, whatever the counts", () => {
+    const classes = classify([
+      judgedFinding("nadia", "/a", "a claim"),
+      judgedFinding("nadia", "/b", "a claim"),
+      judgedFinding("nadia", "/c", "a claim"),
+      finding("axe:label", "/a", { impact: "minor" }),
+    ]);
+
+    expect(classes[classes.length - 1].impact).toBe("judged");
+    expect(classes[0].probe).toBe("axe:label");
   });
 
   it("orders identically whatever order the walk reported findings in", () => {
@@ -125,6 +162,118 @@ describe("the volume policy", () => {
     expect(plan.deferred).toHaveLength(manyClasses.length);
   });
 
+  /**
+   * #1497: an issue a human has read and deliberately deferred is not attention
+   * the ceiling can usefully protect, so it does not occupy a slot. Park enough
+   * of them under the old count and the walk went quiet forever while still
+   * running every Monday and still reporting, accurately and uselessly, that
+   * the inbox was full.
+   */
+  describe("what the brake counts", () => {
+    for (const label of DEFERRED_LABELS) {
+      it(`does not brake on an inbox that is entirely ${label}`, () => {
+        const openIssues = Array.from({ length: INBOX_BRAKE + 5 }, (_, index) =>
+          issueFor(index, "other", [label]),
+        );
+        const plan = planRun({ classes: manyClasses, openIssues });
+
+        expect(plan.brake).toBeNull();
+        expect(plan.file).toHaveLength(NEW_ISSUES_PER_RUN);
+      });
+    }
+
+    it("still brakes once the untriaged half reaches the ceiling, however many are parked", () => {
+      const openIssues = [
+        ...Array.from({ length: INBOX_BRAKE }, (_, index) => issueFor(index, "other")),
+        ...Array.from({ length: 7 }, (_, index) =>
+          issueFor(INBOX_BRAKE + index, "other", ["parked"]),
+        ),
+      ];
+      const plan = planRun({ classes: manyClasses, openIssues });
+
+      expect(plan.file).toEqual([]);
+      expect(plan.brake).toContain(`${INBOX_BRAKE} needs-triage issues are open and awaiting`);
+      expect(plan.brake).toContain(`${INBOX_BRAKE + 7} open in all`);
+      expect(plan.brake).toContain("7 parked or waiting-on-external");
+    });
+
+    it("counts one waiting-on-external issue out of the total and no more", () => {
+      const openIssues = [
+        issueFor(1, "other"),
+        issueFor(2, "other", ["waiting-on-external"]),
+        issueFor(3, "other"),
+      ];
+
+      expect(inboxCount(openIssues)).toEqual({ open: 3, counted: 2, deferred: 1 });
+    });
+
+    it("reads gh's `[{ name }]` labels and a bare string alike", () => {
+      expect(inboxCount([{ number: 1, labels: [{ name: "parked" }] }]).deferred).toBe(1);
+      expect(inboxCount([{ number: 1, labels: ["parked"] }]).deferred).toBe(1);
+      expect(inboxCount([{ number: 1 }]).deferred).toBe(0);
+      expect(inboxCount([{ number: 1, labels: [{ name: "ready-for-agent" }] }]).deferred).toBe(0);
+    });
+
+    /**
+     * The regression this narrowing could most easily cause. The brake asks how
+     * much attention is owed; the dedupe asks whether this class already has
+     * somewhere to be said. Dropping a parked issue from the *list* rather than
+     * only from the *count* would re-file, as a brand-new issue, the finding a
+     * human just parked.
+     */
+    it("still deduplicates against a parked issue rather than filing a second", () => {
+      const classes = classify([finding("skip-link", "/a")]);
+      const plan = planRun({
+        classes,
+        openIssues: [issueFor(11, "skip-link", ["parked"])],
+      });
+
+      expect(plan.file).toEqual([]);
+      expect(plan.comment).toHaveLength(1);
+      expect(plan.comment[0].issue.number).toBe(11);
+    });
+  });
+
+  /**
+   * The budget half of #1498: a judged finding may only ever spend what the
+   * measurements did not. With the weekly ceiling already full of mechanical
+   * classes the judged one is deferred; with room left it is filed like
+   * anything else.
+   */
+  describe("what a judged finding may spend", () => {
+    const judged = judgedFinding("nadia", "/s/blue-mantis", "the jargon is never explained");
+
+    it("is deferred when the measurements have already filled the run", () => {
+      const classes = classify([
+        ...Array.from({ length: NEW_ISSUES_PER_RUN }, (_, index) =>
+          finding(`axe:rule-${index}`, "/a", { impact: "serious" }),
+        ),
+        judged,
+      ]);
+      const plan = planRun({ classes });
+
+      expect(plan.file.map((entry) => entry.impact)).not.toContain("judged");
+      expect(plan.deferred).toHaveLength(1);
+      expect(plan.deferred[0].probe).toBe(judged.probe);
+    });
+
+    it("is filed when they have not", () => {
+      const classes = classify([finding("skip-link", "/a"), judged]);
+      const plan = planRun({ classes });
+
+      expect(plan.file.map((entry) => entry.probe)).toContain(judged.probe);
+      expect(plan.deferred).toEqual([]);
+    });
+
+    it("is suppressed forever once a human closes it, like any other class", () => {
+      const classes = classify([judged]);
+      const plan = planRun({ classes, closedIssues: [issueFor(3, judged.probe)] });
+
+      expect(plan.file).toEqual([]);
+      expect(plan.suppressed).toHaveLength(1);
+    });
+  });
+
   it("bounds the comments too, so a wide run cannot become a wide notification", () => {
     const classes = classify(
       Array.from({ length: COMMENTS_PER_RUN + 3 }, (_, index) =>
@@ -171,6 +320,40 @@ describe("the issues it files", () => {
     for (const item of touched) {
       expect(existsSync(path.join(process.cwd(), item)), `${probe}: ${item}`).toBe(true);
     }
+  });
+
+  it("renders a judged finding as an issue check:follow-ups accepts", () => {
+    const entry = classify([
+      judgedFinding("nadia", "/s/blue-mantis", "the booking refusal names no reason"),
+    ])[0];
+    const { title, body } = renderIssue(entry, {
+      runContext,
+      touches: ["src/app/s/[shopSlug]/page.tsx"],
+    });
+
+    const { problems, touched } = findIssueProblems({ number: 1, title, body });
+    expect(problems).toEqual([]);
+    for (const item of touched) {
+      expect(existsSync(path.join(process.cwd(), item)), item).toBe(true);
+    }
+  });
+
+  /**
+   * The body a judged issue carries has to say, in as many words, that a model
+   * wrote it and that a reader may reject it. The mechanical sentence ("the
+   * probe is mechanical and reports facts from the rendered page") is simply
+   * false here, and an opinion presented as a measurement is the failure this
+   * whole pass is one careless paragraph away from.
+   */
+  it("tells a judged issue's reader that a model wrote it and may be wrong", () => {
+    const entry = classify([
+      judgedFinding("kai", "/shop/blue-mantis", "the refusal does not name the rule"),
+    ])[0];
+    const { body } = renderIssue(entry);
+
+    expect(body).toContain("a model can be wrong");
+    expect(body).not.toContain("The probe is mechanical");
+    expect(body).toContain("Closing it with");
   });
 
   it("carries the fingerprint so next week's run finds it instead of filing again", () => {
@@ -243,6 +426,33 @@ describe("the run summary", () => {
     expect(summary).toContain("would file");
     expect(summary).toContain("not filed");
     expect(summary).toContain("ceiling");
+  });
+
+  it("states both inbox numbers on an ordinary run, not only when the brake fires", () => {
+    const classes = classify([finding("skip-link", "/a")]);
+    const openIssues = [
+      issueFor(1, "other"),
+      issueFor(2, "other", ["parked"]),
+      issueFor(3, "other", ["waiting-on-external"]),
+    ];
+    const plan = planRun({ classes, openIssues });
+    const summary = renderSummary({ plan, classes, findings: classes, dryRun: true });
+
+    expect(plan.brake).toBeNull();
+    expect(summary).toContain("inbox 1 of 3 open needs-triage awaiting triage");
+    expect(summary).toContain("(2 parked or waiting-on-external)");
+    expect(summary).toContain(`brake at ${INBOX_BRAKE}`);
+  });
+
+  it("survives a hand-built plan that carries no inbox at all", () => {
+    const summary = renderSummary({
+      plan: { file: [], comment: [], suppressed: [], deferred: [], brake: null },
+      classes: [],
+      findings: [],
+      dryRun: true,
+    });
+
+    expect(summary).toContain("inbox 0 of 0 open needs-triage");
   });
 
   it("reports a suppression rather than hiding it", () => {
@@ -368,6 +578,18 @@ describe("the persona registry", () => {
     );
 
     expect(capability.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * The band belongs to the judged pass alone. A mechanical probe declaring it
+   * would rank a fact below every opinion and quietly invert the one rule that
+   * makes #1498's opt-in safe.
+   */
+  it("lets no mechanical probe claim the judged severity band", () => {
+    for (const [id, probe] of Object.entries(PROBES)) {
+      expect(probe.impact, id).not.toBe("judged");
+    }
+    expect(AXE_PROBE.impact).not.toBe("judged");
   });
 
   it("knows every probe it can report, axe rules included", () => {

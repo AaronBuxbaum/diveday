@@ -4,6 +4,8 @@ import { LedgerGroup } from "@/components/ui/ledger";
 import type { PublicCrewMember } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { siteFit } from "@/lib/diver-planning";
+import { capturePhoto } from "@/lib/marine-life-tiles";
+
 import { TripCrewLine } from "./TripCrewLine";
 import {
   dayMomentsFor,
@@ -16,6 +18,17 @@ import {
   TripSiteNotes,
 } from "./TripDayPlan";
 import type { DiveBriefing } from "./types";
+
+/**
+ * The widest cell this strip's three faces render into, per layout.
+ *
+ * Both viewports, because a capture has no srcset and one file is drawn into
+ * both. Measured off the captures: the ordinary page renders 171 at 1280 and
+ * 109 at 390; an embed frame renders 413 and 117, its tile runs coming back
+ * 413, 414, 413 and 117, 116, 117.
+ */
+const PAGE_TILE_PX = [109, 171] as const;
+const EMBED_TILE_PX = [117, 413] as const;
 
 /**
  * **The pitch, bounded** — ADR 20260904-reef-all-the-way-down, decision 1.
@@ -53,12 +66,20 @@ export function TripPitch({
   briefings,
   crew,
   locale,
+  embed = false,
 }: {
   briefings: DiveBriefing[];
   /** Only the crew who said yes (`tripPublicCrew`); empty for nearly every shop. */
   crew: readonly PublicCrewMember[];
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
+  /**
+   * Whether the page is rendering inside an embed frame, where the whole column
+   * is `w-full` rather than `max-w-xl` — so a third of it is 413px at 1280
+   * rather than the 171px the ordinary page renders. It changes what this strip
+   * asks the browser for, and nothing about what it draws.
+   */
+  embed?: boolean;
 }) {
   const t = diverTranslator(locale);
   const cards = fieldGuideCardsFor(briefings);
@@ -97,12 +118,25 @@ export function TripPitch({
           {tiles.map((card) => (
             <li key={card.slug ?? card.name} data-pitch-tile className="min-w-0">
               <StoredPhoto
-                src={card.imageUrl}
+                // The widest box this strip renders at: 171 on the ordinary
+                // page, 413 inside an embed frame, where the column is `w-full`
+                // instead of `max-w-xl`. It has to be the real one — the band in
+                // `src/lib/marine-life-tiles.ts` is checked against the number
+                // passed here, so a cell that lies about its width is a cell
+                // whose photograph is quietly enlarged, which is what the embed
+                // capture caught. Capture-only; see that module for the decode
+                // flip this one tile spent five issues on (#1585, #1567, #1432,
+                // #1405, #1623).
+                src={capturePhoto(card.imageUrl, embed ? EMBED_TILE_PX : PAGE_TILE_PX)}
                 alt=""
                 className="aspect-[4/3] w-full rounded-inset"
-                // Three cells across the measure: a third of `max-w-xl`
-                // (36rem) minus the gaps, and the full third of a 390px phone.
-                sizes="(min-width: 640px) 11rem, 32vw"
+                // Three cells across the measure. On the ordinary page that is
+                // a third of `max-w-xl` (36rem) less the gaps, and a third of a
+                // 390px phone below `sm`. An embed frame has no `max-w-xl`, so
+                // the cell is a plain third of the viewport less the column's
+                // own 12px padding and two 8px gaps — `(vw - 40) / 3`, which
+                // `32vw` tracks to within a few pixels at every width.
+                sizes={embed ? "32vw" : "(min-width: 640px) 11rem, 32vw"}
               />
               {/* Two lines rather than a truncation: a third of a 390px phone
                   is about 110px, and "Stoplight parrotfish" read "Stoplight

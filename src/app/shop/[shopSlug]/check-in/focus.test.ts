@@ -91,11 +91,18 @@ describe("the counter's redirects", () => {
    * back to building `shopPath(shopSlug, "check-in")` and dropping the focus.
    * A structural assertion rather than three redirect round-trips, because
    * what fails here is an omission, not a behaviour.
+   *
+   * Counted against the *actions in the file* rather than a literal, which is
+   * the invariant this is actually about: **every** door on the surface builds
+   * its back-path this way. A hard-coded three went red the day the counter
+   * grew its "Not here" pair — a failure that said nothing about the omission
+   * it exists to catch, and that the session adding the door had to decode.
    */
   it("build every back-path through counterQueuePath", () => {
     const source = readFileSync(path.join(import.meta.dirname, "actions.ts"), "utf8");
+    const actions = [...source.matchAll(/^export async function /gm)];
     const backAssignments = [...source.matchAll(/const back = (.+);/g)].map(([, value]) => value);
-    expect(backAssignments.length).toBe(3);
+    expect(backAssignments.length).toBe(actions.length);
     for (const assignment of backAssignments) {
       expect(assignment).toBe("counterQueuePath(shopSlug, focusTripId)");
     }

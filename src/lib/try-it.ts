@@ -59,10 +59,22 @@ export const FIRST_DEPARTURE_HOURS = 4;
  * costs a shop thirty seconds in the boat register. There is only one safe
  * direction to guess in.
  *
- * **Nothing asks the shop to confirm it**, which is issue #1632: the First
- * morning checklist is where a derived default gets looked at, and it only
- * renders while the shop has no departure at all — which a shop that came
- * through the hero never is.
+ * **Nothing asks the shop to confirm it, and that is a decision** (owner,
+ * 2026-09-10, issue #1632). The shop meets the number where it means
+ * something: "6 seats" on its first departure, corrected in the boat register
+ * in the thirty seconds named above. Because the guess can only ever be too
+ * low, a prompt would buy the shop speed and never safety, which is not
+ * enough to earn a step in the one checklist a new shop reads.
+ *
+ * Revisit once a shop has come through the hero in real use, not before — a
+ * surface built ahead of that is the omission turning itself into work. The
+ * shape then is First morning's, the same one `shops.units_confirmed_at`
+ * already uses for a derived default (issue #712): a `capacity_confirmed_at`
+ * column on `boats`, stamped by `updateBoat` when capacity is written, a
+ * "Confirm {boat}'s seats" step in `FirstRunChecklist` that clears on the
+ * stamp, and `showFirstRunChecklist` — today `totalTrips === 0` — widened or
+ * given a second condition, since a hero-drawn shop always arrives with one
+ * departure and so never sees the group at all.
  */
 export const FIRST_BOAT_CAPACITY = 6;
 

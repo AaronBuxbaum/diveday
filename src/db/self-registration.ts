@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import type { SelfDeclaredLevel } from "@/lib/self-registration";
 import type { AppDb } from "./client";
 import { findOrCreatePerson } from "./people";
+import { storedPhone } from "./person-phone";
 import { saveRentalFit } from "./rental-fit";
 import { people, personRoles } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
@@ -86,7 +87,7 @@ async function createPhoneOnlyPerson(
       shopId: input.shopId,
       fullName: input.fullName,
       email: null,
-      phone: input.phone,
+      phone: await storedPhone(tx, input.shopId, input.phone),
     })
     .returning({ id: people.id });
   if (!person) throw new Error("registerDiverAtShop: person insert returned no row");

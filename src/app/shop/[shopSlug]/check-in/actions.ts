@@ -5,10 +5,12 @@ import { redirect } from "next/navigation";
 import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
 import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
+import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
+import { uuidParam } from "@/lib/uuid";
 import { counterQueuePath } from "./focus";
 
 /**
@@ -22,6 +24,15 @@ import { counterQueuePath } from "./focus";
  * afternoon one. `counterQueuePath` (./focus.ts) is the one place that path is
  * built — including its `shopPath` escaping, since `shopSlug` reaches an
  * action as an ordinary caller-supplied argument.
+ *
+ * **And the `bookingId` every one of them reads is shape-checked before it is
+ * spent, not merely checked for empty** (`uuidParam`, src/lib/uuid.ts). These
+ * ids land in `eq(bookings.id, …)` a few frames later, and Postgres does not
+ * coerce a malformed literal there — it raises `invalid input syntax for type
+ * uuid`. So a truncated id took the counter down with an error page at exactly
+ * the moment the queue's own `invalid` notice was the honest answer. The same
+ * guard the trip roster's actions already carry, pinned the same way on both
+ * surfaces (`actions.ids.test.ts`).
  */
 export async function checkInAction(
   shopSlug: string,
@@ -31,7 +42,7 @@ export async function checkInAction(
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, focusTripId);
-  if (!bookingId) redirect(noticeUrl(back, "invalid"));
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await checkInBooking(await getDb(), {
     shopId: session.user.shopId,
@@ -83,7 +94,7 @@ export async function undoCheckInAction(
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, focusTripId);
-  if (!bookingId) redirect(noticeUrl(back, "invalid"));
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await undoCheckInBooking(await getDb(), {
     shopId: session.user.shopId,
@@ -99,6 +110,78 @@ export async function undoCheckInAction(
   }
   revalidatePath(back);
   redirect(noticeUrl(back, outcome.reason === "not_checked_in" ? "not-bookable" : outcome.reason));
+}
+
+/**
+ * **"Not here" — the counter records that a diver never turned up** (issue
+ * #1209), and the seat goes back to the shop as the consequence of that one
+ * tap.
+ *
+ * The two halves below are shaped exactly like `checkInAction` and
+ * `undoCheckInAction` above, for the reason those two are shaped that way: a
+ * refusal has to land back on the boat the staffer was working, or a queue
+ * holding three departures answers a question about the wrong one.
+ *
+ * This layer adds nothing to the gate. `noShowGate` decides on the page
+ * whether the disclosure is drawn, and `markBookingNoShow` runs it again
+ * against locked rows because that is the run that counts; a third opinion in
+ * between is one nobody asked for.
+ */
+export async function markNoShowAction(
+  shopSlug: string,
+  focusTripId: string | null,
+  formData: FormData,
+): Promise<void> {
+  const session = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const back = counterQueuePath(shopSlug, focusTripId);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+
+  const outcome = await markBookingNoShow(await getDb(), {
+    shopId: session.user.shopId,
+    bookingId,
+    recordedByPersonId: session.user.personId,
+  });
+  if (outcome.ok) {
+    // No success banner, the same rule the two taps above follow: the row
+    // moves into the "Not here" group wearing that word and its Undo, and the
+    // panel under it says who the seat can go to. A sentence at the top of the
+    // page would restate that a screen away (design principle 9).
+    revalidatePath(back);
+    return;
+  }
+  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
+}
+
+/**
+ * The diver who walks up as the lines come off.
+ *
+ * Its refusals worth a sentence are the two races: by the time somebody taps
+ * Undo the freed seat may be sold, and `undoBookingNoShow` re-counts it under
+ * the trip's lock against both limits rather than overfilling the boat —
+ * capacity (`trip_full`) and, on a ratio-gated course session, the crew's own
+ * seat cap (`course_ratio_full`).
+ */
+export async function undoNoShowAction(
+  shopSlug: string,
+  focusTripId: string | null,
+  formData: FormData,
+): Promise<void> {
+  const session = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const back = counterQueuePath(shopSlug, focusTripId);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+
+  const outcome = await undoBookingNoShow(await getDb(), {
+    shopId: session.user.shopId,
+    bookingId,
+    recordedByPersonId: session.user.personId,
+  });
+  if (outcome.ok) {
+    revalidatePath(back);
+    return;
+  }
+  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
 }
 
 /**
@@ -119,7 +202,7 @@ export async function markWaiverInPersonFromCheckIn(
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, focusTripId);
-  if (!bookingId) redirect(noticeUrl(back, "invalid"));
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await recordInPersonWaiver(await getDb(), {
     shopId: session.user.shopId,

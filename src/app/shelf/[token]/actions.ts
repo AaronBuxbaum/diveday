@@ -15,6 +15,7 @@ import { liveTrip } from "@/db/trips-live";
 import { savePersonEmergencyContact } from "@/db/waivers";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { handoffHref } from "@/lib/booking-handoff";
+import { readEmergencyContact } from "@/lib/contact";
 import { publicTripPath } from "@/lib/public-routes";
 import {
   SHELF_COOKIE,
@@ -144,6 +145,11 @@ export async function saveShelfSizesAction(token: string, formData: FormData): P
  * answers "nothing happened" with a red line, and stating the rule where the
  * shape is stated is what stops the next reader inferring it from a `return
  * false` two modules away.
+ *
+ * One box filled and the other empty is refused for a different reason, and
+ * with different words: the pair is what reaches a person, and half of it
+ * written over a stored contact is a new name wearing the old number
+ * (`readEmergencyContact`).
  */
 const contactSchema = z
   .object({
@@ -168,6 +174,11 @@ export async function saveShelfEmergencyContactAction(
   if (!ctx) redirect(shelfBase(token));
   const parsed = contactSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${shelfBase(token)}?error=contact`);
+  const submitted = readEmergencyContact({
+    name: parsed.data.emergencyContactName,
+    phone: parsed.data.emergencyContactPhone,
+  });
+  if (submitted.kind === "half") redirect(`${shelfBase(token)}?error=contact-pair`);
   const saved = await savePersonEmergencyContact(ctx.db, {
     shopId: ctx.shopId,
     personId: ctx.personId,

@@ -350,7 +350,7 @@ describe("isLiveShopStaff", () => {
       .insert(people)
       .values({ shopId: otherShop.id, fullName: "Other Owner", email: "other-owner@example.com" })
       .returning();
-    if (!otherPerson) throw new Error("failed to insert other shop's staff person");
+    if (!otherPerson) throw new Error("failed to insert other shop’s staff person");
     await context.db.insert(personRoles).values({ personId: otherPerson.id, role: "owner" });
     await context.db.insert(userAccounts).values({
       personId: otherPerson.id,

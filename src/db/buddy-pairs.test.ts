@@ -164,7 +164,7 @@ describe("buddy teams (in-memory PGlite)", () => {
       ).map((row) => row.personId),
     );
     const unassigned = (await listStaff(db, shop.id)).find((row) => !assigned.has(row.person.id));
-    if (!unassigned) throw new Error("expected a staff member off this trip's crew list");
+    if (!unassigned) throw new Error("expected a staff member off this trip’s crew list");
     expect(
       await formBuddyTeam(db, {
         shopId: shop.id,

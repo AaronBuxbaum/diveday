@@ -231,10 +231,14 @@ test("a mistyped trip id on a shop's public page is a 404 for an anonymous visit
   page,
 }) => {
   const response = await page.goto("/s/blue-mantis/trips/nope");
-  expect(response?.status()).toBeLessThan(500);
+  // Was `toBeLessThan(500)`, which this route passed while answering 200 with
+  // a not-found page in the body — the soft 404 the whole namespace had until
+  // the refusal moved above the streaming boundary (ADR
+  // 20260912-the-public-namespace-refuses-at-the-edge). A test written to rule
+  // out a 500 should say which status it wanted, or it rules out nothing else.
+  expect(response?.status()).toBe(404);
   // The *shop's* refusal, not DiveDay's app-wide one: a `notFound()` in this
   // namespace renders inside the shop's chrome and offers its schedule (issue
-  // #765). The heading is the only thing this test cares about — that the
-  // guard produced a rendered 404 rather than a 500.
+  // #765).
   await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
 });

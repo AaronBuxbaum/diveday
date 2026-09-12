@@ -319,7 +319,7 @@ export async function seedBookings(
       guardianName: guardian.name,
       guardianRelationship: guardian.relationship,
       guardianEmail: `${guardian.name.toLowerCase().replace(/[^a-z]+/g, ".")}@example.com`,
-      guardianSignatureMethod: "in_person" as const,
+      guardianSignatureMethod: "in_person_attested" as const,
       guardianConsentedAt: signedAt,
       guardianSignedAt: signedAt,
     };

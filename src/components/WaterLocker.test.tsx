@@ -19,7 +19,7 @@ afterEach(() => {
 const COPY: WaterLockerCopy = {
   rainAlt: "Rain",
   heading: "Screen locked — water detected",
-  body: "We're ignoring random taps from water on the screen. Hold to unlock once it's dry.",
+  body: "We’re ignoring random taps from water on the screen. Hold to unlock once it’s dry.",
   holdLine1: "HOLD",
   holdLine2: "2s",
   unlockingProgress: "Unlocking... {percent}%",

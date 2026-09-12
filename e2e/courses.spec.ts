@@ -79,11 +79,15 @@ test("a signed-out visitor browses the public course catalog, with the editor st
 
   // Certification paths are gone entirely (ADR
   // 20260805-remove-certification-paths) — no link out to them from the
-  // catalog, and nothing left at the URL they used to hold. Asserted on the
-  // rendered not-found boundary rather than the raw status: `paths` now falls
-  // through to the course-slug route, whose cold first byte can still be 200
-  // under cacheComponents (e2e/marketing.spec.ts documents that limitation).
+  // catalog, and nothing left at the URL they used to hold. `paths` falls
+  // through to the course-slug route, where no such course exists, so the
+  // status is the proxy's refusal above the streaming boundary (ADR
+  // 20260912-the-public-namespace-refuses-at-the-edge). Asserted as a status
+  // as well as a heading: while this only read the heading, the retired URL
+  // answered 200 and stayed indexable, which is the whole of what "gone
+  // entirely" was supposed to mean.
   await expect(page.getByRole("link", { name: /certification paths/i })).toHaveCount(0);
+  expect((await page.request.get("/s/blue-mantis/courses/paths")).status()).toBe(404);
   await page.goto("/s/blue-mantis/courses/paths");
   // Inside a shop's namespace the refusal is the shop's own, framed by its
   // chrome and pointing back at its schedule (issue #765).

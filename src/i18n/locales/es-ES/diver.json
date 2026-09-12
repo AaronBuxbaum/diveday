@@ -65,7 +65,7 @@
   },
   "kiosk": {
     "title": "Registro de llegada",
-    "prompt": "Apellido",
+    "prompt": "Apellido, o escanea tu código",
     "submit": "Registrar llegada",
     "submitting": "Verificando…",
     "ready": "Todo listo, {name}.",
@@ -208,7 +208,8 @@
     "spotsLeftUrgent": "{count, plural, one {Solo queda # plaza} other {Solo quedan # plazas}}",
     "nextWithSpace": {
       "eyebrow": "Próxima salida con plazas",
-      "earlierFull": "{count, plural, one {la salida de {time} está llena} other {las # salidas anteriores están llenas}}"
+      "earlierFull": "{count, plural, one {la salida de {time} está llena} other {las # salidas anteriores están llenas}}",
+      "eyebrowFiltered": "Próxima salida con plazas en esta vista"
     },
     "lenses": {
       "railLabel": "Tipos de día",
@@ -254,6 +255,9 @@
     "arrivalImageAlt": "Referencia de llegada en {place}",
     "openArrivalMap": "Abrir en mapas",
     "saveArrivalCard": "Guardar tarjeta de llegada",
+    "arrivalCodeHeading": "Tu código de llegada",
+    "arrivalCodeBody": "Acércalo al escáner del mostrador y el personal te encontrará.",
+    "arrivalCodeAlt": "Código de llegada de tu reserva",
     "openPublicTrip": "Abrir la página pública de la salida",
     "arrivalShopDefault": "Punto de encuentro del centro",
     "changeLedgerHeading": "Qué ha cambiado",
@@ -286,7 +290,7 @@
     "rentalItems": {
       "bcd": "Chaleco (BCD)",
       "regulator": "Regulador",
-      "wetsuit": "Traje de neopreno",
+      "wetsuit": "Neopreno",
       "maskFins": "Máscara y aletas",
       "weights": "Plomos",
       "diveComputer": "Ordenador de buceo",
@@ -302,9 +306,9 @@
     },
     "exposureSuit": {
       "swimwear": "El agua está lo bastante cálida como para bucear con licra o bañador.",
-      "shorty": "La mayoría bucea cómoda con un traje corto o completo de 3 mm.",
-      "wetsuit5mm": "A esta temperatura, la mayoría prefiere un traje completo de 5 mm.",
-      "wetsuit7mm": "Agua fresca: la mayoría prefiere un traje completo de 7 mm, con capucha y guantes.",
+      "shorty": "La mayoría bucea cómoda con un neopreno corto o completo de 3 mm.",
+      "wetsuit5mm": "A esta temperatura, la mayoría prefiere un neopreno completo de 5 mm.",
+      "wetsuit7mm": "Agua fresca: la mayoría prefiere un neopreno completo de 7 mm, con capucha y guantes.",
       "drysuit": "Agua fría: un semiseco de 7 mm con capucha y guantes, o traje seco si buceas con uno."
     },
     "dockDayRhythm": "Cómo será tu día en el muelle",
@@ -343,7 +347,8 @@
       "bottomTime": "{minutes, plural, one {Alrededor de # minuto en el agua} other {Alrededor de # minutos en el agua}}",
       "surfaceInterval": "{minutes, plural, one {Alrededor de # minuto en superficie} other {Alrededor de # minutos en superficie}}",
       "pickerLabel": "Compara estas profundidades con tu certificación",
-      "within": "Nada de este día pasa de {limit}.",
+      "within": "Nada de este día pasa de los {limit} que cubre tu certificación.",
+      "withinNoCard": "Una primera inmersión sin certificación no pasa de {limit}, y nada de este día pasa de ahí.",
       "over": "La inmersión {number} es en un sitio que llega a {site}, más de los {limit} que cubre tu certificación. Puedes reservar igual: avisa a la tripulación y planificarán tu inmersión dentro de tu límite.",
       "overNoCard": "La inmersión {number} es en un sitio que llega a {site}. Una primera inmersión sin certificación no pasa de {limit}. Puedes reservar igual: pregunta a la tripulación qué necesita este día."
     },
@@ -791,10 +796,11 @@
     "plannedSitesLabel": "Previsto",
     "fieldGuideTitle": "{count, plural, one {Vida que buscar en este sitio} other {Vida que buscar en estos sitios}}",
     "recordedBy": "Registrado por {shopName}",
-    "flySafeAfterDive": "Puedes volar a partir del {when}: {shopName} pide {count, plural, one {# hora} other {# horas}} después de tu última inmersión, siguiendo la guía de DAN.",
-    "flySafeAfterDiveEarlierDay": "Puedes volar a partir del {when}: no era tu primer día de buceo, así que {shopName} pide {count, plural, one {# hora} other {# horas}} después de tu última inmersión, siguiendo la guía de DAN.",
-    "flySafeAfterReturn": "Puedes volar a partir del {when}: {shopName} pide {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo la guía de DAN.",
-    "flySafeAfterReturnEarlierDay": "Puedes volar a partir del {when}: no era tu primer día de buceo, así que {shopName} pide {count, plural, one {# hora} other {# horas}} después de que el día debiera terminar, siguiendo la guía de DAN.",
+    "flySafeAfterDive": "{shopName} te pide esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
+    "flySafeAfterDiveEarlierDay": "{shopName} te pide esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
+    "flySafeAfterReturn": "{shopName} te pide esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
+    "flySafeAfterReturnDivesPlanned": "{shopName} te pide esperar al menos hasta el {when} antes de volar: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
+    "flySafeAfterReturnEarlierDay": "{shopName} te pide esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
     "milestoneStampFirst": "Primer día",
     "milestoneStamp": "{ordinal} día",
     "printNotes": "Notas",
@@ -808,7 +814,7 @@
     "saveImageFailed": "No se ha guardado. Inténtalo de nuevo en un momento.",
     "postcardFileName": "dia-de-buceo",
     "pulseHeading": "¿Algo que deberíamos arreglar?",
-    "pulseAudience": "Solo para {shop}. Nunca en tu opinión y nunca en público.",
+    "pulseAudience": "Solo para el propietario y los gerentes de {shop}. Nunca en tu opinión y nunca en público.",
     "pulseGear": "El equipo",
     "pulseBriefing": "El briefing",
     "pulseBoat": "El barco",
@@ -846,7 +852,7 @@
     "identifierLabel": "Número de tarjeta",
     "sizesHeading": "Tus tallas",
     "sizesHint": "Solo si alquilas con nosotros. Te ahorra la prueba en el mostrador.",
-    "wetsuitLabel": "Traje",
+    "wetsuitLabel": "Neopreno",
     "bootLabel": "Botas",
     "finLabel": "Aletas",
     "submit": "Enviar al centro",
@@ -1078,7 +1084,7 @@
     "contactName": "Nombre del contacto",
     "contactPhone": "Teléfono del contacto",
     "emergencyOnFile": "Ya registrado: {name} · {phone}.",
-    "emergencyContactChangeHint": "Cámbialo aquí si está desactualizado. Dejar un campo vacío mantiene lo que ya está registrado.",
+    "emergencyContactChangeHint": "Cámbialo aquí si está desactualizado. Rellena los dos campos, o déjalos vacíos para mantener lo que ya está registrado. Pídele al centro que elimine el contacto de tu ficha si ya no quieres tenerlo.",
     "signature": "Tu firma",
     "typeFullName": "Escribe tu nombre completo",
     "typeFullNameHint": "Como está en la reserva: {name}",
@@ -1087,6 +1093,7 @@
     "errorName": "Escribe tu nombre completo para continuar.",
     "errorNameMismatch": "Ese nombre no coincide con el de esta reserva. Escríbelo tal como lo tiene el centro, o contacta con ellos si la reserva tiene el nombre equivocado.",
     "errorAgreement": "Confirma que aceptas la exención para continuar.",
+    "errorContactPair": "Un contacto necesita nombre y teléfono, así que no se cambió nada. Rellena los dos campos, o pídele al centro que elimine el contacto de tu ficha si ya no quieres tenerlo.",
     "errorJumpToField": "Ir a ese campo",
     "linkInactive": "Ese enlace ya no está activo. Pide uno nuevo al centro.",
     "rateLimited": "Espera unos segundos e inténtalo de nuevo. No se ha perdido nada.",
@@ -1113,7 +1120,7 @@
     "questionsAnsweredOne": "{answered} de {total} respondida",
     "questionsAnsweredOther": "{answered} de {total} respondidas",
     "progressSaved": "Tu progreso está guardado. Termina cuando quieras.",
-    "emergencyContactDescription": "Alguien a quien podamos contactar por ti ese día. Opcional, pero es lo que tiene el equipo si pasa algo en el agua.",
+    "emergencyContactDescription": "Alguien a quien podamos contactar por ti ese día. Opcional, pero es lo que tiene el equipo si pasa algo en el agua. Nombre y teléfono, o ninguno de los dos.",
     "agreementCheckbox": "He leído esta exención, la entiendo y estoy de acuerdo con ella.",
     "signatureNote": "Tu nombre escrito, tu conformidad y la hora de finalización se guardan con esta versión exacta de la exención.",
     "saveForLater": "Guardar y terminar después",
@@ -1127,11 +1134,12 @@
     "guardianRelationshipParent": "Madre o padre",
     "guardianRelationshipLegalGuardian": "Tutor legal",
     "guardianEmail": "Correo electrónico del tutor",
-    "guardianAgreementCheckbox": "Soy la madre, el padre o el tutor legal de este buceador. He leído esta exención, la entiendo y la acepto en su nombre.",
+    "guardianEmailDescription": "Opcional. Si lo das, te enviamos por correo una copia de lo que firmaste.",
+    "guardianAgreementCheckbox": "Soy la madre, el padre o el tutor legal de este buceador. He leído esta exención, la entiendo y la acepto en su nombre. Las respuestas de salud de arriba están completas y son correctas hasta donde yo sé.",
     "errorGuardianName": "Escribe el nombre completo del tutor.",
-    "errorGuardianNameIsDiver": "El nombre del tutor no puede ser el del buceador. Puede firmar otro progenitor o tutor legal. Si eres el único aquí, escribe tu nombre tal como aparece en tu documento de identidad, con el segundo apellido o el segundo nombre sin abreviar. Si ambos documentos coinciden, pide al centro que añada el segundo apellido o el sufijo al registro del buceador.",
+    "errorGuardianNameIsDiver": "El nombre del tutor no puede ser el del buceador. Puede firmar otro progenitor o tutor legal. Si eres el único aquí, escribe tu nombre tal como aparece en tu documento de identidad, con el segundo apellido o el segundo nombre sin abreviar. Si ambos documentos coinciden de verdad, el centro puede registrarlo en papel con los dos presentes: lleva la exención al mostrador.",
     "errorGuardianRelationship": "Elige la relación del tutor con el buceador.",
-    "errorGuardianEmail": "Escribe el correo electrónico del tutor.",
+    "errorGuardianEmail": "Revisa el correo electrónico del tutor, o déjalo en blanco.",
     "errorGuardianAgreement": "El tutor tiene que marcar la casilla de aceptación para firmar.",
     "railRelease": "Exención",
     "railMedical": "Salud",
@@ -1219,7 +1227,8 @@
     "whatToPlan": "¿Qué preparamos para ti?",
     "askWhatsIncluded": "Pregunta al centro qué incluye el precio de la salida.",
     "notSure": "No lo tengo claro: ayúdame a elegir",
-    "wetsuitSize": "Talla de traje",
+    "wetsuitSize": "Talla de neopreno",
+    "drysuitSize": "Talla de traje seco",
     "finSize": "Talla de aletas y escarpines",
     "weightSetup": "Lastre habitual",
     "anythingElse": "¿Algo más que deba saber la tripulación?",
@@ -1237,14 +1246,14 @@
     "nitroxCardOnFile": "La tripulación verificará tu tarjeta de nitrox antes de la inmersión.",
     "bcdSize": "Talla de chaleco",
     "finSizePlaceholder": "US 9 / EU 42",
-    "weightPlaceholder": "p. ej. 7 kg con un traje de 3 mm",
+    "weightPlaceholder": "p. ej. 7 kg con un neopreno de 3 mm",
     "saveFit": "Guardar equipo de alquiler",
     "bcdIconLabel": "Chaleco",
     "finIconLabel": "Aleta",
     "itemLabels": {
       "bcd": "Chaleco",
       "regulator": "Regulador",
-      "wetsuit": "Traje",
+      "wetsuit": "Neopreno",
       "boots": "Botines",
       "maskFins": "Máscara y aletas",
       "weights": "Lastre",
@@ -1259,6 +1268,7 @@
     "jargonHints": {
       "bcd": "El chaleco inflable que llevas puesto, sujeta tu botella y te permite controlar si flotas o te hundes.",
       "regulator": "La boquilla y la manguera que te dejan respirar aire de tu botella bajo el agua.",
+      "drysuit": "Un traje estanco que te mantiene seco en agua fría. En la mayoría de los de alquiler los escarpines van integrados en el traje, así que no te darán un par aparte.",
       "nitrox": "Una mezcla respirable con más oxígeno que permite a buceadores con formación específica pasar algo más de tiempo bajo el agua en algunas inmersiones."
     }
   },
@@ -2390,7 +2400,7 @@
         },
         "rentalSizes": {
           "column": "Tallas de alquiler",
-          "detail": "BCD, traje, bota y aleta. Las tallas que ya llevas se convierten en un perfil de ajuste."
+          "detail": "BCD, neopreno, bota y aleta. Las tallas que ya llevas se convierten en un perfil de ajuste."
         },
         "pastVisits": {
           "column": "Visitas anteriores",
@@ -2430,6 +2440,7 @@
     "pricing": "Precios",
     "switch": "Cambiar",
     "about": "Quiénes somos",
+    "status": "Estado",
     "privacy": "Privacidad",
     "terms": "Términos",
     "signIn": "Iniciar sesión",
@@ -2490,7 +2501,7 @@
       "fieldName": "Nombre completo",
       "fieldEmail": "Correo",
       "fieldCard": "Nivel de certificación",
-      "fieldSuit": "Talla de traje",
+      "fieldSuit": "Talla de neopreno",
       "ignored": "No reconocidas, así que se ignoran: legacy_id, pos_sync_id.",
       "statDivers": "Buceadores en el archivo",
       "statCards": "Certificaciones",
@@ -2897,7 +2908,7 @@
           },
           "item5": {
             "title": "Tallas de alquiler y la lista de carga de la salida",
-            "detail": "Las tallas de cada buceador se convierten en la lista de equipo del barco, con una botella por buceador y por inmersión repartida entre aire y nitrox. {competitor} no sabe la talla de traje de un buceador."
+            "detail": "Las tallas de cada buceador se convierten en la lista de equipo del barco, con una botella por buceador y por inmersión repartida entre aire y nitrox. {competitor} no sabe la talla de neopreno de un buceador."
           },
           "item6": {
             "title": "El aviso de la noche antes y un recuerdo que comparten",
@@ -2919,7 +2930,7 @@
           },
           "rentalSizes": {
             "what": "Tallas de alquiler",
-            "detail": "Las tallas de BCD, traje, bota y aleta se convierten en un perfil de ajuste de alquiler."
+            "detail": "Las tallas de BCD, neopreno, bota y aleta se convierten en un perfil de ajuste de alquiler."
           },
           "certificationCard": {
             "what": "Registro de certificación",
@@ -3764,10 +3775,11 @@
       "subject": "Tu inmersión con {shopName} — {tripTitle}",
       "thanks": "Gracias por bucear {tripTitle} con {shopName} el {date}.",
       "dived": "Buceaste en {sites}.",
-      "flySafeAfterDive": "Puedes volar a partir del {when}: {shopName} pide {count, plural, one {# hora} other {# horas}} después de tu última inmersión, siguiendo la guía de DAN.",
-      "flySafeAfterDiveEarlierDay": "Puedes volar a partir del {when}: no era tu primer día de buceo, así que {shopName} pide {count, plural, one {# hora} other {# horas}} después de tu última inmersión, siguiendo la guía de DAN.",
-      "flySafeAfterReturn": "Puedes volar a partir del {when}: {shopName} pide {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo la guía de DAN.",
-      "flySafeAfterReturnEarlierDay": "Puedes volar a partir del {when}: no era tu primer día de buceo, así que {shopName} pide {count, plural, one {# hora} other {# horas}} después de que el día debiera terminar, siguiendo la guía de DAN.",
+      "flySafeAfterDive": "{shopName} te pide esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
+      "flySafeAfterDiveEarlierDay": "{shopName} te pide esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
+      "flySafeAfterReturn": "{shopName} te pide esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
+      "flySafeAfterReturnDivesPlanned": "{shopName} te pide esperar al menos hasta el {when} antes de volar: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
+      "flySafeAfterReturnEarlierDay": "{shopName} te pide esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
       "seeRecap": "Ver el resumen de tu día",
       "footer": "Si te encantó, lo mejor que puedes hacer es traer a un compañero la próxima vez. ¡Nos vemos en el agua!"
     },
@@ -3822,6 +3834,12 @@
     "staffReply": {
       "subject": "Un mensaje de {shopName}",
       "reSubject": "Re: {subject}"
+    },
+    "guardianReleaseCopy": {
+      "subject": "Tu copia de la exención firmada de {diverName}",
+      "body": "Firmaste como madre, padre o tutor legal la exención de responsabilidad de {shopName} para {diverName} el {signedAt}. La exención es {releaseTitle}, versión {releaseVersion}.",
+      "note": "Este es tu comprobante. Si algo no cuadra, contacta con el centro.",
+      "noteMedicalReview": "Este es tu comprobante. {shopName} todavía necesita el visto bueno de un médico sobre las respuestas de salud antes de que {diverName} pueda bucear, y se pondrá en contacto contigo."
     },
     "waiverRequest": {
       "subject": "Completa tu waiver para {tripTitle}",
@@ -3878,7 +3896,7 @@
       "blue_star": "Operador Blue Star",
       "green_fins": "Miembro de Green Fins",
       "dan_partner": "Socio empresarial de DAN",
-      "readers_choice": "Premio Readers' Choice"
+      "readers_choice": "Premio Readers’ Choice"
     }
   },
   "embed": {
@@ -3932,7 +3950,7 @@
     "waiverWithTheShop": "{shopName} la está revisando",
     "sizes": "Tallas",
     "sizeBcd": "BCD",
-    "sizeWetsuit": "Traje",
+    "sizeWetsuit": "Neopreno",
     "sizeBoots": "Botas",
     "sizeFins": "Aletas",
     "sizesSave": "Guardar tallas",

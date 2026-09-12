@@ -5,8 +5,9 @@
 
 ## Context
 
-Every `ImageResponse` surface — the five OpenGraph cards plus `icon.tsx` and
-`apple-icon.tsx` — renders the same way: satori emits SVG, and `@vercel/og`
+Every `ImageResponse` surface — at the time, the five OpenGraph cards plus
+`icon.tsx` and `apple-icon.tsx`; see the amendment below for what renders at
+request time now — renders the same way: satori emits SVG, and `@vercel/og`
 (bundled into `next/og`) rasterizes that SVG to PNG. It prefers **sharp** for
 that step and falls back to its bundled resvg WASM only when `import("sharp")`
 fails. Sharp resolves in this app, because the upload pipeline needs it
@@ -91,3 +92,34 @@ unit test that names the cause — rather than as a severed socket in production
   Immune to future libvips policy changes, but adds a runtime dependency and
   reimplements what `next/og` already does.
 - **`images.dangerouslyAllowSVG`** — does not apply; see Context.
+
+## Amendment — 2026-09-11: the root icons are rendered ahead of time, not per request
+
+The favicon and the Apple touch icon are no longer `ImageResponse` metadata
+modules. Next attaches a metadata module to **every page entry**, so `icon.tsx`
+and `apple-icon.tsx` importing `next/og` put 3.07 MiB of satori, font and WASM
+into every closure in the app, including the ones that render no image at all
+(issues #1355, #1361). They are now four committed PNGs — `src/app/icon.png`,
+`src/app/apple-icon.png`, `public/icon-192.png`, `public/icon-512.png`.
+
+Nothing about this decision changes. The PNGs are rendered by
+`scripts/render-brand-icons.tsx` (`pnpm brand:icons`) through the same satori +
+sharp pipeline, and that script calls `allowSvgRasterization()` first for the
+same reason a route would: it is the same libvips block, just moved to a
+developer's machine. What still rasterizes at request time is
+`src/app/pwa-icon-maskable/route.tsx`, `/s/[shopSlug]/year-card`,
+`/shop/[shopSlug]/reports/card` and the four `opengraph-image` routes, and each
+of them calls it.
+
+It did **not** get `next/og` out of every page entry, which is what issue #1361
+set out to do. Measured on the build that landed the PNGs: 46 of 183 closures
+still trace `@vercel/og`, unchanged, because `src/app/opengraph-image.tsx` is
+also a metadata module and Next attaches it to every page entry exactly as it
+attached the icons. `next.config.ts`'s `outputFileTracingExcludes` therefore
+keeps its `/shop/**` key; issue #1709 carries the root card.
+
+The cost this buys is drift: the mark is now bytes in the repository, so a
+change to `src/app/_brand/mark.tsx` or `_brand/colors.ts` does not reach the
+favicon until somebody runs the script, and no guard compares the committed
+bytes against a fresh render. Re-run `pnpm brand:icons` and commit the PNGs in
+the same change as any edit to the mark.

@@ -30,6 +30,7 @@ import { listDiveSites } from "@/db/dive-sites";
 import { shopFirstBooking } from "@/db/first-booking";
 import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
+import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
 import { seasonScale } from "@/db/season-scale";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -58,7 +59,12 @@ import { recapAutoSendAt } from "@/lib/recap-schedule";
 import { seasonStartInstant } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type NoticeTone, noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import {
+  type NoticeCodeOf,
+  type NoticeTone,
+  noticeFromParam,
+  noticeRole,
+} from "@/lib/staff-notices";
 import {
   ACTION_KIND_META,
   assembleDaySpine,
@@ -102,7 +108,6 @@ const AUTH_NOTICES: Record<string, StaffMessageKey> = {
   "export-not-authorized": "shopHome.notice.exportNotAuthorized",
   "reports-not-authorized": "shopHome.notice.reportsNotAuthorized",
   "requests-not-authorized": "shopHome.notice.requestsNotAuthorized",
-  "inbox-not-authorized": "shopHome.notice.inboxNotAuthorized",
   "settings-not-authorized": "shopHome.notice.settingsNotAuthorized",
   // These four used to land on Settings, which was the nearest parent that
   // could explain them. Settings is owner/manager work now, and every one of
@@ -119,14 +124,32 @@ const AUTH_NOTICES: Record<string, StaffMessageKey> = {
   "integrations-not-authorized": "shopHome.notice.integrationsNotAuthorized",
 };
 
+type EveningNotice = { key: StaffMessageKey; tone: NoticeTone };
+
+/**
+ * The fit-keep's refusals, in the spelling `noticeUrl` gives them. The tap
+ * hands `confirmRentalFitSize`'s answer straight to the query string, so the
+ * map below owes words to every member of that union; typing it this way makes
+ * a union that grows without copy a compile error rather than a blank page.
+ */
+type FitKeepRefusalCode = NoticeCodeOf<Exclude<ConfirmRentalFitOutcome, "saved">>;
+
+type BorrowedEveningNotices = Record<string, EveningNotice>;
+/** Loose in the keys it accepts, exact in the ones it demands. */
+type EveningNoticeMap = BorrowedEveningNotices & Record<FitKeepRefusalCode, EveningNotice>;
+
 /**
  * The evening's own `?notice=` codes, re-homed here when `/close-out` folded
  * into this page (H-62). Every code is unchanged — a bookmark carrying one
  * still lands on the right words, because the 308 keeps the query and this
- * page answers it. `invalid` is the recap send's own failure and is the one
- * that must announce itself, hence the tone table rather than a bare key map.
+ * page answers it. The refusals are why this is a tone table rather than a
+ * bare key map: `invalid` is a recap send that failed, a crew photo this
+ * departure cannot take, or a fit-keep whose reservation the desk could not
+ * re-prove, and `unknown-person` is a fit-keep aimed at a person id that is
+ * not this shop's. Both reached this page with no entry here at all, so the
+ * refusal rendered nothing while this comment claimed otherwise.
  */
-const EVENING_NOTICES: Record<string, { key: StaffMessageKey; tone: NoticeTone }> = {
+const EVENING_NOTICES: EveningNoticeMap = {
   "recap-sent": { key: "closeout.notice.recapSent", tone: "success" },
   "recap-send-attention": { key: "closeout.notice.recapAttention", tone: "warning" },
   "recap-not-ready": { key: "closeout.notice.recapNotReady", tone: "neutral" },
@@ -140,10 +163,10 @@ const EVENING_NOTICES: Record<string, { key: StaffMessageKey; tone: NoticeTone }
   // Where the owner-only departure log lands everyone else. The door is absent
   // from their stations, so this is for a bookmark or a role that changed.
   "log-not-authorized": { key: "incidentExport.ownerOnlyNotice", tone: "neutral" },
-  // The evening's "Keep it" (issue #1174, D14). The row leaving the leftovers
-  // group is most of the answer; this says the size went somewhere, because
-  // where it went is a diver record two taps away.
-  "rental-fit-kept": { key: "shopHome.notice.rentalFitKept", tone: "success" },
+  invalid: { key: "closeout.notice.invalid", tone: "danger" },
+  // Telling this reader that the person id they reached is not in their own
+  // shop is not a cross-tenant oracle: it confirms membership nowhere else.
+  "unknown-person": { key: "closeout.notice.unknownPerson", tone: "danger" },
 };
 
 export const metadata: Metadata = {

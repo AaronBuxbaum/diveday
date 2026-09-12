@@ -87,6 +87,24 @@ describe("every handle a notification carries is reachable by the erasure sweep"
       inquirerEmail: "diver@example.invalid",
       inquirerPhone: "+1 305 555 0134",
     } as Notification,
+    // Addressed to the guardian and carrying no address for the minor at all:
+    // this kind is never queued (`notificationIsQueueable`), so there is no row
+    // for an erasure sweep to reach and nothing to lift into a column for it
+    // (issue #1453).
+    guardian_release_copy: {
+      kind: "guardian_release_copy",
+      waiverRecordId: "00000000-0000-4000-8000-000000000007",
+      shopId: "00000000-0000-4000-8000-000000000008",
+      to: "parent@example.invalid",
+      locale: "en-US",
+      guardianName: "Jordan Fischer",
+      diverName: "Lena Fischer",
+      shopName: "Blue Mantis Divers",
+      releaseTitle: "Liability Release",
+      releaseVersion: 3,
+      signedAt: new Date("2026-08-01T13:00:00.000Z"),
+      timezone: "America/New_York",
+    } as Notification,
     new_account_alert: {
       kind: "new_account_alert",
       userAccountId: "00000000-0000-4000-8000-000000000003",
@@ -139,7 +157,7 @@ describe("every handle a notification carries is reachable by the erasure sweep"
       expect(
         surfaced,
         `${kind}.${field} is a way to reach a person and no subject handle returns it, so an ` +
-          "erased diver's queued row keeps it.",
+          "erased diver’s queued row keeps it.",
       ).toContain(value);
     }
   });

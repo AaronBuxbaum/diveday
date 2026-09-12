@@ -108,6 +108,42 @@ describe("SegmentedControl", () => {
     expect(screen.getByRole("link", { name: "Guests" })).toBeInTheDocument();
     expect(screen.getByText("12")).toBeVisible();
   });
+
+  /**
+   * The phone-width short form (#1320). jsdom applies no media queries, so
+   * both words are in the DOM here and the assertion is on the classes that
+   * pick between them — `hidden` is `display: none`, which is what keeps the
+   * accessible name to whichever one is actually shown.
+   */
+  it("carries a short form for below sm without renaming the option", () => {
+    render(
+      <SegmentedControl
+        ariaLabel="Roll-call checkpoint"
+        items={[
+          {
+            key: "after_dive_1",
+            label: "After dive 1",
+            shortLabel: "Dive 1",
+            href: "/shop/reef/trips/1/manifest?checkpoint=after_dive_1",
+          },
+        ]}
+        currentKey={null}
+      />,
+    );
+    expect(screen.getByText("After dive 1")).toHaveClass("max-sm:hidden");
+    expect(screen.getByText("Dive 1")).toHaveClass("sm:hidden");
+    // The wide-viewport name is the one a desktop spec clicks by.
+    expect(screen.getByRole("link", { name: /After dive 1/ })).toBeInTheDocument();
+  });
+
+  it("leaves an option with no short form as a bare label", () => {
+    render(<SegmentedControl ariaLabel="Trip" items={items} currentKey="guests" />);
+    // No wrapper element: the option's only child is its own text, so no
+    // existing call site grows a span it did not ask for.
+    const option = screen.getByRole("link", { name: "Overview" });
+    expect(option.childElementCount).toBe(0);
+    expect(option).toHaveTextContent("Overview");
+  });
 });
 
 /**

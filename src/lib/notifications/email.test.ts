@@ -3,6 +3,7 @@ import {
   bookingConfirmationEmail,
   courseInquiryEmail,
   demoStartedAlertEmail,
+  guardianReleaseCopyEmail,
   lastMinuteDealEmail,
   newAccountAlertEmail,
   passwordChangedEmail,
@@ -179,7 +180,7 @@ describe("tripBlowoutEmail", () => {
       alternatives: [],
       scheduleUrl: "https://diveday.example/s/blue-mantis",
     });
-    expect(email.text).toContain("You haven't been charged");
+    expect(email.text).toContain("You haven’t been charged");
     expect(email.text).toContain("new trips are added all the time");
     expect(email.text).toContain("https://diveday.example/s/blue-mantis");
     expect(email.html).toContain('href="https://diveday.example/s/blue-mantis"');
@@ -257,7 +258,7 @@ describe("tripReminderEmail", () => {
 
   it("adds a medical heads-up when a medical answer needs review", () => {
     const email = tripReminderEmail({ ...base, lead: "day", medicalReview: true });
-    expect(email.text).toContain("doctor's sign-off");
+    expect(email.text).toContain("doctor’s sign-off");
   });
 
   it("stays a warm nudge with no checklist when nothing is outstanding", () => {
@@ -363,10 +364,21 @@ describe("tripRecapEmail", () => {
     const email = tripRecapEmail(recapBase);
     expect(email.text).toContain("Thanks for diving Two-Tank Reef");
     expect(email.text).not.toContain("You dived .");
-    expect(email.text).not.toContain("Fly-safe");
+    // No fly-safe result, no sentence: the recap says nothing about flying
+    // rather than guessing an interval from a record that could not say.
+    expect(email.text).not.toContain("before flying");
   });
 
-  it("carries the fly-safe line in the shop's zone, worded off the last dive or the scheduled end", () => {
+  // The sentence is the shop asking, not the product announcing. An
+  // unattributed "Earliest flight 10:10" followed by an attributed reason read
+  // as a fact and then its justification, which handed the authority to the
+  // time; naming the shop in the lead-in puts it where the claim is made. Two
+  // more words carry two claims the code can support: "at least", because DAN
+  // publishes consensus *minimums* and longer is safer, and "with us", because
+  // the only dives DiveDay can see are the ones booked at this shop. The tail
+  // is untouched: it attributes the figure to the shop and the practice to
+  // DAN, which is the claim the code can support.
+  it("carries the earliest-flight line in the shop's zone, worded off the last dive or the scheduled end", () => {
     // 2026-08-02T14:10Z is a Sunday, 10:10 AM in Key Largo.
     const from = new Date("2026-08-02T14:10:00.000Z");
     const afterDive = tripRecapEmail({
@@ -374,9 +386,9 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "dives_recorded" },
     });
     expect(afterDive.text).toContain(
-      "Fly-safe from Sunday 10:10 AM: Blue Mantis asks for 24 hours after your last dive, following DAN’s guidance.",
+      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: 24 hours after your last dive with us, following DAN’s guidance.",
     );
-    expect(afterDive.html).toContain("Fly-safe from Sunday 10:10 AM");
+    expect(afterDive.html).toContain("wait at least until Sunday 10:10 AM before flying");
 
     const afterReturn = tripRecapEmail({
       ...recapBase,
@@ -389,7 +401,105 @@ describe("tripRecapEmail", () => {
       locale: "es-ES",
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "dives_recorded" },
     });
-    expect(spanish.text).toContain("Puedes volar a partir del domingo, 10:10");
+    expect(spanish.text).toContain(
+      "Blue Mantis te pide esperar al menos hasta el domingo, 10:10 antes de volar: 24 horas después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
+    );
+  });
+
+  // The earlier-day route (issue #1439) reaches two more keys, one per anchor,
+  // and nothing else in this file renders them — a lead-in swap applied to the
+  // plain pair and missed on these two would ship a recap whose voice depended
+  // on whether the diver had dived the day before (issue #1433). What the
+  // clause states is the fact the lookback actually establishes: a dive day on
+  // this shop's own record inside two local days. It said "this was not your
+  // first day diving", which is true of every certified diver alive and reads
+  // as a remark about experience rather than about this week.
+  it("says an earlier dive day is why the wait is longer, in both anchors and both locales", () => {
+    const from = new Date("2026-08-02T14:10:00.000Z");
+    const afterDive = tripRecapEmail({
+      ...recapBase,
+      flySafe: { from, hours: 24, anchor: "last_dive", reason: "earlier_day" },
+    });
+    expect(afterDive.text).toContain(
+      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: our records show another dive day in the last two days, so 24 hours after your last dive with us, following DAN’s guidance.",
+    );
+
+    const afterReturn = tripRecapEmail({
+      ...recapBase,
+      flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "earlier_day" },
+    });
+    expect(afterReturn.text).toContain(
+      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: our records show another dive day in the last two days, so 24 hours after the day was due to end, following DAN’s guidance.",
+    );
+
+    const spanish = tripRecapEmail({
+      ...recapBase,
+      locale: "es-ES",
+      flySafe: { from, hours: 24, anchor: "last_dive", reason: "earlier_day" },
+    });
+    expect(spanish.text).toContain(
+      "nuestros registros muestran otro día de buceo en los últimos dos días",
+    );
+  });
+
+  // The planned-dives route (the one the page cannot help with either: the
+  // recap card carries no dive count, and this email carries no record at
+  // all). The wait comes from what the shop planned, which is by construction
+  // more than the crew logged and may be more than the diver dived, so a diver
+  // who made one dive reads the two-dive figure while packing with nothing to
+  // account for it — and a number a diver decides is a bug is a number they
+  // ignore. One key, because the route only exists when the record is short of
+  // its plan, which is what puts the anchor on the return.
+  it("says a multi-dive plan is why the wait is longer, in both locales", () => {
+    const from = new Date("2026-08-02T14:10:00.000Z");
+    const planned = tripRecapEmail({
+      ...recapBase,
+      flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "dives_planned" },
+    });
+    expect(planned.text).toContain(
+      "Blue Mantis asks you to wait at least until Sunday 10:10 AM before flying: we planned more than one dive, so 24 hours after the day was due to end, following DAN’s guidance.",
+    );
+    // It may not claim the dive it cannot see: the crew logged at most one.
+    expect(planned.text).not.toContain("your last dive with us");
+
+    const spanish = tripRecapEmail({
+      ...recapBase,
+      locale: "es-ES",
+      flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "dives_planned" },
+    });
+    expect(spanish.text).toContain(
+      "planificamos más de una inmersión, así que 24 horas después del final previsto del día",
+    );
+  });
+
+  // Three claims the sentence may not make, pinned across every shape it takes
+  // and both locales rather than in the one wording above, because each of
+  // them came back once already. It may not call the interval a flight the
+  // shop can see ("Earliest flight", "Primer vuelo posible"), it may not state
+  // the wait without the minimum DAN attaches to it, and it may not describe
+  // as *your* last dive a dive it only knows because it was booked here.
+  it("never states the interval as a flight, an unhedged wait, or a dive it cannot see", () => {
+    const from = new Date("2026-08-02T14:10:00.000Z");
+    for (const locale of ["en-US", "es-ES"] as const) {
+      for (const anchor of ["last_dive", "scheduled_return"] as const) {
+        for (const reason of ["dives_recorded", "earlier_day", "dives_planned"] as const) {
+          const { text } = tripRecapEmail({
+            ...recapBase,
+            locale,
+            flySafe: { from, hours: 24, anchor, reason },
+          });
+          const where = `${locale} ${anchor} ${reason}`;
+          expect(text, where).toContain(locale === "en-US" ? "at least until" : "al menos hasta");
+          expect(text, where).not.toContain("Earliest flight");
+          expect(text, where).not.toContain("vuelo posible");
+          if (anchor === "last_dive") {
+            expect(text, where).toContain(
+              locale === "en-US" ? "your last dive with us" : "tu última inmersión con nosotros",
+            );
+          }
+        }
+      }
+    }
   });
 });
 
@@ -589,7 +699,7 @@ describe("passwordResetEmail", () => {
 
   it("reassures someone who didn't request it that nothing changed", () => {
     const email = passwordResetEmail(base);
-    expect(email.text).toContain("your password hasn't changed");
+    expect(email.text).toContain("your password hasn’t changed");
   });
 });
 
@@ -762,5 +872,50 @@ describe("wrapEmailHtml", () => {
     expect(html).toContain("background-color: #008080");
     expect(html).toContain("background-color: #ff6b6b");
     expect(html).toContain("border-radius: 50%");
+  });
+});
+
+/**
+ * **The guardian's copy carries no door** (issue #1453).
+ *
+ * The whole shape of this message is what it refuses: the release is already
+ * signed when it sends, so a second capability URL to a third party is a
+ * security surface with nothing behind it, and the issue rules it out by name.
+ * The renderer beside this one is built from a link and a button, so the
+ * likeliest way this breaks is a copy-paste — which is why the assertion is on
+ * the rendered bytes rather than on the input shape, and why it runs in both
+ * locales: one bundle gaining a URL in a translated string would slip past a
+ * check on the English alone.
+ */
+describe("the guardian's copy of a signed release", () => {
+  const input = {
+    guardianName: "Jordan Fischer",
+    diverName: "Lena Fischer",
+    shopName: "Blue Mantis & Co.",
+    releaseTitle: '<Liability "Release">',
+    releaseVersion: 3,
+    signedAt: new Date("2026-08-01T13:00:00.000Z"),
+    timezone: "America/New_York",
+  };
+
+  it.each(["en-US", "es-ES"] as const)("carries no link and no token (%s)", (locale) => {
+    const email = guardianReleaseCopyEmail({ ...input, locale });
+
+    expect(email.html).not.toContain("<a ");
+    expect(email.html).not.toContain("http");
+    expect(email.text).not.toContain("http");
+    // Every fact the message is for, and nothing about the diver's health:
+    // the questionnaire is the minor's own information and a courtesy copy to
+    // a third party is not where it travels.
+    expect(email.text).toContain("Lena Fischer");
+    expect(email.text).toContain("Blue Mantis & Co.");
+    expect(email.subject).toContain("Lena Fischer");
+  });
+
+  it("escapes the shop and release names it renders into HTML", () => {
+    const email = guardianReleaseCopyEmail({ ...input, locale: "en-US" });
+
+    expect(email.html).toContain("Blue Mantis &amp; Co.");
+    expect(email.html).toContain("&lt;Liability &quot;Release&quot;&gt;");
   });
 });

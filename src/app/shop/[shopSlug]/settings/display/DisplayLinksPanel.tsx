@@ -16,14 +16,25 @@ import {
   IDLE_DISPLAY_LINK_STATE,
 } from "./display-panel-types";
 
-function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
+function SubmitButton({
+  label,
+  pendingLabel,
+  ariaLabel,
+  variant = "primary",
+}: {
+  label: string;
+  pendingLabel: string;
+  ariaLabel?: string;
+  variant?: "primary" | "ghost";
+}) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
       disabled={pending}
       aria-busy={pending}
-      className={buttonClass({ variant: "primary", size: "sm" })}
+      aria-label={ariaLabel}
+      className={buttonClass({ variant, size: "sm" })}
     >
       {pending ? pendingLabel : label}
     </button>
@@ -33,10 +44,10 @@ function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: st
 /**
  * The lobby-display settings: a form that mints a link for one screen, the
  * link itself shown once in the response that minted it, and the list of
- * screens with a revoke on each.
+ * screens with a revoke on each and a renew on the ones that expire.
  *
  * Every word arrives as a prop (see `src/i18n/staff-messages.ts`). One
- * `useActionState` drives the create form and every revoke, so the panel
+ * `useActionState` drives the create form and every row button, so the panel
  * always knows which act ran last.
  */
 export function DisplayLinksPanel({
@@ -69,10 +80,14 @@ export function DisplayLinksPanel({
   const [purpose, setPurpose] = useState<"board" | "check_in" | null>(null);
   const issued = state.status === "issued" ? state : null;
   const invalidLabel = state.status === "invalid_label";
-  // Split, because the panel has two forms. A refused revoke printed under the
-  // create form is a message about something the staffer never submitted.
+  // Split, because a refusal has two places it could land. A refused revoke
+  // printed under the create form is a message about something the staffer
+  // never submitted.
   const deniedIssue = state.status === "denied" && state.intent === "issue";
-  const deniedRevoke = state.status === "denied" && state.intent === "revoke";
+  // A refused renew belongs with the revoke: both were posted from a row in the
+  // Screens list, not from the create form above it.
+  const deniedRow =
+    state.status === "denied" && (state.intent === "revoke" || state.intent === "renew");
   // The server list was rendered before a revoke ran; the revoked row is gone
   // on the next render, and hidden here in the meantime.
   const live = screens.filter((screen) => !(state.status === "revoked" && state.id === screen.id));
@@ -177,6 +192,12 @@ export function DisplayLinksPanel({
             <p className="mt-3 text-xs text-muted">
               {issued.purpose === "check_in" ? copy.sharedCheckIn : copy.shared}
             </p>
+            {/* The lifetime is told at the moment the manager copies the URL,
+                which is the only moment they are certain to read anything on
+                this card. A board link has no lifetime to tell. */}
+            {issued.purpose === "check_in" ? (
+              <p className="mt-1 text-xs text-muted">{copy.expiresCheckIn}</p>
+            ) : null}
           </div>
         ) : null}
       </SectionCard>
@@ -187,9 +208,14 @@ export function DisplayLinksPanel({
             {copy.revoked}
           </ShopNotice>
         ) : null}
+        {state.status === "renewed" ? (
+          <ShopNotice tone="success" role="status" className="mb-4">
+            {copy.renewed}
+          </ShopNotice>
+        ) : null}
         {/* Beside the thing it is about, and `role="alert"` so it is announced —
             the idiom `CalendarFeedPanel` uses for a client-action refusal. */}
-        {deniedRevoke ? (
+        {deniedRow ? (
           <ShopNotice tone="danger" role="alert" className="mb-4">
             {copy.denied}
           </ShopNotice>
@@ -210,25 +236,43 @@ export function DisplayLinksPanel({
                       screen.purposeLabel,
                       screen.createdLabel,
                       screen.lastShownLabel ?? copy.neverShown,
+                      screen.expiresLabel,
                       screen.showNamesLabel,
                     ]
                       .filter((part): part is string => Boolean(part))
                       .join(" · ")}
                   </p>
                 </div>
-                <form action={formAction}>
-                  <input type="hidden" name="intent" value="revoke" />
-                  <input type="hidden" name="id" value={screen.id} />
-                  <InlineConfirm
-                    triggerLabel={copy.revoke}
-                    ariaLabel={screen.revokeLabel}
-                    triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
-                    message={copy.confirmRevoke}
-                    confirmLabel={copy.confirmRevokeButton}
-                    cancelLabel={copy.cancel}
-                    pendingLabel={copy.revoking}
-                  />
-                </form>
+                <div className="flex items-center gap-2">
+                  {/* Only a link that expires has anything to renew, and no
+                      `InlineConfirm`: renewing takes nothing away, so a
+                      confirmation step would be a question with one answer. */}
+                  {screen.expiresLabel ? (
+                    <form action={formAction}>
+                      <input type="hidden" name="intent" value="renew" />
+                      <input type="hidden" name="id" value={screen.id} />
+                      <SubmitButton
+                        label={copy.renew}
+                        pendingLabel={copy.renewing}
+                        ariaLabel={screen.renewLabel}
+                        variant="ghost"
+                      />
+                    </form>
+                  ) : null}
+                  <form action={formAction}>
+                    <input type="hidden" name="intent" value="revoke" />
+                    <input type="hidden" name="id" value={screen.id} />
+                    <InlineConfirm
+                      triggerLabel={copy.revoke}
+                      ariaLabel={screen.revokeLabel}
+                      triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
+                      message={copy.confirmRevoke}
+                      confirmLabel={copy.confirmRevokeButton}
+                      cancelLabel={copy.cancel}
+                      pendingLabel={copy.revoking}
+                    />
+                  </form>
+                </div>
               </li>
             ))}
           </ul>

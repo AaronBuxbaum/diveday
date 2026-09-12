@@ -515,6 +515,21 @@ describe("filterActionsForRoles", () => {
     expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
     expect(result.withheldCount).toBe(2);
   });
+
+  it("returns the whole queue when there is no viewer to filter for", () => {
+    // **Not a fail-open default — the absence of a viewer.** The lens narrows a
+    // screen to the person reading it, and the two callers that render one
+    // (`src/app/shop/[shopSlug]/page.tsx`) always pass `session.user.roles`,
+    // which `requireStaffSession` guarantees is non-empty. The caller that
+    // passes nothing is `closeDay` (`src/db/closeout.ts`), which recomputes the
+    // day's outstanding snapshot for the *record*: that snapshot is the shop's
+    // day, and a close-out that dropped every owed refund because nobody was
+    // looking would be a falsified record rather than a tightened gate.
+    const noRoles = filterActionsForRoles(sampleActions, undefined);
+    expect(noRoles.visibleActions).toHaveLength(8);
+    expect(noRoles.withheldCount).toBe(0);
+    expect(filterActionsForRoles(sampleActions, []).visibleActions).toHaveLength(8);
+  });
 });
 
 /**
@@ -707,6 +722,31 @@ describe("the Say hello row", () => {
       "crew",
     ] as const) {
       expect(filterActionsForRoles([action({ kind: "say_hello" })], [role]).withheldCount).toBe(0);
+    }
+  });
+});
+
+/**
+ * **A waiting diver reaches everyone** (issues #1505/#1518). The inbox carried
+ * an owner/manager gate until 2026-09-10, and this row was narrowed to match
+ * it; the owner opened both, so the row follows. Pinned per role rather than
+ * left to the registry literal, because the failure this guards against is
+ * quiet: a narrowed row does not error, it just stops telling the person at
+ * the dock that a diver is waiting.
+ */
+describe("the unanswered-messages row", () => {
+  it("reaches every staff role, because every staff role may answer it", () => {
+    for (const role of [
+      "owner",
+      "manager",
+      "instructor",
+      "divemaster",
+      "captain",
+      "crew",
+    ] as const) {
+      expect(
+        filterActionsForRoles([action({ kind: "unanswered_messages" })], [role]).withheldCount,
+      ).toBe(0);
     }
   });
 });

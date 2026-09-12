@@ -125,6 +125,18 @@ const serverEnv = {
   // time too — see `e2e:build` in package.json — the browser) actually
   // initialize Sentry and ship real events from every e2e run.
   NEXT_PUBLIC_SENTRY_DSN: "",
+  // Not the application's own environment at all, which is why these two were
+  // missing from the block above: they belong to whatever *runs* the fleet.
+  // `.github/workflows/persona-bots.yml` hands the walk a `GH_TOKEN` with
+  // `issues: write` on this repository and, on a judged run, an
+  // `ANTHROPIC_API_KEY` — and every child inherits `process.env`, so without
+  // these lines the `next start` under test holds both for the length of the
+  // run. Nothing in the app reads either; the exposure is a compromised
+  // dependency or a bug in the very build being exercised, which is the case
+  // this whole block exists for (`security-reviewer`, issue 1498).
+  GH_TOKEN: "",
+  GITHUB_TOKEN: "",
+  ANTHROPIC_API_KEY: "",
 };
 
 /**

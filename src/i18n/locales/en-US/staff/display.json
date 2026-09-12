@@ -1,7 +1,7 @@
 {
   "eyebrow": "Settings",
   "title": "Lobby display",
-  "description": "A link for a TV in the lobby or a tablet on the dock: today's boats, who is aboard as a count, and where to meet. No sign-in on that screen.",
+  "description": "A link for a TV in the lobby or a tablet on the dock: today’s boats, who is aboard as a count, and where to meet. No sign-in on that screen.",
   "create": {
     "heading": "New screen",
     "labelField": "Which screen",
@@ -10,7 +10,7 @@
     "purposeBoard": "Departures board",
     "purposeCheckIn": "Self check-in",
     "purposeCheckInDescription": "A check-in tablet records that a diver has arrived. It never puts anyone on a boat: the crew still does roll call at the rail.",
-    "showNames": "Show the crew's names",
+    "showNames": "Show the crew’s names",
     "showNamesDescription": "Anyone in the room reads them. Only the crew who agreed to be named appear, and divers never do.",
     "submit": "Create link",
     "submitting": "Creating…"
@@ -20,9 +20,10 @@
     "shownOnce": "Copy it now, because it is shown once. If you lose it, revoke this screen and create another.",
     "copy": "Copy",
     "copied": "Copied",
-    "copyFailed": "Couldn't copy, select it manually",
-    "shared": "Anyone with this link sees today's departures without signing in. Treat it like a key to the shop.",
-    "sharedCheckIn": "Anyone with this link can mark a diver as arrived without signing in. Treat it like a key to the shop."
+    "copyFailed": "Couldn’t copy, select it manually",
+    "shared": "Anyone with this link sees today’s departures without signing in. Treat it like a key to the shop.",
+    "sharedCheckIn": "Anyone with this link can mark a diver as arrived without signing in. Treat it like a key to the shop.",
+    "expiresCheckIn": "It stops working in {months, plural, one {# month} other {# months}}. Renew it under Screens before then."
   },
   "list": {
     "heading": "Screens",
@@ -32,6 +33,11 @@
     "neverShown": "Not opened yet",
     "namesOn": "Crew named",
     "namesOff": "Nobody named",
+    "expires": "Expires {when}",
+    "expired": "Expired {when}",
+    "renew": "Renew",
+    "renewNamed": "Renew {label}",
+    "renewing": "Renewing…",
     "revoke": "Revoke",
     "revokeNamed": "Revoke {label}",
     "revoking": "Revoking…",
@@ -42,7 +48,8 @@
   "notice": {
     "denied": "Only an owner or manager can change lobby screens.",
     "invalidLabel": "Give the screen a name of up to {max, plural, one {# character} other {# characters}}.",
-    "revoked": "Link revoked."
+    "revoked": "Link revoked.",
+    "renewed": "Link renewed."
   },
   "world": {
     "heading": "What the world can see",
@@ -57,13 +64,13 @@
     }
   },
   "year": {
-    "heading": "Our year on DiveDay's pages",
+    "heading": "Our year on DiveDay’s pages",
     "description": "The year card, no money on it.",
-    "label": "Show our year on DiveDay's pages",
-    "detail": "Divers, boats out, sites, your busiest day and the strip of days. Never money, never a diver's name.",
+    "label": "Show our year on DiveDay’s pages",
+    "detail": "Divers, boats out, sites, your busiest day and the strip of days. Never money, never a diver’s name.",
     "submit": "Save",
     "submitting": "Saving…",
-    "noticeOn": "Your year is on DiveDay's pages.",
-    "noticeOff": "Your year is off DiveDay's pages."
+    "noticeOn": "Your year is on DiveDay’s pages.",
+    "noticeOff": "Your year is off DiveDay’s pages."
   }
 }

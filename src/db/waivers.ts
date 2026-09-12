@@ -18,6 +18,7 @@ import {
 import { isStaff } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { readEmergencyContact } from "@/lib/contact";
 import {
   type GuardianRelationship,
   type GuardianSigner,
@@ -31,7 +32,11 @@ import { flaggedMedicalPrompts, validateMedicalAnswers } from "@/lib/medical";
 import { operationalWindow } from "@/lib/operational-window";
 import { personNamesMatch } from "@/lib/person-name";
 import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
-import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
+import {
+  inPersonAttestationProvider,
+  localTypedConsentProvider,
+  namesakeAttestationProvider,
+} from "@/lib/signatures";
 import { isUuid } from "@/lib/uuid";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
@@ -960,7 +965,8 @@ function guardianEvidence(
       ok: true;
       name: string;
       relationship: GuardianRelationship;
-      email: string;
+      /** Null when the family gave none — the column is nullable (issue #1453). */
+      email: string | null;
       method: string;
       consentedAt: Date;
       signedAt: Date;
@@ -974,17 +980,27 @@ function guardianEvidence(
   if (!evidence) return { ok: false };
   if (!isGuardianRelationship(guardian.relationship)) return { ok: false };
   const email = guardian.email.trim().toLowerCase();
-  // The writer's own shape check, not the page's. `/waivers/[token]` runs a
-  // zod `.email()` first and is the enforcement of record for a browser; this
-  // is what stands between a hand-built request and an address on a signed
-  // release that nobody can ever reach the guardian at.
-  if (!GUARDIAN_EMAIL_SHAPE.test(email)) return { ok: false };
+  // **Optional, shape-checked when given** (issue #1453, owner decision
+  // 2026-09-10). Blank is a family with no address — a grandparent at a
+  // counter, or a household sharing the one the diver already gave — and
+  // refusing them outright was the wrong end of the promise, since nothing
+  // ever sent to the column. What is *not* relaxed is the shape: the page
+  // dropped `required`, so this is what stands between a hand-built request
+  // and an address on a signed release that nobody can ever reach the guardian
+  // at. A malformed address is still a refusal, never a silent null.
+  if (email !== "" && !GUARDIAN_EMAIL_SHAPE.test(email)) return { ok: false };
+  // **The online path has no namesake exception and must never grow one**
+  // (issue #1573, owner decision 2026-09-10). The paper path does, because a
+  // named staffer physically watched two people sign; here the shop has no
+  // evidence a second person exists at all, so a co-signer with the diver's
+  // own name is one signature wearing two hats and is refused. `GuardianInput`
+  // deliberately carries no field a request could set to get past this.
   if (personNamesMatch(evidence.signerName, diverFullName)) return { ok: false };
   return {
     ok: true,
     name: evidence.signerName,
     relationship: guardian.relationship,
-    email,
+    email: email === "" ? null : email,
     method: evidence.method,
     consentedAt: evidence.consentedAt,
     signedAt: evidence.signedAt,
@@ -1001,22 +1017,24 @@ function completedStatus(
 export type EmergencyContactInput = { name?: string; phone?: string };
 
 /**
- * Write the diver's emergency contact to their person record, but only fill
- * blanks it actually supplied — a diver who leaves a field empty must never
- * wipe a value the shop already has on file. The person is reached through the
- * record's booking, so a bearer token can only ever touch its own diver.
+ * Write the diver's emergency contact to their person record, as a pair or not
+ * at all — `readEmergencyContact` holds that rule and says why a half-filled
+ * submission is refused rather than merged. Both boxes blank is still the
+ * no-change case: a diver who leaves the section alone must never wipe a value
+ * the shop already has on file. The person is reached through the record's
+ * booking, so a bearer token can only ever touch its own diver.
  */
 async function saveEmergencyContact(
   db: AppDb,
   bookingId: string,
   contact: EmergencyContactInput,
 ): Promise<void> {
-  const name = contact.name?.trim();
-  const phone = contact.phone?.trim();
-  if (!name && !phone) return;
-  const patch: Partial<typeof people.$inferInsert> = {};
-  if (name) patch.emergencyContactName = name;
-  if (phone) patch.emergencyContactPhone = phone;
+  const submitted = readEmergencyContact(contact);
+  if (submitted.kind !== "pair") return;
+  const patch: Partial<typeof people.$inferInsert> = {
+    emergencyContactName: submitted.name,
+    emergencyContactPhone: submitted.phone,
+  };
   const [booking] = await db
     .select({ personId: bookings.personId })
     .from(bookings)
@@ -1060,18 +1078,22 @@ export async function getEmergencyContactForPerson(
 /**
  * Save an emergency contact for a booking's diver, scoped to the shop so a
  * bearer-token surface (the `/ready` page) can only ever write to its own
- * booking's person. Blanks never overwrite an existing value.
+ * booking's person. Blanks never overwrite an existing value, and a name
+ * without a number (or a number without a name) writes nothing at all and
+ * returns `false` — `readEmergencyContact` is where that rule lives. Callers
+ * that can say so to a person check the pair themselves first, so the refusal
+ * arrives as words rather than as a save that quietly did not happen.
  */
 export async function saveBookingEmergencyContact(
   db: AppDb,
   input: { shopId: string; bookingId: string; name?: string; phone?: string },
 ): Promise<boolean> {
-  const name = input.name?.trim();
-  const phone = input.phone?.trim();
-  if (!name && !phone) return false;
-  const patch: Partial<typeof people.$inferInsert> = {};
-  if (name) patch.emergencyContactName = name;
-  if (phone) patch.emergencyContactPhone = phone;
+  const submitted = readEmergencyContact(input);
+  if (submitted.kind !== "pair") return false;
+  const patch: Partial<typeof people.$inferInsert> = {
+    emergencyContactName: submitted.name,
+    emergencyContactPhone: submitted.phone,
+  };
   const [booking] = await db
     .select({ personId: bookings.personId })
     .from(bookings)
@@ -1081,22 +1103,31 @@ export async function saveBookingEmergencyContact(
   const [updated] = await db
     .update(people)
     .set(patch)
-    .where(eq(people.id, booking.personId))
+    // The shop is restated rather than inherited from the read above. That
+    // read proves the *booking* is this shop's; it does not prove
+    // `bookings.person_id` points at a person inside it. This is the write a
+    // bearer-token page reaches, so a row that ever goes wrong that way is
+    // non-exploitable instead of merely unlikely — the same predicate
+    // `savePersonEmergencyContact` below makes.
+    .where(and(eq(people.id, booking.personId), eq(people.shopId, input.shopId)))
     .returning({ id: people.id });
   return Boolean(updated);
 }
 
-/** Save a person-level emergency contact when the waiver has no booking context. */
+/**
+ * Save a person-level emergency contact when the waiver has no booking context.
+ * Same pair-or-nothing rule as `saveBookingEmergencyContact`.
+ */
 export async function savePersonEmergencyContact(
   db: DbExecutor,
   input: { shopId: string; personId: string; name?: string; phone?: string },
 ): Promise<boolean> {
-  const name = input.name?.trim();
-  const phone = input.phone?.trim();
-  if (!name && !phone) return false;
-  const patch: Partial<typeof people.$inferInsert> = {};
-  if (name) patch.emergencyContactName = name;
-  if (phone) patch.emergencyContactPhone = phone;
+  const submitted = readEmergencyContact(input);
+  if (submitted.kind !== "pair") return false;
+  const patch: Partial<typeof people.$inferInsert> = {
+    emergencyContactName: submitted.name,
+    emergencyContactPhone: submitted.phone,
+  };
   const [updated] = await db
     .update(people)
     .set(patch)
@@ -1824,7 +1855,26 @@ export async function recordInPersonWaiver(
      * same `in_person_attested` shape. Required when the diver is a minor on
      * the signing day; ignored for an adult.
      */
-    guardian?: { name: string; relationship: string };
+    guardian?: {
+      name: string;
+      relationship: string;
+      /**
+       * The staffer's explicit assertion that the co-signer and the diver
+       * genuinely share a name and that they watched both of them sign (issue
+       * #1573). Honoured only when the names do actually match — see the
+       * refusal below — and never reachable from the online path, whose
+       * `GuardianInput` has no such field.
+       *
+       * A request built by hand can set this without ever seeing the
+       * checkbox, and that is contained rather than prevented: the caller is
+       * already live staff of this shop attesting that a release was signed
+       * on paper at all, the flag changes nothing unless the two names match,
+       * and both the assertion and the staffer who made it are written onto
+       * the record (`guardian_signature_method`, `recorded_by_person_id`)
+       * inside the integrity seal.
+       */
+      namesakeAttested?: boolean;
+    };
     now?: Date;
   },
 ): Promise<InPersonWaiverOutcome> {
@@ -1861,12 +1911,34 @@ export async function recordInPersonWaiver(
       // Separated from the two above on purpose. Those mean the request did not
       // come from the form; this one is what the form produces for a family who
       // share a legal name, and it is the last door before somebody gives up or
-      // writes something untrue on a liability release (issue 1539). The
-      // refusal itself does not move — it is what stops a minor signing as
-      // their own guardian — only what the staffer is told about it.
+      // writes something untrue on a liability release (issue 1539).
+      //
+      // **The refusal is still the default** (issue #1573, owner decision
+      // 2026-09-10). It stops a minor signing as their own guardian, which is
+      // the whole point of a second signer. What moves is that the *paper*
+      // path now has one way past it: the staffer ticks a confirmation saying
+      // the two really do share a name on their IDs and that they watched both
+      // of them sign, and the co-signature is re-captured under
+      // `namesakeAttestationProvider` so the assertion is on the record rather
+      // than lost into an ordinary attestation. Without that tick the family
+      // meets the same refusal they met before.
+      //
+      // The online path does not move and must not: there the shop has no
+      // evidence a second person exists at all. See `guardianEvidence` above.
       if (personNamesMatch(guardian.signerName, signer.fullName)) {
-        return { ok: false, reason: "guardian_name_matches_diver" };
+        if (input.guardian.namesakeAttested !== true) {
+          return { ok: false, reason: "guardian_name_matches_diver" };
+        }
+        guardian = namesakeAttestationProvider.capture({
+          signerName: input.guardian.name,
+          agreed: true,
+          signedAt: now,
+        });
+        if (!guardian) return { ok: false, reason: "guardian_invalid" };
       }
+      // A tick on a form whose two names differ asserts nothing, so it records
+      // nothing: the assertion is only meaningful for the case it names, and a
+      // flag silently honoured anywhere else would turn it into a habit.
       guardianRelationship = input.guardian.relationship;
     }
 

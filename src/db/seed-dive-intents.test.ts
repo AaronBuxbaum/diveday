@@ -44,7 +44,7 @@ async function intentsOn(
       ),
     )
     .limit(1);
-  if (!trip) throw new Error(`expected today's seeded departure "${title}"`);
+  if (!trip) throw new Error(`expected today’s seeded departure "${title}"`);
   const rows = await db
     .select({ intent: bookings.diveIntent })
     .from(bookings)

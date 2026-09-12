@@ -396,8 +396,8 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     }
 
     await undo.click();
-    await expect(page.getByRole("alert").filter({ hasText: "Couldn't undo" })).toContainText(
-      "Couldn't undo. This trip has been cancelled. Reinstate the trip first, then add them back.",
+    await expect(page.getByRole("alert").filter({ hasText: "Couldn’t undo" })).toContainText(
+      "Couldn’t undo. This trip has been cancelled. Reinstate the trip first, then add them back.",
     );
     // Refused, not partially applied: the diver is still off the roster.
     await expect(page.getByRole("link", { name: diver })).toHaveCount(0);
@@ -434,6 +434,34 @@ async function overflowingControls(page: import("@playwright/test").Page) {
   );
 }
 
+/**
+ * **How many lines one named track occupies** — distinct `offsetTop` values
+ * among its options.
+ *
+ * A wrapped row is not a scrolling row: `overflowingControls` above reports
+ * zero for both, because a track that wraps has no overflow to measure. The
+ * manifest's checkpoint row was the one control in the app that read as two
+ * rows at 390px, directly under a four-tab strip that fits on one, so the two
+ * tracks read as two different controls on the surface a crew works at the
+ * rail (issue #1320).
+ *
+ * Scoped to one `aria-label` on purpose. The departure's own four tabs are
+ * *meant* to become a 2x2 block at this width (`SegmentedControl`'s docblock),
+ * so a blanket "no control wraps" rule would be wrong and would have to be
+ * weakened the first time it fired.
+ */
+async function trackLineCount(page: import("@playwright/test").Page, ariaLabel: string) {
+  const nav = page.getByRole("navigation", { name: ariaLabel });
+  await nav.waitFor();
+  return nav.evaluate((element) => {
+    const tops = [...element.querySelectorAll("[data-key]")].map(
+      (option) => (option as HTMLElement).offsetTop,
+    );
+    if (tops.length === 0) throw new Error("the track rendered no options");
+    return new Set(tops).size;
+  });
+}
+
 /** Every departure sub-page, measured at the narrowest viewport we design for. */
 async function assertNoSidewaysScroll(page: import("@playwright/test").Page, tripPath: string) {
   await page.setViewportSize({ width: 390, height: 900 });
@@ -453,6 +481,13 @@ test.describe("a departure's tab strip on a phone", () => {
   test("never needs a sideways drag, in English", async ({ page }) => {
     await assertNoSidewaysScroll(page, await seededTripPath(page));
   });
+
+  test("keeps the manifest's checkpoint track on one line", async ({ page }) => {
+    const tripPath = await seededTripPath(page);
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto(`${tripPath}/manifest`);
+    expect(await trackLineCount(page, "Roll-call checkpoint")).toBe(1);
+  });
 });
 
 test.describe("a departure's tab strip on a phone, in Spanish", () => {
@@ -463,6 +498,17 @@ test.describe("a departure's tab strip on a phone, in Spanish", () => {
 
   test("never needs a sideways drag either", async ({ page }) => {
     await assertNoSidewaysScroll(page, await seededTripPath(page));
+  });
+
+  // The measurement that decided the words. "Después de la inmersión 2" is
+  // about 132px per option at boat size; three of those plus gaps, track
+  // padding and border overrun a 390px viewport, so English fitting proved
+  // nothing here.
+  test("keeps the checkpoint track on one line in Spanish too", async ({ page }) => {
+    const tripPath = await seededTripPath(page);
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto(`${tripPath}/manifest`);
+    expect(await trackLineCount(page, "Punto de control del pase de lista")).toBe(1);
   });
 });
 

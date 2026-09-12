@@ -52,7 +52,7 @@ describe("BookingGearFields", () => {
     );
 
     expect(screen.getByLabelText("Need rental gear?")).not.toBeChecked();
-    expect(screen.getByText(/you won't be charged for gear/)).toBeInTheDocument();
+    expect(screen.getByText(/you won’t be charged for gear/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/^BCD/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/I.d like nitrox/)).not.toBeInTheDocument();
   });
@@ -175,7 +175,7 @@ describe("BookingGearFields", () => {
       />,
     );
 
-    expect(screen.getByText("Diver 2's gear")).toBeInTheDocument();
+    expect(screen.getByText("Diver 2’s gear")).toBeInTheDocument();
     expect(screen.queryByText("Rental gear")).not.toBeInTheDocument();
   });
 

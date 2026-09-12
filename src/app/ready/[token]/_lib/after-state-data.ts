@@ -128,8 +128,10 @@ export async function buildAfterStateProps(input: {
           when: formatWeekdayTime(data.flySafe.from, locale, shop.timezone),
           hours: data.flySafe.hours,
           anchor: data.flySafe.anchor,
-          // Not cosmetic: it picks which of the two sentences the diver reads,
-          // and only the `earlier_day` one explains itself.
+          // Not cosmetic: it picks which sentence the diver reads, and two of
+          // the routes state their reason — this card shows no dive count at
+          // all (see `DiveRecord`), so neither a plan the diver did not dive
+          // nor a day before this one can be read off the page.
           reason: data.flySafe.reason,
         }
       : null,

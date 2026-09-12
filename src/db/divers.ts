@@ -10,6 +10,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  max,
   ne,
   notInArray,
   or,
@@ -23,10 +24,12 @@ import { type AppDb, isUniqueConstraintViolation } from "./client";
 import { listOrdersForPerson } from "./orders";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { listPersonBookingPayments } from "./payments";
+import { storedPhone } from "./person-phone";
 import {
   bookings,
   certifications,
   courses,
+  executedDives,
   nitroxCertifications,
   people,
   personRoles,
@@ -36,6 +39,7 @@ import {
   specialtyCertifications,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 import {
   getCurrentWaiverTemplate,
   getDiverWaiverChannelStates,
@@ -62,8 +66,12 @@ export type NewDiver = {
  */
 export async function createDiver(db: AppDb, input: NewDiver) {
   const email = input.email?.trim().toLowerCase() || null;
-  const phone = input.phone?.trim() || null;
-  const fullName = input.fullName?.trim() || email || phone || "Unnamed diver";
+  const typed = input.phone?.trim() || null;
+  const phone = await storedPhone(db, input.shopId, typed);
+  // The display-name fallback keeps what the staffer typed rather than the
+  // stored form: a person whose only name is their number reads better as
+  // "+1 305 555 0110" than as "+13055550110", and the name is not a key.
+  const fullName = input.fullName?.trim() || email || typed || "Unnamed diver";
   if (email) {
     const [existing] = await db
       .select({ id: people.id })
@@ -134,13 +142,14 @@ export async function updateDiver(
       .limit(1);
     if (existing) return null;
   }
+  const phone = await storedPhone(db, input.shopId, input.phone?.trim() || null);
   try {
     const [person] = await db
       .update(people)
       .set({
         fullName: input.fullName.trim(),
         email,
-        phone: input.phone?.trim() || null,
+        phone,
         ...(input.diveInsurance === undefined
           ? {}
           : { diveInsurance: input.diveInsurance.trim() || null }),
@@ -777,14 +786,81 @@ export async function getDiverProfile(
 }
 
 /**
- * Finds divers in a shop whose names match exactly (case-insensitive) or are similar
- * (similarity score > 0.4 using pg_trgm similarity).
+ * One name the counter is being asked about, and the one fact that makes the
+ * question answerable.
+ *
+ * A list of five names is not evidence: the name is what the staffer just
+ * typed, which is why every one of them is on the list. "Is this the same
+ * Nadia who dived yesterday?" is a question about a *day*, so the day comes
+ * with the name (issue #1556).
  */
-export async function findSimilarDivers(db: AppDb, shopId: string, fullName: string) {
+export type SimilarDiver = {
+  id: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  /**
+   * The most recent departure this diver was actually on, or null when this
+   * shop has no dive day on file for them.
+   *
+   * **The same evidence rule `peopleWhoDivedBefore` uses**
+   * (src/db/executed-dives.ts): a non-cancelled, non-`no_show` booking, on a
+   * live departure the shop still says ran, that has already left — plus that
+   * reader's one escape, a blown-out departure the crew logged dives on. The
+   * two may not disagree about what a dive day is: one of them would then be
+   * telling a staffer something the other refuses.
+   *
+   * **A released seat is not a dive day here either** (`dive-domain-expert`,
+   * 2026-09-11). Both readers used to let a standing desk sighting outrank a
+   * `no_show`, against a close-of-day sweep that does not exist; the only
+   * writer of that status is one staffer's deliberate tap, always later than
+   * the check-in it overwrites, so the escape told the next staffer this
+   * person dived here on a morning the shop's own record says they never came
+   * — and that is the fact the counter's identity question turns on. The full
+   * argument sits on the `no_show` clause in `peopleWhoDivedBefore`.
+   *
+   * What still differs between the four readers is the *trip-status* leg: the
+   * recap's dive-day count (`getRecapPageData`, src/db/recap.ts) and the diver
+   * shelf (src/db/shelf.ts) take a plain non-`scheduled` departure as
+   * disqualifying, with no escape for a crew-logged dive. That gap is
+   * affordable in this direction only. This prompt asks *who is standing at
+   * the counter*, and it asks a staffer who can see them, so naming a day they
+   * do not recognise costs a shake of the head while withholding one costs the
+   * match — and a duplicate record is what later hides a certification or a
+   * signed waiver from a roster. The recap tells the diver "your 3rd dive day"
+   * with nobody there to correct it, and feeds `visitMilestone`'s exact
+   * equality on {1, 10, 25, 50, 100}, where a day that moves does not blur a
+   * stamp but skips it permanently. Putting all four behind one predicate is
+   * issue #1694; it is a change to what a diver's keepsake counts, not a
+   * tidy-up, which is why it is not done here.
+   *
+   * **Whether a null says anything on screen is not this reader's call**: it
+   * speaks when a sibling candidate has a day and is silent when they all
+   * lack one, argued once on `noDiveDayNeedsSaying`
+   * (`src/lib/name-match-evidence.ts`) so the three doors rendering the prompt
+   * cannot answer it two ways.
+   */
+  lastDiveDayAt: Date | null;
+};
+
+/**
+ * Finds divers in a shop whose names match exactly (case-insensitive) or are similar
+ * (similarity score > 0.4 using pg_trgm similarity), each with the last dive day
+ * this shop can put behind the name.
+ *
+ * **Two queries, never one per candidate.** The dive days are one grouped read
+ * over the five ids the name search just returned; a per-row lookup here would
+ * put five round trips in front of a staffer with a queue at the desk.
+ */
+export async function findSimilarDivers(
+  db: AppDb,
+  shopId: string,
+  fullName: string,
+): Promise<SimilarDiver[]> {
   const trimmed = fullName.trim();
   const lowerName = trimmed.toLowerCase();
 
-  return db
+  const candidates = await db
     .select({
       id: people.id,
       fullName: people.fullName,
@@ -806,4 +882,49 @@ export async function findSimilarDivers(db: AppDb, shopId: string, fullName: str
     )
     .orderBy(desc(sql`similarity(lower(${people.fullName}), ${lowerName})`))
     .limit(5);
+  if (candidates.length === 0) return [];
+
+  const now = nowDate();
+  const ids = candidates.map((candidate) => candidate.id);
+  const dived = await db
+    .select({ personId: bookings.personId, lastDiveDayAt: max(trips.startsAt) })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    // Only so a logged dive can speak for a departure the shop later marked
+    // something other than `scheduled` — see the trip-status clause below.
+    .leftJoin(
+      executedDives,
+      and(
+        eq(executedDives.tripId, trips.id),
+        eq(executedDives.shopId, shopId),
+        isNull(executedDives.deletedAt),
+      ),
+    )
+    .where(
+      and(
+        // Both tables scoped, not only the one this read starts from: this
+        // answer must not be reachable from another shop's row by any path.
+        eq(bookings.shopId, shopId),
+        eq(trips.shopId, shopId),
+        inArray(bookings.personId, ids),
+        // The four clauses below are `peopleWhoDivedBefore`'s dive-day rule
+        // (`src/db/executed-dives.ts`), which is where each one is argued and
+        // where a change to any of them belongs. Restated as a query rather
+        // than shared because that reader answers "has this person dived
+        // before" per person and this one needs the day itself; the rule may
+        // not drift apart, and `SimilarDiver.lastDiveDayAt` says why.
+        ne(bookings.status, "cancelled"),
+        ne(bookings.status, "no_show"),
+        or(eq(trips.status, "scheduled"), isNotNull(executedDives.id)),
+        liveTrip(),
+        lt(trips.startsAt, now),
+      ),
+    )
+    .groupBy(bookings.personId);
+
+  const lastDiveDay = new Map(dived.map((row) => [row.personId, row.lastDiveDayAt]));
+  return candidates.map((candidate) => ({
+    ...candidate,
+    lastDiveDayAt: lastDiveDay.get(candidate.id) ?? null,
+  }));
 }

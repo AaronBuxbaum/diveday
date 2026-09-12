@@ -1,8 +1,8 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
 import { canManageShopSettings } from "@/lib/authz";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
-import { normalizeDisplayLabel } from "@/lib/display-tokens";
+import { checkInLinkExpiresAt, normalizeDisplayLabel } from "@/lib/display-tokens";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { type displayTokenPurpose, displayTokens, shops } from "./schema";
@@ -10,10 +10,11 @@ import { type displayTokenPurpose, displayTokens, shops } from "./schema";
 /**
  * **Display links: the credential behind `/board/[token]`** (issue #1426).
  *
- * One writer that mints, one that revokes, and a verify path the board calls
- * on every render. The raw token is returned exactly once, from `issue`, and
- * only its SHA-256 is stored — a reader of the database comes away with
- * nothing that opens a board (`src/lib/bearer-tokens.ts`).
+ * One writer that mints, one that revokes, one that renews a kiosk link's
+ * expiry, and a verify path the board calls on every render. The raw token is
+ * returned exactly once, from `issue`, and only its SHA-256 is stored — a
+ * reader of the database comes away with nothing that opens a board
+ * (`src/lib/bearer-tokens.ts`).
  *
  * Authorization is re-derived at issue time from live roles rather than
  * trusted from the caller: a display link is shop policy (a public screen in
@@ -78,6 +79,11 @@ export async function issueDisplayToken(
         showNames: input.showNames,
         createdByPersonId: input.personId,
         createdAt: now,
+        // Derived from `purpose` here, never from an argument: a caller that
+        // could ask for "no expiry" would be a way to mint a kiosk link that
+        // outlives the tablet (issue #1609). A board link gets null, which is
+        // what the column means by "never".
+        expiresAt: input.purpose === "check_in" ? checkInLinkExpiresAt(now) : null,
       })
       .returning({ id: displayTokens.id });
     if (!row) return { ok: false, reason: "not_authorized" };
@@ -102,10 +108,22 @@ export async function issueDisplayToken(
 export type DisplayTokenContext = { id: string; shopId: string; showNames: boolean };
 
 /**
- * `null` for an unknown token, for a revoked one, **and for a live token minted
- * for the other purpose** — all three alike, so a holder cannot tell "never
- * ours" from "revoked this morning" from "that is the board's link, not the
- * kiosk's". The surfaces answer every one of them with the same refusal card.
+ * `null` for an unknown token, for a revoked one, for one whose expiry has
+ * passed, **and for a live token minted for the other purpose** — all four
+ * alike, so a holder cannot tell "never ours" from "revoked this morning" from
+ * "expired in March" from "that is the board's link, not the kiosk's". The
+ * surfaces answer every one of them with the same refusal card.
+ *
+ * **A null `expires_at` is live only for a board link** (issue #1609, security
+ * review). Read literally the column says "never expires", and that is right
+ * for the board — but it is also what every `check_in` row minted before the
+ * column existed carries, and those are the rows that *write*: a kiosk URL
+ * photographed off a counter tablet would go on recording arrivals against real
+ * bookings forever. So the purpose is part of the liveness test rather than the
+ * expiry alone, and "every kiosk link that opens the counter is bounded" is
+ * true here, of the one predicate, rather than true of the writer and hoped for
+ * everywhere else. An unbounded kiosk row refuses like any other; the writer
+ * that gives it a lifetime again is `renewDisplayToken` below.
  *
  * The purpose is matched in the predicate rather than compared afterwards,
  * which is what makes forgetting it a **type** error at every call site rather
@@ -115,8 +133,9 @@ export type DisplayTokenContext = { id: string; shopId: string; showNames: boole
  */
 export async function verifyDisplayToken(
   db: DbExecutor,
-  input: { token: string; purpose: DisplayTokenPurpose },
+  input: { token: string; purpose: DisplayTokenPurpose; now?: Date },
 ): Promise<DisplayTokenContext | null> {
+  const now = input.now ?? nowDate();
   const [row] = await db
     .select({
       id: displayTokens.id,
@@ -129,6 +148,10 @@ export async function verifyDisplayToken(
         eq(displayTokens.tokenHash, hashBearerToken(input.token)),
         eq(displayTokens.purpose, input.purpose),
         isNull(displayTokens.revokedAt),
+        or(
+          and(eq(displayTokens.purpose, "board"), isNull(displayTokens.expiresAt)),
+          gt(displayTokens.expiresAt, now),
+        ),
       ),
     )
     .limit(1);
@@ -158,9 +181,18 @@ export type DisplayTokenSummary = {
   showNames: boolean;
   createdAt: Date;
   lastShownAt: Date | null;
+  /** Null for a board link, which never expires. */
+  expiresAt: Date | null;
 };
 
-/** The shop's live links, newest first, for the settings page. */
+/**
+ * The shop's links, newest first, for the settings page.
+ *
+ * Deliberately still lists a link whose expiry has passed: a manager has to be
+ * able to find the kiosk that stopped working and renew it, and an expired row
+ * that vanished would look like a link somebody else revoked. Revocation stays
+ * the only thing that takes a row off this list (issue #1609).
+ */
 export async function listDisplayTokens(
   db: DbExecutor,
   input: { shopId: string },
@@ -173,6 +205,7 @@ export async function listDisplayTokens(
       showNames: displayTokens.showNames,
       createdAt: displayTokens.createdAt,
       lastShownAt: displayTokens.lastShownAt,
+      expiresAt: displayTokens.expiresAt,
     })
     .from(displayTokens)
     .where(and(eq(displayTokens.shopId, input.shopId), isNull(displayTokens.revokedAt)))
@@ -202,6 +235,40 @@ export async function revokeDisplayToken(
       and(
         eq(displayTokens.id, input.id),
         eq(displayTokens.shopId, input.shopId),
+        isNull(displayTokens.revokedAt),
+      ),
+    )
+    .returning({ id: displayTokens.id });
+  return rows.length > 0;
+}
+
+/**
+ * **Pushes a check-in link's expiry out by a full lifetime** (issue #1609).
+ *
+ * The same live owner/manager gate as `revokeDisplayToken`, re-derived here
+ * and not trusted from the page that drew the button: this is a full-lifetime
+ * reset on a bearer credential that can *write*, so a crew member reaching the
+ * server action through a stale tab is refused at the writer.
+ *
+ * Shop-scoped in the predicate, so another tenant's id renews nothing. Only a
+ * `check_in` row, because a board link has no expiry to move, and only a live
+ * one — renewing a revoked link would be un-revoking it through a door that
+ * does not say so.
+ */
+export async function renewDisplayToken(
+  db: AppDb,
+  input: { shopId: string; personId: string; id: string; now?: Date },
+): Promise<boolean> {
+  const roles = await loadActiveStaffRoles(db, input.shopId, input.personId);
+  if (!roles || !canManageShopSettings(roles)) return false;
+  const rows = await db
+    .update(displayTokens)
+    .set({ expiresAt: checkInLinkExpiresAt(input.now ?? nowDate()) })
+    .where(
+      and(
+        eq(displayTokens.id, input.id),
+        eq(displayTokens.shopId, input.shopId),
+        eq(displayTokens.purpose, "check_in"),
         isNull(displayTokens.revokedAt),
       ),
     )

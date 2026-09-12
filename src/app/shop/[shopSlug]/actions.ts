@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { closeDay, recordLeftoverDecision } from "@/db/closeout";
+import { fitAdjustedReturnTeaching } from "@/db/gear";
 import { updateHelpRequestStatus } from "@/db/help-requests";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import {
@@ -24,7 +25,6 @@ import { canViewShopReports } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { type LeftoverDecision, shopDayOf } from "@/lib/closeout";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { SIZED_RENTAL_KINDS, type SizedRentalKind } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
@@ -252,22 +252,41 @@ export async function sendRecapAction(tripId: string) {
  * D14) — the evening's one-tap answer, from the leftovers group.
  *
  * Every staff role may answer it, the same rule as closing the day: whoever
- * was at the counter when the swap happened is who knows. The row it lands on
- * exists only because the desk already recorded a `fit_adjusted` return, so
- * this writes down what a human already decided rather than making a new call.
+ * was at the counter when the swap happened is who knows. That is only true
+ * because the tap writes down what a human already decided rather than making
+ * a new call — and until a `security-reviewer` pass read this next door to the
+ * guardian layer, nothing made it true. The action took the *size* as an
+ * argument, so a crew member could post any person id in their shop with any
+ * string and rewrite that diver's stated fit, which is the act
+ * `canOverrideGearRequest` reserves for owner, manager, instructor and
+ * divemaster.
+ *
+ * So the tap names the reservation and nothing else. `fitAdjustedReturnTeaching`
+ * re-proves the desk's own `fit_adjusted` return, shop-scoped, and hands back
+ * the person, the kind and the size; a caller who invents an id gets `invalid`
+ * and writes nothing.
  */
-export async function keepRentalFitAction(personId: string, kind: SizedRentalKind, size: string) {
+export async function keepRentalFitAction(reservationId: string) {
   const { staff, home } = await shopHome();
-  if (!uuidParam(personId) || !SIZED_RENTAL_KINDS.includes(kind)) redirect(home);
-  const result = await confirmRentalFitSize(await getDb(), {
+  if (!uuidParam(reservationId)) redirect(home);
+  const db = await getDb();
+  const teaching = await fitAdjustedReturnTeaching(db, {
     shopId: staff.user.shopId,
-    personId,
-    kind,
-    size,
+    reservationId,
+  });
+  if (!teaching) revalidateAndRedirect(home, noticeUrl(home, "invalid"));
+  const result = await confirmRentalFitSize(db, {
+    shopId: staff.user.shopId,
+    personId: teaching.personId,
+    kind: teaching.kind,
+    size: teaching.size,
     confirmedByPersonId: staff.user.personId,
   });
   if (result !== "saved") revalidateAndRedirect(home, noticeUrl(home, result));
-  revalidateAndRedirect(home, noticeUrl(home, "rental-fit-kept"));
+  // No notice on the way back. The row leaving the leftovers group is the
+  // answer, and a banner reading "Fit saved." over three of those rows told a
+  // staffer who tapped two in a row nothing about which one landed (#1400).
+  revalidateAndRedirect(home);
 }
 
 export async function toggleRecapAutoSendPauseAction(formData: FormData) {

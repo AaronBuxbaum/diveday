@@ -152,13 +152,13 @@ describe("the waiver group", () => {
 
   it("offers the evaluation to a reader who may open it", () => {
     renderCard(clearedDiver(true), undefined, true);
-    const link = screen.getByRole("link", { name: "Open the physician's evaluation" });
+    const link = screen.getByRole("link", { name: "Open the physician’s evaluation" });
     expect(link).toHaveAttribute("href", "/api/medical-clearances/record-1");
   });
 
   it("draws no door for a reader who may not open it", () => {
     renderCard(clearedDiver(true), undefined, false);
-    expect(screen.queryByRole("link", { name: "Open the physician's evaluation" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Open the physician’s evaluation" })).toBeNull();
   });
 
   it("draws no door when the shop kept the paper instead of uploading it", () => {
@@ -166,7 +166,7 @@ describe("the waiver group", () => {
     // an ordinary one — there is simply no file, and an offer to open nothing
     // would read as a fault.
     renderCard(clearedDiver(false), undefined, true);
-    expect(screen.queryByRole("link", { name: "Open the physician's evaluation" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Open the physician’s evaluation" })).toBeNull();
   });
 
   /**

@@ -83,6 +83,15 @@ async function waiverCount(db: AppDb, bookingId: string) {
   return rows.length;
 }
 
+async function bookingIdentityHold(db: AppDb, bookingId: string) {
+  const [row] = await db
+    .select({ at: bookings.identityUnconfirmedAt })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  return row?.at ?? null;
+}
+
 const UNKNOWN_ID = "00000000-0000-4000-8000-000000000000";
 
 /** A non-reserved address the reserved-test-domain guard lets through. */
@@ -358,6 +367,81 @@ describe("seatDiver waiver reporting (what a door is allowed to claim)", () => {
     // Still seated: the diver's place on the boat never depends on this.
     if (!result.ok) throw new Error("expected the diver to be seated");
     expect(await waiverCount(db, result.bookingId)).toBe(0);
+  });
+});
+
+/**
+ * `identityUnconfirmed` is the second thing a door is not allowed to hide.
+ *
+ * A seat taken off the counter's "is this the same diver?" prompt attaches
+ * itself to an existing person on a guess, and the boarding gate refuses it
+ * until a staffer confirms the identity (H-13, issue #1556). Every door used to
+ * answer that with a plain "Added", and the staffer learned the seat was held
+ * one tap later — `checkInBooking` refusing `not_ready` with the diver at the
+ * counter (`dive-domain-expert`, 2026-09-11). A door can only say so if the
+ * consequence path tells it, so this is the contract that lets it.
+ */
+describe("seatDiver identity reporting (what a door is allowed to claim)", () => {
+  it("reports a held seat when the name prompt's tap disagrees with the row", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      // What the counter submits: the candidate's id, plus the name the staffer
+      // actually typed. A different human under a similar spelling is the case
+      // the flag exists for.
+      diver: { personId: diver.id, fromNameMatch: { typedName: "Someone Else Entirely" } },
+      entry: "walk_in",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, identityUnconfirmed: true });
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    // Held, never refused: the seat is real and the gate is what waits.
+    expect(await bookingIdentityHold(db, result.bookingId)).not.toBeNull();
+  });
+
+  it("reports an ordinary seat when a staffer picked the diver by identity", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    // "Enter once, reuse everywhere" has to keep costing nothing: a diver found
+    // in the search by a staffer who went looking is not a guess.
+    expect(result).toMatchObject({ ok: true, identityUnconfirmed: false });
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(await bookingIdentityHold(db, result.bookingId)).toBeNull();
+  });
+
+  it("reports a held seat for a name typed against someone else's address", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+    await db.update(people).set({ email: DELIVERABLE_EMAIL }).where(eq(people.id, diver.id));
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      // Hand entry, deduped by email onto a row carrying a different name —
+      // the shared-inbox signal the flag was built for, reachable from every
+      // door that takes a typed name.
+      diver: { fullName: "Not That Diver", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, identityUnconfirmed: true });
   });
 });
 

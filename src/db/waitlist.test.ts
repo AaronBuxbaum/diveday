@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { people, shops } from "./schema";
+import { bookings, people, shops } from "./schema";
 import { listCertificationSummaries } from "./self-declared-cards";
 import {
   getTripRoster,
@@ -93,6 +93,31 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
     ).resolves.toEqual({ ok: false, reason: "trip_available" });
     const trip = await getTripWithBooked(db, shop.id, openTrip.id);
     expect(trip?.booked).toBe(openTrip.booked);
+  });
+
+  /**
+   * **The same full/not-full decision the booking door makes** — `seatHeld`,
+   * not "every status but cancelled" (issue #1209).
+   *
+   * The counter can release a seat from the dock call onwards, which is inside
+   * the window this form is still open in. Counting the released row as held
+   * would put a diver on a lead list for a boat `createBooking` would have
+   * sold them outright, and the two doors would be saying opposite things
+   * about the same departure at the same moment.
+   */
+  it("sends a diver to book rather than to wait, once a seat is released", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const roster = await getTripRoster(db, shop.id, fullTrip.id);
+    const released = roster[0];
+    if (!released) throw new Error("expected the full trip to have a roster");
+    await db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(eq(bookings.id, released.booking.id));
+
+    await expect(
+      joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor }),
+    ).resolves.toEqual({ ok: false, reason: "trip_available" });
   });
 });
 

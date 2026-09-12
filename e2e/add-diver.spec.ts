@@ -206,6 +206,106 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
 });
 
 /**
+ * **A name the shop half-recognises** (issue #1556). Hand-entering a name one
+ * letter off a diver already on file stops at the counter's prompt rather than
+ * seating anyone; the prompt answers the staffer's real question with the day
+ * the shop last had that candidate on a boat; and picking one seats a diver who
+ * is *blocked* until a staffer says it is them. A `similarity() > 0.4` trigram
+ * match fires on genuinely different people, so the fix is to make a wrong pick
+ * harmless rather than to make the matching cleverer.
+ */
+test("a diver seated off the name prompt is blocked until staff confirm it is them", async ({
+  page,
+}) => {
+  test.setTimeout(30_000);
+  const title = `Name Match Trip ${e2eNow().getTime()}`;
+  await createTrip(page, {
+    title,
+    date: daysFromNow(6),
+    departsAt: "09:00",
+    returnsAt: "11:00",
+    capacity: 6,
+  });
+
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, title);
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+
+  const addDiver = page.locator("#add-diver").filter({ visible: true });
+  await addDiver.scrollIntoViewIfNeeded();
+  await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
+  await page.waitForURL(/\/divers\/new/);
+
+  // One letter off "Marisol Vega", who is in the demo shop's trailing quarter
+  // of sailed departures (src/db/seed-history.ts) — so she has a dive day and
+  // the prompt has something to say beyond repeating the typed name back.
+  await page.getByLabel("Full name").fill("Marisol Vegas");
+  await page.getByLabel("Email").fill(`marisol-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: "Add to trip" }).click();
+
+  // Nobody is seated yet: the question is asked by name, the stake is stated,
+  // and the evidence is on the candidate.
+  await expect(
+    page.getByRole("heading", { name: /Is this the same Marisol Vegas\?/ }),
+  ).toBeVisible();
+  await expect(page.getByText(/Last dive day here: /)).toBeVisible();
+
+  await page.getByRole("button", { name: "Marisol Vega", exact: true }).click();
+  await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
+
+  // And the seating itself says the seat is held. It used to answer the plain
+  // "Diver added to the trip", so the staffer learned the seat was blocked one
+  // tap later — a check-in refusal, with the diver at the counter and the
+  // confirm control on this page (`dive-domain-expert`, 2026-09-11).
+  await expect(page.getByText(/the seat is held until you confirm/)).toBeVisible();
+
+  // Seated, and blocked on the identity the shop only guessed at — the seat
+  // does not inherit her certifications or her waiver on a spelling.
+  const roster = page.locator("#roster");
+  await expect(roster.getByRole("link", { name: "Marisol Vega" }).first()).toBeVisible();
+  await expect(roster.getByText(/Identity unconfirmed/).first()).toBeVisible();
+
+  // One tap at the roster, the same one the shared-inbox path has always cost.
+  await page.getByRole("button", { name: "Confirm this is Marisol Vega" }).click();
+  await page.getByRole("button", { name: "Yes, this is them" }).click();
+  await expect(page.getByRole("status")).toContainText("Identity confirmed.");
+  await expect(page.getByText(/Identity unconfirmed/)).toHaveCount(0);
+});
+
+/**
+ * **An off-origin `?returnTo=`.** The create-diver page takes a return path in
+ * the query, shows it as the back link, and hands it to `revalidateAndRedirect`
+ * once the diver is written — so before `safeShopReturnPath` a staffer who
+ * followed a crafted link was bounced to another origin the moment an
+ * authenticated write succeeded, with the app's own success state behind it.
+ * Refused by falling back to the roster, never by erroring at the staffer.
+ */
+test("a returnTo pointing off-origin never survives the create", async ({ page }) => {
+  const crafted = "/shop/blue-mantis/divers/new?returnTo=https%3A%2F%2Fevil.invalid%2Fsteal";
+  await page.goto(crafted);
+  await expect(page.getByRole("heading", { level: 1, name: "Add a diver" })).toBeVisible();
+
+  // A name no seeded diver is a trigram match for, so the create lands rather
+  // than stopping at the "is this the same person?" prompt.
+  await page.getByLabel("Full name").fill(`Quorrax Zylbender ${e2eNow().getTime()}`);
+  await page.getByRole("button", { name: "Add diver", exact: true }).click();
+
+  // The write succeeded and the staffer is still inside their own shop, on the
+  // new diver's record — the destination a request with no returnTo gets.
+  await page.waitForURL(/\/shop\/blue-mantis\/divers\/[^/?#]+\?edit=1/);
+
+  // ...and the other half of the same param: the back link and Cancel, which a
+  // staffer can follow before submitting anything.
+  await page.goto(crafted);
+  for (const name of ["All divers", "Cancel"]) {
+    await expect(page.getByRole("link", { name, exact: true }).first()).toHaveAttribute(
+      "href",
+      /^\/shop\/blue-mantis\//,
+    );
+  }
+});
+
+/**
  * Creates a departure with room on it and returns its id. Every door below
  * needs one this spec owns, so an assertion can never be satisfied (or broken)
  * by a seeded trip another test also touches.

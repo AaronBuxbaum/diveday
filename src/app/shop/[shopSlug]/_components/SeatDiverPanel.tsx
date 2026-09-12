@@ -7,8 +7,9 @@ import { PersonCandidateList } from "@/components/seat-diver/PersonCandidateList
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import type { BookableDiver } from "@/db/divers";
+import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { fill } from "@/i18n/fill";
+import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { newDiverHref } from "@/lib/person-fields";
 
 /** Every word this panel says, resolved by the page from the staff bundle. */
@@ -33,7 +34,27 @@ export type SeatDiverPanelCopy = {
   emailLabel?: string;
   phoneLabel?: string;
   optionalHint?: string;
-  confirmMatchesTitle?: string;
+  /**
+   * Required, unlike its neighbours: the prompt it heads is the one place a
+   * staffer is told what picking a candidate costs, and a panel that rendered
+   * the list under an empty heading would drop exactly that sentence.
+   */
+  confirmMatchesTitle: string;
+  /**
+   * A candidate's last dive day, already dated in the shop's zone by the page.
+   * A function rather than a string because the date differs per candidate,
+   * and `addPersonAriaLabel` above sets the precedent: the panel holds no
+   * translator and no timezone.
+   */
+  confirmMatchesLastDive: (at: Date) => string;
+  /**
+   * The same line for a candidate this shop has no dive day for. Both halves
+   * are required, unlike their neighbours: they are one line with two values,
+   * and a panel holding only the dated half leaves a first-timer silent beside
+   * a sibling that speaks — which argues for the record that already has cards
+   * (`noDiveDayNeedsSaying`, `src/lib/name-match-evidence.ts`).
+   */
+  confirmMatchesNoDiveDay: string;
   confirmMatchesSubmit?: string;
 };
 
@@ -75,13 +96,11 @@ export function SeatDiverPanel({
   confirmName?: string;
   confirmEmail?: string;
   confirmPhone?: string;
-  confirmMatches?: Array<{
-    id: string;
-    fullName: string;
-    email: string | null;
-    phone: string | null;
-  }>;
+  confirmMatches?: SimilarDiver[];
 }) {
+  // A candidate with no dive day says so only when a sibling has one; the rule
+  // and the bias it corrects are in `noDiveDayNeedsSaying`.
+  const sayNoDiveDay = noDiveDayNeedsSaying(confirmMatches ?? []);
   const addHref = newDiverHref(shopSlug, {
     query,
     surface,
@@ -97,9 +116,7 @@ export function SeatDiverPanel({
       {confirmMatches && confirmMatches.length > 0 ? (
         <div className="border border-warning/25 bg-warning/10 rounded-inset p-4 text-left">
           <div className="flex flex-col gap-2">
-            <h3 className="font-semibold text-sm">
-              {copy.confirmMatchesTitle || "Did you mean one of these existing potential matches?"}
-            </h3>
+            <h3 className="font-semibold text-sm">{copy.confirmMatchesTitle}</h3>
             <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
               {confirmMatches.map((match) => (
                 <li key={match.id}>
@@ -109,14 +126,29 @@ export function SeatDiverPanel({
                   >
                     <input type="hidden" name="tripId" value={tripId} />
                     <input type="hidden" name="personId" value={match.id} />
+                    {/* A tap here came off a name match, so the booking is
+                        told the name it matched on: the prompt fires on an
+                        exact spelling too, and only the comparison says whether
+                        the seat is identity-unconfirmed (issue #1556). The
+                        picker below, where a staffer went looking for a diver
+                        by name, carries no such field. */}
+                    <input type="hidden" name="fromNameMatch" value="true" />
+                    <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
                     <button type="submit" className="underline font-medium text-left">
                       {match.fullName}
                     </button>
                   </form>
                   {match.email || match.phone ? (
-                    <span className="text-muted text-xs ml-1">
+                    <span className="text-muted text-xs ms-1">
                       ({[match.email, match.phone].filter(Boolean).join(", ")})
                     </span>
+                  ) : null}
+                  {match.lastDiveDayAt ? (
+                    <span className="text-muted text-xs ms-1">
+                      {copy.confirmMatchesLastDive(match.lastDiveDayAt)}
+                    </span>
+                  ) : sayNoDiveDay ? (
+                    <span className="text-muted text-xs ms-1">{copy.confirmMatchesNoDiveDay}</span>
                   ) : null}
                 </li>
               ))}

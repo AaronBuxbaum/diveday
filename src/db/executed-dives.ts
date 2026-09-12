@@ -140,10 +140,28 @@ export async function peopleWhoDivedBefore(
         eq(bookings.shopId, shopId),
         eq(trips.shopId, shopId),
         inArray(bookings.personId, [...personIds]),
-        // A diver who cancelled or never showed was not aboard, whatever the
-        // crew recorded for the boat. Crediting them would hand them the
-        // longer wait for a day they spent ashore.
+        // A diver who cancelled was not aboard, whatever the crew recorded for
+        // the boat. Crediting them would hand them the longer wait for a day
+        // they spent ashore.
         ne(bookings.status, "cancelled"),
+        // **A no-show excludes, with no escape** (issue #1558, settled the
+        // other way by a `dive-domain-expert` review on 2026-09-11). This
+        // clause used to let a standing tokenless `arrived` row outrank the
+        // status slot, on the reasoning that a close-of-day sweep would
+        // otherwise erase the fact that a staffer stood in front of this diver
+        // at 06:40. There is no
+        // such sweep and there never was: `markBookingNoShow`
+        // (`src/db/no-show.ts`) is the only writer of `no_show`, it is one
+        // staffer's deliberate tap on one seat, and `checkInBooking` refuses
+        // anything but a `booked` seat — so the sighting is *always* older than
+        // the mark. The escape could only ever let an earlier human statement
+        // beat a later human correction, which is the opposite of the
+        // newest-row-wins rule the arrival trail is built on.
+        //
+        // `cancelled` never had the escape and still does not: a cancellation
+        // is a re-papering of the sale — it can land days later, on a seat
+        // somebody really did check in before the card failed — and says
+        // nothing about the dock.
         ne(bookings.status, "no_show"),
         // A blown-out departure is not a dive day — a cancellation leaves its
         // bookings active by design, so without this the answer counts days

@@ -272,7 +272,8 @@ town, and the shops that dive out of it.
   shop authored and its storefront already shows a stranger, so a shop that has written no tagline
   gets a shorter row rather than a generated one. Departures stay on the storefront one tap away —
   putting "next out" on every row would fan an unbounded town out to three reads a shop on a page
-  crawlers hit.
+  crawlers hit. That is decided, not deferred: the owner settled it on 2026-09-10 (issue #1511)
+  against #1436's original spec, which asked for departures. The town page is a list of shops.
 - **Composition:** the marketing chrome with its trial pitch suppressed (a diver looking for a boat
   is not that audience), the page's name, one line saying these shops book through DiveDay, then
   the hairline ledger the diver-facing catalog already uses.

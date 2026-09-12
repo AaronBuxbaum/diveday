@@ -11,7 +11,10 @@
  * were allowed to reach the manifest. Nothing in this module or its writer does.
  */
 
-/** How long a typed answer may run. A surname, or a booking reference. */
+/**
+ * How long a typed answer may run. A surname, a booking reference, or the
+ * 43-character arrival code a wedge scanner types in for the diver.
+ */
 export const KIOSK_INPUT_MAX = 80;
 
 /** The kiosk's path for a raw token, encoded so a caller can never detach the segment. */
@@ -210,6 +213,16 @@ export function canMatchBeforeTheLastWord(typed: string): boolean {
  * difference only while the slow path stays under it. A database slow enough to
  * push a readiness read past 750ms leaks the same signal again, and no constant
  * can fix that — only a slower floor, which a diver waits through.
+ *
+ * The scanned arrival code (issue #1600) added a hop the 5ms-against-24ms
+ * measurement above predates: `bookingForArrivalCode` spends a
+ * `verifyBookingCapability` *before* the seat query, so every branch a scan
+ * takes — the unknown code, the expired one, the one that resolves to a blocked
+ * diver — starts one round trip behind the same branch reached by typing. It is
+ * no oracle today: one indexed hash lookup leaves the whole scanned path far
+ * under 750ms, and the refusals it reaches are the same sentence. It is one
+ * more hop the floor is covering, and the next thing added ahead of the seat
+ * query is measured against the floor, not against this note.
  */
 export const KIOSK_RESPONSE_FLOOR_MS = 750;
 
@@ -230,20 +243,79 @@ export function kioskResponseWaitMs(
 export type KioskInput =
   | { kind: "booking"; bookingId: string }
   | { kind: "surname"; surname: string }
+  /**
+   * A credential, recognised by its shape alone and resolved by nobody here.
+   * `src/db/kiosk-check-in.ts` turns it into a `booking` lookup — or into
+   * nothing — before a single seat is read, so every filter a typed answer
+   * passes a scanned one passes too.
+   */
+  | { kind: "capability"; token: string }
   | null;
+
+/** What is left once a scanned code has been resolved: the two lookups the reader can run. */
+export type KioskLookup = Exclude<NonNullable<KioskInput>, { kind: "capability" }>;
 
 const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * What the one box on the kiosk was given: a scanned booking reference, or a
- * name to look up. `null` for anything unusable, which the surface answers with
- * the same sentence it answers a miss with — see `kioskSelection`.
+ * **The shape of a bearer capability, and nothing about whether it works.**
+ *
+ * `createBearerToken` is `randomBytes(32).toString("base64url")`: 43
+ * characters, fixed charset, no padding. That is enough for the box to tell a
+ * scanned arrival code from a typed name before any database is asked, and it
+ * is deliberately all this says — which purpose the token carries, whether it
+ * has expired, and whose shop it belongs to are `verifyBookingCapability`'s
+ * questions, asked one module over.
+ *
+ * **Written here rather than beside the mint**, which is where its subject
+ * belongs: `src/lib/booking-capabilities.ts` reaches `node:crypto` on its first
+ * import, and `KioskConsole.tsx` is a client component that imports
+ * `KIOSK_INPUT_MAX` from this file. `src/lib/certification-options.ts` measured
+ * what one such import costs — 133 KB gzipped of browserified crypto in the
+ * first load of the two heaviest public pages — and `buddy-links.ts` beside
+ * `buddy-tokens.ts` is the split this copies: the shape where anything may read
+ * it, the secret arithmetic one file over. The two are held together by a test
+ * that draws real tokens from `createCapabilityToken` and asserts this matches
+ * every one, so the shape cannot drift from the mint without a red test.
+ */
+const CAPABILITY_TOKEN_SHAPE = /^[A-Za-z0-9_-]{43}$/;
+
+/** Is this string shaped like a capability token? Says nothing about whether it verifies. */
+export function isCapabilityToken(value: string): boolean {
+  return CAPABILITY_TOKEN_SHAPE.test(value);
+}
+
+/**
+ * What the one box on the kiosk was given: a scanned booking reference, the
+ * arrival code off a diver's own card, or a name to look up. `null` for
+ * anything unusable, which the surface answers with the same sentence it
+ * answers a miss with — see `kioskSelection`.
+ *
+ * **The scanner is a keyboard, not a camera**: a wedge reader types the code
+ * into this same box, so the code arrives here exactly as a surname does and is
+ * told apart by its shape.
+ *
+ * The token is returned **unchanged**. base64url is case-sensitive, so the
+ * `.toLowerCase()` the booking branch applies to a uuid must never be copied
+ * down here: folding one character would turn every scan into "See the desk".
+ *
+ * **A name can collide with the shape, and is read as a code.** The hyphen is
+ * in base64url, so a single typed word of exactly 43 characters drawn from
+ * `[A-Za-z0-9_-]` — a long enough hyphenated surname, and they exist — is
+ * classified here as a capability, fails to verify one module over, and comes
+ * back as "See the desk" rather than being tried as a name. Written down so it
+ * is not rediscovered as a bug: retrying a failed code as a surname is the
+ * obvious repair and it is the wrong one, because it would give a
+ * scanner-shaped guess a second door and spend the name budget on it. The
+ * diver's repair is a space — a surname typed after a given name is no longer
+ * one 43-character word.
  */
 export function readKioskInput(raw: unknown): KioskInput {
   if (typeof raw !== "string") return null;
   const value = raw.trim();
   if (value.length === 0 || value.length > KIOSK_INPUT_MAX) return null;
   if (UUID_SHAPE.test(value)) return { kind: "booking", bookingId: value.toLowerCase() };
+  if (isCapabilityToken(value)) return { kind: "capability", token: value };
   return { kind: "surname", surname: surnameOf(value) };
 }
 

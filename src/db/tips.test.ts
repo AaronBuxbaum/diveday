@@ -11,6 +11,8 @@ import {
   getTipCurrencyForBooking,
   markTipExpiredBySessionId,
   markTipPaidBySessionId,
+  recordTipStripeCustomer,
+  refreshTipFromStripe,
   startTipCheckout,
   tipBoundsCents,
 } from "./tips";
@@ -293,5 +295,114 @@ describe("markTipPaidBySessionId / markTipExpiredBySessionId", () => {
     expect((await markTipPaidBySessionId(db, row.stripeSessionId, "acct_test"))?.status).toBe(
       "paid",
     );
+  });
+});
+
+// Issue #1621: nothing local knew a tip's Stripe Customer, so diver erasure
+// could raise no obligation against the one Stripe holds. These three are the
+// whole contract — recorded once, never overwritten, never across accounts.
+describe("recordTipStripeCustomer", () => {
+  it("records the Customer id once and ignores a replayed event", async () => {
+    const { db, bookingId } = await tipContext();
+    const started = await startTipCheckout(db, tipInput(bookingId), fakeCheckout());
+    if (!started.ok) throw new Error("expected ok");
+    const [row] = await db.select().from(tips).where(eq(tips.bookingId, bookingId));
+    if (!row) throw new Error("tip row missing");
+    expect(row.stripeCustomerId).toBeNull();
+
+    expect(
+      await recordTipStripeCustomer(db, {
+        stripeSessionId: row.stripeSessionId,
+        stripeCustomerId: "cus_tipper",
+      }),
+    ).toBe(true);
+    const [first] = await db.select().from(tips).where(eq(tips.id, row.id));
+    expect(first?.stripeCustomerId).toBe("cus_tipper");
+
+    // Write-once: a redelivered webhook moves nothing, and Stripe's first
+    // word stands rather than being overwritten by a later payload.
+    expect(
+      await recordTipStripeCustomer(db, {
+        stripeSessionId: row.stripeSessionId,
+        stripeCustomerId: "cus_second_delivery",
+      }),
+    ).toBe(false);
+    const [second] = await db.select().from(tips).where(eq(tips.id, row.id));
+    expect(second?.stripeCustomerId).toBe("cus_tipper");
+  });
+
+  it("refuses a connected account that is not this tip's", async () => {
+    const { db, bookingId } = await tipContext();
+    const started = await startTipCheckout(db, tipInput(bookingId), fakeCheckout());
+    if (!started.ok) throw new Error("expected ok");
+    const [row] = await db.select().from(tips).where(eq(tips.bookingId, bookingId));
+    if (!row) throw new Error("tip row missing");
+
+    expect(
+      await recordTipStripeCustomer(db, {
+        stripeSessionId: row.stripeSessionId,
+        stripeCustomerId: "cus_evil",
+        expectedAccountId: "acct_evil",
+      }),
+    ).toBe(false);
+    const [untouched] = await db.select().from(tips).where(eq(tips.id, row.id));
+    expect(untouched?.stripeCustomerId).toBeNull();
+
+    expect(
+      await recordTipStripeCustomer(db, {
+        stripeSessionId: row.stripeSessionId,
+        stripeCustomerId: "cus_tipper",
+        expectedAccountId: "acct_test",
+      }),
+    ).toBe(true);
+  });
+
+  it("moves nothing for an unknown session id", async () => {
+    const { db } = await tipContext();
+    expect(
+      await recordTipStripeCustomer(db, {
+        stripeSessionId: "cs_unknown",
+        stripeCustomerId: "cus_nobody",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("refreshTipFromStripe", () => {
+  it("records the Customer id the direct read carries, then settles the tip", async () => {
+    // The recap page's webhook-less fallback is the only path that runs when a
+    // delivery never arrives, so it has to learn the Customer id too — the
+    // erasure ledger has no other source for it (issue #1621).
+    const { db, shop, bookingId } = await tipContext();
+    const started = await startTipCheckout(db, tipInput(bookingId), fakeCheckout());
+    if (!started.ok) throw new Error("expected ok");
+    const [row] = await db.select().from(tips).where(eq(tips.bookingId, bookingId));
+    if (!row) throw new Error("tip row missing");
+
+    const refreshed = await refreshTipFromStripe(
+      db,
+      shop.id,
+      row.id,
+      fakeCheckout({
+        async retrieveCheckoutSession() {
+          return {
+            status: "ok",
+            session: {
+              stripeSessionId: row.stripeSessionId,
+              stripeStatus: "complete",
+              paymentStatus: "paid",
+              checkoutUrl: null,
+              amountTotalCents: 1000,
+              taxAmountCents: null,
+              stripeCustomerId: "cus_tip_refreshed",
+              expiresAt: null,
+            },
+          };
+        },
+      }),
+    );
+    expect(refreshed?.status).toBe("paid");
+    const [settled] = await db.select().from(tips).where(eq(tips.id, row.id));
+    expect(settled?.stripeCustomerId).toBe("cus_tip_refreshed");
   });
 });

@@ -129,6 +129,24 @@ describe("what the grid shows", () => {
     expect(within(tomas).queryByText(COPY.blockedLabel)).not.toBeInTheDocument();
   });
 
+  /**
+   * The chip wraps; it must never clip. The grid's only caller passes the
+   * offline manifest's qualified "Blocked when saved" (#1360), and `truncate`
+   * on an 80px tile renders "Blocked wh…" — a chip that says less than the bare
+   * word the qualifier replaced, on the one surface whose risk is reading as
+   * current.
+   */
+  it("shows a long blocked word in full rather than clipping it", () => {
+    render(
+      <MissingDiversGrid
+        divers={[{ ...DIVERS[0], blocked: true }]}
+        copy={{ ...COPY, blockedLabel: "Blocked when saved" }}
+      />,
+    );
+    const chip = screen.getByText("Blocked when saved");
+    expect(chip.className).not.toMatch(/\btruncate\b/);
+  });
+
   it("keeps the dock's absence calm and the after-dive one urgent", () => {
     // Nobody has boarded yet at 7am; that is not an emergency. After a dive
     // the same absence means nobody has counted them back aboard.

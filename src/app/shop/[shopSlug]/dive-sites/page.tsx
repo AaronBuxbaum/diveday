@@ -35,6 +35,7 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
+import { capturePhoto } from "@/lib/marine-life-tiles";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -603,7 +604,10 @@ function TemplatePreview({
                     slot that can show 342. 180px keeps headroom over 171 and
                     still lands on a 384px candidate at DPR2. */}
                 <StoredPhoto
-                  src={entry.imageUrl}
+                  // The same 171px cell as the trip pitch's faces, so the same
+                  // latent decode flip; capture-only rewrite, see
+                  // `src/lib/marine-life-tiles.ts`.
+                  src={capturePhoto(entry.imageUrl, 171)}
                   alt={entry.name}
                   className="aspect-[4/3] w-full rounded-lg bg-surface-sunken"
                   sizes="(min-width: 640px) 180px, 50vw"

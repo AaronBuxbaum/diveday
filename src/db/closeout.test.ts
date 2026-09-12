@@ -22,6 +22,7 @@ import {
   trips as tripsTable,
 } from "./schema";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
+import { recordTripStage } from "./trip-stages";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 const HOUR = 60 * 60 * 1000;
@@ -410,6 +411,46 @@ describe("day close-out (in-memory PGlite)", () => {
       );
       expect(other.state.departures).toEqual([]);
     });
+  });
+
+  it("settles a departure the return buffer still calls still out, once the crew tap Home", async () => {
+    // **Issue #1480, through the plumbing.** The promotion is decided in
+    // `src/lib/closeout.ts`, but it only ever fires if the db half actually
+    // carries the crew's last tap onto the departure — this is the test that
+    // catches that being forgotten.
+    const { db, shop } = await seededShopContext();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed staff missing");
+
+    // Due back five minutes ago: `hasReturned` says no for another 55.
+    const endsAt = new Date(nowMs() - 5 * 60 * 1000);
+    const [trip] = await db
+      .insert(tripsTable)
+      .values({
+        shopId: shop.id,
+        title: "Just In — Molasses & French",
+        startsAt: new Date(endsAt.getTime() - 4 * HOUR),
+        endsAt,
+        capacity: 12,
+        plannedDives: 2,
+        priceCents: 13000,
+      })
+      .returning();
+    if (!trip) throw new Error("fixture trip insert returned no row");
+
+    const before = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
+    expect(before.state.departures.find((d) => d.tripId === trip.id)?.status).toBe("still_out");
+
+    const tap = await recordTripStage(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      stage: "home",
+      recordedByPersonId: staff.person.id,
+    });
+    if (!tap.ok) throw new Error(`stage refused: ${tap.reason}`);
+
+    const after = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
+    expect(after.state.departures.find((d) => d.tripId === trip.id)?.status).toBe("all_home");
   });
 
   it("carries Today's deep-linked reviews row into the leftovers unchanged", async () => {

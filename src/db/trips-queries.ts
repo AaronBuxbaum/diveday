@@ -11,13 +11,13 @@ import {
   isNull,
   lt,
   lte,
-  ne,
   or,
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import {
   summarizeTripDiveSites,
   type TripDiveSiteRef,
@@ -101,7 +101,7 @@ export async function upcomingTripsWithCounts(
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
         liveTrip(),
@@ -255,13 +255,51 @@ function hasSpaceHaving(hasSpace: boolean | undefined) {
   return hasSpace ? sql`count(${bookings.id}) < ${trips.capacity}` : undefined;
 }
 
-/** The join that makes `booked` a count of live bookings rather than all of them. */
 /**
- * A booking that holds a seat: every status but cancelled. Exported so the
- * departures board (`./departures-board.ts`) counts seats with the same
- * predicate the schedule does, rather than a second spelling of it.
+ * **A booking that still holds a seat**, as a SQL predicate.
+ *
+ * The statuses themselves are `SEAT_HELD_STATUSES` in `src/lib/no-show.ts`,
+ * where the boundary is argued and why it moved is written down; this is the
+ * one place they are spelled as a `where` clause, so no capacity count has to
+ * write `ne(bookings.status, "cancelled")` again.
+ *
+ * **Only the seat *counts* take it** — the booking transaction, the restore,
+ * the walk-in picker, the departure's own record and its capacity floor, the
+ * wait-list join, the public dive-site page's departures, and the
+ * schedule/board join below. The roster, the manifest, the gear register and
+ * the buddy builder still reach for every booking that is not cancelled, and
+ * must: a diver marked absent stays on the manifest, which is what the crew
+ * needs to see.
+ *
+ * **The counts that deliberately stay looser**, each counting a released seat
+ * as still held. None can oversell — every one of them counts *more* seats
+ * than `createBookingRecord` will — and each is conservative in the direction
+ * its own question needs (reviewed 2026-09-11, after the public dive-site page
+ * was found telling a stranger a released seat's boat was full):
+ *
+ * - `getStaffingView` (`./staffing.ts`) and `tripOverIntroRatio`
+ *   (`./crew-requests.ts`) size crew against the count. A diver the desk wrote
+ *   off can still be boarded at the rail (`reclaimReleasedSeat`,
+ *   `./manifests.ts`), so the ratio has to already cover them; under-crewing a
+ *   course is the one error here that reaches the water.
+ * - `listDeparturesAwaitingMinimumDecision` and `listMinimumNotMetRecipients`
+ *   (`./trips-minimum.ts`) decide whether a boat runs and who hears that it did
+ *   not. Cancelling a departure is not reversible for the divers on it, so the
+ *   sweep counts the fuller number and tells everyone who ever held a seat.
+ * - `blowoutCandidates` (`./blowouts.ts`) gates which boats a weather cascade
+ *   may offer. Withholding a seat that turns out to exist costs a rescue
+ *   offer; offering one that does not exist costs the diver a second refusal
+ *   on the day their trip was already cancelled.
  */
-export const liveBookingJoin = and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled"));
+export const seatHeld = inArray(bookings.status, [...SEAT_HELD_STATUSES]);
+
+/**
+ * The join that makes `booked` a count of the seats somebody is holding rather
+ * than of every row. Exported so the departures board
+ * (`./departures-board.ts`) counts seats with the same predicate the schedule
+ * does, rather than a second spelling of it.
+ */
+export const liveBookingJoin = and(eq(bookings.tripId, trips.id), seatHeld);
 
 /**
  * The schedule page's list, one keyset page at a time (ordered by departure,
@@ -557,7 +595,7 @@ export async function upcomingScheduleStats(
       booked: count(bookings.id).as("booked"),
     })
     .from(trips)
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
         liveTrip(),
@@ -735,7 +773,7 @@ export async function listUpcomingSessionsForCourse(
   const rows = await db
     .select({ trip: trips, booked: count(bookings.id) })
     .from(trips)
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
         liveTrip(),

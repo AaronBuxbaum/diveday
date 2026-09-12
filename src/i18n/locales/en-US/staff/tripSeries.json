@@ -10,22 +10,22 @@
     "summaryWithFuture": "{summary} · {count, plural, one {# upcoming date on the board.} other {# upcoming dates on the board.}}",
     "summaryAllDone": "{summary} · every date has departed or been cancelled.",
     "applying": "Applying…",
-    "applyToSeries": "Apply this date's details to every upcoming date",
-    "applyDescription": "Copies this date's title, description, capacity, pricing, and dive plan onto every upcoming date. Each date keeps its own time, crew, roster, and conditions.",
+    "applyToSeries": "Apply this date’s details to every upcoming date",
+    "applyDescription": "Copies this date’s title, description, capacity, pricing, and dive plan onto every upcoming date. Each date keeps its own time, crew, roster, and conditions.",
     "saving": "Saving…",
     "stopRepeating": "Stop repeating",
     "stopRepeatingDescription": "Keeps every date already on the board and stops adding new ones.",
     "startRepeating": "Start repeating again",
     "startRepeatingDescription": "Puts the next {days, plural, one {# day} other {# days}} of this trip back on the board, and keeps them there.",
     "editCadence": "Change the days it runs",
-    "editCadenceDescription": "Adding a day puts it on the board straight away. Removing one leaves the dates already scheduled alone: you'll be shown them, with who's booked, and asked.",
+    "editCadenceDescription": "Adding a day puts it on the board straight away. Removing one leaves the dates already scheduled alone: you’ll be shown them, with who’s booked, and asked.",
     "saveCadence": "Save the days",
     "offCadenceHeading": "{count, plural, one {# date on the board is no longer part of this run:} other {# dates on the board are no longer part of this run:}}",
     "offCadenceDateEmpty": "{date} — nobody booked",
     "offCadenceDateBooked": "{date} — {count, plural, one {# diver booked} other {# divers booked}}",
     "cancelOffCadence": "{count, plural, one {Cancel that date} other {Cancel those # dates}}",
     "offCadenceDescription": "Takes them off the public schedule. Reinstate any single one from its own trip page.",
-    "offCadenceDescriptionBooked": "{count, plural, one {# of them has divers booked. They keep their bookings and their history, and you'll want to tell them.} other {# of them have divers booked. They keep their bookings and their history, and you'll want to tell them.}}",
+    "offCadenceDescriptionBooked": "{count, plural, one {# of them has divers booked. They keep their bookings and their history, and you’ll want to tell them.} other {# of them have divers booked. They keep their bookings and their history, and you’ll want to tell them.}}",
     "cancelling": "Cancelling…",
     "cancelAllUpcoming": "Cancel every upcoming date",
     "cancelDescription": "{count, plural, one {Takes the remaining # date off the public schedule.} other {Takes the remaining # dates off the public schedule.}} Also stops the repeat. Reinstate any single date from its own trip page."
@@ -39,6 +39,6 @@
     "seriesCadenceNarrowed": "Saved, but some dates already on the board are no longer part of this run. Nothing has been cancelled.",
     "seriesOffCadenceCancelled": "Those dates are off the public schedule. Reinstate any single one from its own trip page.",
     "seriesStopped": "Stopped repeating. Every date already on the board stays exactly as it is.",
-    "seriesError": "That series change didn't go through. Try again from a scheduled date in the series."
+    "seriesError": "That series change didn’t go through. Try again from a scheduled date in the series."
   }
 }

@@ -813,4 +813,41 @@ describe("admission is monotone with respect to readiness", () => {
     // otherwise leave this test passing vacuously.
     expect(refusals).toBeGreaterThan(20);
   });
+
+  it("lets an unconfirmed identity past the sale-time gate only because readiness re-decides it closed", () => {
+    // The pair, asserted in one place. Read alone, `decideTripAdmission`
+    // returning ADMITTED on `identityUnconfirmed` looks backwards — the weaker
+    // door skipping the stricter gate (security review 2026-09-11). It is not:
+    // the cards on that record are evidence about *somebody*, so refusing on
+    // them would judge one human by another's, and admitting is H-08's ordinary
+    // fail-open on absence of evidence. The line that stops the seat is
+    // readiness, which fails closed on the same flag at the rail. If either
+    // half ever moves, this fails rather than quietly opening the boat.
+    const source: CertRequirementSource = {
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: [],
+      requiresNitrox: false,
+    };
+    expect(
+      decideTripAdmission({
+        requirement: source,
+        siteRequirement: null,
+        evidence: evidence({ certifications: [certification({ level: "open_water" })] }),
+        identityUnconfirmed: true,
+      }),
+    ).toEqual({ admitted: true });
+
+    const readiness = calculateReadiness({
+      requirement: { ...source, requiresWaiver: false, requiresPayment: false } as TripRequirement,
+      siteRequirement: null,
+      waiver: null,
+      certifications: [certification({ level: "instructor" })],
+      identityUnconfirmed: true,
+      now: new Date("2026-08-03T12:00:00Z"),
+    });
+    expect(readiness.status).toBe("blocked");
+    expect(readiness.blockers).toContainEqual(
+      expect.objectContaining({ code: "identity_unconfirmed" }),
+    );
+  });
 });
