@@ -18,9 +18,11 @@ export type DisplayLinkState =
   // the only thing that changes on screen is the expiry line and the notice.
   | { status: "renewed"; id: string }
   | { status: "invalid_label" }
-  // Which act was refused, because the panel has two forms and a refusal shown
-  // under the wrong one is worse than none: a staffer whose revoke was refused
-  // read a message under a create form they never submitted.
+  // Which act was refused, because the panel has two places to show a refusal —
+  // under the create form, and beside the Screens list a row's revoke or renew
+  // was posted from — and showing it under the wrong one is worse than none: a
+  // staffer whose revoke was refused read a message under a create form they
+  // never submitted.
   | { status: "denied"; intent: "issue" | "revoke" | "renew" };
 
 export const IDLE_DISPLAY_LINK_STATE: DisplayLinkState = { status: "idle" };

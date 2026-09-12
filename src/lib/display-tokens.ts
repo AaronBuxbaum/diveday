@@ -1,15 +1,15 @@
-import { DAY_MS } from "@/lib/clock";
-
 /**
- * The departures board's framework-free rules (issue #1426, N-23).
+ * A display link's framework-free rules (issue #1426, N-23).
  *
  * A **display link** is a revocable bearer URL a shop puts on a lobby TV or a
- * dock tablet: `/board/<token>`. The token itself comes from
- * `src/lib/bearer-tokens.ts`; the rows live in `display_tokens`
- * (`src/db/display-tokens.ts`); what the board may show is decided by the
- * reader in `src/db/departures-board.ts`. This module holds the rules that are
- * neither storage nor rendering.
+ * dock tablet: `/board/<token>` for the departures board, `/check-in/<token>`
+ * for the kiosk. The token itself comes from `src/lib/bearer-tokens.ts`; the
+ * rows live in `display_tokens` (`src/db/display-tokens.ts`); what the board
+ * may show is decided by the reader in `src/db/departures-board.ts`. This
+ * module holds the rules that are neither storage nor rendering.
  */
+
+import { DAY_MS } from "@/lib/clock";
 
 /** A label is the shop's own word for which screen this is — one short line. */
 export const DISPLAY_LABEL_MAX_LENGTH = 60;

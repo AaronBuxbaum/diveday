@@ -6,7 +6,13 @@ import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import * as schema from "./schema";
-import { bookings, people, personRoles } from "./schema";
+import {
+  bookings,
+  type ProcessorErasureTarget,
+  people,
+  personRoles,
+  processorErasureTarget,
+} from "./schema";
 
 /**
  * The structural guard on the erasure path (`src/db/anonymize.ts`, ADR
@@ -64,7 +70,8 @@ import { bookings, people, personRoles } from "./schema";
  */
 
 type ForeignKeyFacts = { target: string; columns: string[]; onDelete: string };
-type TableFacts = { references: string[]; columns: string[]; foreignKeys: ForeignKeyFacts[] };
+type ColumnFacts = { name: string; columnType: string };
+type TableFacts = { references: string[]; columns: ColumnFacts[]; foreignKeys: ForeignKeyFacts[] };
 
 /**
  * Blank out line comments, block comments and string/template literals, keeping
@@ -139,7 +146,10 @@ function schemaTables(): Map<string, TableFacts> {
     }
     tables.set(getTableName(value as Parameters<typeof getTableName>[0]), {
       references: config.foreignKeys.map((key) => getTableName(key.reference().foreignTable)),
-      columns: config.columns.map((column) => column.name),
+      columns: config.columns.map((column) => ({
+        name: column.name,
+        columnType: column.columnType,
+      })),
       foreignKeys: config.foreignKeys.map((key) => ({
         target: getTableName(key.reference().foreignTable),
         columns: key.reference().columns.map((column) => column.name),
@@ -355,7 +365,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   auth_verifications:
     "better-auth's `verification` model: no foreign key at all, names its person as text in `identifier`. The erasure sweeps it by that column, because a pending row holds an address in clear and a live bearer token in `value`",
   notification_send_queue:
-    "a queued send, matched on the address inside its sealed payload and on `booking_id`. The one un-normalized blob of personal data in the schema; a work queue, not evidence, so the rows are deleted rather than redacted",
+    "a queued send, matched on the four handles the row carries beside its sealed payload — `recipient_email`, `subject_email`, `subject_phone` and `booking_id` — which were lifted out of the blob so the sweep never has to open it (#1297, #1298). The payload itself is the one un-normalized blob of personal data in the schema; a work queue, not evidence, so the rows are deleted rather than redacted",
 
   // The shop's own record of itself. A diver is not on any of these.
   shops:
@@ -415,54 +425,107 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
 };
 
 /**
- * Every column in the schema that stores a **handle to an object a payment
- * processor holds**, and what erasure owes against each.
+ * Every column the schema could be keeping a **handle to an object an outside
+ * system holds** in, and what erasure owes against each.
  *
  * The processor half of erasure is a ledger (`processor_erasure_obligations`,
  * ADR 20260803-processor-erasure-obligations) fed from a list of source
  * columns someone thought to name — and that list was `orders` alone, while
  * `tips` and `booking_checkouts` carried session ids for a person the whole
  * time (issue #1621). That is the same failure mode as the keep-list above:
- * invisible until a person thinks of the table. So the census is exhaustive
- * rather than sampled, and a new column carrying a `cus_…`/`cs_…`/`in_…` fails
- * this file on the day it is added.
+ * invisible until a person thinks of the table.
  *
- * **What it proves, and what it does not.** It proves every processor handle in
- * the schema was *decided about*: `person` means the object is held on behalf
- * of one diver and erasure owes an obligation for it, `shop` means it names the
- * shop's own Stripe furniture and no diver is behind it, `ledger` means the
- * column is the obligation record itself. It does **not** prove the erasure
- * actually raises a row for every `person` entry — that is asserted per case in
+ * **The net is cast by role, not by vendor.** It used to be
+ * `column.startsWith("stripe_")`, which left this docblock promising more than
+ * it checked: a `paypal_payer_id` or a `provider_customer_id` added tomorrow
+ * would land in no list and fail no test. Nor was that only a future problem —
+ * `booking_payments.provider_ref` and its append-only twin hold the `cs_…`,
+ * `in_…` or `re_…` a transition points at, spelled without the vendor's name,
+ * and both were already slipping past (a `security-reviewer` pass). So the
+ * sweep asks about any free-text column whose name carries an outside-party
+ * segment: a vendor's name, a generic `external`/`provider`/`processor`, or a
+ * payment-object role such as `customer`, `session`, `invoice` or `payer`.
+ * Everything it catches is answered below.
+ *
+ * **Free text only**, and structurally rather than for convenience: a handle is
+ * a string an outside system minted, so it is never an enum (whose values are
+ * all ours) and never a `uuid` or an integer (both minted here).
+ *
+ * **Why a net and not the whole complement.** `OUTSIDE_CLOSURE_REASONS` above
+ * can name every table outside the closure because there are 25 of them and a
+ * reviewer can read the list. The same move over columns is 1,438 sentences,
+ * almost all of them "a timestamp", and a list nobody reads guards nothing. So
+ * the limit is stated rather than implied: a handle under a name carrying none
+ * of these segments — an `acquiring_bank_token`, say — is invisible here, and a
+ * `security-reviewer` pass is what catches it. A whole new *vendor* is not that
+ * case, which is the point of casting by role: its columns say `customer`,
+ * `session`, `payer`, or the vendor's own name.
+ *
+ * **What each decision means.**
+ *
+ * - `person` — held on behalf of one diver, and erasure owes an obligation for
+ *   it. The only tag that owes anything, and the only one that names a target.
+ * - `shop` — the shop's own furniture at a processor or provider; no diver is
+ *   behind the object.
+ * - `ledger` — the obligation record's own column, not a source for it.
+ * - `copy` — points at an object already censused under the table that owns it.
+ *   The obligation is raised there, and raising a second would double-count.
+ * - `elsewhere` — an object at a system the ledger does not reach at all: a
+ *   messaging provider, an accounting integration, the shop's previous
+ *   software. Whether erasure should reach any of them is issue #1721; each
+ *   entry says what happens to the column here in the meantime.
+ * - `none` — the net's over-reach. Caught by a segment, not a handle.
+ *
+ * A `person` entry must also name the ledger target it raises, and that target
+ * must be a value of the enum *and* a target `anonymize.ts` actually builds —
+ * because until that was checked, "fails this file on the day it is added" was
+ * true of the column's *name* and of nothing else: a new handle could be tagged
+ * `person` with a plausible reason, raise no obligation anywhere, and leave
+ * this file green (found by a `security-reviewer` pass).
+ *
+ * It still does **not** prove the erasure raises that obligation *from this
+ * column*, for this diver, against that row's own account: the target is
+ * matched by name, anywhere in `anonymize.ts`. That is asserted per case in
  * `anonymize.test.ts`, against the write rather than against a name.
  */
 const PROCESSOR_OBJECT_COLUMNS: Record<
   string,
-  { held: "person" | "shop" | "ledger"; why: string }
+  | { held: "person"; raises: ProcessorErasureTarget; why: string }
+  | { held: "shop" | "ledger" | "copy" | "elsewhere" | "none"; why: string }
 > = {
+  // --- held for one diver: erasure owes an obligation ----------------------
   "orders.stripe_customer_id": {
     held: "person",
+    raises: "stripe_customer",
     why: "a `cus_…` created for the diver being billed; deleted through `DELETE /v1/customers/{id}`",
   },
   "orders.stripe_invoice_id": {
     held: "person",
+    raises: "stripe_invoice_snapshot",
     why: "a finalized invoice carrying a snapshot of the diver's name and email that no API rewrites; manual, discharged by a human attesting to Stripe's data-deletion request",
   },
   "booking_checkouts.stripe_session_id": {
     held: "person",
+    raises: "stripe_checkout_session_snapshot",
     why: "a Checkout Session holding `customer_email` as given and `customer_details` after completion; Stripe can expire a session but never rewrites either, so it is the same manual shape as an invoice snapshot",
   },
   "booking_checkouts.stripe_customer_id": {
     held: "person",
+    raises: "stripe_customer",
     why: 'the `cus_…` Stripe minted for that session, recorded so an obligation can name a customer object that actually exists (issue #1621). Null when `customer_creation: "if_required"` created none, and then nothing is owed',
   },
   "tips.stripe_session_id": {
     held: "person",
+    raises: "stripe_checkout_session_snapshot",
     why: "the tipping diver's own Checkout Session — same shape and same manual discharge as a booking checkout's",
   },
   "tips.stripe_customer_id": {
     held: "person",
+    raises: "stripe_customer",
     why: "the `cus_…` that tip's session created, on the same `if_required` rule as booking_checkouts",
   },
+
+  // --- the shop's own furniture at a processor or provider -----------------
   "orders.stripe_account_id": {
     held: "shop",
     why: "the connected account the order lives on — the shop's, and the scope an obligation is discharged against, never a person's object",
@@ -486,26 +549,220 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "shop",
     why: "as stripe_coupon_id above",
   },
-  "payment_operation_intents.stripe_object_id": {
+  "shop_integrations.external_account_id": {
     held: "shop",
-    why: "the idempotency ledger's record of which object an attempt produced — a pointer to an object already censused under the table that owns it, never a second one",
+    why: "the realm id, Shopify shop id or equivalent for a connection the shop made — its own account at that provider, with no diver behind it",
   },
-  "imported_payment_history.stripe_reference": {
-    held: "shop",
-    why: "a free-text reference a shop typed or imported from its previous system. It is the shop's own bookkeeping note, scrubbed with the rest of the row rather than chased at a processor",
-  },
+
+  // --- the ledger's own columns -------------------------------------------
   "processor_erasure_obligations.stripe_account_id": {
     held: "ledger",
     why: "the obligation row's own scope column — the ledger, not a source for it",
   },
+  "processor_erasure_obligations.external_id": {
+    held: "ledger",
+    why: "the object an obligation is owed against, copied here so a retry still has something to aim at once the source row is redacted. Also the ledger, and also not a source for it",
+  },
+
+  // --- a second pointer at an object censused under the table that owns it --
+  "payment_operation_intents.stripe_object_id": {
+    held: "copy",
+    why: "the idempotency ledger's record of which object an attempt produced — a pointer to an object already censused under the table that owns it, never a second one",
+  },
+  "booking_payments.provider_ref": {
+    held: "copy",
+    why: "whichever object moved this booking's money, spelled without the vendor's name: `booking_checkouts.stripe_session_id`, `orders.stripe_invoice_id`, the `re_…` a refund returned, or a package entitlement id that is at no processor at all. Each is owed against where it is stored, which is why this column raises nothing of its own",
+  },
+  "booking_payment_events.provider_ref": {
+    held: "copy",
+    why: "the same pointer on the append-only twin, copied from the mutation that caused the row (`setBookingPayment`, src/db/payments.ts)",
+  },
+  "booking_checkouts.checkout_url": {
+    held: "copy",
+    why: "Stripe's hosted page for the session on this row, and it embeds the `cs_…` it was built from. Expiring that session is what `stripe_session_id` already owes",
+  },
+  "tips.checkout_url": { held: "copy", why: "as booking_checkouts.checkout_url" },
+  "orders.hosted_invoice_url": {
+    held: "copy",
+    why: "Stripe's hosted page for the invoice on this row. It renders the diver's name and address, which is precisely what the `stripe_invoice_snapshot` obligation is raised for",
+  },
+  "orders.invoice_pdf_url": { held: "copy", why: "the same invoice, as a PDF" },
+
+  // --- at a system the obligation ledger does not reach (issue #1721) ------
+  "notification_deliveries.provider_message_id": {
+    held: "elsewhere",
+    why: "SES's or Twilio's handle on a message that carried this diver's name and address. The erasure clears the prose beside it (`provider_detail`, `send_error`) and keeps the handle, because it is the shop's evidence that a message went; nothing is owed against the copy the provider keeps",
+  },
+  "notification_delivery_attempts.provider_message_id": {
+    held: "elsewhere",
+    why: "the same handle on the append-only twin, kept for the same reason",
+  },
+  "notification_send_queue.provider_message_id": {
+    held: "elsewhere",
+    why: "the same handle on a send that was still queued. The row itself is deleted by the address and number sweeps, so this one usually goes with it",
+  },
+  "inbound_messages.provider_message_id": {
+    held: "elsewhere",
+    why: "the provider's handle on a message the *diver* sent in. `body`, `subject` and `from_address` are redacted here; the provider's copy is not reached, and this column is `notNull` so there is nothing to clear it to",
+  },
+  "staff_replies.provider_message_id": {
+    held: "elsewhere",
+    why: "the provider's handle on the shop's answer to that message, whose body and recipient are redacted here",
+  },
+  "waiver_deliveries.provider_message_id": {
+    held: "elsewhere",
+    why: "the provider's handle on the message carrying a waiver link. `detail` beside it is nulled; the sent message is not chased",
+  },
+  "waiver_records.delivery_provider_message_id": {
+    held: "elsewhere",
+    why: "the same handle denormalized onto the record it delivered",
+  },
+  "integration_sync_records.external_id": {
+    held: "elsewhere",
+    why: "the QuickBooks or Xero object a diver was synced to, kept deliberately so a second Customer is not created for someone already synced (issue #1015). Nothing here is chased at the provider, and deleting one may not even be possible while its invoices reference it",
+  },
+  "imported_payment_history.stripe_reference": {
+    held: "elsewhere",
+    why: "an unverified `in_`/`pi_`/`ch_` a shop carried out of its previous system, kept as a reconciliation seam rather than as an object we hold. Nulled by the erasure, and never chased at an account it may not even belong to",
+  },
+  "imported_payment_history.payment_reference": {
+    held: "elsewhere",
+    why: "the previous system's own identifier for that payment. DiveDay has no connection to that system and could not discharge anything there; the column is nulled instead",
+  },
+  "imported_payment_history.receipt_reference": {
+    held: "elsewhere",
+    why: "the previous system's receipt number, nulled for the reason above",
+  },
+  "imported_payment_history.source_reference": {
+    held: "elsewhere",
+    why: "the previous system's booking or order id beside it, nulled with the rest of the row",
+  },
+  "prior_visits.source_reference": {
+    held: "elsewhere",
+    why: "the previous system's booking id for an imported visit; nulled, along with the `dedupe_key` that can embed it",
+  },
+  "prior_gear_assignments.source_reference": {
+    held: "elsewhere",
+    why: "the same handle on imported rental history, nulled the same way",
+  },
+
+  // --- the net's over-reach: caught by a segment, not a handle -------------
+  "booking_checkouts.customer_email": {
+    held: "none",
+    why: "the address the diver gave at checkout. Personal data rather than a handle on anything, and redacted with the rest of the row",
+  },
+  "notification_deliveries.provider_detail": {
+    held: "none",
+    why: "the provider's own words for a bounce, which quote the address back often enough that the erasure nulls them. A sentence, not a handle",
+  },
+  "imported_payment_history.receipt_document_url": {
+    held: "none",
+    why: "a receipt document re-stored in our own bucket — the source system's raw URL is never kept. The blob is retired through the media-deletion ledger and the column nulled",
+  },
+  "shop_integrations.external_label": {
+    held: "none",
+    why: "a display label for the connection, which the schema already states is never a token or a URL secret",
+  },
+  "booking_payments.provider": {
+    held: "none",
+    why: '"stripe", or null for a manual mark: which system moved the money, not a handle on anything it holds',
+  },
+  "booking_payment_events.provider": { held: "none", why: "as booking_payments.provider" },
+  "auth_provider_accounts.provider_id": {
+    held: "none",
+    why: "better-auth's name for a login provider, on a table no sign-in path in this repo writes. A provider's *name*, and no payment anywhere near it",
+  },
 };
 
-/** `table.column` for every column that names an object a processor holds. */
-function processorObjectColumns(tables: Map<string, TableFacts>): string[] {
+/**
+ * Every ledger target `anonymize.ts` builds an obligation with, read from its
+ * source.
+ *
+ * The targets are string literals, so the blanking pass cannot be run over the
+ * source the way `erasureWriteSites` runs it — blanking is what would erase the
+ * answer. It is used as a mask instead: blanking preserves offsets, so a
+ * `target:` that still reads `target:` in the blanked copy was code, and one
+ * that does not was prose quoting a target in a docblock.
+ */
+function erasureTargetLiterals(): Set<string> {
+  const source = readFileSync("src/db/anonymize.ts", "utf8");
+  const masked = stripCommentsAndStrings(source);
+  const literals = new Set<string>();
+  for (const match of source.matchAll(/target:\s*"([a-z_]+)"/g)) {
+    const at = match.index;
+    if (at === undefined || !masked.startsWith("target:", at)) continue;
+    literals.add(match[1] as string);
+  }
+  return literals;
+}
+
+/**
+ * The segments a column name carries when it names something an outside party
+ * holds. Vendors are here as belt and braces; the role words are what make the
+ * net survive a vendor nobody has heard of yet. See the census docblock.
+ */
+const OUTSIDE_PARTY_SEGMENTS = new Set([
+  "stripe",
+  "paypal",
+  "braintree",
+  "adyen",
+  "square",
+  "worldpay",
+  "mollie",
+  "razorpay",
+  "klarna",
+  "quickbooks",
+  "xero",
+  "shopify",
+  "twilio",
+  "external",
+  "provider",
+  "processor",
+  "gateway",
+  "psp",
+  "merchant",
+  "acquirer",
+  "remote",
+  "upstream",
+  "customer",
+  "checkout",
+  "session",
+  "invoice",
+  "charge",
+  "intent",
+  "payout",
+  "transfer",
+  "refund",
+  "subscription",
+  "coupon",
+  "promotion",
+  "payer",
+  "mandate",
+  "dispute",
+  "receipt",
+  "reference",
+  "ref",
+  "payment",
+  "transaction",
+]);
+
+/**
+ * Free text is the only shape a handle minted elsewhere can arrive in: an enum
+ * holds one of our own words, and a `uuid` or an integer is minted here.
+ */
+const FREE_TEXT_COLUMN_TYPES = new Set(["PgText", "PgVarchar", "PgChar"]);
+
+function isOutsideHandleCandidate(column: ColumnFacts): boolean {
+  if (!FREE_TEXT_COLUMN_TYPES.has(column.columnType)) return false;
+  return column.name.split("_").some((segment) => OUTSIDE_PARTY_SEGMENTS.has(segment));
+}
+
+/** `table.column` for every column the census above has to answer for. */
+function outsideHandleCandidates(tables: Map<string, TableFacts>): string[] {
   const found: string[] = [];
   for (const [name, facts] of tables) {
     for (const column of facts.columns) {
-      if (column.startsWith("stripe_")) found.push(`${name}.${column}`);
+      if (isOutsideHandleCandidate(column)) found.push(`${name}.${column.name}`);
     }
   }
   return found.sort();
@@ -706,7 +963,70 @@ describe("erasure coverage", () => {
    * simply reported success over objects Stripe still held, which is a promise
    * broken rather than a bug, and exactly the asymmetry this file exists for.
    */
-  it("decides every processor handle in the schema, not only the ones somebody remembered", () => {
-    expect(processorObjectColumns(tables)).toEqual(Object.keys(PROCESSOR_OBJECT_COLUMNS).sort());
+  it("decides every outside handle the net can see, not only the ones somebody remembered", () => {
+    expect(outsideHandleCandidates(tables)).toEqual(Object.keys(PROCESSOR_OBJECT_COLUMNS).sort());
+  });
+
+  /**
+   * The net itself, since the test above can only ever be as wide as this
+   * predicate is.
+   *
+   * It used to be `column.startsWith("stripe_")` under a docblock promising
+   * every processor handle in the schema, so the guard's written promise was
+   * wider than what it checked and two `provider_ref` columns were already
+   * living in the gap (a `security-reviewer` pass). These cases are what "by
+   * role, not by vendor" has to mean to have been worth changing, and the three
+   * refusals are the stated limits rather than oversights: an enum holds one of
+   * our own words, a `uuid` is minted here, and a name carrying none of the
+   * segments is the hole `security-reviewer` still has to cover.
+   */
+  it("asks about a handle spelled without a vendor's name", () => {
+    const asks = (name: string, columnType = "PgText") =>
+      isOutsideHandleCandidate({ name, columnType });
+    for (const name of [
+      "paypal_payer_id",
+      "provider_customer_id",
+      "external_customer_id",
+      "processor_charge_id",
+      "psp_reference",
+      "gateway_session_id",
+      "provider_ref",
+    ]) {
+      expect(asks(name), name).toBe(true);
+    }
+    expect(asks("stripe_account_id", "PgEnumColumn")).toBe(false);
+    expect(asks("stripe_customer_id", "PgUUID")).toBe(false);
+    expect(asks("acquiring_bank_token")).toBe(false);
+  });
+
+  /**
+   * The other half of that decision. Tagging a column `person` is a claim that
+   * erasure owes something at Stripe for it, and the claim was checked by
+   * nobody: the test above compares key sets, so a handle could be censused,
+   * called a diver's, and never raise a row. This makes the tag name its target
+   * and holds the target to the ledger's enum and to a target the erasure
+   * really builds.
+   *
+   * The enum half is a runtime assertion of something the type above already
+   * states, and deliberately so: `pnpm test` does not typecheck, so a target
+   * retired from the enum while an entry still names it would otherwise be
+   * caught only by a separate run.
+   */
+  it("names, for every processor handle held for a person, an obligation the erasure raises", () => {
+    const declared = Object.entries(PROCESSOR_OBJECT_COLUMNS).flatMap(([column, entry]) =>
+      entry.held === "person" ? [{ column, raises: entry.raises }] : [],
+    );
+    // A floor, not a target: it catches a census that stopped tagging anything
+    // `person`, which would make every assertion below pass over an empty list.
+    expect(declared.length).toBeGreaterThan(5);
+
+    const enumValues = new Set<string>(processorErasureTarget.enumValues);
+    const built = erasureTargetLiterals();
+    expect(
+      declared
+        .filter(({ raises }) => !enumValues.has(raises) || !built.has(raises))
+        .map(({ column, raises }) => `${column} -> ${raises}`)
+        .sort(),
+    ).toEqual([]);
   });
 });

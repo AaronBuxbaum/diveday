@@ -53,6 +53,20 @@
  * window short enough to matter for growth deletes exactly those rows. It comes
  * out the same way. Chosen by the product owner, 2026-09-10, over a 30-day
  * window matching `trip_desk_events` (issue #1397).
+ *
+ * **`notification_send_queue` is absent because it empties its own rows, not
+ * because nobody looked.** It is the one table outside this list that holds a
+ * rendered outbound message, a recipient and a subject's address and phone, so
+ * it would be the obvious candidate — but every write that finishes a row
+ * (`sent`, `failed`, `missing_payload`, and the park that spends a parked
+ * row's last attempt) nulls the payload and all four handles, so a row nobody
+ * is still working on already holds nothing a window could take away. That is
+ * an invariant rather than an observation: `src/db/notifications.ts` states it
+ * at each of those writes and `notifications.test.ts` pins it. The one write
+ * that used to break it — a `sealed_payload_unreadable` park past its bound,
+ * kept forever with everything on it — is why this paragraph exists
+ * (`security-reviewer`). If a fifth terminal write ever keeps a handle, the
+ * answer is to clear it there, not to add a window here.
  */
 
 import { DAY_MS } from "@/lib/clock";

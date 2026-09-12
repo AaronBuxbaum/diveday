@@ -4175,10 +4175,16 @@ export const notificationSendQueue = pgTable(
      * (`drainableStatus` in src/db/notifications.ts), which re-offers this one
      * code on each daily pass until the row's `attempts` reach a fortnight's
      * worth — long enough for somebody to notice a mis-set
-     * `SECRET_ENCRYPTION_KEY` and put it back (issue #1340). Past that the row
-     * sits here holding both, and only erasure reaches it. An earlier version
-     * of this paragraph claimed a blanket clear and was wrong about two of the
-     * four writes (`security-reviewer`, on issue #1298).
+     * `SECRET_ENCRYPTION_KEY` and put it back (issue #1340).
+     *
+     * **The exception ends with the waiting.** The pass that takes the row's
+     * last attempt parks it clearing all five columns, because past the bound
+     * nothing offers the row again: the payload could not be drained by a
+     * restored key, and the handles would be keeping a name and an address
+     * alive in a table with no window. Parked used to mean kept for good here
+     * (H-02; `security-reviewer`). An earlier version of this paragraph
+     * claimed a blanket clear and was wrong about two of the four writes
+     * (`security-reviewer`, on issue #1298).
      *
      * `booking_id` deliberately carries no foreign key: it is a match handle
      * for a sweep, not a relationship, and a real reference would make an
@@ -4780,6 +4786,19 @@ export const bookingCheckouts = pgTable(
      * 20260803-processor-erasure-obligations) — the same class of pointer
      * `orders.stripe_customer_id` already carries, and excluded from the shop
      * export for the same reason.
+     *
+     * **For a row written before `20260911222255_checkout-stripe-customer`,
+     * null also means the column did not exist yet**, and nothing on the row
+     * tells that apart from the abandoned case. A `pending` row self-heals —
+     * the webhook and `refreshCheckoutFromStripe` both record what Stripe
+     * reports — but a `completed` one is never read from Stripe again, so its
+     * null is permanent. There is no backfill because H-49 says so: the rows
+     * predating the column are seed and demo data. The promise that survives
+     * either way is the manual half — `pushSessionTargets` raises
+     * `stripe_checkout_session_snapshot` for every session row regardless of
+     * this column, so an owner still files Stripe's data-deletion request and
+     * erasure never reports that nothing is owed (`security-reviewer`,
+     * 2026-09-12).
      */
     stripeCustomerId: text("stripe_customer_id"),
     /** Stripe's hosted payment page; shown again as the recovery link while the session is open. */
@@ -5011,7 +5030,11 @@ export const tips = pgTable(
      * The `cus_…` object Stripe created for this tip's session, once Stripe
      * says one exists — same rule as `booking_checkouts.stripe_customer_id`:
      * `customer_creation: "if_required"` means null is "Stripe created no
-     * Customer", never "we forgot to write it" (issue #1621).
+     * Customer", never "we forgot to write it" (issue #1621) — and the same
+     * exception, that a row written before
+     * `20260911222255_checkout-stripe-customer` is null too, unbackfilled under
+     * H-49, with the session snapshot still owed for it
+     * (`security-reviewer`, 2026-09-12).
      */
     stripeCustomerId: text("stripe_customer_id"),
     checkoutUrl: text("checkout_url"),
@@ -6472,13 +6495,18 @@ export const displayTokens = pgTable(
      */
     lastShownAt: timestamp("last_shown_at", { withTimezone: true }),
     /**
-     * **When this link stops verifying** (issue #1609, security review). Null
-     * means never, which is every `board` row and every row that existed before
-     * this column did. The `check_in` case is the one that expires, because it
-     * is the one that **writes**: its URL lives on a tablet on a counter, and a
-     * credential that records arrivals against real bookings should not outlive
-     * the tablet by years. The lifetime is `CHECK_IN_LINK_TTL_DAYS`, derived in
-     * the writer from `purpose`, and a manager renews it from Settings.
+     * **When this link stops verifying** (issue #1609, security review). The
+     * `check_in` case is the one that expires, because it is the one that
+     * **writes**: its URL lives on a tablet on a counter, and a credential that
+     * records arrivals against real bookings should not outlive the tablet by
+     * years. The lifetime is `CHECK_IN_LINK_TTL_DAYS`, derived in the writer
+     * from `purpose`, and a manager renews it from Settings.
+     *
+     * Null means never **for a board link only**. A `check_in` row with no
+     * expiry — every one minted before this column existed — is not an
+     * unbounded kiosk credential: `verifyDisplayToken` reads the purpose
+     * alongside the expiry and refuses it (security review, 2026-09-12), so the
+     * column being nullable never widens what the counter's URL can do.
      *
      * An expired row is not a revoked row: it stays in the settings list, so
      * the manager whose kiosk stopped working can see why and renew it.

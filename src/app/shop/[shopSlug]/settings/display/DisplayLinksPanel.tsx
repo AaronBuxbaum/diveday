@@ -80,8 +80,9 @@ export function DisplayLinksPanel({
   const [purpose, setPurpose] = useState<"board" | "check_in" | null>(null);
   const issued = state.status === "issued" ? state : null;
   const invalidLabel = state.status === "invalid_label";
-  // Split, because the panel has two forms. A refused revoke printed under the
-  // create form is a message about something the staffer never submitted.
+  // Split, because a refusal has two places it could land. A refused revoke
+  // printed under the create form is a message about something the staffer
+  // never submitted.
   const deniedIssue = state.status === "denied" && state.intent === "issue";
   // A refused renew belongs with the revoke: both were posted from a row in the
   // Screens list, not from the create form above it.

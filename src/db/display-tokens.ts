@@ -114,8 +114,16 @@ export type DisplayTokenContext = { id: string; shopId: string; showNames: boole
  * "expired in March" from "that is the board's link, not the kiosk's". The
  * surfaces answer every one of them with the same refusal card.
  *
- * A null `expires_at` is a live row: that is every board link, and every row
- * that predates the column (issue #1609).
+ * **A null `expires_at` is live only for a board link** (issue #1609, security
+ * review). Read literally the column says "never expires", and that is right
+ * for the board — but it is also what every `check_in` row minted before the
+ * column existed carries, and those are the rows that *write*: a kiosk URL
+ * photographed off a counter tablet would go on recording arrivals against real
+ * bookings forever. So the purpose is part of the liveness test rather than the
+ * expiry alone, and "every kiosk link that opens the counter is bounded" is
+ * true here, of the one predicate, rather than true of the writer and hoped for
+ * everywhere else. An unbounded kiosk row refuses like any other; the writer
+ * that gives it a lifetime again is `renewDisplayToken` below.
  *
  * The purpose is matched in the predicate rather than compared afterwards,
  * which is what makes forgetting it a **type** error at every call site rather
@@ -140,7 +148,10 @@ export async function verifyDisplayToken(
         eq(displayTokens.tokenHash, hashBearerToken(input.token)),
         eq(displayTokens.purpose, input.purpose),
         isNull(displayTokens.revokedAt),
-        or(isNull(displayTokens.expiresAt), gt(displayTokens.expiresAt, now)),
+        or(
+          and(eq(displayTokens.purpose, "board"), isNull(displayTokens.expiresAt)),
+          gt(displayTokens.expiresAt, now),
+        ),
       ),
     )
     .limit(1);

@@ -364,6 +364,42 @@ describe("liveShopStage", () => {
     expect(live?.siteName).toBeNull();
   });
 
+  it("names a departure only from this shop's own board", async () => {
+    // Same discipline as the site join above, on the one column that carries
+    // the title an anonymous visitor reads. The event row's own `shop_id` is
+    // not the proof: an event pointing at another shop's departure must
+    // publish nothing, rather than that shop's words.
+    const { db, shopId } = await freshShop("live-trip-scope");
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "live-trip-scope-other", timezone: ZONE })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("expected a second shop");
+    // Scheduled, public and still on the board, so nothing but the shop
+    // predicate keeps it off this storefront.
+    const theirs = await aDeparture(db, otherShop.id);
+    await db
+      .update(trips)
+      .set({ title: "Another Shop's Sunset Charter" })
+      .where(eq(trips.id, theirs.id));
+    const trip = await aDeparture(db, shopId);
+    const staffer = await aStaffer(db, shopId);
+    await recordTripStage(db, {
+      shopId,
+      tripId: trip.id,
+      stage: "underway",
+      recordedByPersonId: staffer,
+      recordedAt: new Date("2026-07-21T12:10:00.000Z"),
+    });
+    // Reach past the writer, which proves the departure is this shop's before
+    // it inserts, to the state a future writer or a bad migration could leave.
+    await db
+      .update(tripStageEvents)
+      .set({ tripId: theirs.id })
+      .where(eq(tripStageEvents.shopId, shopId));
+    expect(await liveShopStage(db, shopId, NOW, windowStart)).toBeNull();
+  });
+
   it("never publishes a private charter", async () => {
     const { db, shopId } = await freshShop("live-private");
     const trip = await aDeparture(db, shopId, { isPrivate: true });

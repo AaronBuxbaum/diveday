@@ -200,15 +200,16 @@ export async function liveShopStage(
       endsAt: trips.endsAt,
     })
     .from(tripStageEvents)
-    .innerJoin(trips, eq(tripStageEvents.tripId, trips.id))
-    // Both lookups are shop-scoped in their own right, not merely by way of
-    // the event row. The site name this resolves is printed to an anonymous
-    // visitor on the storefront, and `tripDiveSiteSummaries` beside it already
-    // joins this way. Relying on `validateDiveSites` two modules away is the
-    // shape that put another shop's vessel name on the board once already
-    // (`trips.boat_id`, src/db/trips-create.ts) — so the crew name gets the
+    // Every lookup here is shop-scoped in its own right, not merely by way of
+    // the event row. The departure title and the site name this resolves are
+    // printed to an anonymous visitor on the storefront, and
+    // `tripDiveSiteSummaries` beside it already joins this way. Relying on
+    // `validateDiveSites` two modules away is the shape that put another
+    // shop's vessel name on the board once already (`trips.boat_id`,
+    // src/db/trips-create.ts) — so the departure and the crew name get the
     // same predicate rather than an argument about which writer could ever
-    // mis-tenant `recorded_by_person_id`.
+    // mis-tenant `trip_id` or `recorded_by_person_id`.
+    .innerJoin(trips, and(eq(tripStageEvents.tripId, trips.id), eq(trips.shopId, shopId)))
     .leftJoin(
       diveSites,
       and(eq(tripStageEvents.diveSiteId, diveSites.id), eq(diveSites.shopId, shopId)),

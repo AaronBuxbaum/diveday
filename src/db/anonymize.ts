@@ -1743,22 +1743,44 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
           .every((link) => bookingIdSet.has(link.bookingId)),
       );
       if (soleOccupant.length > 0) {
-        const byBooking = await tx
+        // The read is separate from the UPDATE for the reason the tips sweep
+        // above states, and here it was not academic: the UPDATE used to filter
+        // `isNotNull(customer_email)` and take its ledger entries from
+        // `returning()`, so a row whose address was already gone contributed
+        // neither an obligation nor a redaction. Both halves were wrong. The
+        // ledger half is the latent one — `startBookingCheckout` takes a
+        // non-null address, so today only the sweep above nulls the column and
+        // it raised the obligation already, which folds on the same key — and
+        // it stops being latent the day the column is nullable at write (issue
+        // #1621). The redaction half was reachable at once: the sweep above
+        // runs first and nulls the address on this diver's own checkout, which
+        // then failed the filter here and kept its `checkout_url`.
+        const soleOccupantRows = await tx
+          .select({
+            ...CHECKOUT_PROCESSOR_HANDLES,
+            customerEmail: bookingCheckouts.customerEmail,
+            checkoutUrl: bookingCheckouts.checkoutUrl,
+          })
+          .from(bookingCheckouts)
+          .where(
+            and(eq(bookingCheckouts.shopId, shopId), inArray(bookingCheckouts.id, soleOccupant)),
+          );
+        pushSessionTargets(processorTargets, soleOccupantRows);
+        await tx
           .update(bookingCheckouts)
           // The hosted page goes with the address: it is the same Stripe object
           // rendering the same customer, on the same reasoning that nulls
           // `orders.hosted_invoice_url` (issue #1607).
           .set({ customerEmail: null, checkoutUrl: null })
           .where(
-            and(
-              eq(bookingCheckouts.shopId, shopId),
-              inArray(bookingCheckouts.id, soleOccupant),
-              isNotNull(bookingCheckouts.customerEmail),
-            ),
-          )
-          .returning(CHECKOUT_PROCESSOR_HANDLES);
-        pushSessionTargets(processorTargets, byBooking);
-        logFuzzyMatch(ctx, "booking_checkout_sole_occupant", byBooking.length);
+            and(eq(bookingCheckouts.shopId, shopId), inArray(bookingCheckouts.id, soleOccupant)),
+          );
+        logFuzzyMatch(
+          ctx,
+          "booking_checkout_sole_occupant",
+          soleOccupantRows.filter((row) => row.customerEmail !== null || row.checkoutUrl !== null)
+            .length,
+        );
       }
     }
   }

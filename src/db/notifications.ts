@@ -103,10 +103,10 @@ const RETRY_QUEUE_MAX_ATTEMPTS = dailyPassesWithin(RETRY_WINDOW_MS);
  * back has to notice the fault first. Three daily passes is not that window;
  * a fortnight is roughly one person's holiday, which is the real unit here.
  *
- * Past the bound the row stays `failed` and still holds its payload and its
- * handles — exactly what it did before this bound existed (issue #1340).
- * Nothing expires and nothing is thrown away; the drain only stops spending
- * one UPDATE a day on a key that is evidently not coming back.
+ * The pass that reaches the bound is the row's last, and it writes the row off
+ * the way every other finished write does: payload and all four handles
+ * cleared. Why that is the right end for a row nothing will offer again is
+ * argued where it happens, at the park in `drainNotificationRetries` below.
  */
 export const UNREADABLE_RETRY_MAX_ATTEMPTS = dailyPassesWithin(14 * DAILY_TICK_INTERVAL_MS);
 
@@ -623,14 +623,27 @@ export async function drainNotificationRetries(
     // `error_code` is the only place either is written down. (The recoverable
     // case, no key at all, never gets this far: the pass returned above.)
     //
-    // **It keeps its payload and its handles, and that is the one write here
-    // that does.** The value is left in place so a restored key can still
-    // drain it — and since issue #1340 something actually does that:
-    // `drainableStatus()` re-offers this exact code on the next daily pass,
-    // bounded by attempts, so putting the right key back is the whole of the
-    // recovery. Keeping the handles is what keeps the row findable meanwhile;
-    // erasure's own delete carries no status filter, so it still reaches this
-    // one.
+    // **While the bound still has passes left, it keeps its payload and its
+    // handles, and that is the one write here that does.** The value is left in
+    // place so a restored key can still drain it — and since issue #1340
+    // something actually does that: `drainableStatus()` re-offers this exact
+    // code on the next daily pass, bounded by attempts, so putting the right
+    // key back is the whole of the recovery. Keeping the handles is what keeps
+    // the row findable meanwhile; erasure's own delete carries no status
+    // filter, so it still reaches this one.
+    //
+    // **The park that crosses the bound is the row's last write, so it is the
+    // one that finishes the row off.** `drainableStatus()` offers this code
+    // only while `attempts` is below the bound and `claimed` carries the
+    // incremented count, so a row leaving here at or past it is never claimed
+    // again by anything. Past that point the payload buys no recovery — no
+    // code path would ever open it — and what it costs is a rendered outbound
+    // message, a name and an address kept for good in a table nothing prunes
+    // (`notification_send_queue` is deliberately absent from `RETENTION_DAYS`,
+    // src/lib/retention.ts). That is the same thing the `missing_payload`
+    // branch above refuses, and H-02's retention promise refuses it here too
+    // (`security-reviewer`). An earlier version of this branch parked past the
+    // bound holding all five columns forever.
     //
     // `next_attempt_at` moves forward with the park. Left in the past the row
     // would be due on every invocation rather than once a day, and two
@@ -638,6 +651,7 @@ export async function drainNotificationRetries(
     // above counts in wall-clock days.
     const opened = openQueuedPayload(candidate.payloadSealed, key);
     if (!opened) {
+      const parkIsFinal = claimed.attempts >= UNREADABLE_RETRY_MAX_ATTEMPTS;
       await db
         .update(notificationSendQueue)
         .set({
@@ -646,6 +660,15 @@ export async function drainNotificationRetries(
           nextAttemptAt: nextDailyTickAtOrAfter(nowDate()),
           errorCode: "sealed_payload_unreadable",
           lastError: null,
+          ...(parkIsFinal
+            ? {
+                payloadSealed: null,
+                recipientEmail: null,
+                subjectEmail: null,
+                subjectPhone: null,
+                bookingId: null,
+              }
+            : {}),
           updatedAt: nowDate(),
         })
         .where(eq(notificationSendQueue.id, claimed.id));

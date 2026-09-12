@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { displayTokens } from "@/db/schema";
 import { listStaff } from "@/db/trips";
+import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { CHECK_IN_LINK_TTL_DAYS } from "@/lib/display-tokens";
 import { seededShopContext } from "@/test/db";
 import {
@@ -386,6 +387,39 @@ describe("a check-in link's expiry", () => {
     expect((await listDisplayTokens(db, { shopId: shop.id })).map((row) => row.id)).toContain(
       kiosk.issued.id,
     );
+  });
+
+  /**
+   * **A kiosk row with no expiry at all refuses** (security review,
+   * 2026-09-12). The column arrived nullable and nothing backfilled it, so
+   * every `check_in` link minted before it existed carries null — which the
+   * expiry test alone reads as "never expires", i.e. as an unbounded write
+   * capability against real bookings. The purpose is therefore part of the
+   * liveness test, and only the board is allowed to live forever. The row is
+   * written here the way those rows exist: straight into the table, since the
+   * writer can no longer produce one.
+   */
+  it("refuses a kiosk link with no expiry, which renewal brings back", async () => {
+    const { db, shop, personId } = await staffWithRole("owner");
+    const token = createBearerToken();
+    const [row] = await db
+      .insert(displayTokens)
+      .values({
+        shopId: shop.id,
+        tokenHash: hashBearerToken(token),
+        label: "Counter tablet",
+        purpose: "check_in",
+        showNames: false,
+        createdByPersonId: personId,
+        expiresAt: null,
+      })
+      .returning({ id: displayTokens.id });
+    if (!row) throw new Error("insert failed");
+
+    expect(await verifyDisplayToken(db, { token, purpose: "check_in" })).toBeNull();
+
+    expect(await renewDisplayToken(db, { shopId: shop.id, personId, id: row.id })).toBe(true);
+    expect(await verifyDisplayToken(db, { token, purpose: "check_in" })).not.toBeNull();
   });
 });
 

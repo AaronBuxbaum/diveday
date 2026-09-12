@@ -1356,6 +1356,66 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
     expect(provider.deleteCustomer).not.toHaveBeenCalled();
   });
 
+  it("still owes the session snapshot for a completed checkout with no customer pointer", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Settled Sanne", email: "sanne@example.com" })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
+    const tripId = await seededTripId(db, shop.id);
+    const [booking] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId, personId: diver.id })
+      .returning({ id: bookings.id });
+    if (!booking) throw new Error("fixture insert failed");
+    const [checkout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId,
+        // The shape of a row settled before
+        // `20260911222255_checkout-stripe-customer` added the column: money
+        // took, and no pointer, because there was nowhere to put one. A
+        // `completed` row is never read from Stripe again, so unlike a pending
+        // one it never self-heals — nothing here will ever tell this null from
+        // an abandoned session's.
+        status: "completed",
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_pre_column",
+        stripeCustomerId: null,
+        currency: "usd",
+        amountPerDiverCents: 12000,
+        totalCents: 12000,
+        customerEmail: "sanne@example.com",
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_pre_column",
+      })
+      .returning({ id: bookingCheckouts.id });
+    if (!checkout) throw new Error("fixture insert failed");
+    await db
+      .insert(bookingCheckoutBookings)
+      .values({ shopId: shop.id, checkoutId: checkout.id, bookingId: booking.id });
+    const provider = providerReturning({ status: "deleted" });
+
+    await anonymizeDiver(
+      db,
+      { shopId: shop.id, personId: diver.id, actorPersonId: owner.id },
+      { customerProvider: provider },
+    );
+
+    // H-49 is why there is no backfill, and this is why that is survivable: the
+    // session snapshot is owed for every session row whatever this column says,
+    // so the owner still files Stripe's data-deletion request rather than being
+    // told nothing is owed. The automated customer delete is the half genuinely
+    // lost for such a row (`security-reviewer`, 2026-09-12).
+    expect(await obligationsFor(db, shop.id)).toEqual([
+      "stripe_checkout_session_snapshot:cs_pre_column",
+    ]);
+    expect(provider.deleteCustomer).not.toHaveBeenCalled();
+  });
+
   it("raises a checkout this diver paid for but holds no seat on", async () => {
     const { db, shop, owner } = await erasureFixtures();
     await upsertShopStripeAccount(db, shop.id, "acct_test");
@@ -1484,5 +1544,125 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       "stripe_invoice_snapshot:in_rina",
     ]);
     expect(provider.deleteCustomer).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears the hosted page on a sole-occupant checkout the address sweep already blanked", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Solo Sofia", email: "sofia@example.com" })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
+    const tripId = await seededTripId(db, shop.id);
+    const [booking] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId, personId: diver.id })
+      .returning({ id: bookings.id });
+    if (!booking) throw new Error("fixture insert failed");
+    // The ordinary self-booked checkout: her own address on her own seat. The
+    // address sweep matches it first and nulls `customer_email`, which is
+    // exactly the row the sole-occupant sweep used to skip — leaving the
+    // hosted page that renders her standing (issue #1607).
+    const [checkout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId,
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_sofia",
+        stripeCustomerId: "cus_sofia",
+        currency: "usd",
+        amountPerDiverCents: 12000,
+        totalCents: 12000,
+        customerEmail: "sofia@example.com",
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_sofia",
+      })
+      .returning({ id: bookingCheckouts.id });
+    if (!checkout) throw new Error("fixture insert failed");
+    await db
+      .insert(bookingCheckoutBookings)
+      .values({ shopId: shop.id, checkoutId: checkout.id, bookingId: booking.id });
+
+    await anonymizeDiver(
+      db,
+      { shopId: shop.id, personId: diver.id, actorPersonId: owner.id },
+      { customerProvider: providerReturning({ status: "deleted" }) },
+    );
+
+    const [erased] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkout.id));
+    expect(erased?.customerEmail).toBeNull();
+    expect(erased?.checkoutUrl).toBeNull();
+    expect(await obligationsFor(db, shop.id)).toEqual([
+      "stripe_checkout_session_snapshot:cs_sofia",
+      "stripe_customer:cus_sofia",
+    ]);
+  });
+
+  it("owes a sole-occupant checkout that carries no address at all", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Nameless Noor", email: "noor@example.com" })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
+    const tripId = await seededTripId(db, shop.id);
+    const [booking] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId, personId: diver.id })
+      .returning({ id: bookings.id });
+    if (!booking) throw new Error("fixture insert failed");
+    // `startBookingCheckout` takes a non-null address, so nothing writes this
+    // row today. It is the shape the ledger has to survive the day the column
+    // is nullable at write: the booking join is then the only handle on the
+    // session, and a sweep that reads its handles out of `returning()` on an
+    // address-filtered UPDATE hands back nothing (issue #1621).
+    const [checkout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId,
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_noor",
+        stripeCustomerId: "cus_noor",
+        currency: "usd",
+        amountPerDiverCents: 12000,
+        totalCents: 12000,
+        customerEmail: null,
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_noor",
+      })
+      .returning({ id: bookingCheckouts.id });
+    if (!checkout) throw new Error("fixture insert failed");
+    await db
+      .insert(bookingCheckoutBookings)
+      .values({ shopId: shop.id, checkoutId: checkout.id, bookingId: booking.id });
+    const provider = providerReturning({ status: "deleted" });
+
+    await anonymizeDiver(
+      db,
+      { shopId: shop.id, personId: diver.id, actorPersonId: owner.id },
+      { customerProvider: provider },
+    );
+
+    expect(await obligationsFor(db, shop.id)).toEqual([
+      "stripe_checkout_session_snapshot:cs_noor",
+      "stripe_customer:cus_noor",
+    ]);
+    expect(provider.deleteCustomer).toHaveBeenCalledWith(
+      "acct_test",
+      "cus_noor",
+      expect.stringContaining(":customer-delete"),
+    );
+    const [erased] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkout.id));
+    expect(erased?.checkoutUrl).toBeNull();
   });
 });
