@@ -743,7 +743,7 @@ describe("day close-out (in-memory PGlite)", () => {
       // The rail contradicts the desk, and the rail wins. At `after_dive_1`
       // deliberately: that is `inAfterDivePopulation`'s own case — a diver the
       // crew counted without a dock result — it is the checkpoint the counter
-      // used to be blind to (`boardedAtAnyCheckpoint`), and readiness gates a
+      // used to be blind to (`onTheWaterByRollCall`), and readiness gates a
       // `boarded` only at departure, so the real writer runs here with no
       // waiver fixture standing in front of it.
       const boarded = await recordRollCall(db, {

@@ -682,11 +682,17 @@ new domain concept, define it here in the same PR.
   day closes is taken out of it on the desk's statement alone (**sailed**). Nobody is in the water to
   be missing there — the mark cannot co-exist with a boarding at any checkpoint, since `noShowGate`
   refuses one and `reclaimReleasedSeat` undoes the other — and the crew's own `not_boarded` at the
-  dock is read ahead of it. **A statement made at the boat outranks one made at a desk.** A diver the crew recorded aboard at any
-  **roll-call checkpoint** can never be marked absent (`already_boarded`), and when the crew get
-  there second, boarding takes the released seat straight back rather than refusing a body somebody
-  is looking at (`reclaimReleasedSeat`, `src/db/manifests.ts`). It is never a **dive day**, in any
-  of the four readers that count them.
+  dock is read ahead of it. **A statement made at the boat outranks one made at a desk.** A diver
+  the crew recorded aboard at any **roll-call checkpoint** can never be marked absent
+  (`already_boarded`), and neither can one the crew recorded `not_boarded` at an *after-dive*
+  checkpoint: there the word is "did not come back from the dive" rather than "never came", and it
+  is the row that means somebody may still be in the water. One reader answers both
+  (`onTheWaterByRollCall`, `src/db/manifests.ts`), mirroring `inAfterDivePopulation` rather than
+  inventing a second definition of who is on the water; the same word at the **departure**
+  checkpoint is the benign half and stays markable, because "never left the dock" is the ordinary
+  absence this mark exists to record. When the crew get there second, boarding takes the released
+  seat straight back rather than refusing a body somebody is looking at (`reclaimReleasedSeat`,
+  `src/db/manifests.ts`). It is never a **dive day**, in any of the four readers that count them.
 - **Seat release** — the confirm tap on a **no-show** *is* the release. There is no second tap, no
   timer, no evening sweep and no `seat_released_at` column: `no_show` leaves the statuses that hold
   a seat (**seat held**), so the boat reads one seat lighter the moment the mark lands and the next

@@ -96,7 +96,7 @@
     "walkinTripPrerequisite": "That diver’s certifications don’t reach what this boat and its dive sites require.",
     "walkinUnavailable": "That diver can’t take a seat on this boat right now.",
     "walkinInvalid": "Choose a boat and enter a name before adding a walk-in.",
-    "noShowAlreadyBoarded": "The crew recorded that diver aboard, so they can’t be marked not here. Correct the roll call on the boat’s manifest first.",
+    "noShowAlreadyBoarded": "The boat’s roll call puts that diver on the water, so they can’t be marked not here. Check the trip’s manifest.",
     "noShowAlreadyMarked": "That diver is already marked not here.",
     "noShowNotBooked": "That seat was given up, so there is nothing to mark.",
     "noShowTripCancelled": "That departure is cancelled, so its guest list can’t change.",

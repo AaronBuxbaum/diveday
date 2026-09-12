@@ -17,12 +17,12 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { seededShopContext } from "@/test/db";
 import { subscribeManifestEvents } from "./manifest-events";
 import {
-  boardedAtAnyCheckpoint,
   departureRollCallForBooking,
   getTripManifest,
   getTripManifests,
   listDepartureBoardedBookingIds,
   listDepartureBoardedByTrip,
+  onTheWaterByRollCall,
   recordCrewRollCall,
   recordRollCall,
 } from "./manifests";
@@ -479,7 +479,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     // all, and the desk must not be able to call them absent
     // (`inAfterDivePopulation`, src/db/today.ts).
     const { db, shop, reef, booking, staff } = await manifestContext();
-    expect(await boardedAtAnyCheckpoint(db, shop.id, reef.id, booking.booking.id)).toBe(false);
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBe(false);
 
     // No waiver: readiness gates boarding at the dock only, so an after-dive
     // head count takes the diver as they are.
@@ -491,7 +491,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       status: "boarded",
       checkpoint: "after_dive_1",
     });
-    expect(await boardedAtAnyCheckpoint(db, shop.id, reef.id, booking.booking.id)).toBe(true);
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBe(true);
     expect(await departureRollCallForBooking(db, shop.id, reef.id, booking.booking.id)).toBeNull();
 
     // And a `cleared` undo drops it back out, the same supersession every other
@@ -504,7 +504,67 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       status: "cleared",
       checkpoint: "after_dive_1",
     });
-    expect(await boardedAtAnyCheckpoint(db, shop.id, reef.id, booking.booking.id)).toBe(false);
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBe(false);
+  });
+
+  /**
+   * **`not_boarded` means opposite things at the two kinds of checkpoint, and
+   * this reader is the one place that difference is decided** (issue #1704).
+   *
+   * At `departure` it is "never left the dock" — the benign half, and the
+   * ordinary absence the counter exists to record. At `after_dive_n` it is "did
+   * not come back from the dive", which is the missing-diver row
+   * (`isAccountedForAfterDive`, src/db/today.ts; **sailed** in the glossary).
+   * A reader that ignored the checkpoint would be wrong in the direction that
+   * stops a shop doing its work: every walk-away carries a dock `not_boarded`,
+   * so the desk could never release a seat again.
+   */
+  it("reads a not_boarded as the water only after a dive, never at the dock", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const seatId = booking.booking.id;
+
+    // The dock's own "never left": no waiver needed, since readiness gates the
+    // boarded tap and not this one.
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: seatId,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+    });
+    expect(await departureRollCallForBooking(db, shop.id, reef.id, seatId)).toBe("not_boarded");
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seatId)).toBe(false);
+
+    // That dock result is the only row this seat has, and it stays false: the
+    // trap this reader is built to avoid is composing on
+    // `carryForwardNotBoarded` (src/lib/roll-call.ts), which reports the
+    // carried default as a result at `after_dive_1` and would make every
+    // walk-away permanently un-markable. Persisted rows only — `implied` is
+    // never stored.
+
+    // "Did not come back from dive one" is the opposite fact, and the crew can
+    // record it whatever the dock said.
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: seatId,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+    });
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seatId)).toBe(true);
+
+    // A `cleared` at that checkpoint is the crew undoing a mistake, so nothing
+    // stands there any more and the dock's own result still does not count.
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: seatId,
+      recordedByPersonId: staff.id,
+      status: "cleared",
+      checkpoint: "after_dive_1",
+    });
+    expect(await onTheWaterByRollCall(db, shop.id, reef.id, seatId)).toBe(false);
   });
 
   it("carries the counter check-in status onto the manifest, independent of roll call (task 149)", async () => {

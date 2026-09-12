@@ -15,7 +15,7 @@ import { loadActiveStaffRoles } from "./authz";
 import { tripCourseCrewCounts } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
-import { boardedAtAnyCheckpoint } from "./manifests";
+import { onTheWaterByRollCall } from "./manifests";
 import { activityEvents, bookings, courses, people, trips } from "./schema";
 import { getTripWaitlist, pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
@@ -151,16 +151,20 @@ export async function markBookingNoShow(
       // Read without a lock of its own, and correct only because the rail takes
       // the *booking* row `FOR UPDATE` too (`recordRollCall`, src/db/manifests.ts).
       // That is the shared object: while this transaction holds it, no roll
-      // call can commit, so "nobody has boarded them" cannot go stale between
-      // this line and the update below. Before that lock existed the two shared
-      // no object at all and it could — `roll-call.postgres.test.ts` races them
-      // for real and goes red the moment the lock is taken back out.
+      // call can commit, so "the crew has not put them on the water" cannot go
+      // stale between this line and the update below. Before that lock existed
+      // the two shared no object at all and it could — `roll-call.postgres.test.ts`
+      // races them for real and goes red the moment the lock is taken back out.
       //
-      // Any checkpoint, not only the dock (`boardedAtAnyCheckpoint`): a diver
-      // the crew counted at the second site has no departure event at all, and
-      // reading the dock alone left this refusal silent about exactly the
-      // divers `inAfterDivePopulation` (src/db/today.ts) says are on the water.
-      boarded: await boardedAtAnyCheckpoint(tx, input.shopId, seat.tripId, seat.id),
+      // Any checkpoint, and both of the crew's own statements that mean the
+      // diver went to sea (`onTheWaterByRollCall`): one counted at the second
+      // site has no departure event at all, and one recorded as not back after
+      // a dive is a missing-diver row on the manifest rather than an absence.
+      // Reading the dock's `boarded` alone left this refusal silent about
+      // exactly the divers `inAfterDivePopulation` (src/db/today.ts) says are
+      // at risk in the water. The dock's own `not_boarded` is the other
+      // direction and stays eligible: there it means "never left".
+      boarded: await onTheWaterByRollCall(tx, input.shopId, seat.tripId, seat.id),
       tripStatus: seat.tripStatus,
       startsAt: seat.startsAt,
       now,

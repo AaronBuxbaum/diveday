@@ -49,17 +49,28 @@ export function seatIsHeld(status: string): status is SeatHeldStatus {
  * What the counter is allowed to do with a seat, or why not.
  *
  * - `eligible` — the door renders.
- * - `already_boarded` — **the refusal that matters.** The crew recorded this
- *   diver onto the boat at roll call — at the dock, or at any later head
- *   count — so they are on the water. Marking them absent takes a person the
- *   manifest is holding off the expected list while somebody may already be
- *   counting heads at the rail. A statement the crew made at the boat outranks
- *   one made at a desk, the same way `undoCheckInBooking` already lets an
- *   aboard record outrank a queued offline retraction. When the crew get there
- *   *second* the same ordering holds without a refusal: boarding a diver
- *   already marked absent takes the released seat back rather than being
- *   turned away, because nothing at the rail may refuse a body somebody is
- *   looking at (`reclaimReleasedSeat`, src/db/manifests.ts).
+ * - `already_boarded` — **the refusal that matters.** The crew's own roll call
+ *   puts this diver on the water, by either of the two statements that mean it:
+ *   recorded onto the boat at the dock or at any later head count, or recorded
+ *   at an after-dive checkpoint as not back aboard, which is the manifest
+ *   holding them as *missing* rather than absent (`onTheWaterByRollCall`,
+ *   src/db/manifests.ts). Marking either one absent takes a person the manifest
+ *   is holding off the expected list while somebody may already be counting
+ *   heads at the rail. A statement the crew made at the boat outranks one made
+ *   at a desk, the same way `undoCheckInBooking` already lets an aboard record
+ *   outrank a queued offline retraction. When the crew get there *second* the
+ *   same ordering holds without a refusal: boarding a diver already marked
+ *   absent takes the released seat back rather than being turned away, because
+ *   nothing at the rail may refuse a body somebody is looking at
+ *   (`reclaimReleasedSeat`, src/db/manifests.ts).
+ *
+ *   **One code, both facts.** It was the boarded half alone for one slice, and
+ *   the after-dive "did not come back" reaches this same refusal rather than a
+ *   second code: the staffer's next move is identical for both — open the
+ *   manifest — and the code is a shipped `?notice=` value. What changed with it
+ *   are the words, which now say *on the water* rather than *aboard*, so the
+ *   sentence is true of a diver the crew are still looking for
+ *   (`checkIn.notice.noShowAlreadyBoarded`).
  * - `already_marked` — a second device, or a second tap, arriving after the
  *   work is done.
  * - `not_booked` — the seat was given up (cancelled). Somebody who told the
@@ -83,9 +94,28 @@ export type NoShowGate =
 export type NoShowGateInput = {
   bookingStatus: string;
   /**
-   * The crew recorded this diver aboard at roll call, at **any** checkpoint:
-   * a diver counted at the second site was never at the dock at all
-   * (`boardedAtAnyCheckpoint`, src/db/manifests.ts).
+   * **The crew's own roll call puts this diver on the water.** Read it as that
+   * question rather than as its name, which is one slice old: `boarded`
+   * standing at **any** checkpoint, since a diver counted at the second site
+   * was never at the dock at all, **or** an explicit `not_boarded` standing at
+   * an **after-dive** checkpoint, which says "did not come back from the dive"
+   * rather than "never came" (`onTheWaterByRollCall`, src/db/manifests.ts, is
+   * the one reader that answers all of it).
+   *
+   * A `departure` `not_boarded` is deliberately *not* this. There the same word
+   * means "never left the dock", which is the ordinary absence this gate exists
+   * to let a shop record — so a reader that ignores the checkpoint is wrong in
+   * the direction that stops a shop doing its work.
+   *
+   * **The writer feeds this the whole answer; the counter's door does not, and
+   * that is a known gap.** `markBookingNoShow` (src/db/no-show.ts) asks
+   * `onTheWaterByRollCall` under the booking's lock. The check-in page draws the
+   * disclosure from `CheckInQueueRow.boarded`, which is the **departure**
+   * checkpoint alone (`listDepartureBoardedBookingIds`, src/db/check-in.ts), so
+   * "Not here?" is still offered over a diver the crew counted at the second
+   * site or recorded as not back from a dive, and the tap is then refused. The
+   * seat is safe either way, because the refusal sits on the writer and the
+   * writer *is* the release.
    */
   boarded: boolean;
   tripStatus: "scheduled" | "cancelled";

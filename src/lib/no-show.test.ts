@@ -51,13 +51,19 @@ describe("noShowGate", () => {
   });
 
   /**
-   * **The refusal this gate exists for.** A diver the crew recorded aboard is
-   * on the water; marking them absent would take a person the manifest is
-   * holding off the expected list. It is checked ahead of every other
-   * condition so nothing — a cancelled trip, a closed window, a second tap —
-   * can answer first and hide it.
+   * **The refusal this gate exists for.** A diver the crew's roll call puts on
+   * the water — counted aboard, or recorded as not back from a dive — is a
+   * person the manifest is holding, and marking them absent takes them off the
+   * expected list. It is checked ahead of every other condition so nothing —
+   * a cancelled trip, a closed window, a second tap — can answer first and
+   * hide it.
+   *
+   * Which of the crew's two statements produced the `true` is decided one layer
+   * down, in `onTheWaterByRollCall` (src/db/manifests.ts), because only a
+   * reader of `roll_call_events` can tell a dock `not_boarded` ("never left")
+   * from an after-dive one ("did not come back"). This gate is handed the fact.
    */
-  it("never lets a boarded diver be marked absent, whatever else is true", () => {
+  it("never lets a diver the roll call puts on the water be marked absent", () => {
     expect(gate({ boarded: true })).toBe("already_boarded");
     expect(gate({ boarded: true, bookingStatus: "no_show" })).toBe("already_boarded");
     expect(gate({ boarded: true, bookingStatus: "cancelled" })).toBe("already_boarded");

@@ -96,7 +96,7 @@
     "walkinTripPrerequisite": "Las titulaciones de ese buceador no alcanzan lo que exigen este barco y sus sitios de buceo.",
     "walkinUnavailable": "Ese buceador no puede tomar una plaza en este barco ahora mismo.",
     "walkinInvalid": "Elige un barco y escribe un nombre antes de añadir un walk-in.",
-    "noShowAlreadyBoarded": "La tripulación registró a ese buceador a bordo, así que no se puede marcar que no vino. Corrige primero el pase de lista en la lista de embarque.",
+    "noShowAlreadyBoarded": "El pase de lista del barco sitúa a ese buceador en el agua, así que no se puede marcar que no vino. Revisa la lista de embarque de la salida.",
     "noShowAlreadyMarked": "Ese buceador ya está marcado como que no vino.",
     "noShowNotBooked": "Esa reserva se canceló, así que no hay nada que marcar.",
     "noShowTripCancelled": "Esa salida está cancelada, así que su lista de invitados no puede cambiar.",

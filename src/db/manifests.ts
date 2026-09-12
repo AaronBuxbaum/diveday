@@ -418,29 +418,47 @@ export async function departureRollCallForBooking(
 }
 
 /**
- * **Has the crew put this seat on the water at all?** True when the booking's
- * standing result at *any* checkpoint is `boarded` — the dock, or a later
- * after-dive head count.
+ * **Does the crew's own roll call put this diver on the water?** True on either
+ * of the two statements a crew can make that mean the diver went to sea:
+ *
+ * - `boarded` standing at **any** checkpoint — the dock, or a later after-dive
+ *   head count. A diver who joined at the second site has no departure event at
+ *   all.
+ * - `not_boarded` standing at an **after-dive** checkpoint, which is not "never
+ *   came" but **did not come back from the dive**. That is the missing-diver
+ *   row, and the diver it is about sailed (`docs/product/glossary.md`,
+ *   **sailed**).
+ *
+ * **A `departure` `not_boarded` is deliberately not read, and that asymmetry is
+ * the whole of this function.** At the dock the same word means "never left the
+ * dock": the benign half, and the ordinary absence the counter exists to let a
+ * shop record. Reading it here would make every walk-away permanently
+ * un-markable, which is the failure direction that stops a shop doing its work
+ * rather than the one that endangers a diver. The rule is the one
+ * `src/db/today.ts` already writes down at `isAccountedForAfterDive` and
+ * `inAfterDivePopulation` (DOM-H3), consumed rather than restated: exactly the
+ * population that reader counts as at risk in the water is the population the
+ * desk may not call absent.
+ *
+ * **Persisted rows only, never `carryForwardNotBoarded`.** `implied` is never
+ * stored (see {@link standingDiverRollCall}), so a `not_boarded` row at an
+ * after-dive checkpoint is always an explicit "did not come back". Running the
+ * results through that helper first would carry the dock's `not_boarded` onto
+ * every later checkpoint and refuse the mark for the exact case it must allow.
  *
  * The counter's own refusal (`noShowGate`, src/lib/no-show.ts) asked
- * {@link departureRollCallForBooking}, which is pinned to the dock, and so
- * said nothing at all about the population `src/db/today.ts` names at
- * `inAfterDivePopulation`: a diver who joined at the second site, or one the
- * crew counted without a dock result. Those divers have no departure event, so
- * "nobody has boarded them" read true and the desk could take a body already in
- * the water off the expected list — well inside the counter's six-hour reach,
- * which covers a whole two-tank morning.
+ * {@link departureRollCallForBooking} for one slice, which is pinned to the
+ * dock and so said nothing at all about either half above. Neither has a
+ * departure `boarded`, so "nobody has boarded them" read true and the desk
+ * could take a body already in the water off the expected list — well inside
+ * the counter's six-hour reach, which covers a whole two-tank morning.
  *
  * One query, grouped here: per checkpoint the newest event wins and a `cleared`
  * newest drops out, the same supersession every other reader in this file
  * applies. The cancelled-booking guard is the sibling's too, for the sibling's
  * reason — a seat given up is refused as `not_booked`, never as a boarding.
- *
- * `not_boarded` is deliberately not read here: at the dock it means "never
- * left", which is the benign half, and the after-dive reading ("did not come
- * back") is a different alarm than the one this answer feeds.
  */
-export async function boardedAtAnyCheckpoint(
+export async function onTheWaterByRollCall(
   db: DbExecutor,
   shopId: string,
   tripId: string,
@@ -467,6 +485,9 @@ export async function boardedAtAnyCheckpoint(
     );
   const seen = new Set<string>();
   for (const row of rows) {
+    // Newest first, so the first row seen per checkpoint is that checkpoint's
+    // standing result. A `cleared` newest matches neither branch below, so the
+    // checkpoint drops out entirely rather than falling back to an older row.
     if (seen.has(row.checkpoint)) continue;
     seen.add(row.checkpoint);
     if (row.status === "boarded") return true;
