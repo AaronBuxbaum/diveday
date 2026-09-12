@@ -102,22 +102,49 @@ evidence, about a fortnight.
   setting, a page you were told to come back to. Both replace *comprobar*, which is understood
   everywhere but reads as Spain.
 
-## The tide turns at **la estoa**, and it comes in and goes out as **marea entrante / saliente**
+## The sentence names a height turn — **pleamar / bajamar** — and **la estoa** is the shop's own word
 
-Settled 2026-09-07 with the tide window (ADR 20260907-noaa-tide-predictions). Slack water is
-**la estoa** — the word a Caribbean or Mexican captain uses for the turn, and the one that does not
-collide with anything: *marea muerta* is a neap tide and *repunte* is the moment it turns rather
-than the window either side. Flood and ebb are **marea entrante** and **marea saliente**, never the
-textbook *flujo* / *reflujo*, which read as physics rather than as water a diver can feel.
+Settled 2026-09-07 with the tide window, then split by that ADR's own amendment of the same day
+(ADR 20260907-noaa-tide-predictions). Two clauses in one sentence talk about two different things,
+and **the single most important thing to know here is that they must not be flattened back
+together.**
+
+- **The phase clause is DiveDay speaking about NOAA's data**, and that data is a *height* turn. We
+  fetch the `predictions` product at `hilo` interval, which publishes water level. Slack water is a
+  property of the *current*; NOAA publishes it separately in `currents_predictions`, and the two
+  differ by the better part of an hour: on one real pair of stations on one day, slack lagged the
+  height table by 87, 29 and 107 minutes. So the phase says **en el cambio de marea**, matching
+  the English "at the turn of the tide". Calling it *la estoa* there would claim a slack-water
+  measurement we never fetched.
+- **The preference clause is the shop speaking about its own reef**, where slack water is exactly
+  what a divemaster means. There **en la estoa** survives, unchanged.
+
+*La estoa* is still the right word for the turn itself: it is what a Caribbean or Mexican captain
+says, and it collides with nothing — *marea muerta* is a neap tide, and *repunte* is the instant of
+turning rather than the window either side. Flood and ebb stay **marea entrante** and **marea
+saliente**, never the textbook *flujo* / *reflujo*, which read as physics rather than as water a
+diver can feel.
+
+High and low water are **pleamar** and **bajamar**, the words a tide table itself uses, and the
+turn is placed relative to the arrival by **Próxima** or **Última** — which side of the boat's
+arrival the turn sits on is the whole point of naming it.
 
 | English | Spanish |
 | --- | --- |
-| slack (water) | la estoa |
-| at slack water | en la estoa |
+| high water | pleamar |
+| low water | bajamar |
+| Next high water at {time} | Próxima pleamar a las {time} |
+| Last low water at {time} | Última bajamar a las {time} |
+| at the turn of the tide (the phase clause, about NOAA's data) | en el cambio de marea |
+| slack (water) (the turn itself) | la estoa |
+| at slack water (the shop's own preference clause) | en la estoa |
 | on the flood | con marea entrante |
 | on the ebb | con marea saliente |
 | the tide window | la ventana de marea |
 | NOAA tide station | estación de mareas NOAA |
+
+The strings these govern are `tide.window` in `staff/shared.json` and `trip.tideWindow` in
+`diver.json`; both carry every row above in one ICU `select`.
 
 ## A place you dive is **un sitio de buceo**
 
