@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { bookings, people, trips, tripWaitlistEntries } from "./schema";
@@ -12,15 +13,29 @@ import {
 
 const OTHER_SHOP = "00000000-0000-0000-0000-000000000000";
 
+/**
+ * Booking uuids chosen so the pair's ordering by `id` is known and opposite on
+ * the two departures the tie-break test seats — the whole point being that the
+ * answer must not depend on them.
+ */
+const LOW_BOOKING_ID = "11111111-1111-4111-8111-111111111111";
+const HIGH_BOOKING_ID = "99999999-9999-4999-8999-999999999999";
+const OTHER_LOW_BOOKING_ID = "22222222-2222-4222-8222-222222222222";
+const OTHER_HIGH_BOOKING_ID = "88888888-8888-4888-8888-888888888888";
+
 let seq = 0;
 
-async function makeDiver(db: AppDb, shopId: string, opts: { deleted?: boolean } = {}) {
+async function makeDiver(
+  db: AppDb,
+  shopId: string,
+  opts: { deleted?: boolean; name?: string } = {},
+) {
   seq += 1;
   const [person] = await db
     .insert(people)
     .values({
       shopId,
-      fullName: `Diver ${seq}`,
+      fullName: opts.name ?? `Diver ${seq}`,
       email: `diver.${seq}@bluemantis.dive`,
       deletedAt: opts.deleted ? new Date("2026-06-01T00:00:00Z") : null,
     })
@@ -74,6 +89,97 @@ describe("getTripRoster", () => {
       [noShow.id, "no_show"],
     ]);
     expect(roster.every((row) => row.booking.tripId === trip)).toBe(true);
+  });
+
+  /**
+   * **A same-instant tie is the ordinary case, not a contrivance** (issue
+   * #1720). `createBooking` stamps `nowDate()`, the harness freezes it, and two
+   * divers seated back to back in one spec therefore share `created_at` to the
+   * millisecond by construction. The old tie-break was `bookings.id`, a
+   * `defaultRandom()` uuid: one answer per database, a different answer in the
+   * next freshly seeded one, and the index of this array is the 01/02 a crew
+   * counts down at the rail.
+   *
+   * The uuids below are **handed in rather than generated**, and the diver who
+   * must sort first is given the *higher* one. A test that lets
+   * `defaultRandom()` pick agrees with the bug half the time.
+   *
+   * The names are accented on purpose: `Ángel` sorts before `Zoe` under the
+   * ICU collation `people.full_name` carries
+   * (`drizzle/20260911200158_person-name-collation`) and *after* it under the
+   * byte order PGlite would otherwise default to, so this also pins that the
+   * roster inherits the collation without naming it
+   * (`src/db/name-collation.test.ts` owns that property itself).
+   */
+  it("breaks a same-instant tie on the diver's name, whichever way the uuids fall", async () => {
+    const { db, shop } = await seededShopContext();
+    const [tripA, tripB] = await twoTrips(db, shop.id);
+    // The instant `createBooking` would stamp under the frozen test clock.
+    const seatedAt = nowDate();
+    const ours = new Set<string>();
+
+    const seatPair = async (tripId: string, ids: readonly [string, string]) => {
+      const [angelId, zoeId] = ids;
+      for (const [name, bookingId] of [
+        ["Ángel Ferrer", angelId],
+        ["Zoe Adler", zoeId],
+      ] as const) {
+        const person = await makeDiver(db, shop.id, { name });
+        ours.add(person.id);
+        await db.insert(bookings).values({
+          id: bookingId,
+          shopId: shop.id,
+          tripId,
+          personId: person.id,
+          createdAt: seatedAt,
+        });
+      }
+    };
+
+    const namesOn = async (tripId: string) =>
+      (await getTripRoster(db, shop.id, tripId))
+        .filter((row) => ours.has(row.person.id))
+        .map((row) => row.person.fullName);
+
+    // Ángel holds the higher uuid here and the lower one on the other boat.
+    await seatPair(tripA, [HIGH_BOOKING_ID, LOW_BOOKING_ID]);
+    await seatPair(tripB, [OTHER_LOW_BOOKING_ID, OTHER_HIGH_BOOKING_ID]);
+
+    expect(await namesOn(tripA)).toEqual(["Ángel Ferrer", "Zoe Adler"]);
+    expect(await namesOn(tripB)).toEqual(["Ángel Ferrer", "Zoe Adler"]);
+    // Read again: an order that is a property of the rows does not move.
+    expect(await namesOn(tripA)).toEqual(["Ángel Ferrer", "Zoe Adler"]);
+  });
+
+  /**
+   * The failure path of the fix above: the name is the *tie-break*, never the
+   * key. A roster is oldest-seat-first, and a diver seated at the counter this
+   * morning does not jump ahead of the one who booked in March by being called
+   * Adler.
+   */
+  it("keeps seat time above the name, so a later seat does not jump the queue", async () => {
+    const { db, shop } = await seededShopContext();
+    const [trip] = await twoTrips(db, shop.id);
+    const early = await makeDiver(db, shop.id, { name: "Zoe Adler" });
+    const late = await makeDiver(db, shop.id, { name: "Ángel Ferrer" });
+    await db.insert(bookings).values({
+      shopId: shop.id,
+      tripId: trip,
+      personId: early.id,
+      createdAt: new Date("2026-03-02T10:00:00.000Z"),
+    });
+    await db.insert(bookings).values({
+      shopId: shop.id,
+      tripId: trip,
+      personId: late.id,
+      createdAt: new Date("2026-07-21T09:00:00.000Z"),
+    });
+
+    const ours = new Set([early.id, late.id]);
+    const roster = (await getTripRoster(db, shop.id, trip)).filter((row) =>
+      ours.has(row.person.id),
+    );
+    expect(roster.map((row) => row.person.fullName)).toEqual(["Zoe Adler", "Ángel Ferrer"]);
   });
 
   it("answers nothing for another shop's id, even with a real trip id", async () => {
