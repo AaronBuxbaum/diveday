@@ -88,7 +88,9 @@ import { type WaiverRowState, waiverRowStateText } from "./waiver-labels";
  * 1. **A key whose message interpolates, reached by a resolver that fills
  *    nothing.** `translatorOnError` rethrows outside production
  *    (`src/i18n/on-error.ts`), so rendering every code here is what turns that
- *    into a failing test rather than a brace on a manifest in production.
+ *    into a failing test rather than a brace on a manifest in production. This
+ *    is the assertion that carries the file: dropping the `{specialty}` params
+ *    for one readiness blocker fails three of its cases with the ICU error.
  * 2. **English sitting in the es-ES bundle.** A missing es-ES key falls back to
  *    the *English* string rather than throwing, so "not empty" is satisfied by
  *    a bundle with no translation in it. Only comparing the two locales sees it.
@@ -181,6 +183,7 @@ const WAIVER_ROW_STATES = everyCodeOf<WaiverRowState>({
  */
 const BLOCKER_PARAMS: Partial<Record<ReadinessBlockerCode, ReadinessBlockerParams>> = {
   certification_insufficient: { requiredLevel: "advanced_open_water" },
+  specialty_missing: { specialty: "wreck" },
   specialty_pending: { specialty: "wreck" },
   specialty_import_unconfirmed: { specialty: "wreck" },
   under_minimum_age: { age: 14, minimumAge: 15 },
@@ -522,7 +525,12 @@ describe.each(CASES)("$module › $map", ({ rows, map }) => {
       }
       expect(label, code).not.toBeNull();
       expect(label?.trim(), code).not.toBe("");
-      // The fallback for a key no bundle holds is the dotted key itself.
+      // A key no bundle holds renders as the dotted key itself. In this suite
+      // it never gets that far — `translatorOnError` rethrows the
+      // MISSING_MESSAGE first, which is the louder answer and the one a dev
+      // server and an e2e run give too. The assertion stays because that
+      // rethrow is one `isProduction()` away from being swallowed, and this is
+      // what would keep a dotted key from passing as a sentence if it were.
       expect(label, code).not.toMatch(BARE_KEY);
       // A placeholder no resolver filled would survive to the screen — in
       // production, where `translatorOnError` swallows rather than throws.
