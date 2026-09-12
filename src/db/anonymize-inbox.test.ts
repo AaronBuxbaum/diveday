@@ -65,7 +65,7 @@ describe("anonymizeDiver — the inbox", () => {
       personId: null,
       channel: "whatsapp",
       fromAddress: "13055550177",
-      body: "hi it's me from the reef trip",
+      body: "hi it’s me from the reef trip",
       receivedAt: new Date("2026-07-19T10:00:00.000Z"),
       providerMessageId: "erase-2",
     });

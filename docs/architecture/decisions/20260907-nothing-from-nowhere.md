@@ -131,6 +131,29 @@ a keyboard or switch user does changes; a mouse gets the tap and the button as t
 palette on a desktop, and never a sheet carrying a form mid-fill, which keeps its button. One
 hook, `PullToRefresh`'s generalised, holds the numbers for all four gestures.
 
+**Amended 2026-09-11 (#1512): once the sheet's list can scroll, the handle is the only drag
+surface.** Measured on the seeded demo shop at 390x844: the sheet's content stands at 730px against
+the `max-h-[calc(100dvh-8rem)]` cap of 715, so the list scrolls, and a press on a row produced
+exactly one `pointermove` and then nothing — the browser claimed the scroll and the gesture died
+mid-flight, leaving the sheet open under a thumb that meant to close it and saying nothing about
+why. "A drag begins … when the sheet's own list is at its top" was written about a finger starting
+near the sheet's bottom *edge*; on a full sheet that edge is a row, and a list at its top is the
+state every sheet opens in. The clause now reads: a drag begins on the handle, or on a sheet whose
+list does not scroll at all. The handle's press area grows from the 6px bar to the strip around it,
+because the sheet's only dismissal by thumb now depends on hitting it.
+
+Two alternatives were declined. `touch-action: none` on the sheet keeps the browser's hands off the
+press, but then the hook drives the list's scrolling itself — a re-implementation of a browser
+behaviour, on the surface a crew uses one-handed at the rail, to buy a second way to do what the
+handle already does. A non-scrolling drag zone across the sheet's chrome is the handle under
+another name and another 40px of sheet. Trimming destinations so the list fits was rejected
+outright: the sheet is where a shop's menu *goes* to grow, and the count only rises.
+
+The cost is real, and is why this is written down rather than fixed quietly: a thumb on a row of a
+full sheet now does nothing dismissal-wise, and a reader who has not seen this paragraph will read
+that as a regression. It is the scrim, Escape, and the handle — three ways out, one of them under
+the thumb that opened it.
+
 ### 5. The title folds into the bar
 
 On a phone the page title folds into the 56px staff header as the page scrolls, driven by the

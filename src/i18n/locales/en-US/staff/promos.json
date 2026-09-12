@@ -11,12 +11,12 @@
     "invalidWindow": "The end date has to come after the start date.",
     "duplicate": "You already have a code with that text.",
     "notConnected": "Connect your Stripe account in Settings first.",
-    "stripeFailed": "Stripe didn't create that code. It's saved as failed here and can't discount anything.",
+    "stripeFailed": "Stripe didn’t create that code. It’s saved as failed here and can’t discount anything.",
     "notAuthorized": "Promo codes are limited to owners and managers.",
     "deleted": "Code deleted.",
     "deletedToast": "Code deleted.",
     "restored": "Code re-created and live again on your Stripe account.",
-    "restoreFailed": "Couldn't restore that code. Create it again below."
+    "restoreFailed": "Couldn’t restore that code. Create it again below."
   },
   "connectBanner": "Connect your Stripe account in <settingsLink>Settings</settingsLink> before creating a code.",
   "scope": {
@@ -47,16 +47,16 @@
     "startsHint": "(optional)",
     "expires": "Expires",
     "expiresHint": "(optional)",
-    "whatFor": "What it's for",
+    "whatFor": "What it’s for",
     "whatForHint": "(optional — your note, never shown to divers)",
     "whatForPlaceholder": "Autumn returning-diver push",
-    "timezoneHint": "Times are in {timezone}, your shop's timezone."
+    "timezoneHint": "Times are in {timezone}, your shop’s timezone."
   },
   "creating": "Creating…",
   "createCode": "Create code",
   "empty": {
     "heading": "No codes yet",
-    "detail": "Send a one-trip deal from a departure's page when a boat needs filling.",
+    "detail": "Send a one-trip deal from a departure’s page when a boat needs filling.",
     "action": "Create your first code"
   },
   "status": {
@@ -76,14 +76,14 @@
   "saving": "Saving…",
   "copyCode": "Copy code",
   "copyCodeCopied": "Copied",
-  "copyCodeFailed": "Couldn't copy — select it manually",
+  "copyCodeFailed": "Couldn’t copy — select it manually",
   "retry": "Try again",
   "retrying": "Trying again…",
   "delete": "Delete",
   "deleting": "Deleting…",
   "tripDeals": {
     "heading": "Trip deals",
-    "description": "One-trip discounts sent from a departure's page.",
+    "description": "One-trip discounts sent from a departure’s page.",
     "empty": "No trip deals are outstanding right now.",
     "emptyAction": "Open the schedule",
     "recipients": "{count, plural, one {Sent to # diver} other {Sent to # divers}}",

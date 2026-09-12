@@ -4,7 +4,7 @@ import { expect, READ_ONLY, test } from "./fixtures";
  * The public status page and the probe behind it (ADR
  * 20260907-external-uptime-monitor).
  *
- * `READ_ONLY` holds: both tests fetch and read, and neither writes a row.
+ * `READ_ONLY` holds: all three tests fetch and read, and none writes a row.
  *
  * What is worth an e2e test here rather than a unit one is the part no unit
  * test can reach — that the page renders with no session at all, and that the
@@ -42,4 +42,20 @@ test("the probe answers the literal the uptime check matches on", { tag: READ_ON
   // `UPTIME_TARGETS[0].searchString`, on the wire. A rename that left the
   // Route 53 health check matching nothing would fail here first.
   expect(await response.text()).toContain('"status":"ok"');
+});
+
+test("a reader who does not know the address can still get there", { tag: READ_ONLY }, async ({
+  page,
+}) => {
+  // The defect this closes (issue #1475): the page shipped on 2026-09-07 with
+  // nothing linking it, so the only way in was typing the URL — which is the
+  // one thing a shop guessing at an outage cannot do. No unit test can prove a
+  // page is reachable; this walks the footer the way the shop would, from a
+  // marketing page that is not the one being tested.
+  await page.goto("/about");
+
+  await page.getByRole("contentinfo").getByRole("link", { name: "Status" }).click();
+
+  await expect(page).toHaveURL(/\/status$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Everything is running.");
 });

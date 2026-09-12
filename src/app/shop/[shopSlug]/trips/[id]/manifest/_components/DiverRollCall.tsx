@@ -617,6 +617,28 @@ export function DiverRollCall({
                               {diver.fullName}
                             </span>
                             {capsule}
+                            {/* **The desk wrote this one off** (#1209). On the
+                              row and not in the sheet, unlike "Checked in":
+                              that one is routine and a tap away is fine, this
+                              is the reason a crew member should stop looking.
+                              A released seat and a diver still walking down
+                              the dock read identically without it, which is
+                              how a head count at the rail chases a name the
+                              counter settled forty minutes ago
+                              (`dive-domain-expert` review 20260911).
+
+                              Neutral, and outside the one-capsule priority
+                              chain — the same licence the welcome word takes
+                              below. It is not an exception the crew must act
+                              on; it is the absence of one, and colouring it
+                              would put a second loud thing on the row that
+                              most wants a quiet one. The row keeps its mark:
+                              nothing here refuses a boarding, and a diver who
+                              turns up after all is tapped aboard exactly as
+                              before. */}
+                            {diver.notHere ? (
+                              <Badge tone="neutral">{t("manifest.notHerePill")}</Badge>
+                            ) : null}
                           </span>
                           {/* **The welcome word** (issue #1182, delight report
                             D22; ADR 20260904-reef-all-the-way-down slice 16d):

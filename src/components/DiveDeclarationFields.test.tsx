@@ -70,7 +70,7 @@ describe("DiveDeclarationFields", () => {
     // one who abandons the checkout. It says "answer it", not "leave the number
     // blank", because `DiveCardFields` renders only once a level is picked — a
     // sentence naming a box that is not on screen is worse than no sentence.
-    expect(screen.getByText(/Answer it even if your card isn't to hand/)).toBeInTheDocument();
+    expect(screen.getByText(/Answer it even if your card isn’t to hand/)).toBeInTheDocument();
     // The explanation stays focused on why the shop asks. It does not repeat
     // the booking action's downstream reassurance or claim that the answer is
     // merely informational now that certification can gate a sale.

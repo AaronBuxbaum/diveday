@@ -178,6 +178,38 @@ describe("one primary", () => {
   });
 });
 
+/**
+ * **The emergency contact's two boxes move together** — the one rule on this
+ * page that no markup can express, so what is asserted here is that the page
+ * reads it (`readEmergencyContact`, whose docblock in `src/lib/contact.ts` is
+ * where the rule and the hazard behind it are written out) on both submits and
+ * refuses where the diver can see it.
+ */
+describe("the emergency contact's two boxes", () => {
+  it("refuses a half-filled pair rather than sending half of it to a writer", () => {
+    // Both submits read the pair through the one rule, and the complete path
+    // refuses on it alongside the medical answers and the signature.
+    expect(countOf("refusedContactField(submittedContact)")).toBe(2);
+    expect(SOURCE).toContain(
+      "if (!parsed.success || !answers || (guardian && !guardian.success) || refusedContact) {",
+    );
+    // Every write of the contact — the draft save, the signature, and the
+    // re-save after a refused signature — is gated on a complete pair.
+    expect(countOf('submittedContact?.kind === "pair"')).toBe(3);
+  });
+
+  it("puts the refusal on the empty box, which is where the reader is sent", () => {
+    // `FieldErrorFocus` scrolls to and rings an `id`, and `Field`'s `error`
+    // renders the sentence under that same control (the rule in
+    // docs/design/forms-and-controls.md). Without the ids the refusal would
+    // land the diver at the top of the page.
+    expect(SOURCE).toContain('id="emergencyContactName"');
+    expect(SOURCE).toContain('id="emergencyContactPhone"');
+    // One sentence for both boxes: the fix is the same either way.
+    expect(countOf('textKey: "waiver.errorContactPair"')).toBe(2);
+  });
+});
+
 describe("what this slice was forbidden to touch", () => {
   it("presents the release in full", () => {
     // "Presenting the full text is part of what typed consent means here" —

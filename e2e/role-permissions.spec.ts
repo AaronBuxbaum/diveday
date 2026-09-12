@@ -157,7 +157,7 @@ test.describe("H-14 role permissions", () => {
       // the captain on a page that looks like they simply mis-clicked.
       await page.goto(`/shop/${SHOP}/reports`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
-      await expect(page.getByText(/Reports read the shop's revenue/i)).toBeVisible();
+      await expect(page.getByText(/Reports read the shop’s revenue/i)).toBeVisible();
 
       // Date requests carry contact details for people who have not booked, and
       // choosing which unscheduled day gets a boat is desk work — the same
@@ -178,7 +178,37 @@ test.describe("H-14 role permissions", () => {
       await page.goto(`/shop/${SHOP}/settings/import`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
       await expect(
-        page.getByText(/Importing writes divers' personal and medical records/i),
+        page.getByText(/Importing writes divers’ personal and medical records/i),
+      ).toBeVisible();
+    });
+
+    /**
+     * **The inbox is not one of the gated surfaces** (issues #1505/#1518,
+     * decided 2026-09-10 as an H-14 amendment; the reasoning is in ADR
+     * 20260907-two-way-inbox decision 9). It was, for the three days between
+     * shipping and that amendment, which is why it is asserted here at all:
+     * this file's captain lens is where a gate would come back. The two halves
+     * go together because they were one decision — the worklist opens, and the
+     * composer on the diver's record is there to type into.
+     */
+    test("the daily crew may read the shop inbox and answer a diver", { tag: READ_ONLY }, async ({
+      page,
+    }) => {
+      await page.goto(`/shop/${SHOP}/inbox`);
+      // The worklist's own heading, not a bounce to Today with a notice on it
+      // — which is what every refusal in the test above looks like.
+      await expect(page).toHaveURL(`/shop/${SHOP}/inbox`);
+      await expect(
+        page.getByRole("heading", { level: 1, name: "What divers wrote" }),
+      ).toBeVisible();
+
+      // Through the row to the record, the way a captain would reach it. The
+      // composer's presence is the whole assertion: nothing is typed and
+      // nothing is sent, so this stays READ_ONLY (the send is
+      // `e2e/inbox.spec.ts`).
+      await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
+      await expect(
+        page.getByLabel("Reply by email to priya.sharma@example.com", { exact: true }),
       ).toBeVisible();
     });
   });

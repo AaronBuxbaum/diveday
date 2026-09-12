@@ -7,6 +7,30 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## No-show frees the seat (delivered 2026-09-11)
+
+Item 11 of the 2026-08-27 sweep (issue #1209). `bookings.status = 'no_show'` had existed since the
+first schema with a dozen readers branching on it and no writer anywhere; the counter's "Not here?"
+disclosure is that writer. **The staffer's confirm tap is the release** — no second tap, no timer,
+no close-of-day sweep and no `seat_released_at` column: `no_show` leaves `SEAT_HELD_STATUSES`, so
+the boat reads one seat lighter the moment the mark commits and the next diver claims it through
+`bookSpot`'s ordinary capacity transaction. The door opens when the boat leaves without the diver
+rather than at the shop's **dock call time**, and closes at the end of the arrivals window; once the
+boat has genuinely sailed the same tap asks a louder question, because it has stopped being about a
+seat and become a statement that this person did not dive. It auto-refunds and auto-cancels nothing
+— the money is one sentence and a link to that diver's orders. ADR
+[20260911-the-confirm-tap-is-the-release](../architecture/decisions/20260911-the-confirm-tap-is-the-release.md).
+
+**A statement made at the boat outranks one made at a desk.** A diver the crew recorded aboard at
+any checkpoint can never be marked absent, and when the crew get there second, boarding takes the
+released seat straight back (`reclaimReleasedSeat`) rather than refusing a body somebody is looking
+at — over-capacity is then something the manifest *says*, not something it prevents. The released
+row keeps its place on the manifest with a mark of its own, so it cannot read as a diver still
+walking down the dock, and an Undo the seat has outrun refuses under both limits every seat-granting
+path applies — a sold seat or a full instructor ratio — leaving its own trail line naming which.
+Under the mark the counter offers the seat to the **wait list** first, then offers the diver who
+missed another day by name, then says plainly that there is nothing.
+
 ## Fifteen personas walk the product every Monday (delivered 2026-09-07)
 
 N-61 from the 2026-09-07 improvement-ideas sheet (issue #1494). `docs/product/personas.md` was a
@@ -57,9 +81,14 @@ record grows a **Conversation** group, both directions in one column, with a com
 the diver's latest message on the channel it arrived on and in the diver's own recorded locale
 (`src/db/staff-reply.ts` owns the whole consequence: channel, language, Meta's 24-hour window
 checked before the send, and the outcome recorded whether it went or not). Today carries one
-`unanswered_messages` row and nothing at zero. Owner and manager only
-(`canAnswerShopInbox`): a reply leaves as the shop, and the list holds addresses for people who
-never booked.
+`unanswered_messages` row and nothing at zero. Owner and manager only at delivery: a reply leaves
+as the shop, and the list holds addresses for people who never booked. **Widened 2026-09-10** to
+every live staff role, reading and answering both — the message that most wants answering at 7am is
+answered by whoever is at the dock (issues #1505/#1518, an H-14 amendment; the two predicates are
+deleted, and the Today row widened with them). **The stranger's row gained a Delete** the same day
+(issue #1506): with no record it has no door and no composer, so it was the one row in the worklist
+nothing could finish, and it counted against the Today row for as long as it sat there. Soft, on
+that row alone, and no restore — a row that has a record is finished by answering it.
 
 ## The counter survives a lost signal (delivered 2026-09-07)
 
@@ -179,15 +208,22 @@ Settings (`shops.tide_window_public`, default off). Informs; gates nothing. The 
 Largo sites against Carysfort Reef (8723583). ADR
 [20260907-noaa-tide-predictions](../architecture/decisions/20260907-noaa-tide-predictions.md).
 
-## Fly-safe from, on the recap (delivered 2026-09-07)
+## Earliest flight, on the recap (delivered 2026-09-07)
 
 N-04 from the 2026-09-07 improvement-ideas decision sheet (issue #1425). Once the crew has logged
-the day, the thread's after-state and the `trip_recap` email say "Fly-safe from Wednesday 6:10 PM:
-{shop} asks for 24 hours after your last dive, following DAN's guidance" — the shop's own pair of
-hours (`shops.fly_safe_hours_single` / `_repetitive`, a Settings row, floored at DAN's 12 and 18),
-counted from the last recorded exit by `src/lib/fly-safe.ts`, or from the scheduled return once the
-boat is home; repetitive whenever the day held more than one dive by record or by plan. Nothing at
-all while the record cannot say. Informs, never gates.
+the day, the thread's after-state and the `trip_recap` email say "{shop} asks you to wait at least
+until Wednesday 6:10 PM before flying: 24 hours after your last dive with us, following DAN's
+guidance" — the shop's own pair of hours (`shops.fly_safe_hours_single` / `_repetitive`, the
+Settings row headed **Earliest flight**, floored at DAN's 12 and 18), counted from the last recorded
+exit by `src/lib/fly-safe.ts`, or from the buffered return once the boat is home; repetitive
+whenever the day held more than one dive by record or by plan. Where the figure rests on something
+the diver cannot check — a plan of more than one dive the log is short of, or a dive day in the two
+days before this one — the sentence says so, because neither the recap card nor the email carries a
+dive count. Nothing at all while the record cannot say. The lead-in read "Fly-safe from" until issue
+#1433 and the shop asks in its own voice now: DAN's published interval is a consensus minimum that
+lowers DCS risk without removing it, so "safe" was the one word in the sentence the code behind it
+could not support, an unattributed time carried an authority nobody had claimed, and "your last
+dive" described a day DiveDay sees only as far as its own bookings. Informs, never gates.
 
 ## The agent-ready storefront (delivered 2026-09-07)
 
@@ -521,13 +557,14 @@ own departure roll call decides it wherever a shop kept one — `not_boarded` ne
 afterglow at all, `boarded` opens it once the boat is scheduled home plus the standing one-hour
 late-arrival buffer — and where a shop recorded none it waits the four hours the recap *send* has
 always waited before asserting the same thing by email. Nothing else in the product knows whether a
-particular person dived: `bookings.status = 'no_show'` is a close-out act that may not happen for
-hours or at all, so an hour of elapsed time is not evidence. A **cancelled departure** is answered
-before either state — a blow-out cancels the trip and leaves every booking active by design, so the
-thread reads `trips.status` itself and renders the cancellation with the way back to the shop's
-schedule — and a no-show is told plainly that the booking is recorded as one, with the shop's name
-and contact details, instead of the old "This readiness link isn't available · This booking didn't
-sail", two sentences that were both false for that reader.
+particular person dived: `bookings.status = 'no_show'` is one staffer's discretionary tap on a seat
+— a shop that never works the counter queue writes none, and the crew hand the seat straight back by
+boarding the diver — so an hour of elapsed time is not evidence. A **cancelled departure** is
+answered before either state — a blow-out cancels the trip and leaves every booking active by
+design, so the thread reads `trips.status` itself and renders the cancellation with the way back to
+the shop's schedule — and a no-show is told plainly that the booking is recorded as one, with the
+shop's name and contact details, instead of the old "This readiness link isn't available · This
+booking didn't sail", two sentences that were both false for that reader.
 
 **The day's facts render once, and only the ones a shop wrote down.** `/recap` had been saying them
 twice for months: a quiet stat row of conditions and a dotted site itinerary in its first act, then
@@ -570,10 +607,13 @@ blanks that hold the numbers the record itself will not claim.
 answers on `/ready`, whose URL is a bearer capability that can cancel the booking and move its
 refund, so a button handing the current page to a group chat cannot exist on one of two URLs
 rendering one surface. `RecapShareButton` is deleted with its five copy keys; the keepsake's own
-shareable artifact — an image with no bearer URL in it — is issue #1081 and stayed out of scope. For
-the same reason the three recap actions were left untouched: `/ready`'s after-state mints a *recap*
-token server-side and binds them to that, and a composition test fails the build if any of them is
-ever bound to the page's own readiness token.
+shareable artifact — an image with no bearer URL in it — was issue #1081, out of scope here and
+shipped later as slice 16i's "Save as image": `src/lib/postcard-image.ts` draws the record into a
+canvas, and its `PostcardImage` type carries no url, token or slug field at all, which is the
+structural proof the bearer URL cannot reach the picture. For the same reason the three recap
+actions were left untouched: `/ready`'s after-state mints a *recap* token server-side and binds
+them to that, and a composition test fails the build if any of them is ever bound to the page's own
+readiness token.
 
 The marketing mockup was reconciled in the same change, since slice 12b had shipped
 `RecapPageFallback` on the homepage's evening moment row while this surface was still a stat row and

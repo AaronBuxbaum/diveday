@@ -134,7 +134,7 @@ test("the command palette finds a page by the headline it wears", {
   const box = page.getByRole("combobox", { name: /Search divers/ });
 
   for (const [headline, label, urlPattern] of [
-    ["How's your month", "Reports", /\/reports$/],
+    ["How’s your month", "Reports", /\/reports$/],
     ["What divers said", "Reviews", /\/reviews$/],
     ["Discounts a diver can type", "Promo codes", /\/promos$/],
   ] as const) {

@@ -57,10 +57,19 @@ function regionName(shops: readonly RegionShop[]): string | null {
  * answers **200** with the not-found page in the streamed payload — the status
  * line is gone by the time the body runs. Probed 2026-09-07 against a
  * production build: `/s/<unknown-shop>` and `/s/blue-mantis/courses/<unknown>`
- * both answer 200 the same way, so this route is consistent with every other
- * dynamic page here rather than uniquely wrong. It is still a soft 404 to a
- * crawler, which is a repo-wide question rather than this page's to settle,
- * and no comment here should read as if the status were 404.
+ * answered 200 the same way, so this route was consistent with every other
+ * dynamic page here rather than uniquely wrong.
+ *
+ * **That stopped being true of `/s/**`, and it is still true here.** The public
+ * shop namespace now decides the status above the streaming boundary, in
+ * `src/proxy.ts` (ADR 20260912-the-public-namespace-refuses-at-the-edge), so
+ * its unknown URLs answer a real 404 and this route is no longer consistent
+ * with them. It was left out of that change because it asks a different
+ * question — a region slug is a closed list this repository holds, not a row —
+ * so it is still a soft 404 to a crawler, on a page DiveDay does want indexed.
+ * Issue #1734 carries it, together with `/switching/[competitor]` and
+ * `/demo/[story]`, which are soft for the same reason. Until it lands, no
+ * comment here should read as if the status were 404.
  */
 const regionShops = cache(async (region: string) => {
   if (!isRegionSlug(region)) notFound();
@@ -100,10 +109,16 @@ export async function generateMetadata({
  * day-zero row is a shorter card, not an apologetic one, which is the rule
  * `ShopfrontHero` keeps on the storefront itself.
  *
- * **No departures.** `listRegionShops` is unbounded and
+ * **No departures** — the owner's call of 2026-09-10 (issue #1511), not an
+ * unfinished half of #1436's spec. `listRegionShops` is unbounded and
  * `publicAvailabilityTrips` is three queries per shop, so showing "next out"
  * on every card would fan a busy town out to 3N reads on an anonymous,
  * crawler-visible page. The storefront one tap away answers it properly.
+ * Weighed and declined, so nobody re-derives it: one bounded read
+ * `listRegionDepartures(db, regionSlug, { days: 7, limit })` in
+ * `src/db/regions.ts`, joining `trips` to the `listedShopScope` shops in a
+ * single query, plus the pager and the town-with-departures capture it would
+ * bring with it. Never the per-shop loop over `publicAvailabilityTrips`.
  */
 export default async function RegionPage({ params }: { params: Promise<{ region: string }> }) {
   const { region } = await params;

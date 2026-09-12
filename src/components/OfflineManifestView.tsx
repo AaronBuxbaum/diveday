@@ -38,7 +38,7 @@ import {
   type OfflineManifestTranslator,
   offlineManifestTranslator,
 } from "@/i18n/offline-manifest-messages";
-import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
+import { readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { supportNeedsLines } from "@/i18n/support-needs-labels";
@@ -2043,12 +2043,44 @@ export function OfflineManifestView() {
                           documents as measuring under AA at pill sizes — on
                           the surface read in direct sunlight. The words stay
                           the offline ones ("Ready when saved"), because that
-                          distinction is real: this is a snapshot, not live. */}
+                          distinction is real: this is a snapshot, not live.
+
+                          **Every checkpoint, unlike the live capsule and
+                          unlike the grid below.** The live row's readiness
+                          word is `blockedAtDock` — one exception capsule, and
+                          readiness stops being an exception once the boat is
+                          back. This is a different construct: a two-state
+                          statement on every diver saying what the desk knew
+                          when this copy was taken, which is the per-diver
+                          instance of the freshness banner at the top of the
+                          page. Gating it would have to gate the blocked half
+                          alone — leaving "Ready when saved" as the only
+                          readiness word on the page and silence beside the one
+                          diver it is not true of — and the desk's record has
+                          nowhere else to be read on a boat with no signal. The
+                          row's *alarm* already follows the live rule: its
+                          untouched fill is checkpoint-gated above. */}
                         <Badge tone={readinessStatusTone(ready ? "ready" : "blocked")}>
                           {ready
                             ? t("shared.offlineManifest.single.readyBadge")
                             : t("shared.offlineManifest.single.blockedBadge")}
                         </Badge>
+                        {/* **The desk released this seat** (#1209), with the
+                          same qualifier the badge above wears and for the same
+                          reason: a copy saved at 07:05 cannot know that the
+                          counter put them back on the list at 07:20. Neutral,
+                          because it is the absence of an exception rather than
+                          one, and it refuses nothing — the control below still
+                          boards a body the crew can see, which is the live
+                          manifest's rule on a phone with no signal. Without
+                          it this copy is the one surface where a written-off
+                          name and a diver still walking down the dock are the
+                          same row. */}
+                        {diver.notHere ? (
+                          <Badge tone="neutral">
+                            {t("shared.offlineManifest.single.notHereBadge")}
+                          </Badge>
+                        ) : null}
                         {/* Same resolver the live manifest renders (DOM-H3):
                           one word list, so a diver who has not come back from
                           dive one cannot read "Not boarded" here and "Not back
@@ -2409,17 +2441,34 @@ export function OfflineManifestView() {
 
           The grid is also a scanning surface rather than a jump list, and this
           is the copy read underway, at the rail, looking up from the water for
-          a face rather than down at a name. Its rents-kit and blocked accents
-          carry information no chip does. Keeping it is a considered divergence
+          a face rather than down at a name. Its rents-kit line carries
+          information no chip does. Keeping it is a considered divergence
           from the live page, not a leftover: the *rows* above now read
           identically on both surfaces, which is what a captain working the two
-          minutes apart actually needs. */}
+          minutes apart actually needs.
+
+          The blocked accent is **not** part of that divergence — it follows
+          the live chip's checkpoint rule below. The one thing that does stay
+          ungated is the diver row's own readiness badge, for the reason
+          written above it: that badge is the snapshot's two-state record, not
+          an exception accent on a checkpoint-scoped prompt. */}
         <MissingDiversGrid
           divers={missingDivers.map((diver) => ({
             bookingId: diver.bookingId,
             fullName: diver.fullName,
             rentsKit: diver.rentalFit.state === "rents",
-            blocked: diver.readiness.status === "blocked",
+            // A readiness fact, and only at the dock — the same gate the live
+            // chip this grid stands in for applies (`blocked: diver.blocked &&
+            // isDeparture`, SummaryPanel). Every face here is somebody nobody
+            // has called yet, so after a dive every one of them is somebody who
+            // went in the water: the saved paperwork word is stale by
+            // definition there, and its red competed with the one red on the
+            // page that means a diver has not come back. The live row states
+            // the same rule in the same words (`blockedAtDock`, DiverRollCall),
+            // and this page's own head-count note says it of itself
+            // (`isDeparture`, above) — the grid was the one place that said it
+            // and then rendered the word anyway.
+            blocked: isDeparture && diver.readiness.status === "blocked",
           }))}
           tone={isDeparture ? "neutral" : "urgent"}
           copy={{
@@ -2432,7 +2481,14 @@ export function OfflineManifestView() {
             tapHint: t("manifest.missingDiversTapHint"),
             rentsKitLabel: t("manifest.rentsKitLabel"),
             ownKitLabel: t("manifest.ownKitLabel"),
-            blockedLabel: readinessStatusText(t, "blocked"),
+            // The offline exception, all the way down: the diver's own row
+            // reads "Blocked when saved", so the face in this grid has to say
+            // the same thing. The bare readiness word here made the glossary's
+            // "every readiness word on this page carries the qualifier"
+            // sentence false, and put an unqualified badge one scroll from a
+            // qualified one on a page whose whole point is that it may be
+            // stale (#1360).
+            blockedLabel: t("shared.offlineManifest.single.blockedBadge"),
           }}
         />
 

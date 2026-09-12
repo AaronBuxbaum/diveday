@@ -28,7 +28,7 @@ import { latestTripStage } from "@/db/trip-stages";
 import { listTripDives } from "@/db/trips";
 import { catchUpSentences } from "@/i18n/desk-event-labels";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
-import { rollCallCheckpointText } from "@/i18n/manifest-labels";
+import { rollCallCheckpointShortText, rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { fieldGuideCards, marineLifeCatalogCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
@@ -819,6 +819,13 @@ export default async function TripManifestPage({
         items={checkpoints.map((value) => ({
           key: value,
           label: rollCallCheckpointText(t, value),
+          // Below `sm` the full names overran a 390px track and the row read as
+          // two — the one segmented control in the app that did (issue #1320).
+          // This is the call site that earns the short form, and what makes it
+          // a handle rather than a rename is `DiverRollCall`'s heading
+          // underneath: the condition is spelled out over
+          // `rollCallCheckpointShortText`.
+          shortLabel: rollCallCheckpointShortText(t, value),
           href: `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${value}`,
         }))}
         currentKey={checkpoint}

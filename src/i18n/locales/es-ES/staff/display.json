@@ -22,7 +22,8 @@
     "copied": "Copiado",
     "copyFailed": "No se pudo copiar, selecciónalo a mano",
     "shared": "Cualquiera con este enlace ve las salidas de hoy sin iniciar sesión. Trátalo como una llave del centro.",
-    "sharedCheckIn": "Cualquiera con este enlace puede marcar la llegada de un buceador sin iniciar sesión. Trátalo como una llave del centro."
+    "sharedCheckIn": "Cualquiera con este enlace puede marcar la llegada de un buceador sin iniciar sesión. Trátalo como una llave del centro.",
+    "expiresCheckIn": "Deja de funcionar en {months, plural, one {# mes} other {# meses}}. Renuévalo en Pantallas antes de esa fecha."
   },
   "list": {
     "heading": "Pantallas",
@@ -32,6 +33,11 @@
     "neverShown": "Todavía no se ha abierto",
     "namesOn": "Tripulación con nombre",
     "namesOff": "Nadie con nombre",
+    "expires": "Caduca el {when}",
+    "expired": "Caducó el {when}",
+    "renew": "Renovar",
+    "renewNamed": "Renovar {label}",
+    "renewing": "Renovando…",
     "revoke": "Revocar",
     "revokeNamed": "Revocar {label}",
     "revoking": "Revocando…",
@@ -42,7 +48,8 @@
   "notice": {
     "denied": "Solo un propietario o gerente puede cambiar las pantallas del lobby.",
     "invalidLabel": "Ponle a la pantalla un nombre de hasta {max, plural, one {# carácter} other {# caracteres}}.",
-    "revoked": "Enlace revocado."
+    "revoked": "Enlace revocado.",
+    "renewed": "Enlace renovado."
   },
   "world": {
     "heading": "Lo que puede ver el mundo",

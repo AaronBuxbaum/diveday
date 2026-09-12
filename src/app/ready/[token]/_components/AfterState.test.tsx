@@ -102,10 +102,11 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
 }
 
 /**
- * **"Fly-safe from"** (issue #1425). One sentence, two spellings — the clock
- * started at the last recorded exit, or at the day's scheduled end — and
- * nothing at all when the record could not say. It informs and gates nothing,
- * so it is a paragraph rather than a status panel.
+ * **"Earliest flight"** (issue #1425; lead-in reworded by #1433). One sentence,
+ * two spellings — the clock started at the last recorded exit, or at the day's
+ * scheduled end — and nothing at all when the record could not say. It informs
+ * and gates nothing, so it is a paragraph rather than a status panel. These
+ * assertions pin message *keys*, not English, so the reword left them alone.
  */
 describe("the fly-safe line", () => {
   it("renders nothing when the record could not say", () => {
@@ -154,25 +155,36 @@ describe("the fly-safe line", () => {
    * one of them dived here yesterday, and a recap of *today* shows the cause
    * nowhere. Standing on the dock comparing phones, the difference has to
    * explain itself or both of them discount it (issue #1439).
+   *
+   * The planned-dives route is the same problem pointed the other way, and the
+   * card cannot answer it either: **this page carries no dive count at all**
+   * — `DiveRecord` dropped "{n} dives logged" on 2026-08-28 because it counted
+   * the trip row rather than the diver — so someone who made one dive reads
+   * the two-dive figure with nothing here to account for it. That route always
+   * anchors on the return, because it exists only when the record is short of
+   * its plan.
    */
-  it("says why, and only when the reason is a day this recap does not show", () => {
-    for (const [reason, key] of [
-      ["earlier_day", "recap.flySafeAfterDiveEarlierDay"],
-      ["dives_recorded", "recap.flySafeAfterDive"],
-      ["dives_planned", "recap.flySafeAfterDive"],
-      ["one_dive", "recap.flySafeAfterDive"],
+  it("says why when the reason is neither on this page nor in the diver's own day", () => {
+    for (const [anchor, reason, key] of [
+      ["last_dive", "earlier_day", "recap.flySafeAfterDiveEarlierDay"],
+      ["scheduled_return", "earlier_day", "recap.flySafeAfterReturnEarlierDay"],
+      ["scheduled_return", "dives_planned", "recap.flySafeAfterReturnDivesPlanned"],
+      // The diver was in the water for these, and was told when the day was
+      // due to end: nothing to explain.
+      ["last_dive", "dives_recorded", "recap.flySafeAfterDive"],
+      ["scheduled_return", "dives_recorded", "recap.flySafeAfterReturn"],
+      ["last_dive", "one_dive", "recap.flySafeAfterDive"],
     ] as const) {
       cleanup();
       render(
         <AfterState
-          {...props({
-            flySafe: { when: "Sunday 10:20 AM", hours: 24, anchor: "last_dive", reason },
-          })}
+          {...props({ flySafe: { when: "Sunday 10:20 AM", hours: 24, anchor, reason } })}
         />,
       );
-      expect(screen.getByTestId(AFTER_STATE_TEST_IDS.flySafe).textContent, reason).toBe(
-        `${key}(Sunday 10:20 AM,24,Blue Mantis Divers)`,
-      );
+      expect(
+        screen.getByTestId(AFTER_STATE_TEST_IDS.flySafe).textContent,
+        `${anchor} ${reason}`,
+      ).toBe(`${key}(Sunday 10:20 AM,24,Blue Mantis Divers)`);
     }
   });
 });

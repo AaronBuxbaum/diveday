@@ -68,6 +68,20 @@ described here as $22–24 until 2026-09-10.
 > PNGs per run, every run), the daily `pg_dump` objects, the backup bucket, and media. Requests, not
 > storage, are the likely shape of it. Until someone runs Cost Explorer grouped by usage type, treat
 > this line as unexplained rather than as the cost of doing business. Tracked as issue #1651.
+>
+> **The visual bucket has been tightened, and it will not move this line.** On 2026-09-10 the
+> bucket's lifecycle expiry went from 180 days to 60 and the pruner from nightly to six-hourly
+> (ADR 20260826-prune-visual-bucket's second amendment). Both are storage levers, and the arithmetic
+> says storage is not where the money is: the bucket's steady state is roughly ten main baselines
+> plus a day and a half of branch runs — about 145 snapshots × 854 PNGs × ~250 KB, or ~31 GB, which
+> is ~$0.71/month of `TimedStorage-ByteHrs`. What matches the bill is requests, exactly as the daily
+> profile above suggests: ~900 Tier-1 PUTs per publishing run at $0.005/1,000 is $0.0045 a run, and
+> at this repository's rate of ~26 merges plus ~65 branch commits a day that is $0.41/day, or
+> ~$12.3/month — which lands on both the measured $0.38/day and the August total. Neither a
+> lifecycle rule nor a pruner touches a PUT. The only lever that reaches the $12 is whether every CI
+> run needs to upload every capture, which is filed separately and is still the thing to do. What
+> the 60-day expiry *does* buy is a lower ceiling on a silent pruner outage: at ~19 GB a day of
+> accumulation, ~$27/month instead of ~$80.
 
 What moving would and would not do:
 
@@ -89,8 +103,7 @@ What moving would and would not do:
   path is not being used.
 - **AWS trimming.** Real but small, and each remaining item is filed rather than done here: three
   implicit Lambda log groups never expire; two IAM users exist for an MCP consumer that no longer
-  does; the visual bucket's 30-day lifecycle rule can delete a main baseline the pruner is
-  preserving; RUM samples 100% of sessions. Together they are under $10 a month at pilot scale, and
+  does; RUM samples 100% of sessions. Together they are under $10 a month at pilot scale, and
   all of them are one-line changes in the stack. The largest of them is **done**: the
   `MutationDuration` metric filter was dimensioned by action label, which would have billed $0.30
   per distinct label — about $9/month across thirty-odd server actions — and is now one aggregate

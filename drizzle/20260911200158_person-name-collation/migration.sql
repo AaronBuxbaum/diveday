@@ -1,0 +1,22 @@
+-- Give `people.full_name` its own ICU collation, so every reader inherits the
+-- order a person expects without naming a collation in the query. PGlite's
+-- database default is `C` (byte order) and a server's is whatever initdb was
+-- handed, so until this line `Ángel` and `Ñuria` sorted after `Zoe` in the test
+-- suite and somewhere else entirely in production — and 21 `orderBy(asc(
+-- people.fullName))` call sites across `src/db` feed `offsetPage`, where a
+-- wrong order is a wrong page one. drizzle-orm's pg-core cannot express a
+-- collation, so this statement is the source of truth; `drizzle-kit` only
+-- *reports* a collation delta and will not regenerate it away.
+--
+-- Two things the collation deliberately does *not* move. `und-x-icu` as
+-- `initdb` creates it is deterministic (`pg_collation.collisdeterministic`), so
+-- `=` and any unique index over the column stay byte equality — nothing that
+-- scopes a tenant or enforces uniqueness shifts under this. What does move is
+-- case folding: `lower()` and `ILIKE` fold with the column's collation, and ICU
+-- folds the whole Unicode range where an explicit `C` folds ASCII only, so on a
+-- `C`-collation server a diver search for `ángel` starts matching `ÁNGEL`. That
+-- is case, not accent — `'Ángel' ILIKE '%angel%'` is still false — and PGlite's
+-- own default already folded the full range (its `datctype` is `C.UTF-8`), so
+-- the suite sees no change. `src/db/name-collation.test.ts` pins both halves.
+-- diveday:allow-destructive alter-column-type people.full_name: text -> text is binary-coercible, so no row moves and the table keeps its files — but a collation change *always* rebuilds the indexes on that column, and `people_full_name_trgm_idx` (a GIN trgm index) is rebuilt inside the ACCESS EXCLUSIVE lock this statement already holds, so for that whole window the live release can neither read nor write `people`; `requireStaffSession` selects from `people` on every `/shop/**` request, so a shop would see every staff page and every booking hang, not a name list sorting oddly. It is safe to land only because `people` is empty in production today (pre-pilot, H-49): a GIN build over no rows is sub-millisecond, and what is left is lock *acquisition*, which queues behind any transaction already touching `people` and blocks every request arriving behind it. So land it before the first pilot shop. After that this stops being a build-step migration — the runbook's "no migration testing against realistic data volumes" is precisely this gap, and the same statement against a live `people` wants a `lock_timeout` and a quiet window, not `pnpm db:migrate` inside a Vercel build.
+ALTER TABLE "people" ALTER COLUMN "full_name" SET DATA TYPE text COLLATE "und-x-icu";

@@ -78,11 +78,16 @@ stay in `AGENTS.md`.
   paged staff list wears it (ADR 20260803-one-pagination-model); keyset cursors (`src/db/cursor.ts`)
   are the one earned exception. A list's **count must share the row query's exact scope** (joins,
   `where`, `having`, `now`), or the pager promises pages that render nothing.
-- **Link previews and icons** (`ImageResponse`): every `opengraph-image.tsx`, `icon.tsx` and
-  `apple-icon.tsx` calls `allowSvgRasterization()` (`src/lib/og-rasterizer.ts`) first — `next/image`
-  disables libvips' SVG loader process-wide on first use and satori's output is SVG, so without it
-  the card severs the socket mid-stream (ADR 20260804-og-svg-rasterizer). **Every page that exports
-  an `openGraph` block spreads `openGraphSite`** (`src/lib/site-metadata.ts`): Next merges
+- **Link previews and icons** (`ImageResponse`): every surface that rasterizes at request time — the
+  four `opengraph-image.tsx` cards, `pwa-icon-maskable/route.tsx`, `/s/[shopSlug]/year-card` and
+  `/shop/[shopSlug]/reports/card` — calls `allowSvgRasterization()` (`src/lib/og-rasterizer.ts`)
+  first, and so does any new one: `next/image` disables libvips' SVG loader process-wide on first
+  use and satori's output is SVG, so without it the card severs the socket mid-stream (ADR
+  20260804-og-svg-rasterizer). **A metadata module that imports `next/og` reaches every page
+  entry**: Next attaches one to every one of them, which is how the favicon put 3.07 MiB of renderer
+  into every closure in the app. The favicon and touch icon are committed PNGs now, re-rendered by
+  `pnpm brand:icons` (issue #1361); the root card still does it (issue #1709). **Every page that
+  exports an `openGraph` block spreads `openGraphSite`** (`src/lib/site-metadata.ts`): Next merges
   `metadata` shallowly, so a page-level block *replaces* the root layout's. `sharedLinkCard`
   (`src/lib/marketing.ts`) is this plus the card image. Structured data (`JsonLd`) never renders in
   `?embed=1` mode or on a bearer-token page.

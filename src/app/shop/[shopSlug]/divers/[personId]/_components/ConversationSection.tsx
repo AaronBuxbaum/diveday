@@ -34,7 +34,6 @@ export function ConversationSection({
   locale,
   timezone,
   now,
-  canAnswer,
   removed,
   t,
   status,
@@ -46,8 +45,6 @@ export function ConversationSection({
   locale: string;
   timezone: string;
   now: Date;
-  /** `canAnswerShopInbox`, live-checked by the page. The action re-checks. */
-  canAnswer: boolean;
   /**
    * A removed diver's record stays readable, and their thread with it —
    * deleting is soft, and the history is the point. But `sendStaffReply`
@@ -133,59 +130,51 @@ export function ConversationSection({
             </div>
           );
         })}
-        {canAnswer ? (
-          <div className="px-5 py-4 sm:px-6">
-            {replyTo ? (
-              <form
-                action={replyToDiverAction.bind(null, shopSlug, personId)}
-                className="grid gap-3"
+        <div className="px-5 py-4 sm:px-6">
+          {replyTo ? (
+            <form action={replyToDiverAction.bind(null, shopSlug, personId)} className="grid gap-3">
+              <input type="hidden" name="messageId" value={replyTo.message.id} />
+              <Field
+                label={t(
+                  replyTo.message.channel === "whatsapp"
+                    ? "inbox.reply.whatsapp"
+                    : "inbox.reply.email",
+                  {
+                    address: replyDestination(replyTo.message.channel, replyTo.message.fromAddress),
+                  },
+                )}
               >
-                <input type="hidden" name="messageId" value={replyTo.message.id} />
-                <Field
-                  label={t(
-                    replyTo.message.channel === "whatsapp"
-                      ? "inbox.reply.whatsapp"
-                      : "inbox.reply.email",
-                    {
-                      address: replyDestination(
-                        replyTo.message.channel,
-                        replyTo.message.fromAddress,
-                      ),
-                    },
-                  )}
-                >
-                  <textarea
-                    name="body"
-                    required
-                    rows={4}
-                    maxLength={REPLY_BODY_MAX_LENGTH}
-                    placeholder={t("inbox.reply.placeholder")}
-                    className={controlClass}
-                  />
-                </Field>
-                <SubmitButton
-                  pendingLabel={t("inbox.reply.sending")}
-                  className={buttonClass({
-                    variant: "secondary",
-                    size: "sm",
-                    className: "justify-self-start",
-                  })}
-                >
-                  {t("inbox.reply.send")}
-                </SubmitButton>
-              </form>
-            ) : removed ? (
-              // Before the WhatsApp arm on purpose: a removed diver on a stale
-              // thread gets the removal sentence, which is the truer of the two.
-              <p className="text-sm text-muted">{t("inbox.reply.diverRemoved")}</p>
-            ) : closedWhatsApp ? (
-              <p className="text-sm text-muted">{t("inbox.reply.windowClosed")}</p>
-            ) : null}
-            <FieldActions>
-              <DiverFormStatus status={status} />
-            </FieldActions>
-          </div>
-        ) : null}
+                <textarea
+                  name="body"
+                  required
+                  rows={4}
+                  maxLength={REPLY_BODY_MAX_LENGTH}
+                  placeholder={t("inbox.reply.placeholder")}
+                  className={controlClass}
+                />
+              </Field>
+              <SubmitButton
+                pendingLabel={t("inbox.reply.sending")}
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                  className: "justify-self-start",
+                })}
+              >
+                {t("inbox.reply.send")}
+              </SubmitButton>
+            </form>
+          ) : removed ? (
+            // Before the WhatsApp arm on purpose: a removed diver on a stale
+            // thread gets the removal sentence, which is the truer of the two.
+            <p className="text-sm text-muted">{t("inbox.reply.diverRemoved")}</p>
+          ) : closedWhatsApp ? (
+            <p className="text-sm text-muted">{t("inbox.reply.windowClosed")}</p>
+          ) : null}
+          <FieldActions>
+            <DiverFormStatus status={status} />
+          </FieldActions>
+        </div>
       </InsetGroup>
     </DiverFileGroupDisclosure>
   );

@@ -36,6 +36,7 @@ import { canImportShopData, type Role } from "@/lib/authz";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { type PreparedImport, type PreparedRow, parseImportedMoney } from "@/lib/import";
+import { phoneForStorage } from "@/lib/phone";
 import { storeImportReceiptDocument, storeImportWaiverDocument } from "@/lib/storage";
 import { ingestImageUrl } from "@/lib/storage/ingest-url";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
@@ -254,7 +255,7 @@ export async function commitContactImport(
   if (preparedRows.length === 0) return summary;
 
   const [shop] = await db
-    .select({ currency: shops.currency })
+    .select({ currency: shops.currency, country: shops.addressCountry })
     .from(shops)
     .where(eq(shops.id, shopId))
     .limit(1);
@@ -384,6 +385,14 @@ export async function commitContactImport(
         continue;
       }
 
+      // Normalised before either branch writes it. A CSV is the one door where
+      // the numbers are somebody else's export — a bare national column out of
+      // the incumbent system is the ordinary case, not the odd one — and a bare
+      // number in `people.phone` means whatever the shop's address says today
+      // (`storedPhone`, src/db/person-phone.ts). The shop's country is read
+      // once for the whole file, above, rather than per row.
+      const phone = phoneForStorage(row.phone, shop?.country);
+
       // Non-destructive update: identity name refreshes, contact fields only
       // fill in where the import actually carries a value.
       const applyUpdate = (id: string) =>
@@ -391,7 +400,7 @@ export async function commitContactImport(
           .update(people)
           .set({
             fullName: row.fullName,
-            ...(row.phone ? { phone: row.phone } : {}),
+            ...(phone ? { phone } : {}),
             ...(row.dateOfBirth ? { dateOfBirth: row.dateOfBirth } : {}),
             ...(row.emergencyContactName ? { emergencyContactName: row.emergencyContactName } : {}),
             ...(row.emergencyContactPhone
@@ -422,7 +431,7 @@ export async function commitContactImport(
                 shopId,
                 fullName: row.fullName,
                 email: row.email,
-                phone: row.phone,
+                phone,
                 dateOfBirth: row.dateOfBirth,
                 emergencyContactName: row.emergencyContactName,
                 emergencyContactPhone: row.emergencyContactPhone,

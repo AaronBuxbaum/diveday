@@ -22,7 +22,7 @@ afterEach(cleanup);
  */
 
 const LABELS = { live: "Live", scheduled: "Scheduled", ended: "Ended" } as const;
-const COPY = { copyLabel: "Copy code", copiedLabel: "Copied", failedLabel: "Couldn't copy" };
+const COPY = { copyLabel: "Copy code", copiedLabel: "Copied", failedLabel: "Couldn’t copy" };
 
 const ROWS: PromoCodeRow[] = [
   {

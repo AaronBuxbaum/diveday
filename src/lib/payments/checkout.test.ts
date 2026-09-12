@@ -49,6 +49,8 @@ describe("stripe checkout provider", () => {
       checkoutUrl: "https://checkout.stripe.com/c/pay/cs_1",
       amountTotalCents: 36_000,
       taxAmountCents: null,
+      // Stripe sent no `customer` on a session it has only just opened.
+      stripeCustomerId: null,
       expiresAt: new Date(1_790_000_000 * 1000),
     });
 
@@ -202,11 +204,47 @@ describe("stripe checkout provider", () => {
         checkoutUrl: null,
         amountTotalCents: 36_000,
         taxAmountCents: null,
+        stripeCustomerId: null,
         expiresAt: null,
       },
     });
     expect(fetchImpl.mock.calls[0][0]).toBe("https://api.stripe.com/v1/checkout/sessions/cs_1");
     expect(fetchImpl.mock.calls[0][1].headers["Stripe-Account"]).toBe("acct_123");
+  });
+
+  it("reads the Customer id whether Stripe sends it bare or expanded", async () => {
+    // `paymentIntentIdOf`'s twin: a `?expand[]=customer` read returns the whole
+    // Customer object where an ordinary read returns the id, and erasure needs
+    // the id either way (issue #1621).
+    const bare = providerWith(
+      { STRIPE_SECRET_KEY: "sk_test" },
+      vi.fn().mockResolvedValue(
+        ok({
+          id: "cs_1",
+          status: "complete",
+          payment_status: "paid",
+          amount_total: 36_000,
+          customer: "cus_bare",
+        }),
+      ),
+    );
+    const bareResult = await bare.retrieveCheckoutSession("acct_123", "cs_1");
+    expect(bareResult).toMatchObject({ session: { stripeCustomerId: "cus_bare" } });
+
+    const expanded = providerWith(
+      { STRIPE_SECRET_KEY: "sk_test" },
+      vi.fn().mockResolvedValue(
+        ok({
+          id: "cs_1",
+          status: "complete",
+          payment_status: "paid",
+          amount_total: 36_000,
+          customer: { id: "cus_expanded", object: "customer" },
+        }),
+      ),
+    );
+    const expandedResult = await expanded.retrieveCheckoutSession("acct_123", "cs_1");
+    expect(expandedResult).toMatchObject({ session: { stripeCustomerId: "cus_expanded" } });
   });
 
   it("reports a missing amount_total as no settled figure, never as zero money", async () => {

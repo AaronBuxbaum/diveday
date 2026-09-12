@@ -291,7 +291,7 @@ test.describe("no connected payment account", () => {
     // Not a URL assertion: FlashParams strips `?notice=payment-not-connected`
     // on mount, so the rendered banner is what proves the code was handled —
     // an unhandled code renders nothing and fails here.
-    await expect(page.getByText(/Payments aren't connected yet/i).first()).toBeVisible();
+    await expect(page.getByText(/Payments aren’t connected yet/i).first()).toBeVisible();
   });
 
   test("reaching it with a diver in hand lands back on that diver with a reason", {
@@ -311,7 +311,7 @@ test.describe("no connected payment account", () => {
     await page.goto(`/shop/blue-mantis/orders/new?personId=${personId}`);
     await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();
     // This is the code that rendered *nothing* before — the whole bug.
-    await expect(page.getByText(/Payments aren't connected yet/i).first()).toBeVisible();
+    await expect(page.getByText(/Payments aren’t connected yet/i).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Connect payments" }).first()).toBeVisible();
   });
 });

@@ -19,7 +19,6 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import {
-  canAnswerShopInbox,
   canManageShopSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
@@ -245,7 +244,6 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
             reports: canViewShopReports(session.user.roles),
             team: canManageStaffAccounts(session.user.roles),
             settings: canManageShopSettings(session.user.roles),
-            inbox: canAnswerShopInbox(session.user.roles),
           }}
           navCounts={{ blockers: navBlockersCount }}
           locale={locale}

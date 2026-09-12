@@ -79,11 +79,15 @@ test("a signed-out visitor browses the public course catalog, with the editor st
 
   // Certification paths are gone entirely (ADR
   // 20260805-remove-certification-paths) — no link out to them from the
-  // catalog, and nothing left at the URL they used to hold. Asserted on the
-  // rendered not-found boundary rather than the raw status: `paths` now falls
-  // through to the course-slug route, whose cold first byte can still be 200
-  // under cacheComponents (e2e/marketing.spec.ts documents that limitation).
+  // catalog, and nothing left at the URL they used to hold. `paths` falls
+  // through to the course-slug route, where no such course exists, so the
+  // status is the proxy's refusal above the streaming boundary (ADR
+  // 20260912-the-public-namespace-refuses-at-the-edge). Asserted as a status
+  // as well as a heading: while this only read the heading, the retired URL
+  // answered 200 and stayed indexable, which is the whole of what "gone
+  // entirely" was supposed to mean.
   await expect(page.getByRole("link", { name: /certification paths/i })).toHaveCount(0);
+  expect((await page.request.get("/s/blue-mantis/courses/paths")).status()).toBe(404);
   await page.goto("/s/blue-mantis/courses/paths");
   // Inside a shop's namespace the refusal is the shop's own, framed by its
   // chrome and pointing back at its schedule (issue #765).
@@ -601,6 +605,15 @@ test.describe("staff", () => {
 
     // A clean form says nothing at all — the note is a consequence, not a label.
     await expect(page.getByText(/^Unsaved changes/)).toHaveCount(0);
+
+    // Wait for hydration before typing. The dirty flag is the guard's
+    // `onInputCapture`, so a keystroke landing before React attaches is a native
+    // event nobody is listening to: the box holds the text and the bar never says
+    // so, and nothing later in the test types again to recover it. The guard
+    // renders `data-hydrated` for exactly this and the visual suite already waits
+    // on the same signal; only this spec typed blind. Failed that way twice on CI
+    // on 2026-09-11, on two different heads, passing on a re-run in between.
+    await expect(page.locator("[data-hydrated]")).toBeVisible();
 
     await page.getByLabel("Subhead").fill("Three days from pool to reef");
     await expect(page.getByText("Unsaved changes in The pitch")).toBeVisible();

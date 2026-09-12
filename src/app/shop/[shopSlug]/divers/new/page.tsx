@@ -19,7 +19,8 @@ import { createDiver, findSimilarDivers } from "@/db/divers";
 import { discardFormDraft, readFormDraft } from "@/db/form-drafts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { formatTime } from "@/lib/format";
+import { formatShortDate, formatTime } from "@/lib/format";
+import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   blankableDiverEmailSchema,
@@ -28,7 +29,12 @@ import {
   diverSearchPrefill,
 } from "@/lib/person-fields";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import {
+  type NoticeTone,
+  noticeFromParam,
+  safeShopReturnPath,
+  shopPath,
+} from "@/lib/staff-notices";
 
 export const instant = true;
 
@@ -106,6 +112,9 @@ export default async function NewDiverPage({
   const t = staffTranslator(locale);
 
   const potentialMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
+  // A candidate with no dive day says so only when a sibling has one; the rule
+  // and the bias it corrects are in `noDiveDayNeedsSaying`.
+  const sayNoDiveDay = noDiveDayNeedsSaying(potentialMatches);
 
   const rawQuery = q?.trim() ?? "";
   const prefill = diverSearchPrefill(rawQuery);
@@ -119,7 +128,11 @@ export default async function NewDiverPage({
       : null;
   const isWaitlist = waitlistParam === "true";
   const tripId = tripIdParam?.trim() || null;
-  const returnTo = returnToParam?.trim() || null;
+  // `?returnTo=` is whatever was in the address bar, and it becomes the back
+  // link's href here and the redirect target in `createDiverFormAction` below.
+  // Only a path inside this staffer's own shop survives; anything else falls
+  // back to the roster, which is where the page lands with no `returnTo` at all.
+  const returnTo = safeShopReturnPath(shop.slug, returnToParam);
 
   const backLink = returnTo
     ? { href: returnTo, label: t("divers.page.backToRoster") }
@@ -162,7 +175,15 @@ export default async function NewDiverPage({
     const activeSurface = formData.get("surface") as SeatSurfaceId | null;
     const activeTripId = formData.get("tripId") ? String(formData.get("tripId")) : null;
     const activeWaitlist = formData.get("waitlist") === "true";
-    const activeReturnTo = formData.get("returnTo") ? String(formData.get("returnTo")) : null;
+    // Re-validated against the *session's* shop, not the page's: the hidden
+    // input is as client-supplied as the query param was, and this value is
+    // handed to `revalidateAndRedirect` as both the revalidate key and the
+    // redirect target.
+    const returnToField = formData.get("returnTo");
+    const activeReturnTo = safeShopReturnPath(
+      staff.user.shopSlug,
+      typeof returnToField === "string" ? returnToField : null,
+    );
     const force = formData.get("force") === "true";
 
     const buildNewDiverUrl = (extraParams: Record<string, string>) => {
@@ -261,7 +282,9 @@ export default async function NewDiverPage({
       {potentialMatches.length > 0 ? (
         <ShopNotice tone="warning" className="mt-6">
           <div className="flex flex-col gap-2 text-left">
-            <h3 className="font-semibold text-base">{t("divers.page.confirmMatchesTitle")}</h3>
+            <h3 className="font-semibold text-base">
+              {t("divers.page.confirmMatchesTitle", { name: confirmName ?? "" })}
+            </h3>
             <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
               {potentialMatches.map((match) => (
                 <li key={match.id}>
@@ -276,9 +299,30 @@ export default async function NewDiverPage({
                     >
                       <input type="hidden" name="tripId" value={tripId} />
                       <input type="hidden" name="personId" value={match.id} />
+                      {/* The *matched* diver's details, not the spelling the
+                          staffer just typed: a tap here says "this is the same
+                          person", and `addToWaitlistAction` ignores `personId`
+                          — `joinTripWaitlist` resolves the person from the name
+                          and email it is handed, so the typed spelling would
+                          spawn the second person row this prompt exists to
+                          prevent. The seating arm reaches the same record by
+                          id. */}
                       <input type="hidden" name="fullName" value={match.fullName} />
                       <input type="hidden" name="email" value={match.email ?? ""} />
                       <input type="hidden" name="phone" value={match.phone ?? ""} />
+                      {/* Only on the seating arm: a tap here came off a name
+                          match, so the booking is told the name it matched on —
+                          the prompt fires on an exact spelling too, and only the
+                          comparison says whether the seat is
+                          identity-unconfirmed (issue #1556). The wait-list arm
+                          writes an entry, not a seat, and nobody boards from
+                          one. */}
+                      {isWaitlist ? null : (
+                        <>
+                          <input type="hidden" name="fromNameMatch" value="true" />
+                          <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
+                        </>
+                      )}
                       <button type="submit" className="underline font-medium text-left">
                         {match.fullName}
                       </button>
@@ -292,8 +336,19 @@ export default async function NewDiverPage({
                     </Link>
                   )}
                   {match.email || match.phone ? (
-                    <span className="text-muted text-sm ml-1">
+                    <span className="text-muted text-sm ms-1">
                       ({[match.email, match.phone].filter(Boolean).join(", ")})
+                    </span>
+                  ) : null}
+                  {match.lastDiveDayAt ? (
+                    <span className="text-muted text-sm ms-1">
+                      {t("divers.page.confirmMatchesLastDive", {
+                        date: formatShortDate(match.lastDiveDayAt, locale, shop.timezone),
+                      })}
+                    </span>
+                  ) : sayNoDiveDay ? (
+                    <span className="text-muted text-sm ms-1">
+                      {t("divers.page.confirmMatchesNoDiveDay")}
                     </span>
                   ) : null}
                 </li>
@@ -306,7 +361,7 @@ export default async function NewDiverPage({
               <input type="hidden" name="surface" value={surfaceParam ?? ""} />
               <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
               <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
-              <input type="hidden" name="returnTo" value={returnToParam ?? ""} />
+              <input type="hidden" name="returnTo" value={returnTo ?? ""} />
               <input type="hidden" name="request" value={requestParam ?? ""} />
               <input type="hidden" name="force" value="true" />
               <SubmitButton
@@ -347,7 +402,7 @@ export default async function NewDiverPage({
           <input type="hidden" name="surface" value={surfaceParam ?? ""} />
           <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
           <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
-          <input type="hidden" name="returnTo" value={returnToParam ?? ""} />
+          <input type="hidden" name="returnTo" value={returnTo ?? ""} />
           <input type="hidden" name="request" value={requestParam ?? ""} />
           <FieldActions className="mt-6">
             <SubmitButton pendingLabel={t("divers.page.adding")} className={buttonClass()}>

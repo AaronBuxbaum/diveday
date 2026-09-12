@@ -2,6 +2,7 @@ import { type CalendarDate, calendarDateWeekday, isValidCalendarDate } from "./c
 import { formatMoneyScanned, formatTime, weekdayNames } from "./format";
 import { cachedFormatter } from "./intl-cache";
 import { currencyFractionDigits, majorToMinor, maxPriceMajor } from "./money";
+import { CALLING_CODES } from "./phone";
 
 /**
  * "Type it any way": what a field makes of what a person would say out loud.
@@ -198,51 +199,6 @@ export function formatTypedDate(date: CalendarDate, locale = "en-US"): string {
 // ---------------------------------------------------------------------------
 // Phone
 
-/** Calling codes for the countries a shop can be in (`shops.address_country`). */
-const CALLING_CODES: Record<string, string> = {
-  US: "1",
-  CA: "1",
-  MX: "52",
-  GB: "44",
-  AU: "61",
-  NZ: "64",
-  ES: "34",
-  PT: "351",
-  FR: "33",
-  IT: "39",
-  DE: "49",
-  NL: "31",
-  BE: "32",
-  IE: "353",
-  TH: "66",
-  ID: "62",
-  PH: "63",
-  MY: "60",
-  EG: "20",
-  ZA: "27",
-  CR: "506",
-  HN: "504",
-  BZ: "501",
-  DO: "1",
-  BS: "1",
-  JM: "1",
-  KY: "1",
-  TC: "1",
-  VG: "1",
-  BB: "1",
-  TT: "1",
-  MV: "960",
-  FJ: "679",
-  PF: "689",
-  AE: "971",
-  BR: "55",
-  CO: "57",
-  EC: "593",
-  CW: "599",
-  AW: "297",
-  BQ: "599",
-};
-
 function groupNorthAmerican(national: string): string {
   return `${national.slice(0, 3)} ${national.slice(3, 6)} ${national.slice(6)}`;
 }
@@ -262,6 +218,10 @@ function groupInThrees(national: string): string {
  * Ten digits in a Florida shop is a US number; a leading + is taken as
  * written; spaces, dots, dashes and parentheses are ignored. Fewer than seven
  * digits is not a phone number and is left as typed.
+ *
+ * This is the *grouped* reading, for a person to check with their eyes. The
+ * same rules without the spaces, for the value the row stores, are `toE164`
+ * in `src/lib/phone.ts`, which shares this module's `CALLING_CODES`.
  */
 export function readTypedPhone(
   raw: string,
@@ -293,6 +253,30 @@ export function readTypedPhone(
   }
   const national = digits.startsWith("0") ? digits.slice(1) : digits;
   return reading(`+${home} ${groupInThrees(national)}`);
+}
+
+/**
+ * The stored number, grouped for a person to read off a screen.
+ *
+ * Since #1547 `people.phone` holds E.164, so the column is one unbroken run of
+ * digits — right, and no longer shaped for the staffer who is reading it aloud
+ * down a phone line while the diver stands there. The grouping already exists
+ * one function up, so this is `readTypedPhone` again rather than a second set
+ * of rules that can drift from the first (#1712).
+ *
+ * A value it cannot read is returned exactly as stored. A row can still hold
+ * text a writer could not resolve — an extension, a note, a number typed for a
+ * shop with no country on file — and mangling that would be worse than leaving
+ * it alone. The `tel:` href stays the stored value either way: `telHref` keeps
+ * only digits and a leading plus, so a grouped string and an E.164 one produce
+ * the same link.
+ */
+export function displayStoredPhone(
+  stored: string | null | undefined,
+  country: string | null | undefined,
+): string {
+  if (!stored) return "";
+  return readTypedPhone(stored, country)?.label ?? stored;
 }
 
 function reading(value: string): TypedReading {

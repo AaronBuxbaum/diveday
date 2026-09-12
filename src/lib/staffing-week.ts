@@ -1,4 +1,5 @@
 import { type CalendarDate, calendarDateInTimezone } from "./calendar-date";
+import type { CourseCrewGap } from "./course-ratios";
 import {
   type AvailabilityBlock,
   blockCoversDay,
@@ -58,6 +59,14 @@ import { weekDates } from "./week-board";
 export type StaffGapCode =
   | "no_instructor"
   | "over_ratio"
+  // An **intro/DSD** session past its ratio, kept apart from `over_ratio`
+  // because the two are different phone calls (issue #1339). The entry-level
+  // cap is instructor-plus-assistant, so "Over student ratio" correctly
+  // invites rostering a divemaster; the intro cap is instructor-to-student
+  // alone and a divemaster does not move it by one seat. One word for both
+  // sent a divemaster to press "Ask for this one" on the one gap their being
+  // aboard cannot close.
+  | "over_intro_ratio"
   // A course session with nobody in the water: both `no_instructor` and the
   // zero-crew case at once (issue #1338). It is its own code rather than
   // either of them because the chip is the entire information budget of a
@@ -82,10 +91,31 @@ export type StaffGapCode =
 export const GAP_TONE: Record<StaffGapCode, "warning" | "neutral"> = {
   no_instructor: "warning",
   over_ratio: "warning",
+  over_intro_ratio: "warning",
   uncrewed_course: "warning",
   uncrewed_departure: "warning",
   crew_below_target: "neutral",
 };
+
+/**
+ * The one place a course gap's *ratio kind* becomes a chip code.
+ *
+ * `courseCrewGap` (src/lib/course-ratios.ts) has always carried `ratio` on
+ * `over_ratio` — the entry-level rule and the far tighter intro one measure
+ * different things — and every caller but this surface already words the two
+ * apart (`trips.detail.overRatioWarningIntro`, and `overRatioIntroDetailText`
+ * in src/db/today.ts). The staffing week collapsed them by placing
+ * `courseGap.code` verbatim, which is how it came to offer a divemaster the one
+ * ask that cannot help (issue #1339). Pure and exported so `src/db/staffing.ts`
+ * and the tests read the same mapping.
+ *
+ * Null for `none`: not a gap, so not a code.
+ */
+export function staffGapForCourseGap(gap: CourseCrewGap): StaffGapCode | null {
+  if (gap.code === "none") return null;
+  if (gap.code === "no_instructor") return "no_instructor";
+  return gap.ratio === "intro" ? "over_intro_ratio" : "over_ratio";
+}
 
 /** A shift, reduced to what a week cell has to draw. */
 export type WeekShift = { id: string; startsAt: Date; endsAt: Date; note: string | null };
@@ -139,8 +169,44 @@ export type PlacedTrip = {
  */
 export type PlacedGap = PlacedTrip & {
   gap: StaffGapCode;
-  requests: readonly CrewAssignmentRequest[];
+  requests: readonly PlacedGapRequest[];
   viewerMayRequest: boolean;
+  /**
+   * The reader is in this departure's story — they may ask for it, they have
+   * asked, or they are already on its crew — and their being aboard will not
+   * close it (issue #1339): an intro session's cap is instructor-to-student,
+   * and they hold no instructor role.
+   *
+   * **It informs, never gates** — the same rule `src/lib/crew-requests.ts`
+   * states for a blackout. The owner chose to warn rather than refuse: a
+   * divemaster on a DSD session is a legitimate ask (a second pair of hands in
+   * the water is worth having), so `viewerMayRequest` is untouched by this and
+   * the write is unchanged. What the line stops is the roster *reading* as
+   * closed once the request is approved.
+   *
+   * Deliberately **not** tied to the button being on screen. It shipped as
+   * "may request and would not close it", so the divemaster read it once,
+   * tapped, and `already_requested` took it away at the moment the belief it
+   * corrects ("I asked, so that shift is answered") sets in — and somebody
+   * already rostered on an over-ratio intro session, the most operationally
+   * live case there is, never saw it at all. A genuine blackout still hides it,
+   * because there is nothing there for the reader to be wrong about.
+   */
+  viewerAskWontClose: boolean;
+};
+
+/**
+ * A request as the week draws it: the ask, plus whether approving it leaves the
+ * gap exactly where it is (issue #1339).
+ *
+ * The requester was warned before they tapped; the owner or manager working the
+ * queue is the person who can actually close an intro-ratio gap, and saw only a
+ * name and two buttons. `inWaterRole` rides on the request
+ * (src/lib/crew-requests.ts) so the same sentence can sit beside Approve.
+ */
+export type PlacedGapRequest = CrewAssignmentRequest & {
+  /** Pending, on an intro-ratio gap, from somebody who is not an instructor. */
+  askWontClose: boolean;
 };
 
 /** One person's week, before it is placed into days. */
@@ -309,7 +375,12 @@ export function staffWeek(input: {
    * that has no viewer to speak of — every test written before #1235, and the
    * assembly's own unit tests.
    */
-  viewer?: { personId: string; isCrew: boolean };
+  viewer?: {
+    personId: string;
+    isCrew: boolean;
+    /** Whether they can close an instructor-to-student gap themselves (#1339). */
+    holdsInstructorRole: boolean;
+  };
   /** The instant `crewRequestRefusal` measures a sailed departure against. */
   now?: Date;
 }): StaffWeek {
@@ -387,9 +458,8 @@ export function staffWeek(input: {
     const viewer = input.viewer;
     // The same rule the write applies, evaluated here so the affordance is
     // never offered for something the transaction will refuse.
-    const viewerMayRequest = Boolean(
-      viewer?.isCrew &&
-        crewRequestRefusal({
+    const viewerRefusal = viewer?.isCrew
+      ? crewRequestRefusal({
           personId: viewer.personId,
           meetings: gap.meetings,
           crewPersonIds: crewIdsByTrip.get(gap.tripId) ?? [],
@@ -397,11 +467,41 @@ export function staffWeek(input: {
           blocks,
           timeZone: input.timeZone,
           now,
-        }) === null,
-    );
+        })
+      : null;
+    const viewerMayRequest = Boolean(viewer?.isCrew) && viewerRefusal === null;
+    // **The fact belongs to the departure, not to the button** (issue #1339).
+    // A reader is in this gap's story when they may ask for it, when they have
+    // asked, and — the case that never had the line at all — when they are
+    // already on its crew. `unavailable` and `past` are the two refusals that
+    // do take it away: the ask is not theirs to make, so there is no belief
+    // here to correct. Advisory either way; `viewerMayRequest` is untouched.
+    const viewerInvolved =
+      viewerMayRequest ||
+      viewerRefusal === "already_requested" ||
+      viewerRefusal === "already_crewing";
+    const viewerAskWontClose =
+      viewerInvolved && gap.gap === "over_intro_ratio" && !viewer?.holdsInstructorRole;
     gapsByDay.set(first.date, [
       ...(gapsByDay.get(first.date) ?? []),
-      { ...first.placed, gap: gap.gap, requests: tripRequests, viewerMayRequest },
+      {
+        ...first.placed,
+        gap: gap.gap,
+        // The same fact the reader's own line states, said to the person who
+        // can act on it: a pending ask from somebody who is not an instructor
+        // does not move an intro session's instructor-to-student cap. Only
+        // while it is pending — an answered request is history, and the gap
+        // chip above it already says the session is still short.
+        requests: tripRequests.map((request) => ({
+          ...request,
+          askWontClose:
+            request.state === "pending" &&
+            gap.gap === "over_intro_ratio" &&
+            request.inWaterRole !== "instructor",
+        })),
+        viewerMayRequest,
+        viewerAskWontClose,
+      },
     ]);
   }
   const gapDays = dates.map((date) => ({

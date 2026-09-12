@@ -1,8 +1,11 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   assembleDayCloseout,
   assembleEveningClose,
   buildCloseoutSnapshot,
+  type CloseoutRollCallGap,
   type CloseoutTripInput,
   closeoutAdminTaskStatus,
   parseCloseoutSnapshot,
@@ -10,6 +13,14 @@ import {
 } from "./closeout";
 import { type CrewRollCallSubject, rollCallCompleteness } from "./manifests";
 import type { TodayAction } from "./today";
+import {
+  liveStageOf,
+  STAGE_STALE_AFTER_MS,
+  TRIP_STAGES,
+  type TripStage,
+  type TripStageReading,
+} from "./trip-stages";
+import { DEPARTURE_BUFFER_MS } from "./trips";
 
 const TZ = "America/New_York";
 // A fixed evening instant: 17:30 shop-local on 2026-08-04 (EDT, UTC-4).
@@ -35,6 +46,11 @@ function trip(overrides: Partial<CloseoutTripInput> & { tripId: string }): Close
     recapShoutout: null,
     ...overrides,
   };
+}
+
+/** One tap at the rail, as `latestTripStagesByTrip` hands it in. */
+function stage(word: TripStage, recordedAt: Date): TripStageReading {
+  return { stage: word, siteName: "Molasses Reef", recordedAt, recordedByName: "Marco Diaz" };
 }
 
 function action(overrides: Partial<TodayAction> & { id: string }): TodayAction {
@@ -198,6 +214,163 @@ describe("assembleDayCloseout", () => {
       ["out", "still_out"],
       ["night", "not_departed"],
     ]);
+  });
+
+  // **A crew tap settles a station the clock would leave open; it never
+  // reopens one the clock has closed** — issue #1480. The late-arrival hour is
+  // an allowance for a *time-based inference*; a crew member tapping Home at
+  // the rail is the statement that inference was standing in for. The first
+  // four cases below pin the constraints the issue binds the promotion with;
+  // the last two pin the direction it deliberately does *not* run in, so a
+  // later session reads the asymmetry as the rule rather than an oversight.
+  describe("a recorded home stage", () => {
+    const MINUTE = 60 * 1000;
+    /** Sailed at dawn, due back five minutes ago — still out for another 55. */
+    const inBuffer = (overrides: Partial<CloseoutTripInput> = {}): CloseoutTripInput =>
+      trip({
+        tripId: "t1",
+        startsAt: new Date(now.getTime() - 5 * HOUR),
+        endsAt: new Date(now.getTime() - 5 * MINUTE),
+        ...overrides,
+      });
+    const statusOf = (
+      input: CloseoutTripInput,
+      gaps: readonly CloseoutRollCallGap[] = [],
+      at: Date = now,
+    ) =>
+      assembleDayCloseout({ trips: [input], gaps, actions: [], timeZone: TZ, now: at })
+        .departures[0]?.status;
+
+    it("settles a boat the clock would still call still out", () => {
+      // The control first: without the tap this same departure is still out,
+      // which is what makes the promotion below the stage's doing.
+      expect(statusOf(inBuffer())).toBe("still_out");
+      expect(
+        statusOf(inBuffer({ stage: stage("home", new Date(now.getTime() - 10 * MINUTE)) })),
+      ).toBe("all_home");
+    });
+
+    it("never closes the day over a diver nobody counted", () => {
+      // **Constraint 1**, structurally: the gap branch returns before the
+      // clock and the stage are consulted at all, so no tap at the rail can
+      // promote a departure whose head count is open.
+      const tapped = inBuffer({ stage: stage("home", new Date(now.getTime() - 10 * MINUTE)) });
+      expect(
+        statusOf(tapped, [{ tripId: "t1", reason: "missing_diver", diveNumber: 2, uncounted: 1 }]),
+      ).toBe("unreconciled");
+      expect(
+        statusOf(tapped, [{ tripId: "t1", reason: "no_roll_call", diveNumber: 0, uncounted: 8 }]),
+      ).toBe("count_open");
+    });
+
+    it("leaves a departure nobody tapped to the clock, exactly as before", () => {
+      // **Constraint 2.** The buffer is unchanged for every shop that has
+      // never tapped a stage: an hour past the scheduled return, and home.
+      const elapsed = trip({
+        tripId: "t1",
+        startsAt: new Date(now.getTime() - 6 * HOUR),
+        endsAt: new Date(now.getTime() - HOUR - MINUTE),
+      });
+      expect(statusOf(elapsed)).toBe("all_home");
+      expect(statusOf({ ...elapsed, stage: null })).toBe("all_home");
+    });
+
+    it("stops reading a stage the crew stopped maintaining", () => {
+      // **Constraint 3.** A word goes stale two buffers past the departure's
+      // own end (`STAGE_STALE_AFTER_MS`), and by then the clock has long since
+      // answered on its own — so a stale stage cannot move this reading in
+      // *either* direction. The window in which it could is empty, and that is
+      // arithmetic rather than convention:
+      expect(STAGE_STALE_AFTER_MS).toBeGreaterThan(DEPARTURE_BUFFER_MS);
+
+      const endsAt = new Date(now.getTime() - 3 * HOUR);
+      const long = (word: TripStage) =>
+        trip({
+          tripId: "t1",
+          startsAt: new Date(now.getTime() - 8 * HOUR),
+          endsAt,
+          stage: stage(word, new Date(endsAt.getTime() - 5 * MINUTE)),
+        });
+      expect(statusOf(long("home"))).toBe("all_home");
+      expect(statusOf(long("underway"))).toBe("all_home");
+    });
+
+    it("promotes on home and on nothing else", () => {
+      // **Constraint 4.** Four of the five words say the boat is out; only the
+      // fifth says she is back, and only the fifth is allowed to say so.
+      for (const word of ["boarding", "underway", "surface", "heading_in"] as const) {
+        expect(
+          statusOf(inBuffer({ stage: stage(word, new Date(now.getTime() - 10 * MINUTE)) })),
+        ).toBe("still_out");
+      }
+    });
+
+    it("leaves the clock's own close standing through the overdue hour", () => {
+      // The direction the rule does not run in. Between the clock's close
+      // (`endsAt` + one buffer) and the word going stale (two buffers) there
+      // is a live, contrary `underway` — and the departure still reads home,
+      // because no stage demotes. What makes that safe rather than a boat lost
+      // quietly is the gap branch, which returns first: the second expectation
+      // is the same overdue boat with its head count open.
+      const overdue = trip({
+        tripId: "t1",
+        startsAt: new Date(now.getTime() - 6 * HOUR),
+        endsAt: new Date(now.getTime() - HOUR - 30 * MINUTE),
+        stage: stage("underway", new Date(now.getTime() - 10 * MINUTE)),
+      });
+      // The word is genuinely still speaking here, not quietly stale:
+      expect(liveStageOf(overdue.stage ?? null, overdue.endsAt, now)).not.toBeNull();
+
+      expect(statusOf(overdue)).toBe("all_home");
+      expect(
+        statusOf(overdue, [{ tripId: "t1", reason: "missing_diver", diveNumber: 2, uncounted: 1 }]),
+      ).toBe("unreconciled");
+    });
+
+    it("leaves a boat the clock has not released alone, whatever the crew taps", () => {
+      // `hasSailed` carries no matching promotion, and this pins that as a
+      // decision rather than a bug: fifty minutes into an hour-buffered
+      // departure every one of the five words reads `not_departed`, `home`
+      // included. Nothing turns on it — `not_departed` and `still_out` are
+      // both unsettled, and neither ends the day.
+      for (const word of TRIP_STAGES) {
+        expect(
+          statusOf(
+            trip({
+              tripId: "t1",
+              startsAt: new Date(now.getTime() - 50 * MINUTE),
+              endsAt: new Date(now.getTime() + 3 * HOUR),
+              stage: stage(word, new Date(now.getTime() - 45 * MINUTE)),
+            }),
+          ),
+        ).toBe("not_departed");
+      }
+    });
+
+    it("closes the day an hour early once the tap settles the last station", () => {
+      // The unlock, end to end through the evening join: `settled` reads the
+      // promoted status, so the closing block and the homecoming line both
+      // arrive while the clock still has fifty-five minutes to run.
+      const tapped = inBuffer({ stage: stage("home", new Date(now.getTime() - 10 * MINUTE)) });
+      const untapped = inBuffer();
+
+      expect(
+        assembleEveningClose(
+          assembleDayCloseout({ trips: [untapped], gaps: [], actions: [], timeZone: TZ, now })
+            .departures,
+          now,
+        ).closing,
+      ).toBe(false);
+
+      const evening = assembleEveningClose(
+        assembleDayCloseout({ trips: [tapped], gaps: [], actions: [], timeZone: TZ, now })
+          .departures,
+        now,
+      );
+      expect(evening.stations[0]?.settled).toBe(true);
+      expect(evening.closing).toBe(true);
+      expect(evening.allHome).toBe(true);
+    });
   });
 
   it("marks only the boats that are actually back as ended, and carries each one's recap note", () => {
@@ -599,5 +772,41 @@ describe("assembleEveningClose", () => {
       "dawn",
       "afternoon",
     ]);
+  });
+});
+
+/**
+ * The glossary said every departure's end state is read off the same roll-call
+ * evidence Today chases. Since issue #1480 it is read off that evidence, then
+ * the clock, then the crew's own stage — and the stage only ever promotes
+ * (`dive-domain-expert`, the RFH-07 layer). A reader who takes the old sentence
+ * at its word cannot tell why a departure the clock calls still-out reads home.
+ *
+ * A text scan, like `src/lib/gear.test.ts`'s register-group entry.
+ */
+describe("the glossary's close-out entry", () => {
+  const entry = async () => {
+    const glossary = await readFile(path.join(process.cwd(), "docs/product/glossary.md"), "utf8");
+    const block = glossary.split(/^- \*\*/m).find((part) => part.startsWith("Close-out**"));
+    expect(block, "docs/product/glossary.md has no **Close-out** entry").toBeDefined();
+    return block ?? "";
+  };
+
+  it("states the three sources in the order departureStatus reads them", async () => {
+    const text = await entry();
+    expect(text).toContain("departureStatus");
+    const [roll, clock, stage] = ["roll-call evidence", "then the clock", "trip stage"].map(
+      (needle) => text.indexOf(needle),
+    );
+    expect(roll).toBeGreaterThan(-1);
+    expect(clock).toBeGreaterThan(roll);
+    expect(stage).toBeGreaterThan(clock);
+  });
+
+  it("states the promotion and its one-way-ness", async () => {
+    const text = await entry();
+    expect(text).toContain("#1480");
+    expect(text).toMatch(/never reopens one the clock has closed/);
+    expect(text).toMatch(/Nothing\s+demotes/);
   });
 });

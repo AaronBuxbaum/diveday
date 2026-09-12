@@ -225,8 +225,11 @@ export async function listOpenRecapPulses(
     .innerJoin(people, and(eq(people.id, recapPulses.personId), eq(people.shopId, shopId)))
     // diveday:allow-deleted-trips: a pulse about a departure the shop later took
     // off the board is still a thing the shop was asked to fix, and dropping it
-    // here would silently empty the panel rather than answer it.
-    .innerJoin(trips, eq(trips.id, recapPulses.tripId))
+    // here would silently empty the panel rather than answer it. The shop
+    // condition rides along for the reason the join above gives: `tripId` is
+    // copied off the same shop-scoped booking, and the join is what a reader
+    // looks at.
+    .innerJoin(trips, and(eq(trips.id, recapPulses.tripId), eq(trips.shopId, shopId)))
     .where(
       and(
         eq(recapPulses.shopId, shopId),

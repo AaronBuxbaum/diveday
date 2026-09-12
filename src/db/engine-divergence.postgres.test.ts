@@ -256,9 +256,19 @@ describe("what PGlite answers", () => {
    * What that costs: a name list ordered by the database default sorts `Ángel`
    * and `Ñuria` after `Zoe` here, and a server initialised with a UTF-8
    * language locale sorts them where a Spanish reader expects. This app ships
-   * Spanish (`src/i18n/locales/es-ES`) and pages staff lists by name, so the
-   * order a test proves is not the order a shop sees — unless the query names
-   * a collation, which none of them do today.
+   * Spanish (`src/i18n/locales/es-ES`) and pages staff lists by name, so an
+   * order taken from the default is not the order a shop sees.
+   *
+   * The one column that mattered no longer takes it from the default:
+   * `people.full_name` carries `COLLATE "und-x-icu"` of its own, set by
+   * `drizzle/20260911200158_person-name-collation`, so the twenty-one
+   * name-ordered reads in `src/db` are the same order on both engines without
+   * naming a collation (`src/db/name-collation.test.ts` and its `.postgres`
+   * sibling hold both halves). What stays true is the row below: the
+   * *database* default is still `C` here, so any **other** text column ordered
+   * without a collation still answers differently on a server, and
+   * `dive_sites.name`, `gear_items.label` and `courses.title` are exactly
+   * that.
    */
   it("orders text by bytes, which is not how any reader reads a name", async () => {
     const db = await unseededTestDb();

@@ -1,20 +1,25 @@
-import { and, asc, eq, gte, isNull, lte } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, isNull, lte, ne } from "drizzle-orm";
 
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { courseCrewGap } from "@/lib/course-ratios";
 import type {
   AvailabilityBlock,
   CrewAssignmentRequest,
   CrewRequestState,
 } from "@/lib/crew-requests";
+import { inWaterCrewRole } from "@/lib/crew-roles";
 import type { AppDb, DbExecutor } from "./client";
 import {
+  bookings,
+  courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   people,
   personRoles,
   trips,
 } from "./schema";
+import { courseCrewCountsByTrip } from "./today";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -212,16 +217,90 @@ export async function listCrewAssignmentRequests(
     .where(and(eq(crewAssignmentRequests.shopId, shopId), isNull(crewAssignmentRequests.deletedAt)))
     .orderBy(asc(crewAssignmentRequests.requestedAt));
   const wanted = new Set(tripIds);
-  return rows
-    .filter((row) => wanted.has(row.request.tripId))
-    .map(({ request, person }) => ({
-      id: request.id,
-      tripId: request.tripId,
-      personId: request.personId,
-      personName: person.fullName,
-      state: (request.decision ?? "pending") as CrewRequestState,
-      requestedAt: request.requestedAt,
-    }));
+  const live = rows.filter((row) => wanted.has(row.request.tripId));
+  // What each requester would be worth in the water, for the person answering
+  // (issue #1339). A second query rather than a join on the select above: one
+  // row per `(person, role)` would fan the requests out and silently duplicate
+  // every ask made by somebody holding two roles.
+  const rolesByPerson = await shopRolesByPerson(
+    db,
+    live.map((row) => row.request.personId),
+  );
+  return live.map(({ request, person }) => ({
+    id: request.id,
+    tripId: request.tripId,
+    personId: request.personId,
+    personName: person.fullName,
+    // No per-trip role: the ask names a departure, never a job on it, so this
+    // is the shop-wide inference `inWaterCrewRole` makes for an unspecified
+    // row — the same one the assignment itself will get when it lands.
+    inWaterRole: inWaterCrewRole({
+      tripRole: null,
+      shopRoles: rolesByPerson.get(request.personId) ?? [],
+    }),
+    state: (request.decision ?? "pending") as CrewRequestState,
+    requestedAt: request.requestedAt,
+  }));
+}
+
+/** Every standing role each of these people holds, folded one entry per person. */
+async function shopRolesByPerson(
+  db: DbExecutor,
+  personIds: readonly string[],
+): Promise<Map<string, string[]>> {
+  const byPerson = new Map<string, string[]>();
+  const wanted = [...new Set(personIds)];
+  if (wanted.length === 0) return byPerson;
+  const rows = await db
+    .select({ personId: personRoles.personId, role: personRoles.role })
+    .from(personRoles)
+    .where(inArray(personRoles.personId, wanted));
+  for (const row of rows) {
+    byPerson.set(row.personId, [...(byPerson.get(row.personId) ?? []), row.role]);
+  }
+  return byPerson;
+}
+
+/**
+ * Whether this departure is an **intro session still over its ratio** right
+ * now — asked after an approval has already run through `changeTripCrew`, so
+ * the answer describes the boat as it stands rather than predicting it.
+ *
+ * Issue #1339's second half: `INTRO_COURSE_RATIO` credits an assistant zero
+ * students, so approving a divemaster onto an over-ratio DSD session moves
+ * capacity by nothing and the plain "Approved, and they're on the crew" reads
+ * as a gap closed. Measured rather than inferred from the requester's roles,
+ * because the honest sentence is about the session, and a second instructor
+ * approved in the same minute must not leave this saying the wrong thing.
+ *
+ * Composed from `courseCrewGap` (src/lib/course-ratios.ts) and Today's own crew
+ * counter — never a second ratio detector.
+ */
+export async function tripOverIntroRatio(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ course: courses, booked: count(bookings.id) })
+    .from(trips)
+    .leftJoin(courses, eq(courses.id, trips.courseId))
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .groupBy(trips.id, courses.id)
+    .limit(1);
+  if (!row?.course) return false;
+  const counts = (await courseCrewCountsByTrip(db, shopId, [tripId])).get(tripId) ?? {
+    instructorCount: 0,
+    assistantCount: 0,
+  };
+  const gap = courseCrewGap({
+    course: row.course,
+    instructorCount: counts.instructorCount,
+    assistantCount: counts.assistantCount,
+    booked: row.booked,
+  });
+  return gap.code === "over_ratio" && gap.ratio === "intro";
 }
 
 /**

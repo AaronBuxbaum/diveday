@@ -50,6 +50,7 @@ import {
 } from "./schema";
 import { getTodayWork, listRollCallGaps } from "./today";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
+import { latestTripStagesByTrip } from "./trip-stages";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -313,6 +314,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     neverSentDeal,
     comparables,
     planChangeRows,
+    stagesByTrip,
   ] = await Promise.all([
     db
       .select({ tripId: bookings.tripId, booked: count() })
@@ -475,6 +477,10 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
         ),
       )
       .orderBy(asc(executedDives.diveNumber)),
+    // **#1480** — the crew's last tap, so a Home at the rail can settle a
+    // station the return buffer still calls "still out". One batched query for
+    // the whole day, never one per boat.
+    latestTripStagesByTrip(db, shopId, tripIds),
   ]);
   const bookedByTrip = new Map(counts.map((row) => [row.tripId, Number(row.booked)]));
   const photosByTrip = new Map<string, typeof photos>();
@@ -548,6 +554,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     booked: bookedByTrip.get(row.id) ?? 0,
     capacity: row.capacity,
     plannedDives: row.plannedDives,
+    stage: stagesByTrip.get(row.id) ?? null,
     crew: crewSubjectsAtClose(
       row.plannedDives,
       crewByTrip.get(row.id) ?? [],

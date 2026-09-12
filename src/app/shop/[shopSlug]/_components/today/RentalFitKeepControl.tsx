@@ -3,7 +3,6 @@
 import { keepRentalFitAction } from "@/app/shop/[shopSlug]/actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import type { SizedRentalKind } from "@/lib/rentals";
 
 /**
  * **"Keep it"** — the evening's one tap on a size the day already proved
@@ -17,24 +16,27 @@ import type { SizedRentalKind } from "@/lib/rentals";
  * beside it — which is the other honest answer, and the one that costs
  * nothing.
  *
+ * The tap names the reservation and nothing else. The diver and the size are
+ * not the client's to supply: the action re-proves both from the desk's own
+ * `fit_adjusted` return, because this control is open to every staff role on
+ * the strength of writing down what a human already decided, and a bound size
+ * would have let a crew member rewrite any diver's stated fit instead
+ * (`security-reviewer`, issue #1453).
+ *
  * Every word arrives as a prop. Staff copy is resolved server-side and never
  * crosses to the client (`src/i18n/staff-messages.ts`).
  */
 export function RentalFitKeepControl({
-  personId,
-  kind,
-  size,
+  reservationId,
   label,
   pendingLabel,
 }: {
-  personId: string;
-  kind: SizedRentalKind;
-  size: string;
+  reservationId: string;
   label: string;
   pendingLabel: string;
 }) {
   return (
-    <form action={keepRentalFitAction.bind(null, personId, kind, size)}>
+    <form action={keepRentalFitAction.bind(null, reservationId)}>
       <SubmitButton
         pendingLabel={pendingLabel}
         className={buttonClass({ variant: "secondary", size: "sm" })}

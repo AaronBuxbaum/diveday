@@ -46,7 +46,7 @@ async function aSeat(
   shopId: string,
   tripId: string,
   fullName: string,
-  status: "booked" | "cancelled" = "booked",
+  status: "booked" | "cancelled" | "no_show" = "booked",
 ) {
   const [person] = await db.insert(people).values({ shopId, fullName }).returning();
   if (!person) throw new Error("test person insert failed");
@@ -108,6 +108,28 @@ describe("shopFirstBooking", () => {
     expect(await shopFirstBooking(db, shopId, NOW)).toBeNull();
 
     await aSeat(db, shopId, trip.id, "Noor Rahman");
+    expect(await shopFirstBooking(db, shopId, NOW)).toBeNull();
+  });
+
+  /**
+   * **The two doors do not share a boundary** (`dive-domain-expert`,
+   * 2026-09-11, on a docblock that called `no_show` unreachable here). The
+   * counter's no-show mark opens at the scheduled departure (`noShowGate`,
+   * src/lib/no-show.ts) and this reader only calls the boat gone an hour after
+   * it (`hasSailed`), so for that hour a shop's one booking can be written off
+   * while its departure is still ahead by this reader's rule. The status test
+   * is what ends the moment there, not the clock — and the first assertion is
+   * what proves the clock has not ended it yet.
+   */
+  it("lets the counter end the moment in the hour the departure is still ahead", async () => {
+    const { db, shopId } = await freshShop("first-booking-no-show");
+    // Ten minutes past its scheduled time: the no-show door is open and the
+    // late-arrival buffer still has fifty minutes to run.
+    const trip = await aDeparture(db, shopId, new Date(NOW.getTime() - 10 * 60 * 1000));
+    const booking = await aSeat(db, shopId, trip.id, "Ravi Chandra");
+    expect(await shopFirstBooking(db, shopId, NOW)).not.toBeNull();
+
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, booking.id));
     expect(await shopFirstBooking(db, shopId, NOW)).toBeNull();
   });
 

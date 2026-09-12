@@ -66,7 +66,7 @@ describe("tripAdmissionRefusalText — a card refusal", () => {
   it("says the card is simply not on the record, which is where 'add it' is right", () => {
     const text = tripAdmissionRefusalText(t, refusal({ missingSpecialties: ["deep"] }), "en-US");
     expect(text).toContain("Deep");
-    expect(text).toContain("none on this diver's record");
+    expect(text).toContain("none on this diver’s record");
     // A specialty refusal never names a ladder rung — the diver's level is not
     // what is wrong (`heldLevel` is nulled for exactly this reason).
     expect(text).not.toContain("Open Water");

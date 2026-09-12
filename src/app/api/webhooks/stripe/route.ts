@@ -4,12 +4,18 @@ import {
   markCheckoutExpiredBySessionId,
   markCheckoutPaidBySessionId,
   markCheckoutPaymentFailedBySessionId,
+  recordCheckoutStripeCustomer,
 } from "@/db/checkouts";
+import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import { sendGiftPassesForCheckout } from "@/db/gifts";
 import { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } from "@/db/orders";
 import { disconnectShopStripeAccount, setShopStripeAccountStatus } from "@/db/stripe-accounts";
-import { markTipExpiredBySessionId, markTipPaidBySessionId } from "@/db/tips";
+import {
+  markTipExpiredBySessionId,
+  markTipPaidBySessionId,
+  recordTipStripeCustomer,
+} from "@/db/tips";
 import {
   claimStripeWebhookEvent,
   hasNewerAccountUpdate,
@@ -44,7 +50,56 @@ const checkoutSessionObjectSchema = z.object({
     .object({ amount_tax: z.number().int().nonnegative().nullable().optional() })
     .nullable()
     .optional(),
+  // The `cus_…` Stripe created for this session, string or expanded object.
+  // Null on a session Stripe never minted a Customer for (`customer_creation:
+  // "if_required"`), which is every abandoned one.
+  customer: z
+    .union([z.string().min(1), z.object({ id: z.string().min(1) })])
+    .nullable()
+    .optional(),
 });
+
+/**
+ * Record the Customer object this event says Stripe holds, on whichever of the
+ * two session-shaped tables owns the id.
+ *
+ * Run on **every** `checkout.session.*` branch rather than only the paid one:
+ * an `async_payment_failed` session still leaves a Customer behind at Stripe,
+ * and that is exactly the object diver erasure has to be able to name
+ * (issue #1621). A write-once no-op when the id is already recorded.
+ *
+ * Best-effort, like `sendGiftPassesForCheckout` below and for the same reason:
+ * this runs before the status dispatch, and a failure here must never swallow a
+ * settlement.
+ */
+async function recordSessionCustomer(
+  db: AppDb,
+  session: z.infer<typeof checkoutSessionObjectSchema>,
+  expectedAccountId: string | undefined,
+  logOutcome: (outcome: string, extra?: LogContext) => void,
+): Promise<void> {
+  const customer = session.customer;
+  if (!customer) return;
+  const stripeCustomerId = typeof customer === "string" ? customer : customer.id;
+  try {
+    const recorded = await recordCheckoutStripeCustomer(db, {
+      stripeSessionId: session.id,
+      stripeCustomerId,
+      expectedAccountId,
+    });
+    if (!recorded) {
+      // The same try-checkout-then-tip fallback the settlement paths use: one
+      // session id belongs to at most one of the two tables.
+      await recordTipStripeCustomer(db, {
+        stripeSessionId: session.id,
+        stripeCustomerId,
+        expectedAccountId,
+      });
+    }
+  } catch (error) {
+    logOutcome("customer_record_failed", { error: String(error) });
+  }
+}
 
 function invoiceTaxCents(invoice: z.infer<typeof invoiceObjectSchema>): number | null {
   const amounts = invoice.total_tax_amounts ?? invoice.total_taxes;
@@ -213,6 +268,9 @@ export async function POST(request: Request) {
       }
       case "checkout.session.completed": {
         const session = checkoutSessionObjectSchema.safeParse(event.data.object);
+        if (session.success) {
+          await recordSessionCustomer(db, session.data, event.account, logOutcome);
+        }
         // "completed" alone is not "paid": async payment methods complete the
         // session before the money settles. Only Stripe saying paid clears the
         // booking payment gate (docs ADR 20260721-checkout-at-booking).
@@ -253,6 +311,7 @@ export async function POST(request: Request) {
       case "checkout.session.async_payment_succeeded": {
         const session = checkoutSessionObjectSchema.safeParse(event.data.object);
         if (session.success) {
+          await recordSessionCustomer(db, session.data, event.account, logOutcome);
           const checkout = await markCheckoutPaidBySessionId(
             db,
             session.data.id,
@@ -283,6 +342,7 @@ export async function POST(request: Request) {
       case "checkout.session.async_payment_failed": {
         const session = checkoutSessionObjectSchema.safeParse(event.data.object);
         if (session.success) {
+          await recordSessionCustomer(db, session.data, event.account, logOutcome);
           // The counterpart to `async_payment_succeeded` above, and previously
           // the gap that left a delayed-notification payment stuck `pending`
           // forever (PAY-L1): the session had already emitted `completed` with
@@ -314,6 +374,7 @@ export async function POST(request: Request) {
       case "checkout.session.expired": {
         const session = checkoutSessionObjectSchema.safeParse(event.data.object);
         if (session.success) {
+          await recordSessionCustomer(db, session.data, event.account, logOutcome);
           const checkout = await markCheckoutExpiredBySessionId(db, session.data.id, event.account);
           if (checkout) {
             logOutcome("checkout_expired");

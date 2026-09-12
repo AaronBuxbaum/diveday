@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { connection } from "next/server";
+import { after, connection } from "next/server";
 import { z } from "zod";
 import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
@@ -22,6 +22,7 @@ import { recordDiverOwnLocale } from "@/db/people";
 import { bookings, type MedicalAnswers, people, type Shop, trips } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
+import { sendGuardianReleaseCopy } from "@/db/waiver-guardian-copy";
 import {
   completeWaiver,
   getEmergencyContactForBooking,
@@ -41,7 +42,11 @@ import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import { emergencyContactSchema } from "@/lib/contact";
+import {
+  type EmergencyContactSubmission,
+  emergencyContactSchema,
+  readEmergencyContact,
+} from "@/lib/contact";
 import { telHref } from "@/lib/contact-links";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { GUARDIAN_RELATIONSHIPS, guardianSignatureRequired, signingDate } from "@/lib/guardian";
@@ -106,7 +111,22 @@ const guardianDraftSchema = z.object({
 const completeGuardianSchema = z.object({
   guardianName: z.string().trim().min(2).max(120),
   guardianRelationship: z.enum(GUARDIAN_RELATIONSHIPS),
-  guardianEmail: z.string().trim().email().max(200),
+  /**
+   * **Optional, and the one thing it is for is a copy of what was signed**
+   * (issue #1453, owner decision 2026-09-10). It was required, and nothing ever
+   * sent to it — so a grandparent at a counter with no email was refused
+   * outright while a third party's address sat on a signed release with no
+   * reader. Blank is now accepted; a typed address that is not one is still
+   * refused, so the `guardianEmail` arm of `WAIVER_FIELD_ERROR` keeps its job.
+   * `guardianEvidence` re-checks the shape writer-side and is the enforcement
+   * of record for anything that did not come from this form.
+   */
+  guardianEmail: z
+    .string()
+    .trim()
+    .max(200)
+    .refine((value) => value === "" || z.email().safeParse(value).success)
+    .optional(),
   guardianAcknowledged: z.literal("on"),
 });
 
@@ -137,6 +157,8 @@ function guardianDraftFrom(formData: FormData, guardianRequired: boolean) {
 
 type WaiverInvalidField =
   | "medical"
+  | "emergencyContactName"
+  | "emergencyContactPhone"
   | "signerName"
   | "signerNameMismatch"
   | "acknowledged"
@@ -177,11 +199,30 @@ function firstInvalidWaiverField(
   signatureIssuePaths: IssuePaths,
   answers: MedicalAnswers | null,
   guardianIssuePaths: IssuePaths = new Set(),
+  contactField: WaiverInvalidField | undefined = undefined,
 ): WaiverInvalidField | undefined {
   if (!answers) return "medical";
+  // The contact section sits between the questions and the signature card, and
+  // its refusal is the one a normal browser actually reaches: `required` covers
+  // the two controls below it, but no markup can say "these two boxes move
+  // together".
+  if (contactField) return contactField;
   if (signatureIssuePaths.has("signerName")) return "signerName";
   if (signatureIssuePaths.has("acknowledged")) return "acknowledged";
   return GUARDIAN_FIELDS.find((field) => guardianIssuePaths.has(field));
+}
+
+/**
+ * The box a half-filled emergency contact is refused on — the empty one, which
+ * is where the diver has to type. A pair refuses nothing, and neither does a
+ * section left entirely alone: both blank is the no-change case, and a blank
+ * has never overwritten what the shop holds (`readEmergencyContact`).
+ */
+function refusedContactField(
+  submitted: EmergencyContactSubmission | undefined,
+): WaiverInvalidField | undefined {
+  if (submitted?.kind !== "half") return undefined;
+  return submitted.missing === "name" ? "emergencyContactName" : "emergencyContactPhone";
 }
 
 /**
@@ -210,6 +251,17 @@ function refusedSubmitPath(token: string, field: WaiverInvalidField | undefined)
 const WAIVER_FIELD_ERROR: Record<WaiverInvalidField, { textKey: DiverMessageKey; anchor: string }> =
   {
     medical: { textKey: "waiver.errorMedical", anchor: "medical-questionnaire" },
+    // The emergency contact's two boxes, refused on whichever one is empty.
+    // One sentence for both: the fix is the same either way, and it is the
+    // pair — not the box — that the crew needs (`readEmergencyContact`).
+    emergencyContactName: {
+      textKey: "waiver.errorContactPair",
+      anchor: "emergencyContactName",
+    },
+    emergencyContactPhone: {
+      textKey: "waiver.errorContactPair",
+      anchor: "emergencyContactPhone",
+    },
     signerName: { textKey: "waiver.errorName", anchor: "signerName" },
     // A typed name that isn't the diver's own — same field, different fix, so
     // it gets its own sentence rather than the generic "type your full name".
@@ -347,12 +399,13 @@ export default async function WaiverPage({
     error === "invalid" && field && Object.hasOwn(WAIVER_FIELD_ERROR, field)
       ? WAIVER_FIELD_ERROR[field as WaiverInvalidField]
       : undefined;
-  // A refusal that names a control in the signature card renders *beside that
-  // control* (Field `error` / the line under the checkbox), never as a page
-  // banner — the rule in docs/design/forms-and-controls.md. The banner below
+  // A refusal that names a control renders *beside that control* (Field
+  // `error` / the line under the checkbox), never as a page banner — the rule
+  // in docs/design/forms-and-controls.md. That is the signature card, the
+  // guardian's card, and the emergency contact's two boxes. The banner below
   // keeps only what has no single control to sit with: the medical section,
   // the generic incomplete, and the link-level refusals.
-  const signatureCardError =
+  const namedFieldError =
     fieldError && fieldError.anchor !== "medical-questionnaire" ? fieldError : undefined;
   const db = await getDb();
   // A dead or expired link resolves no shop, so there is no
@@ -619,7 +672,7 @@ export default async function WaiverPage({
       : { sign: fieldError.anchor }
     : {};
   const errorText =
-    error === "invalid" && !signatureCardError
+    error === "invalid" && !namedFieldError
       ? t(fieldError?.textKey ?? "waiver.incomplete")
       : error === "unavailable"
         ? t("waiver.linkInactive")
@@ -662,26 +715,37 @@ export default async function WaiverPage({
       medicalAnswers: answers,
       guardian: guardianDraftFrom(formData, guardianRequired),
     });
-    // Persist the contact now too, so "save and finish later" keeps it — blanks
-    // never overwrite what's on file.
+    // Persist the contact now too, so "save and finish later" keeps it — as a
+    // pair or not at all. Both blank still keeps what's on file; one box filled
+    // and the other cleared is refused below rather than spliced onto the
+    // stored number. The draft is already written at this point, so the
+    // refusal costs the diver nothing they typed into the rest of the form.
     const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
-    if (savedDraft && contact.success) {
+    const submittedContact = contact.success
+      ? readEmergencyContact({
+          name: contact.data.emergencyContactName,
+          phone: contact.data.emergencyContactPhone,
+        })
+      : undefined;
+    if (savedDraft && submittedContact?.kind === "pair") {
       if (recordBookingId) {
         await saveBookingEmergencyContact(db, {
           shopId: record.shopId,
           bookingId: recordBookingId,
-          name: contact.data.emergencyContactName,
-          phone: contact.data.emergencyContactPhone,
+          name: submittedContact.name,
+          phone: submittedContact.phone,
         });
       } else {
         await savePersonEmergencyContact(db, {
           shopId: record.shopId,
           personId: record.personId,
-          name: contact.data.emergencyContactName,
-          phone: contact.data.emergencyContactPhone,
+          name: submittedContact.name,
+          phone: submittedContact.phone,
         });
       }
     }
+    const refusedDraftContact = refusedContactField(submittedContact);
+    if (savedDraft && refusedDraftContact) redirect(refusedSubmitPath(token, refusedDraftContact));
     revalidateAndRedirect(
       `/waivers/${token}`,
       `/waivers/${token}${savedDraft ? "?saved=1" : "?error=unavailable"}`,
@@ -706,13 +770,26 @@ export default async function WaiverPage({
     const guardian = guardianRequired
       ? completeGuardianSchema.safeParse(Object.fromEntries(formData))
       : null;
-    if (!parsed.success || !answers || (guardian && !guardian.success)) {
+    // Read before the refusal below, because the contact can refuse too: its
+    // two boxes move together (`readEmergencyContact`), and a form that fills
+    // one and clears the other is sent back to the empty box rather than
+    // written as a new name onto the contact's old number.
+    const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
+    const submittedContact = contact.success
+      ? readEmergencyContact({
+          name: contact.data.emergencyContactName,
+          phone: contact.data.emergencyContactPhone,
+        })
+      : undefined;
+    const refusedContact = refusedContactField(submittedContact);
+    if (!parsed.success || !answers || (guardian && !guardian.success) || refusedContact) {
       const invalidField = firstInvalidWaiverField(
         parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
         answers,
         guardian && !guardian.success
           ? new Set(guardian.error.issues.map((issue) => issue.path[0]))
           : new Set(),
+        refusedContact,
       );
       // A refused guardian section keeps what the family typed, exactly as the
       // signature-card refusals below keep the diver's own answers.
@@ -727,7 +804,6 @@ export default async function WaiverPage({
       }
       redirect(refusedSubmitPath(token, invalidField));
     }
-    const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
     // Same first-hand signal as the draft save above (docs ADR
     // 20260731-per-person-notification-locale) — signing is the strongest
     // version of it, since the diver read and agreed to the whole page.
@@ -741,18 +817,18 @@ export default async function WaiverPage({
       agreed: true,
       medicalAnswers: answers,
       // Optional — a diver who skips it still signs; blanks never clobber a
-      // value already on file.
-      emergencyContact: contact.success
-        ? {
-            name: contact.data.emergencyContactName,
-            phone: contact.data.emergencyContactPhone,
-          }
-        : undefined,
+      // value already on file, and a half-filled pair never reaches here.
+      emergencyContact:
+        submittedContact?.kind === "pair"
+          ? { name: submittedContact.name, phone: submittedContact.phone }
+          : undefined,
       guardian: guardian?.success
         ? {
             name: guardian.data.guardianName,
             relationship: guardian.data.guardianRelationship,
-            email: guardian.data.guardianEmail,
+            // Blank reaches the writer as an empty string and is stored as
+            // null; a malformed one never gets here.
+            email: guardian.data.guardianEmail ?? "",
             agreed: true,
           }
         : undefined,
@@ -772,20 +848,20 @@ export default async function WaiverPage({
         medicalAnswers: answers,
         guardian: guardianDraftFrom(formData, guardianRequired),
       });
-      if (contact.success) {
+      if (submittedContact?.kind === "pair") {
         if (recordBookingId) {
           await saveBookingEmergencyContact(db, {
             shopId: record.shopId,
             bookingId: recordBookingId,
-            name: contact.data.emergencyContactName,
-            phone: contact.data.emergencyContactPhone,
+            name: submittedContact.name,
+            phone: submittedContact.phone,
           });
         } else {
           await savePersonEmergencyContact(db, {
             shopId: record.shopId,
             personId: record.personId,
-            name: contact.data.emergencyContactName,
-            phone: contact.data.emergencyContactPhone,
+            name: submittedContact.name,
+            phone: submittedContact.phone,
           });
         }
       }
@@ -812,6 +888,17 @@ export default async function WaiverPage({
       redirect(`/waivers/${token}?error=unavailable`);
     }
     await trackEvent({ name: "waiver_signed" });
+    // **The guardian's copy** (issue #1453). Deferred past the response for the
+    // same reason every other courtesy send is: the family is watching for
+    // their signed state, and a stalled provider must never stand between them
+    // and it. No-ops for an adult's release and for a family who gave no
+    // address, which is where that decision is made rather than here.
+    after(async () => {
+      await sendGuardianReleaseCopy(await getDb(), {
+        shopId: record.shopId,
+        recordId: record.id,
+      }).catch(() => undefined);
+    });
     // A diver who just signed goes straight to "what's left" instead of a
     // signed-waiver page whose only forward path is the same link — the
     // completed-state render below still shows that page for anyone who
@@ -961,10 +1048,10 @@ export default async function WaiverPage({
             re-fires. Only for refusals that name a real control: "medical" names
             a whole section, and focusing eleven fieldsets at once helps nobody —
             the banner's jump link handles that one. */}
-        {signatureCardError ? (
+        {namedFieldError ? (
           <FieldErrorFocus
-            key={`${signatureCardError.anchor}:${at ?? ""}`}
-            field={signatureCardError.anchor}
+            key={`${namedFieldError.anchor}:${at ?? ""}`}
+            field={namedFieldError.anchor}
           />
         ) : null}
 
@@ -1051,9 +1138,20 @@ export default async function WaiverPage({
             ) : (
               <p className="mt-2 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
             )}
+            {/* A half-filled pair is refused on the empty box, in the same
+                shape as every other refusal on this page: the words under the
+                control the reader was just sent to, not a banner at the top. */}
             <FieldGrid columns={2} className="mt-4">
-              <Field label={t("waiver.contactName")}>
+              <Field
+                label={t("waiver.contactName")}
+                error={
+                  namedFieldError?.anchor === "emergencyContactName"
+                    ? t(namedFieldError.textKey)
+                    : undefined
+                }
+              >
                 <input
+                  id="emergencyContactName"
                   name="emergencyContactName"
                   autoComplete="name"
                   maxLength={120}
@@ -1061,8 +1159,16 @@ export default async function WaiverPage({
                   className={controlClass}
                 />
               </Field>
-              <Field label={t("waiver.contactPhone")}>
+              <Field
+                label={t("waiver.contactPhone")}
+                error={
+                  namedFieldError?.anchor === "emergencyContactPhone"
+                    ? t(namedFieldError.textKey)
+                    : undefined
+                }
+              >
                 <input
+                  id="emergencyContactPhone"
                   name="emergencyContactPhone"
                   type="tel"
                   inputMode="tel"
@@ -1101,9 +1207,7 @@ export default async function WaiverPage({
                 // not a ring with its explanation stranded at the top of the
                 // page.
                 error={
-                  signatureCardError?.anchor === "signerName"
-                    ? t(signatureCardError.textKey)
-                    : undefined
+                  namedFieldError?.anchor === "signerName" ? t(namedFieldError.textKey) : undefined
                 }
               >
                 <input
@@ -1129,17 +1233,17 @@ export default async function WaiverPage({
                 // The checkbox isn't a `Field`, so its refusal wiring is by
                 // hand: the same aria pair `Field`'s `error` prop provides,
                 // pointing at the message rendered just below.
-                aria-invalid={signatureCardError?.anchor === "acknowledged" ? "true" : undefined}
+                aria-invalid={namedFieldError?.anchor === "acknowledged" ? "true" : undefined}
                 aria-describedby={
-                  signatureCardError?.anchor === "acknowledged" ? "acknowledged-error" : undefined
+                  namedFieldError?.anchor === "acknowledged" ? "acknowledged-error" : undefined
                 }
                 className="size-4 accent-primary"
               />
               <span>{t("waiver.agreementCheckbox")}</span>
             </label>
-            {signatureCardError?.anchor === "acknowledged" ? (
+            {namedFieldError?.anchor === "acknowledged" ? (
               <FormStatus id="acknowledged-error" className="mt-2">
-                {t(signatureCardError.textKey)}
+                {t(namedFieldError.textKey)}
               </FormStatus>
             ) : null}
             {guardianRequired ? null : signBlock}
@@ -1162,8 +1266,8 @@ export default async function WaiverPage({
                 <Field
                   label={t("waiver.guardianName")}
                   error={
-                    signatureCardError?.anchor === "guardianName"
-                      ? t(signatureCardError.textKey)
+                    namedFieldError?.anchor === "guardianName"
+                      ? t(namedFieldError.textKey)
                       : undefined
                   }
                 >
@@ -1180,9 +1284,13 @@ export default async function WaiverPage({
                 </Field>
                 <Field
                   label={t("waiver.guardianEmail")}
+                  // Optional since issue #1453, and the description says what
+                  // giving one buys — an address collected under no stated
+                  // purpose is the wrong end of the promise.
+                  description={t("waiver.guardianEmailDescription")}
                   error={
-                    signatureCardError?.anchor === "guardianEmail"
-                      ? t(signatureCardError.textKey)
+                    namedFieldError?.anchor === "guardianEmail"
+                      ? t(namedFieldError.textKey)
                       : undefined
                   }
                 >
@@ -1192,7 +1300,6 @@ export default async function WaiverPage({
                     type="email"
                     inputMode="email"
                     autoComplete="off"
-                    required
                     maxLength={200}
                     defaultValue={draftGuardian?.email ?? ""}
                     className={controlClass}
@@ -1205,8 +1312,8 @@ export default async function WaiverPage({
                     name: signerOnFile?.fullName ?? "",
                   })}
                   error={
-                    signatureCardError?.anchor === "guardianRelationship"
-                      ? t(signatureCardError.textKey)
+                    namedFieldError?.anchor === "guardianRelationship"
+                      ? t(namedFieldError.textKey)
                       : undefined
                   }
                 >
@@ -1240,10 +1347,10 @@ export default async function WaiverPage({
                   // re-tick the agreement to try the next answer.
                   defaultChecked={draftGuardian?.acknowledged ?? false}
                   aria-invalid={
-                    signatureCardError?.anchor === "guardianAcknowledged" ? "true" : undefined
+                    namedFieldError?.anchor === "guardianAcknowledged" ? "true" : undefined
                   }
                   aria-describedby={
-                    signatureCardError?.anchor === "guardianAcknowledged"
+                    namedFieldError?.anchor === "guardianAcknowledged"
                       ? "guardianAcknowledged-error"
                       : undefined
                   }
@@ -1251,9 +1358,9 @@ export default async function WaiverPage({
                 />
                 <span>{t("waiver.guardianAgreementCheckbox")}</span>
               </label>
-              {signatureCardError?.anchor === "guardianAcknowledged" ? (
+              {namedFieldError?.anchor === "guardianAcknowledged" ? (
                 <FormStatus id="guardianAcknowledged-error" className="mt-2">
-                  {t(signatureCardError.textKey)}
+                  {t(namedFieldError.textKey)}
                 </FormStatus>
               ) : null}
               {signBlock}

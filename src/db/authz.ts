@@ -1,6 +1,5 @@
 import { and, eq } from "drizzle-orm";
 import {
-  canAnswerShopInbox,
   canConfigureTrips,
   canDeleteDiver,
   canErasePersonalData,
@@ -14,6 +13,7 @@ import {
   canMergeDiver,
   canOverrideGearRequest,
   canReadMedicalClearanceDocument,
+  canReadPrivateRecapPulse,
   canRefund,
   type Role,
 } from "@/lib/authz";
@@ -171,6 +171,16 @@ export const canPersonReadMedicalClearanceDocument = (
   personId: string,
 ) => canPerson(db, shopId, personId, canReadMedicalClearanceDocument);
 
+/**
+ * The live check behind the private pulse panel and its "Mark addressed"
+ * (issue #1410). Read from `person_roles` on every request rather than the
+ * session's stamped roles, for the same reason the medical-document gate above
+ * does: a manager demoted this morning must not still be reading what divers
+ * told the shop in confidence from a tab they left open.
+ */
+export const canPersonReadPrivateRecapPulse = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canReadPrivateRecapPulse);
+
 export const canPersonConfigureTrips = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canConfigureTrips);
 
@@ -190,12 +200,3 @@ export const canPersonOverrideGearRequest = (db: DbExecutor, shopId: string, per
 /** Live DB-checked companion of the staff-account gate (20260726-staff-invite-accounts). */
 export const canPersonManageStaffAccounts = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageStaffAccounts);
-
-/**
- * Live DB-checked companion of the inbox gate (ADR 20260907-two-way-inbox).
- * Read on every request rather than off the session's stamped roles: a reply
- * goes out as the shop, so a demoted manager loses the composer on their next
- * request instead of at their next sign-in.
- */
-export const canPersonAnswerShopInbox = (db: DbExecutor, shopId: string, personId: string) =>
-  canPerson(db, shopId, personId, canAnswerShopInbox);

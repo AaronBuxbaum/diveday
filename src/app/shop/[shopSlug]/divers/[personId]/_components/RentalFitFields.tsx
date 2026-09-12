@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { controlClass, Field } from "@/components/ui/form";
+import { InfoHint } from "@/components/ui/InfoHint";
 
 /** One "rents from the shop" tick — the shop's catalog, not the diver's answer. */
 export type RentalFitToggle = {
@@ -23,6 +24,12 @@ export type RentalFitSize = {
    * fin & boot size, which rides along with a wetsuit as well as with fins.
    */
   requires: readonly string[];
+  /**
+   * What this box is for beyond its label, behind an `InfoHint`. One field has
+   * one so far: a drysuit's size is also the only place a rock-boot size can
+   * be written down, and nothing else on the form says so.
+   */
+  info?: { label: string; detail: string };
 };
 
 /**
@@ -93,7 +100,13 @@ export function RentalFitFields({
       ) : null}
       {sizes.map((size) =>
         size.requires.some((name) => rented[name]) ? (
-          <Field key={size.name} label={size.label}>
+          <Field
+            key={size.name}
+            label={size.label}
+            aside={
+              size.info ? <InfoHint label={size.info.label} detail={size.info.detail} /> : undefined
+            }
+          >
             <input
               name={size.name}
               value={values[size.name] ?? ""}

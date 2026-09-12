@@ -76,6 +76,37 @@ describe("every seat surface escapes what it puts in a path segment", () => {
 });
 
 /**
+ * A seating has three outcomes a staffer acts on differently, and each door
+ * owes three distinct codes for them. The plain one is the only one that lets
+ * the staffer walk away; the other two each name work still at the desk.
+ *
+ * The held seat is the one that was missing. A seat taken off the counter's
+ * "is this the same diver?" prompt is identity-unconfirmed, so the boarding
+ * gate refuses it (H-13, issue #1556) — and every door answered that with the
+ * same "Added" it answers an ordinary seat with. The staffer met the hold on
+ * the next tap instead: a check-in refusal, with the diver at the counter and
+ * the confirm control on the trip roster (`dive-domain-expert`, 2026-09-11).
+ * A door whose held-seat code collapses back onto its plain one reopens that.
+ */
+describe("every seat surface says a held seat is held", () => {
+  for (const id of ids) {
+    const surface = SEAT_SURFACES[id];
+    it(`${id} names a code of its own for an identity-unconfirmed seat`, () => {
+      const { seatedNotice, seatedWaiverUndeliveredNotice, seatedIdentityUnconfirmedNotice } =
+        surface;
+      expect(
+        new Set([seatedNotice, seatedWaiverUndeliveredNotice, seatedIdentityUnconfirmedNotice])
+          .size,
+      ).toBe(3);
+      // The one spelling a notice code is allowed to have — a code the landing
+      // page's map cannot match renders no banner at all
+      // (src/lib/staff-notices.ts, `NOTICE_CODE_PATTERN`).
+      expect(seatedIdentityUnconfirmedNotice).toMatch(/^[a-z0-9-]+$/);
+    });
+  }
+});
+
+/**
  * The `?gate=` signature is bound to the id the landing route owns
  * (src/lib/trip-admission-gate.ts). A surface that returned the *wrong* one
  * would mint a signature its own reader could never verify — a specific refusal

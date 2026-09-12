@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { openSecret } from "@/lib/secret-box";
 import { seededShopContext } from "@/test/db";
+import { shops } from "./schema";
 import {
   connectShopWhatsAppAccount,
   disconnectShopWhatsAppAccount,
@@ -166,6 +167,25 @@ describe("shopIdForWhatsAppWaba", () => {
     await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_abc" }), { key });
 
     expect(await shopIdForWhatsAppWaba(db, "waba_someone_else")).toBeNull();
+  });
+
+  // `waba_id` has no unique index (issue #1715), so a chain that completes
+  // Embedded Signup for two of its shops against one Meta Business puts two rows
+  // here. An unordered `limit(1)` would hand this diver's message — and any
+  // reply keyword in it, up to a cancellation — to whichever row came back first.
+  it("refuses to guess when two shops hold the same WABA", async () => {
+    const { db, shop } = await seededShopContext();
+    const [sibling] = await db
+      .insert(shops)
+      .values({ name: "Sibling Shop", slug: "sibling-shop-whatsapp-test", timezone: "UTC" })
+      .returning();
+    if (!sibling) throw new Error("second shop insert failed");
+    await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_shared" }), { key });
+    await connectShopWhatsAppAccount(db, connectInput(sibling.id, { wabaId: "waba_shared" }), {
+      key,
+    });
+
+    expect(await shopIdForWhatsAppWaba(db, "waba_shared")).toBeNull();
   });
 });
 

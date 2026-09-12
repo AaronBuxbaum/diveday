@@ -423,6 +423,7 @@ async function TripGuestsBody({
           inviteAction={createDirectTripInvitationAction.bind(null, shopSlug, tripId)}
           status={noticeForForm(tripNotice, "add-diver")}
           locale={locale}
+          timeZone={shop.timezone}
           confirmName={confirmName}
           confirmEmail={confirmEmail}
           confirmPhone={confirmPhone}

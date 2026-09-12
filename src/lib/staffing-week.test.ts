@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { staffWeek, type WeekGap, type WeekPerson } from "./staffing-week";
+import type { CrewAssignmentRequest } from "./crew-requests";
+import {
+  GAP_TONE,
+  type StaffGapCode,
+  staffGapForCourseGap,
+  staffWeek,
+  type WeekGap,
+  type WeekPerson,
+} from "./staffing-week";
 
 /**
  * Slice 9e of ADR 20260827-the-shops-shelves, pinned as rules rather than
@@ -366,6 +374,17 @@ describe("blackouts and requests", () => {
     note: "Family",
   };
   const BEFORE = new Date("2026-08-20T00:00:00.000Z");
+  /** One ask on `GAP`. A divemaster by default — the #1339 case. */
+  const askOn = (overrides: Partial<CrewAssignmentRequest> = {}): CrewAssignmentRequest => ({
+    id: "r1",
+    tripId: GAP.tripId,
+    personId: "person-1",
+    personName: "Keiko Tanaka",
+    inWaterRole: "certified_assistant",
+    state: "pending",
+    requestedAt: BEFORE,
+    ...overrides,
+  });
 
   it("draws a person's own days away in their own row, and nobody else's", () => {
     const week = staffWeek({
@@ -456,7 +475,9 @@ describe("blackouts and requests", () => {
       now: BEFORE,
     } as const;
 
-    expect(ask({ ...base, viewer: { personId: "person-1", isCrew: true } })).toBe(true);
+    expect(
+      ask({ ...base, viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: true } }),
+    ).toBe(true);
     // Nobody reading: the affordance is not offered to a page that has no
     // viewer to speak of (every caller written before this slice).
     expect(ask({ ...base })).toBe(false);
@@ -464,7 +485,7 @@ describe("blackouts and requests", () => {
     expect(
       ask({
         ...base,
-        viewer: { personId: "person-1", isCrew: true },
+        viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: true },
         blocks: [{ ...AWAY, startsOn: "2026-08-27", endsOn: "2026-08-27" }],
       }),
     ).toBe(false);
@@ -472,17 +493,8 @@ describe("blackouts and requests", () => {
     expect(
       ask({
         ...base,
-        viewer: { personId: "person-1", isCrew: true },
-        requests: [
-          {
-            id: "r1",
-            tripId: GAP.tripId,
-            personId: "person-1",
-            personName: "Keiko Tanaka",
-            state: "pending",
-            requestedAt: BEFORE,
-          },
-        ],
+        viewer: { personId: "person-1", isCrew: true, holdsInstructorRole: true },
+        requests: [askOn()],
       }),
     ).toBe(false);
   });
@@ -496,26 +508,143 @@ describe("blackouts and requests", () => {
       today: THURSDAY,
       now: BEFORE,
       requests: [
-        {
-          id: "r1",
-          tripId: GAP.tripId,
-          personId: "person-2",
-          personName: "Sal Moretti",
-          state: "pending",
-          requestedAt: BEFORE,
-        },
-        {
+        askOn({ personId: "person-2", personName: "Sal Moretti" }),
+        askOn({
           id: "r2",
           tripId: "some-other-trip",
           personId: "person-2",
           personName: "Sal Moretti",
-          state: "pending",
-          requestedAt: BEFORE,
-        },
+        }),
       ],
     });
     const gap = week.gapDays.flatMap((day) => day.gaps)[0];
     expect(gap?.requests.map((request) => request.id)).toEqual(["r1"]);
+  });
+
+  /**
+   * Issue #1339. A divemaster could press "Ask for this one" on an intro/DSD
+   * session that was over its ratio, and nothing on the roster said that their
+   * being aboard raises an instructor-to-student cap by zero seats. The fix is
+   * a word beside the ask, never a refusal of it: the owner chose warn, and a
+   * second pair of hands in the water on a DSD session is a legitimate offer.
+   */
+  it("warns the reader whose ask cannot close an intro-ratio gap, and still offers it", () => {
+    const intro: WeekGap = { ...GAP, gap: "over_intro_ratio" };
+    const place = (holdsInstructorRole: boolean, gap = intro) =>
+      staffWeek({
+        people: [KEIKO],
+        gaps: [gap],
+        weekStart: MONDAY,
+        timeZone: TZ,
+        today: THURSDAY,
+        now: BEFORE,
+        viewer: { personId: "person-1", isCrew: true, holdsInstructorRole },
+      }).gapDays.flatMap((day) => day.gaps)[0];
+
+    const divemaster = place(false);
+    expect(divemaster?.viewerAskWontClose).toBe(true);
+    // The failure that matters: the warning must not have quietly become a
+    // gate. The ask is offered on exactly the same terms as before.
+    expect(divemaster?.viewerMayRequest).toBe(true);
+
+    // Somebody who can close it is told nothing — the line is about them.
+    expect(place(true)?.viewerAskWontClose).toBe(false);
+
+    // And the entry-level cap, which a certified assistant does raise, keeps
+    // its own word and earns no warning.
+    expect(place(false, { ...GAP, gap: "over_ratio" })?.viewerAskWontClose).toBe(false);
+  });
+
+  /**
+   * The half of #1339 that the first fix moved rather than closed: the line was
+   * computed alongside `viewerMayRequest`, so it lived exactly as long as the
+   * button did. A blackout taking it away is right — the ask is not theirs to
+   * make, so there is no belief to correct. Having *asked* taking it away is
+   * not: "I asked, so that shift is answered" is precisely the belief the line
+   * exists against, and a divemaster already rostered on the over-ratio intro
+   * session, the most operationally live case there is, never saw it at all.
+   */
+  it("keeps the fact on the departure after the ask, and for somebody already aboard", () => {
+    const gaps = [{ ...GAP, gap: "over_intro_ratio" } as WeekGap];
+    const base = {
+      people: [KEIKO],
+      gaps,
+      weekStart: MONDAY,
+      timeZone: TZ,
+      today: THURSDAY,
+      now: BEFORE,
+    } as const;
+    const divemaster = { personId: "person-1", isCrew: true, holdsInstructorRole: false } as const;
+    const place = (extra: Partial<Parameters<typeof staffWeek>[0]>) =>
+      staffWeek({ ...base, ...extra }).gapDays.flatMap((day) => day.gaps)[0];
+
+    // No viewer at all: nobody to be wrong about it.
+    expect(place({})?.viewerAskWontClose).toBe(false);
+
+    // A blackout the write would refuse on: still hidden, and this is the
+    // refusal that *should* hide it.
+    const blocked = place({
+      viewer: divemaster,
+      blocks: [{ ...AWAY, startsOn: "2026-08-27", endsOn: "2026-08-27" }],
+    });
+    expect(blocked?.viewerMayRequest).toBe(false);
+    expect(blocked?.viewerAskWontClose).toBe(false);
+
+    // Having asked: the button is gone, the fact is not.
+    const asked = place({ viewer: divemaster, requests: [askOn()] });
+    expect(asked?.viewerMayRequest).toBe(false);
+    expect(asked?.viewerAskWontClose).toBe(true);
+
+    // Already on the crew of the session that is over ratio.
+    const aboard = place({
+      viewer: divemaster,
+      people: [
+        {
+          ...KEIKO,
+          crewingTrips: [{ tripId: GAP.tripId, title: GAP.title, meetings: GAP.meetings }],
+        },
+      ],
+    });
+    expect(aboard?.viewerMayRequest).toBe(false);
+    expect(aboard?.viewerAskWontClose).toBe(true);
+
+    // And an instructor in either of those two states is told nothing: the
+    // line is about the reader who cannot close it.
+    expect(
+      place({
+        viewer: { ...divemaster, holdsInstructorRole: true },
+        requests: [askOn()],
+      })?.viewerAskWontClose,
+    ).toBe(false);
+  });
+
+  /**
+   * The other half of #1339: the person who can actually close the gap. The
+   * owner or manager working the queue saw "{person} asked" and two buttons,
+   * approved, and read "Approved, and they're on the crew" about a session
+   * still over ratio. `inWaterRole` rides on the request so the same sentence
+   * can sit beside Approve.
+   */
+  it("says beside a pending ask whether approving it would close the gap", () => {
+    const place = (gap: StaffGapCode, request: CrewAssignmentRequest) =>
+      staffWeek({
+        people: [KEIKO],
+        gaps: [{ ...GAP, gap }],
+        weekStart: MONDAY,
+        timeZone: TZ,
+        today: THURSDAY,
+        now: BEFORE,
+        requests: [request],
+      }).gapDays.flatMap((day) => day.gaps)[0]?.requests[0]?.askWontClose;
+
+    expect(place("over_intro_ratio", askOn())).toBe(true);
+    // Somebody who does close it.
+    expect(place("over_intro_ratio", askOn({ inWaterRole: "instructor" }))).toBe(false);
+    // The entry-level cap, which a certified assistant does raise.
+    expect(place("over_ratio", askOn())).toBe(false);
+    // An answered request is history; the gap chip above it already says the
+    // session is still short.
+    expect(place("over_intro_ratio", askOn({ state: "approved" }))).toBe(false);
   });
 
   it("counts a week with nothing but somebody's days away as having entries", () => {
@@ -531,5 +660,31 @@ describe("blackouts and requests", () => {
       now: BEFORE,
     });
     expect(week.hasEntries).toBe(true);
+  });
+});
+
+/**
+ * The one place a course gap's ratio kind becomes a chip code (issue #1339).
+ * `courseCrewGap` has always carried it; the staffing week threw it away.
+ */
+describe("staffGapForCourseGap", () => {
+  it("keeps the intro cap apart from the entry-level one", () => {
+    expect(
+      staffGapForCourseGap({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" }),
+    ).toBe("over_intro_ratio");
+    expect(
+      staffGapForCourseGap({ code: "over_ratio", booked: 9, capacity: 8, ratio: "entry_level" }),
+    ).toBe("over_ratio");
+  });
+
+  it("passes the instructor gap through and says nothing about an adequate session", () => {
+    expect(staffGapForCourseGap({ code: "no_instructor" })).toBe("no_instructor");
+    expect(staffGapForCourseGap({ code: "none" })).toBeNull();
+  });
+
+  it("draws the intro cap in the same warning ink as the ratio it splits from", () => {
+    // A quieter tone would say the tighter of the two rules matters less.
+    expect(GAP_TONE.over_intro_ratio).toBe("warning");
+    expect(GAP_TONE.over_intro_ratio).toBe(GAP_TONE.over_ratio);
   });
 });

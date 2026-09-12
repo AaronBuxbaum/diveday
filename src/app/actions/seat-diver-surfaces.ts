@@ -66,6 +66,31 @@ export type SeatSurface = {
    */
   seatedWaiverUndeliveredNotice: string;
   /**
+   * The same seating, when the seat it made is **held** — `createBooking`
+   * attached it to an existing person on something short of proof and stamped
+   * `identityUnconfirmedAt`, so the boarding gate refuses it until a staffer
+   * confirms the identity (H-13, issue #1556).
+   *
+   * Still a seating, so still a success code; what it adds is the fact
+   * `seatedNotice` hid. Without it every door answered a plain "Added" and the
+   * staffer met the hold on the next tap instead — a check-in refusal pointing
+   * at a confirm control on the trip roster, which is three screens and a
+   * queue away from the counter that made the seat (`dive-domain-expert`,
+   * 2026-09-11).
+   *
+   * Ranked **above** the waiver notice below when both apply: a held seat
+   * withholds the matched person's particulars, the waiver control among them
+   * (`RosterSection.tsx`'s `showsPersonDetail`), so "hand them the waiver link"
+   * is not yet an instruction anyone can follow.
+   *
+   * Every door needs one, including the diver's own record — which seats a
+   * person the staffer already picked by identity and so has never raised the
+   * flag. The flag is decided inside `createBooking`, not at the door, and a
+   * door with no sentence for it would fall back to "Added", which is the
+   * exact hole this closes.
+   */
+  seatedIdentityUnconfirmedNotice: string;
+  /**
    * Whether the settle URL carries the new booking id — the roster's
    * scroll-to-the-new-row-and-toast affordance. Surfaces without a roster to
    * scroll leave it off rather than trailing a meaningless query param.
@@ -119,6 +144,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     gateScope: ({ tripId }) => ({ kind: "trip", id: tripId }),
     seatedNotice: "diver-added",
     seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",
+    seatedIdentityUnconfirmedNotice: "diver-added-identity-unconfirmed",
     carriesBookingId: true,
     invalidNotice: "diver-invalid",
     refusalNotice: TRIP_REFUSAL_NOTICE,
@@ -155,6 +181,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     gateScope: ({ tripId }) => (tripId ? { kind: "trip", id: tripId } : null),
     seatedNotice: "walkin-added",
     seatedWaiverUndeliveredNotice: "walkin-added-waiver-undelivered",
+    seatedIdentityUnconfirmedNotice: "walkin-added-identity-unconfirmed",
     carriesBookingId: true,
     invalidNotice: "walkin-invalid",
     refusalNotice: {
@@ -185,6 +212,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     gateScope: ({ personId }) => ({ kind: "diver", id: personId }),
     seatedNotice: "booked",
     seatedWaiverUndeliveredNotice: "booked-waiver-undelivered",
+    seatedIdentityUnconfirmedNotice: "booked-identity-unconfirmed",
     carriesBookingId: false,
     invalidNotice: "booking-invalid",
     refusalNotice: {
@@ -224,6 +252,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     gateScope: ({ tripId }) => (tripId ? { kind: "trip", id: tripId } : null),
     seatedNotice: "diver-added",
     seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",
+    seatedIdentityUnconfirmedNotice: "diver-added-identity-unconfirmed",
     carriesBookingId: true,
     invalidNotice: "diver-invalid",
     refusalNotice: TRIP_REFUSAL_NOTICE,

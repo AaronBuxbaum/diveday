@@ -6,11 +6,11 @@
     "notice": {
       "invalid": "Pick a customer and at least one line item with an amount.",
       "notConnected": "Connect a Stripe account in Shop settings before creating an order.",
-      "taxLocationRequired": "Tax is enabled. Add the customer's billing address before sending this invoice.",
-      "stripeFailed": "Stripe couldn't create that invoice. Try again in a moment.",
-      "fallback": "That order couldn't be created."
+      "taxLocationRequired": "Tax is enabled. Add the customer’s billing address before sending this invoice.",
+      "stripeFailed": "Stripe couldn’t create that invoice. Try again in a moment.",
+      "fallback": "That order couldn’t be created."
     },
-    "linkedTo": "Linked to {personName}'s booking on {tripTitle} ({date}).",
+    "linkedTo": "Linked to {personName}’s booking on {tripTitle} ({date}).",
     "courseNote": "Clear the e-learning line if this student already completed it elsewhere.",
     "noPriceNote": "This trip has no price set.",
     "customerLabel": "Customer",
@@ -72,7 +72,7 @@
     },
     "openInvoice": "Open the payable invoice",
     "openInvoiceHint": "— share this link with the customer.",
-    "demoActionHint": "Demo orders aren't backed by a live Stripe invoice, so this action is disabled.",
+    "demoActionHint": "Demo orders aren’t backed by a live Stripe invoice, so this action is disabled.",
     "refreshStatus": "Refresh status",
     "refreshing": "Refreshing…",
     "voidOrder": "Void order",
@@ -85,17 +85,17 @@
     "refunding": "Refunding…",
     "notice": {
       "refreshed": "Status refreshed from Stripe.",
-      "refreshFailed": "Couldn't reach Stripe to refresh this order.",
+      "refreshFailed": "Couldn’t reach Stripe to refresh this order.",
       "voided": "Order voided.",
-      "voidFailed": "Couldn't void this order.",
+      "voidFailed": "Couldn’t void this order.",
       "refunded": "Payment refunded. The trip now shows as unpaid for this diver.",
-      "refundInvalidAmount": "That refund amount isn't one this order can give back. Enter an amount up to what's still held.",
+      "refundInvalidAmount": "That refund amount isn’t one this order can give back. Enter an amount up to what’s still held.",
       "partlyRefunded": "Part of this payment is on its way back. The rest is still with you, and the trip still shows as paid for this diver.",
-      "refundFailed": "Couldn't refund this order.",
-      "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh. Don't send it again.",
+      "refundFailed": "Couldn’t refund this order.",
+      "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh. Don’t send it again.",
       "refundNeedsReconciliation": "Stripe already sent a refund for this order that we never finished recording. Check it against your Stripe dashboard before sending any more. This order is on the stuck payments list.",
       "notAuthorized": "Refunds are limited to owners and managers. Ask one of them to issue this refund.",
-      "demoDisabled": "This is a demo order, so it can't be changed.",
+      "demoDisabled": "This is a demo order, so it can’t be changed.",
       "fallback": "Something changed on this order. The details below are current."
     }
   },
@@ -105,7 +105,7 @@
     "newOrder": "New order",
     "monthlyReport": "Monthly report",
     "notice": {
-      "paymentNotConnected": "Payments aren't connected yet, so there's no account to invoice from. Connect one to start charging divers.",
+      "paymentNotConnected": "Payments aren’t connected yet, so there’s no account to invoice from. Connect one to start charging divers.",
       "notAuthorized": "Sending an invoice is limited to owners and managers. Ask one of them to bill this diver."
     },
     "filters": {
@@ -145,7 +145,7 @@
     "importedHistory": {
       "sectionLabel": "Imported payment history",
       "heading": "Imported payment history",
-      "detail": "Imported payment, refund, and receipt records are unverified. They use source status rather than an order status; only a clear amount in this shop's currency contributes to the separately labelled revenue/refund aggregate. They are never live Stripe orders or booking payments.",
+      "detail": "Imported payment, refund, and receipt records are unverified. They use source status rather than an order status; only a clear amount in this shop’s currency contributes to the separately labelled revenue/refund aggregate. They are never live Stripe orders or booking payments.",
       "unverified": "Unverified import",
       "table": {
         "source": "Source record",
@@ -166,7 +166,7 @@
     },
     "paymentOps": {
       "sectionLabel": "Payments that need a check",
-      "heading": "{count, plural, one {# payment} other {# payments}} we couldn't confirm. Check them in Stripe.",
+      "heading": "{count, plural, one {# payment} other {# payments}} we couldn’t confirm. Check them in Stripe.",
       "detail": "Stripe was asked to do something and the app never confirmed how it went. Check each against the Stripe dashboard and finish it by hand.",
       "started": "started {date}",
       "stripeId": "Stripe: {id}",
@@ -180,7 +180,7 @@
     "owedRefunds": {
       "sectionLabel": "Refunds you still owe",
       "heading": "{count, plural, one {# diver is} other {# divers are}} still owed money for a departure you cancelled.",
-      "detail": "Their money couldn't go back by card. Each of them has been told you'll be in touch. Return it, then mark the seat refunded on the departure's Guests tab.",
+      "detail": "Their money couldn’t go back by card. Each of them has been told you’ll be in touch. Return it, then mark the seat refunded on the departure’s Guests tab.",
       "depositOnly": "deposit only",
       "unrecordedAmount": "amount not recorded",
       "openTrip": "Open trip"

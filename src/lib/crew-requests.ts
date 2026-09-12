@@ -1,6 +1,7 @@
 import { hasReturned } from "@/lib/trips";
 import type { CalendarDate } from "./calendar-date";
 import { calendarDateInTimezone } from "./calendar-date";
+import type { InWaterCrewRole } from "./crew-roles";
 
 /**
  * **The crew's own half of the staffing week** — what a person says about their
@@ -47,6 +48,19 @@ export type CrewAssignmentRequest = {
   tripId: string;
   personId: string;
   personName: string;
+  /**
+   * What this person would contribute to the **in-water supervision ratio** if
+   * the ask were approved — `inWaterCrewRole` (src/lib/crew-roles.ts) read over
+   * their standing roles, because a request names no per-trip job yet.
+   *
+   * Carried on the request because the person who answers it is not the person
+   * who made it (issue #1339). The requester was warned that their being aboard
+   * does not move an intro session's instructor-to-student cap; the owner or
+   * manager working the queue saw "{person} asked" and two buttons, approved,
+   * and read "Approved, and they're on the crew" about a session still over
+   * ratio. A name is not a qualification, so the fact travels with the ask.
+   */
+  inWaterRole: InWaterCrewRole;
   state: CrewRequestState;
   requestedAt: Date;
 };

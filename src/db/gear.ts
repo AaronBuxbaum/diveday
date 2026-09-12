@@ -1853,6 +1853,65 @@ export async function listFitAdjustedReturns(
   });
 }
 
+/**
+ * **The same teaching, re-proved from the reservation the tap names** (issue
+ * #1453's `security-reviewer` pass on the guardian layer, which read this one
+ * next door).
+ *
+ * `keepRentalFitAction` used to take the size as an argument. The docblock's
+ * whole authorization argument was that the row it lands on "exists only
+ * because the desk already recorded a `fit_adjusted` return, so this writes
+ * down what a human already decided rather than making a new call" — which is
+ * why it is open to every staff role, against `canOverrideGearRequest`
+ * reserving an overwrite of a diver's stated size for owner, manager,
+ * instructor and divemaster. Nothing enforced it: a crew member could post any
+ * person id in their shop with any string and rewrite that diver's fit.
+ *
+ * So the tap now names the reservation and the size comes from here. Same
+ * predicates as `listFitAdjustedReturns` above, minus two:
+ *
+ * - **No day window.** That bound is about when the shop is *asked* — the
+ *   leftovers trail is keyed by `shop_day` so the question expires with the
+ *   evening — not about whether the desk's recorded outcome is true. A tap
+ *   that lands at 00:01, or a replayed id from last week, still writes a size
+ *   a named staffer recorded at the counter for that diver, which is the whole
+ *   of the claim.
+ * - **No "differs from what is on file" check.** That decides whether the
+ *   question is worth an evening; confirming a size that already matches is a
+ *   no-op with an attribution stamp, not a wrong write.
+ */
+export async function fitAdjustedReturnTeaching(
+  db: AppDb,
+  input: { shopId: string; reservationId: string },
+): Promise<{ personId: string; kind: SizedRentalKind; size: string } | null> {
+  const [row] = await db
+    .select({
+      personId: bookings.personId,
+      gearKind: gearItems.kind,
+      size: gearItems.size,
+    })
+    .from(gearReservations)
+    .innerJoin(gearItems, eq(gearItems.id, gearReservations.gearItemId))
+    .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
+    .where(
+      and(
+        eq(gearReservations.id, input.reservationId),
+        eq(gearReservations.shopId, input.shopId),
+        eq(gearReservations.returnOutcome, "fit_adjusted"),
+        isNotNull(gearReservations.returnedAt),
+        isNotNull(gearItems.size),
+        liveGearItem(),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+  const kind = sizedRentalKindOfGearKind(row.gearKind);
+  const size = row.size?.trim();
+  if (!kind || !size) return null;
+  return { personId: row.personId, kind, size };
+}
+
 export async function listOverdueGearReservations(
   db: AppDb,
   shopId: string,

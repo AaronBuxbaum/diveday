@@ -10,6 +10,7 @@ import {
   canPersonManageStaffAccounts,
   canPersonManageWaiverTemplates,
   canPersonOverrideGearRequest,
+  canPersonReadPrivateRecapPulse,
   canPersonRefund,
   loadActiveStaffRoles,
   loadActiveStaffRolesByPerson,
@@ -126,6 +127,10 @@ describe("H-14 owner/manager surfaces", () => {
       canPersonManageWaiverTemplates,
       canPersonDeleteDiver,
       canPersonManageStaffAccounts,
+      // #1410: the private recap pulse. Its own predicate rather than the
+      // reports gate it used to borrow, because the recap form promises the
+      // diver this reader set by name (src/lib/authz.ts).
+      canPersonReadPrivateRecapPulse,
     ]) {
       expect(await gate(db, shop.id, owner)).toBe(true);
       expect(await gate(db, shop.id, manager)).toBe(true);

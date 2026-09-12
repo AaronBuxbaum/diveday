@@ -12,7 +12,9 @@ import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   choosePartySize,
+  createTrip,
   daysFromNow,
+  disclosureSettled,
   manifestRow,
   offlineCopySaved,
   openManifestPerson,
@@ -32,8 +34,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Two hundred and nine key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 836 screenshots per run (see
+ * Visual regression coverage. Two hundred and thirty-four key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 936 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -46,18 +48,20 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * "correct the prose" instruction above ended up chasing a number that was
  * never right.
  *
- * Five more come from the `print` block at the bottom: the manifest, prep,
- * trip-packet, day-packet, and departure-log pages as they render for the
+ * Ten more come from the `print` block at the bottom: the manifest, prep,
+ * trip-packet, day-packet, departure-log, dock-sign, window-sticker,
+ * boat-card, site-briefing-cards and paper-pass pages as they render for the
  * printer. Print
  * is its own concern, not a light/dark one — the `@media print` token override
  * collapses both schemes to one black-and-white palette — so each is captured
  * once, at a US-Letter width, via `capturePrint()`.
  *
  * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
- * and `TABLET_SURFACES` adds 10: five staff surfaces get a third, portrait
- * tablet width, at one screenshot per scheme rather than the usual two. That
- * brings the run to 854 screenshots — the tablet width is a 1.2% addition, not
- * the 50% a third viewport applied to every surface would have cost.
+ * `TABLET_SURFACES` adds 16 — eight surfaces a shop runs on a tablet get a
+ * third, portrait width, at one screenshot per scheme rather than two — and
+ * `TV_SURFACES` adds 2 for the one board a lobby screen shows. That brings the
+ * run to 968 screenshots: the extra widths are a 2% addition, not the 50% a
+ * third viewport applied to every surface would have cost.
  *
  * ## One surface, one `test()`
  *
@@ -308,6 +312,28 @@ for (const name of [...TABLET_SURFACES, ...TV_SURFACES]) {
  * partly-but-not-fully diagnosed from would be the same class of confident,
  * incomplete-justification mistake the debug skill's honesty rule warns
  * about — so this correction stays rather than getting quietly folded in.
+ *
+ * **Second correction, 2026-09-10: `unoptimized` took sharp out and left the
+ * browser's own decoder in.** `site-briefing` and `booking-pitch-open` kept
+ * reporting changed after all of the above was in place -- five issues' worth
+ * (#1585, #1567, #1432, #1405, #1623), always the same one marine-life
+ * photograph, never anything else on a 6,000px page, max channel delta 6 to 10.
+ * #1597 measured it: twelve runs of one build on one machine, two byte-exact
+ * variants, flipping about one run in three, and the only thing that moved the
+ * outcome was what else had already run in the browser process.
+ *
+ * That is a decode-cache signature, not a timing one, and the wait loop above
+ * cannot reach it. With `unoptimized` there is no srcset, so the browser is
+ * handed the repository's own 640px file and picks its own decode scale; a JPEG
+ * decoder can decode at N/8 of the stored size, so a source two or more times
+ * the rendered box has more than one legal decode and the cache's state chooses
+ * between them. `src/lib/marine-life-tiles.ts` closes it by serving every
+ * marine-life tile a committed variant whose width sits strictly inside
+ * `(box/2, 2*box)` -- one legal decode, one fixed resample -- and only under
+ * `DIVEDAY_E2E`, so production still renders the full-size source through the
+ * optimizer. The captures below that render a species therefore photograph a
+ * box-sized file rather than a 640px one, which is closer to what a browser is
+ * served in production, not further.
  */
 /**
  * Every wait below is bounded, because `requestAnimationFrame` is not a promise
@@ -2047,12 +2073,25 @@ for (const scheme of ["light", "dark"] as const) {
 
       // A departure that no longer exists, which is what a link on a flyer or
       // in last season's Instagram post resolves to. It is a *shop* surface
-      // now rather than DiveDay's app-wide 404 (issue #765), so the thing to
-      // look at is that the shop's header, nav and footer frame it and that
-      // one action leads back to the board.
+      // rather than DiveDay's app-wide 404 (issue #765), so the thing to look
+      // at is that the shop's header, nav and footer frame it and that one
+      // action leads back to the board.
+      //
+      // The frame is composed in `src/app/not-found.tsx` now, not by the
+      // segment layout: `src/proxy.ts` refuses this URL above the streaming
+      // boundary so it answers a real 404 (ADR
+      // 20260912-the-public-namespace-refuses-at-the-edge), and a rewrite to
+      // `/_not-found` renders under the root layout. The components are the
+      // same four, moved verbatim, so the picture is the same picture — which
+      // is exactly what this baseline is here to say.
+      //
+      // The heading by name rather than `h1` first: the shell this route
+      // streams from is DiveDay's own 404, which has an `<h1>` of its own, so
+      // a wait on the tag can be satisfied by the page this capture exists to
+      // prove is gone.
       test(`a dead link inside a shop renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/trips/00000000-0000-4000-8000-000000000000");
-        await page.locator("h1").first().waitFor();
+        await page.getByRole("heading", { name: "That page isn’t here any more" }).waitFor();
         await capture(page, "shop-not-found", scheme);
       });
 
@@ -3070,7 +3109,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Name", { exact: true }).fill("Orla Byrne");
         await page.getByLabel("Email", { exact: true }).fill(`organizer-${scheme}@example.com`);
         await page.getByLabel("Diver 2 name").fill("Sam Reyes");
-        await page.getByLabel("Use the main contact's email for this diver").check();
+        await page.getByLabel("Use the main contact’s email for this diver").check();
         await page.getByRole("button", { name: /^Book/ }).click();
         await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
         await expect(page).toHaveURL(/\/ready\//);
@@ -3423,7 +3462,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/${unique}`);
         // The line's own tour link, which is what the line exists to keep.
         await page
-          .getByRole("link", { name: "Open Board to see this week's departures." })
+          .getByRole("link", { name: "Open Board to see this week’s departures." })
           .waitFor();
         // ...and proof it is the line and not the card: the two forms share
         // that link, so waiting on it alone would pass on either.
@@ -3728,7 +3767,135 @@ for (const scheme of ["light", "dark"] as const) {
         // Re-opened, and carrying the field the message is about — the half
         // that needs the diver to be a minor.
         await expect(row.getByLabel("Parent or guardian who signed")).toBeVisible();
+        // ...and the way through the refusal names, which only this refusal
+        // draws (issue #1573). It is why this capture moved: the form grew one
+        // line under the two guardian fields.
+        await expect(
+          row.getByLabel("This co-signer and this diver have the same name", { exact: false }),
+        ).toBeVisible();
         await capture(page, "check-in-waiver-refused", scheme);
+      });
+
+      /**
+       * **"Not here?", open** (issue #1209) — the counter's script for the
+       * diver who never turned up.
+       *
+       * The one state of this surface no seeded day can hold. The door opens
+       * when the boat leaves without the diver (`noShowGate`) and shuts when
+       * the arrivals window does, and on the fleet's frozen 09:30 every seeded
+       * departure is either hours out or already home — which is the whole
+       * reason it went unphotographed when it shipped. So the flow sells the
+       * seat on a boat that is still ahead, clears the release at the desk the
+       * way a staffer does, and then sends the boat out without her
+       * (`/api/test/depart-trip`, which moves the departure because the fleet's
+       * clock cannot move).
+       *
+       * **Two frames, because the tap is two different claims**
+       * (`noShowClaim`, src/lib/no-show.ts). Ten minutes out it is about a
+       * seat the shop can still sell, and the door is three quiet words.
+       * Ninety minutes out the boat is gone, the seat is worth nothing, and the
+       * same tap says this person did not dive — the one nobody comes back to
+       * undo, because the diver is at sea or home. That frame is the argument
+       * that the louder script is actually louder.
+       *
+       * What both frames are for is the restraint: the door sits *under* a
+       * check-in tap that stays the only large target on the row, and behind it
+       * one sentence and one button. The counter is used with wet hands on a
+       * shared desk tablet, so a second control that grew to look like a peer
+       * of that tap is exactly the regression these baselines catch.
+       */
+      test(`the counter's not-here door renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        // A departure, a sale and a release recorded before anything is shot.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const title = "Dock Call Two-Tank";
+        await createTrip(page, {
+          title,
+          date: daysFromNow(0),
+          // 09:45 against the frozen 09:30 (`e2e/servers.ts`): still ahead, so
+          // the seat can be sold. The boat is sent out below. One seat, so the
+          // frame holds one row rather than a queue.
+          departsAt: "09:45",
+          returnsAt: "12:00",
+          capacity: 1,
+        });
+        const tripId = await seededTripId(page, "blue-mantis", title);
+
+        // Odile Marchand is seeded carded and booked on nothing
+        // (`src/db/seed-cert-gates.ts`), so she clears this trip's Open Water
+        // baseline and arrives blocked on the release alone.
+        await page.goto(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
+        const findDiver = page.getByRole("searchbox", {
+          name: "Search by name, email, or phone",
+        });
+        await findDiver.fill("Odile Marchand");
+        await findDiver.press("Enter");
+        await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
+        await page.waitForURL(/\/check-in(\?|$)/);
+
+        // **The boat goes without her**, ten minutes ago: past the departure,
+        // inside the hour a late boat is allowed, which is the seat half of
+        // the door.
+        const depart = async (minutesAgo: number) => {
+          const moved = await request.post("/api/test/depart-trip", {
+            data: { tripId, minutesAgo },
+          });
+          expect(moved.ok()).toBe(true);
+        };
+        await depart(10);
+
+        // `?trip=` pins the departure rather than trusting whichever boat the
+        // instrument focuses — the same reason the refusal capture above does.
+        await page.goto(`/shop/blue-mantis/check-in?trip=${tripId}`);
+        const row = page
+          .locator("article")
+          .filter({ hasText: "Odile Marchand" })
+          .filter({ visible: true });
+        await row.getByText("Mark signed on paper").click();
+        await row
+          .getByLabel("I have this diver’s signed release on file", { exact: false })
+          .filter({ visible: true })
+          .check();
+        await row.getByRole("button", { name: "Record paper signature" }).click();
+        // Cleared in place, which is what puts the door on the row: it is
+        // offered under the check-in tap and nowhere else.
+        await expect(row.getByRole("button", { name: "Check in Odile Marchand" })).toBeVisible();
+
+        const door = row.locator("details").filter({ hasText: "Not here?" });
+        await door.locator("> summary").click();
+        // The body animates in, so `open` flipping is not the frame it is laid
+        // out in — waited on the arrival's end state, never a duration.
+        await disclosureSettled(door);
+        // The search box focuses itself from a mount effect and the ring it
+        // paints is in the frame: the same race, and the same signal, as the
+        // three counter captures above.
+        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
+        await capture(page, "check-in-no-show", scheme);
+
+        // **The same row once the boat is really gone.** Ninety minutes past
+        // its departure the seat is worth nothing and the tap has stopped
+        // being about one: the door asks the other question and says what it
+        // costs the diver. Nothing else about the row moves, which is the
+        // comparison this second frame is for.
+        await depart(90);
+        await page.goto(`/shop/blue-mantis/check-in?trip=${tripId}`);
+        const sailedRow = page
+          .locator("article")
+          .filter({ hasText: "Odile Marchand" })
+          .filter({ visible: true });
+        const sailedDoor = sailedRow.locator("details").filter({ hasText: "Did not dive?" });
+        await sailedDoor.locator("> summary").click();
+        await disclosureSettled(sailedDoor);
+        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
+        await capture(page, "check-in-no-show-sailed", scheme);
       });
 
       // **The home's evening reading** (ADR 20260804-day-closeout, folded into
@@ -4352,7 +4519,7 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByRole("button", { name: "Mark signed on paper" })).toBeVisible();
         await page.getByRole("button", { name: "Mark signed on paper" }).click();
         await page
-          .getByLabel("I have this diver's signed release on file", { exact: false })
+          .getByLabel("I have this diver’s signed release on file", { exact: false })
           .check();
         await page.getByRole("button", { name: "Record paper signature" }).click();
         // The earned moment is what says the ledger emptied — and it is the
@@ -4379,7 +4546,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/divers?q=Morgan");
         await page.getByRole("link", { name: "Morgan Vale" }).click();
         await page.getByRole("heading", { level: 1, name: "Morgan Vale" }).waitFor();
-        await page.getByRole("button", { name: "Record the physician's answer" }).click();
+        await page.getByRole("button", { name: "Record the physician’s answer" }).click();
         // The submit is what the disclosure reveals, so waiting on it is
         // waiting on the panel being open rather than on a duration.
         await page.getByRole("button", { name: "Record the answer" }).waitFor();
@@ -4427,11 +4594,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Email").fill("priya.duplicate@example.com");
         await page.getByLabel("Phone").fill("+1 305 555 0999");
         await page.getByRole("button", { name: "Add diver", exact: true }).click();
-        await page
-          .getByRole("heading", {
-            name: "Did you mean one of these existing potential matches?",
-          })
-          .waitFor();
+        // The prompt asks the counter's question by name now (issue #1556), so
+        // this waits on the half that is about this diver rather than on a
+        // sentence that also carries what picking one costs.
+        await page.getByRole("heading", { name: /^Is this the same Priya Sharma\?/ }).waitFor();
         await page.getByRole("button", { name: "Create new diver anyway" }).click();
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
         await page.getByRole("heading", { name: "Possible duplicate records" }).waitFor();
@@ -4642,7 +4808,7 @@ for (const scheme of ["light", "dark"] as const) {
         await dealList.getByLabel("Name").fill("Tess Alvarez");
         await dealList.getByLabel("Email").fill("tess.visual@example.com");
         await dealList.getByLabel("Certification level").selectOption("open_water");
-        await expect(dealList.getByLabel("I'm certified for nitrox (enriched air)")).toHaveCount(0);
+        await expect(dealList.getByLabel("I’m certified for nitrox (enriched air)")).toHaveCount(0);
         await page
           .locator('input[name="availableFrom"]')
           .filter({ visible: true })
@@ -4782,7 +4948,7 @@ for (const scheme of ["light", "dark"] as const) {
         // band's sibling list, so the section is the narrowest honest scope.)
         await page
           .locator("#roster")
-          .getByText("Open Water · below this departure's minimum")
+          .getByText("Open Water · below this departure’s minimum")
           .waitFor();
         await waitForHashLanding(page);
         await capture(page, "trip-guests-waitlist", scheme);
@@ -4804,6 +4970,96 @@ for (const scheme of ["light", "dark"] as const) {
         // of that group's state on the summary line, and it is what this shot
         // must not race.
         await capture(page, "manifest", scheme);
+      });
+
+      /**
+       * **The same manifest with one seat released** (#1209,
+       * `dive-domain-expert` review 20260911).
+       *
+       * The capture above is a boat nobody has written anybody off on, which
+       * is every seeded departure: the counter's door only opens once a boat
+       * has left without the diver, so the state that needs photographing
+       * cannot be reached without making a departure whose time has just
+       * passed. The flow is the counter's own — seat the diver, clear their
+       * release, tap the door —
+       * and then walks to the rail, which is where the pixels under test are.
+       *
+       * What the frame is for is the restraint. A released seat is the absence
+       * of an exception, not one, so the row wears a plain neutral chip beside
+       * the name and keeps its boarding tap: nothing here refuses a body the
+       * crew can see. A future session that reaches for a warning tone, or
+       * moves the word into the person sheet where it costs a tap, has a
+       * baseline to argue with. The count above it is in frame for the other
+       * half of the same fix — the head count's denominator drops the seat,
+       * so the figure is bodies to expect rather than rows on paper.
+       */
+      test(`a manifest with a released seat renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // A departure, a sale and a release recorded before anything is shot.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const title = "Dock Call Reef Manifest";
+        await createTrip(page, {
+          title,
+          date: daysFromNow(0),
+          // 09:00 against the frozen 09:30 (`e2e/servers.ts`): half an hour
+          // past its departure, which is the window the door opens in, and
+          // still inside the hour a late boat is allowed, so the walk-in can
+          // seat these two. Two seats, because the frame is about the *contrast*: a boat
+          // of one released diver photographs the chip and a head count with
+          // nobody left to expect, which is not the row a crew reads.
+          departsAt: "09:00",
+          returnsAt: "12:00",
+          capacity: 2,
+        });
+        const tripId = await seededTripId(page, "blue-mantis", title);
+
+        // Odile Marchand and Hana Kobayashi are both seeded booked on nothing
+        // (`src/db/seed-cert-gates.ts`, `src/db/seed-cast.ts`), so seating
+        // them here flips no other departure's manifest, readiness or queue.
+        const seat = async (name: string) => {
+          await page.goto(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
+          const findDiver = page.getByRole("searchbox", {
+            name: "Search by name, email, or phone",
+          });
+          await findDiver.fill(name);
+          await findDiver.press("Enter");
+          await page.getByRole("button", { name: `Add ${name} to this boat` }).click();
+          await page.waitForURL(/\/check-in(\?|$)/);
+        };
+        await seat("Odile Marchand");
+        await seat("Hana Kobayashi");
+
+        // Both cleared the same way a staffer does, so neither row wears a
+        // blocker that would compete with the one chip under test.
+        await page.goto(`/shop/blue-mantis/check-in?trip=${tripId}`);
+        const counterRow = (name: string) =>
+          page.locator("article").filter({ hasText: name }).filter({ visible: true });
+        for (const name of ["Odile Marchand", "Hana Kobayashi"]) {
+          const row = counterRow(name);
+          await row.getByText("Mark signed on paper").click();
+          await row
+            .getByLabel("I have this diver’s signed release on file", { exact: false })
+            .filter({ visible: true })
+            .check();
+          await row.getByRole("button", { name: "Record paper signature" }).click();
+          await expect(row.getByRole("button", { name: `Check in ${name}` })).toBeVisible();
+        }
+
+        const odile = counterRow("Odile Marchand");
+        await odile.getByText("Not here?").click();
+        await odile.getByRole("button", { name: "Mark Odile Marchand as not here" }).click();
+        await expect(page.getByRole("heading", { name: "Not here — 1" })).toBeVisible();
+
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest`);
+        await page.getByRole("heading", { level: 1, name: new RegExp(title) }).waitFor();
+        // The chip itself, waited on rather than assumed: this capture is
+        // worthless if it photographs the manifest a moment before the row
+        // says anything.
+        await expect(manifestRow(page, "Odile Marchand").getByText("Not here")).toBeVisible();
+        // The same background save the capture above waits out.
+        await offlineCopySaved(page);
+        await capture(page, "manifest-not-here", scheme);
       });
 
       // The departure log: the hand-to-authorities document of the
@@ -5217,15 +5473,19 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The fly-safe hours, open (issue #1425) — two whole-hour boxes whose
+       * Earliest flight, open (issue #1425) — two whole-hour boxes whose
        * floors are DAN's minimums. Its own capture for the reason the row
        * above has one: closed everywhere else, and the form is the only place
-       * a shop sets the number the recap then credits to it.
+       * a shop sets the number the recap then credits to it. The card read
+       * "Fly-safe hours" until issue #1433 took "safe" out of the diver's
+       * sentence as a verdict the wait does not earn; the baseline key stays
+       * `settings-fly-safe` so the reworded card diffs against the old one
+       * rather than arriving as an unreviewable new capture.
        */
-      test(`the fly-safe hours card renders true to the design (${scheme})`, async ({ page }) => {
+      test(`the earliest-flight card renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Fly-safe hours" }).waitFor();
-        await openSettingsRow(page, "Fly-safe hours");
+        await page.getByRole("heading", { name: "Earliest flight" }).waitFor();
+        await openSettingsRow(page, "Earliest flight");
         await page.getByLabel("After repetitive dives or more than one day of diving").waitFor();
         await capture(page, "settings-fly-safe", scheme);
       });
@@ -5484,7 +5744,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await request.post("/api/test/seed-trouble-states");
         await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("region", { name: "Photos that didn't finish deleting" }).waitFor();
+        await page.getByRole("region", { name: "Photos that didn’t finish deleting" }).waitFor();
         await page.getByRole("region", { name: "Erasures not finished at Stripe" }).waitFor();
         await capture(page, "settings-data-unfinished", scheme);
       });
@@ -5592,9 +5852,13 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-calendar", scheme);
       });
 
-      // Lobby display (issue #1426) with one screen listed — minted through
-      // the seed route rather than the form, so the shown-once link block is
-      // *not* in the picture: it carries a token that differs on every run.
+      // Lobby display (issue #1426) with both kinds of screen listed — minted
+      // through the seed route rather than the form, so the shown-once link
+      // block is *not* in the picture: it carries a token that differs on every
+      // run. Both kinds, because the rows are not the same shape: only the
+      // check-in link expires, so only it prints an expiry line and carries a
+      // Renew beside its Revoke (issue #1609). The date is stable because the
+      // e2e harness freezes the clock (src/lib/clock.ts).
       test(`the lobby display settings render true to the design (${scheme})`, async ({
         page,
         request,
@@ -5603,9 +5867,14 @@ for (const scheme of ["light", "dark"] as const) {
           data: { label: "Lobby TV" },
         });
         expect(seeded.ok()).toBe(true);
+        const kiosk = await request.post("/api/test/seed-display-token", {
+          data: { label: "Counter tablet", purpose: "check_in" },
+        });
+        expect(kiosk.ok()).toBe(true);
         await page.goto("/shop/blue-mantis/settings/display");
         await page.getByRole("button", { name: "Create link" }).waitFor();
         await page.getByText("Lobby TV").waitFor();
+        await page.getByRole("button", { name: "Renew Counter tablet" }).waitFor();
         await capture(page, "settings-display", scheme);
       });
 
@@ -5680,7 +5949,7 @@ for (const scheme of ["light", "dark"] as const) {
       // table).
       test(`owner reports render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/reports");
-        await page.getByRole("heading", { level: 1, name: "How's your month" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "How’s your month" }).waitFor();
         await capture(page, "reports", scheme);
       });
 
@@ -5724,8 +5993,8 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the shop's year renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/reports?range=year");
-        await page.getByRole("heading", { level: 1, name: "How's your year" }).waitFor();
-        await page.getByRole("region", { name: "The year's numbers" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "How’s your year" }).waitFor();
+        await page.getByRole("region", { name: "The year’s numbers" }).waitFor();
         await capture(page, "reports-year", scheme);
       });
 
@@ -6541,6 +6810,13 @@ for (const scheme of ["light", "dark"] as const) {
         // The route's own caption box, which only renders once the editor has
         // mounted and read the coordinate fields beside it.
         await page.getByLabel("What the route is called").waitFor();
+        // What the seven-digit station id actually names (issue #1468), read
+        // off the fixture station the fleet serves in place of NOAA. Waited on
+        // rather than assumed: a lookup that answered nothing renders no line
+        // at all, and this is the capture that would otherwise photograph the
+        // absence without failing. Carysfort is genuinely the nearest station
+        // to this reef, so no distance warning belongs in this frame.
+        await page.getByText("8723583 · Carysfort Reef, FL").waitFor();
         await capture(page, "dive-site-edit", scheme);
       });
 
@@ -7173,10 +7449,10 @@ for (const scheme of ["light", "dark"] as const) {
       await openSettingsRow(page, "Your own words");
       await page
         .getByLabel("What a first-timer reads before diving with you")
-        .fill("First time with us? Come find whoever is holding the clipboard — that's us.");
+        .fill("First time with us? Come find whoever is holding the clipboard — that’s us.");
       await page
         .getByLabel("What to expect at the dock")
-        .fill("Park by the blue gate. We'll wave you down from the second slip.");
+        .fill("Park by the blue gate. We’ll wave you down from the second slip.");
       await page
         .getByLabel("How you sign off a finished day")
         .fill("Thanks for diving with us. The kettle's always on.");
@@ -7224,10 +7500,29 @@ for (const scheme of ["light", "dark"] as const) {
       await capture(page, "dive-site-planning-note", scheme);
     });
 
+    /**
+     * **The one state on this page where an absence *is* the information**
+     * (issue #1363), photographed on both surfaces that render it.
+     *
+     * The staffed capture is read by a manager at a desk, who can go and fix
+     * it. The offline one is read by a divemaster at the rail from cache, with
+     * no signal and usually no permission to open Settings at all — which is
+     * why the string underneath stopped handing them an errand. Neither frame
+     * existed before, and the populated card sits inside
+     * `offline-manifest-roll-call` already, so this is the half that was
+     * photographed nowhere.
+     *
+     * One test, not two: clearing the reference through the shop's own form is
+     * the expensive half, and the offline snapshot is primed from the staff
+     * manifest *after* the clear has landed, so the copy the shell reads back
+     * carries it.
+     */
     test(`the manifest prompts for an emergency reference nobody filled in (${scheme})`, async ({
       page,
       privateShop,
     }) => {
+      // Settings → clear → manifest → the saved copy, in one flow.
+      test.setTimeout(FLOW_TIMEOUT_MS);
       await page.goto(`/shop/${privateShop.slug}/settings`);
       await openSettingsRow(page, "Emergency reference");
       // Cleared through the shop's own form, which is how a shop would arrive
@@ -7254,10 +7549,28 @@ for (const scheme of ["light", "dark"] as const) {
         .getByRole("button", { name: "Emergency numbers & response plan" })
         .filter({ visible: true })
         .click();
-      // The prompt itself, not just the heading — the whole point of the
+      // The line itself, not just the heading — the whole point of the
       // capture is the state where there is nothing under it.
       await page.getByText("No emergency numbers recorded").waitFor();
       await capture(page, "manifest-emergency-empty", scheme);
+
+      // The same absence, on the copy the boat falls back to. Straight to the
+      // route with the trip's own id rather than through the manifest's "On
+      // this phone" group: the capture above has already resized this page
+      // through three viewports, and the disclosure does not reopen reliably
+      // afterwards. `offlineCopySaved` is the honest precondition either way —
+      // it waits on the freshness pill, which is the summary line's own report
+      // that a copy exists.
+      await settleOfflineShellWorker(page);
+      await offlineCopySaved(page);
+      const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
+      await page.goto(`/offline-manifest?trip=${tripId}`);
+      // The empty state's own words, not a timeout: the snapshot is primed in the
+      // background from the staff manifest, and if it had been written before
+      // the clear landed this frame would photograph a *populated* card under
+      // an "empty" name. Waiting on the rendered text makes that loud.
+      await page.getByText("No emergency numbers recorded").waitFor();
+      await capture(page, "offline-manifest-emergency-empty", scheme);
     });
   });
 }

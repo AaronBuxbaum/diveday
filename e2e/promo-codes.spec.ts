@@ -90,7 +90,7 @@ test.describe("as owner", () => {
     await page.getByRole("textbox", { name: "Code" }).fill("E2ETEST");
     await page.getByRole("spinbutton", { name: "Discount" }).fill("15");
     await page.getByRole("button", { name: "Create code" }).click();
-    await expect(page.getByText(/Stripe didn't create that code/)).toBeVisible();
+    await expect(page.getByText(/Stripe didn’t create that code/)).toBeVisible();
 
     const failed = page.locator("li").filter({ hasText: "E2ETEST" }).filter({ visible: true });
     await expect(failed.getByText("Failed at Stripe")).toBeVisible();
@@ -139,7 +139,7 @@ test.describe("as owner", () => {
     await page.getByRole("textbox", { name: "Code" }).fill("E2EUNDO");
     await page.getByRole("spinbutton", { name: "Discount" }).fill("15");
     await page.getByRole("button", { name: "Create code" }).click();
-    await expect(page.getByText(/Stripe didn't create that code/)).toBeVisible();
+    await expect(page.getByText(/Stripe didn’t create that code/)).toBeVisible();
     const failed = page.locator("li").filter({ hasText: "E2EUNDO" }).filter({ visible: true });
     await expect(failed.getByText("Failed at Stripe")).toBeVisible();
 
@@ -157,7 +157,7 @@ test.describe("as owner", () => {
     // the same path an ordinary "create a promo" takes, so it fails here for
     // the same reason the original create did (no real Stripe key in the fleet).
     await toast.getByRole("button", { name: "Undo" }).click();
-    await expect(page.getByText(/Couldn't restore that code/)).toBeVisible();
+    await expect(page.getByText(/Couldn’t restore that code/)).toBeVisible();
     await expect(
       page
         .locator("li")
@@ -286,7 +286,7 @@ test.describe("as owner", () => {
     // (ADR 20260827-the-divers-thread, decision 2).
     await expect(page.getByText("Due now")).toBeVisible();
     await expect(page.getByRole("button", { name: /^Book and pay/ })).toBeVisible();
-    await expect(page.getByText("You'll finish paying on a secure Stripe page.")).toBeVisible();
+    await expect(page.getByText("You’ll finish paying on a secure Stripe page.")).toBeVisible();
 
     // The hard assertion this spec exists for.
     const promoField = page.getByLabel("Promo code");
@@ -314,7 +314,7 @@ test.describe("as owner", () => {
     // the discount arithmetic is Stripe's and is unit-tested in
     // src/lib/promo-codes.ts (`discountedAmountCents`).
     await expect(page.getByRole("heading", { name: /You’re on the boat, Promo/ })).toBeVisible();
-    await expect(page.getByText("That code isn't active.")).toHaveCount(0);
+    await expect(page.getByText("That code isn’t active.")).toHaveCount(0);
   });
 
   /**
@@ -344,7 +344,7 @@ test.describe("as owner", () => {
       .fill(`promo-refused-${e2eNow().getTime()}@example.com`);
 
     const bookButton = page.getByRole("button", { name: /^Book and pay/ });
-    const refusal = page.getByText("That code isn't active.");
+    const refusal = page.getByText("That code isn’t active.");
 
     await promoField.fill("REEF10");
     await bookButton.click();
@@ -387,6 +387,6 @@ test.describe("as owner", () => {
     ).toBeVisible();
     await expect(page.getByLabel("Promo code")).toHaveCount(0);
     await expect(page.getByText("(if you have one)")).toHaveCount(0);
-    await expect(page.getByText("You'll finish paying on a secure Stripe page.")).toHaveCount(0);
+    await expect(page.getByText("You’ll finish paying on a secure Stripe page.")).toHaveCount(0);
   });
 });

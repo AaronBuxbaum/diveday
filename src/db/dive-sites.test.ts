@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DIVE_SITE_DIFFICULTIES, SITE_LIBRARY_GROUPS } from "@/lib/dive-site-difficulty";
 import { seededShopContext } from "@/test/db";
@@ -28,9 +28,9 @@ import {
   updateDiveSite,
   updateDiveSiteForForm,
 } from "./dive-sites";
-import { diveSites, globalDiveSites, globalDiveSiteVersions } from "./schema";
+import { bookings, diveSites, globalDiveSites, globalDiveSiteVersions } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
-import { getTripDiveSitesPeek } from "./trips-record";
+import { getTripDiveSitesPeek, getTripWithBooked } from "./trips-record";
 
 describe("dive-site library", () => {
   /**
@@ -975,6 +975,41 @@ describe("what a dive site's public page reads", () => {
     for (const departure of departures) {
       expect(departure.booked).toBeLessThanOrEqual(departure.capacity);
     }
+  });
+
+  /**
+   * The public page and the booking transaction have to agree, because the one
+   * person who cannot check is the one reading this page. With the looser
+   * predicate this reader counted a released seat (`bookings.status =
+   * "no_show"`) as still held, so a stranger was told **Full** for a seat
+   * `createBooking` would have sold them (`security-reviewer` review,
+   * 2026-09-11).
+   */
+  it("counts a released seat as room, the way the trip page and the booking do", async () => {
+    const { db, shop } = await seededShopContext();
+    const molasses = (await listDiveSites(db, shop.id)).find(
+      (site) => site.name === "Molasses Reef",
+    );
+    if (!molasses) throw new Error("seed: no Molasses Reef");
+
+    const before = await listUpcomingDeparturesForSite(db, shop.id, molasses.id);
+    const departure = before.find((row) => row.booked > 0);
+    if (!departure) throw new Error("seed: no booked departure to Molasses Reef");
+    const [seat] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, departure.id), eq(bookings.status, "booked")))
+      .limit(1);
+    if (!seat) throw new Error("seed: no held seat on the departure");
+
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, seat.id));
+
+    const after = await listUpcomingDeparturesForSite(db, shop.id, molasses.id);
+    const reread = after.find((row) => row.id === departure.id);
+    expect(reread?.booked).toBe(departure.booked - 1);
+    // The number the diver-facing trip page prints for the same departure,
+    // read through the staff-side reader that already counts seats held.
+    expect(reread?.booked).toBe((await getTripWithBooked(db, shop.id, departure.id))?.booked);
   });
 
   it("never shows a stranger another shop's site, or a private charter", async () => {

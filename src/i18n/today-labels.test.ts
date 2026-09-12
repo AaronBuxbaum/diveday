@@ -68,7 +68,7 @@ describe("the shop home's pinned sentences", () => {
     // 20260827-clearwater-surface-language, decision 11): 🤙 stays where it
     // ships, and every other celebration emoji left this surface with the
     // recomposition.
-    expect(t("today.todayQueue.boatsClear")).toBe("Today's boats are all clear 🤙");
+    expect(t("today.todayQueue.boatsClear")).toBe("Today’s boats are all clear 🤙");
     // `raw` rather than `t`, so a message carrying a placeholder is scanned as
     // it ships rather than as one rendering of it.
     for (const key of [

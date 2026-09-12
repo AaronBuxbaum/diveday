@@ -485,6 +485,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   booking_checkouts: [
     "shop_id",
     "stripe_account_id", // provider linkage, useless outside this Stripe account
+    "stripe_customer_id", // provider linkage, same as stripe_account_id above
     // An ephemeral Stripe Checkout link that stopped resolving when the session
     // expired — same reasoning as tips.checkout_url.
     "checkout_url",
@@ -537,6 +538,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   tips: [
     "shop_id",
     "stripe_account_id", // provider linkage, useless outside this Stripe account
+    "stripe_customer_id", // provider linkage, same as stripe_account_id above
     "checkout_url", // an ephemeral Stripe Checkout link, same reasoning as booking_checkouts
   ],
   dive_sites: [

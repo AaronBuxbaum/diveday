@@ -13,7 +13,6 @@ import type { Role } from "./authz";
 import type { DiveIntentCount } from "./dive-intent";
 import type { CrewIncompleteReason } from "./manifests";
 import type { AboardBlockerKind, ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
-import type { SizedRentalKind } from "./rentals";
 import type { SeasonStart } from "./season";
 import type { TripStageReading } from "./trip-stages";
 import { utcToWallTime } from "./zoned";
@@ -273,9 +272,11 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   failed_photo_deletion: ["owner", "manager"],
   owed_refund: ["owner", "manager"],
   reviews_pending: ["owner", "manager"],
-  // The same two roles the inbox itself is gated to (`canAnswerShopInbox`):
-  // a row pointing at a page its reader cannot open is a dead end.
-  unanswered_messages: ["owner", "manager"],
+  // Every staff role, since the inbox stopped carrying a gate of its own on
+  // 2026-09-10 (issues #1505/#1518). A row pointing at a page its reader
+  // cannot open is a dead end — and the other way round, a role that may
+  // answer a waiting diver is a role that has to be told one is waiting.
+  unanswered_messages: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_overdue: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_due_back: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_service_due: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
@@ -296,6 +297,13 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
 /**
  * Filters the action queue for the viewer's roles, taking the union for multi-role staff.
  * Owners and managers see everything with zero withheld.
+ *
+ * **No roles means no viewer, not an empty audience.** Every surface that
+ * renders this queue passes `session.user.roles`, which `requireStaffSession`
+ * guarantees is non-empty; the one caller that passes nothing is `closeDay`
+ * (`src/db/closeout.ts`), recomputing the day's outstanding snapshot for the
+ * record rather than for a screen. That snapshot is the shop's day, so
+ * withholding from it would falsify a record, not tighten a gate.
  */
 export function filterActionsForRoles(
   actions: readonly TodayAction[],
@@ -535,14 +543,15 @@ export type TodayAction = {
    * `href` stays the row's real destination — the diver's record — so a
    * pre-hydration tap, a middle-click and an open-in-new-tab all still land
    * somewhere the staffer can finish the job by hand.
+   *
+   * The reservation is the whole payload. It carried the diver, the kind and
+   * the size until a `security-reviewer` pass (issue #1453) read what that
+   * meant on the wire: the control binds these into the action, so a bound
+   * size is a size any staff role could post for any diver. The action
+   * re-proves all three from the desk's own `fit_adjusted` return instead, and
+   * the detail a staffer reads is already rendered into `detail` above.
    */
-  rentalFit?: {
-    personId: string;
-    kind: SizedRentalKind;
-    size: string;
-    unitLabel: string;
-    personName: string;
-  };
+  rentalFit?: { reservationId: string };
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };

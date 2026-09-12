@@ -8,7 +8,7 @@ import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import { bookingCapabilities, bookings, trips } from "./schema";
 
-export type CapabilityPurpose = "readiness" | "confirm" | "claim" | "handoff";
+export type CapabilityPurpose = "readiness" | "confirm" | "claim" | "handoff" | "arrival";
 
 export type IssuedCapability = { token: string; expiresAt: Date };
 

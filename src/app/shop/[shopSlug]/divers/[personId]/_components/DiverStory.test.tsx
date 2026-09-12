@@ -35,7 +35,7 @@ function booking(
 }
 
 const AHEAD = booking("b-ahead", "Saturday reef charter", AHEAD_AT);
-const BEHIND = booking("b-behind", "Last month's wreck dive", BEHIND_AT);
+const BEHIND = booking("b-behind", "Last month’s wreck dive", BEHIND_AT);
 
 function diver(overrides: Partial<Record<string, unknown>> = {}): DiverProfile {
   return {
@@ -75,7 +75,7 @@ describe("one seat, one row", () => {
     const rows = screen.getAllByRole("listitem");
     expect(rows).toHaveLength(2);
     expect(rows[0]?.textContent).toContain("Saturday reef charter");
-    expect(rows[1]?.textContent).toContain("Last month's wreck dive");
+    expect(rows[1]?.textContent).toContain("Last month’s wreck dive");
   });
 
   it("files a cancelled future booking behind the diver — the seat is not coming back", () => {
@@ -98,7 +98,7 @@ describe("one seat, one row", () => {
       "href",
       "/shop/reef-shop/trips/trip-b-ahead/manifest",
     );
-    expect(screen.getByRole("link", { name: "Last month's wreck dive" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Last month’s wreck dive" })).toHaveAttribute(
       "href",
       "/shop/reef-shop/trips/trip-b-behind",
     );

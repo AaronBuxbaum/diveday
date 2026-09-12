@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type {
   Certification,
@@ -1077,5 +1079,34 @@ describe("physician clearance and the medical block", () => {
       now: heldNow,
     });
     expect(result.blockers).toContainEqual({ code: "medical_review" });
+  });
+});
+
+/**
+ * `identity_unconfirmed` has two raisers — the by-email reuse and the counter's
+ * name-match prompt (issue #1556) — and `src/db/bookings.ts` documents both
+ * where it sets the flag. The module that turns the flag into a boarding
+ * blocker described only the by-email one, which is the doc a staffer's
+ * question ("how did a tap at the counter produce this?") lands on
+ * (`dive-domain-expert`, the RFH-07 layer).
+ *
+ * A text scan over the source, in the spirit of `src/test/db-template.test.ts`:
+ * it cannot judge prose, and it fails only when the second door goes unnamed
+ * again.
+ */
+describe("the identity-unconfirmed docblock", () => {
+  it("names both doors that raise the flag", async () => {
+    const source = await readFile(path.join(process.cwd(), "src/lib/readiness.ts"), "utf8");
+    const start = source.indexOf("identityUnconfirmed?: boolean;");
+    expect(start).toBeGreaterThan(-1);
+    const docblock = source.slice(Math.max(0, start - 1400), start);
+    const block = docblock.slice(docblock.lastIndexOf("/**"));
+    expect(block).toContain("H-13");
+    // The older door, and the one the layer added.
+    expect(block).toMatch(/by-email/);
+    expect(block).toMatch(/name-match prompt/);
+    expect(block).toContain("#1556");
+    // Where each is argued, so this stays a pointer rather than a second copy.
+    expect(block).toContain("nameMatchLeavesIdentityInDoubt");
   });
 });

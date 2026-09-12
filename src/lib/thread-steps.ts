@@ -300,11 +300,17 @@ export type DepartureRollCall = "boarded" | "not_boarded" | null;
  * one-hour late-arrival buffer above, and nothing else. That buffer is the
  * right rule for *has it sailed* and the wrong one for *did this person dive*,
  * because the only thing standing between a diver who never boarded and a page
- * saying "Welcome back" was `bookings.status = 'no_show'` — a staff act
- * performed during close-out, which is an evening ritual and "a recorded act,
- * never a gate" (docs/product/glossary.md). An hour after the boat tied up it
- * has almost never happened yet. So the diver who overslept, or who was held at
- * the desk on a medical hold and never left the dock, opened the durable link
+ * saying "Welcome back" was `bookings.status = 'no_show'`, and that status is
+ * not a record of the dock. It has a writer now (`markBookingNoShow`,
+ * src/db/no-show.ts, issue #1209), tapped at the counter while the boat is
+ * still in sight rather than at close-out, and it still may not carry this: the
+ * mark is one staffer's discretionary act on a *seat*, a shop that never works
+ * the counter queue writes none at all, its door shuts six hours after the
+ * departure (`noShowGate`, src/lib/no-show.ts), and a diver the crew board
+ * after it is written has the seat handed straight back (`reclaimReleasedSeat`,
+ * src/db/manifests.ts). A page that opened on it would be reading a shop's desk
+ * work as evidence about the water. So the diver who overslept, or who was held
+ * at the desk on a medical hold and never left the dock, opened the durable link
  * already sitting in their inbox and got a printable dive record for a day they
  * spent on land, and an invitation to tip the crew who dived without them.
  *

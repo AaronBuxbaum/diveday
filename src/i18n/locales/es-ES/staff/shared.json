@@ -22,7 +22,8 @@
     "recordPaperSignature": "Registrar firma en papel",
     "guardianNameLabel": "Madre, padre o tutor que firmó",
     "guardianRelationshipLabel": "Relación",
-    "guardianRelationshipChoose": "Elige una opción"
+    "guardianRelationshipChoose": "Elige una opción",
+    "guardianNamesakeLabel": "Esta persona que firma y este buceador tienen el mismo nombre en sus documentos de identidad. Vi a los dos firmar la exención en papel."
   },
   "guardian": {
     "relationship": {
@@ -189,7 +190,7 @@
     },
     "blockers": {
       "requirementsNotConfigured": "Aún no se han configurado los requisitos de la salida.",
-      "identityUnconfirmed": "Identidad sin confirmar: esta reserva usó el correo de un buceador existente con un nombre distinto. Confirma que es la misma persona antes de embarcar.",
+      "identityUnconfirmed": "Identidad sin confirmar: esta reserva se asoció al registro de un buceador existente por una coincidencia, de un correo compartido o de un nombre elegido de una lista. Confirma que es la misma persona antes de embarcar.",
       "waiverNotSent": "La exención aún no se ha enviado.",
       "waiverPending": "La exención espera la firma del buceador.",
       "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",
@@ -355,6 +356,7 @@
       "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} Cada persona de la lista de tripulación necesita su propio resultado.",
       "readyBadge": "Listo cuando se guardó",
       "blockedBadge": "Bloqueado cuando se guardó",
+      "notHereBadge": "Marcado “no vino” cuando se guardó",
       "statePendingSuffix": "· esperando para enviarse",
       "emergencyContact": "Contacto de emergencia",
       "notOnFile": "Sin datos registrados",
@@ -378,7 +380,7 @@
         "expiredRecordOnLive": "Caducado — regístralo en el manifiesto en vivo",
         "saved": "Guardado en este teléfono. Se enviará en cuanto recuperes la conexión.",
         "genericError": "Ese cambio no se pudo guardar en este dispositivo. Inténtalo de nuevo.",
-        "notAllowed": "Este buceador aún no puede embarcar. Resuelve lo pendiente en el manifiesto en vivo primero.",
+        "notAllowed": "Este buceador no estaba listo para embarcar cuando se guardó esta copia. Abre el manifiesto en vivo antes de que suba a bordo.",
         "unavailable": "Esta copia guardada ya no está disponible. Abre el manifiesto en vivo para registrar el pase de lista."
       },
       "checklist": {
@@ -422,7 +424,7 @@
     "itemLabels": {
       "bcd": "Chaleco",
       "regulator": "Regulador",
-      "wetsuit": "Traje",
+      "wetsuit": "Neopreno",
       "boots": "Escarpines",
       "maskFins": "Máscara y aletas",
       "weights": "Lastre",
@@ -435,14 +437,20 @@
     },
     "nitroxFillsLabel": "Llenados de nitrox",
     "itemWithSize": "{item} {size}",
+    "itemOverDrysuitBoot": "{item} sobre la bota del traje seco",
+    "itemOverDrysuitBootWithSize": "{item} sobre la bota del traje seco, calzado {size}",
     "notRecorded": "No hay equipo registrado, aún no se ha preguntado",
     "ownKit": "Trae su propio equipo",
     "needsStaffFit": "Necesita ajuste del personal en el check-in",
-    "needsStaffFitWithNote": "Necesita ajuste del personal — {note}"
+    "needsStaffFitWithNote": "Necesita ajuste del personal — {note}",
+    "drysuitCardMissing": "Alquila traje seco y no hay certificación de traje seco en su ficha. No es un bloqueo: verifica qué titulación consta o programa una orientación antes de la primera inmersión.",
+    "drysuitCardUnconfirmed": "Alquila traje seco y su certificación de traje seco está sin confirmar. No es un bloqueo: confirma la certificación en su ficha o programa una orientación antes de la primera inmersión."
   },
   "rollCallCheckpoint": {
     "departure": "Antes de zarpar",
-    "afterDive": "Después de la inmersión {n}"
+    "afterDive": "Después de la inmersión {n}",
+    "departureShort": "Muelle",
+    "afterDiveShort": "Inm. {n}"
   },
   "rollCallState": {
     "awaiting": "Pendiente de pase de lista",

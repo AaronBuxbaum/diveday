@@ -17,8 +17,10 @@ import { motionMs } from "@/lib/motion";
  * The contract, unchanged from theirs: **pointer events only** (no gesture
  * library, one code path for touch and pen and mouse), **resistance past the
  * edge** rather than a hard stop, **a cancel curve when released short**, and
- * **no fight with a scroll** — a drag begins only where the sheet is not
- * scrolled, so a finger that means to read the list always reads the list.
+ * **no fight with a scroll** — once the sheet's own list can scroll at all the
+ * handle is the only drag surface, and below that it is any part of a sheet
+ * that is not scrolled, so a finger that means to read the list always reads
+ * the list (amended for #1512; ADR decision 4 carries the measurement).
  *
  * **The finger outranks the timer.** While a drag is live nothing here
  * animates: `offset` is whatever the finger has travelled, applied directly,
@@ -155,12 +157,18 @@ export function useDragSheet({
     // is not a press. The same line, for the same reason, as the pull.
     if (event.pointerType === "mouse" && event.button !== 0) return;
     const sheet = event.currentTarget;
-    // **The scroll wins.** A sheet whose own list has been scrolled is a sheet
-    // the finger is reading, so a downward drag there belongs to the list.
-    // Dragging from the handle works at any scroll position, because a handle
-    // is not content.
+    // **The scroll wins, and it wins before it starts** (#1512). A sheet whose
+    // own list can scroll is a sheet the finger is reading, so a downward drag
+    // anywhere in it belongs to the list — not only once it has been scrolled.
+    // Until #1512 a press on a row of a full sheet passed this gate (nothing
+    // was scrolled yet), started a gesture, got exactly one `pointermove` and
+    // then died when the browser claimed the scroll: the sheet sat open under
+    // a thumb that meant to close it, and nothing said why. Refusing the press
+    // up front means no half-started gesture and no `preventDefault` racing the
+    // scroller. Dragging from the handle works at any size and any scroll
+    // position, because a handle is not content.
     const onHandle = (event.target as HTMLElement | null)?.closest("[data-sheet-handle]") !== null;
-    if (!onHandle && findScrolled(sheet) > 0) return;
+    if (!onHandle && listOwnsDrag(sheet)) return;
 
     const pointerId = event.pointerId;
     start.current = { y: event.clientY, height: sheet.getBoundingClientRect().height };
@@ -238,10 +246,28 @@ export function useDragSheet({
   };
 }
 
-/** How far the nearest scrollable ancestor inside the sheet has been scrolled. */
-function findScrolled(sheet: HTMLElement): number {
+/**
+ * **Is this press the list's rather than the sheet's?** One walk over the sheet
+ * and everything in it, answering both halves in a single pass: has a list here
+ * been scrolled away from its top, and — since #1512 — can one scroll at all.
+ */
+function listOwnsDrag(sheet: HTMLElement): boolean {
+  if (scrollsVertically(sheet)) return true;
   for (const node of sheet.querySelectorAll("*")) {
-    if (node instanceof HTMLElement && node.scrollTop > 0) return node.scrollTop;
+    if (node instanceof HTMLElement && scrollsVertically(node)) return true;
   }
-  return sheet.scrollTop;
+  return false;
+}
+
+/**
+ * Content taller than the box is not enough on its own: an `sr-only` heading is
+ * a 1px box clipping twenty pixels of text, and every sheet has one, so the
+ * bare measurement would say every sheet overflows and no press anywhere would
+ * ever start a drag. Only a box the browser will actually scroll counts.
+ */
+function scrollsVertically(node: HTMLElement): boolean {
+  if (node.scrollTop > 0) return true;
+  if (node.scrollHeight <= node.clientHeight) return false;
+  const overflowY = getComputedStyle(node).overflowY;
+  return overflowY === "auto" || overflowY === "scroll";
 }

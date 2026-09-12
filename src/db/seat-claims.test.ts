@@ -279,7 +279,8 @@ describe("claimPartySeat", () => {
     expect(claimant).toMatchObject({
       fullName: "Milo Actual",
       email: "milo@example.com",
-      phone: "+1-305-555-0142",
+      // Stored E.164, not as the claimant typed it (src/db/person-phone.ts).
+      phone: "+13055550142",
     });
     const roles = await db
       .select()
@@ -349,6 +350,33 @@ describe("claimPartySeat", () => {
     // An unconfirmed identity writes no contact data onto the matched record.
     const [tomas] = await db.select().from(people).where(eq(people.id, second.id));
     expect(tomas?.phone).toBeNull();
+  });
+
+  it("stores the claimant's number onto the matched record in E.164", async () => {
+    const { db, shop, open } = await seededContext();
+    const existing = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Sasha Reyes",
+      email: "sasha@example.com",
+    });
+    if (!existing) throw new Error("diver setup failed");
+    expect(existing.phone).toBeNull();
+    const { lead, memberOne } = await bookParty(db, shop.id, open.id);
+
+    const token = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);
+    const matched = await claimPartySeat(db, {
+      token,
+      fullName: "Sasha Reyes",
+      email: "sasha@example.com",
+      phone: "305-555-0142",
+    });
+    expect(matched).toMatchObject({ ok: true, personId: existing.id, identityUnconfirmed: false });
+
+    // Not the bare national number the claimant typed. A public form is exactly
+    // where an unnormalised row comes from, and a bare row's meaning follows
+    // the shop's address field rather than the row (src/db/person-phone.ts).
+    const [sasha] = await db.select().from(people).where(eq(people.id, existing.id));
+    expect(sasha?.phone).toBe("+13055550142");
   });
 
   it("refuses a second claim of the same seat and leaves the first untouched", async () => {

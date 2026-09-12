@@ -134,18 +134,26 @@ also get a concurrency group per commit, since `cancel-in-progress: false` never
 
 ### Amended 2026-09-02: the pruner is the authoritative bound on the bucket
 
-Two independent bounds grew on `diveday-vrt` and one was quietly overriding the other. The nightly
-pruner Lambda keeps the ten most recent `main` baselines *by count* plus everything under a day old
+Two independent bounds grew on `diveday-vrt` and one was quietly overriding the other. The pruner
+Lambda keeps the ten most recent `main` baselines *by count* plus everything under a day old
 (seven days until 2026-09-08), written that way so a quiet month never leaves an open branch
 comparing against a prefix that was deleted overnight. The bucket's own S3 lifecycle rule expired every object at 30 days regardless
 — so after 30 quiet days the preserved baselines were gone and the next pull request reported every
 surface as new under `Changed: 0`, the exact failure the pruner and the ancestor fallback above exist
 to prevent. The rule was bounding nothing the pruner did not already bound.
 
-**The pruner is authoritative.** The lifecycle rule now expires at 180 days, which is a backstop for
-the case the pruner itself stops running and can only ever fire after it has had a hundred nightly
-chances to act. A future change may lower the pruner's own window; it may not lower this rule to meet
-it.
+**The pruner is authoritative.** The lifecycle rule is a backstop for the case the pruner itself
+stops running, and may only ever fire well after the pruner has had many chances to act. A future
+change may lower the pruner's own window; it may not lower this rule to meet it.
+
+**Amended 2026-09-12: the two numbers live in code, not here.** This paragraph said "180 days" and
+"a hundred nightly chances", and both went stale the moment #1663 moved the expiry to 60 days and
+the pruner from nightly to every six hours — while this ADR was open in that same diff. Naming
+figures in prose that a stack can change one file away is how a confident wrong number outlives the
+thing it described. The expiry is `infra/lib/infra-stack.ts` and is pinned by
+`infra/lib/visual-bucket-pruner.test.ts`; the cadence is the `VisualBucketPrunerSchedule` beside it.
+Read those. What does not move is the ordering: the pruner decides, and the lifecycle rule is only
+ever a floor beneath it.
 
 ### Amended 2026-09-02: a run that compared nothing is a red check
 
@@ -186,3 +194,12 @@ new step stands down there rather than adding a second, vaguer annotation beside
 run that compared nothing at all, which is a different thing: not "the pixels moved", but "we do not
 know". The capture step's narrow `"wedged, not slow"` retry is untouched — widening it would convert
 a deterministic failure into an intermittent pass, which `pnpm check:e2e-hygiene` exists to refuse.
+
+### Amended 2026-09-10: the outage window is accepted, not reconstructed
+
+**What happened.** `regconfig.json` reads the baseline bucket's region from `$REG_SUIT_AWS_REGION`. When the estate moved to us-east-2, commit `7a686b2` replaced that file's `us-east-1` literal with the variable and updated the env registry and `scripts/prune-visual-bucket.mjs`, but not the CI workflow's env block. Nothing set it, the S3 client resolved its host to `s3.undefined.amazonaws.com`, and the compare step died in DNS before it reached the bucket — on `main` and on every open pull request at once. Every commit merged in that window had its screenshots captured, uploaded and then discarded with nothing to compare them against. The region is fixed and confirmed (merged with the stack at #1618); `main` publishes baselines again, and the workflow now derives the region rather than depending on a secret being set.
+
+**The call, made by the owner on 2026-09-10 (issue #1650): accept the window.** The baseline on `main` is current, every surface is compared the next time a branch touches it, and no branch is cut to re-walk the window. The third option — reconstructing baselines for the commits that merged blind — was never on the table, and not only for cost: those screenshots are gone, and re-capturing them at today's code answers a question about today, not about the day a commit merged. The middle option, one no-op branch off `main` to compare every surface at once, was weighed and declined: it shows what stands today, which is exactly what the next branch to touch each surface shows anyway, one surface at a time and with someone who has context reading it.
+
+**What this acceptance depends on, and it is worth stating.** "The next comparison catches it" is only true while there *is* a next comparison. A visual gate that is red for an unrelated reason — as it was for three days on the tide-window capture, issue #1487 — converts this accepted window into an open-ended one, silently, because a run that compares nothing still reports nothing changed. That is the reason the "a run that compared nothing is a red check" amendment above exists, and the reason it is the one thing here that must not be relaxed.
+

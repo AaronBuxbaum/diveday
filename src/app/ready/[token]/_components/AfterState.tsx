@@ -31,6 +31,7 @@ import type { DiveRecordComparison } from "@/lib/dive-record";
 import { type FlySafeAnchor, type FlySafeReason, flySafeMessageKey } from "@/lib/fly-safe";
 import { formatOrdinal } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
+import { capturePhoto } from "@/lib/marine-life-tiles";
 import { currencySymbol, minorToMajor, type ShopCurrency } from "@/lib/money";
 import type { NextDivePick } from "@/lib/next-dive";
 import type { PostcardImage } from "@/lib/postcard-image";
@@ -662,7 +663,8 @@ export function AfterState({
                     {site.cards.map((card) => (
                       <li key={card.id} className="flex min-w-0 gap-3">
                         <StoredPhoto
-                          src={card.imageUrl}
+                          // Capture-only rewrite; `src/lib/marine-life-tiles.ts`.
+                          src={capturePhoto(card.imageUrl, 48)}
                           alt=""
                           className="size-12 shrink-0 rounded-inset"
                           sizes="48px"

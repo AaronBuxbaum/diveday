@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   counterIsClear,
+  counterIsDone,
   counterTally,
   firstVisitMarksAnException,
   isBlockedAtCounter,
+  isNoShowAtCounter,
   isSettledAtCounter,
 } from "./check-in";
 
@@ -52,6 +54,20 @@ describe("counterIsClear", () => {
   });
 
   /**
+   * A staffer who marks the last outstanding name "Not here" has said, in as
+   * many words, that nobody is left to chase — so the accent lands. Counting
+   * the released seat as outstanding would leave the counter arguing with the
+   * person who just told it (issue #1209).
+   */
+  it("is true when the only diver left was marked not here", () => {
+    expect(counterIsClear([seat("checked_in"), seat("no_show")])).toBe(true);
+  });
+
+  it("is still false when a released seat is the only row at all", () => {
+    expect(counterIsClear([seat("no_show")])).toBe(false);
+  });
+
+  /**
    * The earned line is the app's signal to stop chasing, so it may not fire
    * over a boat that still has a diver readiness will not clear — the exact
    * shape a `dive-domain-expert` pass caught on the shipped counter, where a
@@ -77,7 +93,13 @@ describe("counterIsClear", () => {
 
   it("still counts a self-reported seat as here, and only holds the accent back", () => {
     const seats = [seat("checked_in"), { ...seat("checked_in"), selfReported: true }];
-    expect(counterTally(seats)).toEqual({ expected: 2, here: 2, cantBoard: 0, toCome: 0 });
+    expect(counterTally(seats)).toEqual({
+      expected: 2,
+      here: 2,
+      cantBoard: 0,
+      toCome: 0,
+      notHere: 0,
+    });
   });
 });
 
@@ -119,7 +141,7 @@ describe("counterTally", () => {
       seat("booked", "blocked"),
       seat("booked"),
     ]);
-    expect(tally).toEqual({ expected: 5, here: 2, cantBoard: 2, toCome: 1 });
+    expect(tally).toEqual({ expected: 5, here: 2, cantBoard: 2, toCome: 1, notHere: 0 });
     expect(tally.here + tally.cantBoard + tally.toCome).toBe(tally.expected);
   });
 
@@ -129,10 +151,65 @@ describe("counterTally", () => {
       here: 0,
       cantBoard: 1,
       toCome: 0,
+      notHere: 0,
     });
   });
 
   it("is all zeroes for a departure with nobody on it", () => {
-    expect(counterTally([])).toEqual({ expected: 0, here: 0, cantBoard: 0, toCome: 0 });
+    expect(counterTally([])).toEqual({
+      expected: 0,
+      here: 0,
+      cantBoard: 0,
+      toCome: 0,
+      notHere: 0,
+    });
+  });
+
+  /**
+   * **A released seat leaves `expected` and is still said out loud** (issue
+   * #1209). Both halves matter: the figure is a claim about who the boat is
+   * carrying, so "4 of 7 here" over a diver a staffer has already said is not
+   * coming is a figure that can never complete — and a count that silently
+   * drops a person is the other way to lie about a boat.
+   */
+  it("takes a released seat out of everyone expected and reports it separately", () => {
+    const tally = counterTally([seat("checked_in"), seat("booked"), seat("no_show")]);
+    expect(tally).toEqual({ expected: 2, here: 1, cantBoard: 0, toCome: 1, notHere: 1 });
+    expect(tally.here + tally.cantBoard + tally.toCome).toBe(tally.expected);
+  });
+
+  /**
+   * The double count the three bands would otherwise carry: a released seat
+   * whose readiness never cleared is one row, and it must not be both
+   * `cantBoard` and `notHere`.
+   */
+  it("does not also count a released seat as unable to board", () => {
+    expect(counterTally([seat("no_show", "blocked")])).toEqual({
+      expected: 0,
+      here: 0,
+      cantBoard: 0,
+      toCome: 0,
+      notHere: 1,
+    });
+  });
+});
+
+describe("isNoShowAtCounter and counterIsDone", () => {
+  it("marks only a released seat, and never a checked-in one", () => {
+    expect(isNoShowAtCounter(seat("no_show"))).toBe(true);
+    expect(isNoShowAtCounter(seat("checked_in"))).toBe(false);
+    expect(isNoShowAtCounter(seat("booked"))).toBe(false);
+  });
+
+  /**
+   * The split `CounterQueue` draws its working list on. A released seat needs
+   * no tap, so it leaves the list of work — but it is not "settled" either,
+   * and the two groups are drawn from two predicates for that reason.
+   */
+  it("is the counter's finished set: settled or released, never merely booked", () => {
+    expect(counterIsDone(seat("checked_in"))).toBe(true);
+    expect(counterIsDone(seat("no_show"))).toBe(true);
+    expect(counterIsDone(seat("booked"))).toBe(false);
+    expect(counterIsDone(seat("checked_in", "blocked"))).toBe(false);
   });
 });

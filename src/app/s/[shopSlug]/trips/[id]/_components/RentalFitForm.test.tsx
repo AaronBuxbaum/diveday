@@ -13,6 +13,7 @@ const emptyFit: DiverRentalFit = {
   rentsRegulator: false,
   rentsWetsuit: false,
   wetsuitSize: null,
+  drysuitSize: null,
   bootSize: null,
   rentsMaskFins: false,
   finSize: null,
@@ -444,6 +445,144 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
 
     // Should be confirmed even though fin size is not provided
     expect(indicator).toHaveTextContent("Sizes recorded.");
+  });
+});
+
+/**
+ * A drysuit is offered on the drysuit grid, not the wetsuit's (issue 1414): the
+ * wall is racked by girth *and* cut, so the grid carries tall variants the
+ * wetsuit scale has no room for. It shares the wetsuit's girth letters, `XS`
+ * included — a `dive-domain-expert` pass read the old list's missing `XS`, one
+ * field below a wetsuit select that starts there, as this shop having nothing
+ * for a small-framed diver.
+ *
+ * The grid itself is a PROPOSAL pending the owner's confirmation (H-76); these
+ * tests are what pin it, and changing them is the whole cost of changing the
+ * scale.
+ */
+describe("RentalFitForm drysuit size (issue 1414)", () => {
+  function renderDrysuit() {
+    return renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={{ ...emptyFit, rentsDrysuit: true }}
+        rentalItems={["drysuit"]}
+        course={null}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+  }
+
+  it("offers the drysuit grid, never the wetsuit scale", () => {
+    const { container } = renderDrysuit();
+    const select = container.querySelector('select[name="drysuitSize"]') as HTMLSelectElement;
+    expect([...select.options].map((option) => option.value)).toEqual([
+      "",
+      "XS",
+      "S",
+      "M",
+      "MT",
+      "L",
+      "LT",
+      "XL",
+      "XLT",
+      "XXL",
+    ]);
+  });
+
+  /**
+   * The one rule the grid is held to. `MS` and `ML` sat in this list as
+   * in-between girths while `MT` beside them was a height; both readings are
+   * real in the field, so a staffer packing on the strength of `MS` could hand
+   * a short diver a suit cut for a tall one. Every code is now a girth letter
+   * with at most a `T` after it, and that is what this pins — a size whose
+   * second character means something else does not belong in a diver's select,
+   * whatever the owner answers on H-76.
+   */
+  it("says one thing by the second letter: a girth letter, optionally tall", () => {
+    const { container } = renderDrysuit();
+    const select = container.querySelector('select[name="drysuitSize"]') as HTMLSelectElement;
+    const codes = [...select.options].map((option) => option.value).filter(Boolean);
+    expect(codes.filter((code) => !/^(?:XS|S|M|L|XL|XXL)T?$/.test(code))).toEqual([]);
+  });
+
+  /**
+   * Parity with the wetsuit select one field above, which starts at `XS`. A
+   * drysuit grid that keeps `XXL` and drops `XS` reads as a bug to the diver it
+   * excludes, and a cold-water fleet stocks the small end because a large share
+   * of its drysuit divers are small-framed.
+   */
+  it("starts where the wetsuit select starts", () => {
+    const { container } = renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={{ ...emptyFit, rentsWetsuit: true, rentsDrysuit: true }}
+        rentalItems={["wetsuit", "drysuit"]}
+        course={null}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+    for (const name of ["wetsuitSize", "drysuitSize"]) {
+      const select = container.querySelector(`select[name="${name}"]`) as HTMLSelectElement;
+      expect([...select.options].map((option) => option.value)).toContain("XS");
+    }
+  });
+
+  it("holds the gear match open until the drysuit has a size", () => {
+    const { container } = renderDrysuit();
+    const indicator = screen.getByTestId("gear-status-indicator");
+    expect(indicator).toHaveTextContent("Select sizes to confirm your gear match.");
+    const select = container.querySelector('select[name="drysuitSize"]') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "MT" } });
+    expect(indicator).toHaveTextContent("Sizes recorded.");
+  });
+
+  it("never asks a shop that does not rent drysuits", () => {
+    const { container } = renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={{ ...emptyFit, rentsBcd: true }}
+        rentalItems={["bcd"]}
+        course={null}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+    expect(container.querySelector('select[name="drysuitSize"]')).toBeNull();
+  });
+
+  /**
+   * The drysuit tick silently answers a second question: the packing list gives
+   * a drysuit renter no boots line at all, because a rental drysuit usually has
+   * its boots vulcanised on (`src/lib/dive-prep.ts`'s `rentedItems`). This hint
+   * is the only place a diver ever reads that, so they neither pack a pair
+   * against a suit that already has them nor turn up expecting to be handed
+   * one. Same shape as the two jargon hints: in the DOM, wired by
+   * `aria-describedby`, and out of the checkbox's accessible name.
+   */
+  it("says the boots come with the suit, one hover away", () => {
+    renderDrysuit();
+    const trigger = screen.getByRole("button", { name: "What is Drysuit?" });
+    const describedBy = trigger.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy ?? "")?.textContent).toMatch(
+      /boots are part of the suit/i,
+    );
+    expect(screen.getByRole("checkbox", { name: "Drysuit" })).toBeInTheDocument();
   });
 });
 

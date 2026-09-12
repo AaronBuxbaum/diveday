@@ -4,6 +4,7 @@ import { MAX_SHOP_SLUG_LENGTH, suggestShopSlug } from "./onboarding-slug";
 export { MAX_SHOP_SLUG_LENGTH, suggestShopSlug };
 
 import { isValidTimeZone } from "./format";
+import { SHOP_SLUG_PATTERN } from "./public-routes";
 
 /**
  * Framework-free so it can be unit-tested without pulling in better-auth (which
@@ -76,7 +77,10 @@ export const onboardSchema = z.object({
     .min(1, "shop_slug_required" satisfies OnboardErrorCode)
     .max(MAX_SHOP_SLUG_LENGTH)
     .toLowerCase()
-    .regex(/^[a-z0-9-]+$/, "shop_slug_invalid" satisfies OnboardErrorCode),
+    // The routes' own matcher, imported rather than restated: a matcher
+    // narrower than this rule refuses a slug this form just sold somebody
+    // (`SHOP_SLUG_PATTERN`).
+    .regex(SHOP_SLUG_PATTERN, "shop_slug_invalid" satisfies OnboardErrorCode),
   timezone: z
     .string()
     .trim()

@@ -4,8 +4,10 @@ import { RollingFigure } from "@/components/ui/RollingFigure";
 import type { CheckInQueueRow as QueueRow } from "@/db/check-in";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
-import { isSettledAtCounter } from "@/lib/check-in";
+import { counterIsDone, isNoShowAtCounter, isSettledAtCounter } from "@/lib/check-in";
+import type { NoShowClaim } from "@/lib/no-show";
 import { CounterQueueRow, type CounterWaiverNotice } from "./CounterQueueRow";
+import type { NoShowSalvageCopy } from "./NoShowScript";
 
 /**
  * **One departure's divers: who still needs something, then who has settled** —
@@ -41,6 +43,10 @@ export function CounterQueue({
   undoAction,
   waiverAction,
   waiverNotice,
+  noShowClaimFor,
+  markNoShowAction,
+  undoNoShowAction,
+  salvageFor,
   settledOpen,
   settledHeadingLevel,
   t,
@@ -75,6 +81,15 @@ export function CounterQueue({
    */
   waiverNotice?: CounterWaiverNotice;
   /**
+   * Which "Not here?" script this row gets, or `null` for no door at all — the
+   * page runs `noShowGate` and, when it opens, `noShowClaim`.
+   */
+  noShowClaimFor: (row: QueueRow) => NoShowClaim | null;
+  markNoShowAction: (formData: FormData) => Promise<void>;
+  undoNoShowAction: (formData: FormData) => Promise<void>;
+  /** What the shop can do with a released seat, already worded by the page. */
+  salvageFor: (row: QueueRow) => NoShowSalvageCopy | undefined;
+  /**
    * Open the settled group on arrival. True for a boat that has already
    * sailed, where the receipts *are* what the counter is for, and true under a
    * search, where the row somebody typed a name to reach may well be one of
@@ -91,7 +106,8 @@ export function CounterQueue({
   t: StaffTranslator;
 }) {
   const settled = rows.filter(isSettledAtCounter);
-  const waiting = rows.filter((row) => !isSettledAtCounter(row));
+  const notHere = rows.filter(isNoShowAtCounter);
+  const waiting = rows.filter((row) => !counterIsDone(row));
 
   return (
     <>
@@ -112,10 +128,53 @@ export function CounterQueue({
               undoAction={undoAction}
               waiverAction={waiverAction}
               waiverNotice={waiverNotice}
+              noShowClaim={noShowClaimFor(row)}
+              markNoShowAction={markNoShowAction}
+              undoNoShowAction={undoNoShowAction}
+              salvage={salvageFor(row)}
               t={t}
             />
           ))}
         </SettledRows>
+      ) : null}
+
+      {notHere.length > 0 ? (
+        // **Its own group, and never folded** (issue #1209). The receipts group
+        // below is folded because a checked-in diver is finished; a released
+        // seat is the opposite — it is the one thing on this screen with work
+        // still attached to it, and the panel under each row says who that work
+        // could go to. Folding it would hide the whole point of the mark one
+        // tap after making it.
+        //
+        // Not merged into the settled group either: "Checked in — 4" over a row
+        // that says "Not here" is a group header that lies about its own rows.
+        <LedgerGroup
+          as={settledHeadingLevel}
+          className="mt-6"
+          label={t("checkIn.noShow.group", { count: notHere.length })}
+        >
+          <SettledRows>
+            {notHere.map((row) => (
+              <CounterQueueRow
+                key={row.bookingId}
+                row={row}
+                shopSlug={shopSlug}
+                today={today}
+                showEmail={isAmbiguousName(row.personName)}
+                showFirstVisit={showFirstVisit}
+                checkInAction={checkInAction}
+                undoAction={undoAction}
+                waiverAction={waiverAction}
+                waiverNotice={waiverNotice}
+                noShowClaim={noShowClaimFor(row)}
+                markNoShowAction={markNoShowAction}
+                undoNoShowAction={undoNoShowAction}
+                salvage={salvageFor(row)}
+                t={t}
+              />
+            ))}
+          </SettledRows>
+        </LedgerGroup>
       ) : null}
 
       {settled.length > 0 ? (
@@ -148,6 +207,10 @@ export function CounterQueue({
                 undoAction={undoAction}
                 waiverAction={waiverAction}
                 waiverNotice={waiverNotice}
+                noShowClaim={noShowClaimFor(row)}
+                markNoShowAction={markNoShowAction}
+                undoNoShowAction={undoNoShowAction}
+                salvage={salvageFor(row)}
                 t={t}
               />
             ))}

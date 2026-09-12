@@ -114,8 +114,18 @@ declared, and the warning goes away by fixing its cause. Verified working in an 
 2026-09-03. Not taken here because it puts a download from an external host on the critical path of
 every `pnpm` command — in CI, in the Vercel build (`scripts/vercel-build.mjs` shells to
 `pnpm db:migrate` and `pnpm build`), and on every developer machine — trading a warning that has a
-known, guarded blast radius for a hard failure whose blast radius is "the network". Filed for the
-owner rather than decided here.
+known, guarded blast radius for a hard failure whose blast radius is "the network".
+
+**Declined 2026-09-10 (#1331).** Two reasons, in order. First, Vercel refuses it outright: the
+builder reads `.npmrc` before install and throws `Detected unsupported "use-node-version" in your
+".npmrc". Please use "engines" in your "package.json" instead.`
+(`@vercel/build-utils`'s `validateNpmrc`), so the one deploy path that matters would stop building
+the day the line landed. Second, even where it works it buys nothing this repository is actually
+losing: the warning's blast radius is bounded and checked — every machine consumer of a subprocess
+stream here spawns a direct binary or `pnpm exec`, and the one place that parses pnpm's stdout,
+`scripts/post-deploy-wizard.mjs`, is a `pnpm exec` call and unaffected. The real fix is a container
+image that ships Node 24, which no file in this repository can make. Revisit if the warning ever
+costs a second outage, or if Vercel starts supporting the key.
 
 **Leaving the Lambdas on 22.** Defensible — AWS supports `nodejs22.x` for years yet, and nothing
 about the handlers needs 24. Declined because it leaves a fifth declaration contradicting the other
@@ -133,12 +143,20 @@ own history is that a rule which can be checked mechanically eventually has to b
 - `engines` is now a claim that survives contact with the dependency tree. Node 24.0–24.14 and the
   whole of 25 are refused rather than quietly admitted and then refused by `jsdom` under a
   different name.
-- The type layer stops describing a runtime nobody runs. This closes one hole and leaves a bigger
-  one open: `tsconfig.json` still says `lib: ["dom","dom.iterable","esnext"]`, which hands the
-  compiler ES2025-and-later library types regardless of Node — so an API neither Node 24 nor any
-  browser baseline has still compiles green. `lib` and `@types/node` are independent knobs and that
-  one is a separate decision, because the same setting governs client code, where the relevant
-  floor is browsers rather than Node. Filed as a follow-up.
+- The type layer stops describing a runtime nobody runs. The hole this left open — `tsconfig.json`
+  saying `lib: ["dom","dom.iterable","esnext"]`, which hands the compiler ES2025-and-later library
+  types regardless of Node, so an API neither Node 24 nor any browser baseline has still compiles
+  green — was filed as a follow-up and is now closed (issue #1329). The ES floor is `es2024` in both
+  projects: `["dom","dom.iterable","es2024"]` at the root and `["es2024","webworker","dom.iterable"]`
+  in `src/worker/tsconfig.json`, held by the same guard as the numbers above (`ES_LIB` in
+  `scripts/check-node-version.mjs`), because `esnext` is what every scaffold writes and the setting
+  drifts back the moment a config is regenerated. Narrowing it constrains client code as well, and
+  that is the deliberate side effect rather than an oversight: a browser has more than ES2024, so
+  the browser half is now slightly under-described, and being told no about `Set.union` or
+  `RegExp.escape` on a page is the accepted cost of never compiling against a surface the server
+  does not have. Nothing in the tree needed changing to land it — both projects typechecked clean
+  at `es2024` on the day it was made — and `skipLibCheck: true` keeps a dependency's `.d.ts`
+  reaching for an ES2025 type from breaking the build, which is why it stays clean.
 - A `pnpm` command in a Node 22 container still prints `[WARN] Unsupported engine` to stdout. It is
   harmless today — every machine consumer of a subprocess stream here spawns a direct binary or
   `pnpm exec`, which does not warn — and the debug skill now says so, along with what would make

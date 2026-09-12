@@ -138,6 +138,14 @@ attached, and `scripts/check-live-trips.mjs` (in `pnpm check:repo`) fails the bu
 failure is silent and public: an unfiltered read shows an anonymous visitor a departure the shop
 took off the board. `deleted_at` is the only spelling in the tree, internal names included.
 
+A departure that *moves* has a second obligation: `trips.revision` is published as the RFC 5545
+`SEQUENCE` (`src/lib/trip-calendar.ts`), so a write of `trips.starts_at` that leaves the revision
+flat leaves every subscribed calendar on the old `DTSTART` (issue #1165).
+`scripts/check-trip-revision.mjs` (also in `pnpm check:repo`) fails any `.update(trips)` writing
+`startsAt` whose `.set()` neither bumps `revision` nor says `diveday:allow-flat-revision: <why>`
+— the reason being required, and a `.set()` handed anything but an object literal being refused
+rather than guessed at.
+
 ## Tenant isolation
 
 Every domain table carries `shop_id`; every query filters by the session's shop; a lookup by id,

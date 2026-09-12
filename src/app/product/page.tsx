@@ -45,7 +45,7 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Product — booking to head count | DiveDay",
   description:
-    "How DiveDay runs a dive shop's day: bookings, waivers, cert checks, trip prep, and a boat manifest that keeps working when the signal doesn't.",
+    "How DiveDay runs a dive shop’s day: bookings, waivers, cert checks, trip prep, and a boat manifest that keeps working when the signal doesn’t.",
   alternates: { canonical: "/product" },
   openGraph: {
     ...sharedLinkCard,

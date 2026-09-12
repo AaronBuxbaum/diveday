@@ -30,17 +30,17 @@ test.describe("the year on Reports", () => {
 
   test("an owner reads the year beside the month", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/reports");
-    await expect(page.getByRole("heading", { level: 1, name: "How's your month" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "How’s your month" })).toBeVisible();
 
     await page.getByRole("link", { name: "This year" }).click();
     // The destination's own render first, then the URL: a client navigation
     // resolves the two in that order, and waiting on the URL alone times out
     // on a loaded box while the page it names is already on its way.
-    await expect(page.getByRole("heading", { level: 1, name: "How's your year" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "How’s your year" })).toBeVisible();
     await expect(page).toHaveURL(/reports\?range=year/);
     // The sentence the year says, then the four figures under the strip.
     await expect(page.getByText(/\d+ divers?, \d+ boats? out, \d+ sites?\./)).toBeVisible();
-    const figures = page.getByRole("region", { name: "The year's numbers" });
+    const figures = page.getByRole("region", { name: "The year’s numbers" });
     await expect(figures.getByText("Divers", { exact: true })).toBeVisible();
     await expect(figures.getByText("Boats out", { exact: true })).toBeVisible();
     await expect(figures.getByText("Busiest day", { exact: true })).toBeVisible();
@@ -56,8 +56,8 @@ test.describe("the year on Reports", () => {
   test("the month page is one tap back", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/reports?range=year");
     await page.getByRole("link", { name: "This month" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "How's your month" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "This month's numbers" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "How’s your month" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "This month’s numbers" })).toBeVisible();
   });
 
   test("the card is an image the year page hands over", { tag: READ_ONLY }, async ({
@@ -91,11 +91,11 @@ test.describe("the switch, on a shop of the test's own", () => {
     test.setTimeout(90_000);
 
     await page.goto(`/shop/${privateShop.slug}/settings/display`);
-    await expect(page.getByRole("heading", { name: "Our year on DiveDay's pages" })).toBeVisible();
-    await page.getByLabel("Show our year on DiveDay's pages").check();
+    await expect(page.getByRole("heading", { name: "Our year on DiveDay’s pages" })).toBeVisible();
+    await page.getByLabel("Show our year on DiveDay’s pages").check();
     await yearForm(page).getByRole("button", { name: "Save" }).click();
     await expect(page).toHaveURL(/notice=year-on-diveday/);
-    await expect(page.getByText("Your year is on DiveDay's pages.")).toBeVisible();
+    await expect(page.getByText("Your year is on DiveDay’s pages.")).toBeVisible();
 
     // **And a demo tenant still gets nothing.** `privateShop` mints the same
     // `isDemo` shop "Try the live demo" hands a visitor, whose shop, boat and
@@ -104,13 +104,13 @@ test.describe("the switch, on a shop of the test's own", () => {
     // finding 1). The band's own flow is the real shop below.
     expect((await request.get(`/s/${privateShop.slug}/year-card`)).status()).toBe(404);
     await page.goto("/");
-    await expect(page.getByText("A real shop's year")).toHaveCount(0);
+    await expect(page.getByText("A real shop’s year")).toHaveCount(0);
 
     await page.goto(`/shop/${privateShop.slug}/settings/display`);
-    await page.getByLabel("Show our year on DiveDay's pages").uncheck();
+    await page.getByLabel("Show our year on DiveDay’s pages").uncheck();
     await yearForm(page).getByRole("button", { name: "Save" }).click();
     await expect(page).toHaveURL(/notice=year-off-diveday/);
-    await expect(page.getByText("Your year is off DiveDay's pages.")).toBeVisible();
+    await expect(page.getByText("Your year is off DiveDay’s pages.")).toBeVisible();
   });
 });
 
@@ -131,7 +131,7 @@ test.describe("a real shop's year on DiveDay's pages", () => {
 
     // Nothing is shown until a real shop says yes.
     await page.goto("/");
-    await expect(page.getByText("A real shop's year")).toHaveCount(0);
+    await expect(page.getByText("A real shop’s year")).toHaveCount(0);
 
     const seeded = await request.post("/api/test/seed-year-band-shop");
     expect(seeded.ok()).toBe(true);
@@ -142,7 +142,7 @@ test.describe("a real shop's year on DiveDay's pages", () => {
     expect(card.headers()["content-type"]).toContain("image/png");
 
     await page.goto("/");
-    await expect(page.getByText("A real shop's year")).toBeVisible();
+    await expect(page.getByText("A real shop’s year")).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /has run \d+ boats? on DiveDay this year\./ }),
     ).toBeVisible();
@@ -156,6 +156,6 @@ test.describe("a real shop's year on DiveDay's pages", () => {
     expect(dropped.ok()).toBe(true);
     expect((await request.get(`/s/${slug}/year-card`)).status()).toBe(404);
     await page.goto("/");
-    await expect(page.getByText("A real shop's year")).toHaveCount(0);
+    await expect(page.getByText("A real shop’s year")).toHaveCount(0);
   });
 });

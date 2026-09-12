@@ -4,7 +4,7 @@
     "title": "Add a booking",
     "backToBoard": "Back to the board",
     "tripHeading": "Which departure?",
-    "fullExcluded": "Full departures are left out of this list. Change a boat's seats, or put another departure on that day, from the board.",
+    "fullExcluded": "Full departures are left out of this list. Change a boat’s seats, or put another departure on that day, from the board.",
     "tripEmpty": "Nothing upcoming has a seat left.",
     "tripEmptyAction": "Open the schedule",
     "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}",

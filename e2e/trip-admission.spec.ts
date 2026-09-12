@@ -90,7 +90,7 @@ test.describe("as owner", () => {
     await expect(
       page.getByText(/This charter is for divers with Advanced Open Water or higher, so we could/),
     ).toBeVisible();
-    await expect(page.getByText(/isn't taking bookings right now/)).toHaveCount(0);
+    await expect(page.getByText(/isn’t taking bookings right now/)).toHaveCount(0);
     await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toHaveCount(0);
   });
 
@@ -221,7 +221,7 @@ test.describe("as owner", () => {
     // effect of not matching the text, the same disambiguation the other two
     // specs use.
     const banner = page.getByRole("alert").filter({ hasText: "certifications on file" });
-    await expect(banner).toContainText("certifications on file don't reach what this trip");
+    await expect(banner).toContainText("certifications on file don’t reach what this trip");
     await expect(banner).not.toContainText("Deep certification");
     await expect(banner).not.toContainText("charter requires");
   });

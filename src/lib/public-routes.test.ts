@@ -48,8 +48,6 @@ describe("shopSlugFromStaffUrl", () => {
   it("refuses anything that isn't shaped like a slug", () => {
     expect(shopSlugFromStaffUrl("/shop/Blue-Mantis")).toBeNull();
     expect(shopSlugFromStaffUrl("/shop/blue_mantis")).toBeNull();
-    expect(shopSlugFromStaffUrl("/shop/-blue")).toBeNull();
-    expect(shopSlugFromStaffUrl("/shop/blue-")).toBeNull();
     expect(shopSlugFromStaffUrl("/shop/..")).toBeNull();
     expect(shopSlugFromStaffUrl("::not a url::")).toBeNull();
   });
@@ -92,10 +90,23 @@ describe("shopSlugFromPublicPath", () => {
   it("refuses anything that isn't shaped like a slug", () => {
     expect(shopSlugFromPublicPath("/s/Blue-Mantis")).toBeNull();
     expect(shopSlugFromPublicPath("/s/blue_mantis")).toBeNull();
-    expect(shopSlugFromPublicPath("/s/blue-")).toBeNull();
     expect(shopSlugFromPublicPath("/s/..")).toBeNull();
     expect(shopSlugFromPublicPath("/s/../../etc")).toBeNull();
     expect(shopSlugFromPublicPath("//evil.example/s/blue-mantis")).toBeNull();
+  });
+
+  it("reads back every slug sign-up is willing to sell", () => {
+    // `onboardSchema` accepts `[a-z0-9-]+`, so a doubled hyphen and an edge
+    // one are live storefronts. The matcher here used to be narrower, which
+    // cost such a shop the frame around its own 404 — a dead link under it was
+    // answered by DiveDay's sales page with a trial button, the first
+    // impression issue #765 exists to prevent. This is `src/app/not-found.tsx`
+    // reading the header the proxy stamped: it spends the value on
+    // `publicSchedulePath` and reads it back out, so the round trip is the
+    // check.
+    for (const slug of ["blue--mantis", "-reef", "reef-", "a", "2024-reef"]) {
+      expect(shopSlugFromPublicPath(publicSchedulePath(slug))).toBe(slug);
+    }
   });
 
   it("spends the slug on an internal path and nothing else", () => {

@@ -4,7 +4,15 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { findIssueProblems, SKIPPED_EXIT } from "./check-follow-ups.mjs";
+import {
+  findIssueProblems,
+  missingTouchedProblem,
+  SKIPPED_EXIT,
+  TOUCHED_TIMEOUT,
+  touchedPathAccepted,
+  touchedPathExists,
+  unverifiedTouchedProblem,
+} from "./check-follow-ups.mjs";
 
 const valid = {
   number: 123,
@@ -271,6 +279,74 @@ describe("what counts as a touched path", () => {
 });
 
 /**
+ * Issue #1339 named `src/i18n/locales/<locale>/staff/trips.json` with a star for
+ * the locale — the honest answer for a change that edits the same namespace in
+ * every locale — and the literal `access()` failed it, reddening PR #1335, a
+ * branch with nothing to do with it. One match is enough; nothing matching is
+ * still a failure, and it has to say which kind of nothing it found.
+ */
+describe("a glob in Touches", () => {
+  const root = path.join(import.meta.dirname, "..");
+
+  it("accepts a pattern that expands to at least one file", async () => {
+    expect(await touchedPathExists(root, "src/i18n/locales/*/staff/trips.json")).toBe(true);
+  });
+
+  it("says timeout rather than yes when the walk runs out of budget", async () => {
+    // The first version answered `true` here, and both callers read `true` as
+    // "the path exists" — so a glob expensive enough to blow the budget was
+    // accepted, and the filing door would have published it (`sourcery-ai` on
+    // PR 1743). The two callers want opposite answers, so the outcome has to
+    // be distinguishable from both `true` and `false`.
+    expect(TOUCHED_TIMEOUT).not.toBe(true);
+    expect(TOUCHED_TIMEOUT).not.toBe(false);
+    expect(touchedPathAccepted(TOUCHED_TIMEOUT)).toBe(true);
+    expect(touchedPathAccepted(true)).toBe(true);
+    expect(touchedPathAccepted(false)).toBe(false);
+  });
+
+  it("names the budget in the sentence the filing door refuses with", async () => {
+    // The guard that reads an already-filed issue accepts a timeout; the door
+    // about to make one public refuses it, and has to say why in terms a filer
+    // can act on.
+    const problem = unverifiedTouchedProblem("src/**/*.ts");
+    expect(problem).toMatch(/could not be checked/);
+    expect(problem).toMatch(/budget/);
+    expect(problem).not.toMatch(/does not exist/);
+  });
+
+  it("refuses a pattern that climbs out of the checkout, rather than walking it", async () => {
+    // Without this, an issue body is a file-existence oracle for whatever runs
+    // `check:repo`: the pass or fail is one readable bit per pattern, in a CI
+    // log (`security-reviewer`, issue 1356).
+    expect(await touchedPathExists(root, "../../../etc/ssh/*")).toBe(false);
+    expect(await touchedPathExists(root, "/etc/*")).toBe(false);
+  });
+
+  it("says the pattern points outside rather than that it matched no files", async () => {
+    // The two are different mistakes and a filer fixes them differently.
+    expect(missingTouchedProblem("../../*.ts")).toMatch(/points outside the checkout/);
+    expect(missingTouchedProblem("src/does-not-exist/*.ts")).toMatch(/matched no files/);
+  });
+
+  it("refuses a pattern that expands to nothing", async () => {
+    expect(await touchedPathExists(root, "src/i18n/locales/*/staff/no-such-namespace.json")).toBe(
+      false,
+    );
+  });
+
+  it("checks a plain path exactly as it always did", async () => {
+    expect(await touchedPathExists(root, "scripts/check-follow-ups.mjs")).toBe(true);
+    expect(await touchedPathExists(root, "scripts/not-a-real-guard.mjs")).toBe(false);
+  });
+
+  it("says a pattern matched nothing, rather than reading as a typo", () => {
+    expect(missingTouchedProblem("src/i18n/locales/*/staff/nope.json")).toMatch(/matched no files/);
+    expect(missingTouchedProblem("src/lib/nope.ts")).not.toMatch(/matched no files/);
+  });
+});
+
+/**
  * The three outcomes, at the process boundary rather than through
  * `findIssueProblems` — because the thing under test *is* the exit code, and the
  * bug this covers (issue #1097) was that a skipped guard and a passing one were
@@ -437,5 +513,27 @@ describe("--body, the pre-flight for one drafted issue", () => {
     const result = run("--body", draft("future.md", body));
     expect(result.status).toBe(0);
     expect(result.stderr).toMatch(/not on disk here/);
+  });
+
+  it("says nothing about a Touches glob that matches real files", () => {
+    const body = valid.body.replace(
+      "**Touches:** `src/lib`, `docs/agents/issue-tracker.md`",
+      "**Touches:** `src/i18n/locales/*/staff/trips.json`",
+    );
+    const result = run("--body", draft("glob-hit.md", body));
+    expect(result.status).toBe(0);
+    expect(result.stderr).not.toMatch(/not on disk here/);
+  });
+
+  it("warns about a Touches glob that matches nothing, still without failing", () => {
+    // Advisory here for the same reason a missing plain path is: this mode
+    // checks a draft somebody may still edit.
+    const body = valid.body.replace(
+      "**Touches:** `src/lib`, `docs/agents/issue-tracker.md`",
+      "**Touches:** `src/i18n/locales/*/staff/no-such-namespace.json`",
+    );
+    const result = run("--body", draft("glob-miss.md", body));
+    expect(result.status).toBe(0);
+    expect(result.stderr).toMatch(/matched no files/);
   });
 });

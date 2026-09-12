@@ -51,6 +51,26 @@ type WaiverRequestEmailInput = {
   timezone: string;
 };
 
+/**
+ * **No `completionUrl`, and no other URL either** (issue #1453). The guardian's
+ * copy is a record of something already signed, not a door — a second bearer
+ * link to a third party is the one thing the issue refuses outright. The shape
+ * carries nothing a button could be built from, so a copy-paste of
+ * `waiverRequestEmail` cannot accidentally reintroduce one.
+ */
+type GuardianReleaseCopyEmailInput = {
+  locale: DiverLocale;
+  guardianName: string;
+  diverName: string;
+  shopName: string;
+  releaseTitle: string;
+  releaseVersion: number;
+  signedAt: Date;
+  timezone: string;
+  /** See `guardianReleaseCopySchema` — it changes the closing sentence only. */
+  medicalReviewPending?: boolean;
+};
+
 type ReadinessLinkEmailInput = {
   locale: DiverLocale;
   diverName: string;
@@ -207,8 +227,9 @@ export type TripConditionsHoldEmailInput = {
 
 /**
  * The light-mode `--primary` token, duplicated intentionally: an email
- * document can't reference globals.css custom properties any more than
- * `icon.tsx`'s `ImageResponse` can (see that file's own comment).
+ * document can't reference globals.css custom properties any more than a
+ * satori `ImageResponse` can (see `src/lib/og-rasterizer.ts` and
+ * `scripts/check-tokens.mjs`'s exemption list).
  */
 const BRAND_PRIMARY_COLOR = "#008080";
 const BRAND_PAGE_COLOR = "#FAF9F6";
@@ -1276,6 +1297,57 @@ export function waiverRequestEmail(input: WaiverRequestEmailInput): Notification
     subject,
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body} ${completeText}:\n${input.completionUrl}\n\n${expiry}\n`,
     html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(input.completionUrl, completeLink)}<p>${t("notifications.waiverRequest.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+  };
+}
+
+/**
+ * **What a parent gets for putting their name to their child's release**
+ * (issue #1453, owner decision 2026-09-10).
+ *
+ * Four facts and a full stop: the shop, the diver, which release and version,
+ * and the day it was signed. **No medical answers** — the questionnaire is the
+ * diver's health information and a courtesy copy is not where it goes — and
+ * **no link, no token, no button**, because the release is already signed and
+ * a second capability URL to a third party is a security surface with nothing
+ * behind it. `email.test.ts` asserts the rendered body contains no anchor and
+ * no `http`, in both locales, so this stays true through the next edit.
+ */
+export function guardianReleaseCopyEmail(input: GuardianReleaseCopyEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.guardianName, t("notifications.common.genericName"));
+  const signedAt = formatDateTimeTz(input.signedAt, input.locale, input.timezone);
+  const values = {
+    shopName: input.shopName,
+    diverName: input.diverName,
+    releaseTitle: input.releaseTitle,
+    releaseVersion: input.releaseVersion,
+    signedAt,
+  };
+  const body = t("notifications.guardianReleaseCopy.body", values);
+  const bodyHtml = t("notifications.guardianReleaseCopy.body", {
+    shopName: escapeHtml(input.shopName),
+    diverName: escapeHtml(input.diverName),
+    releaseTitle: escapeHtml(input.releaseTitle),
+    releaseVersion: input.releaseVersion,
+    signedAt: escapeHtml(signedAt),
+  });
+  const note = input.medicalReviewPending
+    ? t("notifications.guardianReleaseCopy.noteMedicalReview", {
+        shopName: input.shopName,
+        diverName: input.diverName,
+      })
+    : t("notifications.guardianReleaseCopy.note");
+  const noteHtml = input.medicalReviewPending
+    ? t("notifications.guardianReleaseCopy.noteMedicalReview", {
+        shopName: escapeHtml(input.shopName),
+        diverName: escapeHtml(input.diverName),
+      })
+    : note;
+
+  return {
+    subject: t("notifications.guardianReleaseCopy.subject", { diverName: input.diverName }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${note}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p>${noteHtml}</p>`,
   };
 }
 

@@ -42,7 +42,7 @@
     "preview_landmarks": "Landmarks",
     "preview_fieldGuide": "Field guide",
     "locationRequiredTitle": "Shop location required",
-    "locationRequiredDescription": "Set your shop's address and location in settings.",
+    "locationRequiredDescription": "Set your shop’s address and location in settings.",
     "goToSettings": "Go to Settings",
     "pagination": {
       "total": "{count, plural, one {# site} other {# sites}}"
@@ -55,7 +55,7 @@
   "form": {
     "sections": {
       "about": "The site",
-      "underwater": "What's down there",
+      "underwater": "What’s down there",
       "dive": "The dive",
       "planning": "Planning notes"
     },
@@ -65,9 +65,12 @@
     "nameLabel": "Name",
     "namePlaceholder": "Molasses Reef",
     "forecastLegend": "GPS location",
-    "forecastDescription": "The offshore dive point, not the shop address. Leave both blank to keep the site off divers' maps.",
+    "forecastDescription": "The offshore dive point, not the shop address. Leave both blank to keep the site off divers’ maps.",
     "tideStationLabel": "NOAA tide station",
-    "tideStationHint": "The seven-digit id of the nearest ocean-side station, from <link>NOAA's tide predictions</link>.",
+    "tideStationHint": "The seven-digit id of the nearest ocean-side station, from <link>NOAA’s tide predictions</link>. The list covers US waters only.",
+    "tideStationEcho": "{id} · {name}",
+    "tideStationFarKm": "That station is {distance} km from this site’s coordinates, so the turn it predicts can reach this water up to an hour early or late. Check it’s the one you meant.",
+    "tideStationFarMiles": "That station is {distance} mi from this site’s coordinates, so the turn it predicts can reach this water up to an hour early or late. Check it’s the one you meant.",
     "tidePreferenceLabel": "Dives best",
     "tidePreference": {
       "any": "Any tide",
@@ -81,7 +84,7 @@
     "locationPlaceholder": "Key Largo National Marine Sanctuary",
     "descriptionLabel": "What makes this site special?",
     "photosLegend": "Photos",
-    "photosDescription": "Upload the pictures a diver sees on this site's briefing.",
+    "photosDescription": "Upload the pictures a diver sees on this site’s briefing.",
     "mapImageLabel": "Map still",
     "routeImageLabel": "Route still",
     "removeCurrentPhoto": "Remove this photo",
@@ -89,7 +92,7 @@
     "tooManyPhotos": "{max, plural, one {A site holds up to # photo.} other {A site holds up to # photos.}}",
     "route": {
       "legend": "The route you swim",
-      "description": "Click the map to drop a waypoint, in the order you swim them. The map can't be dragged: the line you draw is the line a diver sees.",
+      "description": "Click the map to drop a waypoint, in the order you swim them. The map can’t be dragged: the line you draw is the line a diver sees.",
       "needsCoordinates": "Fill in the GPS location above and the map appears here, ready to draw on.",
       "labelLabel": "What the route is called",
       "labelPlaceholder": "Reef garden loop",
@@ -105,7 +108,7 @@
         "empty": "Click where the dive starts.",
         "one": "One waypoint down. Click where it goes next.",
         "some": "{count, plural, one {# waypoint} other {# waypoints}}.",
-        "full": "That's the most waypoints a route can carry ({count}). Undo to change one."
+        "full": "That’s the most waypoints a route can carry ({count}). Undo to change one."
       }
     },
     "sitePhotosLabel": "Site photos",
@@ -124,9 +127,9 @@
     "depthRangePlaceholder": "20–45 ft",
     "maxDepthMetersLabel": "Maximum depth (metres)",
     "maxDepthFeetLabel": "Maximum depth (feet)",
-    "maxDepthHint": "(optional · warns when a diver's certification doesn't reach it)",
+    "maxDepthHint": "(optional · warns when a diver’s certification doesn’t reach it)",
     "expectedBottomTimeLabel": "Time in the water here (minutes)",
-    "expectedBottomTimeHint": "(optional · overrides your shop's usual bottom time)",
+    "expectedBottomTimeHint": "(optional · overrides your shop’s usual bottom time)",
     "expectedBottomTimePlaceholder": "45",
     "currentNoteLabel": "Current and conditions notes",
     "divePlanLabel": "Dive plan",
@@ -163,7 +166,7 @@
       "remove": "Remove",
       "removeAriaLabel": "Remove the landmark {name}",
       "empty": "No landmarks yet. Add the first thing your crew points at.",
-      "full": "{max, plural, one {That's the most landmarks one site can carry (#).} other {That's the most landmarks one site can carry (#).}}"
+      "full": "{max, plural, one {That’s the most landmarks one site can carry (#).} other {That’s the most landmarks one site can carry (#).}}"
     },
     "fieldGuide": {
       "legend": "Field guide",
@@ -172,8 +175,8 @@
       "searchPlaceholder": "Stoplight parrotfish, or Sparisoma viride",
       "add": "Add",
       "empty": "No species yet.",
-      "full": "{max, plural, one {That's the most species one guide can hold (#).} other {That's the most species one guide can hold (#).}}",
-      "notFound": "Not in DiveDay's catalog yet.",
+      "full": "{max, plural, one {That’s the most species one guide can hold (#).} other {That’s the most species one guide can hold (#).}}",
+      "notFound": "Not in DiveDay’s catalog yet.",
       "requestSpecies": "Tell DiveDay about it",
       "requestSent": "Thanks, we have noted {name}. It arrives in a release, not today.",
       "remove": "Remove",
@@ -184,7 +187,7 @@
       "moveDownAriaLabel": "Move {name} later in the guide"
     },
     "tipsHeadingLabel": "Heading over the “slow down” tips",
-    "tipsHeadingHint": "(optional · DiveDay writes one if you don't)",
+    "tipsHeadingHint": "(optional · DiveDay writes one if you don’t)",
     "tipsHeadingPlaceholder": "See more by slowing down",
     "certificationLegend": "Certification requirements",
     "minimumCertificationLabel": "Minimum certification",
@@ -195,8 +198,8 @@
     "errorCoordinates": "Add both GPS coordinates. A location needs a latitude and a longitude.",
     "errorTideStation": "A NOAA tide station id is seven digits, like 8723583.",
     "errorDepth": "That maximum depth is deeper than any dive site.",
-    "errorImages": "One of those photos couldn't be stored. A site holds up to six, and each has to be a JPG, PNG, WebP, or HEIC under 5 MB. Everything else you typed is still here.",
-    "errorImagesUnconfigured": "Photo storage isn't set up for this shop yet. Save the briefing without photos for now, or ask your shop's owner or manager to configure it.",
+    "errorImages": "One of those photos couldn’t be stored. A site holds up to six, and each has to be a JPG, PNG, WebP, or HEIC under 5 MB. Everything else you typed is still here.",
+    "errorImagesUnconfigured": "Photo storage isn’t set up for this shop yet. Save the briefing without photos for now, or ask your shop’s owner or manager to configure it.",
     "errorConflict": "Somebody else changed this briefing while you had it open, so nothing was saved. What you typed is still here. Copy anything you need, then reload the page.",
     "planningNoteLabel": "What to remember about running this site",
     "planningNoteDescription": "Staff only. It never reaches a diver.",
@@ -214,7 +217,7 @@
     "deleting": "Deleting…",
     "copiedNotice": "Independent copy ready to tailor.",
     "savedNotice": "Dive site saved.",
-    "errorInvalid": "That didn't save. Check the name and links, then try again.",
+    "errorInvalid": "That didn’t save. Check the name and links, then try again.",
     "certificationDescription": "What this site itself demands.",
     "requiredSpecialties": "Required specialties",
     "scheduleDeparture": "Schedule departure",
@@ -227,7 +230,7 @@
       "keepEditsHint": "Only fields still matching the old template change. Your edits stay intact.",
       "replaceCopy": "Apply template copy",
       "replaceCopyHint": "Use every field from the new template, while keeping your name, photos, and routes.",
-      "replaceConfirm": "Replace this site's template-managed copy with the latest published version?",
+      "replaceConfirm": "Replace this site’s template-managed copy with the latest published version?",
       "applying": "Pulling update…",
       "replacing": "Replacing copy…",
       "updated": "Template update pulled in. Your edits were kept.",
@@ -267,7 +270,7 @@
   "new": {
     "title": "Add a dive site",
     "description": "Everything is optional except the name.",
-    "errorInvalid": "That didn't save. Check the required name and links, then try again.",
+    "errorInvalid": "That didn’t save. Check the required name and links, then try again.",
     "certificationDescription": "These requirements travel with the site into every new trip that uses it.",
     "saveSiteBriefing": "Save dive site"
   }

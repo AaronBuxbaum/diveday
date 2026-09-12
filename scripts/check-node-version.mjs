@@ -70,6 +70,23 @@ export const NODE_FLOOR = "24.15.0";
  */
 export const LAMBDA_NODE_MAJOR = 24;
 
+/**
+ * The ES library floor the compiler describes, in both TypeScript projects.
+ *
+ * `lib` is a runtime-floor claim exactly the way `@types/node` is, and it was
+ * the hole left open when the Node declarations were reconciled: `esnext` hands
+ * the compiler ES2025-and-later library types regardless of what Node 24 or any
+ * browser baseline actually has, so an API nothing runs still compiles green
+ * (issue #1329). It sits here rather than in a comment because the default in
+ * every scaffold is `esnext`, so it drifts back the moment a config is
+ * regenerated and nothing would say so.
+ *
+ * Narrowing it constrains client code too, which is the accepted cost: a
+ * browser has more than ES2024, and being slightly under-described there is
+ * cheaper than compiling against a surface Node does not have.
+ */
+export const ES_LIB = "es2024";
+
 /** Each file, what it must say, and the sentence that explains the drift. */
 const DECLARATIONS = [
   {
@@ -125,6 +142,22 @@ const DECLARATIONS = [
     find: (text) => text.match(/Runtime: "(nodejs[\d.x]+)"/)?.[1],
     want: `nodejs${LAMBDA_NODE_MAJOR}.x`,
     where: "the synthesized-runtime assertion",
+  },
+  // Both of these read by regex rather than `JSON.parse`: src/worker/tsconfig.json
+  // carries `//` comments explaining why it exists at all, so it is not
+  // parseable JSON, and the root one is read the same way to keep the pair
+  // symmetrical.
+  {
+    file: "tsconfig.json",
+    find: (text) => text.match(/"lib"\s*:\s*\[([^\]]*)\]/)?.[1]?.replace(/["\s]/g, ""),
+    want: `dom,dom.iterable,${ES_LIB}`,
+    where: "compilerOptions.lib",
+  },
+  {
+    file: "src/worker/tsconfig.json",
+    find: (text) => text.match(/"lib"\s*:\s*\[([^\]]*)\]/)?.[1]?.replace(/["\s]/g, ""),
+    want: `${ES_LIB},webworker,dom.iterable`,
+    where: "compilerOptions.lib",
   },
 ];
 
@@ -193,7 +226,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.error("The repository disagrees with itself about which Node it runs on:");
     console.error(drift.map((line) => `- ${line}`).join("\n"));
     console.error(
-      "\nThe numbers live in scripts/check-node-version.mjs (NODE_MAJOR, NODE_FLOOR, LAMBDA_NODE_MAJOR). Change them there first, then bring every file above into line — never the other way round.",
+      "\nThe numbers live in scripts/check-node-version.mjs (NODE_MAJOR, NODE_FLOOR, LAMBDA_NODE_MAJOR, ES_LIB). Change them there first, then bring every file above into line — never the other way round.",
     );
     console.error(
       "This is a guard rather than a convention because `engines` is warn-only and pnpm writes that warning to stdout, which is how a mismatch took both MCP servers down (issue #1326, ADR 20260903-node-24-is-the-floor).",
@@ -202,6 +235,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   }
 
   console.log(
-    `node-version: ${DECLARATIONS.length + 1} declarations agree on Node ${NODE_MAJOR} (floor ${NODE_FLOOR}, Lambda nodejs${LAMBDA_NODE_MAJOR}.x), and the README's pnpm pin matches packageManager`,
+    `node-version: ${DECLARATIONS.length + 1} declarations agree on Node ${NODE_MAJOR} (floor ${NODE_FLOOR}, Lambda nodejs${LAMBDA_NODE_MAJOR}.x, ES lib ${ES_LIB}), and the README's pnpm pin matches packageManager`,
   );
 }

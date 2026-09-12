@@ -16,9 +16,9 @@ const COPY: RoleOrientationCardCopy = {
   heading: "New here? A few pointers for your role.",
   tryLabel: "Try:",
   dismiss: "Got it",
-  title: "You're steering the whole shop",
+  title: "You’re steering the whole shop",
   desc: "Today is your work queue.",
-  tryThis: "Open Board to see this week's departures.",
+  tryThis: "Open Board to see this week’s departures.",
 };
 
 const dismissAction = async () => {};
@@ -36,9 +36,9 @@ describe("RoleOrientationCard", () => {
     expect(
       screen.getByRole("heading", { name: "New here? A few pointers for your role." }),
     ).toBeInTheDocument();
-    expect(screen.getByText("You're steering the whole shop")).toBeInTheDocument();
+    expect(screen.getByText("You’re steering the whole shop")).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Open Board to see this week's departures." }),
+      screen.getByRole("link", { name: "Open Board to see this week’s departures." }),
     ).toHaveAttribute("href", "/shop/blue-mantis/schedule/board");
     expect(screen.getByRole("button", { name: "Got it" })).toBeInTheDocument();
   });
@@ -58,7 +58,7 @@ describe("RoleOrientationLine", () => {
 
     expect(screen.queryByRole("heading")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Open Board to see this week's departures." }),
+      screen.getByRole("link", { name: "Open Board to see this week’s departures." }),
     ).toHaveAttribute("href", "/shop/blue-mantis/schedule/board");
     expect(screen.getByRole("button", { name: "Got it" })).toBeInTheDocument();
   });

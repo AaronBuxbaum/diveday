@@ -233,6 +233,30 @@ export function canReadMedicalClearanceDocument(roles: readonly Role[] | undefin
 }
 
 /**
+ * **Read what a diver privately asked the shop to fix** — the recap pulse
+ * (D40, issue #1200; the owner/manager narrowing is issue #1410).
+ *
+ * Owner or manager, the same boundary and the same reasoning as
+ * {@link canReadMedicalClearanceDocument}: these are the diver's own words,
+ * under the diver's name, and they frequently name crew. Nothing on the boat
+ * needs them.
+ *
+ * **Why this is its own predicate and not a call to {@link canViewShopReports}.**
+ * The panel and its action borrowed the revenue gate, which happens to carry
+ * the same role set. But the pulse form tells the diver who will read it —
+ * `recap.pulseAudience`, "Just for the owner and managers at {shop}" — and a
+ * sentence like that is only true while the reader set is the one it names.
+ * Borrowed, the day somebody opens reports to instructors the panel opens with
+ * it and the promise goes quietly false, with nothing to turn red. A reader set
+ * a diver was promised needs a name of its own; `authz.test.ts` pins it against
+ * that sentence in both locales, so widening this gate without rewriting the
+ * promise fails there (security review, the RFH-05 layer).
+ */
+export function canReadPrivateRecapPulse(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
  * Open a departure's incident-ready export — the single document a shop hands
  * to authorities or an insurer after something goes wrong. Owner only, the same
  * strictness as `canErasePersonalData` and deliberately tighter than the
@@ -295,24 +319,4 @@ export function canOverrideGearRequest(roles: readonly Role[] | undefined): bool
     (role) =>
       role === "owner" || role === "manager" || role === "instructor" || role === "divemaster",
   );
-}
-
-/**
- * **Read the shop's inbox and answer it** (ADR 20260907-two-way-inbox).
- *
- * Owner or manager, for the two reasons the same boundary already exists
- * around the shop's other outward-facing voice. What a staffer types here
- * leaves as the shop, to a diver, over the shop's own sender — the same
- * accountability `canManageMessagingSettings` puts on connecting that sender
- * in the first place. And the list holds strangers: a message from an address
- * nobody on the roster holds arrives with its sender's contact details, which
- * is the argument that put the requests board behind a gate too.
- *
- * A captain who needs to know a diver is running late reads it where they
- * already work — the diver is on their manifest, and this is not the surface
- * that tells them. Widening it is a decision for a shop that has run the
- * inbox for a season, not for the change that builds it.
- */
-export function canAnswerShopInbox(roles: readonly Role[] | undefined): boolean {
-  return isOwnerOrManager(roles);
 }

@@ -258,6 +258,18 @@ export function walkPlan(personas = PERSONAS) {
   });
 }
 
+/**
+ * The personas the opt-in judged pass reads for (#1498), and only these two.
+ *
+ * Nadia's list and Kai's are almost entirely about words on a screen — is the
+ * jargon explained, does the refusal name the actual rule — which is the half
+ * no mechanical probe can see and the half a model reading a screenshot can.
+ * Two rather than fifteen because a model's opinion arriving unattended in a
+ * tracker is a trust question before it is a coverage one, and the condition
+ * for widening is a month of dispatched output somebody has actually read.
+ */
+export const JUDGE_PERSONAS = Object.freeze(["nadia", "kai"]);
+
 /** Persona by id, for turning a finding's id list back into names. */
 export function personaById(id, personas = PERSONAS) {
   return personas.find((persona) => persona.id === id) ?? null;
@@ -277,6 +289,10 @@ export function personaById(id, personas = PERSONAS) {
  * shaping time, and only when it is on disk.
  */
 export const PROBES = Object.freeze({
+  // No entry here declares `impact: "judged"`, and `findings.test.mjs` fails on
+  // one that does. The band exists so a model's opinion can only ever spend the
+  // issue budget a measurement did not; a mechanical probe borrowing it would
+  // rank a fact below every opinion and quietly invert that.
   "skip-link": {
     persona: "june",
     kind: "risk",
@@ -348,8 +364,30 @@ export const AXE_PROBE = Object.freeze({
   touches: ["e2e/a11y.spec.ts", "docs/product/personas.md"],
 });
 
+/**
+ * A judged probe id: `judged:<persona>:<url path>:<8 hex of the normalised claim>`.
+ * Built in `judge.mjs`; parsed here so `probeFor` stays the one place a probe id
+ * turns into a record, and so the two halves cannot drift apart unnoticed —
+ * `judge.test.mjs` round-trips a built id through this.
+ */
+const JUDGED_PROBE = /^judged:([a-z][\w-]*):(.+):([0-9a-f]{8})$/;
+
 /** The probe record behind a finding id, axe rules included. */
 export function probeFor(probeId) {
+  const judged = JUDGED_PROBE.exec(probeId);
+  if (judged) {
+    const [, personaId, urlPath] = judged;
+    const persona = personaById(personaId);
+    if (!persona) return null;
+    return {
+      persona: personaId,
+      kind: "improvement",
+      effort: "S",
+      line: `the "hold the line on" list in ${persona.name}'s entry (persona ${persona.number}, ${persona.name})`,
+      touches: ["docs/product/personas.md", "scripts/persona-bots/judge.mjs"],
+      title: () => `Decide whether ${persona.name} is right about ${urlPath}`,
+    };
+  }
   if (probeId.startsWith("axe:")) {
     const rule = probeId.slice("axe:".length);
     return {

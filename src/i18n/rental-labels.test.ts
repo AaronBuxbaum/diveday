@@ -55,4 +55,24 @@ describe("rentalFitLineText", () => {
       }),
     ).toBe("BCD M, Regulator, Wetsuit 5mm M");
   });
+
+  it("says a drysuit diver's fins have to clear the boot, with and without a size", () => {
+    // The stated size is a shoe size (dive-prep.ts's `rentedItems`), so the
+    // rail never reads it as the pair to hand over.
+    expect(
+      rentalFitLineText(t, "en-US", {
+        state: "rents",
+        items: [
+          { kind: "mask_fins", size: "US 9", drysuitFinFit: true },
+          { kind: "drysuit", size: "ML" },
+        ],
+      }),
+    ).toBe("Mask & fins over a drysuit boot, shoe US 9, Drysuit ML");
+    expect(
+      rentalFitLineText(t, "en-US", {
+        state: "rents",
+        items: [{ kind: "mask_fins", size: null, drysuitFinFit: true }],
+      }),
+    ).toBe("Mask & fins over a drysuit boot");
+  });
 });

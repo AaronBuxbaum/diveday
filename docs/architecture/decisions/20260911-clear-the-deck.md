@@ -1,6 +1,6 @@
 # 20260911-clear-the-deck — Six ways to make DiveDay smaller, a floor of deletions, and the pick is the owner's
 
-- **Status:** Proposed — pending H-73. **Round 1 read 2026-09-11 (Aaron Buxbaum, in session):**
+- **Status:** Proposed — pending H-77. **Round 1 read 2026-09-11 (Aaron Buxbaum, in session):**
   the six concepts land, and the surface itself — Reef — is now the problem, "overbearing and ugly";
   go farther. Round 2 (decision 3, below) redraws the surface as five candidates for the owner's
   pick. **Round 2 read, the same day:** the problem is Reef itself; the instrument is the direction
@@ -29,7 +29,7 @@
   `src/app/s/**`, the embed catalogue, the print register, the integrations, and DiveDay's own pages
   under `src/app/`
 - **Follows:** [20260908-one-hand](20260908-one-hand.md), whose floor (20a–20e) this ADR keeps as
-  its own floor's floor and whose open slices 20f–20m pause until H-73 is answered
+  its own floor's floor and whose open slices 20f–20m pause until H-77 is answered
 
 ## Context
 
@@ -77,12 +77,12 @@ kinds of thing rather than spellings.
 | --- | --- | --- | --- |
 | The door | a row's own tap is its only door; a trailing verb, where one exists, is the fix and nothing else — the nine "Open …" doors on the home go | a guard on a link rendered inside a row | — |
 | The chip and the pill | a state is a word: **Blocked** in danger ink, or a sentence in muted ink; nothing tinted behind text on a staff surface | `Badge` is deleted, not narrowed (20c, taken to zero) | — |
-| The decoration | the water band, the drawn site tile, the dial's water, the coral washes and the greeting's mark leave every `/shop/**` page; the shop's colour is the staff app's one accent; the hand and the coral stay on the diver's side | the coral table gains a row; `WaterBandStyle` renders nothing under `/shop` | H-73 b |
-| The switch | a feature is on with a default a sentence can change, or it does not exist; Settings becomes the shop's card (concept 5 in full, or its first half under any other pick) | the settings registry shrinks to facts; each retired switch's conditional goes with it | H-73 c |
-| The outside | the storefront's front page is Right now and the week; every other public noun is one tap in or gone; one embed with one look; every page prints; three connects; the lobby display is the storefront full-screen | the storefront's composition test; the embed snippet table shrinks to one | H-73 c |
-| DiveDay's own pages | three plus the two legal ones — the homepage (already the demo), pricing, switching; product, about, the regions, the demo stories and status fold into the homepage or leave | the marketing route table; `check:route-coverage` | H-73 d |
+| The decoration | the water band, the drawn site tile, the dial's water, the coral washes and the greeting's mark leave every `/shop/**` page; the shop's colour is the staff app's one accent; the hand and the coral stay on the diver's side | the coral table gains a row; `WaterBandStyle` renders nothing under `/shop` | H-77 b |
+| The switch | a feature is on with a default a sentence can change, or it does not exist; Settings becomes the shop's card (concept 5 in full, or its first half under any other pick) | the settings registry shrinks to facts; each retired switch's conditional goes with it | H-77 c |
+| The outside | the storefront's front page is Right now and the week; every other public noun is one tap in or gone; one embed with one look; every page prints; three connects; the lobby display is the storefront full-screen | the storefront's composition test; the embed snippet table shrinks to one | H-77 c |
+| DiveDay's own pages | three plus the two legal ones — the homepage (already the demo), pricing, switching; product, about, the regions, the demo stories and status fold into the homepage or leave | the marketing route table; `check:route-coverage` | H-77 d |
 
-### 2. Six concepts, and the pick is the owner's (H-73 a)
+### 2. Six concepts, and the pick is the owner's (H-77 a)
 
 Each consolidates along a different axis, redraws the shop home for Blue Mantis Divers on Thursday,
 August 27, 2026 at 6:40 AM at desktop and at 390, and states its case, its tradeoff, its cost, what
@@ -122,7 +122,7 @@ screen the dock test was always about. Six stays on the canvas as the pitch to r
 boat is its own tool; two is the honest alternative for a shop whose owner already plans on a wall
 calendar.
 
-### 3. The surface, rethought — round 2 (H-73 e–h)
+### 3. The surface, rethought — round 2 (H-77 e–h)
 
 **The owner's read of round 1 (2026-09-11):** "I like these ideas, but I think we need to go
 farther. I think our Reef concept needs to be rethought since I'm now finding it overbearing and
@@ -175,13 +175,13 @@ taken to its end, and the one surface a shop repeats to a friend. Headline if th
 more than the desk; Salt for the cheapest honest answer; Air if the priority is that nobody can
 call it anything; Slate if a five-boat Saturday on one laptop screen is the job.
 
-**The owner's round-2 calls (H-73):** (e) which surface replaces Reef on every staff page;
+**The owner's round-2 calls (H-77):** (e) which surface replaces Reef on every staff page;
 (f) whether Geist leaves the staff app for the picked surface's face, reversing H-64's one-face
 pick; (g) whether the hand and the coral leave the product entirely or stay on the diver's recap
 postcard only; (h) whether DiveDay's own pages take the picked surface in the slice that shrinks
 them. Round 1's (a), (c) and (d) stand; (b) is answered by every surface here.
 
-### 4. Console — the instrument, drawn deep (round 3, H-73 i–l)
+### 4. Console — the instrument, drawn deep (round 3, H-77 i–l)
 
 **The owner's read of round 2 (2026-09-11):** "I think my problem is with the Reef itself. I like
 when we were looking at DiveDay as an instrument, possibly moving farther away from the cutesy-ness."
@@ -224,7 +224,7 @@ the owner has now named twice, it deletes the idea of decoration rather than the
 its one risk — a shop that wanted a brochure gets a console — is answered by the storefront, which
 stays the shop's.
 
-**The owner's round-3 calls (H-73):** (i) Console as the surface on every staff page, replacing
+**The owner's round-3 calls (H-77):** (i) Console as the surface on every staff page, replacing
 round 2's (e); (j) the scheme — daylight at the desk with depth after dark by the device and the
 boat scheme at the rail, or depth always as Deck and C were; (k) the figures' face — Geist Mono,
 keeping one family, or IBM Plex Mono if Geist Mono reads soft at 56px; (l) two signal inks, red and
@@ -232,7 +232,7 @@ amber, or red only. With round 3, (b) and (f) are answered by the drawing — th
 and Geist stays — and (g) is recommended as entirely: the hand and the coral leave the product.
 (a), (c), (d) and (h) stand.
 
-### 5. Console, further — round 4 (H-73 m–o)
+### 5. Console, further — round 4 (H-77 m–o)
 
 **The owner's read of round 3 (2026-09-11):** "Can we improve this further?" Round 4 takes
 "further" along the instrument's own axis — more instrument, not more decoration — and adds to
@@ -269,14 +269,14 @@ The recommendation, stated so it can be disagreed with: **all five additions, an
 surfaces as the order to build after the home** — the boat's page first, the week second, the
 person and the money third, the outside last, because Harbor already holds it.
 
-**The owner's round-4 calls (H-73):** (m) the display, or round 3's plain figure; (n) the seat
+**The owner's round-4 calls (H-77):** (m) the display, or round 3's plain figure; (n) the seat
 gauge with a legend on every boat count, or the plain meter; (o) the telemetry line on every
 surface, or only where a reading can be stale. Recommended: the display, one per surface; the
 gauge, with the meter kept for counts that are not seats; the line on every surface — an
 instrument that only sometimes says when it read is one you learn not to trust. Every earlier call
 stands as put.
 
-### 6. Chart — light renders light, and the instrument on Reef's paper (round 5, H-73 p–r)
+### 6. Chart — light renders light, and the instrument on Reef's paper (round 5, H-77 p–r)
 
 **The owner's read of round 4 (2026-09-11):** light mode should still render light; that implies
 further changes; and the surface should sit somewhere between an instrument and the existing
@@ -323,7 +323,7 @@ change; the one new thing is the face, which is the display with its glass off. 
 owner's sentence in reverse — a shop that wanted the instrument's severity gets paper — and glare,
 one word at the rail, is where that severity still lives.
 
-**The owner's round-5 calls (H-73):** (p) light renders light — the face replaces the display's
+**The owner's round-5 calls (H-77):** (p) light renders light — the face replaces the display's
 glass by day, the night palette is the device's, glare is the crew's word — or round 4's display
 and boat scheme as drawn; (q) where on the dial: Console, Chart, or Reef after the floor; (r) what
 Chart takes from Reef (the paper and ink, the night palette, the sheet) and what it leaves (the
@@ -338,7 +338,7 @@ stands as put.
 One hand's ADR stays Proposed and its floor (20a–20e) stays the floor: nothing here restates it and
 every concept assumes it. Its open slices 20f–20m — the earned moment on the shared door, the levers
 F, H and K, the trip's line, the pass, the log, the postcard, the rooms, the surface sweep — pause
-until H-73 is answered, because each adds a thing and this ADR's whole argument is subtraction.
+until H-77 is answered, because each adds a thing and this ADR's whole argument is subtraction.
 Their features that already shipped (20n–20t: the boat's line, try it with your boats, the year,
 the gift, sightings, paper, the shelf) stay; call (c) decides where they sit — recommended: all
 kept, on by default, and off the storefront's front page.

@@ -115,6 +115,65 @@ const waiverRequestSchema = z.object({
 });
 
 /**
+ * **The copy a co-signing parent gets of the release they just put their name
+ * to** (issue #1453, owner decision 2026-09-10).
+ *
+ * The guardian's address was required and nothing ever read it: a parent
+ * signed a liability release for their child, handed over an address, and got
+ * nothing, while DiveDay stored a third party's personal data with no reader.
+ * This is that reader.
+ *
+ * Three shapes here are deliberate and a future kind should not copy them
+ * without meaning to:
+ *
+ * - **No `bookingId`.** A guardian is a party to one document, not a customer
+ *   and not a per-booking delivery channel, so no `notification_deliveries`
+ *   row is written (`sendAndRecordNotification` writes one only for a kind
+ *   that carries a booking). That is also why the `notification_kind` pg enum
+ *   needs no new value and this ships with no migration.
+ * - **No URL of any kind in the payload.** The issue refuses a bearer link to
+ *   a third party outright: the release is already signed by the time this
+ *   sends, so a second capability URL would be a security surface with nothing
+ *   behind it. The renderer takes no `completionUrl` because there is none to
+ *   take.
+ * - **No address for the minor, and the payload is the whole reason.** The
+ *   guardian is the recipient; the minor is the person the message is *about*,
+ *   by name, at a named shop, on a named day. A first cut carried `diverEmail`
+ *   so `notificationSubjectEmail` could lift it into a column and legal erasure
+ *   could sweep a queued copy — the hole issue #1298 closed for
+ *   `course_inquiry`. It only ever half-worked: a twelve-year-old signing on a
+ *   shop tablet has no address to lift, and the row stayed unreachable. So this
+ *   kind is not queued at all (`notificationIsQueueable`), and with no row to
+ *   sweep there is no handle to carry. What is left is a minor's *name*, in a
+ *   message that is sent once and retained nowhere.
+ */
+const guardianReleaseCopySchema = z.object({
+  kind: z.literal("guardian_release_copy"),
+  waiverRecordId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  guardianName: z.string().trim().min(1).max(120),
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  releaseTitle: z.string().trim().min(1).max(200),
+  releaseVersion: z.number().int(),
+  signedAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /**
+   * Whether the release is parked in `medical_review` — a physician still owes
+   * the shop an answer before this diver may dive.
+   *
+   * It changes one sentence and it is the reason this field exists. Without it
+   * the copy told a parent "there is nothing to do" about the one hold only
+   * they can clear: a `dive-domain-expert` pass put a 13-year-old's asthma
+   * answer through it and had the family arrive at the dock two days later
+   * expecting to dive.
+   */
+  medicalReviewPending: z.boolean().optional(),
+});
+
+/**
  * **A replacement trip-prep link, asked for by the diver whose link died.**
  *
  * Its own kind rather than a reuse, on both available candidates.
@@ -375,11 +434,12 @@ const tripRecapSchema = z.object({
   /**
    * When the diver may fly (`src/lib/fly-safe.ts`, issue #1425): the instant,
    * the hours that produced it, and whether the clock started at the last
-   * recorded exit or the boat's scheduled return. Absent when nothing on the
+   * recorded exit or the buffered return. Absent when nothing on the
    * record could honestly say, and then the email says nothing about flying.
    *
    * `reason` is not a detail the email prints — it picks *which* sentence the
-   * diver reads, because only the earlier-day route explains itself.
+   * diver reads, and two of the routes state their reason. This email carries
+   * no dive record at all, so nothing in it could stand in for one.
    */
   flySafe: z
     .object({
@@ -777,6 +837,7 @@ export const notificationSchema = z
   .discriminatedUnion("kind", [
     bookingConfirmationSchema,
     waiverRequestSchema,
+    guardianReleaseCopySchema,
     readinessLinkSchema,
     shelfLinkSchema,
     bookingHandoffSchema,
@@ -877,6 +938,39 @@ export function notificationSubjectPhone(notification: Notification): string | n
   }
 }
 
+/**
+ * **Whether a retryable failure of this kind is worth a queue row.**
+ *
+ * Default true: a message that failed on a throttle is a message somebody is
+ * waiting for, and `notification_send_queue` exists so it still arrives.
+ *
+ * `guardian_release_copy` is the one exception, and the reason is erasure
+ * rather than value. The sweep in `anonymizeDiver` can only match handles
+ * lifted into real columns — `recipient_email`, `subject_email`,
+ * `booking_id` — and this kind is addressed to a third party, carries no
+ * booking by design, and puts the minor in `subject_email` only when the minor
+ * has an address of their own. A twelve-year-old signing on a shop tablet
+ * usually has none. So a throttled send leaves a row holding a parent's
+ * plaintext address about a named child, and an owner who then erases that
+ * child does not reach it: the drain still mails the copy, after the erasure
+ * (`dive-domain-expert` and `security-reviewer`, issue #1453).
+ *
+ * Not queueing is the whole fix rather than the cheap half of one. Nothing
+ * downstream reads this message, no gate waits on it, and the release itself
+ * is recorded either way — it is a courtesy, and a courtesy that missed its
+ * moment is not owed a second attempt at the cost of a row erasure cannot
+ * find. The alternative, a `subject_person_id` column swept beside the two
+ * address arms, is a migration for a delivery guarantee nobody asked for.
+ */
+export function notificationIsQueueable(notification: Notification): boolean {
+  switch (notification.kind) {
+    case "guardian_release_copy":
+      return false;
+    default:
+      return true;
+  }
+}
+
 export function notificationIdempotencyKey(notification: Notification): string {
   switch (notification.kind) {
     case "booking_confirmation":
@@ -885,6 +979,16 @@ export function notificationIdempotencyKey(notification: Notification): string {
         : `booking-confirmation/${notification.bookingId}`;
     case "waiver_request":
       return `waiver-request/${notification.waiverRecordId}`;
+    // **Never reached, and kept exact anyway.** This key is the
+    // `notification_send_queue` conflict target and nothing else, and
+    // `notificationIsQueueable` keeps this kind out of that queue entirely, so
+    // no row is ever written under it. It is emphatically *not* a promise of
+    // one copy per release: the send itself is unguarded, so a resubmitted
+    // completion mails a second copy. An earlier version of this comment said
+    // the opposite, and the glossary repeated it (`security-reviewer`, issue
+    // #1453).
+    case "guardian_release_copy":
+      return `guardian-release-copy/${notification.waiverRecordId}`;
     // **Per booking, in effect** — and the expiry is in it for honesty rather
     // than variety. `capabilityExpiryFor` is `tripEndsAt + 30d` for any booking
     // inside its useful window, independent of `now`, so this key does *not*

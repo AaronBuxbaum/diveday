@@ -76,7 +76,7 @@ Ratcheted like `check:copy` (`--write` / `--absorb` / `--report <path>`), becaus
 
 ### shop-word
 
-The shop-word one (`scripts/check-shop-word.mjs`) refuses `tienda` in any `es-ES` message value: in Spanish a dive shop is **el centro**, and `tienda` means *retail* — a string carrying it tells a diver their retail store will check their certification. `src/i18n/locales/es-ES/README.md` settled that in a 2026-08-03 sweep and calls its decisions binding "which is what stops two agents rendering the same word two ways"; the word came back anyway, and six strings were carrying it on 2026-08-21 — including `common.certification.levelDescription`, the one sentence explaining why the certification question is asked, on all three public forms at the point of sale. The pattern is anchored on a word boundary rather than a substring, which is what keeps `trastienda` (a shop's *back office*, all over the switching guides) and `entiendas` ("no firmes nada que no entiendas") out — the README warns in as many words not to let a find-and-replace on "tienda" eat the first of those. Only `es-ES` has an entity word to get wrong, so unlike the check above it demands no word list per locale. It is a **table of eight rules** now rather than that one pattern, each quoting the README decision it enforces at the rule itself — and the file's own prose is the best illustration of why the table exists: it claimed on 2026-09-04 that `comprobar` and `pulsar` were "absent from both bundles" while six files were carrying 24 of them, the offline checklist's own "Comprobado — pulsa para quitar la marca" among them (issue #1503). Both are rules now, and each needed a pattern narrow enough to leave its innocent reading alone: `pulsar` is enumerated by inflection and anchored word-initial, because `Impulso` and `expulse` carry the letters mid-word and `pulso` and `pulsera` are nouns a medical string may yet need; `comprobar` matches the stem behind a negative lookahead for `comprobante`, which is a rental receipt and correct. The near misses are tests rather than comments, so the next person to widen a pattern finds out immediately.
+The shop-word one (`scripts/check-shop-word.mjs`) refuses `tienda` in any `es-ES` message value: in Spanish a dive shop is **el centro**, and `tienda` means *retail* — a string carrying it tells a diver their retail store will check their certification. `src/i18n/locales/es-ES/README.md` settled that in a 2026-08-03 sweep and calls its decisions binding "which is what stops two agents rendering the same word two ways"; the word came back anyway, and six strings were carrying it on 2026-08-21 — including `common.certification.levelDescription`, the one sentence explaining why the certification question is asked, on all three public forms at the point of sale. The pattern is anchored on a word boundary rather than a substring, which is what keeps `trastienda` (a shop's *back office*, all over the switching guides) and `entiendas` ("no firmes nada que no entiendas") out — the README warns in as many words not to let a find-and-replace on "tienda" eat the first of those. Only `es-ES` has an entity word to get wrong, so unlike the check above it demands no word list per locale. It is a **table of nine rules** now rather than that one pattern, each quoting the README decision it enforces at the rule itself — and the file's own prose is the best illustration of why the table exists: it claimed on 2026-09-04 that `comprobar` and `pulsar` were "absent from both bundles" while six files were carrying 24 of them, the offline checklist's own "Comprobado — pulsa para quitar la marca" among them (issue #1503). Both are rules now, and each needed a pattern narrow enough to leave its innocent reading alone: `pulsar` is enumerated by inflection and anchored word-initial, because `Impulso` and `expulse` carry the letters mid-word and `pulso` and `pulsera` are nouns a medical string may yet need; `comprobar` matches the stem behind a negative lookahead for `comprobante`, which is a rental receipt and correct. The ninth, `intro-session` (2026-09-11, issue #1339), is narrower still and for a reason the others do not have: it refuses only *sesión / ratio / clase de iniciación*, because a taster dive is **un bautismo** while `iniciación` keeps the entry-level sense — *curso de iniciación* is the certification course the *sibling* ratio chip governs, and *límite de iniciación* is the depth an Open Water card carries, so both stay. Naming them the same way told a manager one fact twice and hid the only difference that matters: an intro session is closed by another instructor, the entry-level one by a divemaster. The near misses are tests rather than comments, so the next person to widen a pattern finds out immediately.
 
 ### tinted-ink
 
@@ -136,6 +136,29 @@ believed cannot afford that. A regex cannot see an aphorism heading or a rhetori
 those stay in the brand doc and the [brand-voice](../../.claude/skills/brand-voice/SKILL.md)
 checklist; what it *can* see it refuses outright.
 
+It also holds the **house apostrophe**: `’` (U+2019) everywhere a person reads it, and a straight
+`'` is a hit. This one is typography rather than a mannerism, and it lives here because both
+spellings had been landing since the bundles existed — 613 strings carrying 726 straight apostrophes
+against 216 strings spelling it `’`, colliding inside single objects (`shared.json`'s
+`medicalClearance` group held `"Date of the physician's evaluation"` a few keys from `"Nothing of
+this diver’s is waiting…"`). Nothing on screen distinguishes them. Playwright's `getByRole(name)`
+and `getByText` do, and every e2e spec here deliberately hard-codes the English a user sees, so a
+spec author had to guess which spelling a bundle used and found out from a shard ten minutes later:
+PR #1365 (`24f18a2`) cost a full CI round on one character (issue #1367). The rule sits beside
+`proseDashes` rather than in `RULES`, so a third locale inherits it without naming a word list.
+
+Six values keep a straight apostrophe, all of them ICU MessageFormat quoting rather than prose: in
+DOUBLE_OPTIONAL mode `'` opens a literal span only when the next character is `{`, `}` or `#`, which
+is what shows a shop the literal `'{depth18}'` marker to type and what escapes WhatsApp's `'{{1}}'`
+past ICU. A curly quote there would print *and* leave `{depth18}` to be read as a missing argument.
+The guard strips exactly `'[{}#][^']*'` first — the same shape as `namesAnArgument` in
+`src/i18n/raw-messages.test.ts`, and deliberately not a blanket `'[^']*'`, which would swallow
+everything between two prose apostrophes. The keys are `courses.edit.depthMarkersHint` and
+`courses.edit.errorDepthPlaceholder` in both locales, and `notifications.whatsappTemplate.body` in
+both. Note that the sweep also forced the `leadIn` and `notJust` patterns to spell contractions
+`['’]`: a pattern naming only `'` would have kept passing its own fixtures and never fired on a real
+string again.
+
 A short label separator is deliberately not a hit: "Boarded — tap again to undo" and "Checked in —
 2" are not sentences, and the tell is the dash that replaced a full stop or a comma in running
 prose. Ratcheted per file in `scripts/voice-baseline.json` exactly like `check:copy` (`--write`
@@ -160,6 +183,24 @@ Writing it found two live defects, which is the argument for it: a single publis
 ### live-trip-read
 
 The live-trip-read one (`scripts/check-live-trips.mjs`) fails any read of `trips` — a `.from(trips)`, or a join from one of the child tables that now survives a delete — that neither carries `liveTrip()` (`src/db/trips-live.ts`) nor says `diveday:allow-deleted-trips: <why>`. Deleting a departure stamps `trips.deleted_at` and leaves the row and its five children in place, and the table is read from 91 places; a reader that forgets the filter does not throw and does not fail a test written before the column existed, it shows an anonymous visitor a departure the shop took off the board. Joins from `bookings`, `tripWaitlistEntries` and the roll-call tables are outside the gate on purpose — `deleteTrip` refuses a departure carrying any of those, so no such row exists to arrive through.
+
+### trip-revision
+
+The trip-revision one (`scripts/check-trip-revision.mjs`) fails any `.update(trips)` whose `.set()` literal writes `startsAt` without also writing `revision`. `trips.revision` is published as the RFC 5545 `SEQUENCE` on both calendar surfaces (`src/lib/trip-calendar.ts`), and a client that re-fetches an event whose `SEQUENCE` has not moved treats it as the event it already holds — so a departure that slides an hour with a flat revision leaves every subscribed calendar on the old `DTSTART`, and a diver on the dock at the old time. That is issue #1165, which was fixed at the two writers that existed then; nothing made the third one carry it.
+
+The anchor is the table rather than the column, and that is the whole reason the rule is affordable. `moveTrip` bumps the trip and then shifts each of its child days — `.update(tripScheduleDays).set({ startsAt: shift(day.startsAt), endsAt: shift(day.endsAt) })`, three statements below its own bump — and a rule anchored on `startsAt` would have failed that correct line on day one. A schedule day has no `SEQUENCE` of its own; only the trip does. A `.set()` that never mentions `startsAt` is not a calendar move and is not inspected further, which is what keeps the status writers, the minimum sweep, the recap writers, the series cancellations and the soft delete outside the gate.
+
+Five writes touch `trips.startsAt` today and the rule reads all five. `moveTrip` (`src/db/trips-schedule.ts`) bumps unconditionally — the equal-instant case has already returned, so reaching the write means the boat really moved. `updateTrip` (`src/db/trips-record.ts`) renames and moves in one statement, so its bump is a `...(revisionMoved ? { revision: … } : {})` spread that collapses to nothing when only the words changed; that shape and the `${…}` inside the `sql` template literal are the two the brace matcher has to survive, and both are pinned in `scripts/check-trip-revision.test.mjs`. `refreshDemoShop` (`src/db/demo-refresh.ts`) bumps because the demo shop's own `.ics` is real. The two `/api/test/*` fixtures — `seed-evening` and `depart-trip` — say `diveday:allow-flat-revision: <why>`, because a per-worker test database has no subscriber to mislead.
+
+The `.set()` search, and the brace match that reads its literal, both end at the next `.update(trips)`. That bound is issue #635's lesson ported from `scripts/check-live-trips.mjs` rather than re-learned there: a fixed line window once let one write pass because a *neighbour* carried the thing being looked for.
+
+**A `.set()` given anything but an object literal is refused, not passed.** `.set(patch)`, `.set(buildPatch())` and `.set({ ...timesPatch, status })` give the brace matcher nothing of this write to read — it would take the first `{` anywhere after `.set(`, which for the last anchor in a file means the rest of the file, and conclude from someone else's object that no departure moved. That is the shape a developer writes the moment two branches share a patch, and the failure would be silent: the guard's own move count would drop by one with nothing watching it. So the rule says it cannot read the write and asks for the literal to be inlined, or for the exemption by name. The move count is pinned in the tests for the same reason (`security-reviewer`, issue #1394).
+
+**The exemption's reason is required.** `diveday:allow-flat-revision:` with nothing after the colon is refused; `check-redirect-in-try.mjs` and `check-db-concurrency.mjs` already spell theirs the same way.
+
+The anchor is matched per line, so a `.update(\n  trips,\n)` split across three lines is not an anchor and the write goes uninspected. Biome keeps it on one line today. If that ever changes, this is the line to change with it.
+
+The opposite mistake the issue names — bumping for something immaterial, which re-alerts every diver's phone for a typo fixed in a conditions note — is deliberately left un-guarded. It has no mechanical signature; guarding the cheap half of a rule beats guarding neither.
 
 ### departure-buffer
 
@@ -202,6 +243,26 @@ The line is not useless, though, which is why the answer is a paragraph and not 
 The experiment, so nobody has to redo it: inserting `await page.waitForLoadState("networkidle")` before that test's `page.goto` makes the line disappear, and the spec passes 7/7 either way. That proves the navigation is the closer and that nothing in the test depended on what was closed. It is **not** a fix to adopt — the wait is dead weight on a passing spec, and `networkidle` is a blunt instrument that would sit there absorbing real slowness. The finding is that there was nothing to fix.
 
 Do not try to catch this with a guard. `check-e2e-hygiene.mjs` reads lines; knowing whether a stream still had a reader means knowing what is in flight, which no line-based scanner can answer. Issue #1560 asked the question and this is the answer.
+
+#### A negative assertion keyed on copy is measured, not guarded
+
+The sibling rule that keeps being proposed for this guard is one refusing `.toHaveCount(0)` / `.not.toBeVisible()` on a locator built from a string literal. The failure is real and this repo has had it: slice 16f renamed a region's accessible name from "Next boat out" to "Next boat with space", the assertion that the card **is** visible failed and was fixed, and the two asserting the card is **absent** kept passing, because a locator that matches nothing satisfies them for the wrong reason. `e2e/schedule-embed.spec.ts`'s was the only assertion in the suite proving `?embed=1` drops that card, and it had stopped proving it silently and permanently (issue #1403).
+
+It is not built, and the reason is a count rather than an opinion. The rule was implemented as specified — read at statement scope, exempt when the identical string appears in another locator anywhere in the same file — and swept over `e2e/` twice, on 2026-09-10 and again on 2026-09-12 after the suite had grown from 487 negative assertions to 498. The flagged counts did not move:
+
+| Variant | Lines flagged |
+| --- | ---: |
+| The rule as specified in #1403 | **98**, across 46 of the 112 files in `e2e/` |
+| Same, exemption loosened to the string appearing anywhere in the file | 78 |
+| `getByRole(…, { name })` only — the narrower form #1403 itself nominates | **56** |
+| That, restricted to `.toHaveCount(0)` alone | 55 |
+| `getByRole(…, { name })` whose name **and** role are never queried positively in the file | 9, in 6 files |
+
+#1403 pre-committed to a threshold before anyone built anything: "if it is a handful, fix them. If it is fifty, the rule is wrong and the answer is something narrower — perhaps only `getByRole(…, { name })`." The rule as written is roughly twice that line and the narrower form named in the same sentence is above it too. What the 98 are matters more than the number: most are honest single-purpose absence assertions — `e2e/whatsapp-settings.spec.ts:58` proving Embedded Signup asks for no access token, `e2e/tenant-isolation.spec.ts:108-110` proving another shop's staff nav is unreachable, `e2e/marketing.spec.ts:577-579` proving three pricing claims do not repeat on the door. Annotating those is not a fix; it is 98 sentences explaining that an absence assertion asserts absence, which is the failure the `action-race` write-up above names in one line — a rule that fires on correct code is one people learn to silence.
+
+So the decision is the owner's and it is open on #1403, which carries the four options: build it and pay the sweep, take the issue's own narrower fallback and pay 56, narrow past both to the one shape that actually rotted (the last row of the table — a name nothing queries positively in a file that never queries that role either, which is the `e2e/schedule-embed.spec.ts:24` case that stood alone), or decline and close since the three lines that prompted it are fixed. Nothing is blocked on it: the pairing that saved the visual capture is written into `.claude/rules/e2e.md` as a convention either way.
+
+Re-measure before re-proposing this; the number is what the argument turns on and it is cheap to get, while re-deriving it from scratch is a day. The sweep's definitions and script are in #1403's own comment thread. If a variant is ever built, it needs a statement-scope hook rather than a per-line `pattern` — five of the 98 have their locator on a preceding line — and it should be built on the `statementStart` helper already in the script rather than re-deriving a walker that will drift from it.
 
 ### loading-skeleton
 

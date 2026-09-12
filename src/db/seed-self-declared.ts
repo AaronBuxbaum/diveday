@@ -67,7 +67,7 @@ const JOINERS = [
   {
     fullName: "Rowan Feld",
     email: "rowan.feld@example.com",
-    phone: "+1-305-555-0196",
+    phone: "+13055550196",
     availableFromDays: 1,
     /**
      * A claim, and nothing behind it. Open Water clears the shop's ordinary
@@ -81,7 +81,7 @@ const JOINERS = [
   {
     fullName: "Selah Mbeki",
     email: "selah.mbeki@example.com",
-    phone: "+1-305-555-0197",
+    phone: "+13055550197",
     availableFromDays: 0,
     /**
      * The answer the list had no way to give until 2026-08-15, and the one the

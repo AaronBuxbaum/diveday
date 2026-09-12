@@ -49,7 +49,8 @@ guardian signs the same release beside them, and the release is not usable until
    `guardian_signed_at` — the diver's own signature block a second time, plus who they are and how
    to reach them. A check constraint keeps the *signature* whole (signed-at, consented-at, method
    and relationship all present or all absent); the name and email are deliberately outside it, so
-   erasure can take them and leave the fact standing. A guardian is a party to one document, not a
+   erasure can take them and leave the fact standing. **The email is optional**, amended
+   2026-09-10 (decision 11 below), and the one thing it is for is a copy of what was signed. A guardian is a party to one document, not a
    customer: giving them a `people` row would invent a diver the shop never met.
 3. **The relationship is a code, never free text** — `parent` or `legal_guardian`, worded per reader
    in `src/i18n/guardian-labels.ts`, for the same reason a dive site's difficulty is a code
@@ -80,12 +81,100 @@ guardian signs the same release beside them, and the release is not usable until
    diver's release, so they go with the diver's own under `anonymizeDiver`. The shop-wide bundle
    needs them because it is inside the seal — a destination re-verifying the hash without them
    would read every minor's release as tampered.
+9. **The guardian's consent names the health questions as well as the release** (issue #1452,
+   owner decision 2026-09-10). The box a parent ticks used to read "I have read this waiver,
+   understand it, and agree to it on their behalf" — which attested to the liability text and said
+   nothing about the ten RSTC questions sitting above it on the same page, answered by the child.
+   It now reads "I have read this waiver **and the health questions answered above**, understand
+   them, and agree to them on their behalf." One clause, in both locales; the questionnaire is not
+   presented a second time in the guardian's card, there is no `medical_answered_by` column, and
+   there is no minor-specific template — all three are H-01's and were explicitly out of the
+   issue's scope. **No attorney has read this sentence.** The owner authorised the wording on
+   2026-09-10 and H-01/H-03 remain open for it exactly as they do for the release text above it;
+   the Spanish is a translation of a consent statement made by the same agent that wrote the
+   English, under the standing rule in `src/i18n/locales/es-ES/README.md`.
+
+10. **A namesake parent may co-sign on paper, on a named staffer's explicit attestation, and never
+    online** (issue #1573, owner decision 2026-09-10). Decision 1's name-match rule is a
+    *name*-match, not an identity check, so it also refuses the family it cannot help: a parent and
+    child whose IDs read every token alike. That left them with both doors shut and readiness
+    raising **guardian signature missing** forever — the same outcome the alternatives list below
+    already rejects for "refusing the paper path for minors outright". **The two paths do not
+    deserve the same answer, because the evidence differs.** Online, the shop has no evidence a
+    second person exists at all, and a co-signer typing the diver's own name is one signature
+    wearing two hats; `guardianEvidence` keeps refusing it and its input shape carries no field
+    that could say otherwise. On paper a named staffer physically watched two people sign, and that
+    staffer is already on the row (`recorded_by_person_id`). So the paper form grows one checkbox —
+    "This parent and this diver have the same name on their IDs. I watched both of them sign the
+    paper release." — and the co-signature is captured under a third provider,
+    `namesakeAttestationProvider`, writing `guardian_signature_method =
+    "in_person_attested_namesake"`. Three fences hold it: **the refusal stays the default** (no
+    tick, same refusal); **the checkbox is drawn only on a form that has already met that refusal**,
+    scoped to the booking or record the `?notice=waiver-guardian-name` named, so it can never become
+    a habitual tick; and **a tick on a form whose names differ records nothing**, because the
+    assertion is only meaningful for the case it names. The second of those three is a habit fence
+    rather than an enforcement, and the ADR says so rather than letting a later reader mistake it
+    for one: `?notice=` is untrusted input, so a staffer can reach a form with the checkbox drawn
+    by typing a URL and a hand-built request skips the form entirely. What contains it is that the
+    caller is already live staff attesting that a paper release exists at all, that the flag does
+    nothing unless the names match, and that both the assertion and its author are on the row
+    inside the seal. `guardian_signature_method` is `text` and
+    the `waiver_records_guardian_signature_whole` check constrains only null-ness, so **there is no
+    migration**. **Nothing downstream branches on the new value, deliberately.**
+    `guardianSignatureMissing` tests `guardianSignedAt` alone, so the minor boards; the roster, the
+    manifest and the signature log say "Co-signed by X (parent)" exactly as they do for any other
+    co-signature. The distinction lives in the v1 integrity seal and in the export bundle, which is
+    where a shop or a regulator reading the evidence can tell the two apart — stated here rather
+    than discovered, because a reader looking for a badge on a screen will not find one. **This is a
+    relaxation of a check on a minor's liability release and no attorney has read it**; the owner
+    authorised it on 2026-09-10 and H-01/H-03 stay open.
+
+11. **The guardian's address is optional, and the one thing it is for is a copy of what was
+    signed** (issue #1453, owner decision 2026-09-10: "send a copy where there is an address, and
+    stop refusing a family that has none"). As shipped, decision 1 made the address **required** and
+    nothing ever read it — the only readers were the export bundle and the erasure path that nulls
+    it. So a parent put their name to a liability release for their child, handed over an address,
+    and received nothing, while DiveDay held a third party's personal data under no stated purpose.
+    Both halves move at once. **Optional**: the page drops `required` and says what giving one buys,
+    and `guardianEvidence` stores blank as null — the column was already nullable and outside the
+    whole-signature check, so **there is no migration**. What is *not* relaxed is the shape: a typed
+    address that is not one is still refused writer-side, never silently stored as null, because
+    dropping `required` widens what a hand-built request can submit. **The copy**: a new
+    notification kind, `guardian_release_copy`, sent once per release from `/waivers/[token]`'s
+    completion inside `after(…)`, carrying the shop, the diver, the release title and version and
+    the day it was signed. Three shapes are load-bearing and are the whole of what this message is.
+    **No link of any kind** — the issue refuses a bearer URL to a third party by name, the release
+    is already signed by the time this sends, and `email.test.ts` asserts there is no anchor and no
+    `http` in the rendered bytes in both locales rather than trusting a comment. **No medical
+    answers** — the questionnaire is the minor's own health information and a courtesy copy to a
+    third party is not where it travels. **No `bookingId`**, so no `notification_deliveries` row is
+    written, the `notification_kind` pg enum needs no new value, and the guardian never becomes a
+    per-booking delivery channel or lands on any list. **And it is never queued**
+    (`notificationIsQueueable`): a retryable failure is dropped rather than retained. The first cut
+    did the opposite — it carried the minor's own address as `diverEmail` so
+    `notificationSubjectEmail` could lift it into a column and legal erasure could sweep the queued
+    row, closing for this kind the gap that left an erased diver's `course_inquiry` alive in issue
+    #1298. A `dive-domain-expert` and `security-reviewer` pass found that half-closed: the sweep
+    keys on `recipient_email`, `subject_email` and `booking_id`, this kind carries no booking by
+    design, and a twelve-year-old signing on a shop tablet has no address to lift, so the row
+    survived an erasure and the drain still mailed the copy afterwards. Nothing downstream reads
+    this message and no gate waits on it, so not queueing is the whole fix rather than the cheap
+    half of one, and it costs no migration; with no row to sweep, `diverEmail` had no reader and is
+    gone. Nothing is sent for a paper record, which collects no address by decision 7. One sentence
+    does vary: a release parked in `medical_review` says a physician still owes the shop an answer,
+    because the adult reading the copy is who takes the child to that physician.
 
 ## Alternatives considered
 
 - **A second token emailed to the guardian** (the shape N-38 was sketched as) — a second bearer URL
   to a third party's inbox, a second expiry, a second delivery failure mode, and a half-signed
-  release sitting in the middle of it. Rejected: the adult is almost always in the room.
+  release sitting in the middle of it. Rejected: the adult is almost always in the room. Decision 11
+  re-rejects it for the copy: that message carries no URL at all.
+- **Keeping the address required and sending nothing, with a line saying the shop may use it**
+  (issue #1453's option 2) — honest about the collection, and it still leaves the parent with no
+  record of a release they signed, and still refuses the grandparent with no email.
+- **Making the address optional and sending nothing** (option 3) — fixes the refusal and leaves the
+  column a reader-less store of a third party's personal data, which is half the complaint.
 - **A distinct minor waiver template** — the right answer eventually, and H-01's to make. Building
   it now would guess at legal wording this decision explicitly does not touch.
 - **A `people` row for the guardian** — invents a diver the shop never met, and puts a
@@ -96,7 +185,19 @@ guardian signs the same release beside them, and the release is not usable until
   rows that do not exist, which AGENTS.md forbids.
 - **Refusing the paper path for minors outright** — leaves a family standing at a counter with a
   signed form the shop cannot record, and leaves the `guardian` parameter the writer already takes
-  with no caller.
+  with no caller. Decision 10 above is the same argument applied to the family the name-match rule
+  refuses.
+- **Letting the namesake case through on the online path too** (issue #1573) — the assertion has
+  nobody behind it there. A browser submitting two identical names is exactly what a minor signing
+  alone looks like, and no tick a page can render changes that.
+- **A silent pass when the names match** — turns a refusal into an omission. The staffer has to
+  say what they saw, per release, and the record has to carry which of the two things happened.
+- **A boolean column beside the six, rather than a distinct signature method** — a seventh column
+  and a migration to record something the method already has room for, on a path whose whole point
+  is which provider captured the evidence.
+- **Rendering the namesake distinction on the roster or the manifest** — a crew reading a boarding
+  list needs to know the release is co-signed, which it is. A second badge would be a fact about
+  paperwork on a surface whose every line is a fact about the water.
 - **Gating on `guardianSignatureRequired` at render only** — a page can be painted before a date of
   birth lands on the record. The writer applies the rule too, and the page renders the section on
   its refusal.

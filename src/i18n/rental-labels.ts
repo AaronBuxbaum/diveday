@@ -1,4 +1,5 @@
 import type { RentalFitLine, RentalItemKind } from "@/lib/dive-prep";
+import type { DrysuitCardCheck } from "@/lib/drysuit-card";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { RentableItemKind, ShopCatalogKind } from "@/lib/rentals";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
@@ -57,7 +58,7 @@ export function catalogItemLabel(t: StaffTranslator, kind: ShopCatalogKind): str
 export function statedSizesText(
   t: StaffTranslator,
   locale: string,
-  items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins"; size: string }[],
+  items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[],
 ): string {
   const parts = items.map((item) =>
     t("shared.rentalFit.itemWithSize", { item: rentalItemLabel(t, item.kind), size: item.size }),
@@ -89,6 +90,15 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
     case "rents": {
       const parts = line.items.map((item) => {
         const label = rentalItemLabel(t, item.kind);
+        // A drysuit diver's fins. The stated size is the shoe size the fit
+        // forms ask for, and the pair has to clear a vulcanised boot two to
+        // three sizes bigger, so the rail reads the job rather than a number
+        // to hand over (src/lib/dive-prep.ts's `rentedItems`).
+        if (item.drysuitFinFit) {
+          return item.size
+            ? t("shared.rentalFit.itemOverDrysuitBootWithSize", { item: label, size: item.size })
+            : t("shared.rentalFit.itemOverDrysuitBoot", { item: label });
+        }
         return item.size
           ? t("shared.rentalFit.itemWithSize", { item: label, size: item.size })
           : label;
@@ -96,4 +106,23 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
       return cachedListFormat(locale, { style: "long", type: "unit" }).format(parts);
     }
   }
+}
+
+/**
+ * The staff-facing sentence for a drysuit rental with no card behind it
+ * (src/lib/drysuit-card.ts returns the state, this picks the words — AGENTS.md:
+ * domain returns codes, the UI picks the copy). Both sentences end in an action
+ * and say in as many words that nothing is blocked, the same shape the depth
+ * advisory uses, because a staffer who reads this as a refusal will start
+ * looking for the override that does not exist.
+ */
+export function drysuitCardWarningText(
+  t: StaffTranslator,
+  check: Exclude<DrysuitCardCheck, { status: "ok" }>,
+): string {
+  return t(
+    check.status === "unconfirmed"
+      ? "shared.rentalFit.drysuitCardUnconfirmed"
+      : "shared.rentalFit.drysuitCardMissing",
+  );
 }

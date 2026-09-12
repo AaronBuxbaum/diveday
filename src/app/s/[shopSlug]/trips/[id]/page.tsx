@@ -744,7 +744,7 @@ export default async function TripDetailPage({
             all still here, in this order, behind `TripPitch`'s one door. A
             feature that wants to sell harder opens that door; it does not add
             a section, and `page.composition.test.ts` is what says so. */}
-        <TripPitch briefings={diveBriefings} crew={publicCrew} locale={locale} />
+        <TripPitch briefings={diveBriefings} crew={publicCrew} locale={locale} embed={isEmbed} />
         <ConditionsLine
           shop={shop}
           trip={trip}

@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBoat, deleteBoat } from "./boats";
 import { listDiveSites } from "./dive-sites";
-import { people, rollCallEvents, userAccounts } from "./schema";
+import { bookings, people, rollCallEvents, userAccounts } from "./schema";
 import { listTripChangeEvents } from "./trip-change-events";
 import {
   createTrip,
@@ -238,6 +238,48 @@ describe("trip records (in-memory PGlite)", () => {
     });
     expect(accepted.ok).toBe(true);
     expect((await getTripWithBooked(db, shop.id, reef.id))?.capacity).toBe(9);
+  });
+
+  /**
+   * The floor and the page that opens it have to count the same seats.
+   * `getTripWithBooked` reads `seatHeld`; while the floor read every
+   * non-cancelled row, a trip showing "9 booked" refused capacity 9 and blamed
+   * a tenth diver — a seat the desk had already released, which the staffer
+   * could neither see nor cancel (`dive-domain-expert` review, 2026-09-11).
+   */
+  it("counts a released seat as room, so the floor matches the number on the page", async () => {
+    const { db, shop } = await seededShopContext();
+    const reef = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (trip) => trip.title === "Two-Tank Reef — Molasses & French",
+    );
+    if (!reef) throw new Error("expected seeded reef trip missing");
+    expect(reef.booked).toBe(9);
+
+    const [entry] = await getTripRoster(db, shop.id, reef.id);
+    if (!entry) throw new Error("expected a booking to release");
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, entry.booking.id));
+    expect((await getTripWithBooked(db, shop.id, reef.id))?.booked).toBe(8);
+
+    const accepted = await updateTrip(db, shop.id, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: 8,
+      plannedDives: reef.plannedDives,
+    });
+    expect(accepted.ok).toBe(true);
+    expect((await getTripWithBooked(db, shop.id, reef.id))?.capacity).toBe(8);
+
+    // Still a floor, just the honest one: the eight seats somebody is holding.
+    expect(
+      await updateTrip(db, shop.id, reef.id, {
+        title: reef.title,
+        startsAt: reef.startsAt,
+        endsAt: reef.endsAt,
+        capacity: 7,
+        plannedDives: reef.plannedDives,
+      }),
+    ).toEqual({ ok: false, reason: "capacity_below_booked", detail: { bookedCount: 8 } });
   });
 
   it("refuses to drop planned dives below a checkpoint staff already recorded a roll call against", async () => {

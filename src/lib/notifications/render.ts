@@ -7,6 +7,7 @@ import {
   courseInquiryEmail,
   demoStartedAlertEmail,
   giftPassEmail,
+  guardianReleaseCopyEmail,
   lastMinuteDealEmail,
   type NotificationEmail,
   newAccountAlertEmail,
@@ -94,6 +95,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "trip_blowout") return tripBlowoutEmail(notification);
   if (notification.kind === "trip_minimum_not_met") return tripMinimumNotMetEmail(notification);
   if (notification.kind === "waiver_request") return waiverRequestEmail(notification);
+  if (notification.kind === "guardian_release_copy") return guardianReleaseCopyEmail(notification);
   if (notification.kind === "readiness_link") return readinessLinkEmail(notification);
   if (notification.kind === "shelf_link") return shelfLinkEmail(notification);
   if (notification.kind === "booking_handoff") return bookingHandoffEmail(notification);

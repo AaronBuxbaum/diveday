@@ -131,6 +131,20 @@ describe("the log-signal registry", () => {
     expect(referenced.filter((code) => !emitted.has(code))).toEqual([]);
   });
 
+  it("counts the error codes the layers that fail open emit", () => {
+    // A layer that catches, logs and carries on leaves nothing else behind: no
+    // exception for Sentry, no status for the uptime check, nothing on a
+    // screen. `rate_limit.store_failed` had this reasoning written into its own
+    // signal from the start; `public_route.existence_unavailable` did not, and
+    // the `/s/**` namespace quietly went back to soft 404s with no counter
+    // anywhere (ADR 20260912-the-public-namespace-refuses-at-the-edge said to
+    // watch this file for exactly that and nothing had been added).
+    const counted = new Set(LOG_SIGNALS.flatMap((signal) => signal.events ?? []));
+    for (const code of ["rate_limit.store_failed", "public_route.existence_unavailable"]) {
+      expect(counted.has(code)).toBe(true);
+    }
+  });
+
   it("builds a CloudWatch JSON filter pattern for both signal shapes", () => {
     expect(filterPatternFor({ ...LOG_SIGNALS[0], level: "error", events: undefined })).toBe(
       '{ $.level = "error" }',

@@ -406,9 +406,20 @@ export type ReadinessInput = {
   /** The booking's current payment state; absent is treated as unpaid. */
   paymentStatus?: PaymentStatus | null;
   /**
-   * The booking reused an existing person by email under a mismatched name and
-   * has not been staff-confirmed (H-13). Fails closed until staff confirm it is
-   * the same human, so a shared-inbox booking can't board on borrowed evidence.
+   * The booking attached itself to an existing person on something short of
+   * proof and has not been staff-confirmed (H-13). Fails closed until staff
+   * confirm it is the same human, so a seat can't board on borrowed evidence.
+   *
+   * **Two doors raise it, and the module that acts on the flag documented one**
+   * (`dive-domain-expert`, the RFH-07 layer). The by-email path reused a row
+   * whose name on file disagrees with the submitted one — the shared-inbox
+   * signal this flag was built for — and the counter's name-match prompt handed
+   * over a person id on a tap, where either the typed name disagrees with the
+   * one on file or a second diver in the shop answers to that exact name
+   * (issue #1556). Each is argued where it is set, in `createBookingRecord` and
+   * `nameMatchLeavesIdentityInDoubt` (`src/db/bookings.ts`); a safety module
+   * describing only the older one teaches a reader that a tap at the counter
+   * cannot produce the blocker they are looking at.
    */
   identityUnconfirmed?: boolean;
   /**
@@ -627,6 +638,26 @@ function certificationBlocker(
 }
 
 /**
+ * Does this diver hold a card that clears the gate for this specialty?
+ *
+ * Exported so the drysuit rental advisory (`src/lib/drysuit-card.ts`) asks the
+ * card exactly the question the gate asks. An advisory drawing its own line
+ * would be a second answer about the same plastic, and the two would drift.
+ */
+export function holdsSpecialtyCard(
+  specialtyCertifications: readonly SpecialtyCertification[],
+  specialty: DiveSpecialty,
+): boolean {
+  return specialtyCertifications.some(
+    (card) =>
+      card.specialty === specialty &&
+      card.status === "verified" &&
+      // Confirmed by a staffer, or never needed confirming (entered by hand).
+      (!card.importedAt || card.reviewedAt),
+  );
+}
+
+/**
  * A specialty is a yes/no gate: only a verified, unexpired card of that exact
  * specialty clears it. Every other state fails closed with a specific reason.
  *
@@ -643,17 +674,8 @@ function specialtyBlocker(
   specialtyCertifications: readonly SpecialtyCertification[],
   specialty: DiveSpecialty,
 ): ReadinessBlocker | null {
+  if (holdsSpecialtyCard(specialtyCertifications, specialty)) return null;
   const cards = specialtyCertifications.filter((card) => card.specialty === specialty);
-  if (
-    cards.some(
-      (card) =>
-        card.status === "verified" &&
-        // Confirmed by a staffer, or never needed confirming (entered by hand).
-        (!card.importedAt || card.reviewedAt),
-    )
-  ) {
-    return null;
-  }
   // Ahead of `pending` and `missing`: this diver is one tap from cleared, and
   // saying so is what turns a blocker into an action a staffer can take. The
   // `verified` check keeps the two blockers from overlapping — an imported card
@@ -702,9 +724,10 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   const blockers: ReadinessBlocker[] = [];
 
   // Evaluated ahead of — and independently of — the trip's own requirements: a
-  // booking that reused an existing person under a mismatched name must never
-  // board on that person's certs/waiver until staff confirm it is the same
-  // human (H-13), even on a trip whose requirements aren't configured yet.
+  // booking that attached itself to an existing person on something short of
+  // proof must never board on that person's certs/waiver until staff confirm it
+  // is the same human (H-13), even on a trip whose requirements aren't
+  // configured yet.
   if (input.identityUnconfirmed) {
     blockers.push({ code: "identity_unconfirmed" });
   }

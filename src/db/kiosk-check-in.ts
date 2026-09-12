@@ -7,10 +7,12 @@ import {
   FOLD_FROM,
   FOLD_TO,
   type KioskInput,
+  type KioskLookup,
 } from "@/lib/kiosk-check-in";
 import { kioskArrivalsWindow } from "@/lib/operational-window";
+import { verifyBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
-import { bookings, diveSupportNeeds, people, trips } from "./schema";
+import { bookings, diveSupportNeeds, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -122,6 +124,35 @@ export function kioskNameMatch(storedName: SQL, typed: string): SQL {
 }
 
 /**
+ * **The booking behind a scanned arrival code, or nothing at all.**
+ *
+ * The purpose is stated here and it is the whole point: the card a diver saves,
+ * prints and can forward carries an `arrival` credential, and the readiness
+ * token that authorized the download — their medical, waiver and payment
+ * surface — is not a key to this door (issue #1600). `verifyBookingCapability`
+ * answers `null` for every other reason too: unknown token, expired, revoked,
+ * a since-cancelled booking, a called-off trip.
+ *
+ * The shop is re-checked against the display link's own, because the token and
+ * the tablet arrive from different people. A code minted at one shop must not
+ * open another's counter, and a capability is not a tenant claim.
+ *
+ * Nothing here answers the caller differently from a miss: it returns a lookup
+ * or `null`, and `null` reaches the same "See the desk" a typed surname nobody
+ * holds reaches.
+ */
+async function bookingForArrivalCode(
+  db: AppDb,
+  shopId: string,
+  token: string,
+  now: Date,
+): Promise<KioskLookup | null> {
+  const capability = await verifyBookingCapability(db, { token, purpose: "arrival", now });
+  if (!capability || capability.shopId !== shopId) return null;
+  return { kind: "booking", bookingId: capability.bookingId };
+}
+
+/**
  * Seats on today's departures that this typed (or scanned) answer could name.
  *
  * A **booking reference** matches that booking and nothing else. A **surname**
@@ -142,11 +173,23 @@ export async function findKioskSeats(
 ): Promise<KioskSeat[]> {
   if (!input.lookup) return [];
   const now = input.now ?? nowDate();
+  // **A scanned code becomes an ordinary booking lookup here, before a seat is
+  // read.** Every filter below is a promise this surface makes — the tablet's
+  // own two-hour window, a live scheduled trip, a seat that is neither
+  // cancelled nor a deleted person's, the diver who stated a support need and
+  // the minor, both of whom meet a human — and resolving the credential in
+  // `src/app/check-in/[token]/actions.ts` instead would hand `checkInAtKiosk` a
+  // booking that passed none of them.
+  const lookup: KioskLookup | null =
+    input.lookup.kind === "capability"
+      ? await bookingForArrivalCode(db, input.shopId, input.lookup.token, now)
+      : input.lookup;
+  if (!lookup) return [];
   const arrivals = kioskArrivalsWindow(now);
   const match =
-    input.lookup.kind === "booking"
-      ? eq(bookings.id, input.lookup.bookingId)
-      : kioskNameMatch(sql`${people.fullName}`, input.lookup.surname);
+    lookup.kind === "booking"
+      ? eq(bookings.id, lookup.bookingId)
+      : kioskNameMatch(sql`${people.fullName}`, lookup.surname);
 
   const rows = await db
     .select({
@@ -160,6 +203,10 @@ export async function findKioskSeats(
       endsAt: trips.endsAt,
       meetingPointLabel: trips.meetingPointLabel,
       meetingPointAddress: trips.meetingPointAddress,
+      // The zone majority is measured in, below. Read here rather than taken
+      // from the caller for the same reason every other filter on this query is
+      // written here: this door has no staffer behind it.
+      shopTimezone: shops.timezone,
     })
     .from(bookings)
     // `people.shop_id` stated rather than inherited from the booking's own
@@ -168,6 +215,7 @@ export async function findKioskSeats(
     // reads a column on this table, so the table's tenant belongs here too.
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(shops, eq(shops.id, input.shopId))
     // **A diver who has told the shop they need a hand goes to the desk.**
     // Support needs never gate boarding and must never start doing so — this
     // is not a gate, it is a routing rule about which door answers. The whole
@@ -204,9 +252,18 @@ export async function findKioskSeats(
   // tablet answer instead. Filtered here rather than in SQL because majority is
   // calendar arithmetic on the departure's own date, and it discloses nothing
   // to drop the row — every refusal is the same sentence.
-  const eligible = rows.filter(({ dateOfBirth, startsAt }) => {
+  //
+  // **The date is the shop's, not the server's**, which is the same sentence
+  // `src/db/manifests.ts` writes over `tripDate`. An earlier draft read the
+  // departure's *UTC* calendar date: west of UTC an afternoon boat is already
+  // tomorrow in UTC, so a diver whose eighteenth birthday fell the day after
+  // the trip read as an adult at the tablet and as a minor on the captain's
+  // manifest, for the same boat — and being a routing rule rather than a gate
+  // is what made it worse, because the minor walked past the person who was
+  // meant to meet their guardian (`dive-domain-expert` review, 2026-09-12).
+  const eligible = rows.filter(({ dateOfBirth, startsAt, shopTimezone }) => {
     if (!dateOfBirth) return true;
-    return !isMinorOnDate(dateOfBirth, calendarDateInTimezone(startsAt, "UTC"));
+    return !isMinorOnDate(dateOfBirth, calendarDateInTimezone(startsAt, shopTimezone));
   });
 
   // **One diver's own two departures are not an ambiguity — they are a
@@ -221,5 +278,8 @@ export async function findKioskSeats(
       ? eligible.slice(0, 1)
       : eligible;
 
-  return seats.map(({ dateOfBirth: _dateOfBirth, personId: _personId, ...seat }) => seat);
+  return seats.map(
+    ({ dateOfBirth: _dateOfBirth, personId: _personId, shopTimezone: _shopTimezone, ...seat }) =>
+      seat,
+  );
 }

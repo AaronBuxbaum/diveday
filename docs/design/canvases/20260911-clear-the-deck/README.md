@@ -1,6 +1,6 @@
 # Clear the deck — six ways to make DiveDay smaller
 
-- **Status:** Live (its ADR is Proposed, pending H-73; rounds 2, 3, 4 and 5 drawn 2026-09-11, each on the owner's read of the round before; nothing has shipped from it)
+- **Status:** Live (its ADR is Proposed, pending H-77; rounds 2, 3, 4 and 5 drawn 2026-09-11, each on the owner's read of the round before; nothing has shipped from it)
 - **Date:** 2026-09-11
 - **ADR:** [20260911-clear-the-deck](../../../architecture/decisions/20260911-clear-the-deck.md)
 - **Published:** https://claude.ai/code/artifact/d79e2f2e-a6b7-4692-8f32-c67dc5651bb9
@@ -16,7 +16,7 @@ deletes kinds of thing rather than spellings; and **six concepts** that each con
 different axis — by noun, by time, by place, by question, by default, by face — every one redrawing
 the shop home for the same shop on the same morning, at desktop and at 390, so they compare like for
 like. **Nothing here is normative**; the ADR carries the floor and the six, the pick is the owner's
-(H-73), and code obeys the ADR. A second page, drawn the same day on the owner's read of the first,
+(H-77), and code obeys the ADR. A second page, drawn the same day on the owner's read of the first,
 redraws the surface itself; a third, on the read of the second, draws one direction deep; a fourth,
 on the read of the third, takes it further; a fifth, on the read of the fourth, prints it on the app's
 own paper, light rendering light — see "Round 2" through "Round 5" below.
@@ -185,27 +185,27 @@ and none restates.
 ## Slices
 
 Nothing has shipped from this canvas. The floor's first two rows may start on the ADR alone; every
-other row and every concept waits on H-73. When a slice lands, the component that must not drift
+other row and every concept waits on H-77. When a slice lands, the component that must not drift
 names the ADR in its doc comment, a test pins the rule, and this table moves.
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
 | 21a — the floor: the door goes (a row's own tap is its only door; the trailing verb is the fix) | open | — | — |
 | 21b — the floor: the chip and the pill go (`Badge` deleted; a state is a word) | open | — | — |
-| 21c — the floor: the decoration leaves every `/shop/**` page (H-73 b) | open | — | — |
-| 21d — the floor: the switch goes; Settings becomes the shop's card (H-73 c) | open | — | — |
-| 21e — the floor: the outside shrinks — the front page, one embed, every page prints, three connects (H-73 c) | open | — | — |
-| 21f — the floor: DiveDay's own pages become three plus the two legal ones (H-73 d) | open | — | — |
-| 21g — the picked concept's staff shape (H-73 a) | open | — | — |
+| 21c — the floor: the decoration leaves every `/shop/**` page (H-77 b) | open | — | — |
+| 21d — the floor: the switch goes; Settings becomes the shop's card (H-77 c) | open | — | — |
+| 21e — the floor: the outside shrinks — the front page, one embed, every page prints, three connects (H-77 c) | open | — | — |
+| 21f — the floor: DiveDay's own pages become three plus the two legal ones (H-77 d) | open | — | — |
+| 21g — the picked concept's staff shape (H-77 a) | open | — | — |
 | 21h — the boat as its own tool, if the pick includes Ashore and aboard's boat half | open | — | — |
-| 21i — the surface: Console's seven tokens in three schemes, its five sizes, its seven parts, on every staff page, and the deletion of Reef's tokens, ladder, bed, marks and moments (H-73 i, j, k, l; supersedes round 2's e and f) | open | — | — |
-| 21l — the display, the seat gauge and the telemetry line (H-73 m, n, o); the four freshness components they replace deleted | open | — | — |
+| 21i — the surface: Console's seven tokens in three schemes, its five sizes, its seven parts, on every staff page, and the deletion of Reef's tokens, ladder, bed, marks and moments (H-77 i, j, k, l; supersedes round 2's e and f) | open | — | — |
+| 21l — the display, the seat gauge and the telemetry line (H-77 m, n, o); the four freshness components they replace deleted | open | — | — |
 | 21m — a boat's page as one instrument (the four trip tabs become one), then the week as gauges (the board's tiles and buttons go) | open | — | — |
 | 21n — a person's record with the fix as its primary; the till as one page | open | — | — |
-| 21o — the surface, if (q) is Chart: Reef's tokens and night palette kept; the ladder's two upper rungs, the bed, the marks and the moments deleted; one radius of 6; the sheet as the one panel, for boats only (H-73 q, r; narrows 21i, whose token deletion does not happen) | open | — | — |
-| 21p — light renders light: the face on `--surface` and `--border` in place of the display's glass; the app's night palette as the one dark, Console's depth scheme not built; glare as the crew's word wrapping `.boat-mode` on the roll call and the counter (H-73 p; amends 21l's display and 21i's schemes) | open | — | — |
-| 21j — the diver's side on Console: Harbor's storefront on its row, figure and button; the recap as the log card, the drawing gone (H-73 g); DiveDay's hero as a live console | open | — | — |
-| 21k — DiveDay's own pages on the picked surface (H-73 h), in the slice that shrinks them (21f) | open | — | — |
+| 21o — the surface, if (q) is Chart: Reef's tokens and night palette kept; the ladder's two upper rungs, the bed, the marks and the moments deleted; one radius of 6; the sheet as the one panel, for boats only (H-77 q, r; narrows 21i, whose token deletion does not happen) | open | — | — |
+| 21p — light renders light: the face on `--surface` and `--border` in place of the display's glass; the app's night palette as the one dark, Console's depth scheme not built; glare as the crew's word wrapping `.boat-mode` on the roll call and the counter (H-77 p; amends 21l's display and 21i's schemes) | open | — | — |
+| 21j — the diver's side on Console: Harbor's storefront on its row, figure and button; the recap as the log card, the drawing gone (H-77 g); DiveDay's hero as a live console | open | — | — |
+| 21k — DiveDay's own pages on the picked surface (H-77 h), in the slice that shrinks them (21f) | open | — | — |
 
 ## Working on it
 

@@ -111,11 +111,11 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
   // rents drysuits). Every one defaults off, so a shop that leaves them alone
   // is where it was and no diver is ever packed one they did not ask for.
   //
-  // None carries a size yet. A drysuit is the one that plainly wants one, and
-  // giving it a `rental_fit_profiles` size column is its own decision — whose
-  // scale, and whether the boot size beneath a wetsuit answers for it too — so
-  // it is filed rather than guessed at, and until then a drysuit reaches the
-  // packing list as a piece the counter fits by hand.
+  // The drysuit is the one add-on that carries a size (issue 1414), on a drysuit
+  // scale rather than the wetsuit's: a letter for girth and a trailing `T`
+  // for the tall cut, which is how a rental wall is stocked. The other three
+  // carry none and want none — a hood, a torch and an SMB are one size off
+  // the shelf, and a size column there would be a field nobody can answer.
   { kind: "drysuit", field: "rentsDrysuit", name: "drysuit", defaultRented: false },
   { kind: "hood_gloves", field: "rentsHoodGloves", name: "hoodGloves", defaultRented: false },
   { kind: "torch", field: "rentsTorch", name: "torch", defaultRented: false },
@@ -232,16 +232,29 @@ export function nitroxCardWanted(
 /**
  * The pieces of a fit that have a **size to record**, in canonical order.
  *
- * `regulator`, `dive_computer`, `gopro`, `drysuit`, `hood_gloves`, `torch` and
- * `smb` are deliberately absent: none has a `rental_fit_profiles` size column,
- * so renting one can never leave a fit half-filled. `boots` has no checkbox of its own — it rides
+ * `regulator`, `dive_computer`, `gopro`, `hood_gloves`, `torch` and `smb` are
+ * deliberately absent: none has a `rental_fit_profiles` size column, so renting
+ * one can never leave a fit half-filled. `boots` has no checkbox of its own — it rides
  * along with the wetsuit (`src/lib/dive-prep.ts`), so a suit with no shoe size
- * is as much of a loose end as a suit with no suit size.
+ * is as much of a loose end as a suit with no suit size. The `drysuit` is here
+ * since issue 1414 and is the exception among the add-ons: it has a size column, on
+ * its own scale, and the vulcanised boots most rental suits carry need no shoe
+ * size of their own. A suit that takes separate rock boots gets no extra kind
+ * here either — that size rides in the drysuit's own free text, which is the
+ * one field on the fit that reaches the packing list verbatim
+ * (`src/lib/dive-prep.ts`).
  *
  * Same union `statedSizeItems` in `dive-prep.ts` already speaks, so a surface
  * can render both through `src/i18n/rental-labels.ts` without a second map.
  */
-export const SIZED_RENTAL_KINDS = ["bcd", "wetsuit", "boots", "mask_fins", "weights"] as const;
+export const SIZED_RENTAL_KINDS = [
+  "bcd",
+  "wetsuit",
+  "boots",
+  "mask_fins",
+  "weights",
+  "drysuit",
+] as const;
 
 export type SizedRentalKind = (typeof SIZED_RENTAL_KINDS)[number];
 
@@ -260,6 +273,7 @@ export const SIZED_RENTAL_FIT_COLUMN = {
   boots: "bootSize",
   mask_fins: "finSize",
   weights: "weightPreference",
+  drysuit: "drysuitSize",
 } as const satisfies Record<SizedRentalKind, string>;
 
 /**
@@ -304,8 +318,10 @@ export type RentalFitSizes = {
   rentsWetsuit: boolean;
   rentsMaskFins: boolean;
   rentsWeights: boolean;
+  rentsDrysuit: boolean;
   bcdSize: string | null;
   wetsuitSize: string | null;
+  drysuitSize: string | null;
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
@@ -379,6 +395,9 @@ export function rentalFitCompleteness(
     { kind: "boots", rented: fit.rentsWetsuit && offers("wetsuit"), value: shoeSize },
     { kind: "mask_fins", rented: fit.rentsMaskFins && offers("mask_fins"), value: shoeSize },
     { kind: "weights", rented: fit.rentsWeights && offers("weights"), value: fit.weightPreference },
+    // No `boots` row beside it, unlike the wetsuit: a drysuit's boots are part
+    // of the suit, so this one size is the whole answer (issue 1414).
+    { kind: "drysuit", rented: fit.rentsDrysuit && offers("drysuit"), value: fit.drysuitSize },
   ];
   const missing = required
     .filter((item) => item.rented && !recorded(item.value))
@@ -413,6 +432,7 @@ export function sizeForRentalItem(
     boots: shoeSize,
     mask_fins: shoeSize,
     weights: fit.weightPreference,
+    drysuit: fit.drysuitSize,
   }[kind];
   return value?.trim() || null;
 }

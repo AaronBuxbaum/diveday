@@ -16,6 +16,7 @@ import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { type DiveMode, type DockDayRhythm, siteFit } from "@/lib/diver-planning";
 import { formatShortDate } from "@/lib/format";
+import { capturePhoto } from "@/lib/marine-life-tiles";
 import { publicDiveSitePath } from "@/lib/public-routes";
 import type { SiteSightings } from "@/lib/sightings";
 import { nightSkyFor } from "@/lib/sky";
@@ -76,7 +77,22 @@ function ceilingOptions(
       label: level ? t(DIVER_CERT_LEVEL_KEYS[level]) : t("common.certification.levelNone"),
       // A clean day still answers. A control that appears to do nothing when
       // the news is good teaches the reader it is broken.
-      lines: deeper.length > 0 ? deeper : [t("trip.dayProfile.within", { limit: limitText })],
+      //
+      // And the clean-day answer names the card, exactly as the over-limit one
+      // does: this is a claim about a *card*, and the accepted junior gap
+      // (`statedLevelDepthLimit`) happens here rather than on the over-limit
+      // branch — a ten-year-old picking "Open Water" is held to 12 m, so an
+      // unattributed "nothing on this day goes past 18 m" would be wrong about
+      // them by six metres with nothing in the sentence to say whose limit it
+      // was reading.
+      lines:
+        deeper.length > 0
+          ? deeper
+          : [
+              t(level ? "trip.dayProfile.within" : "trip.dayProfile.withinNoCard", {
+                limit: limitText,
+              }),
+            ],
     };
   });
 }
@@ -464,7 +480,8 @@ export function TripLookFor({ briefings, locale }: { briefings: SiteBriefing[]; 
         {cards.map((card) => (
           <li key={card.slug ?? card.name} className="flex min-w-0 gap-3">
             <StoredPhoto
-              src={card.imageUrl}
+              // Capture-only rewrite; `src/lib/marine-life-tiles.ts`.
+              src={capturePhoto(card.imageUrl, 48)}
               alt=""
               className="size-12 shrink-0 rounded-inset"
               sizes="48px"

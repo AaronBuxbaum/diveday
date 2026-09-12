@@ -12,7 +12,7 @@ afterEach(cleanup);
  * a self-expiring element in a browser is the shape `pnpm check:e2e-hygiene`
  * exists to refuse. Fake timers make the same behaviour deterministic.
  */
-const LABEL = "Everyone's cleared to dive";
+const LABEL = "Everyone’s cleared to dive";
 
 describe("RosterAllClear", () => {
   beforeEach(() => {

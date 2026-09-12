@@ -36,7 +36,7 @@ function renderInForm(onSubmit: () => void) {
       }}
     >
       <InlineConfirm
-        message="Cancel your spot on Reef Dive? This can't be undone. You're still inside the free-cancellation window, so what you paid comes back to you."
+        message="Cancel your spot on Reef Dive? This can’t be undone. You’re still inside the free-cancellation window, so what you paid comes back to you."
         triggerLabel="Cancel my spot"
         confirmLabel="Yes, cancel my spot"
         cancelLabel="Never mind"
@@ -109,7 +109,7 @@ describe("InlineConfirm", () => {
         }}
       >
         <InlineConfirm
-          message="Cancel your spot on Reef Dive? This can't be undone. You're still inside the free-cancellation window, so what you paid comes back to you."
+          message="Cancel your spot on Reef Dive? This can’t be undone. You’re still inside the free-cancellation window, so what you paid comes back to you."
           triggerLabel="Cancel my spot"
           confirmLabel="Yes, cancel my spot"
           cancelLabel="Never mind"

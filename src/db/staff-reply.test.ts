@@ -79,7 +79,7 @@ describe("answering by email", () => {
       shopId: shop.id,
       personId: diver.id,
       messageId,
-      body: "You're on the 1pm boat now.",
+      body: "You’re on the 1pm boat now.",
       sentByPersonId: staff.id,
       now: NOW,
       provider,
@@ -90,7 +90,7 @@ describe("answering by email", () => {
     expect(sent).toMatchObject({
       kind: "staff_reply",
       to: diver.email.toLowerCase(),
-      body: "You're on the 1pm boat now.",
+      body: "You’re on the 1pm boat now.",
       // The diver's own subject, marked as a reply exactly once.
       subject: "Re: Your Saturday departure",
       // What files the answer into their thread rather than beside it.
@@ -132,7 +132,7 @@ describe("answering by email", () => {
       shopId: shop.id,
       personId: diver.id,
       messageId,
-      body: "You're on the 1pm boat now.",
+      body: "You’re on the 1pm boat now.",
       sentByPersonId: staff.id,
       now: NOW,
       provider,

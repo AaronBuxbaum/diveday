@@ -59,7 +59,14 @@ export type SeatDiverRefusalDetail = "specific" | "coarse";
 
 /** Who is being seated: a diver already on file, or a name typed at the desk. */
 export type SeatDiverPerson =
-  | { personId: string }
+  /**
+   * `fromNameMatch` mirrors `BookingPerson`'s field of the same name and is
+   * spread straight into `createBooking` below: it carries the name the
+   * staffer typed into the counter's "is this the same diver?" prompt, and
+   * that booking decides from the name whether the seat is
+   * identity-unconfirmed (issue #1556).
+   */
+  | { personId: string; fromNameMatch?: { typedName: string } }
   | { fullName: string; email?: string; phone?: string };
 
 export type SeatDiverInput = {
@@ -103,6 +110,17 @@ export type SeatDiverResult =
       personId: string;
       personName: string;
       waiver: SeatDiverWaiver;
+      /**
+       * The seat is held: `createBooking` attached it to an existing person on
+       * something short of proof and stamped `identityUnconfirmedAt`, so the
+       * boarding gate refuses it until a staffer confirms the identity
+       * (H-13, issue #1556).
+       *
+       * Carried out to the door for the same reason `waiver` is: this is the
+       * one fact a plain "Added" hides, and the staffer otherwise meets it as
+       * a check-in refusal later, with the diver at the counter.
+       */
+      identityUnconfirmed: boolean;
     }
   | {
       ok: false;
@@ -240,5 +258,6 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     personId: outcome.personId,
     personName: outcome.personName,
     waiver,
+    identityUnconfirmed: outcome.identityUnconfirmed,
   };
 }

@@ -11,6 +11,7 @@ import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/compo
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { maxPlausibleBirthDate } from "@/lib/age";
 import { mailtoHref, telHref } from "@/lib/contact-links";
+import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { savePersonAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
@@ -119,7 +120,7 @@ export function DiverHeader({
                   className: "hover:underline",
                 })}
               >
-                {diver.person.phone}
+                {displayStoredPhone(diver.person.phone, country)}
               </a>
             ) : null}
             {!diver.person.email && !diver.person.phone ? (

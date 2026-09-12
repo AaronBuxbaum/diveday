@@ -14,11 +14,16 @@ export type DisplayLinkState =
   // carefully to handle it is the wrong sentence (`security-reviewer` review).
   | { status: "issued"; id: string; label: string; url: string; purpose: "board" | "check_in" }
   | { status: "revoked"; id: string }
+  // A renewed kiosk link keeps working; the row stays exactly where it was, so
+  // the only thing that changes on screen is the expiry line and the notice.
+  | { status: "renewed"; id: string }
   | { status: "invalid_label" }
-  // Which act was refused, because the panel has two forms and a refusal shown
-  // under the wrong one is worse than none: a staffer whose revoke was refused
-  // read a message under a create form they never submitted.
-  | { status: "denied"; intent: "issue" | "revoke" };
+  // Which act was refused, because the panel has two places to show a refusal —
+  // under the create form, and beside the Screens list a row's revoke or renew
+  // was posted from — and showing it under the wrong one is worse than none: a
+  // staffer whose revoke was refused read a message under a create form they
+  // never submitted.
+  | { status: "denied"; intent: "issue" | "revoke" | "renew" };
 
 export const IDLE_DISPLAY_LINK_STATE: DisplayLinkState = { status: "idle" };
 
@@ -57,9 +62,14 @@ export type DisplayLinkCopy = {
   confirmRevoke: string;
   confirmRevokeButton: string;
   cancel: string;
+  renew: string;
+  renewing: string;
   denied: string;
   invalidLabel: string;
   revoked: string;
+  renewed: string;
+  /** What a freshly minted check-in link's lifetime is, said as it is copied. */
+  expiresCheckIn: string;
 };
 
 /** One live link as the list shows it, with dates already localized. */
@@ -80,4 +90,12 @@ export type DisplayLinkView = {
    * paragraph outside the button, so it is not part of the accessible name.
    */
   revokeLabel: string;
+  /**
+   * "Expires 12 Mar 2027" or "Expired 12 Mar 2026", already localized; null for
+   * a board link, which never expires. Its presence is also what decides
+   * whether the row gets a Renew button — the two are the same fact.
+   */
+  expiresLabel: string | null;
+  /** The renew button's accessible name, "Renew Counter tablet" — see `revokeLabel`. */
+  renewLabel: string;
 };

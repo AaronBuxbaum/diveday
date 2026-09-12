@@ -55,7 +55,7 @@ const COPY: CrewSectionCopy = {
   assignLabel: "Assign crew",
   assignOption: "Choose someone…",
   unassignAria: "Remove {name} from crew",
-  assignFailed: "Couldn't save that change.",
+  assignFailed: "Couldn’t save that change.",
   onShift: "On shift",
   notOnShift: "Not on shift",
   manageShifts: "Manage shifts",
@@ -103,7 +103,7 @@ describe("CrewSection assignError reset on revisit", () => {
     await userEvent.selectOptions(screen.getByLabelText("Assign crew"), "staff-2");
 
     await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent("Couldn't save that change.");
+      expect(screen.getByRole("alert")).toHaveTextContent("Couldn’t save that change.");
     });
 
     // Trip A -> Trip B: the server sends fresh crewIds/staff for the new

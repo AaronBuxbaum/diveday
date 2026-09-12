@@ -77,18 +77,22 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // was pulled for, one step later.
   //
   // Naming it here is a *known, accepted* narrowing of that protection, not
-  // a closure of it: `identity_unconfirmed` only flags a submitted name that
-  // doesn't match the name already on file (H-13, `!nameMatches`), so an
-  // attacker who already knows the child's real name — arguably the more
-  // concerning, targeted case — gets `nameMatches: true` on the very first
-  // request and never trips it. `buildDiverChecklist` picks the setup
-  // bucket's *first* blocker, and `calculateReadiness` always pushes
-  // `identity_unconfirmed` before `under_minimum_age` (src/lib/readiness.ts)
-  // — so this copy is only ever shown when no identity mismatch is present,
-  // and the mismatched-name case still gets the generic line above. The
-  // known-name case does not. The product owner chose
-  // this trade for the common case's clarity, with the gap written down
-  // rather than silently accepted. See H-22, docs/product/human-decisions.md.
+  // a closure of it: on the public door — the only one an attacker has —
+  // `identity_unconfirmed` is raised solely by a submitted name that doesn't
+  // match the name already on file (H-13, `!nameMatches`), so an attacker who
+  // already knows the child's real name — arguably the more concerning,
+  // targeted case — gets `nameMatches: true` on the very first request and
+  // never trips it. The blocker's second raiser, a staffer tapping a name off
+  // the counter's match prompt (issue #1556, `BookingPerson.fromNameMatch`),
+  // is behind a staff session and reachable by nobody probing from outside.
+  // `buildDiverChecklist` picks the setup bucket's *first* blocker, and
+  // `calculateReadiness` always pushes `identity_unconfirmed` before
+  // `under_minimum_age` (src/lib/readiness.ts) — so this copy is only ever
+  // shown when no identity mismatch is present, and the mismatched-name case
+  // still gets the generic line above. The known-name case does not. The
+  // product owner chose this trade for the common case's clarity, with the
+  // gap written down rather than silently accepted. See H-22,
+  // docs/product/human-decisions.md.
   under_minimum_age: "waiting",
   // A waiver goes out the moment a diver joins, so this state is the rare
   // leftover — a link that never issued (a delivery hiccup, or a waiver turned

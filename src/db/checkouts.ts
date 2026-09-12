@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { checkoutCharge } from "@/lib/deposits";
 import { log } from "@/lib/log";
@@ -745,6 +745,48 @@ async function attributableTotalCents(db: DbExecutor, checkout: BookingCheckout)
 }
 
 /**
+ * Record the `cus_…` Stripe created for this session, once Stripe says one
+ * exists.
+ *
+ * Nothing local knew a Customer id for a booking checkout before this, so diver
+ * erasure could raise no obligation against one — a promise silently unkept
+ * rather than a bug (issue #1621). Sessions are opened with
+ * `customer_creation: "if_required"`, so **a null column means Stripe created
+ * no Customer**, and the erasure raising nothing for it is the honest answer
+ * rather than a miss.
+ *
+ * Write-once: the update also requires `stripe_customer_id IS NULL`, so a
+ * replayed webhook or a second refresh is a no-op and Stripe's first word
+ * stands. Returns whether a row moved, which is what lets the webhook fall
+ * through to the tip table on the shared session-id space.
+ */
+export async function recordCheckoutStripeCustomer(
+  db: DbExecutor,
+  input: {
+    stripeSessionId: string;
+    stripeCustomerId: string;
+    /** See markCheckoutPaidBySessionId — the same defense-in-depth cross-check. */
+    expectedAccountId?: string;
+  },
+): Promise<boolean> {
+  if (input.stripeCustomerId.trim().length === 0) return false;
+  const [updated] = await db
+    .update(bookingCheckouts)
+    .set({ stripeCustomerId: input.stripeCustomerId })
+    .where(
+      and(
+        eq(bookingCheckouts.stripeSessionId, input.stripeSessionId),
+        isNull(bookingCheckouts.stripeCustomerId),
+        input.expectedAccountId === undefined
+          ? undefined
+          : eq(bookingCheckouts.stripeAccountId, input.expectedAccountId),
+      ),
+    )
+    .returning({ id: bookingCheckouts.id });
+  return updated !== undefined;
+}
+
+/**
  * Mark a checkout paid from Stripe's own evidence and cascade every covered
  * booking through the shared payment gate, both in one transaction so a
  * crash between the two writes can never leave the checkout "completed"
@@ -1127,6 +1169,16 @@ export async function refreshCheckoutFromStripe(
 
   const result = await checkout.retrieveCheckoutSession(row.stripeAccountId, row.stripeSessionId);
   if (result.status !== "ok") return row;
+  // The webhook-less fallback has to learn the same fact the webhook does: a
+  // Customer id Stripe reports here is the only record erasure will ever get of
+  // it (issue #1621). Recorded before the status branch so a session that ends
+  // up expired still leaves the pointer behind.
+  if (result.session.stripeCustomerId) {
+    await recordCheckoutStripeCustomer(db, {
+      stripeSessionId: row.stripeSessionId,
+      stripeCustomerId: result.session.stripeCustomerId,
+    });
+  }
   if (result.session.paymentStatus === "paid") {
     // The snapshot already carries Stripe's own settled total; pass it through
     // rather than dropping it, so this fallback path records the same money

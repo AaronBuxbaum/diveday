@@ -9,7 +9,8 @@ import { canPersonManageShopSettings } from "@/db/authz";
 import { listDisplayTokens } from "@/db/display-tokens";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { DISPLAY_LABEL_MAX_LENGTH } from "@/lib/display-tokens";
+import { nowDate } from "@/lib/clock";
+import { CHECK_IN_LINK_TTL_DAYS, DISPLAY_LABEL_MAX_LENGTH } from "@/lib/display-tokens";
 import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
@@ -62,6 +63,7 @@ export default async function LobbyDisplayPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const links = await listDisplayTokens(db, { shopId: session.user.shopId });
+  const now = nowDate();
   const yearNotice = noticeFromParam(notice, YEAR_NOTICES);
 
   const copy: DisplayLinkCopy = {
@@ -83,6 +85,11 @@ export default async function LobbyDisplayPage({
     copyFailed: t("display.newLink.copyFailed"),
     shared: t("display.newLink.shared"),
     sharedCheckIn: t("display.newLink.sharedCheckIn"),
+    // Months, because that is how a manager thinks about a dive season; the
+    // lifetime itself stays one number, in `src/lib/display-tokens.ts`.
+    expiresCheckIn: t("display.newLink.expiresCheckIn", {
+      months: Math.round(CHECK_IN_LINK_TTL_DAYS / 30),
+    }),
     listHeading: t("display.list.heading"),
     listEmpty: t("display.list.empty"),
     namesOn: t("display.list.namesOn"),
@@ -93,9 +100,12 @@ export default async function LobbyDisplayPage({
     confirmRevoke: t("display.list.confirmRevoke"),
     confirmRevokeButton: t("display.list.confirmRevokeButton"),
     cancel: t("display.list.cancel"),
+    renew: t("display.list.renew"),
+    renewing: t("display.list.renewing"),
     denied: t("display.notice.denied"),
     invalidLabel: t("display.notice.invalidLabel", { max: DISPLAY_LABEL_MAX_LENGTH }),
     revoked: t("display.notice.revoked"),
+    renewed: t("display.notice.renewed"),
   };
 
   const screens: DisplayLinkView[] = links.map((link) => ({
@@ -122,6 +132,21 @@ export default async function LobbyDisplayPage({
         })
       : null,
     revokeLabel: t("display.list.revokeNamed", { label: link.label }),
+    // Null for a board link, which never expires — and that null is also what
+    // keeps the Renew button off the row (issue #1609). Past tense once the
+    // date has gone by: the kiosk has already stopped working, and a manager
+    // looking for why needs the row to say so rather than name a future.
+    expiresLabel: link.expiresAt
+      ? t(
+          link.expiresAt.getTime() > now.getTime()
+            ? "display.list.expires"
+            : "display.list.expired",
+          {
+            when: formatDateTimeTz(link.expiresAt, locale, shop.timezone),
+          },
+        )
+      : null,
+    renewLabel: t("display.list.renewNamed", { label: link.label }),
   }));
 
   return (

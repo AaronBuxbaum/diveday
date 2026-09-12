@@ -136,7 +136,7 @@ function allTableNames(): string[] {
 const UNSCOPED_REASONS: Record<string, string> = {
   auth_verifications:
     "better-auth's `verification` model: no foreign key, names its person as text in `identifier`. Both paths sweep it by that column, and so does the erasure (src/db/anonymize.ts) — a pending row holds an address and a live token",
-  global_dive_sites: "DiveDay's own catalogue of sites, shared by every shop and owned by none",
+  global_dive_sites: "DiveDay’s own catalogue of sites, shared by every shop and owned by none",
   global_dive_site_versions: "the catalogue's own history, beside the table above",
   notification_rate_limit_state:
     "provider coordination keyed by ceiling and period, holding no person",
@@ -196,11 +196,11 @@ const RESET_KEEPS: Record<string, string> = {
     "the front-desk address's own proof of ownership (issue #1288) — settings, not schedule",
   boats: "shop settings, outside the resettable schedule",
   trip_lenses:
-    "the shop's own words for a kind of day — vocabulary is settings, not schedule, and the reset rebuilds the board rather than the words",
+    "the shop’s own words for a kind of day — vocabulary is settings, not schedule, and the reset rebuilds the board rather than the words",
   season_events:
-    "the shop's own year (mini-season, a derby, a nesting window) — settings beside the words above it, and a reset rebuilds the board rather than the calendar it hangs on",
-  dive_packages: "the shop's own price list of packages — settings, not schedule",
-  pre_departure_checklist_items: "the shop's own checklist lines — settings, not schedule",
+    "the shop’s own year (mini-season, a derby, a nesting window) — settings beside the words above it, and a reset rebuilds the board rather than the calendar it hangs on",
+  dive_packages: "the shop’s own price list of packages — settings, not schedule",
+  pre_departure_checklist_items: "the shop’s own checklist lines — settings, not schedule",
   shop_print_runs:
     "when the shop last printed each of its sheets — settings beside the boats above, and a reset rebuilds the board rather than the paper",
   shop_backup_destinations: "seeded by the stable half (seedBackup); a reset would not restore it",
@@ -236,10 +236,10 @@ const RESET_KEEPS: Record<string, string> = {
  * delete fails here too.
  */
 const RESET_PERSON_SCOPED: Record<string, string> = {
-  staff_shifts: "seeded once with the permanent staff; a purged person's shifts go with them",
+  staff_shifts: "seeded once with the permanent staff; a purged person’s shifts go with them",
   calendar_feeds: "a stable staffer's subscription must survive a schedule reset",
   account_sessions:
-    "a purged person's session goes with their login; stable staff sessions survive",
+    "a purged person’s session goes with their login; stable staff sessions survive",
   processor_erasure_obligations: "names the erased person and whoever discharged it",
 };
 

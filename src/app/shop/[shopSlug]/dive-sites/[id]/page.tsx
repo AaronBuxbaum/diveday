@@ -43,6 +43,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
+import { fetchTideStation, tideStationEcho } from "@/lib/tide-stations";
 import { uuidParam } from "@/lib/uuid";
 import { routeEditorCopy } from "../_components/route-editor-copy";
 import { SiteFields } from "../_components/SiteFields";
@@ -155,6 +156,15 @@ export default async function EditDiveSitePage({
     listDiveSiteCreatures(db, shop.id, id),
   ]);
   const templateUpdate = await getDiveSiteTemplateUpdate(db, shop.id, id);
+  // What NOAA calls the station this site carries, and whether it sits
+  // anywhere near the site's own coordinates (issue #1468, ADR
+  // 20260907-noaa-tide-predictions' 2026-09-10 amendment). Read here in the
+  // *render* rather than in `saveAction`, which is what makes "a failed lookup
+  // never blocks a save" structural rather than careful: the save writes the
+  // id, redirects back, and this render is where the echo appears. `null` for
+  // a site with no station, an id NOAA does not know, or a lookup that timed
+  // out — all three render nothing.
+  const station = site.tideStationId ? await fetchTideStation(site.tideStationId) : null;
   // The tide at *this* site on each upcoming departure that dives it, read at
   // the instant the boat gets there rather than at departure (ADR
   // 20260907-noaa-tide-predictions). Empty for a site with no station, which
@@ -556,6 +566,7 @@ export default async function EditDiveSitePage({
             <SiteFields
               t={t}
               depthUnit={depthUnit}
+              tideStation={tideStationEcho(station, site)}
               values={{
                 ...site,
                 // Both lists are normalised for the editors rather than handed

@@ -8,9 +8,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  * reaches the database, and a valid slug with nothing listed in it renders the
  * not-found page rather than a heading over an empty ledger. What that refusal
  * is worth over the wire is measured on `regionShops` in `./page.tsx` — under
- * this app's `cacheComponents` setup it is a soft 404, the same as every other
- * dynamic page here — so nothing in this file should read as if it were a 404
- * status line.
+ * this app's `cacheComponents` setup it is a soft 404, which `/s/**` no longer
+ * is and this route still is (issue #1734) — so nothing in this file should
+ * read as if it were a 404 status line.
  */
 
 vi.mock("next/navigation", () => ({

@@ -267,6 +267,29 @@ describe("rate-limiting runbook", () => {
   });
 });
 
+/**
+ * The kiosk is the one surface where the two nets are not interchangeable, and
+ * the ordering between them is a security property rather than a preference —
+ * see `src/app/check-in/[token]/actions.test.ts`, which owns that half. What is
+ * pinnable here is the relationship between the numbers.
+ */
+describe("the self check-in kiosk's two nets", () => {
+  it("keeps the per-caller net at or under the per-link one, or the second net does nothing", () => {
+    // The only shape a shop actually runs is one lobby, one tablet, one link.
+    // If the per-caller budget were the looser of the two, that deployment
+    // would never reach it, and `kioskLookupByIp` would catch nothing but
+    // somebody spraying across several shops' links at once — which is not the
+    // gap issue #1609 opened it for. Do not fix a red here by raising this
+    // number: `kioskLookup` is #1657's and a human's to move.
+    expect(RATE_LIMITS.kioskLookupByIp.capacity).toBeLessThanOrEqual(
+      RATE_LIMITS.kioskLookup.capacity,
+    );
+    expect(RATE_LIMITS.kioskLookupByIp.refillPerMs).toBeLessThanOrEqual(
+      RATE_LIMITS.kioskLookup.refillPerMs,
+    );
+  });
+});
+
 describe("checkRateLimit — e2e disable switch", () => {
   it("is set by `pnpm dev`, so a screenshot run against the dev server is never throttled", () => {
     // The e2e fleet has always set it (playwright.config.ts). The dev server

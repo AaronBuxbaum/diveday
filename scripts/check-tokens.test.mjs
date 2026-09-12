@@ -93,13 +93,18 @@ describe("the tree walk", () => {
       "src/components/env.d.ts": 'declare const c: "#fff";\n',
       // The metadata-name exemption only applies under src/app — a shared
       // component can't opt out by taking one of the convention names.
-      "src/components/icon.tsx": 'const c = "#0e7490";\n',
+      "src/components/opengraph-image.tsx": 'const c = "#0e7490";\n',
       // The shared chrome the four cards render through: exempt by exact path,
       // for the same reason as the names above (FU-20260812).
       "src/app/_og/card.tsx": 'export const OG_COLORS = { base: "#071720" };\n',
       // The allowlist is a path, not a folder — a neighbour in the same
       // directory cannot inherit the exemption.
       "src/app/_og/other.tsx": 'const c = "#071720";\n',
+      // `icon.tsx` and `apple-icon.tsx` left the name list with the files
+      // themselves (issue #1361 made the icons committed PNGs). Anything
+      // taking the name back is an ordinary component and is scanned.
+      "src/app/icon.tsx": 'const c = "#0e7490";\n',
+      "src/app/apple-icon.tsx": 'const c = "#0e7490";\n',
     };
     for (const [relative, contents] of Object.entries(files)) {
       await mkdir(path.join(root, path.dirname(relative)), { recursive: true });
@@ -108,10 +113,12 @@ describe("the tree walk", () => {
     const details = await scanTree(root);
     expect([...details.keys()].sort()).toEqual([
       "src/app/_og/other.tsx",
+      "src/app/apple-icon.tsx",
+      "src/app/icon.tsx",
       "src/app/page.tsx",
-      "src/components/icon.tsx",
+      "src/components/opengraph-image.tsx",
     ]);
     expect(details.get("src/app/page.tsx")).toHaveLength(2);
-    expect(details.get("src/components/icon.tsx")).toHaveLength(1);
+    expect(details.get("src/components/opengraph-image.tsx")).toHaveLength(1);
   });
 });

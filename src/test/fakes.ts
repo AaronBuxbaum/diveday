@@ -67,6 +67,9 @@ export function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): Checkou
           0,
         ),
         taxAmountCents: null,
+        // A fresh session has no Customer yet: Stripe mints one only
+        // `if_required`, i.e. when the session settles (issue #1621).
+        stripeCustomerId: null,
         expiresAt: new Date(nowMs() + DAY_MS),
       };
     },

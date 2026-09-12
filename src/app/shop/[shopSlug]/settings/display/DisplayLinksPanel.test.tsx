@@ -17,7 +17,9 @@ vi.mock("./actions", () => ({
   ): Promise<DisplayLinkState> =>
     formData.get("intent") === "revoke"
       ? { status: "denied", intent: "revoke" }
-      : { status: "denied", intent: "issue" },
+      : formData.get("intent") === "renew"
+        ? { status: "denied", intent: "renew" }
+        : { status: "denied", intent: "issue" },
 }));
 
 afterEach(cleanup);
@@ -30,7 +32,7 @@ const copy: DisplayLinkCopy = {
   purposeBoard: "Departures board",
   purposeCheckIn: "Self check-in",
   purposeCheckInDescription: "A check-in tablet records that a diver has arrived.",
-  showNames: "Show the crew's names",
+  showNames: "Show the crew’s names",
   showNamesDescription: "Only the crew who agreed to be named appear.",
   submit: "Create link",
   submitting: "Creating…",
@@ -48,15 +50,19 @@ const copy: DisplayLinkCopy = {
   neverShown: "Never opened",
   revoke: "Revoke",
   revoking: "Revoking…",
-  confirmRevoke: "Revoke this screen's link?",
+  confirmRevoke: "Revoke this screen’s link?",
   confirmRevokeButton: "Yes, revoke it",
   cancel: "Cancel",
+  renew: "Renew",
+  renewing: "Renewing…",
   denied: "That didn’t work.",
   invalidLabel: "Name the screen.",
   revoked: "Link revoked.",
+  renewed: "Link renewed.",
+  expiresCheckIn: "It stops working in 6 months.",
 };
 
-function screenRow(id: string, label: string): DisplayLinkView {
+function screenRow(id: string, label: string, expiresLabel: string | null = null): DisplayLinkView {
   return {
     id,
     label,
@@ -66,6 +72,8 @@ function screenRow(id: string, label: string): DisplayLinkView {
     lastShownLabel: null,
     // Built on the server beside the other per-screen strings; see page.tsx.
     revokeLabel: `Revoke ${label}`,
+    expiresLabel,
+    renewLabel: `Renew ${label}`,
   };
 }
 
@@ -120,7 +128,7 @@ describe("where a refusal lands", () => {
     await userEvent.click(screen.getByRole("button", { name: copy.confirmRevokeButton }));
 
     // Found by its words inside the Screens card, never by `findByRole("alert")`
-    // alone: `InlineConfirm`'s own "Revoke this screen's link?" prompt is also
+    // alone: `InlineConfirm`'s own "Revoke this screen’s link?" prompt is also
     // an alert and is still mounted at this moment, so a bare role lookup
     // resolves to whichever won the race. It did locally and lost on CI.
     const list = screen.getByRole("region", { name: copy.listHeading });
@@ -205,5 +213,49 @@ describe("the crew-names checkbox", () => {
     // And back, because a manager changing their mind twice is ordinary.
     await userEvent.click(screen.getByRole("radio", { name: copy.purposeBoard }));
     expect(screen.getByLabelText(copy.showNames)).toBeInTheDocument();
+  });
+});
+
+/**
+ * **A link that expires says when, and offers the one repair.** A kiosk whose
+ * URL quietly stopped working is a tablet nobody can explain, so the row that
+ * has a lifetime prints it and carries a Renew beside the Revoke. A board link
+ * has no lifetime at all (issue #1609), and a Renew on it would offer a repair
+ * for a failure that cannot happen.
+ */
+describe("an expiring link's row", () => {
+  const KIOSK = screenRow(
+    "cccccccc-1111-4222-8333-444444444444",
+    "Counter tablet",
+    "Expires 12 Mar 2027",
+  );
+  const BOARD = screenRow("aaaaaaaa-1111-4222-8333-444444444444", "Lobby TV");
+
+  it("prints its expiry and offers Renew; a board row does neither", () => {
+    render(panel([KIOSK, BOARD]));
+
+    const list = screen.getByRole("region", { name: copy.listHeading });
+    expect(within(list).getByText(/Expires 12 Mar 2027/)).toBeInTheDocument();
+
+    // Named, like Revoke is: two rows announcing "Renew, button" would give a
+    // screen-reader user nothing to choose by.
+    const renew = screen.getByRole("button", { name: "Renew Counter tablet" });
+    expect(renew).toHaveTextContent(copy.renew);
+    expect(screen.queryByRole("button", { name: "Renew Lobby TV" })).toBeNull();
+    // Exactly one Renew on the page, so the board row grew nothing.
+    expect(screen.getAllByRole("button", { name: /^Renew / })).toHaveLength(1);
+  });
+
+  it("puts a refused renew on the Screens card, not under the create form", async () => {
+    render(panel([KIOSK]));
+
+    await userEvent.click(screen.getByRole("button", { name: "Renew Counter tablet" }));
+
+    const list = screen.getByRole("region", { name: copy.listHeading });
+    const notice = await within(list).findByText(copy.denied);
+    expect(notice.closest('[role="alert"]')).not.toBeNull();
+    expect(
+      within(screen.getByRole("region", { name: copy.createHeading })).queryByText(copy.denied),
+    ).toBeNull();
   });
 });

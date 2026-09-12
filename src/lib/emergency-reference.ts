@@ -85,9 +85,11 @@ export function normalizeEmergencyReference(input: {
 /**
  * Whether the shop has recorded anything at all.
  *
- * The manifest asks staff to fill it in when this is false rather than
- * rendering nothing: a silently empty panel is indistinguishable from a shop
- * that has no numbers, and getting shops to fill it in is the entire value.
+ * Two readers, two answers. The manifest keeps the panel either way and states
+ * the absence in words — a silently empty panel is indistinguishable from a
+ * shop that has no numbers — but asks for nothing, because its reader is on a
+ * boat. Settings' hub row is where the same absence becomes an errand, beside
+ * the form that ends it.
  */
 export function hasEmergencyReference(reference: EmergencyReference): boolean {
   return (

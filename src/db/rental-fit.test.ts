@@ -15,6 +15,7 @@ import {
   saveRentalFit,
   saveRentalFitNote,
   setNeedsStaffFit,
+  toDiverRentalFit,
 } from "./rental-fit";
 import { people, rentalFitProfiles } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
@@ -148,6 +149,42 @@ describe("saveRentalFit / getRentalFit", () => {
     expect(saved).toBeNull();
     // Nothing was written under the real shop either.
     expect(await getRentalFit(db, shopId, personId)).toBeNull();
+  });
+
+  /**
+   * The drysuit size is the diver's own answer, so it has to survive the save
+   * *and* the diver-facing projection — a column that stops at the boundary
+   * would come back blank on the form that wrote it (issue 1414).
+   */
+  it("round-trips the drysuit size, including out to the diver's own projection", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+    await saveRentalFit(db, {
+      ...baseFitInput(shopId, personId),
+      rentsDrysuit: true,
+      drysuitSize: "  ML  ",
+    });
+
+    const fetched = await getRentalFit(db, shopId, personId);
+    expect(fetched?.drysuitSize).toBe("ML");
+    expect(toDiverRentalFit(fetched)?.drysuitSize).toBe("ML");
+  });
+
+  it("leaves a stored drysuit size alone when the caller never posts one", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+    await saveRentalFit(db, {
+      ...baseFitInput(shopId, personId),
+      rentsDrysuit: true,
+      drysuitSize: "MT",
+    });
+    // A shop that has since dropped drysuits from its catalog posts no
+    // `drysuitSize` key at all — the same rule every other size column keeps.
+    await saveRentalFit(db, { ...baseFitInput(shopId, personId), bcdSize: "L" });
+
+    expect((await getRentalFit(db, shopId, personId))?.drysuitSize).toBe("MT");
   });
 
   it("returns null for a person with no fit on file", async () => {

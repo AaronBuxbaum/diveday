@@ -7,7 +7,6 @@ import { z } from "zod";
 import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
 import { anonymizeDiver } from "@/db/anonymize";
 import {
-  canPersonAnswerShopInbox,
   canPersonDeleteDiver,
   canPersonErasePersonalData,
   canPersonMergeDiver,
@@ -174,6 +173,7 @@ const profileSchema = z.object({
   // half of the same bug; `saveRentalFit` leaves an absent size alone instead.
   bcdSize: z.string().trim().max(40).optional(),
   wetsuitSize: z.string().trim().max(40).optional(),
+  drysuitSize: z.string().trim().max(40).optional(),
   finSize: z.string().trim().max(40).optional(),
   weightPreference: z.string().trim().max(120).optional(),
 });
@@ -971,6 +971,7 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     rentsSmb: parsed.data.smb === "on",
     bcdSize: parsed.data.bcdSize,
     wetsuitSize: parsed.data.wetsuitSize,
+    drysuitSize: parsed.data.drysuitSize,
     // One shoe-size answer, written to both columns — see RentalFit.tsx.
     bootSize: parsed.data.finSize,
     finSize: parsed.data.finSize,
@@ -1547,10 +1548,18 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
  * **Answer the diver, in the channel they wrote on** (ADR
  * 20260907-two-way-inbox).
  *
- * Two gates, in this order: the live staff check every action on this page
- * makes, then the inbox's own owner/manager gate — re-read here rather than
- * trusted from the render that drew the composer, because hiding a control is
- * a courtesy and never the control itself.
+ * **Every live staff role may send as the shop.** Decided by the product owner
+ * on 2026-09-10 as an amendment to H-14 (issues #1505/#1518); the argument is
+ * decision 9 of that ADR, and the owner's call is H-14 in
+ * `docs/product/human-decisions.md`. What it means here is that the argument
+ * which opened the inbox to reading extends to writing — there is no narrower
+ * gate on sending than there is on looking.
+ *
+ * So there is one gate left, and `requireDiverActionContext` makes it: the
+ * `isLiveStaff` check every action on this page runs before its own. A
+ * demoted, disabled or deleted account loses the composer on its next request
+ * rather than at its next sign-in, which is what the deleted owner/manager
+ * gate was really buying.
  *
  * Everything after that belongs to `sendStaffReply`, which owns the whole
  * consequence: the message decides the channel, the diver's own locale decides
@@ -1566,9 +1575,6 @@ export async function replyToDiverAction(shopSlug: string, personId: string, for
   );
   personId = context.personId;
   const { base, db, staff } = context;
-  if (!(await canPersonAnswerShopInbox(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, backTo(base, "not-authorized-reply", "reply"));
-  }
   // A posted id is caller-controlled: narrowed before it reaches a `uuid`
   // comparison, and answered with the same "no such message" a wrong-record or
   // wrong-tenant id gets.

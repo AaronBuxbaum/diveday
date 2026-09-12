@@ -22,6 +22,29 @@ import { withExplicitSslMode } from "@/db/connection-string";
  * limitation from the other side; docs/engineering/testing.md records what the
  * CI job built on this proves and what it still does not.
  *
+ * ## Two Postgres majors, and neither is the other
+ *
+ * The engine difference is not only the connection count. PGlite 0.5.8 reports
+ * `PostgreSQL 18.3`; CI's `real-postgres` job runs a `postgres:16` service
+ * container; production is Neon, and nobody has yet read which major that
+ * actually is. So 182 of the 191 test files in `src/db` run against an engine
+ * **two majors ahead** of the one that ships: a planner change, a behavioural
+ * fix or a deprecation between 16 and 18 is untested in one direction and
+ * unavailable in the other.
+ *
+ * **Accepted 2026-09-10 (#1383)** as a pre-pilot trade between suite speed, CI
+ * cost and version fidelity. What makes it an accepted risk rather than an
+ * unknown one is that it is measured: `src/db/engine-divergence.postgres.test.ts`
+ * probes eleven behaviours across both engines, ten of which agree, and its
+ * `major_version` row is the ledger that fails the day the gap moves. Two
+ * things were considered and not done — pinning PGlite to an older release
+ * (it tracks upstream, so holding it back trades a measured gap for an
+ * unmaintained one), and widening the `real-postgres` job to a slice of the db
+ * suite (available whenever it is wanted, at CI minutes proportional to the
+ * slice). Moving production to 18 closes the gap from the other side and flips
+ * the `major_version` probe to `agree`; that is the cheapest close, and it is
+ * not this file's to make.
+ *
  * ## Opt-in, and quiet by default *only* because there is no server
  *
  * `DIVEDAY_TEST_POSTGRES_URL` is the whole switch. Unset — every local

@@ -867,6 +867,10 @@ export default async function ManageTripPage({
             ? bid
             : undefined
         }
+        // The one paper-release refusal with a way through (issue #1573),
+        // scoped to the seat the action named so a roster of minors does not
+        // all sprout the staffer's confirmation.
+        namesakeRefusedBookingId={notice === "waiver-guardian-name" ? bid : undefined}
         mayDiscount={mayDiscount}
         mayWriteOffPayment={mayWriteOffPayment}
         compact

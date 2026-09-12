@@ -3,6 +3,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { MAX_SITE_CREATURES } from "@/lib/dive-site-field-guide";
 import { MAX_SITE_LANDMARKS } from "@/lib/dive-site-landmarks";
+import { capturePhoto } from "@/lib/marine-life-tiles";
 import type { FieldGuideCatalogEntry, FieldGuideEditorCopy } from "./FieldGuideEditor";
 import type { LandmarkEditorCopy } from "./LandmarkEditor";
 
@@ -88,6 +89,10 @@ export function marineLifeCatalogEntries(t: DiverTranslator): FieldGuideCatalogE
     scientificName: card.scientificName,
     kind: card.kind,
     description: card.description,
-    imageUrl: card.imageUrl,
+    // Minted here, on the server, and passed into the `"use client"` editor as
+    // data — which is what lets the capture rewrite read a server-only flag.
+    // `h-16 w-20` is an 80px box; capture-only, see
+    // `src/lib/marine-life-tiles.ts`.
+    imageUrl: capturePhoto(card.imageUrl, 80),
   }));
 }

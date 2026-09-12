@@ -728,6 +728,11 @@ const READY_NOTICES: Record<
   "error-tanks": { tone: "danger", key: "ready.errorTanks" },
   "saved-contact": { tone: "success", key: "ready.savedContact" },
   "error-contact": { tone: "danger", key: "ready.errorContact" },
+  // A name without a number, or a number without a name. Its own row because
+  // "try it again" is the wrong instruction for it: the fix is to fill the
+  // other box. The waiver's sentence, not a second one — the two forms are the
+  // same two boxes, and this page already borrows that section's labels.
+  "error-contact-pair": { tone: "danger", key: "waiver.errorContactPair" },
   "saved-last-dived": { tone: "success", key: "ready.lastDivedSaved" },
   "error-last-dived": { tone: "danger", key: "ready.lastDivedUnavailable" },
   // "What's this dive for?" and D18's offers below it. Both redirected with

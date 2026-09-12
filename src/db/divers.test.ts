@@ -24,6 +24,7 @@ import { listOwedProcessorErasures } from "./processor-erasure";
 import { saveRentalFit } from "./rental-fit";
 import {
   activityEvents,
+  bookingArrivalEvents,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -34,6 +35,7 @@ import {
   certifications,
   courseInquiries,
   courses,
+  executedDives,
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -87,6 +89,91 @@ describe("person-first diver records", () => {
       phone: "+1 305 555 0188",
     });
     expect(byPhone?.fullName).toBe("+1 305 555 0188");
+    // The *name* keeps the typed spacing; the phone column does not (below).
+    expect(byPhone?.phone).toBe("+13055550188");
+  });
+
+  /**
+   * **A stored phone is E.164** (issue #1547), read against the shop's own
+   * `address_country`, so an inbound SMS or WhatsApp can find the record it
+   * belongs to by equality rather than by a suffix rule that only described
+   * North America. The odd shapes matter more than the ordinary one: nothing a
+   * staffer types may be dropped or half-rewritten on its way into the column,
+   * because the number is how the shop reaches that diver.
+   */
+  it("stores a typed phone number in E.164, against the shop's country", async () => {
+    const { db, shop } = ctx;
+    const local = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Local Lena",
+      phone: "(305) 555-0301",
+    });
+    expect(local?.phone).toBe("+13055550301");
+
+    // Already international: the Key Largo shop's own country is irrelevant.
+    const visiting = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Visiting Vera",
+      phone: "+34 612 345 678",
+    });
+    expect(visiting?.phone).toBe("+34612345678");
+  });
+
+  it("keeps a number it cannot read exactly as the staffer typed it", async () => {
+    const { db, shop } = ctx;
+    // Too few digits to be a number at all, in a shop that has a country.
+    const short = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Short Sam",
+      phone: "555-0110",
+    });
+    expect(short?.phone).toBe("555-0110");
+
+    // A shop with no address on file has no calling code to read a bare
+    // number against, and DiveDay will not guess one.
+    const [countryless] = await db
+      .insert(shops)
+      .values({ name: "No Address Divers", slug: "no-address-divers", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!countryless) throw new Error("shop insert failed");
+    const bare = await createDiver(db, {
+      shopId: countryless.id,
+      fullName: "Bare Bea",
+      phone: "612 345 678",
+    });
+    expect(bare?.phone).toBe("612 345 678");
+    // An international number still normalises there: no country is needed.
+    const plussed = await createDiver(db, {
+      shopId: countryless.id,
+      fullName: "Plussed Pau",
+      phone: "+34 612 345 678",
+    });
+    expect(plussed?.phone).toBe("+34612345678");
+  });
+
+  it("normalises on the way in through an edit as well as a create", async () => {
+    const { db, shop } = ctx;
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Edited Eli",
+      email: "edited-eli@example.com",
+    });
+    if (!diver) throw new Error("diver insert failed");
+    const edited = await updateDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      fullName: "Edited Eli",
+      phone: "305.555.0302",
+    });
+    expect(edited?.phone).toBe("+13055550302");
+
+    const cleared = await updateDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      fullName: "Edited Eli",
+      phone: "   ",
+    });
+    expect(cleared?.phone).toBeNull();
   });
 
   it("resolves the staff member who cleared a self-declared no-certification stamp", async () => {
@@ -1106,6 +1193,8 @@ describe("diver erasure", () => {
         // version of this fix shipped (`security-reviewer`, issue #1298).
         recipientEmail: "desk@blue-mantis.example",
         subjectEmail: null,
+        // As typed into the public composer, not as stored on the record — see
+        // the course inquiry below, which carries the same spelling.
         subjectPhone: "+1 305 555 0142",
         bookingId: null,
         payloadSealed: "v1.sealed-course-inquiry",
@@ -1170,6 +1259,10 @@ describe("diver erasure", () => {
         courseId: course.id,
         name: "Erasure Elena",
         email: "ELENA@example.com",
+        // Spelt the way a diver types it into the public composer, which is
+        // *not* the E.164 now on her record (issue #1547). The erasure sweeps
+        // compare digits for exactly this reason; a string comparison would
+        // leave this lead standing and read green.
         phone: "+1 305 555 0142",
         experienceLevel: "certified",
         timing: "any weekend in September",
@@ -2419,7 +2512,7 @@ describe("diver erasure", () => {
           email: "elena@example.com",
           phone: "+1 305 555 0142",
           experienceLevel: "certified",
-          message: "Same person, other shop's lead",
+          message: "Same person, other shop’s lead",
         })
         .returning();
       if (!foreign) throw new Error("rival inquiry insert failed");
@@ -2429,7 +2522,7 @@ describe("diver erasure", () => {
       expect(await inquiryById(db, foreign.id)).toMatchObject({
         name: "Erasure Elena",
         email: "elena@example.com",
-        message: "Same person, other shop's lead",
+        message: "Same person, other shop’s lead",
       });
     });
   });
@@ -2460,5 +2553,233 @@ describe("findSimilarDivers name similarity and exact matching", () => {
     // Unrelated name should not match
     const noMatches = await findSimilarDivers(db, shop.id, "Jane Smith");
     expect(noMatches).toHaveLength(0);
+  });
+});
+
+/**
+ * **The evidence half of the counter's prompt** (issue #1556). Five names is
+ * not an answer — the name is what the staffer just typed, which is why every
+ * candidate is on the list. The day the shop last had that person on a boat is
+ * what makes "is this the same Nadia who dived yesterday?" answerable, and it
+ * is the same day `peopleWhoDivedBefore` counts, so the counter and the
+ * fly-safe reader cannot disagree about what a dive day is.
+ *
+ * That rule includes both of the fly-safe reader's escapes, which is what makes
+ * this the widest of the four readers of "did this person dive" — the recap's
+ * count and the diver's shelf are narrower on purpose, and
+ * `SimilarDiver.lastDiveDayAt` argues why (issue #1694). The two cases below
+ * are the escapes; without them the counter goes quiet on exactly the days a
+ * shop's own records disagree with the status column.
+ */
+describe("findSimilarDivers last dive day", () => {
+  const HOUR_MS = 60 * 60 * 1000;
+  /** Far enough from every seeded name that only this test's rows can match. */
+  const NAME = "Marisol Etxebarria";
+
+  async function candidate(db: AppDb, shopId: string) {
+    const person = await createDiver(db, {
+      shopId,
+      fullName: NAME,
+      email: "marisol.etxebarria@example.com",
+    });
+    if (!person) throw new Error("createDiver refused the candidate");
+    return person;
+  }
+
+  /**
+   * A seat on a departure that has since sailed.
+   *
+   * Booked while the boat is still ahead and back-dated afterwards, because
+   * `createBooking` refuses one that has left — which is the only order a real
+   * seat on a past departure ever happens in.
+   */
+  async function sailedSeat(
+    db: AppDb,
+    shopId: string,
+    personId: string,
+    title: string,
+    startsAt: Date,
+  ) {
+    const [trip] = await db
+      .insert(trips)
+      .values({
+        shopId,
+        title,
+        startsAt: new Date(nowMs() + 48 * HOUR_MS),
+        endsAt: new Date(nowMs() + 52 * HOUR_MS),
+        capacity: 6,
+      })
+      .returning();
+    if (!trip) throw new Error("trip insert returned no row");
+    const booking = await createBooking(db, { actor: "staff", shopId, tripId: trip.id, personId });
+    expect(booking.ok, `seating on ${title} has to land`).toBe(true);
+    const [sailed] = await db
+      .update(trips)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS) })
+      .where(eq(trips.id, trip.id))
+      .returning();
+    if (!sailed) throw new Error("back-dating the departure returned no row");
+    return sailed;
+  }
+
+  const lastDiveDayOf = async (db: AppDb, shopId: string, personId: string) => {
+    const matches = await findSimilarDivers(db, shopId, NAME);
+    const row = matches.find((match) => match.id === personId);
+    if (!row) throw new Error("the candidate has to be on the prompt for this to mean anything");
+    return row.lastDiveDayAt;
+  };
+
+  it("reports the most recent departure a candidate has actually sailed on", async () => {
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    await sailedSeat(db, shop.id, person.id, "Three days ago", new Date(nowMs() - 72 * HOUR_MS));
+    const yesterday = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "Yesterday",
+      new Date(nowMs() - 24 * HOUR_MS),
+    );
+    // A seat on a boat that has not left is not a dive day, however soon it is.
+    const [ahead] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Next week",
+        startsAt: new Date(nowMs() + 7 * 24 * HOUR_MS),
+        endsAt: new Date(nowMs() + 7 * 24 * HOUR_MS + 4 * HOUR_MS),
+        capacity: 6,
+      })
+      .returning();
+    if (!ahead) throw new Error("trip insert returned no row");
+    const booked = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: ahead.id,
+      personId: person.id,
+    });
+    expect(booked.ok).toBe(true);
+
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toEqual(yesterday.startsAt);
+  });
+
+  it("reports nothing for a candidate this shop has never had on a boat", async () => {
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toBeNull();
+  });
+
+  it("reports nothing when the one seat on file was cancelled", async () => {
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    const trip = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "Cancelled seat",
+      new Date(nowMs() - 24 * HOUR_MS),
+    );
+    await db
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(and(eq(bookings.tripId, trip.id), eq(bookings.personId, person.id)));
+
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toBeNull();
+  });
+
+  it("reports nothing for a no-show, or for a departure the shop called off", async () => {
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    const missed = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "Never turned up",
+      new Date(nowMs() - 24 * HOUR_MS),
+    );
+    await db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(and(eq(bookings.tripId, missed.id), eq(bookings.personId, person.id)));
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toBeNull();
+
+    // A blown-out departure leaves its bookings active by design, so without
+    // the trip-status clause this would name a day nobody went in the water.
+    const blownOut = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "Blown out",
+      new Date(nowMs() - 48 * HOUR_MS),
+    );
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, blownOut.id));
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toBeNull();
+  });
+
+  /**
+   * A tokenless `arrived` row — a staffer's own tap rather than the lobby
+   * tablet's — written here rather than through `checkInBooking`, whose door is
+   * readiness-gated. What this file owns is whether the *counter* spends the
+   * standing verdict at all.
+   */
+  async function deskSawThem(db: AppDb, shopId: string, tripId: string, bookingId: string) {
+    const [staffer] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shopId), eq(personRoles.role, "owner")))
+      .limit(1);
+    if (!staffer) throw new Error("the seeded shop has to have an owner to record an arrival");
+    await db.insert(bookingArrivalEvents).values({
+      shopId,
+      tripId,
+      bookingId,
+      recordedByPersonId: staffer.id,
+      status: "arrived",
+      displayTokenId: null,
+      occurredAt: new Date(nowMs() - 25 * HOUR_MS),
+    });
+  }
+
+  it("stays silent on a seat the desk checked in and a staffer then released", async () => {
+    // The escape this used to assert, run backwards (`dive-domain-expert`,
+    // 2026-09-11). A standing desk sighting used to outrank `no_show` here,
+    // against a close-of-day sweep the product never had; the real writer is
+    // one staffer's deliberate tap, always later than the check-in it
+    // overwrites. Naming the day would tell the next staffer this person dived
+    // here on a morning the shop's own record says they never came — and that
+    // is the fact the identity question turns on.
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    const startsAt = new Date(nowMs() - 24 * HOUR_MS);
+    const trip = await sailedSeat(db, shop.id, person.id, "Seen, then released", startsAt);
+    const [seat] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, trip.id), eq(bookings.personId, person.id)));
+    if (!seat) throw new Error("the seat has to exist for this case to mean anything");
+    await deskSawThem(db, shop.id, trip.id, seat.id);
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, seat.id));
+
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toBeNull();
+  });
+
+  it("still names a called-off departure the crew logged a dive on", async () => {
+    // A status column changed afterwards for a refund or a re-papered charter
+    // does not outrank a dive somebody wrote down. Without this the counter
+    // goes quiet on a day the shop has a dive log for.
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    const trip = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "Called off after the fact",
+      new Date(nowMs() - 24 * HOUR_MS),
+    );
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
+    await db.insert(executedDives).values({ shopId: shop.id, tripId: trip.id, diveNumber: 1 });
+
+    expect(await lastDiveDayOf(db, shop.id, person.id)).toEqual(trip.startsAt);
   });
 });

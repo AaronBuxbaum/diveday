@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
+import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
+import { createBooking } from "./bookings";
 import {
   decideCrewAssignmentRequest,
   deleteCrewAvailabilityBlock,
@@ -10,11 +12,19 @@ import {
   listCrewAvailabilityBlocks,
   requestCrewAssignment,
   saveCrewAvailabilityBlock,
+  tripOverIntroRatio,
   withdrawCrewAssignmentRequest,
 } from "./crew-requests";
-import { crewAssignmentRequests, crewAvailabilityBlocks, people, personRoles } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
-import { getTripCrewIds, listStaff } from "./trips-crew";
+import {
+  bookings,
+  courses,
+  crewAssignmentRequests,
+  crewAvailabilityBlocks,
+  people,
+  personRoles,
+} from "./schema";
+import { createTrip, setTripCrew, upcomingTripsWithCounts } from "./trips";
+import { changeTripCrew, getTripCrewIds, listStaff } from "./trips-crew";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
 
@@ -182,6 +192,47 @@ describe("crew assignment requests", () => {
     const requests = await listCrewAssignmentRequests(db, shop.id, [trip.id]);
     expect(requests).toHaveLength(1);
     expect(requests[0]).toMatchObject({ personId: crew.id, state: "pending" });
+  });
+
+  /**
+   * Issue #1339. The person who answers a request is not the person who made
+   * it, and the queue handed them a name and two buttons — so a manager could
+   * approve a divemaster onto an over-ratio intro session and read "Approved,
+   * and they're on the crew" about a boat that had not moved a seat. What the
+   * requester would be worth in the water travels with the ask.
+   */
+  it("carries what each requester would contribute in the water", async () => {
+    const { db, shop, trip } = await context();
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((row) => row.roles.includes("instructor"));
+    const divemaster = staff.find(
+      (row) => row.roles.includes("divemaster") && !row.roles.includes("instructor"),
+    );
+    if (!instructor || !divemaster) throw new Error("demo staff missing an instructor or a DM");
+    for (const person of [instructor.person, divemaster.person]) {
+      expect(
+        await requestCrewAssignment(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          personId: person.id,
+          actorPersonId: person.id,
+          now,
+        }),
+      ).toMatchObject({ ok: true });
+    }
+    const byPerson = new Map(
+      (await listCrewAssignmentRequests(db, shop.id, [trip.id])).map((request) => [
+        request.personId,
+        request.inWaterRole,
+      ]),
+    );
+    // The ask names a departure, never a job on it, so this is the shop-wide
+    // inference — and it is the one the assignment itself will land with.
+    expect(byPerson.get(instructor.person.id)).toBe("instructor");
+    expect(byPerson.get(divemaster.person.id)).toBe("certified_assistant");
+    // One row per person, not one per role they hold: the roles are read by a
+    // second query for exactly this reason.
+    expect(byPerson.size).toBe(2);
   });
 
   it("refuses an ask made on somebody else's behalf, even by the owner", async () => {
@@ -352,5 +403,102 @@ describe("crew assignment requests", () => {
       );
     expect(row.decision).toBe("declined");
     expect(row.decidedAt).toEqual(now);
+  });
+});
+
+/**
+ * 180 days out, matching src/db/staffing.test.ts's reasoning: far enough past
+ * the seeded demo's instructor calendar that a synthetic session never collides
+ * with the seed's real crew overlaps.
+ */
+const OPEN_TEST_SESSION_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
+
+/**
+ * Issue #1339's approval notice. `INTRO_COURSE_RATIO` credits a certified
+ * assistant zero students, so approving a divemaster onto an over-ratio intro
+ * session is a real assignment that moves capacity by not one seat — and the
+ * plain "Approved, and they're on the crew" was the last thing the queue said
+ * about it. The action asks the boat rather than inferring from who asked.
+ */
+describe("tripOverIntroRatio", () => {
+  /**
+   * An instructor-crewed session on `courseTitle`, seated `withinRatio` through
+   * the booking gate and then pushed one over by a row written directly —
+   * `createBooking` refuses to *sell* the seat past the ratio, and the state
+   * this reports on is one a data import or a crew change leaves behind.
+   */
+  async function overRatioSession(courseTitle: string, withinRatio: number, tag: string) {
+    const { db, shop } = await seededShopContext();
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, courseTitle)));
+    if (!course) throw new Error(`${courseTitle} course missing`);
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded instructor missing");
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: `Ratio session (${tag})`,
+      startsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS),
+      endsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      capacity: 20,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create ratio test trip");
+    expect(await setTripCrew(db, shop.id, trip.id, [instructor.person.id])).toBe(true);
+    for (let i = 0; i < withinRatio; i++) {
+      expect(
+        await createBooking(db, {
+          actor: "staff",
+          shopId: shop.id,
+          tripId: trip.id,
+          fullName: `Ratio Diver ${i}`,
+          email: `crew-request-${tag}-diver-${i}@example.com`,
+        }),
+      ).toMatchObject({ ok: true });
+    }
+    const [extraDiver] = await db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: `Ratio Diver ${withinRatio}`,
+        email: `crew-request-${tag}-diver-${withinRatio}@example.com`,
+      })
+      .returning();
+    if (!extraDiver) throw new Error("failed to insert extra diver");
+    await db.insert(bookings).values({ shopId: shop.id, tripId: trip.id, personId: extraDiver.id });
+    return { db, shop, trip };
+  }
+
+  it("says an over-ratio intro session is still over it, and a divemaster does not change that", async () => {
+    const { db, shop, trip } = await overRatioSession("Discover Scuba Diving", 2, "dsd-notice");
+    expect(await tripOverIntroRatio(db, shop.id, trip.id)).toBe(true);
+
+    // The approval the notice is about: a real assignment that buys the cap
+    // nothing, because the intro rule credits an assistant zero students.
+    const divemaster = (await listStaff(db, shop.id)).find(
+      (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),
+    );
+    if (!divemaster) throw new Error("seeded divemaster missing");
+    await changeTripCrew(db, shop.id, trip.id, {
+      operation: "assign",
+      personId: divemaster.person.id,
+    });
+    expect(await tripOverIntroRatio(db, shop.id, trip.id)).toBe(true);
+  });
+
+  it("stays quiet for the entry-level cap and for a session inside its ratio", async () => {
+    // Over ratio, but the entry-level one — a certified assistant does raise
+    // that, so the plain success line is the honest answer there.
+    const entryLevel = await overRatioSession("Open Water Diver", 8, "ow-notice");
+    expect(await tripOverIntroRatio(entryLevel.db, entryLevel.shop.id, entryLevel.trip.id)).toBe(
+      false,
+    );
+
+    // And a fun dive, which carries no course ratio at all.
+    const { db, shop, trip } = await context();
+    expect(await tripOverIntroRatio(db, shop.id, trip.id)).toBe(false);
   });
 });

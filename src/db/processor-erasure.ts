@@ -1,9 +1,9 @@
 /**
  * The processor half of diver erasure (ADR 20260803-processor-erasure-obligations).
  *
- * `anonymizeDiver` (src/db/anonymize.ts) empties every column DiveDay owns. Two
- * `NOT NULL` pointers on `orders` name records that live at Stripe instead, and
- * this module is what happens to them:
+ * `anonymizeDiver` (src/db/anonymize.ts) empties every column DiveDay owns.
+ * Three tables keep pointers at records that live at Stripe instead — `orders`,
+ * `tips` and `booking_checkouts` — and this module is what happens to them:
  *
  *   - **`stripe_customer_id` → deleted.** `DELETE /v1/customers/{id}` on the
  *     shop's connected account removes the customer's sensitive data and leaves
@@ -18,6 +18,12 @@
  *     API call rewrites that copy; Stripe handles Invoice/PaymentIntent/Charge
  *     through its own data-deletion request flow. That is a genuinely manual
  *     step, so it is recorded as one rather than quietly implied to be done.
+ *   - **`stripe_session_id` → recorded, not deleted.** A Checkout Session holds
+ *     `customer_email` as DiveDay handed it over and `customer_details` once the
+ *     diver completes it. Stripe has no delete for a session — `expire` closes
+ *     it and rewrites neither field — so it is the same manual shape as the
+ *     invoice. `tips` and `booking_checkouts` both carry one, which is how a
+ *     diver who only ever tipped now reaches this ledger at all (issue #1621).
  *
  * **The delete never runs inside the erasure transaction, and never gates it.**
  * The obligation row commits with the scrub; the Stripe call happens after. A
@@ -142,7 +148,7 @@ export type AttemptProcessorErasureOutcome =
   | { status: "discharged" }
   /** The call was made or could not be made; the row stays `owed` and visible. */
   | { status: "failed"; error: string }
-  /** Not a target any API can discharge — an invoice snapshot needs a human. */
+  /** Not a target any API can discharge — a snapshot needs a human. */
   | { status: "manual" };
 
 /**
@@ -322,9 +328,9 @@ export async function retryProcessorErasure(
  * Bounded cross-shop retry for the nightly tick, mirroring
  * `retryPendingMediaDeletions`: a transient Stripe outage must not require an
  * owner to notice the reports panel and click Retry by hand. Only
- * `stripe_customer` rows under the attempt cap are eligible — an invoice
- * snapshot has no API to retry, and a row past the cap is a standing human
- * problem rather than a nightly Stripe call.
+ * `stripe_customer` rows under the attempt cap are eligible — neither snapshot
+ * kind has an API to retry, and a row past the cap is a standing human problem
+ * rather than a nightly Stripe call.
  *
  * **The cap is in the query, not in the caller.** A capped row stays `owed`
  * forever by design and keeps its original `created_at`, so it sits at the head
@@ -368,9 +374,10 @@ export type DischargeProcessorErasureResult =
 
 /**
  * Mark one obligation done on a human's word. This is the *only* way a
- * `stripe_invoice_snapshot` row ever closes — nothing automated can reach a
- * finalized invoice's name/email snapshot, so an owner attests they filed
- * Stripe's data-deletion request. It also stays available for a
+ * `stripe_invoice_snapshot` or `stripe_checkout_session_snapshot` row ever
+ * closes — nothing automated can reach the name/email a finalized invoice or a
+ * Checkout Session copied, so an owner attests they filed Stripe's
+ * data-deletion request. It also stays available for a
  * `stripe_customer` row whose delete cannot be made to work (an account that no
  * longer exists, say) and which the owner has resolved by other means.
  *

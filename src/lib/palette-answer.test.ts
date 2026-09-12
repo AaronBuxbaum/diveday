@@ -101,7 +101,7 @@ describe("paletteAnswerView", () => {
       href: "/shop/blue-mantis/trips/t-1#booking-b-1",
     });
     expect(view.more).toEqual({
-      label: "Open Grace Mensah's record",
+      label: "Open Grace Mensah’s record",
       href: "/shop/blue-mantis/divers/p-grace",
     });
   });

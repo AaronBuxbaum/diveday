@@ -81,6 +81,8 @@ function snapshot(): OfflineManifestSnapshot {
         notBackAboard: 0,
         awaiting: 2,
         unaccountedFor: 2,
+        overCapacity: 0,
+        notHere: 0,
       },
       divers: [
         {
@@ -963,6 +965,8 @@ describe("offline manifest policy", () => {
         notBackAboard: 0,
         awaiting: 0,
         unaccountedFor: 0,
+        overCapacity: 0,
+        notHere: 0,
       },
     };
 
@@ -1030,6 +1034,8 @@ describe("offline manifest policy", () => {
         notBackAboard: 0,
         awaiting: 1,
         unaccountedFor: 1,
+        overCapacity: 0,
+        notHere: 0,
       },
     } as TripManifest;
   }
@@ -1120,6 +1126,43 @@ describe("offline manifest policy", () => {
     expect(payload.manifests[0]?.divers[0]?.supportNeeds).toBeNull();
   });
 
+  it("carries the counter's write-off to the dock, so a released seat is not a late diver", () => {
+    // #1209. The dock copy is the only copy at the rail, and without this
+    // field a name the counter settled at 07:20 reads on it exactly like a
+    // diver still walking down the pier. It is the desk's statement, not the
+    // boat's: the page wears it with the same "when saved" qualifier every
+    // readiness word there does, and it refuses no boarding.
+    const base = baseManifest();
+    const manifest: TripManifest = {
+      ...base,
+      divers: [{ ...base.divers[0], notHere: true } as TripManifest["divers"][number]],
+    };
+    const payload = serializeManifests(
+      [manifest],
+      {
+        slug: "blue-mantis",
+        name: "Blue Mantis",
+        timezone: "America/New_York",
+        emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+      },
+      (blocker) => blocker.code,
+    );
+    expect(payload.manifests[0]?.divers[0]?.notHere).toBe(true);
+    // Absent means nobody was written off — which is every copy saved before
+    // the counter could say it, and the safe direction: the crew go looking.
+    const quiet = serializeManifests(
+      [baseManifest()],
+      {
+        slug: "blue-mantis",
+        name: "Blue Mantis",
+        timezone: "America/New_York",
+        emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+      },
+      (blocker) => blocker.code,
+    );
+    expect(quiet.manifests[0]?.divers[0]?.notHere).toBeUndefined();
+  });
+
   it("carries a buddy as a name only — never an id, never a computed divergence", () => {
     // The dock copy *displays* buddy teams; whether a pair is split is a
     // live-roll-call read, and a snapshot cannot know who came back (ADR
@@ -1196,6 +1239,8 @@ describe("offline manifest policy", () => {
         notBackAboard: 0,
         awaiting: 1,
         unaccountedFor: 1,
+        overCapacity: 0,
+        notHere: 0,
       },
     };
 
@@ -1278,6 +1323,8 @@ describe("offline manifest policy", () => {
         notBackAboard: 0,
         awaiting: 1,
         unaccountedFor: 1,
+        overCapacity: 0,
+        notHere: 0,
       },
     };
 

@@ -166,11 +166,29 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
   },
   {
     metricName: "DatabaseUnavailable",
-    title: "Health check could not reach the database",
+    title: "Could not reach the database",
     why:
       "Neon's free-tier compute suspends when its allowance is exhausted, which from inside DiveDay looks " +
       "exactly like the database going away mid-day. This is the log-side twin of the external uptime check.",
-    events: ["health.db_unavailable"],
+    events: [
+      "health.db_unavailable",
+      // Added here rather than given its own metric: a new counted signal is
+      // $0.40/month (the pricing note at the top of this file), and "could not
+      // reach the database" is already exactly what this alarm means and
+      // exactly what the response below says to do about it.
+      //
+      // It earns a count because the layer it comes from fails *open* and is
+      // therefore silent: the edge existence check serves the page on any
+      // throw (ADR 20260912-the-public-namespace-refuses-at-the-edge), so an
+      // unreachable database takes the whole `/s/**` namespace back to soft
+      // 404s with nothing on a screen to say so. The ADR's Consequences
+      // pointed at this file for it and nothing had been added.
+      //
+      // Only the unreachable half arrives at `error`. A statement the server
+      // refused is `public_route.existence_query_refused` at `warn`, because a
+      // slug reaches that lookup unfiltered and anyone can produce one.
+      "public_route.existence_unavailable",
+    ],
     threshold: 1,
     periodMinutes: 5,
     response:

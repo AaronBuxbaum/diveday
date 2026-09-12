@@ -16,6 +16,7 @@ import { tripAdmissionFor } from "./bookings";
 import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
 import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
+import { storedPhone } from "./person-phone";
 import {
   bookingGifts,
   bookings,
@@ -421,7 +422,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
   if (!unconfirmed && input.phone?.trim() && !person.phone) {
     await tx
       .update(people)
-      .set({ phone: input.phone.trim() })
+      .set({ phone: await storedPhone(tx, capability.shopId, input.phone) })
       .where(and(eq(people.id, person.id), eq(people.shopId, capability.shopId)));
   }
 

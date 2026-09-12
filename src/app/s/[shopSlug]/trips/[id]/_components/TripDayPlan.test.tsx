@@ -206,6 +206,11 @@ describe("TripDayPlan's profile", () => {
     diveSite: { id: "site-2", name: "Spiegel Grove", depthRange: "18–40 m", maxDepthMeters: 40 },
   } as unknown as Partial<DiveBriefing>);
 
+  /** The entry-level ceiling exactly: a day nothing can be over. */
+  const shallow = briefing({
+    diveSite: { id: "site-1", name: "French Reef", depthRange: "to 12 m", maxDepthMeters: 12 },
+  } as unknown as Partial<DiveBriefing>);
+
   it("states the time in the water and the gap between two dives", () => {
     render(
       <TripDayPlan
@@ -278,7 +283,37 @@ describe("TripDayPlan's profile", () => {
       />,
     );
     await user.selectOptions(screen.getByRole("combobox"), "divemaster");
-    expect(screen.getByText("Nothing on this day goes past 40 m.")).toBeInTheDocument();
+    // And it names the card while it does. The junior gap this answer accepts
+    // (`statedLevelDepthLimit`) lands on exactly this branch — a ten-year-old
+    // picking Open Water is held to 12 m, not the card's 18 — so a clean-day
+    // sentence with no card in it would be the one place the mitigation was
+    // claimed and not made.
+    expect(
+      screen.getByText("Nothing on this day goes past the 40 m your card covers."),
+    ).toBeInTheDocument();
+  });
+
+  it("answers the reader who holds no card without crediting them one", async () => {
+    const user = userEvent.setup();
+    render(
+      <TripDayPlan
+        briefings={[shallow]}
+        shop={SHOP}
+        startsAt={MORNING}
+        endsAt={MIDDAY}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+      />,
+    );
+    // French Reef bottoms at 12 m, which is exactly the entry-level ceiling, so
+    // this is the clean-day branch for someone with nothing to name.
+    await user.selectOptions(screen.getByRole("combobox"), "none_declared");
+    expect(
+      screen.getByText(
+        "A first dive without a card stays inside 12 m, and nothing on this day goes past it.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/your card covers/)).not.toBeInTheDocument();
   });
 
   it("offers no card to state when no site on the day has a depth", () => {

@@ -13,6 +13,7 @@ import {
   countGearItemsByKind,
   createGearItem,
   deleteGearItem,
+  fitAdjustedReturnTeaching,
   gearRegisterGroups,
   getGearItemDetail,
   latestServiceClocks,
@@ -1554,7 +1555,7 @@ describe("returning a whole rental set", () => {
       await checkOutGearReservation(db, { shopId, reservationId: reserved.reservation.id });
       ids.push(reserved.reservation.id);
     }
-    return { bookingId: diver.bookingId, reservationIds: ids };
+    return { bookingId: diver.bookingId, personId: diver.personId, reservationIds: ids };
   }
 
   async function outcomesOf(db: AppDb, ids: string[]) {
@@ -1801,6 +1802,84 @@ describe("returning a whole rental set", () => {
         todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
       });
       expect(await listFitAdjustedReturns(db, shop.id, wholeDay())).toEqual([]);
+    });
+  });
+
+  /**
+   * **What the evening's one tap is allowed to write** (`security-reviewer`,
+   * issue #1453). `keepRentalFitAction` is open to every staff role because it
+   * writes down what the desk already decided; this lookup is the whole of
+   * that claim, so a reservation it does not own, or one nobody recorded a
+   * `fit_adjusted` return against, has to come back as nothing to write.
+   */
+  describe("fitAdjustedReturnTeaching", () => {
+    async function aFitAdjustedReturn(db: AppDb, shopId: string) {
+      const { bookingId, personId, reservationIds } = await aSetOut(db, shopId);
+      const [bcdReservation] = reservationIds;
+      if (!bcdReservation) throw new Error("expected a reservation");
+      return { bookingId, personId, bcdReservation };
+    }
+
+    it("hands back the size the unit actually went out in", async () => {
+      const { db, shop } = await gearShopContext();
+      const { personId, bcdReservation } = await aFitAdjustedReturn(db, shop.id);
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId: bcdReservation,
+        outcome: "fit_adjusted",
+      });
+
+      // The size comes from the unit, never from the caller: `aSetOut` put out
+      // BCD #21 at M.
+      expect(
+        await fitAdjustedReturnTeaching(db, { shopId: shop.id, reservationId: bcdReservation }),
+      ).toEqual({ personId, kind: "bcd", size: "M" });
+    });
+
+    it("says nothing about another shop's reservation", async () => {
+      const { db, shop } = await gearShopContext();
+      const { bcdReservation } = await aFitAdjustedReturn(db, shop.id);
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId: bcdReservation,
+        outcome: "fit_adjusted",
+      });
+
+      const rival = await rivalShop(db);
+      expect(
+        await fitAdjustedReturnTeaching(db, { shopId: rival.id, reservationId: bcdReservation }),
+      ).toBeNull();
+    });
+
+    it("says nothing when the desk recorded a different outcome", async () => {
+      // "All good" is the counter saying the unit that went out was the right
+      // one. There is no swap to learn from, so there is no size to write.
+      const { db, shop } = await gearShopContext();
+      const { bcdReservation } = await aFitAdjustedReturn(db, shop.id);
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId: bcdReservation,
+        outcome: "all_good",
+      });
+
+      expect(
+        await fitAdjustedReturnTeaching(db, { shopId: shop.id, reservationId: bcdReservation }),
+      ).toBeNull();
+    });
+
+    it("says nothing about a reservation nobody returned, or an id nobody issued", async () => {
+      const { db, shop } = await gearShopContext();
+      const { bcdReservation } = await aFitAdjustedReturn(db, shop.id);
+
+      expect(
+        await fitAdjustedReturnTeaching(db, { shopId: shop.id, reservationId: bcdReservation }),
+      ).toBeNull();
+      expect(
+        await fitAdjustedReturnTeaching(db, {
+          shopId: shop.id,
+          reservationId: "00000000-0000-4000-8000-000000000000",
+        }),
+      ).toBeNull();
     });
   });
 

@@ -8,7 +8,7 @@ afterEach(cleanup);
 
 const copy: RepeatFieldsCopy = {
   howOftenLabel: "How often",
-  doesntRepeat: "Doesn't repeat",
+  doesntRepeat: "Doesn’t repeat",
   everyWeek: "Every week",
   every2Weeks: "Every 2 weeks",
   every4Weeks: "Every 4 weeks",

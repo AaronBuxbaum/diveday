@@ -31,7 +31,7 @@ import {
   readinessStatusTone,
   SPECIALTY_KEYS,
 } from "@/i18n/readiness-labels";
-import { rentalFitLineText } from "@/i18n/rental-labels";
+import { drysuitCardWarningText, rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import type { CalendarDate } from "@/lib/calendar-date";
@@ -39,6 +39,7 @@ import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
+import { checkDrysuitCard } from "@/lib/drysuit-card";
 import { formatDateTimeTz } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { flaggedMedicalPrompts } from "@/lib/medical";
@@ -215,6 +216,7 @@ export function RosterSection({
   depthUnit: _depthUnit,
   tripDate,
   keepOpenBookingId,
+  namesakeRefusedBookingId,
   waitingGroup,
   invitedGroup,
   addDiverGroup,
@@ -236,6 +238,12 @@ export function RosterSection({
    * with its panel open on the way back.
    */
   keepOpenBookingId?: string;
+  /**
+   * The seat whose paper release was just refused for a co-signer sharing the
+   * diver's name (issue #1573). That one row's form offers the staffer's
+   * namesake confirmation; every other minor's does not.
+   */
+  namesakeRefusedBookingId?: string;
   readinessByBooking: ReadinessByBooking;
   waiverByBooking: WaiverByBooking;
   rentalFitByBooking: RentalFitByBooking;
@@ -461,24 +469,47 @@ export function RosterSection({
     const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
     const waiverStatus = waiverState(currentWaiver);
     const waiverControl = WAIVER_CONTROLS[waiverStatus];
-    const guardian = currentWaiver ? guardianSignatureOf(currentWaiver) : null;
-    const flaggedPrompts =
-      (waiverStatus === "medical_review" || waiverStatus === "medical_not_cleared") &&
-      currentWaiver?.medicalAnswers
-        ? flaggedMedicalPrompts(currentWaiver.medicalAnswers)
-        : [];
     const nitrox = nitroxByBooking.get(booking.id);
     const identityUnconfirmed = Boolean(
       readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"),
     );
+    /**
+     * **The flag gates disclosure as well as boarding** (security review
+     * 2026-09-11). This seat attached itself to an existing person on a guess
+     * — a reused email under a different name (H-13), or a name tapped off the
+     * counter's trigram prompt (issue #1556) — and everything the roster knows
+     * about that person is then a fact about *somebody*, not provably about
+     * whoever is standing at the counter. Until a staffer confirms it, one
+     * mis-tap would otherwise print a real diver's flagged medical answers,
+     * date of birth, emergency contact and rental sizes under a stranger's
+     * name, to whoever reads the roster.
+     *
+     * What stays is the **state of the seat** — its blockers, its readiness
+     * word, its payment, the confirm control — because a seat nobody can board
+     * still has to say so. What waits is the **particulars of the person**.
+     * Confirming reveals all of it in the same render.
+     *
+     * Deliberately *not* gated: `requiresGuardian` below. That one is a gate,
+     * not a line of text — suppressing it would let a staffer record a paper
+     * waiver for a minor with no guardian co-signature (ADR
+     * 20260907-guardian-co-signature), which is the wrong direction entirely.
+     */
+    const showsPersonDetail = !identityUnconfirmed;
+    const guardian = showsPersonDetail && currentWaiver ? guardianSignatureOf(currentWaiver) : null;
+    const flaggedPrompts =
+      showsPersonDetail &&
+      (waiverStatus === "medical_review" || waiverStatus === "medical_not_cleared") &&
+      currentWaiver?.medicalAnswers
+        ? flaggedMedicalPrompts(currentWaiver.medicalAnswers)
+        : [];
     // Age is shown only when the shop actually holds a date of birth — no
     // date, no line, rather than an "unknown" that reads as a gap to fill on
     // every diver who has never been asked (H-21).
     const dateOfBirth = person.dateOfBirth;
-    const age = dateOfBirth ? ageOnDate(dateOfBirth, tripDate) : null;
-    const minor = dateOfBirth ? isMinorOnDate(dateOfBirth, tripDate) : false;
+    const age = showsPersonDetail && dateOfBirth ? ageOnDate(dateOfBirth, tripDate) : null;
+    const minor = showsPersonDetail && dateOfBirth ? isMinorOnDate(dateOfBirth, tripDate) : false;
     const requiresGuardian = guardianSignatureRequired(dateOfBirth, signedToday);
-    const birthday = birthdayCallout(dateOfBirth, tripDate);
+    const birthday = showsPersonDetail ? birthdayCallout(dateOfBirth, tripDate) : null;
     const hasEmergencyContact = Boolean(
       person.emergencyContactName && person.emergencyContactPhone,
     );
@@ -505,7 +536,21 @@ export function RosterSection({
     const sharedBlockerCount = blockerTexts.length - uniqueBlockers.length;
     const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
     const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
-    const holdOpen = keepOpenBookingId === booking.id;
+    // The suit goes out to a diver the shop has no drysuit card for. Behind
+    // the same confirmation as the sizes and the nitrox word below, because
+    // both halves of the question are the matched person's own record.
+    const drysuitCard = showsPersonDetail
+      ? checkDrysuitCard(
+          rentalFitByBooking.get(booking.id)?.rentsDrysuit ?? false,
+          readinessByBooking.get(booking.id)?.specialtyCertifications ?? [],
+        )
+      : ({ status: "ok" } as const);
+    // The namesake refusal (issue #1573) holds its row open for the same
+    // reason a saved contact does: the way through is a control inside the
+    // row, and a staffer sent back to a collapsed list has been told what
+    // happened and not where to act on it.
+    const namesakeRefused = namesakeRefusedBookingId === booking.id;
+    const holdOpen = keepOpenBookingId === booking.id || namesakeRefused;
 
     const headerLeft = (
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -721,6 +766,18 @@ export function RosterSection({
           </p>
         ) : null}
 
+        {/* The one rental that changes how a diver ascends, going out to
+            someone with no drysuit card behind it. Warning tone and outside
+            the blocker list for the same reason the depth line is: the shop
+            may be running the orientation itself, so this is a conversation
+            before the first dive and never a refusal (src/lib/drysuit-card.ts). */}
+        {drysuitCard.status !== "ok" ? (
+          <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+            <StatusMark variant="warning" />
+            <span>{drysuitCardWarningText(t, drysuitCard)}</span>
+          </p>
+        ) : null}
+
         {/* **Currency, which no card can express** (ADR
             20260821-currency-is-what-catches-people). Warning tone and
             outside the blocker list for the same reason the depth line above
@@ -733,8 +790,10 @@ export function RosterSection({
           </p>
         ) : null}
 
-        {/* This seat reused an existing diver's email under a different name
-            (H-13). Staff verify it really is the same person before it can
+        {/* This seat attached itself to an existing diver on something short
+            of proof: a reused email under a different name (H-13), or a name
+            tapped off the counter's "is this the same diver?" prompt (issue
+            #1556). Staff verify it really is the same person before it can
             board on that person's certs/waiver — the one action that clears
             the identity_unconfirmed blocker above. */}
         {identityUnconfirmed ? (
@@ -886,6 +945,10 @@ export function RosterSection({
               bookingId={booking.id}
               copy={paperWaiverCopy(t)}
               requiresGuardian={requiresGuardian}
+              offerNamesake={namesakeRefused}
+              // Same reason the counter and the diver record re-open on a
+              // refusal: the correction is inside the form that produced it.
+              defaultOpen={namesakeRefused}
               // The fallback under the row's leading action reads in quiet
               // ink — a teal link out-shouted the bordered send pill above it
               // (design review 2026-08-29).
@@ -996,8 +1059,13 @@ export function RosterSection({
             one line in the same warning grammar as its siblings above with
             its fix riding the line's end: the whole line is the disclosure
             that opens the form (`keepOpenBookingId` reopens the row a
-            just-saved contact settled). */}
-        {hasEmergencyContact ? null : (
+            just-saved contact settled).
+
+            Withheld on an unconfirmed row (`showsPersonDetail`) in both
+            directions: the form is prefilled from the matched person and
+            writes back to their record, so offering it would disclose their
+            contact and let a guess edit a real diver's next-of-kin. */}
+        {hasEmergencyContact || !showsPersonDetail ? null : (
           <details className="group/missing-contact mt-3">
             <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong transition-colors hover:bg-warning-tint [&::-webkit-details-marker]:hidden">
               <StatusMark variant="warning" />
@@ -1090,20 +1158,27 @@ export function RosterSection({
             state, and the email — with an adult's age beside it — is
             reference the moment it is needed, not a second line on every
             row. */}
-        <p className="mt-3 text-sm text-muted">
-          <span>{person.email ?? t("trips.roster.noEmailOnFile")}</span>
-          {age !== null ? (
-            <span className="tabular-nums">
-              {" · "}
-              {t("trips.roster.ageYears", { age })}
-            </span>
-          ) : null}
-        </p>
+        {showsPersonDetail ? (
+          <p className="mt-3 text-sm text-muted">
+            <span>{person.email ?? t("trips.roster.noEmailOnFile")}</span>
+            {age !== null ? (
+              <span className="tabular-nums">
+                {" · "}
+                {t("trips.roster.ageYears", { age })}
+              </span>
+            ) : null}
+          </p>
+        ) : (
+          // Said, not silently blank: a panel with no contact and no sizes
+          // reads as a diver who has none, which is a wrong fact rather than
+          // an absent one. The confirm control is in the open half above.
+          <p className="mt-3 text-sm text-muted">{t("trips.roster.identityWithheldDetails")}</p>
+        )}
         <div className="mt-3 grid gap-5 sm:grid-cols-2">
           {/* The signed waiver's own evidence — when, and by which route —
               and nothing else. Every state that is *not* signed already says
               so in the open half (principle 9). */}
-          {currentWaiver?.completedAt && waiverStatus === "complete" ? (
+          {showsPersonDetail && currentWaiver?.completedAt && waiverStatus === "complete" ? (
             <div>
               <GroupLabel as="p">{t("trips.roster.waiverColumnHeading")}</GroupLabel>
               <p className="mt-1 text-sm text-muted">
@@ -1128,28 +1203,32 @@ export function RosterSection({
             </div>
           ) : null}
 
-          <div>
-            <GroupLabel as="p">{t("trips.roster.rentalFitColumnHeading")}</GroupLabel>
-            <p className="mt-1 text-sm text-muted">
-              {rentalFitLineText(
-                t,
-                locale,
-                rentalFitLine(rentalFitByBooking.get(booking.id) ?? null),
-              )}
-            </p>
-            {nitrox ? (
-              <p className="mt-1 text-sm font-medium text-primary">
-                {nitrox.approved
-                  ? t("trips.roster.nitroxApproved")
-                  : t("trips.roster.nitroxUnverified")}
+          {/* Sizes are the matched person's profile row and the nitrox word
+              is their card, so the whole column waits for the confirmation. */}
+          {showsPersonDetail ? (
+            <div>
+              <GroupLabel as="p">{t("trips.roster.rentalFitColumnHeading")}</GroupLabel>
+              <p className="mt-1 text-sm text-muted">
+                {rentalFitLineText(
+                  t,
+                  locale,
+                  rentalFitLine(rentalFitByBooking.get(booking.id) ?? null),
+                )}
               </p>
-            ) : null}
-          </div>
+              {nitrox ? (
+                <p className="mt-1 text-sm font-medium text-primary">
+                  {nitrox.approved
+                    ? t("trips.roster.nitroxApproved")
+                    : t("trips.roster.nitroxUnverified")}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           {/* A contact already on file: a fact about the seat, which is what
               this panel is for. Only this state appears here — a missing one
               is work and stays in the open above (principle 9). */}
-          {hasEmergencyContact ? emergencyContactBlock : null}
+          {hasEmergencyContact && showsPersonDetail ? emergencyContactBlock : null}
 
           {/* The full per-diver list, only when the open half compressed part
               of it into a count. */}

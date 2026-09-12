@@ -35,6 +35,13 @@ const TURNAROUND_MS = 30 * 60 * 1000;
  * produces cannot become flaky by sitting near the boundary it is about.
  */
 const SETTLED_MARGIN_MS = 2 * HOUR_MS;
+/**
+ * How far behind `now` the last boat ties up under `?last=just-in`: **inside**
+ * the standing one-hour late-arrival buffer, which is the one state a crew tap
+ * on Home can change (issue #1480). Five minutes rather than fifty-five so the
+ * state cannot become flaky by sitting near the boundary it is about.
+ */
+const JUST_IN_MARGIN_MS = 5 * 60 * 1000;
 
 /** One departure this route moved, with what closing its count needs to know. */
 type MovedDeparture = {
@@ -88,6 +95,14 @@ type LatestState = "boarded" | "not_boarded" | undefined;
  * nobody counted is a claim the shop's own records do not support. So the only
  * way to photograph that moment is to do the counting.
  *
+ * ## `?last=just-in` — the evening a boat has only just tied up
+ *
+ * The last departure ties up {@link JUST_IN_MARGIN_MS} before `now` instead,
+ * so the clock still calls it out (`hasReturned`) while every earlier boat has
+ * settled. That is the only state in which the crew's own tap on **Home** can
+ * change what the home says (issue #1480), and a day that has no such boat
+ * cannot demonstrate the promotion at all.
+ *
  * **This is a fixture, and the day it makes is not reachable through the
  * product.** It inserts into `roll_call_events` directly, so it walks past the
  * gate `recordRollCall` puts on a `boarded` at the dock — the shared readiness
@@ -114,6 +129,7 @@ export async function POST(request: Request) {
   const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
   if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
 
+  const params = new URL(request.url).searchParams;
   const now = nowDate();
   const bounds = shopDayBounds(now, shop.timezone);
   const today = await db
@@ -132,12 +148,16 @@ export async function POST(request: Request) {
 
   // Latest first, so the last boat of the day is the one that ties up closest
   // to `now` and the earlier ones stack backwards from it.
-  const lastEnd = now.getTime() - SETTLED_MARGIN_MS;
+  const lastEnd =
+    now.getTime() - (params.get("last") === "just-in" ? JUST_IN_MARGIN_MS : SETTLED_MARGIN_MS);
   const moved: MovedDeparture[] = [];
   for (const [index, trip] of [...today].reverse().entries()) {
     const endsAt = new Date(lastEnd - index * (DEPARTURE_MS + TURNAROUND_MS));
     const startsAt = new Date(endsAt.getTime() - DEPARTURE_MS);
     if (startsAt < bounds.from) break;
+    // diveday:allow-flat-revision: an e2e fixture rewinding the demo day inside
+    // a per-worker test database, where no calendar is subscribed — unlike
+    // src/db/demo-refresh.ts, which nudges the live demo shop and does bump.
     await db.update(trips).set({ startsAt, endsAt }).where(eq(trips.id, trip.id));
     moved.push({ id: trip.id, plannedDives: trip.plannedDives, startsAt, endsAt });
   }
@@ -152,10 +172,7 @@ export async function POST(request: Request) {
   const fitAdjusted = await returnOneUnitFitAdjusted(db, shop.id, shop.timezone, moved);
   const planChanged = await moveOneDiveOffPlan(db, shop.id, moved);
 
-  const close =
-    new URL(request.url).searchParams.get("heads") === "closed"
-      ? await closeHeadCounts(db, shop.id, moved)
-      : null;
+  const close = params.get("heads") === "closed" ? await closeHeadCounts(db, shop.id, moved) : null;
   // A day that cannot be honestly closed is a refusal, not a partial success.
   // The caller is a visual spec, and the alternative to a 409 naming the trip
   // and the checkpoint is a picture that is quietly of the wrong state.

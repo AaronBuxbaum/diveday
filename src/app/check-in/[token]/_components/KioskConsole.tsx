@@ -4,7 +4,7 @@ import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
-import { KIOSK_INPUT_MAX } from "@/lib/kiosk-check-in";
+import { isCapabilityToken, KIOSK_INPUT_MAX } from "@/lib/kiosk-check-in";
 import { kioskCheckInAction } from "../actions";
 import { IDLE_KIOSK_RESULT, type KioskCopy, type KioskResult } from "../kiosk-types";
 
@@ -39,7 +39,9 @@ function CheckInButton({ copy }: { copy: KioskCopy }) {
  * The answer lives here in `useActionState` and nowhere else — not in the URL,
  * not in history, not on a bookmark — because this tablet is shared. It clears
  * itself after {@link CLEAR_AFTER_MS}, emptying the box and putting the cursor
- * back in it, so the next diver walks up to a blank prompt.
+ * back in it, so the next diver walks up to a blank prompt. What was *typed*
+ * goes sooner than that — React empties the box when the action resolves, and a
+ * scanned credential goes at the submit (the `submit` wrapper below).
  *
  * Every word arrives as a prop or inside the action's own result: the diver
  * bundle never ships to this page, and nothing here decides what to say about a
@@ -61,6 +63,36 @@ export function KioskConsole({ token, copy }: { token: string; copy: KioskCopy }
   const form = useRef<HTMLFormElement>(null);
   const box = useRef<HTMLInputElement>(null);
 
+  /**
+   * **A scanned arrival code leaves the box at the submit, not at the answer.**
+   *
+   * React empties an uncontrolled form for us once the action resolves, so a
+   * typed surname is gone by the time the card paints. A scanned code is a live
+   * bearer credential for this morning's boat, and for it that moment is too
+   * late: the tablet holds every answer to `KIOSK_RESPONSE_FLOOR_MS` on purpose,
+   * a slow database holds it longer, and a request that never comes back holds
+   * it open with no timer running at all — the whole code standing in 1.5rem
+   * type on lobby glass for all of it (`security-reviewer`, 2026-09-12).
+   *
+   * The box is emptied **here**, inside the action, rather than from an
+   * `onSubmit`: React builds this `FormData` before it calls us, so the code is
+   * already on its way to the server, while a handler that ran before that
+   * would submit an empty box and answer every scan with "See the desk".
+   * Writing the element's own `value` rather than `requestFormReset`, which
+   * schedules its reset for when the action settles — the same moment React
+   * would have emptied an uncontrolled form anyway, and so no earlier than the
+   * window this closes.
+   *
+   * A surname is left alone, as it always was — it is what the queue can hear.
+   */
+  function submit(data: FormData) {
+    const typed = data.get("who");
+    if (box.current && typeof typed === "string" && isCapabilityToken(typed.trim())) {
+      box.current.value = "";
+    }
+    formAction(data);
+  }
+
   useEffect(() => {
     setShown(result);
     if (result.status === "idle") return;
@@ -74,7 +106,7 @@ export function KioskConsole({ token, copy }: { token: string; copy: KioskCopy }
 
   return (
     <>
-      <form ref={form} action={formAction} className="mt-8 grid gap-4">
+      <form ref={form} action={submit} className="mt-8 grid gap-4">
         <label htmlFor={inputId} className="text-[1.5rem] leading-tight font-medium">
           {copy.prompt}
         </label>

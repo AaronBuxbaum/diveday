@@ -12,6 +12,7 @@ import {
   retryBookingConfirmation,
   sendNotification,
   sendNotificationBatch,
+  UNREADABLE_RETRY_MAX_ATTEMPTS,
 } from "./notifications";
 import {
   bookings,
@@ -585,6 +586,46 @@ describe("what the retry queue is allowed to hold", () => {
     },
   );
 
+  it("holds nothing at all for the one kind erasure could not reach", async () => {
+    // The guardian's copy of a minor's release is addressed to a third party,
+    // carries no booking by design, and is about a child who often has no
+    // address of their own — so a queued row would sit in this table naming a
+    // minor with none of the three handles `anonymizeDiver` sweeps on, and the
+    // drain would mail the copy *after* the erasure. Nothing downstream reads
+    // this message, so it is dropped instead (`dive-domain-expert` and
+    // `security-reviewer`, issue #1453).
+    const { db, shop } = await seededShopContext();
+    const delivery = await sendNotification(
+      db,
+      {
+        kind: "guardian_release_copy",
+        waiverRecordId: "00000000-0000-4000-8000-00000000d001",
+        shopId: shop.id,
+        to: "jordan@example.invalid",
+        locale: "en-US",
+        guardianName: "Jordan Fischer",
+        diverName: "Lena Fischer",
+        shopName: "Blue Mantis Divers",
+        releaseTitle: "Liability Release",
+        releaseVersion: 3,
+        signedAt: new Date("2026-08-01T13:00:00.000Z"),
+        timezone: "America/New_York",
+      } as Notification,
+      failsRetryably,
+    );
+
+    // The failure is still reported as retryable — the provider said so, and
+    // lying about that would hide a throttle from the logs. What changes is
+    // that nobody keeps the payload.
+    expect(delivery).toMatchObject({ status: "failed", retryable: true });
+    expect(
+      await db
+        .select()
+        .from(notificationSendQueue)
+        .where(eq(notificationSendQueue.shopId, shop.id)),
+    ).toEqual([]);
+  });
+
   it("lifts the subject's own handles out for a message addressed to somebody else", async () => {
     // The seam the erasure sweep rests on, exercised through `queueRetry`
     // rather than by inserting a row by hand: `course_inquiry` is addressed to
@@ -688,10 +729,187 @@ describe("what the retry queue is allowed to hold", () => {
       .where(eq(notificationSendQueue.shopId, shop.id));
     // Its own code, never `missing_payload` — the two say different things to
     // whoever reads the parked-failure surface — and the value is left in
-    // place, so a restored key can still drain it.
+    // place, so a restored key can still drain it. The handles stay for the
+    // same span: erasure matches on them, and a parked row that had dropped
+    // them would be a row an erasure could no longer find.
     expect(row?.errorCode).toBe("sealed_payload_unreadable");
     expect(row?.payloadSealed).toBe("v1.not.a.real.seal");
+    expect(row?.recipientEmail).toBe("front-desk@example.invalid");
+    // Due again on the next daily pass, not permanently overdue: the row is
+    // re-offered once a day, so two overlapping cron runs cannot spend two of
+    // its attempts in one afternoon (issue #1340).
+    expect(row?.nextAttemptAt?.getTime()).toBeGreaterThan(nowMs());
   });
+
+  it("drains a parked row once the key that opens it is back", async () => {
+    const { db, shop } = await seededShopContext();
+    await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
+    const [queued] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    const sealed = queued?.payloadSealed;
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0), payloadSealed: "v1.not.a.real.seal" })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    await drainNotificationRetries(db, { provider: failsRetryably });
+
+    // The deployment puts the right key back. Restoring the sealed value is
+    // the same event from this row's point of view: what it holds opens again.
+    // Before #1340 nothing moved a parked row back onto the drain, so this
+    // staff invite — and the recipient, subject and booking handles beside it
+    // — sat here for good no matter what anyone fixed.
+    await db
+      .update(notificationSendQueue)
+      .set({ payloadSealed: sealed })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await expect(
+      drainNotificationRetries(db, {
+        provider: {
+          async send() {
+            return { status: "sent", providerMessageId: "unparked" };
+          },
+        },
+        // The pass after the one that parked it: parking moves the row to the
+        // next daily tick, which is up to a day out.
+        now: new Date(nowMs() + 25 * 60 * 60_000),
+      }),
+    ).resolves.toMatchObject({ sent: 1 });
+
+    const [drained] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    // And now it is finished, so it drops everything a finished row drops.
+    // This is the only path by which a parked row ever lets go of them.
+    expect(drained).toMatchObject({
+      status: "sent",
+      payloadSealed: null,
+      recipientEmail: null,
+      subjectEmail: null,
+      subjectPhone: null,
+      bookingId: null,
+    });
+  });
+
+  it("stops re-offering a parked row once its fortnight of passes is up", async () => {
+    const { db, shop } = await seededShopContext();
+    await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
+    // A key that is never coming back. The bound is what keeps that from
+    // costing an UPDATE a day forever. The row below is what the pass that
+    // spent the last attempt leaves behind — see the test after this one — so
+    // the drain walking past it is the whole of what is asserted here.
+    await db
+      .update(notificationSendQueue)
+      .set({
+        status: "failed",
+        errorCode: "sealed_payload_unreadable",
+        attempts: UNREADABLE_RETRY_MAX_ATTEMPTS,
+        nextAttemptAt: new Date(0),
+        payloadSealed: null,
+        recipientEmail: null,
+        subjectEmail: null,
+        subjectPhone: null,
+        bookingId: null,
+      })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await expect(
+      drainNotificationRetries(db, {
+        provider: {
+          async send() {
+            return { status: "sent", providerMessageId: "should-not-happen" };
+          },
+        },
+      }),
+    ).resolves.toMatchObject({ scanned: 0 });
+    const [row] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(row).toMatchObject({
+      status: "failed",
+      attempts: UNREADABLE_RETRY_MAX_ATTEMPTS,
+    });
+  });
+
+  it("empties the row on the park that spends its last attempt", async () => {
+    const { db, shop } = await seededShopContext();
+    await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
+    // One attempt short of the bound, so the pass below is the last one
+    // `drainableStatus()` will ever offer this row.
+    await db
+      .update(notificationSendQueue)
+      .set({
+        status: "failed",
+        errorCode: "sealed_payload_unreadable",
+        attempts: UNREADABLE_RETRY_MAX_ATTEMPTS - 1,
+        nextAttemptAt: new Date(0),
+        payloadSealed: "v1.not.a.real.seal",
+      })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await expect(drainNotificationRetries(db, { provider: failsRetryably })).resolves.toMatchObject(
+      { failed: 1 },
+    );
+
+    const [row] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    // Nothing will open this payload now — no predicate offers the row again —
+    // so keeping it would be keeping a rendered outbound message, a name and
+    // an address in a table nothing prunes, for good (H-02;
+    // `security-reviewer`). The park that crosses the bound is a finished
+    // write and clears what every other finished write clears.
+    expect(row).toMatchObject({
+      status: "failed",
+      errorCode: "sealed_payload_unreadable",
+      attempts: UNREADABLE_RETRY_MAX_ATTEMPTS,
+      payloadSealed: null,
+      recipientEmail: null,
+      subjectEmail: null,
+      subjectPhone: null,
+      bookingId: null,
+    });
+
+    // And it stays walked past, rather than being re-claimed now that it looks
+    // like every other spent row. A day on, so the row's own `next_attempt_at`
+    // is not what is doing the refusing.
+    await expect(
+      drainNotificationRetries(db, {
+        provider: failsRetryably,
+        now: new Date(nowMs() + 25 * 60 * 60_000),
+      }),
+    ).resolves.toMatchObject({ scanned: 0 });
+  });
+
+  it.each(["missing_payload", "temporary_failure"])(
+    "never re-offers a failed row parked under any other code (%s)",
+    async (errorCode) => {
+      const { db, shop } = await seededShopContext();
+      await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);
+      // The boundary the widening must not cross. Every other terminal write
+      // in the drain has already dropped the payload, so a `failed` row with
+      // any other code has nothing left to send; re-offering it would claim a
+      // row the `missing_payload` branch immediately re-fails, once a day.
+      await db
+        .update(notificationSendQueue)
+        .set({
+          status: "failed",
+          errorCode,
+          payloadSealed: null,
+          nextAttemptAt: new Date(0),
+        })
+        .where(eq(notificationSendQueue.shopId, shop.id));
+
+      await expect(
+        drainNotificationRetries(db, { provider: failsRetryably }),
+      ).resolves.toMatchObject({ scanned: 0 });
+    },
+  );
 
   it("hands back a row a dead worker left claimed", async () => {
     const { db, shop } = await seededShopContext();

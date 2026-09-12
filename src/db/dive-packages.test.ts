@@ -1,7 +1,12 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { cancelBooking, createBookingParty } from "./bookings";
+import {
+  cancelBooking,
+  confirmBookingIdentity,
+  createBooking,
+  createBookingParty,
+} from "./bookings";
 import {
   consumeEntitlementForBooking,
   countSpendableDives,
@@ -13,6 +18,7 @@ import {
   releaseEntitlementForBooking,
   shopSellsPackages,
 } from "./dive-packages";
+import { setBookingPayment } from "./payments";
 import {
   bookingPaymentEvents,
   bookingPayments,
@@ -20,6 +26,7 @@ import {
   divePackageEntitlements,
   orders,
   people,
+  trips as tripsTable,
 } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
@@ -475,5 +482,183 @@ describe("a booking made under an unconfirmed identity", () => {
       .from(bookingPayments)
       .where(eq(bookingPayments.bookingId, impostor.bookings[0].bookingId));
     expect(payments).toHaveLength(0);
+  });
+});
+
+/**
+ * **The withheld dives arrive when the shop says who this is.**
+ *
+ * The refusal above is about a stranger; this is about the regular. A diver the
+ * shop has carded fifteen times walks up, the staffer types their name, and the
+ * counter's prompt offers the row it found — `lower(full_name) = lower(typed)`
+ * or `similarity() > 0.4` (`findSimilarDivers`, issue #1556). A spelling that
+ * disagrees raises `identity_unconfirmed`, coverage is withheld, and the seat
+ * reads as owing money.
+ *
+ * Clearing the flag used to leave it there: nothing re-ran, so the ten-dive
+ * regular was asked for the fare on a departure their package covers, and no
+ * later tap gave it back (`dive-domain-expert`, the RFH-07 layer). The confirm
+ * settles it now, inside the confirm's own transaction.
+ */
+describe("confirming a name-match seat's identity", () => {
+  async function regularSeatedFromThePrompt() {
+    const { db, shop } = await seededShopContext();
+    const [staffPerson] = await listStaff(db, shop.id);
+    if (!staffPerson) throw new Error("seed has no staff");
+    const pkg = await createDivePackage(db, {
+      shopId: shop.id,
+      name: "Ten dives",
+      diveCount: 10,
+      priceCents: 90_000,
+      scope: "all",
+      validUntil: null,
+    });
+    if (!pkg) throw new Error("package insert returned no row");
+    const open = await upcomingTripsWithCounts(db, shop.id);
+    const first = open.find((row) => row.courseId === null && row.capacity > row.booked);
+    const second = open.find(
+      (row) => row.courseId === null && row.capacity > row.booked && row.id !== first?.id,
+    );
+    if (!first || !second) throw new Error("seed has no two open fun-dive departures");
+
+    const regular = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: first.id,
+        fullName: "Rosa Regular",
+        email: "rosa-confirmed@example.com",
+      },
+    ]);
+    if (!regular.ok) throw new Error(`booking failed: ${regular.reason}`);
+    const personId = regular.bookings[0].personId;
+
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId,
+        createdByPersonId: staffPerson.person.id,
+        description: "Ten-dive package",
+        totalCents: 90_000,
+        currency: "usd",
+        stripeAccountId: "acct_test",
+        stripeCustomerId: "cus_test",
+        stripeInvoiceId: "in_test",
+      })
+      .returning();
+    if (!order) throw new Error("order insert returned no row");
+    await grantPackageEntitlements(db, {
+      shopId: shop.id,
+      packageId: pkg.id,
+      personId,
+      orderId: order.id,
+      diveCount: 10,
+      validUntil: null,
+    });
+
+    // The counter: the staffer misspells the name, taps the row the prompt
+    // offered, and the seat lands identity-unconfirmed.
+    const seat = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: second.id,
+      personId,
+      fromNameMatch: { typedName: "Rosa Reguler" },
+    });
+    if (!seat.ok) throw new Error(`name-match seating failed: ${seat.reason}`);
+    expect(seat.identityUnconfirmed).toBe(true);
+
+    // Nothing spent, nothing settled — this is the seat the diver is being
+    // asked to pay for.
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
+    expect(
+      await db
+        .select({ status: bookingPayments.status })
+        .from(bookingPayments)
+        .where(eq(bookingPayments.bookingId, seat.bookingId)),
+    ).toHaveLength(0);
+
+    const [trip] = await db
+      .select({ plannedDives: tripsTable.plannedDives })
+      .from(tripsTable)
+      .where(eq(tripsTable.id, second.id))
+      .limit(1);
+    if (!trip) throw new Error("departure vanished");
+
+    return { db, shop, staffPerson, personId, seat, plannedDives: trip.plannedDives };
+  }
+
+  it("spends the package and settles the seat, like any other package seat", async () => {
+    const { db, shop, staffPerson, personId, seat, plannedDives } =
+      await regularSeatedFromThePrompt();
+
+    expect(
+      await confirmBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId: seat.bookingId,
+        actorPersonId: staffPerson.person.id,
+      }),
+    ).toBe(true);
+
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10 - plannedDives);
+    const [payment] = await db
+      .select()
+      .from(bookingPayments)
+      .where(eq(bookingPayments.bookingId, seat.bookingId));
+    expect(payment).toMatchObject({
+      status: "paid",
+      amountCents: 0,
+      provider: "dive_package",
+    });
+  });
+
+  it("leaves a fare the desk already took alone, and the dives with it", async () => {
+    // The guard on `settleConfirmedPackageCoverage`. A staffer who collected
+    // the money before reading the blocker has a seat that is already settled;
+    // applying the package on top would spend the diver's dives as well as
+    // their cash, and overwrite the record that they handed it over. Handing
+    // it back needs a refund path this does not have (issue #1697).
+    const { db, shop, staffPerson, personId, seat } = await regularSeatedFromThePrompt();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: seat.bookingId,
+      status: "paid",
+      amountCents: 12_000,
+      currency: "usd",
+    });
+
+    expect(
+      await confirmBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId: seat.bookingId,
+        actorPersonId: staffPerson.person.id,
+      }),
+    ).toBe(true);
+
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
+    const [payment] = await db
+      .select()
+      .from(bookingPayments)
+      .where(eq(bookingPayments.bookingId, seat.bookingId));
+    expect(payment).toMatchObject({ status: "paid", amountCents: 12_000, provider: null });
+  });
+
+  it("spends nothing on a seat that has been taken off the roster", async () => {
+    // The action takes a booking id off the form and a cancelled row can still
+    // carry the flag. Nobody's package pays for a seat nobody is on.
+    const { db, shop, staffPerson, personId, seat } = await regularSeatedFromThePrompt();
+    await cancelBooking(db, shop.id, seat.bookingId);
+
+    expect(
+      await confirmBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId: seat.bookingId,
+        actorPersonId: staffPerson.person.id,
+      }),
+    ).toBe(true);
+
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
   });
 });

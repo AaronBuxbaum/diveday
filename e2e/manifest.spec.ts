@@ -227,7 +227,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   // Two live regions exist here (the action message and the connectivity
   // badge); scope to the one carrying the sync message.
   await expect(
-    page.getByRole("status").filter({ hasText: "when you're back in service" }),
+    page.getByRole("status").filter({ hasText: "when you’re back in service" }),
   ).toBeVisible();
 
   // The crew half of the same head count, still with the radio off (H-46).
@@ -247,7 +247,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await context.setOffline(false);
   // One message for both queued events — the diver's and the crew member's go
   // through the same sync route and the same reconcile.
-  await expect(page.getByRole("status").filter({ hasText: "Everything's sent" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Everything’s sent" })).toBeVisible();
   // And the crew result stuck: reconciled, not rolled back by the server.
   await expect(crewRow.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
 });
@@ -991,11 +991,11 @@ test("a checklist tap made offline queues, then syncs once signal returns", asyn
   const item = page.getByRole("button", { name: "Fire extinguisher aboard and charged" });
   await item.click();
   await expect(
-    page.getByRole("status").filter({ hasText: "when you're back in service" }),
+    page.getByRole("status").filter({ hasText: "when you’re back in service" }),
   ).toBeVisible();
 
   await context.setOffline(false);
-  await expect(page.getByRole("status").filter({ hasText: "Everything's sent" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Everything’s sent" })).toBeVisible();
 });
 
 /**
@@ -1179,7 +1179,7 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   await expect(diego).toHaveAttribute("aria-pressed", "true");
   await expect(diego).toContainText("Checked in");
   await expect(
-    page.getByRole("status").filter({ hasText: "when you're back in service" }),
+    page.getByRole("status").filter({ hasText: "when you’re back in service" }),
   ).toBeVisible();
 
   // Nothing about a desk tap says anybody is on the boat: the roll call below
@@ -1194,7 +1194,7 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   await expect(diego).toContainText("Checked in");
 
   await context.setOffline(false);
-  await expect(page.getByRole("status").filter({ hasText: "Everything's sent" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Everything’s sent" })).toBeVisible();
 
   await page.goto("/shop/blue-mantis/check-in?q=Diego+Alvarez");
   await expect(page.getByRole("button", { name: "Undo check-in for Diego Alvarez" })).toBeVisible();

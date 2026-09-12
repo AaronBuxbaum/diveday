@@ -15,7 +15,7 @@ import { diveSites, shops } from "./schema";
  * **8723583 is Carysfort Reef**, the nearest ocean-side prediction station to
  * both sites — checked against NOAA's station list on 2026-09-07, which has no
  * station on Molasses Reef itself and puts Vaca Key (the nearest harmonic
- * station) sixty kilometres down the Keys at Marathon. Molasses is a sheltered
+ * station) eighty kilometres down the Keys at Marathon. Molasses is a sheltered
  * shallow reef and takes `any`; the Spiegel Grove sits in open water where the
  * current runs, and `slack` is how every Key Largo operator times it. Together
  * the two show both shapes of the sentence.

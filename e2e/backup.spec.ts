@@ -102,7 +102,7 @@ test.describe("backup settings", () => {
     // that the download half is *here* — heading included — not that its
     // reference list happens to be expanded.
     await expect(
-      page.getByRole("heading", { level: 2, name: "What's in the bundle" }),
+      page.getByRole("heading", { level: 2, name: "What’s in the bundle" }),
     ).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
   });
@@ -189,11 +189,11 @@ test.describe("backup settings, writing to a shop of the test's own", () => {
     // The action ran a real delivery attempt: refused by DNS, recorded, and
     // explained — never a crash, never a silent success.
     await expect(
-      page.getByText("The test delivery didn't land. The endpoint couldn't be reached."),
+      page.getByText("The test delivery didn’t land. The endpoint couldn’t be reached."),
     ).toBeVisible();
     const historyRow = page.getByRole("row").filter({ hasText: "Test" }).first();
     await expect(historyRow.getByRole("cell", { name: "Failed" })).toBeVisible();
-    await expect(historyRow.getByText("The endpoint couldn't be reached.")).toBeVisible();
+    await expect(historyRow.getByText("The endpoint couldn’t be reached.")).toBeVisible();
   });
 
   test("leaving the secret blank keeps the stored credential instead of erasing it", async ({
@@ -216,7 +216,7 @@ test.describe("backup settings, writing to a shop of the test's own", () => {
     // stored key as unreadable instead.)
     await page.getByRole("button", { name: "Run a test delivery now" }).click();
     await expect(
-      page.getByText("The test delivery didn't land. The endpoint couldn't be reached."),
+      page.getByText("The test delivery didn’t land. The endpoint couldn’t be reached."),
     ).toBeVisible();
   });
 });

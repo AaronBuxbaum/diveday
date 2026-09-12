@@ -7,10 +7,12 @@
   //
   // `dom.iterable` is kept for the iteration helpers the store shares with the
   // page; `dom` itself is deliberately absent, because having both is what
-  // makes `self` resolve to the wrong global.
+  // makes `self` resolve to the wrong global. The ES floor is `es2024`, the
+  // same one the root config sets, so the worker never compiles against a
+  // library surface the rest of the tree is refused (issue #1329).
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "lib": ["esnext", "webworker", "dom.iterable"],
+    "lib": ["es2024", "webworker", "dom.iterable"],
     // `node` only — for `process.env` in src/lib/clock.ts (esbuild defines it
     // away in the bundle) and for the node: imports that type-only edges reach.
     // Emphatically not the DOM types, which is the whole point of this config.

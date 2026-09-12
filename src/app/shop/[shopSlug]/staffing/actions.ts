@@ -9,6 +9,7 @@ import {
   deleteCrewAvailabilityBlock,
   requestCrewAssignment,
   saveCrewAvailabilityBlock,
+  tripOverIntroRatio,
 } from "@/db/crew-requests";
 import { getShopById } from "@/db/shops";
 import { setCrewPublicConsent } from "@/db/staff-accounts";
@@ -358,8 +359,20 @@ export async function decideCrewRequestAction(week: string, formData: FormData) 
     operation: "assign",
     personId: outcome.personId,
   });
+  if (!assigned) {
+    revalidateAndRedirect(path, noticeUrl(path, "request-approved-not-assigned", at));
+    return;
+  }
+  // **An approval that changed nothing says so** (issue #1339). A real
+  // assignment can move an intro session's capacity by not one seat, and the
+  // plain "Approved, and they're on the crew" was the last thing the queue said
+  // about it — at 06:40 on a Saturday nobody re-reads the chip afterwards. Why
+  // the boat is asked here rather than the requester's roles inferred from is
+  // `tripOverIntroRatio`'s own doc (src/db/crew-requests.ts); this call site
+  // only turns its answer into the notice.
+  const stillOverIntroRatio = await tripOverIntroRatio(db, session.user.shopId, outcome.tripId);
   revalidateAndRedirect(
     path,
-    noticeUrl(path, assigned ? "request-approved" : "request-approved-not-assigned", at),
+    noticeUrl(path, stillOverIntroRatio ? "request-approved-ratio-open" : "request-approved", at),
   );
 }

@@ -113,8 +113,15 @@ space** pill at the right end of the lens rail, folding the shipped checkbox int
 already has a control in the filter row, and moving it is a recomposition neither the ADR nor
 issue #1162 asks for. And the drawn Friday 8:00 row wears two words ("Easygoing reef · first time
 back in a while"); a departure carries **one** lens, because the rail is single-select, "a kind of
-day" is singular, and the one meta line has room for one more fragment rather than two. A join
-table can be added later without changing the `?lens=` grammar.
+day" is singular, and the one meta line has room for one more fragment rather than two. The
+singular is the owner's call of 2026-09-10 (issue #1393) and not a first cut: the drawn row's
+second word stays undrawable on purpose, so a session reading this canvas against the shipped
+storefront should leave it rather than file the missing word as a bug. What made the call cheap is
+that it is reversible in the direction that might be wanted. Many later costs one migration (a
+`trip_lens_tags` join table) and no redesign — `upcomingTripScope`'s lens predicate becomes an
+`exists` instead of an `eq`, the `?lens=<slug>` grammar is identical, and the rail stays
+single-select. Many now could not be narrowed afterwards without deciding which of a departure's
+words to throw away.
 
 16a and 16b are the first two because the home is the surface the gap was measured on; 16c is
 third because every later surface reads the stage. 16j was planned as a bundle in name only, one

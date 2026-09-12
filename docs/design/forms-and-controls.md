@@ -588,6 +588,11 @@ text but still claims a full target). Sizes: `md` (the default, 48px with a 16px
 with a 14px label), `boat`, `icon`. Pass one-off adjustments through `className`; do not rebuild the
 base. If you find yourself cancelling a variant's own styles, the variant is wrong — add one.
 
+**`primary` is the one thing in the app that carries a `shadow-sm` at rest**, and it is an
+exception stated at the rule rather than a second rule: ADR
+[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
+decision 1 says why, and why no other variant may follow it. Do not sweep it away.
+
 **The size follows the surface, never the button's importance.** Importance is the variant's job.
 A page header, a form's action row, a card body and a dialog take `md`; a ledger row, a table cell
 and a chip row take `sm`; and every button in one row takes the same size. A 16px primary beside a

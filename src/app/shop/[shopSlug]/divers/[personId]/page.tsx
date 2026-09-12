@@ -4,7 +4,6 @@ import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
 import {
-  canPersonAnswerShopInbox,
   canPersonDeleteDiver,
   canPersonErasePersonalData,
   canPersonMergeDiver,
@@ -159,7 +158,6 @@ export default async function DiverDetailPage({
     canErase,
     canExport,
     canOpenClearance,
-    canAnswer,
     stripeAccount,
     notes,
     activityPage,
@@ -182,10 +180,6 @@ export default async function DiverDetailPage({
     // is at `canReadMedicalClearanceDocument`. Hiding the link is a courtesy;
     // the route re-checks the same live roles before it signs anything.
     canPersonReadMedicalClearanceDocument(db, shop.id, session.user.personId),
-    // Answering a diver is the inbox's own gate (ADR 20260907-two-way-inbox):
-    // a reply leaves as the shop. Read live like the rest of them; the action
-    // re-checks before it sends.
-    canPersonAnswerShopInbox(db, shop.id, session.user.personId),
     getShopStripeAccount(db, shop.id),
     listDiverRecordNotes(db, shop.id, personId),
     // Shop-scoped from the session, never the slug, like every read on this
@@ -355,7 +349,6 @@ export default async function DiverDetailPage({
         locale={locale}
         timezone={shop.timezone}
         now={now}
-        canAnswer={canAnswer}
         // `removed` alone, never `removed || anonymizedAt`: the CHECK
         // `people_anonymized_stays_removed` makes an anonymized person removed
         // by construction, so the second term could never add a case.

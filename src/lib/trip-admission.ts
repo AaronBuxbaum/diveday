@@ -284,6 +284,21 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
     return ADMITTED;
   }
 
+  // Deliberate, and not the inversion it looks like (security review
+  // 2026-09-11 read this as "the weaker door skips the stricter gate"). The
+  // flag means this seat attached itself to an existing person on a guess
+  // (H-13), so that person's cards are evidence about *somebody* and not
+  // provably about the booker — `tripAdmissionFor` does not even read them,
+  // and this line makes the same answer explicit rather than leaving it to
+  // fall out of an empty evidence set. Admitting is therefore H-08's ordinary
+  // fail-open on absence of evidence, not an exemption from the gate.
+  //
+  // What re-decides: `calculateReadiness` raises `identity_unconfirmed` for
+  // the same booking (src/lib/readiness.ts) and fails closed on it, so the
+  // seat cannot board until a staffer confirms it is the same human — and
+  // once they do, the cards are read here on the claimant's own record
+  // (src/db/seat-claims.ts) or by readiness at the rail. The roster withholds
+  // that person's details until the same confirmation (`RosterSection.tsx`).
   if (input.identityUnconfirmed) return ADMITTED;
 
   // **Before the boat, a stated card is taken at its word** (H-27/H-29, product

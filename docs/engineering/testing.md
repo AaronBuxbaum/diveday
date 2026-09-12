@@ -51,8 +51,8 @@ one serial `test` each, so the first state the day cannot reach fails by name an
 The spec lives under `scripts/simulate-day/` rather than `e2e/` because the fleet discovers every
 spec in that tree and CI deals them into shards, and this one takes minutes, owns its clock and
 belongs to a nightly job. The clock route is likewise for this runner alone: a fleet worker's clock
-is shared by every spec it runs (`seed-evening`'s docblock says why the departures move there
-instead), so no `e2e/` spec may call it.
+is shared by every spec it runs (`seed-evening` moves the whole day's departures instead, and
+`depart-trip` moves the one a spec names), so no `e2e/` spec may call it.
 
 What it leaves behind (`simulation/`, gitignored): a full-page screenshot per state, and `day.md`
 listing each state with the shop-clock time it was reached, how long it really took, and its
@@ -87,6 +87,29 @@ the repository. ADR
 [20260907-persona-bots-file-under-a-ceiling](../architecture/decisions/20260907-persona-bots-file-under-a-ceiling.md)
 carries the reasoning and the numbers.
 
+**Forty means forty *awaiting triage*.** An issue also carrying `parked` or `waiting-on-external`
+has been read and deliberately deferred, and does not count against the brake — parking is an act of
+triage, and triage is what the ceiling exists to reward, so ten parked findings must not silence the
+walk forever (#1497). Those issues are still deduplicated against: a class whose issue is parked gets
+the ordinary comment, never a second issue. The run summary states both numbers on every run, braked
+or not, so the difference between the two is visible rather than inferred. The ceiling itself did not
+move; forty is changed by deciding it is wrong.
+
+**An opt-in second pass judges rather than measures** (#1498). `pnpm persona:bots --judge` — off by
+default, and reachable in CI only from `workflow_dispatch`, never from the Monday cron — reads the
+screenshots the walk already took back against two personas' own sections of
+[personas.md](../product/personas.md): Nadia's and Kai's, whose "hold the line on" lists are almost
+entirely about words on a screen. `scripts/persona-bots/judge.mjs` builds the prompt, drops any
+finding that names a surface the persona was not shown or quotes nothing off the screen, and
+fingerprints on the persona, the stop, and a *normalised* claim, so two runs that say the same thing
+in different words collide and a closed judged issue is never re-filed. Judged findings sit in the
+last severity band, below every mechanical one, so they can only ever spend issue budget the
+measurements did not. Every other rule — the brake, the comment ceiling, the suppression, the
+`findIssueProblems` self-check — applies to them unchanged. With the flag off nothing here runs and
+the walk takes exactly the screenshots it always did. ADR
+[20260907-persona-bots-file-under-a-ceiling](../architecture/decisions/20260907-persona-bots-file-under-a-ceiling.md)'s
+"The judged pass" section carries the reasoning.
+
 Like the one-day simulation it is the e2e fleet's own machinery under a config of its own:
 `scripts/persona-bots/playwright.config.ts` starts a worker server on this checkout's port block,
 `walk.spec.ts` drives it, and the screenshots come from `scripts/screenshot.mjs` rather than a
@@ -98,7 +121,8 @@ can break — no browser, no build, an incomplete walk, an unreachable `gh` — 
 `.github/workflows/persona-bots.yml` runs it at 07:00 UTC on Mondays (and on `workflow_dispatch`,
 which offers a dry run), builds once, and uploads `persona-bots/` whether or not the walk finished.
 Options: `--dry-run` (shape the issues and print them, file nothing — what a session runs),
-`--no-build`, `--keep`, `--out <dir>`.
+`--judge` (the opt-in judged pass; needs `ANTHROPIC_API_KEY`, and prints `DID NOT JUDGE` and carries
+on without it), `--no-build`, `--keep`, `--out <dir>`.
 
 ### Why `playwright-core` is pinned in devDependencies
 
@@ -251,6 +275,7 @@ named, and all picked up by that glob rather than by a list anyone has to rememb
 | `bookings.postgres.test.ts` | Two — and five — genuinely concurrent transactions racing for the last seat sell exactly the seats that exist |
 | `payments.postgres.test.ts` | Two simultaneous payment writes leave one unbroken `booking_payment_events` chain rather than a fork |
 | `refunds.postgres.test.ts` | Two — and five — simultaneous taps of Refund on one paid order reach Stripe exactly once; the losers are refused locally with `in_progress` rather than by Stripe's over-refund rejection (PAY-L3) |
+| `roll-call.postgres.test.ts` | The counter marking a diver not here and the crew boarding them at the rail serialise on the booking row, so a standing `boarded` result and a released seat never both stand — the rail overrules the desk, and never refuses |
 | `postgres-harness.postgres.test.ts` | The harness itself: finishing a test never terminates a connection that is still alive, and an unreleased `holdRowLock` gate does not hang teardown |
 
 A new suite needs no wiring beyond the name: write `src/db/<thing>.postgres.test.ts` against
@@ -428,7 +453,7 @@ the full suite locally with identical pass counts across repeated runs.
   20260815-per-test-private-shops for why this is per test rather than per file, and why a
   `finally` that restores the setting is not the answer.
 - **Every `/api/test/*` route is guarded, and that is enforced.** The harness's own endpoints
-  (`reset` plus the `seed-*` routes) reset and seed state and mint real tokens — `seed-account-token`
+  (`reset`, `depart-trip`, plus the `seed-*` routes) reset and seed state and mint real tokens — `seed-account-token`
   hands back a valid password-reset or invite token for any account by email — so each handler must
   open with `e2eTestRouteAuthorized(request)` (`src/lib/e2e-test-routes.ts`: env predicate plus a
   `DIVEDAY_E2E_SECRET` bearer token, failing closed). `pnpm check:e2e-fixtures` fails when a handler

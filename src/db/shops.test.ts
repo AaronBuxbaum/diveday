@@ -12,6 +12,7 @@ import {
   setShopAddress,
   setShopDepthUnit,
   setShopFlySafeHours,
+  setShopHospitalityNotes,
   setShopSearchListing,
   setShopTemperatureUnit,
   shopHasPricedRecords,
@@ -345,5 +346,91 @@ describe("setShopFlySafeHours", () => {
     ).rejects.toMatchObject(namesTheConstraint);
     const untouched = await getShopBySlug(db, shop.slug);
     expect(untouched?.flySafeHoursSingle).toBe(18);
+  });
+});
+
+/**
+ * The shop's three hospitality notes (#1212). Every reader asks `note ? …` —
+ * the Ready thread's welcome, `TripArrivalCard`'s dock-call fallback, the
+ * after-state's sign-off — so "unset" has to have exactly one shape. A
+ * whitespace-only textarea stored as `"   "` is truthy, and each of those three
+ * surfaces would then render a blank line where a sentence was promised.
+ */
+describe("setShopHospitalityNotes", () => {
+  it("stores all three and reads them back off the shop", async () => {
+    const { db, shop } = await seededShopContext();
+    const after = await setShopHospitalityNotes(db, shop.id, {
+      welcomeNote: "Glad you are diving with us.",
+      dockCallNote: "Park behind the blue shed.",
+      signOffNote: "Rinse your gear at the far tap.",
+    });
+    expect(after?.welcomeNote).toBe("Glad you are diving with us.");
+    expect(after?.dockCallNote).toBe("Park behind the blue shed.");
+    expect(after?.signOffNote).toBe("Rinse your gear at the far tap.");
+    const reread = await getShopBySlug(db, shop.slug);
+    expect(reread?.signOffNote).toBe("Rinse your gear at the far tap.");
+  });
+
+  it("normalises an empty and a whitespace-only note to null, field by field", async () => {
+    const { db, shop } = await seededShopContext();
+    await setShopHospitalityNotes(db, shop.id, {
+      welcomeNote: "Glad you are diving with us.",
+      dockCallNote: "Park behind the blue shed.",
+      signOffNote: "Rinse your gear at the far tap.",
+    });
+
+    const after = await setShopHospitalityNotes(db, shop.id, {
+      welcomeNote: "",
+      dockCallNote: "   \n  ",
+      signOffNote: "Rinse your gear at the far tap.",
+    });
+    expect(after?.welcomeNote).toBeNull();
+    expect(after?.dockCallNote).toBeNull();
+    // Clearing two says nothing about the third.
+    expect(after?.signOffNote).toBe("Rinse your gear at the far tap.");
+  });
+
+  it("trims what it keeps, so a stray newline never reaches a diver", async () => {
+    const { db, shop } = await seededShopContext();
+    const after = await setShopHospitalityNotes(db, shop.id, {
+      welcomeNote: "  Glad you are diving with us.\n",
+      dockCallNote: "",
+      signOffNote: "",
+    });
+    expect(after?.welcomeNote).toBe("Glad you are diving with us.");
+  });
+
+  it("leaves a shop that never set them as all null", async () => {
+    const { shop } = await seededShopContext();
+    expect(shop.welcomeNote).toBeNull();
+    expect(shop.dockCallNote).toBeNull();
+    expect(shop.signOffNote).toBeNull();
+  });
+
+  it("holds 280 characters and refuses the 281st at the table", async () => {
+    const { db, shop } = await seededShopContext();
+    const full = "a".repeat(280);
+    const after = await setShopHospitalityNotes(db, shop.id, {
+      welcomeNote: full,
+      dockCallNote: "",
+      signOffNote: "",
+    });
+    expect(after?.welcomeNote).toBe(full);
+
+    // The bound is in the database, not only in the form: three short
+    // templates, never a freeform brand CMS (schema.ts:415-427).
+    await expect(
+      setShopHospitalityNotes(db, shop.id, {
+        welcomeNote: "",
+        dockCallNote: "",
+        signOffNote: "b".repeat(281),
+      }),
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({
+        message: expect.stringContaining("shops_hospitality_notes_bounded"),
+      }),
+    });
+    const untouched = await getShopBySlug(db, shop.slug);
+    expect(untouched?.welcomeNote).toBe(full);
   });
 });

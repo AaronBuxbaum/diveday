@@ -57,7 +57,7 @@ describe("TripNoticeBanner", () => {
       renderBanner("diver-trip-prerequisite", "~~deep~0");
       const banner = screen.getByRole("alert");
       expect(banner).toHaveTextContent(
-        "That diver's certifications on file don't reach what this trip and its dive sites require",
+        "That diver’s certifications on file don’t reach what this trip and its dive sites require",
       );
       expect(banner).not.toHaveTextContent("Deep certification");
     });
@@ -69,7 +69,7 @@ describe("TripNoticeBanner", () => {
       );
       const banner = screen.getByRole("alert");
       expect(banner).not.toHaveTextContent("Advanced Open Water");
-      expect(banner).toHaveTextContent("don't reach what this trip");
+      expect(banner).toHaveTextContent("don’t reach what this trip");
     });
 
     it("renders rather than throwing on a repeated ?gate=", () => {
@@ -114,5 +114,23 @@ describe("resolveTripNotice", () => {
   it("still refuses an unrecognized notice code outright", () => {
     expect(resolve("constructor")).toBeUndefined();
     expect(resolve(undefined)).toBeUndefined();
+  });
+
+  /**
+   * The two trip doors (`SEAT_SURFACES["trip-guests"]` and `["new-booking"]`)
+   * land a held seat here — a booking attached to an existing diver on a guess,
+   * which the boarding gate refuses until someone confirms it (H-13, issue
+   * #1556). It used to land as the plain `diver-added`, so the staffer learned
+   * the seat was held on the next tap, at the check-in queue
+   * (`dive-domain-expert`, 2026-09-11). Distinct words, and a tone that is not
+   * "you can walk away".
+   */
+  it("says a held seat is held, beside the form that seated it", () => {
+    const held = resolve("diver-added-identity-unconfirmed");
+
+    expect(held?.form).toBe("add-diver");
+    expect(held?.tone).toBe("warning");
+    expect(held?.text).not.toBe(resolve("diver-added")?.text);
+    expect(held?.text).toMatch(/confirm/i);
   });
 });

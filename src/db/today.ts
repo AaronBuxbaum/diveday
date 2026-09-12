@@ -431,8 +431,12 @@ function isAccountedForAfterDive(state: "boarded" | "not_boarded" | undefined): 
  * Who an after-dive count is counting. **Not** everyone who bought a seat.
  *
  * Crews tap "Boarded" for the people standing in front of them and never touch
- * the two who didn't show; there is no bulk action and nothing in the app ever
- * writes `no_show`. Counting walk-aways as uncounted after every dive raised a
+ * the two who didn't show; there is no bulk action, and the one act that does
+ * write a walk-away down — the counter's no-show mark (`markBookingNoShow`,
+ * src/db/no-show.ts, issue #1209) — writes `bookings.status` and an activity
+ * line, never a `roll_call_events` row. So a walk-away reaches this count the
+ * same way whether or not the desk released their seat: no result at any
+ * checkpoint. Counting walk-aways as uncounted after every dive raised a
  * danger-toned row on most real trips, and a red row that fires on most trips
  * is read by nobody within a fortnight — at which point the row that means a
  * diver is in the water stops working too.
@@ -2119,13 +2123,7 @@ export async function getTodayWork(
       }),
       actionLabel: openDiverActionText(t),
       href: `/shop/${shopSlug}/divers/${row.personId}`,
-      rentalFit: {
-        personId: row.personId,
-        kind: row.kind,
-        size: row.size,
-        unitLabel: row.unitLabel,
-        personName: row.personName,
-      },
+      rentalFit: { reservationId: row.reservationId },
       dueAt: row.tripEndsAt,
     });
   }

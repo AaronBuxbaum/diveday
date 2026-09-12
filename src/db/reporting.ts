@@ -83,7 +83,17 @@ export async function canPersonViewShopReports(
   return canViewShopReports(roleRows.map((row) => row.role as Role));
 }
 
-/** Bookings that still count as "on the boat" — the roster set, not cancellations. */
+/**
+ * Bookings whose seat earned: the two statuses that hold a seat, and no others.
+ *
+ * **Not the roster set**, which is every non-cancelled booking and has included
+ * a released `no_show` since the counter gained a writer for it (issue #1209) —
+ * a name the crew still account for over a seat the shop may already have sold
+ * again. Kept as its own list rather than `SEAT_HELD_STATUSES` on purpose: a
+ * later change to what holds a seat against capacity should reach a revenue
+ * metric as a decision, not as a side effect. `reporting.test.ts` pins the two
+ * apart.
+ */
 const ACTIVE_BOOKING_STATUSES = ["booked", "checked_in"] as const;
 /**
  * Payment states that represent money actually collected (a deposit is partial,

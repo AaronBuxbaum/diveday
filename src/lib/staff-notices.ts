@@ -129,6 +129,45 @@ export function shopPath(slug: string, ...segments: (string | number)[]): string
 }
 
 /**
+ * The read half of `shopPath`: a `?returnTo=` handed back by the client,
+ * reduced to a path inside *this* shop, or nothing.
+ *
+ * `shopPath` makes the paths this app *emits* safe. Nothing made the paths it
+ * *accepts* safe, and two surfaces accept one. `divers/new` was the sharp case:
+ * it read `?returnTo=` straight off the query, rendered it as the back link's
+ * href, and after a successful create handed it to `revalidateAndRedirect` as
+ * both the `revalidatePath` key and the redirect target — so a staffer who
+ * followed a crafted link and then added a diver was bounced off-origin
+ * immediately after an authenticated write, which is a staff-phishing hop with
+ * the app's own success state behind it. Arbitrary text reached `revalidatePath`
+ * on the same line.
+ *
+ * Three refusals, and the third is the one a prefix test alone misses:
+ * another origin (`https://evil.invalid/x`), another *shop* (a same-origin
+ * cross-tenant hop), and traversal — `/shop/blue-mantis/../../evil` passes
+ * `startsWith` and normalises to `/evil` in the browser. Re-parsing against a
+ * throwaway base and re-checking the *normalised* pathname catches all three.
+ *
+ * Deliberately a normalisation to `null` and not a throw: this runs on a path a
+ * staffer reached by following a link, and the caller's answer is to fall back
+ * to a destination it already knows is good, not to show them a 500.
+ */
+export function safeShopReturnPath(slug: string, value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  const prefix = `${shopPath(slug)}/`;
+  if (!trimmed.startsWith(prefix)) return null;
+  try {
+    const base = "https://diveday.invalid";
+    const parsed = new URL(trimmed, base);
+    if (parsed.origin !== base || !parsed.pathname.startsWith(prefix)) return null;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * The write half of the `?notice=` pattern: the URL a surface redirects to in
  * order to say what just happened.
  *

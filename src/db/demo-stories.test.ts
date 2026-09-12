@@ -47,7 +47,7 @@ describe("demoStoryPath", () => {
     const trip = upcoming.find((t) => t.id === tripId);
     // `upcomingTripsWithCounts` only returns `scheduled` departures, so finding
     // it there is the assertion that nothing was blown out on the way in.
-    expect(trip, "the weather day's departure was already cancelled").toBeTruthy();
+    expect(trip, "the weather day’s departure was already cancelled").toBeTruthy();
     // The fullest boat: a blow-out with one diver aboard understates the cascade.
     expect(trip?.booked).toBe(Math.max(...upcoming.map((t) => t.booked)));
     expect(trip?.booked ?? 0).toBeGreaterThan(0);
