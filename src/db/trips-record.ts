@@ -54,6 +54,44 @@ import { seatHeld } from "./trips-queries";
  * recorded a roll call against (CR-006).
  */
 
+/**
+ * "Does this shop have a departure with this id?" — nothing about it, just
+ * whether the row is there.
+ *
+ * Read by `src/proxy.ts` before the static shell of a `/s/<shop>/trips/<id>`
+ * request, so that an id naming no departure answers a real 404 rather than a
+ * 200 whose body says otherwise (ADR
+ * 20260912-the-public-namespace-refuses-at-the-edge).
+ *
+ * **On the board, and nothing beyond that** — `liveTrip()` and no other
+ * predicate. The filter is here because every public reader of a departure
+ * carries it and therefore 404s a deleted one anyway (`getTripWithBooked`
+ * below, which the page, the `.ics` route and the arrival card all read
+ * through, and `publicBoatLine`), so refusing a removed departure at the edge
+ * matches the page rather than overruling it — and `scripts/check-live-trips.mjs`
+ * exists to stop a reader of this table quietly meaning "tombstones too".
+ *
+ * Status and `isPrivate` are deliberately *not* here. Each is a reason a page
+ * declines to render a departure that is still on the board, and the page
+ * answers several of them at 200 on purpose: a cancelled departure gets its
+ * own soft landing, and a shop with the boat line switched off renders
+ * `notFound()` rather than confirm the departure exists. The edge refusing
+ * either would be stricter than the page, which is the one failure this whole
+ * mechanism must not have.
+ */
+export async function tripExistsForShop(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  return rows.length > 0;
+}
+
 /** Trip scoped to a shop (staff pages must never cross tenants), with booked count. */
 export async function getTripWithBooked(db: AppDb, shopId: string, tripId: string) {
   const rows = await db

@@ -2073,12 +2073,25 @@ for (const scheme of ["light", "dark"] as const) {
 
       // A departure that no longer exists, which is what a link on a flyer or
       // in last season's Instagram post resolves to. It is a *shop* surface
-      // now rather than DiveDay's app-wide 404 (issue #765), so the thing to
-      // look at is that the shop's header, nav and footer frame it and that
-      // one action leads back to the board.
+      // rather than DiveDay's app-wide 404 (issue #765), so the thing to look
+      // at is that the shop's header, nav and footer frame it and that one
+      // action leads back to the board.
+      //
+      // The frame is composed in `src/app/not-found.tsx` now, not by the
+      // segment layout: `src/proxy.ts` refuses this URL above the streaming
+      // boundary so it answers a real 404 (ADR
+      // 20260912-the-public-namespace-refuses-at-the-edge), and a rewrite to
+      // `/_not-found` renders under the root layout. The components are the
+      // same four, moved verbatim, so the picture is the same picture — which
+      // is exactly what this baseline is here to say.
+      //
+      // The heading by name rather than `h1` first: the shell this route
+      // streams from is DiveDay's own 404, which has an `<h1>` of its own, so
+      // a wait on the tag can be satisfied by the page this capture exists to
+      // prove is gone.
       test(`a dead link inside a shop renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/trips/00000000-0000-4000-8000-000000000000");
-        await page.locator("h1").first().waitFor();
+        await page.getByRole("heading", { name: "That page isn’t here any more" }).waitFor();
         await capture(page, "shop-not-found", scheme);
       });
 

@@ -937,9 +937,15 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // (`dynamicParams = false` and `experimental_ppr` are both removed under
   // `nextConfig.cacheComponents`). The rendered document still correctly
   // lands on Next's own not-found boundary — only the raw first-byte HTTP
-  // status of a cold hit is 200 instead of 404. Same known Next 16
-  // cacheComponents limitation the certification-path spec documented before
-  // ADR 20260805-remove-certification-paths deleted it.
+  // status of a cold hit is 200 instead of 404.
+  //
+  // This was once the whole app's behaviour. It is not any more: `/s/**`
+  // decides the status in `src/proxy.ts`, above the streaming boundary (ADR
+  // 20260912-the-public-namespace-refuses-at-the-edge), so a retired course
+  // URL like `/s/blue-mantis/courses/paths` answers a real 404 and
+  // `e2e/courses.spec.ts` asserts it. This route was left out because it asks
+  // a different question — `MIGRATION_GUIDE_SLUGS` is a closed list, not a row
+  // — and issue #1734 carries it.
   await page.goto("/switching/checkfront");
   await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
   // `.first()`: the server HTML (confirmed via curl against a fresh build)

@@ -21,8 +21,18 @@ import { publicSchedulePath, shopSlugFromPublicPath } from "@/lib/public-routes"
  * This file changes nothing but which boundary catches it: Next renders the
  * nearest `not-found.tsx`, so the shop's own header, nav and footer come from
  * `layout.tsx` exactly as on any other page here, and the only thing left to
- * write is one accurate sentence and one link back to the board. The root file
- * is untouched and still right for a URL that names no shop.
+ * write is one accurate sentence and one link back to the board.
+ *
+ * **It is the second layer now, not the first.** A URL naming a row that is
+ * simply not there is refused in `src/proxy.ts` before any shell is sent, so
+ * that it answers a real 404 rather than a 200 with this page in the body (ADR
+ * 20260912-the-public-namespace-refuses-at-the-edge), and the refusal renders
+ * `src/app/not-found.tsx`, which composes the same shop shell for the slug the
+ * proxy named. What still arrives here is every `notFound()` the edge cannot
+ * pre-empt: a row that existed when the edge looked and was gone when the page
+ * read it, and a page that refuses a row it found — an opted-out shop's
+ * `availability.json`, a year card a shop keeps private. Those keep this
+ * boundary, and the two renderings are kept identical on purpose.
  *
  * **The slug comes from the request, because this file is handed no `params`**
  * — Next passes `not-found.tsx` no props at all. `REQUEST_PATH_HEADER` is

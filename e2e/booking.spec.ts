@@ -635,16 +635,23 @@ test.describe("the shopfront on a phone", () => {
  *
  * Before issue #765 this fell through to the app-wide 404: no shop chrome, the
  * word DIVEDAY above the heading, and one button to DiveDay's *sales*
- * homepage. The assertions below are the three halves of the fix — the shop is
+ * homepage. The assertions below are the three halves of that fix — the shop is
  * still on the screen, the way onward is that shop's own board, and DiveDay's
- * marketing door is not offered to a diver at all.
+ * marketing door is not offered to a diver at all — and, ahead of them, the
+ * status. The three body assertions were green from the day #765 landed while
+ * the response said 200, so the link a crawler followed stayed indexed and the
+ * flyer kept sending divers to a page search engines still advertised. A
+ * refusal a person reads and a refusal a machine reads are two facts, and this
+ * test only ever checked one of them.
  */
 test("a dead departure link keeps the diver at the shop they were trying to reach", async ({
   page,
 }) => {
   // A valid slug with a trip id that resolves to nothing — the shape of a
   // deleted departure and of a URL retyped off a flyer alike.
-  await page.goto("/s/blue-mantis/trips/00000000-0000-4000-8000-000000000000");
+  const dead = "/s/blue-mantis/trips/00000000-0000-4000-8000-000000000000";
+  const response = await page.goto(dead);
+  expect(response?.status(), dead).toBe(404);
 
   await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
   // The shop's own chrome, from the namespace layout: whose page this is, and

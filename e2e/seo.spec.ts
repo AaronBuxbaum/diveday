@@ -151,6 +151,60 @@ test("sitemap.xml lists the marketing pages, excludes the demo shop, and never l
   expect(body).not.toContain("/waivers/");
 });
 
+/**
+ * **The crawler-facing status of a dead link, asserted as a status.**
+ *
+ * This sits beside robots.txt and sitemap.xml because it is the same kind of
+ * fact: what a crawler is told about a URL. `robots.txt` says where not to
+ * look, `sitemap.xml` says what is worth indexing, and this says what happens
+ * to everything else.
+ *
+ * It is a status assertion rather than a heading assertion on purpose. Every
+ * unknown URL in this namespace already rendered the right not-found page, so
+ * every heading assertion in `e2e/` was green for the whole life of the soft
+ * 404 — the shell streamed at 200, `notFound()` landed in the body far too
+ * late to change a status, and a crawler kept the page. Three issues (#1489,
+ * #1510, #1604) chased that without a single test going red, because no test
+ * was reading the one byte that was wrong. The refusal now happens above the
+ * streaming boundary in `src/proxy.ts` (ADR
+ * 20260912-the-public-namespace-refuses-at-the-edge), and this is the
+ * assertion that can tell.
+ *
+ * The two 200s at the end are not decoration: a guard that only proves
+ * unknown URLs are refused is satisfied by refusing every URL, which would be
+ * the far worse bug — a shop's storefront off the internet.
+ */
+test("an unknown URL under /s/** answers 404, not 200 with the not-found page", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  for (const path of [
+    // A shop slug nobody minted.
+    "/s/no-such-shop-here",
+    // …and one of its children, which must not resolve past its missing shop.
+    "/s/no-such-shop-here/courses",
+    // A live shop, naming a course, a site and a departure it does not have.
+    `/s/${DEMO_SHOP_SLUG}/courses/nope-nope`,
+    `/s/${DEMO_SHOP_SLUG}/sites/somebody-elses-ledge`,
+    `/s/${DEMO_SHOP_SLUG}/trips/00000000-0000-4000-8000-000000000000`,
+    // Segments no shop could have minted: refused on shape, before any query.
+    `/s/${DEMO_SHOP_SLUG}/sites/Molasses%20Reef`,
+    `/s/${DEMO_SHOP_SLUG}/trips/nope`,
+    // The one path that answered 404 before any of this — the widget
+    // catalogue, refused at the edge since it shipped. It is in the list
+    // because it is the proof the mechanism works, and it must keep working.
+    `/s/${DEMO_SHOP_SLUG}/embed/nope`,
+  ]) {
+    expect((await page.request.get(path)).status(), path).toBe(404);
+  }
+
+  for (const path of [
+    `/s/${DEMO_SHOP_SLUG}`,
+    `/s/${DEMO_SHOP_SLUG}/courses/discover-scuba-diving`,
+  ]) {
+    expect((await page.request.get(path)).status(), path).toBe(200);
+  }
+});
+
 test("the schedule page's canonical stays on the standalone URL in both standalone and embed views, and JSON-LD only renders standalone", {
   tag: READ_ONLY,
 }, async ({ page }) => {

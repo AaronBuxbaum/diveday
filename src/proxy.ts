@@ -1,6 +1,8 @@
 import { getCookieCache, getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { getDb } from "@/db/client";
+import { publicRouteExists } from "@/db/public-route-existence";
 import { authSecret } from "@/lib/auth-secret";
 import { isStaff, type Role } from "@/lib/authz";
 import {
@@ -26,8 +28,11 @@ import {
   isUnknownEmbedWidgetRoute,
   parseEmbedBrandParam,
   parseEmbedFontParam,
+  REFUSED_SHOP_SLUG_HEADER,
   REQUEST_PATH_HEADER,
 } from "@/lib/embed-routes";
+import { log } from "@/lib/log";
+import { publicRouteShape } from "@/lib/public-route-shape";
 import { shopSlugFromPublicPath } from "@/lib/public-routes";
 import {
   encodeReferralCookie,
@@ -303,6 +308,87 @@ function rememberPartnerReferral(req: NextRequest, res: Response): void {
   res.headers.set("Cache-Control", "private, no-store");
 }
 
+/**
+ * Next's own not-found entry, as `next/dist/shared/lib/entry-constants.js`
+ * spells it (`UNDERSCORE_NOT_FOUND_ROUTE`). Written out rather than imported:
+ * a deep import into the framework's internals to save retyping eleven
+ * characters buys a break on the next minor. The value is what makes this work
+ * — `base-server.js` rewrites the pathname to `/404` and sets
+ * `res.statusCode = 404` *before* rendering, so the status of this response
+ * does not depend on streaming at all, which is the entire point.
+ */
+const NOT_FOUND_ROUTE = "/_not-found";
+
+/**
+ * **A `/s/**` URL that names nothing is refused here, above the streaming
+ * boundary** (ADR 20260912-the-public-namespace-refuses-at-the-edge).
+ *
+ * Under `cacheComponents` every page in the public namespace streams a static
+ * shell first, so the `notFound()` in its body arrives long after a 200 went
+ * out on the wire: a dead booking link, a course a shop deleted, a mistyped
+ * shop slug all answered 200 with a not-found page in the body, and a crawler
+ * read that as a page worth keeping. `generateMetadata` cannot fix it either —
+ * metadata that reads `params` defers to request time and streams in with the
+ * rest. The only layer left is this one, and the embed catalogue above has been
+ * proving it works for one route since before this one generalised it.
+ *
+ * **What it costs.** One indexed read on `shops.slug` for a shop-level URL,
+ * two for one that names a course, a dive site or a departure inside a shop —
+ * paid on the request path by every diver on every public page, which is
+ * exactly the latency ADR 20260804-instant-navigation set out to avoid. It is
+ * the same read the page itself is about to do a few milliseconds later, so
+ * the *work* is duplicated rather than new; the TTFB is not. If that proves to
+ * matter, the fix is a process-local cache of **positive** shop-slug results
+ * with a short TTL and never a negative one — a shop created a second ago must
+ * not 404 — and it should be measured before it is written.
+ *
+ * **What happens when the read fails or hangs.** A throw is not a refusal:
+ * `catch` returns `null` and the request continues exactly as it does today,
+ * because a 404 fired by a database outage would take every live shop off the
+ * internet to fix a soft 404 on dead links. There is deliberately no timeout
+ * racing this read — the page's own render issues the same query immediately
+ * afterwards, so a slow database is slow either way and a race would only buy
+ * a 200 whose body then hangs.
+ *
+ * GET and HEAD only. A Server Action posts to the route it sits on, and a
+ * booking that lands on a refusal instead of the page is a lost sale.
+ *
+ * **`null` is "serve the page"; an object is "refuse it".** The object carries
+ * the one thing `/_not-found` cannot work out for itself — whether the shop
+ * the URL named is really there — because issue #765 says a diver whose link
+ * died is owed that shop's own refusal and *not* a button to a schedule that
+ * would 404 in its turn. That costs one more indexed read on `shops.slug`, and
+ * it is paid only on the refusal path: a live page never reaches this line.
+ */
+async function refusedPublicRoute(
+  req: NextRequest,
+): Promise<{ liveShopSlug: string | null } | null> {
+  if (req.method !== "GET" && req.method !== "HEAD") return null;
+  const shape = publicRouteShape(req.nextUrl.pathname);
+  if (!shape) return null;
+  try {
+    const db = await getDb();
+    if (await publicRouteExists(db, shape)) return null;
+    // A `shop` shape that was refused *is* the missing shop, so the answer is
+    // already in hand; every other shape was refused for a reason the lookup
+    // does not report, and the slug it claims has still to be proved. The
+    // claim itself comes from the pathname rather than from `shape`, which
+    // carries no slug on the `malformed` branch — a well-formed shop with a
+    // segment no shop could have minted is exactly the case that should still
+    // be framed as that shop's.
+    const claimed = shape.kind === "shop" ? null : shopSlugFromPublicPath(req.nextUrl.pathname);
+    const live =
+      claimed !== null && (await publicRouteExists(db, { kind: "shop", shopSlug: claimed }));
+    return { liveShopSlug: live ? claimed : null };
+  } catch (error) {
+    log("public_route.existence_unavailable", "error", {
+      path: req.nextUrl.pathname,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
 export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response | undefined> {
   // The route pattern alone (isEmbeddableShopRoute) isn't a request — a plain
   // visit to /s/x with no ?embed=1 must stay denied. Only an
@@ -323,6 +409,41 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
       headers: { "content-type": "text/plain; charset=utf-8" },
     });
   }
+  // The same refusal, one layer wider: the widget catalogue above is a closed
+  // list this repository holds, and everything else in the namespace is a row
+  // (see `refusedPublicRoute`). Answered by rewriting rather than by
+  // a bare response, because a diver who followed a dead link is owed a page
+  // rather than the word "Not found": the rewrite renders a real route, and
+  // this function's remaining work — the request-header overrides that route
+  // reads (REQUEST_PATH_HEADER still carries the ORIGINAL pathname, and
+  // REFUSED_SHOP_SLUG_HEADER names the shop to frame the refusal as, issue
+  // #765), `X-Frame-Options`, the CSP headers, the referral cookies — happens
+  // to the refusal exactly as it happens to a live page. The
+  // auth gate is the one thing it stands in front of, and that costs nothing:
+  // every route this can refuse is in the public namespace, where the gate has
+  // never had anything to say.
+  //
+  // **The proxy runs twice on a refusal, and the second pass is the one the
+  // page sees.** Next's router applies the rewrite and then routes the new
+  // path from the top, matcher included — so `proxy` is re-entered with
+  // `/_not-found` as its own pathname, and every header the first pass stamped
+  // is recomputed from a URL that names nothing. Left alone it blanks them
+  // both: `REQUEST_PATH_HEADER` came back as the literal string
+  // `/_not-found`, and the refused shop came back empty, which is a
+  // shop-framed 404 silently reverting to DiveDay's sales-page one (issue
+  // #765). The facts belong to the pass that did the lookups, so this pass
+  // carries them rather than re-deriving them from a path they are not in.
+  //
+  // Carrying a value off the incoming request is the one place this file does
+  // not overwrite a client-supplied header, and it is safe for a reason worth
+  // writing down: no top-level navigation can carry a custom request header,
+  // and no cross-origin `fetch` can set an `x-diveday-*` one without a
+  // preflight this app never grants. Only same-origin script — already running
+  // as the reader — could forge one, and the whole of what it would buy is
+  // DiveDay's own 404 wearing the public header of a real shop. Both readers
+  // still hold the value to the slug charset rather than trusting it.
+  const isRefusalRender = req.nextUrl.pathname === NOT_FOUND_ROUTE;
+  const refused = isRefusalRender ? null : await refusedPublicRoute(req);
   const embedParams = req.nextUrl.searchParams.getAll("embed");
   // A widget view is an embed by path; the schedule and trip pages are embeds
   // only with exactly one `?embed=1` (see the note above).
@@ -348,7 +469,9 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // used to guard against no longer exists at this layer. The one Set-Cookie
   // this function issues is the partner referral below, which is not a
   // credential and carries nothing about who the reader is.
-  const res = (await authGateResponse(req)) ?? NextResponse.next();
+  const res = refused
+    ? NextResponse.rewrite(new URL(NOT_FOUND_ROUTE, req.nextUrl))
+    : ((await authGateResponse(req)) ?? NextResponse.next());
   rememberPartnerReferral(req, res);
   rememberBuddyReferral(req, res);
   // Forward embed-mode and the request's own pathname to the server-component
@@ -363,13 +486,21 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // otherwise have no way to know which shop's schedule to offer a diver whose
   // link died (issue #765). That reader is only safe because the value is
   // overwritten here on every proxied request rather than trusted from the
-  // client, and src/proxy.test.ts pins that.
+  // client, and src/proxy.test.ts pins that. `isRefusalRender` is the one
+  // exception and the note beside it says why: on that pass the URL is
+  // `/_not-found` and recomputing from it would throw away what the pass that
+  // did the lookups already knows.
   overrideRequestHeaders(req, res, {
     [EMBED_REQUEST_HEADER]: isEmbedRequest ? "1" : "",
     [EMBED_BRAND_HEADER]: embedBrand ?? "",
     [EMBED_FONT_HEADER]: embedFont ?? "",
     [EMBED_LOCALE_HEADER]: embedLocale,
-    [REQUEST_PATH_HEADER]: req.nextUrl.pathname,
+    [REQUEST_PATH_HEADER]: isRefusalRender
+      ? (req.headers.get(REQUEST_PATH_HEADER) ?? req.nextUrl.pathname)
+      : req.nextUrl.pathname,
+    [REFUSED_SHOP_SLUG_HEADER]: isRefusalRender
+      ? (req.headers.get(REFUSED_SHOP_SLUG_HEADER) ?? "")
+      : (refused?.liveShopSlug ?? ""),
   });
   // Deny framing everywhere by default (clickjacking on staff/sign-in surfaces);
   // an actual embed request is the one deliberate exception, so a shop can

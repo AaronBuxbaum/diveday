@@ -70,8 +70,12 @@ test("a region segment that is not a slug never reaches the database", { tag: RE
   // Shape is tested before any query runs (`isRegionSlug`), so each of these
   // refuses without a read. The assertion is the rendered refusal rather than
   // a 404 status: under this app's `cacheComponents` setup a `notFound()` from
-  // a dynamic page body answers 200 with the not-found page in the payload,
-  // the same as `/s/<unknown-shop>` — see the note on `regionShops`.
+  // a dynamic page body answers 200 with the not-found page in the payload —
+  // see the note on `regionShops`. `/s/<unknown-shop>` used to be the
+  // companion example and no longer is: that namespace refuses above the
+  // streaming boundary now (ADR
+  // 20260912-the-public-namespace-refuses-at-the-edge) and `e2e/seo.spec.ts`
+  // asserts its status. This route is still soft, and issue #1734 carries it.
   for (const segment of ["Key%20Largo", "key_largo", "-key-largo"]) {
     await page.goto(`/dive/${segment}`);
     await expect(
