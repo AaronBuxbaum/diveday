@@ -925,27 +925,10 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await expect(page.getByRole("heading", { name: /rebuilding your site/ })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Get your data out of Rezdy" })).toBeVisible();
 
-  // An unlisted incumbent has no page — no coming-soon shells. Content-level,
-  // not `response?.status()`: `/switching/[competitor]` prerenders only the
-  // registered slugs via `generateStaticParams`, so an unregistered one like
-  // "checkfront" falls back to a dynamic render, and cacheComponents'
-  // Partial Prerendering unconditionally serves an optimistic 200 "App
-  // Shell" for a dynamic-param combination without a static shell, upgrading
-  // it in the background once `notFound()` resolves — confirmed locally: the
-  // first hit to an unseen slug answers 200, and only a subsequent hit to
-  // the same (now-resolved) path answers 404. There is no per-route opt-out
-  // (`dynamicParams = false` and `experimental_ppr` are both removed under
-  // `nextConfig.cacheComponents`). The rendered document still correctly
-  // lands on Next's own not-found boundary — only the raw first-byte HTTP
-  // status of a cold hit is 200 instead of 404.
-  //
-  // This was once the whole app's behaviour. It is not any more: `/s/**`
-  // decides the status in `src/proxy.ts`, above the streaming boundary (ADR
-  // 20260912-the-public-namespace-refuses-at-the-edge), so a retired course
-  // URL like `/s/blue-mantis/courses/paths` answers a real 404 and
-  // `e2e/courses.spec.ts` asserts it. This route was left out because it asks
-  // a different question — `MIGRATION_GUIDE_SLUGS` is a closed list, not a row
-  // — and issue #1734 carries it.
+  // An unlisted incumbent has no page — no coming-soon shells. This assertion
+  // is content-level on purpose and no longer for want of a status one: the
+  // status is asserted on its own below, for all three routes at once, because
+  // that is the byte three issues chased without a test reading it.
   await page.goto("/switching/checkfront");
   await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
   // `.first()`: the server HTML (confirmed via curl against a fresh build)
@@ -955,6 +938,73 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // differing directive: a route with no dynamic-hole resolution step hits
   // the same not-found boundary and never duplicates it.
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", "noindex");
+});
+
+/**
+ * **The three public dynamic routes outside `/s/**` answer a real 404** (issue
+ * #1734, ADR 20260912-the-public-namespace-refuses-at-the-edge).
+ *
+ * A status assertion rather than a heading assertion, and that is the whole
+ * point of the test. Every one of these URLs already rendered the right
+ * not-found page, so every heading assertion in `e2e/` was green for the entire
+ * life of the soft 404 — the shell streamed at 200, the page's `notFound()`
+ * landed in the body far too late to change a status line, and a crawler kept
+ * the URL as a page worth re-fetching. `/s/**` was fixed and asserted in
+ * `e2e/seo.spec.ts`; these three were left, went on answering 200 for six more
+ * weeks, and nothing anywhere went red. This is the assertion that can tell,
+ * and it is a copy of that one's shape.
+ *
+ * **Twice each.** `/switching/[competitor]` and `/demo/[story]` prerender only
+ * their registered slugs, so an unregistered one used to answer 200 on the
+ * first, cold hit and 404 only once that path had resolved — a single probe
+ * could have called the bug fixed while it was not. The edge decides before any
+ * of that, so both hits must agree now.
+ *
+ * **The 200s are not decoration.** A guard that only proves unknown URLs are
+ * refused is satisfied by refusing everything, which is the far worse bug: a
+ * town that has shops, a guide that is written, a story that opens. The
+ * spreadsheet guide is the sharpest of them — a shipped page whose slug is
+ * deliberately not in `MIGRATION_GUIDE_SLUGS`, because a spreadsheet is not an
+ * incumbent, so a `[competitor]`-shaped judgement of its path would 404 it.
+ */
+test("an unknown town, incumbent or story answers 404, not 200 with the not-found page", async ({
+  page,
+}) => {
+  for (const path of [
+    // The issue's own probe, and the one a shape-only fix would have missed:
+    // `not-a-town` is a slug this app could have minted, so only the shops
+    // listed in it can answer for it.
+    "/dive/not-a-town",
+    // A town segment no locality could have produced — refused on shape,
+    // before any query, exactly as `dive/[region]/page.tsx` refuses it.
+    "/dive/Not_A_Town",
+    // An incumbent with no guide. `checkfront` appears once in
+    // `src/lib/migration-guides.ts`, inside a Rezdy source URL, and names no
+    // guide.
+    "/switching/checkfront",
+    "/demo/not-a-story",
+  ]) {
+    const cold = await page.request.get(path);
+    expect(cold.status(), `${path} (cold hit)`).toBe(404);
+    // A negative answer must never be pinned to a URL that later becomes real:
+    // a town gains its first listed shop, and a guide gets written.
+    expect(cold.headers()["cache-control"], path).toContain("no-store");
+    // The same path again, resolved. Not a retry — both hits must answer 404,
+    // and it is the *cold* one that used to be a 200.
+    const warm = await page.request.get(path);
+    expect(warm.status(), `${path} (second hit)`).toBe(404);
+    expect(warm.headers()["cache-control"], path).toContain("no-store");
+  }
+
+  for (const path of [
+    // Seeded by `seedRegionNeighbours` — two listed shops in Key Largo.
+    "/dive/key-largo",
+    "/switching/eve",
+    "/switching/spreadsheet",
+    "/demo/weather-day",
+  ]) {
+    expect((await page.request.get(path)).status(), path).toBe(200);
+  }
 });
 
 test("help arrives before the homework on a switching guide", async ({ page }) => {

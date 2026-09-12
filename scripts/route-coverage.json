@@ -35,7 +35,7 @@
     "visual": ["confirm-contact-invalid"]
   },
   "/demo/[story]": {
-    "e2e": ["demo-stories.spec.ts"],
+    "e2e": ["demo-stories.spec.ts", "marketing.spec.ts"],
     "visual": ["demo-story-door"]
   },
   "/dive": {
@@ -44,7 +44,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/dive/[region]": {
-    "e2e": ["a11y.spec.ts", "regional-pages.spec.ts"],
+    "e2e": ["a11y.spec.ts", "marketing.spec.ts", "regional-pages.spec.ts"],
     "visual": ["region-shops"],
     "a11y": ["a11y.spec.ts"]
   },
