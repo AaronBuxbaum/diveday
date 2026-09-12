@@ -3230,6 +3230,11 @@ export async function loadShopExportBundleInput(
             "forecast_latitude",
             "forecast_longitude",
             "tide_station_id",
+            // Whether the shop has said it meant that station even though it
+            // sits further from the site than the editor's own threshold
+            // (issue #1731). It travels with the id it answers: restored
+            // without it, a genuinely remote site starts prompting again.
+            "tide_station_confirmed",
             "tide_preference",
             "satellite_image_url",
             "route_image_url",
@@ -3276,6 +3281,7 @@ export async function loadShopExportBundleInput(
             row.forecastLatitude,
             row.forecastLongitude,
             row.tideStationId,
+            row.tideStationConfirmed,
             row.tidePreference,
             row.satelliteImageUrl,
             row.routeImageUrl,

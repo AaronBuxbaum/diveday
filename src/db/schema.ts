@@ -1458,6 +1458,32 @@ export const diveSites = pgTable(
      * tide, which is most sites (ADR 20260907-noaa-tide-predictions).
      */
     tideStationId: text("tide_station_id"),
+    /**
+     * **The shop saying it meant the station above, distance and all** — ADR
+     * 20260907-noaa-tide-predictions' 2026-09-10 amendment, issue #1731.
+     *
+     * The editor prompts a second look when the station sits further than
+     * `IMPLAUSIBLE_STATION_DISTANCE_KM` from the site's own coordinates
+     * (`src/lib/tide-stations.ts`), and a genuinely remote site has no nearer
+     * one to pick: Flower Garden Banks reads Galveston at about 190 km and is
+     * correct. Without an answer that shop reads "check it's the one you
+     * meant" on every visit forever, and the cost lands on the *next* warning
+     * — a crew that learns to click past one learns to click past the Key
+     * Largo reef reading Vaca Key, which is the mistake forty kilometres
+     * exists to catch.
+     *
+     * `not null default false`, never nullable: "never asked" and "answered
+     * no" both mean the sentence renders, and a third state would only give
+     * the export a value nothing can act on.
+     *
+     * **It is about one pairing, not about the site.** Every writer that can
+     * change `tide_station_id` clears it in the same statement
+     * (`src/db/dive-sites.ts`), so a shop that acknowledges Galveston and
+     * later mistypes a different id gets the prompt back. It suppresses one
+     * advisory sentence on one form and is read nowhere else — not by
+     * readiness, not by admission, not by any tide prediction.
+     */
+    tideStationConfirmed: boolean("tide_station_confirmed").notNull().default(false),
     tidePreference: diveSiteTidePreference("tide_preference").notNull().default("any"),
     satelliteImageUrl: text("satellite_image_url"),
     routeImageUrl: text("route_image_url"),

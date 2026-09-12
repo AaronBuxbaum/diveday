@@ -71,6 +71,7 @@
     "tideStationEcho": "{id} · {name}",
     "tideStationFarKm": "Esa estación está a {distance} km de las coordenadas de este sitio, así que el cambio de marea que predice puede llegar aquí hasta una hora antes o después. Comprueba que es la que querías.",
     "tideStationFarMiles": "Esa estación está a {distance} mi de las coordenadas de este sitio, así que el cambio de marea que predice puede llegar aquí hasta una hora antes o después. Comprueba que es la que querías.",
+    "tideStationConfirmedCheckbox": "Esta es la estación correcta para este sitio",
     "tidePreferenceLabel": "Se bucea mejor",
     "tidePreference": {
       "any": "Con cualquier marea",

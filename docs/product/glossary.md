@@ -928,6 +928,16 @@ new domain concept, define it here in the same PR.
   twenty-nine kilometres.
   Advice, never a refusal: the lookup lives in the page's render rather than in the save, every
   failure renders nothing, and a site that has not said where it is draws no sentence at all.
+- **Station acknowledgement** — a shop saying, once, that it meant the station the advisory above
+  questions (`dive_sites.tide_station_confirmed`, a checkbox under the station field). A genuinely
+  remote site has no nearer station to pick — Flower Garden Banks reads Galveston at about 190 km
+  and is right — and no threshold both spares that and catches the Marathon mistake, so the
+  instrument is a per-pairing answer rather than a bigger number. Once set, the advisory does not
+  render; the box stays on the page so the answer can be taken back. **It is about one pairing, not
+  about the site**: every writer that can move `tide_station_id` clears the flag in the same
+  statement, so a shop that acknowledges Galveston and then mistypes a different id gets the prompt
+  back. Stored on the row rather than in the browser — which station a site reads is a fact about
+  the site — and read by nothing but that one sentence.
 - **Course session** — a scheduled class (pool or open water) tied to a course, an instructor,
   and enrolled students. Instructor-to-student **ratios** are agency-mandated and vary by
   course and environment.

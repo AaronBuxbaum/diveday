@@ -71,6 +71,7 @@
     "tideStationEcho": "{id} · {name}",
     "tideStationFarKm": "That station is {distance} km from this site’s coordinates, so the turn it predicts can reach this water up to an hour early or late. Check it’s the one you meant.",
     "tideStationFarMiles": "That station is {distance} mi from this site’s coordinates, so the turn it predicts can reach this water up to an hour early or late. Check it’s the one you meant.",
+    "tideStationConfirmedCheckbox": "This is the right station for this site",
     "tidePreferenceLabel": "Dives best",
     "tidePreference": {
       "any": "Any tide",

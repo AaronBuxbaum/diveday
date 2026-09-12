@@ -43,6 +43,8 @@ export type SiteFieldValues = {
   forecastLatitude: number | null;
   forecastLongitude: number | null;
   tideStationId: string | null;
+  /** Whether the shop has already said it meant that station (issue #1731). */
+  tideStationConfirmed: boolean;
   tidePreference: TidePreference;
   locationName: string | null;
   description: string | null;
@@ -212,6 +214,18 @@ export function SiteFields({
   // whether the plan holds. The turn is already a height turn rather than
   // slack (ADR 20260907's 2026-09-07 amendment), so the hour is the second
   // error stacked on the first.
+  //
+  // **And it can be answered** (issue #1731). A genuinely remote site has no
+  // nearer station to pick — Flower Garden Banks reads Galveston at about 190
+  // km and is right — so without an answer that shop reads the prompt on every
+  // visit forever, and a warning that is always wrong is one a crew learns to
+  // click past. The cost lands on the next warning, which may be the Key Largo
+  // reef reading Vaca Key. So the box below the fields is the answer, the
+  // sentence stops once it is ticked, and the box stays on the page so the shop
+  // can take the answer back. Still a prompt and never a refusal: the id saves
+  // either way, and nothing here reaches a readiness or admission rule.
+  const stationFar = Boolean(tideStation?.far && tideStation.distanceKm !== null);
+  const stationConfirmed = values?.tideStationConfirmed ?? false;
   const tideStationNote = tideStation ? (
     <>
       <span className="block">
@@ -220,7 +234,7 @@ export function SiteFields({
           name: stationLabel(tideStation),
         })}
       </span>
-      {tideStation.far && tideStation.distanceKm !== null ? (
+      {stationFar && !stationConfirmed && tideStation.distanceKm !== null ? (
         <span className="mt-0.5 block font-medium text-warning-strong">
           {depthUnit === "feet"
             ? t("diveSites.form.tideStationFarMiles", {
@@ -274,76 +288,96 @@ export function SiteFields({
       grouped: true,
       description: t("diveSites.form.forecastDescription"),
       body: (
-        <FieldGrid columns={2} className="gap-y-5">
-          <Field label={t("diveSites.form.latitudeLabel")}>
-            <input
-              name="forecastLatitude"
-              type="number"
-              step="any"
-              min={-90}
-              max={90}
-              defaultValue={values?.forecastLatitude ?? ""}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("diveSites.form.longitudeLabel")}>
-            <input
-              name="forecastLongitude"
-              type="number"
-              step="any"
-              min={-180}
-              max={180}
-              defaultValue={values?.forecastLongitude ?? ""}
-              className={controlClass}
-            />
-          </Field>
-          {/* The tide is read at a NOAA station, never at the coordinates
+        <>
+          <FieldGrid columns={2} className="gap-y-5">
+            <Field label={t("diveSites.form.latitudeLabel")}>
+              <input
+                name="forecastLatitude"
+                type="number"
+                step="any"
+                min={-90}
+                max={90}
+                defaultValue={values?.forecastLatitude ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("diveSites.form.longitudeLabel")}>
+              <input
+                name="forecastLongitude"
+                type="number"
+                step="any"
+                min={-180}
+                max={180}
+                defaultValue={values?.forecastLongitude ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            {/* The tide is read at a NOAA station, never at the coordinates
               above — a reef is rarely a station — so the id is its own field,
               and the hint carries the one link a staffer needs to find one.
               A blank id says nothing about the tide anywhere (ADR
               20260907-noaa-tide-predictions). */}
-          <Field
-            label={t("diveSites.form.tideStationLabel")}
-            description={tideStationNote}
-            hint={t.rich("diveSites.form.tideStationHint", {
-              link: (chunks) => (
-                <a
-                  href="https://tidesandcurrents.noaa.gov/tide_predictions.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-primary hover:underline"
-                >
-                  {chunks}
-                </a>
-              ),
-            })}
-          >
-            {/* No `pattern`: native constraint validation refuses the submit
+            <Field
+              label={t("diveSites.form.tideStationLabel")}
+              description={tideStationNote}
+              hint={t.rich("diveSites.form.tideStationHint", {
+                link: (chunks) => (
+                  <a
+                    href="https://tidesandcurrents.noaa.gov/tide_predictions.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {chunks}
+                  </a>
+                ),
+              })}
+            >
+              {/* No `pattern`: native constraint validation refuses the submit
                 outright, in the browser's own words, and the form never
                 reaches the refusal this repository already writes in both
                 languages and puts on the field. */}
-            <input
-              name="tideStationId"
-              inputMode="numeric"
-              maxLength={7}
-              defaultValue={values?.tideStationId ?? ""}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("diveSites.form.tidePreferenceLabel")}>
-            <select
-              name="tidePreference"
-              defaultValue={values?.tidePreference ?? "any"}
-              className={controlClass}
-            >
-              {TIDE_PREFERENCES.map((preference) => (
-                <option key={preference} value={preference}>
-                  {t(`diveSites.form.tidePreference.${preference}`)}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </FieldGrid>
+              <input
+                name="tideStationId"
+                inputMode="numeric"
+                maxLength={7}
+                defaultValue={values?.tideStationId ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("diveSites.form.tidePreferenceLabel")}>
+              <select
+                name="tidePreference"
+                defaultValue={values?.tidePreference ?? "any"}
+                className={controlClass}
+              >
+                {TIDE_PREFERENCES.map((preference) => (
+                  <option key={preference} value={preference}>
+                    {t(`diveSites.form.tidePreference.${preference}`)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </FieldGrid>
+          {/* Only while there is something to answer. A station inside the
+              threshold, a site with no coordinates to measure against and a
+              lookup that answered nothing all leave the question unasked, and
+              a tick box for a question nobody put is furniture. It follows the
+              grid rather than sitting inside it because the grid's rows are a
+              subgrid two tracks deep per field, and a checkbox belongs beside
+              its own words the way the nitrox box does. */}
+          {stationFar ? (
+            <label className="mt-4 flex min-h-11 items-center gap-2 text-sm font-medium">
+              <input
+                name="tideStationConfirmed"
+                type="checkbox"
+                defaultChecked={stationConfirmed}
+                className="size-4 accent-primary"
+              />
+              {t("diveSites.form.tideStationConfirmedCheckbox")}
+            </label>
+          ) : null}
+        </>
       ),
     },
 

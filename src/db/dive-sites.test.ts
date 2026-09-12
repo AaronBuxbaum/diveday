@@ -206,6 +206,117 @@ describe("dive-site library", () => {
     expect(cleared).toMatchObject({ tideStationId: null, tidePreference: "any" });
   });
 
+  /**
+   * **A station acknowledgement answers one pairing, and dies with it** —
+   * issue #1731, ADR 20260907-noaa-tide-predictions' 2026-09-10 amendment.
+   *
+   * The editor's distance prompt cannot be answered by moving the threshold:
+   * Flower Garden Banks reads Galveston at about 190 km and is correct, and no
+   * number both spares that and catches the Key Largo reef reading Vaca Key
+   * eighty kilometres down the chain. So the shop ticks a box — and the whole
+   * safety property of that box is that it cannot outlive the id it was ticked
+   * for. A shop that acknowledged Galveston and then mistyped seven other
+   * digits would otherwise have silenced the prompt on a pairing nobody has
+   * ever looked at, which is worse than the nagging it replaced.
+   */
+  it("keeps a station acknowledgement only for the id it was given for", async () => {
+    const { db, shop } = await seededShopContext();
+    const site = await createDiveSite(db, {
+      shopId: shop.id,
+      name: "Flower Garden Banks",
+      forecastLatitude: 27.8783,
+      forecastLongitude: -93.8158,
+      tideStationId: "8771450",
+      tideStationConfirmed: true,
+    });
+    expect(site).toMatchObject({ tideStationId: "8771450", tideStationConfirmed: true });
+
+    // Re-saving the same pairing leaves the answer standing: nothing about the
+    // question has changed, and a shop that has to re-tick on every edit is
+    // back where it started.
+    const resaved = await updateDiveSite(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: "Flower Garden Banks",
+      tideStationId: "8771450",
+      tideStationConfirmed: true,
+    });
+    expect(resaved).toMatchObject({ tideStationId: "8771450", tideStationConfirmed: true });
+
+    // The id moves and the tick arrives with it in the same submission — the
+    // typo case. The new pairing is unanswered.
+    const mistyped = await updateDiveSite(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: "Flower Garden Banks",
+      tideStationId: "8723970",
+      tideStationConfirmed: true,
+    });
+    expect(mistyped).toMatchObject({ tideStationId: "8723970", tideStationConfirmed: false });
+
+    // And the shop can take its answer back on a pairing that has not moved.
+    const reconfirmed = await updateDiveSite(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: "Flower Garden Banks",
+      tideStationId: "8723970",
+      tideStationConfirmed: true,
+    });
+    expect(reconfirmed).toMatchObject({ tideStationConfirmed: true });
+    const withdrawn = await updateDiveSite(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: "Flower Garden Banks",
+      tideStationId: "8723970",
+    });
+    expect(withdrawn).toMatchObject({ tideStationConfirmed: false });
+  });
+
+  it("refuses to store an acknowledgement with no station to acknowledge", async () => {
+    const { db, shop } = await seededShopContext();
+    // A tick with no id suppresses nothing and would read in the CSV as an
+    // answer to a question nobody put.
+    const created = await createDiveSite(db, {
+      shopId: shop.id,
+      name: "Unstationed Ledge",
+      tideStationConfirmed: true,
+    });
+    expect(created).toMatchObject({ tideStationId: null, tideStationConfirmed: false });
+
+    const stationed = await createDiveSite(db, {
+      shopId: shop.id,
+      name: "Galveston Wall",
+      tideStationId: "8771450",
+      tideStationConfirmed: true,
+    });
+    // Clearing the station takes the answer with it: the briefing says nothing
+    // about the tide any more, so there is nothing left to have meant.
+    const cleared = await updateDiveSite(db, shop.id, stationed.id, {
+      shopId: shop.id,
+      name: "Galveston Wall",
+      tideStationId: "",
+      tideStationConfirmed: true,
+    });
+    expect(cleared).toMatchObject({ tideStationId: null, tideStationConfirmed: false });
+  });
+
+  it("carries a station acknowledgement onto a copy, which copies the pairing whole", async () => {
+    const { db, shop } = await seededShopContext();
+    const source = await createDiveSite(db, {
+      shopId: shop.id,
+      name: "Stetson Bank",
+      forecastLatitude: 28.1633,
+      forecastLongitude: -94.3,
+      tideStationId: "8771450",
+      tideStationConfirmed: true,
+    });
+    const copy = await copyDiveSite(db, shop.id, source.id, "Stetson Bank copy");
+    // Same coordinates, same station, same question — so the same answer. A
+    // copy that dropped it would put the prompt back on a site nothing about
+    // which has changed.
+    expect(copy).toMatchObject({
+      tideStationId: "8771450",
+      tideStationConfirmed: true,
+      forecastLatitude: 28.1633,
+    });
+  });
+
   it("keeps the full briefing and readiness gates through create and edit", async () => {
     const { db, shop } = await seededShopContext();
 

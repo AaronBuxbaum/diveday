@@ -98,6 +98,17 @@ export const diveSiteFormSchema = z.object({
    * refusal can name the field rather than the whole form.
    */
   tideStationId: z.string().trim().max(20).optional().default(""),
+  /**
+   * The shop's answer to the distance prompt beside that id (issue #1731) — a
+   * checkbox, so an absent key is an unchecked box rather than a malformed
+   * post, exactly as `fitTone` reads an absent value as "work it out".
+   *
+   * It is never trusted as far as the row: the writers in
+   * `src/db/dive-sites.ts` land it as true only when the id it arrives beside
+   * is the one the row already holds, because an acknowledgement is about one
+   * pairing and this form can post a new id and a stale tick together.
+   */
+  tideStationConfirmed: z.preprocess((value) => value === "on", z.boolean()),
   tidePreference: z.preprocess(
     (value) => (value === "" || value === undefined ? "any" : value),
     z.enum(TIDE_PREFERENCES),
