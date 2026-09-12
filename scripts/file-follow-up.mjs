@@ -9,7 +9,9 @@ import {
   LABEL,
   PARKED_LABEL,
   REQUIRED_SECTIONS,
+  TOUCHED_TIMEOUT,
   touchedPathExists,
+  unverifiedTouchedProblem,
   WAITING_LABEL,
 } from "./check-follow-ups.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
@@ -265,13 +267,31 @@ async function readSection(root, spec) {
     for await (const chunk of process.stdin) chunks.push(chunk);
     return Buffer.concat(chunks).toString("utf8");
   }
-  const resolved = path.resolve(root, spec);
+  const requested = path.resolve(root, spec);
+  // **The containment check is on the link target, not on the name.** A lexical
+  // `path.resolve` says `<checkout>/notes.md` is inside the checkout even when
+  // it is a symlink to `~/.aws/credentials`, and `readFile` follows it — so the
+  // first version of this guard could still be walked straight past, which is
+  // the whole primitive it exists to close (`sourcery-ai` on PR 1743,
+  // reproduced before fixing). `realpath` first, then decide.
+  let resolved;
+  try {
+    resolved = realpathSync(requested);
+  } catch {
+    // No such file, or a dangling link. Not this check's refusal to make: fall
+    // through to `readFile` so the caller reports "could not read" with the
+    // flag and the path, which is what a typo deserves.
+    resolved = requested;
+  }
   if (!within(root, resolved) && !within(realTmpDir(), resolved)) {
     throw new Error(
-      `“${spec}” is neither in the checkout nor in the scratch directory (${realTmpDir()}), and this body goes to a public tracker — draft the prose in one of those, or pipe it in as “-”`,
+      `“${spec}” resolves outside the checkout and the scratch directory (${realTmpDir()}), and this body goes to a public tracker — draft the prose in one of those, or pipe it in as “-”`,
     );
   }
-  if (SECRET_SHAPED_FILE.test(resolved)) {
+  // Both the name and the target: a link called `notes.md` pointing at an env
+  // file is refused by the target, and an env file reached directly is refused
+  // by the name even on a filesystem where `realpath` told us nothing.
+  if (SECRET_SHAPED_FILE.test(requested) || SECRET_SHAPED_FILE.test(resolved)) {
     throw new Error(
       `“${spec}” is an env file, and this body goes to a public tracker — put the prose in a file of its own`,
     );
@@ -311,7 +331,15 @@ async function main() {
   // every other session's `pnpm check`, and a path that is not in the tree today
   // reddens all of them the moment it lands.
   for (const token of touched) {
-    if (await touchedPathExists(root, token)) continue;
+    const outcome = await touchedPathExists(root, token);
+    if (outcome === true) continue;
+    // The one place a timeout is not accepted. The guard reading an issue that
+    // is already filed shrugs a slow walk off; this is the door about to make
+    // one public, and "I could not check" is not "it is fine".
+    if (outcome === TOUCHED_TIMEOUT) {
+      problems.push(unverifiedTouchedProblem(token));
+      continue;
+    }
     problems.push(
       `**Touches:** “${token}” is not in this tree — name a path that exists on main, and name an arriving one in prose instead.`,
     );

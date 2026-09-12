@@ -8,7 +8,10 @@ import {
   findIssueProblems,
   missingTouchedProblem,
   SKIPPED_EXIT,
+  TOUCHED_TIMEOUT,
+  touchedPathAccepted,
   touchedPathExists,
+  unverifiedTouchedProblem,
 } from "./check-follow-ups.mjs";
 
 const valid = {
@@ -287,6 +290,29 @@ describe("a glob in Touches", () => {
 
   it("accepts a pattern that expands to at least one file", async () => {
     expect(await touchedPathExists(root, "src/i18n/locales/*/staff/trips.json")).toBe(true);
+  });
+
+  it("says timeout rather than yes when the walk runs out of budget", async () => {
+    // The first version answered `true` here, and both callers read `true` as
+    // "the path exists" — so a glob expensive enough to blow the budget was
+    // accepted, and the filing door would have published it (`sourcery-ai` on
+    // PR 1743). The two callers want opposite answers, so the outcome has to
+    // be distinguishable from both `true` and `false`.
+    expect(TOUCHED_TIMEOUT).not.toBe(true);
+    expect(TOUCHED_TIMEOUT).not.toBe(false);
+    expect(touchedPathAccepted(TOUCHED_TIMEOUT)).toBe(true);
+    expect(touchedPathAccepted(true)).toBe(true);
+    expect(touchedPathAccepted(false)).toBe(false);
+  });
+
+  it("names the budget in the sentence the filing door refuses with", async () => {
+    // The guard that reads an already-filed issue accepts a timeout; the door
+    // about to make one public refuses it, and has to say why in terms a filer
+    // can act on.
+    const problem = unverifiedTouchedProblem("src/**/*.ts");
+    expect(problem).toMatch(/could not be checked/);
+    expect(problem).toMatch(/budget/);
+    expect(problem).not.toMatch(/does not exist/);
   });
 
   it("refuses a pattern that climbs out of the checkout, rather than walking it", async () => {
