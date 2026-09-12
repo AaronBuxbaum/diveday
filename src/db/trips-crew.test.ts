@@ -25,6 +25,10 @@ import {
   upcomingStaffSchedule,
   upcomingTripsWithCounts,
 } from "./trips";
+// Direct, not through the `./trips` barrel: the outcome-carrying door is read
+// by the trip page's crew panel and by this file, and both name the module
+// that owns the transaction.
+import { changeTripCrewOutcome } from "./trips-crew";
 
 const FOREIGN_SHOP_ID = "00000000-0000-4000-8000-000000000099";
 
@@ -931,9 +935,11 @@ describe("crewMoveConflicts", () => {
  * and nothing proposed.
  *
  * Every setup here reaches the state the way a shop does: `setTripCrew` and
- * `changeTripCrew` both *refuse* to write an overlap, so the only door into it
- * is `moveTrip` — it slides a departure's window and never looks at crew. What
- * the shop was never told is what this reader exists to say.
+ * `changeTripCrew` both *refuse* to write an overlap, so every door into it is
+ * a write that moves the **boat** without reading the roster. `moveTrip` is
+ * the loudest of three — the Details form (`updateTripRecord`) and reinstating
+ * a called-off departure are the other two, and `crewClashes` names all three.
+ * What the shop was never told is what this reader exists to say.
  *
  * Same two load-bearing facts as the move preview above, because it is the same
  * predicate: the **window** and not the day, and the **shop's** zone and not
@@ -1138,6 +1144,37 @@ describe("crewClashes", () => {
     expect(await crewClashes(db, shop.id, mover.id)).toEqual([]);
   });
 
+  /**
+   * **Nothing once the boat is home** (dive-domain-expert review, 2026-09-12).
+   * A clash on a departure already back is permanent, unfixable and true —
+   * nobody moves last Monday's boat — so a `role="status"` line riding on last
+   * month's charter page is precisely the saturation failure #757 and #1203
+   * paid for, re-entered by a side door. `hasReturned`, so the buffered hour is
+   * the one every "has the boat come back" question in the repo shares
+   * (`.claude/rules/domain.md`).
+   *
+   * Asked of **each departure's own** window, which is why the two panels stop
+   * speaking at different instants: the 07:00 is home an hour after 20:30 while
+   * the reef drift it was slid onto is still out.
+   */
+  it("stops reporting once the departure it is about has come home", async () => {
+    const { db, shop, host, mover } = await shopWithAMovedDeparture();
+    // The moved 07:00 now runs 09:00–10:30 shop-local (19:00–20:30Z); the reef
+    // drift it landed on runs 09:00–13:00 (19:00–23:00Z).
+    const moverStillOut = new Date("2030-08-03T21:29:00Z");
+    const moverHome = new Date("2030-08-03T21:31:00Z");
+    expect(await crewClashes(db, shop.id, mover.id, moverStillOut)).toHaveLength(1);
+    expect(await crewClashes(db, shop.id, mover.id, moverHome)).toEqual([]);
+
+    // The drift is still out at that instant and still says so — the bound is
+    // per departure, not a blanket "this day is behind us".
+    expect(await crewClashes(db, shop.id, host.id, moverHome)).toHaveLength(1);
+    expect(await crewClashes(db, shop.id, host.id, new Date("2030-08-03T23:59:00Z"))).toHaveLength(
+      1,
+    );
+    expect(await crewClashes(db, shop.id, host.id, new Date("2030-08-04T00:01:00Z"))).toEqual([]);
+  });
+
   it("says nothing for a departure with nobody on it, or for another shop's", async () => {
     const { db, shop, mover } = await shopWithAMovedDeparture();
     // `trip_assignments` carries no shop_id of its own (CR-007), so the trip id
@@ -1180,5 +1217,126 @@ describe("crewClashes", () => {
         operation: "assign",
       }),
     ).toBe(false);
+  });
+});
+
+/**
+ * **The refusal that carries its reason** (issue #1695, dive-domain-expert
+ * review 2026-09-12).
+ *
+ * `changeTripCrew` answers `false` for every refusal alike, and the trip's Crew
+ * panel rendered one sentence for all of them: "That didn't save. Recheck your
+ * connection or try again." So the panel that now explains a standing clash in
+ * exact words told the staffer who tried to *create* one that their connection
+ * was bad — and the next move at a dock is to tap again, or to go and widen the
+ * other departure's hours until it sticks, which manufactures the very state
+ * the reader above exists to report.
+ *
+ * One code, not a vocabulary: `crew_clash` is the only refusal here whose fix
+ * is not "try again", and every other branch stays `refused` on purpose.
+ */
+describe("changeTripCrewOutcome", () => {
+  it("names a crew clash, and keeps every other refusal one word", async () => {
+    const { db, shop } = await seededShopContext();
+    const [marisol, ana] = await listStaff(db, shop.id);
+    if (!marisol || !ana) throw new Error("expected two seeded staff members");
+
+    const drift = await createTrip(db, {
+      shopId: shop.id,
+      title: "The 09:00 reef drift",
+      startsAt: new Date("2030-08-03T13:00:00Z"),
+      endsAt: new Date("2030-08-03T17:00:00Z"),
+      capacity: 6,
+    });
+    const wreck = await createTrip(db, {
+      shopId: shop.id,
+      title: "The 10:00 wreck",
+      startsAt: new Date("2030-08-03T14:00:00Z"),
+      endsAt: new Date("2030-08-03T18:00:00Z"),
+      capacity: 6,
+    });
+    if (!drift || !wreck) throw new Error("trips not created");
+
+    // The clean assignment stands.
+    expect(
+      await changeTripCrewOutcome(db, shop.id, drift.id, {
+        personId: marisol.person.id,
+        operation: "assign",
+      }),
+    ).toEqual({ ok: true });
+
+    // The overlapping one is refused, and says which refusal it was — the same
+    // impossibility, in the same vocabulary, as `crewClashes` reports for a
+    // departure already standing in it.
+    expect(
+      await changeTripCrewOutcome(db, shop.id, wreck.id, {
+        personId: marisol.person.id,
+        operation: "assign",
+      }),
+    ).toEqual({ ok: false, refusal: "crew_clash" });
+
+    // A person who holds no staff role in this shop is a different refusal and
+    // keeps the general sentence: nothing about a second boat is true of them.
+    const [stranger] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Not on the roster" })
+      .returning();
+    if (!stranger) throw new Error("person not created");
+    expect(
+      await changeTripCrewOutcome(db, shop.id, wreck.id, {
+        personId: stranger.id,
+        operation: "assign",
+      }),
+    ).toEqual({ ok: false, refusal: "refused" });
+
+    // And another shop's trip id, which is the CR-007 refusal.
+    expect(
+      await changeTripCrewOutcome(db, FOREIGN_SHOP_ID, wreck.id, {
+        personId: ana.person.id,
+        operation: "assign",
+      }),
+    ).toEqual({ ok: false, refusal: "refused" });
+  });
+
+  /**
+   * The boolean door is the same transaction read through one field, so the two
+   * cannot drift into different guards — which is the whole reason the split is
+   * a view rather than a copy.
+   */
+  it("is the one transaction `changeTripCrew` reports as a boolean", async () => {
+    const { db, shop } = await seededShopContext();
+    const [marisol] = await listStaff(db, shop.id);
+    if (!marisol) throw new Error("expected a seeded staff member");
+
+    const morning = await createTrip(db, {
+      shopId: shop.id,
+      title: "The 07:00 two-tank",
+      startsAt: new Date("2030-08-04T11:00:00Z"),
+      endsAt: new Date("2030-08-04T15:00:00Z"),
+      capacity: 6,
+    });
+    const overlapping = await createTrip(db, {
+      shopId: shop.id,
+      title: "The 08:00 charter",
+      startsAt: new Date("2030-08-04T12:00:00Z"),
+      endsAt: new Date("2030-08-04T16:00:00Z"),
+      capacity: 6,
+    });
+    if (!morning || !overlapping) throw new Error("trips not created");
+
+    expect(
+      await changeTripCrew(db, shop.id, morning.id, {
+        personId: marisol.person.id,
+        operation: "assign",
+      }),
+    ).toBe(true);
+    expect(
+      await changeTripCrew(db, shop.id, overlapping.id, {
+        personId: marisol.person.id,
+        operation: "assign",
+      }),
+    ).toBe(false);
+    // The refused call wrote nothing, on either door.
+    expect(await getTripCrewIds(db, shop.id, overlapping.id)).toEqual([]);
   });
 });

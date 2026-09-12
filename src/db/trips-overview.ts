@@ -209,9 +209,11 @@ export async function getTripOverview(
   // has never scheduled a shift — means the question doesn't apply.
   //
   // Beside it, the clash the crew panel had no way to know about (issue #1695):
-  // who on this crew is on another departure whose hours overlap this one. A
-  // state only `moveTrip` can manufacture, and until now one nothing said
-  // outside the Move panel that made it.
+  // who on this crew is on another departure whose hours overlap this one. No
+  // write door will *create* it — `setTripCrew` and `changeTripCrew` both
+  // refuse — so it arrives from a write that moves the boat without reading the
+  // roster, and there are three of those rather than the one `moveTrip` this
+  // comment used to name (`crewClashes`' own docblock, "Three doors, not one").
   const [shiftCoverage, clashes] = await Promise.all([
     crewShiftCoverage(db, shop.id, trip, crewIds),
     crewClashes(db, shop.id, trip.id),

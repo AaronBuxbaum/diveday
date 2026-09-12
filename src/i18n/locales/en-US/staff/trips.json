@@ -26,6 +26,7 @@
     "noRequirements": "No admission requirements set",
     "noBoat": "Boat not assigned",
     "noCrew": "No crew assigned",
+    "crewClash": "Crew clash",
     "oneTime": "One-time departure",
     "perSeat": "per seat",
     "seatsLabel": "of {capacity, plural, one {# seat} other {# seats}}",
@@ -245,6 +246,7 @@
     "assignOption": "Assign crew…",
     "unassignAria": "Unassign {name}",
     "clash": "Also crewing {departure} at these hours and cannot be on both.",
+    "assignClash": "{name} is already crewing another departure at these hours and cannot be on both.",
     "assignFailed": "That didn’t save. Recheck your connection or try again."
   },
   "recapNote": {

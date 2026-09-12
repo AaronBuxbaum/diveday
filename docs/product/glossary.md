@@ -734,11 +734,18 @@ new domain concept, define it here in the same PR.
   line because one is an inference from the roster and the other is the crew member's own
   statement. The third — over her hours — is unmodelled, and nothing says otherwise. `moveTrip`
   does not refuse a clash; the preview informs and the owner decides. **And the preview is no longer
-  the only reader** (issue #1695): `moveTrip` is the one thing that manufactures a clash and the
-  panel that warned about it closes with the move, so the clash a departure is *standing* in is read
-  back on its own Crew panel and in the staffing week, on the day the overlap falls
-  (`crewClashes`, the same overlap query the preview asks with a shifted window). Still information
-  on every surface — nothing gates on it.
+  the only reader** (issue #1695): the panel that warned about a move closes with the move, so the
+  clash a departure is *standing* in is read back on its own Crew panel, on its About summary row,
+  and in the staffing week on the day the overlap falls (`crewClashes`, the same overlap query the
+  preview asks with a shifted window). Still information on every surface — nothing gates on it.
+  **Three writes manufacture one, not just `moveTrip`** (dive-domain-expert review 2026-09-12): the
+  move, `updateTripRecord` — the About → Details form, which writes `starts_at`/`ends_at` straight
+  through and replaces `trip_schedule_days` wholesale with no crew read at all — and
+  `setTripStatus(…, "scheduled")`, which reinstates a called-off departure whose crew were
+  re-rostered while it was off the board. The last two are mild rather than silent, because both
+  redirect with a `?notice=` whose form re-opens About, so the read speaks on the next paint. A
+  clash already **home** is reported nowhere: it is permanent, unfixable and true, which is the
+  shape of a warning a shop learns to scroll past.
 - **Crew gap** — a scheduled trip with nobody rostered on it, or a course session `courseCrewGap`
   reports as instructorless or booked past its ratio. It is a prompt for staff, not a boarding
   authorization by itself. **Today owns it**: Today names it (`instructor_missing`) and its

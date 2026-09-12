@@ -34,6 +34,7 @@ export {
   type CrewClash,
   type CrewMoveConflicts,
   changeTripCrew,
+  changeTripCrewOutcome,
   crewClashes,
   crewMoveConflicts,
   getTripCrewAssignments,
@@ -42,6 +43,7 @@ export {
   setTripCrew,
   type TripCrewChange,
   type TripCrewMemberInput,
+  type TripCrewOutcome,
   tripCrewByTrip,
 } from "./trips-crew";
 export {

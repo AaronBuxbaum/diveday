@@ -243,9 +243,12 @@ function CrewChip({
       </span>
       <span className="font-medium">{trip.title}</span>
       {/* **One person, two hulls, these same hours** (issue #1695) — a state
-          `setTripCrew` refuses to write and only a move can manufacture, and
-          until now the schedule board's Move panel was the one surface that
-          ever said so. It leads the blackout below it for the reason
+          `setTripCrew` refuses to write and which three writes that move the
+          boat manufacture anyway (a move, the departure's own Details form,
+          and reinstating a called-off boat; `crewClashes` in
+          src/db/trips-crew.ts names all three). Until now the schedule board's
+          Move panel was the one surface that ever said so. It leads the
+          blackout below it for the reason
           `composeMovePreflight` gives the same pair: a clash is a physical
           impossibility and a blackout is somebody's note. Still informs, never
           gates — nobody is taken off a boat here either (#1345).
@@ -655,18 +658,40 @@ export function StaffingWeek({
                         <Link
                           key={trip.tripId}
                           href={tripHref(shopSlug, trip.tripId)}
-                          className="text-sm font-medium text-primary hover:underline"
+                          className="flex flex-col text-sm font-medium text-primary hover:underline"
                         >
-                          <span className="sr-only">{words.crewing}: </span>
-                          <span className="tabular-nums">
-                            {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
-                          </span>{" "}
-                          {trip.title}
-                          {trip.awayBlocks.length > 0 ? (
-                            <span className="ms-1 font-semibold text-warning-strong">
-                              · {words.away}
+                          <span>
+                            <span className="sr-only">{words.crewing}: </span>
+                            <span className="tabular-nums">
+                              {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
+                            </span>{" "}
+                            {trip.title}
+                            {trip.awayBlocks.length > 0 ? (
+                              <span className="ms-1 font-semibold text-warning-strong">
+                                · {words.away}
+                              </span>
+                            ) : null}
+                          </span>
+                          {/* **The louder warning, on the width a counter runs
+                              on** (dive-domain-expert review, 2026-09-12). This
+                              list is the whole week below `lg` — a phone and
+                              the portrait tablet on the desk — and it carried
+                              the blackout's `· Away` marker while saying
+                              nothing at all about a clash, which is the
+                              ranking the grid above argues for exactly
+                              inverted. Same words as the chip, one line per
+                              clashing departure, and inside the link so the
+                              sentence joins its accessible name rather than
+                              needing a live region of its own. */}
+                          {trip.clashes.map((clash) => (
+                            <span
+                              key={clash.tripId}
+                              className="flex items-start gap-1 font-semibold text-warning-strong"
+                            >
+                              <DiveDayIcon name="warning" className="mt-0.5 size-3 shrink-0" />
+                              <span>{fill(words.crewClash, { departure: clash.title })}</span>
                             </span>
-                          ) : null}
+                          ))}
                         </Link>
                       ))}
                       {cell?.away.map((block) => (

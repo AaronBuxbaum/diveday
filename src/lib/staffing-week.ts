@@ -7,6 +7,7 @@ import {
   crewRequestRefusal,
   overlappingBlocks,
 } from "./crew-requests";
+import { hasReturned } from "./trips";
 import { weekDates } from "./week-board";
 
 /**
@@ -157,12 +158,25 @@ export type CrewClash = { tripId: string; title: string };
  * Asked per **placed meeting** rather than once per run, unlike the blackout
  * above it: a course clashing on its Tuesday leg is not clashing on its Monday,
  * and the week's whole claim is that a chip states its own day's commitment.
+ *
+ * **Nothing at all once that meeting is home** (`hasReturned`, the same hour of
+ * grace `src/db/staffing.ts`'s gap walk drops a sailed departure by, and the
+ * same reading `weekBoard` takes). The week deliberately shows up to six days
+ * behind the shop's own today and `trip_status` stays `scheduled` after a boat
+ * comes back, so without this bound a Friday afternoon carries a full warning
+ * about two hulls that both came home on Monday. A *past* clash is permanent —
+ * nobody moves last Monday's boat — which makes it exactly the saturation
+ * failure #757 and #1203 paid for, re-entered by a side door. Asked of the
+ * chip's own meeting, not of the run: a course still mid-week keeps the mark on
+ * the legs that are still ahead.
  */
 export function clashingDepartures(
   window: TripMeeting,
   tripId: string,
   crewing: readonly WeekCrewing[],
+  now: Date,
 ): CrewClash[] {
+  if (hasReturned(window.endsAt, now)) return [];
   const clashes: CrewClash[] = [];
   for (const other of crewing) {
     if (other.tripId === tripId || clashes.some((found) => found.tripId === other.tripId)) continue;
@@ -187,10 +201,12 @@ export function clashingDepartures(
  * almost every chip.
  *
  * `clashes` are the other departures this same person crews at these very
- * hours (issue #1695) — a state `setTripCrew` refuses to write and only
- * `moveTrip` can manufacture, which until now nothing said outside the Move
- * panel that made it. Informs, never gates, for the reason #1345 settled: the
- * owner assigns crew. Empty for every honest chip.
+ * hours (issue #1695) — a state `setTripCrew` refuses to write and three doors
+ * manufacture anyway, of which `moveTrip` is only the loudest (they are named
+ * on `crewClashes`, src/db/trips-crew.ts). Until now nothing said so outside
+ * the Move panel that made it. Informs, never gates, for the reason #1345
+ * settled: the owner assigns crew. Empty for every honest chip, and empty
+ * again once the meeting is home.
  */
 export type PlacedTrip = {
   tripId: string;
@@ -426,7 +442,13 @@ export function staffWeek(input: {
     /** Whether they can close an instructor-to-student gap themselves (#1339). */
     holdsInstructorRole: boolean;
   };
-  /** The instant `crewRequestRefusal` measures a sailed departure against. */
+  /**
+   * The instant `crewRequestRefusal` measures a sailed departure against, and
+   * the one `clashingDepartures` drops a clash on a meeting already home by.
+   * The epoch default holds every fixture written before either rule ahead of
+   * the shop's clock, which is the conservative answer for both: the ask is
+   * still open and the clash still worth saying.
+   */
   now?: Date;
 }): StaffWeek {
   const blocks = input.blocks ?? [];
@@ -458,11 +480,16 @@ export function staffWeek(input: {
       const away = overlappingBlocks(blocks, person.personId, trip.meetings, input.timeZone);
       // The clash is read off this person's own crewing list, which is already
       // scheduled, live departures only (`getStaffingView`) — the same rule the
-      // departure page's `crewClashes` asks in SQL. A clash with a boat outside
-      // this week cannot exist: an overlapping window is in the same week the
-      // chip is, so the week the overlap falls in is the week that shows it.
+      // departure page's `crewClashes` asks in SQL. **A clash is drawn in the
+      // week the overlap falls in**, which is not always a week both boats are
+      // fetched for: a Sunday 22:00 night dive back at 01:00 overlaps a Monday
+      // 00:30 departure that this week's query stops one instant short of, so
+      // the Sunday chip is silent and the fact draws on next week's Monday
+      // column. The limit is acceptable because it is not the only reader —
+      // `crewClashes` on the departure page has no week bound at all, so the
+      // boat's own Crew panel always tells the truth.
       for (const { date, placed } of placements(trip, input.timeZone, dates, away, (meeting) =>
-        clashingDepartures(meeting, trip.tripId, person.crewingTrips),
+        clashingDepartures(meeting, trip.tripId, person.crewingTrips, now),
       )) {
         crewingByDay.set(date, [...(crewingByDay.get(date) ?? []), placed]);
       }

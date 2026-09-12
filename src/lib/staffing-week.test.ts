@@ -39,13 +39,16 @@ function person(overrides: Partial<WeekPerson> = {}): WeekPerson {
   };
 }
 
-function build(input: { people?: WeekPerson[]; gaps?: WeekGap[]; today?: string } = {}) {
+function build(
+  input: { people?: WeekPerson[]; gaps?: WeekGap[]; today?: string; now?: Date } = {},
+) {
   return staffWeek({
     people: input.people ?? [person()],
     gaps: input.gaps ?? [],
     weekStart: MONDAY,
     timeZone: TZ,
     today: input.today ?? THURSDAY,
+    ...(input.now ? { now: input.now } : {}),
   });
 }
 
@@ -691,9 +694,11 @@ describe("staffGapForCourseGap", () => {
 
 /**
  * **A standing crew clash** (issue #1695): one person rostered on two
- * departures whose hours overlap. `setTripCrew` refuses to write that, so the
- * only door into it is `moveTrip` — and the week showed the person on both
- * boats as if it were a shift pattern.
+ * departures whose hours overlap. `setTripCrew` refuses to write that, so a
+ * shop only reaches it through a write that moves the **boat** without reading
+ * the roster — `moveTrip`, the Details form, or reinstating a called-off
+ * departure (`crewClashes` names all three) — and the week showed the person on
+ * both boats as if it were a shift pattern.
  *
  * The rule is the **window**, never the day, and it is the same half-open
  * predicate the roster refuses on (`src/db/trips-crew.ts`): a morning boat plus
@@ -713,8 +718,13 @@ describe("a standing crew clash", () => {
     ],
   };
 
-  function clashesOn(date: string, crewingTrips: WeekPerson["crewingTrips"], tripId: string) {
-    const week = build({ people: [person({ crewingTrips })] });
+  function clashesOn(
+    date: string,
+    crewingTrips: WeekPerson["crewingTrips"],
+    tripId: string,
+    now?: Date,
+  ) {
+    const week = build({ people: [person({ crewingTrips })], now });
     const day = week.people[0]?.days.find((entry) => entry.date === date);
     return day?.crewing.find((trip) => trip.tripId === tripId)?.clashes ?? null;
   }
@@ -810,5 +820,90 @@ describe("a standing crew clash", () => {
 
   it("never counts a departure against itself, however many legs it has", () => {
     expect(clashesOn("2026-08-27", [DRIFT], "trip-drift")).toEqual([]);
+  });
+
+  /**
+   * **Nothing once both boats are home** (dive-domain-expert review,
+   * 2026-09-12). The week shows up to six days behind the shop's own today and
+   * `trip_status` stays `scheduled` after a boat comes back, so a Friday
+   * afternoon was drawing a full warning about Thursday morning's double
+   * booking: permanent, unfixable and true, which is exactly the saturation
+   * failure #757 and #1203 paid for. The gap row below already drops a sailed
+   * departure by the same rule (`src/db/staffing.ts`) — the chips did not.
+   *
+   * Asked **per meeting** rather than per run, so a course still mid-week keeps
+   * the mark on the legs that are still ahead.
+   */
+  it("stops saying it once the meeting is home, and keeps the chip", () => {
+    const wreck = {
+      tripId: "trip-wreck",
+      title: "Spiegel Grove",
+      meetings: [
+        {
+          startsAt: new Date("2026-08-27T14:00:00.000Z"),
+          endsAt: new Date("2026-08-27T18:00:00.000Z"),
+        },
+      ],
+    };
+    // The drift is back at 1:00 PM local. An hour of grace, the same buffer
+    // every "has it come home" question in the repo carries, so 1:59 PM still
+    // says it and 2:01 PM does not.
+    const stillOut = new Date("2026-08-27T17:59:00.000Z");
+    const home = new Date("2026-08-27T18:01:00.000Z");
+    expect(clashesOn("2026-08-27", [DRIFT, wreck], "trip-drift", stillOut)).toEqual([
+      { tripId: "trip-wreck", title: "Spiegel Grove" },
+    ]);
+    expect(clashesOn("2026-08-27", [DRIFT, wreck], "trip-drift", home)).toEqual([]);
+
+    // The chip itself is untouched — the week still says she crewed it. Only
+    // the warning goes.
+    const week = build({
+      people: [person({ crewingTrips: [DRIFT, wreck] })],
+      now: home,
+    });
+    const thursday = week.people[0]?.days.find((day) => day.date === "2026-08-27");
+    expect(thursday?.crewing.map((trip) => trip.tripId)).toEqual(["trip-drift", "trip-wreck"]);
+  });
+
+  /**
+   * A multi-day course whose Tuesday leg is home and whose Wednesday leg is not
+   * — the case a per-run bound would get wrong in the expensive direction, by
+   * dropping a clash that is still fixable.
+   */
+  it("keeps the mark on a leg still ahead of a course whose earlier leg is home", () => {
+    const course = {
+      tripId: "trip-course",
+      title: "Rescue, Tue and Wed",
+      meetings: [
+        {
+          startsAt: new Date("2026-08-25T13:00:00.000Z"),
+          endsAt: new Date("2026-08-25T17:00:00.000Z"),
+        },
+        {
+          startsAt: new Date("2026-08-26T13:00:00.000Z"),
+          endsAt: new Date("2026-08-26T17:00:00.000Z"),
+        },
+      ],
+    };
+    const bothDays = {
+      tripId: "trip-charter",
+      title: "The two-day charter",
+      meetings: [
+        {
+          startsAt: new Date("2026-08-25T14:00:00.000Z"),
+          endsAt: new Date("2026-08-25T18:00:00.000Z"),
+        },
+        {
+          startsAt: new Date("2026-08-26T14:00:00.000Z"),
+          endsAt: new Date("2026-08-26T18:00:00.000Z"),
+        },
+      ],
+    };
+    // Tuesday evening: Tuesday's leg is home, Wednesday's has not sailed.
+    const now = new Date("2026-08-25T23:00:00.000Z");
+    expect(clashesOn("2026-08-25", [course, bothDays], "trip-course", now)).toEqual([]);
+    expect(clashesOn("2026-08-26", [course, bothDays], "trip-course", now)).toEqual([
+      { tripId: "trip-charter", title: "The two-day charter" },
+    ]);
   });
 });

@@ -56,6 +56,7 @@ const COPY: CrewSectionCopy = {
   assignOption: "Choose someone…",
   unassignAria: "Remove {name} from crew",
   assignFailed: "Couldn’t save that change.",
+  assignClash: "{name} is already crewing another departure at these hours and cannot be on both.",
   clash: "Also crewing {departure} at these hours and cannot be on both.",
   onShift: "On shift",
   notOnShift: "Not on shift",
@@ -301,14 +302,25 @@ describe("CrewSection shift coverage", () => {
 
 /**
  * **The clash a staffer used to have to open the Move panel to learn about**
- * (issue #1695). `moveTrip` manufactures it — it slides a departure's window
- * and never looks at crew — and until this row carried the mark, the panel that
- * warned about it had already closed.
+ * (issue #1695). Three writes manufacture it, each of which moves the boat
+ * without reading the roster — `moveTrip`, the Details form two panels above
+ * this one, and reinstating a called-off departure (`crewClashes` names all
+ * three) — and until this row carried the mark, the only panel that ever warned
+ * about any of them had already closed.
  *
  * Two things are pinned here and both were the point: the other boat is
  * **named** (the question the reader has the instant they see the mark), and
- * the mark is an alert rather than a refusal — the owner assigns crew (#1345),
- * so every control on the row keeps working.
+ * the mark refuses nothing — the owner assigns crew (#1345), so every control
+ * on the row keeps working.
+ *
+ * The role is `status`, never `alert` (dive-domain-expert review, 2026-09-12).
+ * The line is rendered with the page, so on a cold load a live region already
+ * present at first paint has no change to announce and on a soft navigation an
+ * `alert` interrupts — the announcement was a coin flip on how the reader
+ * arrived, at the volume reserved for something that just happened. A standing
+ * condition is `status` at most; the weight is carried by *where* it is drawn,
+ * which is the trip page's About summary row (`page.tsx`), because this panel
+ * lives inside a disclosure that is closed on an ordinary visit.
  */
 describe("CrewSection standing crew clash", () => {
   const props = {
@@ -332,15 +344,19 @@ describe("CrewSection standing crew clash", () => {
         copy={COPY}
       />,
     );
-    const alerts = screen.getAllByRole("alert");
-    expect(alerts).toHaveLength(1);
-    expect(alerts[0]).toHaveTextContent(
+    const marks = screen.getAllByRole("status");
+    expect(marks).toHaveLength(1);
+    expect(marks[0]).toHaveTextContent(
       "Also crewing The 09:00 reef drift at these hours and cannot be on both.",
     );
+    // Never `alert`: a statically rendered live region announces on a soft
+    // navigation and stays silent on a cold load, which is the wrong half of
+    // the time either way.
+    expect(screen.queryByRole("alert")).toBeNull();
     // On her row, not the section's: the name is already the line above it, so
     // the sentence spends its words on the boat she is double-booked onto.
-    expect(screen.getByText("Marisol Vega").closest("li")).toContainElement(alerts[0]);
-    expect(screen.getByText("Ana Cruz").closest("li")).not.toContainElement(alerts[0]);
+    expect(screen.getByText("Marisol Vega").closest("li")).toContainElement(marks[0]);
+    expect(screen.getByText("Ana Cruz").closest("li")).not.toContainElement(marks[0]);
   });
 
   it("still lets the owner work the roster — it informs, it does not gate", async () => {
@@ -373,7 +389,64 @@ describe("CrewSection standing crew clash", () => {
     render(
       <CrewSection {...props} updateCrewAction={vi.fn(async () => ({ ok: true }))} copy={COPY} />,
     );
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByText(/cannot be on both/)).toBeNull();
+  });
+
+  /**
+   * **Trying to create one is not a network failure** (dive-domain-expert
+   * review, 2026-09-12). Every `ok: false` reached `assignFailed` — "Recheck
+   * your connection or try again" — so the panel that explains this state in
+   * exact words told the staffer who had just walked into it to check their
+   * signal. At a dock the next move is to tap again, or to go and widen the
+   * other departure's hours until it sticks, which manufactures the state.
+   */
+  it("says which refusal it was when an assignment would create a clash", async () => {
+    const updateCrewAction = vi.fn(async () => ({
+      ok: false as const,
+      refusal: "crew_clash" as const,
+    }));
+    render(
+      <CrewSection
+        {...props}
+        staff={[staffMember("staff-1", "Marisol Vega"), staffMember("staff-2", "Ana Cruz")]}
+        crewIds={["staff-1"]}
+        updateCrewAction={updateCrewAction}
+        copy={COPY}
+      />,
+    );
+    await screen.findByRole("combobox", { name: "Assign crew" });
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Assign crew" }), "staff-2");
+
+    expect(
+      await screen.findByText(
+        "Ana Cruz is already crewing another departure at these hours and cannot be on both.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Couldn’t save that change.")).toBeNull();
+    // Refused, so nothing was added to the roster on screen either.
+    expect(screen.queryByLabelText("Remove Ana Cruz from crew")).toBeNull();
+  });
+
+  /**
+   * And every other refusal keeps the sentence it has always had — a refusal
+   * code per branch would be a vocabulary to keep in step with a message
+   * bundle, and none of the others has a different next move.
+   */
+  it("keeps the general sentence for a refusal with no reason to give", async () => {
+    const updateCrewAction = vi.fn(async () => ({ ok: false as const }));
+    render(
+      <CrewSection
+        {...props}
+        staff={[staffMember("staff-1", "Marisol Vega"), staffMember("staff-2", "Ana Cruz")]}
+        crewIds={["staff-1"]}
+        updateCrewAction={updateCrewAction}
+        copy={COPY}
+      />,
+    );
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Assign crew" }), "staff-2");
+
+    expect(await screen.findByText("Couldn’t save that change.")).toBeInTheDocument();
     expect(screen.queryByText(/cannot be on both/)).toBeNull();
   });
 });

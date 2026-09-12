@@ -90,7 +90,7 @@ test.describe("a standing crew clash", () => {
     // **The departure's own page**, which is where a staffer looks next.
     await page.goto(await tripPathByTitle(page, SHOP, twoTank));
     await openTripAbout(page);
-    await expect(page.locator("#crew").getByRole("alert")).toContainText(
+    await expect(page.locator("#crew").getByRole("status")).toContainText(
       `Also crewing ${drift} at these hours and cannot be on both.`,
     );
     // Still nobody's gate: the roster is the owner's, so every control on the

@@ -44,7 +44,7 @@ import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
   cancelOffCadenceSeriesTrips,
-  changeTripCrew,
+  changeTripCrewOutcome,
   getTripWithBooked,
   listTripDiverContacts,
   reinstateTripClearingMinimum,
@@ -1490,11 +1490,15 @@ export async function updateTripCrewAction(
   shopSlug: string,
   tripId: string,
   change: TripCrewChange,
-): Promise<{ ok: boolean }> {
+): Promise<{ ok: boolean; refusal?: "crew_clash" | "refused" }> {
   const s = (await requireShopSurface(shopSlug)).session;
   const db = await getDb();
-  const success = await changeTripCrew(db, s.user.shopId, tripId, change);
-  if (success) {
+  // The outcome rather than the boolean, because the Crew panel has something
+  // to say about one of the refusals: "you cannot put this person on two boats
+  // at once" is a sentence a staffer can act on, and "that didn't save" is one
+  // they can only tap again over (issue #1695).
+  const outcome = await changeTripCrewOutcome(db, s.user.shopId, tripId, change);
+  if (outcome.ok) {
     // One write path for crew (Today's board and the trip's CrewSection both
     // call this), so the trip's activity log — read from the Trip surface —
     // stays the single record of who touched the crew and when, regardless of
@@ -1520,7 +1524,7 @@ export async function updateTripCrewAction(
     revalidatePath(shopPath(shopSlug, "trips", tripId, "manifest"));
     return { ok: true };
   }
-  return { ok: false };
+  return { ok: false, refusal: outcome.refusal };
 }
 
 const updatePickupSchema = z.object({
