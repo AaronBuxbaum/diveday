@@ -13,7 +13,10 @@ import {
   type RentalPricing,
   rentalFitCompleteness,
   SHOP_CATALOG_ITEMS,
+  SIZED_RENTAL_FIT_COLUMN,
+  SIZED_RENTAL_KINDS,
   shopOffersNitrox,
+  sizedRentalKindOfGearKind,
   toRentableKinds,
 } from "./rentals";
 
@@ -453,5 +456,70 @@ describe("RENTAL_FIT_TEXT_LIMITS", () => {
     // form unsaveable (issue #1728).
     expect(RENTAL_FIT_TEXT_LIMITS.size).toBe(40);
     expect(RENTAL_FIT_TEXT_LIMITS.weightPreference).toBe(120);
+  });
+});
+
+/**
+ * **What one tracked gear unit teaches the evening** (issue #1174's D14 recall,
+ * widened to the drysuit by issue #1724).
+ *
+ * The mapping had no test of its own, which is how the drysuit stayed out of
+ * the recall for a release after `drysuit_size` arrived: every assertion on it
+ * was a `src/db/gear.test.ts` integration case that happened to send a BCD.
+ */
+describe("sizedRentalKindOfGearKind", () => {
+  it("maps every register kind that has a size column to learn from", () => {
+    expect(sizedRentalKindOfGearKind("bcd")).toBe("bcd");
+    expect(sizedRentalKindOfGearKind("wetsuit")).toBe("wetsuit");
+    expect(sizedRentalKindOfGearKind("boots")).toBe("boots");
+    expect(sizedRentalKindOfGearKind("weights")).toBe("weights");
+    // The register splits mask and fins into separate physical units; the fit
+    // has one `finSize` for the pair, and the shoe size is the fins' half.
+    expect(sizedRentalKindOfGearKind("fins")).toBe("mask_fins");
+  });
+
+  it("maps a drysuit unit to the drysuit fit column (issue #1724)", () => {
+    // `gear_items.size` is free text for every kind, so a drysuit unit meets
+    // `drysuit_size` exactly as loosely as a BCD unit meets `bcd_size`: there
+    // is no second scale to reconcile, which is the question the issue held
+    // itself open on.
+    expect(sizedRentalKindOfGearKind("drysuit")).toBe("drysuit");
+    expect(SIZED_RENTAL_FIT_COLUMN.drysuit).toBe("drysuitSize");
+  });
+
+  it("stays quiet for a unit with no size a fit could hold", () => {
+    // A mask has no size column of its own — the one shoe size answers for
+    // boots and fins. The rest simply have nothing to record: a hood, a torch
+    // and an SMB are one size off the shelf, and a tank's "AL80" is a cylinder,
+    // not a fit.
+    for (const kind of [
+      "mask",
+      "regulator",
+      "dive_computer",
+      "gopro",
+      "tank",
+      "hood",
+      "gloves",
+      "torch",
+      "dpv",
+      "smb",
+      "reel",
+      "camera",
+      "nitrox_analyzer",
+      "o2_kit",
+      "other",
+    ]) {
+      expect(sizedRentalKindOfGearKind(kind)).toBeNull();
+    }
+    // Not a register kind at all, and the signature takes a plain string so
+    // this module never loads the register (ADR 20260815-minimal-gear-register).
+    expect(sizedRentalKindOfGearKind("")).toBeNull();
+    expect(sizedRentalKindOfGearKind("hood_gloves")).toBeNull();
+  });
+
+  it("never answers with a kind the fit has no column for", () => {
+    for (const kind of SIZED_RENTAL_KINDS) {
+      expect(SIZED_RENTAL_FIT_COLUMN[kind]).toBeTruthy();
+    }
   });
 });

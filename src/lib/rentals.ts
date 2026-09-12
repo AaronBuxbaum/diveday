@@ -319,6 +319,18 @@ export const SIZED_RENTAL_FIT_COLUMN = {
  * {@link rentalFitCompleteness} already keeps. A unit whose kind is not here
  * simply never produces an evening question.
  *
+ * The **drysuit** is here since issue #1724, and the question that held it out
+ * — whether a register drysuit's recorded size is on the same scale
+ * `drysuit_size` uses — is answered by the register having no per-kind
+ * vocabulary at all: `gear_items.size` is free text for every kind ("M", "10",
+ * "3mm L"), and `listFitAdjustedReturns` compares it to the fit column by
+ * trimmed string equality. A drysuit unit therefore meets its column exactly
+ * as loosely as a BCD unit meets `bcd_size`, and an off-grid string the shop
+ * really wrote ("ML, rock boot 9") survives both fit forms — the diver's select
+ * offers a stored off-grid size back (issue #1728), the staff editor is free
+ * text. `hood`, `gloves`, `torch` and `smb` stay out: they carry no size column
+ * for a return to teach.
+ *
  * Takes a plain string rather than importing `GearItemKind`, which keeps this
  * module free of the register (the gear half of the app is opt-in by presence,
  * ADR 20260815-minimal-gear-register, and nothing here should make it load).
@@ -335,6 +347,8 @@ export function sizedRentalKindOfGearKind(gearKind: string): SizedRentalKind | n
       return "mask_fins";
     case "weights":
       return "weights";
+    case "drysuit":
+      return "drysuit";
     default:
       return null;
   }
