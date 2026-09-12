@@ -41,7 +41,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { RE_ENTRY_ASKS, reEntryOffersFor } from "@/lib/re-entry";
-import { nitroxAvailableOn } from "@/lib/rentals";
+import { nitroxAvailableOn, RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 
 /**
@@ -331,11 +331,11 @@ const fitSchema = z.object({
   // stored size for every item the shop does not currently offer, which is the
   // destructive half of the same bug; `saveRentalFit` leaves an absent size
   // alone instead (`src/db/rental-fit.ts`).
-  bcdSize: z.string().trim().max(20).optional(),
-  wetsuitSize: z.string().trim().max(20).optional(),
-  drysuitSize: z.string().trim().max(20).optional(),
-  finSize: z.string().trim().max(20).optional(),
-  weightPreference: z.string().trim().max(80).optional(),
+  bcdSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  drysuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  weightPreference: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.weightPreference).optional(),
 });
 
 export async function saveFitFromReady(token: string, formData: FormData) {

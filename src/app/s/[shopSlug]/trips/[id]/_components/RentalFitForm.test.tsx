@@ -461,11 +461,11 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
  * scale.
  */
 describe("RentalFitForm drysuit size (issue 1414)", () => {
-  function renderDrysuit() {
+  function renderDrysuit(fit?: Partial<DiverRentalFit>) {
     return renderDiver(
       <RentalFitForm
         action={mockAction}
-        rentalFit={{ ...emptyFit, rentsDrysuit: true }}
+        rentalFit={{ ...emptyFit, rentsDrysuit: true, ...fit }}
         rentalItems={["drysuit"]}
         course={null}
         pricing={defaultPricing}
@@ -477,6 +477,87 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
       />,
     );
   }
+
+  /**
+   * A size the grid cannot represent (issue #1728).
+   *
+   * H-76 sanctions these: `MS`, `ML`, `LS` and `MLT` are real sizes a shop
+   * that stocks one records staff-side, where the field is free text. And
+   * `drysuit_size` is the one field on the fit that reaches the packing list
+   * verbatim, so "ML, rock boot 9" is how a neoprene-sock fleet says a diver
+   * needs a boot — the crew find out at the dock if it goes missing.
+   */
+  const offGrid = "ML, rock boot 9";
+
+  function drysuitSelect(container: HTMLElement) {
+    return container.querySelector('select[name="drysuitSize"]') as HTMLSelectElement;
+  }
+
+  function submitted(container: HTMLElement, field: string) {
+    const form = container.querySelector("form") as HTMLFormElement;
+    return new FormData(form).get(field);
+  }
+
+  it("offers a stored off-grid size, and a save that ignores the box keeps it", () => {
+    const { container } = renderDrysuit({ drysuitSize: offGrid });
+    const select = drysuitSelect(container);
+    expect(select.value).toBe(offGrid);
+    expect([...select.options].map((option) => option.value)).toEqual([
+      "",
+      offGrid,
+      "XS",
+      "S",
+      "M",
+      "MT",
+      "L",
+      "LT",
+      "XL",
+      "XLT",
+      "XXL",
+    ]);
+    // The FormData, not merely the option's presence in the markup. Before the
+    // fix the option assertion is what a naive test checks and it is the
+    // *serialization* that loses the value: an unselected single select
+    // contributes no entry at all, so the column was overwritten the moment
+    // anybody touched the box.
+    expect(submitted(container, "drysuitSize")).toBe(offGrid);
+  });
+
+  it("still lets a deliberate change win", () => {
+    const { container } = renderDrysuit({ drysuitSize: offGrid });
+    fireEvent.change(drysuitSelect(container), { target: { value: "MT" } });
+    expect(submitted(container, "drysuitSize")).toBe("MT");
+  });
+
+  it("adds no duplicate option for a size already on the grid", () => {
+    const { container } = renderDrysuit({ drysuitSize: "MT" });
+    const select = drysuitSelect(container);
+    expect(select.value).toBe("MT");
+    expect([...select.options].map((option) => option.value)).toEqual([
+      "",
+      "XS",
+      "S",
+      "M",
+      "MT",
+      "L",
+      "LT",
+      "XL",
+      "XLT",
+      "XXL",
+    ]);
+  });
+
+  it("keeps a stored size longer than the diver form's old cap", () => {
+    // The issue's own example is 15 characters and clears the old 20-character
+    // diver-side cap, so a suite built only on it goes green while the
+    // 21-to-40 half ships a form the diver cannot save at all. Asserted at the
+    // staff writer's full limit so the case cannot silently shrink.
+    const long = "XXL tall, rock boot 13 wide, thick socks".slice(0, 40);
+    expect(long).toHaveLength(40);
+    const { container } = renderDrysuit({ drysuitSize: long });
+    expect(drysuitSelect(container).value).toBe(long);
+    expect(submitted(container, "drysuitSize")).toBe(long);
+  });
 
   it("offers the drysuit grid, never the wetsuit scale", () => {
     const { container } = renderDrysuit();

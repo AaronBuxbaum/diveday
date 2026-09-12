@@ -8,6 +8,7 @@ import {
   offeredRentableItems,
   quoteRentalFit,
   RENTABLE_ITEMS,
+  RENTAL_FIT_TEXT_LIMITS,
   type RentalFitSizes,
   type RentalPricing,
   rentalFitCompleteness,
@@ -432,5 +433,22 @@ describe("rentalFitCompleteness", () => {
       state: "incomplete",
       missing: ["weights"],
     });
+  });
+});
+
+describe("RENTAL_FIT_TEXT_LIMITS", () => {
+  it("is the one cap both writers of rental_fit_profiles read", () => {
+    // Two schemas must read these: the staff fit editor
+    // (`src/app/shop/[shopSlug]/divers/[personId]/actions.ts`) and the diver's
+    // own gear form (`src/app/ready/[token]/actions.ts`). The diver form posts
+    // back whatever staff stored, so a tighter cap there fails `safeParse` and
+    // redirects `?error=fit` on a form where every visible box is right.
+    //
+    // That was live when this was written: `finSize` was 20 on the diver side
+    // against 40 staff-side, and `weightPreference` 80 against 120, so a
+    // staffer recording a 24-character fin size made that diver's whole gear
+    // form unsaveable (issue #1728).
+    expect(RENTAL_FIT_TEXT_LIMITS.size).toBe(40);
+    expect(RENTAL_FIT_TEXT_LIMITS.weightPreference).toBe(120);
   });
 });

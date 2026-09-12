@@ -64,6 +64,7 @@ import { isValidCalendarDate } from "@/lib/calendar-date";
 import { isPlausibleCardNumber } from "@/lib/card-number";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
+import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeMedicalClearanceDocument } from "@/lib/storage";
@@ -171,11 +172,11 @@ const profileSchema = z.object({
   // (issue #1062). `.default("")` parses, and then blanks a stored size for
   // every item the shop does not currently offer, which is the destructive
   // half of the same bug; `saveRentalFit` leaves an absent size alone instead.
-  bcdSize: z.string().trim().max(40).optional(),
-  wetsuitSize: z.string().trim().max(40).optional(),
-  drysuitSize: z.string().trim().max(40).optional(),
-  finSize: z.string().trim().max(40).optional(),
-  weightPreference: z.string().trim().max(120).optional(),
+  bcdSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  drysuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  weightPreference: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.weightPreference).optional(),
 });
 
 /**

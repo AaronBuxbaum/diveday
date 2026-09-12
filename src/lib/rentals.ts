@@ -259,6 +259,31 @@ export const SIZED_RENTAL_KINDS = [
 export type SizedRentalKind = (typeof SIZED_RENTAL_KINDS)[number];
 
 /**
+ * How long a rental-fit text field may be, for **both** writers of
+ * `rental_fit_profiles`.
+ *
+ * Written down once because the two writers cannot hold different limits. The
+ * staff fit editor is free text — a neoprene-sock fleet records "ML, rock boot
+ * 9", which is the one field on the fit that reaches the packing list verbatim
+ * (`drysuit_size` in `src/db/schema.ts`, read by `src/lib/dive-prep.ts`). The
+ * diver's own gear form then **re-submits whatever staff stored**, so a cap
+ * tighter on the diver's side fails `safeParse` and redirects `?error=fit` on
+ * a form where every visible box is right — issue #1062's bug, arrived at from
+ * the other direction.
+ *
+ * That was not hypothetical when this was written: `finSize` was 20 here and
+ * 40 staff-side, and `weightPreference` 80 against 120, and both are text
+ * inputs that post their pre-filled stored value. HTML `maxlength` does not
+ * constrain a value the visitor never typed, so a staffer recording a
+ * 24-character fin size already made that diver's whole gear form unsaveable
+ * (issue #1728).
+ *
+ * The numbers are the staff side's, because the staff box is the free-text one
+ * and widening the diver's cap loses nothing a staffer could not already type.
+ */
+export const RENTAL_FIT_TEXT_LIMITS = { size: 40, weightPreference: 120 } as const;
+
+/**
  * Which `rental_fit_profiles` column records each sized kind's size.
  *
  * Written down once because two writers now need it: the fit editor, which
