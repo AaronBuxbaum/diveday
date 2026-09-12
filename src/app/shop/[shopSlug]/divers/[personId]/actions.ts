@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
-import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
+import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
 import { anonymizeDiver } from "@/db/anonymize";
 import {
   canPersonDeleteDiver,
@@ -63,6 +63,7 @@ import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { isPlausibleCardNumber } from "@/lib/card-number";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import type { PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
@@ -1184,8 +1185,9 @@ export async function sendShelfLinkAction(shopSlug: string, personId: string) {
 export async function markWaiverInPersonAction(
   shopSlug: string,
   personId: string,
+  _state: PaperWaiverFormState,
   formData: FormData,
-) {
+): Promise<PaperWaiverFormState> {
   const context = await requireDiverActionContext(
     shopSlug,
     personId,
@@ -1205,24 +1207,16 @@ export async function markWaiverInPersonAction(
     // refuses a section that is not a signature.
     guardian: paperGuardianFrom(formData),
   });
-  revalidateAndRedirect(
-    base,
-    await successUrl(
-      context,
-      outcome.ok
-        ? "waiver-paper-recorded"
-        : outcome.reason === "medical_attestation_required"
-          ? "waiver-medical-attestation"
-          : // A guardian whose name matches the diver's is the one refusal here
-            // an honest submission produces, so it gets its own words (issue
-            // 1539) rather than "try again", which cannot work.
-            outcome.reason === "guardian_name_matches_diver"
-            ? "waiver-guardian-name"
-            : "waiver-error",
-      "waiver",
-      outcome.ok,
-    ),
-  );
+  // **Only success navigates.** A refusal used to redirect with its own
+  // `?notice=` — including the one an honest submission produces, a guardian
+  // whose name is the diver's own (issue 1539) — and that redirect is what
+  // emptied the form the staffer had just filled in, down to the medical tick
+  // (issue #1674). It answers in the form instead, carrying the typed values
+  // back, and the words are still this surface's own (`paperWaiverCopy`'s
+  // `diver`): a namesake family is sent to the counter, where the confirmation
+  // the other two surfaces offer is a thing somebody actually witnessed.
+  if (!outcome.ok) return paperWaiverRefused(outcome.reason, formData);
+  revalidateAndRedirect(base, await successUrl(context, "waiver-paper-recorded", "waiver", true));
 }
 
 /**

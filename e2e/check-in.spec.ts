@@ -365,32 +365,30 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
     }
   });
   await card.getByRole("button", { name: "Record paper signature" }).click();
-  // The banner, not the query param: `?notice=` is one-shot now (`FlashParams`
-  // on the page strips it once the words are on screen), so the words are the
-  // contract and the URL is an implementation detail mid-erase.
+  // Under the button that was pressed, on the row it is about: the refusal
+  // answers in the form's own action state now rather than redirecting with a
+  // `?notice=` (issue #1674), so the words are the contract and there is no
+  // query param left to read.
   await expect(
-    page.getByText("Confirm you reviewed the medical questionnaire", { exact: false }),
+    card.getByText("Confirm you reviewed the medical questionnaire", { exact: false }),
   ).toBeVisible();
 
-  // A refusal is the one outcome here that still navigates, and it lands on the
-  // bare queue — so the search has to be retyped to get back to her, and waited
-  // for again for the reason above. This is the step that timed out on CI: the
-  // form was opened against the instrument's render, the search landed, the row
-  // was rebuilt, and `check()` sat waiting on a checkbox that had closed behind
-  // a "Mark signed on paper" button again.
-  await search.fill("Priya Sharma");
-  await search.press("Enter");
-  await expect(searchIsShowing).toBeVisible();
-  await card.getByText("Mark signed on paper").click();
+  // **Neither outcome navigates.** The refusal used to, landing on the bare
+  // queue — so the search had to be retyped, the row was rebuilt, and the form
+  // the staffer had filled in closed behind a "Mark signed on paper" button
+  // with everything they typed gone (the step that timed out on CI). Now the
+  // form is still open, still on this row, and the search is still in the box:
+  // the staffer's next act is the single box the refusal named.
+  await expect(page).toHaveURL(/\/check-in\?q=Priya\+Sharma/);
   await card
     .getByLabel("I have this diver’s signed release on file", { exact: false })
     .filter({ visible: true })
     .check();
   await card.getByRole("button", { name: "Record paper signature" }).click();
 
-  // Success lands **in place**: no banner, no navigation, and — the point of
-  // it — the search that found her is still in the box and still in the URL,
-  // so the next act is one tap rather than typing her name a third time. Same
+  // Success lands **in place** too: no banner, no navigation, and — the point
+  // of it — the search that found her is still in the box and still in the URL,
+  // so the next act is one tap rather than typing her name a second time. Same
   // immutable record a self-service signature produces, so the blocker is
   // genuinely gone rather than merely hidden.
   await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toBeVisible();

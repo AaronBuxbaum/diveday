@@ -239,7 +239,7 @@ export function WaiverGroup({
               >
                 <PaperWaiverControl
                   action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
-                  copy={paperWaiverCopy(t)}
+                  copy={paperWaiverCopy(t, "diver")}
                   // A minor's paper release names its co-signer too — measured
                   // on today, the day the staffer records the signature
                   // (ADR 20260907-guardian-co-signature).
@@ -247,21 +247,23 @@ export function WaiverGroup({
                     diver.person.dateOfBirth,
                     signingDate(nowDate(), timezone),
                   )}
-                  // **No namesake confirmation here, deliberately.** This door
-                  // is the absentee case — the family phoned ahead, or handed a
-                  // release over months before they booked (`waivers.ts`,
+                  // **No namesake confirmation here, deliberately** —
+                  // `offersNamesake` is left off. This door is the absentee
+                  // case — the family phoned ahead, or handed a release over
+                  // months before they booked (`waivers.ts`,
                   // `InPersonWaiverSubject`) — and the confirmation asserts in
                   // the first person that the staffer watched two people sign.
                   // Offering it to somebody reading a scanned PDF in February
                   // asks them to attest to a thing nobody witnessed, and the
                   // value it writes exists to tell a regulator somebody did. A
                   // namesake family is sent to the counter, where the words are
-                  // true (`divers.notice.waiverGuardianName`).
+                  // true (`divers.notices.waiverGuardianName`).
                   variant="secondary"
                   className=""
-                  // A refused attestation lands back here with its notice;
-                  // re-open the form so the staffer can tick the box rather
-                  // than hunt for the trigger again.
+                  // A page-level notice that landed the staffer back here
+                  // re-opens the form. A refused attestation no longer
+                  // navigates: it answers under the button with what they
+                  // typed still in the boxes (issue #1674).
                   defaultOpen={Boolean(status) && status?.tone !== "success"}
                 />
               </WaiverDeliveryActions>

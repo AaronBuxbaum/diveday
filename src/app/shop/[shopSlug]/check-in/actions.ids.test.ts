@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
+import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { noticeUrl } from "@/lib/staff-notices";
 import { redirectedTo, staffSession } from "@/test/staff-session";
 import { counterQueuePath } from "./focus";
@@ -78,13 +79,33 @@ describe("a malformed booking id at the counter", () => {
     ["undoing a check-in", undoCheckInAction],
     ["marking a diver not here", markNoShowAction],
     ["undoing that mark", undoNoShowAction],
-    ["recording a paper waiver", markWaiverInPersonFromCheckIn],
   ])("settles %s back on the focused departure instead of erroring", async (_label, action) => {
     signIn();
 
     const to = await redirectedTo(() => action(SHOP_SLUG, FOCUS_TRIP_ID, bookingForm(NOT_A_UUID)));
 
     expect(to).toBe(noticeUrl(counterQueuePath(SHOP_SLUG, FOCUS_TRIP_ID), "invalid"));
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  /**
+   * **The paper-waiver door is the one that does not navigate** (issue #1674).
+   * It answers into the form's own `useActionState` so a refusal can hand the
+   * typed values back, so there is no focused-departure path to land on — the
+   * form never left the page. The guard itself is the same one: a truncated id
+   * is refused before the database is reached.
+   */
+  it("refuses a paper waiver in the form rather than navigating", async () => {
+    signIn();
+
+    const state = await markWaiverInPersonFromCheckIn(
+      SHOP_SLUG,
+      FOCUS_TRIP_ID,
+      PAPER_WAIVER_IDLE,
+      bookingForm(NOT_A_UUID),
+    );
+
+    expect(state).toMatchObject({ status: "refused", refusal: "error" });
     expect(getDb).not.toHaveBeenCalled();
   });
 

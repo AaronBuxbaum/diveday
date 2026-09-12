@@ -11,6 +11,7 @@ import { activityLine } from "@/i18n/activity-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
+import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -28,7 +29,9 @@ export type TripRosterActions = {
   addExistingDiverAction: FormAction;
   addToWaitlistAction: FormAction;
   createDirectTripInvitationAction: FormAction;
-  markWaiverInPersonAction: FormAction;
+  /** A reducer, not a plain `FormAction`: a refused paper release answers in
+   * the form with the typed values rather than redirecting (issue #1674). */
+  markWaiverInPersonAction: PaperWaiverAction;
   markPaymentAction: FormAction;
   removeBookingAction: FormAction;
   confirmDiverIdentityAction: FormAction;

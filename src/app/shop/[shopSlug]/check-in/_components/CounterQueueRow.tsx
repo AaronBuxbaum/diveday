@@ -18,6 +18,7 @@ import { blockerFixFor } from "@/lib/blockers";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { guardianSignatureRequired } from "@/lib/guardian";
 import type { NoShowClaim } from "@/lib/no-show";
+import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import type { FormNotice } from "@/lib/staff-notices";
 import { counterBlockerDisclosure } from "../blocker-disclosure";
 import { CheckInActionForm } from "../CheckInActionForm";
@@ -162,7 +163,9 @@ export function CounterQueueRow({
   showFirstVisit: boolean;
   checkInAction: (formData: FormData) => Promise<{ ok: true }>;
   undoAction: (formData: FormData) => Promise<{ ok: true }>;
-  waiverAction: (formData: FormData) => Promise<void>;
+  /** A reducer, not a plain form action: a refused paper release answers in
+   * the form, carrying the typed values back (`PaperWaiverAction`, #1674). */
+  waiverAction: PaperWaiverAction;
   /**
    * The page's refused paper-waiver recording, when there is one — already
    * routed to a form by `noticeForForm` and carrying the booking it is about.
@@ -389,18 +392,21 @@ export function CounterQueueRow({
     <PaperWaiverControl
       action={waiverAction}
       bookingId={row.bookingId}
-      copy={paperWaiverCopy(t)}
+      copy={paperWaiverCopy(t, "counter")}
       // A minor's paper release names its co-signer too (ADR
       // 20260907-guardian-co-signature).
       requiresGuardian={guardianSignatureRequired(row.dateOfBirth, today)}
-      // Offered only on the row whose recording was just refused for a
-      // namesake co-signer, never on every minor at the counter.
-      offerNamesake={refusedWaiver?.code === "waiver-guardian-name"}
+      // The diver is standing here, so a staffer can truthfully say they
+      // watched both a namesake parent and child sign — the roster is the
+      // other such door, the diver's record deliberately not one.
+      offersNamesake
+      // Drawn on this row's own refusal, or on a page notice that named this
+      // booking, and on no other minor at the counter.
+      noticedNamesake={refusedWaiver?.code === "waiver-guardian-name"}
       className="mt-2"
-      // A refused recording lands back here with its notice below; re-open the
-      // form so the staffer can correct what it names rather than hunt for the
-      // trigger again. The diver record does exactly this (`WaiverGroup.tsx`),
-      // and the counter is where the diver is standing there waiting.
+      // A page-level notice that landed the staffer back here re-opens the
+      // form. A refused recording no longer navigates at all: it answers under
+      // the button with what they typed still in the boxes (issue #1674).
       defaultOpen={Boolean(refusedWaiver)}
     />
   ) : null;

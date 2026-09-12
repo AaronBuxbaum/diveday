@@ -6,6 +6,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { counterIsDone, isNoShowAtCounter, isSettledAtCounter } from "@/lib/check-in";
 import type { NoShowClaim } from "@/lib/no-show";
+import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { CounterQueueRow, type CounterWaiverNotice } from "./CounterQueueRow";
 import type { NoShowSalvageCopy } from "./NoShowScript";
 
@@ -71,7 +72,8 @@ export function CounterQueue({
   showFirstVisit: boolean;
   checkInAction: (formData: FormData) => Promise<{ ok: true }>;
   undoAction: (formData: FormData) => Promise<{ ok: true }>;
-  waiverAction: (formData: FormData) => Promise<void>;
+  /** A reducer, not a plain form action — see `CounterQueueRow`. */
+  waiverAction: PaperWaiverAction;
   /**
    * A refused paper-waiver recording, passed straight through: the row it
    * names is the one that renders it, and every other row ignores it. Handed

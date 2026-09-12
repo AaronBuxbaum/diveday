@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
+import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
 import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { PAPER_WAIVER_IDLE, type PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -192,17 +193,29 @@ export async function undoNoShowAction(
  * Same single write path as the roster (`recordInPersonWaiver`), so the record
  * is the same immutable, staff-attested one however it was reached; the
  * medical attestation is required there, not here, and a missing checkbox
- * comes back as its own notice rather than a generic failure.
+ * comes back as its own sentence rather than a generic failure.
+ *
+ * **Neither answer navigates now.** Success never did — see below. A refusal
+ * used to, and the redirect was what emptied the form: the staffer retyped the
+ * medical tick, the co-signer's name and the relationship before they could fix
+ * the one thing the notice named, at a wet counter with a family waiting (issue
+ * #1674). It answers into the form's own `useActionState` instead, which is
+ * also what carries those three values back — and it does so without the
+ * guardian's name ever entering a URL, the address bar or an access log. The
+ * refusal lands beside the button on the row it belongs to for free, which is
+ * what the `bid` parameter was doing by hand (issue 1574).
  */
 export async function markWaiverInPersonFromCheckIn(
   shopSlug: string,
   focusTripId: string | null,
+  _state: PaperWaiverFormState,
   formData: FormData,
-) {
+): Promise<PaperWaiverFormState> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, focusTripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+  // Not a seat this queue could be showing, so not a submission its form made.
+  if (!uuidParam(bookingId)) return paperWaiverRefused("booking_not_found", formData);
 
   const outcome = await recordInPersonWaiver(await getDb(), {
     shopId: session.user.shopId,
@@ -222,27 +235,12 @@ export async function markWaiverInPersonFromCheckIn(
   // actually checking them in — began by typing their name again.
   if (outcome.ok) {
     revalidatePath(back);
-    return;
+    return PAPER_WAIVER_IDLE;
   }
-  revalidateAndRedirect(
-    back,
-    noticeUrl(
-      back,
-      outcome.reason === "medical_attestation_required"
-        ? "waiver-medical-attestation"
-        : // The counter is where a family who share a legal name ends up after
-          // the online path refused them, so it is the surface that most needs
-          // to say why rather than "try again" (issue 1539).
-          outcome.reason === "guardian_name_matches_diver"
-          ? "waiver-guardian-name"
-          : "waiver-error",
-      // **Which row.** The queue can hold three families at once, and a
-      // refusal that names none of them is one the staffer has to guess at —
-      // on a page where the collapsed form has just shut underneath it. The
-      // roster and the diver record both carry `bid` for this reason; the
-      // counter, the surface those families are actually standing at, was the
-      // one that did not (issue 1574).
-      { bid: bookingId },
-    ),
-  );
+  // The counter is where a family who share a legal name ends up after the
+  // online path refused them, so it is the surface that most needs to say why
+  // rather than "try again" (issue 1539) — and the one that then offers the
+  // namesake confirmation on the same form, with what they typed still in it.
+  // Nothing was written, so nothing is revalidated.
+  return paperWaiverRefused(outcome.reason, formData);
 }

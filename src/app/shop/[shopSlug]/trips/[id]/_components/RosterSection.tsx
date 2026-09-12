@@ -43,6 +43,7 @@ import { checkDrysuitCard } from "@/lib/drysuit-card";
 import { formatDateTimeTz } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { flaggedMedicalPrompts } from "@/lib/medical";
+import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { paymentSourceLine } from "@/lib/payment-source";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
@@ -257,7 +258,9 @@ export function RosterSection({
   paymentsConnected: boolean;
   /** When free cancellation closes, so staff see a refund cue on paid seats; null = no stated window. */
   cancellationDeadline: Date | null;
-  markWaiverInPersonAction: (formData: FormData) => void;
+  /** A reducer, not a plain form action: a refusal hands the typed values
+   * back to the control rather than redirecting (`PaperWaiverAction`). */
+  markWaiverInPersonAction: PaperWaiverAction;
   markPaymentAction: (formData: FormData) => void;
   /**
    * Whether this staffer may set `waived` or `refunded` — a decision about
@@ -943,11 +946,18 @@ export function RosterSection({
             <PaperWaiverControl
               action={markWaiverInPersonAction}
               bookingId={booking.id}
-              copy={paperWaiverCopy(t)}
+              copy={paperWaiverCopy(t, "roster")}
               requiresGuardian={requiresGuardian}
-              offerNamesake={namesakeRefused}
-              // Same reason the counter and the diver record re-open on a
-              // refusal: the correction is inside the form that produced it.
+              // A diver is standing at this departure, so the staffer here can
+              // truthfully say they watched both a namesake parent and child
+              // sign — the counter is the other such door, the diver's record
+              // deliberately not one.
+              offersNamesake
+              // Drawn on this row's own refusal, or on a page notice that
+              // named this booking, and on no other minor on the boat.
+              noticedNamesake={namesakeRefused}
+              // A page-level notice that landed the staffer back here reopens
+              // the form; a refusal of this form no longer navigates at all.
               defaultOpen={namesakeRefused}
               // The fallback under the row's leading action reads in quiet
               // ink — a teal link out-shouted the bordered send pill above it
