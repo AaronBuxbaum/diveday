@@ -6,11 +6,11 @@ import {
   eq,
   gt,
   gte,
-  ilike,
   inArray,
   isNull,
   lte,
   ne,
+  notInArray,
   or,
 } from "drizzle-orm";
 import { isMinorOnDate } from "@/lib/age";
@@ -34,6 +34,7 @@ import {
   listDepartureBoardedBookingIds,
   type OnTheWater,
 } from "./manifests";
+import { personSearchMatch } from "./person-search";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
 import {
   activityEvents,
@@ -41,6 +42,7 @@ import {
   bookings,
   diveSupportNeeds,
   people,
+  personRoles,
   priorVisits,
   shops,
   trips,
@@ -152,9 +154,18 @@ export type CheckInQueueRow = {
  * The counter queue is intentionally a bounded, day-of read: the arrivals lens
  * on the shared operational horizon (`src/lib/operational-window.ts`), never a
  * freestanding window of its own. A scanner that types a booking id into the
- * search box gets the same result as a name/email search, while the default
- * view stays small enough to use one-handed on a phone. Readiness always comes
- * from the shared service, never a second gate.
+ * search box gets the same result as a name/email/phone search, while the
+ * default view stays small enough to use one-handed on a phone. Readiness
+ * always comes from the shared service, never a second gate.
+ *
+ * The person half of the search is `personSearchMatch`
+ * (`src/db/person-search.ts`), the same predicate
+ * {@link listOtherMatchingDivers} runs — and that is load-bearing, not tidiness.
+ * This page decides who is "already on today's list" from the rows *this* query
+ * returns, so a query shape the queue cannot answer but the other lookup can
+ * puts a diver who is booked today under the heading for divers who are not,
+ * with a button offering to seat them again. The queue used to match name and
+ * email only, so a phone number did exactly that (issue #1765).
  */
 export async function listCheckInQueue(
   db: AppDb,
@@ -165,11 +176,7 @@ export async function listCheckInQueue(
   const arrivals = arrivalsWindow(now);
   const query = options.query?.trim() ?? "";
   const queryFilter = query
-    ? or(
-        ilike(people.fullName, `%${query}%`),
-        ilike(people.email, `%${query}%`),
-        isUuid(query) ? eq(bookings.id, query) : undefined,
-      )
+    ? or(personSearchMatch(query), isUuid(query) ? eq(bookings.id, query) : undefined)
     : undefined;
   const rows = await db
     .select({
@@ -374,6 +381,57 @@ export async function listWalkInTrips(
     .groupBy(trips.id)
     .having(gt(trips.capacity, count(bookings.id)))
     .orderBy(asc(trips.startsAt));
+}
+
+export type OtherMatchingDiver = {
+  id: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+};
+
+/**
+ * Divers the counter's search found who are **not** on today's list — the
+ * "somebody is standing here and their name is not in the queue" case, which
+ * ends in seating them onto one of `listWalkInTrips`' departures.
+ *
+ * `excludePersonIds` is who the queue already showed, so nobody appears under
+ * both headings. Read from the queue the same search produced, which is why
+ * this runs `personSearchMatch` and {@link listCheckInQueue} runs it too: a
+ * query one of them can answer and the other cannot is a booked diver offered
+ * a second seat (issue #1765).
+ *
+ * Lived in the check-in page as an inline `select` until that mismatch made it
+ * the reported bug; a query nothing could test is how the two halves of one
+ * screen came to disagree.
+ */
+export async function listOtherMatchingDivers(
+  db: AppDb,
+  shopId: string,
+  options: { query?: string; excludePersonIds?: string[]; limit?: number } = {},
+): Promise<OtherMatchingDiver[]> {
+  const query = options.query?.trim() ?? "";
+  if (!query) return [];
+  const excluded = options.excludePersonIds ?? [];
+  return db
+    .select({
+      id: people.id,
+      fullName: people.fullName,
+      email: people.email,
+      phone: people.phone,
+    })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        eq(personRoles.role, "diver"),
+        isNull(people.deletedAt),
+        excluded.length > 0 ? notInArray(people.id, excluded) : undefined,
+        personSearchMatch(query),
+      ),
+    )
+    .limit(options.limit ?? 5);
 }
 
 /**

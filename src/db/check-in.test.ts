@@ -2,9 +2,16 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
-import { checkInBooking, listCheckInQueue, listWalkInTrips, undoCheckInBooking } from "./check-in";
+import {
+  checkInBooking,
+  listCheckInQueue,
+  listOtherMatchingDivers,
+  listWalkInTrips,
+  undoCheckInBooking,
+} from "./check-in";
 import { listDepartureBoardedBookingIds, recordRollCall } from "./manifests";
 import { listTripsReadiness } from "./readiness";
 import {
@@ -460,6 +467,66 @@ describe("counter check-in", () => {
     expect(results).toBeDefined();
     expect(results.length).toBeGreaterThan(0);
     expect(results.find((r) => r.booking.tripId === reef.id)).toBeDefined();
+  });
+});
+
+/**
+ * **The counter's two halves must answer the same query.** The page decides who
+ * is "already on today's list" from the rows `listCheckInQueue` returned, so a
+ * search shape one of these two can answer and the other cannot does not merely
+ * find nothing — it files a diver who is booked today under the heading for
+ * divers who are not, beside a button offering to seat them again.
+ *
+ * That is what a phone number did (issue #1765): the queue matched name and
+ * email only, the other lookup matched `people.phone` raw, and the page printed
+ * a grouped reading of it that matched neither.
+ */
+describe("searching the counter by phone", () => {
+  const typed = "305-555-0653";
+  const stored = "+13055550653";
+  /** What every staff surface prints for that row since #1712. */
+  const onScreen = "+1 305 555 0653";
+
+  it("finds the booked diver in the queue, and never in the not-booked list", async () => {
+    const { db, shop, booking, personName } = await context();
+    await db.update(people).set({ phone: stored }).where(eq(people.id, booking.personId));
+    expect(displayStoredPhone(stored)).toBe(onScreen);
+
+    for (const query of [onScreen, typed, stored]) {
+      const queue = await listCheckInQueue(db, shop.id, { query });
+      expect(queue.map((row) => row.personName)).toContain(personName);
+      // The page excludes whoever the queue already showed; the assertion that
+      // matters is that this lookup does not *also* claim them.
+      const others = await listOtherMatchingDivers(db, shop.id, {
+        query,
+        excludePersonIds: queue.map((row) => row.personId),
+      });
+      expect(others.map((row) => row.id)).not.toContain(booking.personId);
+    }
+  });
+
+  it("finds a diver who holds no seat today, which is what the seat buttons are for", async () => {
+    const { db, shop } = await context();
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Walk-in Wanda", phone: stored })
+      .returning();
+    if (!person) throw new Error("person insert returned no row");
+    await db.insert(personRoles).values({ personId: person.id, role: "diver" });
+
+    const queue = await listCheckInQueue(db, shop.id, { query: onScreen });
+    expect(queue.map((row) => row.personId)).not.toContain(person.id);
+    const others = await listOtherMatchingDivers(db, shop.id, {
+      query: onScreen,
+      excludePersonIds: queue.map((row) => row.personId),
+    });
+    expect(others.map((row) => row.id)).toContain(person.id);
+  });
+
+  it("answers nothing for a blank query rather than the whole roster", async () => {
+    const { db, shop } = await context();
+    expect(await listOtherMatchingDivers(db, shop.id, { query: "   " })).toEqual([]);
+    expect(await listOtherMatchingDivers(db, shop.id, {})).toEqual([]);
   });
 });
 

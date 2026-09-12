@@ -2,8 +2,8 @@ import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import type { PaletteAnswerView } from "@/lib/palette-answer";
-import { MIN_PHONE_SEARCH_DIGITS, phoneDigits } from "@/lib/person-fields";
 import type { AppDb } from "./client";
+import { personSearchMatch } from "./person-search";
 import {
   courses,
   diveSites,
@@ -101,22 +101,6 @@ export async function searchShop(
   if (query.length < MIN_QUERY) return EMPTY_RESULTS;
   const like = `%${query}%`;
 
-  // Digits to digits. `people.phone` is free text, so a staffer typing what
-  // caller ID showed them never matched a stored `"+1 305 555 0142"`.
-  // Deliberately *added* to the raw `ilike` rather than replacing it: the raw
-  // comparison is the indexed one this module's docblock is built around, and
-  // this expression is not, so the index still carries every name, email and
-  // as-typed phone query — only a bare-digits query pays for the scan. Guarded
-  // by a digit floor so an ordinary two-letter name query never triggers it.
-  const digits = phoneDigits(query);
-  const phoneMatch =
-    digits.length >= MIN_PHONE_SEARCH_DIGITS
-      ? or(
-          ilike(people.phone, like),
-          sql`regexp_replace(coalesce(${people.phone}, ''), '[^0-9]', '', 'g') like ${`%${digits}%`}`,
-        )
-      : ilike(people.phone, like);
-
   // **Nearest to now, in either direction.** `desc(startsAt)` is the right
   // default nearly everywhere else `trips` is read, because those surfaces page
   // a stream forward from now — but `trips` is forward-looking, so in a *search*
@@ -142,7 +126,10 @@ export async function searchShop(
         and(
           eq(people.shopId, shopId),
           isNull(people.deletedAt),
-          or(ilike(people.fullName, like), ilike(people.email, like), phoneMatch),
+          // Name, email and phone through the one shared predicate
+          // (`src/db/person-search.ts`), which is where the digits-to-digits
+          // phone comparison and its index coupling are argued.
+          personSearchMatch(query),
         ),
       )
       .orderBy(people.fullName)

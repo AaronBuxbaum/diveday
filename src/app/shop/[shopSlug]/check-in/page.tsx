@@ -1,4 +1,3 @@
-import { and, eq, ilike, isNull, notInArray, or } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -18,10 +17,9 @@ import type {
   CheckInQueueRow,
   UndoCheckInOutcome,
 } from "@/db/check-in";
-import { listCheckInQueue, listWalkInTrips } from "@/db/check-in";
+import { listCheckInQueue, listOtherMatchingDivers, listWalkInTrips } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { type MarkNoShowOutcome, noShowSalvage, type UndoNoShowOutcome } from "@/db/no-show";
-import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { upcomingScheduleStats } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -319,31 +317,10 @@ export default async function CheckInPage({
         )
       : undefined;
   const bookedPersonIds = new Set(queue.map((row) => row.personId));
-  const otherMatchingDivers = query
-    ? await db
-        .select({
-          id: people.id,
-          fullName: people.fullName,
-          email: people.email,
-          phone: people.phone,
-        })
-        .from(people)
-        .innerJoin(personRoles, eq(personRoles.personId, people.id))
-        .where(
-          and(
-            eq(people.shopId, shop.id),
-            eq(personRoles.role, "diver"),
-            isNull(people.deletedAt),
-            bookedPersonIds.size > 0 ? notInArray(people.id, [...bookedPersonIds]) : undefined,
-            or(
-              ilike(people.fullName, `%${query}%`),
-              ilike(people.email, `%${query}%`),
-              ilike(people.phone, `%${query}%`),
-            ),
-          ),
-        )
-        .limit(5)
-    : [];
+  const otherMatchingDivers = await listOtherMatchingDivers(db, shop.id, {
+    query,
+    excludePersonIds: [...bookedPersonIds],
+  });
   // The page's own clock, not a second reading of the wall — everything above
   // this line is anchored to `now`, and a picker offering a boat the queue has
   // already written off is the drift that costs.

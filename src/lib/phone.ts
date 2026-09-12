@@ -1,13 +1,20 @@
 /**
- * The one shape a phone number is stored and compared in: E.164 — a `+`, the
- * country's calling code, and digits, with nothing else in it
- * (`+13055550110`).
+ * The one shape a phone number is **stored** in: E.164 — a `+`, the country's
+ * calling code, and digits, with nothing else in it (`+13055550110`).
  *
  * Two readers share the table below. `readTypedPhone`
  * (`src/lib/forgiving-fields.ts`) turns what a staffer typed into the grouped
  * string the field shows back to them; `toE164` turns the same text into the
- * string the row holds and every comparison runs on. One table, so the field
- * and the database can never disagree about which country a shop is in.
+ * string the row holds. One table, so the field and the database can never
+ * disagree about which country a shop is in.
+ *
+ * **Stored is not displayed, and it is not compared.** The staff surfaces print
+ * a grouped reading of the column (`displayStoredPhone`), staff search compares
+ * the digits of the query to the digits of the column (`personSearchMatch`,
+ * src/db/person-search.ts), and the inbound router matches on the last seven
+ * (`src/db/inbound-messages.ts`). Assuming those three are one string is issue
+ * #1765: the screen grouped the number, the search box did not, and a staffer
+ * pasting what they were looking at found nobody.
  *
  * Pure and framework-free: the shop's country arrives as a parameter
  * (`shops.address_country`), never read from anywhere in here.

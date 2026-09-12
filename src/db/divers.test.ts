@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT } from "@/lib/anonymization";
 import { nowDate, nowMs } from "@/lib/clock";
+import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import type { DeleteCustomerResult } from "@/lib/payments/customers";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
@@ -562,6 +563,40 @@ describe("roster search and pagination", () => {
     expect(nobody.page).toBe(1);
   });
 
+  /**
+   * **What the roster prints is not what the roster stores.** `people.phone`
+   * holds E.164 (`phoneForStorage`) and since #1712 every staff surface shows a
+   * grouped reading of it (`displayStoredPhone`), so the most natural gesture
+   * there is — select the number off a diver's record, paste it into the search
+   * box — compared `%+1 305 555 0651%` against `+13055550651` and returned an
+   * empty list (issue #1765). Both sides are normalised to digits now
+   * (`personSearchMatch`).
+   */
+  it("finds a diver by the grouped phone number the surfaces print", async () => {
+    const { db, shop } = ctx;
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Pasted Number",
+      phone: "305-555-0651",
+    });
+    if (!diver) throw new Error("diver setup failed");
+    // Stored canonical, printed grouped — the two strings the staffer is
+    // holding at once.
+    expect(diver.phone).toBe("+13055550651");
+    expect(displayStoredPhone(diver.phone)).toBe("+1 305 555 0651");
+
+    const pasted = await listDiverSummaries(db, shop.id, { query: "+1 305 555 0651" });
+    expect(pasted.divers.map((row) => row.id)).toContain(diver.id);
+    expect(pasted.total).toBe(1);
+
+    // The same number the other ways it reaches a search box: off a card, off a
+    // caller ID with no calling code to type.
+    const dashed = await listDiverSummaries(db, shop.id, { query: "305-555-0651" });
+    expect(dashed.divers.map((row) => row.id)).toContain(diver.id);
+    const bare = await listDiverSummaries(db, shop.id, { query: "3055550651" });
+    expect(bare.divers.map((row) => row.id)).toContain(diver.id);
+  });
+
   it("filters the roster to whoever still owes a safety contact", async () => {
     const { db, shop } = ctx;
     const target = (await listDiverSummaries(db, shop.id)).divers[0];
@@ -854,6 +889,29 @@ describe("listBookableDivers (returning-diver picker)", () => {
     if (!diver) throw new Error("diver setup failed");
     await deleteDiver(db, shop.id, diver.id);
     expect(await listBookableDivers(db, shop.id, trip.id, { query: "gary" })).toEqual([]);
+  });
+
+  /**
+   * The picker's own copy of the roster's defect (issue #1765): the panels that
+   * drive it print `displayStoredPhone(match.phone)` beside each candidate
+   * (`SeatDiverPanel`, `AddDiverSection`), so the number a staffer sees there is
+   * the grouped one too.
+   */
+  it("finds a returning diver by the grouped phone number beside their name", async () => {
+    const { db, shop } = ctx;
+    const trip = await openTrip(db, shop.id);
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Regular Rosa",
+      phone: "305-555-0652",
+    });
+    if (!diver) throw new Error("diver setup failed");
+
+    const grouped = displayStoredPhone(diver.phone);
+    expect(grouped).toBe("+1 305 555 0652");
+    expect(
+      (await listBookableDivers(db, shop.id, trip.id, { query: grouped })).map((m) => m.person.id),
+    ).toEqual([diver.id]);
   });
 });
 

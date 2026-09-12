@@ -827,8 +827,8 @@ export const people = pgTable(
     uniqueIndex("people_shop_email_unique")
       .on(table.shopId, sql`lower(${table.email})`)
       .where(sql`${table.deletedAt} is null and ${table.email} is not null`),
-    // Backs the command-palette/diver-roster leading-wildcard ILIKE search
-    // (src/db/search.ts, src/db/divers.ts) — a plain btree can't serve
+    // Backs the leading-wildcard ILIKE search every staff box runs
+    // (`personSearchMatch`, src/db/person-search.ts) — a plain btree can't serve
     // `ilike '%query%'`, only pg_trgm's GIN similarity index can (CR-018).
     index("people_full_name_trgm_idx").using("gin", sql`${table.fullName} gin_trgm_ops`),
     index("people_email_trgm_idx").using("gin", sql`${table.email} gin_trgm_ops`),
@@ -839,7 +839,7 @@ export const people = pgTable(
     // now, and an expression index is what keeps that comparison indexed rather
     // than turning every bare-digit query into a sequential scan. The
     // expression here must stay character-for-character identical to the one in
-    // `src/db/search.ts`, or Postgres will not use this index at all.
+    // `src/db/person-search.ts`, or Postgres will not use this index at all.
     //
     // `[^0-9]` rather than `\D` deliberately: drizzle-kit's migration writer
     // swallows the backslash, so `\D` reached the generated SQL as a bare `D`

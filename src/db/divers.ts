@@ -5,7 +5,6 @@ import {
   desc,
   eq,
   gte,
-  ilike,
   inArray,
   isNotNull,
   isNull,
@@ -25,6 +24,7 @@ import { listOrdersForPerson } from "./orders";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { listPersonBookingPayments } from "./payments";
 import { storedPhone } from "./person-phone";
+import { personSearchMatch } from "./person-search";
 import {
   bookings,
   certifications,
@@ -261,10 +261,12 @@ export async function isDiverRemoved(db: AppDb, shopId: string, personId: string
 export const DIVER_PAGE_SIZE = PAGE_SIZE.list;
 
 /**
- * The diver roster stays server-fed: search is indexed `ilike` over the
- * columns the front desk actually types (name, email, phone — same shape as
- * the command palette in `search.ts`), and pages are bounded so a shop with
- * thousands of records costs one page, not the whole table.
+ * The diver roster stays server-fed: search is `personSearchMatch`
+ * (`src/db/person-search.ts`) over the columns the front desk actually types
+ * (name, email, phone — the same predicate the command palette and the counter
+ * use, so a number copied off one of them finds the row on all of them), and
+ * pages are bounded so a shop with thousands of records costs one page, not the
+ * whole table.
  */
 /**
  * Named roster views for common front-desk jobs. Deliberately code-defined, not
@@ -440,7 +442,6 @@ export async function listDiverSummaries(
   } = {},
 ) {
   const query = options.query?.trim() ?? "";
-  const like = query ? `%${query}%` : null;
 
   const filter = options.filter ?? "all";
   const timeZone = options.timeZone ?? "UTC";
@@ -450,9 +451,7 @@ export async function listDiverSummaries(
     eq(personRoles.role, "diver"),
     removalScope(filter),
     diverFilterCondition(db, filter, { shopId, timeZone, now }),
-    like
-      ? or(ilike(people.fullName, like), ilike(people.email, like), ilike(people.phone, like))
-      : undefined,
+    personSearchMatch(query),
   );
 
   // Offset rather than keyset. The roster used to page forward-only by cursor,
@@ -514,7 +513,7 @@ export type BookableDiver = {
  * Returning divers a staffer can drop straight onto a trip without re-entering
  * them — the "enter once, reuse everywhere" path that keeps the roster from
  * minting a second person row (and orphaning the first diver's certs, waivers,
- * and rental fit) every time a regular books. Same indexed `ilike` over
+ * and rental fit) every time a regular books. Same `personSearchMatch` over
  * name/email/phone the diver roster and command palette use, bounded to a
  * handful of matches. Excludes soft-deleted records and anyone already holding
  * an active seat on this trip — the roster can't book them twice. Carries each
@@ -529,7 +528,6 @@ export async function listBookableDivers(
   const query = options.query?.trim() ?? "";
   if (!query) return [];
   const limit = options.limit ?? 6;
-  const like = `%${query}%`;
 
   const bookedRows = await db
     .select({ personId: bookings.personId })
@@ -546,7 +544,7 @@ export async function listBookableDivers(
         eq(people.shopId, shopId),
         eq(personRoles.role, "diver"),
         isNull(people.deletedAt),
-        or(ilike(people.fullName, like), ilike(people.email, like), ilike(people.phone, like)),
+        personSearchMatch(query),
         bookedIds.length ? notInArray(people.id, bookedIds) : undefined,
       ),
     )
