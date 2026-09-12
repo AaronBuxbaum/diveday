@@ -118,6 +118,20 @@ const OFFLINE_BOAT_TARGET_CLASS = buttonClass({
   className: "w-full sm:w-auto",
 });
 
+/**
+ * One diver's roll-call row id, minted here and nowhere else: this is both what
+ * the row carries and what the missing-divers grid is handed to jump to.
+ *
+ * Two literals one screen apart is how that grid spent its life scrolling to
+ * `diver-row-<bookingId>` — the **live** manifest's id — while the rows on this
+ * page answered to `offline-roll-call-<bookingId>`, so every tap at the rail did
+ * nothing at all (#1675). One function is what makes the pair undriftable; the
+ * grid holds no prefix of its own to be wrong about.
+ */
+function offlineRollCallRowId(bookingId: string): string {
+  return `offline-roll-call-${bookingId}`;
+}
+
 function OfflineStatusLabel({
   variant,
   children,
@@ -1054,10 +1068,10 @@ export function OfflineManifestView() {
           );
           /**
            * **The seat as the shared predicates read it**, and the one place
-           * this page decides what `bookings.status` was when the copy was
-           * taken. It carried `arrival ? "checked_in" : "booked"` and nothing
-           * else, so a seat the desk had released reached
-           * `isSettledAtCounter` as an ordinary booking (#1705).
+           * this page decides what the booking's own `status` column said when
+           * the copy was taken. It answered `arrival ? "checked_in" :
+           * "booked"` and nothing else, so a seat the desk had released
+           * reached `isSettledAtCounter` as an ordinary booking (#1705).
            *
            * The desk's own answer wins over this device's: a released seat
            * with a queued arrival on it is a tap the server has already
@@ -1562,8 +1576,8 @@ export function OfflineManifestView() {
                 // sentences were resolved into this copy when it was saved, so
                 // they are already in the reader's language.
                 //
-                // **The desk released the seat** (#1209, #1705).
-                // `bookings.status` is `no_show`, the same call answers
+                // **The desk released the seat** (#1209, #1705). The booking's
+                // `status` column reads `no_show`, so the same call answers
                 // `not_bookable`, and the row that came back wore "this
                 // booking was cancelled" — a sentence about a thing nobody
                 // did. Only the *desk's* control goes: the roll call below
@@ -2086,11 +2100,16 @@ export function OfflineManifestView() {
               return (
                 <li
                   key={diver.bookingId}
-                  id={`offline-roll-call-${diver.bookingId}`}
-                  // Every row is a jump target — the missing-divers grid links
-                  // to any uncalled person — so every row carries the scroll
-                  // margin that keeps its name clear of the sticky panel, not
-                  // just the two states that used to.
+                  id={offlineRollCallRowId(diver.bookingId)}
+                  // Every row is a jump target — the missing-divers grid is
+                  // handed this very id for any uncalled person, which is why
+                  // one function mints it rather than a literal here and a
+                  // prefix there (#1675) — so every row carries the scroll
+                  // margin that keeps a landed row off the top edge, not just
+                  // the two states that used to. Not the live page's sticky
+                  // checkpoint panel, which this page does not have: nothing
+                  // on this surface is sticky or fixed (the grid's own note
+                  // below turns on the same fact).
                   className={`scroll-mt-24 border-l-4 p-4 sm:p-5 ${
                     recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
                   }`}
@@ -2521,6 +2540,11 @@ export function OfflineManifestView() {
           divers={missingDivers.map((diver) => ({
             bookingId: diver.bookingId,
             fullName: diver.fullName,
+            // Where the tap lands, from the same function that wrote the id
+            // onto the row above (#1675). Every face here is a diver from the
+            // roster rendered above, so the target is on the page by
+            // construction, not by hope.
+            rowId: offlineRollCallRowId(diver.bookingId),
             rentsKit: diver.rentalFit.state === "rents",
             // A readiness fact, and only at the dock — the same gate the live
             // chip this grid stands in for applies (`blocked: diver.blocked &&

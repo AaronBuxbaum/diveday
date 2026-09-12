@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   acknowledgeDiscardedOfflineRecords,
   appendOfflineArrival,
@@ -1517,6 +1517,54 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     const grid = document.getElementById("missing-divers-grid");
     if (!grid) throw new Error("the missing-divers grid is missing");
     expect(within(grid).getByRole("button", { name: /Priya/ })).toBeInTheDocument();
+  });
+
+  /**
+   * **A tap target is only a target if the tap lands** (#1675). The grid looked
+   * its row up as `diver-row-<bookingId>` — the *live* manifest's id — while
+   * every row on this page answers to `offline-roll-call-<bookingId>`, so
+   * `getElementById` returned null and every tap on every face was a silent
+   * no-op, under a hint that says "Tap a diver to jump to their row" on the one
+   * surface that exists for having no signal.
+   *
+   * Nothing caught it: the grid's own suite mounts a stub row and this file
+   * asserted the button *exists*. Existing is not the promise. This asserts the
+   * jump reaches **that diver's row**, which is the only version that fails if
+   * the ids drift apart again or a third prefix is looked up.
+   */
+  it("jumps from a face in the grid to that diver's own row", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      richEnvelope("trip-1", { withCarriedNotBoarded: true }),
+    );
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    // jsdom ships no layout, so `src/test/setup.ts` installs a no-op
+    // `scrollIntoView` on the prototype — which is exactly why the spies go on
+    // the *rows themselves*: a jump to some other element, or to nothing, is
+    // swallowed by that no-op and would read as green. `elsewhere` is what the
+    // prototype catches, i.e. any element that is not one of these two rows.
+    const priya = document.getElementById("offline-roll-call-diver-priya");
+    const marcus = document.getElementById("offline-roll-call-diver-marcus");
+    if (!priya || !marcus) throw new Error("the diver rows are missing");
+    const elsewhere = vi.spyOn(Element.prototype, "scrollIntoView");
+    onTestFinished(() => elsewhere.mockRestore());
+    priya.scrollIntoView = vi.fn();
+    marcus.scrollIntoView = vi.fn();
+
+    const grid = document.getElementById("missing-divers-grid");
+    if (!grid) throw new Error("the missing-divers grid is missing");
+    fireEvent.click(within(grid).getByRole("button", { name: /Priya/ }));
+
+    expect(priya.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+    expect(marcus.scrollIntoView).not.toHaveBeenCalled();
+    expect(elsewhere).not.toHaveBeenCalled();
+    // The ring is the other half of the jump: on a nine-diver roster, landing
+    // mid-list without a mark leaves the crew counting rows to find the face.
+    expect(priya.classList.contains("ring-4")).toBe(true);
   });
 
   /**

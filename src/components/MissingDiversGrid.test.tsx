@@ -19,6 +19,18 @@ import { MissingDiversGrid, type MissingDiversGridCopy } from "./MissingDiversGr
  * person is not on the manifest.
  */
 
+/**
+ * The row id a caller hands in — deliberately **neither** production prefix.
+ *
+ * This file used to mount its stub rows under `diver-row-<bookingId>`, the id
+ * the grid built for itself out of the *live* manifest's markup, so every jump
+ * test here passed against a row no caller renders while every real tap on the
+ * offline manifest did nothing (#1675). An id belonging to nobody is what stops
+ * that coming back: the only way a tap can land now is by using the id it was
+ * given.
+ */
+const rowIdOf = (bookingId: string) => `stub-row-${bookingId}`;
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -26,7 +38,13 @@ afterEach(() => {
   // `cleanup()` does not own. Left behind, a row from an earlier test keeps its
   // id and `getElementById` returns *it* — so the next test's assertions would
   // silently be about a stale node.
-  for (const row of document.querySelectorAll('[id^="diver-row-"]')) row.remove();
+  //
+  // `diver-row-` too: the decoy in the last jump test wears the id the grid
+  // used to build for itself, and one of those surviving a failed assertion is
+  // exactly the stale node this loop exists to prevent.
+  for (const row of document.querySelectorAll('[id^="stub-row-"], [id^="diver-row-"]')) {
+    row.remove();
+  }
 });
 
 const COPY: MissingDiversGridCopy = {
@@ -39,14 +57,19 @@ const COPY: MissingDiversGridCopy = {
 };
 
 const DIVERS = [
-  { bookingId: "booking-1", fullName: "Priya Raman", rentsKit: true },
-  { bookingId: "booking-2", fullName: "Tomas Ek", rentsKit: false },
+  {
+    bookingId: "booking-1",
+    fullName: "Priya Raman",
+    rentsKit: true,
+    rowId: rowIdOf("booking-1"),
+  },
+  { bookingId: "booking-2", fullName: "Tomas Ek", rentsKit: false, rowId: rowIdOf("booking-2") },
 ];
 
 /** A stand-in for the manifest row the grid jumps to. */
 function mountRow(bookingId: string) {
   const row = document.createElement("div");
-  row.id = `diver-row-${bookingId}`;
+  row.id = rowIdOf(bookingId);
   row.scrollIntoView = vi.fn();
   document.body.append(row);
   return row;
@@ -92,7 +115,14 @@ describe("what the grid shows", () => {
   it("takes at most two initials from a long name", () => {
     render(
       <MissingDiversGrid
-        divers={[{ bookingId: "b", fullName: "Ana Maria Sofia Delgado", rentsKit: false }]}
+        divers={[
+          {
+            bookingId: "b",
+            fullName: "Ana Maria Sofia Delgado",
+            rentsKit: false,
+            rowId: rowIdOf("b"),
+          },
+        ]}
         copy={COPY}
       />,
     );
@@ -103,7 +133,7 @@ describe("what the grid shows", () => {
     // Real rosters carry mononyms and walk-in placeholders.
     render(
       <MissingDiversGrid
-        divers={[{ bookingId: "b", fullName: "Kai", rentsKit: false }]}
+        divers={[{ bookingId: "b", fullName: "Kai", rentsKit: false, rowId: rowIdOf("b") }]}
         copy={COPY}
       />,
     );
@@ -234,6 +264,28 @@ describe("tapping a diver jumps to their manifest row", () => {
     render(<MissingDiversGrid divers={DIVERS} copy={COPY} />);
     expect(() => fireEvent.click(screen.getAllByRole("button")[0])).not.toThrow();
   });
+
+  /**
+   * The shipped bug, from the grid's side: it built `diver-row-<bookingId>`
+   * itself and its only caller renders nothing of the sort, so the jump landed
+   * on the live manifest's id and nowhere on the page a crew member was holding
+   * (#1675). The grid now knows only what it is handed, and this keeps the old
+   * prefix from creeping back as a fallback — a tap that scrolls to a row the
+   * caller did not name is not a working tap.
+   */
+  it("jumps to the row it was handed, never to one it guessed at", () => {
+    const decoy = document.createElement("div");
+    decoy.id = "diver-row-booking-1";
+    decoy.scrollIntoView = vi.fn();
+    document.body.append(decoy);
+    const row = mountRow("booking-1");
+    render(<MissingDiversGrid divers={DIVERS} copy={COPY} />);
+
+    fireEvent.click(screen.getAllByRole("button")[0]);
+
+    expect(row.scrollIntoView).toHaveBeenCalled();
+    expect(decoy.scrollIntoView).not.toHaveBeenCalled();
+  });
 });
 
 describe("the avatar colour is decoration, never status", () => {
@@ -248,6 +300,7 @@ describe("the avatar colour is decoration, never status", () => {
       bookingId: `booking-${index}`,
       fullName: `Diver Number${index}`,
       rentsKit: index % 2 === 0,
+      rowId: rowIdOf(`booking-${index}`),
     }));
     render(<MissingDiversGrid divers={many} copy={COPY} />);
 

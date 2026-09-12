@@ -9,6 +9,20 @@ type MissingDiver = {
   fullName: string;
   rentsKit: boolean;
   /**
+   * The id of this diver's row on the calling page — the element a tap jumps
+   * to, minted by the caller with the same function that writes it onto the
+   * row.
+   *
+   * The grid built this id itself until #1675, from the *live* manifest's
+   * `diver-row-<bookingId>`, while its only caller renders
+   * `offline-roll-call-<bookingId>`: `getElementById` answered null, the
+   * handler returned early, and every tap on every face was a silent no-op —
+   * under a hint that reads "Tap a diver to jump to their row", on the one
+   * surface that exists for having no signal. A grid that concatenates its
+   * caller's markup can be wrong about it; one that is handed the id cannot.
+   */
+  rowId: string;
+  /**
    * Readiness says this diver cannot board yet. Display only — the grid never
    * gates anything, it just stops saying "not yet called" beside somebody whose
    * own row already says so.
@@ -109,7 +123,13 @@ export function MissingDiversGrid({
               key={diver.bookingId}
               type="button"
               onClick={() => {
-                const element = document.getElementById(`diver-row-${diver.bookingId}`);
+                // The caller renders the row for every face here — this grid's
+                // divers are a filter of the roster below it, in the same pass
+                // — so a miss is not a state this surface has. The guard is
+                // what keeps a jump from taking the whole roll call down on a
+                // boat, and it is nothing more than that: it is never the
+                // answer to "the ids don't match" (#1675).
+                const element = document.getElementById(diver.rowId);
                 if (!element) return;
                 // Motion has a job (design/principles.md §5) and a reader who
                 // asked for less of it still gets the jump — instantly, and
