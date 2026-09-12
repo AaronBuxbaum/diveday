@@ -134,18 +134,26 @@ also get a concurrency group per commit, since `cancel-in-progress: false` never
 
 ### Amended 2026-09-02: the pruner is the authoritative bound on the bucket
 
-Two independent bounds grew on `diveday-vrt` and one was quietly overriding the other. The nightly
-pruner Lambda keeps the ten most recent `main` baselines *by count* plus everything under a day old
+Two independent bounds grew on `diveday-vrt` and one was quietly overriding the other. The pruner
+Lambda keeps the ten most recent `main` baselines *by count* plus everything under a day old
 (seven days until 2026-09-08), written that way so a quiet month never leaves an open branch
 comparing against a prefix that was deleted overnight. The bucket's own S3 lifecycle rule expired every object at 30 days regardless
 — so after 30 quiet days the preserved baselines were gone and the next pull request reported every
 surface as new under `Changed: 0`, the exact failure the pruner and the ancestor fallback above exist
 to prevent. The rule was bounding nothing the pruner did not already bound.
 
-**The pruner is authoritative.** The lifecycle rule now expires at 180 days, which is a backstop for
-the case the pruner itself stops running and can only ever fire after it has had a hundred nightly
-chances to act. A future change may lower the pruner's own window; it may not lower this rule to meet
-it.
+**The pruner is authoritative.** The lifecycle rule is a backstop for the case the pruner itself
+stops running, and may only ever fire well after the pruner has had many chances to act. A future
+change may lower the pruner's own window; it may not lower this rule to meet it.
+
+**Amended 2026-09-12: the two numbers live in code, not here.** This paragraph said "180 days" and
+"a hundred nightly chances", and both went stale the moment #1663 moved the expiry to 60 days and
+the pruner from nightly to every six hours — while this ADR was open in that same diff. Naming
+figures in prose that a stack can change one file away is how a confident wrong number outlives the
+thing it described. The expiry is `infra/lib/infra-stack.ts` and is pinned by
+`infra/lib/visual-bucket-pruner.test.ts`; the cadence is the `VisualBucketPrunerSchedule` beside it.
+Read those. What does not move is the ordering: the pruner decides, and the lifecycle rule is only
+ever a floor beneath it.
 
 ### Amended 2026-09-02: a run that compared nothing is a red check
 
