@@ -70,6 +70,69 @@ describe("statements the expand/contract rule forbids", () => {
       "the live deployment still selects and writes this column",
     );
   });
+
+  /**
+   * **A correct refusal that describes the wrong hazard gets waved through.**
+   * A collation change is written as a type change, and the note used to say
+   * "a non-binary-coercible type change rewrites the table and breaks the live
+   * deployment's reads" — every clause of which is false for that shape:
+   * `text` → `text` *is* binary-coercible, no row is rewritten, and what stops
+   * the live deployment is the ACCESS EXCLUSIVE lock held while every index on
+   * the column is rebuilt. An author reads that and concludes the rule is not
+   * about them (issue #1751).
+   */
+  describe("the collation case of alter-column-type", () => {
+    const collation =
+      'ALTER TABLE "people" ALTER COLUMN "full_name" SET DATA TYPE text COLLATE "und-x-icu";';
+
+    it("still refuses it, under the same rule id the existing marker names", () => {
+      // `20260911200158_person-name-collation`'s acknowledgement says
+      // `alter-column-type`; a new rule id would have invalidated it.
+      expect(ruleIdsFor(collation)).toEqual(["alter-column-type"]);
+    });
+
+    it("names the index rebuild and the lock, which is the cost it actually has", () => {
+      const message = problems(collation)[0];
+      expect(message).toContain("rebuilds every index on the column");
+      expect(message).toContain("ACCESS EXCLUSIVE");
+      // Lock *acquisition* is the half an author cannot see in the statement:
+      // it queues behind any open transaction on the table, so the window a
+      // user feels is set by the slowest transaction in flight.
+      expect(message).toContain("queues behind any open transaction");
+    });
+
+    it("does not tell a plain type change about a rebuild it does not do", () => {
+      // The leaves-alone direction: the added sentence is conditional on the
+      // statement, not bolted onto every match.
+      const message = problems('ALTER TABLE "orders" ALTER COLUMN "total_cents" TYPE bigint;')[0];
+      expect(message).toContain("rewrites every row");
+      expect(message).not.toContain("rebuilds every index on the column");
+    });
+
+    it("still tells a rewrite that carries a COLLATE clause that it rewrites rows", () => {
+      // The trap in giving collation its own rule: the statement says which
+      // collation it wants and never what the type *was*, so
+      // `SET DATA TYPE varchar(40) COLLATE "C"` is a genuine rewrite wearing a
+      // COLLATE clause. A rule that matched `TYPE … COLLATE` and swapped in the
+      // gentler note would make this guard less safe than it was.
+      const message = problems(
+        'ALTER TABLE "people" ALTER COLUMN "full_name" SET DATA TYPE varchar(40) COLLATE "C";',
+      )[0];
+      expect(message).toContain("rewrites every row");
+      expect(message).toContain("rebuilds every index on the column");
+    });
+
+    it("leaves the sibling rules' notes naming their own live code", () => {
+      // Checked here rather than assumed: `set-not-null` and `drop-default`
+      // share the `ALTER COLUMN` shape and could have drifted the same way.
+      expect(problems('ALTER TABLE "people" ALTER COLUMN "email" SET NOT NULL;')[0]).toContain(
+        "the live deployment still writes NULL",
+      );
+      expect(problems('ALTER TABLE "orders" ALTER COLUMN "currency" DROP DEFAULT;')[0]).toContain(
+        "inserts from the live deployment that omit the column start failing",
+      );
+    });
+  });
 });
 
 describe("statements the expand/contract rule calls safe", () => {
