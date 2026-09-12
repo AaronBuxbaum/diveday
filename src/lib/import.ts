@@ -86,6 +86,7 @@ import { isPlausibleDateOfBirth } from "./age";
 import { type CalendarDate, isValidCalendarDate } from "./calendar-date";
 import { CERTIFICATION_AGENCIES } from "./certification-options";
 import { currencyMinorUnits, isShopCurrency } from "./money";
+import { RENTAL_FIT_TEXT_LIMITS } from "./rentals";
 
 /**
  * Sized for the largest file the switching guides actually ask an owner to
@@ -673,7 +674,8 @@ export type ImportIssueCode =
   | "payment_history_no_date"
   | "no_name"
   | "merged_duplicate"
-  | "no_email_new_record";
+  | "no_email_new_record"
+  | "size_too_long";
 
 /**
  * The data a translated message needs to fill in its placeholders. Which
@@ -685,6 +687,15 @@ export type ImportIssueCode =
 export type ImportIssueParams = {
   email?: string;
   value?: string;
+  /**
+   * Which column the issue is about, as the same `ImportField` code the
+   * wizard's own mapping table is keyed by — a code, never a word, like
+   * everything else this file emits. The preview resolves it to the column
+   * label a staffer already sees on that header (`ImportWizard.tsx`), so a row
+   * with three unusable size cells says which piece to re-enter instead of
+   * repeating one sentence three times.
+   */
+  field?: ImportField;
   parsed?: string;
   status?: string;
   specialty?: string;
@@ -1390,6 +1401,60 @@ function freeText(value: string | null): string | null {
 }
 
 /**
+ * A rental-fit size this shop's own forms will be able to re-submit, or null so
+ * the caller declines it with a note — the same no-number-no-card shape
+ * {@link cardNumber} keeps, and for a sharper reason.
+ *
+ * Every writer of `rental_fit_profiles` caps a size at
+ * `RENTAL_FIT_TEXT_LIMITS.size`, and each of them re-posts whatever is stored:
+ * the staff fit editor, the diver's gear form on `/ready`, and the diver's own
+ * shelf. A longer value in the column therefore fails `safeParse` on every one
+ * of them, on a form where every visible box reads right — issue #1062's bug
+ * reached from the one door that had no cap at all (issue #1754). A prior
+ * system's "wetsuit size" cell is exactly where this arrives: `Medium Large,
+ * long torso, prefers 5mm not 3mm` is 45 characters of a staffer's note filed
+ * under a size.
+ *
+ * **Declined, not truncated**, which is the deliberate call. `MAX_FREE_TEXT_LENGTH`
+ * is three times this cap, so routing these through {@link freeText} would have
+ * left the bug standing for everything between the two numbers — but the real
+ * argument is that the importer never invents a value. A cut-off size is a
+ * plausible-looking wrong size that reaches the packing list verbatim
+ * (`src/lib/dive-prep.ts`) and is acted on at the dock, while a size DiveDay
+ * does not hold is a gap the product already chases: `rentalFitCompleteness`
+ * names the missing piece, and the diver's own gear form asks for it again in a
+ * box that cannot exceed the cap. The declined cell is named and quoted on the
+ * import report beside its row ({@link MAX_ECHOED_CELL_LENGTH} of it), at the
+ * moment the one person who can set the size by hand is looking at the file
+ * itself.
+ */
+function fitSize(value: string | null): string | null {
+  if (!value) return null;
+  return value.length > RENTAL_FIT_TEXT_LIMITS.size ? null : value;
+}
+
+/**
+ * How much of a declined cell a warning quotes back. Twenty characters past the
+ * size cap itself, so any value that could have been a size is shown whole and
+ * anything cut is by definition too long to be one.
+ *
+ * The bound exists because the echo was the *cell*, capped only by
+ * `MAX_IMPORT_CELL_LENGTH`: four size columns over sixty previewed rows is a
+ * quarter of a megabyte of warning text in one table column
+ * (`security-reviewer`, issue #1754). Nothing is lost that anyone needed — the
+ * head of the value is what identifies the row, and the staffer running the
+ * import has the file itself open.
+ */
+const MAX_ECHOED_CELL_LENGTH = RENTAL_FIT_TEXT_LIMITS.size + 20;
+
+/** A declined cell quoted back to the staffer, bounded for display. */
+function echoedCell(value: string): string {
+  return value.length > MAX_ECHOED_CELL_LENGTH
+    ? `${value.slice(0, MAX_ECHOED_CELL_LENGTH)}…`
+    : value;
+}
+
+/**
  * A card number we are willing to key a unique index on. Out-of-range lengths
  * return null so the caller declines the card with a reason — the same
  * no-number-no-card path — rather than handing Postgres a 2,000-character btree
@@ -1719,11 +1784,32 @@ export function prepareContactImport(text: string): PreparedImport {
       }
     }
 
+    // Bounded here, at the one door values enter by, rather than at each of the
+    // three forms that read them back out (`fitSize`, issue #1754). A declined
+    // size raises a `warning` naming its column and quoting the head of the
+    // cell: the staffer running the import is the one person who can read it
+    // and set the size by hand, and this is the moment they are looking.
+    const sizeCell = (field: ImportField) => {
+      const raw = clean(at(cells, field));
+      const held = fitSize(raw);
+      if (raw && !held) {
+        // The column, then as much of its value as identifies the row
+        // (`echoedCell`): every sibling warning here names its field, and a
+        // row with three unusable size cells otherwise reads as one sentence
+        // said three times with nothing to act on.
+        issues.push({
+          level: "warning",
+          code: "size_too_long",
+          params: { field, value: echoedCell(raw) },
+        });
+      }
+      return held;
+    };
     const sizes = {
-      bcdSize: clean(at(cells, "bcd_size")),
-      wetsuitSize: clean(at(cells, "wetsuit_size")),
-      bootSize: clean(at(cells, "boot_size")),
-      finSize: clean(at(cells, "fin_size")),
+      bcdSize: sizeCell("bcd_size"),
+      wetsuitSize: sizeCell("wetsuit_size"),
+      bootSize: sizeCell("boot_size"),
+      finSize: sizeCell("fin_size"),
     };
 
     // Trusted per row (ADR 20260724-import-waiver-acceptance): a truthy

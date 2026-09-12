@@ -87,11 +87,15 @@ const boat = (tripId: string, label = "Two-Tank Reef · 7:00 AM") => ({ tripId, 
  * is about.
  */
 function closed(overrides: Partial<CloseoutDeparture> & { tripId: string }): CloseoutDeparture {
+  const booked = overrides.booked ?? 10;
   return {
     title: "Two-Tank Reef",
     startsAt: hoursFromNow(-6),
     endsAt: hoursFromNow(-3),
-    booked: 10,
+    booked,
+    // Nobody was marked absent, so the boat carried its whole roster — a case
+    // about a no-show sets `sailed` lower (issue #1689).
+    sailed: booked,
     capacity: 12,
     plannedDives: 2,
     // Two crew, both counted back at the closing checkpoint — the shape a
@@ -1118,6 +1122,21 @@ describe("the evening reading", () => {
 
     expect(screen.getByText("10 of 10 back")).toBeInTheDocument();
     expect(screen.queryByText(/All boats are home/)).toBeNull();
+  });
+
+  it("says nobody was aboard rather than counting a boat that carried no divers back", () => {
+    // **Issue #1689's review, finding 7.** The numbers sentence is gated on
+    // who sailed, never on the roster — a one-seat boat whose only diver was
+    // marked absent printed "0 of 0 back", which reads as a head count of an
+    // empty boat somebody closed. The per-status wording is the honest answer,
+    // and it is the one sentence this key is ever asked for.
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1", booked: 1, sailed: 0 })]),
+    });
+
+    expect(screen.getByText("No divers were aboard.")).toBeInTheDocument();
+    expect(screen.queryByText("0 of 0 back")).toBeNull();
   });
 
   it("says the plan changed on the station's own meta line, and nothing when it did not", () => {

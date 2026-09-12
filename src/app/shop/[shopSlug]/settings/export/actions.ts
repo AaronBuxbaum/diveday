@@ -44,7 +44,7 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
  * key — the banner renders `backup.notice.<code>` — so a fork between the two
  * spellings shows a staffer nothing at all (src/lib/staff-notices.ts).
  */
-type Notice =
+export type Notice =
   | "saved"
   | "invalid"
   | "endpoint-invalid"

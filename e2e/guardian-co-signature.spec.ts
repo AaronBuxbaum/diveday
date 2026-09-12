@@ -173,18 +173,29 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   });
   await expect(refused.getByText("The co-signer’s name is the diver’s own")).toBeVisible();
 
+  // **And nothing the staffer typed was thrown away** (issue #1674). The
+  // refusal used to redirect with a `?notice=`, which remounted these boxes
+  // empty — so reaching the one new tick began by retyping the medical
+  // attestation, the co-signer's name and the relationship, at a wet counter
+  // with a family waiting. This is the surface where it bit hardest, because
+  // the tick below appears only on this second pass.
+  await expect(
+    refused
+      .getByLabel("I have this diver’s signed release on file", { exact: false })
+      .filter({ visible: true }),
+  ).toBeChecked();
+  await expect(refused.getByLabel("Parent or guardian who signed")).toHaveValue("Lena Fischer");
+  await expect(refused.getByLabel("Relationship")).toHaveValue("parent");
+
   // And the way through, which only this refusal draws: the form comes back
-  // open, carrying the staffer's own assertion about what they saw.
+  // open, carrying the staffer's own assertion about what they saw. One tick
+  // and one tap — nothing is retyped, which is the whole of #1674, and the
+  // recording below would be refused on the browser's own `required` if the
+  // relationship had not survived.
   const namesake = refused.getByLabel("This co-signer and this diver have the same name", {
     exact: false,
   });
   await expect(namesake).toBeVisible();
-  await refused
-    .getByLabel("I have this diver’s signed release on file", { exact: false })
-    .filter({ visible: true })
-    .check();
-  await refused.getByLabel("Parent or guardian who signed").fill("Lena Fischer");
-  await refused.getByLabel("Relationship").selectOption("parent");
   await namesake.check();
   await refused.getByRole("button", { name: "Record paper signature" }).click();
 
@@ -241,10 +252,15 @@ test("the diver record refuses a namesake co-signer and offers no tick", async (
   await page.getByRole("button", { name: "Record paper signature" }).click();
 
   // Refused, and told where the confirmation lives instead of being offered one
-  // here.
+  // here. The form is still standing with what was typed in it (issue #1674) —
+  // this door loses nothing either, it just has no way through.
   await expect(page.getByText("The co-signer’s name is the diver’s own")).toBeVisible();
   await expect(page.getByText("record the release at the check-in counter")).toBeVisible();
-  await expect(page.getByLabel("Parent or guardian who signed")).toBeVisible();
+  await expect(page.getByLabel("Parent or guardian who signed")).toHaveValue(diver);
+  await expect(page.getByLabel("Relationship")).toHaveValue("parent");
+  await expect(
+    page.getByLabel("I have this diver’s signed release on file", { exact: false }),
+  ).toBeChecked();
   await expect(
     page.getByLabel("This co-signer and this diver have the same name", { exact: false }),
   ).toHaveCount(0);

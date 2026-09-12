@@ -15,14 +15,14 @@ const candidates = [
     id: "11111111-1111-4111-8111-111111111111",
     fullName: "Maya Rivera",
     email: "maya@example.test",
-    phone: "+1 305 555 0142",
+    phone: "+13055550142",
     reasons: ["same_name" as const],
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
     fullName: "Maya Rivera",
     email: null,
-    phone: "+1 305 555 0142",
+    phone: "+13055550142",
     reasons: ["same_phone" as const],
   },
 ];
@@ -65,6 +65,27 @@ describe("the merge-diver panel", () => {
     const checked = (screen.getAllByRole("radio") as HTMLInputElement[]).filter((r) => r.checked);
     expect(checked).toHaveLength(1);
     expect(checked[0]?.value).toBe(candidates[0]?.id);
+  });
+
+  /**
+   * `people.phone` holds E.164 since #1547, and this list is where an owner
+   * decides two records are the same person by reading their numbers off the
+   * screen. Ungrouped, that decision is taken between two unbroken runs of
+   * eleven digits (#1712).
+   */
+  it("groups a candidate's stored number for the eye comparing them", () => {
+    render(
+      <MergeDiver
+        candidates={candidates}
+        shopSlug="blue-mantis"
+        personId="33333333-3333-4333-8333-333333333333"
+        t={staffTranslator("en-US")}
+      />,
+    );
+
+    expect(screen.getByText("maya@example.test · +1 305 555 0142")).toBeVisible();
+    expect(screen.getByText("+1 305 555 0142")).toBeVisible();
+    expect(screen.queryByText(/\+13055550142/)).toBeNull();
   });
 
   it("renders nothing to merge when the roster found no duplicates", () => {

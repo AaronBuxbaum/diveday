@@ -187,7 +187,7 @@ export default async function ManageTripPage({
     pulse,
     crew,
   } = overview;
-  const { crewIds, tripRoleByPerson, crewGap, ratioGap, languageGap, onShiftIds } = crew;
+  const { crewIds, tripRoleByPerson, crewGap, ratioGap, languageGap, onShiftIds, clashes } = crew;
   // Same tone as underTargetNote below: informs, refuses nothing (issue
   // #708). Each missing language is named in the reader's own locale
   // (`languageNameIn`), matching the team settings form's convention —
@@ -454,6 +454,34 @@ export default async function ManageTripPage({
   const aboutSummary = [planSummary, boatCrewSummary, series ? repeatsSummary : null]
     .filter(Boolean)
     .join(" · ");
+  // The clash is a fact about two boats that will both sail, so a called-off
+  // departure drops it with the rest of the live-trip nudges — `crewClashes`
+  // answers nothing for one anyway, and this keeps the two from ever
+  // disagreeing on screen.
+  const liveClashes = cancelled ? [] : clashes;
+  // **The weight lands where somebody sees it** (issue #1695, dive-domain-expert
+  // review 2026-09-12). `CrewSection`'s per-person sentence is two layers deep:
+  // inside the Crew panel, inside an About disclosure that is closed on every
+  // ordinary visit — and nothing inside a closed `<details>` is in the
+  // accessibility tree, so the line announced to nobody and was read by nobody.
+  // The one line a staffer *does* read at rest is this summary strip, which
+  // carries `boatCrewSummary` and carried no mark at all.
+  //
+  // So the strip takes one word in the warning ink and the naming sentences
+  // stay inside, which is the relationship `MinimumSeatsBand` already has to
+  // the Details panel that sets the minimum. It **leads** the strip rather than
+  // trailing it because the strip is a single `truncate`d line: appended, the
+  // mark is the first thing a narrow screen throws away.
+  const aboutSummaryText = aboutSummary || t("trips.about.noneSet");
+  const aboutSummaryNode =
+    liveClashes.length > 0 ? (
+      <>
+        <span className="font-semibold text-warning-strong">{t("trips.about.crewClash")}</span>
+        {` · ${aboutSummaryText}`}
+      </>
+    ) : (
+      aboutSummaryText
+    );
   const rosterActions = {
     addBookingAction: seatNewDiverAction.bind(null, "trip-guests", shopSlug),
     addExistingDiverAction: seatExistingDiverAction.bind(null, "trip-guests", shopSlug),
@@ -577,7 +605,7 @@ export default async function ManageTripPage({
         detailsLabel={t("trips.about.details")}
         closeLabel={t("trips.about.close")}
         editLabel={t("trips.about.edit")}
-        summary={aboutSummary || t("trips.about.noneSet")}
+        summary={aboutSummaryNode}
         conditionsSummary={conditionsSummary}
         open={aboutOpen}
         rows={[
@@ -718,6 +746,10 @@ export default async function ManageTripPage({
             // live-trip nudges — the ratio gates, the shop's target, and the
             // shift-coverage badges are all about a boat that will leave.
             onShiftIds={cancelled ? null : onShiftIds}
+            // Marked on the About summary strip as well (`aboutSummaryNode`
+            // above), because this panel is inside a disclosure that is closed
+            // on an ordinary visit.
+            clashes={liveClashes}
             crewGapCode={cancelled ? "none" : crewGap.code}
             updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
             copy={{
@@ -732,6 +764,12 @@ export default async function ManageTripPage({
               assignOption: t("trips.crew.assignOption"),
               unassignAria: t.raw("trips.crew.unassignAria"),
               assignFailed: t("trips.crew.assignFailed"),
+              // `t.raw`: `{name}` is whoever the staffer just picked, which
+              // only the component knows (src/i18n/fill.ts).
+              assignClash: t.raw("trips.crew.assignClash"),
+              // `t.raw`: `{departure}` is the other boat's own title, which
+              // only the component has per row (src/i18n/fill.ts).
+              clash: t.raw("trips.crew.clash"),
               roleAria: t.raw("trips.crew.roleAria"),
               roleUnspecified: t("trips.crew.roleUnspecified"),
               roleOptions: {
@@ -849,6 +887,7 @@ export default async function ManageTripPage({
         locale={locale}
         timezone={shop.timezone}
         depthUnit={shop.depthUnit}
+        shopRentalItems={shop.rentalItems}
         tripNotice={tripNotice}
         pageNotice={rosterPageNotice}
         noteDeleted={

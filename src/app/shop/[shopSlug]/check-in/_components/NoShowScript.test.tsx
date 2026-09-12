@@ -4,6 +4,14 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NoShowSalvage, type NoShowSalvageCopy, NoShowScript } from "./NoShowScript";
 
+// The script's confirm posts through `RowActionForm`, which refreshes the row
+// in place on a successful send — so this render needs a stand-in for the
+// router context it has none of.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+  unstable_rethrow: vi.fn(),
+}));
+
 afterEach(() => {
   cleanup();
 });
@@ -15,6 +23,7 @@ const scriptCopy = {
   confirm: "Mark not here",
   confirming: "Marking…",
   confirmAriaLabel: "Mark Nadia Petrov as not here",
+  sendFailed: "That didn’t send. Tap it again.",
 };
 
 const money = {

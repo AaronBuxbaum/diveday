@@ -248,7 +248,7 @@ export default async function BlowoutPage({
                     {diver.messageStatus === "no_email" && diver.phone ? (
                       <div className="text-xs text-muted">
                         {t("blowout.record.callThem", {
-                          phone: displayStoredPhone(diver.phone, shop.addressCountry),
+                          phone: displayStoredPhone(diver.phone),
                         })}
                       </div>
                     ) : null}

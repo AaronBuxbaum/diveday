@@ -462,6 +462,7 @@ export default async function StaffingPage({
               empty: t("staffing.week.empty"),
               away: t("staffing.week.away"),
               awayConflict: t.raw("staffing.week.awayConflict"),
+              crewClash: t.raw("staffing.week.crewClash"),
               request: t("staffing.week.request"),
               requestAria: t.raw("staffing.week.requestAria"),
               requesting: t("staffing.week.requesting"),

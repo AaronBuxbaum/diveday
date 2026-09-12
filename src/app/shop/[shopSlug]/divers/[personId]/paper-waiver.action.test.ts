@@ -11,6 +11,7 @@ import {
   specialtyCertifications,
   waiverRecords,
 } from "@/db/schema";
+import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { seededShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -115,6 +116,16 @@ function attested() {
 }
 
 /**
+ * The action is a `useActionState` reducer now, so every call carries the
+ * previous state (issue #1674). Success still redirects; a refusal answers with
+ * a state carrying what the staffer typed, which is what the two refusal tests
+ * below read.
+ */
+function recordPaper(shopSlug: string, personId: string, formData: FormData) {
+  return markWaiverInPersonAction(shopSlug, personId, PAPER_WAIVER_IDLE, formData);
+}
+
+/**
  * Both tests here declare 40s rather than taking the file's 20s default. They
  * pay for two things the rest of the file does not: six extra writes to strip
  * the seeded record bare, and the post-mutation `diverRecordIsClear` read that
@@ -132,9 +143,7 @@ describe("the last thing clearing", () => {
       const { db, shop, personId } = await context();
       await clearEverythingElse(db, shop.id, personId);
 
-      const to = await redirectedTo(() =>
-        markWaiverInPersonAction(shop.slug, personId, attested()),
-      );
+      const to = await redirectedTo(() => recordPaper(shop.slug, personId, attested()));
 
       // No `&form=`: the moment belongs to the masthead, which is where
       // `NOTICE_KEYS` files `diver-clear`.
@@ -151,9 +160,7 @@ describe("the last thing clearing", () => {
       // One thing left undone is enough — the moment is about the whole record.
       await db.update(people).set({ emergencyContactPhone: "" }).where(eq(people.id, personId));
 
-      const to = await redirectedTo(() =>
-        markWaiverInPersonAction(shop.slug, personId, attested()),
-      );
+      const to = await redirectedTo(() => recordPaper(shop.slug, personId, attested()));
 
       expect(to).toBe(
         `/shop/${shop.slug}/divers/${personId}?notice=waiver-paper-recorded&form=waiver#waiver`,
@@ -167,7 +174,7 @@ describe("recording a paper waiver from the diver record", () => {
   it("files the release against the diver and no seat", async () => {
     const { db, shop, personId } = await context();
 
-    const to = await redirectedTo(() => markWaiverInPersonAction(shop.slug, personId, attested()));
+    const to = await redirectedTo(() => recordPaper(shop.slug, personId, attested()));
 
     expect(to).toBe(
       `/shop/${shop.slug}/divers/${personId}?notice=waiver-paper-recorded&form=waiver#waiver`,
@@ -198,7 +205,7 @@ describe("recording a paper waiver from the diver record", () => {
       0,
     );
 
-    const to = await redirectedTo(() => markWaiverInPersonAction(shop.slug, person.id, attested()));
+    const to = await redirectedTo(() => recordPaper(shop.slug, person.id, attested()));
 
     expect(to).toBe(
       `/shop/${shop.slug}/divers/${person.id}?notice=waiver-paper-recorded&form=waiver#waiver`,
@@ -209,13 +216,56 @@ describe("recording a paper waiver from the diver record", () => {
   it("refuses without the medical attestation, and writes nothing", async () => {
     const { db, shop, personId } = await context();
 
-    const to = await redirectedTo(() =>
-      markWaiverInPersonAction(shop.slug, personId, new FormData()),
-    );
+    const state = await recordPaper(shop.slug, personId, new FormData());
 
-    expect(to).toBe(
-      `/shop/${shop.slug}/divers/${personId}?notice=waiver-medical-attestation&form=waiver#waiver`,
-    );
+    // In the form, not down a redirect (issue #1674): the tick is the one thing
+    // the staffer has to go back and do, and the form has to still be there.
+    expect(state).toEqual({
+      status: "refused",
+      refusal: "medical_attestation",
+      typed: { medicalAttested: false, guardianName: "", guardianRelationship: "" },
+    });
+    expect(await completedWaivers(db, shop.id, personId)).toHaveLength(0);
+  });
+
+  /**
+   * **The regression this issue is about** (issue #1674).
+   *
+   * A staffer recording a paper release for a minor types three things — the
+   * medical attestation, the co-signer's name, the relationship. Every refusal
+   * used to `redirect()` with a `?notice=`, which remounted the form's
+   * uncontrolled inputs empty, so correcting the one thing the notice named
+   * began by retyping the other two. Here the refusal is the medical
+   * attestation and the guardian half is *valid*, which is exactly the shape
+   * that used to be thrown away.
+   *
+   * Asserted on the values rather than on a URL on purpose: a `?notice=` that
+   * carried them would put a named minor's guardian's name into the address
+   * bar, the browser's history and every access log on the way, which is the
+   * shape this issue ruled out.
+   */
+  it("hands back the medical tick, the co-signer and the relationship it refused", async () => {
+    const { db, shop, personId } = await context();
+    // A minor on the signing day, so the guardian half is drawn and submitted.
+    await db.update(people).set({ dateOfBirth: "2012-01-01" }).where(eq(people.id, personId));
+
+    const form = new FormData();
+    form.set("guardianName", "Ama Boateng");
+    form.set("guardianRelationship", "parent");
+    const state = await recordPaper(shop.slug, personId, form);
+
+    expect(state).toEqual({
+      status: "refused",
+      refusal: "medical_attestation",
+      // Echoed exactly as typed — never trimmed, and never pre-filled from the
+      // diver's own record, which `personNamesMatch`'s fuzziness would let
+      // silently change the spelling on an attested document.
+      typed: {
+        medicalAttested: false,
+        guardianName: "Ama Boateng",
+        guardianRelationship: "parent",
+      },
+    });
     expect(await completedWaivers(db, shop.id, personId)).toHaveLength(0);
   });
 
@@ -228,6 +278,11 @@ describe("recording a paper waiver from the diver record", () => {
    * to work, since the input is not wrong in a way retrying fixes. The refusal
    * itself does not move: it is what stops a minor signing as their own
    * guardian. Only what the staffer is told about it.
+   *
+   * And what they are left holding. The three typed values come back with it
+   * (issue #1674), which matters most here of all three refusals: on the two
+   * surfaces that offer the namesake confirmation it appears only on this
+   * second pass, so retyping the lot was the price of reaching the one new box.
    */
   it("names the shared-name refusal instead of telling the desk to try again", async () => {
     const { db, shop, personId } = await context();
@@ -239,21 +294,26 @@ describe("recording a paper waiver from the diver record", () => {
     const form = attested();
     form.set("guardianName", diver.fullName);
     form.set("guardianRelationship", "parent");
-    const to = await redirectedTo(() => markWaiverInPersonAction(shop.slug, personId, form));
+    const state = await recordPaper(shop.slug, personId, form);
 
-    expect(to).toBe(
-      `/shop/${shop.slug}/divers/${personId}?notice=waiver-guardian-name&form=waiver#waiver`,
-    );
-    // Not the generic one, which is the whole point.
-    expect(to).not.toContain("notice=waiver-error");
+    // Its own refusal, not the generic one, which is the whole point of 1539.
+    expect(state).toEqual({
+      status: "refused",
+      refusal: "guardian_name",
+      typed: {
+        medicalAttested: true,
+        guardianName: diver.fullName,
+        guardianRelationship: "parent",
+      },
+    });
     expect(await completedWaivers(db, shop.id, personId)).toHaveLength(0);
   });
 
   it("does not stack a second record on a diver who already holds a current one", async () => {
     const { db, shop, personId } = await context();
-    await redirectedTo(() => markWaiverInPersonAction(shop.slug, personId, attested()));
+    await redirectedTo(() => recordPaper(shop.slug, personId, attested()));
 
-    const to = await redirectedTo(() => markWaiverInPersonAction(shop.slug, personId, attested()));
+    const to = await redirectedTo(() => recordPaper(shop.slug, personId, attested()));
 
     // Idempotent, and it still reports success: the shop's question ("is this
     // diver's release on file?") is answered either way.
@@ -275,13 +335,11 @@ describe("recording a paper waiver from the diver record", () => {
       .returning();
     if (!removed) throw new Error("failed to insert a removed diver");
 
-    const to = await redirectedTo(() =>
-      markWaiverInPersonAction(shop.slug, removed.id, attested()),
-    );
+    const state = await recordPaper(shop.slug, removed.id, attested());
 
-    expect(to).toBe(
-      `/shop/${shop.slug}/divers/${removed.id}?notice=waiver-error&form=waiver#waiver`,
-    );
+    // The generic refusal, and the right one: the form marks every field
+    // required, so reaching this means the request did not come from it.
+    expect(state).toMatchObject({ status: "refused", refusal: "error" });
     expect(await completedWaivers(db, shop.id, removed.id)).toHaveLength(0);
   });
 
@@ -290,7 +348,7 @@ describe("recording a paper waiver from the diver record", () => {
     const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
     await db.delete(personRoles).where(eq(personRoles.personId, owner));
 
-    const to = await redirectedTo(() => markWaiverInPersonAction(shop.slug, personId, attested()));
+    const to = await redirectedTo(() => recordPaper(shop.slug, personId, attested()));
 
     expect(to).toBe(
       `/shop/${shop.slug}/divers/${personId}?notice=not-authorized-waiver&form=waiver#waiver`,

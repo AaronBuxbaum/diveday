@@ -1,7 +1,14 @@
 import { and, asc, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { PrepDiver } from "@/lib/dive-prep";
-import { SIZED_RENTAL_FIT_COLUMN, type SizedRentalKind } from "@/lib/rentals";
+import {
+  NOTHING_RENTED,
+  offeredRentalFitFields,
+  RENTABLE_ITEMS,
+  type RentalFitField,
+  SIZED_RENTAL_FIT_COLUMN,
+  type SizedRentalKind,
+} from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import {
@@ -10,23 +17,31 @@ import {
   people,
   type rentalFitItem,
   rentalFitProfiles,
+  shops,
 } from "./schema";
 import { SUPPORT_NEEDS_COLUMNS } from "./support-needs";
 
 export type RentalFitInput = {
   shopId: string;
   personId: string;
-  rentsBcd: boolean;
-  rentsRegulator: boolean;
-  rentsWetsuit: boolean;
-  rentsMaskFins: boolean;
-  rentsWeights: boolean;
-  rentsDiveComputer: boolean;
-  rentsGopro: boolean;
-  rentsDrysuit: boolean;
-  rentsHoodGloves: boolean;
-  rentsTorch: boolean;
-  rentsSmb: boolean;
+  /**
+   * Which pieces the diver rents — **optional, like the sizes below and for the
+   * same reason** (issue #1755). A caller with nothing to say about an item
+   * omits it; one that derives all eleven from a form is narrowed to the shop's
+   * current catalog by `flagUpdates` below, which is where that rule and the
+   * dropped-then-re-added question are written up.
+   */
+  rentsBcd?: boolean;
+  rentsRegulator?: boolean;
+  rentsWetsuit?: boolean;
+  rentsMaskFins?: boolean;
+  rentsWeights?: boolean;
+  rentsDiveComputer?: boolean;
+  rentsGopro?: boolean;
+  rentsDrysuit?: boolean;
+  rentsHoodGloves?: boolean;
+  rentsTorch?: boolean;
+  rentsSmb?: boolean;
   bcdSize?: string;
   wetsuitSize?: string;
   drysuitSize?: string;
@@ -38,6 +53,84 @@ export type RentalFitInput = {
 
 function optional(value: string | undefined) {
   return value?.trim() || null;
+}
+
+/**
+ * **The `rents_*` columns this shop's catalog has an answer for**; the rest
+ * stay exactly as they are, which is the mirror of the absent-size rule below
+ * (issue #1755).
+ *
+ * An item a shop has dropped from its catalog renders no checkbox on any of the
+ * four fit surfaces, and an unchecked HTML checkbox posts nothing — so every
+ * caller derives `false` for it from a form that never asked. Writing that
+ * turned `rents_drysuit` off on the next save of a diver's fit, by the diver on
+ * `/ready` or by a staffer nudging a boot size on the record, while
+ * `drysuit_size` was preserved by the very defence protecting sizes: the suit
+ * left that diver's packing list and the size sat behind it recording a fit
+ * nobody would act on.
+ *
+ * The offered set is re-derived **here**, not asked of the caller, for the
+ * reason issue #1754 is filed about its twin: a rule the forms each have to
+ * remember is a rule one of them forgets, and there are four of them. It is the
+ * same shape `setBookingNitrox` already keeps in `src/db/nitrox.ts`, which
+ * re-reads the catalog rather than trusting a post that claims a fill the shop
+ * does not sell.
+ *
+ * **A shop that drops an item and later re-adds it gets the diver's old answer
+ * back**, deliberately. It is still their answer, nobody retracted it, and the
+ * alternative is a shop's catalog edit quietly speaking for a diver who was
+ * never asked. Clearing a stored fit when an item leaves the catalog is a
+ * defensible thing to want, but it belongs in the settings change where a
+ * staffer is present to be told, not in a drive-by on the next diver save.
+ */
+function flagUpdates(
+  input: RentalFitInput,
+  offered: Set<RentalFitField>,
+): Partial<Record<RentalFitField, boolean>> {
+  const flags: Partial<Record<RentalFitField, boolean>> = {};
+  for (const item of RENTABLE_ITEMS) {
+    const value = input[item.field];
+    if (value !== undefined && offered.has(item.field)) flags[item.field] = value;
+  }
+  return flags;
+}
+
+/**
+ * The shop's catalog and whether this diver has a **stated fit** on file — the
+ * two facts {@link flagUpdates} needs, in one round trip, or **null when the
+ * shop itself cannot be read**.
+ *
+ * A row with `fit_stated_at` null exists for something other than a fit: today
+ * that is `saveRentalFitNote`, which creates one for a diver who has only left
+ * the crew a note. Its `rents_*` columns are still at their schema defaults,
+ * five of which are **true**, and nothing reads them while the discriminator is
+ * null (`schema.ts`, `rental_fit_profiles.fit_stated_at`). So "leave the column
+ * alone" has to mean "leave the diver's own prior answer alone" — where there
+ * has never been an answer, an un-offered item must land `false` rather than
+ * inherit a default that would pack a BCD, a regulator, a wetsuit, a mask, fins
+ * and weights nobody asked for.
+ *
+ * **A missing shop row is a refusal, not an empty catalog** (`dive-domain-expert`
+ * review). `?? []` on the column is right — a shop really can rent nothing —
+ * but reading *no row* the same way turns a save into a silent lie: every flag
+ * would go to `false` on a brand-new profile and the caller would be told it
+ * saved. `saveRentalFit` already answers an unknown person with null, and a
+ * shop whose catalog cannot be read deserves the same answer.
+ */
+async function fitWritingContext(db: AppDb, shopId: string, personId: string) {
+  const [[shop], [profile]] = await Promise.all([
+    db.select({ rentalItems: shops.rentalItems }).from(shops).where(eq(shops.id, shopId)).limit(1),
+    db
+      .select({ fitStatedAt: rentalFitProfiles.fitStatedAt })
+      .from(rentalFitProfiles)
+      .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)))
+      .limit(1),
+  ]);
+  if (!shop) return null;
+  return {
+    offered: offeredRentalFitFields(shop.rentalItems ?? []),
+    statedBefore: Boolean(profile?.fitStatedAt),
+  };
 }
 
 /** The size columns the caller actually named, trimmed; the rest stay as they are. */
@@ -70,18 +163,20 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
     .limit(1);
   if (!person) return null;
 
+  const context = await fitWritingContext(db, input.shopId, input.personId);
+  if (!context) return null;
+  const { offered, statedBefore } = context;
   const values = {
-    rentsBcd: input.rentsBcd,
-    rentsRegulator: input.rentsRegulator,
-    rentsWetsuit: input.rentsWetsuit,
-    rentsMaskFins: input.rentsMaskFins,
-    rentsWeights: input.rentsWeights,
-    rentsDiveComputer: input.rentsDiveComputer,
-    rentsGopro: input.rentsGopro,
-    rentsDrysuit: input.rentsDrysuit,
-    rentsHoodGloves: input.rentsHoodGloves,
-    rentsTorch: input.rentsTorch,
-    rentsSmb: input.rentsSmb,
+    // Only the pieces this shop currently rents are written; an item its
+    // catalog has dropped keeps whatever the diver last said (`flagUpdates`,
+    // issue #1755 -- the mirror of the absent-size rule below).
+    //
+    // `NOTHING_RENTED` underneath it is for a row that has never stated a fit:
+    // a column nobody has answered must not arrive as its `default(true)`,
+    // which would be six unasked-for pieces on the packing list
+    // (`fitWritingContext`).
+    ...(statedBefore ? {} : NOTHING_RENTED),
+    ...flagUpdates(input, offered),
     // Each size is written only when the caller actually carried it -- the
     // same rule as `note` below, and for the same reason. The diver record's
     // form renders a size box only for an item the shop's catalog currently
@@ -146,7 +241,15 @@ export async function saveRentalFitNote(
   const values = { note: optional(input.note), updatedAt: nowDate() };
   const [profile] = await db
     .insert(rentalFitProfiles)
-    .values({ shopId: input.shopId, personId: input.personId, ...values })
+    // **The row this writer creates is the one every later writer inherits**,
+    // so it starts claiming nothing (`NOTHING_RENTED`, `security-reviewer`
+    // issue #1755). Five `rents_*` columns default to `true`, and while
+    // `fit_stated_at` is null nothing reads them -- but the next writer to
+    // stamp it hands those defaults to the packing list, which is how a note
+    // about a titanium hip turned into a BCD, a regulator, a wetsuit, a mask,
+    // fins and weights nobody ticked. Laid only on the insert: an existing
+    // profile's own answers are the diver's and are never touched here.
+    .values({ shopId: input.shopId, personId: input.personId, ...NOTHING_RENTED, ...values })
     .onConflictDoUpdate({
       target: [rentalFitProfiles.shopId, rentalFitProfiles.personId],
       set: values,
@@ -160,10 +263,9 @@ export async function saveRentalFitNote(
  *
  * The shelf shows the sizes the shop has and lets the diver correct them, and
  * that is the whole of what it may write: which pieces the shop supplies is the
- * shop's answer, not the diver's, and `saveRentalFit` above would need all
- * eleven `rents_*` booleans posted to leave them alone. Same shape as
- * `saveRentalFitNote` for the same reason — one form, one set of columns, and
- * nothing a diver did not touch.
+ * shop's answer, not the diver's, and the shelf has no checkbox to answer it
+ * with. Same shape as `saveRentalFitNote` for the same reason — one form, one
+ * set of columns, and nothing a diver did not touch.
  *
  * `fit_stated_at` **is** set here, unlike the note writer: four sizes typed by
  * the diver are a stated fit, which is exactly what the packing list should
@@ -201,7 +303,14 @@ export async function saveRentalFitSizes(
   };
   const [profile] = await db
     .insert(rentalFitProfiles)
-    .values({ shopId: input.shopId, personId: input.personId, ...values })
+    // The shelf has no checkbox, so the profile it creates claims nothing
+    // (`NOTHING_RENTED`, `security-reviewer` issue #1755). This writer stamps
+    // `fit_stated_at`, which is what makes the five `default(true)` columns
+    // readable, so without the baseline a diver correcting one size on their
+    // own phone stated a fit claiming six pieces their shop may not even rent.
+    // On the insert only: `set:` stays four sizes and the clock, so nothing a
+    // diver did not touch is rewritten.
+    .values({ shopId: input.shopId, personId: input.personId, ...NOTHING_RENTED, ...values })
     .onConflictDoUpdate({
       target: [rentalFitProfiles.shopId, rentalFitProfiles.personId],
       set: values,
@@ -280,7 +389,12 @@ export async function confirmRentalFitSize(
   };
   await db
     .insert(rentalFitProfiles)
-    .values({ shopId: input.shopId, personId: input.personId, ...values })
+    // Same baseline as its two siblings above, for the same reason: the
+    // evening's one tap stamps `fit_stated_at`, so a diver with no fit on file
+    // would get a stated fit claiming the five `default(true)` pieces
+    // alongside the one size a staffer actually confirmed (`NOTHING_RENTED`,
+    // `security-reviewer` issue #1755). Insert path only.
+    .values({ shopId: input.shopId, personId: input.personId, ...NOTHING_RENTED, ...values })
     .onConflictDoUpdate({
       target: [rentalFitProfiles.shopId, rentalFitProfiles.personId],
       set: values,

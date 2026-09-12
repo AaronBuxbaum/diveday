@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
-import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
+import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
 import { anonymizeDiver } from "@/db/anonymize";
 import {
   canPersonDeleteDiver,
@@ -63,7 +63,9 @@ import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { isPlausibleCardNumber } from "@/lib/card-number";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import type { PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
+import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeMedicalClearanceDocument } from "@/lib/storage";
@@ -171,11 +173,11 @@ const profileSchema = z.object({
   // (issue #1062). `.default("")` parses, and then blanks a stored size for
   // every item the shop does not currently offer, which is the destructive
   // half of the same bug; `saveRentalFit` leaves an absent size alone instead.
-  bcdSize: z.string().trim().max(40).optional(),
-  wetsuitSize: z.string().trim().max(40).optional(),
-  drysuitSize: z.string().trim().max(40).optional(),
-  finSize: z.string().trim().max(40).optional(),
-  weightPreference: z.string().trim().max(120).optional(),
+  bcdSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  drysuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  weightPreference: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.weightPreference).optional(),
 });
 
 /**
@@ -958,6 +960,12 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
   const saved = await saveRentalFit(db, {
     shopId: staff.user.shopId,
     personId,
+    // An item this shop's catalog has dropped renders no checkbox in
+    // `GearAndSizes.tsx`, so it posts nothing and arrives here as `false`.
+    // `saveRentalFit` re-derives the offered set and leaves those columns alone
+    // rather than reading the silence as "no" (issue #1755) — which matters
+    // most on this writer of the two, because there is a staffer present,
+    // correcting a boot size, who would never be told.
     rentsBcd: parsed.data.bcd === "on",
     rentsRegulator: parsed.data.regulator === "on",
     rentsWetsuit: parsed.data.wetsuit === "on",
@@ -1183,8 +1191,9 @@ export async function sendShelfLinkAction(shopSlug: string, personId: string) {
 export async function markWaiverInPersonAction(
   shopSlug: string,
   personId: string,
+  _state: PaperWaiverFormState,
   formData: FormData,
-) {
+): Promise<PaperWaiverFormState> {
   const context = await requireDiverActionContext(
     shopSlug,
     personId,
@@ -1204,24 +1213,16 @@ export async function markWaiverInPersonAction(
     // refuses a section that is not a signature.
     guardian: paperGuardianFrom(formData),
   });
-  revalidateAndRedirect(
-    base,
-    await successUrl(
-      context,
-      outcome.ok
-        ? "waiver-paper-recorded"
-        : outcome.reason === "medical_attestation_required"
-          ? "waiver-medical-attestation"
-          : // A guardian whose name matches the diver's is the one refusal here
-            // an honest submission produces, so it gets its own words (issue
-            // 1539) rather than "try again", which cannot work.
-            outcome.reason === "guardian_name_matches_diver"
-            ? "waiver-guardian-name"
-            : "waiver-error",
-      "waiver",
-      outcome.ok,
-    ),
-  );
+  // **Only success navigates.** A refusal used to redirect with its own
+  // `?notice=` — including the one an honest submission produces, a guardian
+  // whose name is the diver's own (issue 1539) — and that redirect is what
+  // emptied the form the staffer had just filled in, down to the medical tick
+  // (issue #1674). It answers in the form instead, carrying the typed values
+  // back, and the words are still this surface's own (`paperWaiverCopy`'s
+  // `diver`): a namesake family is sent to the counter, where the confirmation
+  // the other two surfaces offer is a thing somebody actually witnessed.
+  if (!outcome.ok) return paperWaiverRefused(outcome.reason, formData);
+  revalidateAndRedirect(base, await successUrl(context, "waiver-paper-recorded", "waiver", true));
 }
 
 /**
@@ -1580,7 +1581,7 @@ export async function replyToDiverAction(shopSlug: string, personId: string, for
   // wrong-tenant id gets.
   const messageId = uuidParam(String(formData.get("messageId") ?? ""));
   if (!messageId) {
-    revalidateAndRedirect(base, backTo(base, "reply-message_not_found", "reply"));
+    revalidateAndRedirect(base, backTo(base, "reply-message-not-found", "reply"));
   }
   const result = await sendStaffReply(db, {
     shopId: staff.user.shopId,

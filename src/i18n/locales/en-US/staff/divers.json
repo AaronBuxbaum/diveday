@@ -386,6 +386,7 @@
     "tripPrerequisite": "This diver’s certifications on file don’t reach what that trip and its dive sites require. Open the trip to see what it asks for.",
     "tripUnavailable": "Add an email and choose an available activity.",
     "waiverError": "That paper waiver couldn’t be recorded. Open the diver’s next departure to see why.",
+    "waiverIdentityUnconfirmed": "That seat is held until somebody confirms who the diver is, so a paper release can’t go on their record yet. Confirm it on the departure’s guest list, then record the release.",
     "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver, or send the digital link so the diver answers it.",
     "waiverGuardianName": "The co-signer’s name is the diver’s own, so this release would show one person signing twice. Type the guardian’s name as their own ID reads it, and if the diver’s record is shorter than the diver’s ID, correct the record to match. If the two really do read exactly alike, record the release at the check-in counter or from the trip roster, where you can confirm you watched both of them sign.",
     "waiverPaperRecorded": "Paper waiver recorded, signed and on file."

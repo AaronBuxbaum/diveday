@@ -17,7 +17,7 @@ import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getShopReviewAggregate } from "@/db/reviews";
-import { getShopBySlug } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { siteSightings } from "@/db/trip-sightings";
@@ -108,7 +108,7 @@ export async function generateMetadata({
   // notFound() could render it.
   if (!uuidParam(id)) return { title: "Trip — DiveDay" };
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) return { title: "Trip — DiveDay" };
   const trip = await getTripWithBooked(db, shop.id, id);
   if (!trip) return { title: "Trip — DiveDay" };
@@ -181,7 +181,7 @@ export default async function TripDetailPage({
   // to a schedule the embedding page may never have shown at all.
   const isEmbed = embed === "1";
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) notFound();
   // What this visitor's device asked for, falling back to the shop's own
   // default — DiveDay never asks (docs ADR 20260729-diver-copy-localization).

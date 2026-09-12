@@ -9,6 +9,20 @@ type MissingDiver = {
   fullName: string;
   rentsKit: boolean;
   /**
+   * The id of this diver's row on the calling page — the element a tap jumps
+   * to, minted by the caller with the same function that writes it onto the
+   * row.
+   *
+   * The grid built this id itself until #1675, from the *live* manifest's
+   * `diver-row-<bookingId>`, while its only caller renders
+   * `offline-roll-call-<bookingId>`: `getElementById` answered null, the
+   * handler returned early, and every tap on every face was a silent no-op —
+   * under a hint that reads "Tap a diver to jump to their row", on the one
+   * surface that exists for having no signal. A grid that concatenates its
+   * caller's markup can be wrong about it; one that is handed the id cannot.
+   */
+  rowId: string;
+  /**
    * Readiness says this diver cannot board yet. Display only — the grid never
    * gates anything, it just stops saying "not yet called" beside somebody whose
    * own row already says so.
@@ -109,7 +123,13 @@ export function MissingDiversGrid({
               key={diver.bookingId}
               type="button"
               onClick={() => {
-                const element = document.getElementById(`diver-row-${diver.bookingId}`);
+                // The caller renders the row for every face here — this grid's
+                // divers are a filter of the roster below it, in the same pass
+                // — so a miss is not a state this surface has. The guard is
+                // what keeps a jump from taking the whole roll call down on a
+                // boat, and it is nothing more than that: it is never the
+                // answer to "the ids don't match" (#1675).
+                const element = document.getElementById(diver.rowId);
                 if (!element) return;
                 // Motion has a job (design/principles.md §5) and a reader who
                 // asked for less of it still gets the jump — instantly, and
@@ -166,7 +186,20 @@ export function MissingDiversGrid({
                   of the word here, and `truncate` on an 80px tile renders
                   "Blocked wh…" — a clipped chip that says less than the bare
                   word it replaced. Two or three tight lines is the density
-                  cost, accepted on #1360. */}
+                  cost, accepted on #1360.
+                  **And it holds in Spanish** (issue #1681), which is the
+                  language that asked the question: "Bloqueado cuando se
+                  guardó" wraps to the same two or three lines, because the
+                  longest token in it — `Bloqueado`, ~57px at 12px semibold —
+                  still fits the chip's 60px content box (80px tile less
+                  `px-2.5` either side). So the tile is *not* widened: that
+                  would cost every tile in every language to rescue one chip,
+                  and the chip is doing what it was built to do. The es-ES
+                  string is not shortened either — the qualifier is the whole
+                  reason it exists, and `es-ES/README.md` owns those words.
+                  `e2e/visual.spec.ts` now photographs this grid in Spanish at
+                  390px, so the next hand to make it longer has a baseline to
+                  answer to rather than a paragraph. */}
               {diver.blocked ? (
                 <Badge
                   tone="danger"

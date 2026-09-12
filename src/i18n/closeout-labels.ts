@@ -53,6 +53,16 @@ const GAP_DETAIL_KEYS: Record<RollCallGapReason, StaffMessageKey> = {
  * shop-local clock time the sentence needs — return time for `still_out`,
  * departure time for `not_departed` — already formatted by the caller for the
  * request locale.
+ *
+ * **The `all_home` fall-through has no count in it, on purpose** (issue
+ * #1689). Its only caller reaches this function when the station is not
+ * printing the homecoming numbers, which for an `all_home` station means
+ * `sailed === 0` — an empty boat, or one whose whole roster stayed ashore. It
+ * used to interpolate `booked` through a plural whose `one`/`other` branches
+ * that guard made unreachable, and those branches said "10 divers, head count
+ * closed" one line from "9 of 9 back". Unreachable copy carrying the wrong
+ * meaning is a trap for whoever moves the guard next, so it is deleted rather
+ * than left standing.
  */
 export function closeoutDepartureDetailText(
   t: StaffTranslator,
@@ -61,7 +71,6 @@ export function closeoutDepartureDetailText(
     gapReason: RollCallGapReason | null;
     uncounted: number;
     diveNumber: number;
-    booked: number;
   },
   time: string,
 ): string {
@@ -77,7 +86,7 @@ export function closeoutDepartureDetailText(
     case "not_departed":
       return t("closeout.departures.detail.notDeparted", { time });
     default:
-      return t("closeout.departures.detail.allHome", { booked: departure.booked });
+      return t("closeout.departures.detail.allHome");
   }
 }
 

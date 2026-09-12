@@ -167,22 +167,30 @@ const nextConfig: NextConfig = {
       "node_modules/**/*.d.cts",
       "node_modules/**/*.d.mts",
     ],
-    // **Satori, in 56 staff closures that render no image** (issue #1355).
+    // **Satori, in staff closures that render no image** (issue #1355).
     //
-    // `@vercel/og` is 3.07 MiB of renderer, bundled font and WASM, and it
-    // reaches every page entry, because Next attaches a **metadata module** to
-    // every one of them and `src/app/opengraph-image.tsx` imports
-    // `ImageResponse`. So a settings form traces the rasterizer.
+    // `@vercel/og` is 3.07 MiB of renderer, bundled font and WASM, and Next
+    // attaches a **metadata module** to every page entry in that module's
+    // segment subtree — so a card in the *root* segment reaches every closure
+    // in the app, and a settings form traces the rasterizer.
     //
-    // Issue #1361 made the two root icons committed PNGs (`src/app/icon.png`,
-    // `apple-icon.png`, `public/icon-192.png`, `public/icon-512.png`) on the
-    // theory that `icon.tsx` and `apple-icon.tsx` were the importers holding
-    // this open. **They were not the only ones, and this key stays.** Measured
-    // on the build that landed those PNGs: with this key, 46 of 183 closures
-    // carry the module and 6 need it; without it, 102 do. The root
-    // `opengraph-image.tsx` is a real card that cannot be deleted, and Next
-    // attaches it to every page entry exactly as it attached the icons — see
-    // issue #1709 for that half.
+    // Both root importers are gone now. Issue #1361 made the two root icons
+    // committed PNGs (`src/app/icon.png`, `apple-icon.png`,
+    // `public/icon-192.png`, `public/icon-512.png`), and issue #1709 moved the
+    // root card off the convention to `src/app/link-card/route.tsx` — a route
+    // handler is its own closure and is attached to nothing. What remains under
+    // `/shop/**` is the reach of the *staff* surfaces' own metadata, which is
+    // why the key stays until it is measured away.
+    //
+    // **The numbers below are pre-#1709 and have not been re-measured**:
+    // with this key, 46 of 183 closures carried the module and 6 needed it;
+    // without it, 102 did. #1709 landed with no `pnpm build` (CI's job), so
+    // whoever next runs one should re-count
+    // (`grep -l "@vercel/og" $(find .next -name "*.nft.json") | wc -l`) and
+    // replace this paragraph with what they see. The remaining metadata
+    // importers are the three `opengraph-image.tsx` cards under `/recap/` and
+    // `/s/`, each reaching only its own subtree; `src/app/_og/card.test.tsx`
+    // refuses a new one in the root segment.
     //
     // **`/shop/**` and never `/shop`.** These keys are matched with picomatch
     // and `contains: true`, so they match a *substring* of the route: the bare
@@ -199,9 +207,10 @@ const nextConfig: NextConfig = {
     // the fix; it needs the key narrowed or the route moved, not another key.
     //
     // The other `ImageResponse` surfaces are outside `/shop/` and keep the
-    // module: `pwa-icon-maskable`, `/s/[shopSlug]/year-card`, and four
-    // `opengraph-image` routes at the root, `/recap/[token]`, `/s/[shopSlug]`
-    // and `/s/[shopSlug]/trips/[id]`. Any new one under `/shop/` lands in the
+    // module: `pwa-icon-maskable`, `link-card` (DiveDay's own shared card,
+    // issue #1709), `/s/[shopSlug]/year-card`, and the three `opengraph-image`
+    // routes at `/recap/[token]`, `/s/[shopSlug]` and
+    // `/s/[shopSlug]/trips/[id]`. Any new one under `/shop/` lands in the
     // same trap, which is why the list is written out here.
     //
     // The marketing and diver-facing pages cannot be excluded the same way:

@@ -599,6 +599,7 @@ describe("confirming a name-match seat's identity", () => {
         shopId: shop.id,
         bookingId: seat.bookingId,
         actorPersonId: staffPerson.person.id,
+        door: "counter",
       }),
     ).toBe(true);
 
@@ -634,6 +635,7 @@ describe("confirming a name-match seat's identity", () => {
         shopId: shop.id,
         bookingId: seat.bookingId,
         actorPersonId: staffPerson.person.id,
+        door: "counter",
       }),
     ).toBe(true);
 
@@ -656,6 +658,7 @@ describe("confirming a name-match seat's identity", () => {
         shopId: shop.id,
         bookingId: seat.bookingId,
         actorPersonId: staffPerson.person.id,
+        door: "counter",
       }),
     ).toBe(true);
 

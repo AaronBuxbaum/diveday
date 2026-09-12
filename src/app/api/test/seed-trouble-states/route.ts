@@ -26,7 +26,9 @@ import {
   trips,
   waiverRecords,
 } from "@/db/schema";
+import { seatDiver } from "@/db/seat-diver";
 import { getShopBySlug } from "@/db/shops";
+import { moveTrip } from "@/db/trips";
 import { completeWaiver, issueWaiverRequest, recordWaiverDelivery } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -327,7 +329,171 @@ export async function POST(request: Request) {
       ? await unsignTheSeededMinorsRelease(db, shop.id, now)
       : null;
 
-  return NextResponse.json({ ok: true, ...(blockedMinor ? { blockedMinor } : {}) });
+  // Opt-in, and it moves a departure: the board, Today's queue and every
+  // subscribed calendar's `SEQUENCE` go with it. The two captures that want a
+  // standing crew clash ask for it, and both address the boat it made by id.
+  const crewClash =
+    new URL(request.url).searchParams.get("crewClash") === "1"
+      ? await slideOneDepartureOntoAnother(db, shop.id, now, shop.timezone)
+      : null;
+
+  // Opt-in for the readiness reason again, and it puts a tenth name on today's
+  // boat — every count on the counter, the board and Today moves with it. The
+  // capture that wants the counter's held row asks for it, and addresses the
+  // diver it seated by name.
+  const identityHeld =
+    new URL(request.url).searchParams.get("identityHeld") === "1"
+      ? await seatSomebodyOffTheNamePrompt(db, shop.id, actor.id, now)
+      : null;
+
+  return NextResponse.json({
+    ok: true,
+    ...(blockedMinor ? { blockedMinor } : {}),
+    ...(crewClash ? { crewClash } : {}),
+    ...(identityHeld ? { identityHeld } : {}),
+  });
+}
+
+/**
+ * **A seat the counter's own name prompt produced** (H-13, issues #1556 and
+ * #1696) — a walk-in tapped off "Is this the same Zoe Bennett?", so the booking
+ * carries an existing diver's record on a guess and `identity_unconfirmed`
+ * refuses it at the rail until a staffer vouches for the person.
+ *
+ * Through `seatDiver` with `fromNameMatch`, which is the only door that makes
+ * this state: stamping `identity_unconfirmed_at` by hand would photograph a row
+ * the product could not have written, and would skip the waiver-on-join the
+ * held row is normally carrying beside it.
+ *
+ * Not seeded into blue-mantis, for the reason the whole route exists: the demo
+ * shop's own morning boat permanently holding a seat over somebody's identity
+ * is a worse demo, and the flag moves readiness, which nine unrelated captures
+ * read.
+ *
+ * **Zoe Bennett by name, and a typed name one letter off it.** The diver has to
+ * be somebody today's boat does not already carry (`already_booked` otherwise)
+ * and somebody no other seed or spec names, so the row lands in one place;
+ * `personNamesMatch` compares token sets exactly, so "Zoe Bennet" is the
+ * disagreement that raises the flag.
+ *
+ * Returns the diver and the boat, because the capture addresses both.
+ */
+async function seatSomebodyOffTheNamePrompt(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  actorPersonId: string,
+  now: Date,
+): Promise<{ diver: string; tripId: string; bookingId: string } | null> {
+  const [diver] = await db
+    .select({ id: people.id, fullName: people.fullName })
+    .from(people)
+    .where(and(eq(people.shopId, shopId), eq(people.fullName, "Zoe Bennett")))
+    .limit(1);
+  if (!diver) return null;
+  // The boat the counter is pointed at: the next scheduled departure that has
+  // not sailed, ordered by its own start so the answer does not depend on a
+  // `defaultRandom()` id (see `boardADiverThenBlockThem`).
+  const [departure] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        isNull(trips.deletedAt),
+        gte(trips.startsAt, now),
+      ),
+    )
+    .orderBy(trips.startsAt)
+    .limit(1);
+  if (!departure) return null;
+
+  const seated = await seatDiver(db, {
+    shopId,
+    tripId: departure.id,
+    actorPersonId,
+    diver: { personId: diver.id, fromNameMatch: { typedName: "Zoe Bennet" } },
+    entry: "walk_in",
+    refusals: "coarse",
+  });
+  if (!seated.ok || !seated.identityUnconfirmed) return null;
+  return { diver: diver.fullName, tripId: departure.id, bookingId: seated.bookingId };
+}
+
+/**
+ * **One divemaster on two hulls at the same hours** (issue #1695) — the state
+ * `setTripCrew` and `changeTripCrew` both refuse to write, and the one a shop
+ * reaches anyway.
+ *
+ * The only door into it is `moveTrip`: it slides a departure's window and never
+ * looks at crew, so a boat landed on top of another leaves both crews as they
+ * were. Reached here the same way, through the real mutation, rather than by
+ * inserting the overlap by hand — an assignment row the roster would have
+ * refused is not the state this photographs.
+ *
+ * Not seeded into blue-mantis for the reason the whole route exists: a demo
+ * shop permanently warning that its divemaster cannot be where the schedule
+ * says she is, is a worse demo.
+ *
+ * Returns the boat that moved, because both captures address it — the trip
+ * page by id, the staffing week by the shop-local day it landed on (`?week=`
+ * snaps any date to its Monday, `resolveWeekStart`).
+ */
+async function slideOneDepartureOntoAnother(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  now: Date,
+  timezone: string,
+): Promise<{ tripId: string; otherTitle: string; date: string } | null> {
+  // Upcoming, crewed, scheduled departures, earliest first — one row per crew
+  // member. An hour of slack ahead of the frozen clock keeps a boat that is
+  // already out of it: `moveTrip` refuses one the crew has counted heads on.
+  const rows = await db
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      personId: tripAssignments.personId,
+    })
+    .from(trips)
+    .innerJoin(tripAssignments, eq(tripAssignments.tripId, trips.id))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        isNull(trips.deletedAt),
+        gte(trips.startsAt, new Date(now.getTime() + HOUR_MS)),
+      ),
+    )
+    .orderBy(trips.startsAt);
+
+  type Departure = { id: string; title: string; startsAt: Date; endsAt: Date; crew: Set<string> };
+  const byTrip = new Map<string, Departure>();
+  for (const row of rows) {
+    const entry = byTrip.get(row.id) ?? { ...row, crew: new Set<string>() };
+    entry.crew.add(row.personId);
+    byTrip.set(row.id, entry);
+  }
+  const departures = [...byTrip.values()];
+  const [host] = departures;
+  if (!host) return null;
+  // The first later departure sharing somebody with the host and **not already
+  // overlapping it** — landing one on top of the other is what makes the clash,
+  // and a pair that already overlaps would mean the move changed nothing.
+  const mover = departures.find(
+    (departure) =>
+      departure.id !== host.id &&
+      [...departure.crew].some((personId) => host.crew.has(personId)) &&
+      (departure.startsAt >= host.endsAt || departure.endsAt <= host.startsAt),
+  );
+  if (!mover) return null;
+  if (!(await moveTrip(db, shopId, mover.id, host.startsAt)).ok) return null;
+  return {
+    tripId: mover.id,
+    otherTitle: host.title,
+    date: calendarDateInTimezone(host.startsAt, timezone),
+  };
 }
 
 /**

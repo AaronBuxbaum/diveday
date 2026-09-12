@@ -2,9 +2,16 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
-import { checkInBooking, listCheckInQueue, listWalkInTrips, undoCheckInBooking } from "./check-in";
+import {
+  checkInBooking,
+  listCheckInQueue,
+  listOtherMatchingDivers,
+  listWalkInTrips,
+  undoCheckInBooking,
+} from "./check-in";
 import { listDepartureBoardedBookingIds, recordRollCall } from "./manifests";
 import { listTripsReadiness } from "./readiness";
 import {
@@ -286,6 +293,70 @@ describe("counter check-in", () => {
     // states stay independent rather than one implying the other.
     expect(afterBoarding[0]?.boarded).toBe(true);
     expect(afterBoarding[0]?.bookingStatus).toBe("booked");
+    // The wider question the no-show door is drawn on agrees with the badge
+    // here, because a dock boarding satisfies both.
+    expect(afterBoarding[0]?.onTheWater).toBe("boarded");
+  });
+
+  /**
+   * **The queue row that decides whether "Did not dive?" is drawn**
+   * (dive-domain-expert review, issue #1704).
+   *
+   * The badge above is the dock, and it is right to be: it says the crew
+   * counted this diver onto the boat. The gate asks a wider question, and for
+   * one slice it was handed the badge's narrower answer — so the counter drew
+   * the door over a diver the crew had recorded as not back aboard after a
+   * dive, and the writer then refused the tap. No seat was ever lost; the app
+   * spent two taps inviting the desk to write off a missing person.
+   *
+   * No waiver on this seat, deliberately: readiness gates the boarded tap at
+   * the dock and nothing else, so the after-dive result is recordable here.
+   */
+  it("tells the no-show door a diver missing after a dive is on the water", async () => {
+    const { db, shop, reef, staff, booking, personName } = await context();
+
+    const before = await listCheckInQueue(db, shop.id, { query: personName });
+    expect(before[0]?.onTheWater).toBeNull();
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const after = await listCheckInQueue(db, shop.id, { query: personName });
+    expect(after[0]?.onTheWater).toBe("missing_after_dive");
+    // The dock badge stays false, which is the point of keeping them apart:
+    // this diver has no departure result at all.
+    expect(after[0]?.boarded).toBe(false);
+  });
+
+  /**
+   * And the dock's own `not_boarded` leaves the door open, because there the
+   * word means "never left the dock" — the ordinary walk-away the counter
+   * exists to record. A row that read `not_boarded` without its checkpoint
+   * would close the door on every one of them.
+   */
+  it("leaves the no-show door open for a diver the crew marked ashore at the dock", async () => {
+    const { db, shop, reef, staff, booking, personName } = await context();
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const queue = await listCheckInQueue(db, shop.id, { query: personName });
+    expect(queue[0]?.onTheWater).toBeNull();
   });
 
   it("refuses a cross-tenant booking or non-staff actor", async () => {
@@ -396,6 +467,66 @@ describe("counter check-in", () => {
     expect(results).toBeDefined();
     expect(results.length).toBeGreaterThan(0);
     expect(results.find((r) => r.booking.tripId === reef.id)).toBeDefined();
+  });
+});
+
+/**
+ * **The counter's two halves must answer the same query.** The page decides who
+ * is "already on today's list" from the rows `listCheckInQueue` returned, so a
+ * search shape one of these two can answer and the other cannot does not merely
+ * find nothing — it files a diver who is booked today under the heading for
+ * divers who are not, beside a button offering to seat them again.
+ *
+ * That is what a phone number did (issue #1765): the queue matched name and
+ * email only, the other lookup matched `people.phone` raw, and the page printed
+ * a grouped reading of it that matched neither.
+ */
+describe("searching the counter by phone", () => {
+  const typed = "305-555-0653";
+  const stored = "+13055550653";
+  /** What every staff surface prints for that row since #1712. */
+  const onScreen = "+1 305 555 0653";
+
+  it("finds the booked diver in the queue, and never in the not-booked list", async () => {
+    const { db, shop, booking, personName } = await context();
+    await db.update(people).set({ phone: stored }).where(eq(people.id, booking.personId));
+    expect(displayStoredPhone(stored)).toBe(onScreen);
+
+    for (const query of [onScreen, typed, stored]) {
+      const queue = await listCheckInQueue(db, shop.id, { query });
+      expect(queue.map((row) => row.personName)).toContain(personName);
+      // The page excludes whoever the queue already showed; the assertion that
+      // matters is that this lookup does not *also* claim them.
+      const others = await listOtherMatchingDivers(db, shop.id, {
+        query,
+        excludePersonIds: queue.map((row) => row.personId),
+      });
+      expect(others.map((row) => row.id)).not.toContain(booking.personId);
+    }
+  });
+
+  it("finds a diver who holds no seat today, which is what the seat buttons are for", async () => {
+    const { db, shop } = await context();
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Walk-in Wanda", phone: stored })
+      .returning();
+    if (!person) throw new Error("person insert returned no row");
+    await db.insert(personRoles).values({ personId: person.id, role: "diver" });
+
+    const queue = await listCheckInQueue(db, shop.id, { query: onScreen });
+    expect(queue.map((row) => row.personId)).not.toContain(person.id);
+    const others = await listOtherMatchingDivers(db, shop.id, {
+      query: onScreen,
+      excludePersonIds: queue.map((row) => row.personId),
+    });
+    expect(others.map((row) => row.id)).toContain(person.id);
+  });
+
+  it("answers nothing for a blank query rather than the whole roster", async () => {
+    const { db, shop } = await context();
+    expect(await listOtherMatchingDivers(db, shop.id, { query: "   " })).toEqual([]);
+    expect(await listOtherMatchingDivers(db, shop.id, {})).toEqual([]);
   });
 });
 

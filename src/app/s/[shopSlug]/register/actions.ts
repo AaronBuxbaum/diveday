@@ -9,6 +9,7 @@ import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 import {
   hasContactPath,
@@ -24,9 +25,14 @@ const registrationSchema = z.object({
   agency: z.enum(["padi", "ssi", "naui", "sdi", "raid", "bsac", "cmas", "other"]).optional(),
   level: z.enum(SELF_DECLARED_LEVELS).optional(),
   identifier: z.string().trim().max(120).optional(),
-  wetsuitSize: z.string().trim().max(40).optional(),
-  bootSize: z.string().trim().max(40).optional(),
-  finSize: z.string().trim().max(40).optional(),
+  // The fit forms' own cap, imported rather than restated: these three sizes
+  // land in `rental_fit_profiles` (`registerDiverAtShop`), and every later
+  // reader of those columns caps at `RENTAL_FIT_TEXT_LIMITS.size` and re-posts
+  // what is stored — so a wider bound here would store a size the diver's own
+  // gear form could not save back (issue #1754).
+  wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  bootSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
 });
 
 export type { SelfRegistrationFormState };

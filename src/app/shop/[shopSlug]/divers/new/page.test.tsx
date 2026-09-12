@@ -51,7 +51,7 @@ const MATCH = {
   id: "11111111-1111-4111-8111-111111111111",
   fullName: "Nadia Ruiz",
   email: "nadia@example.com",
-  phone: "+52 998 555 0100",
+  phone: "+529985550100",
   lastDiveDayAt: null,
 };
 
@@ -124,6 +124,19 @@ describe("NewDiverPage name-match prompt", () => {
     expect(form?.querySelector('input[name="email"]')).toHaveValue(MATCH.email);
     expect(form?.querySelector('input[name="phone"]')).toHaveValue(MATCH.phone);
     expect(form?.querySelector('input[name="personId"]')).toHaveValue(MATCH.id);
+  });
+
+  /**
+   * The stored column is E.164 (#1547). The line the staffer reads is grouped,
+   * and the form beside it still posts the stored value the action matches on —
+   * a display concern that must not reach the write (#1712).
+   */
+  it("groups the candidate's stored number without changing what the form posts", async () => {
+    await renderPage(seatingArm);
+
+    expect(screen.getByText(`(${MATCH.email}, +52 998 555 0100)`)).toBeInTheDocument();
+    const form = screen.getByRole("button", { name: MATCH.fullName }).closest("form");
+    expect(form?.querySelector('input[name="phone"]')).toHaveValue("+529985550100");
   });
 
   it("names the candidate with no dive day once a sibling has one", async () => {

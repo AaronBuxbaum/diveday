@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
+import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
+import { confirmBookingIdentity } from "@/db/bookings";
 import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { PAPER_WAIVER_IDLE, type PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -192,17 +194,29 @@ export async function undoNoShowAction(
  * Same single write path as the roster (`recordInPersonWaiver`), so the record
  * is the same immutable, staff-attested one however it was reached; the
  * medical attestation is required there, not here, and a missing checkbox
- * comes back as its own notice rather than a generic failure.
+ * comes back as its own sentence rather than a generic failure.
+ *
+ * **Neither answer navigates now.** Success never did — see below. A refusal
+ * used to, and the redirect was what emptied the form: the staffer retyped the
+ * medical tick, the co-signer's name and the relationship before they could fix
+ * the one thing the notice named, at a wet counter with a family waiting (issue
+ * #1674). It answers into the form's own `useActionState` instead, which is
+ * also what carries those three values back — and it does so without the
+ * guardian's name ever entering a URL, the address bar or an access log. The
+ * refusal lands beside the button on the row it belongs to for free, which is
+ * what the `bid` parameter was doing by hand (issue 1574).
  */
 export async function markWaiverInPersonFromCheckIn(
   shopSlug: string,
   focusTripId: string | null,
+  _state: PaperWaiverFormState,
   formData: FormData,
-) {
+): Promise<PaperWaiverFormState> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, focusTripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+  // Not a seat this queue could be showing, so not a submission its form made.
+  if (!uuidParam(bookingId)) return paperWaiverRefused("booking_not_found", formData);
 
   const outcome = await recordInPersonWaiver(await getDb(), {
     shopId: session.user.shopId,
@@ -222,27 +236,82 @@ export async function markWaiverInPersonFromCheckIn(
   // actually checking them in — began by typing their name again.
   if (outcome.ok) {
     revalidatePath(back);
+    return PAPER_WAIVER_IDLE;
+  }
+  // The counter is where a family who share a legal name ends up after the
+  // online path refused them, so it is the surface that most needs to say why
+  // rather than "try again" (issue 1539) — and the one that then offers the
+  // namesake confirmation on the same form, with what they typed still in it.
+  // Nothing was written, so nothing is revalidated.
+  return paperWaiverRefused(outcome.reason, formData);
+}
+
+/**
+ * **The counter confirms a held seat is who the record says** (H-13, issue
+ * #1696) — the second door onto the roster's attestation, never a second
+ * attestation.
+ *
+ * A seat the counter's own name-match prompt created is attached to an existing
+ * diver on a guess, and `identity_unconfirmed` refuses it at the rail until a
+ * staffer vouches for the person in front of them. Until now the only control
+ * that cleared it was on the trip roster, so the counter met the flag as a
+ * `not_ready` refusal from `checkInBooking` and had to leave the queue, open
+ * the trip, expand a confirm and walk back — with a diver at the desk and a
+ * queue behind them.
+ *
+ * `confirmBookingIdentity` is called, not copied: one write, one trail line,
+ * one set of package settlements, whichever door reached it — the same rule
+ * seating follows (`src/db/seat-diver.ts`).
+ *
+ * **Success answers in place, like every other tap on this surface.** The row
+ * loses its confirm control and its identity blocker under the finger that did
+ * it, and a redirect would throw away the search that found the diver — the
+ * exact regression issue #1674 removed from the paper-waiver door two controls
+ * over, on this same row. `counterQueuePath` carries the focused departure and
+ * nothing else, so there is no landing that keeps a `?q=`.
+ *
+ * The refusal does navigate, because it has no row state to land on: the seat
+ * was not held when the tap arrived — a double tap, or a row another staffer
+ * cleared while this one was reading it — so on the next render the row has no
+ * identity blocker and no confirm control, and a `useActionState` answer would
+ * have nowhere to land. (For a booking this shop does not hold, the row is not
+ * on the page at all.)
+ *
+ * **So the refusal carries the search with it** (`dive-domain-expert` review of
+ * issue #1696). `counterQueuePath` holds the focused departure and nothing
+ * else, and the branch that navigates is precisely the one with the diver still
+ * at the desk — landing it on the bare queue threw away the `?q=` that found
+ * them, which is the regression issue #1674 removed from the paper-waiver door
+ * two controls along this row. Passed as a `noticeUrl` parameter, so it is
+ * percent-encoded at the one door that builds these URLs rather than
+ * concatenated here.
+ */
+export async function confirmIdentityFromCheckIn(
+  shopSlug: string,
+  focusTripId: string | null,
+  /** The queue's live search, bound by the page — see the refusal below. */
+  query: string | null,
+  formData: FormData,
+): Promise<void> {
+  const session = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const back = counterQueuePath(shopSlug, focusTripId);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+
+  const confirmed = await confirmBookingIdentity(await getDb(), {
+    shopId: session.user.shopId,
+    bookingId,
+    actorPersonId: session.user.personId,
+    // The trail says which door this came through, because the evidence here is
+    // different in kind: the person is at the desk (`IdentityConfirmDoor`).
+    door: "counter",
+  });
+  if (confirmed) {
+    revalidatePath(back);
     return;
   }
   revalidateAndRedirect(
     back,
-    noticeUrl(
-      back,
-      outcome.reason === "medical_attestation_required"
-        ? "waiver-medical-attestation"
-        : // The counter is where a family who share a legal name ends up after
-          // the online path refused them, so it is the surface that most needs
-          // to say why rather than "try again" (issue 1539).
-          outcome.reason === "guardian_name_matches_diver"
-          ? "waiver-guardian-name"
-          : "waiver-error",
-      // **Which row.** The queue can hold three families at once, and a
-      // refusal that names none of them is one the staffer has to guess at —
-      // on a page where the collapsed form has just shut underneath it. The
-      // roster and the diver record both carry `bid` for this reason; the
-      // counter, the surface those families are actually standing at, was the
-      // one that did not (issue 1574).
-      { bid: bookingId },
-    ),
+    noticeUrl(back, "identity-not-held", { q: query?.trim() || undefined }),
   );
 }

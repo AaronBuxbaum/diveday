@@ -67,10 +67,10 @@ never pays for them.
 
 Follow the **schema-change** skill. The short form: edit `src/db/schema.ts`, `pnpm db:generate`
 with a `--name`, review the generated SQL once, seed if e2e needs rows, and **before you push** run
-the three coverage guards that assert over `schema.ts` from files you will never touch:
+the four coverage guards that assert over `schema.ts` from files you will never touch:
 
 ```bash
-pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts --reporter=dot
+pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot
 ```
 
 Touching `schema.ts` at all is the trigger, not the shape of the change — `pnpm test:changed`

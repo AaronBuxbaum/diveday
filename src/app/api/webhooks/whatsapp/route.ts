@@ -114,24 +114,35 @@ export async function POST(request: Request) {
   }
 
   for (const event of events) {
-    let shopId: string | null = null;
-    if (event.wabaId) {
-      shopId = await shopFor(event.wabaId);
-      // A signed event for a WABA no shop has connected — a disconnect that
-      // raced an in-flight message, or a subscription Meta has not dropped yet.
-      // Nothing to apply, and scoping to "no shop" would silently widen the
-      // update instead, so skip rather than fall through unscoped.
-      if (!shopId) {
-        log("whatsapp_webhook.unknown_waba", "warn", { status: event.status });
-        continue;
-      }
+    // Meta names the WABA on every entry it sends. `wabaId` is optional in the
+    // parser because the payload *shape* allows the field to be absent, not
+    // because a real event omits it — so an event arriving without one is a
+    // shape DiveDay cannot attribute, and `applyProviderEmailEvent` with no
+    // `shopId` matches the provider message id across every shop's rows. That
+    // is deliberate for SES, where the tenant is genuinely unknowable
+    // (src/db/notifications.ts), and wrong here where it is merely missing:
+    // one shop's delivery status would land on another's row. Fail closed, the
+    // same way the inbound-message loop above does (security review,
+    // 2026-09-12).
+    if (!event.wabaId) {
+      log("whatsapp_webhook.event_without_waba", "warn", { status: event.status });
+      continue;
+    }
+    const shopId = await shopFor(event.wabaId);
+    // A signed event for a WABA no shop has connected — a disconnect that
+    // raced an in-flight message, or a subscription Meta has not dropped yet.
+    // Nothing to apply, and scoping to "no shop" would silently widen the
+    // update instead, so skip rather than fall through unscoped.
+    if (!shopId) {
+      log("whatsapp_webhook.unknown_waba", "warn", { status: event.status });
+      continue;
     }
     const result = await applyProviderEmailEvent(db, {
       providerMessageId: event.providerMessageId,
       status: event.status,
       detail: event.detail,
       occurredAt: event.occurredAt,
-      ...(shopId ? { shopId } : {}),
+      shopId,
     });
     // `unknown_message` is routine rather than a fault: a courtesy text sent
     // alongside an email is not the tracked channel, so it has no delivery row

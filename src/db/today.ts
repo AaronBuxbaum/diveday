@@ -415,13 +415,21 @@ export type OpenRollCall = {
  *   is saying "not back yet, check again", and the checkpoint must open, not
  *   close.
  *
- * So this module does not ask `carryForwardNotBoarded` (src/lib/manifests.ts)
- * what a diver's effective state is — that helper carries *any* `not_boarded`
- * forward as an accounted-for record, which closes every later checkpoint too.
- * The rule here is the boring one instead: **at an after-dive checkpoint a
- * diver is accounted for only if their latest live result there is `boarded`.**
- * Departure carry-forward then needs no special case at all, because a diver
- * left ashore never enters the after-dive population below.
+ * So this module does not ask `carryForwardNotBoarded` (src/lib/roll-call.ts,
+ * re-exported from src/lib/manifests.ts) what a diver's effective state is —
+ * that helper carries *any* `not_boarded` forward as an accounted-for record,
+ * which closes every later checkpoint too. The rule here is the boring one
+ * instead: **at an after-dive checkpoint a diver is accounted for only if their
+ * latest live result there is `boarded`.** Departure carry-forward then needs no
+ * special case at all, because a diver left ashore never enters the after-dive
+ * population below.
+ *
+ * **A second reader now mirrors this pair, so keep them saying one thing.** The
+ * counter's no-show refusal asks `onTheWaterByRollCall` (src/db/manifests.ts)
+ * whether the crew's roll call puts a diver on the water, and it is this
+ * asymmetry read the other way round: the population counted at risk here is
+ * the population the desk may not call absent. Widen who is at risk and that
+ * gate must widen with it.
  */
 function isAccountedForAfterDive(state: "boarded" | "not_boarded" | undefined): boolean {
   return state === "boarded";

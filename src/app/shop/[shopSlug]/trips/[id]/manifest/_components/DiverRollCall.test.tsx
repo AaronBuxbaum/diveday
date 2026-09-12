@@ -118,6 +118,44 @@ function exceptionControl(row: HTMLElement, name: string) {
   return [...row.querySelectorAll("button")].find((button) => button.textContent?.trim() === name);
 }
 
+describe("the rail numbering is the roster's order and nothing else", () => {
+  /**
+   * **The coupling `getTripRoster` calls load-bearing, asserted from the
+   * screen** (domain review of issue #1720).
+   *
+   * That query's docblock says "the index of this array **is** the rail
+   * numbering", and three surfaces compute it positionally off the prop —
+   * here, the offline dock copy, and the departure log. Nothing pinned it. A
+   * future session adding a "blocked first" or an alphabetical sort to a
+   * roll-call list would silently re-number the rail with every test still
+   * green, and a crew would be counting down a list whose numbers no longer
+   * match the sheet in the captain's hand.
+   *
+   * The prop order below is deliberately **not** alphabetical: a fixture that
+   * is already sorted cannot fail if somebody adds a sort.
+   */
+  it("numbers rows by their position in the prop, never by name", () => {
+    const { container } = renderList({
+      divers: [
+        diver({ bookingId: "00000000-0000-4000-8000-0000000000a1", fullName: "Zoe Adler" }),
+        diver({ bookingId: "00000000-0000-4000-8000-0000000000a2", fullName: "Ana Ruiz" }),
+        diver({ bookingId: "00000000-0000-4000-8000-0000000000a3", fullName: "Ángel Ferrer" }),
+      ],
+    });
+    const rows = [...container.querySelectorAll("li")];
+    const numbered = rows.map((row) => {
+      const text = row.textContent ?? "";
+      // The badge opens the row's text and runs straight into the name
+      // ("01Zoe Adler"), so this anchors rather than looking for a boundary.
+      return { line: text.match(/^(\d{2})/)?.[1] ?? null, text };
+    });
+    expect(numbered.map((row) => row.line)).toEqual(["01", "02", "03"]);
+    expect(numbered[0]?.text).toContain("Zoe Adler");
+    expect(numbered[1]?.text).toContain("Ana Ruiz");
+    expect(numbered[2]?.text).toContain("Ángel Ferrer");
+  });
+});
+
 describe("the not-back path is a deliberate two-step (decision 3)", () => {
   it("puts no exception control in the row a captain taps down the list", () => {
     renderList({ divers: [diver()] });

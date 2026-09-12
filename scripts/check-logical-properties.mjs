@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { physicalUtilitiesInTree, staleBaselineEntries } from "./logical-properties-lib.mjs";
 
 /**
  * **Layout that does not care which way the page reads.**
@@ -35,83 +36,22 @@ import process from "node:process";
 const ROOT = process.cwd();
 export const BASELINE_PATH = "scripts/logical-properties-baseline.json";
 const guardedRoots = ["src/app", "src/components", "src/features"];
-const sourceExtensions = new Set([".ts", ".tsx"]);
 
 /**
- * The physical utilities that have a logical twin, and only those. `top-`,
- * `bottom-`, `mt-`, `mb-` and friends are not directional — a page reads down
- * in every locale DiveDay could ever ship — so they are not here.
+ * The scan itself — the walk, and what counts as a physical utility — is
+ * `scripts/logical-properties-lib.mjs`, so the vanished-file path below can be
+ * tested without a tree on disk and without importing this file (issue #1763).
+ * What is left here is the argv, the baseline, the ratchet and the printing.
+ *
+ * `vanished` is the files the walk listed and the read could not find. It is
+ * named below rather than thrown, and kept out of both the baseline write and
+ * the stale sweep.
  */
-const PHYSICAL = [
-  ["ml-", "ms-"],
-  ["mr-", "me-"],
-  ["pl-", "ps-"],
-  ["pr-", "pe-"],
-  ["left-", "start-"],
-  ["right-", "end-"],
-  ["text-left", "text-start"],
-  ["text-right", "text-end"],
-  ["border-l", "border-s"],
-  ["border-r", "border-e"],
-  ["rounded-l", "rounded-s"],
-  ["rounded-r", "rounded-e"],
-];
-
-/**
- * A utility inside a class string, with its optional variants — `sm:ml-2`,
- * `group-hover:pr-4`, `-ml-1`. Anchored on a boundary so `border-r` does not
- * match `border-red-500`, and `left-` does not match a word ending in "left".
- */
-const patternFor = (utility) =>
-  new RegExp(
-    `(?<![\\w-])-?(?:[a-z-]+:)*${utility}${utility.endsWith("-") ? "[\\w./\\[\\]%-]+" : ""}(?![\\w-])`,
-    "g",
-  );
-
-/**
- * Comments out, before anything is counted. Prose is full of "right-hand" and
- * "left-aligned", and neither is a class — the same reason `check-tokens.mjs`
- * strips first. Replaced with spaces rather than removed so line numbers in
- * the report still point at the real line.
- */
-function stripComments(source) {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, (match) => match.replace(/[^\n]/g, " "))
-    .replace(/(^|[^:])\/\/[^\n]*/g, (match, lead) => lead + " ".repeat(match.length - lead.length));
-}
-
-async function walk(relativeDirectory) {
-  let entries;
-  try {
-    entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (sourceExtensions.has(path.extname(entry.name))) files.push(relativePath);
-  }
-  return files;
-}
-
-const details = new Map();
-for (const root of guardedRoots) {
-  for (const file of await walk(root)) {
-    const contents = stripComments(await readFile(path.join(ROOT, file), "utf8"));
-    const hits = [];
-    contents.split("\n").forEach((line, index) => {
-      for (const [physical, logical] of PHYSICAL) {
-        for (const match of line.matchAll(patternFor(physical))) {
-          hits.push({ line: index + 1, text: match[0], logical });
-        }
-      }
-    });
-    if (hits.length > 0) details.set(file, hits);
-  }
-}
+const { details, vanished } = await physicalUtilitiesInTree(
+  guardedRoots,
+  (directory) => readdir(path.join(ROOT, directory), { withFileTypes: true }),
+  (file) => readFile(path.join(ROOT, file), "utf8"),
+);
 
 const reportIndex = process.argv.indexOf("--report");
 if (reportIndex !== -1) {
@@ -125,6 +65,14 @@ if (reportIndex !== -1) {
   }
   console.log(`\n${shown} physical directional utilities under "${prefix || "src"}"`);
   process.exit(0);
+}
+
+if (vanished.length > 0) {
+  console.warn(
+    `logical-properties: skipped ${vanished.length} file(s) that disappeared between the walk and the read — ${vanished.join(", ")}.\n` +
+      "    Nothing is wrong with them: a concurrent edit, rename or delete landed mid-run. Re-run the guard on a settled tree\n" +
+      "    (`node scripts/check-logical-properties.mjs`) to have them counted.",
+  );
 }
 
 let baseline = {};
@@ -141,6 +89,14 @@ const baselineCounts = Object.fromEntries(
 
 const absorbing = process.argv.includes("--absorb");
 if (process.argv.includes("--write") || absorbing) {
+  // A baseline written from a scan that missed a file banks a fall that never
+  // happened, and the ratchet does not turn back.
+  if (vanished.length > 0) {
+    console.error(
+      `Refusing to write a baseline from an incomplete scan: ${vanished.length} file(s) disappeared mid-run (above). Re-run on a settled tree.`,
+    );
+    process.exit(1);
+  }
   const grew = [...details.entries()].filter(
     ([file, hits]) => baselineExists && hits.length > (baselineCounts[file] ?? 0),
   );
@@ -200,12 +156,10 @@ for (const [file, hits] of details) {
     );
   }
 }
-for (const file of Object.keys(baselineCounts)) {
-  if (!details.has(file)) {
-    violations.push(
-      `${file}: clean or gone — remove its baseline entry (\`node scripts/check-logical-properties.mjs --write\`).`,
-    );
-  }
+for (const file of staleBaselineEntries(baselineCounts, { details, vanished })) {
+  violations.push(
+    `${file}: clean or gone — remove its baseline entry (\`node scripts/check-logical-properties.mjs --write\`).`,
+  );
 }
 
 if (violations.length > 0) {

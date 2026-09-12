@@ -91,6 +91,7 @@
     "assignAria": "Asignar tripulación a {trip}",
     "away": "Ausente",
     "awayConflict": "Ausente {dates}",
+    "crewClash": "También en {departure}: no puede estar en ambas salidas",
     "crewing": "Tripulación",
     "deciding": "Guardando…",
     "decline": "Rechazar",

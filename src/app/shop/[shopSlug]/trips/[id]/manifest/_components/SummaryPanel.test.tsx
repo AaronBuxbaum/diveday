@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { TripManifest } from "@/lib/manifests";
+import { DiverRollCall } from "./DiverRollCall";
 import { SummaryPanel } from "./SummaryPanel";
 
 /**
@@ -274,5 +275,107 @@ describe("a seat the counter released is not a head to count", () => {
     expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toBe(
       "7 of 7 divers aboard",
     );
+  });
+});
+
+/**
+ * **Every chip points at a row that is on the page.**
+ *
+ * The panel's name chips and the roll call's rows are two halves of one jump,
+ * rendered from two files, and until `diverRowId` existed each spelled the
+ * target itself. They agreed — and nothing here would have noticed if they
+ * stopped: the chip test above asserts `"#diver-row-b-3"` and the roll call's
+ * asserts `diver-row-b-1..b-3`, each restating its own literal, so renaming
+ * one side and missing the other keeps both suites green while a captain taps
+ * a name at the rail and the page does not move.
+ *
+ * That is not hypothetical. It is #1675, shipped on the offline manifest,
+ * where the face grid jumped to `diver-row-<bookingId>` and its rows carried
+ * `offline-roll-call-<bookingId>`.
+ *
+ * So this renders both from one roster and resolves the hrefs against the
+ * document. It asserts a relationship rather than a string, which is the only
+ * shape that can fail on a rename.
+ */
+describe("the panel's chips and the roll call's rows are one jump", () => {
+  function diver(bookingId: string, fullName: string): TripManifest["divers"][number] {
+    return {
+      bookingId,
+      fullName,
+      email: null,
+      emergencyContactName: "Asha Iyer",
+      emergencyContactPhone: "+1-305-555-0231",
+      readiness: { status: "ready", blockers: [] },
+      rentalFit: { state: "own_kit" },
+      nitroxRequested: false,
+      checkedIn: false,
+      buddyTeam: null,
+      buddyAlert: null,
+      rollCall: undefined,
+    } as TripManifest["divers"][number];
+  }
+
+  it("resolves every name chip to a diver row in the same document", () => {
+    const roster = [
+      diver("b-1", "Ana Ruiz"),
+      diver("b-2", "Diego Marín"),
+      diver("b-3", "Priya Sharma"),
+    ];
+    const { container } = render(
+      <>
+        <SummaryPanel
+          checkpoint="after_dive_1"
+          isDeparture={false}
+          rollCallComplete={false}
+          completeness={completeness()}
+          summary={summary()}
+          separatedTeams={0}
+          // Both chip lists, because both built the target by hand: the
+          // still-to-call list and the not-back-aboard list.
+          uncalled={[{ bookingId: "b-2", fullName: "Diego Marín", blocked: false }]}
+          uncalledCrew={[]}
+          notBackAboardDivers={[{ bookingId: "b-3", fullName: "Priya Sharma" }]}
+          notBackAboardCrew={[]}
+          t={t}
+        />
+        <DiverRollCall
+          divers={roster}
+          crewNames={[]}
+          checkpoint="after_dive_1"
+          isDeparture={false}
+          shopSlug="blue-mantis"
+          tripId="00000000-0000-4000-8000-0000000000ff"
+          locale="en-US"
+          timezone="America/New_York"
+          notesByBooking={new Map()}
+          rollCallAction={vi.fn(async () => ({ ok: true }) as const)}
+          addPrivateNoteAction={vi.fn(async () => undefined) as never}
+          rollCallButtonCopy={() => ({
+            errorRefusal: "Try again",
+            blockedMessage: "Still blocked",
+          })}
+          buddyTeamLabel={() => null}
+          t={t}
+        />
+      </>,
+    );
+
+    const chips = [...container.querySelectorAll<HTMLAnchorElement>('a[href^="#diver-row-"]')];
+    // A vacuous pass is the failure mode worth naming: if the panel stopped
+    // rendering chips this would assert nothing at all.
+    expect(chips.length).toBe(2);
+    for (const chip of chips) {
+      const id = chip.getAttribute("href")?.slice(1) ?? "";
+      const row = container.querySelector(`li[id="${id}"]`);
+      expect(row, `no row for ${chip.textContent}`).not.toBeNull();
+      // **And it is that person's row**, not merely a row (`dive-domain-expert`
+      // review, issue #1773). Both halves of the id carry a booking id, so a
+      // transposition resolves to somebody — and lands a captain on the wrong
+      // diver while a named person is in the water, which is worse than
+      // #1675's tap that did nothing at all.
+      expect(row?.textContent, `${chip.textContent}'s chip points at another row`).toContain(
+        chip.textContent,
+      );
+    }
   });
 });

@@ -1803,6 +1803,154 @@ describe("returning a whole rental set", () => {
       });
       expect(await listFitAdjustedReturns(db, shop.id, wholeDay())).toEqual([]);
     });
+
+    /**
+     * **A drysuit teaches the evening exactly as a BCD does** (issue #1724).
+     *
+     * The drysuit became a sized fit kind with `drysuit_size` and a scale of
+     * its own (issue #1414), and `sizedRentalKindOfGearKind` kept returning
+     * null for the register's `drysuit` units for a while after — so a suit
+     * that came home a size up asked the shop nothing.
+     *
+     * The scale question that held it out is answered by `gear_items.size`
+     * being free text for every kind: the register carries no per-kind
+     * vocabulary, and this reader compares the two by trimmed string equality,
+     * so a drysuit unit meets its column as loosely as a BCD unit already did.
+     */
+    async function aDrysuitOut(db: AppDb, shopId: string, unitSize: string) {
+      const unit = mustCreate(
+        await createGearItem(db, { shopId, kind: "drysuit", label: "Drysuit #3", size: unitSize }),
+      );
+      const diver = await shopBooking(db, shopId, "Keiko Tanaka");
+      const reserved = await reserveGearUnit(db, {
+        shopId,
+        gearItemId: unit.id,
+        bookingId: diver.bookingId,
+        reservedFrom: "2026-09-10",
+        reservedUntil: "2026-09-11",
+      });
+      if (!reserved.ok) throw new Error("reserve failed");
+      await checkOutGearReservation(db, { shopId, reservationId: reserved.reservation.id });
+      return { reservationId: reserved.reservation.id, personId: diver.personId };
+    }
+
+    async function aDrysuitFit(
+      db: AppDb,
+      shopId: string,
+      personId: string,
+      drysuitSize: string | undefined,
+    ) {
+      await saveRentalFit(db, {
+        shopId,
+        personId,
+        rentsBcd: false,
+        rentsRegulator: false,
+        rentsWetsuit: false,
+        rentsMaskFins: false,
+        rentsWeights: false,
+        rentsDiveComputer: false,
+        rentsGopro: false,
+        rentsDrysuit: true,
+        rentsHoodGloves: false,
+        rentsTorch: false,
+        rentsSmb: false,
+        drysuitSize,
+      });
+    }
+
+    it("asks about a drysuit that came back a size up", async () => {
+      const { db, shop } = await gearShopContext();
+      // The drysuit scale: a letter for girth and a trailing `T` for the tall
+      // cut, which is how a rental wall is stocked. `ML` against a recorded `M`
+      // is the swap a counter makes when the suit is a size up.
+      const { reservationId, personId } = await aDrysuitOut(db, shop.id, "ML");
+      await aDrysuitFit(db, shop.id, personId, "M");
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId,
+        outcome: "fit_adjusted",
+      });
+
+      const rows = await listFitAdjustedReturns(db, shop.id, wholeDay());
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        reservationId,
+        kind: "drysuit",
+        unitLabel: "Drysuit #3",
+        size: "ML",
+        recordedSize: "M",
+        personName: "Keiko Tanaka",
+      });
+    });
+
+    it("says nothing when the drysuit fit already records the size that went out", async () => {
+      const { db, shop } = await gearShopContext();
+      const { reservationId, personId } = await aDrysuitOut(db, shop.id, "MT");
+      await aDrysuitFit(db, shop.id, personId, "MT");
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId,
+        outcome: "fit_adjusted",
+      });
+
+      expect(await listFitAdjustedReturns(db, shop.id, wholeDay())).toEqual([]);
+    });
+
+    it("asks when the drysuit fit holds no size at all", async () => {
+      // The first drysuit a diver takes has nothing on file, and the evening is
+      // where that gets filled in rather than at the counter with wet hands.
+      const { db, shop } = await gearShopContext();
+      const { reservationId, personId } = await aDrysuitOut(db, shop.id, "L");
+      await aDrysuitFit(db, shop.id, personId, undefined);
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId,
+        outcome: "fit_adjusted",
+      });
+
+      expect(await listFitAdjustedReturns(db, shop.id, wholeDay())).toMatchObject([
+        { kind: "drysuit", size: "L", recordedSize: null },
+      ]);
+    });
+
+    it("carries an off-grid drysuit size through verbatim", async () => {
+      // `drysuit_size` is the one size field whose free text is load-bearing
+      // beyond the size itself: a neoprene-sock fleet records the rock-boot
+      // size in it, and both fit forms hold such a value (issue #1728). A
+      // reader that tidied it to a clean letter here would lose the boot.
+      const { db, shop } = await gearShopContext();
+      const { reservationId, personId } = await aDrysuitOut(db, shop.id, "ML, rock boot 9");
+      await aDrysuitFit(db, shop.id, personId, "M");
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId,
+        outcome: "fit_adjusted",
+      });
+
+      expect(await listFitAdjustedReturns(db, shop.id, wholeDay())).toMatchObject([
+        { kind: "drysuit", size: "ML, rock boot 9", recordedSize: "M" },
+      ]);
+    });
+
+    it("re-proves the drysuit teaching from the reservation the evening tap names", async () => {
+      // The tap writes through `fitAdjustedReturnTeaching`, not through the
+      // list, so the mapping has to hold on both doors or the question renders
+      // and then writes nothing.
+      const { db, shop } = await gearShopContext();
+      const { reservationId, personId } = await aDrysuitOut(db, shop.id, "ML");
+      await aDrysuitFit(db, shop.id, personId, "M");
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId,
+        outcome: "fit_adjusted",
+      });
+
+      expect(await fitAdjustedReturnTeaching(db, { shopId: shop.id, reservationId })).toEqual({
+        personId,
+        kind: "drysuit",
+        size: "ML",
+      });
+    });
   });
 
   /**

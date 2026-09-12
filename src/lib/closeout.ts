@@ -145,6 +145,85 @@ export type CloseoutPlanChange = {
   reasonCode: PlanChangeReason | null;
 };
 
+/**
+ * **Did this seat sail?** Asked of every non-cancelled booking on a departure,
+ * and the whole of what {@link CloseoutTripInput.sailed} counts (issue #1689).
+ *
+ * The evidence is ranked, strongest first, because the two statements this
+ * product holds about a seat are made by different people at different moments
+ * and can disagree:
+ *
+ * 1. **The crew's dock tap.** `boarded` at the `departure` checkpoint is
+ *    somebody on the boat saying they counted this body aboard — "the
+ *    strongest evidence this product holds about where a person is"
+ *    (`reclaimReleasedSeat`, src/db/manifests.ts). `not_boarded` *there* means
+ *    "never left the dock" and nothing else, which is why the caller must read
+ *    it through a departure-pinned reader (`listDepartureRollCallByTrip`): the
+ *    same word at an after-dive checkpoint means "did not come back", and that
+ *    diver sailed.
+ * 2. **The desk's mark.** `bookings.status = 'no_show'` is one staffer's
+ *    statement that the diver never turned up. It answers only for a seat the
+ *    crew said nothing about, which is why it is the fallback and not the rule.
+ *
+ * The ranking is the half of #1689 the first fix missed. It read the desk's
+ * mark alone, and the commoner shape of the miscount is the other one: the
+ * crew tap "Not boarded" for the two who never showed — which is what closes
+ * the dock count at a busy dock — and nobody at the desk ever does the "Not
+ * here?" tap inside its window. Booking status stayed `booked`, so the evening
+ * counted those two out *and* home and said "10 divers and 2 crew out, 12
+ * back" over a boat that carried eight.
+ *
+ * **A seat nobody spoke for counts.** No dock result and no mark is an
+ * unfinished dock count, and `listRollCallGaps` is already raising
+ * `departure_uncounted` or `no_roll_call` over it — so the station reads
+ * `count_open` and {@link EveningClose.allHome} can never be granted on the
+ * strength of this fallback.
+ *
+ * **The crew's evidence is ranked across every checkpoint, not the dock
+ * alone** — which is what this function got wrong for one slice
+ * (dive-domain-expert review, issue #1704). A seat with no dock result, an
+ * after-dive `not_boarded`, and the desk's mark answered "did not sail" here
+ * while `onTheWaterByRollCall` answered "on the water" about the same diver, so
+ * the evening printed "0 divers out, 0 back" over a one-diver boat carrying
+ * somebody the day was raising a top-severity missing-diver row about. The
+ * clamp on {@link EveningClose} hid the `-1` that would have exposed it. The
+ * dock still wins where it spoke, which keeps the ashore-then-boarded-later
+ * case below; what changed is that its *silence* no longer outranks a statement
+ * the crew made at sea. The test that guarded the old shape wrote the safety
+ * argument down and the widening broke it: a `no_show` can never stand over a
+ * diver the crew placed on the water, because `noShowGate` refuses one and
+ * `reclaimReleasedSeat` undoes the other — and both now cover all of it.
+ *
+ * **Two cases it deliberately answers "not aboard" to, with the direction
+ * stated so nobody reads them as oversights.** A diver the crew marked ashore
+ * at the dock and then boarded at a later checkpoint — `inAfterDivePopulation`
+ * in src/db/today.ts names them — is not counted, because "souls on board" is
+ * how many the vessel *left with* (glossary) and nobody was left behind either
+ * way: they carry no after-dive gap, so both halves of the sentence move
+ * together. And a boarding recorded on an offline device that never syncs is
+ * invisible here, so a seat the desk also marked lands in neither `out` nor
+ * `back` where it used to land in both; `out === back` either way, and no
+ * version of this count detects an event that never arrived.
+ */
+export function seatSailed(input: {
+  /** `bookings.status === "no_show"` — the desk's own statement. */
+  noShow: boolean;
+  /** The standing result at the **departure** checkpoint; null when there is none. */
+  dockResult: "boarded" | "not_boarded" | null;
+  /**
+   * Whether a result stands at any **after-dive** checkpoint —
+   * `standingResultMeansSailed` over `listAfterDiveRollCallByTrip`. Either word
+   * there means the person was on the boat: `boarded` counted them at a later
+   * site, and `not_boarded` says they did not come *back*.
+   */
+  afterDiveResultStands: boolean;
+}): boolean {
+  if (input.dockResult === "boarded") return true;
+  if (input.dockResult === "not_boarded") return false;
+  if (input.afterDiveResultStands) return true;
+  return !input.noShow;
+}
+
 /** One of today's departures, as the db layer hands it in. */
 export type CloseoutTripInput = {
   tripId: string;
@@ -153,6 +232,24 @@ export type CloseoutTripInput = {
   endsAt: Date;
   /** Non-cancelled bookings — a fact about the trip, shown beside its state. */
   booked: number;
+  /**
+   * **Divers the departure actually carried** — the roster less every seat the
+   * shop's own records place ashore, which is the crew's `not_boarded` at the
+   * dock first and the desk's `no_show` mark second ({@link seatSailed}, issue
+   * #1689).
+   *
+   * Its own field rather than a narrowing of `booked`, because the readers
+   * either side of it want the roster: `openSeatsDebrief` subtracts seats from
+   * capacity, and a released seat never came back to the shelf. The homecoming
+   * sentence is the one reader asking who was *aboard*, and it counted a diver
+   * left standing on the dock as having gone out and come home because both
+   * questions shared one number.
+   *
+   * **Never defaulted to `booked`.** A default is how a later caller puts that
+   * miscount back with a green suite, which is why this is required on the
+   * input rather than optional.
+   */
+  sailed: number;
   /** Seats the departure had, for the evening's open-seats reading. */
   capacity: number;
   /** Decides the closing checkpoint the crew are counted at. */
@@ -230,6 +327,8 @@ export type CloseoutDeparture = {
   startsAt: Date;
   endsAt: Date;
   booked: number;
+  /** See `CloseoutTripInput.sailed` — the divers aboard, never the seats sold. */
+  sailed: number;
   capacity: number;
   plannedDives: number;
   /** See `CloseoutTripInput.crew` — the assigned crew, at the closing checkpoint. */
@@ -420,6 +519,7 @@ export function assembleDayCloseout(input: {
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       booked: trip.booked,
+      sailed: trip.sailed,
       capacity: trip.capacity,
       plannedDives: trip.plannedDives,
       crew: trip.crew,
@@ -701,17 +801,51 @@ export type StationClose = {
   /** The roster the day is judged against — non-cancelled bookings. */
   booked: number;
   /**
-   * How many of that roster the head count brought back.
+   * **The divers this station sent out** — see `CloseoutTripInput.sailed`.
+   *
+   * The homecoming numbers are built from this and never from `booked`, at
+   * both scales: the day's sentence and the station's own sentence say the
+   * same thing about one boat, and reading two different counts is how they
+   * would come to disagree (issue #1689).
+   */
+  sailed: number;
+  /**
+   * **{@link sailed} less the headline gap's own count** — not a head count of
+   * everyone who came back.
    *
    * Only an **after-dive** gap subtracts: those are the reasons that can mean
    * a person is still in the water (`AFTER_DIVE_GAP_REASONS`). A dock-count
    * gap means the *departure* count was never closed, which is paperwork about
    * who got on the boat rather than a claim about who did not get off it — so
    * it leaves this number alone and says so through `status` instead.
+   *
+   * **It subtracts one gap, because there is only ever one to subtract.**
+   * `listRollCallGaps` emits at most one diver row per trip, reporting the
+   * first dive that has one and ranking `missing_diver` above
+   * `after_dive_uncounted` — so a boat missing one diver after dive 1 and a
+   * *different* diver after dive 2 subtracts 1 and reads one too high. That is
+   * safe rather than correct: such a station is `unreconciled`, `allHome` is
+   * false, and the sentence on screen is the gap reason's own rather than these
+   * numbers. Widening it would mean a second gap reader, which is the thing
+   * this file exists not to have (issue #1689's review, finding 8).
    */
   back: number;
-  /** How many crew the trip named. Zero is its own open state (`crewIsAccountedFor`). */
-  crewAssigned: number;
+  /**
+   * **Crew this station sent out** — the trip's assigned crew less the ones a
+   * human recorded ashore at the dock (`crewAshore`, src/lib/manifests.ts;
+   * issue #1689).
+   *
+   * Assigned was the wrong number for a sentence about who came home, and the
+   * dock reality that reaches it is a last-minute crew change: swap a
+   * divemaster at 07:00, the crew mark the original ashore, and `changeTripCrew`
+   * refuses to unassign anybody who has roll-call history — so they stay
+   * assigned forever and the evening counted them out *and* back. "Souls on
+   * board" is how many people the vessel *left with* (glossary), and a
+   * divemaster standing on the dock is precisely the body that term exists to
+   * keep out of it. Zero is its own open state: `crewIsAccountedFor` makes the
+   * same subtraction before it grants the moment.
+   */
+  crewSailed: number;
   /**
    * Whether every assigned crew member is accounted for at the closing
    * checkpoint, through the *same* predicate the manifest asks
@@ -721,7 +855,7 @@ export type StationClose = {
    * count.
    */
   crewAccountedFor: boolean;
-  /** Assigned crew the closing checkpoint brought back. */
+  /** Crew who sailed and whom the closing checkpoint brought back. */
   crewBack: number;
   /** See `CloseoutDeparture.openSeats`. Null when the boat filled. */
   openSeats: OpenSeatsDebrief | null;
@@ -764,9 +898,21 @@ export type EveningClose = {
   out: number;
   /** Souls the head counts brought back. */
   back: number;
-  /** The diver half of {@link out}, for a sentence that names both. */
+  /**
+   * The diver half of {@link out}, for a sentence that names both.
+   *
+   * **Divers who sailed, not seats that were sold** (issue #1689; the rule is
+   * {@link seatSailed}). A seat the crew marked `not_boarded` at the dock, or
+   * the desk marked `no_show`, is the shop's own word that the person was not
+   * aboard, and while this summed `booked` the sentence counted them out *and*
+   * back — both numbers moving together, so even `out === back` held and the
+   * moment below was still spent.
+   */
   divers: number;
-  /** The crew half of {@link out} — every assigned crew member of the day. */
+  /**
+   * The crew half of {@link out} — the crew the day's boats **carried**, never
+   * the crew they rostered (issue #1689; see {@link StationClose.crewSailed}).
+   */
   crew: number;
   /**
    * The evening's earned moment: the day is closing and every head count
@@ -775,7 +921,7 @@ export type EveningClose = {
    * nobody out has nothing to celebrate, so `out` must be positive.
    *
    * **Every station's status has to be `all_home`, not merely `out === back`.**
-   * A dock count that was never closed leaves `back` equal to `booked` by
+   * A dock count that was never closed leaves `back` equal to `sailed` by
    * arithmetic — the gap is about who got *on* the boat, so it subtracts
    * nothing — and a sentence saying "10 out, 10 back" over a boat nobody
    * counted is a claim the shop's own records do not support. The moment is
@@ -823,6 +969,14 @@ export function assembleEveningClose(
       // same rule (`rollCallCheckpoints`, src/lib/roll-call.ts).
       const closingCheckpoint = rollCallCheckpoints(departure.plannedDives).at(-1) ?? "departure";
       const crewCounts = crewRollCallCounts(closingCheckpoint, departure.crew);
+      // **Both halves of the sentence count who was carried** (issue #1689). A
+      // rostered hand the crew recorded ashore at the dock is not a body the
+      // boat left with, and reading `crewAssigned` put them in `out` and in
+      // `back` at once — so the arithmetic came out even and the moment was
+      // granted over a divemaster standing on the dock. This is the same
+      // subtraction `crewIsAccountedFor` already makes below, on the same
+      // counts, which is what keeps the number and the verdict in step.
+      const crewSailed = Math.max(0, crewCounts.crewAssigned - crewCounts.crewAshore);
       return {
         tripId: departure.tripId,
         title: departure.title,
@@ -834,10 +988,11 @@ export function assembleEveningClose(
         diveNumber: departure.diveNumber,
         uncounted: departure.uncounted,
         booked: departure.booked,
-        back: Math.max(0, departure.booked - missing),
-        crewAssigned: crewCounts.crewAssigned,
+        sailed: departure.sailed,
+        back: Math.max(0, departure.sailed - missing),
+        crewSailed,
         crewAccountedFor: crewIsAccountedFor(closingCheckpoint, departure.crew),
-        crewBack: Math.max(0, crewCounts.crewAssigned - crewCounts.crewNotBackAboard),
+        crewBack: Math.max(0, crewSailed - crewCounts.crewNotBackAboard),
         openSeats: departure.openSeats,
         planChanges: departure.planChanges,
         recapSentAt: departure.recapSentAt,
@@ -850,8 +1005,8 @@ export function assembleEveningClose(
         a.endsAt.getTime() - b.endsAt.getTime() ||
         a.tripId.localeCompare(b.tripId),
     );
-  const divers = stations.reduce((total, station) => total + station.booked, 0);
-  const crew = stations.reduce((total, station) => total + station.crewAssigned, 0);
+  const divers = stations.reduce((total, station) => total + station.sailed, 0);
+  const crew = stations.reduce((total, station) => total + station.crewSailed, 0);
   const out = divers + crew;
   const back = stations.reduce((total, station) => total + station.back + station.crewBack, 0);
   const closing = stations.length > 0 && stations.every((station) => station.settled);

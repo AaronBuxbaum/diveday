@@ -16,6 +16,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { GEAR_KIND_ORDER, type GearItemKind, type GearServiceKind } from "@/lib/gear";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
@@ -48,7 +49,11 @@ async function requireUnitSurface(formData: FormData) {
 const unitFormSchema = z.object({
   kind: z.enum(kindValues),
   label: z.string().trim().max(80),
-  size: z.string().trim().max(40),
+  // Same cap as the register's add form, and for the same reason rather than by
+  // coincidence: `keepRentalFitAction` copies this value straight into
+  // `rental_fit_profiles`, so the fit forms' own bound is the one that governs
+  // it (issue #1754).
+  size: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size),
   serialNumber: z.string().trim().max(80),
   brandModel: z.string().trim().max(120),
   purchasedOn: z.string().trim().max(10),

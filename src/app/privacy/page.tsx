@@ -73,13 +73,28 @@ export const metadata: Metadata = {
  *    honest thing to write. Inventing a number here would pre-empt the decision
  *    in public, which is worse than the silence it replaced.
  *
- * ## No link to it yet
+ * ## Reachable, not promoted
  *
- * `MarketingFooter` does **not** link here, and neither does `/onboard`. That
- * is the owner's explicit call (2026-08-14): the pages exist and are reachable,
- * but they are not advertised until the open rows above close and counsel has
- * read them. Do not "fix" the missing footer link — adding it is a decision,
- * not a tidy-up.
+ * `MarketingFooter` links here and to `/terms`, and is the only route to
+ * either page from anywhere on the site (2026-09-10). Before that both were
+ * reachable by typed URL alone, while the SES production-access case named
+ * both by URL and told the reviewer this page states that AWS processes our
+ * mail — a claim a reviewer checks by looking for the link.
+ *
+ * That overturned half of the owner's 2026-08-14 call, which was that the
+ * pages exist and are reachable but are not advertised. The half still
+ * standing is the funnel: neither the marketing nav nor `/onboard` links
+ * them, and the shop-facing footer (`PublicShopFooterSection`) deliberately
+ * does not either — that one carries a shop's own phone and email, and
+ * DiveDay's legal pages are not a shop's.
+ *
+ * So the rule to follow is **reachable, not promoted**. Anyone who wants the
+ * policy can reach it from the bottom of any marketing page; nothing in the
+ * conversion path asks them to read it first. Adding one of those remaining
+ * links is a decision, not a tidy-up.
+ *
+ * The two open rows above are untouched by that: H-18 and H-02 govern what
+ * this page may *say*, not who may reach it.
  */
 export default async function PrivacyPage() {
   const locale = await requestLocale();

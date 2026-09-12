@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -10,6 +11,23 @@ import {
   signInAsOwner,
   signOut,
 } from "./helpers";
+
+/**
+ * A **digest** of the code drawn into a saved card — the QR of that download's
+ * own `arrival` token, so two downloads digesting the same would be two cards
+ * carrying one credential.
+ *
+ * A digest rather than the `data:` URL itself, which is what this compared
+ * first. Playwright prints both sides of a failed `not.toBe` into the run's
+ * report, and both sides there are live bearer credentials: the database is
+ * per-worker and ephemeral so nothing real was ever at stake, but a credential
+ * in a CI artifact costs nothing to avoid (security review, 2026-09-12).
+ */
+function codeImageIn(cardHtml: string): string {
+  const match = /src="(data:image\/png[^"]+)"/.exec(cardHtml);
+  if (!match?.[1]) throw new Error("saved card carries no arrival code");
+  return createHash("sha256").update(match[1]).digest("hex");
+}
 
 test.describe("the dive arrival arc", () => {
   signedInAsOwner();
@@ -85,9 +103,8 @@ test.describe("the dive arrival arc", () => {
     await expect(page.getByText("North Jetty Marina", { exact: true })).toBeVisible();
     await expect(page.getByText("12 Dock Rd", { exact: true })).toBeVisible();
 
-    const cardResponse = await page.request.get(
-      `${publicPath}/arrival-card?booking=${encodeURIComponent(bookingToken ?? "")}`,
-    );
+    const cardUrl = `${publicPath}/arrival-card?booking=${encodeURIComponent(bookingToken ?? "")}`;
+    const cardResponse = await page.request.get(cardUrl);
     expect(cardResponse.status()).toBe(200);
     expect(cardResponse.headers()["content-disposition"]).toMatch(/attachment/);
     const cardHtml = await cardResponse.text();
@@ -95,6 +112,41 @@ test.describe("the dive arrival arc", () => {
     // The arrival code rides the saved file, encoded into it rather than
     // fetched: the card is opened on a morning with no signal (issue #1600).
     expect(cardHtml).toContain("data:image/png");
+
+    // **The diver who cannot find the card they printed** (issue #1729). The
+    // control is offered only once a card has actually been saved, and the
+    // download above is what saves one — so reopening the thread here is the
+    // gate's own proof as well as the way to the control.
+    const stopCode = page.getByRole("button", { name: "Stop the code on a saved card" });
+    const confirmStop = page.getByRole("button", { name: "Yes, stop the code" });
+    await page.goto(readyPath);
+    await expect(stopCode).toBeVisible();
+    await stopCode.click();
+    await expect(
+      page.getByText(
+        "Stop the code on any card you saved or printed? It will not scan at the counter; save the card again for a new one.",
+      ),
+    ).toBeVisible();
+    await confirmStop.click();
+    await expect(page.getByRole("status")).toContainText(
+      "Your old code no longer scans. Save the card again for a new one.",
+    );
+    // Both halves of the control are gone with the code they stopped — the
+    // trigger *and* the armed confirm, so this cannot pass by the block merely
+    // still being open. There is nothing left to stop until the next download.
+    await expect(stopCode).toHaveCount(0);
+    await expect(confirmStop).toHaveCount(0);
+    await expect(page.getByText("Save arrival card")).toBeVisible();
+
+    // Saving the card again gives a new one, which is the other half of the
+    // sentence the confirm just promised. The code rides the file as a PNG of
+    // that download's own token, so a different image is a different credential.
+    const freshCard = await page.request.get(cardUrl);
+    expect(freshCard.status()).toBe(200);
+    const freshHtml = await freshCard.text();
+    expect(codeImageIn(freshHtml)).not.toBe(codeImageIn(cardHtml));
+    await page.goto(readyPath);
+    await expect(stopCode).toBeVisible();
 
     await openThreadStep(page, "dayof");
     await page.getByRole("radio", { name: "Carry my gear" }).check();

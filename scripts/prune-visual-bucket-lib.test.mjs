@@ -19,6 +19,52 @@ const RECENT = new Date(NOW - 2 * HOUR);
 /** Older than the one-day floor, younger than anything anyone would call stale. */
 const TWO_DAYS_OLD = new Date(NOW - 2 * DAY);
 
+/** Readable stand-ins for a main tip (a merge commit) and a pull request's head commit. */
+const hex = (n) => n.toString(16).padStart(2, "0");
+const tipSha = (i) => `${"a".repeat(38)}${hex(i)}`;
+const headSha = (tip, n) => `${"b".repeat(36)}${hex(tip)}${hex(n)}`;
+
+/**
+ * `main` shaped the way this repository's actually is: every pull request lands
+ * as a merge commit, so main's own tips are the merges — and each merge drags
+ * that pull request's head commits into main's ancestry with dates a minute
+ * either side of the tip they landed on.
+ *
+ * GitHub's `/commits?sha=main` returns that whole set newest-first, which is
+ * the list the pruner reads. Measured on this repository, only 5 of the newest
+ * 30 rows and 11 of the newest 100 are main tips; the rest are those head
+ * commits (issue #1662).
+ */
+function mainHistory({ tips, headsPerTip = 4, tipSpacingMs = 2 * HOUR, now = NOW }) {
+  const rows = [];
+  for (let i = 0; i < tips; i++) {
+    const tipAtMs = now - (i + 1) * tipSpacingMs;
+    rows.push({
+      sha: tipSha(i),
+      parents: [{ sha: tipSha(i + 1) }, { sha: headSha(i, 0) }],
+      commit: { committer: { date: new Date(tipAtMs).toISOString() } },
+    });
+    for (let n = 0; n < headsPerTip; n++) {
+      rows.push({
+        sha: headSha(i, n),
+        parents: [{ sha: headSha(i, n + 1) }],
+        commit: { committer: { date: new Date(tipAtMs - (n + 1) * 60_000).toISOString() } },
+      });
+    }
+  }
+  return rows;
+}
+
+const mainTips = (rows) => rows.map((row) => row.sha).filter((sha) => sha.startsWith("a"));
+
+/** Serves `rows` the way the commits API does: pages of `pageSize`, newest first. */
+function githubPages(rows, pageSize = 100) {
+  return vi.fn(async (url) => {
+    const page = Number(new URL(url).searchParams.get("page") || "1");
+    return { ok: true, json: async () => rows.slice((page - 1) * pageSize, page * pageSize) };
+  });
+}
+
 /** An S3 client that answers `out.json` probes for exactly `shasWithSnapshots`. */
 function probeClient(shasWithSnapshots) {
   return {
@@ -140,6 +186,94 @@ describe("prune-visual-bucket-lib", () => {
       expect(result.verified).toBe(false);
       expect(result.keepShas).toEqual([]);
       expect(result.source).toBe("head_commit_unverified");
+    });
+
+    /**
+     * The bug this file is the regression test for (issue #1662). The candidate
+     * list is every ancestor of `main` newest-first, and four of every five
+     * rows in it is a pull request's head commit — so "keep the ten newest
+     * published ancestors" kept two main tips and spent the other eight slots
+     * on head commits that `MIN_PRUNE_AGE_MS` was already holding. A branch cut
+     * three merges ago then had no fork point left in the bucket, and a run
+     * with no baseline compares nothing.
+     */
+    it("keeps main's own tips, not whatever ancestor published most recently", async () => {
+      const rows = mainHistory({ tips: 6 });
+      const result = await resolveActiveBaseline({
+        bucket: "test-bucket",
+        fetchImpl: githubPages(rows),
+        s3Client: probeClient(rows.map((row) => row.sha)),
+        now: NOW,
+      });
+
+      expect(result.keepShas).toEqual(mainTips(rows));
+      expect(result.verified).toBe(true);
+      expect(result.source).toBe("head_commit");
+    });
+
+    it("keeps a fork point the ten newest published ancestors would have evicted", async () => {
+      const rows = mainHistory({ tips: 6 });
+      // Flat position 10 or worse: outside every slot the old walk had to give.
+      const forkPoint = tipSha(2);
+      expect(rows.findIndex((row) => row.sha === forkPoint)).toBeGreaterThanOrEqual(10);
+
+      const result = await resolveActiveBaseline({
+        bucket: "test-bucket",
+        fetchImpl: githubPages(rows),
+        s3Client: probeClient(rows.map((row) => row.sha)),
+        now: NOW,
+      });
+
+      expect(result.keepShas).toContain(forkPoint);
+      expect(result.keepShas).not.toContain(headSha(0, 0));
+    });
+
+    /**
+     * A count alone re-files the bug it fixes: ten main tips is about twenty
+     * hours at the measured merge rate, and a fork point has been measured at
+     * 34.3 hours old when its branch's visual run published.
+     */
+    it("keeps every main tip inside the age window, past the count", async () => {
+      // Tips six hours apart, so tip 11 lands on the 72-hour edge and tip 12
+      // is outside it: twelve kept where the count alone would have kept ten.
+      const rows = mainHistory({ tips: 20, tipSpacingMs: 6 * HOUR });
+      const result = await resolveActiveBaseline({
+        bucket: "test-bucket",
+        fetchImpl: githubPages(rows),
+        s3Client: probeClient(rows.map((row) => row.sha)),
+        now: NOW,
+      });
+
+      expect(result.keepShas).toHaveLength(12);
+      expect(result.keepShas).toContain(tipSha(11));
+      expect(result.keepShas).not.toContain(tipSha(12));
+    });
+
+    it("keeps the count as a floor when main has gone quiet for a month", async () => {
+      const rows = mainHistory({ tips: 14, tipSpacingMs: 2 * DAY });
+      const result = await resolveActiveBaseline({
+        bucket: "test-bucket",
+        fetchImpl: githubPages(rows),
+        s3Client: probeClient(rows.map((row) => row.sha)),
+        now: NOW,
+      });
+
+      expect(result.keepShas).toEqual(mainTips(rows).slice(0, 10));
+    });
+
+    it("reads more than one page when one does not reach back far enough", async () => {
+      const rows = mainHistory({ tips: 30 });
+      const fetchImpl = githubPages(rows);
+      await resolveActiveBaseline({
+        bucket: "test-bucket",
+        fetchImpl,
+        s3Client: probeClient(rows.map((row) => row.sha)),
+        now: NOW,
+      });
+
+      // 100 rows is 20 tips, which is 40 hours: short of the 72-hour window.
+      expect(fetchImpl.mock.calls.length).toBeGreaterThan(1);
+      expect(new URL(fetchImpl.mock.calls[0][0]).searchParams.get("per_page")).toBe("100");
     });
   });
 

@@ -827,8 +827,8 @@ export const people = pgTable(
     uniqueIndex("people_shop_email_unique")
       .on(table.shopId, sql`lower(${table.email})`)
       .where(sql`${table.deletedAt} is null and ${table.email} is not null`),
-    // Backs the command-palette/diver-roster leading-wildcard ILIKE search
-    // (src/db/search.ts, src/db/divers.ts) — a plain btree can't serve
+    // Backs the leading-wildcard ILIKE search every staff box runs
+    // (`personSearchMatch`, src/db/person-search.ts) — a plain btree can't serve
     // `ilike '%query%'`, only pg_trgm's GIN similarity index can (CR-018).
     index("people_full_name_trgm_idx").using("gin", sql`${table.fullName} gin_trgm_ops`),
     index("people_email_trgm_idx").using("gin", sql`${table.email} gin_trgm_ops`),
@@ -839,7 +839,7 @@ export const people = pgTable(
     // now, and an expression index is what keeps that comparison indexed rather
     // than turning every bare-digit query into a sequential scan. The
     // expression here must stay character-for-character identical to the one in
-    // `src/db/search.ts`, or Postgres will not use this index at all.
+    // `src/db/person-search.ts`, or Postgres will not use this index at all.
     //
     // `[^0-9]` rather than `\D` deliberately: drizzle-kit's migration writer
     // swallows the backslash, so `\D` reached the generated SQL as a bare `D`
@@ -1458,6 +1458,32 @@ export const diveSites = pgTable(
      * tide, which is most sites (ADR 20260907-noaa-tide-predictions).
      */
     tideStationId: text("tide_station_id"),
+    /**
+     * **The shop saying it meant the station above, distance and all** — ADR
+     * 20260907-noaa-tide-predictions' 2026-09-10 amendment, issue #1731.
+     *
+     * The editor prompts a second look when the station sits further than
+     * `IMPLAUSIBLE_STATION_DISTANCE_KM` from the site's own coordinates
+     * (`src/lib/tide-stations.ts`), and a genuinely remote site has no nearer
+     * one to pick: Flower Garden Banks reads Galveston at about 190 km and is
+     * correct. Without an answer that shop reads "check it's the one you
+     * meant" on every visit forever, and the cost lands on the *next* warning
+     * — a crew that learns to click past one learns to click past the Key
+     * Largo reef reading Vaca Key, which is the mistake forty kilometres
+     * exists to catch.
+     *
+     * `not null default false`, never nullable: "never asked" and "answered
+     * no" both mean the sentence renders, and a third state would only give
+     * the export a value nothing can act on.
+     *
+     * **It is about one pairing, not about the site.** Every writer that can
+     * change `tide_station_id` clears it in the same statement
+     * (`src/db/dive-sites.ts`), so a shop that acknowledges Galveston and
+     * later mistypes a different id gets the prompt back. It suppresses one
+     * advisory sentence on one form and is read nowhere else — not by
+     * readiness, not by admission, not by any tide prediction.
+     */
+    tideStationConfirmed: boolean("tide_station_confirmed").notNull().default(false),
     tidePreference: diveSiteTidePreference("tide_preference").notNull().default("any"),
     satelliteImageUrl: text("satellite_image_url"),
     routeImageUrl: text("route_image_url"),
@@ -4462,43 +4488,59 @@ export const shopStripeAccounts = pgTable(
  * the business. Once a shop says "disconnect", the safest thing to hold is
  * nothing.
  */
-export const shopWhatsappAccounts = pgTable("shop_whatsapp_accounts", {
-  shopId: uuid("shop_id")
-    .primaryKey()
-    .references(() => shops.id),
-  /** Meta's id for the sending number — the path segment of the Cloud API send endpoint. */
-  phoneNumberId: text("phone_number_id").notNull(),
-  /** The human-readable number Meta reports for it, shown back to staff for confirmation. */
-  displayPhoneNumber: text("display_phone_number"),
-  /** The WhatsApp Business Account the number belongs to; recorded for support, never sent. */
-  wabaId: text("waba_id"),
-  /**
-   * The shop's Meta access token, sealed with AES-256-GCM (`src/lib/secret-box.ts`)
-   * — never plaintext. This column is the reason `SECRET_ENCRYPTION_KEY` exists:
-   * a token here can send messages as the shop's business, so a database dump
-   * must not be enough to use it.
-   */
-  accessTokenSealed: text("access_token_sealed").notNull(),
-  /**
-   * The six-digit PIN this number was registered with during Embedded Signup,
-   * sealed like the token. DiveDay generates it — the shop never types it — but
-   * Meta demands the same PIN for any later re-registration, and a shop that
-   * cannot re-register is a shop locked out of its own number.
-   */
-  registrationPinSealed: text("registration_pin_sealed"),
-  /**
-   * The approved template courtesy messages are sent through, and its Meta
-   * language code. Stored per shop rather than hard-coded: WhatsApp requires
-   * business-initiated messages to use a template the *shop* got approved, and
-   * a shop whose review went through under a different name must still work.
-   */
-  templateName: text("template_name").notNull(),
-  templateLanguage: text("template_language").notNull(),
-  connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
-  /** Set by the settings page's test send, so staff can see the connection was proven, not just saved. */
-  verifiedAt: timestamp("verified_at", { withTimezone: true }),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const shopWhatsappAccounts = pgTable(
+  "shop_whatsapp_accounts",
+  {
+    shopId: uuid("shop_id")
+      .primaryKey()
+      .references(() => shops.id),
+    /** Meta's id for the sending number — the path segment of the Cloud API send endpoint. */
+    phoneNumberId: text("phone_number_id").notNull(),
+    /** The human-readable number Meta reports for it, shown back to staff for confirmation. */
+    displayPhoneNumber: text("display_phone_number"),
+    /**
+     * The WhatsApp Business Account the number belongs to — and the **tenant key
+     * for everything inbound**, not merely a support note. Meta names the WABA in
+     * `entry[].id` on every webhook delivery, and `shopIdForWhatsAppWaba` is what
+     * turns that into the shop whose bookings a reply keyword acts on. The unique
+     * index below is why that resolution has one answer: without it a chain
+     * completing Embedded Signup for two of its DiveDay shops against one Meta
+     * Business put two rows here, and a diver's message — up to a cancellation —
+     * landed in whichever came back first (issue #1715).
+     *
+     * Nullable on purpose, and Postgres lets nulls repeat under a unique index:
+     * a row connected before a WABA was recorded stays legal.
+     */
+    wabaId: text("waba_id"),
+    /**
+     * The shop's Meta access token, sealed with AES-256-GCM (`src/lib/secret-box.ts`)
+     * — never plaintext. This column is the reason `SECRET_ENCRYPTION_KEY` exists:
+     * a token here can send messages as the shop's business, so a database dump
+     * must not be enough to use it.
+     */
+    accessTokenSealed: text("access_token_sealed").notNull(),
+    /**
+     * The six-digit PIN this number was registered with during Embedded Signup,
+     * sealed like the token. DiveDay generates it — the shop never types it — but
+     * Meta demands the same PIN for any later re-registration, and a shop that
+     * cannot re-register is a shop locked out of its own number.
+     */
+    registrationPinSealed: text("registration_pin_sealed"),
+    /**
+     * The approved template courtesy messages are sent through, and its Meta
+     * language code. Stored per shop rather than hard-coded: WhatsApp requires
+     * business-initiated messages to use a template the *shop* got approved, and
+     * a shop whose review went through under a different name must still work.
+     */
+    templateName: text("template_name").notNull(),
+    templateLanguage: text("template_language").notNull(),
+    connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Set by the settings page's test send, so staff can see the connection was proven, not just saved. */
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("shop_whatsapp_accounts_waba_unique").on(table.wabaId)],
+);
 
 export const shopBackupDestinations = pgTable("shop_backup_destinations", {
   /** One destination per shop, like `shop_whatsapp_accounts` — reconfiguring is an upsert, never a second row. */
@@ -7232,8 +7274,11 @@ export const rentalFitProfiles = pgTable(
      * separately, which is why `rents_drysuit` pushes one packing piece where
      * `rents_wetsuit` pushes two (`src/lib/dive-prep.ts`). A fleet stocking
      * neoprene-sock suits worn with separate rock boots says so in this same
-     * free text ("ML, rock boot 9"): no column records a rock-boot size, and
-     * this is the one field on the fit that reaches the packing list verbatim.
+     * free text ("ML, rock boot 9"): no column records a rock-boot size, so
+     * this is the one size field with no companion column or packing piece for
+     * what it implies — the only one whose free text is load-bearing beyond the
+     * size itself. Every size reaches the packing list verbatim; only this one
+     * carries a second fact with nothing on the list to notice its loss.
      */
     drysuitSize: text("drysuit_size"),
     bootSize: text("boot_size"),
@@ -7248,12 +7293,21 @@ export const rentalFitProfiles = pgTable(
      * exists: since issue 627 the diver's free-text note ("titanium hip, I run
      * heavy") is its own question on `/ready`, saved by `saveRentalFitNote`,
      * which will create this row for a diver who has never touched the gear
-     * form. Every `rents_*` column above defaults to **true**, so without this
-     * discriminator a diver who only left a note would appear on the boat's
-     * packing list renting a BCD, regulator, wetsuit, mask, fins and weights —
-     * six pieces, no sizes, nobody asked for any of them. `rentalFitLine` and
-     * the prep checklist read a null here as "no fit recorded", exactly as they
-     * already read a missing row.
+     * form. **Five** of the eleven `rents_*` columns above default to `true`
+     * (the core kit: BCD, regulator, wetsuit, mask and fins, weights), so
+     * without this discriminator a diver who only left a note would appear on
+     * the boat's packing list renting all five with no sizes, nobody having
+     * asked for any of them. `rentalFitLine` and the prep checklist read a null
+     * here as "no fit recorded", exactly as they already read a missing row.
+     *
+     * That hazard now has a second defence under it rather than only this one:
+     * every writer that can *create* one of these rows lays `NOTHING_RENTED`
+     * (src/lib/rentals.ts) under its insert, including `saveRentalFitNote`
+     * itself — so a note-only row holds eleven explicit `false`s and no longer
+     * hands those five defaults to whichever writer stamps this column next
+     * (`security-reviewer`, issue #1755). The discriminator still earns its
+     * keep: it is what separates a note from a fit for every reader, and no
+     * amount of explicit `false` makes a row with no answers into an answer.
      */
     fitStatedAt: timestamp("fit_stated_at", { withTimezone: true }),
     /**

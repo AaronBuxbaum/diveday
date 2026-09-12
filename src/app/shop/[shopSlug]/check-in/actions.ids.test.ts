@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
+import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { noticeUrl } from "@/lib/staff-notices";
 import { redirectedTo, staffSession } from "@/test/staff-session";
 import { counterQueuePath } from "./focus";
@@ -41,6 +42,7 @@ const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
 const {
   checkInAction,
+  confirmIdentityFromCheckIn,
   markNoShowAction,
   markWaiverInPersonFromCheckIn,
   undoCheckInAction,
@@ -78,13 +80,41 @@ describe("a malformed booking id at the counter", () => {
     ["undoing a check-in", undoCheckInAction],
     ["marking a diver not here", markNoShowAction],
     ["undoing that mark", undoNoShowAction],
-    ["recording a paper waiver", markWaiverInPersonFromCheckIn],
+    // The one door with a fourth bound argument — the queue's search, which
+    // its refusal carries back (issue #1696). A malformed id is refused before
+    // that matters, so it stands in with no search at all.
+    [
+      "confirming a held seat's identity",
+      (shopSlug: string, focusTripId: string | null, formData: FormData) =>
+        confirmIdentityFromCheckIn(shopSlug, focusTripId, null, formData),
+    ],
   ])("settles %s back on the focused departure instead of erroring", async (_label, action) => {
     signIn();
 
     const to = await redirectedTo(() => action(SHOP_SLUG, FOCUS_TRIP_ID, bookingForm(NOT_A_UUID)));
 
     expect(to).toBe(noticeUrl(counterQueuePath(SHOP_SLUG, FOCUS_TRIP_ID), "invalid"));
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  /**
+   * **The paper-waiver door is the one that does not navigate** (issue #1674).
+   * It answers into the form's own `useActionState` so a refusal can hand the
+   * typed values back, so there is no focused-departure path to land on — the
+   * form never left the page. The guard itself is the same one: a truncated id
+   * is refused before the database is reached.
+   */
+  it("refuses a paper waiver in the form rather than navigating", async () => {
+    signIn();
+
+    const state = await markWaiverInPersonFromCheckIn(
+      SHOP_SLUG,
+      FOCUS_TRIP_ID,
+      PAPER_WAIVER_IDLE,
+      bookingForm(NOT_A_UUID),
+    );
+
+    expect(state).toMatchObject({ status: "refused", refusal: "error" });
     expect(getDb).not.toHaveBeenCalled();
   });
 

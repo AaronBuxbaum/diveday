@@ -8,7 +8,7 @@ const DEPARTURE = new Date("2026-09-11T14:00:00.000Z");
 function gate(overrides: Partial<NoShowGateInput> = {}) {
   return noShowGate({
     bookingStatus: "booked",
-    boarded: false,
+    onTheWater: null,
     tripStatus: "scheduled",
     startsAt: DEPARTURE,
     now: new Date(DEPARTURE.getTime() + 10 * MINUTE_MS),
@@ -51,21 +51,29 @@ describe("noShowGate", () => {
   });
 
   /**
-   * **The refusal this gate exists for.** A diver the crew recorded aboard is
-   * on the water; marking them absent would take a person the manifest is
-   * holding off the expected list. It is checked ahead of every other
-   * condition so nothing — a cancelled trip, a closed window, a second tap —
-   * can answer first and hide it.
+   * **The refusal this gate exists for.** A diver the crew's roll call puts on
+   * the water — counted aboard, or recorded as not back from a dive — is a
+   * person the manifest is holding, and marking them absent takes them off the
+   * expected list. It is checked ahead of every other condition so nothing —
+   * a cancelled trip, a closed window, a second tap — can answer first and
+   * hide it.
+   *
+   * Which of the crew's two statements produced the `true` is decided one layer
+   * down, in `onTheWaterByRollCall` (src/db/manifests.ts), because only a
+   * reader of the roll-call trail can tell a dock `not_boarded` ("never left")
+   * from an after-dive one ("did not come back") — and only that reader knows
+   * to ask the crew table as well, for a staffer holding a seat on a trip they
+   * crew. This gate is handed the fact.
    */
-  it("never lets a boarded diver be marked absent, whatever else is true", () => {
-    expect(gate({ boarded: true })).toBe("already_boarded");
-    expect(gate({ boarded: true, bookingStatus: "no_show" })).toBe("already_boarded");
-    expect(gate({ boarded: true, bookingStatus: "cancelled" })).toBe("already_boarded");
-    expect(gate({ boarded: true, tripStatus: "cancelled" })).toBe("already_boarded");
-    expect(gate({ boarded: true, now: new Date(DEPARTURE.getTime() - 3 * HOUR_MS) })).toBe(
+  it("never lets a diver the roll call puts on the water be marked absent", () => {
+    expect(gate({ onTheWater: "boarded" })).toBe("already_boarded");
+    expect(gate({ onTheWater: "boarded", bookingStatus: "no_show" })).toBe("already_boarded");
+    expect(gate({ onTheWater: "boarded", bookingStatus: "cancelled" })).toBe("already_boarded");
+    expect(gate({ onTheWater: "boarded", tripStatus: "cancelled" })).toBe("already_boarded");
+    expect(gate({ onTheWater: "boarded", now: new Date(DEPARTURE.getTime() - 3 * HOUR_MS) })).toBe(
       "already_boarded",
     );
-    expect(gate({ boarded: true, now: new Date(DEPARTURE.getTime() + 12 * HOUR_MS) })).toBe(
+    expect(gate({ onTheWater: "boarded", now: new Date(DEPARTURE.getTime() + 12 * HOUR_MS) })).toBe(
       "already_boarded",
     );
   });

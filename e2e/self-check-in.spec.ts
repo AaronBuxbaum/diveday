@@ -1,5 +1,14 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { manifestRow, openTripFromBoard, openTripTab } from "./helpers";
+import {
+  bookASeatAndOpenThread,
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  manifestRow,
+  openTripFromBoard,
+  openTripTab,
+  seededTripId,
+} from "./helpers";
 
 const DISPLAY_SETTINGS = "/shop/blue-mantis/settings/display";
 /**
@@ -222,6 +231,157 @@ test.describe("self check-in at the counter", () => {
     } finally {
       await visitor.close();
     }
+  });
+
+  /**
+   * **A scanned arrival code, end to end in the browser** (issues #1600 and
+   * #1725).
+   *
+   * The credential exists only as a QR image on a diver's saved arrival card —
+   * the route draws it with `QRCode.toDataURL` and the file holds nothing else
+   * — so a spec cannot read it out of the download without a decoder this
+   * repository deliberately does not carry. `/api/test/seed-arrival-code` mints
+   * one through `issueBookingCapability`, which is the same writer the card
+   * uses, so what is typed below is a code the product could have made.
+   *
+   * The same diver the first test checks in by surname, on purpose: the two
+   * doors have to end on the same card, and a scan that produced a *different*
+   * answer would be the defect worth catching.
+   */
+  test("a scanned code checks the same diver in as a typed surname, and the desk sees it", async ({
+    page,
+    request,
+  }) => {
+    const minted = await request.post("/api/test/seed-arrival-code", {
+      data: { email: "ines.costa@example.com" },
+    });
+    expect(minted.ok()).toBe(true);
+    const { token } = (await minted.json()) as { token: string };
+
+    const seeded = await request.post("/api/test/seed-display-token", {
+      data: { label: "Counter tablet", purpose: "check_in" },
+    });
+    expect(seeded.ok()).toBe(true);
+    const { path } = (await seeded.json()) as { path: string };
+
+    const visitor = await page.context().browser()?.newContext();
+    if (!visitor) throw new Error("no browser to open a signed-out context with");
+    try {
+      const kiosk = makeActivitySafe(await visitor.newPage());
+      await kiosk.goto(path);
+      // One box, and the scanner types into it exactly as a thumb does — a
+      // wedge scanner is a keyboard (`readKioskInput` tells the two apart by
+      // the shape of what arrives, not by which field it came from).
+      await kiosk.getByLabel(KIOSK_BOX).fill(token);
+      await kiosk.getByRole("button", { name: "Check in" }).click();
+      await expect(kiosk.getByText("You’re set, Ines.")).toBeVisible();
+      const answered = await kiosk.locator("main").innerText();
+      expect(answered).toContain(REEF_TRIP);
+      // The scanned path discloses no more than the typed one: not the diver's
+      // full name, and nobody else on the boat.
+      expect(answered).not.toContain(READY_DIVER);
+      expect(answered).not.toContain(BLOCKED_DIVER);
+      // And the code is not left in the address bar of a shared tablet.
+      expect(new URL(kiosk.url()).search).toBe("");
+    } finally {
+      await visitor.close();
+    }
+
+    // The desk's half, which is the point: a scan is an arrival, and it lands
+    // in the same settled state a staffer's own tap produces.
+    await page.goto("/shop/blue-mantis/check-in");
+    const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+    await expect(search).toHaveAttribute("data-hydrated", "true");
+    await search.fill(READY_DIVER);
+    await search.press("Enter");
+    await expect(
+      page.getByRole("button", { name: `Undo check-in for ${READY_DIVER}` }),
+    ).toBeVisible({ timeout: 15_000 });
+  });
+
+  /**
+   * **The code on a card the diver lost** (issue #1729).
+   *
+   * A diver who printed an arrival card and left it in a bag can retire it from
+   * their own thread, and `stopArrivalCodesFromReady` revokes every live
+   * `arrival` row for the booking rather than one identifiable card. That is a
+   * refusal cause the counter did not have before, and what a stopped code
+   * still buys if it scans is a false arrival on a manifest — so it gets the
+   * same one sentence every other miss gets, and it gets it here rather than
+   * only in `src/db/kiosk-check-in.test.ts`.
+   *
+   * Its own departure, today and inside the tablet's six-hour window
+   * (`kioskArrivalsWindow`): a code minted against a boat outside that window
+   * is refused for the *window*, which would make this pass for the wrong
+   * reason and go on passing if the revoke stopped working.
+   */
+  test("a code the diver stopped reads the same as one nobody minted", async ({
+    page,
+    request,
+  }) => {
+    // A create, a public booking, a mint, a revoke and a kiosk visit.
+    test.setTimeout(60_000);
+    const stamp = e2eNow().getTime();
+    const title = `Kiosk code boat ${stamp}`;
+    const email = `kiosk-code-${stamp}@example.com`;
+
+    // 12:00 against the fleet's frozen 09:30 in the shop's own zone: inside the
+    // kiosk's window, and far enough ahead that it has not sailed.
+    await createTrip(page, {
+      title,
+      date: daysFromNow(0),
+      departsAt: "12:00",
+      returnsAt: "14:00",
+    });
+    const tripId = await seededTripId(page, "blue-mantis", title);
+    await page.goto(`/s/blue-mantis/trips/${tripId}`);
+    await bookASeatAndOpenThread(page, "Kiosk Code Diver", email);
+    const readyPath = new URL(page.url()).pathname;
+
+    const minted = await request.post("/api/test/seed-arrival-code", { data: { email } });
+    expect(minted.ok()).toBe(true);
+    const { token } = (await minted.json()) as { token: string };
+
+    // The diver's own control, which renders only once a live `arrival` row
+    // exists — the mint above is one, exactly as a download would be.
+    await page.goto(readyPath);
+    await page.getByRole("button", { name: "Stop the code on a saved card" }).click();
+    await page.getByRole("button", { name: "Yes, stop the code" }).click();
+    await expect(page.getByRole("status")).toContainText("Your old code no longer scans.");
+
+    const seeded = await request.post("/api/test/seed-display-token", {
+      data: { label: "Counter tablet", purpose: "check_in" },
+    });
+    expect(seeded.ok()).toBe(true);
+    const { path } = (await seeded.json()) as { path: string };
+
+    const visitor = await page.context().browser()?.newContext();
+    if (!visitor) throw new Error("no browser to open a signed-out context with");
+    try {
+      const kiosk = makeActivitySafe(await visitor.newPage());
+      await kiosk.goto(path);
+      await kiosk.getByLabel(KIOSK_BOX).fill(token);
+      await kiosk.getByRole("button", { name: "Check in" }).click();
+      await expect(kiosk.getByText("See the desk")).toBeVisible();
+      // It names nobody and says nothing about why — the property every refusal
+      // on this surface shares, and the reason a stopped code cannot be told
+      // from one nobody ever minted.
+      const refused = await kiosk.locator("main").innerText();
+      expect(refused).not.toContain("Kiosk Code Diver");
+      expect(refused).not.toMatch(/stopped|expired|revoked/i);
+    } finally {
+      await visitor.close();
+    }
+
+    // And nothing was written: the diver is still expected, not arrived.
+    await page.goto("/shop/blue-mantis/check-in");
+    const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+    await expect(search).toHaveAttribute("data-hydrated", "true");
+    await search.fill("Kiosk Code Diver");
+    await search.press("Enter");
+    await expect(
+      page.getByRole("button", { name: "Undo check-in for Kiosk Code Diver" }),
+    ).toHaveCount(0);
   });
 
   /**

@@ -141,7 +141,7 @@ export default async function TripPrepPage({
    * tables, and both groupings, so none of them can drift into telling the
    * boat different things about the same piece.
    */
-  const pieceSize = (piece: PrepPiece) => {
+  const pieceDetail = (piece: PrepPiece) => {
     // The count is real; the size deliberately isn't.
     if (piece.fitAtCheckIn) {
       return <span className="font-medium text-warning">{t("trips.prep.fitAtCheckIn")}</span>;
@@ -169,6 +169,32 @@ export default async function TripPrepPage({
     // size to record has nothing to say, because those are different problems.
     return UNSIZED_ITEM_KINDS.includes(piece.kind) ? null : (
       <span className="text-muted">{t("trips.prep.notRecorded")}</span>
+    );
+  };
+  /**
+   * The one thing a size cannot say: the shop's own catalog no longer offers
+   * this piece, and the diver's fit still asks for it.
+   *
+   * The piece is deliberately still on the list. A stored `rents_*` flag
+   * survives the shop dropping that item (issue #1755), so dropping the line
+   * here would be the same silence one layer down — the packer would see
+   * nothing while the fit behind it still records a suit. The size stays too,
+   * because it is what the conversation with the diver is about. What comes
+   * off is everything this flag was making the *other* lines say
+   * (`inShopDrysuit`, `src/lib/dive-prep.ts`).
+   */
+  const pieceSize = (piece: PrepPiece) => {
+    const detail = pieceDetail(piece);
+    if (!piece.notOffered) return detail;
+    const dropped = (
+      <span className="font-medium text-warning">{t("trips.prep.noLongerRented")}</span>
+    );
+    return detail ? (
+      <>
+        {detail} · {dropped}
+      </>
+    ) : (
+      dropped
     );
   };
   /** The same answer in a Size column, where an unsized piece still owes a cell. */

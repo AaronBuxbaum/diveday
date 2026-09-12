@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import { nowDate } from "@/lib/clock";
+import { NOTHING_RENTED } from "@/lib/rentals";
 import type { SelfDeclaredLevel } from "@/lib/self-registration";
 import type { AppDb } from "./client";
 import { findOrCreatePerson } from "./people";
@@ -169,17 +170,9 @@ export async function registerDiverAtShop(
       personId,
       // Sizes without a claim about what they rent: the diver is telling the
       // shop what fits, not ordering equipment. Staff set the rest at prep.
-      rentsBcd: false,
-      rentsRegulator: false,
-      rentsWetsuit: false,
-      rentsMaskFins: false,
-      rentsWeights: false,
-      rentsDiveComputer: false,
-      rentsGopro: false,
-      rentsDrysuit: false,
-      rentsHoodGloves: false,
-      rentsTorch: false,
-      rentsSmb: false,
+      // Spelled from the one list so a new rentable item cannot arrive here as
+      // a piece this form never asked about.
+      ...NOTHING_RENTED,
       wetsuitSize: input.fit.wetsuitSize,
       bootSize: input.fit.bootSize,
       finSize: input.fit.finSize,

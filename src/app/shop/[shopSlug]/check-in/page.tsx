@@ -1,4 +1,3 @@
-import { and, eq, ilike, isNull, notInArray, or } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -18,10 +17,9 @@ import type {
   CheckInQueueRow,
   UndoCheckInOutcome,
 } from "@/db/check-in";
-import { listCheckInQueue, listWalkInTrips } from "@/db/check-in";
+import { listCheckInQueue, listOtherMatchingDivers, listWalkInTrips } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { type MarkNoShowOutcome, noShowSalvage, type UndoNoShowOutcome } from "@/db/no-show";
-import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { upcomingScheduleStats } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -44,11 +42,13 @@ import { type NoticeCodeOf, noticeForForm, noticeFromParam, noticeRole } from "@
 import { hasSailed } from "@/lib/trips";
 import { CounterInstrument } from "./_components/CounterInstrument";
 import { CounterQueue } from "./_components/CounterQueue";
+import type { CounterIdentityCopy } from "./_components/CounterQueueRow";
 import { DepartureChips } from "./_components/DepartureChips";
 import { DepartureMeta } from "./_components/DepartureMeta";
 import type { NoShowSalvageCopy } from "./_components/NoShowScript";
 import {
   checkInAction,
+  confirmIdentityFromCheckIn,
   markNoShowAction,
   markWaiverInPersonFromCheckIn,
   undoCheckInAction,
@@ -174,8 +174,12 @@ const noticeCopy: NoticeMap = {
   // The counter's name-match prompt hands a booking an existing diver's record
   // on a guess, and the seat is held until someone confirms it is the same
   // person (H-13, issue #1556). Said here rather than left for the check-in tap
-  // to refuse: that refusal arrives with the diver at the counter, and the
-  // confirm control is on the trip's guest list.
+  // to refuse: that refusal arrives with the diver at the counter.
+  //
+  // It used to send the staffer to the trip's guest list, which was the only
+  // place the confirm lived. The queue row carries its own now (issue #1696),
+  // so the sentence points at the row instead — the walk the notice was
+  // apologising for is gone.
   "walkin-added-identity-unconfirmed": {
     tone: "warning",
     key: "checkIn.notice.walkinAddedIdentityUnconfirmed",
@@ -212,12 +216,28 @@ const noticeCopy: NoticeMap = {
   // the same rule as checking in: the row moves into the "Not here" group, or
   // back out of it, under the finger that did it.
   //
-  // The safety one is `no-show-already-boarded`: the crew recorded this diver
-  // onto the boat, so the counter is being asked to take a person off the
-  // expected list while somebody may be counting heads at the rail. It is a
-  // refusal with an instruction attached, because the staffer is not wrong to
-  // want it — the roll call is simply the record that outranks the desk.
+  // The safety ones are the two roll-call refusals, and they say different
+  // sentences because the desk's next act differs. `no-show-already-boarded` is
+  // the calm half: the crew recorded this diver onto the boat, so the counter
+  // is being asked to take a person off the expected list while somebody may be
+  // counting heads at the rail. A refusal with an instruction attached, because
+  // the staffer is not wrong to want it — the roll call simply outranks the desk.
   "no-show-already-boarded": { tone: "danger", key: "checkIn.notice.noShowAlreadyBoarded" },
+  // And the loud half: a crew member has recorded that this diver did not come
+  // back from a dive. The desk is standing at the one screen that can reach
+  // the boat and the emergency contact, so the sentence names the fact rather
+  // than the rule that produced it (issue #1704).
+  "no-show-already-missing-after-dive": {
+    tone: "danger",
+    key: "checkIn.notice.noShowAlreadyMissingAfterDive",
+  },
+  // **The identity confirm's one refusal** (issue #1696). Its success has no
+  // entry, for the same reason checking in has none: the row loses its confirm
+  // control and its identity blocker under the finger that did it. This is the
+  // race — a double tap, or a row another staffer cleared while this one was
+  // reading it — and the row it is about looks exactly as it did, so there is
+  // nothing on the page that says it.
+  "identity-not-held": { tone: "neutral", key: "checkIn.notice.identityNotHeld" },
   "no-show-already-marked": { tone: "neutral", key: "checkIn.notice.noShowAlreadyMarked" },
   "no-show-not-booked": { tone: "neutral", key: "checkIn.notice.noShowNotBooked" },
   // Both taps answer this one: nobody fails to show for a boat that never left,
@@ -310,31 +330,10 @@ export default async function CheckInPage({
         )
       : undefined;
   const bookedPersonIds = new Set(queue.map((row) => row.personId));
-  const otherMatchingDivers = query
-    ? await db
-        .select({
-          id: people.id,
-          fullName: people.fullName,
-          email: people.email,
-          phone: people.phone,
-        })
-        .from(people)
-        .innerJoin(personRoles, eq(personRoles.personId, people.id))
-        .where(
-          and(
-            eq(people.shopId, shop.id),
-            eq(personRoles.role, "diver"),
-            isNull(people.deletedAt),
-            bookedPersonIds.size > 0 ? notInArray(people.id, [...bookedPersonIds]) : undefined,
-            or(
-              ilike(people.fullName, `%${query}%`),
-              ilike(people.email, `%${query}%`),
-              ilike(people.phone, `%${query}%`),
-            ),
-          ),
-        )
-        .limit(5)
-    : [];
+  const otherMatchingDivers = await listOtherMatchingDivers(db, shop.id, {
+    query,
+    excludePersonIds: [...bookedPersonIds],
+  });
   // The page's own clock, not a second reading of the wall — everything above
   // this line is anchored to `now`, and a picker offering a boat the queue has
   // already written off is the drift that costs.
@@ -407,6 +406,27 @@ export default async function CheckInPage({
   const recordPaperWaiver = markWaiverInPersonFromCheckIn.bind(null, shopSlug, focusedTripId);
   const markNoShow = markNoShowAction.bind(null, shopSlug, focusedTripId);
   const undoNoShow = undoNoShowAction.bind(null, shopSlug, focusedTripId);
+  // The search is bound too, and only this action takes it: its refusal lands
+  // the staffer back on a queue they very often reached by typing a name, so it
+  // carries the `?q=` along. The surface's other refusals still drop theirs
+  // (issue #1803).
+  const confirmIdentity = confirmIdentityFromCheckIn.bind(null, shopSlug, focusedTripId, query);
+
+  /**
+   * **The identity confirm's words, per row** (issue #1696). The trigger names
+   * the diver because the queue can hold three held seats at once and a run of
+   * identical "Confirm this is…" buttons is one a staffer taps on the wrong
+   * row. Resolved here rather than in the row for the reason every string on
+   * this surface is: `staffTranslator` is server-side only and the locale is
+   * the page's.
+   */
+  const identityCopyFor = (row: CheckInQueueRow): CounterIdentityCopy => ({
+    trigger: t("checkIn.identity.trigger", { name: row.personName }),
+    message: t("checkIn.identity.message", { name: row.personName }),
+    confirm: t("checkIn.identity.confirm"),
+    cancel: t("checkIn.identity.cancel"),
+    confirming: t("checkIn.identity.confirming"),
+  });
 
   // **"Not here?" opens when the boat leaves without them**, and says something
   // different once it is gone — which is why both questions are answered here
@@ -420,7 +440,7 @@ export default async function CheckInPage({
   const noShowClaimFor = (row: CheckInQueueRow): NoShowClaim | null =>
     noShowGate({
       bookingStatus: row.bookingStatus,
-      boarded: row.boarded,
+      onTheWater: row.onTheWater,
       tripStatus: "scheduled",
       startsAt: row.startsAt,
       now,
@@ -752,6 +772,8 @@ export default async function CheckInPage({
               noShowClaimFor={noShowClaimFor}
               markNoShowAction={markNoShow}
               undoNoShowAction={undoNoShow}
+              confirmIdentityAction={confirmIdentity}
+              identityCopyFor={identityCopyFor}
               salvageFor={salvageFor}
               // A boat that has sailed is one the counter is reading rather
               // than working: its receipts are the point, so they arrive open.
@@ -787,6 +809,8 @@ export default async function CheckInPage({
                     noShowClaimFor={noShowClaimFor}
                     markNoShowAction={markNoShow}
                     undoNoShowAction={undoNoShow}
+                    confirmIdentityAction={confirmIdentity}
+                    identityCopyFor={identityCopyFor}
                     salvageFor={salvageFor}
                     // **A search is a lookup, so nothing it found is folded
                     // away.** This branch renders only while `query` is set,
@@ -823,9 +847,7 @@ export default async function CheckInPage({
                         {diver.fullName}
                       </Link>
                       <p className="text-sm text-muted">
-                        {[diver.email, displayStoredPhone(diver.phone, shop.addressCountry)]
-                          .filter(Boolean)
-                          .join(" · ")}
+                        {[diver.email, displayStoredPhone(diver.phone)].filter(Boolean).join(" · ")}
                       </p>
                     </div>
                     {openDepartures.length > 0 ? (

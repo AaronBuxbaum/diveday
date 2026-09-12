@@ -1,13 +1,20 @@
 /**
- * The one shape a phone number is stored and compared in: E.164 — a `+`, the
- * country's calling code, and digits, with nothing else in it
- * (`+13055550110`).
+ * The one shape a phone number is **stored** in: E.164 — a `+`, the country's
+ * calling code, and digits, with nothing else in it (`+13055550110`).
  *
  * Two readers share the table below. `readTypedPhone`
  * (`src/lib/forgiving-fields.ts`) turns what a staffer typed into the grouped
  * string the field shows back to them; `toE164` turns the same text into the
- * string the row holds and every comparison runs on. One table, so the field
- * and the database can never disagree about which country a shop is in.
+ * string the row holds. One table, so the field and the database can never
+ * disagree about which country a shop is in.
+ *
+ * **Stored is not displayed, and it is not compared.** The staff surfaces print
+ * a grouped reading of the column (`displayStoredPhone`), staff search compares
+ * the digits of the query to the digits of the column (`personSearchMatch`,
+ * src/db/person-search.ts), and the inbound router matches on the last seven
+ * (`src/db/inbound-messages.ts`). Assuming those three are one string is issue
+ * #1765: the screen grouped the number, the search box did not, and a staffer
+ * pasting what they were looking at found nobody.
  *
  * Pure and framework-free: the shop's country arrives as a parameter
  * (`shops.address_country`), never read from anywhere in here.
@@ -61,6 +68,32 @@ export const CALLING_CODES: Record<string, string> = {
 /** E.164 allows fifteen digits; seven is the shortest national number above. */
 function inE164Range(digits: string): boolean {
   return digits.length >= 7 && digits.length <= 15;
+}
+
+/**
+ * Whether this string is already the stored shape: a `+` and nothing but
+ * digits, seven to fifteen of them.
+ *
+ * What {@link toE164} answers, and therefore what `people.phone` holds for
+ * every number DiveDay could resolve. A row holding anything else holds text a
+ * writer could not resolve and stored as typed ({@link phoneForStorage}) — an
+ * extension, a note, a number typed where there was no calling code to put in
+ * front of it — which is why a reader that reshapes a stored number asks this
+ * first (`displayStoredPhone`, src/lib/forgiving-fields.ts).
+ */
+export function isE164(value: string): boolean {
+  const digits = value.slice(1);
+  // No leading zero, which is not E.164's rule but is the one that keeps this
+  // predicate honest about its readers. `readTypedPhone` strips a leading `00`
+  // as an international prefix, so `+001234567` would have printed as
+  // `+1 234 567` -- two digits shorter than the row, in front of a staffer
+  // about to dial it, and the one shape where "this value is E.164, so
+  // reshaping it preserves the digits" was false. Unreachable through any
+  // writer, since `toE164` strips the `00` before storing, so this closes a
+  // disagreement between the guard and the reader rather than a live bug
+  // (security review, 2026-09-12).
+  if (digits.startsWith("0")) return false;
+  return value.startsWith("+") && /^\d+$/.test(digits) && inE164Range(digits);
 }
 
 /**

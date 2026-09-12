@@ -8,7 +8,8 @@ import {
   disconnectShopWhatsAppAccount,
   getShopWhatsAppAccount,
   markShopWhatsAppVerified,
-  type WhatsAppKeyRefusal,
+  shopIdForWhatsAppWaba,
+  type WhatsAppConnectRefusal,
   whatsAppProviderForAccount,
 } from "@/db/whatsapp-accounts";
 import { diverTranslator } from "@/i18n/messages";
@@ -45,8 +46,12 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
  * Spelled lower-case kebab, because on this page the code *is* the message-bundle
  * key — the banner renders `whatsapp.notice.<code>` — so a fork between the two
  * spellings shows a staffer nothing at all (src/lib/staff-notices.ts).
+ *
+ * Exported so `page.tsx` can type its tone map `Record<NoticeCodeOf<Notice |
+ * WhatsAppConnectRefusal>, NoticeTone>`: a member added here with no tone entry
+ * there used to render no banner at all, silently and green (issue #1768).
  */
-type Notice =
+export type Notice =
   | "connected"
   | "signup-unavailable"
   | "signup-failed-exchange"
@@ -60,7 +65,8 @@ type Notice =
   | "not-authorized"
   | "no-account"
   | "encryption-key-unset"
-  | "encryption-key-invalid";
+  | "encryption-key-invalid"
+  | "waba-already-connected";
 
 /**
  * What Meta's Embedded Signup popup hands back. All three are opaque ids from
@@ -93,11 +99,11 @@ async function settingsPath(): Promise<{ shopId: string; personId: string; path:
 }
 
 /**
- * `WhatsAppKeyRefusal` rides along beside `Notice` because `src/db` answers in
- * its own snake_case domain spelling; `noticeUrl` normalises it to the kebab the
- * bundle key uses, so the refusal arrives worded rather than silent.
+ * `WhatsAppConnectRefusal` rides along beside `Notice` because `src/db` answers
+ * in its own snake_case domain spelling; `noticeUrl` normalises it to the kebab
+ * the bundle key uses, so the refusal arrives worded rather than silent.
  */
-function done(path: string, notice: Notice | WhatsAppKeyRefusal): never {
+function done(path: string, notice: Notice | WhatsAppConnectRefusal): never {
   revalidateAndRedirect(path, noticeUrl(path, notice));
 }
 
@@ -126,6 +132,30 @@ export async function completeWhatsAppSignupAction(formData: FormData): Promise<
     phoneNumberId: formData.get("phoneNumberId") ?? "",
   });
   if (!parsed.success) done(path, "invalid");
+
+  // Refused before Meta is touched, not only after the write. The WABA is the
+  // tenant key every inbound event is routed on, so one belonging to another
+  // DiveDay shop can never be stored here — and the unique index behind
+  // `connectShopWhatsAppAccount` is the authority on that. What this read buys
+  // is the *order*: registering a number mints a PIN, and registering one whose
+  // row is then refused would leave the number bound to a PIN nobody holds,
+  // which is exactly the lockout `registration_pin_sealed` exists to prevent.
+  //
+  // That order is also a cross-tenant existence oracle, written down here
+  // because it was priced rather than missed. Because the read sits above the
+  // code exchange, any shop's owner or manager can post a WABA id with ten junk
+  // characters for a `code` and tell `waba-already-connected` ("another DiveDay
+  // shop holds it") from `signup-failed-exchange` ("nobody does") without
+  // holding a Meta credential at all. A WABA id is a 15-digit opaque number, so
+  // it confirms a suspicion about a named business rather than enumerating
+  // customers, and the refusal's own words concede the same fact to anyone with
+  // a real code. Accepted for now; #1766 moves the read between step 1 and step
+  // 2 of `completeEmbeddedSignup`, which keeps the PIN property and makes the
+  // oracle cost a valid code. The check is also a check-then-act, so two
+  // simultaneous Connects can both register a number: #1769 (security review,
+  // 2026-09-12).
+  const wabaHolder = await shopIdForWhatsAppWaba(db, parsed.data.wabaId);
+  if (wabaHolder && wabaHolder !== shopId) done(path, "waba-already-connected");
 
   const shop = await getShopById(db, shopId);
   // The template is submitted in the shop's own diver-facing language, with its

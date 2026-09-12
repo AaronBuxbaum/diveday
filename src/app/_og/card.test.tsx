@@ -19,14 +19,29 @@ afterEach(cleanup);
  * These are the tests that would have caught both: one asserts the mark's
  * pixels are *derived* from the one geometry list rather than typed, and one
  * walks the route tree and refuses any card that draws its own chrome — so a
- * fifth card added tomorrow is covered without anybody remembering to add it
- * here.
+ * fifth `opengraph-image.tsx` added tomorrow is covered without anybody
+ * remembering to add it here.
+ *
+ * The third is about the *cost* of a card rather than its pixels: a metadata
+ * convention file in the root segment is attached to every page entry in the
+ * app, so DiveDay's own card is a route handler and this file refuses a root
+ * metadata module that imports a renderer (issue #1709).
  */
 
 const APP = path.join(process.cwd(), "src/app");
 
+/**
+ * DiveDay's own card is a plain route handler rather than a
+ * `src/app/opengraph-image.tsx`, because Next attaches a metadata module to
+ * **every page entry** and that import reached the traced closure of every
+ * route in the app (issue #1709). It is named by exact path and not by
+ * filename: `route.tsx` is the commonest name under `src/app`, and a walk that
+ * collected them all would drag every API handler into these assertions.
+ */
+const NAMED_CARDS = [path.join(APP, "link-card", "route.tsx")];
+
 async function cardFiles(): Promise<string[]> {
-  const found: string[] = [];
+  const found: string[] = [...NAMED_CARDS];
   async function walk(directory: string) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const full = path.join(directory, entry.name);
@@ -38,6 +53,17 @@ async function cardFiles(): Promise<string[]> {
   await walk(APP);
   return found.sort();
 }
+
+/**
+ * The dynamic forms of Next's image metadata conventions. The committed PNGs
+ * (`icon.png`, `apple-icon.png`) are not modules and cost a page entry
+ * nothing; these are the ones that can import a renderer.
+ */
+const METADATA_IMAGE_MODULES = new Set(
+  ["icon", "apple-icon", "opengraph-image", "twitter-image"].flatMap((name) =>
+    ["ts", "tsx", "js", "jsx"].map((extension) => `${name}.${extension}`),
+  ),
+);
 
 /** Line comments first, then blocks — a `//` mentioning `/*` would otherwise eat the file. */
 function stripComments(source: string): string {
@@ -96,11 +122,51 @@ describe("the mark's geometry has one home", () => {
   });
 });
 
+/**
+ * **A metadata module is attached to every page entry in its segment's
+ * subtree**, so the one in the *root* segment is attached to every page entry
+ * in the app. That is how `icon.tsx` and then `opengraph-image.tsx` each put
+ * 3.07 MiB of satori, a bundled font, `resvg.wasm` and `yoga.wasm` into the
+ * traced closure of `/sign-in` and every staff settings form — routes that
+ * render no image at all (issues #1355, #1361, #1709).
+ *
+ * Nothing about that failure is visible: the card is correct, the pages are
+ * correct, and the only symptom is deploy size and cold-start weight. So it is
+ * asserted rather than remembered, and asserted here because this is the file
+ * that already walks the route tree for cards.
+ *
+ * The right shape for a card DiveDay owns app-wide is a **route handler**,
+ * which is its own closure and is attached to nothing — `link-card/route.tsx`
+ * and `pwa-icon-maskable/route.tsx`. A deeper `opengraph-image.tsx` is fine
+ * and stays: its reach is its own subtree, which is the cost of the card that
+ * subtree actually renders.
+ */
+describe("the root segment attaches no image renderer to every page in the app", () => {
+  it("renders DiveDay's own card from a route handler, not a root metadata module", async () => {
+    const rootSegment = await readdir(APP, { withFileTypes: true });
+    const modules = rootSegment
+      .filter((entry) => entry.isFile() && METADATA_IMAGE_MODULES.has(entry.name))
+      .map((entry) => entry.name);
+
+    for (const name of modules) {
+      const source = await readFile(path.join(APP, name), "utf8");
+      expect(
+        source,
+        `src/app/${name} imports a renderer, so every page entry in the app traces @vercel/og. Move it to a route handler and name the URL in src/lib/site-metadata.ts — see issue #1709.`,
+      ).not.toMatch(/from "next\/og"/);
+    }
+
+    // The other half of the pair, so a card that quietly stopped existing
+    // cannot pass this as an empty loop.
+    expect(await readFile(NAMED_CARDS[0], "utf8")).toMatch(/from "next\/og"/);
+  });
+});
+
 describe("every link-preview card wears the shared chrome", () => {
   it("finds all four cards", async () => {
     const files = await cardFiles();
     expect(files.map((file) => path.relative(APP, file))).toEqual([
-      "opengraph-image.tsx",
+      path.join("link-card", "route.tsx"),
       path.join("recap", "[token]", "opengraph-image.tsx"),
       path.join("s", "[shopSlug]", "opengraph-image.tsx"),
       path.join("s", "[shopSlug]", "trips", "[id]", "opengraph-image.tsx"),

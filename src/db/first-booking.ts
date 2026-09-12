@@ -97,9 +97,18 @@ export async function shopFirstBooking(
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(eq(bookings.shopId, shopId))
-    // "First" has to mean one row. Two bookings can share an instant — a
-    // seeding transaction stamps them identically — so the id decides, rather
-    // than the heap.
+    // **The tie-break here is unreachable, and that is the whole point.**
+    // `limit(2)` plus the `rows.length !== 1` test below means the output is a
+    // function of the row *set* and never of its order: with two rows this
+    // reader returns null whichever of them came back first, and with one row
+    // there is nothing to break. So this is the one reader on issue #1753's
+    // list that needed no new key — `asc(bookings.id)` is a `defaultRandom()`
+    // uuid, and no caller, capture or diff can observe which way it went.
+    //
+    // The clause stays because `limit(2)` wants a defined window rather than
+    // the heap's first two, and `asc(bookings.createdAt)` says which two a
+    // reader would expect. If the random-uuid guard the issue proposes ever
+    // lands, this is its exempt case and this comment is the reason.
     .orderBy(asc(bookings.createdAt), asc(bookings.id))
     .limit(2);
 

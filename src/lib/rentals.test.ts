@@ -3,16 +3,23 @@ import {
   DEFAULT_SHOP_RENTAL_ITEMS,
   EMPTY_RENTAL_PRICING,
   hasAnyRentalPricing,
+  NOTHING_RENTED,
   nitroxAvailableOn,
   nitroxCardWanted,
   offeredRentableItems,
+  offeredRentalFitFields,
   quoteRentalFit,
   RENTABLE_ITEMS,
+  RENTAL_FIT_TEXT_LIMITS,
+  type RentalFitField,
   type RentalFitSizes,
   type RentalPricing,
   rentalFitCompleteness,
   SHOP_CATALOG_ITEMS,
+  SIZED_RENTAL_FIT_COLUMN,
+  SIZED_RENTAL_KINDS,
   shopOffersNitrox,
+  sizedRentalKindOfGearKind,
   toRentableKinds,
 } from "./rentals";
 
@@ -432,5 +439,140 @@ describe("rentalFitCompleteness", () => {
       state: "incomplete",
       missing: ["weights"],
     });
+  });
+});
+
+describe("offeredRentalFitFields / NOTHING_RENTED", () => {
+  it("names only the columns the shop's current catalog can answer", () => {
+    // What lets `saveRentalFit` tell a box the diver unticked from a question
+    // no form ever put to them (issue #1755). An unchecked HTML checkbox posts
+    // nothing, so the post alone cannot separate the two and the catalog has to.
+    const fields = offeredRentalFitFields(["wetsuit", "drysuit"]);
+    expect([...fields].sort()).toEqual(["rentsDrysuit", "rentsWetsuit"]);
+    expect(fields.has("rentsBcd")).toBe(false);
+    // A stored catalog holds words from a form and from seed data, so an
+    // unknown one answers for nothing rather than throwing.
+    expect(offeredRentalFitFields(["not_a_kind"]).size).toBe(0);
+    // Nitrox lives in the same stored catalog and has no `rental_fit_profiles`
+    // column at all — it must never widen this set.
+    expect(offeredRentalFitFields(["nitrox"]).size).toBe(0);
+  });
+
+  it("says no to every rentable item, and to exactly those", () => {
+    // A brand-new profile starts here, because five of the eleven columns
+    // default to **true** in the schema: a column no form asked about must not
+    // arrive as six unasked-for pieces on a packing list.
+    //
+    // **Both sides are checked against a third thing**, spelled by hand, or
+    // this assertion cannot fail: `NOTHING_RENTED` is built by mapping
+    // `RENTABLE_ITEMS`, so comparing the two compares one list with itself
+    // (`security-reviewer`, issue #1754). `RentalFitField` is the union the
+    // `rents_*` columns answer to, and `Record<RentalFitField, true>` is the
+    // one shape the compiler will not let be short a member — so a twelfth
+    // column added to the union without a `RENTABLE_ITEMS` entry is a type
+    // error here, rather than a field silently missing from the baseline and
+    // arriving at its `default(true)` on every new row.
+    const EVERY_RENTAL_FIT_FIELD: Record<RentalFitField, true> = {
+      rentsBcd: true,
+      rentsRegulator: true,
+      rentsWetsuit: true,
+      rentsMaskFins: true,
+      rentsWeights: true,
+      rentsDiveComputer: true,
+      rentsGopro: true,
+      rentsDrysuit: true,
+      rentsHoodGloves: true,
+      rentsTorch: true,
+      rentsSmb: true,
+    };
+    const everyField = Object.keys(EVERY_RENTAL_FIT_FIELD).sort();
+    expect(Object.keys(NOTHING_RENTED).sort()).toEqual(everyField);
+    expect(RENTABLE_ITEMS.map((item) => item.field).sort()).toEqual(everyField);
+    expect(Object.values(NOTHING_RENTED).every((value) => value === false)).toBe(true);
+  });
+});
+
+describe("RENTAL_FIT_TEXT_LIMITS", () => {
+  it("is the one cap both writers of rental_fit_profiles read", () => {
+    // THREE schemas must read these, not two: the staff fit editor
+    // (`src/app/shop/[shopSlug]/divers/[personId]/actions.ts`), the diver's
+    // gear form (`src/app/ready/[token]/actions.ts`), and the diver's own shelf
+    // (`src/app/shelf/[token]/actions.ts`). Each posts back whatever staff
+    // stored, so a tighter cap on any of them fails `safeParse` on a form where
+    // every visible box is right — `?error=fit` on the first two, `?error=sizes`
+    // on the shelf. The shelf was missed on the first pass and found by a domain
+    // review; that is what this count is here to stop happening again.
+    //
+    // That was live when this was written: `finSize` was 20 on the diver side
+    // against 40 staff-side, and `weightPreference` 80 against 120, so a
+    // staffer recording a 24-character fin size made that diver's whole gear
+    // form unsaveable (issue #1728).
+    expect(RENTAL_FIT_TEXT_LIMITS.size).toBe(40);
+    expect(RENTAL_FIT_TEXT_LIMITS.weightPreference).toBe(120);
+  });
+});
+
+/**
+ * **What one tracked gear unit teaches the evening** (issue #1174's D14 recall,
+ * widened to the drysuit by issue #1724).
+ *
+ * The mapping had no test of its own, which is how the drysuit stayed out of
+ * the recall for a release after `drysuit_size` arrived: every assertion on it
+ * was a `src/db/gear.test.ts` integration case that happened to send a BCD.
+ */
+describe("sizedRentalKindOfGearKind", () => {
+  it("maps every register kind that has a size column to learn from", () => {
+    expect(sizedRentalKindOfGearKind("bcd")).toBe("bcd");
+    expect(sizedRentalKindOfGearKind("wetsuit")).toBe("wetsuit");
+    expect(sizedRentalKindOfGearKind("boots")).toBe("boots");
+    expect(sizedRentalKindOfGearKind("weights")).toBe("weights");
+    // The register splits mask and fins into separate physical units; the fit
+    // has one `finSize` for the pair, and the shoe size is the fins' half.
+    expect(sizedRentalKindOfGearKind("fins")).toBe("mask_fins");
+  });
+
+  it("maps a drysuit unit to the drysuit fit column (issue #1724)", () => {
+    // `gear_items.size` is free text for every kind, so a drysuit unit meets
+    // `drysuit_size` exactly as loosely as a BCD unit meets `bcd_size`: there
+    // is no second scale to reconcile, which is the question the issue held
+    // itself open on.
+    expect(sizedRentalKindOfGearKind("drysuit")).toBe("drysuit");
+    expect(SIZED_RENTAL_FIT_COLUMN.drysuit).toBe("drysuitSize");
+  });
+
+  it("stays quiet for a unit with no size a fit could hold", () => {
+    // A mask has no size column of its own — the one shoe size answers for
+    // boots and fins. The rest simply have nothing to record: a hood, a torch
+    // and an SMB are one size off the shelf, and a tank's "AL80" is a cylinder,
+    // not a fit.
+    for (const kind of [
+      "mask",
+      "regulator",
+      "dive_computer",
+      "gopro",
+      "tank",
+      "hood",
+      "gloves",
+      "torch",
+      "dpv",
+      "smb",
+      "reel",
+      "camera",
+      "nitrox_analyzer",
+      "o2_kit",
+      "other",
+    ]) {
+      expect(sizedRentalKindOfGearKind(kind)).toBeNull();
+    }
+    // Not a register kind at all, and the signature takes a plain string so
+    // this module never loads the register (ADR 20260815-minimal-gear-register).
+    expect(sizedRentalKindOfGearKind("")).toBeNull();
+    expect(sizedRentalKindOfGearKind("hood_gloves")).toBeNull();
+  });
+
+  it("never answers with a kind the fit has no column for", () => {
+    for (const kind of SIZED_RENTAL_KINDS) {
+      expect(SIZED_RENTAL_FIT_COLUMN[kind]).toBeTruthy();
+    }
   });
 });

@@ -5,7 +5,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { TideStationEcho } from "@/lib/tide-stations";
 import { routeEditorCopy } from "./route-editor-copy";
-import { SiteFields } from "./SiteFields";
+import { SiteFields, type SiteFieldValues } from "./SiteFields";
 import { fieldGuideEditorCopy, landmarkEditorCopy } from "./site-editor-copy";
 
 afterEach(cleanup);
@@ -34,10 +34,53 @@ const FAR: TideStationEcho = {
   far: true,
 };
 
+/**
+ * A stored site as the edit page hands it over, so a test can say what the
+ * shop has already answered. The blank-form tests below pass no values at all,
+ * which is the new-site page's own shape.
+ */
+const STORED: SiteFieldValues = {
+  name: "Molasses Reef",
+  forecastLatitude: 25.0106,
+  forecastLongitude: -80.3764,
+  tideStationId: "8723583",
+  tideStationConfirmed: false,
+  tidePreference: "any",
+  locationName: null,
+  description: null,
+  satelliteImageUrl: null,
+  routeImageUrl: null,
+  routePoints: [],
+  routeLabel: null,
+  routeNote: null,
+  routeZoom: 15,
+  imageUrls: [],
+  marineLife: null,
+  marineLifeDescription: null,
+  difficultyLevel: null,
+  depthRange: null,
+  maxDepthMeters: null,
+  expectedBottomTimeMinutes: null,
+  currentNote: null,
+  divePlan: null,
+  conservationNote: null,
+  fitTone: null,
+  fitNote: null,
+  fieldGuideTipsHeading: null,
+  landmarks: [],
+  creatures: [],
+  minimumCertificationLevel: null,
+  requiredSpecialties: [],
+  requiresNitrox: false,
+  planningNote: null,
+  planningNoteAt: null,
+};
+
 function renderFields(
   tideStation?: TideStationEcho | null,
   depthUnit: DepthUnit = "meters",
   locale: "en-US" | "es-ES" = "en-US",
+  values?: SiteFieldValues,
 ) {
   const translator = locale === "en-US" ? t : staffTranslator(locale);
   render(
@@ -45,6 +88,7 @@ function renderFields(
       t={translator}
       depthUnit={depthUnit}
       tideStation={tideStation}
+      values={values}
       certificationDescription="Who can dive this site."
       routeCopy={routeEditorCopy(translator)}
       landmarkCopy={landmarkEditorCopy(translator)}
@@ -130,5 +174,75 @@ describe("SiteFields — the tide station echo (issue #1468)", () => {
     expect(input).not.toHaveAttribute("aria-invalid", "true");
     const describedBy = input?.getAttribute("aria-describedby") ?? "";
     expect(document.getElementById(describedBy)?.textContent).toContain("Vaca Key");
+  });
+});
+
+/**
+ * **A prompt a shop can answer** — issue #1731.
+ *
+ * Flower Garden Banks reads Galveston at about 190 km and is right; no
+ * threshold both spares that and catches the Key Largo reef reading Vaca Key,
+ * so the instrument is a per-pairing acknowledgement rather than a bigger
+ * number. What the box protects is the *next* warning: a sentence that is
+ * always wrong is one a crew stops reading.
+ */
+describe("SiteFields — answering the tide station prompt (issue #1731)", () => {
+  const confirmedBox = () => document.querySelector('input[name="tideStationConfirmed"]');
+
+  it("offers the box only where there is a question to answer", () => {
+    renderFields(null, "meters", "en-US", STORED);
+    expect(confirmedBox()).toBeNull();
+    cleanup();
+    // A station well inside the threshold asks nothing, so a tick box for it
+    // would be furniture on a form that is already long.
+    renderFields(NEAR, "meters", "en-US", STORED);
+    expect(confirmedBox()).toBeNull();
+    cleanup();
+    renderFields(FAR, "meters", "en-US", STORED);
+    expect(confirmedBox()).toBeInTheDocument();
+    expect(screen.getByText("This is the right station for this site")).toBeInTheDocument();
+  });
+
+  it("stops the sentence once the shop has answered it, and keeps the station named", () => {
+    renderFields(FAR, "meters", "en-US", { ...STORED, tideStationConfirmed: true });
+    expect(screen.queryByText(/from this site’s coordinates/)).toBeNull();
+    // The echo is not the warning: which place those seven digits name is
+    // worth reading whether or not the distance has been accounted for.
+    expect(screen.getByText("8723970 · Vaca Key, FL")).toBeInTheDocument();
+  });
+
+  /**
+   * The box survives the answer. A checked box that vanished would leave the
+   * shop no way to take the acknowledgement back, and the next staffer no way
+   * to see that one had been given.
+   */
+  it("keeps the answered box on the page, ticked", () => {
+    renderFields(FAR, "meters", "en-US", { ...STORED, tideStationConfirmed: true });
+    expect(confirmedBox()).toBeChecked();
+    cleanup();
+    renderFields(FAR, "meters", "en-US", STORED);
+    expect(confirmedBox()).not.toBeChecked();
+  });
+
+  it("asks and answers in Spanish too", () => {
+    renderFields(FAR, "meters", "es-ES", STORED);
+    expect(screen.getByText("Esta es la estación correcta para este sitio")).toBeInTheDocument();
+    cleanup();
+    renderFields(FAR, "meters", "es-ES", { ...STORED, tideStationConfirmed: true });
+    expect(screen.queryByText(/de las coordenadas de este sitio/)).toBeNull();
+  });
+
+  /**
+   * Still a prompt and never a refusal (ADR 20260907-noaa-tide-predictions'
+   * 2026-09-10 amendment): an unanswered far pairing leaves the id the staffer
+   * typed in the field and the control valid, exactly as it did before the box
+   * existed.
+   */
+  it("does not turn the unanswered prompt into a refusal", () => {
+    renderFields(FAR, "meters", "en-US", STORED);
+    const input = document.querySelector('input[name="tideStationId"]');
+    expect(input).toHaveValue("8723583");
+    expect(input).not.toHaveAttribute("aria-invalid", "true");
+    expect(confirmedBox()).not.toBeRequired();
   });
 });

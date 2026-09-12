@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { RowActionForm } from "../RowActionForm";
 
 /**
  * **"Not here?" — the counter's script for the diver who never turned up**
@@ -40,6 +41,13 @@ export type NoShowScriptCopy = {
   confirming: string;
   /** Names the diver — one row's confirm must not read like every other row's. */
   confirmAriaLabel: string;
+  /**
+   * What this script says when the send did not go through. A failed release
+   * used to replace the whole counter with the error boundary (issue #1788):
+   * the script is reached at the desk with the diver's seat in the balance, and
+   * the queue behind it is the last thing a staffer can afford to lose.
+   */
+  sendFailed: string;
 };
 
 export function NoShowScript({
@@ -63,7 +71,7 @@ export function NoShowScript({
       </summary>
       <div className="mt-2 flex flex-wrap items-center gap-3 ps-5">
         <p className="min-w-0 text-sm text-muted">{copy.consequence}</p>
-        <form action={action}>
+        <RowActionForm action={action} sendFailedLabel={copy.sendFailed}>
           <input type="hidden" name="bookingId" value={bookingId} />
           <SubmitButton
             pendingLabel={copy.confirming}
@@ -73,7 +81,7 @@ export function NoShowScript({
           >
             {copy.confirm}
           </SubmitButton>
-        </form>
+        </RowActionForm>
       </div>
     </details>
   );

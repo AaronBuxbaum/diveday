@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { paperGuardianFrom } from "@/app/actions/paper-waiver-fields";
+import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
 import { canPersonConfigureTrips, canPersonRefund } from "@/db/authz";
 import { getBoatById } from "@/db/boats";
 import {
@@ -44,7 +44,7 @@ import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
   cancelOffCadenceSeriesTrips,
-  changeTripCrew,
+  changeTripCrewOutcome,
   getTripWithBooked,
   listTripDiverContacts,
   reinstateTripClearingMinimum,
@@ -57,11 +57,7 @@ import {
   updateTripConditions,
 } from "@/db/trips";
 import { joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
-import {
-  type InPersonWaiverOutcome,
-  recordInPersonWaiver,
-  saveBookingEmergencyContact,
-} from "@/db/waivers";
+import { recordInPersonWaiver, saveBookingEmergencyContact } from "@/db/waivers";
 import { toDiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { isValidCalendarDate } from "@/lib/calendar-date";
@@ -72,6 +68,7 @@ import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { PAPER_WAIVER_IDLE, type PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
@@ -344,35 +341,11 @@ const WAITLIST_NOTICE: Record<Extract<WaitlistOutcome, { ok: false }>["reason"],
 };
 
 /**
- * An in-person waiver refusal's `?notice=` code. Six of the seven share one
- * message — the staffer's next move is the same for every "that row is not what
- * you think it is" — but the seventh is the medical attestation, which is a
- * different act, and the ternary this replaces made the other six invisible.
+ * An in-person waiver refusal no longer has a `?notice=` code at all: it is
+ * answered in the form that produced it, which is also what carries the typed
+ * values back (issue #1674). The nine reasons fold onto the three a staffer can
+ * act on in `paperWaiverRefused`, and the words are in `paperWaiverCopy`.
  */
-const IN_PERSON_WAIVER_NOTICE: Record<
-  Extract<InPersonWaiverOutcome, { ok: false }>["reason"],
-  string
-> = {
-  medical_attestation_required: "waiver-medical-attestation",
-  booking_not_found: "waiver-error",
-  booking_unavailable: "waiver-error",
-  person_not_found: "waiver-error",
-  template_not_found: "waiver-error",
-  staff_not_found: "waiver-error",
-  invalid_signature: "waiver-error",
-  // A minor's paper release with no co-signer, or one whose co-signer cannot be
-  // one — an unusable signature, or a relationship outside the allowed set (ADR
-  // 20260907-guardian-co-signature). The form asks for each field and marks it
-  // required, so reaching either of these means the request did not come from
-  // it: the seventh's company, not its own message.
-  guardian_required: "waiver-error",
-  guardian_invalid: "waiver-error",
-  // This one is different, and used to sit with them (issue 1539). It is what
-  // the form produces for a family who share a legal name, so the staffer who
-  // typed it in can act on it — and "try again" is the one thing guaranteed not
-  // to work, because the input is not wrong in a way retrying fixes.
-  guardian_name_matches_diver: "waiver-guardian-name",
-};
 
 export async function saveDetails(shopSlug: string, tripId: string, formData: FormData) {
   const back = backPath(shopSlug, tripId);
@@ -1175,6 +1148,7 @@ export async function confirmDiverIdentityAction(
     shopId: s.user.shopId,
     bookingId,
     actorPersonId: s.user.personId,
+    door: "roster",
   });
   revalidateAndRedirect(
     back,
@@ -1286,19 +1260,29 @@ export async function saveCourseNextStepAction(
  * banner threw the page back to its top with every disclosure shut — for news
  * the card itself delivers better: the waiver control the finger was just on
  * becomes "Signed on paper · <date>", and the blocker above it clears. Same
- * rule the counter queue already states in its own `noticeCopy` table. A
- * refusal keeps its redirect: the attestation was not given, so there is no
- * new row state to read the answer from.
+ * rule the counter queue already states in its own `noticeCopy` table.
+ *
+ * **A refusal no longer navigates either** (issue #1674). It used to redirect
+ * with a `?notice=`, which remounted the form's uncontrolled inputs empty and
+ * left the staffer retyping the medical tick, the co-signer's name and the
+ * relationship before they could correct the one thing the notice named. It
+ * answers into the form's own `useActionState` instead, carrying those three
+ * values back with the refusal — never through the URL, which is not where a
+ * named minor's guardian's name goes.
  */
 export async function markWaiverInPersonAction(
   shopSlug: string,
   tripId: string,
+  _state: PaperWaiverFormState,
   formData: FormData,
-) {
+): Promise<PaperWaiverFormState> {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
-  if (!bookingId) redirect(noticeUrl(back, "waiver-error"));
+  // No seat on the request at all: the form always carries one here, so this is
+  // not a submission the form made. Answered in the form anyway rather than
+  // redirected, so there is exactly one shape of refusal to read.
+  if (!bookingId) return paperWaiverRefused("booking_not_found", formData);
   const outcome = await recordInPersonWaiver(await getDb(), {
     shopId: s.user.shopId,
     subject: { bookingId },
@@ -1310,15 +1294,11 @@ export async function markWaiverInPersonAction(
     // refuses a section that is not a signature.
     guardian: paperGuardianFrom(formData),
   });
-  if (!outcome.ok) {
-    revalidateAndRedirect(
-      back,
-      noticeUrl(back, IN_PERSON_WAIVER_NOTICE[outcome.reason], {
-        bid: bookingId,
-      }),
-    );
-  }
+  // Nothing was written, so nothing is revalidated: the roster the staffer is
+  // looking at is still true, and the answer is the sentence under the button.
+  if (!outcome.ok) return paperWaiverRefused(outcome.reason, formData);
   revalidatePath(back);
+  return PAPER_WAIVER_IDLE;
 }
 
 /**
@@ -1511,11 +1491,15 @@ export async function updateTripCrewAction(
   shopSlug: string,
   tripId: string,
   change: TripCrewChange,
-): Promise<{ ok: boolean }> {
+): Promise<{ ok: boolean; refusal?: "crew_clash" | "refused" }> {
   const s = (await requireShopSurface(shopSlug)).session;
   const db = await getDb();
-  const success = await changeTripCrew(db, s.user.shopId, tripId, change);
-  if (success) {
+  // The outcome rather than the boolean, because the Crew panel has something
+  // to say about one of the refusals: "you cannot put this person on two boats
+  // at once" is a sentence a staffer can act on, and "that didn't save" is one
+  // they can only tap again over (issue #1695).
+  const outcome = await changeTripCrewOutcome(db, s.user.shopId, tripId, change);
+  if (outcome.ok) {
     // One write path for crew (Today's board and the trip's CrewSection both
     // call this), so the trip's activity log — read from the Trip surface —
     // stays the single record of who touched the crew and when, regardless of
@@ -1541,7 +1525,7 @@ export async function updateTripCrewAction(
     revalidatePath(shopPath(shopSlug, "trips", tripId, "manifest"));
     return { ok: true };
   }
-  return { ok: false };
+  return { ok: false, refusal: outcome.refusal };
 }
 
 const updatePickupSchema = z.object({

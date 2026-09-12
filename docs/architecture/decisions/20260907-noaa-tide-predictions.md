@@ -150,8 +150,42 @@ than slack (the 2026-09-07 amendment above), and a divemaster acts on the conseq
 a row measured. The field's hint also says that CO-OPS covers **US waters only** — a shop in
 Cozumel, Bonaire or the Red Sea has no station to pick, which degrades to silence and is correct,
 but the one that typed the nearest US id was otherwise being told to check something it could not
-act on. Two things this still does not have, both filed rather than guessed at: a way for a
-genuinely remote site to *answer* the sentence, which needs a column on the site row (Flower Garden
-Banks reads Galveston at about 190 km and warns forever) — issue #1731; and the station's name on
+act on. One thing this still does not have, filed rather than guessed at: the station's name on
 the departure line, where the person who needs to know whose tide this is actually reads it —
 issue #1732.
+
+## Amendment 2026-09-12 — the prompt can be answered, once, per pairing
+
+The amendment above left the distance sentence unanswerable, and a prompt with no answer is not a
+prompt. A genuinely remote site has no nearer station to pick: Flower Garden Banks reads Galveston
+at about 190 km and is *correct*, so that shop read "check it's the one you meant" on every visit to
+its own editor, forever, about a pairing nothing was wrong with. The cost does not land there. It
+lands on the next warning — the glossary's RAID entry writes this failure down for the depth
+ceiling, and it is the same shape here: a crew that learns to click past a sentence that is always
+wrong learns to click past the Key Largo reef reading Vaca Key, which is the mistake forty
+kilometres exists to catch.
+
+**Moving the threshold cannot fix it.** To spare 190 km the number has to go above 190 km, and at
+that setting the roughly 75 km Marathon mistake no longer warns. Distance alone does not separate a
+right answer from a wrong one at these magnitudes, so the instrument is a **per-pairing
+acknowledgement** rather than a bigger number: `dive_sites.tide_station_confirmed`, `not null
+default false`, a checkbox under the station field, and the sentence does not render once it is set.
+Not a per-browser dismissal — which station a site reads is a fact about the site, and the next
+staffer on the next laptop deserves the same answer.
+
+The safety property is that **it cannot outlive the id it was given for.** An acknowledgement
+answers one pairing, and the editor posts a new id and a stale tick in the same submission, so every
+writer in `src/db/dive-sites.ts` lands the flag as true only where the incoming id matches the one
+the row still holds — inside the `UPDATE` rather than as a read-then-write, so a concurrent save
+cannot land in the gap. A shop that acknowledges Galveston and then mistypes seven other digits gets
+the prompt back. A tick with no station at all is dropped rather than stored, and "Copy and tailor"
+carries the flag because it copies the coordinates and the station verbatim: same pairing, same
+question, same answer.
+
+Nothing here moves the constraint the amendment above rests on. The station lookup stays in the
+page's render and not in `saveAction`, so a failed lookup still cannot block a save; the flag
+suppresses one advisory sentence on one form and is read by no readiness rule, no admission rule and
+no prediction; and it stays a prompt rather than a refusal — an unanswered far pairing saves exactly
+as it did before the box existed. The box itself stays on the page once ticked, so the shop can take
+the answer back, and it renders only while there is a question: a station inside the threshold, a
+site with no coordinates, and a lookup that answered nothing all ask nothing.

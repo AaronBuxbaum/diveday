@@ -45,6 +45,11 @@ describe("statements the expand/contract rule forbids", () => {
       ['ALTER TABLE "orders" ALTER COLUMN "total_cents" TYPE bigint;', "alter-column-type"],
       ['ALTER TABLE "people" ALTER COLUMN "email" SET NOT NULL;', "set-not-null"],
       ['ALTER TABLE "orders" ALTER COLUMN "currency" DROP DEFAULT;', "drop-default"],
+      ['ALTER TABLE "activity_events" ADD COLUMN "code" text NOT NULL;', "add-column-not-null"],
+      [
+        'ALTER TABLE "activity_events" ADD COLUMN IF NOT EXISTS "code" text NOT NULL;',
+        "add-column-not-null",
+      ],
       ["ALTER TYPE \"public\".\"trip_status\" RENAME VALUE 'draft' TO 'planned';", "rename-type"],
       ['ALTER TYPE "public"."trip_status" RENAME TO "departure_status";', "rename-type"],
     ];
@@ -65,6 +70,69 @@ describe("statements the expand/contract rule forbids", () => {
       "the live deployment still selects and writes this column",
     );
   });
+
+  /**
+   * **A correct refusal that describes the wrong hazard gets waved through.**
+   * A collation change is written as a type change, and the note used to say
+   * "a non-binary-coercible type change rewrites the table and breaks the live
+   * deployment's reads" — every clause of which is false for that shape:
+   * `text` → `text` *is* binary-coercible, no row is rewritten, and what stops
+   * the live deployment is the ACCESS EXCLUSIVE lock held while every index on
+   * the column is rebuilt. An author reads that and concludes the rule is not
+   * about them (issue #1751).
+   */
+  describe("the collation case of alter-column-type", () => {
+    const collation =
+      'ALTER TABLE "people" ALTER COLUMN "full_name" SET DATA TYPE text COLLATE "und-x-icu";';
+
+    it("still refuses it, under the same rule id the existing marker names", () => {
+      // `20260911200158_person-name-collation`'s acknowledgement says
+      // `alter-column-type`; a new rule id would have invalidated it.
+      expect(ruleIdsFor(collation)).toEqual(["alter-column-type"]);
+    });
+
+    it("names the index rebuild and the lock, which is the cost it actually has", () => {
+      const message = problems(collation)[0];
+      expect(message).toContain("rebuilds every index on the column");
+      expect(message).toContain("ACCESS EXCLUSIVE");
+      // Lock *acquisition* is the half an author cannot see in the statement:
+      // it queues behind any open transaction on the table, so the window a
+      // user feels is set by the slowest transaction in flight.
+      expect(message).toContain("queues behind any open transaction");
+    });
+
+    it("does not tell a plain type change about a rebuild it does not do", () => {
+      // The leaves-alone direction: the added sentence is conditional on the
+      // statement, not bolted onto every match.
+      const message = problems('ALTER TABLE "orders" ALTER COLUMN "total_cents" TYPE bigint;')[0];
+      expect(message).toContain("rewrites every row");
+      expect(message).not.toContain("rebuilds every index on the column");
+    });
+
+    it("still tells a rewrite that carries a COLLATE clause that it rewrites rows", () => {
+      // The trap in giving collation its own rule: the statement says which
+      // collation it wants and never what the type *was*, so
+      // `SET DATA TYPE varchar(40) COLLATE "C"` is a genuine rewrite wearing a
+      // COLLATE clause. A rule that matched `TYPE … COLLATE` and swapped in the
+      // gentler note would make this guard less safe than it was.
+      const message = problems(
+        'ALTER TABLE "people" ALTER COLUMN "full_name" SET DATA TYPE varchar(40) COLLATE "C";',
+      )[0];
+      expect(message).toContain("rewrites every row");
+      expect(message).toContain("rebuilds every index on the column");
+    });
+
+    it("leaves the sibling rules' notes naming their own live code", () => {
+      // Checked here rather than assumed: `set-not-null` and `drop-default`
+      // share the `ALTER COLUMN` shape and could have drifted the same way.
+      expect(problems('ALTER TABLE "people" ALTER COLUMN "email" SET NOT NULL;')[0]).toContain(
+        "the live deployment still writes NULL",
+      );
+      expect(problems('ALTER TABLE "orders" ALTER COLUMN "currency" DROP DEFAULT;')[0]).toContain(
+        "inserts from the live deployment that omit the column start failing",
+      );
+    });
+  });
 });
 
 describe("statements the expand/contract rule calls safe", () => {
@@ -77,6 +145,18 @@ describe("statements the expand/contract rule calls safe", () => {
       'CREATE TABLE "push_subscriptions" ("id" uuid PRIMARY KEY, "endpoint" text NOT NULL);',
       'ALTER TABLE "course_inquiries" ADD COLUMN "preferred_date" date;',
       'ALTER TABLE "shops" ADD COLUMN "temperature_unit" text DEFAULT \'c\' NOT NULL;',
+      // A default is what makes an added NOT NULL column expand-shaped: the
+      // previous release's inserts omit the column and still succeed. Either
+      // keyword order, and drizzle's cast-suffixed enum form.
+      'ALTER TABLE "shops" ADD COLUMN "temperature_unit" text NOT NULL DEFAULT \'c\';',
+      'ALTER TABLE "shops" ADD COLUMN "inbound_email_token" uuid DEFAULT gen_random_uuid() NOT NULL;',
+      'ALTER TABLE "dive_sites" ADD COLUMN "tide_preference" "dive_site_tide_preference" DEFAULT \'any\'::"dive_site_tide_preference" NOT NULL;',
+      // A new table's own NOT NULL columns are not added to anything the
+      // previous release writes, so `CREATE TABLE` must stay out of this rule.
+      'CREATE TABLE "arrivals" ("id" uuid PRIMARY KEY, "code" text NOT NULL);',
+      // The expand-shaped way to tighten a column, which reads as `NOT NULL`
+      // to anything matching keywords loosely enough to catch a bare `ADD`.
+      'ALTER TABLE "people" ADD CONSTRAINT "people_email_present" CHECK ("email" IS NOT NULL) NOT VALID;',
       'CREATE INDEX "trips_shop_start_idx" ON "trips" USING btree ("shop_id","starts_at");',
       'CREATE INDEX CONCURRENTLY "orders_email_trgm" ON "orders" USING gin ("email" gin_trgm_ops);',
       'CREATE UNIQUE INDEX "shops_slug_unique" ON "shops" USING btree ("slug");',
@@ -107,6 +187,57 @@ describe("statements the expand/contract rule calls safe", () => {
       'ALTER TYPE "public"."trip_status" ADD VALUE \'blown_out\';--> statement-breakpoint',
       'ALTER TABLE "trips" ADD COLUMN "blown_out_at" timestamp with time zone;--> statement-breakpoint',
       'CREATE INDEX "trips_blown_out_idx" ON "trips" USING btree ("blown_out_at");',
+    ].join("\n");
+    expect(problems(sql)).toEqual([]);
+  });
+});
+
+describe("a NOT NULL column added with no default", () => {
+  const add = 'ALTER TABLE "activity_events" ADD COLUMN "code" text NOT NULL;';
+  const reason = "pre-pilot, no users, H-49 — the table is emptied in the same migration";
+
+  it("names the inserts it breaks, not the keyword it saw", () => {
+    expect(problems(add)[0]).toContain("cannot name a column that did not exist yet");
+  });
+
+  it("is excused by a marker naming the column", () => {
+    const sql = `-- diveday:allow-destructive add-column-not-null activity_events.code: ${reason}\n${add}`;
+    expect(problems(sql)).toEqual([]);
+  });
+
+  it("judges each added column on its own clause", () => {
+    // The hole a whole-statement search for `DEFAULT` would leave: one clause's
+    // default vouching for another clause's bare NOT NULL. Asserted in both
+    // orders, because a scan that stops at the first match only fails in one.
+    const defaultFirst =
+      'ALTER TABLE "shops" ADD COLUMN "unit" text DEFAULT \'c\' NOT NULL, ADD COLUMN "code" text NOT NULL;';
+    const bareFirst =
+      'ALTER TABLE "shops" ADD COLUMN "code" text NOT NULL, ADD COLUMN "unit" text DEFAULT \'c\' NOT NULL;';
+    expect(ruleIdsFor(defaultFirst)).toEqual(["add-column-not-null"]);
+    expect(ruleIdsFor(bareFirst)).toEqual(["add-column-not-null"]);
+
+    // The same trap with the `DEFAULT` in a sibling action rather than a
+    // sibling column, where the keyword is not in the added column's clause at
+    // all.
+    const siblingSetDefault =
+      'ALTER TABLE "shops" ADD COLUMN "code" text NOT NULL, ALTER COLUMN "unit" SET DEFAULT \'c\';';
+    expect(ruleIdsFor(siblingSetDefault)).toEqual(["add-column-not-null"]);
+  });
+
+  it("does not fire on a type whose own punctuation carries a comma", () => {
+    const sql = 'ALTER TABLE "orders" ADD COLUMN "rate" numeric(10, 2) DEFAULT 0 NOT NULL;';
+    expect(problems(sql)).toEqual([]);
+  });
+
+  it("reads the live migration that prompted the rule", () => {
+    // `20260910215916_activity_events_code_and_params` passed this guard
+    // unasked before the rule existed (issue #1659), while its own prose
+    // described the outage in detail. Both statements it adds are here: the
+    // bare one needs its marker, the defaulted one must not ask for one.
+    const sql = [
+      `-- diveday:allow-destructive add-column-not-null activity_events.code: ${reason}`,
+      add,
+      'ALTER TABLE "activity_events" ADD COLUMN "params" jsonb DEFAULT \'{}\' NOT NULL;',
     ].join("\n");
     expect(problems(sql)).toEqual([]);
   });

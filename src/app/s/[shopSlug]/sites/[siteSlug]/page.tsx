@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { cache } from "react";
 import {
   TripLookFor,
   TripMoments,
@@ -21,7 +22,7 @@ import {
   listDiveSiteBriefingExtras,
   listUpcomingDeparturesForSite,
 } from "@/db/dive-sites";
-import { getShopBySlug } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { requestTranslator } from "@/i18n/request";
 import { depthText } from "@/i18n/unit-labels";
@@ -39,16 +40,23 @@ import { capacityLabel } from "@/lib/trips";
 // that can least afford to wait on a database round trip for its first pixel.
 export const instant = true;
 
-/** The site row a public URL names, with its shop — or nothing, twice over. */
-async function resolveSite(shopSlug: string, siteSlug: string) {
+/**
+ * The site row a public URL names, with its shop — or nothing, twice over.
+ *
+ * Memoized for the render: `generateMetadata` and the page body below both
+ * need the same shop and the same site, and they used to read each of them
+ * twice (issue #1737). `cache()` here is request-scoped, so a site the shop
+ * renames is renamed on the next load.
+ */
+const resolveSite = cache(async (shopSlug: string, siteSlug: string) => {
   const slug = parseDiveSiteSlug(siteSlug);
   if (!slug) return null;
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) return null;
   const site = await getDiveSiteBySlug(db, shop.id, slug);
   return site ? { db, shop, site } : null;
-}
+});
 
 export async function generateMetadata({
   params,

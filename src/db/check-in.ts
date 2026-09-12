@@ -6,11 +6,11 @@ import {
   eq,
   gt,
   gte,
-  ilike,
   inArray,
   isNull,
   lte,
   ne,
+  notInArray,
   or,
 } from "drizzle-orm";
 import { isMinorOnDate } from "@/lib/age";
@@ -28,7 +28,13 @@ import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { giftGiversByBooking } from "./gifts";
-import { departureRollCallForBooking, listDepartureBoardedBookingIds } from "./manifests";
+import {
+  departureRollCallForBooking,
+  listAfterDiveRollCallByTrip,
+  listDepartureBoardedBookingIds,
+  type OnTheWater,
+} from "./manifests";
+import { personSearchMatch } from "./person-search";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
 import {
   activityEvents,
@@ -36,6 +42,7 @@ import {
   bookings,
   diveSupportNeeds,
   people,
+  personRoles,
   priorVisits,
   shops,
   trips,
@@ -77,6 +84,23 @@ export type CheckInQueueRow = {
    * UX persona lens 17).
    */
   boarded: boolean;
+  /**
+   * **The crew's own roll call puts this diver on the water**, which is a wider
+   * question than the badge above and is asked for a different reason: it is
+   * what `noShowGate` refuses on (src/lib/no-show.ts). True on a `boarded`
+   * standing at **any** checkpoint, and on a `not_boarded` standing at an
+   * **after-dive** one — "did not come back from the dive" rather than "never
+   * came", which is the manifest holding them as missing.
+   *
+   * Separate from `boarded` rather than replacing it, because the two are
+   * genuinely different facts: the badge says the crew counted this diver onto
+   * the boat at the dock, and this says the shop's records place them at sea.
+   * Feeding the gate the badge's narrower answer is what drew "Did not dive?"
+   * over a diver the crew were still looking for — the writer refused the tap,
+   * so no seat was lost, but the counter spent two taps inviting the desk to
+   * write off a missing person (dive-domain-expert review, issue #1704).
+   */
+  onTheWater: OnTheWater;
   /**
    * This seat's arrival was **self-reported at the lobby tablet**, not seen by
    * a staffer (N-24). The counter still counts them as here — they very
@@ -130,9 +154,18 @@ export type CheckInQueueRow = {
  * The counter queue is intentionally a bounded, day-of read: the arrivals lens
  * on the shared operational horizon (`src/lib/operational-window.ts`), never a
  * freestanding window of its own. A scanner that types a booking id into the
- * search box gets the same result as a name/email search, while the default
- * view stays small enough to use one-handed on a phone. Readiness always comes
- * from the shared service, never a second gate.
+ * search box gets the same result as a name/email/phone search, while the
+ * default view stays small enough to use one-handed on a phone. Readiness
+ * always comes from the shared service, never a second gate.
+ *
+ * The person half of the search is `personSearchMatch`
+ * (`src/db/person-search.ts`), the same predicate
+ * {@link listOtherMatchingDivers} runs — and that is load-bearing, not tidiness.
+ * This page decides who is "already on today's list" from the rows *this* query
+ * returns, so a query shape the queue cannot answer but the other lookup can
+ * puts a diver who is booked today under the heading for divers who are not,
+ * with a button offering to seat them again. The queue used to match name and
+ * email only, so a phone number did exactly that (issue #1765).
  */
 export async function listCheckInQueue(
   db: AppDb,
@@ -143,11 +176,7 @@ export async function listCheckInQueue(
   const arrivals = arrivalsWindow(now);
   const query = options.query?.trim() ?? "";
   const queryFilter = query
-    ? or(
-        ilike(people.fullName, `%${query}%`),
-        ilike(people.email, `%${query}%`),
-        isUuid(query) ? eq(bookings.id, query) : undefined,
-      )
+    ? or(personSearchMatch(query), isUuid(query) ? eq(bookings.id, query) : undefined)
     : undefined;
   const rows = await db
     .select({
@@ -188,6 +217,10 @@ export async function listCheckInQueue(
     readinessByBooking.set(row.booking.id, row.readiness);
   }
   const boardedBookingIds = await listDepartureBoardedBookingIds(db, shopId, tripIds);
+  // The other half of what "on the water" means, for the no-show door. One
+  // grouped query for the queue's trips, beside the departure read rather than
+  // instead of it — the badge needs the dock and the gate needs both.
+  const afterDiveByTrip = await listAfterDiveRollCallByTrip(db, shopId, tripIds);
   const selfReportedBookingIds = await listSelfReportedArrivalBookingIds(
     db,
     shopId,
@@ -207,6 +240,9 @@ export async function listCheckInQueue(
     giftGiverName: claimedAt === null ? (giftGivers.get(row.bookingId) ?? null) : null,
     bookingStatus: row.bookingStatus as "booked" | "checked_in" | "no_show",
     boarded: boardedBookingIds.has(row.bookingId),
+    onTheWater: boardedBookingIds.has(row.bookingId)
+      ? "boarded"
+      : (afterDiveByTrip.get(row.tripId)?.get(row.bookingId) ?? null),
     selfReported: selfReportedBookingIds.has(row.bookingId),
     missingEmergencyContact: !emergencyContactName || !emergencyContactPhone,
     firstVisit: history.firstVisitBookingIds.has(row.bookingId),
@@ -345,6 +381,57 @@ export async function listWalkInTrips(
     .groupBy(trips.id)
     .having(gt(trips.capacity, count(bookings.id)))
     .orderBy(asc(trips.startsAt));
+}
+
+export type OtherMatchingDiver = {
+  id: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+};
+
+/**
+ * Divers the counter's search found who are **not** on today's list — the
+ * "somebody is standing here and their name is not in the queue" case, which
+ * ends in seating them onto one of `listWalkInTrips`' departures.
+ *
+ * `excludePersonIds` is who the queue already showed, so nobody appears under
+ * both headings. Read from the queue the same search produced, which is why
+ * this runs `personSearchMatch` and {@link listCheckInQueue} runs it too: a
+ * query one of them can answer and the other cannot is a booked diver offered
+ * a second seat (issue #1765).
+ *
+ * Lived in the check-in page as an inline `select` until that mismatch made it
+ * the reported bug; a query nothing could test is how the two halves of one
+ * screen came to disagree.
+ */
+export async function listOtherMatchingDivers(
+  db: AppDb,
+  shopId: string,
+  options: { query?: string; excludePersonIds?: string[]; limit?: number } = {},
+): Promise<OtherMatchingDiver[]> {
+  const query = options.query?.trim() ?? "";
+  if (!query) return [];
+  const excluded = options.excludePersonIds ?? [];
+  return db
+    .select({
+      id: people.id,
+      fullName: people.fullName,
+      email: people.email,
+      phone: people.phone,
+    })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        eq(personRoles.role, "diver"),
+        isNull(people.deletedAt),
+        excluded.length > 0 ? notInArray(people.id, excluded) : undefined,
+        personSearchMatch(query),
+      ),
+    )
+    .limit(options.limit ?? 5);
 }
 
 /**

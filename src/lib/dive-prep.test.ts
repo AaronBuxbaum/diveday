@@ -946,6 +946,168 @@ describe("divers with an incomplete fit", () => {
   });
 });
 
+/**
+ * **A shop that drops an item does not get to change what the rest of the list
+ * says.**
+ *
+ * `rents_drysuit` survives the shop unticking drysuit in its catalog, which is
+ * correct (issue #1755): the diver stated it, nobody retracted it, and a
+ * catalog edit is not the diver speaking. What the read side did with that
+ * surviving flag was the unfinished half — it still suppressed the weights
+ * number, still sized fins up over a boot that was not coming, and still raised
+ * the card advisory, all three of them derived from a flag the shop's own
+ * catalog contradicted. None of the three is about the drysuit *piece*; each is
+ * a claim about what else changes because a rental suit is going out.
+ *
+ * The piece itself stays, marked. A silent filter at the read would be the same
+ * failure the writer refuses, one layer down.
+ */
+describe("a piece the shop stopped renting", () => {
+  const drysuitDiver: RentalFit = {
+    ...fullFit,
+    rentsDrysuit: true,
+    drysuitSize: "ML",
+    rentsWeights: true,
+    weightPreference: "12 lb with 3 mm suit",
+    rentsMaskFins: true,
+    finSize: "US 9",
+  };
+  /** Everything the fit above asks for, except the suit. */
+  const noDrysuits = ["bcd", "regulator", "wetsuit", "mask_fins", "weights"];
+  const withDrysuits = [...noDrysuits, "drysuit"];
+
+  it("keeps the drysuit on the list and says the shop no longer rents it", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [diver({ bookingId: "b1", fullName: "Dry Dana", fit: drysuitDiver })],
+      plannedDives: 1,
+      offeredKinds: noDrysuits,
+    });
+    // Still there, still sized: the size is what the conversation with the
+    // diver is about, and a line that vanished would tell the packer nothing
+    // while the fit behind it still records a suit.
+    expect(lineFor(checklist, "drysuit", "ML")).toMatchObject({
+      count: 1,
+      notOffered: true,
+      divers: ["Dry Dana"],
+    });
+    const pieces = checklist.diverLines[0]?.items ?? [];
+    expect(pieces.find((piece) => piece.kind === "drysuit")).toMatchObject({
+      size: "ML",
+      notOffered: true,
+    });
+  });
+
+  it("gives the diver their stated weighting back", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [diver({ bookingId: "b1", fullName: "Dry Dana", fit: drysuitDiver })],
+      plannedDives: 1,
+      offeredKinds: noDrysuits,
+    });
+    // No suit off this wall, so nothing is adding two to four kilos and there
+    // is no correction to make. Withholding the most safety-relevant number in
+    // the fit over a suit nobody is handing over is the expensive direction:
+    // under-weighted is the diver who cannot hold a safety stop.
+    expect(lineFor(checklist, "weights", "12 lb with 3 mm suit")).toMatchObject({
+      count: 1,
+      drysuitWeightCheck: false,
+      divers: ["Dry Dana"],
+    });
+    expect(checklist.lines.some((line) => line.drysuitWeightCheck)).toBe(false);
+  });
+
+  it("gives the diver ordinary fin sizing back", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [diver({ bookingId: "b1", fullName: "Dry Dana", fit: drysuitDiver })],
+      plannedDives: 1,
+      offeredKinds: noDrysuits,
+    });
+    // "Size up over the boot" packs two to three sizes too big with no boot in
+    // the picture, and a fin that loose comes off on a drift dive.
+    expect(lineFor(checklist, "mask_fins", "US 9")).toMatchObject({
+      count: 1,
+      drysuitFinFit: false,
+      notOffered: false,
+    });
+    expect(checklist.lines.some((line) => line.drysuitFinFit)).toBe(false);
+  });
+
+  it("says the same thing on the roll call and the offline manifest", () => {
+    // `rentalFitLine` is what the rail reads, and handed the same catalog it
+    // cannot contradict the packing list.
+    const line = rentalFitLine(drysuitDiver, noDrysuits);
+    const items = line.state === "rents" ? line.items : [];
+    expect(items.find((item) => item.kind === "weights")).toEqual({
+      kind: "weights",
+      size: "12 lb with 3 mm suit",
+    });
+    expect(items.find((item) => item.kind === "mask_fins")).toEqual({
+      kind: "mask_fins",
+      size: "US 9",
+    });
+  });
+
+  it("leaves all three alone while the shop still rents drysuits", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [diver({ bookingId: "b1", fullName: "Dry Dana", fit: drysuitDiver })],
+      plannedDives: 1,
+      offeredKinds: withDrysuits,
+    });
+    // The mirror case: the catalog is the discriminator, never the flag alone.
+    expect(lineFor(checklist, "weights", null)).toMatchObject({ drysuitWeightCheck: true });
+    expect(lineFor(checklist, "mask_fins", "US 9")).toMatchObject({ drysuitFinFit: true });
+    expect(lineFor(checklist, "drysuit", "ML")).toMatchObject({ notOffered: false });
+  });
+
+  it("leaves all three alone when no catalog was handed over", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [diver({ bookingId: "b1", fullName: "Dry Dana", fit: drysuitDiver })],
+      plannedDives: 1,
+    });
+    // Over-including is the safe direction for a packing list, and it is what
+    // `rentalFitCompleteness` already does with an absent catalog.
+    expect(lineFor(checklist, "weights", null)).toMatchObject({ drysuitWeightCheck: true });
+    expect(lineFor(checklist, "drysuit", "ML")).toMatchObject({ notOffered: false });
+  });
+
+  it("marks a dropped piece that never had a size to show", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Torch Tomas",
+          fit: { ...fullFit, rentsTorch: true },
+        }),
+      ],
+      plannedDives: 1,
+      offeredKinds: noDrysuits,
+    });
+    // A torch has no size to carry, so the mark is the only thing the line can
+    // say — and without it the row would read as an ordinary piece to pull.
+    expect(lineFor(checklist, "torch", null)).toMatchObject({ count: 1, notOffered: true });
+    expect(lineFor(checklist, "bcd", "M")).toMatchObject({ notOffered: false });
+  });
+
+  it("reads boots off the wetsuit, which is the only entry that exists", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [diver({ bookingId: "b1", fullName: "Wet Wanda" })],
+      plannedDives: 1,
+      offeredKinds: withDrysuits,
+    });
+    // Boots are not a catalog entry of their own — nothing ticks them, they
+    // ride along with the suit — so asking the catalog about `boots` directly
+    // would read every shop on earth as having dropped them.
+    expect(lineFor(checklist, "boots", "9")).toMatchObject({ notOffered: false });
+    // And a shop that drops the suit drops its boots with it.
+    const dropped = buildDivePrepChecklist({
+      divers: [diver({ bookingId: "b1", fullName: "Wet Wanda" })],
+      plannedDives: 1,
+      offeredKinds: ["bcd", "regulator", "mask_fins", "weights"],
+    });
+    expect(lineFor(dropped, "boots", "9")).toMatchObject({ notOffered: true });
+    expect(lineFor(dropped, "wetsuit", "5mm M")).toMatchObject({ notOffered: true });
+  });
+});
+
 describe("the same packing list grouped by diver", () => {
   it("regroups exactly the pieces the by-item rows carry, one row per diver", () => {
     const checklist = buildDivePrepChecklist({

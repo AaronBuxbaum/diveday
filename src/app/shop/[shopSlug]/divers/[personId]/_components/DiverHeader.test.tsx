@@ -19,7 +19,7 @@ function diver(): DiverProfile {
       id: "person-1",
       fullName: "Mira Castellanos",
       email: "mira@example.test",
-      phone: "+1 305 555 0142",
+      phone: "+13055550142",
       diveInsurance: null,
       dateOfBirth: null,
       emergencyContactName: null,
@@ -51,6 +51,23 @@ function renderHeader({
     />,
   );
 }
+
+/**
+ * `people.phone` holds E.164 since #1547 (`storedPhone`, src/db/person-phone.ts),
+ * so this line read `+13055550142` — right, and eleven digits in a row for the
+ * staffer reading it aloud while the diver stands at the counter. The grouping
+ * is display only: the `tel:` the same anchor carries is still the stored value,
+ * which is what a tap dials (#1712).
+ */
+describe("the diver's phone number", () => {
+  it("groups the stored number and still dials the stored one", () => {
+    const { container } = renderHeader();
+    const link = container.querySelector<HTMLAnchorElement>('a[href^="tel:"]');
+
+    expect(link?.textContent).toBe("+1 305 555 0142");
+    expect(link?.getAttribute("href")).toBe("tel:+13055550142");
+  });
+});
 
 describe("DiverHeader edit disclosure", () => {
   it("keeps the summary in the action row while its full-width form is open", () => {

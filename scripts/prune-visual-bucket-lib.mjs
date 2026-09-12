@@ -12,13 +12,65 @@ export const DEFAULT_BRANCH = "main";
 export const COMMIT_SHA = /^[0-9a-f]{40}$/i;
 
 /**
- * How many recent main baselines to keep, not one. reg-suit's expected key is
- * the *parent* on a push to main and the *fork point* on a pull request
- * (`scripts/reg-suit-keys.mjs`), so keeping only the newest leaves every open
- * branch comparing against a prefix that was deleted overnight — and a run with
- * no baseline reports nothing changed, which reads exactly like nothing broke.
+ * The floor under how *many* main baselines survive, however quiet main gets.
+ *
+ * reg-suit's expected key is the *parent* on a push to main and the *fork
+ * point* on a pull request (`scripts/reg-suit-keys.mjs`), so this is the number
+ * that decides whether an open branch has anything to compare against at all.
+ *
+ * It counts commits on main's **first-parent chain** — main's own tips, which
+ * are the only commits a fork point can be — and not, as it did until
+ * 2026-09-12, whatever ancestors of main happened to be newest. That
+ * distinction was the whole of issue #1662. The candidate list is every
+ * ancestor of main newest-first, and because every pull request lands as a
+ * merge commit that drags its head commits into main's ancestry, only 5 of the
+ * newest 30 rows — and 11 of the newest 100 — are main tips. So ten slots
+ * bought about two main tips, and the other eight went to head commits that
+ * `MIN_PRUNE_AGE_MS` was already holding for as long as anyone was iterating on
+ * them. Measured over every merged pull request in this repository's history,
+ * 11 of 28 had a fork point outside the ten newest published ancestors, and 4
+ * of 28 were deeper than the candidate list even reached.
+ *
+ * Ten is the right floor: over the same 28, a fork point sat at most **7** main
+ * tips back (p50 2, p95 7). What a count cannot cover is the clock — see
+ * `KEEP_MAIN_BASELINE_AGE_MS`.
  */
 export const KEEP_MAIN_BASELINES = 10;
+
+/**
+ * And the floor under how much of main's *history* survives, however fast main
+ * moves: every main tip whose commit is younger than this keeps its snapshot,
+ * on top of the count above.
+ *
+ * A count on its own re-files the bug it fixes. At the measured 11.7 merges a
+ * day ten main tips is about twenty hours, so a branch cut in the evening and
+ * pushed the next afternoon is already past it — and the measured fork-point
+ * age at the moment a branch's visual run published was p50 2.5h, p95 23.8h,
+ * max 34.3h. Seventy-two hours is a little over twice that measured tail.
+ *
+ * Replayed over this repository's real history it keeps 29 tips covering 71.4
+ * hours of main, where the ten-slot rule it replaces covered 5.4 — so the "nine
+ * hours" this was filed as was itself generous. It costs almost nothing: 29
+ * snapshots is ~6 GB at this bucket's ~213 MB a snapshot, ~$0.14/month against
+ * a ~$12 bill that is request-shaped rather than storage-shaped (ADR
+ * 20260826-prune-visual-bucket's second amendment). And
+ * `scripts/wait-for-baseline.mjs` walks 40 first-parent ancestors behind it —
+ * a walk that can only resolve anything *because* the kept baselines are now a
+ * contiguous run along the very chain it walks. Before this, the keeps were the
+ * newest prefixes by date, so every ancestor of a pruned fork point was pruned
+ * too and the walk found nothing.
+ */
+export const KEEP_MAIN_BASELINE_AGE_MS = 72 * 60 * 60 * 1000;
+
+/** GitHub's `per_page` maximum, and the ceiling on pages one run will read. */
+export const CANDIDATE_PAGE_SIZE = 100;
+
+/**
+ * Four pages is ~44 main tips, or ~3.7 days at the measured merge rate: enough
+ * to satisfy the age window with margin. A run stops paging the moment its
+ * chain reaches past the window, so in steady state this is one or two calls.
+ */
+export const MAX_CANDIDATE_PAGES = 4;
 
 /**
  * Nothing published inside this window is pruned, whatever branch it came from.
@@ -56,16 +108,22 @@ export async function snapshotExists(bucket, commitSha, { s3Client } = {}) {
 }
 
 /**
- * Fetches recent commit SHAs from GitHub REST API for a branch.
+ * One page of a branch's history from the GitHub REST API, newest first.
+ *
+ * A row carries the two things the keep rule needs beyond the sha: the **first
+ * parent**, which is what reconstructs main's own chain out of a list that is
+ * mostly pull-request head commits, and the **commit date**, which is what the
+ * age window is measured against.
  */
 export async function fetchGitHubBranchCommits({
   repo = DEFAULT_REPO,
   branch = DEFAULT_BRANCH,
   token = process.env.GITHUB_TOKEN,
   fetchImpl = fetch,
-  limit = 30,
+  limit = CANDIDATE_PAGE_SIZE,
+  page = 1,
 } = {}) {
-  const url = `${GITHUB_API}/repos/${repo}/commits?sha=${encodeURIComponent(branch)}&per_page=${limit}`;
+  const url = `${GITHUB_API}/repos/${repo}/commits?sha=${encodeURIComponent(branch)}&per_page=${limit}&page=${page}`;
   const headers = {
     accept: "application/vnd.github+json",
     "user-agent": "diveday-visual-pruner",
@@ -78,27 +136,58 @@ export async function fetchGitHubBranchCommits({
     const data = await res.json();
     if (!Array.isArray(data)) return [];
     return data
-      .map((item) => (typeof item?.sha === "string" ? item.sha.trim() : ""))
-      .filter((sha) => COMMIT_SHA.test(sha));
+      .map((item) => ({
+        sha: typeof item?.sha === "string" ? item.sha.trim().toLowerCase() : "",
+        parentSha:
+          typeof item?.parents?.[0]?.sha === "string"
+            ? item.parents[0].sha.trim().toLowerCase()
+            : "",
+        committedAtMs: commitDateMs(item?.commit?.committer?.date ?? item?.commit?.author?.date),
+      }))
+      .filter((commit) => COMMIT_SHA.test(commit.sha));
   } catch {
     return [];
   }
 }
 
+/** A commit date the API may not have sent. Unknown is null, never a guess. */
+function commitDateMs(value) {
+  if (typeof value !== "string") return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 /**
- * Reads recent commit SHAs using local git if available.
+ * The same rows from local git, for when the API is unreachable.
+ *
+ * `--first-parent` because that is the history the keep rule is about; `%P`
+ * still lists every parent, so the chain walk reads the same field either way.
  */
-export function fetchGitBranchCommits({ git, branch = DEFAULT_BRANCH, limit = 30 } = {}) {
+export function fetchGitBranchCommits({
+  git,
+  branch = DEFAULT_BRANCH,
+  limit = CANDIDATE_PAGE_SIZE,
+} = {}) {
   if (typeof git !== "function") return [];
   const refsToTry = [`origin/${branch}`, branch, "HEAD"];
   for (const ref of refsToTry) {
     try {
-      const output = git(["log", ref, "-n", String(limit), "--format=%H"]);
-      const shas = output
+      const output = git(["log", ref, "--first-parent", "-n", String(limit), "--format=%H %P %ct"]);
+      const commits = output
         .split("\n")
-        .map((line) => line.trim())
-        .filter((sha) => COMMIT_SHA.test(sha));
-      if (shas.length > 0) return shas;
+        .map((line) => {
+          // `<sha> <parent...> <committed seconds>`, and a parent list that is
+          // empty at the root commit.
+          const parts = line.trim().split(/\s+/).filter(Boolean);
+          const seconds = parts.length > 1 ? Number(parts[parts.length - 1]) : Number.NaN;
+          return {
+            sha: (parts[0] ?? "").toLowerCase(),
+            parentSha: parts.length > 2 ? parts[1].toLowerCase() : "",
+            committedAtMs: Number.isFinite(seconds) ? seconds * 1000 : null,
+          };
+        })
+        .filter((commit) => COMMIT_SHA.test(commit.sha));
+      if (commits.length > 0) return commits;
     } catch {
       // Continue to next ref
     }
@@ -107,17 +196,53 @@ export function fetchGitBranchCommits({ git, branch = DEFAULT_BRANCH, limit = 30
 }
 
 /**
- * Resolves the active main baseline commit SHA that should be preserved.
+ * Main's own tips, newest first: the candidate list walked along first-parent
+ * links, which drops every pull-request head commit the list is otherwise full
+ * of. Stops where the links leave the fetched set.
+ */
+export function mainFirstParentChain(candidates) {
+  const positionBySha = new Map(candidates.map((commit, index) => [commit.sha, index]));
+  const chain = [];
+  const seen = new Set();
+  let cursor = candidates[0];
+  while (cursor && !seen.has(cursor.sha)) {
+    seen.add(cursor.sha);
+    chain.push(cursor);
+    const next = cursor.parentSha ? positionBySha.get(cursor.parentSha) : undefined;
+    cursor = next === undefined ? undefined : candidates[next];
+  }
+  return chain;
+}
+
+/** Whether a main tip is beyond the age window and so held only by the count. */
+function outsideAgeWindow(commit, now) {
+  // An unknown commit date counts as inside it: erring towards keeping a
+  // baseline costs storage, erring the other way costs a branch its baseline.
+  return commit.committedAtMs !== null && now - commit.committedAtMs > KEEP_MAIN_BASELINE_AGE_MS;
+}
+
+/** Whether what has been fetched already reaches past both floors. */
+function chainCoversBothFloors(chain, now) {
+  return chain.length >= KEEP_MAIN_BASELINES && outsideAgeWindow(chain[chain.length - 1], now);
+}
+
+/**
+ * Resolves the main baselines that should be preserved.
  *
  * Algorithm:
  * 1. If explicitCommit is supplied, validate and use it directly.
- * 2. Fetch candidate commit SHAs on main (via GitHub API, falling back to git).
- * 3. Walk candidates newest-to-oldest, testing whether `<sha>/out.json` exists in S3.
- * 4. Return every recent main commit that actually has a published snapshot,
- *    newest first, so a push to main can still resolve its parent and a branch
- *    cut a few commits back can still resolve its fork point.
- * 5. If no candidate has one, say so (`verified: false`) rather than nominating
- *    a prefix that is not in the bucket — see `pruneVisualBucket`.
+ * 2. Fetch pages of main's history (via GitHub API, falling back to git) until
+ *    what has been fetched reaches past both floors below, or the pages run out.
+ * 3. Reduce that list to main's own tips by walking first-parent links, because
+ *    a fork point is a main tip and four of every five rows in the list is not
+ *    (issue #1662).
+ * 4. Walk those tips newest-to-oldest, testing whether `<sha>/out.json` exists
+ *    in S3, and keep every one that does until *both* floors are satisfied:
+ *    `KEEP_MAIN_BASELINES` of them, and none left inside
+ *    `KEEP_MAIN_BASELINE_AGE_MS`. A push to main then resolves its parent, and a
+ *    branch resolves its fork point or an ancestor of it that is still there.
+ * 5. If no tip has one, say so (`verified: false`) rather than nominating a
+ *    prefix that is not in the bucket — see `pruneVisualBucket`.
  */
 export async function resolveActiveBaseline({
   bucket = DEFAULT_BUCKET,
@@ -128,6 +253,7 @@ export async function resolveActiveBaseline({
   fetchImpl = fetch,
   s3Client,
   git,
+  now = Date.now(),
 } = {}) {
   if (explicitCommit) {
     const trimmed = explicitCommit.trim();
@@ -146,9 +272,27 @@ export async function resolveActiveBaseline({
     };
   }
 
-  let candidates = await fetchGitHubBranchCommits({ repo, branch, token, fetchImpl });
+  const candidates = [];
+  const known = new Set();
+  const collect = (rows) => {
+    for (const commit of rows) {
+      if (known.has(commit.sha)) continue;
+      known.add(commit.sha);
+      candidates.push(commit);
+    }
+  };
+
+  for (let page = 1; page <= MAX_CANDIDATE_PAGES; page += 1) {
+    const rows = await fetchGitHubBranchCommits({ repo, branch, token, fetchImpl, page });
+    collect(rows);
+    // The end of the branch's history, or a chain that already reaches past
+    // both floors: either way there is nothing more worth asking for.
+    if (rows.length < CANDIDATE_PAGE_SIZE) break;
+    if (chainCoversBothFloors(mainFirstParentChain(candidates), now)) break;
+  }
+
   if (candidates.length === 0 && git) {
-    candidates = fetchGitBranchCommits({ git, branch });
+    collect(fetchGitBranchCommits({ git, branch }));
   }
 
   if (candidates.length === 0) {
@@ -159,12 +303,26 @@ export async function resolveActiveBaseline({
 
   const candidatesChecked = [];
   const keepShas = [];
-  for (const sha of candidates) {
-    const normalizedSha = sha.toLowerCase();
-    candidatesChecked.push(normalizedSha);
-    if (await snapshotExists(bucket, normalizedSha, { s3Client })) {
-      keepShas.push(normalizedSha);
+  const probe = async (commit) => {
+    if (candidatesChecked.includes(commit.sha)) return;
+    candidatesChecked.push(commit.sha);
+    if (await snapshotExists(bucket, commit.sha, { s3Client })) keepShas.push(commit.sha);
+  };
+
+  const chain = mainFirstParentChain(candidates);
+  for (const commit of chain) {
+    if (keepShas.length >= KEEP_MAIN_BASELINES && outsideAgeWindow(commit, now)) break;
+    await probe(commit);
+  }
+
+  // A chain of one out of a list of many means the rows carried no parent links
+  // at all — a payload shape this did not expect, not a history one commit
+  // long. Fall back to the flat newest-first walk this replaced, so a surprise
+  // in the response can never make the pruner keep *less* than it used to.
+  if (chain.length <= 1 && candidates.length > 1) {
+    for (const commit of candidates) {
       if (keepShas.length >= KEEP_MAIN_BASELINES) break;
+      await probe(commit);
     }
   }
 
@@ -173,21 +331,21 @@ export async function resolveActiveBaseline({
       activeBaseline: keepShas[0],
       keepShas,
       verified: true,
-      headCommit: candidates[0].toLowerCase(),
-      source: keepShas[0] === candidates[0].toLowerCase() ? "head_commit" : "recent_main_ancestor",
+      headCommit: candidates[0].sha,
+      source: keepShas[0] === candidates[0].sha ? "head_commit" : "recent_main_ancestor",
       candidatesChecked,
     };
   }
 
   // Not a baseline: a name for what we could not find. `pruneVisualBucket`
-  // refuses to delete on this, because "no main commit in the last 30 has a
-  // snapshot" is far more likely to mean the probe is broken than that every
-  // baseline is genuinely gone.
+  // refuses to delete on this, because "no recent main tip has a snapshot" is
+  // far more likely to mean the probe is broken than that every baseline is
+  // genuinely gone.
   return {
-    activeBaseline: candidates[0].toLowerCase(),
+    activeBaseline: candidates[0].sha,
     keepShas: [],
     verified: false,
-    headCommit: candidates[0].toLowerCase(),
+    headCommit: candidates[0].sha,
     source: "head_commit_unverified",
     candidatesChecked,
   };

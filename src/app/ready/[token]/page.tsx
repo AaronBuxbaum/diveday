@@ -46,6 +46,7 @@ import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { publicBoatLine } from "@/db/boat-line";
 import {
+  hasLiveArrivalCapability,
   resolveRevokedBookingCapability,
   staleBookingCapabilityForToken,
   verifyBookingCapability,
@@ -139,6 +140,7 @@ import {
   saveTanksFromReady,
   saveWelcomeConsentFromReady,
   signWaiverFromReady,
+  stopArrivalCodesFromReady,
 } from "./actions";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -756,6 +758,14 @@ const READY_NOTICES: Record<
   // second confirmation. The refusal never says *which* of the two reasons it
   // was, for the same reason the cancel one does not.
   "error-welcome": { tone: "danger", key: "ready.welcomeUnavailable" },
+  // The diver killed the code on a card they have lost (issue #1729). Its own
+  // notice, and a needed one: the effect is entirely off-screen — a printout in
+  // somebody's bag stops scanning — so the arrival card settling back to no
+  // control at all is the only other thing that says the tap landed. Neutral
+  // rather than success: nothing was achieved for the diver, a credential was
+  // taken away, and the sentence's second half is where they go next. There is
+  // no error twin, because `stopArrivalCodesFromReady` has no refusal to report.
+  "saved-arrival-code": { tone: "neutral", key: "ready.arrivalCodeStopped" },
 };
 
 /**
@@ -1795,29 +1805,43 @@ export default async function DiverReadinessPage({
   // One round trip, not two: the trip reads are scoped by `shop.id`, which the
   // verified capability already resolved, so none of them has to wait on the
   // shop row `PackingSection` needs for its units and rental catalogue.
-  const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage, followLine] =
-    await Promise.all([
-      getShopBySlug(db, shop.slug),
-      getTripWithBooked(db, shop.id, data.trip.id),
-      listTripDives(db, shop.id, data.trip.id),
-      listTripChangeEvents(db, shop.id, data.trip.id),
-      // Only the crew who agreed to be named (issue #1181, D21). This thread is
-      // reached by a capability URL rather than indexed, but the consent is the
-      // person's answer about divers, not about search engines — so it is the
-      // same filter and the same words as the public page.
-      tripPublicCrew(db, shop.id, data.trip.id),
-      // Where the crew last said this boat was (ADR
-      // 20260904-reef-all-the-way-down, Budget rule 4). Read whatever its age;
-      // `liveStageOf` below decides whether it still speaks, so a stage nobody
-      // cleared cannot follow a diver into next week.
-      latestTripStage(db, shop.id, data.trip.id),
-      // The page the share row below hands over (ADR 20260908-one-hand,
-      // decision 6, lever U). Asked as the reader of that page would ask it,
-      // rather than assembled from a switch and three conditions here: the row
-      // then offers a link exactly when the link answers, and a shop that has
-      // not said yes gets no row at all.
-      publicBoatLine(db, { shopSlug: shop.slug, tripId: data.trip.id, now: nowDate() }),
-    ]);
+  const [
+    fullShop,
+    fullTrip,
+    tripDives,
+    changeEvents,
+    publicCrew,
+    boatStage,
+    followLine,
+    hasArrivalCode,
+  ] = await Promise.all([
+    getShopBySlug(db, shop.slug),
+    getTripWithBooked(db, shop.id, data.trip.id),
+    listTripDives(db, shop.id, data.trip.id),
+    listTripChangeEvents(db, shop.id, data.trip.id),
+    // Only the crew who agreed to be named (issue #1181, D21). This thread is
+    // reached by a capability URL rather than indexed, but the consent is the
+    // person's answer about divers, not about search engines — so it is the
+    // same filter and the same words as the public page.
+    tripPublicCrew(db, shop.id, data.trip.id),
+    // Where the crew last said this boat was (ADR
+    // 20260904-reef-all-the-way-down, Budget rule 4). Read whatever its age;
+    // `liveStageOf` below decides whether it still speaks, so a stage nobody
+    // cleared cannot follow a diver into next week.
+    latestTripStage(db, shop.id, data.trip.id),
+    // The page the share row below hands over (ADR 20260908-one-hand,
+    // decision 6, lever U). Asked as the reader of that page would ask it,
+    // rather than assembled from a switch and three conditions here: the row
+    // then offers a link exactly when the link answers, and a shop that has
+    // not said yes gets no row at all.
+    publicBoatLine(db, { shopSlug: shop.slug, tripId: data.trip.id, now: nowDate() }),
+    // Has this booking ever handed out an arrival code? Only the arrival-card
+    // download mints one, so this is "did somebody save the card", and it is
+    // what decides whether the card below offers a way to stop the code on it
+    // (issue #1729). The same rule the self-cancel follows: no control here
+    // that could only ever come back having done nothing.
+    hasLiveArrivalCapability(db, { shopId: shop.id, bookingId }),
+  ]);
   // The boat's own line, composed here: word order and where the site sits in
   // the sentence are the locale's choice, and `liveStageOf` is what stops a
   // stage nobody cleared speaking for a departure that ended yesterday.
@@ -2403,6 +2427,11 @@ export default async function DiverReadinessPage({
             downloadHref={`${publicTripArrivalCardPath(fullShop.slug, fullTrip.id)}?booking=${encodeURIComponent(
               token,
             )}`}
+            // The way out of a lost printout (issue #1729). Bound to this
+            // page's own readiness token, which is what the action re-verifies
+            // — the arrival code itself is never held here, and there is
+            // nothing to hand it.
+            stopCodeAction={hasArrivalCode ? stopArrivalCodesFromReady.bind(null, token) : null}
             className="mt-8"
           />
         ) : null}

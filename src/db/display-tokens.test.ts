@@ -276,6 +276,52 @@ describe("listDisplayTokens and touchDisplayToken", () => {
     expect(listed[0]?.showNames).toBe(true);
     expect(listed[1]?.lastShownAt).toBeNull();
   });
+
+  /**
+   * **A `created_at` tie goes to the label, never to the uuid.** Under the
+   * frozen clock every row a run writes shares one instant, so `created_at`
+   * runs out as a sort key and the next one decides the whole order. It used to
+   * be `desc(id)` — a `defaultRandom()` uuid, a different answer in every
+   * database — and both `settings-display-dark` captures swapped their two rows
+   * on a commit that touched neither the page nor the query (2026-09-12).
+   *
+   * The ids are forced here rather than left random, because the id *is* the
+   * confounder under test: left alone this would be a coin flip rather than a
+   * proof. With them forced the old order is `['Zulu TV', 'Alpha tablet']`
+   * every time.
+   */
+  it("breaks a shared-timestamp tie on the shop's own label, not on whichever uuid sorted higher", async () => {
+    const { db, shop, personId } = await staffWithRole("owner");
+    const together = new Date("2026-07-21T09:30:00.000Z");
+    const zulu = await issueDisplayToken(db, {
+      shopId: shop.id,
+      personId,
+      label: "Zulu TV",
+      purpose: "board",
+      showNames: false,
+      now: together,
+    });
+    const alpha = await issueDisplayToken(db, {
+      shopId: shop.id,
+      personId,
+      label: "Alpha tablet",
+      purpose: "board",
+      showNames: false,
+      now: together,
+    });
+    if (!zulu.ok || !alpha.ok) throw new Error("issue failed");
+
+    // Lower uuid to the alphabetically-first label, so `desc(id)` answers the
+    // exact opposite of what the list should show.
+    const lower = "00000000-0000-4000-8000-000000000001";
+    const higher = "00000000-0000-4000-8000-000000000002";
+    await db.update(displayTokens).set({ id: lower }).where(eq(displayTokens.id, alpha.issued.id));
+    await db.update(displayTokens).set({ id: higher }).where(eq(displayTokens.id, zulu.issued.id));
+
+    const listed = await listDisplayTokens(db, { shopId: shop.id });
+    const mine = listed.filter((row) => row.id === lower || row.id === higher);
+    expect(mine.map((row) => row.label)).toEqual(["Alpha tablet", "Zulu TV"]);
+  });
 });
 
 /**

@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, isNotNull, min } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, min, ne } from "drizzle-orm";
 import type { AppDb } from "./client";
 import { shops } from "./schema";
 import { listedShopScope } from "./shops";
@@ -53,4 +53,36 @@ export async function listRegionShops(db: AppDb, regionSlug: string) {
     .from(shops)
     .where(and(listedShopScope(db), eq(shops.regionSlug, regionSlug)))
     .orderBy(asc(shops.name), asc(shops.id));
+}
+
+/**
+ * **Whether `/dive/<slug>` has a town to show** — the edge refusal's question
+ * (ADR 20260912-the-public-namespace-refuses-at-the-edge, issue #1734).
+ *
+ * `src/proxy.ts` has to settle the status before a static shell streams, so it
+ * asks this before `dive/[region]/page.tsx` runs at all. Every predicate is
+ * one the page already applies, which is the invariant that keeps the edge from
+ * refusing a page that would have rendered: `listedShopScope` is what
+ * `listRegionShops` reads through, and the locality filter is the page's own
+ * second refusal — `regionName` drops a shop with no locality and 404s the town
+ * when none of them names one, because the heading is that name and never the
+ * slug.
+ *
+ * `limit(1)` rather than the page's unbounded `select()`: the page needs every
+ * shop in the town, this needs to know whether there is one.
+ */
+export async function regionIsListed(db: AppDb, regionSlug: string): Promise<boolean> {
+  const [row] = await db
+    .select({ one: shops.id })
+    .from(shops)
+    .where(
+      and(
+        listedShopScope(db),
+        eq(shops.regionSlug, regionSlug),
+        isNotNull(shops.addressLocality),
+        ne(shops.addressLocality, ""),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
 }

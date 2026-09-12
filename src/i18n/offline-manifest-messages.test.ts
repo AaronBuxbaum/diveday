@@ -88,13 +88,33 @@ function reachableModules(): string[] {
  * a different bundle and none of this view's business. `trips` is a staff
  * namespace and `trip` is not, which is exactly the distinction a
  * shape-matching regex would get wrong.
+ *
+ * **Comments are stripped first, and that is not tidiness.** This scan read the
+ * whole file, so a docblock naming a database column in backticks — the view
+ * carried two saying `` `bookings.status` `` — matched as a message key and
+ * failed the first assertion below, because `bookings` is also a staff
+ * namespace. It cost a red CI shard on 2026-09-12 and was then made to pass by
+ * rewording the prose, which hid the cause rather than removing it. `orders`,
+ * `divers`, `gear` and `trips` are all table names too, so the next one was a
+ * matter of time. The docblock above calls a false alarm here worth "one look";
+ * an alarm a reader answers by editing a comment is worth less than that.
  */
 function staffNamespacesIn(file: string, known: readonly string[]): string[] {
-  const source = readFileSync(path.join(ROOT, file), "utf8");
+  const source = stripComments(readFileSync(path.join(ROOT, file), "utf8"));
   const found = [...source.matchAll(/["`]([a-zA-Z]+)\.[a-zA-Z$][\w.${}]*["`]/g)]
     .map((match) => match[1] as string)
     .filter((namespace) => known.includes(namespace));
   return [...new Set(found)].sort();
+}
+
+/**
+ * Block and line comments out, so a namespace named in prose is not read as a
+ * key the view renders. Deliberately crude: it is scanning TypeScript source
+ * for a *mention*, and the one shape it must not break is a URL in code
+ * (`https://…`), which is why a `//` preceded by `:` survives.
+ */
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 }
 
 describe("the offline manifest's message bundle", () => {
@@ -124,6 +144,32 @@ describe("the offline manifest's message bundle", () => {
     const known = staffNamespaces();
     const reached = new Set(reachableModules().flatMap((file) => staffNamespacesIn(file, known)));
     expect([...SHIPPED].filter((namespace) => !reached.has(namespace))).toEqual([]);
+  });
+
+  /**
+   * **A namespace named in a comment is prose, not a key**, and the scan has to
+   * know the difference. `bookings.status` is a database column this view's
+   * docblocks have every reason to name; it is also, as a string, exactly what
+   * a `t("bookings.…")` call looks like. Both directions are asserted, because
+   * stripping comments is only safe if it cannot also strip a key.
+   */
+  it("reads keys and not prose", () => {
+    const known = staffNamespaces();
+    expect(known).toContain("bookings");
+    expect(staffNamespacesIn(VIEW, known)).toEqual(["manifest", "shared"]);
+
+    const withComments = stripComments(
+      [
+        "/** the copy decides what `bookings.status` was when the copy was taken */",
+        "// `orders.title` in a line comment is prose too",
+        'const key = "gear.title";',
+        'const url = "https://example.test/x";',
+      ].join("\n"),
+    );
+    expect(withComments).toContain('"gear.title"');
+    expect(withComments).toContain("https://example.test/x");
+    expect(withComments).not.toContain("bookings.status");
+    expect(withComments).not.toContain("orders.title");
   });
 
   /**

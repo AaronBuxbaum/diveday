@@ -97,6 +97,44 @@ describe("shopFirstBooking", () => {
     expect(await shopFirstBooking(db, shopId, NOW)).toBeNull();
   });
 
+  /**
+   * **This reader's tie-break is unreachable, and that is why it needed no
+   * fix** (issue #1753, whose premise was that all seven readers on its list
+   * had an observable random-uuid order — this one does not).
+   *
+   * `limit(2)` plus the `rows.length !== 1` test makes the answer a function
+   * of the row *set*, never of its order: two seats sharing an instant end the
+   * moment whichever of them the database hands back first. Asserted with the
+   * ids forced *both* ways, because "it happens not to matter today" and "it
+   * cannot matter" are different claims and only the second one licenses
+   * leaving `asc(bookings.id)` in place.
+   */
+  it("ends the moment on a second seat whichever way the booking uuids sort", async () => {
+    const together = new Date("2026-08-20T15:00:00.000Z");
+    const lower = "00000000-0000-4000-8000-000000000001";
+    const higher = "00000000-0000-4000-8000-000000000002";
+
+    for (const [first, second] of [
+      [lower, higher],
+      [higher, lower],
+    ]) {
+      const { db, shopId } = await freshShop(`first-booking-tie-${first.slice(-1)}`);
+      const trip = await aDeparture(db, shopId, new Date("2026-09-05T12:30:00.000Z"));
+      const one = await aSeat(db, shopId, trip.id, "Ravi Chandra");
+      const two = await aSeat(db, shopId, trip.id, "Noor Rahman");
+      await db
+        .update(bookings)
+        .set({ createdAt: together, id: first })
+        .where(eq(bookings.id, one.id));
+      await db
+        .update(bookings)
+        .set({ createdAt: together, id: second })
+        .where(eq(bookings.id, two.id));
+
+      expect(await shopFirstBooking(db, shopId, NOW)).toBeNull();
+    }
+  });
+
   it("counts a cancelled booking against the history but never celebrates one", async () => {
     // **Why the count is over every row rather than the live ones.** A shop on
     // its second diver after one cancellation has exactly one *live* booking

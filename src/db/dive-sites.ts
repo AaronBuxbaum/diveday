@@ -63,6 +63,12 @@ export type DiveSiteInput = {
   /** The NOAA station this site's tide is read against; null/undefined says nothing about the tide. */
   tideStationId?: string | null;
   /**
+   * Whether the shop has said it meant that station, distance and all (issue
+   * #1731). Never written as given: `confirmedStationWrite` below lands it as
+   * true only for the pairing the row already holds.
+   */
+  tideStationConfirmed?: boolean;
+  /**
    * When the site dives best. Omitting it writes `"any"` rather than leaving
    * the stored value standing -- this module overwrites every field it is
    * given, the way `locationName` does, and the comment used to promise a
@@ -418,6 +424,34 @@ async function availableSiteSlug(db: DbExecutor, shopId: string, name: string): 
   );
 }
 
+/**
+ * **What `tide_station_confirmed` is allowed to become, given the id this
+ * write carries** — issue #1731, ADR 20260907-noaa-tide-predictions'
+ * 2026-09-10 amendment.
+ *
+ * The acknowledgement answers one *pairing*: this site's coordinates against
+ * this station's position. The editor posts the id and the tick in the same
+ * submission, so a staffer who acknowledged Galveston and then mistyped seven
+ * different digits would otherwise carry the acknowledgement onto a station
+ * nobody has looked at — and the prompt that exists to catch that typo would
+ * never render again.
+ *
+ * So the tick survives only where the id does not move: `false` outright when
+ * nothing is claimed or the site has no station at all, and otherwise a
+ * comparison evaluated **inside the `UPDATE`** against the id the row still
+ * holds. One statement rather than read-then-write, so a concurrent save
+ * cannot land in the gap.
+ *
+ * It lives here rather than in `parseDiveSiteForm` on purpose: a caller that
+ * never sees the form — a copy, an import, a test — cannot skip a rule the
+ * writer applies.
+ */
+function confirmedStationWrite(input: DiveSiteInput) {
+  const stationId = input.tideStationId || null;
+  if (!stationId || !input.tideStationConfirmed) return false;
+  return sql`${diveSites.tideStationId} = ${stationId}`;
+}
+
 export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
   const [site] = await db
     .insert(diveSites)
@@ -429,6 +463,12 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
       forecastLatitude: input.forecastLatitude ?? null,
       forecastLongitude: input.forecastLongitude ?? null,
       tideStationId: input.tideStationId || null,
+      // No stored id to compare against on an insert — the pairing and the
+      // answer to it are written in the same statement, so they cannot
+      // disagree. A tick with no station is dropped rather than stored: it
+      // would suppress nothing and read in the export as an answer to a
+      // question nobody asked.
+      tideStationConfirmed: Boolean((input.tideStationId || null) && input.tideStationConfirmed),
       tidePreference: input.tidePreference ?? "any",
       satelliteImageUrl: input.satelliteImageUrl || null,
       routeImageUrl: input.routeImageUrl || null,
@@ -526,6 +566,11 @@ export async function updateDiveSite(
       forecastLatitude: input.forecastLatitude ?? null,
       forecastLongitude: input.forecastLongitude ?? null,
       tideStationId: input.tideStationId || null,
+      // **Cleared by the same statement that moves the id** (issue #1731).
+      // `confirmedStationWrite` compares the incoming id against the one the
+      // row still holds, so an acknowledgement can never follow a station a
+      // staffer has just retyped.
+      tideStationConfirmed: confirmedStationWrite(input),
       tidePreference: input.tidePreference ?? "any",
       satelliteImageUrl: input.satelliteImageUrl || null,
       routeImageUrl: input.routeImageUrl || null,
@@ -671,6 +716,11 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     // the shop has no way to see that the tide line stopped rendering.
     tideStationId: source.tideStationId,
     tidePreference: source.tidePreference,
+    // The acknowledgement travels because the *pairing* does: a copy carries
+    // this row's coordinates and this row's station verbatim, so the question
+    // the shop already answered is the same question, and dropping the answer
+    // would put the prompt back on a site nothing about has changed.
+    tideStationConfirmed: source.tideStationConfirmed,
     satelliteImageUrl: source.satelliteImageUrl ?? undefined,
     routeImageUrl: source.routeImageUrl ?? undefined,
     imageUrls: source.imageUrls,

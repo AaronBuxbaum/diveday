@@ -547,6 +547,25 @@ export type PartySeatClaim = {
  * After departure the links stop being mintable on purpose (`claimableNow`
  * would refuse them anyway): the panel keeps showing who claimed, but a seat
  * nobody claimed before the boat left is the organizer's exactly as today.
+ *
+ * **Ordered seat time, then the seat's name, then the booking id** — the clause
+ * `getTripRoster` states in full (issue #1753). This reader is the one on that
+ * list where **production reaches the tie**, not only a test: every row here
+ * belongs to *one party*, and `createBookingParty` writes the whole party in a
+ * single transaction with `createBooking` stamping `nowDate()` per seat, at
+ * millisecond resolution. Two seats typed into the same form landing in one
+ * millisecond is ordinary, and the tie-break used to be `asc(bookings.id)` — a
+ * `defaultRandom()` uuid. The organizer's panel renders this array in order
+ * (`PartyClaimPanel`), so "Milo, then Pia" or "Pia, then Milo" was decided by
+ * whichever uuid Postgres minted, and re-renders of the same party disagree
+ * across databases. Under the frozen test clock the tie is not a maybe: every
+ * seat of every party a spec books shares one instant.
+ *
+ * `people.full_name` carries `COLLATE "und-x-icu"`
+ * (`drizzle/20260911200158_person-name-collation`), so the name key orders
+ * sensibly in any language without the query saying so. It is *not*
+ * alphabetical in the sense an organizer would search — `full_name` is one
+ * free-text box — which is why the panel's copy never calls it a sorted list.
  */
 export async function issuePartySeatClaims(
   db: AppDb,
@@ -572,7 +591,7 @@ export async function issuePartySeatClaims(
         ne(bookings.status, "cancelled"),
       ),
     )
-    .orderBy(asc(bookings.createdAt), asc(bookings.id));
+    .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
   const seats: PartySeatClaim[] = [];
   for (const row of rows) {
     // `false`: this query is scoped to one organizer's party by

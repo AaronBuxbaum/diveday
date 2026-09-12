@@ -257,6 +257,82 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   ).toHaveCount(1);
 });
 
+/**
+ * **The counter's own guess, cleared at the counter** (H-13, issues #1556 and
+ * #1696).
+ *
+ * The walk-in name prompt is where a held seat comes from: a staffer types a
+ * name, the prompt offers the diver already on file, and a tap attaches the
+ * booking to that person's record on something short of proof. Until this
+ * landed, the only control that cleared the flag was on the trip roster — so
+ * the counter tapped check in, met `checkInBooking`'s `not_ready` refusal,
+ * followed its link to the trip, expanded a confirm there and walked back, with
+ * a diver at the desk and a queue behind them.
+ *
+ * The whole loop in one pass, because the loop is the feature: the guess, the
+ * held row, the attestation on that row, and the boarding it releases.
+ */
+test("a walk-in seated off the name prompt is confirmed and checked in without leaving the queue", async ({
+  page,
+}) => {
+  const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+  await page.goto(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
+  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/new\?/);
+
+  // One letter off a diver already on file. `personNamesMatch` compares token
+  // sets exactly, so this is the disagreement that raises the flag — the prompt
+  // fires on an exact spelling too, and that one is not a guess.
+  await page.getByLabel("Full name").fill("Zoe Bennet");
+  await page.getByRole("button", { name: "Add to boat" }).click();
+
+  // "Is this the same Zoe Bennet?" — the prompt, with the record it found.
+  await expect(page.getByRole("heading", { name: /Is this the same Zoe Bennet\?/ })).toBeVisible();
+  await page.getByRole("button", { name: "Zoe Bennett", exact: true }).click();
+
+  // The seating says the seat is held, in the counter's own words, rather than
+  // letting "Added" imply the diver can board.
+  await expect(
+    page.getByText("the seat is held until you confirm it’s the same person", { exact: false }),
+  ).toBeVisible();
+
+  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
+  await search.fill("Zoe Bennett");
+  await search.press("Enter");
+  // Act on the search render, never on the focused-departure one: the same row
+  // is on screen in both, and touching it mid-navigation loses the client state
+  // the confirm keeps (see the paper-waiver spec below for the incident).
+  await expect(
+    page.getByRole("heading", { name: /Search results for .Zoe Bennett./ }),
+  ).toBeVisible();
+
+  const card = page.locator("article").filter({ hasText: "Zoe Bennett" }).filter({ visible: true });
+  await expect(card.getByText("Blocked")).toBeVisible();
+  await expect(card.getByText("Identity unconfirmed", { exact: false })).toBeVisible();
+  // The gate the whole change is about: a held row offers no check-in.
+  await expect(card.getByRole("button", { name: "Check in Zoe Bennett" })).toHaveCount(0);
+
+  // **Two taps, not one.** The attestation releases another person's
+  // certifications and release onto this seat and has no undo, so the trigger
+  // arms and a second, deliberate tap posts it.
+  await card.getByRole("button", { name: "Confirm this is Zoe Bennett" }).click();
+  await expect(card.getByText("Is the person at the counter Zoe Bennett?")).toBeVisible();
+  await card.getByRole("button", { name: "Yes, this is them" }).click();
+
+  // It lands in place — the search that found her is still in the box and still
+  // in the URL — and the row it landed on now offers the boarding the flag was
+  // refusing.
+  await expect(card.getByRole("button", { name: "Check in Zoe Bennett" })).toBeVisible();
+  await expect(page).toHaveURL(/\/check-in\?q=Zoe\+Bennett/);
+  await expect(card.getByRole("button", { name: /^Confirm this is / })).toHaveCount(0);
+
+  // And `checkInBooking` re-reads readiness for itself, so this tap is the
+  // proof the flag is gone from the row rather than only from the render.
+  await card.getByRole("button", { name: "Check in Zoe Bennett" }).click();
+  await expect(page.getByRole("button", { name: "Undo check-in for Zoe Bennett" })).toBeVisible();
+});
+
 test("the walk-in picker explains an invalid submission before a boat is chosen", async ({
   page,
 }) => {
@@ -365,32 +441,30 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
     }
   });
   await card.getByRole("button", { name: "Record paper signature" }).click();
-  // The banner, not the query param: `?notice=` is one-shot now (`FlashParams`
-  // on the page strips it once the words are on screen), so the words are the
-  // contract and the URL is an implementation detail mid-erase.
+  // Under the button that was pressed, on the row it is about: the refusal
+  // answers in the form's own action state now rather than redirecting with a
+  // `?notice=` (issue #1674), so the words are the contract and there is no
+  // query param left to read.
   await expect(
-    page.getByText("Confirm you reviewed the medical questionnaire", { exact: false }),
+    card.getByText("Confirm you reviewed the medical questionnaire", { exact: false }),
   ).toBeVisible();
 
-  // A refusal is the one outcome here that still navigates, and it lands on the
-  // bare queue — so the search has to be retyped to get back to her, and waited
-  // for again for the reason above. This is the step that timed out on CI: the
-  // form was opened against the instrument's render, the search landed, the row
-  // was rebuilt, and `check()` sat waiting on a checkbox that had closed behind
-  // a "Mark signed on paper" button again.
-  await search.fill("Priya Sharma");
-  await search.press("Enter");
-  await expect(searchIsShowing).toBeVisible();
-  await card.getByText("Mark signed on paper").click();
+  // **Neither outcome navigates.** The refusal used to, landing on the bare
+  // queue — so the search had to be retyped, the row was rebuilt, and the form
+  // the staffer had filled in closed behind a "Mark signed on paper" button
+  // with everything they typed gone (the step that timed out on CI). Now the
+  // form is still open, still on this row, and the search is still in the box:
+  // the staffer's next act is the single box the refusal named.
+  await expect(page).toHaveURL(/\/check-in\?q=Priya\+Sharma/);
   await card
     .getByLabel("I have this diver’s signed release on file", { exact: false })
     .filter({ visible: true })
     .check();
   await card.getByRole("button", { name: "Record paper signature" }).click();
 
-  // Success lands **in place**: no banner, no navigation, and — the point of
-  // it — the search that found her is still in the box and still in the URL,
-  // so the next act is one tap rather than typing her name a third time. Same
+  // Success lands **in place** too: no banner, no navigation, and — the point
+  // of it — the search that found her is still in the box and still in the URL,
+  // so the next act is one tap rather than typing her name a second time. Same
   // immutable record a self-service signature produces, so the blocker is
   // genuinely gone rather than merely hidden.
   await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toBeVisible();

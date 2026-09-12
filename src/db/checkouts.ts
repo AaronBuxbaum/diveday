@@ -252,6 +252,12 @@ export async function startBookingCheckout(
   const existing = await latestCheckoutForBookingIds(db, input.shopId, input.bookingIds);
   if (
     existing?.status === "pending" &&
+    // A pending row with no hosted page is not reusable, and the erasure path
+    // depends on that: `anonymizeDiver` nulls `checkout_url` on every checkout
+    // minted with an erased diver's address, including a party they paid for
+    // and hold no seat on (src/db/anonymize.ts, issue #1722). Dropping this
+    // clause would hand the next caller on those same bookings the page minted
+    // for the diver we just told the shop had been erased.
     existing.checkoutUrl &&
     (!existing.expiresAt || existing.expiresAt > nowDate()) &&
     (await checkoutCoversExactly(db, input.shopId, existing.id, input.bookingIds))

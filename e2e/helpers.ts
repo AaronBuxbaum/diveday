@@ -124,12 +124,18 @@ export async function saveDiveIntent(page: Page, label: string) {
  * preparation belongs to a diver who has a seat). A spec about that reading
  * therefore has to hold one.
  */
-export async function bookASeatAndOpenThread(page: Page, name: string) {
+export async function bookASeatAndOpenThread(page: Page, name: string, email?: string) {
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill(name);
   await page
     .getByLabel("Email", { exact: true })
-    .fill(`${name.toLowerCase().replace(/[^a-z]+/g, "-")}-${e2eNow().getTime()}@example.com`);
+    // A caller passes one when it has to *say* the address afterwards — a
+    // test-only seed route that resolves a diver by email, say. Otherwise the
+    // derived one keeps every booking this makes distinct without a caller
+    // having to care.
+    .fill(
+      email ?? `${name.toLowerCase().replace(/[^a-z]+/g, "-")}-${e2eNow().getTime()}@example.com`,
+    );
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book/ }).click();
   await expect(page).toHaveURL(/\/ready\//);

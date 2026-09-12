@@ -371,10 +371,12 @@ export class InfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       lifecycleRules: [
         // The pruner (section 15) is what bounds this bucket, and it is the
-        // only bound that understands what a baseline is: it keeps the ten most
-        // recent `main` snapshots by *count* plus everything under a day old,
-        // precisely so a quiet month never leaves an open branch with nothing
-        // to compare against. An S3 expiry counts only days, so at 30 it
+        // only bound that understands what a baseline is: it keeps the tips of
+        // `main`'s own first-parent chain -- at least ten of them by *count*,
+        // and every one published in the last 72 hours -- plus everything of
+        // any kind under a day old, precisely so neither a quiet month nor a
+        // fast week leaves an open branch with nothing to compare against. An
+        // S3 expiry counts only days, so at 30 it
         // deleted the very snapshots the pruner had preserved -- and a run with
         // no baseline reports `Changed: 0`, which reads exactly like nothing
         // broke. The pruner is authoritative; this rule may only ever be a

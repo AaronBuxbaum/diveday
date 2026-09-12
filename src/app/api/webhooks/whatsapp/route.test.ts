@@ -148,4 +148,35 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
     // One lookup for both halves: the WABA is the same.
     expect(shopIdForWhatsAppWaba).toHaveBeenCalledTimes(1);
   });
+
+  /**
+   * **A delivery status nobody can attribute is dropped, not applied.**
+   *
+   * `applyProviderEmailEvent` with no `shopId` matches a provider message id
+   * across every shop's rows — deliberate for SES, where a bounce genuinely
+   * arrives without a tenant, and wrong here, where the WABA is simply absent
+   * from the entry. Meta names it on every real event, so failing closed costs
+   * nothing and stops one shop's "delivered" landing on another's row
+   * (security review, 2026-09-12).
+   */
+  it("drops a delivery status whose entry names no WABA", async () => {
+    const payload = JSON.stringify({
+      object: "whatsapp_business_account",
+      entry: [
+        {
+          changes: [
+            {
+              field: "messages",
+              value: {
+                statuses: [{ id: "wamid.out", status: "delivered", timestamp: "1785672000" }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect((await POST(webhookRequest(payload))).status).toBe(200);
+    expect(shopIdForWhatsAppWaba).not.toHaveBeenCalled();
+    expect(applyProviderEmailEvent).not.toHaveBeenCalled();
+  });
 });

@@ -15,7 +15,7 @@ import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 // the app to obtain a URL string. `app-url.ts` imports `@/lib/configured` and
 // one type, and nothing else.
 import { publicAppUrl } from "@/lib/notifications/app-url";
-import { openGraphSite } from "@/lib/site-metadata";
+import { openGraphSite, sharedLinkCardImage } from "@/lib/site-metadata";
 import { Observability } from "./observability-client";
 
 const geistSans = Geist({
@@ -59,7 +59,15 @@ export const metadata: Metadata = {
   // The app-wide floor, inherited only by pages that export no `openGraph`
   // block of their own — every page that does export one spreads
   // `openGraphSite` itself. See src/lib/site-metadata.ts.
-  openGraph: { ...openGraphSite },
+  //
+  // The card is named here rather than attached by file convention: it was
+  // `src/app/opengraph-image.tsx` until issue #1709, and a metadata module in
+  // this segment reaches the traced closure of every page entry in the app.
+  // Naming it on the floor is what keeps `/sign-in` and every other page with
+  // no words of its own unfurling with a picture, exactly as the file did. A
+  // segment with its own `opengraph-image.tsx` still wins: Next only skips that
+  // file when the *same* level's `openGraph` block names images.
+  openGraph: { ...openGraphSite, images: [sharedLinkCardImage] },
   twitter: {
     card: "summary_large_image",
   },

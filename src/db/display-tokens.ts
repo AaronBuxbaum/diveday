@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, or } from "drizzle-orm";
 import { canManageShopSettings } from "@/lib/authz";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
@@ -192,6 +192,26 @@ export type DisplayTokenSummary = {
  * able to find the kiosk that stopped working and renew it, and an expired row
  * that vanished would look like a link somebody else revoked. Revocation stays
  * the only thing that takes a row off this list (issue #1609).
+ *
+ * **The label breaks a `created_at` tie, not the id.** The tie used to go to
+ * `desc(id)` — a `defaultRandom()` uuid, so a different answer in every
+ * database that holds the same two screens.
+ *
+ * Be precise about what that actually cost, because the obvious claim is the
+ * wrong one. `created_at` is written from the clock, so two links a manager
+ * mints from a form are microseconds apart and production never reaches the
+ * tie. What reaches it is **every test and every capture**: the clock is frozen
+ * at the harness boundary, so all of a run's rows share one instant and the
+ * whole order is the uuid. `settings-display-dark` at both widths therefore
+ * swapped its two rows on a commit that touched neither the page nor this query
+ * (2026-09-12), and a capture that re-orders itself is a capture whose diffs
+ * nobody can read — the same cost the manifest's rail numbering was carrying
+ * (issue #1720).
+ *
+ * So the tie goes to the shop's own word for the screen, which is the only key
+ * on the row a person can predict, with the id last for a total order under two
+ * screens sharing a label. Ordering by something visible would be the right
+ * shape even if the uuid had never flipped anything.
  */
 export async function listDisplayTokens(
   db: DbExecutor,
@@ -209,7 +229,7 @@ export async function listDisplayTokens(
     })
     .from(displayTokens)
     .where(and(eq(displayTokens.shopId, input.shopId), isNull(displayTokens.revokedAt)))
-    .orderBy(desc(displayTokens.createdAt), desc(displayTokens.id));
+    .orderBy(desc(displayTokens.createdAt), asc(displayTokens.label), asc(displayTokens.id));
 }
 
 /**

@@ -22,7 +22,7 @@
       "notDeparted": "Sin zarpar"
     },
     "detail": {
-      "allHome": "{booked, plural, =0 {No había buceadores reservados} one {# buceador, recuento cerrado} other {# buceadores, recuento cerrado}}.",
+      "allHome": "No iba ningún buceador a bordo.",
       "stillOut": "Vuelve a las {time}.",
       "notDeparted": "Zarpa a las {time}.",
       "missingDiver": "{count, plural, one {# buceador quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# buceadores quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos. El recuento se cierra en el manifiesto.",

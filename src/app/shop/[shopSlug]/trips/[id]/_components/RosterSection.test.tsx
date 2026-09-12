@@ -4,6 +4,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { emptyMedicalAnswers, flaggedMedicalPrompts, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { RosterSection } from "./RosterSection";
 import type {
   NitroxByBooking,
@@ -26,6 +27,8 @@ afterEach(cleanup);
  */
 
 const noop = () => {};
+/** The paper-waiver door is a `useActionState` reducer (issue #1674). */
+const noRefusal = async () => PAPER_WAIVER_IDLE;
 
 function entry(
   id: string,
@@ -109,7 +112,7 @@ function renderRoster({
       requiresPayment={false}
       paymentsConnected={false}
       cancellationDeadline={null}
-      markWaiverInPersonAction={noop}
+      markWaiverInPersonAction={noRefusal}
       markPaymentAction={noop}
       mayWriteOffPayment={false}
       removeBookingAction={noop}

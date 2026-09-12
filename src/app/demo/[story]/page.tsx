@@ -30,11 +30,13 @@ import { storySource } from "@/lib/funnel";
  * is, and waits for the tap — one clear primary action, and the only claim on
  * the page is a description of what the visitor is about to see.
  */
-// Only the three stories are valid routes; anything else 404s via the
-// `notFound()` call in the body — `dynamicParams` is not compatible with Cache
-// Components (nextConfig.cacheComponents), so the refusal for an unknown story
-// is enforced in the page rather than in this config. Same arrangement, and the
-// same reason, as `/switching/[competitor]`.
+// Only the three stories are valid routes. `dynamicParams` is not compatible
+// with Cache Components (nextConfig.cacheComponents), so the refusal for an
+// unknown story cannot be enforced from this config: the status comes from
+// `src/proxy.ts`, which judges the segment against this same `DEMO_STORY_IDS`
+// before anything streams (issue #1734), and the `notFound()` in the body is
+// the second layer that renders it. Same arrangement, and the same reason, as
+// `/switching/[competitor]`.
 export function generateStaticParams() {
   return DEMO_STORY_IDS.map((story) => ({ story }));
 }

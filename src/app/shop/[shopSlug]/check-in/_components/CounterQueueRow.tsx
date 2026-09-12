@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -18,9 +19,12 @@ import { blockerFixFor } from "@/lib/blockers";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { guardianSignatureRequired } from "@/lib/guardian";
 import type { NoShowClaim } from "@/lib/no-show";
+import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import type { FormNotice } from "@/lib/staff-notices";
+import { primaryBlocker } from "@/lib/today";
 import { counterBlockerDisclosure } from "../blocker-disclosure";
 import { CheckInActionForm } from "../CheckInActionForm";
+import { RowActionForm } from "../RowActionForm";
 import { NoShowSalvage, type NoShowSalvageCopy, NoShowScript } from "./NoShowScript";
 
 /**
@@ -70,6 +74,26 @@ export type CounterWaiverNotice = FormNotice & {
  *   a neutral badge. The tinted row fills the counter used to wear retire with
  *   the card stack (decision 2): hairlines and ink, not eight fills.
  */
+
+/**
+ * **What the counter's identity confirm says**, resolved once by the page like
+ * every other string on this surface (`NoShowScript`'s copy object sets the
+ * precedent; `staffTranslator` is server-side only).
+ *
+ * Worded for this door rather than borrowed from the roster's: at the counter
+ * the person is standing in front of the staffer, which is the evidence the
+ * attestation is actually made on. The roster's sentence is written for
+ * somebody reading a list.
+ */
+export type CounterIdentityCopy = {
+  /** The unarmed trigger, naming the diver — one row's confirm must not read like the next row's. */
+  trigger: string;
+  /** What confirming releases, in one sentence. Shown only once armed. */
+  message: string;
+  confirm: string;
+  cancel: string;
+  confirming: string;
+};
 
 /** The row's leading identity block — name, exceptional badges, quiet meta. */
 function DiverIdentity({
@@ -145,6 +169,8 @@ export function CounterQueueRow({
   noShowClaim,
   markNoShowAction,
   undoNoShowAction,
+  confirmIdentityAction,
+  identityCopy,
   salvage,
   t,
 }: {
@@ -162,7 +188,9 @@ export function CounterQueueRow({
   showFirstVisit: boolean;
   checkInAction: (formData: FormData) => Promise<{ ok: true }>;
   undoAction: (formData: FormData) => Promise<{ ok: true }>;
-  waiverAction: (formData: FormData) => Promise<void>;
+  /** A reducer, not a plain form action: a refused paper release answers in
+   * the form, carrying the typed values back (`PaperWaiverAction`, #1674). */
+  waiverAction: PaperWaiverAction;
   /**
    * The page's refused paper-waiver recording, when there is one — already
    * routed to a form by `noticeForForm` and carrying the booking it is about.
@@ -180,6 +208,13 @@ export function CounterQueueRow({
   noShowClaim: NoShowClaim | null;
   markNoShowAction: (formData: FormData) => Promise<void>;
   undoNoShowAction: (formData: FormData) => Promise<void>;
+  /**
+   * The counter's own door onto the roster's attestation (issue #1696) — one
+   * `confirmBookingIdentity`, two surfaces, as with seating.
+   */
+  confirmIdentityAction: (formData: FormData) => Promise<void>;
+  /** Its words, resolved by the page — see {@link CounterIdentityCopy}. */
+  identityCopy: CounterIdentityCopy;
   /**
    * What the shop can do with this released seat, already worded — the page
    * holds the translator, the locale and the shop's timezone, so it is the one
@@ -214,7 +249,10 @@ export function CounterQueueRow({
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <Badge tone="neutral">{t("checkIn.noShow.badge")}</Badge>
-            <form action={undoNoShowAction}>
+            <RowActionForm
+              action={undoNoShowAction}
+              sendFailedLabel={t("checkIn.sendFailedButton")}
+            >
               <input type="hidden" name="bookingId" value={row.bookingId} />
               <SubmitButton
                 pendingLabel={t("checkIn.noShow.undoing")}
@@ -223,7 +261,7 @@ export function CounterQueueRow({
               >
                 {t("checkIn.noShow.undo")}
               </SubmitButton>
-            </form>
+            </RowActionForm>
           </div>
         </div>
         {salvage ? <NoShowSalvage copy={salvage} /> : null}
@@ -354,6 +392,7 @@ export function CounterQueueRow({
                     confirmAriaLabel: t("checkIn.noShow.sailedConfirmAriaLabel", {
                       name: row.personName,
                     }),
+                    sendFailed: t("checkIn.sendFailedButton"),
                   }
                 : {
                     door: t("checkIn.noShow.door"),
@@ -363,6 +402,7 @@ export function CounterQueueRow({
                     confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", {
                       name: row.personName,
                     }),
+                    sendFailed: t("checkIn.sendFailedButton"),
                   }
             }
           />
@@ -382,6 +422,38 @@ export function CounterQueueRow({
     },
     t,
   );
+  /**
+   * **This seat is held on a guess** (H-13, issue #1556): it attached itself to
+   * an existing diver's record off the counter's own name prompt, or off a
+   * reused email under a different name, and `identity_unconfirmed` refuses it
+   * at the rail until a staffer vouches for the person in front of them.
+   *
+   * Read off the blockers the row already carries rather than from a new
+   * column — the same list `blockerFixFor` above and `counterBlockerDisclosure`
+   * below are reading (`src/lib/readiness.ts`).
+   */
+  const identityUnconfirmed = row.readiness.blockers.some(
+    (blocker) => blocker.code === "identity_unconfirmed",
+  );
+  /**
+   * **…and it is the blocker the row's pointing link is about**, which is the
+   * one case where that link has to go (`dive-domain-expert` review of issue
+   * #1696).
+   *
+   * `blockerDestination` answers this hold with "Open roster", and on *this*
+   * surface that link buys the staffer nothing: the roster withholds the same
+   * particulars behind the same flag, so the only thing it offers is the
+   * attestation this row now carries itself. Two identically styled secondary
+   * buttons, the pointing one first, and the mis-tap costs exactly what this
+   * change bought — the diver waits at the desk while the staffer navigates
+   * away and back.
+   *
+   * Suppressed here rather than in `blockerDestination`: Today's queue reads
+   * the same rule and has no confirm control of its own, so the link is still
+   * the only door it can offer (`src/lib/today.ts`).
+   */
+  const identityHoldsTheRow =
+    primaryBlocker(row.readiness.blockers)?.code === "identity_unconfirmed";
   // A diver at the counter with a signed paper release in hand: record it here
   // rather than sending them off to the trip's guest list. Offered only when
   // the waiver is the one fix this row is showing.
@@ -389,20 +461,73 @@ export function CounterQueueRow({
     <PaperWaiverControl
       action={waiverAction}
       bookingId={row.bookingId}
-      copy={paperWaiverCopy(t)}
+      copy={paperWaiverCopy(t, "counter")}
       // A minor's paper release names its co-signer too (ADR
       // 20260907-guardian-co-signature).
       requiresGuardian={guardianSignatureRequired(row.dateOfBirth, today)}
-      // Offered only on the row whose recording was just refused for a
-      // namesake co-signer, never on every minor at the counter.
-      offerNamesake={refusedWaiver?.code === "waiver-guardian-name"}
+      // The diver is standing here, so a staffer can truthfully say they
+      // watched both a namesake parent and child sign — the roster is the
+      // other such door, the diver's record deliberately not one.
+      offersNamesake
+      // Drawn on this row's own refusal, or on a page notice that named this
+      // booking, and on no other minor at the counter.
+      noticedNamesake={refusedWaiver?.code === "waiver-guardian-name"}
       className="mt-2"
-      // A refused recording lands back here with its notice below; re-open the
-      // form so the staffer can correct what it names rather than hunt for the
-      // trigger again. The diver record does exactly this (`WaiverGroup.tsx`),
-      // and the counter is where the diver is standing there waiting.
+      // A page-level notice that landed the staffer back here re-opens the
+      // form. A refused recording no longer navigates at all: it answers under
+      // the button with what they typed still in the boxes (issue #1674).
       defaultOpen={Boolean(refusedWaiver)}
     />
+  ) : null;
+  const waiverBlock = refusedWaiver ? (
+    <div className="min-w-0">
+      {paperControl}
+      <FormStatus tone={refusedWaiver.tone} className="mt-2">
+        {refusedWaiver.text}
+      </FormStatus>
+    </div>
+  ) : (
+    // Unwrapped when nothing was refused, so every ordinary row keeps the exact
+    // flex child it had before the refusal routing landed (issue 1574).
+    paperControl
+  );
+  /**
+   * **The counter's own identity confirm** (issue #1696), so a walk-in seated
+   * off the name prompt can be cleared where the staffer is standing instead of
+   * on the trip roster a navigation away.
+   *
+   * A two-step `InlineConfirm` and never the one-tap `SubmitButton` its
+   * neighbours on this row use: this attestation hands another person's
+   * certifications and waiver to this seat, spends the prepaid dives that cover
+   * it, and has no undo — the case `docs/design/principles.md` §7 reserves a
+   * blocking confirm for.
+   *
+   * **And while it is showing it is the row's only button.** A blocked row is
+   * offered no check-in control at all (`e2e/check-in.spec.ts`), so the small
+   * secondary treatment was justified against a large target that is not there;
+   * what it sat beside was the blocker's own "Open roster" link, suppressed
+   * above on exactly the rows that render this.
+   *
+   * The row still prints nothing new about the matched person. The flag gates
+   * disclosure as well as boarding (security review 2026-09-11), and the fix
+   * for the walk was a control, not a preview.
+   */
+  const identityControl = identityUnconfirmed ? (
+    <RowActionForm
+      action={confirmIdentityAction}
+      sendFailedLabel={t("checkIn.sendFailedButton")}
+      className="mt-3"
+    >
+      <input type="hidden" name="bookingId" value={row.bookingId} />
+      <InlineConfirm
+        triggerLabel={identityCopy.trigger}
+        message={identityCopy.message}
+        confirmLabel={identityCopy.confirm}
+        cancelLabel={identityCopy.cancel}
+        pendingLabel={identityCopy.confirming}
+        triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
+      />
+    </RowActionForm>
   ) : null;
   return (
     <LedgerRow as="article" size="lg" className="px-4 py-3 sm:px-5">
@@ -450,7 +575,10 @@ export function CounterQueueRow({
         surface="check_in"
         waiverCopy={waiverSendCopy(t)}
         blockers={row.readiness.blockers}
-        fix={fix}
+        // Nothing to point at when the hold *is* the blocker: the attestation
+        // below is the whole fix, and a second secondary button walks the
+        // staffer away from it (`identityHoldsTheRow`).
+        fix={identityHoldsTheRow ? null : fix}
         collapseReasons={counterBlockerDisclosure(t, row.readiness.blockers) ?? undefined}
         t={t}
         extra={
@@ -465,17 +593,17 @@ export function CounterQueueRow({
           //
           // `BlockedDiverRow` renders `extra` unconditionally in both layouts,
           // so a refusal routed to a rendered row always has somewhere to land.
-          refusedWaiver ? (
-            <div className="min-w-0">
-              {paperControl}
-              <FormStatus tone={refusedWaiver.tone} className="mt-2">
-                {refusedWaiver.text}
-              </FormStatus>
-            </div>
+          identityControl ? (
+            // The confirm sits *after* the waiver control, in the order the
+            // desk works them: the identity is what releases the matched
+            // person's waiver onto the seat, so a staffer who clears it may
+            // find the paper control gone on the next render.
+            <>
+              {waiverBlock}
+              {identityControl}
+            </>
           ) : (
-            // Unwrapped when nothing was refused, so every ordinary row keeps
-            // the exact flex child it had before this change.
-            paperControl
+            waiverBlock
           )
         }
       />
@@ -490,7 +618,7 @@ export function CounterQueueRow({
  */
 function PassDoor({ shopSlug, row, t }: { shopSlug: string; row: QueueRow; t: StaffTranslator }) {
   return (
-    <form action={printPassAction}>
+    <RowActionForm action={printPassAction} sendFailedLabel={t("checkIn.sendFailedButton")}>
       <input type="hidden" name="shopSlug" value={shopSlug} />
       <input type="hidden" name="bookingId" value={row.bookingId} />
       <SubmitButton
@@ -500,6 +628,6 @@ function PassDoor({ shopSlug, row, t }: { shopSlug: string; row: QueueRow; t: St
       >
         {t("print.counter.passDoor")}
       </SubmitButton>
-    </form>
+    </RowActionForm>
   );
 }

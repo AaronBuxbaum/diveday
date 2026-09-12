@@ -1,7 +1,9 @@
 import { randomBytes } from "node:crypto";
+import { sql } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { openSecret } from "@/lib/secret-box";
 import { seededShopContext } from "@/test/db";
+import type { AppDb } from "./client";
 import { shops } from "./schema";
 import {
   connectShopWhatsAppAccount,
@@ -26,6 +28,16 @@ function connectInput(shopId: string, overrides: Record<string, unknown> = {}) {
     wabaId: "waba_1",
     ...overrides,
   };
+}
+
+/** A second tenant in the same database — the whole point of every WABA test below. */
+async function siblingShop(db: AppDb, slug: string) {
+  const [sibling] = await db
+    .insert(shops)
+    .values({ name: "Sibling Shop", slug, timezone: "UTC" })
+    .returning();
+  if (!sibling) throw new Error("second shop insert failed");
+  return sibling;
 }
 
 function okFetch(id = "wamid.OK") {
@@ -110,6 +122,48 @@ describe("connectShopWhatsAppAccount", () => {
     expect(openSecret(after?.accessTokenSealed ?? "", key)).toBe("EAAG-rotated");
   });
 
+  it("refuses a WABA another shop already holds, and stores nothing", async () => {
+    // The fault this closes (issue #1715): the WABA is the tenant key every
+    // inbound WhatsApp event is routed on, and two rows holding one made a
+    // diver's message — a reply keyword in it up to a cancellation — land in an
+    // arbitrary one of the two shops. A chain completing Embedded Signup for two
+    // of its DiveDay shops against one Meta Business is the ordinary way there.
+    const { db, shop } = await seededShopContext();
+    const sibling = await siblingShop(db, "sibling-shop-waba-taken");
+    await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_shared" }), { key });
+
+    const result = await connectShopWhatsAppAccount(
+      db,
+      connectInput(sibling.id, { wabaId: "waba_shared" }),
+      { key },
+    );
+
+    expect(result).toEqual({ status: "refused", reason: "waba_already_connected" });
+    // Rejected by the database, not merely absent: a test that only re-read the
+    // first shop's row would still pass with the unique index dropped.
+    expect(await getShopWhatsAppAccount(db, sibling.id)).toBeNull();
+    expect(await shopIdForWhatsAppWaba(db, "waba_shared")).toBe(shop.id);
+  });
+
+  it("lets two shops connect before a WABA is recorded, because nulls repeat", async () => {
+    // `waba_id` stays nullable under the unique index on purpose. A shop whose
+    // row predates a recorded WABA is legal, and Postgres lets nulls repeat — so
+    // tightening the column to not-null, or storing "" for absent, would refuse
+    // a second shop's ordinary connection.
+    const { db, shop } = await seededShopContext();
+    const sibling = await siblingShop(db, "sibling-shop-waba-null");
+
+    expect(
+      (await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: null }), { key }))
+        .status,
+    ).toBe("connected");
+    expect(
+      (await connectShopWhatsAppAccount(db, connectInput(sibling.id, { wabaId: null }), { key }))
+        .status,
+    ).toBe("connected");
+    expect((await getShopWhatsAppAccount(db, sibling.id))?.wabaId).toBeNull();
+  });
+
   it("trims the pasted values a staff form inevitably carries", async () => {
     const { db, shop } = await seededShopContext();
     await connectShopWhatsAppAccount(
@@ -169,17 +223,16 @@ describe("shopIdForWhatsAppWaba", () => {
     expect(await shopIdForWhatsAppWaba(db, "waba_someone_else")).toBeNull();
   });
 
-  // `waba_id` has no unique index (issue #1715), so a chain that completes
-  // Embedded Signup for two of its shops against one Meta Business puts two rows
-  // here. An unordered `limit(1)` would hand this diver's message — and any
-  // reply keyword in it, up to a cancellation — to whichever row came back first.
-  it("refuses to guess when two shops hold the same WABA", async () => {
+  // The belt to `shop_whatsapp_accounts_waba_unique`'s braces. The index makes
+  // the second row impossible (issue #1715), so this state is now reachable only
+  // by removing it — which is precisely the regression worth holding a test
+  // against: an index dropped in a later migration must not quietly restore the
+  // arbitrary-tenant routing the reader refuses to do. Dropping it in this test's
+  // own throwaway PGlite proves the reader, not the index.
+  it("refuses to guess if two shops ever hold the same WABA", async () => {
     const { db, shop } = await seededShopContext();
-    const [sibling] = await db
-      .insert(shops)
-      .values({ name: "Sibling Shop", slug: "sibling-shop-whatsapp-test", timezone: "UTC" })
-      .returning();
-    if (!sibling) throw new Error("second shop insert failed");
+    const sibling = await siblingShop(db, "sibling-shop-whatsapp-test");
+    await db.execute(sql`drop index shop_whatsapp_accounts_waba_unique`);
     await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_shared" }), { key });
     await connectShopWhatsAppAccount(db, connectInput(sibling.id, { wabaId: "waba_shared" }), {
       key,

@@ -2,13 +2,13 @@ import type { getBookingForTrip } from "@/db/bookings";
 import type { listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import type { getBookingReadiness, getTripRequirements } from "@/db/readiness";
 import type { DiverRentalFit } from "@/db/rental-fit";
-import type { getShopBySlug } from "@/db/shops";
+import type { shopBySlugCached } from "@/db/shops";
 import type { getTripWithBooked, listTripDives, listTripScheduleDays } from "@/db/trips";
 import type { MarineLifeCard } from "@/i18n/marine-life-labels";
 import type { DiverMessageKey } from "@/i18n/messages";
 import type { fetchAutomatedMarineForecast } from "@/lib/marine-forecast";
 
-export type Shop = NonNullable<Awaited<ReturnType<typeof getShopBySlug>>>;
+export type Shop = NonNullable<Awaited<ReturnType<typeof shopBySlugCached>>>;
 export type Trip = NonNullable<Awaited<ReturnType<typeof getTripWithBooked>>>;
 export type TripDive = Awaited<ReturnType<typeof listTripDives>>[number];
 /** One consecutive day a departure meets on — a `trip_schedule_days` row. */

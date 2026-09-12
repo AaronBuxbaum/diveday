@@ -14,7 +14,7 @@ import {
   getShopReviewAggregate,
   listPublishedShopReviewsPage,
 } from "@/db/reviews";
-import { getShopBySlug } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops";
 import { requestTranslator } from "@/i18n/request";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { publicReviewsPath, publicSchedulePath } from "@/lib/public-routes";
@@ -28,7 +28,7 @@ export async function generateMetadata({
   params: Promise<{ shopSlug: string }>;
 }): Promise<Metadata> {
   const { shopSlug } = await params;
-  const shop = await getShopBySlug(await getDb(), shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) return { title: "Reviews — DiveDay" };
   const { t } = await requestTranslator(shop.defaultLocale);
   const description = t("reviews.allDescription");
@@ -59,7 +59,7 @@ export default async function PublicReviewsPage({
   const { shopSlug } = await params;
   const { page } = await searchParams;
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) notFound();
 
   const { locale, t } = await requestTranslator(shop.defaultLocale);

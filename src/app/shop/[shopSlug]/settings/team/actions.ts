@@ -327,7 +327,7 @@ export async function saveStaffLanguagesAction(formData: FormData) {
   });
   revalidateAndRedirect(
     path,
-    noticeUrl(`${path}#staff-${personId}`, saved ? "languages-saved" : "not_found", {
+    noticeUrl(`${path}#staff-${personId}`, saved ? "languages-saved" : "not-found", {
       languagesFor: personId,
     }),
   );

@@ -767,13 +767,13 @@ account.
 Visual regression testing (`reg-suit`) publishes captured screenshots and diff reports to `diveday-vrt`
 under top-level commit SHA prefixes.
 
-### Daily Schedule and Behavior
+### Schedule and Behavior
 
 An EventBridge Scheduler schedule (`diveday-visual-bucket-pruner`) invokes the Lambda function
-`diveday-visual-bucket-pruner` daily at 04:00 UTC:
-1. Queries the GitHub API for recent commits on `main`.
-2. Identifies the newest commit that has a published snapshot report (`out.json`) in S3.
-3. Preserves that active main baseline, and the nine next-newest `main` commits that also have one (`KEEP_MAIN_BASELINES = 10`).
+`diveday-visual-bucket-pruner` every six hours (it was nightly at 04:00 UTC until 2026-09-10):
+1. Pages the GitHub API for recent commits on `main`, 100 at a time, until what it has reaches past both floors in step 3 (`MAX_CANDIDATE_PAGES = 4`).
+2. Reduces that list to `main`'s own tips by walking first-parent links, because a pull request's baseline is its fork point and a fork point is a main tip. Four of every five rows in the list is a pull-request head commit, and counting those as baselines is what issue #1662 was.
+3. Preserves every one of those tips that has a published snapshot report (`out.json`) in S3, newest first, until both floors are satisfied: at least `KEEP_MAIN_BASELINES = 10` of them, and none left inside `KEEP_MAIN_BASELINE_AGE_MS = 72h`. The count is what survives a quiet month; the age window is what covers a branch cut yesterday. The measured distribution both were sized from is the 2026-09-12 amendment to ADR 20260826-prune-visual-bucket.
 4. Deletes all objects in stale snapshot prefixes in 1000-object batches — stale meaning "not one of those baselines, and published more than a day ago" (`MIN_PRUNE_AGE_MS`, one day since 2026-09-08; the floor exists for a stacked pull request's lower layer, which is on no branch the walk can enumerate).
 5. Emits structured JSON summary metrics to CloudWatch Logs (`/aws/lambda/diveday-visual-bucket-pruner`).
 

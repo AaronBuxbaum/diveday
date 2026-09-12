@@ -5,7 +5,8 @@ import {
   REFUSED_SHOP_SLUG_HEADER,
   REQUEST_PATH_HEADER,
 } from "@/lib/embed-routes";
-import type { PublicRouteShape } from "@/lib/public-route-shape";
+import type { PublicRouteQuery } from "@/lib/public-route-shape";
+import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 
 /**
  * The edge refusal's two database modules, stubbed at the module boundary.
@@ -26,7 +27,7 @@ const existence = vi.hoisted(() => ({
    * server refused" have to be distinguishable here.
    */
   throwsWith: null as unknown,
-  asked: [] as PublicRouteShape[],
+  asked: [] as PublicRouteQuery[],
   /**
    * The shops the stub says are really there, whatever `answer` says about the
    * resource under them — `null` to let `answer` speak for both halves alike.
@@ -38,9 +39,13 @@ const existence = vi.hoisted(() => ({
 
 vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
 vi.mock("@/db/public-route-existence", () => ({
-  publicRouteLookup: async (_db: unknown, shape: PublicRouteShape) => {
+  publicRouteLookup: async (_db: unknown, shape: PublicRouteQuery) => {
     existence.asked.push(shape);
     if (existence.throws) throw existence.throwsWith ?? new Error("database unavailable");
+    // A town names no shop, so the real module never resolves one and answers
+    // `shopExists: false` whatever it finds — the refusal is DiveDay's own
+    // (issue #1734).
+    if (shape.kind === "region") return { exists: existence.answer, shopExists: false };
     const shopExists = existence.liveShops
       ? existence.liveShops.has(shape.shopSlug)
       : existence.answer;
@@ -79,6 +84,27 @@ function request(url: string, headers?: Record<string, string>): NextRequest {
 
 async function run(req: NextRequest): Promise<Response> {
   const res = await proxy(req, {});
+  if (!res) throw new Error("proxy returned no response");
+  return res;
+}
+
+/**
+ * The proxy with the refused-statement damper's module state reset.
+ *
+ * `reportRefusedQuery` keeps its last-reported instant and swallowed count in
+ * module scope — that is what makes the bound per instance — so a test that
+ * expects the first line of a fresh instance has to say so, or it passes or
+ * fails on file order. The `vi.hoisted` `existence` stub survives
+ * `vi.resetModules()`, which is what makes this safe (`src/lib/rate-limit.test.ts`
+ * leans on the same thing).
+ */
+async function freshProxy(): Promise<typeof proxy> {
+  vi.resetModules();
+  return (await import("@/proxy")).proxy;
+}
+
+async function runOn(fresh: typeof proxy, req: NextRequest): Promise<Response> {
+  const res = await fresh(req, {});
   if (!res) throw new Error("proxy returned no response");
   return res;
 }
@@ -182,6 +208,22 @@ describe("the public namespace's edge refusal", () => {
     existence.liveShops = null;
   });
 
+  /**
+   * A slug Postgres refuses: SQLSTATE 22021, wrapped by drizzle exactly as the
+   * driver hands it over — the SQL followed by the bound parameters verbatim,
+   * which is the caller's own string and must never reach a log line.
+   */
+  function refuseWithSqlState(): void {
+    const driver = Object.assign(new Error('invalid byte sequence for encoding "UTF8": 0x00'), {
+      code: "22021",
+    });
+    existence.throws = true;
+    existence.throwsWith = new Error(
+      'Failed query: select "id" from "shops" where "shops"."slug" = $1\nparams: probe-slug,1',
+      { cause: driver },
+    );
+  }
+
   function rewriteTarget(res: Response): string | null {
     const value = res.headers.get("x-middleware-rewrite");
     return value ? new URL(value).pathname : null;
@@ -275,6 +317,83 @@ describe("the public namespace's edge refusal", () => {
       await run(request(path));
     }
     expect(existence.asked).toEqual([]);
+  });
+
+  /**
+   * The three dynamic routes outside `/s/**` (issue #1734). They answered 200
+   * with a not-found page for six weeks after this refusal shipped, because a
+   * pathname `publicRouteShape` has no opinion about is passed through
+   * untouched — silence by construction, which is why
+   * `src/app/edge-refusal-coverage.test.ts` now reads the route tree.
+   */
+  it("refuses an unregistered incumbent and an unknown story without opening a database", async () => {
+    // `MIGRATION_GUIDE_SLUGS` and `DEMO_STORY_IDS` are closed lists this
+    // repository holds, so the pure half settles both. `asked` staying empty is
+    // the assertion: a crawler probing these must not be able to make a cold
+    // instance open a connection it has no question for.
+    existence.answer = true;
+    for (const path of ["/switching/checkfront", "/demo/not-a-story"]) {
+      const res = await run(request(path));
+      expect(rewriteTarget(res), path).toBe("/_not-found");
+      // No shop over these — they are DiveDay's own pages, so the refusal is
+      // DiveDay's own and issue #765's frame does not apply.
+      expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`), path).toBe("");
+      expect(res.headers.get("Cache-Control"), path).toBe("no-store");
+    }
+    expect(existence.asked).toEqual([]);
+  });
+
+  it("leaves a registered guide, a real story and the spreadsheet page alone", async () => {
+    // The direction that costs an outage rather than crawl budget. The
+    // spreadsheet guide is the sharp one: a live page whose slug is
+    // deliberately not an incumbent, so a `[competitor]`-shaped judgement of
+    // its path would 404 it.
+    existence.answer = false;
+    for (const path of [
+      "/switching/eve",
+      "/switching/spreadsheet",
+      "/switching",
+      "/demo/weather-day",
+    ]) {
+      expect(rewriteTarget(await run(request(path))), path).toBeNull();
+    }
+    expect(existence.asked).toEqual([]);
+  });
+
+  it("asks the database about a town, and refuses the one nobody dives out of", async () => {
+    // There is no closed list of towns — `isRegionSlug` is a pattern, and the
+    // set is a projection of `shops.region_slug` — so `/dive/not-a-town` is the
+    // one of the three that has to be a read. This is the assertion a
+    // shape-only fix fails.
+    existence.answer = false;
+    const res = await run(request("/dive/not-a-town"));
+    expect(rewriteTarget(res)).toBe("/_not-found");
+    expect(existence.asked).toEqual([{ kind: "region", regionSlug: "not-a-town" }]);
+    expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`)).toBe("");
+
+    existence.asked = [];
+    existence.answer = true;
+    expect(rewriteTarget(await run(request("/dive/key-largo")))).toBeNull();
+    expect(existence.asked).toEqual([{ kind: "region", regionSlug: "key-largo" }]);
+  });
+
+  it("refuses a town segment no locality could have produced, with no read at all", async () => {
+    // The free half: `dive/[region]/page.tsx` shape-tests before it queries, so
+    // the edge may apply the same test a layer earlier.
+    existence.answer = true;
+    for (const segment of ["Key%20Largo", "key_largo", "-key-largo"]) {
+      expect(rewriteTarget(await run(request(`/dive/${segment}`))), segment).toBe("/_not-found");
+    }
+    expect(existence.asked).toEqual([]);
+  });
+
+  it("serves a town when the read fails, exactly as it serves a shop", async () => {
+    // The fail-open policy reaches the new shape too: a database outage must
+    // not take `/dive/key-largo` off the internet to fix a soft 404.
+    existence.throws = true;
+    await logged(async () => {
+      expect(rewriteTarget(await run(request("/dive/key-largo")))).toBeNull();
+    });
   });
 
   it("names the shop when the shop is alive and only the thing under it is gone", async () => {
@@ -502,6 +621,12 @@ describe("the public namespace's edge refusal", () => {
       shape: "course",
       code: "ECONNREFUSED",
     });
+    // The same absence the refused branch asserts. Held here too, because
+    // otherwise adding `error: String(error)` to this branch's `log()` would
+    // ship drizzle's wrapper message — the SQL and the bound parameters
+    // verbatim, which is the caller's own string — with the suite green.
+    expect(JSON.stringify(line)).not.toContain("10.0.0.1");
+    expect(JSON.stringify(line)).not.toContain("open-water");
   });
 
   it("logs a statement the server refused at warn, carrying none of the request's own strings", async () => {
@@ -511,24 +636,147 @@ describe("the public namespace's edge refusal", () => {
     // outage put whoever was sending it in charge of the alarm, and the line
     // carried their own path *and* drizzle's wrapper message, which is the SQL
     // followed by the bound parameters verbatim.
-    const driver = Object.assign(new Error('invalid byte sequence for encoding "UTF8": 0x00'), {
-      code: "22021",
-    });
-    existence.throws = true;
-    existence.throwsWith = new Error(
-      'Failed query: select "id" from "shops" where "shops"."slug" = $1\nparams: probe-slug,1',
-      { cause: driver },
-    );
-    const lines = await logged(() => run(request("/s/probe-slug")));
+    refuseWithSqlState();
+    const fresh = await freshProxy();
+    const lines = await logged(() => runOn(fresh, request("/s/probe-slug")));
     expect(lines).toHaveLength(1);
+    // The level is asserted, not just the count: putting this back to `error`
+    // would hand whoever is sending `/s/%00` the `AppErrors` alarm.
     expect(lines[0]).toMatchObject({
       level: "warn",
       event: "public_route.existence_query_refused",
       shape: "shop",
       code: "22021",
+      swallowed: 1,
     });
     expect(JSON.stringify(lines)).not.toContain("probe-slug");
     expect(JSON.stringify(lines)).not.toContain("invalid byte sequence");
+  });
+
+  it("writes one line for a flood of refused statements, and still serves every page", async () => {
+    // The line is what an anonymous GET can make the app write, so it is
+    // bounded per instance. 200 requests, one line.
+    refuseWithSqlState();
+    const fresh = await freshProxy();
+    const responses: Response[] = [];
+    const lines = await logged(async () => {
+      for (let i = 0; i < 200; i += 1) {
+        responses.push(await runOn(fresh, request("/s/probe-slug")));
+      }
+    });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ level: "warn", swallowed: 1 });
+    // Failing open is the behaviour the damper must not have disturbed: every
+    // one of those requests still served its page rather than a refusal.
+    expect(responses.filter((res) => rewriteTarget(res) !== null)).toEqual([]);
+  });
+
+  it("carries the swallowed count into the next interval, so the rate stays visible", async () => {
+    // Damped is not dropped. The second line says how many the first stood in
+    // for, the same as `rate_limit.store_failed`.
+    refuseWithSqlState();
+    const fresh = await freshProxy();
+    const first = await logged(async () => {
+      for (let i = 0; i < 200; i += 1) await runOn(fresh, request("/s/probe-slug"));
+    });
+    expect(first).toHaveLength(1);
+
+    // The unit clock is frozen, so a minute has to be stated rather than waited
+    // for.
+    const later = new Date(Date.parse(TEST_FROZEN_CLOCK) + 61_000).toISOString();
+    vi.stubEnv("DIVEDAY_CLOCK", later);
+    try {
+      const second = await logged(() => runOn(fresh, request("/s/probe-slug")));
+      expect(second).toHaveLength(1);
+      expect(second[0]).toMatchObject({
+        level: "warn",
+        event: "public_route.existence_query_refused",
+        swallowed: 200,
+      });
+    } finally {
+      // `vitest.config.ts` sets `DIVEDAY_CLOCK` process-wide and nothing
+      // unstubs it between tests, so leaving this stubbed would hand a clock 61
+      // seconds ahead to every later test in this worker — and the frozen
+      // instant is load-bearing in several of them.
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("alarms on our own credentials being rejected, mid-flood and undamped", async () => {
+    // `28P01` is our own `DATABASE_URL` being refused: no bound parameter
+    // produces it, and it takes this whole check back to fail-open soft 404s
+    // for every diver. It used to classify into the damped `warn` branch, where
+    // no metric counted it and whoever was flooding `/s/%00` could at best
+    // delay it by a minute (issue #1750). It is now the `error` line
+    // `DatabaseUnavailable` alarms on at one datapoint in five minutes, which
+    // is never damped — so it arrives on its first occurrence even while a
+    // flood is in progress.
+    refuseWithSqlState();
+    const fresh = await freshProxy();
+    const lines = await logged(async () => {
+      for (let i = 0; i < 50; i += 1) await runOn(fresh, request("/s/probe-slug"));
+      existence.throwsWith = Object.assign(new Error("password authentication failed"), {
+        code: "28P01",
+      });
+      await runOn(fresh, request("/s/probe-slug"));
+      await runOn(fresh, request("/s/probe-slug"));
+    });
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toMatchObject({
+      level: "warn",
+      event: "public_route.existence_query_refused",
+      code: "22021",
+      swallowed: 1,
+    });
+    for (const line of lines.slice(1)) {
+      expect(line).toMatchObject({
+        level: "error",
+        event: "public_route.existence_unavailable",
+        shape: "shop",
+        code: "28P01",
+      });
+    }
+  });
+
+  it("keeps one refused code's flood out of another's bucket", async () => {
+    // A single global bucket would let whoever is sending `/s/%00` hold it open
+    // and fold every other refused statement into `swallowed`, unreported —
+    // letting a stranger choose what an operator can see. Both codes here are
+    // class 22 now that the branch is narrowed to the caller's own bytes, and
+    // `22P05` must still get its own first line mid-flood.
+    refuseWithSqlState();
+    const fresh = await freshProxy();
+    const lines = await logged(async () => {
+      for (let i = 0; i < 50; i += 1) await runOn(fresh, request("/s/probe-slug"));
+      const driver = Object.assign(new Error("has no equivalent in encoding"), { code: "22P05" });
+      existence.throwsWith = new Error("Failed query", { cause: driver });
+      await runOn(fresh, request("/s/probe-slug"));
+    });
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatchObject({ code: "22021", swallowed: 1, level: "warn" });
+    expect(lines[1]).toMatchObject({ code: "22P05", swallowed: 1, level: "warn" });
+  });
+
+  it("never damps a database failure that is ours", async () => {
+    // The other branch is the one worth waking somebody for:
+    // `DatabaseUnavailable` alarms at one datapoint in five minutes, so a
+    // damper on it would blunt the alarm the split exists to protect.
+    existence.throws = true;
+    existence.throwsWith = Object.assign(new Error("connect ECONNREFUSED 10.0.0.1:5432"), {
+      code: "ECONNREFUSED",
+    });
+    const fresh = await freshProxy();
+    const lines = await logged(async () => {
+      await runOn(fresh, request("/s/blue-mantis"));
+      await runOn(fresh, request("/s/blue-mantis"));
+    });
+    expect(lines).toHaveLength(2);
+    for (const line of lines) {
+      expect(line).toMatchObject({
+        level: "error",
+        event: "public_route.existence_unavailable",
+      });
+    }
   });
 });
 

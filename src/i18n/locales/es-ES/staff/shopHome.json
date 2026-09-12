@@ -152,8 +152,8 @@
       "since": "Desde el {date}"
     },
     "close": {
-      "back": "{back} de {booked} de vuelta",
-      "backBy": "{back} de {booked} de vuelta a las {time}",
+      "back": "{back} de {sailed} de vuelta",
+      "backBy": "{back} de {sailed} de vuelta a las {time}",
       "closedBy": "lista cerrada por {name}",
       "backSouls": "salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}",
       "backSoulsBy": "salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back} a las {time}",

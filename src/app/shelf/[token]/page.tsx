@@ -22,6 +22,7 @@ import { DIVER_CERTIFICATION_AGENCY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale, requestTranslator } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
 import { formatRelativeDay, formatShortDate, formatTime, formatWeekday } from "@/lib/format";
+import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { RememberShelf } from "./_components/RememberShelf";
 import {
   forgetShelfAction,
@@ -300,7 +301,7 @@ function TheFile({
               id="shelf-bcd"
               name="bcdSize"
               defaultValue={file.sizes.bcdSize ?? ""}
-              maxLength={20}
+              maxLength={RENTAL_FIT_TEXT_LIMITS.size}
               className={controlClass}
             />
           </Field>
@@ -309,7 +310,7 @@ function TheFile({
               id="shelf-wetsuit"
               name="wetsuitSize"
               defaultValue={file.sizes.wetsuitSize ?? ""}
-              maxLength={20}
+              maxLength={RENTAL_FIT_TEXT_LIMITS.size}
               className={controlClass}
             />
           </Field>
@@ -318,7 +319,7 @@ function TheFile({
               id="shelf-boots"
               name="bootSize"
               defaultValue={file.sizes.bootSize ?? ""}
-              maxLength={20}
+              maxLength={RENTAL_FIT_TEXT_LIMITS.size}
               className={controlClass}
             />
           </Field>
@@ -327,7 +328,7 @@ function TheFile({
               id="shelf-fins"
               name="finSize"
               defaultValue={file.sizes.finSize ?? ""}
-              maxLength={20}
+              maxLength={RENTAL_FIT_TEXT_LIMITS.size}
               className={controlClass}
             />
           </Field>

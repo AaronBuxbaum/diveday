@@ -26,6 +26,7 @@
     "noRequirements": "No admission requirements set",
     "noBoat": "Boat not assigned",
     "noCrew": "No crew assigned",
+    "crewClash": "Crew clash",
     "oneTime": "One-time departure",
     "perSeat": "per seat",
     "seatsLabel": "of {capacity, plural, one {# seat} other {# seats}}",
@@ -81,6 +82,7 @@
     "waiverComplete": "That diver already has a completed waiver.",
     "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver, or send the digital link so the diver answers it.",
     "waiverGuardianName": "The co-signer’s name is the diver’s own, so this release would show one person signing twice. Type the guardian’s name as their own ID reads it, and if the diver’s record is shorter than the diver’s ID, correct the record to match. If the two really do read exactly alike, tick the confirmation on this form and record it.",
+    "waiverIdentityUnconfirmed": "This seat is held until somebody confirms who this diver is, so a paper release can’t go on their record yet. Confirm it on their guest row, then record the release.",
     "waiverError": "That paper waiver couldn’t be recorded. Open the diver’s record to see why.",
     "recapNote": "Recap note saved. It rides along on every diver’s recap.",
     "recapPhotoRemoved": "Photo removed from the recap.",
@@ -244,6 +246,8 @@
     "assignLabel": "Assign crew",
     "assignOption": "Assign crew…",
     "unassignAria": "Unassign {name}",
+    "clash": "Also crewing {departure} at these hours and cannot be on both.",
+    "assignClash": "{name} is already crewing another departure at these hours and cannot be on both.",
     "assignFailed": "That didn’t save. Recheck your connection or try again."
   },
   "recapNote": {
@@ -570,6 +574,7 @@
     "drysuitWeightCheck": "Drysuit: weight check in the water",
     "drysuitFins": "Pack fins that clear a drysuit boot",
     "drysuitFinsWithSize": "Shoe {size}: pack fins that clear a drysuit boot",
+    "noLongerRented": "You no longer rent this",
     "notRecorded": "Not recorded",
     "emptyHeading": "Nothing to pack yet",
     "emptyAction": "Open the guest list",

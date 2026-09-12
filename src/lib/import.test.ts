@@ -23,6 +23,7 @@ import {
   priorVisitDedupeKey,
 } from "./import";
 import { IMPORT_SCOPE_ROW_KEYS } from "./migration-guides";
+import { RENTAL_FIT_TEXT_LIMITS } from "./rentals";
 
 describe("parseCsv (RFC-4180)", () => {
   it("reads quoted fields, embedded commas, doubled quotes, and CRLF", () => {
@@ -175,6 +176,103 @@ describe("prepareContactImport — explicit bounds (CR-016)", () => {
     const prepared = prepareContactImport(`full_name\n${hugeCell}`);
     expect(prepared.fatal?.code).toBe("cell_too_long_row");
     expect(prepared.rows).toHaveLength(0);
+  });
+});
+
+describe("prepareContactImport — rental sizes every fit form can re-submit (#1754)", () => {
+  // The importer was the one door onto the four size columns with no cap at
+  // all, while all three writers of `rental_fit_profiles` re-post whatever is
+  // stored and cap it at `RENTAL_FIT_TEXT_LIMITS.size`. An over-long imported
+  // size therefore made that diver's fit unsaveable from the staff editor, the
+  // `/ready` gear form and the diver's own shelf alike, on forms where every
+  // visible box read right.
+  const noteFiledAsASize = "Medium Large, long torso, prefers 5mm not 3mm";
+
+  it("declines a size longer than a fit form can hold, and says so on the report", () => {
+    expect(noteFiledAsASize.length).toBeGreaterThan(RENTAL_FIT_TEXT_LIMITS.size);
+    const prepared = prepareContactImport(
+      `full_name,wetsuit_size\nOverlong Olive,"${noteFiledAsASize}"`,
+    );
+    const row = prepared.rows[0];
+    expect(row?.sizes.wetsuitSize).toBeNull();
+    // The column is named, and the value quoted back is bounded: the staffer
+    // running the import is the one person who can set the size by hand, and
+    // what they need is which cell on which row — the file itself is open in
+    // front of them (`security-reviewer`, issue #1754). Unbounded, four size
+    // columns over sixty previewed rows was a quarter of a megabyte of warning
+    // text in one table column.
+    expect(row?.issues).toEqual(
+      expect.arrayContaining([
+        {
+          level: "warning",
+          code: "size_too_long",
+          params: { field: "wetsuit_size", value: noteFiledAsASize },
+        },
+      ]),
+    );
+  });
+
+  it("quotes back only the head of a chatty cell, and names its column", () => {
+    // A prior system's notes field mapped onto a size column. Sixty rows of
+    // this in a preview is why the echo is bounded at all.
+    const essay = `Medium Large ${"and a further remark ".repeat(20)}`.trim();
+    const prepared = prepareContactImport(`full_name,bcd_size\nChatty Chris,"${essay}"`);
+    const echoed = prepared.rows[0]?.issues.find((i) => i.code === "size_too_long")?.params?.value;
+    expect(echoed).toBe(`${essay.slice(0, 60)}…`);
+    expect(echoed?.length).toBe(61);
+    // Twenty characters past the size cap, so any value that could have been a
+    // size is shown whole and only what is too long to be one is cut.
+    expect(essay.slice(0, 60).length).toBeGreaterThan(RENTAL_FIT_TEXT_LIMITS.size);
+    // One sentence per column, so a row with three unusable cells says which
+    // piece to re-enter three different ways.
+    expect(prepared.rows[0]?.issues[0]?.params?.field).toBe("bcd_size");
+  });
+
+  it("holds a size right at the cap, and never truncates one past it", () => {
+    const atTheCap = "M".repeat(RENTAL_FIT_TEXT_LIMITS.size);
+    const oneOver = "L".repeat(RENTAL_FIT_TEXT_LIMITS.size + 1);
+    const prepared = prepareContactImport(
+      `full_name,bcd_size,fin_size\nEdge Eddie,${atTheCap},${oneOver}`,
+    );
+    expect(prepared.rows[0]?.sizes.bcdSize).toBe(atTheCap);
+    // Not `oneOver.slice(0, 40)`: a cut-off size is a plausible-looking wrong
+    // size that reaches the packing list verbatim, while a size DiveDay does
+    // not hold is a gap `rentalFitCompleteness` already chases.
+    expect(prepared.rows[0]?.sizes.finSize).toBeNull();
+  });
+
+  it("bounds the boot column too, the one no form re-submits on its own", () => {
+    // `boot_size` has no box of its own on the staff editor — it is written
+    // from the one shoe-size answer — so an over-long value there is the
+    // quietest of the four and needs the boundary most.
+    const prepared = prepareContactImport(`full_name,boot_size\nQuiet Quinn,"${noteFiledAsASize}"`);
+    expect(prepared.rows[0]?.sizes.bootSize).toBeNull();
+    expect(prepared.rows[0]?.issues.filter((i) => i.code === "size_too_long")).toHaveLength(1);
+  });
+
+  it("raises one warning per over-long cell, not one for the row", () => {
+    const prepared = prepareContactImport(
+      [
+        "full_name,bcd_size,wetsuit_size,boot_size,fin_size",
+        `Four Fiona,"${noteFiledAsASize}","${noteFiledAsASize}",9,"${noteFiledAsASize}"`,
+      ].join("\n"),
+    );
+    const raised = prepared.rows[0]?.issues.filter((i) => i.code === "size_too_long");
+    expect(raised).toHaveLength(3);
+    // And each names its own column. Three warnings that read identically tell
+    // a staffer nothing about which piece to go and set (`dive-domain-expert`
+    // review); every sibling warning in this file names its field.
+    expect(raised?.map((issue) => issue.params?.field)).toEqual([
+      "bcd_size",
+      "wetsuit_size",
+      "fin_size",
+    ]);
+    expect(prepared.rows[0]?.sizes.bootSize).toBe("9");
+  });
+
+  it("stays quiet about a row that carries no sizes at all", () => {
+    const prepared = prepareContactImport("full_name,email\nPlain Pat,pat@example.com");
+    expect(prepared.rows[0]?.issues.some((i) => i.code === "size_too_long")).toBe(false);
   });
 });
 

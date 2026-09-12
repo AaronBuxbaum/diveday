@@ -12,6 +12,7 @@ import {
   buddyReferralFromSearchParams,
   encodeBuddyCookie,
 } from "@/lib/buddy-links";
+import { MINUTE_MS, nowMs } from "@/lib/clock";
 import {
   type CspOptions,
   enforcedPolicy,
@@ -33,7 +34,7 @@ import {
   REQUEST_PATH_HEADER,
 } from "@/lib/embed-routes";
 import { log } from "@/lib/log";
-import { publicRouteShape } from "@/lib/public-route-shape";
+import { type PublicRouteShape, publicRouteShape } from "@/lib/public-route-shape";
 import { shopSlugFromPublicPath } from "@/lib/public-routes";
 import {
   encodeReferralCookie,
@@ -321,11 +322,106 @@ function rememberPartnerReferral(req: NextRequest, res: Response): void {
  */
 const NOT_FOUND_ROUTE = "/_not-found";
 
+/** One refused-statement line per failure kind, per instance, per minute. */
+const REFUSED_QUERY_REPORT_INTERVAL_MS = MINUTE_MS;
+
 /**
- * **A `/s/**` URL that names nothing is refused here, above the streaming
+ * How many distinct `shape:code` pairs get a bucket of their own before the
+ * rest share one. The key is built from two closed vocabularies, so a caller
+ * cannot mint keys — but this is the map a flood writes into, so it is bounded
+ * anyway rather than trusted to stay small.
+ */
+const REFUSED_QUERY_KIND_LIMIT = 16;
+
+/** Where pairs past the limit are counted, so the map cannot be grown. */
+const REFUSED_QUERY_OVERFLOW = "overflow";
+
+/** Module state, so the bound is per instance and dies with the instance. */
+const refusedQueries = new Map<string, { lastReportedAt: number; swallowed: number }>();
+
+/**
+ * The refused-statement line, bounded — the damper shape `reportStoreFailure`
+ * in `src/lib/rate-limit.ts` already uses.
+ *
+ * **Why this branch and not its neighbour.** A stranger reaches this one at
+ * will: the slugs below go to Postgres unfiltered and length-unbounded on
+ * purpose, so `/s/%00` is a statement the server refuses, once per request,
+ * for as long as it is sent. An anonymous GET should not be able to make the
+ * app write without limit. The `error` branch is deliberately left undamped:
+ * `DatabaseUnavailable` alarms at one datapoint in five minutes
+ * (`infra/lib/observability.ts`), and delaying it would blunt the one line
+ * here worth waking somebody for — which is the whole reason
+ * `classifyDatabaseFailure` splits the two. That does leave the *error* branch
+ * unbounded by request rate: pool exhaustion under a flood throws without a
+ * `code`, classifies as alarming, and writes a line per request. That is a
+ * genuine incident and should page somebody, so it is not damped here; the
+ * fleet-wide answer to the flood itself is a platform rate rule.
+ *
+ * **Bucketed per `shape:code`, not globally.** A single bucket would let
+ * whoever is sending `/s/%00` hold it open and fold every *other* failure that
+ * reaches this branch into `swallowed`, unreported — a stranger choosing what
+ * an operator can see. Issue #1750 narrowed this branch to SQLSTATE class 22
+ * alone, so the codes that used to make that urgent — `28P01` (our credentials
+ * rejected), `42501` (a revoked grant), `42P01` (a table missing mid-deploy) —
+ * now take the undamped `error` branch below and are never held behind a flood
+ * at all. The bucketing stays because the narrower version of the same thing is
+ * still true: `22021` and `22P05` are different failures, and a flood of one
+ * must not swallow the first sighting of the other. The key is built from two
+ * closed vocabularies and the map is capped regardless, so the bucket count is
+ * bounded whatever arrives.
+ *
+ * **The bound is per instance, not fleet-wide.** Serverless instances are many
+ * and short-lived, so a flood spread across them still writes a line each.
+ * This damps one instance's chatter; it is not a rate limit, and the
+ * fleet-wide answer to a flood is a platform rule
+ * (docs/engineering/rate-limiting-runbook.md).
+ *
+ * **Priced once, here, so nobody re-derives it.** The line is about 126 bytes,
+ * roughly 152 with CloudWatch's per-event overhead, so on the order of 35M
+ * such requests a month still sit inside the 5 GB always-free allowance. Each
+ * of those requests already costs a Vercel invocation and a Neon read, and the
+ * `vercel_spend` and `neon_compute` ceilings in `src/lib/cost-guardrails.ts`
+ * meet that long first. The bound exists because an unbounded
+ * attacker-triggered write is the wrong shape, not because the bill was large.
+ *
+ * `swallowed` keeps the real rate visible through the damping, the same as
+ * `rate_limit.store_failed`.
+ */
+function reportRefusedQuery(shape: PublicRouteShape["kind"], code: string, now: number): void {
+  try {
+    const kind = `${shape}:${code}`;
+    const key =
+      refusedQueries.has(kind) || refusedQueries.size < REFUSED_QUERY_KIND_LIMIT
+        ? kind
+        : REFUSED_QUERY_OVERFLOW;
+    let bucket = refusedQueries.get(key);
+    if (!bucket) {
+      bucket = { lastReportedAt: Number.NEGATIVE_INFINITY, swallowed: 0 };
+      refusedQueries.set(key, bucket);
+    }
+    bucket.swallowed += 1;
+    const sinceLastReport = now - bucket.lastReportedAt;
+    // A `now` that moved backwards reports rather than silently suppressing
+    // until the clock catches up again.
+    if (sinceLastReport >= 0 && sinceLastReport < REFUSED_QUERY_REPORT_INTERVAL_MS) return;
+    const swallowed = bucket.swallowed;
+    bucket.swallowed = 0;
+    bucket.lastReportedAt = now;
+    log("public_route.existence_query_refused", "warn", { shape, code, swallowed });
+  } catch {
+    // The precedent's rule, and the reason it wraps its whole body:
+    // observability failing must never become the outage the fail-open policy
+    // exists to prevent. A throw out of here would escape this function's
+    // caller's `catch` and turn a database hiccup into a 500 on every public
+    // page.
+  }
+}
+
+/**
+ * **A public URL that names nothing is refused here, above the streaming
  * boundary** (ADR 20260912-the-public-namespace-refuses-at-the-edge).
  *
- * Under `cacheComponents` every page in the public namespace streams a static
+ * Under `cacheComponents` every public page streams a static
  * shell first, so the `notFound()` in its body arrives long after a 200 went
  * out on the wire: a dead booking link, a course a shop deleted, a mistyped
  * shop slug all answered 200 with a not-found page in the body, and a crawler
@@ -334,9 +430,19 @@ const NOT_FOUND_ROUTE = "/_not-found";
  * rest. The only layer left is this one, and the embed catalogue above has been
  * proving it works for one route since before this one generalised it.
  *
+ * **Every dynamic public route, not one namespace.** This shipped for `/s/**`
+ * alone, and the three dynamic routes outside it went on answering 200 —
+ * `/dive/<town>`, `/switching/<incumbent>`, `/demo/<story>`, two of them
+ * surfaces DiveDay wants indexed (issue #1734). Nothing failed while they did,
+ * because a pathname `publicRouteShape` has no opinion about is passed through
+ * untouched, which is silence by construction. That is now the one thing a new
+ * route cannot do quietly: `src/app/edge-refusal-coverage.test.ts` walks the
+ * route tree and fails on a dynamic public route the shape module does not
+ * recognise.
+ *
  * **What it costs.** One indexed read on `shops.slug` for a shop-level URL or
  * an unmintable segment under one, two for a URL that names a course, a dive
- * site or a departure inside a shop —
+ * site or a departure inside a shop, one on `shops.region_slug` for a town —
  * paid on the request path by every diver on every public page, which is
  * exactly the latency ADR 20260804-instant-navigation set out to avoid. It is
  * the same read the page itself is about to do a few milliseconds later, so
@@ -344,6 +450,10 @@ const NOT_FOUND_ROUTE = "/_not-found";
  * matter, the fix is a process-local cache of **positive** shop-slug results
  * with a short TTL and never a negative one — a shop created a second ago must
  * not 404 — and it should be measured before it is written.
+ *
+ * A switching guide and a demo story cost nothing at all: both are closed lists
+ * this repository holds, so `publicRouteShape` settles them and this function
+ * never opens a database for them.
  *
  * **What happens when the read fails or hangs.** A throw is not a refusal:
  * `catch` returns `null` and the request continues exactly as it does today,
@@ -372,6 +482,15 @@ async function refusedPublicRoute(
   if (req.method !== "GET" && req.method !== "HEAD") return null;
   const shape = publicRouteShape(req.nextUrl.pathname);
   if (!shape) return null;
+  // Already an answer. A segment judged against a closed list this repository
+  // holds — a switching guide, a demo story, a town whose slug no locality
+  // could have produced — needs no database, so it never opens one: `getDb()`
+  // below is a connection a crawler probing `/demo/nope` would otherwise be
+  // able to ask a cold instance for. No shop frames it either; these are
+  // DiveDay's own pages, and issue #765's rule is about a diver stranded on a
+  // storefront. `PublicRouteQuery` is what makes this branch mandatory rather
+  // than remembered — the lookup below does not accept an `absent` shape.
+  if (shape.kind === "absent") return { liveShopSlug: null };
   try {
     const db = await getDb();
     const { exists, shopExists } = await publicRouteLookup(db, shape);
@@ -385,21 +504,29 @@ async function refusedPublicRoute(
     // reason: a well-formed shop with a segment no shop could have minted is
     // exactly the case that should still be framed as that shop's. A refused
     // `shop` shape *is* the missing shop, and `shopExists` is false there
-    // without a branch here saying so.
+    // without a branch here saying so. A town is the one refused shape with no
+    // shop over it at all — the lookup already answers `shopExists: false`, and
+    // this says it in the one way the compiler can check.
+    if (shape.kind === "region") return { liveShopSlug: null };
     return { liveShopSlug: shopExists ? shape.shopSlug : null };
   } catch (error) {
-    // Two unrelated failures land here and only one of them is an incident.
-    // The slugs above reach Postgres unfiltered and length-unbounded on
-    // purpose, so `/s/%00` is a statement the server refuses — once per
-    // request, for as long as it is sent, and free for whoever is sending it.
-    // The database being gone is the other one, and it stops this check for
-    // every diver at once: that is the line worth an alarm, and it has one
-    // (`DatabaseUnavailable` in `infra/lib/observability.ts`).
+    // Two kinds of failure land here and only one of them is the caller's
+    // doing. The slugs above reach Postgres unfiltered and length-unbounded on
+    // purpose, so `/s/%00` is a statement the server refuses over the bytes
+    // sent to it — once per request, for as long as it is sent, and free for
+    // whoever is sending it. Everything else is ours: the database gone, our
+    // credentials rejected, a grant revoked, a table the schema does not have.
+    // Each of those stops this check for every diver at once, which is the line
+    // worth an alarm, and it has one (`DatabaseUnavailable` in
+    // `infra/lib/observability.ts`). `classifyDatabaseFailure` splits them on
+    // SQLSTATE class 22 and states there what makes that safe — that a stranger
+    // can reach no other class through these four constant statements.
     //
     // Neither branch logs the caught message or the pathname. Drizzle's
     // wrapper message is the SQL followed by the bound parameters verbatim,
     // which is the attacker's own string, and so was the `path` this used to
-    // ship to CloudWatch unauthenticated and unthrottled. `shape.kind` says
+    // ship to CloudWatch unauthenticated — and, until `reportRefusedQuery`
+    // above, once per request for as long as it was sent. `shape.kind` says
     // which lookup failed out of a closed set of five, and
     // `classifyDatabaseFailure` reports a SQLSTATE, a Node errno, or
     // `"unknown"` — closed vocabularies, never a string off the wire.
@@ -409,9 +536,9 @@ async function refusedPublicRoute(
     // codes the app emits straight off the source, and a metric filter
     // matching a code nothing writes counts zero forever without erroring.
     const failure = classifyDatabaseFailure(error);
-    const context = { shape: shape.kind, code: failure.code };
-    if (failure.unreachable) log("public_route.existence_unavailable", "error", context);
-    else log("public_route.existence_query_refused", "warn", context);
+    if (failure.alarming)
+      log("public_route.existence_unavailable", "error", { shape: shape.kind, code: failure.code });
+    else reportRefusedQuery(shape.kind, failure.code, nowMs());
     return null;
   }
 }

@@ -229,6 +229,8 @@
       "certificationCard": "Evidencia de certificación",
       "waiverDocument": "Documento de exención",
       "diveSitePhoto": "Foto del sitio de buceo",
+      "shopLogo": "Logotipo del centro",
+      "shopHero": "Foto de portada del centro",
       "paymentReceipt": "Recibo importado"
     },
     "stuckDetail": {

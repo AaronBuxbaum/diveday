@@ -14,6 +14,7 @@ import {
   nitroxAvailableOn,
   offeredRentableItems,
   quoteRentalFit,
+  RENTAL_FIT_TEXT_LIMITS,
   type RentableItemKind,
   type RentalPricing,
 } from "@/lib/rentals";
@@ -48,6 +49,47 @@ const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
  * one line.
  */
 const DRYSUIT_SIZES = ["XS", "S", "M", "MT", "L", "LT", "XL", "XLT", "XXL"];
+
+/**
+ * The grid, plus a stored value the grid cannot represent.
+ *
+ * The mechanism, not the symptom: a controlled `<select>` whose `value`
+ * matches no option leaves `selectedIndex` at -1, so the box paints **blank**
+ * while `drysuitOk` below happily reports a size on file. And because an
+ * unselected single select contributes no entry to the submitted form data,
+ * the stored value survives only until the diver touches the box — at which
+ * point a grid value overwrites the one field on the fit that reaches the
+ * packing list verbatim (`drysuit_size` in `src/db/schema.ts`, read by
+ * `src/lib/dive-prep.ts`, where a neoprene-sock fleet records "ML, rock boot
+ * 9"). Silent data loss, and the crew find out at the dock.
+ *
+ * Off-grid values are sanctioned rather than accidental: H-76
+ * (`docs/product/human-decisions.md`) says `MS`, `ML`, `LS` and `MLT` are real
+ * sizes a shop that stocks one records staff-side, where the field is free
+ * text. Offering the stored value as an option makes it visible, selected, and
+ * preserved by any save that does not deliberately change it.
+ *
+ * Trimmed before comparing: the staff writer trims on write, but nothing
+ * guarantees every existing row is trimmed, and an untrimmed `" MT "` would
+ * otherwise be offered as a spurious second option beside `MT`.
+ */
+function optionsWithStored(grid: readonly string[], stored: string | null | undefined) {
+  const value = (stored ?? "").trim();
+  return value && !grid.includes(value) ? [value, ...grid] : grid;
+}
+
+/**
+ * Whether an option is the stored off-grid value rather than a grid code, so
+ * the select can say what it is.
+ *
+ * Rendered bare, the stored string sits above nine clean letters looking like a
+ * mistake to tidy up — and the diver's plausible move is to "correct" it to the
+ * letter they believe they are, which writes away the shop's own encoding of a
+ * boot the fleet does not stock separately. Closing the *accidental* overwrite
+ * without saying anything leaves the innocent one wide open (domain review of
+ * issue #1728).
+ */
+const isStoredOffGrid = (grid: readonly string[], option: string) => !grid.includes(option);
 
 /**
  * `src/lib/rentals.ts` returns item codes, never rendered words (see the
@@ -175,14 +217,28 @@ export function RentalFitForm({
           .map((item) => item.kind),
       ),
   );
-  const [bcdSize, setBcdSize] = useState(rentalFit?.bcdSize ?? "");
-  const [wetsuitSize, setWetsuitSize] = useState(rentalFit?.wetsuitSize ?? "");
-  const [drysuitSize, setDrysuitSize] = useState(rentalFit?.drysuitSize ?? "");
+  // Trimmed to match `optionsWithStored`, which compares a trimmed value
+  // against the grid. Untrimmed here, a stored `" MT "` would be offered as
+  // clean `MT` and then bind to a value matching no option — the blank box over
+  // a size on file that this whole helper exists to stop. Unreachable today
+  // (every writer trims), which is exactly why the two halves must agree rather
+  // than one of them being half-defensive.
+  const [bcdSize, setBcdSize] = useState((rentalFit?.bcdSize ?? "").trim());
+  const [wetsuitSize, setWetsuitSize] = useState((rentalFit?.wetsuitSize ?? "").trim());
+  const [drysuitSize, setDrysuitSize] = useState((rentalFit?.drysuitSize ?? "").trim());
   // One shoe-size figure for fins and boots alike: they were two fields asking
   // the same question, and a diver who answered one and not the other left the
   // crew guessing. `bootSize` is still its own column (imports carry one), and
   // the save action writes this value to both.
   const [finSize, setFinSize] = useState(rentalFit?.finSize ?? rentalFit?.bootSize ?? "");
+
+  // From the prop, deliberately, not from the live state: derived from state
+  // the off-grid option would vanish the instant the diver picked a grid size,
+  // and they could not undo an accidental change without reloading the page.
+  // From the prop it stays in the list, unselected, and is revertible.
+  const bcdOptions = optionsWithStored(SIZES, rentalFit?.bcdSize);
+  const wetsuitOptions = optionsWithStored(SIZES, rentalFit?.wetsuitSize);
+  const drysuitOptions = optionsWithStored(DRYSUIT_SIZES, rentalFit?.drysuitSize);
 
   const bcdOk = !rentedKinds.has("bcd") || !!bcdSize;
   const wetsuitOk = !rentedKinds.has("wetsuit") || !!wetsuitSize;
@@ -414,8 +470,10 @@ export function RentalFitForm({
                   className={controlClass}
                 >
                   <option value="">{t("rental.notSure")}</option>
-                  {SIZES.map((size) => (
-                    <option key={size}>{size}</option>
+                  {bcdOptions.map((size) => (
+                    <option key={size} value={size}>
+                      {isStoredOffGrid(SIZES, size) ? t("rental.sizeOnFile", { size }) : size}
+                    </option>
                   ))}
                 </select>
               </Field>
@@ -429,8 +487,10 @@ export function RentalFitForm({
                   className={controlClass}
                 >
                   <option value="">{t("rental.notSure")}</option>
-                  {SIZES.map((size) => (
-                    <option key={size}>{size}</option>
+                  {wetsuitOptions.map((size) => (
+                    <option key={size} value={size}>
+                      {isStoredOffGrid(SIZES, size) ? t("rental.sizeOnFile", { size }) : size}
+                    </option>
                   ))}
                 </select>
               </Field>
@@ -444,8 +504,12 @@ export function RentalFitForm({
                   className={controlClass}
                 >
                   <option value="">{t("rental.notSure")}</option>
-                  {DRYSUIT_SIZES.map((size) => (
-                    <option key={size}>{size}</option>
+                  {drysuitOptions.map((size) => (
+                    <option key={size} value={size}>
+                      {isStoredOffGrid(DRYSUIT_SIZES, size)
+                        ? t("rental.sizeOnFile", { size })
+                        : size}
+                    </option>
                   ))}
                 </select>
               </Field>
@@ -454,7 +518,7 @@ export function RentalFitForm({
               <Field label={t("rental.finSize")} hint={t("common.optional")}>
                 <input
                   name="finSize"
-                  maxLength={20}
+                  maxLength={RENTAL_FIT_TEXT_LIMITS.size}
                   value={finSize}
                   onChange={(e) => setFinSize(e.target.value)}
                   placeholder={t("rental.finSizePlaceholder")}
@@ -466,7 +530,7 @@ export function RentalFitForm({
               <Field label={t("rental.weightSetup")} hint={t("common.optional")}>
                 <input
                   name="weightPreference"
-                  maxLength={80}
+                  maxLength={RENTAL_FIT_TEXT_LIMITS.weightPreference}
                   defaultValue={rentalFit?.weightPreference ?? ""}
                   placeholder={t("rental.weightPlaceholder")}
                   className={controlClass}

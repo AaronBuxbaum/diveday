@@ -1,7 +1,9 @@
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { StoredPhoto } from "@/components/StoredPhoto";
+import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FactSource } from "@/components/ui/FactSource";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { DIVER_FACT_SOURCE_KEYS } from "@/i18n/fact-source-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -86,6 +88,7 @@ export function TripArrivalCard({
   locale,
   sites,
   downloadHref,
+  stopCodeAction,
   className = "",
 }: {
   shop: ArrivalCardShop;
@@ -103,6 +106,18 @@ export function TripArrivalCard({
   sites?: readonly string[];
   /** A post-booking download URL carrying the Ready capability. */
   downloadHref?: string | null;
+  /**
+   * **Stops every live arrival code this booking has ever handed out**
+   * (`stopArrivalCodesFromReady`, issue #1729) — for the diver who has lost the
+   * card they printed.
+   *
+   * Passed only where the booking actually holds one
+   * (`hasLiveArrivalCapability`): a row exists only because somebody downloaded
+   * the card, so a diver who never saved one is offered nothing to stop. The
+   * public trip page, which has no capability and no download, passes none of
+   * this.
+   */
+  stopCodeAction?: (() => Promise<void>) | null;
   className?: string;
 }) {
   const t = diverTranslator(locale);
@@ -189,6 +204,28 @@ export function TripArrivalCard({
             {t("trip.arrivalSupport")}{" "}
             <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
           </p>
+        ) : null}
+        {/* Last in the card, under everything a diver opens it for, and the one
+            control here rather than beside "Save arrival card" at the top: the
+            common act is saving the card, and a diver looking for this one has
+            already lost something and will read the whole card looking.
+
+            The trigger is quiet and the confirm is not. A mis-tap costs a
+            re-download, which on the no-signal morning the card exists for is
+            not available — so the consequence is read at the moment of
+            commitment, the way the self-cancel's refund preview is. */}
+        {stopCodeAction ? (
+          <form action={stopCodeAction} className="border-t border-border pt-4">
+            <InlineConfirm
+              triggerLabel={t("trip.arrivalCodeStop")}
+              triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
+              message={t("trip.arrivalCodeStopConfirm")}
+              confirmLabel={t("trip.arrivalCodeStopConfirmButton")}
+              cancelLabel={t("ready.neverMind")}
+              pendingLabel={t("trip.arrivalCodeStopping")}
+              confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
+            />
+          </form>
         ) : null}
       </div>
     </SectionCard>

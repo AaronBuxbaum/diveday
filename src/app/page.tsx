@@ -30,10 +30,10 @@ import {
   earlyAccessPriceAmount,
   fullShopExport,
   midSeasonCutover,
+  sharedLinkCard,
 } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
-import { openGraphSite } from "@/lib/site-metadata";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary placed inside the page — the root
@@ -51,16 +51,19 @@ export const metadata: Metadata = {
     "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place. Try it in a live demo, run the boat on it, and take your records with you if you ever leave.",
   alternates: { canonical: "/" },
   openGraph: {
-    ...openGraphSite,
+    ...sharedLinkCard,
     title: "DiveDay — dive shop software for the whole dive day",
     description:
       "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place, from first booking to final head count.",
     url: "/",
   },
-  // `summary_large_image`: the shared link card is attached to this page by
-  // file convention — `src/app/opengraph-image.tsx` sits in this same root
-  // segment, which is why this is the one marketing page that does not spread
-  // `sharedLinkCard` (docs/product/marketing.md, Twitter-card policy).
+  // `summary_large_image`: the shared link card resolves here, and this page
+  // now names it like every other marketing page. It used to be the one that
+  // did not, because the card was `src/app/opengraph-image.tsx` in this same
+  // root segment and Next re-attached it for free; issue #1709 moved the card
+  // to its own route handler to keep `next/og` out of every page entry, so
+  // there is nothing left to inherit (docs/product/marketing.md, Twitter-card
+  // policy).
   twitter: {
     card: "summary_large_image",
     title: "DiveDay — dive shop software for the whole dive day",

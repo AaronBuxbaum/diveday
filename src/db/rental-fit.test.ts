@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { rentalFitLine } from "@/lib/dive-prep";
-import { rentalFitCompleteness } from "@/lib/rentals";
+import { NOTHING_RENTED, rentalFitCompleteness } from "@/lib/rentals";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -14,10 +14,12 @@ import {
   rentalFitByBooking,
   saveRentalFit,
   saveRentalFitNote,
+  saveRentalFitSizes,
   setNeedsStaffFit,
   toDiverRentalFit,
 } from "./rental-fit";
 import { people, rentalFitProfiles } from "./schema";
+import { setShopRentalItems } from "./shops";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function context() {
@@ -25,7 +27,7 @@ async function context() {
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
   if (!open) throw new Error("open trip missing");
-  return { db, shopId: shop.id, tripId: open.id };
+  return { db, shop, shopId: shop.id, tripId: open.id };
 }
 
 async function bookVisitor(db: AppDb, shopId: string, tripId: string, fullName: string) {
@@ -192,6 +194,150 @@ describe("saveRentalFit / getRentalFit", () => {
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
     expect(await getRentalFit(db, shopId, personId)).toBeNull();
   });
+
+  /**
+   * **The other half of the absent-key rule** (issue #1755). The sizes have
+   * been defended since issue #1062; the `rents_*` booleans were recomputed
+   * from the post regardless, so a shop dropping an item from its catalog
+   * turned its flag off on the next save of any diver's fit while the size was
+   * preserved by the very defence protecting sizes. The piece left that diver's
+   * packing list and the size sat behind it recording a fit nobody would act on.
+   */
+  describe("an item the shop no longer offers", () => {
+    const withoutDrysuit = (items: readonly string[]) => items.filter((k) => k !== "drysuit");
+
+    it("keeps the flag as well as the size when a form could not have asked", async () => {
+      const { db, shop, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+      expect(shop.rentalItems).toContain("drysuit");
+
+      await saveRentalFit(db, {
+        ...baseFitInput(shopId, personId),
+        rentsDrysuit: true,
+        drysuitSize: "MT",
+      });
+      await setShopRentalItems(db, shopId, withoutDrysuit(shop.rentalItems));
+
+      // What both fit forms post once the checkbox is gone: an unchecked HTML
+      // checkbox and an absent one are the same empty post, so every caller
+      // derives `false` from a question the form never put to the diver.
+      await saveRentalFit(db, {
+        ...baseFitInput(shopId, personId),
+        rentsDrysuit: false,
+        bcdSize: "L",
+      });
+
+      const fetched = await getRentalFit(db, shopId, personId);
+      expect(fetched?.rentsDrysuit).toBe(true);
+      expect(fetched?.drysuitSize).toBe("MT");
+      expect(fetched?.bcdSize).toBe("L");
+    });
+
+    it("gives the diver their own answer back when the shop re-adds it", async () => {
+      const { db, shop, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+      await saveRentalFit(db, {
+        ...baseFitInput(shopId, personId),
+        rentsDrysuit: true,
+        drysuitSize: "MT",
+      });
+      await setShopRentalItems(db, shopId, withoutDrysuit(shop.rentalItems));
+      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: false });
+      await setShopRentalItems(db, shopId, [...shop.rentalItems]);
+
+      // Deliberate: it is still the diver's answer, nobody retracted it, and
+      // the alternative is a shop's catalog edit speaking for a diver who was
+      // never asked.
+      const fetched = await getRentalFit(db, shopId, personId);
+      expect(fetched?.rentsDrysuit).toBe(true);
+      expect(fetched?.drysuitSize).toBe("MT");
+    });
+
+    it("still lets the diver untick a box the shop does offer", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: true });
+      // The ordinary path, and the one a careless fix breaks: a flag that can
+      // never be turned off is a worse bug than the one above.
+      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: false });
+
+      const fetched = await getRentalFit(db, shopId, personId);
+      expect(fetched?.rentsDrysuit).toBe(false);
+      expect(fetched?.rentsRegulator).toBe(false);
+      expect(fetched?.rentsBcd).toBe(true);
+    });
+
+    it("records no claim at all on a diver's first fit", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+      // A shop that rents wetsuits and nothing else. Five of the eleven columns
+      // default to **true** in the schema, so "leave an unasked column alone"
+      // on a brand-new row would put a BCD, a regulator, a mask, fins and
+      // weights on this diver's packing list that nobody ever ticked.
+      await setShopRentalItems(db, shopId, ["wetsuit"]);
+
+      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsBcd: true });
+
+      const fetched = await getRentalFit(db, shopId, personId);
+      expect(fetched?.rentsWetsuit).toBe(true);
+      expect(fetched?.rentsBcd).toBe(false);
+      expect(fetched?.rentsRegulator).toBe(false);
+      expect(fetched?.rentsMaskFins).toBe(false);
+      expect(fetched?.rentsWeights).toBe(false);
+    });
+
+    it("records no claim on a row that existed only for the diver's note", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+      await setShopRentalItems(db, shopId, ["wetsuit"]);
+      // `saveRentalFitNote` creates the row with `fit_stated_at` null, so its
+      // flags are still at the schema defaults and no answer has been given.
+      await saveRentalFitNote(db, { shopId, personId, note: "Titanium hip, runs heavy" });
+
+      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsWetsuit: true });
+
+      const fetched = await getRentalFit(db, shopId, personId);
+      expect(fetched?.note).toBe("Titanium hip, runs heavy");
+      expect(fetched?.rentsWetsuit).toBe(true);
+      expect(fetched?.rentsBcd).toBe(false);
+      expect(fetched?.rentsWeights).toBe(false);
+    });
+
+    it("refuses the save outright when the shop's catalog cannot be read", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+      // The state the reader defends against, and the only way a test can
+      // build it: `people.shop_id` has a foreign key, so no app path can point
+      // a diver at a shop with no row behind it. With the constraint off, the
+      // catalog read comes back empty — and an empty *catalog* is a legitimate
+      // answer ("this shop rents nothing"), which is exactly why an empty
+      // *result* must not be read as one: what the writer would otherwise send
+      // is eleven `false`s and a `fit_stated_at`, a fit claiming nothing on a
+      // diver nobody asked (`dive-domain-expert` review).
+      //
+      // Without the refusal this does not fail quietly either — the same
+      // missing row breaks `rental_fit_profiles_shop_id_shops_id_fkey` and the
+      // caller gets an opaque database error where it already knows how to
+      // render a null.
+      const shopWithNoRow = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+      await db.execute(sql`alter table people drop constraint people_shop_id_shops_id_fkey`);
+      await db.update(people).set({ shopId: shopWithNoRow }).where(eq(people.id, personId));
+
+      expect(
+        await saveRentalFit(db, {
+          ...baseFitInput(shopWithNoRow, personId),
+          rentsBcd: true,
+        }),
+      ).toBeNull();
+      const [profile] = await db
+        .select()
+        .from(rentalFitProfiles)
+        .where(eq(rentalFitProfiles.personId, personId));
+      expect(profile).toBeUndefined();
+    });
+  });
 });
 
 /**
@@ -278,6 +424,81 @@ describe("saveRentalFitNote", () => {
     });
     expect(saved).toBeNull();
     expect(await getRentalFit(db, shopId, personId)).toBeNull();
+  });
+});
+
+/**
+ * **The shelf's four sizes** — and the row it creates when the diver has no fit
+ * on file, which is the ordinary case: the sizes form renders unconditionally
+ * and the shelf has no checkbox to say what the diver rents.
+ */
+describe("saveRentalFitSizes", () => {
+  it("states a fit that claims nothing, since the shelf never asked (#1755)", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Shelf Sheila");
+
+    await saveRentalFitSizes(db, {
+      shopId,
+      personId,
+      bcdSize: "M",
+      wetsuitSize: "3mm/M",
+      bootSize: "9",
+      finSize: "M",
+    });
+
+    const fit = await getRentalFit(db, shopId, personId);
+    // `fit_stated_at` is stamped here — four sizes typed by the diver are a
+    // stated fit — and stamping it is what makes the five `default(true)`
+    // columns readable by the packing list. So a diver correcting one size on
+    // their own phone claimed a BCD, a regulator, a wetsuit, a mask, fins and
+    // weights their shop may not even rent.
+    expect(fit?.fitStatedAt).toBeInstanceOf(Date);
+    expect(fit).toMatchObject(NOTHING_RENTED);
+    expect(fit?.bcdSize).toBe("M");
+  });
+
+  it("leaves what the diver already said they rent exactly as it was", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Shelf Sheila");
+    await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: true });
+
+    await saveRentalFitSizes(db, {
+      shopId,
+      personId,
+      bcdSize: "L",
+      wetsuitSize: "3mm/M",
+      bootSize: "9",
+      finSize: "M",
+    });
+
+    // The baseline is for the row this writer *creates*; an answer on file is
+    // the diver's own and is never rewritten by a size correction.
+    const fit = await getRentalFit(db, shopId, personId);
+    expect(fit?.rentsBcd).toBe(true);
+    expect(fit?.rentsDrysuit).toBe(true);
+    expect(fit?.bcdSize).toBe("L");
+  });
+
+  it("states no claim for a diver who had only left the crew a note", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Shelf Sheila");
+    // The row already exists with `fit_stated_at` null, so this writer takes
+    // the update path and its own baseline never runs — the note writer's row
+    // has to have been created claiming nothing for this to hold.
+    await saveRentalFitNote(db, { shopId, personId, note: "Titanium hip, runs heavy" });
+
+    await saveRentalFitSizes(db, {
+      shopId,
+      personId,
+      bcdSize: "M",
+      wetsuitSize: "3mm/M",
+      bootSize: "9",
+      finSize: "M",
+    });
+
+    const fit = await getRentalFit(db, shopId, personId);
+    expect(fit?.note).toBe("Titanium hip, runs heavy");
+    expect(fit).toMatchObject(NOTHING_RENTED);
   });
 });
 
@@ -572,6 +793,36 @@ describe("rental fit completeness over a stored profile", () => {
       // **Never cleared here.** A stale flag costs one extra look at the
       // counter; a wrongly-cleared one puts a diver in gear nobody checked.
       expect(fit?.needsStaffFitAt).toBeInstanceOf(Date);
+    });
+
+    it("claims only the piece it confirmed when the diver had no fit on file", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Fresh Fiona");
+      const [staffPerson] = await db
+        .select({ id: people.id })
+        .from(people)
+        .where(eq(people.shopId, shopId))
+        .limit(1);
+      if (!staffPerson) throw new Error("shop has no people");
+
+      // No `saveRentalFit` first: the evening's tap is a door onto this table
+      // of its own, and it stamps `fit_stated_at`. Without the all-false
+      // baseline the row it creates claimed the five `default(true)` pieces
+      // beside the one size a human actually confirmed (issue #1755).
+      expect(
+        await confirmRentalFitSize(db, {
+          shopId,
+          personId,
+          kind: "bcd",
+          size: "L",
+          confirmedByPersonId: staffPerson.id,
+        }),
+      ).toBe("saved");
+
+      const fit = await getRentalFit(db, shopId, personId);
+      expect(fit?.bcdSize).toBe("L");
+      expect(fit?.fitStatedAt).toBeInstanceOf(Date);
+      expect(fit).toMatchObject(NOTHING_RENTED);
     });
 
     it("refuses a person from another shop, and an empty size", async () => {

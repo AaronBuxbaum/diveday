@@ -124,6 +124,8 @@ function withoutLineSuffix(token) {
 
 /** A token carrying any of these is a pattern to expand, not a filename to look up. */
 const GLOB_CHARS = /[*?[\]{}]/;
+/** The same set, for naming the characters that made a token a pattern. */
+const GLOB_CHARS_GLOBAL = /[*?[\]{}]/g;
 
 /**
  * Does this `**Touches:**` token name something in the tree?
@@ -220,7 +222,15 @@ export function unverifiedTouchedProblem(token) {
 export function missingTouchedProblem(token) {
   if (GLOB_CHARS.test(token) && (path.isAbsolute(token) || token.split("/").includes("..")))
     return `**Touches:** “${token}” points outside the checkout — name a path relative to the repository root.`;
-  const detail = GLOB_CHARS.test(token) ? ` The pattern “${token}” matched no files.` : "";
+  // Which character made it a pattern, by name. "matched no files" alone reads
+  // as "your path is wrong" when the truth is often "your path is a glob" —
+  // and for a bracketed route segment the path is checked literally first, so
+  // arriving here means it is genuinely not on disk under that spelling.
+  const metacharacters = [...new Set(token.match(GLOB_CHARS_GLOBAL) ?? [])];
+  const detail =
+    metacharacters.length > 0
+      ? ` It is also a pattern — ${metacharacters.map((character) => `“${character}”`).join(", ")} ${metacharacters.length === 1 ? "is a glob character" : "are glob characters"} — and expanding it matched no files either. A bracketed route segment resolves when the file is on disk under exactly that spelling, so this one is not.`
+      : "";
   return `**Touches:** path “${token}” does not exist — name where the work lives today. A file only your own unmerged branch adds is not that: this resolves against the working tree, so it reddens every other session's \`pnpm check\` until you merge. List paths that exist on main and name the arriving ones in prose instead.${detail}`;
 }
 
@@ -418,14 +428,21 @@ export function listOpenFollowUps(root) {
  * `findIssueProblems`, same rules, same messages.
  *
  * It resolves `**Touches:**` paths against **this** working tree, which is all
- * any run of this guard can do — but here that answer is advisory rather than
- * fatal, because a draft written on a branch may legitimately name a path that
- * branch adds. What no local check can tell you is whether the path will exist
- * in the tree of every *other* session running `pnpm check` before your branch
- * merges, which is the case that actually reddens their builds. Hence a warning
- * that says so rather than a pass or a failure.
+ * any run of this guard can do — and an unresolved one is **fatal here**, the
+ * same as in the whole-tracker scan. Until 2026-09-12 it was a warning beside a
+ * printed "is a valid follow-up body" and an exit code of 0, on the reasoning
+ * that a draft written on a branch may legitimately name a path that branch
+ * adds. That reasoning is real and is now the `--allow-unresolved-touches`
+ * flag; what it cost as a default is worse: the one rule that most often
+ * reddens `Repository safeguards` in every open pull request at once was the
+ * one rule this door said yes to, so a session that trusted the exit code —
+ * which is what an exit code is for — filed the body anyway (issue #1761).
+ *
+ * What no local check can tell you either way is whether the path will exist in
+ * the tree of every *other* session running `pnpm check` before your branch
+ * merges, which is the case that actually reddens their builds.
  */
-async function checkDraft(bodyPath, title) {
+async function checkDraft(bodyPath, title, { allowUnresolvedTouches = false } = {}) {
   let body;
   try {
     body = await readFile(path.resolve(process.cwd(), bodyPath), "utf8");
@@ -444,60 +461,82 @@ async function checkDraft(bodyPath, title) {
   const missing = [];
   for (const item of touched) {
     if (touchedPathAccepted(await touchedPathExists(process.cwd(), item))) continue;
-    missing.push(GLOB_CHARS.test(item) ? `${item} (matched no files)` : item);
+    missing.push(item);
   }
-  if (problems.length > 0) {
+  // The same sentence the scan prints, from the same function, rather than a
+  // shorter one written here: it is the sentence that explains the resolution
+  // rule and names the glob characters, and two spellings of one refusal is how
+  // a validator drifts from the check it pre-flights.
+  const findings = [
+    ...problems.map((item) => item.replace(/^#0 “[^”]*”: /, "")),
+    ...(allowUnresolvedTouches ? [] : missing.map((item) => missingTouchedProblem(item))),
+  ];
+  if (findings.length > 0) {
     console.error(
-      `Draft follow-up (${bodyPath}):\n${problems
-        .map((item) => `- ${item.replace(/^#0 “[^”]*”: /, "")}`)
-        .join("\n")}`,
+      `Draft follow-up (${bodyPath}):\n${findings.map((item) => `- ${item}`).join("\n")}`,
     );
     console.error(
       "Fix these before filing: a malformed issue fails `check:follow-ups` inside every open pull request's `pnpm check`, not just your own. See docs/agents/issue-tracker.md's Filing a follow-up section.",
     );
+    if (missing.length > 0) {
+      console.error(
+        "If your branch genuinely adds a path above, name it in prose instead — or re-run with `--allow-unresolved-touches` to accept it as a warning, knowing it reddens every other session's `pnpm check` until your branch merges.",
+      );
+    }
     process.exit(1);
   }
-  // Not a failure. The whole-tracker run resolves these against the working
-  // tree, and a draft filed from a branch may legitimately name a path that
-  // branch adds — but it will redden every *other* session's check until the
-  // branch merges, so it is worth knowing now rather than from CI.
+  // Asked for explicitly, so it warns rather than refusing — and still says
+  // what it costs, because the cost lands on branches that did not choose it.
   if (missing.length > 0) {
     console.warn(
-      `follow-ups: ${bodyPath} names ${missing.length} path(s) not on disk here — ${missing.join(", ")}. If your branch adds them, name them in prose instead; **Touches:** is resolved against the working tree of every session that runs \`pnpm check\`.`,
+      `follow-ups: ${bodyPath} names ${missing.length} path(s) not on disk here, accepted because you passed --allow-unresolved-touches:\n${missing
+        .map((item) => `- ${missingTouchedProblem(item)}`)
+        .join("\n")}`,
     );
   }
   console.log(`follow-ups: ${bodyPath} is a valid follow-up body`);
 }
 
 /**
- * `--body <path>` and an optional `--title <text>`, and **nothing else**.
+ * `--body <path>`, an optional `--title <text>`, an optional
+ * `--allow-unresolved-touches`, and **nothing else**.
  *
  * Strict on purpose, which for a ten-line argument parser needs saying. This
  * tool exists to catch a mistake before it costs every open pull request an
  * hour, so a mistyped invocation that quietly succeeds is the one outcome worth
  * engineering against: `--body draft.md --boddy other.md` must not validate
  * `draft.md` and exit 0, leaving the agent believing it checked something it
- * did not. Anything unrecognised, repeated, or positional is an error.
+ * did not. Anything unrecognised, repeated, or positional is an error — and a
+ * mistyped `--allow-unresolved-touch` is refused rather than ignored, because
+ * an escape hatch nobody can tell they missed is the failure mode that stops
+ * people running the validator at all.
  *
  * `present` is separate from `value` for the same reason, so `--body --title x`
  * reports a missing path rather than trying to read a file called `--title`.
  *
  * Returns `{ error }` instead of exiting, so the tests can read the message.
  */
+const DRAFT_SWITCHES = new Set(["--allow-unresolved-touches"]);
+
 export function parseDraftArgs(argv) {
   const flags = { "--body": undefined, "--title": undefined };
+  const switches = { "--allow-unresolved-touches": false };
   const seen = new Set();
   for (let at = 0; at < argv.length; at += 1) {
     const name = argv[at];
-    if (!(name in flags)) {
+    if (!(name in flags) && !DRAFT_SWITCHES.has(name)) {
       return {
-        error: `follow-ups: unrecognised argument \`${name}\` — only --body <path> and --title <text>`,
+        error: `follow-ups: unrecognised argument \`${name}\` — only --body <path>, --title <text> and --allow-unresolved-touches`,
       };
     }
     if (seen.has(name)) return { error: `follow-ups: ${name} given twice` };
     seen.add(name);
+    if (DRAFT_SWITCHES.has(name)) {
+      switches[name] = true;
+      continue;
+    }
     const value = argv[at + 1];
-    if (value === undefined || value in flags) {
+    if (value === undefined || value in flags || DRAFT_SWITCHES.has(value)) {
       return {
         error:
           name === "--body"
@@ -508,22 +547,28 @@ export function parseDraftArgs(argv) {
     flags[name] = value;
     at += 1;
   }
-  return { body: flags["--body"], title: flags["--title"] };
+  return {
+    body: flags["--body"],
+    title: flags["--title"],
+    allowUnresolvedTouches: switches["--allow-unresolved-touches"],
+  };
 }
 
 async function main() {
   const args = process.argv.slice(2);
   if (args.length > 0) {
-    const { error, body, title } = parseDraftArgs(args);
+    const { error, body, title, allowUnresolvedTouches } = parseDraftArgs(args);
     if (error) {
       console.error(error);
       process.exit(1);
     }
     if (body === undefined) {
-      console.error("follow-ups: --title is only meaningful beside a --body <path>");
+      console.error(
+        "follow-ups: --title and --allow-unresolved-touches are only meaningful beside a --body <path>",
+      );
       process.exit(1);
     }
-    await checkDraft(body, title);
+    await checkDraft(body, title, { allowUnresolvedTouches });
     return;
   }
 

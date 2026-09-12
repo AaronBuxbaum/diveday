@@ -256,11 +256,14 @@ export async function storeShopHeroImage(
  * there -- in its own public-media namespace.
  *
  * **"Public at the edge" is not "shown to the public", and the difference is
- * deliberate here.** `TripArrivalCard` renders on `/ready/[token]` and on the
- * staff departure page, never on the anonymous trip page: that page passes
- * `revealArrivalDetails={false}`, and `TripChangeLedger` reports only *that*
- * the arrival photo changed while withholding the value. A shop says when and
- * how much in the open, and where to meet only to somebody holding a booking.
+ * deliberate here.** Two surfaces render this photo and both are gated, and
+ * they share no code: `TripArrivalCard` on the diver's readiness thread
+ * (`/ready/[token]`, its one caller in the tree), and `DetailsSection`'s
+ * `trip.arrivalPhotoUrl` branch on the staff departure page. Never the
+ * anonymous trip page: that page passes `revealArrivalDetails={false}`, and
+ * `TripChangeLedger` reports only *that* the arrival photo changed while
+ * withholding the value. A shop says when and how much in the open, and where
+ * to meet only to somebody holding a booking.
  *
  * So the prefix is served from CloudFront for the same mechanical reason
  * `recap/` is, and it is the same reason `medical-clearances/` is not:

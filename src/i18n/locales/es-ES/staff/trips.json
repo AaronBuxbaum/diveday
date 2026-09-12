@@ -26,6 +26,7 @@
     "noRequirements": "No hay requisitos de admisión configurados",
     "noBoat": "Barco sin asignar",
     "noCrew": "Tripulación sin asignar",
+    "crewClash": "Tripulante en dos salidas",
     "oneTime": "Salida única",
     "perSeat": "por plaza",
     "seatsLabel": "de {capacity, plural, one {# plaza} other {# plazas}}",
@@ -81,6 +82,7 @@
     "waiverComplete": "Ese buceador ya tiene una exención de responsabilidad completada.",
     "waiverMedicalAttestation": "Confirma que revisaste el cuestionario médico antes de registrar una exención en papel, o envía el enlace digital para que el buceador lo responda.",
     "waiverGuardianName": "El nombre de la madre, padre o tutor es el mismo del buceador, así que esta exención mostraría a una sola persona firmando dos veces. Escribe ese nombre tal como aparece en su propia identificación, y si el registro del buceador es más corto que su identificación, corrige el registro. Si las dos de verdad son idénticas, marca la confirmación en este formulario y registra la exención.",
+    "waiverIdentityUnconfirmed": "Esta plaza queda retenida hasta que alguien confirme de quién se trata, así que todavía no se puede registrar una exención en papel en su ficha. Confírmalo en su fila del listado y luego registra la exención.",
     "waiverError": "No se pudo registrar esa exención en papel. Abre el registro del buceador para ver por qué.",
     "recapNote": "Nota de resumen guardada. Acompaña el resumen de cada buceador.",
     "recapPhotoRemoved": "Foto eliminada del resumen.",
@@ -244,6 +246,8 @@
     "assignLabel": "Asignar tripulante",
     "assignOption": "Asignar tripulante…",
     "unassignAria": "Quitar a {name}",
+    "clash": "También está en la tripulación de {departure} a esas horas y no puede estar en ambas salidas.",
+    "assignClash": "{name} ya está en la tripulación de otra salida a esas horas y no puede estar en ambas salidas.",
     "assignFailed": "No se ha guardado. Verifica tu conexión o inténtalo de nuevo."
   },
   "recapNote": {
@@ -570,6 +574,7 @@
     "drysuitWeightCheck": "Traje seco: verificar el lastre en el agua",
     "drysuitFins": "Prepara aletas que entren sobre la bota del traje seco",
     "drysuitFinsWithSize": "Calzado {size}: prepara aletas que entren sobre la bota del traje seco",
+    "noLongerRented": "Ya no alquilas esto",
     "notRecorded": "No registrado",
     "emptyHeading": "Todavía no hay nada que preparar",
     "emptyAction": "Abrir la lista de buceadores",

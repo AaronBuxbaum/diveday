@@ -15,6 +15,12 @@
  * month. Past those it is $0.30 per metric, $0.10 per alarm, $3.00 per
  * dashboard, $0.50/GB ingested and $0.12/GB scanned.
  *
+ * Ingestion is the half a stranger can move, and the noisiest anonymous line
+ * in the app is `public_route.existence_query_refused`. It is bounded at its
+ * own emit, per instance, and priced there rather than here -- see
+ * `reportRefusedQuery` in `src/proxy.ts`. The number lives in one place; this
+ * is the pointer to it.
+ *
  * This registry currently declares 17 metrics (11 log signals + 5 web vitals
  * + the mutation-duration metric, which is one metric *permanently* because its
  * filter carries no dimension -- see `MUTATION_DURATION_SIGNAL`) and 14 alarms (8 + the 3 alarmed vitals + the
@@ -184,9 +190,16 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       // 404s with nothing on a screen to say so. The ADR's Consequences
       // pointed at this file for it and nothing had been added.
       //
-      // Only the unreachable half arrives at `error`. A statement the server
-      // refused is `public_route.existence_query_refused` at `warn`, because a
-      // slug reaches that lookup unfiltered and anyone can produce one.
+      // Counts more than the database being gone, and deliberately: our own
+      // credentials rejected, a grant revoked, a table the schema does not
+      // have, a read-only endpoint after a failover all leave the namespace
+      // exactly as silent (issue #1750). Only one thing arrives at `warn`
+      // instead, as `public_route.existence_query_refused`: a statement the
+      // server refused over the bytes in it, SQLSTATE class 22, because a slug
+      // reaches that lookup unfiltered and anyone can produce one.
+      // `src/lib/db-failure.ts` holds the split and the argument that no other
+      // class is reachable by a stranger -- which is what keeps this alarm out
+      // of an anonymous caller's hands at a threshold of one in five minutes.
       "public_route.existence_unavailable",
     ],
     threshold: 1,

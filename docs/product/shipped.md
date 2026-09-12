@@ -165,6 +165,32 @@ which of the day's sites goes deeper than that card covers (`statedLevelDepthLim
 no `people` row, nothing that travels with the booking — and it **gates nothing**: the site's
 maximum is not the dive plan (H-08).
 
+## A minor's release is signed twice (delivered 2026-09-07)
+
+N-38 from the 2026-09-07 improvement-ideas sheet, which reopened H-21's own open question: until it
+landed, a twelve-year-old could open the ordinary `/waivers/[token]` link, execute a liability
+release alone, and have every staff surface read that record as **Signed**. Now the minor and their
+guardian sign the *same* text under the *same* provider on one page, `waiver_records` carries six
+guardian columns and its own draft, and `readiness.ts` blocks boarding on
+`guardian_signature_missing` until the second signature exists. Age is measured on the day the pen
+moved, in the shop's own zone, so a release a seventeen-year-old signed alone does not become valid
+on their eighteenth birthday. The legal wording is still H-01's and still English, and whether
+typed consent is a sufficient assurance level is still H-03 — this shipped the second signer and
+the frame around them, not a minor-specific release. ADR
+[20260907-guardian-co-signature](../architecture/decisions/20260907-guardian-co-signature.md).
+
+## The regional pages (delivered 2026-09-07)
+
+N-49 from the 2026-09-07 improvement-ideas sheet (issue #1436). `/dive` and `/dive/[region]` are
+the one place DiveDay lists shops beside each other: a town, and the shops that dive out of it, for
+the diver who knows *where* they will be and not yet *who* with. One row per shop, carrying only
+what the shop authored and its storefront already shows a stranger — no search box, no map, no
+sort, because a town has a handful of shops and a list of them needs no instrument. Departures stay
+on the storefront one tap away: the owner settled that on 2026-09-10 (issue #1511) against #1436's
+original spec, because "next out" on every row would fan an unbounded town out to three reads a
+shop on a page crawlers hit. Written up in
+[design/surfaces.md](../design/surfaces.md#the-regional-pages--dive-and-diveregion).
+
 ## Self check-in at the counter (delivered 2026-09-09)
 
 N-24 from the improvement-ideas decision sheet. A shop mints a second kind of **display link** at

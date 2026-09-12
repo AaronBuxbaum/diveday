@@ -37,7 +37,7 @@ import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { people, personRoles } from "@/db/schema";
-import { getShopBySlug } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops";
 import { listShopSpokenLanguages } from "@/db/staff-accounts";
 import { languageEndonym, localeEndonym } from "@/i18n/language-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
@@ -72,7 +72,9 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
   // 20260726-schedule-embed). Everything chrome-shaped comes off in that mode.
   const isEmbed = (await headers()).get(EMBED_REQUEST_HEADER) === "1";
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
+  // Memoized for this render, so the footer and the brand below share this one
+  // row rather than each sending the same `where slug = $1` (issue #1737).
+  const shop = await shopBySlugCached(shopSlug);
   const locale = await requestLocale(shop?.defaultLocale);
   const t = diverTranslator(locale);
   const showBanner = !isEmbed && (shop?.isDemo ?? false);
@@ -238,7 +240,7 @@ export async function PublicShopFooterSection({
   const isEmbed = (await headers()).get(EMBED_REQUEST_HEADER) === "1";
   if (isEmbed) return null;
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) return null;
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
@@ -291,7 +293,7 @@ export function PublicShopChromePlaceholder({ label }: { label: DiverTranslator 
 
 export async function PublicShopBrand({ params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
-  const shop = await getShopBySlug(await getDb(), shopSlug);
+  const shop = await shopBySlugCached(shopSlug);
   if (!shop) return null;
   // An embed that inherits its host page arrives with the host's colour and
   // face, validated and forwarded by the proxy; the host wins over the shop's

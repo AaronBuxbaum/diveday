@@ -315,8 +315,18 @@ export type OfflineManifestPayload = {
            * page wears, because that is exactly what it is: the desk may have
            * put them back on the list since (`undoBookingNoShow`), and a saved
            * copy reading as current is the one lie a roll-call surface must
-           * not tell. It refuses nothing either way — the crew's tap boards a
-           * body they can see, here as on the live manifest.
+           * not tell.
+           *
+           * **It refuses no boarding, and exactly one thing else** (issue
+           * #1705). The crew's tap boards a body they can see, here as on the
+           * live manifest, and the rail takes the released seat back on sync.
+           * What it does take away is the *desk's* control on the same page:
+           * the counter section renders a released seat with its badge and no
+           * check-in, because `checkInBooking` answers `not_bookable` on a
+           * `no_show` booking the moment the tap lands, and a tap the server
+           * is certain to refuse is not a control. The two halves of that
+           * decision are a crew member's eyes against a desk's record, and
+           * only the desk's own surface defers.
            *
            * Optional and additive, like `checkedIn` above and for the same
            * reason (no `OFFLINE_MANIFEST_RECORD_VERSION` bump — a bump is a

@@ -417,6 +417,88 @@ describe("markBookingNoShow", () => {
   });
 
   /**
+   * **The crew recorded this diver missing after a dive, and the desk may not
+   * call that an absence** (issue #1704).
+   *
+   * `not_boarded` at an after-dive checkpoint is not "never came": it is "did
+   * not come back from the dive", and it is the one row on the manifest that
+   * means somebody may still be in the water (`isAccountedForAfterDive` and
+   * `inAfterDivePopulation`, src/db/today.ts; **sailed** in the glossary, which
+   * says that diver sailed and is the one the day is still looking for).
+   * Releasing their seat here would put it back on sale — and a wait-list diver
+   * into it — while the crew are still counting heads at the rail.
+   *
+   * Reached without any departure event at all, which is the adversarial half:
+   * `recordRollCall` accepts an after-dive result with no prior dock result, so
+   * the refusal cannot lean on a departure row being there to find.
+   */
+  it("refuses a diver the crew recorded missing after a dive", async () => {
+    const { db, shop, trip, staffId, bookingId, now } = await context();
+    expect(
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+      }),
+    ).toMatchObject({ ok: true });
+
+    // Its **own** code, not the boarded one. The desk's next act differs — a
+    // diver counted aboard is fine and this one is who the day is looking for —
+    // so the counter says a different sentence for each
+    // (dive-domain-expert review, issue #1704).
+    expect(
+      await markBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now }),
+    ).toEqual({ ok: false, reason: "already_missing_after_dive" });
+    expect(await statusOf(db, bookingId)).not.toBe("no_show");
+  });
+
+  /**
+   * **The other direction, and the reason this is not one rule about
+   * `not_boarded`.** At the dock the same word means "never left the dock",
+   * which is the benign half and the ordinary absence the counter exists to
+   * record: the crew have already said this diver did not come, and the desk
+   * saying so too must still release the seat.
+   *
+   * The second case is the one that fails if the refusal is built on
+   * `carryForwardNotBoarded` (src/lib/roll-call.ts) rather than on persisted
+   * rows. That helper carries the dock's `not_boarded` onto every later
+   * checkpoint, so a reader composed on it sees a standing after-dive result
+   * here — on a seat the crew touched exactly once, at the dock — and makes
+   * every walk-away on every trip permanently un-markable.
+   */
+  it("still releases the seat of a diver the crew recorded ashore at the dock", async () => {
+    const { db, shop, trip, staffId, bookingId, now } = await context();
+    expect(
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        status: "not_boarded",
+      }),
+    ).toMatchObject({ ok: true });
+
+    // No after-dive row of any kind — only the dock's, carried forward by a
+    // helper this path deliberately does not ask.
+    expect(
+      await db
+        .select({ rows: count() })
+        .from(rollCallEvents)
+        .where(
+          and(eq(rollCallEvents.bookingId, bookingId), eq(rollCallEvents.checkpoint, "departure")),
+        ),
+    ).toEqual([{ rows: 1 }]);
+
+    expect(
+      await markBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now }),
+    ).toMatchObject({ ok: true });
+    expect(await statusOf(db, bookingId)).toBe("no_show");
+  });
+
+  /**
    * The opening moved off the shop's dock call on 2026-09-11: a diver who is
    * late for the arrival time the shop asked for has not missed the boat, and
    * this tap writes the second fact rather than the first.

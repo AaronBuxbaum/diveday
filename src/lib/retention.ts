@@ -54,6 +54,19 @@
  * out the same way. Chosen by the product owner, 2026-09-10, over a 30-day
  * window matching `trip_desk_events` (issue #1397).
  *
+ * **The roll-call and pairing trails are deliberately unbounded too**, and
+ * their argument is written where each is declared rather than here: a roll
+ * call, a crew's own check-in, an arrival tap at the desk and a buddy pairing
+ * are safety evidence about a departure, so a window would put an expiry on
+ * the answer to "who was on this boat, and who were they with?" exactly when
+ * an old incident is being reconstructed. Erasure reaches all four through the
+ * live join to `people`, so nothing here outlives a diver's request either.
+ * Decided with the trails themselves (`buddy_team_events`,
+ * `roll_call_events`, `roll_call_crew_events`, `booking_arrival_events`; ADR
+ * 20260804-buddy-teams, and the docblock over each table in
+ * `src/db/schema.ts`, which points back at this file for the statement this
+ * paragraph now makes).
+ *
  * **`notification_send_queue` is absent because it empties its own rows, not
  * because nobody looked.** It is the one table outside this list that holds a
  * rendered outbound message, a recipient and a subject's address and phone, so
@@ -104,6 +117,27 @@ export type RetainedTable =
   | "inbound_messages"
   | "staff_replies"
   | "booking_gifts";
+
+/**
+ * The append-only trails this mechanism deliberately leaves unbounded, as a
+ * list something other than a paragraph can read.
+ *
+ * Every name here is argued in a paragraph of this file's docblock above, and
+ * that is the whole of the point: a trail joins this list because somebody
+ * decided in writing that its rows outlive any window, never because a test
+ * wanted the name somewhere. `src/db/retention.test.ts` holds both halves —
+ * that no schema table is missing from every classification, and that no name
+ * here is missing its paragraph and the decision that paragraph cites.
+ * Whether the argument is any *good* is a reviewer's call, not a test's.
+ */
+export const UNBOUNDED_BY_DECISION: readonly string[] = [
+  "gear_service_events",
+  "trip_stage_events",
+  "buddy_team_events",
+  "roll_call_events",
+  "roll_call_crew_events",
+  "booking_arrival_events",
+];
 
 /**
  * The one place a human changes how long each trail is kept, in days.

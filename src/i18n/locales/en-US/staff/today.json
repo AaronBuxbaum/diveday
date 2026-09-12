@@ -229,6 +229,8 @@
       "certificationCard": "Certification evidence",
       "waiverDocument": "Waiver document",
       "diveSitePhoto": "Dive-site photo",
+      "shopLogo": "Shop logo",
+      "shopHero": "Shop cover photo",
       "paymentReceipt": "Imported receipt"
     },
     "stuckDetail": {

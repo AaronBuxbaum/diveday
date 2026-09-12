@@ -18,6 +18,7 @@ import {
   type RollCallRecord,
   rollCallCheckpoints,
   rollCallNoteAllowed,
+  standingResultMeansSailed,
   type TripManifest,
 } from "@/lib/manifests";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
@@ -393,6 +394,79 @@ export async function listDepartureRollCallByTrip(
 }
 
 /**
+ * **Every seat the crew have spoken for at an after-dive checkpoint**, by trip.
+ *
+ * The departure reader above is pinned to the dock on purpose, and its docblock
+ * says why: at the dock `not_boarded` means "never left" and is benign. This is
+ * the other half of the same evidence, kept as its own function so that neither
+ * word can be read through the wrong one. A booking is in the set when the
+ * newest result standing at **any** after-dive checkpoint is `boarded` or
+ * `not_boarded` — either way, that person was on the boat. A `cleared` newest
+ * drops the checkpoint out, the same supersession every reader here applies.
+ *
+ * **Two callers, and they are why it exists** (dive-domain-expert review, issue
+ * #1704). `seatSailed` (src/lib/closeout.ts) ranked the dock alone, so the
+ * evening said "0 out, 0 back" about a one-diver boat carrying a missing diver:
+ * the desk's `no_show` stood, no dock result contradicted it, and the after-dive
+ * `not_boarded` the day was raising a top-severity row about was invisible to
+ * the count. And the counter's own door (src/app/shop/[shopSlug]/check-in) drew
+ * "Did not dive?" over exactly those divers, because it fed `noShowGate` the
+ * departure-boarded set — the writer refused the tap, so no seat was ever lost,
+ * but the app spent two taps inviting the desk to write off the person the crew
+ * were looking for.
+ *
+ * One grouped query for the whole day, never one per boat.
+ */
+export async function listAfterDiveRollCallByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: string[],
+): Promise<Map<string, Map<string, "boarded" | "missing_after_dive">>> {
+  const byTrip = new Map<string, Map<string, "boarded" | "missing_after_dive">>();
+  if (tripIds.length === 0) return byTrip;
+  const rows = await db
+    .select({
+      tripId: rollCallEvents.tripId,
+      bookingId: rollCallEvents.bookingId,
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+    })
+    .from(rollCallEvents)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
+    )
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        inArray(rollCallEvents.tripId, tripIds),
+        ne(rollCallEvents.checkpoint, "departure"),
+      ),
+    )
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
+  // Newest first, so the first row seen per booking *and* checkpoint is that
+  // checkpoint's standing result. A `boarded` anywhere outranks a
+  // `missing_after_dive`, the same precedence `onTheWaterByRollCall` applies:
+  // the crew counted this person back onto the boat.
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const key = `${row.bookingId}:${row.checkpoint}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (!standingResultMeansSailed(row.checkpoint, row.status)) continue;
+    const spoken = byTrip.get(row.tripId) ?? new Map<string, "boarded" | "missing_after_dive">();
+    if (row.status === "boarded") spoken.set(row.bookingId, "boarded");
+    else if (!spoken.has(row.bookingId)) spoken.set(row.bookingId, "missing_after_dive");
+    byTrip.set(row.tripId, spoken);
+  }
+  return byTrip;
+}
+
+/**
  * **One seat's own departure result**, for the diver's own page rather than a
  * staff roster: `boarded`, `not_boarded`, or null where the crew recorded
  * nothing at all.
@@ -418,34 +492,62 @@ export async function departureRollCallForBooking(
 }
 
 /**
- * **Has the crew put this seat on the water at all?** True when the booking's
- * standing result at *any* checkpoint is `boarded` — the dock, or a later
- * after-dive head count.
+ * **Does the crew's own roll call put this diver on the water?** True on either
+ * of the two statements a crew can make that mean the diver went to sea:
+ *
+ * - `boarded` standing at **any** checkpoint — the dock, or a later after-dive
+ *   head count. A diver who joined at the second site has no departure event at
+ *   all.
+ * - `not_boarded` standing at an **after-dive** checkpoint, which is not "never
+ *   came" but **did not come back from the dive**. That is the missing-diver
+ *   row, and the diver it is about sailed (`docs/product/glossary.md`,
+ *   **sailed**).
+ *
+ * **A `departure` `not_boarded` is deliberately not read, and that asymmetry is
+ * the whole of this function.** At the dock the same word means "never left the
+ * dock": the benign half, and the ordinary absence the counter exists to let a
+ * shop record. Reading it here would make every walk-away permanently
+ * un-markable, which is the failure direction that stops a shop doing its work
+ * rather than the one that endangers a diver. The rule is the one
+ * `src/db/today.ts` already writes down at `isAccountedForAfterDive` and
+ * `inAfterDivePopulation` (DOM-H3), consumed rather than restated: exactly the
+ * population that reader counts as at risk in the water is the population the
+ * desk may not call absent.
+ *
+ * **Persisted rows only, never `carryForwardNotBoarded`.** `implied` is never
+ * stored (see {@link standingDiverRollCall}), so a `not_boarded` row at an
+ * after-dive checkpoint is always an explicit "did not come back". Running the
+ * results through that helper first would carry the dock's `not_boarded` onto
+ * every later checkpoint and refuse the mark for the exact case it must allow.
  *
  * The counter's own refusal (`noShowGate`, src/lib/no-show.ts) asked
- * {@link departureRollCallForBooking}, which is pinned to the dock, and so
- * said nothing at all about the population `src/db/today.ts` names at
- * `inAfterDivePopulation`: a diver who joined at the second site, or one the
- * crew counted without a dock result. Those divers have no departure event, so
- * "nobody has boarded them" read true and the desk could take a body already in
- * the water off the expected list — well inside the counter's six-hour reach,
- * which covers a whole two-tank morning.
+ * {@link departureRollCallForBooking} for one slice, which is pinned to the
+ * dock and so said nothing at all about either half above. Neither has a
+ * departure `boarded`, so "nobody has boarded them" read true and the desk
+ * could take a body already in the water off the expected list — well inside
+ * the counter's six-hour reach, which covers a whole two-tank morning.
  *
- * One query, grouped here: per checkpoint the newest event wins and a `cleared`
- * newest drops out, the same supersession every other reader in this file
- * applies. The cancelled-booking guard is the sibling's too, for the sibling's
- * reason — a seat given up is refused as `not_booked`, never as a boarding.
+ * **Both halves of the head count.** The diver table answers for the seat; the
+ * crew table answers for a staffer who holds a seat on a trip they also crew,
+ * which a shop where staff dive too has on most boats. Missing crew outranks a
+ * missing diver on this product's own severity ranking, so a reader that saw
+ * only `roll_call_events` was unsafe in the narrow case and the review that
+ * found it said so (issue #1704). The crew read is a second query on the rare
+ * branch rather than a union, because the ordinary seat belongs to somebody who
+ * is not on the roster at all.
  *
- * `not_boarded` is deliberately not read here: at the dock it means "never
- * left", which is the benign half, and the after-dive reading ("did not come
- * back") is a different alarm than the one this answer feeds.
+ * Grouped here rather than in SQL: per checkpoint the newest event wins and a
+ * `cleared` newest drops out, the same supersession every other reader in this
+ * file applies. The cancelled-booking guard is the sibling's too, for the
+ * sibling's reason — a seat given up is refused as `not_booked`, never as a
+ * boarding.
  */
-export async function boardedAtAnyCheckpoint(
+export async function onTheWaterByRollCall(
   db: DbExecutor,
   shopId: string,
   tripId: string,
   bookingId: string,
-): Promise<boolean> {
+): Promise<OnTheWater> {
   const rows = await db
     .select({ checkpoint: rollCallEvents.checkpoint, status: rollCallEvents.status })
     .from(rollCallEvents)
@@ -465,13 +567,92 @@ export async function boardedAtAnyCheckpoint(
       desc(rollCallEvents.createdAt),
       desc(rollCallEvents.seq),
     );
+  const fromDivers = standingRowMeansSailed(rows);
+  if (fromDivers) return fromDivers;
+
+  // **The crew roll call, for a staffer who holds a seat on a trip they crew.**
+  // "Missing crew" is severity 2 on this product's own ranking, above a missing
+  // diver, on the grounds that the crew are the people most reliably in the
+  // water (`docs/product/glossary.md`). Their results live in a different table
+  // keyed on the person rather than the booking, so without this read a shop
+  // where staff dive too could mark absent the one seat belonging to somebody
+  // the crew half of the head count says never came back — seat released, dive
+  // day struck, and the two halves of souls-on-board disagreeing about a human
+  // (dive-domain-expert review, issue #1704).
+  //
+  // Second query rather than a union, and only when the diver table said
+  // nothing: the ordinary seat belongs to somebody who is not on the roster, so
+  // the common path pays for one read and this one is the rare branch. The
+  // `tripAssignments` join is the crew counterpart of the cancelled-booking
+  // guard above — somebody taken off the roster keeps their event rows and must
+  // not answer for a crew list they are no longer on.
+  const crewRows = await db
+    .select({ checkpoint: rollCallCrewEvents.checkpoint, status: rollCallCrewEvents.status })
+    .from(rollCallCrewEvents)
+    .innerJoin(
+      bookings,
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.personId, rollCallCrewEvents.personId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .innerJoin(
+      tripAssignments,
+      and(
+        eq(tripAssignments.tripId, rollCallCrewEvents.tripId),
+        eq(tripAssignments.personId, rollCallCrewEvents.personId),
+      ),
+    )
+    .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
+    .orderBy(
+      desc(rollCallCrewEvents.occurredAt),
+      desc(rollCallCrewEvents.createdAt),
+      desc(rollCallCrewEvents.seq),
+    );
+  return standingRowMeansSailed(crewRows);
+}
+
+/**
+ * **Which of the two statements put this person at sea**, or null for neither.
+ *
+ * A boolean was enough while the counter's refusal said the same sentence for
+ * both, and a dive-domain-expert review said that sentence was the wrong shape:
+ * "the boat's roll call puts that diver on the water, check the manifest" is a
+ * rule citation, and for `missing_after_dive` the fact the staffer needs is
+ * that a human has recorded that this diver did not come back from a dive —
+ * which changes what they do in the next sixty seconds rather than only where
+ * they tap (issue #1704).
+ *
+ * `boarded` wins where both stand: a diver counted back onto the boat at a
+ * later checkpoint is aboard, and only the newest word per checkpoint is read
+ * at all, so a `missing_after_dive` here is one nothing has retracted.
+ */
+export type OnTheWater = "boarded" | "missing_after_dive" | null;
+
+/**
+ * Newest-first rows, grouped to one standing result per checkpoint, asked
+ * {@link standingResultMeansSailed}. The first row seen for a checkpoint is
+ * that checkpoint's standing result; a `cleared` newest answers false, so the
+ * checkpoint drops out entirely rather than falling back to an older row.
+ *
+ * Walked to the end rather than returned on the first hit, because a
+ * `boarded` anywhere outranks a `missing_after_dive`: the crew counted this
+ * person back, and the checkpoints do not arrive in order here.
+ */
+function standingRowMeansSailed(
+  rows: readonly { checkpoint: string; status: "boarded" | "not_boarded" | "cleared" }[],
+): OnTheWater {
   const seen = new Set<string>();
+  let missing = false;
   for (const row of rows) {
     if (seen.has(row.checkpoint)) continue;
     seen.add(row.checkpoint);
-    if (row.status === "boarded") return true;
+    if (!standingResultMeansSailed(row.checkpoint, row.status)) continue;
+    if (row.status === "boarded") return "boarded";
+    missing = true;
   }
-  return false;
+  return missing ? "missing_after_dive" : null;
 }
 
 /**
@@ -989,10 +1170,19 @@ async function acceptedRollCallNote(
  * person aboard whom the manifest does not carry, which is the worse of the two
  * states by a distance.
  *
- * **One direction only.** A later `not_boarded` or `cleared` does not release
- * the seat again. Releasing a seat is the desk's act, with its own gate and its
- * own confirm tap (`noShowGate`), and a mis-tap at the rail must never sell a
- * diver's seat out from under them.
+ * **Two statements reach here, not one.** A boarding at any checkpoint, and a
+ * `not_boarded` at an **after-dive** checkpoint — which does not mean "never
+ * came" but "did not come back from the dive", and is therefore a diver who
+ * sailed and is now the one the day is looking for. Both are the crew saying
+ * the diver went to sea, so both take the release back; `missingAfterDive`
+ * only picks which trail line says so. The caller applies
+ * `standingResultMeansSailed`, so this and `noShowGate`'s refusal cannot
+ * disagree about a diver (issue #1704).
+ *
+ * **One direction only.** A **departure** `not_boarded`, or a `cleared`, does
+ * not release the seat again. Releasing a seat is the desk's act, with its own
+ * gate and its own confirm tap (`noShowGate`), and a mis-tap at the rail must
+ * never sell a diver's seat out from under them.
  */
 async function reclaimReleasedSeat(
   tx: DbExecutor,
@@ -1003,6 +1193,8 @@ async function reclaimReleasedSeat(
     personId: string;
     recordedByPersonId: string;
     occurredAt: Date;
+    /** The crew reported them not back aboard, rather than boarding them. */
+    missingAfterDive: boolean;
   },
 ): Promise<void> {
   const [updated] = await tx
@@ -1039,7 +1231,7 @@ async function reclaimReleasedSeat(
     tripId: input.tripId,
     bookingId: input.bookingId,
     actorPersonId: input.recordedByPersonId,
-    code: "booking_no_show_boarded",
+    code: input.missingAfterDive ? "booking_no_show_missing_after_dive" : "booking_no_show_boarded",
     params: { actor, diver },
     occurredAt: input.occurredAt,
   });
@@ -1220,9 +1412,21 @@ export async function recordRollCall(
     if (!event) throw new Error("recordRollCall: insert returned no row");
     // The rail has contradicted the desk. Nothing above refused it and nothing
     // here does either (the docblock says why); what happens instead is that
-    // the seat the counter released comes back with the body that is standing
-    // on the boat.
-    if (input.status === "boarded" && booking.status === "no_show") {
+    // the seat the counter released comes back with the body the crew are
+    // standing in front of — or looking for.
+    //
+    // **Both statements that mean the diver sailed, not the boarding alone.**
+    // `noShowGate` refuses the desk when the crew get there first; this is the
+    // same ordering when they get there second, and for one slice it covered
+    // only half of it. A crew member tapping "not back aboard" after a dive on
+    // a seat the desk had already released left a `no_show` standing over a
+    // diver in the water: the seat had left `SEAT_HELD_STATUSES` at the desk's
+    // tap, the counter had already offered it to the wait list, and the
+    // glossary's promise that the mark "cannot co-exist with a boarding at any
+    // checkpoint" was false in exactly the ordering the offline manifest makes
+    // ordinary — after-dive marks are made with no signal and arrive hours
+    // later (dive-domain-expert review, issue #1704).
+    if (booking.status === "no_show" && standingResultMeansSailed(checkpoint, input.status)) {
       await reclaimReleasedSeat(tx, {
         shopId: input.shopId,
         tripId: input.tripId,
@@ -1230,6 +1434,11 @@ export async function recordRollCall(
         personId: booking.personId,
         recordedByPersonId: staffId,
         occurredAt,
+        // Two facts, two trail lines: "the boat carried somebody the desk had
+        // written off" and "the desk wrote off somebody the crew then reported
+        // missing" are what an owner reconciling the departure needs told
+        // apart, and the second is the one that matters at 18:00.
+        missingAfterDive: input.status === "not_boarded",
       });
     }
     return { ok: true, eventId: event.id };

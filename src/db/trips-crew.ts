@@ -1,8 +1,10 @@
 import { and, asc, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { shopDayOf } from "@/lib/closeout";
 import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
+import { hasReturned } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
 import { publishManifestEvent } from "./manifest-events";
@@ -84,6 +86,196 @@ export type CrewMoveConflicts = {
   away: CrewMoveConflict[];
 };
 
+/** One window a departure occupies — its own, or the one a move proposes. */
+type CrewWindow = { startsAt: Date; endsAt: Date };
+
+/**
+ * **The overlap question, asked once.** Who among these crew members is on
+ * another live, scheduled departure whose window meets any of `windows`.
+ *
+ * The one place the predicate lives, so the move preview
+ * (`crewMoveConflicts`, shifted windows) and the standing clash a departure is
+ * already in (`crewClashes`, its own windows) cannot come to different answers
+ * about the same pair of boats. Rows fan out per leg of the *other* departure,
+ * so every caller dedupes what it is about to render.
+ *
+ * ## The window, not the day
+ *
+ * A clash is a **time overlap**, asked of each window the departure actually
+ * occupies. Two reasons it cannot be "the same calendar day":
+ *
+ * 1. `setTripCrew` and `changeTripCrew` already define a crew conflict, and
+ *    they define it exactly this way — and *refuse* it. A reading using a
+ *    looser rule would report as a problem a state the shop can only be in
+ *    because the model deliberately allows it.
+ * 2. A morning two-tank and an afternoon single are an ordinary double shift
+ *    for a divemaster. Calling that a clash is the saturation failure #757 and
+ *    #1203 already paid for once: a warning that is routinely wrong is one a
+ *    crew learns to click past, and the cost lands on the next warning, which
+ *    may be right.
+ *
+ * Tenancy is proved through `trips` on both sides, because `trip_assignments`
+ * carries no `shop_id` of its own (CR-007). Reads only.
+ */
+async function overlappingCrewDepartures(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  crewIds: readonly string[],
+  windows: readonly CrewWindow[],
+) {
+  return db
+    .select({
+      personId: tripAssignments.personId,
+      fullName: people.fullName,
+      otherTripId: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+    })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        // A called-off departure holds nobody's day. `setTripCrew`'s own
+        // conflict check does not exclude these; this one does, and the
+        // difference is filed rather than quietly copied.
+        eq(trips.status, "scheduled"),
+        ne(trips.id, tripId),
+        inArray(tripAssignments.personId, [...crewIds]),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        // The predicate `setTripCrew` refuses on, against the *other* side's
+        // own legs where it has them.
+        or(
+          ...windows.map((day) =>
+            and(
+              lt(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`, day.endsAt),
+              gt(sql`coalesce(${tripScheduleDays.endsAt}, ${trips.endsAt})`, day.startsAt),
+            ),
+          ),
+        ),
+      ),
+    )
+    .orderBy(asc(people.fullName), asc(trips.startsAt));
+}
+
+/**
+ * One crew member this departure cannot sail with as it stands: they are on
+ * another departure whose hours overlap it.
+ */
+export type CrewClash = {
+  personId: string;
+  fullName: string;
+  otherTripId: string;
+  /** The other departure they are on, named — never "another departure". */
+  otherTitle: string;
+};
+
+/**
+ * **The clash a departure is standing in right now** (issue #1695) — no
+ * proposed move, no panel open.
+ *
+ * ## Three doors, not one
+ *
+ * `setTripCrew` and `changeTripCrew` refuse to *write* this state, so every way
+ * a shop reaches it is a write that moves the *boat* without reading the
+ * roster. There are three, and the claim that `moveTrip` is the only one was
+ * wrong when it was written (dive-domain-expert review, 2026-09-12):
+ *
+ * 1. **`moveTrip`** — the loudest: a departure's window shifts, its crew stay
+ *    as they were, and two hulls are counting on the same divemaster. Its own
+ *    Move panel warns first, and then closes with the move.
+ * 2. **`updateTripRecord`** (src/db/trips-record.ts) — the About → Details
+ *    form two panels above the Crew list writes `starts_at`/`ends_at` straight
+ *    through and replaces `trip_schedule_days` wholesale, with no crew read
+ *    anywhere in it. Nothing warns at all.
+ * 3. **`setTripStatus(…, "scheduled")`** — reinstating a called-off departure
+ *    whose crew were re-rostered onto another boat while it was cancelled. A
+ *    called-off boat holds nobody's day, so the clash appears at the moment it
+ *    goes back on the board (`trips-crew.test.ts` exercises exactly this).
+ *
+ * Doors 2 and 3 are low severity rather than silent: both redirect with a
+ * `?notice=` whose form is in the trip page's `aboutForms` (`saved` →
+ * `details`, `reinstated` → `lifecycle`), so About re-opens and this read
+ * speaks on the very next paint.
+ *
+ * **A read, never a row.** The answer is computed from the roster every time it
+ * is asked, so it cannot go stale against a roster the owner then fixes, and
+ * there is nothing to clear when they do (`.claude/rules/db.md` — this
+ * repository writes no reconciliation code).
+ *
+ * **Information, not a gate.** Issue #1345 settled that a move neither refuses
+ * a clash nor drops the clashing crew, because the owner assigns crew. Nothing
+ * here refuses anything; it is the sentence a staffer was never shown.
+ *
+ * The subject departure must be `scheduled` too — symmetric with the other
+ * side, and for the same reason: a called-off boat holds nobody's day, so its
+ * crew are not double-booked by it.
+ *
+ * **And it must not be home yet.** A departure a buffered hour past its
+ * scheduled return (`hasReturned`, the one rule every "has the boat come back"
+ * question in this repo shares) reports nothing: the clash on last month's
+ * charter is permanent, unfixable and true, which is the definition of a
+ * warning a shop learns to scroll past — the saturation failure #757 and #1203
+ * already paid for. `now` is read through the clock so the frozen e2e clock
+ * reaches it like every other surface.
+ */
+export async function crewClashes(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  now: Date = nowDate(),
+): Promise<CrewClash[]> {
+  const [trip] = await db
+    .select({ startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.id, tripId),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  if (!trip) return [];
+  if (hasReturned(trip.endsAt, now)) return [];
+
+  const crewIds = await getTripCrewIds(db, shopId, tripId);
+  if (crewIds.length === 0) return [];
+
+  // Every leg, because the overlap is per window: a course whose Tuesday
+  // meeting lands on another boat clashes even though its Monday is clear.
+  const days = await db
+    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+    .from(tripScheduleDays)
+    .where(eq(tripScheduleDays.tripId, tripId));
+  const windows = days.length > 0 ? days : [{ startsAt: trip.startsAt, endsAt: trip.endsAt }];
+
+  const rows = await overlappingCrewDepartures(db, shopId, tripId, crewIds, windows);
+  // **One line per person per other departure**, and the id is what dedupes —
+  // never the name. Two crew members who share a name are two people to ring,
+  // and the left join above repeats a row per leg of the other boat.
+  const clashes: CrewClash[] = [];
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const key = `${row.personId}:${row.otherTripId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    clashes.push({
+      personId: row.personId,
+      fullName: row.fullName,
+      otherTripId: row.otherTripId,
+      otherTitle: row.title,
+    });
+  }
+  return clashes;
+}
+
 /**
  * **What moving this departure would ask of the people on it** (issue #1310) —
  * the one consequence of a move that nothing else in the app can answer, and
@@ -107,22 +299,11 @@ export type CrewMoveConflicts = {
  * They are separate lists because they are separate facts: one is an
  * inference from the roster, the other is the crew member's own statement.
  *
- * ## The window, not the day
- *
- * A clash is a **time overlap**, computed against the days the move actually
- * proposes — every leg of a multi-day course, shifted by the same wall-clock
- * delta `moveTrip` will apply. Two reasons it cannot be "the same calendar
- * day":
- *
- * 1. `setTripCrew` and `changeTripCrew` already define a crew conflict, and
- *    they define it exactly this way — and *refuse* it. A preview using a
- *    looser rule would report as a problem a state the shop can only be in
- *    because the model deliberately allows it.
- * 2. A morning two-tank and an afternoon single are an ordinary double shift
- *    for a divemaster. Calling that a clash is the saturation failure #757 and
- *    #1203 already paid for once: a warning that is routinely wrong is one a
- *    crew learns to click past, and the cost lands on the next warning, which
- *    may be right.
+ * The windows asked about are every leg of a multi-day course, shifted by the
+ * same wall-clock delta `moveTrip` will apply — so the preview and the move
+ * cannot disagree about where the boat lands. Why a clash is a time overlap
+ * and never a shared calendar day is argued once, on
+ * `overlappingCrewDepartures`, which owns the predicate both readings use.
  *
  * Tenancy is proved through `trips` on both sides, because `trip_assignments`
  * carries no `shop_id` of its own (CR-007). Reads only.
@@ -159,42 +340,9 @@ export async function crewMoveConflicts(
   ).map((day) => ({ startsAt: shift(day.startsAt), endsAt: shift(day.endsAt) }));
 
   const [overlapping, blocks] = await Promise.all([
-    db
-      .select({
-        personId: tripAssignments.personId,
-        fullName: people.fullName,
-        title: trips.title,
-        startsAt: trips.startsAt,
-      })
-      .from(tripAssignments)
-      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-      .innerJoin(people, eq(people.id, tripAssignments.personId))
-      .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
-      .where(
-        and(
-          liveTrip(),
-          eq(trips.shopId, shopId),
-          // A called-off departure holds nobody's day. `setTripCrew`'s own
-          // conflict check does not exclude these; this one does, and the
-          // difference is filed rather than quietly copied.
-          eq(trips.status, "scheduled"),
-          ne(trips.id, tripId),
-          inArray(tripAssignments.personId, crewIds),
-          eq(people.shopId, shopId),
-          isNull(people.deletedAt),
-          // The predicate `setTripCrew` refuses on, against the *other* side's
-          // own legs where it has them.
-          or(
-            ...proposed.map((day) =>
-              and(
-                lt(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`, day.endsAt),
-                gt(sql`coalesce(${tripScheduleDays.endsAt}, ${trips.endsAt})`, day.startsAt),
-              ),
-            ),
-          ),
-        ),
-      )
-      .orderBy(asc(people.fullName), asc(trips.startsAt)),
+    // The same predicate `crewClashes` asks of a departure standing still,
+    // against the windows this move proposes rather than the ones it has.
+    overlappingCrewDepartures(db, shopId, tripId, crewIds, proposed),
     // The shop-local days the move would occupy, from the earliest leg to the
     // latest — `min`/`max` rather than first and last, because
     // `trip_schedule_days` comes back in no particular order and a course
@@ -467,8 +615,39 @@ export type TripCrewChange = {
 };
 
 /**
- * Apply one crew assignment change without replacing concurrent assignments.
- * The trip and person are both tenant-checked inside the transaction.
+ * Why a crew change was turned down, when the reason is one a staffer at a dock
+ * can do something about.
+ *
+ * **`crew_clash` is the only refusal whose fix is not "try again"** (issue
+ * #1695, dive-domain-expert review 2026-09-12). The person being assigned is
+ * already rostered on another departure whose hours overlap this one, which is
+ * the same physical impossibility `crewClashes` reports a departure already
+ * standing in — and the panel that now explains that state in exact words told
+ * the staffer who tried to *create* it that their connection was bad. The next
+ * move at a dock is to tap again, or to go and widen the other departure's
+ * hours until it sticks, which manufactures the very state the read exists to
+ * report.
+ *
+ * Everything else is `refused` deliberately, and stays one word: the course
+ * rules, the roll-call history guard, an unknown person, another shop's trip. A
+ * refusal code per branch is a vocabulary to keep in step with a message
+ * bundle, and none of those four has a sentence a staffer would act on
+ * differently.
+ */
+export type TripCrewRefusal = "crew_clash" | "refused";
+
+/** What one crew change did, and — when it did nothing — why. */
+export type TripCrewOutcome = { ok: true } | { ok: false; refusal: TripCrewRefusal };
+
+/**
+ * Apply one crew assignment change without replacing concurrent assignments,
+ * and say **why** when it applies nothing. The trip and person are both
+ * tenant-checked inside the transaction.
+ *
+ * `changeTripCrew` below is the boolean view of this one: the whole
+ * transaction lives here, so there is exactly one copy of the guards and a
+ * caller that only needs to know whether anything changed is not paying for a
+ * second write path.
  *
  * **Unassign is refused for anybody who has a per-person crew roll-call result
  * on this trip** (`crewWithRollCallHistory`). Removing them would delete the
@@ -482,13 +661,13 @@ export type TripCrewChange = {
  * ships a role picker: the fix for a mis-tap is to set the role again, in the
  * UI, rather than a value nobody can reach without SQL (review 20260803, D4/D5).
  */
-export async function changeTripCrew(
+export async function changeTripCrewOutcome(
   db: AppDb,
   shopId: string,
   tripId: string,
   change: TripCrewChange,
-): Promise<boolean> {
-  return db.transaction(async (tx) => {
+): Promise<TripCrewOutcome> {
+  return db.transaction(async (tx): Promise<TripCrewOutcome> => {
     const [eligible] = await tx
       .select({ personId: people.id })
       .from(people)
@@ -503,7 +682,7 @@ export async function changeTripCrew(
         ),
       )
       .limit(1);
-    if (!eligible) return false;
+    if (!eligible) return { ok: false, refusal: "refused" };
 
     const [targetTrip] = await tx
       .select({ courseId: trips.courseId })
@@ -511,7 +690,7 @@ export async function changeTripCrew(
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
       .for("update");
-    if (!targetTrip) return false;
+    if (!targetTrip) return { ok: false, refusal: "refused" };
     // Nobody with per-person roll-call history on this trip is removable — the
     // same guard `setTripCrew` applies, checked before the course rules so the
     // refusal reason cannot depend on whether the trip happens to be a course
@@ -520,7 +699,7 @@ export async function changeTripCrew(
       change.operation === "unassign" &&
       (await crewWithRollCallHistory(tx, tripId, [change.personId])).size > 0
     ) {
-      return false;
+      return { ok: false, refusal: "refused" };
     }
 
     if (targetTrip.courseId) {
@@ -570,9 +749,9 @@ export async function changeTripCrew(
         courseRequiresInstructor: true,
         proposedCrew,
       });
-      if (review.blocking) return false;
+      if (review.blocking) return { ok: false, refusal: "refused" };
       const { instructorCount } = countInWaterCrew(proposedCrew);
-      if (instructorCount === 0) return false;
+      if (instructorCount === 0) return { ok: false, refusal: "refused" };
       // No ratio check — same reason as `setTripCrew` above: pulling a crew
       // member who is not on the boat must always be recordable, even when it
       // leaves the session over ratio. The `over_ratio` advisory is the nudge;
@@ -615,7 +794,10 @@ export async function changeTripCrew(
           ),
         )
         .limit(1);
-      if (conflict.length > 0) return false;
+      // **The one refusal that carries its own name.** Same predicate, same
+      // vocabulary as the standing clash this panel now reports (`crewClashes`
+      // above): one person, two hulls, these same hours.
+      if (conflict.length > 0) return { ok: false, refusal: "crew_clash" };
       const insert = tx
         .insert(tripAssignments)
         .values({ tripId, personId: change.personId, tripRole: change.tripRole ?? null });
@@ -638,8 +820,27 @@ export async function changeTripCrew(
           and(eq(tripAssignments.tripId, tripId), eq(tripAssignments.personId, change.personId)),
         );
     }
-    return true;
+    return { ok: true };
   });
+}
+
+/**
+ * Apply one crew assignment change, as a plain did-it-change answer.
+ *
+ * The boolean view of {@link changeTripCrewOutcome} — every guard, every
+ * refusal and the transaction itself are that function's, so the two can never
+ * drift. Callers with nothing to say about *why* a change was turned down keep
+ * using this; the trip's Crew panel takes the outcome, because "you cannot put
+ * this person on two boats at once" and "that didn't reach the server" are
+ * different sentences and only one of them is worth tapping again over.
+ */
+export async function changeTripCrew(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  change: TripCrewChange,
+): Promise<boolean> {
+  return (await changeTripCrewOutcome(db, shopId, tripId, change)).ok;
 }
 
 /** The crew assigned to each of these trips, in one query, grouped by trip. */

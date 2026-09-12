@@ -1609,7 +1609,29 @@ export type InPersonWaiverOutcome =
          * telling them the names match would be wrong for either of the two
          * above, which is why splitting beats re-wording.
          */
-        | "guardian_name_matches_diver";
+        | "guardian_name_matches_diver"
+        /**
+         * **The seat is held over who the diver is** (H-13), so nobody may
+         * attest a release onto it yet.
+         *
+         * A staff-attested paper record is the strongest evidence in the
+         * product — it says a named staffer watched this person sign, and it
+         * carries the medical tick — and it lands on the *matched* person's
+         * history, which is precisely the record the flag says the shop is not
+         * sure about. Recorded there, it cannot be taken back by clearing a
+         * flag later.
+         *
+         * Refused at the writer rather than left to the surfaces
+         * (`dive-domain-expert` review of issue #1696). The counter only hid its
+         * control because `identity` outranks `waiver` in `KIND_SEVERITY`
+         * (`src/lib/today.ts`) and `blockerFixFor` offers one fix at a time —
+         * re-rank that table for an unrelated reason and the control comes back
+         * — and the roster's `PaperWaiverControl` never consulted the flag at
+         * all, so that door was open. The fix for a diver standing there with
+         * paper in hand is one tap away on both surfaces: confirm the identity,
+         * then record the release.
+         */
+        | "identity_unconfirmed";
     };
 
 /**
@@ -1690,6 +1712,7 @@ async function bookingSigner(
       fullName: people.fullName,
       dateOfBirth: people.dateOfBirth,
       tripStatus: trips.status,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -1704,6 +1727,11 @@ async function bookingSigner(
     .limit(1);
   if (!booking) return { ok: false, reason: "booking_not_found" };
   if (booking.tripStatus !== "scheduled") return { ok: false, reason: "booking_unavailable" };
+  // A seat still held over whose seat it is cannot take an attestation about
+  // the person in it — see `identity_unconfirmed` on `InPersonWaiverOutcome`.
+  // `personSigner` below has no such check and needs none: there is no seat, so
+  // there is no guess, and the release lands on the diver the caller named.
+  if (booking.identityUnconfirmedAt) return { ok: false, reason: "identity_unconfirmed" };
   return {
     ok: true,
     bookingId: booking.id,
@@ -2362,10 +2390,31 @@ export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tri
  * Staff roster view: only the current record joins each active booking across
  * multiple trips.
  *
- * Ordered by seat time then id, for the reason `getTripRoster` states in full:
- * `bookings.created_at` ties across a seeding transaction, and since
- * `createBooking` stamps the application clock it ties across a spec's own
- * writes too. A list a staffer works down is not left to the heap.
+ * **Ordered exactly as `getTripRoster` is** — seat time, then the diver's
+ * name, then the booking id as the last resort (issue #1753). The divergence
+ * this docblock used to record is closed: two readers of one roster answering
+ * in two different orders is a trap for whoever next renders these rows
+ * directly.
+ *
+ * Be precise about what the old `asc(bookings.id)` cost, because the
+ * overstatement that was here — "a list a staffer works down" — was not true.
+ * **No surface observes this array's order.** Every consumer re-keys it by
+ * booking id: `listTripsReadiness` builds `readinessByBooking` /
+ * `depthByBooking` maps from it, the trip page's `WaiverByBooking` is a `Map`,
+ * the Guests tab hangs waiver detail off the roster's own spine
+ * (`trips-guests.ts`), and the requirements action reduces it to a count. So
+ * nobody — a staffer, a capture, or a diff — can see the tie broken either
+ * way today.
+ *
+ * What the id key cost was the *contract*: `bookings.created_at` is not a
+ * total order (`createBooking` stamps the application clock, frozen for the
+ * unit fleet and for e2e, so a party booked in one transaction and every
+ * booking a spec writes tie by construction), and `bookings.id` is a
+ * `defaultRandom()` uuid, so the documented order was "seat time, then
+ * whichever uuid the database happened to mint" — unpredictable to a reader
+ * and different in every freshly seeded database. `people.full_name` carries
+ * `COLLATE "und-x-icu"` (`drizzle/20260911200158_person-name-collation`), so
+ * the name key is locale-sensible without the query saying so.
  */
 export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tripIds: string[]) {
   if (tripIds.length === 0) return [];
@@ -2384,5 +2433,5 @@ export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tr
         ne(bookings.status, "cancelled"),
       ),
     )
-    .orderBy(asc(bookings.createdAt), asc(bookings.id));
+    .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
 }

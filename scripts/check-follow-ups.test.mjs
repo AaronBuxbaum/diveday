@@ -378,6 +378,32 @@ describe("a glob in Touches", () => {
     expect(missingTouchedProblem("src/i18n/locales/*/staff/nope.json")).toMatch(/matched no files/);
     expect(missingTouchedProblem("src/lib/nope.ts")).not.toMatch(/matched no files/);
   });
+
+  /**
+   * **A Next.js dynamic segment is a real path and a character class at once.**
+   * `src/app/ready/[token]/actions.ts` is spelled exactly right on disk and
+   * expands to `src/app/ready/t/actions.ts` and friends, none of which exist —
+   * so reading it only as a pattern refused a path anybody could `cat`, and
+   * the sentence said "does not exist" about a file that does. Three rounds of
+   * red `Repository safeguards` on PR #1746 (issue #1761).
+   */
+  it("resolves a bracketed route path that is on disk, before expanding it", async () => {
+    expect(await touchedPathExists(root, "src/app/ready/[token]/actions.ts")).toBe(true);
+  });
+
+  it("still refuses a bracketed path that is not on disk under that spelling", async () => {
+    expect(await touchedPathExists(root, "src/app/ready/[token]/not-a-real-action.ts")).toBe(false);
+  });
+
+  it("names the character that made a token a pattern", () => {
+    // "matched no files" alone reads as "your path is wrong" when the truth is
+    // often "your path is a glob", and a filer cannot act on the difference
+    // without being told which character did it.
+    const problem = missingTouchedProblem("src/app/ready/[token]/nope.ts");
+    expect(problem).toMatch(/“\[”/);
+    expect(problem).toMatch(/glob character/);
+    expect(missingTouchedProblem("src/lib/nope.ts")).not.toMatch(/glob character/);
+  });
 });
 
 /**
@@ -520,6 +546,15 @@ describe("--body, the pre-flight for one drafted issue", () => {
     ["a stray positional", ["good.md"], /unrecognised argument/],
     ["a --title with no body", ["--title", "x"], /only meaningful beside/],
     ["a --title with no value", ["--body", "good.md", "--title"], /--title needs/],
+    // A mistyped escape hatch must be refused rather than ignored: silently
+    // dropping it turns a deliberate override into a refusal nobody can
+    // explain, which is how people stop running the validator at all.
+    [
+      "a mistyped escape hatch",
+      ["--body", "good.md", "--allow-unresolved-touch"],
+      /unrecognised argument/,
+    ],
+    ["the escape hatch with no body", ["--allow-unresolved-touches"], /only meaningful beside/],
   ])("refuses %s", (_name, args, expected) => {
     // `good.md` is real, so a case that fails here failed on the arguments
     // rather than on a missing file.
@@ -535,18 +570,51 @@ describe("--body, the pre-flight for one drafted issue", () => {
     expect(result.stderr).toMatch(/could not read/);
   });
 
-  it("warns about a Touches path that is not on disk, without failing", () => {
-    // Not a failure here: a draft written on a branch may legitimately name a
-    // path that branch adds. It is still worth saying, because the
-    // whole-tracker run resolves these against the working tree and will
-    // redden every *other* session's check until the branch merges.
+  /**
+   * **The hole this door had, and the reason an exit code is worth anything.**
+   * Until 2026-09-12 an unresolved `Touches:` path printed a warning, then
+   * printed "is a valid follow-up body", then exited 0 — while the same body,
+   * once filed, failed the tracker scan and reddened `Repository safeguards` in
+   * every open pull request at once. The validator said yes to the exact body
+   * CI said no to, and a session that trusted the exit code filed it anyway
+   * (issue #1761).
+   */
+  it("refuses a Touches path that is not on disk, the way the tracker scan does", () => {
     const body = valid.body.replace(
       "**Touches:** `src/lib`, `docs/agents/issue-tracker.md`",
       "**Touches:** `src/lib/not-a-real-file-here.ts`",
     );
     const result = run("--body", draft("future.md", body));
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/does not exist/);
+    // And it names the way out, because a refusal that does not is one people
+    // route around.
+    expect(result.stderr).toMatch(/--allow-unresolved-touches/);
+  });
+
+  it("accepts one with --allow-unresolved-touches, still saying what it costs", () => {
+    // The lenient reading is real and stays reachable: a draft written on a
+    // branch may legitimately name a path that branch adds. It is a flag rather
+    // than the default because the cost lands on every *other* session's check.
+    const body = valid.body.replace(
+      "**Touches:** `src/lib`, `docs/agents/issue-tracker.md`",
+      "**Touches:** `src/lib/not-a-real-file-here.ts`",
+    );
+    const result = run("--body", draft("future-allowed.md", body), "--allow-unresolved-touches");
     expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/valid follow-up body/);
     expect(result.stderr).toMatch(/not on disk here/);
+  });
+
+  it("still exits 0 on a body whose every path resolves", () => {
+    // The case that stops the strictness above from refusing every good draft.
+    const body = valid.body.replace(
+      "**Touches:** `src/lib`, `docs/agents/issue-tracker.md`",
+      "**Touches:** `src/app/ready/[token]/actions.ts`",
+    );
+    const result = run("--body", draft("bracketed.md", body));
+    expect(result.status).toBe(0);
+    expect(result.stderr).not.toMatch(/does not exist/);
   });
 
   it("says nothing about a Touches glob that matches real files", () => {
@@ -559,15 +627,14 @@ describe("--body, the pre-flight for one drafted issue", () => {
     expect(result.stderr).not.toMatch(/not on disk here/);
   });
 
-  it("warns about a Touches glob that matches nothing, still without failing", () => {
-    // Advisory here for the same reason a missing plain path is: this mode
-    // checks a draft somebody may still edit.
+  it("refuses a Touches glob that matches nothing, and names the metacharacter", () => {
     const body = valid.body.replace(
       "**Touches:** `src/lib`, `docs/agents/issue-tracker.md`",
       "**Touches:** `src/i18n/locales/*/staff/no-such-namespace.json`",
     );
     const result = run("--body", draft("glob-miss.md", body));
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/matched no files/);
+    expect(result.stderr).toMatch(/“\*”/);
   });
 });

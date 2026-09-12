@@ -46,7 +46,7 @@ async function aTripAhead(db: Awaited<ReturnType<typeof seededShopContext>>["db"
 function doorFor(startsAt: Date) {
   return noShowGate({
     bookingStatus: "booked",
-    boarded: false,
+    onTheWater: null,
     tripStatus: "scheduled",
     startsAt,
     now: nowDate(),

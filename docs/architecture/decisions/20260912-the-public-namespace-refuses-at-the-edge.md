@@ -187,10 +187,23 @@ metric filter matching a renamed code counts zero forever without erroring. The 
 reaches the same `catch` is not an incident and must not share the alarm: a shop slug and a course
 slug go into the lookup unfiltered and length-unbounded on purpose, so `/s/%00` is a statement
 Postgres refuses (SQLSTATE 22021), once per request, free for whoever is sending it. That branch is
-`public_route.existence_query_refused` at `warn`, split by `src/lib/db-failure.ts` on whether a
-server answered at all. Neither line carries the pathname or the driver's message: drizzle's wrapper
+`public_route.existence_query_refused` at `warn`, split by `src/lib/db-failure.ts` on SQLSTATE
+class 22 — a data exception, which on this path is a value the caller sent. Everything else that
+lands in that `catch` alarms, the database being gone included but also our own credentials being
+rejected, a revoked grant, and a table the schema does not have; each leaves the namespace exactly
+as silent. That split read the other way round at first — only the classes a server raises about
+*itself* alarmed, on the reasoning that a SQLSTATE means a server answered — and issue #1750
+inverted it, which is safe only because no other class is reachable through the four constant
+statements `publicRouteLookup` issues. The argument is written out in `src/lib/db-failure.ts` and is
+a precondition for adding a reader here. Neither line carries the pathname or the driver's message: drizzle's wrapper
 message is the SQL followed by the bound parameters verbatim, and both were being shipped to
-CloudWatch unauthenticated and unthrottled at the request of a stranger.
+CloudWatch unauthenticated at the request of a stranger. The volume was the other half of that, and
+is now bounded too: the refused branch emits at most one line per instance per minute and carries a
+`swallowed` count so the real rate stays readable (`reportRefusedQuery` in `src/proxy.ts`, issue
+#1736). Per instance, not fleet-wide — serverless instances are many, so this damps one instance's
+chatter rather than rate-limiting the fleet. The `unavailable` branch beside it is deliberately
+undamped, because `DatabaseUnavailable` alarms at one datapoint in five minutes and a delayed first
+line would blunt the alarm this split exists to protect.
 
 **What it discloses.** A status line is an oracle, and under `/s/**` there is one row whose
 visibility a page decides for itself: `courses.is_active` is the shop's Hidden toggle, and
@@ -238,11 +251,28 @@ recognise returns `null`, which means *no opinion*: the request is passed throug
 deliberate and not negotiable — `/s/<shop>/opengraph-image` and `/s/<shop>/trips/<id>/opengraph-image`
 are routes this module must never refuse, and a namespace-wide "refuse what I have not been taught"
 would take them off the internet the day somebody adds the next one. So the failure mode is the safe
-one, and it is silent: a new route under `/s/**` that nobody teaches the shape module keeps its
-static shell and goes straight back to answering 200 for its own unknown sub-resources, with no test
-going red, because the `/s/**` status assertions in `e2e/seo.spec.ts` enumerate paths rather than
-routes. Adding a public page here means adding it to `publicRouteShape` and adding its refusal to
-that list. The route-map row in `AGENTS.md` says so, in those terms.
+one, and it was silent: a new route that nobody teaches the shape module keeps its static shell and
+goes straight back to answering 200 for its own unknown sub-resources, with no test going red,
+because the status assertions in `e2e/` enumerate paths rather than routes.
+
+**That silence cost six weeks and is now closed (issue #1734).** This decision was scoped to `/s/**`,
+and the three dynamic public routes outside it went on answering 200 with a not-found page —
+`/dive/<town>`, `/switching/<incumbent>`, `/demo/<story>`, two of them surfaces DiveDay wants
+indexed — exactly as predicted by the paragraph above and exactly as invisibly. So recognition is
+pinned to the route tree rather than to memory: `src/app/edge-refusal-coverage.test.ts` walks
+`src/app`, and a dynamic public route `publicRouteShape` has no opinion about fails it by name. It
+asserts the other direction too, which is the one that costs an outage rather than crawl budget — a
+*static* route must never be judged, because it always has a page to serve. Writing it caught
+`/switching/spreadsheet`, a live guide whose slug is deliberately absent from
+`MIGRATION_GUIDE_SLUGS`, being read as an unregistered competitor and refused.
+
+The three routes also widened the shape module past "which row?": a switching guide and a demo story
+are judged against closed lists this repository holds, so they are settled with no query at all
+(`{ kind: "absent" }`, which `PublicRouteQuery` excludes so it cannot reach a database). A town is
+not — `isRegionSlug` is a pattern and the real set is a projection of `shops.region_slug`, so
+`/dive/not-a-town` passes every shape check there is and pays one `limit 1` read through the page's
+own `listedShopScope`. A shape-only refusal there would have left the issue's own probe answering
+200 with every new unit test green, which is the trap its triage comment named.
 
 **The escape hatch.** If the edge read shows up in the p95, the cheap retreat is to keep the pure
 shape half in the proxy (which needs no read and catches every malformed segment) and let existence

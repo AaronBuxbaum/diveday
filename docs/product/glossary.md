@@ -676,12 +676,30 @@ new domain concept, define it here in the same PR.
   from the manifest.** The roster keeps every non-cancelled booking (`getTripRoster`,
   `src/db/trips-roster.ts`), because a diver the desk wrote off is still a name the crew must
   account for at roll call; the row wears a mark of its own so it cannot read as somebody merely
-  late, and it stays in the expected head count until somebody at the boat speaks for them. **A
-  statement made at the boat outranks one made at a desk.** A diver the crew recorded aboard at any
-  **roll-call checkpoint** can never be marked absent (`already_boarded`), and when the crew get
-  there second, boarding takes the released seat straight back rather than refusing a body somebody
-  is looking at (`reclaimReleasedSeat`, `src/db/manifests.ts`). It is never a **dive day**, in any
-  of the four readers that count them.
+  late, and it stays in the expected head count until somebody at the boat speaks for them. **The
+  evening's souls count is the one place it does subtract, because that line asks a different
+  question** (issue #1689): it counts who the boat *carried*, so a seat still marked absent when the
+  day closes is taken out of it on the desk's statement alone (**sailed**). Nobody is in the water to
+  be missing there — the mark cannot co-exist with a boarding at any checkpoint, since `noShowGate`
+  refuses one and `reclaimReleasedSeat` undoes the other — and the crew's own `not_boarded` at the
+  dock is read ahead of it. **A statement made at the boat outranks one made at a desk.** A diver
+  the crew recorded aboard at any **roll-call checkpoint** can never be marked absent
+  (`already_boarded`), and neither can one the crew recorded `not_boarded` at an *after-dive*
+  checkpoint: there the word is "did not come back from the dive" rather than "never came", and it
+  is the row that means somebody may still be in the water. **The two refusals say different
+  sentences**, because the desk's next act differs: a diver counted aboard is fine and there is
+  nothing to do, while a diver the crew recorded missing means call the boat and open the manifest
+  (`already_boarded` / `already_missing_after_dive`). One reader answers both
+  (`onTheWaterByRollCall`, `src/db/manifests.ts`), over the diver roll call *and* the crew roll
+  call — a staffer can hold a seat on a trip they crew, and **missing crew** outranks a missing
+  diver — and it applies `standingResultMeansSailed` (`src/lib/roll-call.ts`), the one predicate
+  every reader of this question shares rather than inventing a second definition of who is on the
+  water. The same word at the **departure** checkpoint is the benign half and stays markable,
+  because "never left the dock" is the ordinary absence this mark exists to record. When the crew
+  get there second, **both** statements take the released seat straight back rather than refusing a
+  body somebody is looking at (`reclaimReleasedSeat`, `src/db/manifests.ts`): for one slice only
+  the boarding did, which left a mark standing over a diver in the water on the ordering the
+  offline manifest makes ordinary — after-dive taps are made with no signal and sync hours later. It is never a **dive day**, in any of the four readers that count them.
 - **Seat release** — the confirm tap on a **no-show** *is* the release. There is no second tap, no
   timer, no evening sweep and no `seat_released_at` column: `no_show` leaves the statuses that hold
   a seat (**seat held**), so the boat reads one seat lighter the moment the mark lands and the next
@@ -715,7 +733,19 @@ new domain concept, define it here in the same PR.
   can answer are this one and the **Working shift** blackout above, reported as its own separate
   line because one is an inference from the roster and the other is the crew member's own
   statement. The third — over her hours — is unmodelled, and nothing says otherwise. `moveTrip`
-  does not refuse a clash; the preview informs and the owner decides.
+  does not refuse a clash; the preview informs and the owner decides. **And the preview is no longer
+  the only reader** (issue #1695): the panel that warned about a move closes with the move, so the
+  clash a departure is *standing* in is read back on its own Crew panel, on its About summary row,
+  and in the staffing week on the day the overlap falls (`crewClashes`, the same overlap query the
+  preview asks with a shifted window). Still information on every surface — nothing gates on it.
+  **Three writes manufacture one, not just `moveTrip`** (dive-domain-expert review 2026-09-12): the
+  move, `updateTripRecord` — the About → Details form, which writes `starts_at`/`ends_at` straight
+  through and replaces `trip_schedule_days` wholesale with no crew read at all — and
+  `setTripStatus(…, "scheduled")`, which reinstates a called-off departure whose crew were
+  re-rostered while it was off the board. The last two are mild rather than silent, because both
+  redirect with a `?notice=` whose form re-opens About, so the read speaks on the next paint. A
+  clash already **home** is reported nowhere: it is permanent, unfixable and true, which is the
+  shape of a warning a shop learns to scroll past.
 - **Crew gap** — a scheduled trip with nobody rostered on it, or a course session `courseCrewGap`
   reports as instructorless or booked past its ratio. It is a prompt for staff, not a boarding
   authorization by itself. **Today owns it**: Today names it (`instructor_missing`) and its
@@ -910,6 +940,16 @@ new domain concept, define it here in the same PR.
   twenty-nine kilometres.
   Advice, never a refusal: the lookup lives in the page's render rather than in the save, every
   failure renders nothing, and a site that has not said where it is draws no sentence at all.
+- **Station acknowledgement** — a shop saying, once, that it meant the station the advisory above
+  questions (`dive_sites.tide_station_confirmed`, a checkbox under the station field). A genuinely
+  remote site has no nearer station to pick — Flower Garden Banks reads Galveston at about 190 km
+  and is right — and no threshold both spares that and catches the Marathon mistake, so the
+  instrument is a per-pairing answer rather than a bigger number. Once set, the advisory does not
+  render; the box stays on the page so the answer can be taken back. **It is about one pairing, not
+  about the site**: every writer that can move `tide_station_id` clears the flag in the same
+  statement, so a shop that acknowledges Galveston and then mistypes a different id gets the prompt
+  back. Stored on the row rather than in the browser — which station a site reads is a fact about
+  the site — and read by nothing but that one sentence.
 - **Course session** — a scheduled class (pool or open water) tied to a course, an instructor,
   and enrolled students. Instructor-to-student **ratios** are agency-mandated and vary by
   course and environment.
@@ -959,7 +999,9 @@ new domain concept, define it here in the same PR.
   **the app is the record and the card is the fallback**, so nothing printed is ever a second,
   quieter register; and **the roll is called by name**, every diver and every crew member, by two
   people — a head count is the practice that leaves people behind, which is why no DiveDay surface
-  asks for one.
+  asks for one. The number printed beside each name is a line number and never an identity; see
+  **roll-call order**.
+- **Roll-call order** — the order the manifest lists divers in: **oldest seat first, then the diver's name, then the booking id** (`getTripRoster`, `src/db/trips-roster.ts`). The screen, the departure log and the saved dock copy all read that one query, so the three can never disagree about who sits where in the list. The **number beside each name is a line number, not the diver's number**: it is that row's position in today's list, so it shifts when a seat is cancelled, when a released seat is resold to somebody else, and when a name is corrected inside a group of seats sold in the same instant. It exists so a person can keep their place down a wet list, and for nothing else — **the roll is still called by name** (see **Manifest**), and no note, message, export or radio call ever refers to a diver as a number. A shop wanting a number a diver keeps for the day (a tank station, a group) does not have one: that is a stored fact about a person on a departure, not a position in a list. The order is stable against a re-read and against a fresh seed of the same data; it is not stable against the roster's own contents changing (issue #1720, and #1759 for the stronger promise).
 - **Print register** — the pane in Settings that lists the shop's own printable sheets in the
   groups of where the paper goes: at the dock and the door, on the boat, for a diver, on the wall
   (ADR 20260908-one-hand, decision 6, lever X). Every row names the sheet, the paper it prints on,
@@ -1010,6 +1052,23 @@ new domain concept, define it here in the same PR.
   array rather than a widened roll-call event, and its own answer — checked, by whom, when, or
   explicitly not checked — is what the **departure log** prints.
   See [20260824-pre-departure-safety-check](../architecture/decisions/20260824-pre-departure-safety-check.md).
+- **Sailed** — how many of a departure's booked divers the boat actually **carried**, as distinct
+  from the roster it sold. One rule answers it per seat (`seatSailed`, `src/lib/closeout.ts`),
+  reading the shop's statements about that seat strongest first: the crew's own result at the
+  `departure` **roll-call** checkpoint, where `boarded` counts and `not_boarded` ("never left the
+  dock") does not; then any result standing at an *after-dive* checkpoint, either word of which
+  means the person was on the boat; and then — only for a seat the crew said nothing about at all —
+  the desk's **no-show** mark. A seat nobody has spoken for counts, because no result is an
+  unfinished dock count rather than a statement about a person, and the departure's own status is
+  already saying so (`departure_uncounted`). `not_boarded` at an *after-dive* checkpoint is the
+  opposite fact and subtracts nothing: that diver sailed, and is the one the day is still looking
+  for. The dock still wins where it *spoke*, which is what keeps the ashore-then-boarded-later seat
+  out of a count that asks how many the vessel left with; for one slice its *silence* won too, and
+  the evening read "0 out, 0 back" over a boat carrying a missing diver (issue #1704). It is **not**
+  `booked`, and the two must not be collapsed — every question about seats *sold* still reads the
+  roster, because a released seat never came back to the shelf. Its reader is the evening's
+  **souls on board** line, whose crew half is the same idea: assigned crew less the ones a human
+  recorded ashore at the dock.
 - **Souls on board** — the industry's (and the coast guard's) term for how many *people* a vessel
   left with: divers plus crew, one number, no distinction between who paid and who works. It is
   printed at the top of the paper manifest and nowhere on screen, deliberately. On paper it is a
@@ -1017,9 +1076,14 @@ new domain concept, define it here in the same PR.
   live roll-call count, because a "Boarded 6" printed at 07:12 is wrong by 07:20 and paper cannot
   correct itself. The screen answers the live question, in the checkpoint panel. **One screen does
   count this way**: the shop home's evening homecoming line, which since 2026-09-05 reads "8 divers
-  and 2 crew out, 10 back" (issue #1346). It counted bookings before that, which left the crew out
+  and 2 crew out, 10 back" (issue #1346). It counted bookings until then, which left the crew out
   of both numbers on the one sentence in the product about who came home — and it says the two
   halves rather than one total, because a shop reading its own evening wants to know which is which.
+  **Both halves now count who was carried, not who was rostered** (issue #1689): the diver half is
+  **sailed** and the crew half is the assigned crew less the ones recorded ashore at the dock. A
+  count that includes a divemaster standing on the dock is the failure "left with" exists to
+  prevent, and it was reachable through an ordinary last-minute crew swap, because `changeTripCrew`
+  refuses to unassign anybody who has roll-call history.
 - **Departure log** (was "incident-ready export" until 2026-08-12) — the print-optimized document a
   shop hands to authorities or insurers after a departure, generated from close-out: the manifest roster with each person's per-checkpoint roll-call state, the
   **pre-departure checklist**'s own answer for each shop-defined item (checked, by whom, when, or
@@ -1666,8 +1730,18 @@ new domain concept, define it here in the same PR.
   computer (default-on); the GoPro and nitrox are opt-in — most shops don't fill nitrox, so a shop
   that hasn't ticked it never shows the nitrox request, its price field, or the packing list's
   nitrox tank count and blockers. Editing the catalog changes what is offered going forward; it
-  does not rewrite a fit a diver already recorded. The catalog is only **half** the nitrox
-  answer — see **Nitrox-compatible course** below.
+  does not rewrite a fit a diver already recorded, and **what the read side then does with a
+  stored flag the catalog contradicts is the other half of that promise.** The piece *stays* on
+  the trip prep list, marked as something the shop no longer rents: dropping it silently would
+  hide a fit nobody can fill, which is the same failure the writer refuses one layer up. What
+  comes off is everything that piece was making *other* lines say. So a diver whose shop stopped
+  renting drysuits gets their stated weighting back on the weights line, ordinary fin sizing, and
+  no drysuit-card advisory — none of those three is about the suit itself; each is a claim about
+  what changes *because a rental suit is going out*, which a contradicted flag does not say
+  (`src/lib/dive-prep.ts`'s `inShopDrysuit`, `src/lib/drysuit-card.ts`). Completeness stops
+  chasing that piece's size at the same time (**Complete rental fit** below), so the list neither
+  nags for a size nobody can hand over nor pretends the piece was never asked for. The catalog is
+  only **half** the nitrox answer — see **Nitrox-compatible course** below.
 - **Nitrox-compatible course** — whether a shop will run a given course on enriched air
   (`courses.nitrox_compatible`, set on the course editor's *At a glance* box). It is the second of
   two gates on the enriched-air request: `nitroxAvailableOn` (`src/lib/rentals.ts`) offers the box
@@ -1695,13 +1769,28 @@ new domain concept, define it here in the same PR.
   The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
   manufacturer grid a rental wall is racked from (a girth letter, a trailing `T` for the tall cut),
   which shares the wetsuit's girth letters but carries a second axis the wetsuit scale has no room
-  for. Which codes the diver's own select offers is open as H-76. It contributes exactly **one**
+  for. Which codes the diver's own select offers is open as H-76. **A stored size the diver's grid
+  cannot spell is offered back to them as a selected option, and they can replace it** (issue
+  #1728): a staffer typing `ML, rock boot 9` should know the diver will see those words on their own
+  gear form. Before that the box painted blank over the stored value and the next save overwrote it,
+  which was worse — but it does mean the free text is a shared field rather than a staff-only one.
+  It contributes exactly **one**
   piece to the packing list and no boots of its own: most rental drysuits have their boots
   vulcanised on, so they come off the wall with the suit and there is nothing extra to pull. A fleet
   stocking neoprene-sock suits worn with separate rock boots writes that into the drysuit size
   itself ("ML, rock boot 9"), which is free text staff-side and reaches the packing list verbatim.
   The diver's shoe size still matters for fins over that boot, and the mask/fins question already
   asks it.
+  Every size field holds **40 characters** and the usual-weighting note 120
+  (`RENTAL_FIT_TEXT_LIMITS`, `src/lib/rentals.ts`) — one bound for all four writers, because the
+  diver's own form re-submits whatever staff stored, so a tighter cap on the diver's side fails
+  their save on a box they never typed in (issue #1728). That bound is product behaviour and not
+  only form validation: the contact importer **drops** a longer size, with the original cell on
+  the import report beside its row, rather than truncating it (issue #1754). A cut-off size is a
+  plausible-looking wrong size that reaches the packing list verbatim and is acted on at the dock,
+  while a size DiveDay does not hold is a gap completeness already chases and the diver's own form
+  asks for again. It is the tightest constraint on the drysuit's second fact above: a fleet
+  writing its rock-boot size into `drysuit_size` has 40 characters for both.
   A drysuit ticked here with no **Drysuit** specialty on the diver's record raises a roster advisory
   (`src/lib/drysuit-card.ts`) and nothing more: air in the suit expands on the way up and the
   specialty exists for exactly that, but a shop runs its own orientations, so this is a
@@ -1802,8 +1891,12 @@ new domain concept, define it here in the same PR.
   same question one step over: every fit form asks one shoe size ("Fin & boot size", "US 9 / EU
   42"), a vulcanised drysuit boot is two to three fin sizes bigger than the foot in it, and a pair
   packed to the stated number does not go on at the bench. That size stays on the line as the
-  number the packer sizes up from, and the line says the pair has to clear the boot. Rules in
-  `src/lib/dive-prep.ts`.
+  number the packer sizes up from, and the line says the pair has to clear the boot.
+  **Both of those hold only while the shop actually rents drysuits.** A piece the shop has since
+  dropped from its **rental catalog** is the one line here that carries a reason rather than only
+  a size: it stays on the list, says the shop no longer rents it, and stops changing any other
+  line — so a diver at a shop that stopped renting suits is packed lead to their stated number
+  and fins to their stated size, like anyone else. Rules in `src/lib/dive-prep.ts`.
 - **Diver profile** — the shop's person-first operational record. A diver profile gathers contact
   details, certification evidence, rental fit, and bookings; cards are not managed as an unrelated
   certification inbox.
@@ -2144,8 +2237,9 @@ new domain concept, define it here in the same PR.
   public booking that reuses an email under a genuinely different name is stamped
   `bookings.identity_unconfirmed_at`. That raises a fail-closed `identity_unconfirmed` readiness
   blocker — so a shared inbox (a spouse, or a minor booked under a parent's email; see **Junior
-  certification**) can't board on the matched diver's evidence — until staff **Confirm identity** on
-  the roster. **The same blocker has a second raiser (#1556):** a staffer who types a name at the
+  certification**) can't board on the matched diver's evidence — until staff **Confirm identity**
+  (below), on the trip roster or on the check-in queue's own row. **The same blocker has a second
+  raiser (#1556):** a staffer who types a name at the
   counter is shown the divers it half-matches (`similarity() > 0.4`, `findSimilarDivers`) with the
   day each of them last dived, and tapping one seats that diver `identity_unconfirmed` too. The
   prompt fires on genuinely different people, so the answer is to make a wrong tap harmless rather
@@ -2155,6 +2249,26 @@ new domain concept, define it here in the same PR.
   unrelated person (that soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
   [human-decisions.md](human-decisions.md) and
   [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md).
+- **Confirm identity** — the staff tap that clears `bookings.identity_unconfirmed_at`, and the
+  most consequential one in the product: it says *this person is the diver this seat was attached
+  to*. Clearing the flag hands the seat the matched diver's **certifications** (readiness stops
+  withholding them) and their **live signed release** — `issueWaiverOnJoin` asks for no new one
+  from somebody who already holds a valid signature, so the seat boards on that paper — and
+  **spends** the prepaid dives that cover it: `settleConfirmedPackageCoverage` settles the fare
+  against the diver's package in the same transaction, which is money leaving a balance rather
+  than a permission being granted. **There is no undo.** `confirmBookingIdentity`
+  (`src/db/bookings.ts`) is the only writer, reached by two doors — the trip roster's guest row
+  and the check-in queue's own row (issue #1696) — and each writes its own trail line, on the
+  departure and on the *matched person's* record, naming the staffer and which door it was
+  (`identity_confirmed` / `identity_confirmed_at_counter`). **Open to every live staff role on
+  purpose**: the flag is raised at the counter, and a staffer who cannot clear one they just
+  raised strands a walk-in until a manager walks past — what carries the weight is the trail, not
+  the role list (`src/lib/authz.ts`). **When the answer is no**, the resolution is not a different
+  tap: staff book that person under their own email, which creates their own record, and leave
+  this seat held or remove it. Nothing else may be attested onto a held seat in the meantime —
+  recording a paper release on one is refused at the writer (`recordInPersonWaiver`), because a
+  staff-attested signature with a medical tick would land on the very record the flag says the
+  shop is unsure of. See H-13 in [human-decisions.md](human-decisions.md).
 - **Remove vs. erase (a diver)** — two different operations, deliberately not the same button.
   **Removing** a diver is the reversible archive action every entity has
   ([20260719-crud-archive-semantics](../architecture/decisions/20260719-crud-archive-semantics.md)):

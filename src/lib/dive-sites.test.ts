@@ -115,6 +115,26 @@ describe("parseDiveSiteForm", () => {
     }
   });
 
+  /**
+   * The box the distance prompt is answered with (issue #1731). A checkbox is
+   * absent from the post when it is unchecked, which must read as "no" rather
+   * than as a malformed submission — and it is the *writers* in
+   * `src/db/dive-sites.ts` that decide whether a yes may reach the row, so the
+   * parse carries the tick and judges nothing.
+   */
+  it("reads the station acknowledgement off a checkbox, absent meaning no", () => {
+    const ticked = parseDiveSiteForm(
+      formEntries({ tideStationId: "8723583", tideStationConfirmed: "on" }),
+      "meters",
+    );
+    expect(ticked.ok).toBe(true);
+    if (ticked.ok) expect(ticked.fields.tideStationConfirmed).toBe(true);
+
+    const untouched = parseDiveSiteForm(formEntries({ tideStationId: "8723583" }), "meters");
+    expect(untouched.ok).toBe(true);
+    if (untouched.ok) expect(untouched.fields.tideStationConfirmed).toBe(false);
+  });
+
   it("refuses a station id of the wrong shape with its own code", () => {
     expect(parseDiveSiteForm(formEntries({ tideStationId: "87235" }), "meters")).toEqual({
       ok: false,

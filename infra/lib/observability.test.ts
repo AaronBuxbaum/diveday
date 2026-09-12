@@ -657,6 +657,25 @@ describe("the synthesized observability stack", () => {
     }
   });
 
+  it("counts no signal off the line a stranger can trigger", () => {
+    // `public_route.existence_query_refused` is what `/s/%00` writes: an
+    // anonymous GET, repeatable for free. It is damped per instance
+    // (`reportRefusedQuery` in `src/proxy.ts`) and logged at `warn` for the
+    // same reason -- the day a signal counts it, three curls page an operator.
+    //
+    // Both halves are pinned, because either alone leaves the door open: no
+    // signal may name the event, and `AppErrors` must stay the only signal
+    // that counts by *level*, since a second level-based signal at `warn`
+    // would sweep this line up without ever naming it.
+    for (const signal of LOG_SIGNALS) {
+      expect(signal.events ?? []).not.toContain("public_route.existence_query_refused");
+    }
+    const byLevel = LOG_SIGNALS.filter((signal) => signal.level);
+    expect(byLevel).toHaveLength(1);
+    expect(byLevel[0]?.metricName).toBe("AppErrors");
+    expect(byLevel[0]?.level).toBe("error");
+  });
+
   it("hands the shipper's credentials to the app through the .env document, not an output", () => {
     const template = synthesize();
     const outputs = JSON.stringify(template.toJSON().Outputs);

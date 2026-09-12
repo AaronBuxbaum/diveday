@@ -37,6 +37,7 @@ const WORDS: StaffingWeekWords = {
   empty: "Nothing scheduled this week.",
   away: "Away",
   awayConflict: "Away {dates}",
+  crewClash: "Also on {departure}: cannot be on both",
   request: "Ask for this one",
   requestAria: "Ask to work {trip}",
   requesting: "Asking…",
@@ -353,5 +354,114 @@ describe("StaffingWeek", () => {
 
     const grid = within(container).getAllByText("Today");
     expect(grid.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * **The clash a week-planning manager was never shown** (issue #1695). One
+ * divemaster on two hulls at the same hours is a state `setTripCrew` refuses to
+ * write, so a shop only reaches it through a write that moves the **boat**
+ * without reading the roster — `moveTrip`, the departure's own Details form, or
+ * reinstating a called-off boat (`crewClashes` names all three) — and the Move
+ * panel that warned about the first of those closed the moment the move went
+ * through, leaving the surface a shop actually plans the week on showing the
+ * same person on both boats as if that were a shift pattern.
+ */
+describe("StaffingWeek standing crew clash", () => {
+  /** Thursday, Key Largo: the 9:00 AM reef drift and the 10:00 AM wreck. */
+  const DRIFT = {
+    tripId: "trip-drift",
+    title: "Reef drift",
+    meetings: [
+      {
+        startsAt: new Date("2026-08-27T13:00:00.000Z"),
+        endsAt: new Date("2026-08-27T17:00:00.000Z"),
+      },
+    ],
+  };
+  const WRECK = {
+    tripId: "trip-wreck",
+    title: "Spiegel Grove",
+    meetings: [
+      {
+        startsAt: new Date("2026-08-27T14:00:00.000Z"),
+        endsAt: new Date("2026-08-27T18:00:00.000Z"),
+      },
+    ],
+  };
+  /** The same Thursday, 3:00 PM: an ordinary second shift, not a clash. */
+  const AFTERNOON = {
+    tripId: "trip-afternoon",
+    title: "Afternoon single",
+    meetings: [
+      {
+        startsAt: new Date("2026-08-27T19:00:00.000Z"),
+        endsAt: new Date("2026-08-27T22:00:00.000Z"),
+      },
+    ],
+  };
+
+  /**
+   * **Both renderings, asserted separately** (dive-domain-expert review,
+   * 2026-09-12). This component draws the week twice — the seven-column grid
+   * from `lg` up and a day list below it — and jsdom renders both subtrees
+   * whatever the viewport says, so a singular `getByText` here *passed because
+   * the phone branch was missing the line*: two matches throw. The list is the
+   * whole week on a phone and on the portrait tablet a counter actually runs
+   * on, so the branch that was silent is the one that mattered most.
+   */
+  function branches(container: HTMLElement) {
+    const grid = container.querySelector<HTMLElement>('[class~="lg:block"]');
+    const list = container.querySelector<HTMLElement>('[class~="lg:hidden"]');
+    if (!grid || !list) throw new Error("the week should render a grid and a day list");
+    return { grid, list };
+  }
+
+  it("names the other departure on each chip, in the day the overlap falls", () => {
+    const { container } = renderWeek({ people: [{ ...KEIKO, crewingTrips: [DRIFT, WRECK] }] });
+    const { grid, list } = branches(container);
+
+    // Both hulls say it, because a manager fixes this from whichever one they
+    // opened, and each names the *other* boat. The word is what carries it —
+    // this grid's own rule, and the reason the chip is the blackout's chip
+    // rather than a second warning grammar.
+    for (const branch of [grid, list]) {
+      expect(within(branch).getByText("Also on Spiegel Grove: cannot be on both")).toBeVisible();
+      expect(within(branch).getByText("Also on Reef drift: cannot be on both")).toBeVisible();
+    }
+  });
+
+  /**
+   * The clash rides inside the day list's own link, so the sentence joins that
+   * link's accessible name — which is why neither rendering needs a live region
+   * of its own, and why the departure page's line is the only announced copy of
+   * this fact.
+   */
+  it("carries the clash inside the phone list's departure link", () => {
+    const { container } = renderWeek({ people: [{ ...KEIKO, crewingTrips: [DRIFT, WRECK] }] });
+    const { list } = branches(container);
+
+    const link = within(list).getByText("Also on Spiegel Grove: cannot be on both").closest("a");
+    expect(link).toHaveAttribute("href", "/shop/blue-mantis/trips/trip-drift#crew");
+    expect(within(list).queryByRole("alert")).toBeNull();
+    expect(within(list).queryByRole("status")).toBeNull();
+  });
+
+  /**
+   * The silent case, and the assertion most likely to be dropped: a morning
+   * boat and an afternoon boat are how a divemaster works a day, and the roster
+   * allows it on purpose (#757, #1203).
+   */
+  it("says nothing about an ordinary double shift", () => {
+    const { container } = renderWeek({ people: [{ ...KEIKO, crewingTrips: [DRIFT, AFTERNOON] }] });
+    const { grid, list } = branches(container);
+
+    for (const branch of [grid, list]) {
+      expect(within(branch).queryByText(/cannot be on both/)).toBeNull();
+      // The chips themselves are both there — the absence above is about the
+      // warning, not about a week that failed to render.
+      expect(within(branch).getAllByText(/Reef drift/).length).toBeGreaterThan(0);
+      expect(within(branch).getAllByText(/Afternoon single/).length).toBeGreaterThan(0);
+    }
   });
 });

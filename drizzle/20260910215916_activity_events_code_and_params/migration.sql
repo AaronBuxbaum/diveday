@@ -25,6 +25,7 @@
 DELETE FROM "activity_events";--> statement-breakpoint
 -- diveday:allow-destructive drop-constraint activity_events.activity_events_message_not_blank: the column it guards is dropped four statements below, so the constraint has nothing left to guard
 ALTER TABLE "activity_events" DROP CONSTRAINT "activity_events_message_not_blank";--> statement-breakpoint
+-- diveday:allow-destructive add-column-not-null activity_events.code: pre-pilot, no users, H-49 -- the paragraph above prices this deploy window in full, and no expand/contract shape removes `message` without it
 ALTER TABLE "activity_events" ADD COLUMN "code" text NOT NULL;--> statement-breakpoint
 ALTER TABLE "activity_events" ADD COLUMN "params" jsonb DEFAULT '{}' NOT NULL;--> statement-breakpoint
 -- diveday:allow-destructive drop-column activity_events.message: pre-pilot, no users, H-49 -- the table is emptied above, so this drops a column with no rows under it, and the replacement code/params pair is added in the same migration

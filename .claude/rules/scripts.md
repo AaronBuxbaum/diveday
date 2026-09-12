@@ -28,8 +28,11 @@ reviewer agents, and CI. Loaded when one of them is read.
   one that is not in the table, and on the `check:repo` row in `AGENTS.md` naming the wrong count.
 - **Ratchets turn one way.** `--write` banks a fall and refuses a rise; `--absorb "<why>"` records a
   deliberate rise with its reason in the baseline diff. `copy`, `domain-strings`, `tokens`,
-  `architecture`, `type-ramp`, `voice`, `logical-properties`, `bundle-reach`, `route-coverage` and
-  `context-budget` all work this way.
+  `architecture`, `type-ramp`, `voice`, `logical-properties`, `bundle-reach`, `route-coverage`,
+  `locale` and `context-budget` all work this way. `locale`'s count is the one that will never
+  reach zero — an acronym and a course name are the same word in Spanish, so read it as
+  "unexamined" and name a deliberate one in `DELIBERATELY_IDENTICAL`
+  ([docs/agents/repo-checks.md](../../docs/agents/repo-checks.md)).
 - **The agent layer is checked** (`scripts/check-agents.mjs`): every skill has frontmatter whose
   `name` matches its directory and a `description` (the only part every session pays for); every
   skill is in `.claude/skills/README.md` and mentioned in `AGENTS.md`; every reviewer agent is in

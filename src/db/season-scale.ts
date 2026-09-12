@@ -27,7 +27,11 @@ export type SeasonScale = {
    * means to the shop saying it.
    */
   diversBefore: number;
-  /** Today's seats in boarding order — the departure's clock, then the booking's. */
+  /**
+   * Today's seats in boarding order — the departure's clock, then the seat's
+   * own, then the diver's name. The last key is what keeps the *named* diver
+   * of a milestone the same on every render; see the `orderBy` below.
+   */
   todaySeats: {
     personId: string;
     diverName: string;
@@ -90,9 +94,30 @@ export async function seasonScale(
         .innerJoin(trips, eq(bookings.tripId, trips.id))
         .innerJoin(people, eq(bookings.personId, people.id))
         .where(and(seatIsLive, gte(trips.startsAt, from), lt(trips.startsAt, to)))
-        // Total rather than usually-stable: the hundredth diver must be the
-        // same diver on every render of the same day.
-        .orderBy(asc(trips.startsAt), asc(bookings.createdAt), asc(bookings.id)),
+        // **Total, and predictable — not merely total.** This order picks the
+        // person the home *names*: `factOfScaleFor` walks these seats in
+        // order and stops at the one that crosses the hundred, so whoever is
+        // at that index is the diver a shop reads their own milestone about.
+        //
+        // The tie above the last key is not rare. `createBooking` stamps
+        // `created_at` from the application clock (`nowDate()`, millisecond
+        // resolution) rather than the column's `defaultNow()`, so a party
+        // booked in one transaction can share an instant in production, and
+        // under the frozen clock every seat a test or an e2e run writes shares
+        // one. The tie-break used to be `asc(bookings.id)` — a
+        // `defaultRandom()` uuid — so which of two divers on the same boat got
+        // named was decided by a uuid, differently in every freshly seeded
+        // database (issue #1753).
+        //
+        // `people.full_name` is already joined and selected here, so the
+        // predictable key costs nothing; `asc(bookings.id)` stays last as the
+        // only resort for two identically-named divers seated in one instant.
+        .orderBy(
+          asc(trips.startsAt),
+          asc(bookings.createdAt),
+          asc(people.fullName),
+          asc(bookings.id),
+        ),
     () =>
       db
         .select({ startsAt: trips.startsAt })

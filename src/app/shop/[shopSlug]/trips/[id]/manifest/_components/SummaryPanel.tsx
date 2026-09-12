@@ -4,7 +4,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessStatusText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { scopedHash, scopedId } from "@/lib/element-id";
+import { crewRowId, diverRowHash, scopedHash, scopedId } from "@/lib/element-id";
 import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
 import { HeadCount } from "./HeadCount";
 
@@ -215,19 +215,19 @@ export function SummaryPanel({
   const missing: Array<{ key: string; href: string; label: string }> = [
     ...notBackAboardDivers.map((diver) => ({
       key: `missing-diver-${diver.bookingId}`,
-      href: `#diver-row-${diver.bookingId}`,
+      href: diverRowHash(diver.bookingId),
       label: diver.fullName,
     })),
     ...notBackAboardCrew.map((member) => ({
       key: `missing-crew-${member.id}`,
-      href: scopedHash(idPrefix, `crew-row-${member.id}`),
+      href: scopedHash(idPrefix, crewRowId(member.id)),
       label: t("manifest.buddyCrewName", { name: member.fullName }),
     })),
   ];
   const stillToCall: Array<{ key: string; href: string; label: string; blocked: boolean }> = [
     ...uncalled.map((diver) => ({
       key: `diver-${diver.bookingId}`,
-      href: `#diver-row-${diver.bookingId}`,
+      href: diverRowHash(diver.bookingId),
       label: diver.fullName,
       // A readiness fact, and only at the dock: after a dive roll call is a
       // physical head count that readiness never gates, so the word would
@@ -237,7 +237,7 @@ export function SummaryPanel({
     })),
     ...uncalledCrew.map((member) => ({
       key: `crew-${member.id}`,
-      href: scopedHash(idPrefix, `crew-row-${member.id}`),
+      href: scopedHash(idPrefix, crewRowId(member.id)),
       // The buddy panel's marker, reused rather than re-worded: a crew member
       // reads as "the crew member (crew)" in both places on this page.
       label: t("manifest.buddyCrewName", { name: member.fullName }),

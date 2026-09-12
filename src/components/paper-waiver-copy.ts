@@ -1,6 +1,8 @@
 import { staffGuardianRelationshipOptions } from "@/i18n/guardian-labels";
-import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { GuardianRelationship } from "@/lib/guardian";
+import type { PaperWaiverRefusal } from "@/lib/paper-waiver-form";
+import type { NoticeTone } from "@/lib/staff-notices";
 
 /**
  * Words for `PaperWaiverControl`, resolved server-side and passed down as plain
@@ -38,9 +40,66 @@ export type PaperWaiverCopy = {
      */
     namesakeLabel: string;
   };
+  /**
+   * What a refusal says, **beside the form rather than in a page banner**
+   * (`.claude/rules/surfaces.md`, "Where a form says what happened"). A refused
+   * recording no longer navigates — it answers in `useActionState` carrying the
+   * typed values back (issue #1674) — so the words come down with the rest of
+   * the copy instead of being resolved from a `?notice=` on the way back in.
+   */
+  refusals: Record<PaperWaiverRefusal, { text: string; tone: NoticeTone }>;
 };
 
-export function paperWaiverCopy(t: StaffTranslator): PaperWaiverCopy {
+/**
+ * Which surface is asking, because the words differ by more than tone: a
+ * namesake family at the counter or on the roster is told to tick the
+ * confirmation on the form in front of them, and the same family reached from
+ * the diver's record is sent to the counter, because the tick asserts in the
+ * first person that the staffer watched two people sign and nobody reading a
+ * scanned PDF in February did (`PaperWaiverControl`'s `offersNamesake`).
+ */
+export type PaperWaiverSurface = "roster" | "counter" | "diver";
+
+/**
+ * Every refusal the form can say, in each surface's own words.
+ *
+ * **These are the keys the three page-level notice tables already used** —
+ * `TripNoticeBanner.tsx`, `check-in/page.tsx` and `record-notices.ts` — read
+ * from here now that the refusal lands in the form instead of the banner. The
+ * tones come across unchanged with them: the medical attestation is a
+ * `warning` on the counter and the diver's record and a `danger` on the roster,
+ * which is what shipped, and this table is not the place to reopen it.
+ */
+const REFUSAL_COPY: Record<
+  PaperWaiverSurface,
+  Record<PaperWaiverRefusal, { key: StaffMessageKey; tone: NoticeTone }>
+> = {
+  roster: {
+    medical_attestation: { key: "trips.notices.waiverMedicalAttestation", tone: "danger" },
+    guardian_name: { key: "trips.notices.waiverGuardianName", tone: "danger" },
+    identity_unconfirmed: { key: "trips.notices.waiverIdentityUnconfirmed", tone: "danger" },
+    error: { key: "trips.notices.waiverError", tone: "danger" },
+  },
+  counter: {
+    medical_attestation: { key: "checkIn.notice.waiverMedicalAttestation", tone: "warning" },
+    guardian_name: { key: "checkIn.notice.waiverGuardianName", tone: "danger" },
+    identity_unconfirmed: { key: "checkIn.notice.waiverIdentityUnconfirmed", tone: "danger" },
+    error: { key: "checkIn.notice.waiverError", tone: "danger" },
+  },
+  diver: {
+    medical_attestation: { key: "divers.notices.waiverMedicalAttestation", tone: "warning" },
+    guardian_name: { key: "divers.notices.waiverGuardianName", tone: "danger" },
+    // This surface attests for a *person*, never a seat, so `bookingSigner` —
+    // the only reader of the flag — is never reached from here. The words exist
+    // because the table is total and a refusal with no sentence renders nothing;
+    // they point at the seat, which is where the confirm lives.
+    identity_unconfirmed: { key: "divers.notices.waiverIdentityUnconfirmed", tone: "danger" },
+    error: { key: "divers.notices.waiverError", tone: "danger" },
+  },
+};
+
+export function paperWaiverCopy(t: StaffTranslator, surface: PaperWaiverSurface): PaperWaiverCopy {
+  const refusals = REFUSAL_COPY[surface];
   return {
     markSignedOnPaper: t("shared.paperWaiver.markSignedOnPaper"),
     medicalAttestationLabel: t("shared.paperWaiver.medicalAttestationLabel"),
@@ -53,6 +112,18 @@ export function paperWaiverCopy(t: StaffTranslator): PaperWaiverCopy {
       relationshipChoose: t("shared.paperWaiver.guardianRelationshipChoose"),
       relationshipOptions: staffGuardianRelationshipOptions(t),
       namesakeLabel: t("shared.paperWaiver.guardianNamesakeLabel"),
+    },
+    refusals: {
+      medical_attestation: {
+        text: t(refusals.medical_attestation.key),
+        tone: refusals.medical_attestation.tone,
+      },
+      guardian_name: { text: t(refusals.guardian_name.key), tone: refusals.guardian_name.tone },
+      identity_unconfirmed: {
+        text: t(refusals.identity_unconfirmed.key),
+        tone: refusals.identity_unconfirmed.tone,
+      },
+      error: { text: t(refusals.error.key), tone: refusals.error.tone },
     },
   };
 }

@@ -23,7 +23,7 @@ import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { supportNeedsLines } from "@/i18n/support-needs-labels";
 import { welcomeCueText } from "@/i18n/welcome-cue-labels";
-import { scopedId } from "@/lib/element-id";
+import { diverRowId, scopedId } from "@/lib/element-id";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -556,7 +556,7 @@ export function DiverRollCall({
           const bookingNotes = notesByBooking.get(diver.bookingId) ?? [];
           const teamLabel = buddyTeamLabel(diver.buddyTeam ? [diver.buddyTeam] : []);
           return (
-            <li key={diver.bookingId} id={`diver-row-${diver.bookingId}`} className={rowClass}>
+            <li key={diver.bookingId} id={diverRowId(diver.bookingId)} className={rowClass}>
               <div className={ruleClass}>
                 <div className="flex items-start">
                   {/* The name column *is* the disclosure. One tap on the person

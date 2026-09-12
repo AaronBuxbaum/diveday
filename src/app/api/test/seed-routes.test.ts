@@ -35,6 +35,7 @@ const seedObservedSpecies = await import("./seed-observed-species/route");
 const seedDiveTimes = await import("./seed-dive-times/route");
 const seedReturningDiver = await import("./seed-returning-diver/route");
 const seedBookingHandoff = await import("./seed-booking-handoff/route");
+const seedArrivalCode = await import("./seed-arrival-code/route");
 const seedShelfToken = await import("./seed-shelf-token/route");
 const seedDisplayToken = await import("./seed-display-token/route");
 const seedYearBandShop = await import("./seed-year-band-shop/route");
@@ -157,6 +158,16 @@ const routes: SeedRoute[] = [
     // that it mints a working ten-minute credential over a diver's booking. A
     // route answering on a misconfigured deployment would be handing out the
     // door to a real diver's contact details.
+    expectPastTheGuard: expectInvalidBody,
+  },
+  {
+    slug: "seed-arrival-code",
+    POST: seedArrivalCode.POST,
+    // A shop slug and an email, refused first — and it must be, because past
+    // that it mints a working arrival code for a diver's seat, and a scan of
+    // one *writes an arrival on a manifest*. A route answering on a
+    // misconfigured deployment would let anyone put a diver on a boat they
+    // never came to (issue #1725).
     expectPastTheGuard: expectInvalidBody,
   },
   {

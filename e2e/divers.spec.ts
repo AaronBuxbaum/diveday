@@ -298,7 +298,21 @@ test("the roster pages forward, and page two is not page one", async ({ page }) 
   // with the navigation API — the shape `orders-demo.spec.ts` already uses on
   // this identical interaction — rather than polling the URL as a value on the
   // assertion budget, which is the first thing to run out on a loaded shard.
-  await page.waitForURL(/[?&]page=2/);
+  //
+  // **`domcontentloaded`, not the default `load`, and that is the whole of
+  // issue #1624.** `load` waits for subresources, and this shell keeps two
+  // kinds of background traffic going that have nothing to do with the page
+  // turn: the offline-manifest poll (`/api/offline-manifests/upcoming`) and the
+  // App Shell's RSC prefetches (`?_rsc=`). On a loaded shard those hold `load`
+  // open past the budget while the navigation itself committed seconds
+  // earlier — the failing run's own browser-activity attachment lists both
+  // firing within 600ms of the goto. Widening the timeout was tried twice
+  // (#1592, #1595) and split once; the third remedy is to stop waiting on a
+  // signal the test does not need. Everything below auto-waits for the content
+  // it asserts on, so a parsed document is the honest gate. The sibling specs
+  // already reach for `domcontentloaded` for the same reason
+  // (`readiness.spec.ts`, `certifications.spec.ts`).
+  await page.waitForURL(/[?&]page=2/, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
   // The page turned, and it turned to different divers — a pager that moves
   // the URL and not the rows would pass every assertion above this one.

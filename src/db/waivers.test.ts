@@ -46,6 +46,7 @@ import {
   hasUnansweredMedicalHold,
   issueWaiverRequest,
   listSignedWaiversByPerson,
+  listTripWaiverStatuses,
   listWaiverIntegrityAudit,
   listWaiverTemplateHistory,
   recordInPersonWaiver,
@@ -928,6 +929,89 @@ describe("staff records a paper / in-person signature", () => {
         now,
       }),
     ).toMatchObject({ ok: false });
+  });
+
+  /**
+   * **A seat held over *whose* seat it is takes no attestation** (H-13,
+   * `dive-domain-expert` review of issue #1696).
+   *
+   * This record is the strongest evidence in the product: a named staffer says
+   * they watched this person sign, with the medical tick, and it lands on the
+   * *matched* person's history — the record the flag exists to say the shop is
+   * not sure about. Nothing later undoes that.
+   *
+   * Refused here rather than left to the surfaces. The counter only hides its
+   * control because `identity` outranks `waiver` in `KIND_SEVERITY` and
+   * `blockerFixFor` offers one fix at a time, and the roster's own
+   * `PaperWaiverControl` never consulted the flag at all — so on the evidence
+   * the property was resting on an integer in an unrelated table.
+   */
+  it("refuses a paper waiver on a seat whose identity is still unconfirmed", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const staff = await staffPerson(db, shop.id);
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: now })
+      .where(eq(bookings.id, booking.id));
+
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        subject: { bookingId: booking.id },
+        recordedByPersonId: staff.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "identity_unconfirmed" });
+    // Nothing written, so the seat still owes a release and the gate still holds.
+    expect(
+      await db.select().from(waiverRecords).where(eq(waiverRecords.bookingId, booking.id)),
+    ).toHaveLength(0);
+    const readiness = await getBookingReadiness(db, shop.id, booking.id);
+    expect(readiness?.blockers).toContainEqual(
+      expect.objectContaining({ code: "identity_unconfirmed" }),
+    );
+
+    // …and the same tap lands the moment the shop says who this is.
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null })
+      .where(eq(bookings.id, booking.id));
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        subject: { bookingId: booking.id },
+        recordedByPersonId: staff.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
+  /**
+   * The diver's own record attests for a *person*, with no seat in sight, so
+   * there is no guess to refuse — the release lands on the diver the caller
+   * named. Pinned because the refusal above is one `select` away from being
+   * written into `personSigner` too, where it would block the one door a
+   * standing release is recorded through.
+   */
+  it("still records a diver's own paper release while a seat of theirs is held", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const staff = await staffPerson(db, shop.id);
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: now })
+      .where(eq(bookings.id, booking.id));
+
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        subject: { personId: booking.personId },
+        recordedByPersonId: staff.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toMatchObject({ ok: true });
   });
 
   it("refuses to record a paper waiver without a medical-clear attestation", async () => {
@@ -3275,4 +3359,52 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
   function db_record(ctx: Awaited<ReturnType<typeof waiverContext>>, recordId: string) {
     return ctx.db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
   }
+});
+
+describe("listTripWaiverStatuses row order (issue #1753)", () => {
+  /**
+   * **The two readers of one roster answer in the same order.**
+   *
+   * `getTripRoster` and `listTripsWaiverStatuses` walk the same seats with the
+   * same filter, and this one used to stop at `asc(bookings.id)` — a
+   * `defaultRandom()` uuid — while the roster had moved on to
+   * `asc(people.full_name)`. Nothing renders this array directly today (every
+   * consumer re-keys it by booking id), so the cost was not a visible list: it
+   * was that the documented order was unpredictable, and that whoever next
+   * rendered these rows would have got a different order from the manifest
+   * beside it.
+   *
+   * The tie is forced with `created_at`, and the **higher** uuid is given to
+   * the diver who must sort first, so the old clause answered the exact
+   * opposite every time rather than half the time.
+   */
+  it("breaks a shared-instant tie on the diver's name, and agrees with getTripRoster", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Waiver Order Reef",
+      startsAt: new Date("2026-08-02T13:00:00.000Z"),
+      endsAt: new Date("2026-08-02T17:00:00.000Z"),
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("test trip insert failed");
+    const together = new Date("2026-07-21T13:30:00.000Z");
+    const seat = async (fullName: string, id: string) => {
+      const [person] = await db.insert(people).values({ shopId: shop.id, fullName }).returning();
+      if (!person) throw new Error("test person insert failed");
+      await db
+        .insert(bookings)
+        .values({ id, shopId: shop.id, tripId: trip.id, personId: person.id, createdAt: together });
+    };
+    // "Alpha Nord" must come first, so it gets the higher uuid.
+    await seat("Zulu Mbeki", "00000000-0000-4000-8000-000000000001");
+    await seat("Alpha Nord", "00000000-0000-4000-8000-000000000002");
+
+    const statuses = await listTripWaiverStatuses(db, shop.id, trip.id);
+    expect(statuses.map((row) => row.person.fullName)).toEqual(["Alpha Nord", "Zulu Mbeki"]);
+    // …and the roster it sits beside gives the identical order.
+    const roster = await getTripRoster(db, shop.id, trip.id);
+    expect(statuses.map((row) => row.booking.id)).toEqual(roster.map((row) => row.booking.id));
+  });
 });

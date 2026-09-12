@@ -32,6 +32,12 @@ import {
  * the main landmark, and the page's own `loading.tsx` — served without waiting
  * on a database round trip, while the shop's identity and its live inventory
  * stream in behind it.
+ *
+ * Three of those components need the shop row, and they cannot hand it to each
+ * other: separate boundaries, and a prop would have to come from a read up
+ * here. They each ask `shopBySlugCached` (`src/db/shops.ts`) instead, which is
+ * memoized for the render — so the three boundaries cost one query, not three
+ * (issue #1737). A fourth component that needs the row asks the same reader.
  */
 export default function PublicShopLayout({
   children,

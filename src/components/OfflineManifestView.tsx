@@ -43,7 +43,7 @@ import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { supportNeedsLines } from "@/i18n/support-needs-labels";
 import type { ArrivalStatus } from "@/lib/arrival";
-import { isSettledAtCounter } from "@/lib/check-in";
+import { counterIsDone, isSettledAtCounter } from "@/lib/check-in";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -117,6 +117,20 @@ const OFFLINE_BOAT_TARGET_CLASS = buttonClass({
   busy: true,
   className: "w-full sm:w-auto",
 });
+
+/**
+ * One diver's roll-call row id, minted here and nowhere else: this is both what
+ * the row carries and what the missing-divers grid is handed to jump to.
+ *
+ * Two literals one screen apart is how that grid spent its life scrolling to
+ * `diver-row-<bookingId>` — the **live** manifest's id — while the rows on this
+ * page answered to `offline-roll-call-<bookingId>`, so every tap at the rail did
+ * nothing at all (#1675). One function is what makes the pair undriftable; the
+ * grid holds no prefix of its own to be wrong about.
+ */
+function offlineRollCallRowId(bookingId: string): string {
+  return `offline-roll-call-${bookingId}`;
+}
 
 function OfflineStatusLabel({
   variant,
@@ -1028,13 +1042,15 @@ export function OfflineManifestView() {
    * **The counter's seats, in the order a staffer works them**, and empty once
    * the boat has gone.
    *
-   * Settled sinks to the bottom, which is `CounterQueue`'s own composition and
-   * the same shared predicate (`isSettledAtCounter`, `src/lib/check-in.ts`) —
+   * What the counter is finished with sinks to the bottom, which is
+   * `CounterQueue`'s own composition and the same shared predicates
+   * (`isSettledAtCounter` and `counterIsDone`, `src/lib/check-in.ts`) —
    * "settled" is checked in *and still cleared*, so a diver who came through
    * the door and has gone blocked since stays up in the working list wearing
-   * their reasons. On a twenty-four-diver morning the flat roster put eighteen
-   * receipts on top of the eight rows anybody could act on, and pushed the roll
-   * call two screens down.
+   * their reasons, while a seat the desk released sinks because there is no tap
+   * left to make on it. On a twenty-four-diver morning the flat roster put
+   * eighteen receipts on top of the eight rows anybody could act on, and pushed
+   * the roll call two screens down.
    *
    * The live page folds its settled group behind a disclosure; this one only
    * orders and dims it. A `<details>` is a second control on a wet-hands
@@ -1050,19 +1066,39 @@ export function OfflineManifestView() {
             diver.bookingId,
             offlineArrivalEvents(envelope),
           );
+          /**
+           * **The seat as the shared predicates read it**, and the one place
+           * this page decides what the booking's own `status` column said when
+           * the copy was taken. It answered `arrival ? "checked_in" :
+           * "booked"` and nothing else, so a seat the desk had released
+           * reached `isSettledAtCounter` as an ordinary booking (#1705).
+           *
+           * The desk's own answer wins over this device's: a released seat
+           * with a queued arrival on it is a tap the server has already
+           * refused, or is about to, and rendering it as checked in would be
+           * this page arguing with the only authority there is.
+           */
+          const seat = {
+            bookingStatus: diver.notHere ? "no_show" : arrival ? "checked_in" : "booked",
+            readiness: diver.readiness,
+          };
           return {
             diver,
             arrival,
             refused: refusedOfflineArrival(diver.bookingId, offlineArrivalEvents(envelope)),
-            settled: isSettledAtCounter({
-              bookingStatus: arrival ? "checked_in" : "booked",
-              readiness: diver.readiness,
-            }),
+            settled: isSettledAtCounter(seat),
+            done: counterIsDone(seat),
           };
         })
         // Stable: `sort` keeps roster order inside each group, so a name does
         // not move except across the one boundary that means something.
-        .sort((a, b) => Number(a.settled) - Number(b.settled));
+        //
+        // `counterIsDone` rather than `settled`, which is the live queue's own
+        // split: a released seat is not settled — nobody is boarding on it —
+        // but the counter is as finished with it as with a receipt, and a name
+        // needing no tap sitting at the top of the working list is the noise
+        // this ordering exists to take away.
+        .sort((a, b) => Number(a.done) - Number(b.done));
   // Readiness gates boarding at departure only. After a dive, roll call is a
   // head count — a diver aboard is recorded present whatever the saved paperwork
   // said. The server re-checks the same way, so an offline board still syncs.
@@ -1502,6 +1538,19 @@ export function OfflineManifestView() {
                 // indistinguishable from a tap the tablet never registered, and
                 // the staffer taps again instead of looking at the blocker
                 // (`refusedOfflineArrival`, and the ADR's own paragraph).
+                //
+                // **`not_bookable` is two events wearing one code, and the
+                // sentence says both** (#1705). `checkInBooking` returns it
+                // for a cancelled seat *and* for one the desk released, and
+                // the branch above cannot pre-empt the second: a copy saved at
+                // 07:05 carries `notHere: false` for a diver written off at
+                // 07:20, so the tap was offered, made, and refused. Naming
+                // only the cancellation told a crew member a story about their
+                // own booking that never happened. Splitting the code would
+                // have to reach through `checkInBooking`, the sync route and
+                // the queued event's `rejectionReason`; the honest sentence
+                // costs nothing and says the same thing either way, which is:
+                // this seat is not yours to check in, read the live counter.
                 const refusal = refused ? (
                   <p className="mt-1 text-sm font-medium text-danger">
                     {t(
@@ -1515,13 +1564,27 @@ export function OfflineManifestView() {
                     )}
                   </p>
                 ) : null;
-                // **No tap on a diver readiness refuses**, which is the live
-                // counter's own grammar: that row shows what is in the way
-                // instead of a control (`CounterQueueRow`). Offering one here
-                // would offer a tap the server refuses the moment it lands.
-                // The blocker sentences were resolved into this copy when it
-                // was saved, so they are already in the reader's language.
-                if (diver.readiness.status !== "ready") {
+                // **No tap on a seat the desk cannot take one on**, which is
+                // the live counter's own grammar: such a row shows what is in
+                // the way instead of a control (`CounterQueueRow`). Offering
+                // one here would offer a tap the server refuses the moment it
+                // lands. Two seats qualify, for two different reasons, and
+                // each says which in a badge rather than in a sentence.
+                //
+                // **Readiness refuses them.** `checkInBooking` re-reads
+                // readiness live and answers `not_ready`. The blocker
+                // sentences were resolved into this copy when it was saved, so
+                // they are already in the reader's language.
+                //
+                // **The desk released the seat** (#1209, #1705). The booking's
+                // `status` column reads `no_show`, so the same call answers
+                // `not_bookable`, and the row that came back wore "this
+                // booking was cancelled" — a sentence about a thing nobody
+                // did. Only the *desk's* control goes: the roll call below
+                // still boards a body the crew can see, and the rail takes the
+                // released seat back on sync rather than turning that body
+                // away.
+                if (diver.readiness.status !== "ready" || diver.notHere) {
                   return (
                     <li
                       key={diver.bookingId}
@@ -1537,14 +1600,30 @@ export function OfflineManifestView() {
                           to sign a second time. "A stale copy reading as
                           current" is the one lie a roll-call surface must not
                           tell (docs/product/glossary.md), and the counter on
-                          the same screen does not get an exemption from it. */}
-                        <Badge tone={readinessStatusTone("blocked")}>
-                          {t("shared.offlineManifest.single.blockedBadge")}
-                        </Badge>
+                          the same screen does not get an exemption from it.
+                          The released seat's own badge carries the same
+                          qualifier for the same reason: `undoBookingNoShow`
+                          may have put them back on the list at 07:20. */}
+                        {diver.readiness.status !== "ready" ? (
+                          <Badge tone={readinessStatusTone("blocked")}>
+                            {t("shared.offlineManifest.single.blockedBadge")}
+                          </Badge>
+                        ) : null}
+                        {diver.notHere ? (
+                          <Badge tone="neutral">
+                            {t("shared.offlineManifest.single.notHereBadge")}
+                          </Badge>
+                        ) : null}
                       </div>
-                      <p className="mt-1 text-sm text-muted">
-                        {diver.readiness.blockers.map((blocker) => blocker.text).join(" · ")}
-                      </p>
+                      {/* Nothing where there are no blockers: a released seat
+                          that readiness was clearing has the badge and the
+                          missing control, and a shop's own words are the only
+                          thing this line ever carries. */}
+                      {diver.readiness.blockers.length > 0 ? (
+                        <p className="mt-1 text-sm text-muted">
+                          {diver.readiness.blockers.map((blocker) => blocker.text).join(" · ")}
+                        </p>
+                      ) : null}
                       {refusal}
                     </li>
                   );
@@ -2021,11 +2100,16 @@ export function OfflineManifestView() {
               return (
                 <li
                   key={diver.bookingId}
-                  id={`offline-roll-call-${diver.bookingId}`}
-                  // Every row is a jump target — the missing-divers grid links
-                  // to any uncalled person — so every row carries the scroll
-                  // margin that keeps its name clear of the sticky panel, not
-                  // just the two states that used to.
+                  id={offlineRollCallRowId(diver.bookingId)}
+                  // Every row is a jump target — the missing-divers grid is
+                  // handed this very id for any uncalled person, which is why
+                  // one function mints it rather than a literal here and a
+                  // prefix there (#1675) — so every row carries the scroll
+                  // margin that keeps a landed row off the top edge, not just
+                  // the two states that used to. Not the live page's sticky
+                  // checkpoint panel, which this page does not have: nothing
+                  // on this surface is sticky or fixed (the grid's own note
+                  // below turns on the same fact).
                   className={`scroll-mt-24 border-l-4 p-4 sm:p-5 ${
                     recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
                   }`}
@@ -2456,6 +2540,11 @@ export function OfflineManifestView() {
           divers={missingDivers.map((diver) => ({
             bookingId: diver.bookingId,
             fullName: diver.fullName,
+            // Where the tap lands, from the same function that wrote the id
+            // onto the row above (#1675). Every face here is a diver from the
+            // roster rendered above, so the target is on the page by
+            // construction, not by hope.
+            rowId: offlineRollCallRowId(diver.bookingId),
             rentsKit: diver.rentalFit.state === "rents",
             // A readiness fact, and only at the dock — the same gate the live
             // chip this grid stands in for applies (`blocked: diver.blocked &&

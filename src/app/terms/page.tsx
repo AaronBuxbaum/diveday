@@ -50,8 +50,10 @@ export const metadata: Metadata = {
  * this page points there instead. A terms page quoting a stale figure is a
  * worse problem than a terms page that does not quote one.
  *
- * Not linked from the footer or `/onboard` yet — the owner's explicit call.
- * See the note on `/privacy` before adding one.
+ * Linked from the marketing footer, which carries both legal pages, and from
+ * nowhere else — not the marketing nav, not `/onboard`. See the note on
+ * `/privacy` for which half of the owner's 2026-08-14 call that leaves
+ * standing, and why the remaining gaps are deliberate.
  */
 export default async function TermsPage() {
   const locale = await requestLocale();

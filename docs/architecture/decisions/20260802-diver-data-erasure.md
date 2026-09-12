@@ -145,7 +145,7 @@ deleted; rows that are evidence are kept and their personal fields scrubbed.**
 | `recap_photos` | rows deleted + blob queued (photographs of the diver) |
 | `notification_deliveries` | `provider_detail`, `send_error` → null (bounce text quotes the address) |
 | `notification_delivery_attempts` | `send_error` → null. The append-only twin of the row above, written from the same `delivery.detail` in the same call, so it quotes the same address; scrubbing only the denormalized latest state would leave the address in the history behind it. `send_error_code` is a provider code, not prose, and stays. |
-| `booking_checkouts` | `customer_email` → null. Two asymmetric sweeps — see "The checkout's copy of the address" below. |
+| `booking_checkouts` | `customer_email`, `checkout_url` → null. Two asymmetric sweeps — see "The checkout's copy of the address" below. |
 | `trip_last_minute_promo_recipients` | `email` → a unique unusable address. The row stays and, with the address gone, holds nothing but a `person_id` pointing at a row that has itself been erased. `person_id` stays for the reason `course_inquiries`' does — it points at a row that has itself been erased, and keeping it is what makes a replayed erasure reach the same rows. Found by the person-reachable sweep issue #1607 asks for; the table is in the portable export bundle, so the address was leaving the shop with every deal the diver had ever been offered. |
 | `notification_send_queue` | rows deleted, matched on `payload->>'to'` (case-insensitive) and `payload->>'bookingId'`. The one un-normalized PII blob; a work queue, not evidence. |
 | `form_drafts` | rows **deleted**, matched on the erased address appearing as any value in the `fields` blob (issue #1620). `person_id` is the *author*, so no person-scoped sweep reaches the subject — a `new_diver` draft holds a third party's name, address, phone and emergency contact under a staffer's id. The bound the table was trusted for is weaker than it reads: `NEVER_DRAFTED` excludes card, medical and token fields but not those four, and the retention prune runs **weekly** against its one-day cutoff, so a draft could outlive an erasure by five more days. Deleted rather than redacted for the send queue's reason — a work queue is not evidence, and a half-typed form with the identity removed helps nobody. Matched on the address only: a name would reach a namesake's draft and a phone is shared across a household. |
@@ -168,9 +168,14 @@ two sweeps are deliberately asymmetric:
 1. **By address** (`lower(customer_email) = ` the diver's, shop-scoped). Both callers of
    `startBookingCheckout` pass a `people.email`, so a stored address equal to this diver's is theirs
    whoever the checkout covers — including a party they paid for but hold no seat on, which the
-   booking join cannot see at all. Nulled unconditionally. Co-travellers on that party lose the
-   hosted link and the recovery nudge and must be quoted a fresh checkout; that is a cost of
-   erasure, not a reason to leave the address standing.
+   booking join cannot see at all. Address **and** hosted page nulled unconditionally: the page is
+   the same Stripe object rendering the same customer, on the argument that already nulls
+   `orders.hosted_invoice_url`, and `startBookingCheckout` hands an unexpired `pending` row's
+   `checkout_url` to whoever starts checkout on those same bookings next, so nulling only the
+   address left the party checkout — the one row the join cannot reach — as a live pointer at the
+   erased address (issue #1722). Co-travellers on that party lose the hosted link and the recovery
+   nudge; the reuse branch reads a null URL, falls through and mints them a fresh session, and staff
+   can quote one too. That is a cost of erasure, not a reason to leave the address standing.
 2. **By booking, only where the checkout covers nothing but this diver's own seats.** This reaches an
    address that is theirs but no longer on their person row — changed after checking out — for which
    the join is the only handle. It deliberately stops at a mixed party: an address that survived

@@ -33,9 +33,9 @@ pnpm test:changed
 It selects by import graph, so it picks up the coverage guards — the ones that assert over
 `src/db/schema.ts` from files your change never touches, and therefore the ones a focused
 `pnpm test <file>` can never select. When you touched `schema.ts`, `test:changed` widens to the
-whole suite and belongs to CI; name the three guards by path instead
-(`src/db/export.test.ts`, `src/db/diver-merge.test.ts`, `src/db/delete-path-coverage.test.ts` —
-40 tests, about a minute). See [docs/agents/verifying.md](../../../docs/agents/verifying.md).
+whole suite and belongs to CI; name the four guards by path instead
+(`src/db/export.test.ts`, `src/db/diver-merge.test.ts`, `src/db/delete-path-coverage.test.ts`,
+`src/db/retention.test.ts`). See [docs/agents/verifying.md](../../../docs/agents/verifying.md).
 
 ## 2. Flows changed: e2e
 

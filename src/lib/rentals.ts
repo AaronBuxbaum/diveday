@@ -163,6 +163,52 @@ export function offeredRentableItems(rentalItems: readonly string[]): RentableIt
   return RENTABLE_ITEMS.filter((item) => offered.has(item.kind));
 }
 
+/**
+ * Which `rental_fit_profiles` boolean columns a shop's current catalog has
+ * anything to say about — the offered items' fields, so a writer can tell a box
+ * the diver unticked from a question no form ever put to them (issue #1755).
+ *
+ * An unchecked HTML checkbox posts nothing at all, so the post alone cannot
+ * separate the two, and a writer that checked `"drysuit" in formData` would
+ * read every genuinely unticked box as "never asked" and make a flag
+ * impossible to turn off. The shop's catalog is what can separate them, because
+ * it is what decided which checkboxes rendered in the first place
+ * ({@link offeredRentableItems}, read by all four fit surfaces).
+ *
+ * "This diver rents nothing" is the same list with every answer `false`
+ * ({@link NOTHING_RENTED}).
+ */
+export function offeredRentalFitFields(rentalItems: readonly string[]): Set<RentalFitField> {
+  return new Set(offeredRentableItems(rentalItems).map((item) => item.field));
+}
+
+/**
+ * "This diver rents nothing" — every `rents_*` flag off, from the one list that
+ * defines them.
+ *
+ * **Every writer that can create a `rental_fit_profiles` row lays this under
+ * its insert**, and none may spell eleven `false`s of its own: the walk-up
+ * self-registration and the contact importer, which record sizes without
+ * claiming the diver asked for equipment, and all four writers in
+ * `src/db/rental-fit.ts` — the fit forms, the diver's note, the diver's shelf
+ * and the evening's "keep it". A column no form asked about must not arrive as
+ * its `default(true)` (`src/db/schema.ts` — five of the eleven default on,
+ * which is six unasked-for pieces on a packing list), and a row created
+ * claiming nothing is also the only thing that makes it safe for the next
+ * writer to stamp `fit_stated_at` on a row it did not create.
+ *
+ * The cast is load-bearing and cannot check itself: `Object.fromEntries` types
+ * as an index signature, so a member of {@link RentalFitField} with no
+ * {@link RENTABLE_ITEMS} entry would be missing from this object and the cast
+ * would say otherwise — the one column left at its `default(true)` on every new
+ * row, with nothing red. `rentals.test.ts` holds that line by checking both
+ * lists against a hand-spelled `Record<RentalFitField, true>`, which the
+ * compiler will not let be short a member.
+ */
+export const NOTHING_RENTED = Object.fromEntries(
+  RENTABLE_ITEMS.map((item) => [item.field, false]),
+) as Record<RentalFitField, boolean>;
+
 /** Whether this shop fills nitrox tanks at all — the first of the two gates below. */
 export function shopOffersNitrox(rentalItems: readonly string[]): boolean {
   return toRentableKinds(rentalItems).includes("nitrox");
@@ -240,9 +286,10 @@ export function nitroxCardWanted(
  * since issue 1414 and is the exception among the add-ons: it has a size column, on
  * its own scale, and the vulcanised boots most rental suits carry need no shoe
  * size of their own. A suit that takes separate rock boots gets no extra kind
- * here either — that size rides in the drysuit's own free text, which is the
- * one field on the fit that reaches the packing list verbatim
- * (`src/lib/dive-prep.ts`).
+ * here either — that size rides in the drysuit's own free text, the one size
+ * field with no companion column or packing piece for what it implies, so the
+ * only one whose free text is load-bearing beyond the size itself
+ * (`src/lib/dive-prep.ts`; every size reaches the packing list verbatim).
  *
  * Same union `statedSizeItems` in `dive-prep.ts` already speaks, so a surface
  * can render both through `src/i18n/rental-labels.ts` without a second map.
@@ -257,6 +304,38 @@ export const SIZED_RENTAL_KINDS = [
 ] as const;
 
 export type SizedRentalKind = (typeof SIZED_RENTAL_KINDS)[number];
+
+/**
+ * How long a rental-fit text field may be, for **every** writer of
+ * `rental_fit_profiles`.
+ *
+ * There are three, and a domain review found the third after the first two were
+ * fixed: the staff fit editor, the diver's gear form on `/ready/[token]`, and
+ * the diver's own shelf (`src/app/shelf/[token]/actions.ts`). `confirmRentalFitSize`
+ * is a fourth door onto one column.
+ *
+ * Written down once because they cannot hold different limits. The
+ * staff fit editor is free text — a neoprene-sock fleet records "ML, rock boot
+ * 9" in `drysuit_size`, the one size field with no companion column or packing
+ * piece for what it implies, so the only one whose free text is load-bearing
+ * beyond the size itself (`src/db/schema.ts`, read by `src/lib/dive-prep.ts`,
+ * which reaches the packing list verbatim like every other size). The
+ * diver's own gear form then **re-submits whatever staff stored**, so a cap
+ * tighter on the diver's side fails `safeParse` and redirects `?error=fit` on
+ * a form where every visible box is right — issue #1062's bug, arrived at from
+ * the other direction.
+ *
+ * That was not hypothetical when this was written: `finSize` was 20 here and
+ * 40 staff-side, and `weightPreference` 80 against 120, and both are text
+ * inputs that post their pre-filled stored value. HTML `maxlength` does not
+ * constrain a value the visitor never typed, so a staffer recording a
+ * 24-character fin size already made that diver's whole gear form unsaveable
+ * (issue #1728).
+ *
+ * The numbers are the staff side's, because the staff box is the free-text one
+ * and widening the diver's cap loses nothing a staffer could not already type.
+ */
+export const RENTAL_FIT_TEXT_LIMITS = { size: 40, weightPreference: 120 } as const;
 
 /**
  * Which `rental_fit_profiles` column records each sized kind's size.
@@ -286,6 +365,18 @@ export const SIZED_RENTAL_FIT_COLUMN = {
  * {@link rentalFitCompleteness} already keeps. A unit whose kind is not here
  * simply never produces an evening question.
  *
+ * The **drysuit** is here since issue #1724, and the question that held it out
+ * — whether a register drysuit's recorded size is on the same scale
+ * `drysuit_size` uses — is answered by the register having no per-kind
+ * vocabulary at all: `gear_items.size` is free text for every kind ("M", "10",
+ * "3mm L"), and `listFitAdjustedReturns` compares it to the fit column by
+ * trimmed string equality. A drysuit unit therefore meets its column exactly
+ * as loosely as a BCD unit meets `bcd_size`, and an off-grid string the shop
+ * really wrote ("ML, rock boot 9") survives both fit forms — the diver's select
+ * offers a stored off-grid size back (issue #1728), the staff editor is free
+ * text. `hood`, `gloves`, `torch` and `smb` stay out: they carry no size column
+ * for a return to teach.
+ *
  * Takes a plain string rather than importing `GearItemKind`, which keeps this
  * module free of the register (the gear half of the app is opt-in by presence,
  * ADR 20260815-minimal-gear-register, and nothing here should make it load).
@@ -302,6 +393,8 @@ export function sizedRentalKindOfGearKind(gearKind: string): SizedRentalKind | n
       return "mask_fins";
     case "weights":
       return "weights";
+    case "drysuit":
+      return "drysuit";
     default:
       return null;
   }

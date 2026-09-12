@@ -18,9 +18,9 @@ Conversely, while active, PR branches and superseded snapshots lingered for 7 da
    - Implement an automated Lambda function `diveday-visual-bucket-pruner` (`VisualBucketPruner`) scheduled every six hours via EventBridge Scheduler (`VisualBucketPrunerSchedule`) to promptly clean up stale PR snapshots while preserving the active main baseline. It ran nightly at 04:00 UTC until 2026-09-10.
 
 2. **Active Baseline Resolution Algorithm:**
-   - Query GitHub REST API (`GET /repos/AaronBuxbaum/diveday/commits?sha=main&per_page=30`) or local `git log` to retrieve recent commit SHAs on `main`.
-   - Walk candidate commits from newest to oldest, probing S3 for `${sha}/out.json`.
-   - The newest commit with an extant snapshot report is identified as the active main baseline.
+   - Query GitHub REST API (`GET /repos/AaronBuxbaum/diveday/commits?sha=main&per_page=100`) or local `git log --first-parent` to retrieve recent commit SHAs on `main`. It was one page of 30 until 2026-09-12 — see the third amendment.
+   - Reduce that list to `main`'s own tips along first-parent links, then walk them from newest to oldest, probing S3 for `${sha}/out.json`. The reduction arrived 2026-09-12; before it, the walk was over every ancestor of `main`, most of which are pull-request head commits.
+   - The newest tip with an extant snapshot report is identified as the active main baseline.
    - List all top-level directory prefixes in the S3 bucket via `ListObjectsV2Command` (`Delimiter: "/"`).
    - Preserve the active main baseline prefix (and any explicitly requested commit SHAs).
    - Delete all objects under stale prefixes in 1000-object batches via `DeleteObjectsCommand`.
@@ -38,7 +38,7 @@ Conversely, while active, PR branches and superseded snapshots lingered for 7 da
 ## Consequences
 
 - **Main baseline preservation:** The active main baseline is guaranteed to persist in S3 regardless of how many days pass between commits to `main` — *by the pruner*. The bucket's own `expire-old-visual-snapshots` lifecycle rule still deletes every object at 60 days and cannot tell a live baseline from a dead one, so a gap longer than that is still the failure this ADR set out to fix. The rule is a cost backstop, not part of the guarantee.
-- **More than one baseline is kept, deliberately.** reg-suit's expected key is the *parent* commit on a push to main and the *fork point* on a pull request (`scripts/reg-suit-keys.mjs`), and for a stacked pull request it is the layer below's head, which is on no branch the main-history walk can enumerate. Keeping only the newest main baseline therefore deleted the baseline of every open branch overnight, and a run with no baseline reports that nothing changed. The pruner keeps the last 10 verified main baselines plus every prefix published in the last day (amended 2026-09-08, below).
+- **More than one baseline is kept, deliberately.** reg-suit's expected key is the *parent* commit on a push to main and the *fork point* on a pull request (`scripts/reg-suit-keys.mjs`), and for a stacked pull request it is the layer below's head, which is on no branch the main-history walk can enumerate. Keeping only the newest main baseline therefore deleted the baseline of every open branch overnight, and a run with no baseline reports that nothing changed. The pruner keeps the verified tips of `main`'s own first-parent chain — at least 10 of them, and every one published in the last 72 hours — plus every prefix of any kind published in the last day (amended 2026-09-08 and 2026-09-12, below; the count was over all of `main`'s ancestors rather than its tips until the second of those, which is issue #1662).
 - **No verified baseline means no pruning.** If nothing on recent `main` has a published snapshot, the pruner deletes nothing and says so. That state is far more likely to mean the probe cannot read the bucket than that every baseline is genuinely gone, and the earlier behaviour — nominate an unverified HEAD and prune against it — emptied the bucket in one scheduled run.
 - **Zero storage bloat:** Stale PR snapshots and obsolete historical baselines are reclaimed every six hours.
 - **Observability:** Pruning runs emit structured JSON logs (`visual_pruner.summary`) to CloudWatch Logs with bounded 1-month retention.
@@ -65,3 +65,30 @@ The lifecycle rule is **60 days** (it was 180) and the pruner runs **every six h
 - `MIN_PRUNE_AGE_MS = 24h`, in both copies. It is the only thing that knows about a stacked pull request's lower layer, which is on no branch the main-history walk can enumerate.
 - The refusal to prune when nothing on recent `main` has a verified snapshot.
 - The rule that the lifecycle expiry may only ever be a **floor beneath** the pruner, never a bound that can reach inside it. Sixty days clears the pruner's own horizon by a wide margin; the synth test named "expires objects far beyond the pruner's own retention, never inside it" is what holds that line against a future tightening.
+
+## Amended 2026-09-12: the count counts main's own tips, and an age window sits beside it
+
+`KEEP_MAIN_BASELINES` never kept ten main baselines. It kept the ten newest **ancestors of `main`** that had published a snapshot, and those are not the same set (issue #1662).
+
+Every pull request here lands as a merge commit, which drags that pull request's head commits into `main`'s ancestry with dates a minute either side of the tip they landed on. `GET /commits?sha=main` returns that whole set newest-first, and measured on this repository only **5 of the newest 30 rows — and 11 of the newest 100 — are main tips**. So eight of the ten slots went to head commits that `MIN_PRUNE_AGE_MS` was already holding for as long as anyone was iterating on them, and about two main tips survived. A fork point is a main tip, so "ten baselines" was two.
+
+**The measurement.** Over every merged pull request in this repository's history (28 with a fork point behind `main`'s tip, 58 merges across 5.0 days, 11.7 merges a day):
+
+| | p50 | p75 | p90 | p95 | max |
+| --- | --- | --- | --- | --- | --- |
+| fork-point depth along `main`'s first-parent chain | 2 | 3 | 4 | 7 | **7** |
+| fork-point depth in the list the pruner actually read | 7 | 21 | 46 | 48 | **50** |
+| fork-point age in hours when the branch's visual run published | 2.5 | 3.8 | 15.5 | 23.8 | **34.3** |
+
+**11 of 28 pull requests had a fork point outside the ten newest published ancestors, and 4 of 28 were deeper than the 30 candidates the pruner even fetched** — past those four, no value of the count could have reached them. Against `main`'s own chain, though, the deepest fork point in the whole history was **7**.
+
+**So the count was not the wrong number, it was counting the wrong set.** The keep rule now walks `main`'s first-parent chain — reconstructed from the `parents[0]` links the commits API already returns, and from `git log --first-parent` on the CLI path — and keeps the published tips along it. Two floors, both stated as constants:
+
+- `KEEP_MAIN_BASELINES = 10`, unchanged in value, is the floor under *how many*: it is what keeps a baseline alive through a quiet month, which is the guarantee this ADR was written for, and 10 is comfortably past the measured maximum depth of 7.
+- `KEEP_MAIN_BASELINE_AGE_MS = 72h` is the new floor under *how much history*: every main tip younger than this is kept on top of the count. A count alone re-files the bug it fixes — ten main tips is about twenty hours at 11.7 merges a day, and a fork point has been measured at 34.3 hours old when its branch's run published. Seventy-two hours is a little over twice that tail. Replayed over this repository's real history it resolves **29 kept tips covering 71.4 hours** of `main`, where the old rule's ten prefixes covered **5.4 hours** — so the issue's "about nine hours" was itself generous, as its triage comment suspected. 29 snapshots is ~6 GB at this bucket's ~213 MB a snapshot: **~$0.14/month**, against a bill the second amendment establishes is request-shaped.
+
+Two supporting changes come with it. The candidate fetch is `per_page=100` and pages up to `MAX_CANDIDATE_PAGES = 4` — stopping the moment the chain reaches past both floors, so steady state is one or two calls — because 11 main tips per 100 rows means 30 candidates could not have held ten tips even after the fix. And the same rule makes `scripts/wait-for-baseline.mjs` work for the first time: its 40-ancestor first-parent walk goes *backwards*, toward older commits, so while the keeps were the newest prefixes by date every ancestor of a pruned fork point was pruned too and the walk always found nothing. The keeps are now a contiguous run along the very chain it walks, so a fork point older than the window resolves to a kept ancestor and the run compares, loudly noting which baseline it used.
+
+**What this does not change.** The 24-hour floor, and its job: a stacked pull request's lower layer is still on no branch the chain walk can name. The refusal to prune when nothing verified is left to keep. The lifecycle expiry staying a floor *beneath* the pruner. And the pruner keeps strictly more than it did — a chain of one out of a list of many means the payload carried no parent links at all, and that case falls back to the flat newest-first walk this replaced, so a surprise in the response can never make the pruner keep less than before.
+
+**The two copies are now pinned to each other.** There are four retention constants in `scripts/prune-visual-bucket-lib.mjs` and `infra/lib/visual-bucket-pruner-handler.ts`, held apart because the handler is bundled into a Lambda and cannot import from `scripts/`. "They must move together" was prose until now; the case named "holds the same retention constants as the CLI copy in scripts/" in `infra/lib/visual-bucket-pruner-handler.test.ts` reads the `.mjs` literals and fails on a drift.

@@ -72,15 +72,21 @@ export function ClosingStation({
   // keeps the close-out's own per-reason wording, which names what is open
   // rather than counting what is not (DOM-H3 — one sentence per reason, never
   // a shared vague one).
-  const counted = close.status === "all_home" && close.booked > 0;
+  // **`sailed`, never `booked`, in every number this sentence prints, and in
+  // the test that decides whether to print it at all** (issue #1689). A seat
+  // the crew marked not boarded at the dock, or the desk marked `no_show`, is
+  // a diver who was not on the boat; gating on the roster would put "0 of 0
+  // back" on a one-seat boat whose only diver stayed ashore, instead of
+  // falling through to the per-status wording that says so.
+  const counted = close.status === "all_home" && close.sailed > 0;
   // **Souls, but only where the records support the claim** (issue #1346). A
   // shop whose crew were counted gets the sentence that names both; a shop
   // that has never tapped a crew roll call keeps the diver-only wording it has
   // always had, rather than a line asserting a crew count nobody made.
   const souls = counted && close.crewAccountedFor;
   const soulCounts = {
-    divers: close.booked,
-    crew: close.crewAssigned,
+    divers: close.sailed,
+    crew: close.crewSailed,
     back: close.back + close.crewBack,
   };
   const detail = counted
@@ -92,12 +98,12 @@ export function ClosingStation({
           })
         : t("shopHome.spine.close.backBy", {
             back: close.back,
-            booked: close.booked,
+            sailed: close.sailed,
             time: formatTime(headCountClose.closedAt, locale, timeZone),
           })
       : souls
         ? t("shopHome.spine.close.backSouls", soulCounts)
-        : t("shopHome.spine.close.back", { back: close.back, booked: close.booked })
+        : t("shopHome.spine.close.back", { back: close.back, sailed: close.sailed })
     : closeoutDepartureDetailText(t, close, detailTime);
   const checkpoint = close.diveNumber >= 1 ? `after_dive_${close.diveNumber}` : "departure";
   // Two quiet readings the day already contains, each rendering nothing when

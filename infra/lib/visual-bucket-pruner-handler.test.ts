@@ -1,11 +1,21 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import type { S3Client } from "@aws-sdk/client-s3";
 import { describe, expect, it, vi } from "vitest";
 import {
+  CANDIDATE_PAGE_SIZE,
   fetchCommits,
+  fetchMainCandidates,
   hasSnapshot,
+  KEEP_MAIN_BASELINE_AGE_MS,
+  KEEP_MAIN_BASELINES,
   listObjects,
   listPrefixes,
+  MAX_CANDIDATE_PAGES,
+  MIN_PRUNE_AGE_MS,
+  type PrunerCommit,
   pruneBucket,
+  resolveKeepShas,
 } from "./visual-bucket-pruner-handler";
 
 const SHA_1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -20,7 +30,88 @@ const RECENT = new Date(NOW - 2 * HOUR);
 /** Older than the one-day floor, younger than anything anyone would call stale. */
 const TWO_DAYS_OLD = new Date(NOW - 2 * DAY);
 
+/** Readable stand-ins for a main tip (a merge commit) and a pull request's head. */
+const hex = (n: number) => n.toString(16).padStart(2, "0");
+const tipSha = (i: number) => `${"a".repeat(38)}${hex(i)}`;
+const headSha = (tip: number, n: number) => `${"b".repeat(36)}${hex(tip)}${hex(n)}`;
+
+/**
+ * main the shape this repository's actually is: every pull request lands as a
+ * merge commit, so main's own tips are the merges -- and each merge drags that
+ * pull request's head commits into main's ancestry with dates a minute either
+ * side of the tip they landed on. GitHub's /commits?sha=main is that whole set
+ * newest-first, which is the list the pruner reads: measured on this
+ * repository, only 5 of the newest 30 rows are main tips (issue #1662).
+ */
+function mainHistory({
+  tips,
+  headsPerTip = 4,
+  tipSpacingMs = 2 * HOUR,
+  now = NOW,
+}: {
+  tips: number;
+  headsPerTip?: number;
+  tipSpacingMs?: number;
+  now?: number;
+}): PrunerCommit[] {
+  const rows: PrunerCommit[] = [];
+  for (let i = 0; i < tips; i++) {
+    const tipAtMs = now - (i + 1) * tipSpacingMs;
+    rows.push({ sha: tipSha(i), parentSha: tipSha(i + 1), committedAtMs: tipAtMs });
+    for (let n = 0; n < headsPerTip; n++) {
+      rows.push({
+        sha: headSha(i, n),
+        parentSha: headSha(i, n + 1),
+        committedAtMs: tipAtMs - (n + 1) * 60_000,
+      });
+    }
+  }
+  return rows;
+}
+
+const mainTips = (rows: readonly PrunerCommit[]) =>
+  rows.map((row) => row.sha).filter((sha) => sha.startsWith("a"));
+
+/** An S3 client that answers out.json probes for exactly `shasWithSnapshots`. */
+function probeClient(shasWithSnapshots: readonly string[]) {
+  return {
+    send: vi.fn(async (cmd: { input?: Record<string, unknown> }) => {
+      const prefix = String(cmd.input?.Prefix ?? "");
+      const sha = prefix.replace("/out.json", "");
+      return { Contents: shasWithSnapshots.includes(sha) ? [{ Key: prefix }] : [] };
+    }),
+  } as unknown as S3Client;
+}
+
 describe("visual-bucket-pruner-handler", () => {
+  /**
+   * The four retention constants live in two copies by design -- this handler
+   * is bundled into a Lambda and cannot import from scripts/ -- and ADR
+   * 20260826-prune-visual-bucket says in prose that they must move together.
+   * Nothing enforced it, which is how a value could drift in one copy and be
+   * discovered only by a branch finding no baseline. This is the enforcement.
+   */
+  it("holds the same retention constants as the CLI copy in scripts/", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "scripts/prune-visual-bucket-lib.mjs"),
+      "utf8",
+    );
+    const cliConstant = (name: string) => {
+      const match = source.match(new RegExp(`export const ${name} = ([^;]+);`));
+      if (!match) throw new Error(`${name} is not exported from prune-visual-bucket-lib.mjs`);
+      // Arithmetic literals such as `72 * 60 * 60 * 1000`, and nothing else.
+      const expression = match[1].trim();
+      if (!/^[\d\s*+]+$/.test(expression)) throw new Error(`${name} is not a plain number`);
+      return Number(new Function(`return ${expression}`)());
+    };
+
+    expect(cliConstant("KEEP_MAIN_BASELINES")).toBe(KEEP_MAIN_BASELINES);
+    expect(cliConstant("KEEP_MAIN_BASELINE_AGE_MS")).toBe(KEEP_MAIN_BASELINE_AGE_MS);
+    expect(cliConstant("MIN_PRUNE_AGE_MS")).toBe(MIN_PRUNE_AGE_MS);
+    expect(cliConstant("CANDIDATE_PAGE_SIZE")).toBe(CANDIDATE_PAGE_SIZE);
+    expect(cliConstant("MAX_CANDIDATE_PAGES")).toBe(MAX_CANDIDATE_PAGES);
+  });
+
   describe("fetchCommits", () => {
     it("parses valid commit SHAs from GitHub API", async () => {
       const fetchImpl = vi.fn(async () => ({
@@ -29,7 +120,26 @@ describe("visual-bucket-pruner-handler", () => {
       })) as unknown as typeof fetch;
 
       const commits = await fetchCommits("AaronBuxbaum/diveday", "main", fetchImpl);
-      expect(commits).toEqual([SHA_1, SHA_2]);
+      expect(commits.map((commit) => commit.sha)).toEqual([SHA_1, SHA_2]);
+    });
+
+    /** The chain walk and the age window are both read out of the payload. */
+    it("carries the first parent and the commit date of every row", async () => {
+      const fetchImpl = vi.fn(async () => ({
+        ok: true,
+        json: async () => [
+          {
+            sha: SHA_1,
+            parents: [{ sha: SHA_2 }, { sha: SHA_3 }],
+            commit: { committer: { date: "2026-08-26T02:00:00Z" } },
+          },
+        ],
+      })) as unknown as typeof fetch;
+
+      const commits = await fetchCommits("AaronBuxbaum/diveday", "main", fetchImpl);
+      expect(commits).toEqual([
+        { sha: SHA_1, parentSha: SHA_2, committedAtMs: Date.UTC(2026, 7, 26, 2, 0, 0) },
+      ]);
     });
 
     it("returns empty array on API error or malformed response", async () => {
@@ -40,6 +150,120 @@ describe("visual-bucket-pruner-handler", () => {
 
       const commits = await fetchCommits("AaronBuxbaum/diveday", "main", fetchImpl);
       expect(commits).toEqual([]);
+    });
+  });
+
+  describe("resolveKeepShas", () => {
+    /**
+     * The bug this is the regression test for (issue #1662). "Keep the ten
+     * newest published ancestors" kept two main tips and spent the other eight
+     * slots on pull-request head commits that MIN_PRUNE_AGE_MS was already
+     * holding, so a branch cut three merges back had no fork point left in the
+     * bucket -- and a run with no baseline compares nothing.
+     */
+    it("keeps main's own tips, not whatever ancestor published most recently", async () => {
+      const rows = mainHistory({ tips: 6 });
+      const keep = await resolveKeepShas(
+        probeClient(rows.map((row) => row.sha)),
+        "test-bucket",
+        rows,
+        { now: NOW },
+      );
+
+      expect(keep).toEqual(mainTips(rows));
+      expect(keep).not.toContain(headSha(0, 0));
+    });
+
+    it("keeps a fork point the ten newest published ancestors would have evicted", async () => {
+      const rows = mainHistory({ tips: 6 });
+      const forkPoint = tipSha(2);
+      // Flat position 10 or worse: outside every slot the old walk had to give.
+      expect(rows.findIndex((row) => row.sha === forkPoint)).toBeGreaterThanOrEqual(10);
+
+      const keep = await resolveKeepShas(
+        probeClient(rows.map((row) => row.sha)),
+        "test-bucket",
+        rows,
+        { now: NOW },
+      );
+      expect(keep).toContain(forkPoint);
+    });
+
+    it("keeps every main tip inside the age window, past the count", async () => {
+      // Tips six hours apart, so tip 11 lands on the 72-hour edge and tip 12 is
+      // outside it: twelve kept where the count alone would have kept ten.
+      const rows = mainHistory({ tips: 20, tipSpacingMs: 6 * HOUR });
+      const keep = await resolveKeepShas(
+        probeClient(rows.map((row) => row.sha)),
+        "test-bucket",
+        rows,
+        { now: NOW },
+      );
+
+      expect(keep).toHaveLength(12);
+      expect(keep).toContain(tipSha(11));
+      expect(keep).not.toContain(tipSha(12));
+    });
+
+    it("keeps the count as a floor when main has gone quiet for a month", async () => {
+      const rows = mainHistory({ tips: 14, tipSpacingMs: 2 * DAY });
+      const keep = await resolveKeepShas(
+        probeClient(rows.map((row) => row.sha)),
+        "test-bucket",
+        rows,
+        { now: NOW },
+      );
+
+      expect(keep).toEqual(mainTips(rows).slice(0, KEEP_MAIN_BASELINES));
+    });
+
+    /** Rows with no parent links leave a chain of one; keep what it used to. */
+    it("falls back to the flat walk when the payload carried no parent links", async () => {
+      const rows: PrunerCommit[] = [SHA_1, SHA_2, SHA_3].map((sha) => ({
+        sha,
+        parentSha: "",
+        committedAtMs: NOW - HOUR,
+      }));
+
+      const keep = await resolveKeepShas(probeClient([SHA_2, SHA_3]), "test-bucket", rows, {
+        now: NOW,
+      });
+      expect(keep).toEqual([SHA_2, SHA_3]);
+    });
+
+    it("comes back empty when no main tip has a snapshot", async () => {
+      const rows = mainHistory({ tips: 6 });
+      expect(await resolveKeepShas(probeClient([]), "test-bucket", rows, { now: NOW })).toEqual([]);
+    });
+  });
+
+  describe("fetchMainCandidates", () => {
+    it("reads more than one page when one does not reach back far enough", async () => {
+      const rows = mainHistory({ tips: 30 });
+      const fetchImpl = vi.fn(async (url: string) => ({
+        ok: true,
+        json: async () => {
+          const page = Number(new URL(url).searchParams.get("page") || "1");
+          return rows
+            .slice((page - 1) * CANDIDATE_PAGE_SIZE, page * CANDIDATE_PAGE_SIZE)
+            .map((row) => ({
+              sha: row.sha,
+              parents: [{ sha: row.parentSha }],
+              commit: { committer: { date: new Date(row.committedAtMs ?? NOW).toISOString() } },
+            }));
+        },
+      })) as unknown as typeof fetch;
+
+      const candidates = await fetchMainCandidates("AaronBuxbaum/diveday", "main", {
+        fetchImpl,
+        now: NOW,
+      });
+
+      // 100 rows is 20 tips, which is 40 hours: short of the 72-hour window.
+      expect((fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(
+        1,
+      );
+      expect(candidates.length).toBeGreaterThan(CANDIDATE_PAGE_SIZE);
     });
   });
 

@@ -78,8 +78,35 @@ const IDENT = '(?:"[^"]*"|[A-Z_][A-Z0-9_$]*)';
  *
  * `note` is what the failure prints: not "this is forbidden" but *which live
  * code it breaks*, because that is the sentence that tells an author whether
- * they need to split the change or acknowledge it.
+ * they need to split the change or acknowledge it. A rule whose one pattern
+ * catches two different hazards writes a `note` **function** of the matched
+ * statement instead of a string, because a note describing a hazard the
+ * author's statement does not have is how a correct refusal gets waved through
+ * (issue #1751).
  */
+/**
+ * The `ADD COLUMN` clauses of one `ALTER TABLE`, each cut at the next action.
+ *
+ * Judging the clauses separately is the whole point: one statement can add a
+ * defaulted column beside a bare one, and a whole-statement search for
+ * `DEFAULT` would let the hazardous clause hide behind the safe one's keyword.
+ * Cutting at the next action does the same for a sibling `ALTER COLUMN ... SET
+ * DEFAULT`, whose keyword is not in the added column's clause at all.
+ *
+ * The `COLUMN` keyword is required rather than optional, unlike the `ALTER`
+ * and `RENAME` rules above. Postgres accepts `ADD <name> <type>` without it,
+ * but reaching that far means also reading `ADD CONSTRAINT ... CHECK (x IS NOT
+ * NULL)` as an added column — and that statement is the *expand*-shaped way to
+ * tighten a column, so firing on it would refuse the remedy. drizzle always
+ * writes `ADD COLUMN`.
+ */
+function addColumnClauses(statement) {
+  return statement
+    .split(/\bADD\s+COLUMN\b/)
+    .slice(1)
+    .map((clause) => clause.split(/,\s*(?:ADD|ALTER|DROP|RENAME|VALIDATE|SET)\b/)[0]);
+}
+
 export const rules = [
   {
     id: "drop-table",
@@ -145,8 +172,34 @@ export const rules = [
     ),
   },
   {
+    // **This one pattern catches two hazards, and they are not the same cost.**
+    // A collation change is written as a type change —
+    // `ALTER TABLE "people" ALTER COLUMN "full_name" SET DATA TYPE text COLLATE
+    // "und-x-icu"` — and for that shape every clause of the old note was
+    // false: `text` → `text` is binary-coercible, no row is rewritten, the
+    // table keeps its files, and what stops the live deployment is the index
+    // rebuild's lock rather than a read of a rewritten column. An author
+    // refused for a collation change read a note about a different hazard, and
+    // the natural response is "but mine *is* binary-coercible, this rule isn't
+    // about me" — written on reasoning nobody had corrected, because the note
+    // never named the real cost (issue #1751).
+    //
+    // So the collation sentence is *added* to the note, never swapped in: the
+    // statement says which collation it wants but never what the type was, so
+    // `SET DATA TYPE varchar(40) COLLATE "C"` is a genuine rewrite that also
+    // carries a `COLLATE` clause and is indistinguishable here from a
+    // collation-only change. A separate `alter-column-collation` rule matching
+    // `TYPE … COLLATE` would hand that statement the gentler note and make
+    // this guard less safe than it was; one rule id that names both costs does
+    // not — and it leaves
+    // `20260911200158_person-name-collation`'s existing marker, which names
+    // `alter-column-type`, valid.
     id: "alter-column-type",
-    note: "a non-binary-coercible type change rewrites the table and breaks the live deployment's reads",
+    note: (statement) =>
+      "the live deployment reads and writes this column, and the ACCESS EXCLUSIVE lock this statement takes stops both until it finishes — a type change that is not binary-coercible rewrites every row inside that lock" +
+      (/\bCOLLATE\b/.test(statement)
+        ? ". A collation change *is* binary-coercible, so no row moves and the table keeps its files — but Postgres always rebuilds every index on the column inside that same lock, and if the type beside the COLLATE clause also changed, both costs apply. Lock *acquisition* is the other half: the statement queues behind any open transaction on the table and blocks every request arriving behind it, so the window a user feels is set by the slowest transaction in flight rather than by the rebuild. The expand list in docs/engineering/deploy-and-migrations-runbook.md carries the worked example"
+        : ""),
     pattern: new RegExp(
       String.raw`\bALTER\s+TABLE\b[\s\S]*\bALTER\s+(?:COLUMN\s+)?${IDENT}\s+(?:SET\s+DATA\s+)?TYPE\b`,
     ),
@@ -157,6 +210,25 @@ export const rules = [
     pattern: new RegExp(
       String.raw`\bALTER\s+TABLE\b[\s\S]*\bALTER\s+(?:COLUMN\s+)?${IDENT}\s+SET\s+NOT\s+NULL\b`,
     ),
+  },
+  {
+    // The add-form sibling of `set-not-null`, and the one a schema change
+    // reaches for most often. With no default the previous release's inserts —
+    // which cannot name a column that did not exist when they were written —
+    // fail for the whole deploy window, because `scripts/vercel-build.mjs`
+    // migrates *inside* the production build.
+    //
+    // A default makes those inserts succeed, so the hazard is gone and firing
+    // there would be the noise this guard's docblock warns about: it is the
+    // ordinary shape of an additive column, and `20260905152524_graceful_whiplash`
+    // onward are full of it.
+    id: "add-column-not-null",
+    note: "the live deployment's inserts cannot name a column that did not exist yet, and with no default every one of them fails until the new build is serving",
+    matches: (statement) =>
+      /\bALTER\s+TABLE\b/.test(statement) &&
+      addColumnClauses(statement).some(
+        (clause) => /\bNOT\s+NULL\b/.test(clause) && !/\bDEFAULT\b/.test(clause),
+      ),
   },
   {
     id: "drop-default",
@@ -178,6 +250,15 @@ const ruleIds = new Set(rules.map((rule) => rule.id));
 
 function ruleMatches(rule, statement) {
   return rule.matches ? rule.matches(statement) : rule.pattern.test(statement);
+}
+
+/**
+ * The sentence this rule prints for *this* statement. A string note is the same
+ * for every match; a function note reads the statement, which is what lets one
+ * rule name the hazard the author actually has.
+ */
+export function noteFor(rule, statement) {
+  return typeof rule.note === "function" ? rule.note(statement) : rule.note;
 }
 
 /**
@@ -457,7 +538,7 @@ export function auditMigration(sql) {
       if (index === -1) {
         problems.push({
           line: statement.line,
-          message: `${rule.id}: ${rule.note} — ${excerpt(statement.code)}`,
+          message: `${rule.id}: ${noteFor(rule, statement.masked)} — ${excerpt(statement.code)}`,
         });
       } else {
         spent.add(index);

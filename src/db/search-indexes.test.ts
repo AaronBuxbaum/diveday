@@ -102,6 +102,11 @@ describe("leading-wildcard ILIKE search is indexed (DATA-L6)", () => {
  * #719). The sweep above cannot see it: it reads `ilike(<table>.<column>` call
  * sites, and this arm is neither.
  *
+ * It lives in `src/db/person-search.ts`, the one predicate every staff search
+ * box runs, rather than in the command palette that first needed it — four
+ * copies of that predicate had drifted, and only the palette's normalised a
+ * phone number at all (issue #1765).
+ *
  * That matters more than it looks. Postgres matches a query to an expression
  * index by comparing *parsed trees*, not source text, so whitespace alone is
  * harmless — but any real difference in the expression (a different character
@@ -120,7 +125,7 @@ describe("the phone-digits search expression", () => {
   const DIGITS_EXPRESSION = "regexp_replace(coalesce(${people.phone}, ''), '[^0-9]', '', 'g')";
 
   it("is the same expression in the query and in the index", async () => {
-    const query = readFileSync(path.join(process.cwd(), "src/db/search.ts"), "utf8");
+    const query = readFileSync(path.join(process.cwd(), "src/db/person-search.ts"), "utf8");
     const schemaSource = readFileSync(path.join(process.cwd(), "src/db/schema.ts"), "utf8");
 
     expect(query).toContain(DIGITS_EXPRESSION);

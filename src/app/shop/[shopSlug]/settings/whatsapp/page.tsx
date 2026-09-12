@@ -6,16 +6,18 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { canPersonManageMessagingSettings } from "@/db/authz";
-import { getShopWhatsAppAccount } from "@/db/whatsapp-accounts";
+import { getShopWhatsAppAccount, type WhatsAppConnectRefusal } from "@/db/whatsapp-accounts";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { whatsAppSignupConfigFromEnvironment } from "@/lib/notifications/whatsapp-signup";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { requireShopSurface } from "@/lib/session";
+import type { NoticeCodeOf, NoticeTone } from "@/lib/staff-notices";
 import {
   completeWhatsAppSignupAction,
   disconnectWhatsAppAction,
+  type Notice,
   testWhatsAppAction,
 } from "./actions";
 import { EmbeddedSignupButton } from "./EmbeddedSignupButton";
@@ -35,6 +37,13 @@ export const metadata: Metadata = { title: "WhatsApp — DiveDay" };
 // Every key here is also a `whatsapp.notice.<code>` key in the staff bundle —
 // the banner below looks the words up by the code itself — so the two are
 // renamed together or the banner renders nothing (src/lib/staff-notices.ts).
+//
+// The `satisfies` is what makes a missing tone a `pnpm typecheck` failure
+// rather than a silent no-banner: `NoticeCodeOf` is the kebab spelling of the
+// action's own `Notice` union plus the snake_case refusals `src/db` answers
+// with, which reach here normalised. Both halves of the drift are compile
+// errors now — a code with no tone, and a tone for a code nothing can emit
+// (issue #1768).
 const NOTICE_TONE = {
   connected: "success",
   disconnected: "success",
@@ -50,7 +59,8 @@ const NOTICE_TONE = {
   "signup-failed-register": "danger",
   "signup-failed-subscribe": "danger",
   "signup-failed-template": "danger",
-} as const;
+  "waba-already-connected": "danger",
+} as const satisfies Record<NoticeCodeOf<Notice | WhatsAppConnectRefusal>, NoticeTone>;
 
 type NoticeCode = keyof typeof NOTICE_TONE;
 

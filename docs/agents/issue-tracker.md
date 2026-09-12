@@ -198,6 +198,8 @@ node scripts/check-follow-ups.mjs --body <path> --title "<the title you intend>"
 
 That runs the same validation `pnpm check:follow-ups` runs, on one drafted body, with no `gh` and no network — so it works in the cloud containers where these issues are usually written and where the whole-tracker run reports SKIPPED. Twenty seconds, and the reason to spend them is that a malformed `needs-triage` issue fails `Repository safeguards` on **every open pull request in the repository at once**, on branches whose diffs could not possibly have caused it, until somebody edits the issue by hand. That has happened three times: once from a hand-written entry (#1097), and twice on 2026-09-08 in a single session, from bodies that looked right and used a `Kind:` outside the vocabulary (#1526, #1555). In each case the first news came from an unrelated pull request, forty minutes later.
 
+**Its exit code agrees with CI, including on the `Touches:` line.** An unresolved path fails the pre-flight, exactly as it fails the tracker scan. Until 2026-09-12 it warned and exited 0, so the one rule that most often reddens `Repository safeguards` everywhere at once was the one rule this door said yes to (#1761). If your branch genuinely adds a path — the legitimate case the old warning was written for — name it in prose and leave it off the line, or pass `--allow-unresolved-touches` to accept it as a warning, knowing it reddens every other session's `pnpm check` until your branch merges.
+
 **`Touches:` names paths that exist on `main` today.** The mechanism is not that, and the gap is the
 whole point: `pnpm check:follow-ups` resolves every backticked path on that line against **whatever
 tree it is run in**. So a path your own unmerged branch adds passes on your branch — where you file
@@ -214,6 +216,8 @@ is exactly the stale entry this check exists to catch, and it was going to misle
 whether or not anything failed.
 
 A glob is accepted on that line when it expands to at least one file in the tree the check runs in, so a change that edits the same namespace in every locale says `src/i18n/locales/*/staff/trips.json` once rather than listing each locale and going stale when a third arrives. Issue #1339 wrote it that way, correctly, and the literal lookup failed it — reddening PR #1335, a branch with nothing to do with it.
+
+A path with a dynamic route segment in it — `src/app/ready/[token]/actions.ts` — is a real path and a glob character class at the same time, and it is checked literally first, so write it exactly as it is on disk. Reading it only as a pattern was how a correctly spelled path got told it "does not exist": the brackets expand to `src/app/ready/t/actions.ts` and friends, which exist nowhere. Issue #1755 named that path on 2026-09-12 and `Repository safeguards` went red for it on PR #1746, a branch with nothing to do with that issue, which is how this check's red always arrives (#1761). If such a path is refused now, the file really is not there under that spelling — and the sentence names the characters that made the token a pattern, so a `*` or `{` you did not mean to type says so.
 
 Resolving against `main` instead of the checkout would look like the tighter rule and is not
 available: CI checks out only the pull request's own ref, so there is no `main` there to resolve

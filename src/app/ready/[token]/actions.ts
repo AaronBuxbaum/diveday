@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { verifyBookingCapability } from "@/db/booking-capabilities";
+import { revokeBookingCapabilities, verifyBookingCapability } from "@/db/booking-capabilities";
 import {
   confirmCarriedFacts,
   selfCancelBooking,
@@ -41,7 +41,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { RE_ENTRY_ASKS, reEntryOffersFor } from "@/lib/re-entry";
-import { nitroxAvailableOn } from "@/lib/rentals";
+import { nitroxAvailableOn, RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 
 /**
@@ -331,11 +331,11 @@ const fitSchema = z.object({
   // stored size for every item the shop does not currently offer, which is the
   // destructive half of the same bug; `saveRentalFit` leaves an absent size
   // alone instead (`src/db/rental-fit.ts`).
-  bcdSize: z.string().trim().max(20).optional(),
-  wetsuitSize: z.string().trim().max(20).optional(),
-  drysuitSize: z.string().trim().max(20).optional(),
-  finSize: z.string().trim().max(20).optional(),
-  weightPreference: z.string().trim().max(80).optional(),
+  bcdSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  drysuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  weightPreference: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.weightPreference).optional(),
 });
 
 export async function saveFitFromReady(token: string, formData: FormData) {
@@ -346,6 +346,11 @@ export async function saveFitFromReady(token: string, formData: FormData) {
   const saved = await saveRentalFit(ctx.db, {
     shopId: ctx.data.shop.id,
     personId: ctx.data.person.id,
+    // An item the shop's catalog has dropped renders no checkbox in
+    // `RentalFitForm`, so it posts nothing and arrives here as `false`.
+    // `saveRentalFit` re-derives the offered set and leaves those columns alone
+    // rather than reading the silence as "no" (issue #1755) — the same posture
+    // the nitrox request takes below, and the mirror of the absent-size rule.
     rentsBcd: parsed.data.bcd === "on",
     rentsRegulator: parsed.data.regulator === "on",
     rentsWetsuit: parsed.data.wetsuit === "on",
@@ -877,4 +882,66 @@ export async function emailFreshReadinessLinkAction(token: string) {
   }
 
   redirect(`${base(token)}?sent=${RESCUE_PARAM[await sendPlannedReadinessLink(db, plan)]}`);
+}
+
+/**
+ * **Kill the code on a card the diver cannot find** (issue #1729).
+ *
+ * The arrival card is the one DiveDay credential that routinely leaves on
+ * paper. A diver saves the HTML from `/ready`, prints it, and the QR inside it
+ * is an `arrival` capability that checks them in at that shop's self check-in
+ * tablet (`bookingForArrivalCode`, `src/db/kiosk-check-in.ts`). What a printout
+ * left on a hotel table still buys is a **false arrival on a manifest** — the
+ * roll call saying a diver is aboard who is not — and that is a safety surface,
+ * so the paper needed a way to be retired. Until this, the only things that ever
+ * retired an `arrival` row were cancelling the booking, the per-purpose live cap
+ * pushing out the oldest, and expiry.
+ *
+ * **Every live `arrival` row for the booking, not "the one on the card I
+ * lost".** Tokens are stored only as hashes and a card is minted per download,
+ * so no caller anywhere can identify one printout among several. Saving the
+ * card again mints a fresh code, which is both the recovery path and the
+ * sentence `trip.arrivalCodeStopConfirm` promises — and the reason this control
+ * is explicit rather than a silent revoke-on-download: a quiet replace would
+ * kill the copy a diver printed for the buddy carrying their bag, with no
+ * sentence anywhere saying so.
+ *
+ * **Nothing here answers a question the token could not already.**
+ * `contextFor` is the only door, exactly as for every sibling action: it spends
+ * the shared per-IP bucket, resolves the *readiness* capability, and its two
+ * refusals land on the same two URLs the rest of this file lands on — so a tap
+ * against a stranger's token is indistinguishable from a tap against a real one
+ * and this is not an oracle for "is this booking real". The booking written to
+ * is the one the token resolved to and the shop is that booking's own, so the
+ * write cannot reach another seat, at this shop or any other.
+ *
+ * **No narrower bucket than the shared one, deliberately — and the reason is
+ * the harm, not the act.** "Strictly the smaller act" was the first way this
+ * was written and it is falsifiable: `selfCancelBooking` refuses anything but
+ * `booked` and refuses once the boat `hasSailed`, while this revoke runs for the
+ * life of the readiness capability, so there are two windows where the larger
+ * act is unavailable and this one is not. Neither window buys an attacker
+ * anything — in `checked_in` the code has already been spent and a re-scan
+ * answers `alreadyArrived`, and past the kiosk's grace the tablet will not look
+ * at the departure at all — so the honest sentence is that the larger *harm* is
+ * already available to whoever holds this URL. What repeated taps do cost, that
+ * the self-cancel's own 5/hour bucket does not: a bearer can deny the arrival
+ * code indefinitely, revoking each time the diver re-downloads. Bounded, because
+ * the surname still resolves at the kiosk and the desk is the documented
+ * fallback, and nothing on a manifest or in readiness moves. Accepted; #1778
+ * carries the staff-side door that would end it (security review, 2026-09-12).
+ *
+ * Success only. `revokeBookingCapabilities` is an idempotent `UPDATE` with no
+ * refusal to report: a second tap, or a tap on a booking holding no live rows,
+ * writes nothing and the notice stays true either way.
+ */
+export async function stopArrivalCodesFromReady(token: string) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  await revokeBookingCapabilities(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    purpose: "arrival",
+  });
+  revalidateAndRedirect(base(token), `${base(token)}?saved=arrival-code`);
 }
