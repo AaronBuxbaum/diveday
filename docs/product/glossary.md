@@ -21,10 +21,12 @@ new domain concept, define it here in the same PR.
 - **Conditions hold** — a reversible crew call while weather or sea state is uncertain. Existing
   bookings remain valid, new bookings pause, and booked divers are notified. It is not a
   cancellation and never implies a refund.
-- **Arrival card** — the public, non-sensitive place-to-go projection for one departure: meeting
-  label and address, optional shop-authored landmark guidance, a map hand-off, public support
-  contacts, and the departure time. It appears on the public trip and `/ready`, and its opt-in
-  download is a small HTML copy that contains no booking, waiver, readiness, or medical state.
+- **Arrival card** — the place-to-go projection for one departure: meeting label and address,
+  optional shop-authored landmark guidance, a map hand-off, public support contacts, and the
+  departure time. The panel on the public trip page is public and non-sensitive. The **download**
+  is not: it is the booked diver's own card, released only against their `/ready` capability, and
+  it carries an **arrival code**. It still contains no waiver, readiness or medical state, and no
+  booking id.
 - **Change ledger** — the chronological, diver-visible record of material meeting-point and
   conditions changes. Each event stores before/after public-safe snapshots, a broad source
   (`shop` or `crew`), and a timestamp; it never names a staffer or carries private operational
@@ -969,6 +971,13 @@ new domain concept, define it here in the same PR.
   own briefing and the field guide the shop picked, so the words a diver hears on the boat are the
   words on the storefront. The briefing is the shop's; the species names are DiveDay's, in the
   reader's language.
+- **Arrival code** — the QR on a diver's downloaded arrival card: an `arrival`-purpose booking
+  capability, minted fresh each download, hashed at rest, and dying with the booking it names. It
+  authorizes **one thing** — being recognised at the counter tablet, the same thing saying a surname
+  there already buys — and nothing on `/ready`: not the waiver, not the medical answers, not
+  payment. Deliberately **not** the paper pass's booking id: that id is safe on paper because only a
+  staff session resolves it, and an id printed on a diver-facing surface can never be revoked. A
+  forwarded card is therefore worth what the manifest already shows a staffer.
 - **Paper pass** — the A6 pass printed at the counter for a diver without a phone: the departure,
   the hull, the meeting point, the shop's dock call, what to bring, and a code carrying **the
   booking's id and nothing else**. A booking id is not a capability — the counter resolves it inside
@@ -1666,7 +1675,13 @@ new domain concept, define it here in the same PR.
   the shop rather than quoted at zero. A shop that prices nothing keeps the "ask the shop what's
   included" behaviour.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
-  and in *what size* (BCD, wetsuit, boot, fin, usual weighting, plus the dive-computer/GoPro add-ons).
+  and in *what size* (BCD, wetsuit, drysuit, boot, fin, usual weighting, plus the dive-computer/GoPro add-ons).
+  The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
+  manufacturer letter-plus-height grid a rental wall is stocked from (girth letter, trailing `T`
+  for the tall cut), never the wetsuit's XS-XXL. It contributes exactly **one** piece to the
+  packing list and no boots of its own: a drysuit's boots are vulcanised on, so they come off the
+  wall with the suit and the shop can never be out of them separately. The diver's shoe size still
+  matters for fins over that boot, and the mask/fins question already asks it.
   It is a storage concept: a fit never reserves an item, is never evidence, and never replaces a
   dock-side fit check. It is the single input to the trip prep list. Reserving a particular unit is
   the **gear register**'s separate act (below) — a shop that keeps no register still has fits, and a

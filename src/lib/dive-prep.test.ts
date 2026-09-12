@@ -22,6 +22,7 @@ const fullFit: RentalFit = {
   rentsSmb: false,
   bcdSize: "M",
   wetsuitSize: "5mm M",
+  drysuitSize: null,
   bootSize: "9",
   finSize: "M",
   weightPreference: "6 kg",
@@ -95,6 +96,118 @@ describe("rented add-ons on the prep list", () => {
     const kinds = line.state === "rents" ? line.items.map((item) => item.kind) : [];
     expect(kinds).toContain("dive_computer");
     expect(kinds).toContain("gopro");
+  });
+});
+
+/**
+ * **The whole product answer of issue 1414, and the reason these tests are loud.**
+ *
+ * A drysuit is sized on its own scale and contributes exactly ONE piece. It
+ * deliberately does *not* copy `rentsWetsuit`, which pushes a suit *and* a
+ * pair of boots from one shoe-size answer: a drysuit's boots are vulcanised
+ * on, so they leave the wall with the suit and there is nothing separate to
+ * pack. A future change that "fixes" the drysuit to match the wetsuit shape
+ * arrives at the dock with boots nobody owns, and these tests refuse it.
+ */
+describe("a drysuit on the prep list (issue 1414)", () => {
+  /** Own kit except the drysuit, so only the piece under test is on the list. */
+  const drysuitOnly = {
+    ...fullFit,
+    rentsBcd: false,
+    rentsRegulator: false,
+    rentsWetsuit: false,
+    rentsMaskFins: false,
+    rentsWeights: false,
+    rentsDrysuit: true,
+    drysuitSize: "ML",
+  };
+
+  it("packs one drysuit at its own size and no boots beside it", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [diver({ bookingId: "b1", fullName: "Dry Dana", fit: drysuitOnly })],
+      plannedDives: 1,
+    });
+    expect(checklist.lines.map((line) => [line.kind, line.size])).toEqual([["drysuit", "ML"]]);
+  });
+
+  it("still packs a wetsuit renter's boots — the two shapes stay different", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Wet Wanda",
+          fit: { ...drysuitOnly, rentsDrysuit: false, rentsWetsuit: true },
+        }),
+      ],
+      plannedDives: 1,
+    });
+    expect(checklist.lines.map((line) => [line.kind, line.size])).toEqual([
+      ["wetsuit", "5mm M"],
+      ["boots", "9"],
+    ]);
+  });
+
+  it("reaches the list unsized and names the diver as a loose end", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Sizeless Sam",
+          fit: { ...drysuitOnly, drysuitSize: null },
+        }),
+      ],
+      plannedDives: 1,
+    });
+    expect(lineFor(checklist, "drysuit", null)).toMatchObject({
+      count: 1,
+      divers: ["Sizeless Sam"],
+    });
+    expect(checklist.diversWithIncompleteFit).toEqual([
+      { fullName: "Sizeless Sam", personId: "b1", state: "incomplete", missing: ["drysuit"] },
+    ]);
+  });
+
+  it("sorts after boots and before mask and fins, every morning", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Dry Dana",
+          fit: { ...fullFit, rentsDrysuit: true, drysuitSize: "ML" },
+        }),
+      ],
+      plannedDives: 1,
+    });
+    expect(checklist.lines.map((line) => line.kind)).toEqual([
+      "bcd",
+      "regulator",
+      "wetsuit",
+      "boots",
+      "drysuit",
+      "mask_fins",
+      "weights",
+    ]);
+  });
+
+  it("carries the stated drysuit size to whoever does the hands-on fit", () => {
+    const flaggedAt = new Date("2026-07-24T12:00:00Z");
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Flagged Fay",
+          fit: { ...drysuitOnly, needsStaffFitAt: flaggedAt, needsStaffFitNote: "No ML" },
+        }),
+      ],
+      plannedDives: 1,
+      now: flaggedAt,
+    });
+    // The line carries no size — that is what the flag does — so the fitter
+    // would otherwise have nothing to start from.
+    expect(checklist.lines[0]).toMatchObject({ kind: "drysuit", size: null, fitAtCheckIn: true });
+    expect(checklist.diversNeedingStaffFit[0]?.statedSizes).toEqual([
+      { kind: "drysuit", size: "ML" },
+    ]);
   });
 });
 

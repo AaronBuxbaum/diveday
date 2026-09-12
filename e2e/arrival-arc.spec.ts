@@ -90,7 +90,11 @@ test.describe("the dive arrival arc", () => {
     );
     expect(cardResponse.status()).toBe(200);
     expect(cardResponse.headers()["content-disposition"]).toMatch(/attachment/);
-    expect(await cardResponse.text()).toContain("Blue Mantis sign by the fuel dock");
+    const cardHtml = await cardResponse.text();
+    expect(cardHtml).toContain("Blue Mantis sign by the fuel dock");
+    // The arrival code rides the saved file, encoded into it rather than
+    // fetched: the card is opened on a morning with no signal (issue #1600).
+    expect(cardHtml).toContain("data:image/png");
 
     await openThreadStep(page, "dayof");
     await page.getByRole("radio", { name: "Carry my gear" }).check();

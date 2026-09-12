@@ -29,6 +29,7 @@ export type RentalFitInput = {
   rentsSmb: boolean;
   bcdSize?: string;
   wetsuitSize?: string;
+  drysuitSize?: string;
   bootSize?: string;
   finSize?: string;
   weightPreference?: string;
@@ -44,6 +45,7 @@ function sizeUpdates(input: RentalFitInput) {
   const sizes = {
     bcdSize: input.bcdSize,
     wetsuitSize: input.wetsuitSize,
+    drysuitSize: input.drysuitSize,
     bootSize: input.bootSize,
     finSize: input.finSize,
     weightPreference: input.weightPreference,
@@ -389,6 +391,13 @@ export type DiverRentalFit = {
   rentsSmb: boolean;
   bcdSize: string | null;
   wetsuitSize: string | null;
+  /**
+   * Crosses the boundary because the diver is the one who states it: the
+   * drysuit size is their own answer on their own form (issue 1414), the same
+   * standing as the wetsuit size above it — not something the shop wrote
+   * about them, which is what this projection exists to hold back.
+   */
+  drysuitSize: string | null;
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
@@ -420,6 +429,7 @@ export function toDiverRentalFit(
     rentsSmb: profile.rentsSmb,
     bcdSize: profile.bcdSize,
     wetsuitSize: profile.wetsuitSize,
+    drysuitSize: profile.drysuitSize,
     bootSize: profile.bootSize,
     finSize: profile.finSize,
     weightPreference: profile.weightPreference,

@@ -53,6 +53,8 @@ export type RentalFit = {
   rentsSmb: boolean;
   bcdSize: string | null;
   wetsuitSize: string | null;
+  /** On the drysuit scale, never the wetsuit's (issue 1414, schema.ts). */
+  drysuitSize: string | null;
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
@@ -282,7 +284,7 @@ export type DivePrepChecklist = {
      * "bring a range in their band" means starting from scratch on a moving
      * dock. It is a starting point, not an allocation.
      */
-    statedSizes: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins"; size: string }[];
+    statedSizes: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[];
     /**
      * Whole days since the flag was raised. A shortage is a fact about one
      * day, so an old flag is a prompt to re-ask the diver rather than a
@@ -340,6 +342,7 @@ const KIND_ORDER: RentalItemKind[] = [
   "regulator",
   "wetsuit",
   "boots",
+  "drysuit",
   "mask_fins",
   "weights",
   "dive_computer",
@@ -397,11 +400,14 @@ function rentedItems(fit: RentalFit): PrepPiece[] {
   if (fit.rentsWeights) items.push(stated("weights", fit.weightPreference));
   if (fit.rentsDiveComputer) items.push(unsized("dive_computer"));
   if (fit.rentsGopro) items.push(unsized("gopro"));
-  // The four add-ons that carry no size (see `RENTABLE_ITEMS`). A drysuit is
-  // the one that visibly wants one; until it has a size column it reaches the
-  // packing list as a piece, which is still what the crew has to pull off the
-  // wall.
-  if (fit.rentsDrysuit) items.push(unsized("drysuit"));
+  // **One piece, and no boot beside it** (issue 1414). A drysuit's boots are
+  // vulcanised on: they come off the wall with the suit, the shop cannot be
+  // out of them separately, and there is nothing extra to pack. Deliberately a
+  // different shape from `rentsWetsuit` above, which pushes two pieces from
+  // one shoe-size answer — do not "fix" this to match it. Fins still go over a
+  // drysuit boot, and `mask_fins` already asks that shoe size.
+  if (fit.rentsDrysuit) items.push(sized("drysuit", fit.drysuitSize));
+  // The three add-ons that carry no size (see `RENTABLE_ITEMS`).
   if (fit.rentsHoodGloves) items.push(unsized("hood_gloves"));
   if (fit.rentsTorch) items.push(unsized("torch"));
   if (fit.rentsSmb) items.push(unsized("smb"));
@@ -416,8 +422,8 @@ function rentedItems(fit: RentalFit): PrepPiece[] {
  */
 function statedSizeItems(
   fit: RentalFit,
-): { kind: "bcd" | "wetsuit" | "boots" | "mask_fins"; size: string }[] {
-  const items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins"; size: string }[] = [];
+): { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[] {
+  const items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[] = [];
   const bcdSize = size(fit.bcdSize);
   if (fit.rentsBcd && bcdSize) items.push({ kind: "bcd", size: bcdSize });
   if (fit.rentsWetsuit) {
@@ -426,6 +432,10 @@ function statedSizeItems(
     const bootSize = size(fit.bootSize);
     if (bootSize) items.push({ kind: "boots", size: bootSize });
   }
+  // The flag blanks a drysuit's size on the packing line like any other sized
+  // piece, so the fitter needs the size the diver actually asked for (issue 1414).
+  const drysuitSize = size(fit.drysuitSize);
+  if (fit.rentsDrysuit && drysuitSize) items.push({ kind: "drysuit", size: drysuitSize });
   const finSize = size(fit.finSize);
   if (fit.rentsMaskFins && finSize) items.push({ kind: "mask_fins", size: finSize });
   return items;

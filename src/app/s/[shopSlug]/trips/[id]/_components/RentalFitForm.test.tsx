@@ -13,6 +13,7 @@ const emptyFit: DiverRentalFit = {
   rentsRegulator: false,
   rentsWetsuit: false,
   wetsuitSize: null,
+  drysuitSize: null,
   bootSize: null,
   rentsMaskFins: false,
   finSize: null,
@@ -444,6 +445,77 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
 
     // Should be confirmed even though fin size is not provided
     expect(indicator).toHaveTextContent("Sizes recorded.");
+  });
+});
+
+/**
+ * A drysuit is offered on the drysuit grid, not the wetsuit's XS-XXL (issue 1414):
+ * a wall stocked from `S/MS/M/MT/ML/…` holds no suit called "XS", so offering
+ * one here would collect an answer the counter cannot fill. The grid itself is
+ * a PROPOSAL pending the owner's confirmation; this test is what pins it, and
+ * changing it is the whole cost of changing the scale.
+ */
+describe("RentalFitForm drysuit size (issue 1414)", () => {
+  function renderDrysuit() {
+    return renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={{ ...emptyFit, rentsDrysuit: true }}
+        rentalItems={["drysuit"]}
+        course={null}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+  }
+
+  it("offers the drysuit grid, never the wetsuit scale", () => {
+    const { container } = renderDrysuit();
+    const select = container.querySelector('select[name="drysuitSize"]') as HTMLSelectElement;
+    expect([...select.options].map((option) => option.value)).toEqual([
+      "",
+      "S",
+      "MS",
+      "M",
+      "MT",
+      "ML",
+      "L",
+      "LT",
+      "XL",
+      "XLT",
+      "XXL",
+    ]);
+  });
+
+  it("holds the gear match open until the drysuit has a size", () => {
+    const { container } = renderDrysuit();
+    const indicator = screen.getByTestId("gear-status-indicator");
+    expect(indicator).toHaveTextContent("Select sizes to confirm your gear match.");
+    const select = container.querySelector('select[name="drysuitSize"]') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "ML" } });
+    expect(indicator).toHaveTextContent("Sizes recorded.");
+  });
+
+  it("never asks a shop that does not rent drysuits", () => {
+    const { container } = renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={{ ...emptyFit, rentsBcd: true }}
+        rentalItems={["bcd"]}
+        course={null}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+    expect(container.querySelector('select[name="drysuitSize"]')).toBeNull();
   });
 });
 

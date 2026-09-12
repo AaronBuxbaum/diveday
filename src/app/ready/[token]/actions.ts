@@ -320,10 +320,22 @@ const fitSchema = z.object({
   torch: z.string().optional(),
   smb: z.string().optional(),
   nitrox: z.string().optional(),
-  bcdSize: z.string().trim().max(20),
-  wetsuitSize: z.string().trim().max(20),
-  finSize: z.string().trim().max(20),
-  weightPreference: z.string().trim().max(80),
+  // Optional, and deliberately not `.default("")` — the same rule the staff
+  // record's `profileSchema` keeps, for the same reason (issue #1062).
+  // `RentalFitForm` renders a size box only for an item
+  // `offeredRentableItems(shop.rentalItems)` says the shop offers, so a shop
+  // that does not rent drysuits posts no `drysuitSize` key at all, and a
+  // required field failed on `undefined` — refusing every fit save that shop's
+  // divers could make with "Check the details and try again." on a form where
+  // every visible box was right. `.default("")` parses and then blanks a
+  // stored size for every item the shop does not currently offer, which is the
+  // destructive half of the same bug; `saveRentalFit` leaves an absent size
+  // alone instead (`src/db/rental-fit.ts`).
+  bcdSize: z.string().trim().max(20).optional(),
+  wetsuitSize: z.string().trim().max(20).optional(),
+  drysuitSize: z.string().trim().max(20).optional(),
+  finSize: z.string().trim().max(20).optional(),
+  weightPreference: z.string().trim().max(80).optional(),
 });
 
 export async function saveFitFromReady(token: string, formData: FormData) {
@@ -347,6 +359,9 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     rentsSmb: parsed.data.smb === "on",
     bcdSize: parsed.data.bcdSize,
     wetsuitSize: parsed.data.wetsuitSize,
+    // On the drysuit grid, not the wetsuit's (issue 1414) — one size, and no boot
+    // size beside it: a drysuit's boots are part of the suit.
+    drysuitSize: parsed.data.drysuitSize,
     // Fins and boots are one shoe-size answer on the diver's form now, written
     // to both columns so the packing list, the manifest and the CSV export all
     // keep reading the field they already read.

@@ -6324,6 +6324,11 @@ export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
   // 3): ten minutes, minted by the diver's own thread and consumed by the
   // booking it leads to. The one purpose whose expiry is not the trip's.
   "handoff",
+  // The QR on the arrival card the diver downloads, prints and can forward.
+  // It authorizes nothing but being recognised at the counter tablet — the
+  // same thing typing a surname there already buys — so a card left on a
+  // hotel desk leaks no more than the diver's name on the manifest.
+  "arrival",
 ]);
 
 /**
@@ -7155,10 +7160,13 @@ export const tripRequirements = pgTable(
  * confirmation can only ever name one of them.
  *
  * Deliberately not `gear_item_kind` below: that one is the *register's*
- * alphabet and carries `regulator`, `tank`, `drysuit`, `hood` and a split
- * `mask`/`fins`, none of which has a size column on `rental_fit_profiles`. A
- * confirmation naming one of those could not be printed back to a diver
- * against any size the shop actually holds.
+ * alphabet and carries `regulator`, `tank`, `hood` and a split `mask`/`fins`,
+ * none of which has a size column on `rental_fit_profiles`. A confirmation
+ * naming one of those could not be printed back to a diver against any size
+ * the shop actually holds.
+ *
+ * `drysuit` was in that excluded company until issue 1414 gave it `drysuit_size`
+ * below; it is a sized piece now, on a scale of its own, and belongs here.
  */
 export const rentalFitItem = pgEnum("rental_fit_item", [
   "bcd",
@@ -7166,6 +7174,7 @@ export const rentalFitItem = pgEnum("rental_fit_item", [
   "boots",
   "mask_fins",
   "weights",
+  "drysuit",
 ]);
 
 /**
@@ -7209,6 +7218,20 @@ export const rentalFitProfiles = pgTable(
     rentsSmb: boolean("rents_smb").notNull().default(false),
     bcdSize: text("bcd_size"),
     wetsuitSize: text("wetsuit_size"),
+    /**
+     * The one add-on that carries a size (issue 1414), and it is **not** the
+     * wetsuit's. A drysuit is sized on the manufacturer letter-plus-height
+     * grid a rental wall is stocked from — the letter is girth, a trailing
+     * `T` is the tall cut — so an XS-XXL wetsuit value written here would
+     * name a suit no shop holds. `text`, not an enum: the grid varies by
+     * manufacturer, and staff record an off-grid size as free text.
+     *
+     * A drysuit's boots are vulcanised on, so this size answers for them
+     * too — there is no boot piece to pull off the rack separately, which is
+     * why `rents_drysuit` pushes one packing piece where `rents_wetsuit`
+     * pushes two (`src/lib/dive-prep.ts`).
+     */
+    drysuitSize: text("drysuit_size"),
     bootSize: text("boot_size"),
     finSize: text("fin_size"),
     weightPreference: text("weight_preference"),

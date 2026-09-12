@@ -173,6 +173,7 @@ const profileSchema = z.object({
   // half of the same bug; `saveRentalFit` leaves an absent size alone instead.
   bcdSize: z.string().trim().max(40).optional(),
   wetsuitSize: z.string().trim().max(40).optional(),
+  drysuitSize: z.string().trim().max(40).optional(),
   finSize: z.string().trim().max(40).optional(),
   weightPreference: z.string().trim().max(120).optional(),
 });
@@ -970,6 +971,7 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     rentsSmb: parsed.data.smb === "on",
     bcdSize: parsed.data.bcdSize,
     wetsuitSize: parsed.data.wetsuitSize,
+    drysuitSize: parsed.data.drysuitSize,
     // One shoe-size answer, written to both columns — see RentalFit.tsx.
     bootSize: parsed.data.finSize,
     finSize: parsed.data.finSize,

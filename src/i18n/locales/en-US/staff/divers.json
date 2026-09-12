@@ -223,6 +223,8 @@
     "bcdSizePlaceholder": "M",
     "wetsuitSizeLabel": "Wetsuit size",
     "wetsuitSizePlaceholder": "3 mm / M",
+    "drysuitSizeLabel": "Drysuit size",
+    "drysuitSizePlaceholder": "ML",
     "finSizeLabel": "Fin & boot size",
     "finSizePlaceholder": "US 9 / EU 42",
     "weightPreferenceLabel": "Weight preference",

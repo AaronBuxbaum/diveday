@@ -88,6 +88,15 @@ export function GearAndSizes({
       defaultValue: profile?.wetsuitSize ?? "",
       requires: ["wetsuit"],
     },
+    // Free text, not the diver form's select: staff-side is where a size off
+    // the proposed drysuit grid gets recorded (issue 1414).
+    offers.has("drysuit") && {
+      name: "drysuitSize",
+      label: t("divers.rentalFit.drysuitSizeLabel"),
+      placeholder: t("divers.rentalFit.drysuitSizePlaceholder"),
+      defaultValue: profile?.drysuitSize ?? "",
+      requires: ["drysuit"],
+    },
     // One shoe-size answer covers fins and boots — the two fields asked the
     // same question, and the save writes it to both columns.
     (offers.has("mask_fins") || offers.has("wetsuit")) && {

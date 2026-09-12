@@ -2,6 +2,11 @@ import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { manifestRow, openTripFromBoard, openTripTab } from "./helpers";
 
 const DISPLAY_SETTINGS = "/shop/blue-mantis/settings/display";
+/**
+ * The one box, whose label names both ways in: a surname typed by a diver, or
+ * the arrival code a wedge scanner types in for them (issue #1600).
+ */
+const KIOSK_BOX = "Last name, or scan your code";
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 /**
  * A diver on today's boat the tablet will answer for: cleared to board, of age,
@@ -62,7 +67,7 @@ test.describe("self check-in at the counter", () => {
       ).toBeVisible();
 
       // A surname is all it asks for, and all it takes.
-      await kiosk.getByLabel("Last name").fill("Costa");
+      await kiosk.getByLabel(KIOSK_BOX).fill("Costa");
       await kiosk.getByRole("button", { name: "Check in" }).click();
       await expect(kiosk.getByText("You’re set, Ines.")).toBeVisible();
 
@@ -128,9 +133,10 @@ test.describe("self check-in at the counter", () => {
   /**
    * **Every refusal is the same sentence.** A tablet in a lobby is operated by
    * whoever walks up to it, so an answer that varied with *why* — nobody by
-   * that name, two people by that name, a diver whose waiver is unsigned —
-   * would answer questions about a stranger's booking to anyone willing to
-   * type. Three of those causes, one answer.
+   * that name, two people by that name, a diver whose waiver is unsigned, an
+   * arrival code that was never minted — would answer questions about a
+   * stranger's booking to anyone willing to type. Four of those causes, one
+   * answer.
    */
   test("an unknown name, a blocked diver and a bad answer all read the same", async ({
     page,
@@ -147,7 +153,7 @@ test.describe("self check-in at the counter", () => {
     try {
       const kiosk = makeActivitySafe(await visitor.newPage());
       await kiosk.goto(path);
-      const box = kiosk.getByLabel("Last name");
+      const box = kiosk.getByLabel(KIOSK_BOX);
       const submit = kiosk.getByRole("button", { name: "Check in" });
 
       // Nobody by that name.
@@ -162,7 +168,7 @@ test.describe("self check-in at the counter", () => {
 
       // A diver readiness will not clear — refused ashore, while there is still
       // somebody to talk to, which is the whole reason the counter exists.
-      await kiosk.getByLabel("Last name").fill("Sharma");
+      await kiosk.getByLabel(KIOSK_BOX).fill("Sharma");
       await kiosk.getByRole("button", { name: "Check in" }).click();
       await expect(kiosk.getByText("See the desk")).toBeVisible();
       // It names nobody, and it does not say what the blocker was.
@@ -193,13 +199,26 @@ test.describe("self check-in at the counter", () => {
        */
       for (const surname of ["Alvarez", "Fischer"]) {
         await kiosk.reload();
-        await kiosk.getByLabel("Last name").fill(surname);
+        await kiosk.getByLabel(KIOSK_BOX).fill(surname);
         await kiosk.getByRole("button", { name: "Check in" }).click();
         await expect(kiosk.getByText("See the desk")).toBeVisible();
         const sent = await kiosk.locator("main").innerText();
         expect(sent).not.toContain(SUPPORT_NEEDS_DIVER);
         expect(sent).not.toContain(MINOR_DIVER);
       }
+
+      /**
+       * **And a code nobody minted.** The box now recognises a 43-character
+       * base64url string as a scanned arrival credential rather than a surname
+       * (issue #1600), which is exactly the kind of branch that wants an oracle
+       * bolted to it: "that is not a real code" would tell whoever typed it that
+       * the shape was right. It gets the one sentence instead, and the guessing
+       * cost is 256 bits against a per-link rate limit.
+       */
+      await kiosk.reload();
+      await kiosk.getByLabel(KIOSK_BOX).fill("x".repeat(43));
+      await kiosk.getByRole("button", { name: "Check in" }).click();
+      await expect(kiosk.getByText("See the desk")).toBeVisible();
     } finally {
       await visitor.close();
     }
@@ -236,7 +255,7 @@ test.describe("self check-in at the counter", () => {
       // The board's own token, at the counter's door.
       await tablet.goto(`/check-in/${boardToken}`);
       await expect(tablet.getByRole("heading", { name: "This tablet isn’t set up" })).toBeVisible();
-      await expect(tablet.getByLabel("Last name")).toHaveCount(0);
+      await expect(tablet.getByLabel(KIOSK_BOX)).toHaveCount(0);
       await expect(tablet.getByText("Blue Mantis")).toHaveCount(0);
 
       // A token that was never ours: the same card, so the two are
@@ -246,7 +265,7 @@ test.describe("self check-in at the counter", () => {
 
       // The live one works, until the shop revokes it.
       await tablet.goto(kioskPath);
-      await expect(tablet.getByLabel("Last name")).toBeVisible();
+      await expect(tablet.getByLabel(KIOSK_BOX)).toBeVisible();
 
       await page.goto(DISPLAY_SETTINGS);
       await page.getByRole("button", { name: "Revoke Counter tablet" }).click();
@@ -255,7 +274,7 @@ test.describe("self check-in at the counter", () => {
 
       await tablet.goto(kioskPath);
       await expect(tablet.getByRole("heading", { name: "This tablet isn’t set up" })).toBeVisible();
-      await expect(tablet.getByLabel("Last name")).toHaveCount(0);
+      await expect(tablet.getByLabel(KIOSK_BOX)).toHaveCount(0);
     } finally {
       await visitor.close();
     }

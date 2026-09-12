@@ -15,6 +15,7 @@ import {
   listSelfReportedArrivalBookingIds,
   listSelfReportedArrivalBookingIdsForTrip,
 } from "./arrival-provenance";
+import { issueBookingCapability, revokeBookingCapabilities } from "./booking-capabilities";
 import { checkInAtKiosk } from "./check-in";
 import { issueDisplayToken, revokeDisplayToken, verifyDisplayToken } from "./display-tokens";
 import { findKioskSeats, kioskNameMatch } from "./kiosk-check-in";
@@ -560,6 +561,155 @@ describe("findKioskSeats", () => {
       await findKioskSeats(db, {
         shopId: shop.id,
         lookup: readKioskInput(booking.id),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * **The arrival card's QR, scanned at the counter** (issue #1600). A wedge
+   * reader types the code into the same box a surname goes in, so the whole
+   * branch is `readKioskInput` recognising its shape and this reader resolving
+   * it — through `verifyBookingCapability`, before a single seat is read, so
+   * every filter above applies to a scan exactly as it applies to a name.
+   */
+  it("finds the seat behind a live arrival code", async () => {
+    const { db, shop, booking, atTheDoor } = await counter();
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "arrival",
+      now: atTheDoor,
+    });
+    if (!issued) throw new Error("could not mint an arrival code");
+    const seats = await findKioskSeats(db, {
+      shopId: shop.id,
+      lookup: readKioskInput(issued.token),
+      now: atTheDoor,
+    });
+    expect(seats.map((row) => row.bookingId)).toEqual([booking.id]);
+  });
+
+  /**
+   * **The purpose gate, and the reason the card got a credential of its own.**
+   * The same booking's readiness token is the diver's medical, waiver and
+   * payment surface; the card is a file they save, print and can forward. If
+   * the counter accepted either, the card would be carrying the wrong one
+   * around a hotel lobby. It is refused with the sentence a stranger gets.
+   */
+  it("refuses the same booking's readiness token", async () => {
+    const { db, shop, booking, atTheDoor } = await counter();
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "readiness",
+      now: atTheDoor,
+    });
+    if (!readiness) throw new Error("could not mint a readiness token");
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(readiness.token),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * **A code is not a tenant claim.** The token and the tablet arrive from two
+   * different people, so the shop the capability names is checked against the
+   * shop the display link opened — otherwise one shop's arrival card would
+   * write an arrival at another shop's counter.
+   */
+  it("refuses an arrival code at another shop's counter", async () => {
+    const { db, shop, booking, atTheDoor } = await counter();
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "arrival",
+      now: atTheDoor,
+    });
+    if (!issued) throw new Error("could not mint an arrival code");
+    expect(
+      await findKioskSeats(db, {
+        shopId: OTHER_SHOP,
+        lookup: readKioskInput(issued.token),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * **A revoked card is a dead card**, which is what makes the credential
+   * withdrawable at all: cancelling the booking revokes every purpose, and the
+   * cap on live capabilities per purpose retires the oldest. Both reach the
+   * counter through this one check.
+   */
+  it("refuses a revoked arrival code", async () => {
+    const { db, shop, booking, atTheDoor } = await counter();
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "arrival",
+      now: atTheDoor,
+    });
+    if (!issued) throw new Error("could not mint an arrival code");
+    await revokeBookingCapabilities(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now: atTheDoor,
+    });
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(issued.token),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * **A code does not buy past the two routing rules.** Holding a valid arrival
+   * credential says who you are, and says nothing about which door should
+   * answer: a diver who stated a support need and a minor still meet a person,
+   * exactly as they do when they type their name. This is the assertion that
+   * would fail if the code were ever resolved outside this reader.
+   */
+  it("still sends a support-needs diver and a minor to the desk when they scan", async () => {
+    const { db, shop, booking, person, reef, atTheDoor } = await counter();
+    const supported = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "arrival",
+      now: atTheDoor,
+    });
+    if (!supported) throw new Error("could not mint an arrival code");
+    await db.insert(diveSupportNeeds).values({
+      shopId: shop.id,
+      personId: person.id,
+      supportDiversNeeded: 1,
+      supportDiversProvidedBy: "shop",
+    });
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(supported.token),
+        now: atTheDoor,
+      }),
+    ).toEqual([]);
+
+    // The same seat again, this time a minor rather than a supported diver.
+    await db.delete(diveSupportNeeds).where(eq(diveSupportNeeds.personId, person.id));
+    const fourteen = new Date(reef.startsAt.getTime());
+    fourteen.setUTCFullYear(fourteen.getUTCFullYear() - 14);
+    await db
+      .update(people)
+      .set({ dateOfBirth: fourteen.toISOString().slice(0, 10) })
+      .where(eq(people.id, person.id));
+    expect(
+      await findKioskSeats(db, {
+        shopId: shop.id,
+        lookup: readKioskInput(supported.token),
         now: atTheDoor,
       }),
     ).toEqual([]);

@@ -17,6 +17,7 @@ import { DOCK_DAY_LIMITS } from "@/lib/diver-planning";
 import { formatDateWithYear } from "@/lib/format";
 import type { CertificationLevel } from "@/lib/readiness";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
+import { stationDistanceInUnit, stationLabel, type TideStationEcho } from "@/lib/tide-stations";
 import { TIDE_PREFERENCES, type TidePreference } from "@/lib/tides";
 import {
   type FieldGuideCatalogEntry,
@@ -145,6 +146,7 @@ export function SiteFields({
   t,
   depthUnit,
   values,
+  tideStation,
   certificationDescription,
   requiredSpecialtiesLabel,
   routeCopy,
@@ -160,6 +162,13 @@ export function SiteFields({
   depthUnit: DepthUnit;
   /** Omitted for a blank briefing; a site row prefills every field. */
   values?: SiteFieldValues;
+  /**
+   * What NOAA calls the station this site already carries, looked up in the
+   * page's render (issue #1468). `null` or absent renders nothing at all —
+   * a blank field, a station NOAA does not know, a lookup that timed out and
+   * the new-site form are one case here, and the case is silence.
+   */
+  tideStation?: TideStationEcho | null;
   /** The certification section's page-specific lead-in sentence. */
   certificationDescription: string;
   /** Edit-only heading above the specialty checkboxes; the new form has none. */
@@ -186,6 +195,36 @@ export function SiteFields({
     tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
   };
   const labels = siteFormSectionLabels(t);
+
+  // Seven digits, and until issue #1468 nothing on this form said what they
+  // named: a station typed for the wrong end of the Keys answered every
+  // prediction request and read as an ordinary tide sentence on every
+  // departure. The first line is NOAA's own answer to the id, so a wrong one
+  // is legible as a wrong *place*; the second is advice about a station that
+  // sits implausibly far from the coordinates two fields up, and it refuses
+  // nothing — the save above it never waits on this lookup and a failed one
+  // renders neither line.
+  const tideStationNote = tideStation ? (
+    <>
+      <span className="block">
+        {t("diveSites.form.tideStationEcho", {
+          id: tideStation.id,
+          name: stationLabel(tideStation),
+        })}
+      </span>
+      {tideStation.far && tideStation.distanceKm !== null ? (
+        <span className="mt-0.5 block font-medium text-warning-strong">
+          {depthUnit === "feet"
+            ? t("diveSites.form.tideStationFarMiles", {
+                distance: stationDistanceInUnit(tideStation.distanceKm, depthUnit),
+              })
+            : t("diveSites.form.tideStationFarKm", {
+                distance: stationDistanceInUnit(tideStation.distanceKm, depthUnit),
+              })}
+        </span>
+      ) : null}
+    </>
+  ) : undefined;
 
   const sections: Record<SiteFormSection, SectionParts> = {
     about: {
@@ -257,6 +296,7 @@ export function SiteFields({
               20260907-noaa-tide-predictions). */}
           <Field
             label={t("diveSites.form.tideStationLabel")}
+            description={tideStationNote}
             hint={t.rich("diveSites.form.tideStationHint", {
               link: (chunks) => (
                 <a

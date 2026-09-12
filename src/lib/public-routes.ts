@@ -80,7 +80,15 @@ export function publicTripCalendarPath(shopSlug: string, tripId: string): string
   return `${publicTripPath(shopSlug, tripId)}/calendar`;
 }
 
-/** A small, public HTML arrival card that can be saved for a no-signal morning. */
+/**
+ * The booked diver's own HTML arrival card, saved for a no-signal morning.
+ *
+ * Public in shape only: the route refuses every request without a `?booking=`
+ * readiness capability for this very trip, and the card it returns carries an
+ * `arrival` credential in a QR (issue #1600). It sits under the public tree
+ * because it is the diver's door rather than a staff one — not because anyone
+ * may fetch it.
+ */
 export function publicTripArrivalCardPath(shopSlug: string, tripId: string): string {
   return `${publicTripPath(shopSlug, tripId)}/arrival-card`;
 }

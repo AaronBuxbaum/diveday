@@ -22,6 +22,22 @@ import type { RentalFit } from "./types";
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
 /**
+ * A drysuit is not sized on the wetsuit scale above, and offering XS-XXL here
+ * would name suits no rental wall holds (issue 1414). This is the manufacturer
+ * letter-plus-height grid the wall is actually stocked from: the letter is
+ * girth, a trailing `T` is the tall cut, and `MS`/`ML` are the in-between
+ * girths a fleet genuinely carries. `LS` and `MLT` are real sizes and are
+ * deliberately left out — rarely stocked as rentals, and a shop holding one
+ * records it staff-side, where the field is free text.
+ *
+ * The grid itself is the owner's call and is open as **H-76** in
+ * `docs/product/human-decisions.md`; this list ships provisionally. Only this
+ * array depends on the answer — the column is `text` and the staff field is
+ * free text — so changing the grid is an edit to this one line.
+ */
+const DRYSUIT_SIZES = ["S", "MS", "M", "MT", "ML", "L", "LT", "XL", "XLT", "XXL"];
+
+/**
  * `src/lib/rentals.ts` returns item codes, never rendered words (see the
  * domain-strings-common notes on a domain function rendered on both a staff
  * and a diver page) — `SettingsPage.tsx`/`RentalFit.tsx` resolve the same
@@ -140,6 +156,7 @@ export function RentalFitForm({
   );
   const [bcdSize, setBcdSize] = useState(rentalFit?.bcdSize ?? "");
   const [wetsuitSize, setWetsuitSize] = useState(rentalFit?.wetsuitSize ?? "");
+  const [drysuitSize, setDrysuitSize] = useState(rentalFit?.drysuitSize ?? "");
   // One shoe-size figure for fins and boots alike: they were two fields asking
   // the same question, and a diver who answered one and not the other left the
   // crew guessing. `bootSize` is still its own column (imports carry one), and
@@ -148,7 +165,8 @@ export function RentalFitForm({
 
   const bcdOk = !rentedKinds.has("bcd") || !!bcdSize;
   const wetsuitOk = !rentedKinds.has("wetsuit") || !!wetsuitSize;
-  const isConfirmed = rentedKinds.size > 0 && bcdOk && wetsuitOk;
+  const drysuitOk = !rentedKinds.has("drysuit") || !!drysuitSize;
+  const isConfirmed = rentedKinds.size > 0 && bcdOk && wetsuitOk && drysuitOk;
 
   const [nitroxRequested, setNitroxRequested] = useState(wantsNitrox);
   /**
@@ -362,6 +380,7 @@ export function RentalFitForm({
             the order is unchanged. */}
         {offers.has("bcd") ||
         offers.has("wetsuit") ||
+        offers.has("drysuit") ||
         offers.has("mask_fins") ||
         offers.has("weights") ? (
           <FieldGrid columns={2}>
@@ -390,6 +409,21 @@ export function RentalFitForm({
                 >
                   <option value="">{t("rental.notSure")}</option>
                   {SIZES.map((size) => (
+                    <option key={size}>{size}</option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
+            {offers.has("drysuit") ? (
+              <Field label={t("rental.drysuitSize")}>
+                <select
+                  name="drysuitSize"
+                  value={drysuitSize}
+                  onChange={(e) => setDrysuitSize(e.target.value)}
+                  className={controlClass}
+                >
+                  <option value="">{t("rental.notSure")}</option>
+                  {DRYSUIT_SIZES.map((size) => (
                     <option key={size}>{size}</option>
                   ))}
                 </select>

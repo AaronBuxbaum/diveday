@@ -68,6 +68,9 @@
     "forecastDescription": "The offshore dive point, not the shop address. Leave both blank to keep the site off divers’ maps.",
     "tideStationLabel": "NOAA tide station",
     "tideStationHint": "The seven-digit id of the nearest ocean-side station, from <link>NOAA’s tide predictions</link>.",
+    "tideStationEcho": "{id} · {name}",
+    "tideStationFarKm": "That station is {distance} km from this site’s coordinates. Check it’s the one you meant.",
+    "tideStationFarMiles": "That station is {distance} mi from this site’s coordinates. Check it’s the one you meant.",
     "tidePreferenceLabel": "Dives best",
     "tidePreference": {
       "any": "Any tide",

@@ -57,7 +57,7 @@ export function catalogItemLabel(t: StaffTranslator, kind: ShopCatalogKind): str
 export function statedSizesText(
   t: StaffTranslator,
   locale: string,
-  items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins"; size: string }[],
+  items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[],
 ): string {
   const parts = items.map((item) =>
     t("shared.rentalFit.itemWithSize", { item: rentalItemLabel(t, item.kind), size: item.size }),

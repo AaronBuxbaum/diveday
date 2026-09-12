@@ -223,6 +223,8 @@
     "bcdSizePlaceholder": "M",
     "wetsuitSizeLabel": "Talla de traje",
     "wetsuitSizePlaceholder": "3 mm / M",
+    "drysuitSizeLabel": "Talla de traje seco",
+    "drysuitSizePlaceholder": "ML",
     "finSizeLabel": "Talla de aletas y escarpines",
     "finSizePlaceholder": "US 9 / EU 42",
     "weightPreferenceLabel": "Preferencia de peso",

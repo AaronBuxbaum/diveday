@@ -31,6 +31,7 @@ function makeRentalFit(overrides: Partial<RentalFit> = {}): RentalFit {
     rentsSmb: false,
     bcdSize: null,
     wetsuitSize: null,
+    drysuitSize: null,
     bootSize: null,
     finSize: null,
     weightPreference: null,
@@ -87,5 +88,19 @@ describe("GearAndSizes", () => {
     expect(summary).toHaveTextContent("Rental fit on file");
     expect(summary).not.toHaveTextContent(/BCD M|Wetsuit ML|Boots 8/);
     expect(screen.getByText("BCD M · Wetsuit ML · Boots 8")).toBeInTheDocument();
+  });
+
+  /**
+   * Staff-side the drysuit size is free text, not the diver form's select: the
+   * counter is where a size off the proposed grid gets recorded (issue 1414).
+   */
+  it("asks for a drysuit size only when the shop's catalog has one, prefilled", () => {
+    renderGear(makeRentalFit({ rentsDrysuit: true, drysuitSize: "MT" }), ["drysuit"]);
+    expect(screen.getByLabelText("Drysuit size")).toHaveValue("MT");
+  });
+
+  it("never asks a shop that does not rent drysuits", () => {
+    renderGear(makeRentalFit({ rentsBcd: true, bcdSize: "M" }), ["bcd"]);
+    expect(screen.queryByLabelText("Drysuit size")).not.toBeInTheDocument();
   });
 });

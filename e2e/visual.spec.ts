@@ -6797,6 +6797,13 @@ for (const scheme of ["light", "dark"] as const) {
         // The route's own caption box, which only renders once the editor has
         // mounted and read the coordinate fields beside it.
         await page.getByLabel("What the route is called").waitFor();
+        // What the seven-digit station id actually names (issue #1468), read
+        // off the fixture station the fleet serves in place of NOAA. Waited on
+        // rather than assumed: a lookup that answered nothing renders no line
+        // at all, and this is the capture that would otherwise photograph the
+        // absence without failing. Carysfort is genuinely the nearest station
+        // to this reef, so no distance warning belongs in this frame.
+        await page.getByText("8723583 · Carysfort Reef, FL").waitFor();
         await capture(page, "dive-site-edit", scheme);
       });
 
