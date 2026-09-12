@@ -340,6 +340,40 @@ describe("a glob in Touches", () => {
     expect(await touchedPathExists(root, "scripts/not-a-real-guard.mjs")).toBe(false);
   });
 
+  /**
+   * The regression this expansion caused, and the reason the literal lookup now
+   * runs first for every token. Next's dynamic segments are square brackets, so
+   * to a glob `[shopSlug]` is a character class matching one of `s h o p S l u
+   * g` — never a directory of that name. Most of this repository's route tree
+   * is such a path, and on 2026-09-12 issues #1803 and #1804 named four that
+   * all exist, which reddened `Repository safeguards` on every open pull
+   * request at once: the exact outage #1339's expansion was added to stop.
+   */
+  it("resolves a Next dynamic-route path, whose brackets are not a character class", async () => {
+    expect(await touchedPathExists(root, "src/app/shop/[shopSlug]/check-in/actions.ts")).toBe(true);
+    expect(
+      await touchedPathExists(
+        root,
+        "src/app/shop/[shopSlug]/trips/[id]/_components/AddDiverSection.tsx",
+      ),
+    ).toBe(true);
+  });
+
+  it("still refuses a dynamic-route path that names nothing", async () => {
+    expect(await touchedPathExists(root, "src/app/shop/[shopSlug]/no-such-file.ts")).toBe(false);
+  });
+
+  /**
+   * Containment used to guard only the glob branch, so a literal token with no
+   * glob character in it was joined onto the root and answered from wherever it
+   * landed — the same file-existence oracle, reachable by writing the path out
+   * in full (`security-reviewer`, issue 1356).
+   */
+  it("refuses a literal path that climbs out of the checkout, not only a pattern", async () => {
+    expect(await touchedPathExists(root, "../../../etc/passwd")).toBe(false);
+    expect(await touchedPathExists(root, "/etc/passwd")).toBe(false);
+  });
+
   it("says a pattern matched nothing, rather than reading as a typo", () => {
     expect(missingTouchedProblem("src/i18n/locales/*/staff/nope.json")).toMatch(/matched no files/);
     expect(missingTouchedProblem("src/lib/nope.ts")).not.toMatch(/matched no files/);
