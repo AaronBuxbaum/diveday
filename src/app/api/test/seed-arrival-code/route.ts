@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { issueBookingCapability } from "@/db/booking-capabilities";
@@ -7,6 +7,7 @@ import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { bookings, people, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { liveTrip } from "@/db/trips-live";
+import { arrivalCardExpiryFor } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 
@@ -66,30 +67,53 @@ export async function POST(request: Request) {
    * it answers the same "See the desk" a miss does, so a spec built on the
    * wrong seat would prove nothing at all while passing.
    */
+  const now = nowDate();
   const [seat] = await db
-    .select({ id: bookings.id })
+    .select({ id: bookings.id, startsAt: trips.startsAt })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(
       and(
+        // All three tenant conditions, though a person belongs to one shop and
+        // a booking's trip is that shop's, so `people.shopId` alone is correct
+        // today. An invariant is not a filter: the house rule is that a reader
+        // says which shop it is about in the query a person can grep, and
+        // `seed-booking-handoff` beside this one states them the same way
+        // (`security-reviewer`, issue #1725).
         eq(people.shopId, shop.id),
+        eq(bookings.shopId, shop.id),
+        eq(trips.shopId, shop.id),
         eq(people.email, parsed.data.email.toLowerCase()),
         isNull(people.deletedAt),
         ne(bookings.status, "cancelled"),
         eq(trips.status, "scheduled"),
         liveTrip(),
+        // Ahead of the clock, because "earliest first" with no floor picks a
+        // departure that has already sailed once the seed carries one, and the
+        // kiosk answers "See the desk" for it — a spec that proves nothing
+        // while passing, which is the failure the window note below is about.
+        gte(trips.startsAt, now),
       ),
     )
     .orderBy(asc(trips.startsAt))
     .limit(1);
   if (!seat) return NextResponse.json({ error: "booking_not_found" }, { status: 404 });
 
+  // **Bounded like a real card, not like the trip-anchored default.** Without
+  // `expiresAt` this mints trip end + 30 days, which is the life issue #1600
+  // deliberately took away from a printed card: the product's own arrival-card
+  // route passes `arrivalCardExpiryFor(trip.startsAt)`. A fixture whose token
+  // outlives every real one is a fixture that would keep passing if somebody
+  // dropped that narrowing — the wrong direction for a test to fail safe in
+  // (`security-reviewer`, issue #1725). `issueBookingCapability` keeps whichever
+  // bound is sooner, so this can only shorten.
   const issued = await issueBookingCapability(db, {
     shopId: shop.id,
     bookingId: seat.id,
     purpose: "arrival",
-    now: nowDate(),
+    expiresAt: arrivalCardExpiryFor(seat.startsAt),
+    now,
   });
   if (!issued) return NextResponse.json({ error: "capability_refused" }, { status: 409 });
   return NextResponse.json({ token: issued.token });

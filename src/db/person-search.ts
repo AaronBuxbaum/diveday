@@ -68,6 +68,27 @@ import { people } from "./schema";
  * ten-digit needle can match a row in another country whose national number
  * ends the same way, which is a longer list, never a wrong one.
  *
+ * ## It carries no scope, and the callers' scopes are not identical
+ *
+ * This predicate names three columns and nothing else: no shop, no role, no
+ * `deleted_at`. Every caller keeps its own, and a reader must not take this
+ * function for the place tenancy is enforced. The five are not uniform, which
+ * is worth writing down rather than asserting away (`security-reviewer`, issue
+ * #1765):
+ *
+ * - `src/db/divers.ts` (both readers) and `listOtherMatchingDivers` in
+ *   `src/db/check-in.ts` carry all three — shop, a `person_roles` join, and the
+ *   soft-delete scope.
+ * - `src/db/search.ts` (the command palette) carries shop and `deleted_at` but
+ *   **no role join**, so a staffer typing a punctuated number can surface a
+ *   colleague's stored phone. Inside one tenant, and `/api/search` gates on a
+ *   live staff-role read, but it is not the same scope as the roster's.
+ * - `listCheckInQueue` in `src/db/check-in.ts` is a booking query: it carries
+ *   `bookings.shopId` *and* `trips.shopId`, and **no `deleted_at is null`** —
+ *   a soft-deleted person still on a live booking in the arrivals window shows
+ *   up, which is arguably the right answer at a counter and is certainly not
+ *   what "every call site keeps all three" would have told you.
+ *
  * ## The digit floor
  *
  * Below {@link MIN_PHONE_SEARCH_DIGITS} the query is compared to the phone
