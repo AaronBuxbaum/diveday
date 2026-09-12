@@ -7,14 +7,20 @@ import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportShopData, loadShopExportCounts } from "@/db/export";
 import { PAGE_SIZE } from "@/db/paging";
-import { getShopBackupDestination, listBackupDeliveries } from "@/features/backup-export";
+import {
+  getShopBackupDestination,
+  listBackupDeliveries,
+  type SaveBackupDestinationRefusal,
+} from "@/features/backup-export";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { addMonths, type MonthRef, monthKey, monthLabel } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
+import type { NoticeCodeOf, NoticeTone } from "@/lib/staff-notices";
 import { utcToWallTime } from "@/lib/zoned";
 import { BackupsSection, deliveryErrorText } from "./_components/BackupsSection";
+import type { Notice } from "./actions";
 import { DownloadExportButton } from "./DownloadExportButton";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -34,6 +40,13 @@ const DELIVERY_PAGE_SIZE = PAGE_SIZE.section;
 // Every key here is also a `backup.notice.<code>` key in the staff bundle —
 // the banner below looks the words up by the code itself — so the two are
 // renamed together or the banner renders nothing (src/lib/staff-notices.ts).
+//
+// The `satisfies` is what makes a missing tone a `pnpm typecheck` failure
+// rather than a silent no-banner: `NoticeCodeOf` is the kebab spelling of the
+// action's own `Notice` union plus `SaveBackupDestinationRefusal`, the
+// snake_case refusal the feature module answers with, which reaches here
+// normalised. Both halves of the drift are compile errors now — a code with no
+// tone, and a tone for a code nothing can emit (issue #1782).
 const NOTICE_TONE = {
   saved: "success",
   disconnected: "success",
@@ -47,7 +60,7 @@ const NOTICE_TONE = {
   "encryption-key-unset": "danger",
   "encryption-key-invalid": "danger",
   "no-destination": "danger",
-} as const;
+} as const satisfies Record<NoticeCodeOf<Notice | SaveBackupDestinationRefusal>, NoticeTone>;
 
 type NoticeCode = keyof typeof NOTICE_TONE;
 
