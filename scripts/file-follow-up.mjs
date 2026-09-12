@@ -326,10 +326,12 @@ async function main() {
       parked: parsed.labels.includes(PARKED_LABEL),
     },
   );
-  // Fatal here, where `--body`'s pre-flight only warns. That mode checks a draft
-  // somebody may still edit; this one is about to put the entry in front of
-  // every other session's `pnpm check`, and a path that is not in the tree today
-  // reddens all of them the moment it lands.
+  // Fatal here, and fatal in `--body`'s pre-flight since 2026-09-12 (issue
+  // #1761) — with one difference: that door takes
+  // `--allow-unresolved-touches` for a draft whose branch legitimately adds the
+  // path, and this one does not, because it is about to put the entry in front
+  // of every other session's `pnpm check` and a path that is not in the tree
+  // today reddens all of them the moment it lands.
   for (const token of touched) {
     const outcome = await touchedPathExists(root, token);
     if (outcome === true) continue;
