@@ -20,6 +20,13 @@ skip link, a message key on screen, a page that did not render. Everything below
 judgement — whether a refusal's reason is *true*, whether the jargon is explained — is still a
 person's to make, and the surfaces the walk visits are listed in `scripts/persona-bots/personas.mjs`.
 
+**Two of the sections below are read by a machine, word for word.** An opt-in second pass
+(`pnpm persona:bots --judge`) hands a model Nadia's section and Kai's, with screenshots of the stops
+they make, and asks for concrete violations of their own lists — so for those two personas the "hold
+the line on" list is a contract, not only a prompt for a human reader. Edit it as one: a line added
+there is a thing the pass will start looking for, and a heading renumbered or renamed breaks the
+slice (`scripts/persona-bots/judge.test.mjs` fails rather than letting it go quiet).
+
 ## Contents
 
 | # | Persona | Surfaces |

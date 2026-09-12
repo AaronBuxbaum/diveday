@@ -155,6 +155,9 @@ export async function POST(request: Request) {
     const endsAt = new Date(lastEnd - index * (DEPARTURE_MS + TURNAROUND_MS));
     const startsAt = new Date(endsAt.getTime() - DEPARTURE_MS);
     if (startsAt < bounds.from) break;
+    // diveday:allow-flat-revision: an e2e fixture rewinding the demo day inside
+    // a per-worker test database, where no calendar is subscribed — unlike
+    // src/db/demo-refresh.ts, which nudges the live demo shop and does bump.
     await db.update(trips).set({ startsAt, endsAt }).where(eq(trips.id, trip.id));
     moved.push({ id: trip.id, plannedDives: trip.plannedDives, startsAt, endsAt });
   }

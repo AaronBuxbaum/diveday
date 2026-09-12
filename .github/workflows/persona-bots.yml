@@ -30,6 +30,10 @@ on:
         description: "Shape the issues and print them, but file nothing"
         type: boolean
         default: false
+      judge:
+        description: "Also read the screenshots as Nadia and Kai (costs an API call per persona)"
+        type: boolean
+        default: false
 
 concurrency:
   group: persona-bots-${{ github.ref }}
@@ -56,10 +60,20 @@ jobs:
       # One build, the same e2e build ci.yml's `build` job makes; the walk then
       # reuses it (`--no-build`) rather than paying for a second one.
       - run: pnpm e2e:build
+      # `--judge` is reachable only from `workflow_dispatch`, never from the
+      # Monday `schedule` above, and that is what makes the judged pass opt-in
+      # (#1498). A model's opinion arriving unattended in a tracker is a trust
+      # question before it is a coverage one; the cron gets this only after a
+      # month of dispatched output somebody has read. `ANTHROPIC_API_KEY` is a
+      # repository secret a human adds — the same shape as `GITHUB_TOKEN` here,
+      # not a `config/env-registry.mjs` row, which is the application's own
+      # environment. Absent, the run prints `DID NOT JUDGE` and files the
+      # mechanical findings as usual.
       - name: Walk the personas
-        run: pnpm persona:bots --no-build ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: pnpm persona:bots --no-build ${{ inputs.dry_run && '--dry-run' || '' }} ${{ inputs.judge && '--judge' || '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       # The findings and the screenshots every filed issue links to — the
       # walk's whole published output, and deliberately the only thing that
       # leaves the runner. Playwright's own trace is off (see the walk's

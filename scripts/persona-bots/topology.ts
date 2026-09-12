@@ -39,3 +39,16 @@ export const PERSONA_FINDINGS_FILE = path.join(PERSONA_OUT_DIR, "findings.json")
  * actually be filed.
  */
 export const SCREENSHOT_CAP = 8;
+
+/**
+ * Extra captures the opt-in judged pass (#1498) is allowed on top of
+ * {@link SCREENSHOT_CAP}.
+ *
+ * The mechanical cap photographs only surfaces a finding already named. A pass
+ * that judges "the stops they made" needs a picture of each stop whether or not
+ * a lens fired there — that is the whole input — so `PERSONA_BOTS_JUDGE=1`
+ * raises the ceiling by exactly enough for the five stops the two judged
+ * personas make, with one spare. With the flag unset nothing here is reached
+ * and the run costs what it always did.
+ */
+export const JUDGED_SCREENSHOT_CAP = 6;

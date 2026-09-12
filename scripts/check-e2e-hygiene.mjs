@@ -36,6 +36,18 @@ import { pathToFileURL } from "node:url";
  * `diveday:allow-e2e-hygiene <rule>: <why>` passes. The why must name the
  * mechanism that makes the wait deterministic, not restate that it is needed —
  * mirrors scripts/check-migrations.mjs's acknowledgement marker.
+ *
+ * Measured here and deliberately not built: a rule refusing a negative
+ * assertion (`toHaveCount(0)` / `.not.toBeVisible()`) keyed on a string-literal
+ * name, which is how the "Next boat out" rename left two absence assertions
+ * passing for the wrong reason (issue #1403). Swept twice — 2026-09-10, and
+ * again 2026-09-12 against a suite that had grown to 498 negative assertions —
+ * and the counts did not move: the shape that issue specifies flags 98 lines
+ * across 46 of the 112 files in `e2e/`, and the narrower
+ * `getByRole(…, { name })` form the issue itself nominates flags 56, against
+ * its own "if it is fifty, the rule is wrong". The fork is open on #1403 and
+ * the counts are in docs/agents/repo-checks.md. Re-measure before re-proposing
+ * it; do not re-derive the number.
  */
 
 export const ACKNOWLEDGEMENT = "diveday:allow-e2e-hygiene";

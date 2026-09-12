@@ -87,6 +87,29 @@ the repository. ADR
 [20260907-persona-bots-file-under-a-ceiling](../architecture/decisions/20260907-persona-bots-file-under-a-ceiling.md)
 carries the reasoning and the numbers.
 
+**Forty means forty *awaiting triage*.** An issue also carrying `parked` or `waiting-on-external`
+has been read and deliberately deferred, and does not count against the brake — parking is an act of
+triage, and triage is what the ceiling exists to reward, so ten parked findings must not silence the
+walk forever (#1497). Those issues are still deduplicated against: a class whose issue is parked gets
+the ordinary comment, never a second issue. The run summary states both numbers on every run, braked
+or not, so the difference between the two is visible rather than inferred. The ceiling itself did not
+move; forty is changed by deciding it is wrong.
+
+**An opt-in second pass judges rather than measures** (#1498). `pnpm persona:bots --judge` — off by
+default, and reachable in CI only from `workflow_dispatch`, never from the Monday cron — reads the
+screenshots the walk already took back against two personas' own sections of
+[personas.md](../product/personas.md): Nadia's and Kai's, whose "hold the line on" lists are almost
+entirely about words on a screen. `scripts/persona-bots/judge.mjs` builds the prompt, drops any
+finding that names a surface the persona was not shown or quotes nothing off the screen, and
+fingerprints on the persona, the stop, and a *normalised* claim, so two runs that say the same thing
+in different words collide and a closed judged issue is never re-filed. Judged findings sit in the
+last severity band, below every mechanical one, so they can only ever spend issue budget the
+measurements did not. Every other rule — the brake, the comment ceiling, the suppression, the
+`findIssueProblems` self-check — applies to them unchanged. With the flag off nothing here runs and
+the walk takes exactly the screenshots it always did. ADR
+[20260907-persona-bots-file-under-a-ceiling](../architecture/decisions/20260907-persona-bots-file-under-a-ceiling.md)'s
+"The judged pass" section carries the reasoning.
+
 Like the one-day simulation it is the e2e fleet's own machinery under a config of its own:
 `scripts/persona-bots/playwright.config.ts` starts a worker server on this checkout's port block,
 `walk.spec.ts` drives it, and the screenshots come from `scripts/screenshot.mjs` rather than a
@@ -98,7 +121,8 @@ can break — no browser, no build, an incomplete walk, an unreachable `gh` — 
 `.github/workflows/persona-bots.yml` runs it at 07:00 UTC on Mondays (and on `workflow_dispatch`,
 which offers a dry run), builds once, and uploads `persona-bots/` whether or not the walk finished.
 Options: `--dry-run` (shape the issues and print them, file nothing — what a session runs),
-`--no-build`, `--keep`, `--out <dir>`.
+`--judge` (the opt-in judged pass; needs `ANTHROPIC_API_KEY`, and prints `DID NOT JUDGE` and carries
+on without it), `--no-build`, `--keep`, `--out <dir>`.
 
 ### Why `playwright-core` is pinned in devDependencies
 

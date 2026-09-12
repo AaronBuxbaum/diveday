@@ -184,6 +184,18 @@ Writing it found two live defects, which is the argument for it: a single publis
 
 The live-trip-read one (`scripts/check-live-trips.mjs`) fails any read of `trips` — a `.from(trips)`, or a join from one of the child tables that now survives a delete — that neither carries `liveTrip()` (`src/db/trips-live.ts`) nor says `diveday:allow-deleted-trips: <why>`. Deleting a departure stamps `trips.deleted_at` and leaves the row and its five children in place, and the table is read from 91 places; a reader that forgets the filter does not throw and does not fail a test written before the column existed, it shows an anonymous visitor a departure the shop took off the board. Joins from `bookings`, `tripWaitlistEntries` and the roll-call tables are outside the gate on purpose — `deleteTrip` refuses a departure carrying any of those, so no such row exists to arrive through.
 
+### trip-revision
+
+The trip-revision one (`scripts/check-trip-revision.mjs`) fails any `.update(trips)` whose `.set()` literal writes `startsAt` without also writing `revision`. `trips.revision` is published as the RFC 5545 `SEQUENCE` on both calendar surfaces (`src/lib/trip-calendar.ts`), and a client that re-fetches an event whose `SEQUENCE` has not moved treats it as the event it already holds — so a departure that slides an hour with a flat revision leaves every subscribed calendar on the old `DTSTART`, and a diver on the dock at the old time. That is issue #1165, which was fixed at the two writers that existed then; nothing made the third one carry it.
+
+The anchor is the table rather than the column, and that is the whole reason the rule is affordable. `moveTrip` bumps the trip and then shifts each of its child days — `.update(tripScheduleDays).set({ startsAt: shift(day.startsAt), endsAt: shift(day.endsAt) })`, three statements below its own bump — and a rule anchored on `startsAt` would have failed that correct line on day one. A schedule day has no `SEQUENCE` of its own; only the trip does. A `.set()` that never mentions `startsAt` is not a calendar move and is not inspected further, which is what keeps the status writers, the minimum sweep, the recap writers, the series cancellations and the soft delete outside the gate.
+
+Five writes touch `trips.startsAt` today and the rule reads all five. `moveTrip` (`src/db/trips-schedule.ts`) bumps unconditionally — the equal-instant case has already returned, so reaching the write means the boat really moved. `updateTrip` (`src/db/trips-record.ts`) renames and moves in one statement, so its bump is a `...(revisionMoved ? { revision: … } : {})` spread that collapses to nothing when only the words changed; that shape and the `${…}` inside the `sql` template literal are the two the brace matcher has to survive, and both are pinned in `scripts/check-trip-revision.test.mjs`. `refreshDemoShop` (`src/db/demo-refresh.ts`) bumps because the demo shop's own `.ics` is real. The two `/api/test/*` fixtures — `seed-evening` and `depart-trip` — say `diveday:allow-flat-revision: <why>`, because a per-worker test database has no subscriber to mislead.
+
+The `.set()` search, and the brace match that reads its literal, both end at the next `.update(trips)`. That bound is issue #635's lesson ported from `scripts/check-live-trips.mjs` rather than re-learned there: a fixed line window once let one write pass because a *neighbour* carried the thing being looked for.
+
+The opposite mistake the issue names — bumping for something immaterial, which re-alerts every diver's phone for a typo fixed in a conditions note — is deliberately left un-guarded. It has no mechanical signature; guarding the cheap half of a rule beats guarding neither.
+
 ### departure-buffer
 
 The departure-buffer one (`scripts/check-departure-buffer.mjs`) refuses three shapes outside `src/lib/trips.ts`: an offset added to a `startsAt`/`endsAt` on a line that also *compares*; the same offset bound to a name and compared against *now* a few lines later; and any `*_BUFFER_MS` declaration. All three mean the same thing — somebody asked "has this sailed?" without going through `hasSailed()` / `hasReturned()`. The split-across-lines rule arrived in review: the first version matched only within one line, so `const cutoff = new Date(trip.startsAt.getTime() + HOUR_MS)` followed by `if (cutoff <= now)` was a prohibited check the guard called clean. Comparing a derived date against anything other than the clock is left alone, which is what keeps the seeds — full of exactly that arithmetic — out of it.
@@ -225,6 +237,26 @@ The line is not useless, though, which is why the answer is a paragraph and not 
 The experiment, so nobody has to redo it: inserting `await page.waitForLoadState("networkidle")` before that test's `page.goto` makes the line disappear, and the spec passes 7/7 either way. That proves the navigation is the closer and that nothing in the test depended on what was closed. It is **not** a fix to adopt — the wait is dead weight on a passing spec, and `networkidle` is a blunt instrument that would sit there absorbing real slowness. The finding is that there was nothing to fix.
 
 Do not try to catch this with a guard. `check-e2e-hygiene.mjs` reads lines; knowing whether a stream still had a reader means knowing what is in flight, which no line-based scanner can answer. Issue #1560 asked the question and this is the answer.
+
+#### A negative assertion keyed on copy is measured, not guarded
+
+The sibling rule that keeps being proposed for this guard is one refusing `.toHaveCount(0)` / `.not.toBeVisible()` on a locator built from a string literal. The failure is real and this repo has had it: slice 16f renamed a region's accessible name from "Next boat out" to "Next boat with space", the assertion that the card **is** visible failed and was fixed, and the two asserting the card is **absent** kept passing, because a locator that matches nothing satisfies them for the wrong reason. `e2e/schedule-embed.spec.ts`'s was the only assertion in the suite proving `?embed=1` drops that card, and it had stopped proving it silently and permanently (issue #1403).
+
+It is not built, and the reason is a count rather than an opinion. The rule was implemented as specified — read at statement scope, exempt when the identical string appears in another locator anywhere in the same file — and swept over `e2e/` twice, on 2026-09-10 and again on 2026-09-12 after the suite had grown from 487 negative assertions to 498. The flagged counts did not move:
+
+| Variant | Lines flagged |
+| --- | ---: |
+| The rule as specified in #1403 | **98**, across 46 of the 112 files in `e2e/` |
+| Same, exemption loosened to the string appearing anywhere in the file | 78 |
+| `getByRole(…, { name })` only — the narrower form #1403 itself nominates | **56** |
+| That, restricted to `.toHaveCount(0)` alone | 55 |
+| `getByRole(…, { name })` whose name **and** role are never queried positively in the file | 9, in 6 files |
+
+#1403 pre-committed to a threshold before anyone built anything: "if it is a handful, fix them. If it is fifty, the rule is wrong and the answer is something narrower — perhaps only `getByRole(…, { name })`." The rule as written is roughly twice that line and the narrower form named in the same sentence is above it too. What the 98 are matters more than the number: most are honest single-purpose absence assertions — `e2e/whatsapp-settings.spec.ts:58` proving Embedded Signup asks for no access token, `e2e/tenant-isolation.spec.ts:108-110` proving another shop's staff nav is unreachable, `e2e/marketing.spec.ts:577-579` proving three pricing claims do not repeat on the door. Annotating those is not a fix; it is 98 sentences explaining that an absence assertion asserts absence, which is the failure the `action-race` write-up above names in one line — a rule that fires on correct code is one people learn to silence.
+
+So the decision is the owner's and it is open on #1403, which carries the four options: build it and pay the sweep, take the issue's own narrower fallback and pay 56, narrow past both to the one shape that actually rotted (the last row of the table — a name nothing queries positively in a file that never queries that role either, which is the `e2e/schedule-embed.spec.ts:24` case that stood alone), or decline and close since the three lines that prompted it are fixed. Nothing is blocked on it: the pairing that saved the visual capture is written into `.claude/rules/e2e.md` as a convention either way.
+
+Re-measure before re-proposing this; the number is what the argument turns on and it is cheap to get, while re-deriving it from scratch is a day. The sweep's definitions and script are in #1403's own comment thread. If a variant is ever built, it needs a statement-scope hook rather than a per-line `pattern` — five of the 98 have their locator on a preceding line — and it should be built on the `statementStart` helper already in the script rather than re-deriving a walker that will drift from it.
 
 ### loading-skeleton
 

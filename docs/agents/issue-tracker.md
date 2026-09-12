@@ -176,7 +176,21 @@ reader already is.
 ​```
 ```
 
-**Check the body before you file it.** Draft it to a file and run:
+**The four `##` headings are matched exactly, and only at the start of a line** — same words, same order, no renaming and no extra hash level — and `Kind:` and `Effort:` come from the closed vocabularies in `scripts/check-follow-ups.mjs` (`question | improvement | risk | cleanup | half-done`, and `S | M | L`). A heading that is one word off is not a style nit: it fails `Repository safeguards` on **every open pull request in the repository at once**, on branches whose diffs could not have caused it, until somebody edits the issue by hand.
+
+**So do not type the headings. File through the helper:**
+
+```sh
+node scripts/file-follow-up.mjs --title "<what should happen>" --kind improvement --effort M \
+  --touches "src/lib/example.ts,docs/product/example.md" \
+  --noticed noticed.md --why why.md --proposed proposed.md --prompt prompt.md
+```
+
+Each prose flag takes a file (or `-` for stdin). It composes the body in exactly the shape above, runs the same `findIssueProblems` the guard runs, and **refuses to call `gh` at all** when anything comes back — the judgement moves to write time, which is where the asymmetry is (#1356). `--dry-run` prints the body it would file. `--label` is repeatable and `needs-triage` is always included.
+
+`--waiting-on "<the event, and where a reader would check it>"` and `--parked "<what would un-park it>"` write the two optional lines, and each is refused without its own `--label` (`waiting-on-external`, `parked`). The line is what a human reads and the label is what every machine reads — `pnpm gates`, the persona walk's inbox brake, the guard's own tally — so an issue carrying one without the other says two different things at once.
+
+**If you write the body by hand anyway, check it before you file it.** Draft it to a file and run:
 
 ```sh
 node scripts/check-follow-ups.mjs --body <path> --title "<the title you intend>"
@@ -198,6 +212,8 @@ deletes or renames a path an open follow-up names, `check:follow-ups` fails on y
 issue's `Touches:` line as part of your change — an entry pointing at a file that no longer exists
 is exactly the stale entry this check exists to catch, and it was going to mislead its cold reader
 whether or not anything failed.
+
+A glob is accepted on that line when it expands to at least one file in the tree the check runs in, so a change that edits the same namespace in every locale says `src/i18n/locales/*/staff/trips.json` once rather than listing each locale and going stale when a third arrives. Issue #1339 wrote it that way, correctly, and the literal lookup failed it — reddening PR #1335, a branch with nothing to do with it.
 
 Resolving against `main` instead of the checkout would look like the tighter rule and is not
 available: CI checks out only the pull request's own ref, so there is no `main` there to resolve

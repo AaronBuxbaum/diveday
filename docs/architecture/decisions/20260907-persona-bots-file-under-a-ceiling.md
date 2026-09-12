@@ -73,6 +73,26 @@ the neighbouring rule over the source, where the answer is readable.
    yields to the inbox; the inbox never yields to the bot.
 6. A run that did not complete files nothing.
 
+**What (5) counts, narrowed.** #1497 asked whether an issue a human has already triaged into a
+deliberately-deferred state should still occupy one of the forty. It should not. An issue carrying
+`parked` ("read, real, not now") or `waiting-on-external` ("nobody here owes the next move") has
+already had the attention the ceiling exists to protect; counting it means ten parked findings
+silence the walk permanently while it keeps running every Monday and keeps reporting, accurately and
+uselessly, that the inbox is full. So `inboxCount` in `findings.mjs` subtracts them, and the run
+summary prints both numbers — counted and open — on every run, braked or not.
+
+Three things this deliberately does not do. **The ceiling did not move**: forty is a number to change
+by deciding it is wrong, not by routing around it, and the narrowing is the count's definition rather
+than a raise. **`ready-for-agent` still counts**: it is work owed that somebody can clear this week,
+unlike the other two. And **the exclusion applies to the count, never to the list** — a parked issue
+is still deduplicated against, so a class whose issue is parked gets the ordinary comment. Dropping
+it from the list would re-file the finding a human had just parked, which is worse than either answer
+the question was choosing between.
+
+The exclusion is only as good as the labels, and that is worth saying plainly: an issue somebody
+means to defer but leaves unlabelled still counts. That is correct — the ceiling reads triage state,
+and an unlabelled issue has none.
+
 **What this bot publishes, and the invariant that lets it.** A filed issue names every URL the
 probe fired on and links a screenshot of it, on a public tracker, from a public artifact. That is
 only safe because of a property that is currently invisible in the code: **the walk never opens a
@@ -115,6 +135,57 @@ that cannot list the tracker, a body the guard refuses — each prints `DID NOT 
 with the reason and exits 0. Nothing here is a gate, and a scheduled job that goes red for an
 unreachable API trains everyone to ignore the one that goes red for a real finding.
 
+### The judged pass (#1498)
+
+Everything above measures. Almost everything the personas' own lists ask for is a judgement instead
+— whether a refusal states a *true* reason, whether the jargon is explained — and the "A model
+reading the screenshots" alternative below was refused for exactly that reason. #1498 reverses it,
+narrowly: a second pass over the pictures the walk **already took**, off unless a human dispatches
+the workflow with it on.
+
+For each of two personas — Nadia (1) and Kai (11), whose lists are almost entirely about words on a
+screen — the pass hands a model that persona's own section of `docs/product/personas.md` and the
+screenshots of the stops they made, and asks for concrete violations of that list, each naming the
+surface and quoting what it read. `scripts/persona-bots/judge.mjs` is the whole of it.
+
+A judged stop is photographed **under the role the persona holds** (`screenshot.mjs --as`), unlike
+the path-keyed captures a filed issue links, which stay the owner's view. Kai's entire lens is the
+fewest permissions; judging his refusal against a picture of the owner's view of the same URL would
+file findings about a page he cannot reach. The prompt says which role each stop was opened under
+for the same reason.
+
+Four things make an opinion safe to put in this inbox, and each is code rather than intention:
+
+1. **The fingerprint survives a rewording.** A judgement that varies from run to run cannot be
+   deduplicated, and deduplication is what stops a finding being filed every Monday. The probe id is
+   `judged:<persona>:<path>:<hash of the normalised claim>` — casing, punctuation, a leading "The"
+   and anything past the first twelve words are stripped before hashing. `fingerprint()` wraps it
+   like any other probe id, so the open-issue comment path and the closed-issue suppression both
+   work unchanged: a judged claim a human has closed is never re-filed.
+2. **A judged finding ranks below every measurement.** `judged` is the last band in `IMPACT_RANK`,
+   and `classify` sorts by impact first, so the three-issue budget reaches an opinion only once the
+   facts have left some. No mechanical probe may declare the band; a test refuses one that does.
+3. **Nothing is exempted.** The brake, the comment ceiling, the suppression and the
+   `findIssueProblems` self-check apply to a judged body exactly as to a mechanical one — and the
+   body says outright that a model wrote it, quotes what it read, and tells the reader that closing
+   the issue with "no, and here is why" is a complete answer.
+4. **Anything unverifiable is dropped.** A finding naming a surface the persona was not shown is the
+   model answering from the doc rather than from a picture; one with no quotation is an opinion with
+   nothing behind it. Both are discarded. The pass may report less than it saw, never more.
+
+**Opt-in is the mitigation, not a convenience.** `--judge` is reachable only from
+`workflow_dispatch`; the Monday `schedule` does not pass it, and the cron gets it only after a month
+of dispatched output somebody has read — the issue's own condition. `ANTHROPIC_API_KEY` is a
+repository secret a human adds, the same shape as `GITHUB_TOKEN` in that workflow, not a
+`config/env-registry.mjs` row (that registry is the application's own environment). With the flag
+off the run is byte-identical to the one before this landed, down to the number of screenshots
+taken.
+
+**It sends pictures of the demo shop to a third party**, including a staff schedule board rendering
+seeded diver names. The data is synthetic and the shop is never a real one, and the capability
+invariant above carries over unchanged — `DEAD_CAPABILITY_TOKENS` keeps live capability URLs out of
+the walk, so out of the judged pass too.
+
 ## Alternatives considered
 
 - **File freely and tune later.** Rejected in the Context: by the time the volume is visible the
@@ -135,7 +206,8 @@ unreachable API trains everyone to ignore the one that goes red for a real findi
   faithful reading of "persona bots", and out of scope here: it needs a budget, a provider decision
   and an ADR of its own, and it produces exactly the unfalsifiable findings the ceiling exists to
   keep out of the inbox. The deterministic walk is the half that can ship without an owner
-  decision, and it is the half whose findings are reproducible by opening a URL.
+  decision, and it is the half whose findings are reproducible by opening a URL. **Reversed for an
+  opt-in pass by #1498 — see "The judged pass" above.**
 
 ## Consequences
 
@@ -151,3 +223,9 @@ issue does not — mitigated by every filed prompt telling the session to re-cap
 Revisit the numbers — three, five, forty — once there is a month of real runs to look at; they are
 constants in one file with tests around them, and moving them is a one-line change plus the reason.
 Revisit the suppression rule if a real regression is found to have been silently swallowed by it.
+
+The judged pass costs one API request per persona per dispatched run, six extra screenshots, and a
+standing obligation: read a month of its output before letting the Monday cron near it, and turn it
+off rather than tune it if what it files is not worth the reading. Forty stopped meaning "forty open"
+and started meaning "forty awaiting triage" (#1497), so the brake now depends on labels a human
+applies — an issue deferred without its label still counts, which is the correct failure.

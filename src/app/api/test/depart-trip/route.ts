@@ -80,6 +80,10 @@ export async function POST(request: Request) {
   // exactly the reasoning that stops being true later.
   await db
     .update(trips)
+    // diveday:allow-flat-revision: the same fixture reasoning as `seed-evening` —
+    // one named departure re-timed inside a per-worker test database, which no
+    // calendar client has ever fetched. `moveTrip` is the door a shop moves a
+    // real departure through, and it bumps.
     .set({ startsAt, endsAt })
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shop.id)));
   return NextResponse.json({ ok: true, startsAt: startsAt.toISOString() });

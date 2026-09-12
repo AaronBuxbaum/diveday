@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { access, glob, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -66,7 +66,9 @@ export const PARKED_LABEL = "parked";
 
 const VALID_KINDS = new Set(["question", "improvement", "risk", "cleanup", "half-done"]);
 const VALID_EFFORTS = new Set(["S", "M", "L"]);
-const REQUIRED_SECTIONS = [
+/** Exported so `scripts/file-follow-up.mjs` composes a body in this order rather
+ *  than keeping a second copy of the headings that would drift from these. */
+export const REQUIRED_SECTIONS = [
   "What I noticed",
   "Why it isn't already done",
   "Proposed change",
@@ -118,6 +120,48 @@ function looksLikeAPath(token) {
  *  existence check rather than refusing the entry for including one. */
 function withoutLineSuffix(token) {
   return token.replace(/:\d+(?::\d+)?$/, "");
+}
+
+/** A token carrying any of these is a pattern to expand, not a filename to look up. */
+const GLOB_CHARS = /[*?[\]{}]/;
+
+/**
+ * Does this `**Touches:**` token name something in the tree?
+ *
+ * A plain token is the literal `access()` this has always done. A token with a
+ * glob character in it is expanded instead, and one match is enough. Issue
+ * #1339 is why: a change that edits the same namespace in every locale honestly
+ * touches every `staff/trips.json` under `src/i18n/locales`, the entry said so
+ * with a star for the locale segment, and the literal lookup failed — which
+ * reddened `Repository safeguards` on PR #1335, a branch that had nothing to do
+ * with it. Spelling out every locale instead is the same fact twice, and goes
+ * stale the day a third one lands.
+ *
+ * The cost, accepted with eyes open: `src/**` satisfies this line forever. The
+ * `Touches:` rule is about giving a cold reader an anchored place to start, and
+ * a filer who wants to write something useless could always have named a
+ * directory.
+ */
+export async function touchedPathExists(root, token) {
+  if (!GLOB_CHARS.test(token)) {
+    try {
+      await access(path.join(root, token));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  for await (const match of glob(token, { cwd: root })) {
+    if (match) return true;
+  }
+  return false;
+}
+
+/** The sentence for a `Touches:` token that resolved to nothing, saying which
+ *  kind of nothing — a pattern that matched no files reads as a typo otherwise. */
+export function missingTouchedProblem(token) {
+  const detail = GLOB_CHARS.test(token) ? ` The pattern “${token}” matched no files.` : "";
+  return `**Touches:** path “${token}” does not exist — name where the work lives today. A file only your own unmerged branch adds is not that: this resolves against the working tree, so it reddens every other session's \`pnpm check\` until you merge. List paths that exist on main and name the arriving ones in prose instead.${detail}`;
 }
 
 /** One `**Label:** …` line, including its wrapped continuation lines — the
@@ -339,11 +383,8 @@ async function checkDraft(bodyPath, title) {
   });
   const missing = [];
   for (const item of touched) {
-    try {
-      await access(path.join(process.cwd(), item));
-    } catch {
-      missing.push(item);
-    }
+    if (await touchedPathExists(process.cwd(), item)) continue;
+    missing.push(GLOB_CHARS.test(item) ? `${item} (matched no files)` : item);
   }
   if (problems.length > 0) {
     console.error(
@@ -443,13 +484,8 @@ async function main() {
     });
     problems.push(...result.problems);
     for (const touched of result.touched) {
-      try {
-        await access(path.join(root, touched));
-      } catch {
-        problems.push(
-          `#${issue.number} “${issue.title}”: **Touches:** path “${touched}” does not exist — name where the work lives today. A file only your own unmerged branch adds is not that: this resolves against the working tree, so it reddens every other session's \`pnpm check\` until you merge. List paths that exist on main and name the arriving ones in prose instead.`,
-        );
-      }
+      if (await touchedPathExists(root, touched)) continue;
+      problems.push(`#${issue.number} “${issue.title}”: ${missingTouchedProblem(touched)}`);
     }
   }
 
@@ -466,7 +502,7 @@ async function main() {
     // malformed issue fails it on every open pull request at once, and nothing
     // in your diff caused it or can fix it.
     console.error(
-      "These are tracker problems, not branch problems: edit the issues named above. Nothing in this branch caused them, and every other open pull request is failing the same way until they are fixed. Draft a body to a file and run `node scripts/check-follow-ups.mjs --body <path>` before filing, to avoid adding to this.",
+      "These are tracker problems, not branch problems: edit the issues named above. Nothing in this branch caused them, and every other open pull request is failing the same way until they are fixed. File through `node scripts/file-follow-up.mjs` — it composes the body and refuses to call `gh` when it would not pass — or draft a body to a file and run `node scripts/check-follow-ups.mjs --body <path>` before filing, to avoid adding to this.",
     );
     process.exit(1);
   }

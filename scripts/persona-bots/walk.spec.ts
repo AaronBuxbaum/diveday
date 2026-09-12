@@ -5,8 +5,9 @@ import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../../src/db/dev-credentials";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "../subprocess.mjs";
 import { classify } from "./findings.mjs";
-import { DEMO_SHOP_SLUG, walkPlan } from "./personas.mjs";
+import { DEMO_SHOP_SLUG, JUDGE_PERSONAS, walkPlan } from "./personas.mjs";
 import {
+  JUDGED_SCREENSHOT_CAP,
   PERSONA_BASE_URL,
   PERSONA_FINDINGS_FILE,
   PERSONA_OUT_DIR,
@@ -39,6 +40,19 @@ type Finding = {
 const findings: Finding[] = [];
 /** Filled by the last test; keyed by the URL path each picture is of. */
 const screenshots: Record<string, string> = {};
+/**
+ * The stops the opt-in judged pass (#1498) is to read, written into the report
+ * so the second pass never re-derives the walk plan. Empty unless
+ * `PERSONA_BOTS_JUDGE=1`.
+ */
+type JudgeStop = {
+  path: string;
+  personas: string[];
+  as: string | null;
+  locale: string;
+  screenshot?: string;
+};
+const judgeStops: JudgeStop[] = [];
 /**
  * How many surfaces were actually opened, counted rather than assumed.
  *
@@ -246,18 +260,48 @@ async function dropContext(as: string | null, locale: string) {
  * without a picture of them.
  */
 test("photograph the surfaces the findings name", async () => {
-  // Its own budget rather than the per-visit one: this is up to SCREENSHOT_CAP
-  // separate `screenshot.mjs` processes, each with a browser and a sign-in of
-  // its own and each already bounded by `runBounded`.
-  test.setTimeout(SCREENSHOT_CAP * SUBPROCESS_TIMEOUTS.nodeScript + 60_000);
-  const wanted: string[] = [];
-  for (const entry of classify(findings)) {
-    for (const surface of entry.surfaces) {
-      if (!wanted.includes(surface.path) && wanted.length < SCREENSHOT_CAP)
-        wanted.push(surface.path);
+  // **Opt-in, and byte-identical to the old behaviour when it is off.** The
+  // judged pass reads the stops its two personas made, whether or not a lens
+  // fired there, so the pictures have to exist before it runs — but a picture
+  // is a whole `screenshot.mjs` process, and the Monday cron does not pass the
+  // flag.
+  const judging = process.env.PERSONA_BOTS_JUDGE === "1";
+  const cap = judging ? SCREENSHOT_CAP + JUDGED_SCREENSHOT_CAP : SCREENSHOT_CAP;
+  // Its own budget rather than the per-visit one: this is up to `cap` separate
+  // `screenshot.mjs` processes, each with a browser and a sign-in of its own
+  // and each already bounded by `runBounded`.
+  test.setTimeout(cap * SUBPROCESS_TIMEOUTS.nodeScript + 60_000);
+  // A capture is a (path, role) pair rather than a path. `screenshot.mjs`
+  // signs in as the owner unless told otherwise, and Kai's whole lens is the
+  // *fewest* permissions: judging his refusal against a picture of the owner's
+  // view of the same URL would file findings about a page he cannot see.
+  const wanted: { path: string; as: string | null }[] = [];
+  const already = (urlPath: string, as: string | null) =>
+    wanted.some((capture) => capture.path === urlPath && capture.as === as);
+  if (judging) {
+    // Seeded *before* the finding-derived list, deliberately: a judged stop with
+    // no picture is a persona the pass cannot read at all, while a mechanical
+    // finding with no picture still files an issue naming its surfaces.
+    for (const visit of walkPlan()) {
+      if (!visit.personas.some((id: string) => JUDGE_PERSONAS.includes(id))) continue;
+      if (judgeStops.some((stop) => stop.path === visit.path && stop.as === visit.as)) continue;
+      judgeStops.push({
+        path: visit.path,
+        personas: visit.personas.filter((id: string) => JUDGE_PERSONAS.includes(id)),
+        as: visit.as,
+        locale: visit.locale,
+      });
+      if (!already(visit.path, visit.as) && wanted.length < cap)
+        wanted.push({ path: visit.path, as: visit.as });
     }
   }
-  for (const target of wanted) {
+  for (const entry of classify(findings)) {
+    for (const surface of entry.surfaces) {
+      if (!already(surface.path, null) && wanted.length < cap)
+        wanted.push({ path: surface.path, as: null });
+    }
+  }
+  for (const capture of wanted) {
     const result = runBounded(
       process.execPath,
       [
@@ -269,7 +313,8 @@ test("photograph the surfaces the findings name", async () => {
         "--light",
         "--width",
         "1280",
-        target,
+        ...(capture.as ? ["--as", capture.as] : []),
+        capture.path,
       ],
       {
         timeoutMs: SUBPROCESS_TIMEOUTS.nodeScript,
@@ -278,11 +323,21 @@ test("photograph the surfaces the findings name", async () => {
       },
     );
     if (result.status !== 0) {
-      console.warn(`persona-bots: no screenshot for ${target} — ${short(result.stderr ?? "")}`);
+      console.warn(
+        `persona-bots: no screenshot for ${capture.path} — ${short(result.stderr ?? "")}`,
+      );
       continue;
     }
     const written = String(result.stdout ?? "").match(/(?:wrote|replaced) (\S+\.png)/);
-    if (written) screenshots[target] = path.basename(written[1]);
+    if (!written) continue;
+    const file = path.basename(written[1]);
+    // The path-keyed map is what a filed issue's surface line reads, and it
+    // stays the owner's picture, exactly as before. A role-specific capture
+    // belongs to the judged stop that asked for it and nowhere else.
+    if (capture.as === null) screenshots[capture.path] = file;
+    for (const stop of judgeStops) {
+      if (stop.path === capture.path && stop.as === capture.as) stop.screenshot = file;
+    }
   }
   writeFindings();
 });
@@ -291,7 +346,7 @@ test("photograph the surfaces the findings name", async () => {
 function writeFindings() {
   writeFileSync(
     PERSONA_FINDINGS_FILE,
-    `${JSON.stringify({ shop: DEMO_SHOP_SLUG, walked, planned: walkPlan().length, findings, screenshots }, null, 2)}\n`,
+    `${JSON.stringify({ shop: DEMO_SHOP_SLUG, walked, planned: walkPlan().length, findings, screenshots, judgeStops }, null, 2)}\n`,
   );
 }
 

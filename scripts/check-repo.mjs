@@ -71,6 +71,7 @@ const checks = [
   ["shop-word", "check-shop-word.mjs"],
   ["icu-plurals", "check-icu-plurals.mjs"],
   ["live-trips", "check-live-trips.mjs"],
+  ["trip-revision", "check-trip-revision.mjs"],
   ["departure-buffer", "check-departure-buffer.mjs"],
   ["redirect-in-try", "check-redirect-in-try.mjs"],
   ["text", "check-source-text.mjs"],
