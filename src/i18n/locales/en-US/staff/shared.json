@@ -394,7 +394,7 @@
         "notCheckedInLabel": "Check in",
         "checkedInWhenSavedLabel": "Checked in when saved",
         "refusedNotReady": "Not checked in: readiness stopped clearing them after you tapped. Open the live counter before they board.",
-        "refusedNotBookable": "Not checked in: this booking was cancelled.",
+        "refusedNotBookable": "Not checked in: this seat is no longer on the boat’s list. It was either cancelled or marked not here at the desk. Open the live counter.",
         "refusedBoarded": "Still checked in: the crew recorded them aboard.",
         "refusedGeneric": "DiveDay did not apply this tap. Open the live counter."
       }

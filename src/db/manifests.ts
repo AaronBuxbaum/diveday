@@ -491,6 +491,7 @@ export async function onTheWaterByRollCall(
     if (seen.has(row.checkpoint)) continue;
     seen.add(row.checkpoint);
     if (row.status === "boarded") return true;
+    if (row.status === "not_boarded" && row.checkpoint !== "departure") return true;
   }
   return false;
 }

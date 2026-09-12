@@ -2456,6 +2456,39 @@ describe("OfflineManifestView — the counter", () => {
     expect(within(counter).queryByRole("button", { name: /Priya Shah/ })).not.toBeInTheDocument();
     expect(within(counter).getByText("Priya Shah")).toBeInTheDocument();
   });
+
+  /**
+   * **A seat the desk released gets no control either, and for the other
+   * reason** (#1705). `bookings.status` is `no_show`, so `checkInBooking`
+   * answers `not_bookable` the moment the batch reaches signal — and the
+   * sentence the row then wore said the booking was cancelled, which is not
+   * what happened to it. Nobody cancelled anything: the diver did not turn up
+   * and somebody at the desk said so.
+   *
+   * Both halves in one spec on purpose. The desk's control goes and the boat's
+   * stays: a change that threads this flag through the shared diver record and
+   * reads it in both sections takes the crew's tap away too, and a crew member
+   * looking at a body is the strongest evidence this product has.
+   */
+  it("gives a released seat no check-in, and still lets the crew board them", async () => {
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1", { notHere: true }));
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const counter = screen.getByRole("region", { name: "At the counter" });
+    expect(within(counter).queryByRole("button", { name: /Priya Shah/ })).not.toBeInTheDocument();
+    expect(within(counter).getByText("Priya Shah")).toBeInTheDocument();
+    // The desk's record, wearing the qualifier every other saved fact on this
+    // page wears: `undoBookingNoShow` may have put her back at 07:20.
+    expect(within(counter).getByText("Not here when saved")).toBeInTheDocument();
+    // Readiness was clearing her, so the blocked badge is not the reason the
+    // control is gone and must not be borrowed as one.
+    expect(within(counter).queryByText("Blocked when saved")).toBeNull();
+
+    const row = document.getElementById("offline-roll-call-diver-priya");
+    if (!row) throw new Error("Priya's row missing");
+    expect(within(row).getByRole("button", { name: "Mark boarded" })).toBeEnabled();
+  });
 });
 
 /**
@@ -2508,7 +2541,16 @@ describe("OfflineManifestView — the counter's harder readings", () => {
     ).toBeInTheDocument();
   });
 
-  it("tells a cancelled seat apart from a readiness hold", async () => {
+  /**
+   * **One code, two events, and the sentence says both** (#1705).
+   * `checkInBooking` answers `not_bookable` for a cancelled seat *and* for one
+   * the desk released, and this is the reading the released case actually
+   * reaches: the copy was saved at 07:05 with the seat still on the list, the
+   * desk wrote the diver off at 07:20, and the tap made at 07:40 syncs into a
+   * refusal. The words used to say the booking was cancelled, about a booking
+   * nobody had cancelled.
+   */
+  it("names both ways a refused seat can have left the list", async () => {
     vi.mocked(loadOfflineManifest).mockResolvedValue(
       richEnvelope("trip-1", {}, { arrivalEvents: [rejected("not_bookable")] }),
     );
@@ -2516,7 +2558,13 @@ describe("OfflineManifestView — the counter's harder readings", () => {
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
 
     const counter = screen.getByRole("region", { name: "At the counter" });
-    expect(within(counter).getByText(/this booking was cancelled/)).toBeInTheDocument();
+    expect(within(counter).getByText(/no longer on the boat’s list/)).toBeInTheDocument();
+    expect(
+      within(counter).getByText(/cancelled or marked not here at the desk/),
+    ).toBeInTheDocument();
+    // Still told apart from a readiness hold, which is the distinction this
+    // row's sentence has always carried.
+    expect(within(counter).queryByText(/readiness stopped clearing them/)).toBeNull();
   });
 
   /**
@@ -2596,6 +2644,31 @@ describe("OfflineManifestView — the counter's harder readings", () => {
     // though she is first in roster order.
     expect(names[0]).toContain("Marcus Reed");
     expect(names[1]).toContain("Priya Shah");
+  });
+
+  /**
+   * `counterIsDone`'s other half (#1705): the counter is as finished with a
+   * released seat as with a receipt, so that sinks too. Keyed off `settled`
+   * alone, the one row on the screen with no tap left on it sat at the top of
+   * the working list — a name in a queue of names needing nothing, which is
+   * exactly the noise the ordering exists to take away.
+   *
+   * Read off the list items rather than the buttons: a released row has no
+   * control, which is the point of the change this pins.
+   */
+  it("sinks a released seat below one still to come", async () => {
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      richEnvelope("trip-1", { notHere: true, withCarriedNotBoarded: true }),
+    );
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const counter = screen.getByRole("region", { name: "At the counter" });
+    const rows = within(counter)
+      .getAllByRole("listitem")
+      .map((item) => item.textContent ?? "");
+    expect(rows[0]).toContain("Marcus Reed");
+    expect(rows[1]).toContain("Priya Shah");
   });
 
   /**

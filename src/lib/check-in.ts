@@ -71,6 +71,13 @@ export function isNoShowAtCounter(seat: CounterSeat): boolean {
  * people a staffer can still act on, and a released seat is not one of them:
  * leaving it up there is a name in a queue of names that needs no tap, which
  * is exactly the noise the settled group exists to take away.
+ *
+ * The dock copy's counter reads the same predicate (`OfflineManifestView`,
+ * issue #1705) and goes one step further with the released half: that row gets
+ * no check-in control at all, because a tap on it is one `checkInBooking`
+ * refuses as `not_bookable` the moment the batch reaches signal. Boarding is
+ * untouched on both surfaces — the crew can see a body, and the rail takes the
+ * seat back.
  */
 export function counterIsDone(seat: CounterSeat): boolean {
   return isSettledAtCounter(seat) || isNoShowAtCounter(seat);
