@@ -187,8 +187,15 @@ metric filter matching a renamed code counts zero forever without erroring. The 
 reaches the same `catch` is not an incident and must not share the alarm: a shop slug and a course
 slug go into the lookup unfiltered and length-unbounded on purpose, so `/s/%00` is a statement
 Postgres refuses (SQLSTATE 22021), once per request, free for whoever is sending it. That branch is
-`public_route.existence_query_refused` at `warn`, split by `src/lib/db-failure.ts` on whether a
-server answered at all. Neither line carries the pathname or the driver's message: drizzle's wrapper
+`public_route.existence_query_refused` at `warn`, split by `src/lib/db-failure.ts` on SQLSTATE
+class 22 — a data exception, which on this path is a value the caller sent. Everything else that
+lands in that `catch` alarms, the database being gone included but also our own credentials being
+rejected, a revoked grant, and a table the schema does not have; each leaves the namespace exactly
+as silent. That split read the other way round at first — only the classes a server raises about
+*itself* alarmed, on the reasoning that a SQLSTATE means a server answered — and issue #1750
+inverted it, which is safe only because no other class is reachable through the four constant
+statements `publicRouteLookup` issues. The argument is written out in `src/lib/db-failure.ts` and is
+a precondition for adding a reader here. Neither line carries the pathname or the driver's message: drizzle's wrapper
 message is the SQL followed by the bound parameters verbatim, and both were being shipped to
 CloudWatch unauthenticated at the request of a stranger. The volume was the other half of that, and
 is now bounded too: the refused branch emits at most one line per instance per minute and carries a

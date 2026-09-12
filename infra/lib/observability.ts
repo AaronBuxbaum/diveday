@@ -190,9 +190,16 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       // 404s with nothing on a screen to say so. The ADR's Consequences
       // pointed at this file for it and nothing had been added.
       //
-      // Only the unreachable half arrives at `error`. A statement the server
-      // refused is `public_route.existence_query_refused` at `warn`, because a
-      // slug reaches that lookup unfiltered and anyone can produce one.
+      // Counts more than the database being gone, and deliberately: our own
+      // credentials rejected, a grant revoked, a table the schema does not
+      // have, a read-only endpoint after a failover all leave the namespace
+      // exactly as silent (issue #1750). Only one thing arrives at `warn`
+      // instead, as `public_route.existence_query_refused`: a statement the
+      // server refused over the bytes in it, SQLSTATE class 22, because a slug
+      // reaches that lookup unfiltered and anyone can produce one.
+      // `src/lib/db-failure.ts` holds the split and the argument that no other
+      // class is reachable by a stranger -- which is what keeps this alarm out
+      // of an anonymous caller's hands at a threshold of one in five minutes.
       "public_route.existence_unavailable",
     ],
     threshold: 1,

@@ -621,12 +621,15 @@ describe("the public namespace's edge refusal", () => {
     }
   });
 
-  it("keeps a code a stranger cannot produce out of the flood's bucket", async () => {
-    // A single global bucket would let whoever is sending `/s/%00` hold it open
-    // and fold every other refused-class failure into `swallowed`, unreported —
-    // letting a stranger choose what an operator can see. `28P01` is our own
-    // credentials being rejected: nobody's bytes produce it, and it must get
-    // its own first line even mid-flood (security review of #1736, F1).
+  it("alarms on our own credentials being rejected, mid-flood and undamped", async () => {
+    // `28P01` is our own `DATABASE_URL` being refused: no bound parameter
+    // produces it, and it takes this whole check back to fail-open soft 404s
+    // for every diver. It used to classify into the damped `warn` branch, where
+    // no metric counted it and whoever was flooding `/s/%00` could at best
+    // delay it by a minute (issue #1750). It is now the `error` line
+    // `DatabaseUnavailable` alarms on at one datapoint in five minutes, which
+    // is never damped — so it arrives on its first occurrence even while a
+    // flood is in progress.
     refuseWithSqlState();
     const fresh = await freshProxy();
     const lines = await logged(async () => {
@@ -635,13 +638,45 @@ describe("the public namespace's edge refusal", () => {
         code: "28P01",
       });
       await runOn(fresh, request("/s/probe-slug"));
+      await runOn(fresh, request("/s/probe-slug"));
     });
-    expect(lines).toHaveLength(2);
-    expect(lines[0]).toMatchObject({ code: "22021", swallowed: 1 });
-    expect(lines[1]).toMatchObject({ code: "28P01", swallowed: 1, level: "warn" });
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toMatchObject({
+      level: "warn",
+      event: "public_route.existence_query_refused",
+      code: "22021",
+      swallowed: 1,
+    });
+    for (const line of lines.slice(1)) {
+      expect(line).toMatchObject({
+        level: "error",
+        event: "public_route.existence_unavailable",
+        shape: "shop",
+        code: "28P01",
+      });
+    }
   });
 
-  it("never damps an unreachable database", async () => {
+  it("keeps one refused code's flood out of another's bucket", async () => {
+    // A single global bucket would let whoever is sending `/s/%00` hold it open
+    // and fold every other refused statement into `swallowed`, unreported —
+    // letting a stranger choose what an operator can see. Both codes here are
+    // class 22 now that the branch is narrowed to the caller's own bytes, and
+    // `22P05` must still get its own first line mid-flood.
+    refuseWithSqlState();
+    const fresh = await freshProxy();
+    const lines = await logged(async () => {
+      for (let i = 0; i < 50; i += 1) await runOn(fresh, request("/s/probe-slug"));
+      const driver = Object.assign(new Error("has no equivalent in encoding"), { code: "22P05" });
+      existence.throwsWith = new Error("Failed query", { cause: driver });
+      await runOn(fresh, request("/s/probe-slug"));
+    });
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatchObject({ code: "22021", swallowed: 1, level: "warn" });
+    expect(lines[1]).toMatchObject({ code: "22P05", swallowed: 1, level: "warn" });
+  });
+
+  it("never damps a database failure that is ours", async () => {
     // The other branch is the one worth waking somebody for:
     // `DatabaseUnavailable` alarms at one datapoint in five minutes, so a
     // damper on it would blunt the alarm the split exists to protect.

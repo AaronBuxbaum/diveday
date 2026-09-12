@@ -353,20 +353,22 @@ const refusedQueries = new Map<string, { lastReportedAt: number; swallowed: numb
  * here worth waking somebody for — which is the whole reason
  * `classifyDatabaseFailure` splits the two. That does leave the *error* branch
  * unbounded by request rate: pool exhaustion under a flood throws without a
- * `code`, classifies as unreachable, and writes a line per request. That is a
+ * `code`, classifies as alarming, and writes a line per request. That is a
  * genuine incident and should page somebody, so it is not damped here; the
  * fleet-wide answer to the flood itself is a platform rate rule.
  *
  * **Bucketed per `shape:code`, not globally.** A single bucket would let
- * whoever is sending `/s/%00` hold it open and fold every *other* refused-class
- * failure into `swallowed`, unreported — a stranger choosing what an operator
- * can see. That matters because the refused class is wider than the caller's
- * own bytes: `28P01` (our credentials rejected), `42501` (a revoked grant) and
- * `42P01` (a table missing mid-deploy) all classify here today, and each takes
- * the whole existence check back to fail-open soft 404s. Keyed per kind, a code
- * a caller cannot produce always gets its own first line. The key is built from
- * two closed vocabularies and the map is capped regardless, so the bucket count
- * is bounded whatever arrives.
+ * whoever is sending `/s/%00` hold it open and fold every *other* failure that
+ * reaches this branch into `swallowed`, unreported — a stranger choosing what
+ * an operator can see. Issue #1750 narrowed this branch to SQLSTATE class 22
+ * alone, so the codes that used to make that urgent — `28P01` (our credentials
+ * rejected), `42501` (a revoked grant), `42P01` (a table missing mid-deploy) —
+ * now take the undamped `error` branch below and are never held behind a flood
+ * at all. The bucketing stays because the narrower version of the same thing is
+ * still true: `22021` and `22P05` are different failures, and a flood of one
+ * must not swallow the first sighting of the other. The key is built from two
+ * closed vocabularies and the map is capped regardless, so the bucket count is
+ * bounded whatever arrives.
  *
  * **The bound is per instance, not fleet-wide.** Serverless instances are many
  * and short-lived, so a flood spread across them still writes a line each.
@@ -482,13 +484,17 @@ async function refusedPublicRoute(
     // without a branch here saying so.
     return { liveShopSlug: shopExists ? shape.shopSlug : null };
   } catch (error) {
-    // Two unrelated failures land here and only one of them is an incident.
-    // The slugs above reach Postgres unfiltered and length-unbounded on
-    // purpose, so `/s/%00` is a statement the server refuses — once per
-    // request, for as long as it is sent, and free for whoever is sending it.
-    // The database being gone is the other one, and it stops this check for
-    // every diver at once: that is the line worth an alarm, and it has one
-    // (`DatabaseUnavailable` in `infra/lib/observability.ts`).
+    // Two kinds of failure land here and only one of them is the caller's
+    // doing. The slugs above reach Postgres unfiltered and length-unbounded on
+    // purpose, so `/s/%00` is a statement the server refuses over the bytes
+    // sent to it — once per request, for as long as it is sent, and free for
+    // whoever is sending it. Everything else is ours: the database gone, our
+    // credentials rejected, a grant revoked, a table the schema does not have.
+    // Each of those stops this check for every diver at once, which is the line
+    // worth an alarm, and it has one (`DatabaseUnavailable` in
+    // `infra/lib/observability.ts`). `classifyDatabaseFailure` splits them on
+    // SQLSTATE class 22 and states there what makes that safe — that a stranger
+    // can reach no other class through these four constant statements.
     //
     // Neither branch logs the caught message or the pathname. Drizzle's
     // wrapper message is the SQL followed by the bound parameters verbatim,
@@ -504,7 +510,7 @@ async function refusedPublicRoute(
     // codes the app emits straight off the source, and a metric filter
     // matching a code nothing writes counts zero forever without erroring.
     const failure = classifyDatabaseFailure(error);
-    if (failure.unreachable)
+    if (failure.alarming)
       log("public_route.existence_unavailable", "error", { shape: shape.kind, code: failure.code });
     else reportRefusedQuery(shape.kind, failure.code, nowMs());
     return null;
