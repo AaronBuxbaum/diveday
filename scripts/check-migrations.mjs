@@ -80,6 +80,29 @@ const IDENT = '(?:"[^"]*"|[A-Z_][A-Z0-9_$]*)';
  * code it breaks*, because that is the sentence that tells an author whether
  * they need to split the change or acknowledge it.
  */
+/**
+ * The `ADD COLUMN` clauses of one `ALTER TABLE`, each cut at the next action.
+ *
+ * Judging the clauses separately is the whole point: one statement can add a
+ * defaulted column beside a bare one, and a whole-statement search for
+ * `DEFAULT` would let the hazardous clause hide behind the safe one's keyword.
+ * Cutting at the next action does the same for a sibling `ALTER COLUMN ... SET
+ * DEFAULT`, whose keyword is not in the added column's clause at all.
+ *
+ * The `COLUMN` keyword is required rather than optional, unlike the `ALTER`
+ * and `RENAME` rules above. Postgres accepts `ADD <name> <type>` without it,
+ * but reaching that far means also reading `ADD CONSTRAINT ... CHECK (x IS NOT
+ * NULL)` as an added column — and that statement is the *expand*-shaped way to
+ * tighten a column, so firing on it would refuse the remedy. drizzle always
+ * writes `ADD COLUMN`.
+ */
+function addColumnClauses(statement) {
+  return statement
+    .split(/\bADD\s+COLUMN\b/)
+    .slice(1)
+    .map((clause) => clause.split(/,\s*(?:ADD|ALTER|DROP|RENAME|VALIDATE|SET)\b/)[0]);
+}
+
 export const rules = [
   {
     id: "drop-table",
@@ -157,6 +180,25 @@ export const rules = [
     pattern: new RegExp(
       String.raw`\bALTER\s+TABLE\b[\s\S]*\bALTER\s+(?:COLUMN\s+)?${IDENT}\s+SET\s+NOT\s+NULL\b`,
     ),
+  },
+  {
+    // The add-form sibling of `set-not-null`, and the one a schema change
+    // reaches for most often. With no default the previous release's inserts —
+    // which cannot name a column that did not exist when they were written —
+    // fail for the whole deploy window, because `scripts/vercel-build.mjs`
+    // migrates *inside* the production build.
+    //
+    // A default makes those inserts succeed, so the hazard is gone and firing
+    // there would be the noise this guard's docblock warns about: it is the
+    // ordinary shape of an additive column, and `20260905152524_graceful_whiplash`
+    // onward are full of it.
+    id: "add-column-not-null",
+    note: "the live deployment's inserts cannot name a column that did not exist yet, and with no default every one of them fails until the new build is serving",
+    matches: (statement) =>
+      /\bALTER\s+TABLE\b/.test(statement) &&
+      addColumnClauses(statement).some(
+        (clause) => /\bNOT\s+NULL\b/.test(clause) && !/\bDEFAULT\b/.test(clause),
+      ),
   },
   {
     id: "drop-default",
