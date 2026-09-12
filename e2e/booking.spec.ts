@@ -552,8 +552,17 @@ test.describe("as owner", () => {
     // role can make it — `src/lib/authz.ts`'s answer to that weight is the
     // trail, not the role list, so the shop has to be able to read back who
     // made the call (the RFH-07 security pass).
+    //
+    // **Naming the door is the assertion, not decoration.** There are two —
+    // this roster row and the check-in queue's own row (issue #1696) — and the
+    // trail carries a different code for each, because "somebody cleared it"
+    // and "somebody at the counter cleared it with the diver in front of them"
+    // are different facts to read back a week later. A regex that matched both
+    // would pass with the two doors indistinguishable again.
     await openTripActivity(page);
-    await expect(page.getByText(/confirmed this booking is Nora Quinn/)).toBeVisible();
+    await expect(
+      page.getByText(/confirmed on the trip roster that this booking is Nora Quinn/),
+    ).toBeVisible();
   });
 });
 
