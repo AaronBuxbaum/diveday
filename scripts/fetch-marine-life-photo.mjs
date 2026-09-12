@@ -104,7 +104,7 @@ const JPEG = { quality: 78, mozjpeg: true };
  * The invariant these widths establish is in `src/lib/marine-life-tiles.ts`:
  * the served file's width must lie strictly inside `(box/2, 2*box)`. Above that
  * band the decoder has a legal half-scale and therefore a choice; below it the
- * tile is upscaled past what a photograph survives. The three widths cover the
+ * tile is upscaled past what a photograph survives. The four widths cover the
  * five boxes the app renders these at -- 48 (the diver's field guide and the
  * recap), 80 (the species picker), 224 (the trip pitch inside an embed frame,
  * whose 413px and 117px cells share no other band), and 171 (the trip pitch's three faces and
@@ -199,9 +199,22 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * descriptive user agent and unhurried traffic; both are the price of the
  * images being free.
  */
+/**
+ * How long one request may take before it is abandoned. A server that accepts
+ * the connection and then sends nothing would otherwise hang a `--list` run of
+ * fifty species forever: the retry loop below only re-enters on a *completed*
+ * non-ok response, so a stall is not something it can see. That is the shape of
+ * the incident `.claude/rules/scripts.md` records for unbounded subprocesses,
+ * reached here through a `fetch` instead (`security-reviewer` on PR 1663).
+ */
+const REQUEST_TIMEOUT_MS = 30_000;
+
 async function polite(url, { attempts = 4 } = {}) {
   for (let attempt = 1; ; attempt += 1) {
-    const response = await fetch(url, { headers: { "user-agent": UA } });
+    const response = await fetch(url, {
+      headers: { "user-agent": UA },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
     if (response.ok) return response;
     const retryable = response.status === 429 || response.status >= 500;
     if (!retryable || attempt === attempts) {
@@ -332,7 +345,27 @@ async function recordCredit(slug, pick) {
   await writeFile(README, lines.join("\n"));
 }
 
+/**
+ * The shape a slug must have before it is allowed to build a path.
+ *
+ * Mirrors `BUNDLED_PHOTO` in `src/lib/marine-life-tiles.ts`, which only ever
+ * rewrites `[a-z0-9-]+\.jpg` — so a slug outside this set silently never gets
+ * a tile served, and validating here buys correctness as well as safety.
+ *
+ * The safety half: this string reaches `path.join` at four write sinks, and
+ * `sharp().toFile()` will happily write wherever the join lands. `--list`
+ * widens the source from one argument to the first column of an arbitrary
+ * tab-separated file, so a species list somebody was handed becomes the path
+ * (`security-reviewer` on PR 1663). A slug is a slug; it is not a route.
+ */
+const SLUG = /^[a-z0-9][a-z0-9-]*$/;
+
 async function one(slug, query, { dryRun, force }) {
+  if (!SLUG.test(slug ?? "")) {
+    throw new Error(
+      `“${slug}” is not a slug — lowercase letters, digits and hyphens only, starting with a letter or digit. It names a file under ${PHOTO_DIR}, so it may not carry a separator or a parent segment.`,
+    );
+  }
   if (!force && existsSync(path.join(PHOTO_DIR, `${slug}.jpg`))) {
     console.log(`${slug}: already has a photo (pass --force to replace)`);
     return true;

@@ -24,8 +24,9 @@ more, and the folder is 6.81 MB rather than the 9.9 MB the question was asked ab
 
 ## `tiles/` — capture-only variants, never rendered to a person
 
-`tiles/48/`, `tiles/96/` and `tiles/171/` hold one downscale of each source per rendered box size,
-1.19 MB in total. They exist for a test defect, not for a diver: the e2e build turns the image
+`tiles/48/`, `tiles/96/`, `tiles/171/` and `tiles/224/` hold one downscale of each source per
+rendered box size: 148 species at four widths, 592 files, 2.28 MB in total against 6.49 MB of
+sources. They exist for a test defect, not for a diver: the e2e build turns the image
 optimizer off, so a capture is handed the 640px source with no srcset and Chromium chooses its own
 decode scale — and whenever the source is two or more times the rendered box, more than one scaled
 decode is legal and the choice depends on what else has run in the browser process. That flip

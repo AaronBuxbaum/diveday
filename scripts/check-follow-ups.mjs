@@ -151,8 +151,16 @@ const GLOB_CHARS = /[*?[\]{}]/;
  * to hit `check:repo`'s own kill timer — and that reports a **failure**, on
  * every open pull request at once, which is precisely the outage this module
  * exists to prevent. So the big directories are skipped and the walk has a
- * deadline. A walk that runs out of time answers **yes**: this guard fails
- * open, because a slow filesystem must not redden somebody else's branch.
+ * deadline.
+ *
+ * **A walk that runs out of time says `"timeout"`, not `true`.** The first
+ * version answered `true`, which both callers read as "the path exists" — so a
+ * glob expensive enough to blow the budget was *accepted*, and the filing door
+ * would publish it (`sourcery-ai` on PR 1743). The two callers want opposite
+ * things and now get to choose: the guard reading an issue that is already
+ * filed accepts it, because a slow filesystem must not redden somebody else's
+ * branch; the door about to file one refuses, because "I could not check" is
+ * not "it is fine" when the next step is public and permanent.
  */
 const GLOB_WALK_BUDGET_MS = 2_000;
 const GLOB_SKIPPED = ["node_modules", ".git", ".next", ".pglite", "test-results"];
@@ -173,13 +181,27 @@ export async function touchedPathExists(root, token) {
     exclude: (name) => GLOB_SKIPPED.includes(name),
   })) {
     if (match) return true;
-    if (Date.now() > deadline) return true;
+    if (Date.now() > deadline) return TOUCHED_TIMEOUT;
   }
-  return Date.now() > deadline;
+  return Date.now() > deadline ? TOUCHED_TIMEOUT : false;
+}
+
+/** What `touchedPathExists` answers when it ran out of budget rather than out
+ *  of candidates — neither "it exists" nor "it does not". */
+export const TOUCHED_TIMEOUT = "timeout";
+
+/** The reading for a guard checking an issue somebody already filed: accept,
+ *  because a slow filesystem must not redden a branch that did not cause it. */
+export function touchedPathAccepted(outcome) {
+  return outcome === true || outcome === TOUCHED_TIMEOUT;
 }
 
 /** The sentence for a `Touches:` token that resolved to nothing, saying which
  *  kind of nothing — a pattern that matched no files reads as a typo otherwise. */
+export function unverifiedTouchedProblem(token) {
+  return `**Touches:** “${token}” could not be checked — expanding it ran past the ${GLOB_WALK_BUDGET_MS}ms budget. Name the paths, or narrow the pattern: this body is about to go on a public tracker and an unchecked path fails \`check:follow-ups\` inside every open pull request once it is there.`;
+}
+
 export function missingTouchedProblem(token) {
   if (GLOB_CHARS.test(token) && (path.isAbsolute(token) || token.split("/").includes("..")))
     return `**Touches:** “${token}” points outside the checkout — name a path relative to the repository root.`;
@@ -406,7 +428,7 @@ async function checkDraft(bodyPath, title) {
   });
   const missing = [];
   for (const item of touched) {
-    if (await touchedPathExists(process.cwd(), item)) continue;
+    if (touchedPathAccepted(await touchedPathExists(process.cwd(), item))) continue;
     missing.push(GLOB_CHARS.test(item) ? `${item} (matched no files)` : item);
   }
   if (problems.length > 0) {
@@ -507,7 +529,7 @@ async function main() {
     });
     problems.push(...result.problems);
     for (const touched of result.touched) {
-      if (await touchedPathExists(root, touched)) continue;
+      if (touchedPathAccepted(await touchedPathExists(root, touched))) continue;
       problems.push(`#${issue.number} “${issue.title}”: ${missingTouchedProblem(touched)}`);
     }
   }

@@ -32,7 +32,7 @@ Conversely, while active, PR branches and superseded snapshots lingered for 7 da
 ## Alternatives considered
 
 - **S3 Object Tagging + Lifecycle Rules:** Tagging main baselines as `keep=true` and applying S3 lifecycle filter rules. Rejected because reg-suit's S3 publisher plugin does not support custom object tags on upload without modifying third-party code, and retrospective tag updates across 1,000+ objects per run introduce API latency and cost.
-- **Pruning directly inside CI push-to-main jobs:** Running bucket cleanup on every push to main inside GitHub Actions. Rejected because failed or cancelled CI runs could skip cleanup, whereas a dedicated AWS EventBridge Scheduler + Lambda ensures decoupled, reliable, daily execution independent of CI runner states.
+- **Pruning directly inside CI push-to-main jobs:** Running bucket cleanup on every push to main inside GitHub Actions. Rejected because failed or cancelled CI runs could skip cleanup, whereas a dedicated AWS EventBridge Scheduler + Lambda ensures decoupled, reliable execution on its own cadence, independent of CI runner states.
 - **Retaining fixed N days of snapshots:** Kept the same flaw: periods of low activity still wipe out the trunk baseline.
 
 ## Consequences

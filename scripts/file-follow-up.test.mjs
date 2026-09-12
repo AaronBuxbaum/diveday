@@ -9,7 +9,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -241,7 +241,33 @@ describe("the refusal, at the process boundary", () => {
     const result = run(...pointFlagAt(argsFor(), "--noticed", outside));
     expect(result.status).toBe(1);
     expect(result.spawnedGh).toBe(false);
-    expect(result.stderr).toMatch(/neither in the checkout nor in the scratch directory/);
+    expect(result.stderr).toMatch(/resolves outside the checkout/);
+  });
+
+  it("refuses a symlink that points out of the allowed directories", () => {
+    // The first version of the containment check was lexical, so a link named
+    // innocuously inside the checkout passed it and `readFile` followed it
+    // straight to the target — the exact primitive the check exists to close
+    // (`sourcery-ai` on PR 1743). Reproduced before fixing: the link below
+    // resolved clean and its contents would have gone into a public issue.
+    // `/etc/hostname` stands in for the real target — a credential store in a
+    // home directory — because it is readable, outside both allowed roots, and
+    // not ours to create. The link sits inside the scratch directory, so only
+    // resolving it reveals where it goes.
+    const target = "/etc/hostname";
+    if (!existsSync(target)) return;
+    const link = path.join(dir, "looks-innocent.md");
+    try {
+      symlinkSync(target, link);
+    } catch {
+      return; // a filesystem without symlinks has nothing to prove here
+    }
+
+    const result = run(...pointFlagAt(argsFor(), "--noticed", link));
+
+    expect(result.status).toBe(1);
+    expect(result.spawnedGh).toBe(false);
+    expect(result.stderr).toMatch(/resolves outside the checkout/);
   });
 
   it("refuses an env file even where it is allowed to read", () => {
