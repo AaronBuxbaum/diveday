@@ -960,6 +960,12 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
   const saved = await saveRentalFit(db, {
     shopId: staff.user.shopId,
     personId,
+    // An item this shop's catalog has dropped renders no checkbox in
+    // `GearAndSizes.tsx`, so it posts nothing and arrives here as `false`.
+    // `saveRentalFit` re-derives the offered set and leaves those columns alone
+    // rather than reading the silence as "no" (issue #1755) — which matters
+    // most on this writer of the two, because there is a staffer present,
+    // correcting a boot size, who would never be told.
     rentsBcd: parsed.data.bcd === "on",
     rentsRegulator: parsed.data.regulator === "on",
     rentsWetsuit: parsed.data.wetsuit === "on",

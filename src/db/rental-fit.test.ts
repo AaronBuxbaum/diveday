@@ -18,6 +18,7 @@ import {
   toDiverRentalFit,
 } from "./rental-fit";
 import { people, rentalFitProfiles } from "./schema";
+import { setShopRentalItems } from "./shops";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function context() {
@@ -25,7 +26,7 @@ async function context() {
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
   if (!open) throw new Error("open trip missing");
-  return { db, shopId: shop.id, tripId: open.id };
+  return { db, shop, shopId: shop.id, tripId: open.id };
 }
 
 async function bookVisitor(db: AppDb, shopId: string, tripId: string, fullName: string) {
@@ -191,6 +192,117 @@ describe("saveRentalFit / getRentalFit", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
     expect(await getRentalFit(db, shopId, personId)).toBeNull();
+  });
+
+  /**
+   * **The other half of the absent-key rule** (issue #1755). The sizes have
+   * been defended since issue #1062; the `rents_*` booleans were recomputed
+   * from the post regardless, so a shop dropping an item from its catalog
+   * turned its flag off on the next save of any diver's fit while the size was
+   * preserved by the very defence protecting sizes. The piece left that diver's
+   * packing list and the size sat behind it recording a fit nobody would act on.
+   */
+  describe("an item the shop no longer offers", () => {
+    const withoutDrysuit = (items: readonly string[]) => items.filter((k) => k !== "drysuit");
+
+    it("keeps the flag as well as the size when a form could not have asked", async () => {
+      const { db, shop, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+      expect(shop.rentalItems).toContain("drysuit");
+
+      await saveRentalFit(db, {
+        ...baseFitInput(shopId, personId),
+        rentsDrysuit: true,
+        drysuitSize: "MT",
+      });
+      await setShopRentalItems(db, shopId, withoutDrysuit(shop.rentalItems));
+
+      // What both fit forms post once the checkbox is gone: an unchecked HTML
+      // checkbox and an absent one are the same empty post, so every caller
+      // derives `false` from a question the form never put to the diver.
+      await saveRentalFit(db, {
+        ...baseFitInput(shopId, personId),
+        rentsDrysuit: false,
+        bcdSize: "L",
+      });
+
+      const fetched = await getRentalFit(db, shopId, personId);
+      expect(fetched?.rentsDrysuit).toBe(true);
+      expect(fetched?.drysuitSize).toBe("MT");
+      expect(fetched?.bcdSize).toBe("L");
+    });
+
+    it("gives the diver their own answer back when the shop re-adds it", async () => {
+      const { db, shop, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+      await saveRentalFit(db, {
+        ...baseFitInput(shopId, personId),
+        rentsDrysuit: true,
+        drysuitSize: "MT",
+      });
+      await setShopRentalItems(db, shopId, withoutDrysuit(shop.rentalItems));
+      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: false });
+      await setShopRentalItems(db, shopId, [...shop.rentalItems]);
+
+      // Deliberate: it is still the diver's answer, nobody retracted it, and
+      // the alternative is a shop's catalog edit speaking for a diver who was
+      // never asked.
+      const fetched = await getRentalFit(db, shopId, personId);
+      expect(fetched?.rentsDrysuit).toBe(true);
+      expect(fetched?.drysuitSize).toBe("MT");
+    });
+
+    it("still lets the diver untick a box the shop does offer", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: true });
+      // The ordinary path, and the one a careless fix breaks: a flag that can
+      // never be turned off is a worse bug than the one above.
+      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: false });
+
+      const fetched = await getRentalFit(db, shopId, personId);
+      expect(fetched?.rentsDrysuit).toBe(false);
+      expect(fetched?.rentsRegulator).toBe(false);
+      expect(fetched?.rentsBcd).toBe(true);
+    });
+
+    it("records no claim at all on a diver's first fit", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+      // A shop that rents wetsuits and nothing else. Five of the eleven columns
+      // default to **true** in the schema, so "leave an unasked column alone"
+      // on a brand-new row would put a BCD, a regulator, a mask, fins and
+      // weights on this diver's packing list that nobody ever ticked.
+      await setShopRentalItems(db, shopId, ["wetsuit"]);
+
+      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsBcd: true });
+
+      const fetched = await getRentalFit(db, shopId, personId);
+      expect(fetched?.rentsWetsuit).toBe(true);
+      expect(fetched?.rentsBcd).toBe(false);
+      expect(fetched?.rentsRegulator).toBe(false);
+      expect(fetched?.rentsMaskFins).toBe(false);
+      expect(fetched?.rentsWeights).toBe(false);
+    });
+
+    it("records no claim on a row that existed only for the diver's note", async () => {
+      const { db, shopId, tripId } = await context();
+      const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+      await setShopRentalItems(db, shopId, ["wetsuit"]);
+      // `saveRentalFitNote` creates the row with `fit_stated_at` null, so its
+      // flags are still at the schema defaults and no answer has been given.
+      await saveRentalFitNote(db, { shopId, personId, note: "Titanium hip, runs heavy" });
+
+      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsWetsuit: true });
+
+      const fetched = await getRentalFit(db, shopId, personId);
+      expect(fetched?.note).toBe("Titanium hip, runs heavy");
+      expect(fetched?.rentsWetsuit).toBe(true);
+      expect(fetched?.rentsBcd).toBe(false);
+      expect(fetched?.rentsWeights).toBe(false);
+    });
   });
 });
 

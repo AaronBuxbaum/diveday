@@ -346,6 +346,11 @@ export async function saveFitFromReady(token: string, formData: FormData) {
   const saved = await saveRentalFit(ctx.db, {
     shopId: ctx.data.shop.id,
     personId: ctx.data.person.id,
+    // An item the shop's catalog has dropped renders no checkbox in
+    // `RentalFitForm`, so it posts nothing and arrives here as `false`.
+    // `saveRentalFit` re-derives the offered set and leaves those columns alone
+    // rather than reading the silence as "no" (issue #1755) — the same posture
+    // the nitrox request takes below, and the mirror of the absent-size rule.
     rentsBcd: parsed.data.bcd === "on",
     rentsRegulator: parsed.data.regulator === "on",
     rentsWetsuit: parsed.data.wetsuit === "on",

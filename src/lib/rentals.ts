@@ -163,6 +163,40 @@ export function offeredRentableItems(rentalItems: readonly string[]): RentableIt
   return RENTABLE_ITEMS.filter((item) => offered.has(item.kind));
 }
 
+/**
+ * Which `rental_fit_profiles` boolean columns a shop's current catalog has
+ * anything to say about — the offered items' fields, so a writer can tell a box
+ * the diver unticked from a question no form ever put to them (issue #1755).
+ *
+ * An unchecked HTML checkbox posts nothing at all, so the post alone cannot
+ * separate the two, and a writer that checked `"drysuit" in formData` would
+ * read every genuinely unticked box as "never asked" and make a flag
+ * impossible to turn off. The shop's catalog is what can separate them, because
+ * it is what decided which checkboxes rendered in the first place
+ * ({@link offeredRentableItems}, read by all four fit surfaces).
+ *
+ * "This diver rents nothing" is the same list with every answer `false`
+ * ({@link NOTHING_RENTED}).
+ */
+export function offeredRentalFitFields(rentalItems: readonly string[]): Set<RentalFitField> {
+  return new Set(offeredRentableItems(rentalItems).map((item) => item.field));
+}
+
+/**
+ * "This diver rents nothing" — every `rents_*` flag off, from the one list that
+ * defines them.
+ *
+ * Two writers need it and neither may spell eleven `false`s of its own: the
+ * walk-up self-registration, which records sizes without claiming the diver
+ * asked for equipment, and `saveRentalFit`, which starts a **new** profile from
+ * here so a column the form never asked about cannot arrive as its
+ * `default(true)` (`src/db/schema.ts` — five of the eleven default on, which is
+ * six unasked-for pieces on a packing list).
+ */
+export const NOTHING_RENTED = Object.fromEntries(
+  RENTABLE_ITEMS.map((item) => [item.field, false]),
+) as Record<RentalFitField, boolean>;
+
 /** Whether this shop fills nitrox tanks at all — the first of the two gates below. */
 export function shopOffersNitrox(rentalItems: readonly string[]): boolean {
   return toRentableKinds(rentalItems).includes("nitrox");

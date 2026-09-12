@@ -3,9 +3,11 @@ import {
   DEFAULT_SHOP_RENTAL_ITEMS,
   EMPTY_RENTAL_PRICING,
   hasAnyRentalPricing,
+  NOTHING_RENTED,
   nitroxAvailableOn,
   nitroxCardWanted,
   offeredRentableItems,
+  offeredRentalFitFields,
   quoteRentalFit,
   RENTABLE_ITEMS,
   RENTAL_FIT_TEXT_LIMITS,
@@ -436,6 +438,33 @@ describe("rentalFitCompleteness", () => {
       state: "incomplete",
       missing: ["weights"],
     });
+  });
+});
+
+describe("offeredRentalFitFields / NOTHING_RENTED", () => {
+  it("names only the columns the shop's current catalog can answer", () => {
+    // What lets `saveRentalFit` tell a box the diver unticked from a question
+    // no form ever put to them (issue #1755). An unchecked HTML checkbox posts
+    // nothing, so the post alone cannot separate the two and the catalog has to.
+    const fields = offeredRentalFitFields(["wetsuit", "drysuit"]);
+    expect([...fields].sort()).toEqual(["rentsDrysuit", "rentsWetsuit"]);
+    expect(fields.has("rentsBcd")).toBe(false);
+    // A stored catalog holds words from a form and from seed data, so an
+    // unknown one answers for nothing rather than throwing.
+    expect(offeredRentalFitFields(["not_a_kind"]).size).toBe(0);
+    // Nitrox lives in the same stored catalog and has no `rental_fit_profiles`
+    // column at all — it must never widen this set.
+    expect(offeredRentalFitFields(["nitrox"]).size).toBe(0);
+  });
+
+  it("says no to every rentable item, and to exactly those", () => {
+    // A brand-new profile starts here, because five of the eleven columns
+    // default to **true** in the schema: a column no form asked about must not
+    // arrive as six unasked-for pieces on a packing list.
+    expect(Object.keys(NOTHING_RENTED).sort()).toEqual(
+      RENTABLE_ITEMS.map((item) => item.field).sort(),
+    );
+    expect(Object.values(NOTHING_RENTED).every((value) => value === false)).toBe(true);
   });
 });
 
