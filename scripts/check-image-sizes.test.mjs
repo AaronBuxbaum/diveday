@@ -113,7 +113,7 @@ function canonical(target) {
  * `git ls-files` answers from the index, so a file deleted in the working tree
  * and not staged yet is still listed — an ordinary state between `rm` and `git
  * add`. The guard used to `readFile` it and die on a raw Node stack trace, in
- * the middle of a concurrent 47-guard run where a stack trace reads as a broken
+ * the middle of a concurrent 48-guard run where a stack trace reads as a broken
  * script rather than as "stage your deletion".
  */
 describe("declarationsInListing", () => {

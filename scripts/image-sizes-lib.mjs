@@ -196,7 +196,7 @@ export function declarationsInSource(file, text) {
  * so a file deleted in the working tree and not yet staged is still listed. The
  * read used to throw straight out of the guard, which turned an ordinary
  * working state (delete a file, run `pnpm check:repo` before committing) into a
- * raw Node stack trace in the middle of a concurrent 47-guard run, where it
+ * raw Node stack trace in the middle of a concurrent 48-guard run, where it
  * reads as a broken script rather than as "stage your deletion" (issue #1763).
  * So a listed path that has vanished is reported, not thrown — and its registry
  * entries are left out of the stale sweep by the caller, because a mid-edit
