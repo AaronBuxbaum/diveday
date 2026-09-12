@@ -385,3 +385,95 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     ).toBeNull();
   });
 });
+
+/**
+ * A drysuit is the one rental that changes how a diver ascends, and DiveDay
+ * already records who holds the specialty — so the roster says when the suit
+ * and the card have come apart (`dive-domain-expert` review, 2026-09-12).
+ * Never a gate: the sentence is warning tone beside the depth advisory, and
+ * `src/lib/drysuit-card.test.ts` pins that readiness cannot see it.
+ */
+describe("a drysuit going out with no drysuit card", () => {
+  const diver = entry("d", "Ines Kowalski");
+  const drysuitFit = (rentsDrysuit: boolean) =>
+    new Map([
+      [
+        "d",
+        {
+          rentsDrysuit,
+          drysuitSize: rentsDrysuit ? "ML" : null,
+          rentsBcd: false,
+          rentsRegulator: false,
+          rentsWetsuit: false,
+          rentsMaskFins: false,
+          rentsWeights: false,
+          rentsDiveComputer: false,
+          rentsGopro: false,
+          rentsHoodGloves: false,
+          rentsTorch: false,
+          rentsSmb: false,
+          bcdSize: null,
+          wetsuitSize: null,
+          bootSize: null,
+          finSize: null,
+          weightPreference: null,
+          needsStaffFitAt: null,
+          needsStaffFitNote: null,
+        },
+      ],
+    ]) as unknown as RentalFitByBooking;
+
+  const withCards = (cards: unknown[]) =>
+    new Map([
+      [
+        "d",
+        {
+          ...readinessRow("ready"),
+          specialtyCertifications: cards,
+        } as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never,
+      ],
+    ]) as ReadinessByBooking;
+
+  const waivers = new Map([["d", signedWaiver]]) as WaiverByBooking;
+
+  it("names the gap, and says in the sentence that nothing is blocked", () => {
+    renderRoster({
+      roster: [diver],
+      readiness: withCards([]),
+      waivers,
+      rentalFit: drysuitFit(true),
+    });
+
+    expect(
+      screen.getByText(
+        "Renting a drysuit with no drysuit certification on file. This is not a block: check what they hold, or plan an orientation before the first dive.",
+      ),
+    ).toBeInTheDocument();
+    // The advisory is not a blocker, so the seat is still cleared.
+    expect(screen.queryByText("Blocked")).toBeNull();
+  });
+
+  it("says nothing when the diver holds the card", () => {
+    renderRoster({
+      roster: [diver],
+      readiness: withCards([
+        { specialty: "drysuit", status: "verified", importedAt: null, reviewedAt: null },
+      ]),
+      waivers,
+      rentalFit: drysuitFit(true),
+    });
+
+    expect(screen.queryByText(/drysuit certification/)).toBeNull();
+  });
+
+  it("says nothing about a diver who is not renting one", () => {
+    renderRoster({
+      roster: [diver],
+      readiness: withCards([]),
+      waivers,
+      rentalFit: drysuitFit(false),
+    });
+
+    expect(screen.queryByText(/drysuit certification/)).toBeNull();
+  });
+});

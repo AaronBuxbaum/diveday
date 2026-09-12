@@ -22,20 +22,32 @@ import type { RentalFit } from "./types";
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
 /**
- * A drysuit is not sized on the wetsuit scale above, and offering XS-XXL here
- * would name suits no rental wall holds (issue 1414). This is the manufacturer
- * letter-plus-height grid the wall is actually stocked from: the letter is
- * girth, a trailing `T` is the tall cut, and `MS`/`ML` are the in-between
- * girths a fleet genuinely carries. `LS` and `MLT` are real sizes and are
- * deliberately left out — rarely stocked as rentals, and a shop holding one
- * records it staff-side, where the field is free text.
+ * A drysuit is not sized on the wetsuit scale above (issue 1414): a rental wall
+ * is racked on the manufacturer grid, where a girth letter carries a second
+ * axis the wetsuit has none of — the cut. One rule holds this list together: a
+ * girth letter, optionally followed by `T` for the tall cut. The second
+ * character therefore means exactly one thing wherever it appears.
  *
- * The grid itself is the owner's call and is open as **H-76** in
- * `docs/product/human-decisions.md`; this list ships provisionally. Only this
- * array depends on the answer — the column is `text` and the staff field is
- * free text — so changing the grid is an edit to this one line.
+ * That rule is what a `dive-domain-expert` pass took off the provisional list.
+ * `MS` and `ML` shipped here as in-between *girths* while `MT` beside them was
+ * a *height*, and both readings are real — manufacturer charts gloss `MS` as
+ * medium short and `ML` as medium large — so a diver picking `MS` for a short
+ * torso and a packer reading it as a girth were never naming the same suit.
+ * They join `LS` and `MLT`: real sizes, rarely stocked as rentals, and a shop
+ * holding one records it staff-side, where the field is free text. `XS` goes
+ * back on: every major maker publishes it, a cold-water fleet stocks it, and
+ * the wetsuit select one field above starts there — so its absence read to a
+ * small-framed diver as "this shop has nothing for me".
+ *
+ * The grid is the owner's call and is open as **H-76** in
+ * `docs/product/human-decisions.md`, which carries the two questions this list
+ * cannot answer for itself: the short cut is missing where the tall one is not,
+ * and a diver may not know their drysuit size at all. This list ships
+ * provisionally. Only this array depends on the answer — the column is `text`
+ * and the staff field is free text — so changing the grid is an edit to this
+ * one line.
  */
-const DRYSUIT_SIZES = ["S", "MS", "M", "MT", "ML", "L", "LT", "XL", "XLT", "XXL"];
+const DRYSUIT_SIZES = ["XS", "S", "M", "MT", "L", "LT", "XL", "XLT", "XXL"];
 
 /**
  * `src/lib/rentals.ts` returns item codes, never rendered words (see the
@@ -60,15 +72,24 @@ export const RENTABLE_ITEM_LABEL_KEYS: Record<RentableItemKind, DiverMessageKey>
 };
 
 /**
- * Plain-language definitions for the two acronyms this checklist is most
- * likely to stump a newcomer with. They used to sit under the list as
- * permanent paragraphs; now they hang off the item they explain as an
- * `InfoHint`, so the checklist reads as a checklist and the explanation is
- * one hover (or tap, or tab-stop) away for whoever wants it.
+ * Plain-language definitions for the items this checklist is most likely to
+ * stump a newcomer with. They used to sit under the list as permanent
+ * paragraphs; now they hang off the item they explain as an `InfoHint`, so the
+ * checklist reads as a checklist and the explanation is one hover (or tap, or
+ * tab-stop) away for whoever wants it.
+ *
+ * The drysuit is here for a different reason from the two acronyms: it is the
+ * one tick that silently answers a second question. The packing list gives a
+ * drysuit renter no boots line at all, because a rental drysuit usually has
+ * its boots vulcanised on (`src/lib/dive-prep.ts`'s `rentedItems`), and a
+ * diver who packs their own boots against a suit that already has them, or
+ * turns up expecting to be handed a pair, finds out at the dock. Saying it on
+ * the tick is the only place a diver ever reads it.
  */
 export const RENTABLE_ITEM_HINT_KEYS: Partial<Record<RentableItemKind, DiverMessageKey>> = {
   bcd: "rental.jargonHints.bcd",
   regulator: "rental.jargonHints.regulator",
+  drysuit: "rental.jargonHints.drysuit",
 };
 
 /**

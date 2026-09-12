@@ -238,7 +238,11 @@ export function nitroxCardWanted(
  * along with the wetsuit (`src/lib/dive-prep.ts`), so a suit with no shoe size
  * is as much of a loose end as a suit with no suit size. The `drysuit` is here
  * since issue 1414 and is the exception among the add-ons: it has a size column, on
- * its own scale, and its vulcanised boots need no shoe size of their own.
+ * its own scale, and the vulcanised boots most rental suits carry need no shoe
+ * size of their own. A suit that takes separate rock boots gets no extra kind
+ * here either — that size rides in the drysuit's own free text, which is the
+ * one field on the fit that reaches the packing list verbatim
+ * (`src/lib/dive-prep.ts`).
  *
  * Same union `statedSizeItems` in `dive-prep.ts` already speaks, so a surface
  * can render both through `src/i18n/rental-labels.ts` without a second map.

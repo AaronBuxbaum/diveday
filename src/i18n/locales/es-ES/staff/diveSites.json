@@ -67,10 +67,10 @@
     "forecastLegend": "Ubicación GPS",
     "forecastDescription": "El punto del sitio mar adentro, no la dirección del centro. Deja ambos en blanco para que el sitio no aparezca en los mapas de los buceadores.",
     "tideStationLabel": "Estación de mareas NOAA",
-    "tideStationHint": "El id de siete dígitos de la estación mar adentro más cercana, de <link>las predicciones de marea de NOAA</link>.",
+    "tideStationHint": "El id de siete dígitos de la estación mar adentro más cercana, de <link>las predicciones de marea de NOAA</link>. La lista solo cubre aguas de Estados Unidos.",
     "tideStationEcho": "{id} · {name}",
-    "tideStationFarKm": "Esa estación está a {distance} km de las coordenadas de este sitio. Comprueba que es la que querías.",
-    "tideStationFarMiles": "Esa estación está a {distance} mi de las coordenadas de este sitio. Comprueba que es la que querías.",
+    "tideStationFarKm": "Esa estación está a {distance} km de las coordenadas de este sitio, así que el cambio de marea que predice puede llegar aquí hasta una hora antes o después. Comprueba que es la que querías.",
+    "tideStationFarMiles": "Esa estación está a {distance} mi de las coordenadas de este sitio, así que el cambio de marea que predice puede llegar aquí hasta una hora antes o después. Comprueba que es la que querías.",
     "tidePreferenceLabel": "Se bucea mejor",
     "tidePreference": {
       "any": "Con cualquier marea",

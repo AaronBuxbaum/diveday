@@ -360,7 +360,9 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     bcdSize: parsed.data.bcdSize,
     wetsuitSize: parsed.data.wetsuitSize,
     // On the drysuit grid, not the wetsuit's (issue 1414) — one size, and no boot
-    // size beside it: a drysuit's boots are part of the suit.
+    // size beside it: on most rental drysuits the boots are part of the suit.
+    // A fleet whose suits take separate rock boots says so in the size itself,
+    // which is why the staff-side box is free text (`src/lib/dive-prep.ts`).
     drysuitSize: parsed.data.drysuitSize,
     // Fins and boots are one shoe-size answer on the diver's form now, written
     // to both columns so the packing list, the manifest and the CSV export all

@@ -198,6 +198,25 @@ describe("readKioskInput", () => {
   });
 
   /**
+   * **The collision the shape leaves, pinned rather than fixed.** The hyphen is
+   * in base64url, so one typed word of exactly 43 characters from that charset
+   * is read as a code and never tried as a name — a genuinely long hyphenated
+   * surname reaches it. The behaviour is deliberate (`readKioskInput` says why
+   * retrying a failed code as a surname is the wrong repair), and this test is
+   * what stops it being rediscovered as a bug and quietly changed.
+   */
+  it("reads a 43-character hyphenated surname as a code, not a name", () => {
+    const surname = "Featherstonehaugh-Cholmondeley-Marjoribanks";
+    expect(surname).toHaveLength(43);
+    expect(readKioskInput(surname)).toEqual({ kind: "capability", token: surname });
+    // The diver's own repair: a given name in front, and it is a name again.
+    expect(readKioskInput(`Alice ${surname}`)).toEqual({
+      kind: "surname",
+      surname: surname.toLowerCase(),
+    });
+  });
+
+  /**
    * Everything unusable is `null`, and the surface answers `null` with the same
    * sentence it answers a miss with. A kiosk that said "that isn't a name"
    * would be telling whoever typed it something about the shape of the lookup.

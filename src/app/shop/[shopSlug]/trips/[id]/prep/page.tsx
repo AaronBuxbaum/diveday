@@ -23,6 +23,7 @@ import {
   isPrepGrouping,
   type PrepGrouping,
   type PrepPiece,
+  prepLineKey,
   UNSIZED_ITEM_KINDS,
 } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
@@ -144,6 +145,24 @@ export default async function TripPrepPage({
     // The count is real; the size deliberately isn't.
     if (piece.fitAtCheckIn) {
       return <span className="font-medium text-warning">{t("trips.prep.fitAtCheckIn")}</span>;
+    }
+    // A drysuit diver's stated weighting is a wetsuit answer, so there is no
+    // number to pack to and the lead is settled in the water (dive-prep.ts).
+    if (piece.drysuitWeightCheck) {
+      return <span className="font-medium text-warning">{t("trips.prep.drysuitWeightCheck")}</span>;
+    }
+    // A drysuit diver's fins. The stated size is a shoe size — one question,
+    // "Fin & boot size" — and a drysuit boot is two to three fin sizes bigger
+    // than the foot in it, so the size is where the packer starts and never
+    // what they pull (dive-prep.ts).
+    if (piece.drysuitFinFit) {
+      return (
+        <span className="font-medium text-warning">
+          {piece.size
+            ? t("trips.prep.drysuitFinsWithSize", { size: piece.size })
+            : t("trips.prep.drysuitFins")}
+        </span>
+      );
     }
     if (piece.size) return piece.size;
     // An item that should have had a size and doesn't says so; one with no
@@ -652,10 +671,7 @@ export default async function TripPrepPage({
                     breakpoint coincidence. */}
                 <ul className="mt-3 flex flex-col gap-3 sm:hidden print:hidden">
                   {checklist.lines.map((line) => (
-                    <li
-                      key={`${line.kind}:${line.fitAtCheckIn ? " fit" : (line.size ?? "")}`}
-                      className={sectionCardClass()}
-                    >
+                    <li key={`${line.kind}:${prepLineKey(line)}`} className={sectionCardClass()}>
                       <div className="flex items-start justify-between gap-3">
                         <p className="font-semibold">{rentalItemLabel(t, line.kind)}</p>
                         <p className={`shrink-0 ${FIGURE_CLASS}`}>
@@ -691,7 +707,7 @@ export default async function TripPrepPage({
                   </THead>
                   <TBody>
                     {checklist.lines.map((line) => (
-                      <tr key={`${line.kind}:${line.fitAtCheckIn ? " fit" : (line.size ?? "")}`}>
+                      <tr key={`${line.kind}:${prepLineKey(line)}`}>
                         <Td className="font-medium">{rentalItemLabel(t, line.kind)}</Td>
                         <Td>{sizeCell(line)}</Td>
                         <Td numeric>{line.count}</Td>

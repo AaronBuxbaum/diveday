@@ -424,7 +424,7 @@
     "itemLabels": {
       "bcd": "Chaleco",
       "regulator": "Regulador",
-      "wetsuit": "Traje",
+      "wetsuit": "Neopreno",
       "boots": "Escarpines",
       "maskFins": "Máscara y aletas",
       "weights": "Lastre",
@@ -437,10 +437,14 @@
     },
     "nitroxFillsLabel": "Llenados de nitrox",
     "itemWithSize": "{item} {size}",
+    "itemOverDrysuitBoot": "{item} sobre la bota del traje seco",
+    "itemOverDrysuitBootWithSize": "{item} sobre la bota del traje seco, calzado {size}",
     "notRecorded": "No hay equipo registrado, aún no se ha preguntado",
     "ownKit": "Trae su propio equipo",
     "needsStaffFit": "Necesita ajuste del personal en el check-in",
-    "needsStaffFitWithNote": "Necesita ajuste del personal — {note}"
+    "needsStaffFitWithNote": "Necesita ajuste del personal — {note}",
+    "drysuitCardMissing": "Alquila traje seco y no hay certificación de traje seco en su ficha. No es un bloqueo: verifica qué titulación consta o programa una orientación antes de la primera inmersión.",
+    "drysuitCardUnconfirmed": "Alquila traje seco y su certificación de traje seco está sin confirmar. No es un bloqueo: confirma la certificación en su ficha o programa una orientación antes de la primera inmersión."
   },
   "rollCallCheckpoint": {
     "departure": "Antes de zarpar",

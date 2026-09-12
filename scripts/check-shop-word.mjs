@@ -148,6 +148,21 @@ const RULES = [
     says: 'a taster dive (DSD/Try Scuba) is "un bautismo (de buceo)", masculine — "iniciación" is the entry-level course, which is the other ratio',
   },
   {
+    id: "wetsuit",
+    // README's neopreno section — settled 2026-09-12, the day the drysuit got
+    // a size field. The wetsuit had been `Traje` on three item lists and
+    // `Talla de traje` on both fit forms, which is only "suit"; the moment
+    // `Talla de traje seco` rendered directly under it, nothing told a diver
+    // which of the two was the one they were renting.
+    //
+    // Two shapes, both of them what the labels actually said, and neither of
+    // them able to mean anything else: a `talla de traje` with no `seco` after
+    // it, and a string that is nothing but the word. `traje seco`, `traje
+    // estanco` in the drysuit's jargon hint, and a `traje de baño` all pass.
+    pattern: /\btallas? de trajes?\b(?!\s+secos?)|^trajes?$/i,
+    says: 'the wetsuit is "el neopreno" — "Neopreno" on a kit list, "Talla de neopreno" on a fit form. "Traje" alone reads as the generic suit and sits one line from "Traje seco"',
+  },
+  {
     id: "check",
     // README:98, and its verificar/revisar paragraph at :100-103.
     //

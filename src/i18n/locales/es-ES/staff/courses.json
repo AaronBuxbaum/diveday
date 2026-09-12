@@ -143,7 +143,7 @@
     "questionLabel": "Pregunta {number}",
     "questionPlaceholder": "¿El equipo está incluido?",
     "answerLabel": "Respuesta",
-    "answerPlaceholder": "Sí: máscara, aletas, traje y botellas entran en el precio del curso.",
+    "answerPlaceholder": "Sí: máscara, aletas, neopreno y botellas entran en el precio del curso.",
     "removeFaq": "Eliminar la pregunta {number}",
     "addFaq": "Añadir una pregunta",
     "faqsMaxOne": "{max} pregunta es el máximo que admite una página de curso.",

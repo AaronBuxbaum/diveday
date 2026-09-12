@@ -7,8 +7,12 @@ import { cancelBooking } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { bookingCapabilities } from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
+import { arrivalCardExpiryFor, capabilityExpiryFor } from "@/lib/booking-capabilities";
+import { publicAppUrl } from "@/lib/notifications/app-url";
 import { seededShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
+
+const CALLER_IP = "203.0.113.7";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -16,10 +20,20 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 // `requestLocale` reads both `headers()` and `cookies()`, which resolve only
 // inside a real Next request scope — absent here, since the handler is called
-// directly. An empty request negotiates down to the shop's default locale.
-vi.mock("next/headers", () => nextHeadersStub());
+// directly. The request asks for no language, so it negotiates down to the
+// shop's default locale; the forwarded address is what `clientIp` buckets the
+// throttle on.
+vi.mock("next/headers", () => nextHeadersStub({ headers: { "x-forwarded-for": CALLER_IP } }));
+// Partially mocked so a test can empty the bucket: the real token bucket would
+// need sixty calls to say no, and what is worth pinning is the refusal, not
+// the arithmetic (`rate-limit.test.ts` owns that).
+vi.mock("@/lib/rate-limit", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
+  return { ...actual, checkRateLimit: vi.fn() };
+});
 
 const { getDb } = await import("@/db/client");
+const { checkRateLimit, RATE_LIMITS, rateLimitKey } = await import("@/lib/rate-limit");
 const { GET } = await import("./route");
 
 /**
@@ -56,7 +70,7 @@ function card(shopSlug: string, tripId: string, token?: string) {
 /** Every live `arrival` capability this booking holds. */
 async function arrivalRows(db: AppDb, bookingId: string) {
   return db
-    .select({ id: bookingCapabilities.id })
+    .select({ id: bookingCapabilities.id, expiresAt: bookingCapabilities.expiresAt })
     .from(bookingCapabilities)
     .where(
       and(eq(bookingCapabilities.bookingId, bookingId), eq(bookingCapabilities.purpose, "arrival")),
@@ -66,6 +80,7 @@ async function arrivalRows(db: AppDb, bookingId: string) {
 describe("GET /s/[shopSlug]/trips/[id]/arrival-card", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
   });
 
   it("returns the diver's own card as an attachment, with the code drawn into it", async () => {
@@ -111,6 +126,27 @@ describe("GET /s/[shopSlug]/trips/[id]/arrival-card", () => {
     ).resolves.toBeNull();
   });
 
+  /**
+   * **A printed credential must not outlive the morning it is for.**
+   *
+   * The card left with the trip-anchored default — trip end plus thirty days —
+   * so a seat booked a season out printed a code that scanned for the season
+   * and a month after it (`security-reviewer`, issue #1600). The only door that
+   * accepts it is the kiosk, which looks a few hours either side of a
+   * departure, so the credential is cut to that and nothing wider.
+   */
+  it("mints a code bounded to the departure, not to the trip-anchored default", async () => {
+    const { db, shop, trip, bookingId, token } = await bookedDiver();
+
+    await card(shop.slug, trip.id, token);
+
+    const [row] = await arrivalRows(db, bookingId);
+    expect(row?.expiresAt).toEqual(arrivalCardExpiryFor(trip.startsAt));
+    expect(row?.expiresAt.getTime()).toBeLessThan(
+      capabilityExpiryFor(trip.endsAt, new Date()).getTime(),
+    );
+  });
+
   it("never prints the booking's database id on the card", async () => {
     const { shop, trip, bookingId, token } = await bookedDiver();
 
@@ -148,6 +184,54 @@ describe("GET /s/[shopSlug]/trips/[id]/arrival-card", () => {
     const response = await card("reef-runners", trip.id, token);
 
     expect(response.status).toBe(404);
+  });
+
+  /**
+   * **A readiness link is not a budget.** Anyone holding one — they are
+   * re-tapped all week and forwarded in inboxes — could loop this GET, and
+   * every pass rasterizes a code and writes a capability row that
+   * `src/lib/retention.ts` never prunes; past
+   * `MAX_LIVE_CAPABILITIES_PER_PURPOSE` the loop starts revoking the card the
+   * diver already printed for tomorrow morning.
+   */
+  it("refuses a throttled caller with the same 404, and mints nothing", async () => {
+    const { db, shop, trip, bookingId, token } = await bookedDiver();
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, retryAfterMs: 60_000 });
+
+    const response = await card(shop.slug, trip.id, token);
+
+    expect(response.status).toBe(404);
+    await expect(arrivalRows(db, bookingId)).resolves.toHaveLength(0);
+  });
+
+  it("spends the shared capability budget before the token is verified", async () => {
+    const { shop, trip } = await bookedDiver();
+
+    // A token that resolves to nothing: the budget is spent anyway, or this
+    // door would be free to whoever is walking tokens rather than holding one.
+    await card(shop.slug, trip.id, "not-a-real-token");
+
+    expect(checkRateLimit).toHaveBeenCalledWith(
+      rateLimitKey("arrival-card", CALLER_IP),
+      RATE_LIMITS.capabilityAction,
+    );
+  });
+
+  /**
+   * **The card is paper, so its one link is on the canonical origin.** The
+   * request here arrives on `http://localhost`; whatever host a download
+   * happens to be made through — a preview deployment, a proxy, a forged
+   * `Host` — must not be what a diver's saved file points at, because nobody
+   * can correct a printed page afterwards (`security-reviewer`, issue #1600).
+   */
+  it("links the trip on the canonical origin, never the request's host", async () => {
+    const { shop, trip, token } = await bookedDiver();
+
+    const body = await (await card(shop.slug, trip.id, token)).text();
+
+    expect(publicAppUrl()).toBe("https://dive.day");
+    expect(body).toContain(`href="https://dive.day/s/${shop.slug}/trips/${trip.id}"`);
+    expect(body).not.toContain("http://localhost");
   });
 
   it("refuses a cancelled booking, and mints nothing", async () => {

@@ -37,6 +37,7 @@ import {
   diveSupportNeeds,
   people,
   priorVisits,
+  shops,
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -749,9 +750,14 @@ export async function checkInAtKiosk(
         personId: people.id,
         personName: people.fullName,
         dateOfBirth: people.dateOfBirth,
+        // The zone the minor rule below is decided in, read here rather than
+        // taken from the caller for the same reason every predicate on this
+        // query is written here.
+        shopTimezone: shops.timezone,
       })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .innerJoin(shops, eq(shops.id, input.shopId))
       // The diver's own tenancy, stated for the same reason as the departure's
       // below: this door has no staffer behind it, so nothing it depends on is
       // inherited from the caller that supplied the booking id.
@@ -787,9 +793,19 @@ export async function checkInAtKiosk(
     // A minor goes to the desk too, and not as a gate: a guardian's
     // co-signature makes them `ready`. Calendar arithmetic rather than a SQL
     // predicate, so it sits here and answers with the same refusal.
+    //
+    // On the **shop's** calendar day, the same one `src/db/manifests.ts`
+    // measures age and birthdays on. This read the departure's UTC date until
+    // 2026-09-12, which west of UTC is a day later than the trip for every
+    // afternoon boat: a diver turning eighteen the day after the trip cleared
+    // here and printed as a minor on the captain's manifest
+    // (`dive-domain-expert` review).
     if (
       booking.dateOfBirth &&
-      isMinorOnDate(booking.dateOfBirth, calendarDateInTimezone(booking.tripStartsAt, "UTC"))
+      isMinorOnDate(
+        booking.dateOfBirth,
+        calendarDateInTimezone(booking.tripStartsAt, booking.shopTimezone),
+      )
     ) {
       return { ok: false, reason: "not_found" };
     }

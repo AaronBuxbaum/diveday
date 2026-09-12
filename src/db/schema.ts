@@ -7220,16 +7220,20 @@ export const rentalFitProfiles = pgTable(
     wetsuitSize: text("wetsuit_size"),
     /**
      * The one add-on that carries a size (issue 1414), and it is **not** the
-     * wetsuit's. A drysuit is sized on the manufacturer letter-plus-height
-     * grid a rental wall is stocked from — the letter is girth, a trailing
-     * `T` is the tall cut — so an XS-XXL wetsuit value written here would
-     * name a suit no shop holds. `text`, not an enum: the grid varies by
-     * manufacturer, and staff record an off-grid size as free text.
+     * wetsuit's. A drysuit is sized on the manufacturer grid a rental wall is
+     * racked from — a girth letter, a trailing `T` for the tall cut — so a
+     * plain wetsuit value written here drops the axis the wall is racked by.
+     * `text`, not an enum: the grid varies by manufacturer, staff record an
+     * off-grid size as free text, and which codes the diver's own select
+     * offers is the owner's open call (H-76).
      *
-     * A drysuit's boots are vulcanised on, so this size answers for them
-     * too — there is no boot piece to pull off the rack separately, which is
-     * why `rents_drysuit` pushes one packing piece where `rents_wetsuit`
-     * pushes two (`src/lib/dive-prep.ts`).
+     * Most rental drysuits have their boots vulcanised on, so this size
+     * answers for them too — there is no boot piece to pull off the rack
+     * separately, which is why `rents_drysuit` pushes one packing piece where
+     * `rents_wetsuit` pushes two (`src/lib/dive-prep.ts`). A fleet stocking
+     * neoprene-sock suits worn with separate rock boots says so in this same
+     * free text ("ML, rock boot 9"): no column records a rock-boot size, and
+     * this is the one field on the fit that reaches the packing list verbatim.
      */
     drysuitSize: text("drysuit_size"),
     bootSize: text("boot_size"),

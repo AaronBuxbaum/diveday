@@ -26,6 +26,7 @@ import {
   diveSupportNeeds,
   people,
   rollCallEvents,
+  shops,
   trips,
 } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -97,6 +98,47 @@ async function clearForBoarding(
     agreed: true,
     medicalAnswers: clearAnswers,
   });
+}
+
+/**
+ * **A departure whose UTC calendar date is not the day it sails.** Moves the
+ * shop to Hawaii — no DST, so this holds in every month — and the boat to 01:00
+ * UTC, which is 15:00 the *previous* afternoon in Honolulu. Hands back the date
+ * of birth of a diver who turns eighteen on the UTC date: an adult by the
+ * server's calendar and a minor by the shop's, on the same boat.
+ *
+ * This is the gap both kiosk doors fell into until 2026-09-12. They measured
+ * majority with `calendarDateInTimezone(startsAt, "UTC")` while the captain's
+ * manifest measured it in `shop.timezone` (`src/db/manifests.ts`), so west of
+ * UTC the tablet called that diver an adult and the manifest called them a
+ * minor — and because this is a routing rule rather than a gate, the minor
+ * walked past the person who was meant to meet their guardian
+ * (`dive-domain-expert` review).
+ */
+async function boatSailsTheAfternoonBeforeItsUtcDate(
+  db: Awaited<ReturnType<typeof counter>>["db"],
+  shopId: string,
+  tripId: string,
+  seededStartsAt: Date,
+) {
+  await db.update(shops).set({ timezone: "Pacific/Honolulu" }).where(eq(shops.id, shopId));
+  // The boat keeps the seeded day, so readiness and the kiosk window stay the
+  // ones every other test here works against — unless that day is February 29,
+  // which has no eighteenth anniversary in a non-leap year. Then the boat moves
+  // a day rather than the scenario inventing a date the `date` column rejects.
+  const seededDay = seededStartsAt.toISOString().slice(0, 10);
+  const utcDay = seededDay.endsWith("-02-29") ? `${seededDay.slice(0, 4)}-03-01` : seededDay;
+  const sails = new Date(`${utcDay}T01:00:00.000Z`);
+  await db
+    .update(trips)
+    .set({ startsAt: sails, endsAt: new Date(sails.getTime() + 4 * 60 * 60 * 1000) })
+    .where(eq(trips.id, tripId));
+  return {
+    /** Ten minutes before it leaves, the way every other lookup here states it. */
+    atTheDoor: new Date(sails.getTime() - 10 * 60 * 1000),
+    /** Eighteen on the UTC date, seventeen on the day the boat actually sails. */
+    eighteenTheDayAfter: `${Number(utcDay.slice(0, 4)) - 18}${utcDay.slice(4)}`,
+  };
 }
 
 describe("findKioskSeats", () => {
@@ -567,6 +609,36 @@ describe("findKioskSeats", () => {
   });
 
   /**
+   * **And it is the shop's calendar day that decides, not the server's.** The
+   * manifest measures age, minor status and birthdays on the day the boat
+   * sails in `shop.timezone`; this door read the departure's UTC date, which
+   * west of UTC is the *next* day for every afternoon boat.
+   */
+  it("measures majority on the day the boat sails in the shop's own timezone", async () => {
+    const { db, shop, booking, person, reef } = await counter();
+    const { atTheDoor, eighteenTheDayAfter } = await boatSailsTheAfternoonBeforeItsUtcDate(
+      db,
+      shop.id,
+      reef.id,
+      reef.startsAt,
+    );
+    await db
+      .update(people)
+      .set({ dateOfBirth: eighteenTheDayAfter })
+      .where(eq(people.id, person.id));
+    const lookup = () =>
+      findKioskSeats(db, { shopId: shop.id, lookup: readKioskInput(booking.id), now: atTheDoor });
+    expect(await lookup()).toEqual([]);
+
+    // The same diver, the same boat, the same instant — and a shop whose own
+    // calendar agrees with the server's. Now they are the adult they read as,
+    // which is what keeps the assertion above about the timezone rather than
+    // about the tablet refusing everybody with a birth date.
+    await db.update(shops).set({ timezone: "UTC" }).where(eq(shops.id, shop.id));
+    expect(await lookup()).toHaveLength(1);
+  });
+
+  /**
    * **The arrival card's QR, scanned at the counter** (issue #1600). A wedge
    * reader types the code into the same box a surname goes in, so the whole
    * branch is `readKioskInput` recognising its shape and this reader resolving
@@ -1013,6 +1085,41 @@ describe("checkInAtKiosk", () => {
     // And the seat is untouched by any of the four.
     const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
     expect(saved?.status).toBe("booked");
+  });
+
+  /**
+   * **The write door measures majority on the same calendar day the reader
+   * does, and both are the shop's.** Two doors disagreeing about which day it
+   * is would be the same hole with an extra step.
+   */
+  it("measures majority on the day the boat sails in the shop's own timezone", async () => {
+    const { db, shop, link, booking, person, reef } = await counter();
+    await clearForBoarding(db, shop.id, booking.id, person.fullName);
+    const { atTheDoor, eighteenTheDayAfter } = await boatSailsTheAfternoonBeforeItsUtcDate(
+      db,
+      shop.id,
+      reef.id,
+      reef.startsAt,
+    );
+    await db
+      .update(people)
+      .set({ dateOfBirth: eighteenTheDayAfter })
+      .where(eq(people.id, person.id));
+    const tap = () =>
+      checkInAtKiosk(db, {
+        shopId: shop.id,
+        displayTokenId: link.id,
+        bookingId: booking.id,
+        now: atTheDoor,
+      });
+    expect(await tap()).toMatchObject({ ok: false, reason: "not_found" });
+    const [held] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(held?.status).toBe("booked");
+
+    // And the same tap goes through once the shop's own calendar agrees with
+    // the server's, so the refusal above is about the day and not the diver.
+    await db.update(shops).set({ timezone: "UTC" }).where(eq(shops.id, shop.id));
+    expect(await tap()).toMatchObject({ ok: true, bookingId: booking.id });
   });
 
   it("refuses a booking belonging to another shop", async () => {

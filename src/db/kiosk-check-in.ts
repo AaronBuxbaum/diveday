@@ -12,7 +12,7 @@ import {
 import { kioskArrivalsWindow } from "@/lib/operational-window";
 import { verifyBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
-import { bookings, diveSupportNeeds, people, trips } from "./schema";
+import { bookings, diveSupportNeeds, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -203,6 +203,10 @@ export async function findKioskSeats(
       endsAt: trips.endsAt,
       meetingPointLabel: trips.meetingPointLabel,
       meetingPointAddress: trips.meetingPointAddress,
+      // The zone majority is measured in, below. Read here rather than taken
+      // from the caller for the same reason every other filter on this query is
+      // written here: this door has no staffer behind it.
+      shopTimezone: shops.timezone,
     })
     .from(bookings)
     // `people.shop_id` stated rather than inherited from the booking's own
@@ -211,6 +215,7 @@ export async function findKioskSeats(
     // reads a column on this table, so the table's tenant belongs here too.
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(shops, eq(shops.id, input.shopId))
     // **A diver who has told the shop they need a hand goes to the desk.**
     // Support needs never gate boarding and must never start doing so — this
     // is not a gate, it is a routing rule about which door answers. The whole
@@ -247,9 +252,18 @@ export async function findKioskSeats(
   // tablet answer instead. Filtered here rather than in SQL because majority is
   // calendar arithmetic on the departure's own date, and it discloses nothing
   // to drop the row — every refusal is the same sentence.
-  const eligible = rows.filter(({ dateOfBirth, startsAt }) => {
+  //
+  // **The date is the shop's, not the server's**, which is the same sentence
+  // `src/db/manifests.ts` writes over `tripDate`. An earlier draft read the
+  // departure's *UTC* calendar date: west of UTC an afternoon boat is already
+  // tomorrow in UTC, so a diver whose eighteenth birthday fell the day after
+  // the trip read as an adult at the tablet and as a minor on the captain's
+  // manifest, for the same boat — and being a routing rule rather than a gate
+  // is what made it worse, because the minor walked past the person who was
+  // meant to meet their guardian (`dive-domain-expert` review, 2026-09-12).
+  const eligible = rows.filter(({ dateOfBirth, startsAt, shopTimezone }) => {
     if (!dateOfBirth) return true;
-    return !isMinorOnDate(dateOfBirth, calendarDateInTimezone(startsAt, "UTC"));
+    return !isMinorOnDate(dateOfBirth, calendarDateInTimezone(startsAt, shopTimezone));
   });
 
   // **One diver's own two departures are not an ambiguity — they are a
@@ -264,5 +278,8 @@ export async function findKioskSeats(
       ? eligible.slice(0, 1)
       : eligible;
 
-  return seats.map(({ dateOfBirth: _dateOfBirth, personId: _personId, ...seat }) => seat);
+  return seats.map(
+    ({ dateOfBirth: _dateOfBirth, personId: _personId, shopTimezone: _shopTimezone, ...seat }) =>
+      seat,
+  );
 }

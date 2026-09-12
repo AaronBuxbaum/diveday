@@ -225,6 +225,8 @@
     "wetsuitSizePlaceholder": "3 mm / M",
     "drysuitSizeLabel": "Drysuit size",
     "drysuitSizePlaceholder": "ML",
+    "drysuitSizeHintLabel": "About drysuit size",
+    "drysuitSizeHint": "Most rental drysuits have the boots vulcanised on, so this size answers for the feet too and the packing list carries no boots line. If yours take separate rock boots, put that size in here as well; it is the only field on the fit the packer will see.",
     "finSizeLabel": "Fin & boot size",
     "finSizePlaceholder": "US 9 / EU 42",
     "weightPreferenceLabel": "Weight preference",

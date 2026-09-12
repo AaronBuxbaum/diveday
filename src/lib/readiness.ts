@@ -638,6 +638,26 @@ function certificationBlocker(
 }
 
 /**
+ * Does this diver hold a card that clears the gate for this specialty?
+ *
+ * Exported so the drysuit rental advisory (`src/lib/drysuit-card.ts`) asks the
+ * card exactly the question the gate asks. An advisory drawing its own line
+ * would be a second answer about the same plastic, and the two would drift.
+ */
+export function holdsSpecialtyCard(
+  specialtyCertifications: readonly SpecialtyCertification[],
+  specialty: DiveSpecialty,
+): boolean {
+  return specialtyCertifications.some(
+    (card) =>
+      card.specialty === specialty &&
+      card.status === "verified" &&
+      // Confirmed by a staffer, or never needed confirming (entered by hand).
+      (!card.importedAt || card.reviewedAt),
+  );
+}
+
+/**
  * A specialty is a yes/no gate: only a verified, unexpired card of that exact
  * specialty clears it. Every other state fails closed with a specific reason.
  *
@@ -654,17 +674,8 @@ function specialtyBlocker(
   specialtyCertifications: readonly SpecialtyCertification[],
   specialty: DiveSpecialty,
 ): ReadinessBlocker | null {
+  if (holdsSpecialtyCard(specialtyCertifications, specialty)) return null;
   const cards = specialtyCertifications.filter((card) => card.specialty === specialty);
-  if (
-    cards.some(
-      (card) =>
-        card.status === "verified" &&
-        // Confirmed by a staffer, or never needed confirming (entered by hand).
-        (!card.importedAt || card.reviewedAt),
-    )
-  ) {
-    return null;
-  }
   // Ahead of `pending` and `missing`: this diver is one tap from cleared, and
   // saying so is what turns a blocker into an action a staffer can take. The
   // `verified` check keeps the two blockers from overlapping — an imported card

@@ -437,10 +437,14 @@
     },
     "nitroxFillsLabel": "Nitrox fills",
     "itemWithSize": "{item} {size}",
+    "itemOverDrysuitBoot": "{item} over a drysuit boot",
+    "itemOverDrysuitBootWithSize": "{item} over a drysuit boot, shoe {size}",
     "notRecorded": "No fit on file, not asked yet",
     "ownKit": "Own kit",
     "needsStaffFit": "Needs staff fit at check-in",
-    "needsStaffFitWithNote": "Needs staff fit — {note}"
+    "needsStaffFitWithNote": "Needs staff fit — {note}",
+    "drysuitCardMissing": "Renting a drysuit with no drysuit certification on file. This is not a block: check what they hold, or plan an orientation before the first dive.",
+    "drysuitCardUnconfirmed": "Renting a drysuit, and the drysuit certification on file is not confirmed. This is not a block: confirm the certification on their record, or plan an orientation before the first dive."
   },
   "rollCallCheckpoint": {
     "departure": "Before departure",

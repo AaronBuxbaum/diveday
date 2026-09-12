@@ -1,4 +1,5 @@
-import { DAY_MS } from "@/lib/clock";
+import { DAY_MS, HOUR_MS } from "@/lib/clock";
+import { KIOSK_AHEAD_HOURS } from "@/lib/operational-window";
 import { createBearerToken, hashBearerToken } from "./bearer-tokens";
 
 /**
@@ -35,6 +36,30 @@ export function capabilityExpiryFor(tripEndsAt: Date, now: Date): Date {
   const ceiling = now.getTime() + CAPABILITY_MAX_TTL_MS;
   const floor = now.getTime() + CAPABILITY_MIN_TTL_MS;
   return new Date(Math.max(floor, Math.min(tripBound, ceiling)));
+}
+
+/**
+ * **How long the code on a printed arrival card may open a counter.**
+ *
+ * The card is a file the diver saves, prints and can forward, so the credential
+ * drawn into it is the one capability that leaves on paper. Under the
+ * trip-anchored default above, a seat booked a season out printed a live bearer
+ * credential for the season plus thirty days — a card left on a hotel table in
+ * March still scanning in September (`security-reviewer`, issue #1600).
+ *
+ * Bounded to the morning it is for instead, off the *departure* rather than the
+ * trip's end. The number is the kiosk's own {@link KIOSK_AHEAD_HOURS}, which is
+ * exactly how early that tablet will look at a departure, so the credential can
+ * never expire while the one door that accepts it is still open for this boat.
+ * The cushion past `KIOSK_GRACE_MINUTES` is deliberate: "See the desk" should
+ * be the kiosk's own answer about a departure that has sailed, never a dead
+ * token's answer about a code.
+ *
+ * `issueBookingCapability` clamps this against the trip-anchored bound and
+ * keeps whichever is sooner, so this can only ever shorten the life of a card.
+ */
+export function arrivalCardExpiryFor(tripStartsAt: Date): Date {
+  return new Date(tripStartsAt.getTime() + KIOSK_AHEAD_HOURS * HOUR_MS);
 }
 
 /** The absolute-path readiness link for an already-issued `readiness` capability token. */

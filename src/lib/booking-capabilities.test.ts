@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { HOUR_MS } from "@/lib/clock";
 import {
+  KIOSK_AHEAD_HOURS,
+  KIOSK_GRACE_MINUTES,
+  kioskArrivalsWindow,
+  withinWindow,
+} from "@/lib/operational-window";
+import {
+  arrivalCardExpiryFor,
   CAPABILITY_MAX_TTL_MS,
   CAPABILITY_MIN_TTL_MS,
   CAPABILITY_TRIP_GRACE_MS,
@@ -81,6 +89,32 @@ describe("capabilityExpiryFor", () => {
     const tripEndsAt = new Date(now.getTime() + CAPABILITY_MIN_TTL_MS - CAPABILITY_TRIP_GRACE_MS);
     const expiry = capabilityExpiryFor(tripEndsAt, now);
     expect(expiry.getTime()).toBe(now.getTime() + CAPABILITY_MIN_TTL_MS);
+  });
+});
+
+describe("arrivalCardExpiryFor", () => {
+  const tripStartsAt = new Date("2026-07-10T08:00:00Z");
+
+  it("outlives every instant the kiosk will still look at this departure", () => {
+    // The last of them: the tablet's grace reaches a boat that pulled away
+    // half an hour ago and nothing past it. A card that died first would put
+    // "See the desk" on the screen of a diver whose boat is still at the dock.
+    const lastScan = new Date(tripStartsAt.getTime() + KIOSK_GRACE_MINUTES * 60_000);
+    expect(withinWindow(kioskArrivalsWindow(lastScan), tripStartsAt)).toBe(true);
+    expect(arrivalCardExpiryFor(tripStartsAt).getTime()).toBeGreaterThan(lastScan.getTime());
+  });
+
+  it("expires the morning it is for, not a month after the boat is back", () => {
+    // The finding: the card took the trip-anchored default, so a seat booked a
+    // season out printed a bearer credential live for the season plus thirty
+    // days (`security-reviewer`, issue #1600).
+    const bookedInJanuary = new Date("2026-01-10T00:00:00Z");
+    const tripEndsAt = new Date("2026-07-10T16:00:00Z");
+    const expiry = arrivalCardExpiryFor(tripStartsAt);
+    expect(expiry.getTime()).toBe(tripStartsAt.getTime() + KIOSK_AHEAD_HOURS * HOUR_MS);
+    expect(expiry.getTime()).toBeLessThan(
+      capabilityExpiryFor(tripEndsAt, bookedInJanuary).getTime(),
+    );
   });
 });
 

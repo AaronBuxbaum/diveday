@@ -204,6 +204,14 @@ export function SiteFields({
   // sits implausibly far from the coordinates two fields up, and it refuses
   // nothing — the save above it never waits on this lookup and a failed one
   // renders neither line.
+  //
+  // That second sentence names what the distance costs on the water, not the
+  // distance alone: a divemaster acts on consequence, and eighty kilometres
+  // down a chain moves the predicted turn by the better part of an hour —
+  // which is the difference between a fact about a row and a fact about
+  // whether the plan holds. The turn is already a height turn rather than
+  // slack (ADR 20260907's 2026-09-07 amendment), so the hour is the second
+  // error stacked on the first.
   const tideStationNote = tideStation ? (
     <>
       <span className="block">

@@ -31,7 +31,7 @@ import {
   readinessStatusTone,
   SPECIALTY_KEYS,
 } from "@/i18n/readiness-labels";
-import { rentalFitLineText } from "@/i18n/rental-labels";
+import { drysuitCardWarningText, rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import type { CalendarDate } from "@/lib/calendar-date";
@@ -39,6 +39,7 @@ import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
+import { checkDrysuitCard } from "@/lib/drysuit-card";
 import { formatDateTimeTz } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { flaggedMedicalPrompts } from "@/lib/medical";
@@ -535,6 +536,15 @@ export function RosterSection({
     const sharedBlockerCount = blockerTexts.length - uniqueBlockers.length;
     const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
     const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
+    // The suit goes out to a diver the shop has no drysuit card for. Behind
+    // the same confirmation as the sizes and the nitrox word below, because
+    // both halves of the question are the matched person's own record.
+    const drysuitCard = showsPersonDetail
+      ? checkDrysuitCard(
+          rentalFitByBooking.get(booking.id)?.rentsDrysuit ?? false,
+          readinessByBooking.get(booking.id)?.specialtyCertifications ?? [],
+        )
+      : ({ status: "ok" } as const);
     // The namesake refusal (issue #1573) holds its row open for the same
     // reason a saved contact does: the way through is a control inside the
     // row, and a staffer sent back to a collapsed list has been told what
@@ -753,6 +763,18 @@ export function RosterSection({
           <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
             <StatusMark variant="warning" />
             <span>{depthText}</span>
+          </p>
+        ) : null}
+
+        {/* The one rental that changes how a diver ascends, going out to
+            someone with no drysuit card behind it. Warning tone and outside
+            the blocker list for the same reason the depth line is: the shop
+            may be running the orientation itself, so this is a conversation
+            before the first dive and never a refusal (src/lib/drysuit-card.ts). */}
+        {drysuitCard.status !== "ok" ? (
+          <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+            <StatusMark variant="warning" />
+            <span>{drysuitCardWarningText(t, drysuitCard)}</span>
           </p>
         ) : null}
 

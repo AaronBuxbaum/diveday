@@ -142,3 +142,16 @@ picker: choosing one is a question NOAA's own list answers better than a dropdow
 What is committed to: one more endpoint shape from the same provider. The escape hatch is
 unchanged — a rename there costs a parser change, and dropping the confirmation is one module, one
 prop and three bundle keys.
+
+**What the distance sentence says, and where the station list ends.** The sentence names what the
+distance costs on the water rather than the kilometres alone: eighty kilometres down a chain moves
+the predicted turn by the better part of an hour, on a number that is already a height turn rather
+than slack (the 2026-09-07 amendment above), and a divemaster acts on the consequence, not on what
+a row measured. The field's hint also says that CO-OPS covers **US waters only** — a shop in
+Cozumel, Bonaire or the Red Sea has no station to pick, which degrades to silence and is correct,
+but the one that typed the nearest US id was otherwise being told to check something it could not
+act on. Two things this still does not have, both filed rather than guessed at: a way for a
+genuinely remote site to *answer* the sentence, which needs a column on the site row (Flower Garden
+Banks reads Galveston at about 190 km and warns forever) — issue #1731; and the station's name on
+the departure line, where the person who needs to know whose tide this is actually reads it —
+issue #1732.

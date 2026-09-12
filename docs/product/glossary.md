@@ -894,6 +894,22 @@ new domain concept, define it here in the same PR.
   measurement — real slack on a reef lags it by a site-specific amount, which is the crew's to know.
   Staff read it wherever a site has a station; divers read it only once the shop switches
   `tide_window_public` on. Informs; never a gate.
+- **Station echo** — NOAA's own name for the station a site points at, shown under the id on the
+  dive-site editor. `isTideStationId` is `/^\d{7}$/` and can be no stricter — a subordinate
+  station's id looks exactly like a harmonic one's and every seven-digit id answers — so a station
+  typed for the wrong end of the chain produced a confident tide sentence about the wrong water on
+  every departure and said nothing (issue #1468). The echo makes a wrong id legible as a wrong
+  *place* rather than as digits nobody can check. CO-OPS covers **US waters only**; a shop with no
+  station near it gets no echo and no tide sentence, which is the right answer rather than a gap.
+- **Implausible-station advisory** — the sentence on that same field when the station sits further
+  than `IMPLAUSIBLE_STATION_DISTANCE_KM` (40 km, `src/lib/tide-stations.ts`) from the site's own
+  coordinates. It names what the distance costs on the water rather than the distance alone: the
+  turn that station predicts can reach this water up to an hour early or late, stacked on a number
+  that is already a height turn and not slack. Forty is calibrated on the mistake the demo's own
+  seed names — a Key Largo reef reading Vaca Key at Marathon — against a correct pairing at
+  twenty-nine kilometres.
+  Advice, never a refusal: the lookup lives in the page's render rather than in the save, every
+  failure renders nothing, and a site that has not said where it is draws no sentence at all.
 - **Course session** — a scheduled class (pool or open water) tied to a course, an instructor,
   and enrolled students. Instructor-to-student **ratios** are agency-mandated and vary by
   course and environment.
@@ -1677,11 +1693,19 @@ new domain concept, define it here in the same PR.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
   and in *what size* (BCD, wetsuit, drysuit, boot, fin, usual weighting, plus the dive-computer/GoPro add-ons).
   The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
-  manufacturer letter-plus-height grid a rental wall is stocked from (girth letter, trailing `T`
-  for the tall cut), never the wetsuit's XS-XXL. It contributes exactly **one** piece to the
-  packing list and no boots of its own: a drysuit's boots are vulcanised on, so they come off the
-  wall with the suit and the shop can never be out of them separately. The diver's shoe size still
-  matters for fins over that boot, and the mask/fins question already asks it.
+  manufacturer grid a rental wall is racked from (a girth letter, a trailing `T` for the tall cut),
+  which shares the wetsuit's girth letters but carries a second axis the wetsuit scale has no room
+  for. Which codes the diver's own select offers is open as H-76. It contributes exactly **one**
+  piece to the packing list and no boots of its own: most rental drysuits have their boots
+  vulcanised on, so they come off the wall with the suit and there is nothing extra to pull. A fleet
+  stocking neoprene-sock suits worn with separate rock boots writes that into the drysuit size
+  itself ("ML, rock boot 9"), which is free text staff-side and reaches the packing list verbatim.
+  The diver's shoe size still matters for fins over that boot, and the mask/fins question already
+  asks it.
+  A drysuit ticked here with no **Drysuit** specialty on the diver's record raises a roster advisory
+  (`src/lib/drysuit-card.ts`) and nothing more: air in the suit expands on the way up and the
+  specialty exists for exactly that, but a shop runs its own orientations, so this is a
+  conversation before the first dive and never a boarding refusal (H-08's instrument, not readiness').
   It is a storage concept: a fit never reserves an item, is never evidence, and never replaces a
   dock-side fit check. It is the single input to the trip prep list. Reserving a particular unit is
   the **gear register**'s separate act (below) — a shop that keeps no register still has fits, and a
@@ -1769,7 +1793,17 @@ new domain concept, define it here in the same PR.
   all, which is the judgement call.
 - **Trip prep list** — the derived packing list for one departure: tanks (one per diver per planned
   dive, split air/nitrox) plus rental kit grouped by item and size, with the divers each line is
-  for. Purely derived — nothing on it is an allocation. Rules in `src/lib/dive-prep.ts`.
+  for. Purely derived — nothing on it is an allocation. A diver in a **drysuit** is the one piece of
+  kit whose line deliberately carries no number: both fit forms ask usual weighting against a
+  wetsuit ("Usually 12 lb with 3 mm suit"), and a drysuit needs two to four kilos more, so their
+  weights line reads "weight check in the water" on the prep list and carries no size on a manifest
+  or roster line. Under-weighted is the direction a drysuit diver cannot hold a safety stop in; the
+  stated answer stays on the diver profile, where the question was asked. Their **fins** are the
+  same question one step over: every fit form asks one shoe size ("Fin & boot size", "US 9 / EU
+  42"), a vulcanised drysuit boot is two to three fin sizes bigger than the foot in it, and a pair
+  packed to the stated number does not go on at the bench. That size stays on the line as the
+  number the packer sizes up from, and the line says the pair has to clear the boot. Rules in
+  `src/lib/dive-prep.ts`.
 - **Diver profile** — the shop's person-first operational record. A diver profile gathers contact
   details, certification evidence, rental fit, and bookings; cards are not managed as an unrelated
   certification inbox.

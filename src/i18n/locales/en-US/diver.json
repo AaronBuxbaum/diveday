@@ -256,7 +256,7 @@
     "openArrivalMap": "Open in maps",
     "saveArrivalCard": "Save arrival card",
     "arrivalCodeHeading": "Your arrival code",
-    "arrivalCodeBody": "Hold it under the scanner at the counter and the crew will find you.",
+    "arrivalCodeBody": "Hold it under the scanner at the counter and the staff will find you.",
     "arrivalCodeAlt": "Arrival code for your booking",
     "openPublicTrip": "Open the public trip page",
     "arrivalShopDefault": "Shop meeting point",
@@ -1268,6 +1268,7 @@
     "jargonHints": {
       "bcd": "The inflatable vest you wear that holds your tank and lets you control whether you float or sink.",
       "regulator": "The mouthpiece and hose that let you breathe air from your tank underwater.",
+      "drysuit": "A sealed suit that keeps you dry in cold water. On most rentals the boots are part of the suit, so you won’t be handed a separate pair.",
       "nitrox": "A breathing gas with extra oxygen that lets specially trained divers spend a bit more time underwater on some dives."
     }
   },

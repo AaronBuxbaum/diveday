@@ -34,18 +34,23 @@ const FAR: TideStationEcho = {
   far: true,
 };
 
-function renderFields(tideStation?: TideStationEcho | null, depthUnit: DepthUnit = "meters") {
+function renderFields(
+  tideStation?: TideStationEcho | null,
+  depthUnit: DepthUnit = "meters",
+  locale: "en-US" | "es-ES" = "en-US",
+) {
+  const translator = locale === "en-US" ? t : staffTranslator(locale);
   render(
     <SiteFields
-      t={t}
+      t={translator}
       depthUnit={depthUnit}
       tideStation={tideStation}
       certificationDescription="Who can dive this site."
-      routeCopy={routeEditorCopy(t)}
-      landmarkCopy={landmarkEditorCopy(t)}
-      fieldGuideCopy={fieldGuideEditorCopy(t)}
+      routeCopy={routeEditorCopy(translator)}
+      landmarkCopy={landmarkEditorCopy(translator)}
+      fieldGuideCopy={fieldGuideEditorCopy(translator)}
       marineLifeCatalog={[]}
-      locale="en-US"
+      locale={locale}
       timezone="America/New_York"
     />,
   );
@@ -64,12 +69,19 @@ describe("SiteFields — the tide station echo (issue #1468)", () => {
     expect(screen.queryByText(/from this site’s coordinates/)).toBeNull();
   });
 
+  /**
+   * The distance is the evidence, never the whole sentence: a staffer reading
+   * "81 km" has been told what a database noticed, and what they act on is
+   * what that costs on the water. Eighty kilometres down the Keys moves the
+   * predicted turn by the better part of an hour, on a number that is already
+   * a height turn rather than slack.
+   */
   it("prompts a second look at a station that sits implausibly far from the site", () => {
     renderFields(FAR);
     expect(screen.getByText("8723970 · Vaca Key, FL")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "That station is 81 km from this site’s coordinates. Check it’s the one you meant.",
+        "That station is 81 km from this site’s coordinates, so the turn it predicts can reach this water up to an hour early or late. Check it’s the one you meant.",
       ),
     ).toBeInTheDocument();
   });
@@ -78,7 +90,31 @@ describe("SiteFields — the tide station echo (issue #1468)", () => {
     renderFields(FAR, "feet");
     expect(
       screen.getByText(
-        "That station is 50 mi from this site’s coordinates. Check it’s the one you meant.",
+        "That station is 50 mi from this site’s coordinates, so the turn it predicts can reach this water up to an hour early or late. Check it’s the one you meant.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * NOAA CO-OPS publishes US waters and nothing else, so a shop in Cozumel,
+   * Bonaire or the Red Sea has no station to pick — and the one that types the
+   * nearest US id is being asked to check something they cannot act on. The
+   * field says where the list ends before the warning can accuse them of a
+   * mistake, in both languages.
+   */
+  it("says the station list is US waters, in both bundles", () => {
+    renderFields(null);
+    expect(screen.getByText(/The list covers US waters only\./)).toBeInTheDocument();
+    cleanup();
+    renderFields(null, "meters", "es-ES");
+    expect(screen.getByText(/La lista solo cubre aguas de Estados Unidos\./)).toBeInTheDocument();
+  });
+
+  it("carries the same consequence into Spanish", () => {
+    renderFields(FAR, "meters", "es-ES");
+    expect(
+      screen.getByText(
+        "Esa estación está a 81 km de las coordenadas de este sitio, así que el cambio de marea que predice puede llegar aquí hasta una hora antes o después. Comprueba que es la que querías.",
       ),
     ).toBeInTheDocument();
   });

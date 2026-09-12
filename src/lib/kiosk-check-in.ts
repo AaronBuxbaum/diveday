@@ -213,6 +213,16 @@ export function canMatchBeforeTheLastWord(typed: string): boolean {
  * difference only while the slow path stays under it. A database slow enough to
  * push a readiness read past 750ms leaks the same signal again, and no constant
  * can fix that — only a slower floor, which a diver waits through.
+ *
+ * The scanned arrival code (issue #1600) added a hop the 5ms-against-24ms
+ * measurement above predates: `bookingForArrivalCode` spends a
+ * `verifyBookingCapability` *before* the seat query, so every branch a scan
+ * takes — the unknown code, the expired one, the one that resolves to a blocked
+ * diver — starts one round trip behind the same branch reached by typing. It is
+ * no oracle today: one indexed hash lookup leaves the whole scanned path far
+ * under 750ms, and the refusals it reaches are the same sentence. It is one
+ * more hop the floor is covering, and the next thing added ahead of the seat
+ * query is measured against the floor, not against this note.
  */
 export const KIOSK_RESPONSE_FLOOR_MS = 750;
 
@@ -288,6 +298,17 @@ export function isCapabilityToken(value: string): boolean {
  * The token is returned **unchanged**. base64url is case-sensitive, so the
  * `.toLowerCase()` the booking branch applies to a uuid must never be copied
  * down here: folding one character would turn every scan into "See the desk".
+ *
+ * **A name can collide with the shape, and is read as a code.** The hyphen is
+ * in base64url, so a single typed word of exactly 43 characters drawn from
+ * `[A-Za-z0-9_-]` — a long enough hyphenated surname, and they exist — is
+ * classified here as a capability, fails to verify one module over, and comes
+ * back as "See the desk" rather than being tried as a name. Written down so it
+ * is not rediscovered as a bug: retrying a failed code as a surname is the
+ * obvious repair and it is the wrong one, because it would give a
+ * scanner-shaped guess a second door and spend the name budget on it. The
+ * diver's repair is a space — a surname typed after a given name is no longer
+ * one 43-character word.
  */
 export function readKioskInput(raw: unknown): KioskInput {
   if (typeof raw !== "string") return null;

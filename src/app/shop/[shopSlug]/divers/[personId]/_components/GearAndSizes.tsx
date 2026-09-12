@@ -89,13 +89,24 @@ export function GearAndSizes({
       requires: ["wetsuit"],
     },
     // Free text, not the diver form's select: staff-side is where a size off
-    // the proposed drysuit grid gets recorded (issue 1414).
+    // the proposed drysuit grid gets recorded (issue 1414). The hint is the
+    // other half of that freedom. A drysuit renter gets no boots line at all,
+    // because a rental drysuit usually has its boots vulcanised on
+    // (`src/lib/dive-prep.ts`); a fleet whose suits take separate rock boots
+    // has no column, no tick and no piece to say so with, and a missing line
+    // on a packing list is invisible until the dock. This box is the one field
+    // that reaches the line verbatim, so it is where the rock-boot size goes,
+    // and nothing but this hint tells the staffer that.
     offers.has("drysuit") && {
       name: "drysuitSize",
       label: t("divers.rentalFit.drysuitSizeLabel"),
       placeholder: t("divers.rentalFit.drysuitSizePlaceholder"),
       defaultValue: profile?.drysuitSize ?? "",
       requires: ["drysuit"],
+      info: {
+        label: t("divers.rentalFit.drysuitSizeHintLabel"),
+        detail: t("divers.rentalFit.drysuitSizeHint"),
+      },
     },
     // One shoe-size answer covers fins and boots — the two fields asked the
     // same question, and the save writes it to both columns.

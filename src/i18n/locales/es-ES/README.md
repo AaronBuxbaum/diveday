@@ -249,6 +249,32 @@ carries. `scripts/check-shop-word.mjs` refuses only *sesión / ratio / clase de 
 shapes that were naming a bautismo, and leaves *curso de iniciación* and *límite de iniciación*
 alone.
 
+## The wetsuit is **el neopreno**; **el traje seco** is the drysuit
+
+Settled 2026-09-12, the day the drysuit got a size field of its own. Until then the Spanish called the
+wetsuit *Traje* — the item label on the diver's kit picker, on the diver's packing list and on the
+staff one, and *Talla de traje* on both fit forms — and *traje* on its own is just "suit". The moment
+**Talla de traje seco** landed directly under **Talla de traje**, a diver reading the two had no
+reliable way to tell that the first one meant the wetsuit, on the form that decides what comes off the
+rental wall for them. *Neopreno* is the word a Spanish-speaking shop says out loud, everywhere the
+market is, and it cannot be read as the other suit.
+
+| English | Spanish |
+| --- | --- |
+| wetsuit (kit list, fit form, packing list) | el neopreno |
+| Wetsuit size | Talla de neopreno |
+| a 3 mm wetsuit | un neopreno de 3 mm |
+| drysuit | el traje seco |
+| Drysuit size | Talla de traje seco |
+
+The noun is **masculine**: `el`/`un`/`este`, and anything reaching back to it agrees (`corto`,
+`completo`, `húmedo`).
+
+**`traje` is not banned — it names the dry one now.** *Traje seco* is exactly right and must not
+change, *traje estanco* survives in the drysuit's own jargon hint, and a *traje de baño* is a
+swimsuit. `scripts/check-shop-word.mjs` refuses the two shapes the wetsuit labels actually used: a
+*talla de traje* with no *seco* after it, and a string that is nothing but the word *Traje*.
+
 ## The waiver is **la exención**
 
 One document, one word — settled 2026-08-14, after a sweep found the marketing bundle promising to

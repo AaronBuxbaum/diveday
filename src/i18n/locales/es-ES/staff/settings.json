@@ -340,7 +340,7 @@
       "description": "Lo que se cotiza a un buceador por su equipo de alquiler.",
       "detail": "Pon precio al equipo completo (suele salir más barato) y a cada pieza por separado: cinco piezas cotizan el conjunto, menos se pagan por pieza. Deja una casilla vacía para cobrarlo en el centro.",
       "fullSetLabel": "Equipo completo",
-      "fullSetHint": "(BCD, regulador, traje, máscara y aletas, lastre, computadora de buceo)",
+      "fullSetHint": "(BCD, regulador, neopreno, máscara y aletas, lastre, computadora de buceo)",
       "nitroxLabel": "Nitrox",
       "nitroxHint": "(por inmersión)",
       "submit": "Guardar precios de alquiler",
@@ -678,7 +678,7 @@
       },
       "rentalSizes": {
         "what": "Tallas de alquiler",
-        "detail": "Las tallas de BCD, traje, bota y aleta se convierten en un perfil de ajuste de alquiler."
+        "detail": "Las tallas de BCD, neopreno, bota y aleta se convierten en un perfil de ajuste de alquiler."
       },
       "certificationCard": {
         "what": "Registro de certificación",
@@ -750,7 +750,7 @@
         "nitrox_certified": "Nitrox",
         "nitrox_certification_number": "Número de nitrox",
         "bcd_size": "Talla de BCD",
-        "wetsuit_size": "Talla de traje",
+        "wetsuit_size": "Talla de neopreno",
         "boot_size": "Talla de botas",
         "fin_size": "Talla de aletas",
         "waiver_accepted": "Waiver aceptado",
